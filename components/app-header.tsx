@@ -4,7 +4,6 @@ import { ChangeEvent, RefObject, useRef } from "react";
 import { PlusIcon, UploadIcon, DownloadIcon, SearchIcon, HelpCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { GsdLogo } from "@/components/gsd-logo";
 
 interface AppHeaderProps {
@@ -46,7 +45,6 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
           <Button variant="subtle" className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
             <HelpCircleIcon className="h-5 w-5" />
           </Button>
-          <ThemeToggle />
           <Button onClick={onNewTask} className="hidden sm:inline-flex">
             <PlusIcon className="mr-2 h-4 w-4" /> New Task
           </Button>

@@ -43,7 +43,6 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
             <div className="space-y-2">
               <Shortcut label="Create new task" hint="N" />
               <Shortcut label="Focus search" hint="/" />
-              <Shortcut label="Toggle theme" hint="T" />
               <Shortcut label="Show this help" hint="?" />
             </div>
           </section>

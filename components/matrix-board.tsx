@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTheme } from "next-themes";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
@@ -55,7 +54,6 @@ export function MatrixBoard() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
   const { showToast } = useToast();
 
   const filteredQuadrants = useMemo(() => {
@@ -193,16 +191,11 @@ export function MatrixBoard() {
         setHelpOpen(true);
         return;
       }
-
-      if (event.key.toLowerCase() === "t") {
-        event.preventDefault();
-        setTheme(theme === "light" ? "dark" : "light");
-      }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [theme, setTheme]);
+  }, []);
 
   const taskBeingEdited = dialogState?.mode === "edit" ? dialogState.task : undefined;
   const activeTaskDraft = taskBeingEdited ? toDraft(taskBeingEdited) : undefined;

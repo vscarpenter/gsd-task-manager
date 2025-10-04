@@ -20,7 +20,8 @@
       "Bash(git push:*)",
       "Bash(pnpm test:*)",
       "Bash(git commit:*)",
-      "WebFetch(domain:pagespeed.web.dev)"
+      "WebFetch(domain:pagespeed.web.dev)",
+      "Bash(rsvg-convert:*)"
     ],
     "deny": [],
     "ask": []
