@@ -4,8 +4,8 @@
   "description": "Prioritize what matters with an offline Eisenhower matrix.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b1723",
-  "theme_color": "#2fd07e",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
   "id": "gsd-task-manager",
   "icons": [
     {

@@ -18,6 +18,7 @@ describe("formatRelative", () => {
   });
 
   it("falls back to calendar dates for distant events", () => {
-    expect(formatRelative("2025-01-01T00:00:00.000Z")).toMatch(/Jan/);
+    const result = formatRelative("2025-06-15T12:00:00.000Z");
+    expect(result).toMatch(/Jun/);
   });
 });

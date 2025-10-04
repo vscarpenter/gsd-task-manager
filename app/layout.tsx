@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.variable, jetbrains.variable, "bg-canvas text-white antialiased")}> 
+      <body className={cn(inter.variable, jetbrains.variable, "bg-canvas text-foreground antialiased")}> 
         <ThemeProvider>
           {children}
           <PwaRegister />
