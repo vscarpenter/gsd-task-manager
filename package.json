@@ -4,13 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "rm -rf .next out",
+    "prebuild": "npm run clean",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "export": "next export"
+    "export": "next export",
+    "deploy:s3": "aws s3 sync out/ s3://gsd.vinny.dev/ --delete --cache-control 'public,max-age=31536000,immutable'",
+    "deploy:cf": "aws cloudfront create-invalidation --distribution-id E1T6GDX0TQEP94 --paths '/*'",
+    "deploy": "npm run build && npm run deploy:s3 && npm run deploy:cf"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
@@ -23,8 +28,8 @@
     "nanoid": "^4.0.2",
     "next": "15.0.0-canary.113",
     "next-themes": "^0.3.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "rc",
+    "react-dom": "rc",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -44,5 +49,6 @@
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
-  }
+  },
+  "license": "MIT"
 }

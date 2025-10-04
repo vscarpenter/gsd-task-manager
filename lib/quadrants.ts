@@ -5,6 +5,7 @@ export interface QuadrantMeta {
   title: string;
   subtitle: string;
   accentClass: string;
+  bgClass: string;
 }
 
 export const quadrants: QuadrantMeta[] = [
@@ -12,25 +13,29 @@ export const quadrants: QuadrantMeta[] = [
     id: "urgent-important",
     title: "Do First",
     subtitle: "High urgency, high impact tasks",
-    accentClass: "bg-quadrant-focus/25 text-quadrant-focus"
+    accentClass: "bg-blue-100 text-blue-700",
+    bgClass: "bg-quadrant-focus"
   },
   {
     id: "not-urgent-important",
     title: "Schedule",
     subtitle: "Plan meaningful progress",
-    accentClass: "bg-quadrant-schedule/25 text-quadrant-schedule"
+    accentClass: "bg-yellow-100 text-yellow-700",
+    bgClass: "bg-quadrant-schedule"
   },
   {
     id: "urgent-not-important",
     title: "Delegate",
     subtitle: "Hand off quick wins",
-    accentClass: "bg-quadrant-delegate/25 text-quadrant-delegate"
+    accentClass: "bg-green-100 text-green-700",
+    bgClass: "bg-quadrant-delegate"
   },
   {
     id: "not-urgent-not-important",
     title: "Eliminate",
     subtitle: "Reduce noise and distractors",
-    accentClass: "bg-quadrant-eliminate/25 text-quadrant-eliminate"
+    accentClass: "bg-purple-100 text-purple-700",
+    bgClass: "bg-quadrant-eliminate"
   }
 ];
 

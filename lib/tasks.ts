@@ -1,11 +1,12 @@
 import { nanoid } from "nanoid";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { resolveQuadrantId } from "@/lib/quadrants";
 import { importPayloadSchema, taskDraftSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 
 export async function listTasks(): Promise<TaskRecord[]> {
+  const db = getDb();
   return db.tasks.orderBy("createdAt").reverse().toArray();
 }
 
@@ -21,11 +22,13 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     updatedAt: now
   };
 
+  const db = getDb();
   await db.tasks.add(record);
   return record;
 }
 
 export async function updateTask(id: string, updates: Partial<TaskDraft>): Promise<TaskRecord> {
+  const db = getDb();
   const existing = await db.tasks.get(id);
   if (!existing) {
     throw new Error(`Task ${id} not found`);
@@ -52,6 +55,7 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
 }
 
 export async function toggleCompleted(id: string, completed: boolean): Promise<TaskRecord> {
+  const db = getDb();
   const existing = await db.tasks.get(id);
   if (!existing) {
     throw new Error(`Task ${id} not found`);
@@ -68,14 +72,17 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
 }
 
 export async function deleteTask(id: string): Promise<void> {
+  const db = getDb();
   await db.tasks.delete(id);
 }
 
 export async function clearTasks(): Promise<void> {
+  const db = getDb();
   await db.tasks.clear();
 }
 
 export async function exportTasks(): Promise<ImportPayload> {
+  const db = getDb();
   const tasks = await db.tasks.toArray();
   const normalized = tasks.map((task) => taskRecordSchema.parse(task));
   return {
@@ -86,6 +93,7 @@ export async function exportTasks(): Promise<ImportPayload> {
 }
 
 export async function importTasks(payload: ImportPayload): Promise<void> {
+  const db = getDb();
   const parsed = importPayloadSchema.parse(payload);
   await db.transaction("rw", db.tasks, async () => {
     await db.tasks.clear();

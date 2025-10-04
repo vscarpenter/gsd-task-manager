@@ -1,10 +1,11 @@
 "use client";
 
 import { ChangeEvent, RefObject, useRef } from "react";
-import { PlusIcon, UploadIcon, DownloadIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, UploadIcon, DownloadIcon, SearchIcon, HelpCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { GsdLogo } from "@/components/gsd-logo";
 
 interface AppHeaderProps {
   onNewTask: () => void;
@@ -13,9 +14,10 @@ interface AppHeaderProps {
   onExport: () => Promise<void>;
   onImport: (file: File) => Promise<void>;
   searchInputRef: RefObject<HTMLInputElement>;
+  onHelp: () => void;
 }
 
-export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, onImport, searchInputRef }: AppHeaderProps) {
+export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, onImport, searchInputRef, onHelp }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -28,15 +30,21 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
   };
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-white/5 bg-canvas/80 px-6 py-4 backdrop-blur">
+    <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-slate-200 bg-white/80 px-6 py-4 backdrop-blur">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
-            Prioritize what matters
-          </h1>
+        <div className="flex items-center gap-3">
+          <GsdLogo className="shrink-0" />
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Prioritize what matters
+            </h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="subtle" className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
+            <HelpCircleIcon className="h-5 w-5" />
+          </Button>
           <ThemeToggle />
           <Button onClick={onNewTask} className="hidden sm:inline-flex">
             <PlusIcon className="mr-2 h-4 w-4" /> New Task

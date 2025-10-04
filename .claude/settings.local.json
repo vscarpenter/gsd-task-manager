@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(npm install:*)",
+      "Bash(aws s3 ls:*)",
+      "Bash(grep:*)",
+      "Bash(aws cloudfront get-distribution:*)",
+      "Bash(aws s3api get-bucket-policy:*)",
+      "Bash(aws s3api get-public-access-block:*)",
+      "Bash(chmod:*)",
+      "Bash(find:*)",
+      "Bash(npm run test:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

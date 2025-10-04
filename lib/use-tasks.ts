@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import type { TaskRecord } from "@/lib/types";
 import { quadrantOrder } from "@/lib/quadrants";
 
@@ -11,6 +11,10 @@ export interface TaskBuckets {
 export function useTasks(): TaskBuckets {
   const tasks =
     useLiveQuery(async () => {
+      if (typeof window === "undefined") {
+        return [] as TaskRecord[];
+      }
+      const db = getDb();
       const rows = await db.tasks.toArray();
       return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     }, [], []) ?? [];

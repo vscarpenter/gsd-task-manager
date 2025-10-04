@@ -2,9 +2,7 @@
 
 import { CheckIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
-import { formatDueDate, formatRelative, cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { formatDueDate, cn } from "@/lib/utils";
 
 interface TaskCardProps {
   task: TaskRecord;
@@ -15,69 +13,59 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardProps) {
   const dueLabel = formatDueDate(task.dueDate);
-  const relative = formatRelative(task.dueDate);
 
   return (
     <article
       className={cn(
-        "group flex flex-col gap-3 rounded-2xl border border-white/5 bg-white/[0.04] p-4 shadow-sm transition",
+        "group flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition",
         task.completed ? "opacity-60" : "opacity-100"
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold leading-tight text-white">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold leading-snug text-slate-900 truncate">
             {task.title}
           </h3>
           {task.description ? (
-            <p className="text-sm text-slate-300">{task.description}</p>
+            <p className="mt-0.5 text-xs text-slate-600 line-clamp-2">{task.description}</p>
           ) : null}
         </div>
         <button
           type="button"
           onClick={() => onToggleComplete(task, !task.completed)}
           className={cn(
-            "button-reset flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold uppercase transition",
+            "button-reset flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase transition",
             task.completed
-              ? "border-accent/80 bg-accent/20 text-accent"
-              : "border-white/15 text-slate-200 hover:border-accent/70 hover:text-accent"
+              ? "border-accent bg-accent/10 text-accent"
+              : "border-slate-300 text-slate-600 hover:border-accent hover:text-accent"
           )}
           aria-pressed={task.completed}
           aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
         >
-          <CheckIcon className="h-4 w-4" />
+          <CheckIcon className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge className="bg-quadrant-focus/20 text-quadrant-focus">
-          {task.urgent ? "Urgent" : "Not Urgent"}
-        </Badge>
-        <Badge className="bg-quadrant-schedule/20 text-quadrant-schedule">
-          {task.important ? "Important" : "Not Important"}
-        </Badge>
-        <Badge variant="outline">{task.quadrant.replace(/-/g, " ")}</Badge>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-        <span>
-          Due {dueLabel}
-          {relative ? <span className="text-slate-500"> - {relative}</span> : null}
-        </span>
-        <span>Updated {formatRelative(task.updatedAt)}</span>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 pt-2 opacity-0 transition group-hover:opacity-100">
-        <Button variant="ghost" className="px-3" onClick={() => onEdit(task)}>
-          <PencilIcon className="mr-1 h-4 w-4" /> Edit
-        </Button>
-        <Button
-          variant="ghost"
-          className="px-3 text-red-300 hover:text-red-100"
-          onClick={() => onDelete(task)}
-        >
-          <Trash2Icon className="mr-1 h-4 w-4" /> Delete
-        </Button>
+      <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+        <span className="truncate">Due {dueLabel}</span>
+        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={() => onEdit(task)}
+            className="rounded px-1.5 py-0.5 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Edit task"
+          >
+            <PencilIcon className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(task)}
+            className="rounded px-1.5 py-0.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+            aria-label="Delete task"
+          >
+            <Trash2Icon className="h-3 w-3" />
+          </button>
+        </div>
       </div>
     </article>
   );

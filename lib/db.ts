@@ -12,4 +12,17 @@ class GsdDatabase extends Dexie {
   }
 }
 
-export const db = new GsdDatabase();
+let dbInstance: GsdDatabase | null = null;
+
+export function getDb(): GsdDatabase {
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  if (typeof indexedDB === "undefined") {
+    throw new Error("IndexedDB is not available in this environment.");
+  }
+
+  dbInstance = new GsdDatabase();
+  return dbInstance;
+}

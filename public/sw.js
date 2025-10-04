@@ -24,6 +24,12 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+
+  // Only handle http/https requests
+  if (!request.url.startsWith('http')) {
+    return;
+  }
+
   if (request.method !== "GET") {
     return;
   }
@@ -36,8 +42,15 @@ self.addEventListener("fetch", (event) => {
 
       return fetch(request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          // Only cache successful responses
+          if (response && response.status === 200 && response.type === 'basic') {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clone).catch(() => {
+                // Silently fail if caching fails
+              });
+            });
+          }
           return response;
         })
         .catch(() => caches.match("/"));

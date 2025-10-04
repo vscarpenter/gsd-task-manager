@@ -1,6 +1,14 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  safelist: [
+    {
+      pattern: /(bg|text)-quadrant-(focus|schedule|delegate|eliminate)(\/(10|15|20|25|30|40|50|60|70|80|90))?/
+    },
+    {
+      pattern: /(bg|text)-accent(\/(10|20|30|40|50|60|70|80|90))?/
+    }
+  ],
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -10,18 +18,18 @@ const config: Config = {
     extend: {
       colors: {
         canvas: {
-          DEFAULT: "#0b1723",
-          foreground: "#0f2132"
+          DEFAULT: "#ffffff",
+          foreground: "#f8f9fa"
         },
         accent: {
-          DEFAULT: "#2fd07e",
-          muted: "#9ff6c4"
+          DEFAULT: "#6366f1",
+          muted: "#a5b4fc"
         },
         quadrant: {
-          focus: "#ff6b6b",
-          schedule: "#ffd166",
-          delegate: "#4dabf7",
-          eliminate: "#6c757d"
+          focus: "#dbeafe",      // light blue pastel
+          schedule: "#fef9c3",   // light yellow pastel
+          delegate: "#d1fae5",   // light green pastel
+          eliminate: "#f3e8ff"   // light purple pastel
         }
       },
       fontFamily: {

@@ -118,7 +118,7 @@ export function TaskForm({
           placeholder="Add a task name"
           required
         />
-        {errors.title ? <p className="text-xs text-red-400">{errors.title}</p> : null}
+        {errors.title ? <p className="text-xs text-red-600">{errors.title}</p> : null}
       </div>
 
       <div className="space-y-1">
@@ -130,42 +130,42 @@ export function TaskForm({
           onChange={(event) => updateField("description", event.target.value)}
         />
         {errors.description ? (
-          <p className="text-xs text-red-400">{errors.description}</p>
+          <p className="text-xs text-red-600">{errors.description}</p>
         ) : null}
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2 rounded-2xl border border-white/10 p-3">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Urgency</p>
+        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-700">Urgency</p>
           <div className="flex gap-2">
             <TogglePill
               label="Urgent"
               active={values.urgent}
-              accentClass="bg-quadrant-focus text-slate-900"
-              onToggle={() => updateField("urgent", !values.urgent)}
+              variant="blue"
+              onSelect={() => updateField("urgent", true)}
             />
             <TogglePill
               label="Not urgent"
               active={!values.urgent}
-              accentClass="bg-white/10 text-white"
-              onToggle={() => updateField("urgent", !values.urgent)}
+              variant="blue"
+              onSelect={() => updateField("urgent", false)}
             />
           </div>
         </div>
-        <div className="space-y-2 rounded-2xl border border-white/10 p-3">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Importance</p>
+        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-700">Importance</p>
           <div className="flex gap-2">
             <TogglePill
               label="Important"
               active={values.important}
-              accentClass="bg-quadrant-schedule text-slate-900"
-              onToggle={() => updateField("important", !values.important)}
+              variant="amber"
+              onSelect={() => updateField("important", true)}
             />
             <TogglePill
               label="Not important"
               active={!values.important}
-              accentClass="bg-white/10 text-white"
-              onToggle={() => updateField("important", !values.important)}
+              variant="amber"
+              onSelect={() => updateField("important", false)}
             />
           </div>
         </div>
@@ -182,7 +182,7 @@ export function TaskForm({
             updateField("dueDate", nextIso);
           }}
         />
-        {errors.dueDate ? <p className="text-xs text-red-400">{errors.dueDate}</p> : null}
+        {errors.dueDate ? <p className="text-xs text-red-600">{errors.dueDate}</p> : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
@@ -190,7 +190,7 @@ export function TaskForm({
           <Button
             type="button"
             variant="ghost"
-            className="text-sm text-red-300 hover:text-red-200"
+            className="text-sm text-red-600 hover:text-red-700"
             onClick={() => onDelete()}
           >
             Delete task

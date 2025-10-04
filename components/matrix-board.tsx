@@ -190,13 +190,14 @@ export function MatrixBoard() {
         onExport={handleExport}
         onImport={handleImport}
         searchInputRef={searchInputRef}
+        onHelp={() => setHelpOpen(true)}
       />
 
       <main className="px-6 pb-10">
         {!hasTasks ? (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-center">
-            <h2 className="text-xl font-semibold text-white">Build your Eisenhower matrix</h2>
-            <p className="mt-3 text-sm text-slate-300">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+            <h2 className="text-xl font-semibold text-slate-900">Build your Eisenhower matrix</h2>
+            <p className="mt-3 text-sm text-slate-600">
               Start by adding a task. We will help you categorize it by urgency and importance and keep it synced offline in IndexedDB.
             </p>
             <Button className="mt-6" onClick={() => setDialogState({ mode: "create" })}>
@@ -204,9 +205,9 @@ export function MatrixBoard() {
             </Button>
           </div>
         ) : visibleCount === 0 ? (
-          <div className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
-            <h2 className="text-lg font-semibold text-white">No tasks match "{searchQuery}".</h2>
-            <p className="mt-2 text-sm text-slate-300">Try a different search term or clear the filter.</p>
+          <div className="mx-auto max-w-xl rounded-3xl border border-slate-300 bg-slate-50 p-8 text-center">
+            <h2 className="text-lg font-semibold text-slate-900">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
+            <p className="mt-2 text-sm text-slate-600">Try a different search term or clear the filter.</p>
             <Button className="mt-4" variant="subtle" onClick={() => setSearchQuery("")}
             >
               Clear search

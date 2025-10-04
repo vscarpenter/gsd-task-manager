@@ -5,6 +5,7 @@ if (!window.matchMedia) {
   window.matchMedia = () => ({
     matches: false,
     media: "",
+    onchange: null,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
     addListener: () => undefined,
