@@ -78,7 +78,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             )}
             <button
               onClick={() => hideToast(toast.id)}
-              className="text-slate-400 hover:text-slate-600"
+              className="text-slate-500 hover:text-slate-700"
               aria-label="Dismiss"
             >
               <XIcon className="h-4 w-4" />

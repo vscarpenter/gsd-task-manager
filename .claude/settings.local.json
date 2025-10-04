@@ -14,7 +14,13 @@
       "Bash(chmod:*)",
       "Bash(find:*)",
       "Bash(npm run test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git log:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nUpdate app to light theme with pastel colors and enhance UI\n\nMajor theme overhaul:\n- Convert from dark theme to light theme with white background\n- Update all components with pastel quadrant colors (blue, yellow, green, purple)\n- Fix dialog, input, textarea, and button components for light theme\n- Redesign toggle pills with explicit color variants (blue/amber)\n- Create GSD logo component with 2x2 grid design\n- Make task cards more compact (smaller padding, icon-only actions)\n\nEnhancements:\n- Expand help dialog with tips, keyboard shortcuts, and matrix explanation\n- Make help button and theme toggle more visible (variant=\"subtle\")\n- Add .claude/ directory with local settings\n- Create CLAUDE.md documentation for future Claude Code instances\n- Update .gitignore to exclude temp files and directories\n- Add pnpm-lock.yaml for dependency locking\n- Add clean/prebuild scripts to package.json\n- Update service worker to filter non-HTTP requests\n- Fix ESLint errors (unescaped quotes, vitest config)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(pnpm test:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:pagespeed.web.dev)"
     ],
     "deny": [],
     "ask": []

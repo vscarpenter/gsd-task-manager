@@ -21,9 +21,17 @@ const config: Config = {
           DEFAULT: "#ffffff",
           foreground: "#f8f9fa"
         },
+        foreground: {
+          DEFAULT: "#0f172a",
+          muted: "#64748b"
+        },
         accent: {
           DEFAULT: "#6366f1",
           muted: "#a5b4fc"
+        },
+        muted: {
+          DEFAULT: "#64748b",
+          foreground: "#64748b"
         },
         quadrant: {
           focus: "#dbeafe",      // light blue pastel

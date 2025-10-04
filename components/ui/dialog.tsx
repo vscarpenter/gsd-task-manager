@@ -39,7 +39,7 @@ export const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="button-reset absolute right-4 top-4 rounded-full p-1 text-slate-400 transition hover:text-slate-600"
+        className="button-reset absolute right-4 top-4 rounded-full p-1 text-slate-500 transition hover:text-slate-700"
         aria-label="Close"
       >
         <Cross2Icon className="h-4 w-4" />

@@ -46,7 +46,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardP
         </button>
       </div>
 
-      <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+      <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
         <span className="truncate">Due {dueLabel}</span>
         <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
           <button

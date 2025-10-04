@@ -28,7 +28,7 @@ export function MatrixColumn({ quadrant, tasks, onEdit, onDelete, onToggleComple
 
       <div className="space-y-3">
         {tasks.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-4 text-sm text-slate-500">
+          <p className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-4 text-sm text-slate-600">
             Nothing here yet - drop something that matches this quadrant.
           </p>
         ) : (
