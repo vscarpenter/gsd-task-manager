@@ -50,7 +50,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <Button onClick={() => window.location.reload()}>
               Reload page
             </Button>
-            <Button variant="outline" onClick={() => window.location.href = "/"}>
+            <Button variant="subtle" onClick={() => window.location.href = "/"}>
               Go home
             </Button>
           </div>

@@ -11,6 +11,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://gsd-taskmanager.com"),
   title: "GSD Task Manager",
   description: "Prioritize what matters with a privacy-first Eisenhower matrix.",
   manifest: "/manifest.json",
