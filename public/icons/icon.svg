@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="matrixGradient" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#2fd07e" />
+      <stop offset="50%" stop-color="#4dabf7" />
+      <stop offset="100%" stop-color="#ff6b6b" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#0b1723" />
+  <g transform="translate(96 96)" stroke="url(#matrixGradient)" stroke-width="18" stroke-linecap="round">
+    <rect x="0" y="0" width="140" height="140" rx="28" fill="rgba(47,208,126,0.15)" />
+    <rect x="180" y="0" width="140" height="140" rx="28" fill="rgba(255,209,102,0.12)" />
+    <rect x="0" y="180" width="140" height="140" rx="28" fill="rgba(77,171,247,0.12)" />
+    <rect x="180" y="180" width="140" height="140" rx="28" fill="rgba(108,117,125,0.18)" />
+  </g>
+  <path d="M140 380 L256 140 L372 380 Z" fill="url(#matrixGradient)" opacity="0.75" />
+</svg>
