@@ -1,0 +1,77 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#ffffff"/>
+
+  <!-- Gradient Background Overlay -->
+  <rect width="1200" height="630" fill="url(#gradient)"/>
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Large GSD Matrix Logo (centered-left) -->
+  <g transform="translate(120, 165)">
+    <!-- 2x2 Matrix Grid (scaled up) -->
+    <rect x="0" y="0" width="130" height="130" rx="12" fill="#dbeafe"/>
+    <rect x="150" y="0" width="130" height="130" rx="12" fill="#fef9c3"/>
+    <rect x="0" y="150" width="130" height="130" rx="12" fill="#d1fae5"/>
+    <rect x="150" y="150" width="130" height="130" rx="12" fill="#f3e8ff"/>
+
+    <!-- Checkmark in top-left quadrant -->
+    <path d="M40 65L55 80L90 45" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Border outline -->
+    <rect x="0" y="0" width="280" height="280" rx="20" stroke="#64748b" stroke-width="4" fill="none"/>
+  </g>
+
+  <!-- Title -->
+  <text x="500" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#0f172a">
+    GSD Task Manager
+  </text>
+
+  <!-- Subtitle -->
+  <text x="500" y="330" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="400" fill="#64748b">
+    Prioritize what matters with the
+  </text>
+
+  <!-- Subtitle line 2 -->
+  <text x="500" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="400" fill="#64748b">
+    Eisenhower Matrix
+  </text>
+
+  <!-- Features badges -->
+  <g transform="translate(500, 430)">
+    <!-- Privacy-first badge -->
+    <rect x="0" y="0" width="180" height="50" rx="25" fill="#6366f1" fill-opacity="0.1" stroke="#6366f1" stroke-width="2"/>
+    <text x="90" y="32" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#6366f1" text-anchor="middle">
+      Privacy-First
+    </text>
+
+    <!-- Offline badge -->
+    <rect x="200" y="0" width="140" height="50" rx="25" fill="#6366f1" fill-opacity="0.1" stroke="#6366f1" stroke-width="2"/>
+    <text x="270" y="32" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#6366f1" text-anchor="middle">
+      Offline PWA
+    </text>
+
+    <!-- Free badge -->
+    <rect x="360" y="0" width="100" height="50" rx="25" fill="#6366f1" fill-opacity="0.1" stroke="#6366f1" stroke-width="2"/>
+    <text x="410" y="32" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" fill="#6366f1" text-anchor="middle">
+      Free
+    </text>
+  </g>
+
+  <!-- Decorative dots pattern (top right) -->
+  <g opacity="0.3">
+    <circle cx="1050" cy="80" r="4" fill="#6366f1"/>
+    <circle cx="1070" cy="80" r="4" fill="#6366f1"/>
+    <circle cx="1090" cy="80" r="4" fill="#6366f1"/>
+    <circle cx="1050" cy="100" r="4" fill="#6366f1"/>
+    <circle cx="1070" cy="100" r="4" fill="#6366f1"/>
+    <circle cx="1090" cy="100" r="4" fill="#6366f1"/>
+    <circle cx="1050" cy="120" r="4" fill="#6366f1"/>
+    <circle cx="1070" cy="120" r="4" fill="#6366f1"/>
+    <circle cx="1090" cy="120" r="4" fill="#6366f1"/>
+  </g>
+</svg>
