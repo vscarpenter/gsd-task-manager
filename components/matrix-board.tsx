@@ -9,6 +9,7 @@ import { HelpDialog } from "@/components/help-dialog";
 import { TaskForm } from "@/components/task-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { quadrants, quadrantOrder } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
@@ -52,8 +53,10 @@ export function MatrixBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
+  const { showToast } = useToast();
 
   const filteredQuadrants = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -81,26 +84,45 @@ export function MatrixBoard() {
   const closeDialog = () => setDialogState(null);
 
   const handleSubmit = async (draft: TaskDraft) => {
+    setIsLoading(true);
     try {
       if (dialogState?.mode === "edit" && dialogState.task) {
         await updateTask(dialogState.task.id, draft);
       } else {
         await createTask(draft);
       }
+      closeDialog();
     } catch (error) {
       console.error(error);
       window.alert("Unable to save task. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDelete = async (task: TaskRecord) => {
-    const confirmed = window.confirm(`Delete "${task.title}"? This cannot be undone.`);
-    if (!confirmed) {
-      return;
-    }
     try {
+      // Store task data for undo
+      const taskData = { ...task };
+
       await deleteTask(task.id);
       closeDialog();
+
+      showToast(
+        `Deleted "${task.title}"`,
+        {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await createTask(toDraft(taskData));
+            } catch (error) {
+              console.error(error);
+              window.alert("Failed to restore task.");
+            }
+          }
+        },
+        5000
+      );
     } catch (error) {
       console.error(error);
       window.alert("Failed to delete task.");
@@ -117,6 +139,7 @@ export function MatrixBoard() {
   };
 
   const handleExport = async () => {
+    setIsLoading(true);
     try {
       const json = await exportToJson();
       const blob = new Blob([json], { type: "application/json" });
@@ -129,16 +152,21 @@ export function MatrixBoard() {
     } catch (error) {
       console.error(error);
       window.alert("Export failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleImport = async (file: File) => {
+    setIsLoading(true);
     try {
       const contents = await file.text();
       await importFromJson(contents);
     } catch (error) {
       console.error(error);
       window.alert("Import failed. Ensure you selected a valid export file.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -191,6 +219,7 @@ export function MatrixBoard() {
         onImport={handleImport}
         searchInputRef={searchInputRef}
         onHelp={() => setHelpOpen(true)}
+        isLoading={isLoading}
       />
 
       <main className="px-6 pb-10">

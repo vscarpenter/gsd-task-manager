@@ -15,9 +15,10 @@ interface AppHeaderProps {
   onImport: (file: File) => Promise<void>;
   searchInputRef: RefObject<HTMLInputElement>;
   onHelp: () => void;
+  isLoading?: boolean;
 }
 
-export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, onImport, searchInputRef, onHelp }: AppHeaderProps) {
+export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, onImport, searchInputRef, onHelp, isLoading }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -75,10 +76,10 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
           onChange={handleImportChange}
           aria-hidden
         />
-        <Button variant="subtle" onClick={() => fileInputRef.current?.click()}>
+        <Button variant="subtle" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
           <UploadIcon className="mr-2 h-4 w-4" /> Import JSON
         </Button>
-        <Button variant="subtle" onClick={onExport}>
+        <Button variant="subtle" onClick={onExport} disabled={isLoading}>
           <DownloadIcon className="mr-2 h-4 w-4" /> Export
         </Button>
       </div>
