@@ -1,32 +1,109 @@
 # GSD Task Manager
 
-GSD Task Manager is a privacy-first Eisenhower matrix built with Next.js App Router, TypeScript, Tailwind CSS, Dexie, and shadcn-inspired components. All task data lives in the browser via IndexedDB and can be exported or imported as JSON.
+**Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
-## Getting Started
+Live at [gsd.vinny.dev](https://gsd.vinny.dev)
 
-```bash
-pnpm install
-pnpm dev
+## What is the Eisenhower Matrix?
+
+The Eisenhower Matrix is a productivity framework that helps you prioritize tasks by urgency and importance. It's named after President Dwight D. Eisenhower, who famously said: *"What is important is seldom urgent, and what is urgent is seldom important."*
+
+The matrix divides tasks into four quadrants:
+
+```
+                    URGENT              NOT URGENT
+              ┌──────────────────┬──────────────────┐
+  IMPORTANT   │   DO FIRST       │   SCHEDULE       │
+              │   (Quadrant 1)   │   (Quadrant 2)   │
+              │                  │                  │
+              │  Critical tasks  │  Long-term goals │
+              │  requiring       │  and strategic   │
+              │  immediate       │  planning        │
+              │  attention       │                  │
+              ├──────────────────┼──────────────────┤
+NOT IMPORTANT │   DELEGATE       │   ELIMINATE      │
+              │   (Quadrant 3)   │   (Quadrant 4)   │
+              │                  │                  │
+              │  Tasks that can  │  Time-wasters    │
+              │  be delegated    │  and             │
+              │  to others       │  distractions    │
+              │                  │                  │
+              └──────────────────┴──────────────────┘
 ```
 
-The development server runs at `http://localhost:3000`. Use the keyboard shortcuts `n`, `/`, and `?` for quick task creation, search, and help.
+### The Four Quadrants
 
-## Available Scripts
+- **Q1: Urgent + Important (Do First)** — Crises, deadlines, emergencies. Handle these immediately.
+- **Q2: Not Urgent + Important (Schedule)** — Strategic planning, learning, relationship building. This is where you should spend most of your time.
+- **Q3: Urgent + Not Important (Delegate)** — Interruptions, some emails, other people's priorities. Delegate these when possible.
+- **Q4: Not Urgent + Not Important (Eliminate)** — Time-wasters, busy work, mindless scrolling. Minimize or eliminate these.
 
-- `pnpm dev` - start the Next.js development server with App Router
-- `pnpm lint` - run ESLint with the Next.js config
-- `pnpm test` - execute Vitest in CI mode using the `jsdom` environment
-- `pnpm build` - build the production bundle
-- `pnpm export` - static export for S3/CloudFront deployments
+## How GSD Works
 
-## Testing
+GSD Task Manager is a **completely private** task manager that runs entirely in your browser. Your tasks never leave your device — everything is stored locally using IndexedDB.
 
-Vitest is configured with Testing Library helpers. Example suites live in `tests/` and target utility logic and soon UI behavior. Aim for at least 80% statement coverage using `pnpm test -- --coverage` before shipping changes.
+### Features
 
-## PWA
+✅ **Privacy-first** — All data stays on your device
+✅ **Works offline** — Install as a PWA (Progressive Web App)
+✅ **Eisenhower Matrix** — Organize tasks by urgency and importance
+✅ **Drag & drop** — Move tasks between quadrants
+✅ **Export/Import** — Back up your tasks as JSON
+✅ **Keyboard shortcuts** — Fast task entry and navigation
+✅ **Dark mode** — Easy on the eyes
 
-The app registers a service worker (`public/sw.js`) and ships a manifest (`public/manifest.json`) so it can be installed on desktop and mobile. Visit `/install` for platform-specific installation guidance.
+## How to Use
 
-## Data Storage
+### Creating Tasks
 
-Tasks persist via Dexie-managed IndexedDB tables (`lib/db.ts`). Use the export/import controls in the header to back up or restore task data. Schema validation is handled with `zod` in `lib/schema.ts`.
+1. Click **"New Task"** or press `n`
+2. Enter a task title
+3. Optionally add a description
+4. Mark the task as **Urgent** and/or **Important**
+5. Click **"Add Task"**
+
+Your task will automatically appear in the correct quadrant based on your selections.
+
+### Managing Tasks
+
+- **Complete a task** — Click the checkmark icon
+- **Edit a task** — Click the edit icon (pencil)
+- **Delete a task** — Click the delete icon (trash)
+- **Move between quadrants** — Drag and drop tasks, or edit to change urgency/importance
+
+### Keyboard Shortcuts
+
+- `n` — Create a new task
+- `/` — Focus the search bar
+- `?` — Show help dialog
+
+### Backing Up Your Data
+
+Since all your tasks are stored locally in your browser:
+
+1. Click **"Export Tasks"** in the footer to download a JSON backup
+2. Click **"Import Tasks"** to restore from a backup file
+
+**Important:** Clearing your browser data will delete your tasks. Export regularly to avoid data loss!
+
+### Installing as a PWA
+
+GSD can be installed on your desktop or mobile device for offline access:
+
+- **Desktop (Chrome/Edge):** Click the install icon in the address bar
+- **Mobile (iOS Safari):** Tap Share → "Add to Home Screen"
+- **Mobile (Android Chrome):** Tap the three-dot menu → "Install app"
+
+Visit the [Install page](https://gsd.vinny.dev/install) for detailed instructions.
+
+## Tips for Success
+
+1. **Start your day in Quadrant 2** — Focus on important, non-urgent tasks before firefighting begins
+2. **Review weekly** — Move tasks between quadrants as priorities shift
+3. **Be honest about urgency** — Not everything is urgent, even if it feels that way
+4. **Eliminate ruthlessly** — If a task stays in Q4 for weeks, delete it
+5. **Export regularly** — Keep backups of your task data
+
+---
+
+For developers interested in contributing or self-hosting, see [TECHNICAL.md](./TECHNICAL.md).

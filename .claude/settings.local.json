@@ -21,7 +21,11 @@
       "Bash(pnpm test:*)",
       "Bash(git commit:*)",
       "WebFetch(domain:pagespeed.web.dev)",
-      "Bash(rsvg-convert:*)"
+      "Bash(rsvg-convert:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm dev:*)"
     ],
     "deny": [],
     "ask": []
