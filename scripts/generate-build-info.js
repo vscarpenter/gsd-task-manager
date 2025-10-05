@@ -3,20 +3,37 @@
 const fs = require('fs');
 const path = require('path');
 
+const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
 const BUILD_INFO_FILE = path.join(__dirname, '..', '.build-info.json');
 
+// Read package.json to get base version
+const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
+const baseVersion = packageJson.version || '0.1.0';
+
+// Parse semantic version (e.g., "0.1.6" -> { major: 0, minor: 1, patch: 6 })
+const [major, minor, patch] = baseVersion.split('.').map(Number);
+
 // Read or initialize build info
-let buildInfo = { buildNumber: 0 };
+let buildInfo = { version: baseVersion };
 if (fs.existsSync(BUILD_INFO_FILE)) {
   try {
     buildInfo = JSON.parse(fs.readFileSync(BUILD_INFO_FILE, 'utf8'));
   } catch (err) {
-    console.warn('Failed to read build info, starting from 0');
+    console.warn('Failed to read build info, using package.json version');
   }
 }
 
-// Increment build number
-buildInfo.buildNumber += 1;
+// If the base version in package.json changed, reset to that version
+// Otherwise, increment the patch number
+let newVersion;
+if (buildInfo.version !== baseVersion) {
+  newVersion = baseVersion;
+} else {
+  const [currentMajor, currentMinor, currentPatch] = buildInfo.version.split('.').map(Number);
+  newVersion = `${currentMajor}.${currentMinor}.${currentPatch + 1}`;
+}
+
+buildInfo.version = newVersion;
 
 // Generate friendly date format: "Jan 5, 2025 at 2:30 PM"
 const now = new Date();
@@ -38,7 +55,7 @@ fs.writeFileSync(BUILD_INFO_FILE, JSON.stringify(buildInfo, null, 2));
 
 // Write environment variables to a sourceable file
 const envFile = path.join(__dirname, '..', '.build-env.sh');
-const envContent = `export NEXT_PUBLIC_BUILD_NUMBER=${buildInfo.buildNumber}\nexport NEXT_PUBLIC_BUILD_DATE="${buildInfo.buildDate}"\n`;
+const envContent = `export NEXT_PUBLIC_BUILD_NUMBER=${buildInfo.version}\nexport NEXT_PUBLIC_BUILD_DATE="${buildInfo.buildDate}"\n`;
 fs.writeFileSync(envFile, envContent);
 
-console.log(`Build ${buildInfo.buildNumber} generated for ${buildInfo.buildDate}`);
+console.log(`Build ${buildInfo.version} generated for ${buildInfo.buildDate}`);
