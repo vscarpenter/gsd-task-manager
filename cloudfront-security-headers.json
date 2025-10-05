@@ -1,0 +1,68 @@
+{
+  "Comment": "Security headers configuration for CloudFront - Apply via Response Headers Policy",
+  "ResponseHeadersPolicy": {
+    "Name": "gsd-security-headers",
+    "Comment": "Security headers for GSD Task Manager",
+    "SecurityHeadersConfig": {
+      "StrictTransportSecurity": {
+        "AccessControlMaxAgeSec": 63072000,
+        "IncludeSubdomains": true,
+        "Preload": true,
+        "Override": true
+      },
+      "ContentTypeOptions": {
+        "Override": true
+      },
+      "FrameOptions": {
+        "FrameOption": "DENY",
+        "Override": true
+      },
+      "XSSProtection": {
+        "ModeBlock": true,
+        "Protection": true,
+        "Override": true
+      },
+      "ReferrerPolicy": {
+        "ReferrerPolicy": "strict-origin-when-cross-origin",
+        "Override": true
+      },
+      "ContentSecurityPolicy": {
+        "ContentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+        "Override": true
+      }
+    },
+    "CustomHeadersConfig": {
+      "Items": [
+        {
+          "Header": "Permissions-Policy",
+          "Value": "geolocation=(), microphone=(), camera=(), payment=()",
+          "Override": true
+        }
+      ]
+    }
+  },
+  "Instructions": {
+    "step1": "Go to AWS CloudFront Console",
+    "step2": "Navigate to 'Policies' > 'Response headers'",
+    "step3": "Click 'Create response headers policy'",
+    "step4": "Use the configuration from ResponseHeadersPolicy above",
+    "step5": "Attach the policy to your CloudFront distribution",
+    "alternative_cli": "Use the AWS CLI command below to create the policy",
+    "cli_command": "aws cloudfront create-response-headers-policy --cli-input-json file://cloudfront-security-headers.json"
+  },
+  "CSP_Explanation": {
+    "default-src": "'self' - Only allow resources from same origin",
+    "script-src": "'self' 'unsafe-inline' 'unsafe-eval' - Required for Next.js hydration and React DevTools",
+    "style-src": "'self' 'unsafe-inline' - Required for Tailwind and inline styles",
+    "img-src": "'self' data: blob: - Allow images from same origin, data URIs, and blobs",
+    "font-src": "'self' data: - Allow fonts from same origin and data URIs",
+    "connect-src": "'self' - Only allow fetch/XHR to same origin",
+    "frame-ancestors": "'none' - Prevent clickjacking (same as X-Frame-Options: DENY)",
+    "base-uri": "'self' - Restrict <base> tag URLs",
+    "form-action": "'self' - Restrict form submissions to same origin"
+  },
+  "Production_Optimized_CSP": {
+    "note": "For production, tighten CSP by removing 'unsafe-inline' and 'unsafe-eval' if possible",
+    "recommended": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+  }
+}
