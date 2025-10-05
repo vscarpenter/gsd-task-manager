@@ -10,33 +10,14 @@ The Eisenhower Matrix is a productivity framework that helps you prioritize task
 
 The matrix divides tasks into four quadrants:
 
-```
-                    URGENT              NOT URGENT
-              ┌──────────────────┬──────────────────┐
-  IMPORTANT   │   DO FIRST       │   SCHEDULE       │
-              │   (Quadrant 1)   │   (Quadrant 2)   │
-              │                  │                  │
-              │  Critical tasks  │  Long-term goals │
-              │  requiring       │  and strategic   │
-              │  immediate       │  planning        │
-              │  attention       │                  │
-              ├──────────────────┼──────────────────┤
-NOT IMPORTANT │   DELEGATE       │   ELIMINATE      │
-              │   (Quadrant 3)   │   (Quadrant 4)   │
-              │                  │                  │
-              │  Tasks that can  │  Time-wasters    │
-              │  be delegated    │  and             │
-              │  to others       │  distractions    │
-              │                  │                  │
-              └──────────────────┴──────────────────┘
-```
+![Eisenhower Matrix](public/gsd-matrix.png)
 
 ### The Four Quadrants
 
-- **Q1: Urgent + Important (Do First)** — Crises, deadlines, emergencies. Handle these immediately.
-- **Q2: Not Urgent + Important (Schedule)** — Strategic planning, learning, relationship building. This is where you should spend most of your time.
-- **Q3: Urgent + Not Important (Delegate)** — Interruptions, some emails, other people's priorities. Delegate these when possible.
-- **Q4: Not Urgent + Not Important (Eliminate)** — Time-wasters, busy work, mindless scrolling. Minimize or eliminate these.
+- **Do First (Urgent + Important)** — Crises, deadlines, emergencies. Handle these immediately.
+- **Schedule (Not Urgent + Important)** — Strategic planning, learning, relationship building. This is where you should spend most of your time.
+- **Delegate (Urgent + Not Important)** — Interruptions, some emails, other people's priorities. Delegate these when possible.
+- **Eliminate (Not Urgent + Not Important)** — Time-wasters, busy work, mindless scrolling. Minimize or eliminate these.
 
 ## How GSD Works
 
