@@ -134,21 +134,46 @@ Disables unnecessary browser features.
 
 ### Option 2: AWS CLI
 
-Use the provided configuration file:
+1. **Create the Response Headers Policy:**
 
-```bash
-aws cloudfront create-response-headers-policy \
-  --cli-input-json file://cloudfront-security-headers.json
-```
+   ```bash
+   aws cloudfront create-response-headers-policy \
+     --cli-input-json file://cloudfront-security-headers.json
+   ```
 
-Then attach the policy to your distribution:
+   This will output a policy ID. Save it for the next step.
 
-```bash
-aws cloudfront update-distribution \
-  --id E1T6GDX0TQEP94 \
-  --if-match <ETAG> \
-  --distribution-config file://distribution-config.json
-```
+2. **Get your distribution configuration:**
+
+   ```bash
+   aws cloudfront get-distribution-config \
+     --id E1T6GDX0TQEP94 > dist-config.json
+   ```
+
+3. **Extract the ETag and config:**
+
+   The output contains an `ETag` field - you'll need this for the update.
+   Edit the `DistributionConfig` section and add the policy ID to `DefaultCacheBehavior`:
+
+   ```json
+   {
+     "DefaultCacheBehavior": {
+       "ResponseHeadersPolicyId": "YOUR-POLICY-ID-FROM-STEP-1",
+       ...
+     }
+   }
+   ```
+
+4. **Update the distribution:**
+
+   ```bash
+   aws cloudfront update-distribution \
+     --id E1T6GDX0TQEP94 \
+     --if-match ETAG-FROM-STEP-2 \
+     --distribution-config file://dist-config.json
+   ```
+
+See `cloudfront-security-headers-reference.md` for detailed instructions and troubleshooting.
 
 ### Option 3: Terraform/CloudFormation
 

@@ -28,7 +28,8 @@
       "Bash(pnpm dev:*)",
       "Bash(gh release create v1.0 --title \"v1.0 - Initial Release\" --notes \"$(cat <<''EOF''\n# GSD Task Manager v1.0 🎉\n\nFirst stable release of GSD Task Manager - a privacy-first Eisenhower Matrix task manager built with Next.js.\n\n## 🌟 Key Features\n\n- **Eisenhower Matrix Implementation** - Organize tasks by urgency and importance across four quadrants\n- **Privacy-First** - All data stored locally in IndexedDB, nothing sent to servers\n- **Progressive Web App** - Install on desktop and mobile for offline access\n- **Drag & Drop** - Move tasks between quadrants with ease\n- **Keyboard Shortcuts** - Fast task entry (`n`), search (`/`), and help (`?`)\n- **Export/Import** - Backup and restore your tasks as JSON\n- **Enhanced Onboarding** - Comprehensive welcome experience for new users\n- **Dark Mode Support** - Easy on the eyes\n\n## 📋 What''s Included\n\n- Complete task management (create, edit, delete, complete)\n- Visual quadrant system with color-coded organization\n- Real-time search and filtering\n- Responsive design for all devices\n- Comprehensive documentation (README.md, TECHNICAL.md, CLAUDE.md)\n\n## 🚀 Quick Start\n\nVisit [gsd.vinny.dev](https://gsd.vinny.dev) to start using the app, or self-host by following the instructions in TECHNICAL.md.\n\n## 📦 Recent Changes\n\n- Enhanced onboarding experience with visual matrix guide\n- Updated documentation with gsd-matrix.png visual\n- Restructured README for end users\n- Added comprehensive TECHNICAL.md for developers\n- Drag-and-drop task movement between quadrants\n- Open Graph social share image\n- Lighthouse accessibility and SEO improvements\n\n---\n\nBuilt with Next.js 15, TypeScript, Tailwind CSS, Dexie, and ❤️\nEOF\n)\")",
       "Bash(pnpm audit:*)",
-      "Bash(pnpm update:*)"
+      "Bash(pnpm update:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
