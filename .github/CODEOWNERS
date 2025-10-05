@@ -1,0 +1,10 @@
+# This file defines code owners for the repository.
+# Code owners are automatically requested for review when someone opens a pull request.
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owner - will be requested for review on all PRs
+* @vscarpenter
+
+# Specific overrides (add these as your project grows)
+# /docs/ @vscarpenter @documentation-team
+# /.github/ @vscarpenter
