@@ -6,7 +6,7 @@
     "dev": "next dev",
     "clean": "rm -rf .next out",
     "prebuild": "npm run clean",
-    "build": "next build",
+    "build": "node scripts/generate-build-info.js && source .build-env.sh && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
