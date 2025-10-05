@@ -1,4 +1,5 @@
-const CACHE_NAME = "gsd-cache-v1";
+// Use timestamp for cache versioning to ensure iOS devices get updates
+const CACHE_NAME = `gsd-cache-${Date.now()}`;
 const OFFLINE_ASSETS = ["/", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -34,26 +35,49 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  // Network-first strategy for HTML to ensure fresh content on iOS
+  const isHTMLRequest = request.headers.get('accept')?.includes('text/html') ||
+                        request.url.endsWith('/') ||
+                        request.url.endsWith('.html');
 
-      return fetch(request)
+  if (isHTMLRequest) {
+    event.respondWith(
+      fetch(request)
         .then((response) => {
-          // Only cache successful responses
-          if (response && response.status === 200 && response.type === 'basic') {
+          // Cache the fresh HTML response
+          if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, clone).catch(() => {
-                // Silently fail if caching fails
-              });
+              cache.put(request, clone).catch(() => {});
             });
           }
           return response;
         })
-        .catch(() => caches.match("/"));
-    })
-  );
+        .catch(() => caches.match(request).then(cached => cached || caches.match("/")))
+    );
+  } else {
+    // Cache-first for static assets
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return fetch(request)
+          .then((response) => {
+            // Only cache successful responses
+            if (response && response.status === 200 && response.type === 'basic') {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, clone).catch(() => {
+                  // Silently fail if caching fails
+                });
+              });
+            }
+            return response;
+          })
+          .catch(() => caches.match("/"));
+      })
+    );
+  }
 });
