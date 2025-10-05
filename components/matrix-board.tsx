@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
@@ -11,12 +12,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { quadrants, quadrantOrder } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
-import type { TaskDraft, TaskRecord } from "@/lib/types";
+import type { QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import {
   createTask,
   deleteTask,
   exportToJson,
   importFromJson,
+  moveTaskToQuadrant,
   toggleCompleted,
   updateTask
 } from "@/lib/tasks";
@@ -55,6 +57,21 @@ export function MatrixBoard() {
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+
+  // Configure sensors for drag-and-drop (mouse + touch)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8 // Prevent accidental drags
+      }
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5
+      }
+    })
+  );
 
   const filteredQuadrants = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -168,6 +185,24 @@ export function MatrixBoard() {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const taskId = active.id as string;
+    const targetQuadrant = over.id as QuadrantId;
+
+    try {
+      await moveTaskToQuadrant(taskId, targetQuadrant);
+    } catch (error) {
+      console.error(error);
+      showToast("Failed to move task. Please try again.", undefined, 3000);
+    }
+  };
+
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (isTypingElement(event.target)) {
@@ -203,72 +238,74 @@ export function MatrixBoard() {
   const hasTasks = all.length > 0;
 
   return (
-    <div className="space-y-8">
-      <AppHeader
-        onNewTask={() => setDialogState({ mode: "create" })}
-        onSearchChange={setSearchQuery}
-        searchQuery={searchQuery}
-        onExport={handleExport}
-        onImport={handleImport}
-        searchInputRef={searchInputRef}
-        onHelp={() => setHelpOpen(true)}
-        isLoading={isLoading}
-      />
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="space-y-8">
+        <AppHeader
+          onNewTask={() => setDialogState({ mode: "create" })}
+          onSearchChange={setSearchQuery}
+          searchQuery={searchQuery}
+          onExport={handleExport}
+          onImport={handleImport}
+          searchInputRef={searchInputRef}
+          onHelp={() => setHelpOpen(true)}
+          isLoading={isLoading}
+        />
 
-      <main className="px-6 pb-10">
-        {!hasTasks ? (
-          <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-            <h2 className="text-xl font-semibold text-slate-900">Build your Eisenhower matrix</h2>
-            <p className="mt-3 text-sm text-slate-600">
-              Start by adding a task. We will help you categorize it by urgency and importance and keep it synced offline in IndexedDB.
-            </p>
-            <Button className="mt-6" onClick={() => setDialogState({ mode: "create" })}>
-              Create your first task
-            </Button>
-          </div>
-        ) : visibleCount === 0 ? (
-          <div className="mx-auto max-w-xl rounded-3xl border border-slate-300 bg-slate-50 p-8 text-center">
-            <h2 className="text-lg font-semibold text-slate-900">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
-            <p className="mt-2 text-sm text-slate-600">Try a different search term or clear the filter.</p>
-            <Button className="mt-4" variant="subtle" onClick={() => setSearchQuery("")}
-            >
-              Clear search
-            </Button>
-          </div>
-        ) : (
-          <div className="matrix-grid">
-            {quadrants.map((quadrant) => (
-              <MatrixColumn
-                key={quadrant.id}
-                quadrant={quadrant}
-                tasks={filteredQuadrants[quadrant.id] ?? []}
-                onEdit={(task) => setDialogState({ mode: "edit", task })}
-                onDelete={handleDelete}
-                onToggleComplete={handleComplete}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+        <main className="px-6 pb-10">
+          {!hasTasks ? (
+            <div className="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+              <h2 className="text-xl font-semibold text-slate-900">Build your Eisenhower matrix</h2>
+              <p className="mt-3 text-sm text-slate-600">
+                Start by adding a task. We will help you categorize it by urgency and importance and keep it synced offline in IndexedDB.
+              </p>
+              <Button className="mt-6" onClick={() => setDialogState({ mode: "create" })}>
+                Create your first task
+              </Button>
+            </div>
+          ) : visibleCount === 0 ? (
+            <div className="mx-auto max-w-xl rounded-3xl border border-slate-300 bg-slate-50 p-8 text-center">
+              <h2 className="text-lg font-semibold text-slate-900">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
+              <p className="mt-2 text-sm text-slate-600">Try a different search term or clear the filter.</p>
+              <Button className="mt-4" variant="subtle" onClick={() => setSearchQuery("")}
+              >
+                Clear search
+              </Button>
+            </div>
+          ) : (
+            <div className="matrix-grid">
+              {quadrants.map((quadrant) => (
+                <MatrixColumn
+                  key={quadrant.id}
+                  quadrant={quadrant}
+                  tasks={filteredQuadrants[quadrant.id] ?? []}
+                  onEdit={(task) => setDialogState({ mode: "edit", task })}
+                  onDelete={handleDelete}
+                  onToggleComplete={handleComplete}
+                />
+              ))}
+            </div>
+          )}
+        </main>
 
-      <AppFooter />
+        <AppFooter />
 
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+        <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
-      <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{dialogState?.mode === "edit" ? "Edit task" : "Create task"}</DialogTitle>
-          </DialogHeader>
-          <TaskForm
-            initialValues={activeTaskDraft}
-            onSubmit={handleSubmit}
-            onCancel={closeDialog}
-            onDelete={taskBeingEdited ? () => handleDelete(taskBeingEdited) : undefined}
-            submitLabel={dialogState?.mode === "edit" ? "Update task" : "Add task"}
-          />
-        </DialogContent>
-      </Dialog>
-    </div>
+        <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{dialogState?.mode === "edit" ? "Edit task" : "Create task"}</DialogTitle>
+            </DialogHeader>
+            <TaskForm
+              initialValues={activeTaskDraft}
+              onSubmit={handleSubmit}
+              onCancel={closeDialog}
+              onDelete={taskBeingEdited ? () => handleDelete(taskBeingEdited) : undefined}
+              submitLabel={dialogState?.mode === "edit" ? "Update task" : "Add task"}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+    </DndContext>
   );
 }

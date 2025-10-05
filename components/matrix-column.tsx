@@ -1,5 +1,7 @@
 "use client";
 
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { QuadrantMeta } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
@@ -14,8 +16,21 @@ interface MatrixColumnProps {
 }
 
 export function MatrixColumn({ quadrant, tasks, onEdit, onDelete, onToggleComplete }: MatrixColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: quadrant.id
+  });
+
+  const taskIds = tasks.map((task) => task.id);
+
   return (
-    <section className={cn("matrix-card", quadrant.bgClass)}>
+    <section
+      ref={setNodeRef}
+      className={cn(
+        "matrix-card transition-all",
+        quadrant.bgClass,
+        isOver && "ring-2 ring-accent ring-offset-2"
+      )}
+    >
       <header className="matrix-card__header">
         <div>
           <h2 className="matrix-card__title">{quadrant.title}</h2>
@@ -26,23 +41,25 @@ export function MatrixColumn({ quadrant, tasks, onEdit, onDelete, onToggleComple
         </span>
       </header>
 
-      <div className="space-y-3">
-        {tasks.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-4 text-sm text-slate-600">
-            Nothing here yet - drop something that matches this quadrant.
-          </p>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggleComplete={onToggleComplete}
-            />
-          ))
-        )}
-      </div>
+      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {tasks.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-4 text-sm text-slate-600">
+              Nothing here yet - drop something that matches this quadrant.
+            </p>
+          ) : (
+            tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onToggleComplete={onToggleComplete}
+              />
+            ))
+          )}
+        </div>
+      </SortableContext>
     </section>
   );
 }

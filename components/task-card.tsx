@@ -1,6 +1,8 @@
 "use client";
 
-import { CheckIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { TaskRecord } from "@/lib/types";
 import { formatDueDate, cn } from "@/lib/utils";
 
@@ -14,21 +16,45 @@ interface TaskCardProps {
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardProps) {
   const dueLabel = formatDueDate(task.dueDate);
 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined
+  };
+
   return (
     <article
+      ref={setNodeRef}
+      style={style}
       className={cn(
         "group flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition",
-        task.completed ? "opacity-60" : "opacity-100"
+        task.completed ? "opacity-60" : "opacity-100",
+        isDragging && "cursor-grabbing"
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold leading-snug text-slate-900 truncate">
-            {task.title}
-          </h3>
-          {task.description ? (
-            <p className="mt-0.5 text-xs text-slate-600 line-clamp-2">{task.description}</p>
-          ) : null}
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          <button
+            type="button"
+            className="cursor-grab touch-none shrink-0 rounded p-0.5 opacity-0 transition group-hover:opacity-100 hover:bg-slate-100"
+            aria-label="Drag to move task"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVerticalIcon className="h-4 w-4 text-slate-400" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold leading-snug text-slate-900 truncate">
+              {task.title}
+            </h3>
+            {task.description ? (
+              <p className="mt-0.5 text-xs text-slate-600 line-clamp-2">{task.description}</p>
+            ) : null}
+          </div>
         </div>
         <button
           type="button"

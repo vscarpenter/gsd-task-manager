@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
-import { resolveQuadrantId } from "@/lib/quadrants";
+import { parseQuadrantFlags, resolveQuadrantId } from "@/lib/quadrants";
 import { importPayloadSchema, taskDraftSchema, taskRecordSchema } from "@/lib/schema";
-import type { ImportPayload, TaskDraft, TaskRecord } from "@/lib/types";
+import type { ImportPayload, QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 
 export async function listTasks(): Promise<TaskRecord[]> {
@@ -74,6 +74,31 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
 export async function deleteTask(id: string): Promise<void> {
   const db = getDb();
   await db.tasks.delete(id);
+}
+
+/**
+ * Move a task to a different quadrant by updating its urgent/important flags.
+ * This is the primary handler for drag-and-drop operations.
+ */
+export async function moveTaskToQuadrant(id: string, targetQuadrant: QuadrantId): Promise<TaskRecord> {
+  const db = getDb();
+  const existing = await db.tasks.get(id);
+  if (!existing) {
+    throw new Error(`Task ${id} not found`);
+  }
+
+  const { urgent, important } = parseQuadrantFlags(targetQuadrant);
+
+  const nextRecord: TaskRecord = {
+    ...existing,
+    urgent,
+    important,
+    quadrant: targetQuadrant,
+    updatedAt: isoNow()
+  };
+
+  await db.tasks.put(nextRecord);
+  return nextRecord;
 }
 
 export async function clearTasks(): Promise<void> {
