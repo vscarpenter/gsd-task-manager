@@ -75,7 +75,7 @@ GSD can be installed on your desktop or mobile device for offline access:
 - **Mobile (iOS Safari):** Tap Share → "Add to Home Screen"
 - **Mobile (Android Chrome):** Tap the three-dot menu → "Install app"
 
-Visit the [Install page](https://gsd.vinny.dev/install) for detailed instructions.
+Visit the [Install page](https://gsd.vinny.dev/install.html) for detailed instructions.
 
 ## Tips for Success
 
