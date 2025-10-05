@@ -127,8 +127,16 @@ export async function importTasks(payload: ImportPayload): Promise<void> {
 }
 
 export async function importFromJson(raw: string): Promise<void> {
-  const payload = JSON.parse(raw);
-  await importTasks(payload);
+  try {
+    const payload = JSON.parse(raw);
+    await importTasks(payload);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error("Invalid JSON format. Please ensure you selected a valid export file.");
+    }
+    // Re-throw validation errors from importTasks/schema with their original messages
+    throw error;
+  }
 }
 
 export async function exportToJson(): Promise<string> {

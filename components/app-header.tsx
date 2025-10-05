@@ -12,7 +12,7 @@ interface AppHeaderProps {
   searchQuery: string;
   onExport: () => Promise<void>;
   onImport: (file: File) => Promise<void>;
-  searchInputRef: RefObject<HTMLInputElement>;
+  searchInputRef: RefObject<HTMLInputElement | null>;
   onHelp: () => void;
   isLoading?: boolean;
 }
