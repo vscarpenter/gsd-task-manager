@@ -2,7 +2,7 @@
 
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
-Live at [gsd.vinny.dev](https://gsd.vinny.dev)
+Live running app at [gsd.vinny.dev](https://gsd.vinny.dev)
 
 ## What is the Eisenhower Matrix?
 
