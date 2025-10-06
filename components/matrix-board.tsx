@@ -255,17 +255,17 @@ export function MatrixBoard() {
           {!hasTasks ? (
             <div className="mx-auto max-w-3xl space-y-8">
               {/* Welcome header */}
-              <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-8 text-center shadow-sm">
-                <h2 className="text-2xl font-bold text-slate-900">Welcome to GSD Task Manager</h2>
-                <p className="mt-3 text-base text-slate-600">
+              <div className="rounded-3xl border border-card-border bg-gradient-to-br from-background-muted to-background p-8 text-center shadow-sm">
+                <h2 className="text-2xl font-bold text-foreground">Welcome to GSD Task Manager</h2>
+                <p className="mt-3 text-base text-foreground-muted">
                   <span className="font-semibold">Get Stuff Done</span> using the Eisenhower Matrix — a proven productivity framework that helps you prioritize what truly matters.
                 </p>
               </div>
 
               {/* Matrix explanation */}
-              <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900">How the Eisenhower Matrix Works</h3>
-                <p className="mt-2 text-sm text-slate-600">
+              <div className="rounded-3xl border border-card-border bg-card p-8 shadow-sm">
+                <h3 className="text-lg font-semibold text-foreground">How the Eisenhower Matrix Works</h3>
+                <p className="mt-2 text-sm text-foreground-muted">
                   Tasks are organized into four quadrants based on urgency and importance:
                 </p>
 
@@ -321,24 +321,24 @@ export function MatrixBoard() {
               </div>
 
               {/* Quick tips */}
-              <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900">Quick Tips</h3>
-                <ul className="mt-4 space-y-2 text-sm text-slate-600">
+              <div className="rounded-3xl border border-card-border bg-card p-8 shadow-sm">
+                <h3 className="text-lg font-semibold text-foreground">Quick Tips</h3>
+                <ul className="mt-4 space-y-2 text-sm text-foreground-muted">
                   <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-slate-400">•</span>
-                    <span>Press <kbd className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700">n</kbd> to create a new task</span>
+                    <span className="mt-0.5 text-foreground-muted">•</span>
+                    <span>Press <kbd className="rounded border border-border bg-background-muted px-1.5 py-0.5 text-xs font-semibold text-foreground">n</kbd> to create a new task</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-slate-400">•</span>
+                    <span className="mt-0.5 text-foreground-muted">•</span>
                     <span>All your data stays private in your browser — nothing is sent to any server</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-slate-400">•</span>
+                    <span className="mt-0.5 text-foreground-muted">•</span>
                     <span>Export your tasks regularly to keep a backup</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-slate-400">•</span>
-                    <span>Press <kbd className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700">?</kbd> anytime to see all keyboard shortcuts</span>
+                    <span className="mt-0.5 text-foreground-muted">•</span>
+                    <span>Press <kbd className="rounded border border-border bg-background-muted px-1.5 py-0.5 text-xs font-semibold text-foreground">?</kbd> anytime to see all keyboard shortcuts</span>
                   </li>
                 </ul>
               </div>
@@ -351,9 +351,9 @@ export function MatrixBoard() {
               </div>
             </div>
           ) : visibleCount === 0 ? (
-            <div className="mx-auto max-w-xl rounded-3xl border border-slate-300 bg-slate-50 p-8 text-center">
-              <h2 className="text-lg font-semibold text-slate-900">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
-              <p className="mt-2 text-sm text-slate-600">Try a different search term or clear the filter.</p>
+            <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
+              <h2 className="text-lg font-semibold text-foreground">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
+              <p className="mt-2 text-sm text-foreground-muted">Try a different search term or clear the filter.</p>
               <Button className="mt-4" variant="subtle" onClick={() => setSearchQuery("")}
               >
                 Clear search

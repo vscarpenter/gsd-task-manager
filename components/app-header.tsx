@@ -5,6 +5,7 @@ import { PlusIcon, UploadIcon, DownloadIcon, SearchIcon, HelpCircleIcon } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GsdLogo } from "@/components/gsd-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AppHeaderProps {
   onNewTask: () => void;
@@ -30,18 +31,19 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
   };
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-slate-200 bg-white/80 px-6 py-4 backdrop-blur">
+    <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <GsdLogo className="shrink-0" />
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Prioritize what matters
             </h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button variant="subtle" className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
             <HelpCircleIcon className="h-5 w-5" />
           </Button>
@@ -56,7 +58,7 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <Input
             ref={searchInputRef}
             placeholder="Search tasks by title, description, or quadrant"
