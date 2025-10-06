@@ -22,9 +22,9 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
           <section>
             <div className="mb-3 flex items-center gap-2">
               <LightbulbIcon className="h-4 w-4 text-accent" />
-              <h3 className="font-semibold text-slate-900">Quick Tips</h3>
+              <h3 className="font-semibold text-foreground">Quick Tips</h3>
             </div>
-            <div className="space-y-2 text-sm text-slate-600">
+            <div className="space-y-2 text-sm text-foreground-muted">
               <Tip text="Tasks are automatically organized by urgency and importance into four quadrants" />
               <Tip text="Focus on 'Do First' (urgent + important) tasks to tackle high-priority items" />
               <Tip text="Use 'Schedule' (not urgent + important) for strategic planning and growth" />
@@ -38,7 +38,7 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
           <section>
             <div className="mb-3 flex items-center gap-2">
               <KeyboardIcon className="h-4 w-4 text-accent" />
-              <h3 className="font-semibold text-slate-900">Keyboard Shortcuts</h3>
+              <h3 className="font-semibold text-foreground">Keyboard Shortcuts</h3>
             </div>
             <div className="space-y-2">
               <Shortcut label="Create new task" hint="N" />
@@ -49,7 +49,7 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
 
           {/* Eisenhower Matrix Section */}
           <section>
-            <h3 className="mb-3 font-semibold text-slate-900">The Eisenhower Matrix</h3>
+            <h3 className="mb-3 font-semibold text-foreground">The Eisenhower Matrix</h3>
             <div className="space-y-2 text-sm">
               <QuadrantInfo
                 title="Do First"
@@ -99,9 +99,9 @@ interface ShortcutProps {
 
 function Shortcut({ label, hint }: ShortcutProps) {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-      <span className="text-slate-700">{label}</span>
-      <kbd className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-mono text-slate-600">
+    <div className="flex items-center justify-between rounded-lg bg-background-muted px-3 py-2 text-sm">
+      <span className="text-foreground">{label}</span>
+      <kbd className="rounded border border-border bg-background px-2 py-1 text-xs font-mono text-foreground-muted">
         {hint}
       </kbd>
     </div>
@@ -116,13 +116,13 @@ interface QuadrantInfoProps {
 
 function QuadrantInfo({ title, color, description }: QuadrantInfoProps) {
   return (
-    <div className="rounded-lg border border-slate-200 p-3">
+    <div className="rounded-lg border border-card-border p-3">
       <div className="mb-1 flex items-center gap-2">
         <span className={`rounded px-2 py-0.5 text-xs font-semibold ${color}`}>
           {title}
         </span>
       </div>
-      <p className="text-xs text-slate-600">{description}</p>
+      <p className="text-xs text-foreground-muted">{description}</p>
     </div>
   );
 }

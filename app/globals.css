@@ -4,14 +4,78 @@
 
 :root {
   color-scheme: light;
-  background-color: #ffffff;
-  color: #0f172a;
+  
+  /* Background colors */
+  --background: 255 255 255;           /* #ffffff */
+  --background-muted: 248 250 252;     /* #f8fafc */
+  --background-accent: 241 245 249;    /* #f1f5f9 */
+  
+  /* Foreground colors */
+  --foreground: 15 23 42;              /* #0f172a */
+  --foreground-muted: 100 116 139;     /* #64748b */
+  
+  /* Border colors */
+  --border: 226 232 240;               /* #e2e8f0 */
+  --border-muted: 241 245 249;         /* #f1f5f9 */
+  
+  /* Accent colors */
+  --accent: 99 102 241;                /* #6366f1 */
+  --accent-hover: 79 70 229;           /* #4f46e5 */
+  --accent-muted: 165 180 252;         /* #a5b4fc */
+  
+  /* Quadrant colors */
+  --quadrant-focus: 219 234 254;       /* #dbeafe - blue */
+  --quadrant-schedule: 254 249 195;    /* #fef9c3 - yellow */
+  --quadrant-delegate: 209 250 229;    /* #d1fae5 - green */
+  --quadrant-eliminate: 243 232 255;   /* #f3e8ff - purple */
+  
+  /* Card colors */
+  --card-background: 255 255 255;      /* #ffffff */
+  --card-border: 226 232 240;          /* #e2e8f0 */
+  
+  /* Overlay colors */
+  --overlay: 0 0 0;                    /* #000000 with opacity */
+}
+
+.dark {
+  color-scheme: dark;
+  
+  /* Background colors */
+  --background: 15 23 42;              /* #0f172a */
+  --background-muted: 30 41 59;        /* #1e293b */
+  --background-accent: 51 65 85;       /* #334155 */
+  
+  /* Foreground colors */
+  --foreground: 248 250 252;           /* #f8fafc */
+  --foreground-muted: 148 163 184;     /* #94a3b8 */
+  
+  /* Border colors */
+  --border: 51 65 85;                  /* #334155 */
+  --border-muted: 30 41 59;            /* #1e293b */
+  
+  /* Accent colors */
+  --accent: 129 140 248;               /* #818cf8 */
+  --accent-hover: 165 180 252;         /* #a5b4fc */
+  --accent-muted: 99 102 241;          /* #6366f1 */
+  
+  /* Quadrant colors - darker versions */
+  --quadrant-focus: 30 58 138;         /* #1e3a8a - dark blue */
+  --quadrant-schedule: 113 63 18;      /* #713f12 - dark yellow */
+  --quadrant-delegate: 20 83 45;       /* #14532d - dark green */
+  --quadrant-eliminate: 88 28 135;     /* #581c87 - dark purple */
+  
+  /* Card colors */
+  --card-background: 30 41 59;         /* #1e293b */
+  --card-border: 51 65 85;             /* #334155 */
+  
+  /* Overlay colors */
+  --overlay: 0 0 0;                    /* #000000 with opacity */
 }
 
 body {
   font-family: var(--font-sans, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
-  background: #ffffff;
-  color: #0f172a;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
   min-height: 100vh;
   overflow-y: scroll;
 }
@@ -25,12 +89,12 @@ main {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(15, 23, 42, 0.15);
+  background-color: rgb(var(--foreground-muted) / 0.3);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgba(248, 250, 252, 0.5);
+  background-color: rgb(var(--background-muted) / 0.5);
 }
 
 .button-reset {
@@ -45,7 +109,7 @@ main {
   }
 
   .matrix-card {
-    @apply rounded-2xl border border-slate-200 p-6 shadow-sm;
+    @apply rounded-2xl border border-card-border bg-card p-6 shadow-sm;
   }
 
   .matrix-card__header {
@@ -53,10 +117,10 @@ main {
   }
 
   .matrix-card__title {
-    @apply text-lg font-semibold tracking-wide text-slate-900;
+    @apply text-lg font-semibold tracking-wide text-foreground;
   }
 
   .matrix-card__subtitle {
-    @apply text-sm text-slate-500;
+    @apply text-sm text-foreground-muted;
   }
 }

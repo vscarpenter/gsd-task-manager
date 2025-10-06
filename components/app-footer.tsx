@@ -5,7 +5,7 @@ export function AppFooter() {
   const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE || "unknown";
 
   return (
-    <footer className="mt-10 border-t border-slate-200 px-6 py-6 text-xs text-slate-600">
+    <footer className="mt-10 border-t border-border px-6 py-6 text-xs text-foreground-muted">
       <p className="text-center">
         Created by{" "}
         <a
@@ -17,7 +17,7 @@ export function AppFooter() {
           Vinny Carpenter
         </a>
         {" · "}
-        <span className="text-slate-500">
+        <span className="text-foreground-muted/70">
           Build {buildNumber} · {buildDate}
         </span>
       </p>

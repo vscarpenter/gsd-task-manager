@@ -135,8 +135,8 @@ export function TaskForm({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-700">Urgency</p>
+        <div className="space-y-2 rounded-2xl border border-card-border bg-background-muted p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground">Urgency</p>
           <div className="flex gap-2">
             <TogglePill
               label="Urgent"
@@ -152,8 +152,8 @@ export function TaskForm({
             />
           </div>
         </div>
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-700">Importance</p>
+        <div className="space-y-2 rounded-2xl border border-card-border bg-background-muted p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground">Importance</p>
           <div className="flex gap-2">
             <TogglePill
               label="Important"

@@ -10,7 +10,7 @@ interface TogglePillProps {
 export function TogglePill({ active, label, onSelect, variant }: TogglePillProps) {
   const activeBlue = "bg-blue-600 text-white border border-blue-600";
   const activeAmber = "bg-amber-500 text-white border border-amber-500";
-  const inactive = "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 hover:border-slate-400";
+  const inactive = "bg-background text-foreground border border-border hover:bg-background-muted hover:border-border";
 
   const className = active
     ? (variant === "blue" ? activeBlue : activeAmber)
