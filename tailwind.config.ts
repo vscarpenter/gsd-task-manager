@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: ["class"],
   safelist: [
     {
       pattern: /(bg|text)-quadrant-(focus|schedule|delegate|eliminate)(\/(10|15|20|25|30|40|50|60|70|80|90))?/
@@ -17,27 +18,43 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: {
-          DEFAULT: "#ffffff",
-          foreground: "#f8f9fa"
+        background: {
+          DEFAULT: "rgb(var(--background) / <alpha-value>)",
+          muted: "rgb(var(--background-muted) / <alpha-value>)",
+          accent: "rgb(var(--background-accent) / <alpha-value>)"
         },
         foreground: {
-          DEFAULT: "#0f172a",
-          muted: "#64748b"
+          DEFAULT: "rgb(var(--foreground) / <alpha-value>)",
+          muted: "rgb(var(--foreground-muted) / <alpha-value>)"
+        },
+        border: {
+          DEFAULT: "rgb(var(--border) / <alpha-value>)",
+          muted: "rgb(var(--border-muted) / <alpha-value>)"
         },
         accent: {
-          DEFAULT: "#6366f1",
-          muted: "#a5b4fc"
-        },
-        muted: {
-          DEFAULT: "#64748b",
-          foreground: "#64748b"
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          hover: "rgb(var(--accent-hover) / <alpha-value>)",
+          muted: "rgb(var(--accent-muted) / <alpha-value>)"
         },
         quadrant: {
-          focus: "#dbeafe",      // light blue pastel
-          schedule: "#fef9c3",   // light yellow pastel
-          delegate: "#d1fae5",   // light green pastel
-          eliminate: "#f3e8ff"   // light purple pastel
+          focus: "rgb(var(--quadrant-focus) / <alpha-value>)",
+          schedule: "rgb(var(--quadrant-schedule) / <alpha-value>)",
+          delegate: "rgb(var(--quadrant-delegate) / <alpha-value>)",
+          eliminate: "rgb(var(--quadrant-eliminate) / <alpha-value>)"
+        },
+        card: {
+          DEFAULT: "rgb(var(--card-background) / <alpha-value>)",
+          border: "rgb(var(--card-border) / <alpha-value>)"
+        },
+        overlay: "rgb(var(--overlay) / <alpha-value>)",
+        // Legacy aliases for backward compatibility
+        canvas: {
+          DEFAULT: "rgb(var(--background) / <alpha-value>)",
+          foreground: "rgb(var(--background-muted) / <alpha-value>)"
+        },
+        muted: {
+          DEFAULT: "rgb(var(--foreground-muted) / <alpha-value>)",
+          foreground: "rgb(var(--foreground-muted) / <alpha-value>)"
         }
       },
       fontFamily: {

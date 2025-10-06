@@ -32,14 +32,14 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl focus:outline-none",
+        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-card-border bg-card p-6 shadow-xl focus:outline-none",
         className
       )}
       {...props}
     >
       {children}
       <DialogPrimitive.Close
-        className="button-reset absolute right-4 top-4 rounded-full p-1 text-slate-500 transition hover:text-slate-700"
+        className="button-reset absolute right-4 top-4 rounded-full p-1 text-foreground-muted transition hover:text-foreground"
         aria-label="Close"
       >
         <Cross2Icon className="h-4 w-4" />
@@ -62,7 +62,7 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold text-slate-900", className)}
+    className={cn("text-lg font-semibold text-foreground", className)}
     {...props}
   />
 ));
@@ -74,7 +74,7 @@ export const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-slate-600", className)}
+    className={cn("text-sm text-foreground-muted", className)}
     {...props}
   />
 ));

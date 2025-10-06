@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 type ButtonVariant = "primary" | "subtle" | "ghost";
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-accent hover:bg-accent/90 text-white",
-  subtle: "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300",
-  ghost: "bg-transparent hover:bg-slate-100 text-slate-700"
+  primary: "bg-accent hover:bg-accent-hover text-white",
+  subtle: "bg-background-muted hover:bg-background-accent text-foreground border border-border",
+  ghost: "bg-transparent hover:bg-background-muted text-foreground"
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

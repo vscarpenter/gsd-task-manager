@@ -59,11 +59,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
           <div
             key={toast.id}
             className={cn(
-              "flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-lg",
+              "flex items-center gap-3 rounded-lg border border-card-border bg-card px-4 py-3 shadow-lg",
               "animate-in slide-in-from-bottom-5"
             )}
           >
-            <p className="flex-1 text-sm text-slate-900">{toast.message}</p>
+            <p className="flex-1 text-sm text-foreground">{toast.message}</p>
             {toast.action && (
               <Button
                 variant="subtle"
@@ -78,7 +78,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
             )}
             <button
               onClick={() => hideToast(toast.id)}
-              className="text-slate-500 hover:text-slate-700"
+              className="text-foreground-muted hover:text-foreground"
               aria-label="Dismiss"
             >
               <XIcon className="h-4 w-4" />
