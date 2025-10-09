@@ -1,10 +1,10 @@
 "use client";
 
-import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { TaskRecord } from "@/lib/types";
-import { formatDueDate, cn } from "@/lib/utils";
+import { formatDueDate, cn, isOverdue, isDueToday } from "@/lib/utils";
 
 interface TaskCardProps {
   task: TaskRecord;
@@ -15,6 +15,10 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardProps) {
   const dueLabel = formatDueDate(task.dueDate);
+  const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
+  const taskIsDueToday = !task.completed && isDueToday(task.dueDate);
+  const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+  const totalSubtasks = task.subtasks.length;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id
@@ -31,9 +35,10 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardP
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex flex-col gap-2 rounded-lg border border-card-border bg-card p-3 shadow-sm transition",
+        "group flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm transition",
         task.completed ? "opacity-60" : "opacity-100",
-        isDragging && "cursor-grabbing"
+        isDragging && "cursor-grabbing",
+        taskIsOverdue ? "border-red-300 bg-red-50/50" : "border-card-border"
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -60,7 +65,9 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardP
           type="button"
           onClick={() => onToggleComplete(task, !task.completed)}
           className={cn(
-            "button-reset flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase transition",
+            "button-reset flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase transition",
+            "h-7 w-7 md:h-7 md:w-7",
+            "sm:h-9 sm:w-9",
             task.completed
               ? "border-accent bg-accent/10 text-accent"
               : "border-border text-foreground-muted hover:border-accent hover:text-accent"
@@ -68,28 +75,77 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardP
           aria-pressed={task.completed}
           aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
         >
-          <CheckIcon className="h-3.5 w-3.5" />
+          <CheckIcon className="h-4 w-4 sm:h-4 sm:w-4" />
         </button>
       </div>
 
+      {/* Tags */}
+      {task.tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {task.tags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
+            >
+              <TagIcon className="h-2.5 w-2.5" />
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Subtasks progress */}
+      {totalSubtasks > 0 ? (
+        <div className="flex items-center gap-2 text-xs">
+          <div className="flex-1 h-1.5 rounded-full bg-background-muted overflow-hidden">
+            <div
+              className="h-full bg-accent transition-all"
+              style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
+            />
+          </div>
+          <span className="shrink-0 text-foreground-muted">
+            {completedSubtasks}/{totalSubtasks}
+          </span>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
-        <span className="truncate">Due {dueLabel}</span>
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+        <div className="flex items-center gap-2">
+          {taskIsOverdue ? (
+            <span className="flex items-center gap-1 text-red-600 font-medium">
+              <AlertCircleIcon className="h-3 w-3" />
+              Overdue
+            </span>
+          ) : taskIsDueToday ? (
+            <span className="flex items-center gap-1 text-amber-600 font-medium">
+              <AlertCircleIcon className="h-3 w-3" />
+              Due today
+            </span>
+          ) : (
+            <span className="truncate">Due {dueLabel}</span>
+          )}
+          {task.recurrence !== "none" ? (
+            <span className="flex items-center gap-1 text-accent" title={`Recurs ${task.recurrence}`}>
+              <RepeatIcon className="h-3 w-3" />
+            </span>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 transition sm:group-hover:opacity-100">
           <button
             type="button"
             onClick={() => onEdit(task)}
-            className="rounded px-1.5 py-0.5 hover:bg-background-muted hover:text-foreground"
+            className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation"
             aria-label="Edit task"
           >
-            <PencilIcon className="h-3 w-3" />
+            <PencilIcon className="h-4 w-4 sm:h-3 sm:w-3" />
           </button>
           <button
             type="button"
             onClick={() => onDelete(task)}
-            className="rounded px-1.5 py-0.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+            className="rounded p-2 sm:px-1.5 sm:py-0.5 text-red-600 hover:bg-red-50 hover:text-red-700 touch-manipulation"
             aria-label="Delete task"
           >
-            <Trash2Icon className="h-3 w-3" />
+            <Trash2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
           </button>
         </div>
       </div>

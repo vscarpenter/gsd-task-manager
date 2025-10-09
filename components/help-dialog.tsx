@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LightbulbIcon, KeyboardIcon } from "lucide-react";
+import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon } from "lucide-react";
 
 interface HelpDialogProps {
   open: boolean;
@@ -14,26 +14,10 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
       <DialogContent className="max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Help & Tips</DialogTitle>
-          <DialogDescription>Get the most out of GSD Task Manager</DialogDescription>
+          <DialogDescription>Master GSD Task Manager and boost your productivity</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Tips Section */}
-          <section>
-            <div className="mb-3 flex items-center gap-2">
-              <LightbulbIcon className="h-4 w-4 text-accent" />
-              <h3 className="font-semibold text-foreground">Quick Tips</h3>
-            </div>
-            <div className="space-y-2 text-sm text-foreground-muted">
-              <Tip text="Tasks are automatically organized by urgency and importance into four quadrants" />
-              <Tip text="Focus on 'Do First' (urgent + important) tasks to tackle high-priority items" />
-              <Tip text="Use 'Schedule' (not urgent + important) for strategic planning and growth" />
-              <Tip text="Delegate or eliminate tasks that don't align with your goals" />
-              <Tip text="All data is stored locally in your browser - export regularly to back up" />
-              <Tip text="Install as a PWA to use offline and get a native app experience" />
-            </div>
-          </section>
-
           {/* Keyboard Shortcuts Section */}
           <section>
             <div className="mb-3 flex items-center gap-2">
@@ -47,30 +31,99 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
             </div>
           </section>
 
+          {/* New Features Section */}
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <SparklesIcon className="h-4 w-4 text-accent" />
+              <h3 className="font-semibold text-foreground">Enhanced Features</h3>
+            </div>
+            <div className="space-y-3 text-sm">
+              <FeatureBox
+                icon={<RepeatIcon className="h-4 w-4" />}
+                title="Recurring Tasks"
+                description="Set tasks to repeat daily, weekly, or monthly. When you complete a recurring task, a new instance is automatically created with the next due date."
+                tip="Perfect for habits, routines, and regular reviews!"
+              />
+              <FeatureBox
+                icon={<TagIcon className="h-4 w-4" />}
+                title="Tags & Labels"
+                description="Add multiple tags to categorize tasks (e.g., #work, #personal, #health). Tags are searchable and help you filter related tasks quickly."
+                tip="Use tags to group tasks by project, context, or energy level."
+              />
+              <FeatureBox
+                icon={<CheckSquareIcon className="h-4 w-4" />}
+                title="Subtasks & Checklists"
+                description="Break down complex tasks into smaller, actionable steps. Track progress with a visual progress bar showing completed/total subtasks."
+                tip="Subtasks make big tasks less overwhelming and more achievable."
+              />
+              <FeatureBox
+                icon={<CalendarIcon className="h-4 w-4" />}
+                title="Smart Due Dates"
+                description="Tasks display overdue warnings (red) for past-due items and due today alerts (amber) for immediate tasks. Visual cues help you prioritize time-sensitive work."
+                tip="Set due dates for Q1 tasks and use them to track deadlines."
+              />
+            </div>
+          </section>
+
           {/* Eisenhower Matrix Section */}
           <section>
             <h3 className="mb-3 font-semibold text-foreground">The Eisenhower Matrix</h3>
             <div className="space-y-2 text-sm">
               <QuadrantInfo
-                title="Do First"
-                color="bg-blue-100 text-blue-700"
-                description="Urgent + Important: Critical tasks requiring immediate attention"
+                title="Do First (Q1)"
+                color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                description="Urgent + Important: Crises, deadlines, emergencies"
+                examples="Client deadline today, system outage, urgent bug fix"
               />
               <QuadrantInfo
-                title="Schedule"
-                color="bg-yellow-100 text-yellow-700"
-                description="Not Urgent + Important: Strategic tasks for long-term success"
+                title="Schedule (Q2)"
+                color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                description="Not Urgent + Important: Strategic work, planning, growth"
+                examples="Long-term projects, learning, relationship building, exercise"
               />
               <QuadrantInfo
-                title="Delegate"
-                color="bg-green-100 text-green-700"
-                description="Urgent + Not Important: Tasks others can handle"
+                title="Delegate (Q3)"
+                color="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                description="Urgent + Not Important: Interruptions, busy work"
+                examples="Some emails, meetings, routine tasks that others can handle"
               />
               <QuadrantInfo
-                title="Eliminate"
-                color="bg-purple-100 text-purple-700"
-                description="Not Urgent + Not Important: Low-value tasks to minimize"
+                title="Eliminate (Q4)"
+                color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                description="Not Urgent + Not Important: Time-wasters, distractions"
+                examples="Mindless scrolling, excessive TV, unnecessary meetings"
               />
+            </div>
+          </section>
+
+          {/* Best Practices Section */}
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <LightbulbIcon className="h-4 w-4 text-accent" />
+              <h3 className="font-semibold text-foreground">Best Practices</h3>
+            </div>
+            <div className="space-y-2 text-sm text-foreground-muted">
+              <Tip text="Start each day working on Q2 tasks before Q1 fires break out" />
+              <Tip text="Aim to spend 60% of your time in Q2 (Schedule) for long-term success" />
+              <Tip text="Use the 2-minute rule: if a task takes < 2 minutes, do it immediately" />
+              <Tip text="Review your matrix weekly - move tasks as priorities change" />
+              <Tip text="Challenge Q1 tasks: are they truly urgent AND important?" />
+              <Tip text="Set recurring tasks for weekly reviews and planning sessions" />
+              <Tip text="Use tags to group related tasks across quadrants" />
+              <Tip text="Break large Q2 projects into smaller subtasks for momentum" />
+              <Tip text="Export your tasks regularly as a backup" />
+              <Tip text="All data is stored locally - nothing sent to servers" />
+            </div>
+          </section>
+
+          {/* Mobile Tips Section */}
+          <section className="rounded-lg border border-accent/20 bg-accent/5 p-4">
+            <h3 className="mb-2 text-sm font-semibold text-foreground">Mobile Tips</h3>
+            <div className="space-y-1 text-xs text-foreground-muted">
+              <Tip text="Use the blue + button for quick task creation" />
+              <Tip text="Action buttons are always visible - no need to hover" />
+              <Tip text="Task forms slide up from bottom for easy one-handed use" />
+              <Tip text="Install as PWA for offline access and faster loading" />
             </div>
           </section>
         </div>
@@ -112,9 +165,10 @@ interface QuadrantInfoProps {
   title: string;
   color: string;
   description: string;
+  examples?: string;
 }
 
-function QuadrantInfo({ title, color, description }: QuadrantInfoProps) {
+function QuadrantInfo({ title, color, description, examples }: QuadrantInfoProps) {
   return (
     <div className="rounded-lg border border-card-border p-3">
       <div className="mb-1 flex items-center gap-2">
@@ -123,6 +177,31 @@ function QuadrantInfo({ title, color, description }: QuadrantInfoProps) {
         </span>
       </div>
       <p className="text-xs text-foreground-muted">{description}</p>
+      {examples && (
+        <p className="mt-1 text-xs italic text-foreground-muted/70">
+          Examples: {examples}
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface FeatureBoxProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  tip: string;
+}
+
+function FeatureBox({ icon, title, description, tip }: FeatureBoxProps) {
+  return (
+    <div className="rounded-lg border border-card-border bg-background-muted/50 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <div className="text-accent">{icon}</div>
+        <h4 className="font-semibold text-foreground">{title}</h4>
+      </div>
+      <p className="mb-2 text-xs text-foreground-muted">{description}</p>
+      <p className="text-xs font-medium text-accent">💡 {tip}</p>
     </div>
   );
 }

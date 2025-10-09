@@ -44,7 +44,7 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="subtle" className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
+          <Button className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
             <HelpCircleIcon className="h-5 w-5" />
           </Button>
           <Button onClick={onNewTask} className="hidden sm:inline-flex">

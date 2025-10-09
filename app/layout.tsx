@@ -15,6 +15,13 @@ export const metadata: Metadata = {
   title: "GSD Task Manager",
   description: "Prioritize what matters with a privacy-first Eisenhower matrix.",
   manifest: "/manifest.json",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover" // iOS safe area support
+  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
