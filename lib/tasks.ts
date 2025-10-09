@@ -19,7 +19,10 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     quadrant: resolveQuadrantId(validated.urgent, validated.important),
     completed: false,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    recurrence: validated.recurrence ?? "none",
+    tags: validated.tags ?? [],
+    subtasks: validated.subtasks ?? []
   };
 
   const db = getDb();
@@ -39,7 +42,10 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
     description: updates.description ?? existing.description,
     urgent: updates.urgent ?? existing.urgent,
     important: updates.important ?? existing.important,
-    dueDate: updates.dueDate ?? existing.dueDate
+    dueDate: updates.dueDate ?? existing.dueDate,
+    recurrence: updates.recurrence ?? existing.recurrence,
+    tags: updates.tags ?? existing.tags,
+    subtasks: updates.subtasks ?? existing.subtasks
   };
 
   const validated = taskDraftSchema.parse(nextDraft);
@@ -54,11 +60,58 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
   return nextRecord;
 }
 
+/**
+ * Calculate the next due date for a recurring task
+ */
+function calculateNextDueDate(currentDueDate: string | undefined, recurrence: string): string | undefined {
+  if (!currentDueDate || recurrence === "none") {
+    return currentDueDate;
+  }
+
+  const current = new Date(currentDueDate);
+  const next = new Date(current);
+
+  switch (recurrence) {
+    case "daily":
+      next.setDate(next.getDate() + 1);
+      break;
+    case "weekly":
+      next.setDate(next.getDate() + 7);
+      break;
+    case "monthly":
+      next.setMonth(next.getMonth() + 1);
+      break;
+  }
+
+  return next.toISOString();
+}
+
 export async function toggleCompleted(id: string, completed: boolean): Promise<TaskRecord> {
   const db = getDb();
   const existing = await db.tasks.get(id);
   if (!existing) {
     throw new Error(`Task ${id} not found`);
+  }
+
+  // If marking as completed and task has recurrence, create a new instance
+  if (completed && existing.recurrence !== "none") {
+    const now = isoNow();
+    const nextDueDate = calculateNextDueDate(existing.dueDate, existing.recurrence);
+
+    // Create new recurring instance
+    const newInstance: TaskRecord = {
+      ...existing,
+      id: nanoid(12),
+      completed: false,
+      dueDate: nextDueDate,
+      createdAt: now,
+      updatedAt: now,
+      parentTaskId: existing.parentTaskId ?? existing.id, // Track original recurring task
+      // Reset subtasks to uncompleted for new instance
+      subtasks: existing.subtasks.map(st => ({ ...st, completed: false }))
+    };
+
+    await db.tasks.add(newInstance);
   }
 
   const nextRecord: TaskRecord = {
@@ -142,4 +195,74 @@ export async function importFromJson(raw: string): Promise<void> {
 export async function exportToJson(): Promise<string> {
   const payload = await exportTasks();
   return JSON.stringify(payload, null, 2);
+}
+
+/**
+ * Toggle a subtask's completion status
+ */
+export async function toggleSubtask(taskId: string, subtaskId: string, completed: boolean): Promise<TaskRecord> {
+  const db = getDb();
+  const existing = await db.tasks.get(taskId);
+  if (!existing) {
+    throw new Error(`Task ${taskId} not found`);
+  }
+
+  const updatedSubtasks = existing.subtasks.map(st =>
+    st.id === subtaskId ? { ...st, completed } : st
+  );
+
+  const nextRecord: TaskRecord = {
+    ...existing,
+    subtasks: updatedSubtasks,
+    updatedAt: isoNow()
+  };
+
+  await db.tasks.put(nextRecord);
+  return nextRecord;
+}
+
+/**
+ * Add a new subtask to a task
+ */
+export async function addSubtask(taskId: string, title: string): Promise<TaskRecord> {
+  const db = getDb();
+  const existing = await db.tasks.get(taskId);
+  if (!existing) {
+    throw new Error(`Task ${taskId} not found`);
+  }
+
+  const newSubtask = {
+    id: nanoid(12),
+    title,
+    completed: false
+  };
+
+  const nextRecord: TaskRecord = {
+    ...existing,
+    subtasks: [...existing.subtasks, newSubtask],
+    updatedAt: isoNow()
+  };
+
+  await db.tasks.put(nextRecord);
+  return nextRecord;
+}
+
+/**
+ * Delete a subtask from a task
+ */
+export async function deleteSubtask(taskId: string, subtaskId: string): Promise<TaskRecord> {
+  const db = getDb();
+  const existing = await db.tasks.get(taskId);
+  if (!existing) {
+    throw new Error(`Task ${taskId} not found`);
+  }
+
+  const nextRecord: TaskRecord = {
+    ...existing,
+    subtasks: existing.subtasks.filter(st => st.id !== subtaskId),
+    updatedAt: isoNow()
+  };
+
+  await db.tasks.put(nextRecord);
+  return nextRecord;
 }

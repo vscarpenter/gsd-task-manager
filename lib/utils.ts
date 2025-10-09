@@ -39,3 +39,43 @@ export function formatRelative(value?: string): string {
 
   return formatter.format(dayDelta, "day");
 }
+
+/**
+ * Check if a date is overdue (in the past)
+ */
+export function isOverdue(value?: string): boolean {
+  if (!value) {
+    return false;
+  }
+  const date = new Date(value);
+  const now = new Date();
+  // Set both to start of day for fair comparison
+  date.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  return date < now;
+}
+
+/**
+ * Check if a date is due today
+ */
+export function isDueToday(value?: string): boolean {
+  if (!value) {
+    return false;
+  }
+  const date = new Date(value);
+  const now = new Date();
+  return date.toDateString() === now.toDateString();
+}
+
+/**
+ * Check if a date is due this week
+ */
+export function isDueThisWeek(value?: string): boolean {
+  if (!value) {
+    return false;
+  }
+  const date = new Date(value);
+  const now = new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return date >= now && date <= weekFromNow;
+}

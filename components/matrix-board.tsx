@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
@@ -34,7 +35,10 @@ function toDraft(task: TaskRecord): TaskDraft {
     description: task.description,
     urgent: task.urgent,
     important: task.important,
-    dueDate: task.dueDate
+    dueDate: task.dueDate,
+    recurrence: task.recurrence,
+    tags: task.tags,
+    subtasks: task.subtasks
   };
 }
 
@@ -80,7 +84,16 @@ export function MatrixBoard() {
     }
 
     const matches = (task: TaskRecord) => {
-      const haystack = [task.title, task.description, task.quadrant, task.dueDate ?? "", task.id]
+      // Search across title, description, tags, quadrant, due date, and subtasks
+      const haystack = [
+        task.title,
+        task.description,
+        task.quadrant,
+        task.dueDate ?? "",
+        task.id,
+        ...task.tags,
+        ...task.subtasks.map(st => st.title)
+      ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(normalized);
@@ -251,7 +264,21 @@ export function MatrixBoard() {
           isLoading={isLoading}
         />
 
-        <main className="px-6 pb-10">
+        {/* Floating Action Button - Mobile Only */}
+        <button
+          onClick={() => setDialogState({ mode: "create" })}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-all hover:bg-accent-hover active:scale-95 md:hidden touch-manipulation"
+          style={{
+            paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))"
+          }}
+          aria-label="Create new task"
+        >
+          <PlusIcon className="h-6 w-6" />
+        </button>
+
+        <main className="px-6 pb-10 md:pb-10" style={{
+          paddingBottom: "max(2.5rem, calc(5rem + env(safe-area-inset-bottom)))"
+        }}>
           {!hasTasks ? (
             <div className="mx-auto max-w-3xl space-y-8">
               {/* Welcome header */}

@@ -32,17 +32,25 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-card-border bg-card p-6 shadow-xl focus:outline-none",
+        "fixed z-50 w-full bg-card shadow-xl focus:outline-none",
+        // Desktop: centered modal
+        "md:left-1/2 md:top-1/2 md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border md:border-card-border md:p-6",
+        // Mobile: full-screen with safe areas, scrollable
+        "inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-3xl border-t border-card-border p-6 pb-8",
+        "sm:max-h-[85vh]",
         className
       )}
+      style={{
+        paddingBottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))"
+      }}
       {...props}
     >
       {children}
       <DialogPrimitive.Close
-        className="button-reset absolute right-4 top-4 rounded-full p-1 text-foreground-muted transition hover:text-foreground"
+        className="button-reset absolute right-4 top-4 rounded-full p-2 text-foreground-muted transition hover:text-foreground touch-manipulation"
         aria-label="Close"
       >
-        <Cross2Icon className="h-4 w-4" />
+        <Cross2Icon className="h-5 w-5 sm:h-4 sm:w-4" />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
