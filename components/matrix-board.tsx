@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
 import { HelpDialog } from "@/components/help-dialog";
+import { ImportDialog } from "@/components/import-dialog";
 import { TaskForm } from "@/components/task-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import {
   createTask,
   deleteTask,
   exportToJson,
-  importFromJson,
   moveTaskToQuadrant,
   toggleCompleted,
   updateTask
@@ -58,6 +58,8 @@ export function MatrixBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -186,16 +188,21 @@ export function MatrixBoard() {
   };
 
   const handleImport = async (file: File) => {
-    setIsLoading(true);
     try {
       const contents = await file.text();
-      await importFromJson(contents);
+      // Validate JSON format before showing dialog
+      JSON.parse(contents);
+      setPendingImportContents(contents);
+      setImportDialogOpen(true);
     } catch (error) {
       console.error(error);
-      window.alert("Import failed. Ensure you selected a valid export file.");
-    } finally {
-      setIsLoading(false);
+      window.alert("Invalid file format. Please select a valid JSON export file.");
     }
+  };
+
+  const handleImportComplete = () => {
+    setPendingImportContents(null);
+    showToast("Tasks imported successfully", undefined, 3000);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -405,6 +412,14 @@ export function MatrixBoard() {
         <AppFooter />
 
         <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
+        <ImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          fileContents={pendingImportContents}
+          existingTaskCount={all.length}
+          onImportComplete={handleImportComplete}
+        />
 
         <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
           <DialogContent>

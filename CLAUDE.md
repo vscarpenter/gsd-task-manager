@@ -52,8 +52,9 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
   - `matrix-column.tsx` - Single quadrant column with tasks
   - `task-card.tsx` - Individual task with complete/edit/delete actions
   - `task-form.tsx` - Create/edit task dialog with zod validation
-  - `app-header.tsx` - Search, new task button, theme toggle
-  - `app-footer.tsx` - Export/import JSON controls
+  - `import-dialog.tsx` - Import mode selection dialog (merge vs replace)
+  - `app-header.tsx` - Search, new task button, export/import buttons, theme toggle
+  - `app-footer.tsx` - Footer with credits and build info
 
 ### Key Patterns
 - **Client-side only**: All components use `"use client"` - no server rendering
@@ -108,6 +109,15 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - Utility functions in `lib/utils.ts`: `isOverdue()`, `isDueToday()`, `isDueThisWeek()`
 - Visual hierarchy helps prioritize time-sensitive work
 
+### Import/Export with Mode Selection
+- **Export**: Download all tasks as JSON backup file
+- **Import with options**: When importing, users choose between two modes:
+  - **Merge mode** (safe): Keeps existing tasks and adds imported tasks. Duplicate IDs are automatically regenerated to prevent conflicts.
+  - **Replace mode** (destructive): Deletes all existing tasks and replaces with imported tasks. Shows warning with existing task count.
+- Import dialog shows task counts for both existing and incoming tasks
+- All import operations are validated against Zod schemas before persisting
+- Implementation: `components/import-dialog.tsx`, `lib/tasks.ts` (importTasks, importFromJson)
+
 ## Development Notes
 - Changes to task schema require updating fixtures in `lib/schema.ts` and export/import logic
 - Database migrations handled in `lib/db.ts` - current version is 2
@@ -116,3 +126,4 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - Run `pnpm typecheck` and `pnpm lint` before committing
 - Static export mode means no runtime server features (no API routes, no SSR)
 - New task fields (recurrence, tags, subtasks) are all optional with sensible defaults
+- Import mode parameter defaults to "replace" for backward compatibility in lib/tasks.ts functions
