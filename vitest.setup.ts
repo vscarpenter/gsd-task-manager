@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import "fake-indexeddb/auto";
 
 // Provide a mock implementation for matchMedia used by Radix components
 if (!window.matchMedia) {

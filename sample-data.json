@@ -10,7 +10,30 @@
       "completed": false,
       "dueDate": "2025-10-05T23:59:59.999Z",
       "createdAt": "2025-10-04T10:00:00.000Z",
-      "updatedAt": "2025-10-04T10:00:00.000Z"
+      "updatedAt": "2025-10-04T10:00:00.000Z",
+      "tags": ["urgent", "bug", "revenue-critical"],
+      "subtasks": [
+        {
+          "id": "sub-1-1",
+          "title": "Reproduce the issue in staging environment",
+          "completed": true
+        },
+        {
+          "id": "sub-1-2",
+          "title": "Identify root cause in payment service logs",
+          "completed": true
+        },
+        {
+          "id": "sub-1-3",
+          "title": "Implement fix and write regression test",
+          "completed": false
+        },
+        {
+          "id": "sub-1-4",
+          "title": "Deploy to production with rollback plan",
+          "completed": false
+        }
+      ]
     },
     {
       "id": "urgent-imp-2",
@@ -22,7 +45,30 @@
       "completed": false,
       "dueDate": "2025-10-05T23:59:59.999Z",
       "createdAt": "2025-10-04T09:30:00.000Z",
-      "updatedAt": "2025-10-04T09:30:00.000Z"
+      "updatedAt": "2025-10-04T09:30:00.000Z",
+      "tags": ["presentation", "leadership", "quarterly"],
+      "subtasks": [
+        {
+          "id": "sub-2-1",
+          "title": "Compile Q4 financial metrics and growth data",
+          "completed": true
+        },
+        {
+          "id": "sub-2-2",
+          "title": "Create slide deck with key initiatives",
+          "completed": true
+        },
+        {
+          "id": "sub-2-3",
+          "title": "Rehearse presentation with leadership team",
+          "completed": false
+        },
+        {
+          "id": "sub-2-4",
+          "title": "Prepare backup materials and Q&A responses",
+          "completed": false
+        }
+      ]
     },
     {
       "id": "urgent-imp-3",
@@ -34,7 +80,8 @@
       "completed": false,
       "dueDate": "2025-10-04T23:59:59.999Z",
       "createdAt": "2025-10-04T08:00:00.000Z",
-      "updatedAt": "2025-10-04T08:00:00.000Z"
+      "updatedAt": "2025-10-04T08:00:00.000Z",
+      "tags": ["client", "escalation", "enterprise"]
     },
     {
       "id": "not-urg-imp-1",
@@ -46,7 +93,30 @@
       "completed": false,
       "dueDate": "2025-10-15T23:59:59.999Z",
       "createdAt": "2025-10-03T14:00:00.000Z",
-      "updatedAt": "2025-10-03T14:00:00.000Z"
+      "updatedAt": "2025-10-03T14:00:00.000Z",
+      "tags": ["product", "ux", "growth"],
+      "subtasks": [
+        {
+          "id": "sub-4-1",
+          "title": "Interview 10 users about current onboarding pain points",
+          "completed": false
+        },
+        {
+          "id": "sub-4-2",
+          "title": "Analyze activation funnel drop-off points",
+          "completed": false
+        },
+        {
+          "id": "sub-4-3",
+          "title": "Create wireframes for improved flow",
+          "completed": false
+        },
+        {
+          "id": "sub-4-4",
+          "title": "Run A/B test with 5% of new users",
+          "completed": false
+        }
+      ]
     },
     {
       "id": "not-urg-imp-2",
@@ -58,7 +128,30 @@
       "completed": false,
       "dueDate": "2025-11-01T23:59:59.999Z",
       "createdAt": "2025-10-02T11:00:00.000Z",
-      "updatedAt": "2025-10-02T11:00:00.000Z"
+      "updatedAt": "2025-10-02T11:00:00.000Z",
+      "tags": ["team", "planning", "culture"],
+      "subtasks": [
+        {
+          "id": "sub-5-1",
+          "title": "Survey team for location and activity preferences",
+          "completed": true
+        },
+        {
+          "id": "sub-5-2",
+          "title": "Research and book venue (capacity: 25 people)",
+          "completed": false
+        },
+        {
+          "id": "sub-5-3",
+          "title": "Create 2-day agenda with strategic planning sessions",
+          "completed": false
+        },
+        {
+          "id": "sub-5-4",
+          "title": "Coordinate travel and accommodation bookings",
+          "completed": false
+        }
+      ]
     },
     {
       "id": "not-urg-imp-3",
@@ -70,7 +163,26 @@
       "completed": false,
       "dueDate": "2025-10-20T23:59:59.999Z",
       "createdAt": "2025-10-01T16:00:00.000Z",
-      "updatedAt": "2025-10-01T16:00:00.000Z"
+      "updatedAt": "2025-10-01T16:00:00.000Z",
+      "tags": ["research", "ai", "innovation"],
+      "recurrence": "weekly",
+      "subtasks": [
+        {
+          "id": "sub-6-1",
+          "title": "Review competitor AI features and market trends",
+          "completed": false
+        },
+        {
+          "id": "sub-6-2",
+          "title": "Identify 3-5 high-impact use cases for our product",
+          "completed": false
+        },
+        {
+          "id": "sub-6-3",
+          "title": "Estimate implementation cost and timeline",
+          "completed": false
+        }
+      ]
     },
     {
       "id": "not-urg-imp-4",
@@ -82,7 +194,8 @@
       "completed": false,
       "dueDate": "2025-10-25T23:59:59.999Z",
       "createdAt": "2025-09-30T10:00:00.000Z",
-      "updatedAt": "2025-09-30T10:00:00.000Z"
+      "updatedAt": "2025-09-30T10:00:00.000Z",
+      "tags": ["blog", "technical-writing", "recruiting"]
     },
     {
       "id": "urg-not-imp-1",
@@ -94,7 +207,9 @@
       "completed": false,
       "dueDate": "2025-10-04T23:59:59.999Z",
       "createdAt": "2025-10-04T07:00:00.000Z",
-      "updatedAt": "2025-10-04T07:00:00.000Z"
+      "updatedAt": "2025-10-04T07:00:00.000Z",
+      "tags": ["social-media", "networking"],
+      "recurrence": "weekly"
     },
     {
       "id": "urg-not-imp-2",
@@ -106,7 +221,8 @@
       "completed": false,
       "dueDate": "2025-10-04T23:59:59.999Z",
       "createdAt": "2025-10-03T15:00:00.000Z",
-      "updatedAt": "2025-10-03T15:00:00.000Z"
+      "updatedAt": "2025-10-03T15:00:00.000Z",
+      "tags": ["admin", "team"]
     },
     {
       "id": "urg-not-imp-3",
@@ -118,7 +234,8 @@
       "completed": false,
       "dueDate": "2025-10-04T23:59:59.999Z",
       "createdAt": "2025-10-04T11:00:00.000Z",
-      "updatedAt": "2025-10-04T11:00:00.000Z"
+      "updatedAt": "2025-10-04T11:00:00.000Z",
+      "tags": ["delegate", "design"]
     },
     {
       "id": "urg-not-imp-4",
@@ -130,7 +247,8 @@
       "completed": false,
       "dueDate": "2025-10-04T23:59:59.999Z",
       "createdAt": "2025-10-04T12:00:00.000Z",
-      "updatedAt": "2025-10-04T12:00:00.000Z"
+      "updatedAt": "2025-10-04T12:00:00.000Z",
+      "tags": ["meeting", "team"]
     },
     {
       "id": "not-urg-not-imp-1",
@@ -142,7 +260,8 @@
       "completed": false,
       "dueDate": "2025-10-30T23:59:59.999Z",
       "createdAt": "2025-09-28T09:00:00.000Z",
-      "updatedAt": "2025-09-28T09:00:00.000Z"
+      "updatedAt": "2025-09-28T09:00:00.000Z",
+      "tags": ["personal", "organization"]
     },
     {
       "id": "not-urg-not-imp-2",
@@ -154,7 +273,9 @@
       "completed": false,
       "dueDate": "2025-11-15T23:59:59.999Z",
       "createdAt": "2025-09-25T14:00:00.000Z",
-      "updatedAt": "2025-09-25T14:00:00.000Z"
+      "updatedAt": "2025-09-25T14:00:00.000Z",
+      "tags": ["learning", "productivity"],
+      "recurrence": "monthly"
     },
     {
       "id": "not-urg-not-imp-3",
@@ -166,7 +287,8 @@
       "completed": false,
       "dueDate": "2025-11-30T23:59:59.999Z",
       "createdAt": "2025-09-20T10:00:00.000Z",
-      "updatedAt": "2025-09-20T10:00:00.000Z"
+      "updatedAt": "2025-09-20T10:00:00.000Z",
+      "tags": ["research", "tools"]
     },
     {
       "id": "completed-1",
@@ -178,7 +300,9 @@
       "completed": true,
       "dueDate": "2025-10-03T23:59:59.999Z",
       "createdAt": "2025-10-02T08:00:00.000Z",
-      "updatedAt": "2025-10-03T17:00:00.000Z"
+      "updatedAt": "2025-10-03T17:00:00.000Z",
+      "tags": ["admin", "finance"],
+      "recurrence": "monthly"
     },
     {
       "id": "completed-2",
@@ -190,7 +314,26 @@
       "completed": true,
       "dueDate": "2025-10-03T23:59:59.999Z",
       "createdAt": "2025-10-01T13:00:00.000Z",
-      "updatedAt": "2025-10-03T16:30:00.000Z"
+      "updatedAt": "2025-10-03T16:30:00.000Z",
+      "tags": ["code-review", "mentoring"],
+      "recurrence": "daily",
+      "subtasks": [
+        {
+          "id": "sub-cr-1",
+          "title": "Review code changes for security best practices",
+          "completed": true
+        },
+        {
+          "id": "sub-cr-2",
+          "title": "Check test coverage and edge cases",
+          "completed": true
+        },
+        {
+          "id": "sub-cr-3",
+          "title": "Provide constructive feedback and suggestions",
+          "completed": true
+        }
+      ]
     }
   ],
   "exportedAt": "2025-10-04T18:00:00.000Z",

@@ -61,7 +61,7 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
           <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <Input
             ref={searchInputRef}
-            placeholder="Search tasks by title, description, or quadrant"
+            placeholder="Search tasks by title, description, tags, or subtasks"
             className="pl-9"
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
