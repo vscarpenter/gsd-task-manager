@@ -170,19 +170,45 @@ export async function exportTasks(): Promise<ImportPayload> {
   } satisfies ImportPayload;
 }
 
-export async function importTasks(payload: ImportPayload): Promise<void> {
+export async function importTasks(payload: ImportPayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   const parsed = importPayloadSchema.parse(payload);
+
   await db.transaction("rw", db.tasks, async () => {
-    await db.tasks.clear();
-    await db.tasks.bulkAdd(parsed.tasks);
+    if (mode === "replace") {
+      // Replace mode: clear existing and add imported tasks
+      await db.tasks.clear();
+      await db.tasks.bulkAdd(parsed.tasks);
+    } else {
+      // Merge mode: keep existing, add imported with regenerated IDs if needed
+      const existingTasks = await db.tasks.toArray();
+      const existingIds = new Set(existingTasks.map(t => t.id));
+
+      const tasksToImport = parsed.tasks.map(task => {
+        // If ID already exists, regenerate it
+        if (existingIds.has(task.id)) {
+          return {
+            ...task,
+            id: nanoid(12),
+            // Also regenerate subtask IDs to avoid conflicts
+            subtasks: task.subtasks.map(st => ({
+              ...st,
+              id: nanoid(12)
+            }))
+          };
+        }
+        return task;
+      });
+
+      await db.tasks.bulkAdd(tasksToImport);
+    }
   });
 }
 
-export async function importFromJson(raw: string): Promise<void> {
+export async function importFromJson(raw: string, mode: "replace" | "merge" = "replace"): Promise<void> {
   try {
     const payload = JSON.parse(raw);
-    await importTasks(payload);
+    await importTasks(payload, mode);
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error("Invalid JSON format. Please ensure you selected a valid export file.");
