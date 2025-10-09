@@ -27,10 +27,10 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 ## Architecture
 
 ### Data Layer
-- **IndexedDB via Dexie** (`lib/db.ts`): Single `GsdDatabase` instance with `tasks` table
-- **CRUD Operations** (`lib/tasks.ts`): All task mutations (create, update, delete, toggle, import/export)
+- **IndexedDB via Dexie** (`lib/db.ts`): Single `GsdDatabase` instance with `tasks` table (v2 with recurrence, tags, subtasks support)
+- **CRUD Operations** (`lib/tasks.ts`): All task mutations (create, update, delete, toggle, import/export) plus subtask management (addSubtask, deleteSubtask, toggleSubtask)
 - **Live Queries** (`lib/use-tasks.ts`): React hook `useTasks()` returns `{ all, byQuadrant }` with live updates
-- **Schema Validation** (`lib/schema.ts`): Zod schemas for TaskDraft, TaskRecord, and ImportPayload
+- **Schema Validation** (`lib/schema.ts`): Zod schemas for TaskDraft, TaskRecord, Subtask, ImportPayload, and RecurrenceType
 
 ### Quadrant System
 Tasks are classified by `urgent` and `important` boolean flags, which derive a quadrant ID:
@@ -60,6 +60,9 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **Live reactivity**: `useTasks()` hook returns live data via `useLiveQuery` from dexie-react-hooks
 - **Validation**: All task operations validate with zod schemas before persisting
 - **Keyboard shortcuts**: Implemented via `useEffect` listeners (n=new, /=search, ?=help)
+- **Recurring tasks**: When completed, automatically create new instance with updated due date
+- **Enhanced search**: Search includes tags and subtasks in addition to title/description
+- **Visual indicators**: Overdue warnings (red), due today alerts (amber), recurrence icons, subtask progress bars
 
 ### PWA Configuration
 - `public/manifest.json` - App metadata for installation
@@ -79,9 +82,37 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **React components**: Arrow functions with explicit return types when complex
 - **Imports**: Use `@/` alias for all internal imports
 
+## Feature Highlights (v2)
+
+### Recurring Tasks
+- Set recurrence interval: none, daily, weekly, monthly
+- When marking a recurring task complete, a new instance is automatically created with the next due date
+- Subtasks reset to uncompleted in new instances
+- Recurrence indicator (repeat icon) shown on task cards
+
+### Tags & Labels
+- Add multiple tags to any task for categorization (e.g., #work, #personal, #health)
+- Tags displayed as colored chips on task cards
+- Search includes tag content for easy filtering
+- Tag management in task form with inline add/remove
+
+### Subtasks & Checklists
+- Break down complex tasks into smaller actionable steps
+- Visual progress bar showing completed/total subtasks (e.g., 2/5)
+- Toggle subtask completion in task form
+- Subtasks searchable via main search bar
+
+### Enhanced Due Dates
+- **Overdue warning**: Red border and "Overdue" label for past-due tasks
+- **Due today alert**: Amber "Due today" label for immediate tasks
+- Utility functions in `lib/utils.ts`: `isOverdue()`, `isDueToday()`, `isDueThisWeek()`
+- Visual hierarchy helps prioritize time-sensitive work
+
 ## Development Notes
 - Changes to task schema require updating fixtures in `lib/schema.ts` and export/import logic
+- Database migrations handled in `lib/db.ts` - current version is 2
 - When modifying quadrant logic, update both `lib/quadrants.ts` and UI rendering in matrix components
 - PWA updates require changes to manifest.json, icons, and sw.js together
 - Run `pnpm typecheck` and `pnpm lint` before committing
 - Static export mode means no runtime server features (no API routes, no SSR)
+- New task fields (recurrence, tags, subtasks) are all optional with sensible defaults
