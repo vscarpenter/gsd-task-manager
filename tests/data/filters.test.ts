@@ -298,8 +298,8 @@ describe("Filter utilities", () => {
     it("should have Today's Focus view", () => {
       const view = BUILT_IN_SMART_VIEWS.find(v => v.name === "Today's Focus");
       expect(view).toBeDefined();
-      expect(view?.criteria.dueToday).toBe(true);
-      expect(view?.criteria.overdue).toBe(true);
+      expect(view?.criteria.quadrants).toEqual(['urgent-important']);
+      expect(view?.criteria.status).toBe('active');
     });
 
     it("should have This Week view", () => {

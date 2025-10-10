@@ -131,14 +131,12 @@ export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria): Tas
 export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updatedAt'>[] = [
   {
     name: "Today's Focus",
-    description: "Due today, overdue, and urgent+important tasks",
+    description: "All urgent and important tasks - your top priorities",
     icon: "🎯",
     isBuiltIn: true,
     criteria: {
       status: 'active',
-      quadrants: ['urgent-important'],
-      dueToday: true,
-      overdue: true
+      quadrants: ['urgent-important']
     }
   },
   {
