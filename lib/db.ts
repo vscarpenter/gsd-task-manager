@@ -32,6 +32,12 @@ class GsdDatabase extends Dexie {
           }
         });
       });
+
+    // Version 3: Add indexes for better query performance and fix test issues
+    // Add createdAt and updatedAt indexes for sorting and filtering
+    this.version(3).stores({
+      tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed]"
+    });
   }
 }
 
