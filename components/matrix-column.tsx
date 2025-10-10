@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { QuadrantMeta } from "@/lib/quadrants";
@@ -15,12 +16,13 @@ interface MatrixColumnProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
 }
 
-export function MatrixColumn({ quadrant, tasks, onEdit, onDelete, onToggleComplete }: MatrixColumnProps) {
+function MatrixColumnComponent({ quadrant, tasks, onEdit, onDelete, onToggleComplete }: MatrixColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: quadrant.id
   });
 
-  const taskIds = tasks.map((task) => task.id);
+  // Memoize task IDs array to prevent unnecessary SortableContext re-renders
+  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
 
   return (
     <section
@@ -63,3 +65,13 @@ export function MatrixColumn({ quadrant, tasks, onEdit, onDelete, onToggleComple
     </section>
   );
 }
+
+// Memoize the component to prevent re-renders when tasks haven't changed
+export const MatrixColumn = memo(MatrixColumnComponent, (prevProps, nextProps) => {
+  // Only re-render if tasks array reference changed or length differs
+  return (
+    prevProps.quadrant.id === nextProps.quadrant.id &&
+    prevProps.tasks.length === nextProps.tasks.length &&
+    prevProps.tasks === nextProps.tasks // Reference equality check
+  );
+});

@@ -10,8 +10,12 @@ export default defineConfig({
     setupFiles: "./vitest.setup.ts",
     css: true,
     coverage: {
-      reporter: ["text", "lcov"],
+      enabled: true,
+      reporter: ["text", "lcov", "html"],
       provider: "v8",
+      include: ["lib/**/*.ts", "components/**/*.tsx"],
+      exclude: ["**/*.test.ts", "**/*.test.tsx", "**/*.config.ts", "**/types.ts"],
+      all: true,
       thresholds: {
         statements: 80,
         lines: 80,
