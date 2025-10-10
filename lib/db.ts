@@ -1,8 +1,10 @@
 import Dexie, { Table } from "dexie";
 import type { TaskRecord } from "@/lib/types";
+import type { SmartView } from "@/lib/filters";
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
+  smartViews!: Table<SmartView, string>;
 
   constructor() {
     super("GsdTaskManager");
@@ -37,6 +39,12 @@ class GsdDatabase extends Dexie {
     // Add createdAt and updatedAt indexes for sorting and filtering
     this.version(3).stores({
       tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed]"
+    });
+
+    // Version 4: Add Smart Views table for saved filters
+    this.version(4).stores({
+      tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed]",
+      smartViews: "id, name, isBuiltIn, createdAt"
     });
   }
 }

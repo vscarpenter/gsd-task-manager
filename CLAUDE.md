@@ -118,6 +118,29 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - All import operations are validated against Zod schemas before persisting
 - Implementation: `components/import-dialog.tsx`, `lib/tasks.ts` (importTasks, importFromJson)
 
+### Advanced Filtering & Smart Views (Phase 2)
+- **Smart Views**: Pre-configured filter combinations for common workflows
+  - 7 built-in views: Today's Focus, This Week, Overdue Backlog, No Deadline, Recently Added, Recently Completed, Recurring Tasks
+  - Custom Smart Views: Users can save their own filter combinations
+  - Smart View selector in header (right of search bar)
+  - Database schema v4 with `smartViews` table
+- **Filter System**: Comprehensive filtering with multiple criteria
+  - Filter by: quadrants, status, tags, due dates, recurrence, search query
+  - FilterCriteria interface in `lib/filters.ts` with 99.23% test coverage
+  - FilterBar shows active filter chips (removable)
+  - FilterPopover provides detailed filter editor with collapsible sections
+  - TagMultiselect component for searchable tag selection
+- **UI Layout**:
+  - Settings menu in header (Import/Export moved here)
+  - Smart View selector in header (right of search)
+  - Add Filter button **temporarily disabled** - Smart Views provide sufficient filtering for current needs
+  - FilterBar only appears when filters are active (cleaner UI)
+- **Implementation Notes**:
+  - All filter components fully implemented and functional
+  - Add Filter button commented out in `app-header.tsx` (lines 79-82)
+  - To re-enable: uncomment button and wire up `onOpenFilters` prop
+  - FilterPopover component ready for use when needed
+
 ## Development Notes
 - Changes to task schema require updating fixtures in `lib/schema.ts` and export/import logic
 - Database migrations handled in `lib/db.ts` - current version is 2
