@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon } from "lucide-react";
+import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon, StarIcon } from "lucide-react";
 
 interface HelpDialogProps {
   open: boolean;
@@ -38,6 +38,12 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
               <h3 className="font-semibold text-foreground">Enhanced Features</h3>
             </div>
             <div className="space-y-3 text-sm">
+              <FeatureBox
+                icon={<StarIcon className="h-4 w-4" />}
+                title="Smart Views"
+                description="Pre-configured filters for common workflows like 'Today's Focus', 'This Week', and 'Overdue Backlog'. Access via the Smart Views dropdown in the header, or create custom views from your own filter combinations."
+                tip="Use Smart Views to quickly focus on what matters most right now!"
+              />
               <FeatureBox
                 icon={<RepeatIcon className="h-4 w-4" />}
                 title="Recurring Tasks"
