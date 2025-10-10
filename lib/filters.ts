@@ -22,6 +22,7 @@ export interface FilterCriteria {
   overdue?: boolean;
   dueToday?: boolean;
   dueThisWeek?: boolean;
+  noDueDate?: boolean; // Filter for tasks without due dates
 
   // Recurrence filters
   recurrence?: RecurrenceType[];
@@ -100,6 +101,11 @@ export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria): Tas
     filtered = filtered.filter(task => !task.completed && isDueThisWeek(task.dueDate));
   }
 
+  // Filter by no due date
+  if (criteria.noDueDate) {
+    filtered = filtered.filter(task => !task.dueDate);
+  }
+
   // Filter by recurrence types
   if (criteria.recurrence && criteria.recurrence.length > 0) {
     filtered = filtered.filter(task => criteria.recurrence!.includes(task.recurrence));
@@ -166,7 +172,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
     isBuiltIn: true,
     criteria: {
       status: 'active',
-      dueDateRange: undefined // Tasks with no dueDate
+      noDueDate: true
     }
   },
   {
@@ -213,6 +219,7 @@ export function isEmptyFilter(criteria: FilterCriteria): boolean {
     !criteria.overdue &&
     !criteria.dueToday &&
     !criteria.dueThisWeek &&
+    !criteria.noDueDate &&
     (!criteria.recurrence || criteria.recurrence.length === 0) &&
     (!criteria.searchQuery || criteria.searchQuery.trim() === '')
   );
@@ -239,6 +246,7 @@ export function getFilterDescription(criteria: FilterCriteria): string {
   if (criteria.overdue) parts.push('overdue');
   if (criteria.dueToday) parts.push('due today');
   if (criteria.dueThisWeek) parts.push('due this week');
+  if (criteria.noDueDate) parts.push('no due date');
 
   if (criteria.recurrence && criteria.recurrence.length > 0) {
     parts.push(`${criteria.recurrence.join(', ')} recurrence`);

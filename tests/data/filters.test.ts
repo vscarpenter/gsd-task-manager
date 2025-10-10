@@ -172,6 +172,16 @@ describe("Filter utilities", () => {
       expect(result.some(t => t.recurrence === "daily")).toBe(true);
     });
 
+    it("should filter by no due date", () => {
+      const criteria: FilterCriteria = {
+        noDueDate: true
+      };
+      const result = applyFilters(sampleTasks, criteria);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("5");
+      expect(result[0].dueDate).toBeUndefined();
+    });
+
     it("should filter by search query", () => {
       const criteria: FilterCriteria = {
         searchQuery: "bug"
@@ -312,6 +322,13 @@ describe("Filter utilities", () => {
       const view = BUILT_IN_SMART_VIEWS.find(v => v.name === "Recurring Tasks");
       expect(view).toBeDefined();
       expect(view?.criteria.recurrence).toEqual(["daily", "weekly", "monthly"]);
+    });
+
+    it("should have No Deadline view", () => {
+      const view = BUILT_IN_SMART_VIEWS.find(v => v.name === "No Deadline");
+      expect(view).toBeDefined();
+      expect(view?.criteria.noDueDate).toBe(true);
+      expect(view?.criteria.status).toBe('active');
     });
   });
 });
