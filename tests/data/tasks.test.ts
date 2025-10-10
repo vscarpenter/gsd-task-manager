@@ -137,6 +137,9 @@ describe("Task CRUD operations", () => {
     it("should update task fields", async () => {
       const task = await createTask(createSampleTask({ title: "Original" }));
 
+      // Wait to ensure different timestamp
+      await new Promise(resolve => setTimeout(resolve, 10));
+
       const updated = await updateTask(task.id, {
         title: "Updated",
         description: "New description"
