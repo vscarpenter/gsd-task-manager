@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyFilters, isEmptyFilter, getFilterDescription, BUILT_IN_SMART_VIEWS } from "@/lib/filters";
-import type { FilterCriteria, TaskRecord } from "@/lib/types";
+import type { FilterCriteria } from "@/lib/filters";
+import type { TaskRecord } from "@/lib/types";
 
 describe("Filter utilities", () => {
   const sampleTasks: TaskRecord[] = [

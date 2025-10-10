@@ -6,12 +6,16 @@ import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
+import { FilterPanel } from "@/components/filter-panel";
+import { SmartViewSelector } from "@/components/smart-view-selector";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { quadrants, quadrantOrder } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
+import { applyFilters } from "@/lib/filters";
+import type { FilterCriteria } from "@/lib/filters";
 import type { QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import {
   createTask,
@@ -26,6 +30,7 @@ import {
 const HelpDialog = lazy(() => import("@/components/help-dialog").then(m => ({ default: m.HelpDialog })));
 const ImportDialog = lazy(() => import("@/components/import-dialog").then(m => ({ default: m.ImportDialog })));
 const TaskForm = lazy(() => import("@/components/task-form").then(m => ({ default: m.TaskForm })));
+const SaveSmartViewDialog = lazy(() => import("@/components/save-smart-view-dialog").then(m => ({ default: m.SaveSmartViewDialog })));
 
 interface DialogState {
   mode: "create" | "edit";
@@ -57,11 +62,13 @@ function isTypingElement(target: EventTarget | null): boolean {
 }
 
 export function MatrixBoard() {
-  const { all, byQuadrant } = useTasks();
+  const { all } = useTasks();
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [saveSmartViewOpen, setSaveSmartViewOpen] = useState(false);
   const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -82,32 +89,23 @@ export function MatrixBoard() {
     })
   );
 
+  // Extract all unique tags from tasks
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    all.forEach(task => task.tags.forEach(tag => tagSet.add(tag)));
+    return Array.from(tagSet).sort();
+  }, [all]);
+
   const filteredQuadrants = useMemo(() => {
-    const normalized = searchQuery.trim().toLowerCase();
-    if (!normalized) {
-      return byQuadrant;
-    }
+    // First apply advanced filters
+    const criteriaWithSearch = { ...filterCriteria, searchQuery: searchQuery.trim() || undefined };
+    const filtered = applyFilters(all, criteriaWithSearch);
 
-    const matches = (task: TaskRecord) => {
-      // Search across title, description, tags, quadrant, due date, and subtasks
-      const haystack = [
-        task.title,
-        task.description,
-        task.quadrant,
-        task.dueDate ?? "",
-        task.id,
-        ...task.tags,
-        ...task.subtasks.map(st => st.title)
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(normalized);
-    };
-
+    // Group filtered tasks by quadrant
     return Object.fromEntries(
-      quadrantOrder.map((id) => [id, (byQuadrant[id] ?? []).filter(matches)])
+      quadrantOrder.map((id) => [id, filtered.filter(task => task.quadrant === id)])
     );
-  }, [byQuadrant, searchQuery]);
+  }, [all, filterCriteria, searchQuery]);
 
   const visibleCount = useMemo(
     () => quadrantOrder.reduce((total, id) => total + (filteredQuadrants[id]?.length ?? 0), 0),
@@ -208,6 +206,19 @@ export function MatrixBoard() {
     showToast("Tasks imported successfully", undefined, 3000);
   };
 
+  const handleSelectSmartView = (criteria: FilterCriteria) => {
+    setFilterCriteria(criteria);
+    setSearchQuery(""); // Clear search when selecting a Smart View
+  };
+
+  const handleSaveSmartView = () => {
+    setSaveSmartViewOpen(true);
+  };
+
+  const handleSmartViewSaved = () => {
+    showToast("Smart View saved successfully", undefined, 3000);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -273,6 +284,24 @@ export function MatrixBoard() {
           onHelp={() => setHelpOpen(true)}
           isLoading={isLoading}
         />
+
+        {/* Smart Views and Filters */}
+        {hasTasks && (
+          <div className="px-6 space-y-4">
+            <div className="flex items-center justify-end">
+              <SmartViewSelector
+                onSelectView={handleSelectSmartView}
+                currentCriteria={filterCriteria}
+              />
+            </div>
+            <FilterPanel
+              criteria={filterCriteria}
+              onChange={setFilterCriteria}
+              onSaveAsSmartView={handleSaveSmartView}
+              availableTags={availableTags}
+            />
+          </div>
+        )}
 
         {/* Floating Action Button - Mobile Only */}
         <button
@@ -429,6 +458,17 @@ export function MatrixBoard() {
               fileContents={pendingImportContents}
               existingTaskCount={all.length}
               onImportComplete={handleImportComplete}
+            />
+          </Suspense>
+        )}
+
+        {saveSmartViewOpen && (
+          <Suspense fallback={<div className="sr-only">Loading...</div>}>
+            <SaveSmartViewDialog
+              open={saveSmartViewOpen}
+              onOpenChange={setSaveSmartViewOpen}
+              criteria={filterCriteria}
+              onSaved={handleSmartViewSaved}
             />
           </Suspense>
         )}
