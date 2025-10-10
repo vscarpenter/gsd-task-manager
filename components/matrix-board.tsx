@@ -286,6 +286,7 @@ export function MatrixBoard() {
           isLoading={isLoading}
           onSelectSmartView={handleSelectSmartView}
           onOpenFilters={() => setFilterPopoverOpen(true)}
+          currentFilterCriteria={filterCriteria}
         />
 
         {/* Active Filter Chips */}

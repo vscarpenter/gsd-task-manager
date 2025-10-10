@@ -8,10 +8,10 @@ import type { SmartView, FilterCriteria } from "@/lib/filters";
 
 interface SmartViewSelectorProps {
   onSelectView: (criteria: FilterCriteria) => void;
-  currentCriteria?: FilterCriteria; // eslint-disable-line @typescript-eslint/no-unused-vars
+  currentCriteria?: FilterCriteria;
 }
 
-export function SmartViewSelector({ onSelectView }: SmartViewSelectorProps) {
+export function SmartViewSelector({ onSelectView, currentCriteria }: SmartViewSelectorProps) {
   const [views, setViews] = useState<SmartView[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedView, setSelectedView] = useState<SmartView | null>(null);
@@ -19,6 +19,13 @@ export function SmartViewSelector({ onSelectView }: SmartViewSelectorProps) {
   useEffect(() => {
     loadViews();
   }, []);
+
+  // Clear selection when criteria is externally cleared (e.g., via "Clear All" button)
+  useEffect(() => {
+    if (currentCriteria && Object.keys(currentCriteria).length === 0 && selectedView) {
+      setSelectedView(null);
+    }
+  }, [currentCriteria, selectedView]);
 
   const loadViews = async () => {
     const allViews = await getSmartViews();
