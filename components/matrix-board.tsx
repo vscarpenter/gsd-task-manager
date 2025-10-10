@@ -6,8 +6,8 @@ import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
-import { FilterPanel } from "@/components/filter-panel";
-import { SmartViewSelector } from "@/components/smart-view-selector";
+import { FilterBar } from "@/components/filter-bar";
+import { FilterPopover } from "@/components/filter-popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -68,6 +68,7 @@ export function MatrixBoard() {
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [saveSmartViewOpen, setSaveSmartViewOpen] = useState(false);
   const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -283,22 +284,16 @@ export function MatrixBoard() {
           searchInputRef={searchInputRef}
           onHelp={() => setHelpOpen(true)}
           isLoading={isLoading}
+          onSelectSmartView={handleSelectSmartView}
+          onOpenFilters={() => setFilterPopoverOpen(true)}
         />
 
-        {/* Smart Views and Filters */}
+        {/* Active Filter Chips */}
         {hasTasks && (
-          <div className="px-6 space-y-4">
-            <div className="flex items-center justify-end">
-              <SmartViewSelector
-                onSelectView={handleSelectSmartView}
-                currentCriteria={filterCriteria}
-              />
-            </div>
-            <FilterPanel
+          <div className="px-6">
+            <FilterBar
               criteria={filterCriteria}
               onChange={setFilterCriteria}
-              onSaveAsSmartView={handleSaveSmartView}
-              availableTags={availableTags}
             />
           </div>
         )}
@@ -472,6 +467,15 @@ export function MatrixBoard() {
             />
           </Suspense>
         )}
+
+        <FilterPopover
+          open={filterPopoverOpen}
+          onOpenChange={setFilterPopoverOpen}
+          criteria={filterCriteria}
+          onChange={setFilterCriteria}
+          onSaveAsSmartView={handleSaveSmartView}
+          availableTags={availableTags}
+        />
 
         <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
           <DialogContent>

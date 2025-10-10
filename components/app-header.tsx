@@ -1,11 +1,14 @@
 "use client";
 
-import { ChangeEvent, RefObject, useRef } from "react";
-import { PlusIcon, UploadIcon, DownloadIcon, SearchIcon, HelpCircleIcon } from "lucide-react";
+import { RefObject } from "react";
+import { PlusIcon, SearchIcon, HelpCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GsdLogo } from "@/components/gsd-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SettingsMenu } from "@/components/settings-menu";
+import { SmartViewSelector } from "@/components/smart-view-selector";
+import type { FilterCriteria } from "@/lib/filters";
 
 interface AppHeaderProps {
   onNewTask: () => void;
@@ -16,19 +19,22 @@ interface AppHeaderProps {
   searchInputRef: RefObject<HTMLInputElement | null>;
   onHelp: () => void;
   isLoading?: boolean;
+  onSelectSmartView: (criteria: FilterCriteria) => void;
+  onOpenFilters: () => void;
 }
 
-export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, onImport, searchInputRef, onHelp, isLoading }: AppHeaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    await onImport(file);
-    event.target.value = "";
-  };
+export function AppHeader({
+  onNewTask,
+  onSearchChange,
+  searchQuery,
+  onExport,
+  onImport,
+  searchInputRef,
+  onHelp,
+  isLoading,
+  onSelectSmartView,
+  onOpenFilters // eslint-disable-line @typescript-eslint/no-unused-vars
+}: AppHeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
@@ -43,6 +49,7 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SettingsMenu onExport={onExport} onImport={onImport} isLoading={isLoading} />
           <ThemeToggle />
           <Button className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
             <HelpCircleIcon className="h-5 w-5" />
@@ -68,20 +75,11 @@ export function AppHeader({ onNewTask, onSearchChange, searchQuery, onExport, on
             aria-label="Search tasks"
           />
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json"
-          className="hidden"
-          onChange={handleImportChange}
-          aria-hidden
-        />
-        <Button variant="subtle" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
-          <UploadIcon className="mr-2 h-4 w-4" /> Import JSON
-        </Button>
-        <Button variant="subtle" onClick={onExport} disabled={isLoading}>
-          <DownloadIcon className="mr-2 h-4 w-4" /> Export
-        </Button>
+        <SmartViewSelector onSelectView={onSelectSmartView} />
+        {/* Add Filter button temporarily disabled - Smart Views provide sufficient filtering */}
+        {/* <Button variant="subtle" onClick={onOpenFilters}>
+          <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
+        </Button> */}
       </div>
     </header>
   );

@@ -1,6 +1,9 @@
 import type { QuadrantId, RecurrenceType, TaskRecord } from "@/lib/types";
 import { isOverdue, isDueToday, isDueThisWeek } from "@/lib/utils";
 
+// Re-export types for convenience
+export type { QuadrantId, RecurrenceType };
+
 /**
  * Criteria for filtering tasks
  */
