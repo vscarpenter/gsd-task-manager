@@ -3,6 +3,7 @@
 import { ChangeEvent, useRef, useState } from "react";
 import { SettingsIcon, UploadIcon, DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SettingsMenuProps {
   onExport: () => Promise<void>;
@@ -31,14 +32,21 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
 
   return (
     <div className="relative">
-      <Button
-        className="h-10 w-10 p-0"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Settings"
-        aria-expanded={isOpen}
-      >
-        <SettingsIcon className="h-5 w-5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            className="h-10 w-10 p-0"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Settings"
+            aria-expanded={isOpen}
+          >
+            <SettingsIcon className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Import / Export</p>
+        </TooltipContent>
+      </Tooltip>
 
       {isOpen && (
         <>

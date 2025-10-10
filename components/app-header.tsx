@@ -4,6 +4,7 @@ import { RefObject } from "react";
 import { PlusIcon, SearchIcon, HelpCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { GsdLogo } from "@/components/gsd-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SettingsMenu } from "@/components/settings-menu";
@@ -39,31 +40,39 @@ export function AppHeader({
 }: AppHeaderProps) {
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <GsdLogo className="shrink-0" />
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Prioritize what matters
-            </h1>
+    <TooltipProvider delayDuration={300}>
+      <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <GsdLogo className="shrink-0" />
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                Prioritize what matters
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <SettingsMenu onExport={onExport} onImport={onImport} isLoading={isLoading} />
+            <ThemeToggle />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
+                  <HelpCircleIcon className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Help & Tips (Press ?)</p>
+              </TooltipContent>
+            </Tooltip>
+            <Button onClick={onNewTask} className="hidden sm:inline-flex">
+              <PlusIcon className="mr-2 h-4 w-4" /> New Task
+            </Button>
+            <Button onClick={onNewTask} className="sm:hidden" aria-label="Create task">
+              <PlusIcon className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <SettingsMenu onExport={onExport} onImport={onImport} isLoading={isLoading} />
-          <ThemeToggle />
-          <Button className="h-10 w-10 p-0" onClick={onHelp} aria-label="Help">
-            <HelpCircleIcon className="h-5 w-5" />
-          </Button>
-          <Button onClick={onNewTask} className="hidden sm:inline-flex">
-            <PlusIcon className="mr-2 h-4 w-4" /> New Task
-          </Button>
-          <Button onClick={onNewTask} className="sm:hidden" aria-label="Create task">
-            <PlusIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1">
@@ -83,6 +92,7 @@ export function AppHeader({
           <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
         </Button> */}
       </div>
-    </header>
+      </header>
+    </TooltipProvider>
   );
 }
