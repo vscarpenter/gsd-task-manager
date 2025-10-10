@@ -21,6 +21,7 @@ interface AppHeaderProps {
   isLoading?: boolean;
   onSelectSmartView: (criteria: FilterCriteria) => void;
   onOpenFilters: () => void;
+  currentFilterCriteria?: FilterCriteria;
 }
 
 export function AppHeader({
@@ -33,7 +34,8 @@ export function AppHeader({
   onHelp,
   isLoading,
   onSelectSmartView,
-  onOpenFilters // eslint-disable-line @typescript-eslint/no-unused-vars
+  onOpenFilters, // eslint-disable-line @typescript-eslint/no-unused-vars
+  currentFilterCriteria
 }: AppHeaderProps) {
 
   return (
@@ -75,7 +77,7 @@ export function AppHeader({
             aria-label="Search tasks"
           />
         </div>
-        <SmartViewSelector onSelectView={onSelectSmartView} />
+        <SmartViewSelector onSelectView={onSelectSmartView} currentCriteria={currentFilterCriteria} />
         {/* Add Filter button temporarily disabled - Smart Views provide sufficient filtering */}
         {/* <Button variant="subtle" onClick={onOpenFilters}>
           <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
