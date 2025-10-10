@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -13,12 +14,15 @@ interface TaskCardProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
 }
 
-export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardProps) {
-  const dueLabel = formatDueDate(task.dueDate);
-  const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
-  const taskIsDueToday = !task.completed && isDueToday(task.dueDate);
-  const completedSubtasks = task.subtasks.filter(st => st.completed).length;
-  const totalSubtasks = task.subtasks.length;
+function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete }: TaskCardProps) {
+  // Memoize expensive computations
+  const dueLabel = useMemo(() => formatDueDate(task.dueDate), [task.dueDate]);
+  const taskIsOverdue = useMemo(() => !task.completed && isOverdue(task.dueDate), [task.completed, task.dueDate]);
+  const taskIsDueToday = useMemo(() => !task.completed && isDueToday(task.dueDate), [task.completed, task.dueDate]);
+  const { completedSubtasks, totalSubtasks } = useMemo(() => ({
+    completedSubtasks: task.subtasks.filter(st => st.completed).length,
+    totalSubtasks: task.subtasks.length
+  }), [task.subtasks]);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id
@@ -152,3 +156,23 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete }: TaskCardP
     </article>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const TaskCard = memo(TaskCardComponent, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.task.id === nextProps.task.id &&
+    prevProps.task.title === nextProps.task.title &&
+    prevProps.task.description === nextProps.task.description &&
+    prevProps.task.completed === nextProps.task.completed &&
+    prevProps.task.urgent === nextProps.task.urgent &&
+    prevProps.task.important === nextProps.task.important &&
+    prevProps.task.dueDate === nextProps.task.dueDate &&
+    prevProps.task.recurrence === nextProps.task.recurrence &&
+    prevProps.task.updatedAt === nextProps.task.updatedAt &&
+    prevProps.task.tags.length === nextProps.task.tags.length &&
+    prevProps.task.subtasks.length === nextProps.task.subtasks.length &&
+    JSON.stringify(prevProps.task.tags) === JSON.stringify(nextProps.task.tags) &&
+    JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks)
+  );
+});

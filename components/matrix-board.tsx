@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
 import { AppFooter } from "@/components/app-footer";
-import { HelpDialog } from "@/components/help-dialog";
-import { ImportDialog } from "@/components/import-dialog";
-import { TaskForm } from "@/components/task-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { quadrants, quadrantOrder } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
@@ -23,6 +21,11 @@ import {
   toggleCompleted,
   updateTask
 } from "@/lib/tasks";
+
+// Lazy load heavy components
+const HelpDialog = lazy(() => import("@/components/help-dialog").then(m => ({ default: m.HelpDialog })));
+const ImportDialog = lazy(() => import("@/components/import-dialog").then(m => ({ default: m.ImportDialog })));
+const TaskForm = lazy(() => import("@/components/task-form").then(m => ({ default: m.TaskForm })));
 
 interface DialogState {
   mode: "create" | "edit";
@@ -411,28 +414,41 @@ export function MatrixBoard() {
 
         <AppFooter />
 
-        <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+        {/* Lazy-loaded dialogs with Suspense fallback */}
+        {helpOpen && (
+          <Suspense fallback={<div className="sr-only">Loading...</div>}>
+            <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+          </Suspense>
+        )}
 
-        <ImportDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-          fileContents={pendingImportContents}
-          existingTaskCount={all.length}
-          onImportComplete={handleImportComplete}
-        />
+        {importDialogOpen && (
+          <Suspense fallback={<div className="sr-only">Loading...</div>}>
+            <ImportDialog
+              open={importDialogOpen}
+              onOpenChange={setImportDialogOpen}
+              fileContents={pendingImportContents}
+              existingTaskCount={all.length}
+              onImportComplete={handleImportComplete}
+            />
+          </Suspense>
+        )}
 
         <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{dialogState?.mode === "edit" ? "Edit task" : "Create task"}</DialogTitle>
             </DialogHeader>
-            <TaskForm
-              initialValues={activeTaskDraft}
-              onSubmit={handleSubmit}
-              onCancel={closeDialog}
-              onDelete={taskBeingEdited ? () => handleDelete(taskBeingEdited) : undefined}
-              submitLabel={dialogState?.mode === "edit" ? "Update task" : "Add task"}
-            />
+            {dialogState !== null && (
+              <Suspense fallback={<div className="flex items-center justify-center p-8"><Spinner /></div>}>
+                <TaskForm
+                  initialValues={activeTaskDraft}
+                  onSubmit={handleSubmit}
+                  onCancel={closeDialog}
+                  onDelete={taskBeingEdited ? () => handleDelete(taskBeingEdited) : undefined}
+                  submitLabel={dialogState?.mode === "edit" ? "Update task" : "Add task"}
+                />
+              </Suspense>
+            )}
           </DialogContent>
         </Dialog>
       </div>
