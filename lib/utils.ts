@@ -68,7 +68,8 @@ export function isDueToday(value?: string): boolean {
 }
 
 /**
- * Check if a date is due this week
+ * Check if a date is due this week (includes overdue tasks)
+ * Rationale: If something is overdue, it needs attention "this week"
  */
 export function isDueThisWeek(value?: string): boolean {
   if (!value) {
@@ -77,5 +78,8 @@ export function isDueThisWeek(value?: string): boolean {
   const date = new Date(value);
   const now = new Date();
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  return date >= now && date <= weekFromNow;
+
+  // Include overdue tasks - if it's overdue, you need to handle it this week
+  // Also include tasks due within the next 7 days
+  return date <= weekFromNow;
 }
