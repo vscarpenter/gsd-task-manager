@@ -141,7 +141,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   },
   {
     name: "This Week",
-    description: "All tasks due within the next 7 days",
+    description: "Tasks needing attention this week (overdue + next 7 days)",
     icon: "📅",
     isBuiltIn: true,
     criteria: {
