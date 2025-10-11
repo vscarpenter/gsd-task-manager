@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
@@ -59,6 +59,7 @@ export function MatrixBoard() {
   const { all } = useTasks();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
+  const [showCompleted, setShowCompleted] = useState(false);
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -93,15 +94,19 @@ export function MatrixBoard() {
   }, [all]);
 
   const filteredQuadrants = useMemo(() => {
-    // First apply advanced filters
-    const criteriaWithSearch = { ...filterCriteria, searchQuery: searchQuery.trim() || undefined };
+    // First apply advanced filters, including completed status
+    const criteriaWithSearch: FilterCriteria = {
+      ...filterCriteria,
+      searchQuery: searchQuery.trim() || undefined,
+      status: showCompleted ? 'all' : 'active'
+    };
     const filtered = applyFilters(all, criteriaWithSearch);
 
     // Group filtered tasks by quadrant
     return Object.fromEntries(
       quadrantOrder.map((id) => [id, filtered.filter(task => task.quadrant === id)])
     );
-  }, [all, filterCriteria, searchQuery]);
+  }, [all, filterCriteria, searchQuery, showCompleted]);
 
   const visibleCount = useMemo(
     () => quadrantOrder.reduce((total, id) => total + (filteredQuadrants[id]?.length ?? 0), 0),
@@ -159,6 +164,15 @@ export function MatrixBoard() {
   const handleComplete = async (task: TaskRecord, completed: boolean) => {
     try {
       await toggleCompleted(task.id, completed);
+
+      // Show helpful toast when completing a task (only if completed tasks are hidden)
+      if (completed && !showCompleted) {
+        showToast(
+          `"${task.title}" completed. Click 👁️ to view completed tasks`,
+          undefined,
+          TOAST_DURATION.LONG
+        );
+      }
     } catch (error) {
       handleError(error, {
         action: ErrorActions.TOGGLE_TASK,
@@ -279,6 +293,8 @@ export function MatrixBoard() {
           onSelectSmartView={handleSelectSmartView}
           onOpenFilters={() => setFilterPopoverOpen(true)}
           currentFilterCriteria={filterCriteria}
+          showCompleted={showCompleted}
+          onToggleCompleted={() => setShowCompleted(!showCompleted)}
         />
 
         {/* Active Filter Chips */}

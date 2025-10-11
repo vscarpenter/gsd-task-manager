@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon, StarIcon } from "lucide-react";
+import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon, StarIcon, EyeIcon } from "lucide-react";
 
 interface HelpDialogProps {
   open: boolean;
@@ -43,6 +43,12 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                 title="Smart Views"
                 description="Pre-configured filters for common workflows like 'Today's Focus', 'This Week', and 'Overdue Backlog'. Access via the Smart Views dropdown in the header, or create custom views from your own filter combinations."
                 tip="Use Smart Views to quickly focus on what matters most right now!"
+              />
+              <FeatureBox
+                icon={<EyeIcon className="h-4 w-4" />}
+                title="Show/Hide Completed"
+                description="Completed tasks are hidden by default to keep your matrix clean and focused. Click the eye icon in the header to toggle completed tasks on/off. View all completed tasks anytime using the 'All Completed' or 'This Week's Wins' Smart Views."
+                tip="Keep your focus on active work while preserving completed task history!"
               />
               <FeatureBox
                 icon={<RepeatIcon className="h-4 w-4" />}

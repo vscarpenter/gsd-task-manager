@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
-import { PlusIcon, SearchIcon, HelpCircleIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, HelpCircleIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,6 +23,8 @@ interface AppHeaderProps {
   onSelectSmartView: (criteria: FilterCriteria) => void;
   onOpenFilters: () => void;
   currentFilterCriteria?: FilterCriteria;
+  showCompleted: boolean;
+  onToggleCompleted: () => void;
 }
 
 export function AppHeader({
@@ -36,7 +38,9 @@ export function AppHeader({
   isLoading,
   onSelectSmartView,
   onOpenFilters, // eslint-disable-line @typescript-eslint/no-unused-vars
-  currentFilterCriteria
+  currentFilterCriteria,
+  showCompleted,
+  onToggleCompleted
 }: AppHeaderProps) {
 
   return (
@@ -54,6 +58,22 @@ export function AppHeader({
           </div>
           <div className="flex items-center gap-2">
             <SettingsMenu onExport={onExport} onImport={onImport} isLoading={isLoading} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showCompleted ? "primary" : "ghost"}
+                  className="h-10 w-10 p-0"
+                  onClick={onToggleCompleted}
+                  aria-label={showCompleted ? "Hide completed tasks" : "Show completed tasks"}
+                  aria-pressed={showCompleted}
+                >
+                  {showCompleted ? <EyeIcon className="h-5 w-5" /> : <EyeOffIcon className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{showCompleted ? "Hide" : "Show"} Completed Tasks</p>
+              </TooltipContent>
+            </Tooltip>
             <ThemeToggle />
             <Tooltip>
               <TooltipTrigger asChild>

@@ -31,7 +31,8 @@ describe("AppHeader", () => {
     onImport: vi.fn(),
     onHelp: vi.fn(),
     onSelectSmartView: vi.fn(),
-    onOpenFilters: vi.fn()
+    onOpenFilters: vi.fn(),
+    onToggleCompleted: vi.fn()
   };
 
   const searchInputRef = { current: null };
@@ -41,7 +42,8 @@ describe("AppHeader", () => {
     searchQuery: "",
     searchInputRef,
     isLoading: false,
-    currentFilterCriteria: {}
+    currentFilterCriteria: {},
+    showCompleted: false
   };
 
   beforeEach(() => {
