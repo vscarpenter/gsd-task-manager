@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { z } from "zod";
-import { nanoid } from "nanoid";
 import { taskDraftSchema } from "@/lib/schema";
-import type { TaskDraft, RecurrenceType, Subtask } from "@/lib/types";
+import type { TaskDraft, RecurrenceType } from "@/lib/types";
 import { TogglePill } from "@/components/toggle-pill";
+import { TaskFormTags } from "@/components/task-form-tags";
+import { TaskFormSubtasks } from "@/components/task-form-subtasks";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, PlusIcon, XIcon } from "lucide-react";
 
 interface TaskFormProps {
   initialValues?: TaskDraft;
@@ -68,46 +68,9 @@ export function TaskForm({
   const [values, setValues] = useState<TaskDraft>({ ...defaultValues, ...initialValues });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [newTag, setNewTag] = useState("");
-  const [newSubtask, setNewSubtask] = useState("");
 
   const updateField = <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => {
     setValues((current) => ({ ...current, [key]: value }));
-  };
-
-  const addTag = () => {
-    const trimmed = newTag.trim();
-    if (!trimmed) return;
-    if (values.tags && values.tags.includes(trimmed)) return;
-    updateField("tags", [...(values.tags || []), trimmed]);
-    setNewTag("");
-  };
-
-  const removeTag = (tag: string) => {
-    updateField("tags", (values.tags || []).filter(t => t !== tag));
-  };
-
-  const addSubtask = () => {
-    const trimmed = newSubtask.trim();
-    if (!trimmed) return;
-    const subtask: Subtask = {
-      id: nanoid(12),
-      title: trimmed,
-      completed: false
-    };
-    updateField("subtasks", [...(values.subtasks || []), subtask]);
-    setNewSubtask("");
-  };
-
-  const removeSubtask = (id: string) => {
-    updateField("subtasks", (values.subtasks || []).filter(st => st.id !== id));
-  };
-
-  const toggleSubtask = (id: string) => {
-    const updated = (values.subtasks || []).map(st =>
-      st.id === id ? { ...st, completed: !st.completed } : st
-    );
-    updateField("subtasks", updated);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -244,97 +207,17 @@ export function TaskForm({
         <p className="text-xs text-foreground-muted">When completed, create a new instance automatically</p>
       </div>
 
-      <div className="space-y-2">
-        <Label>Tags</Label>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Add tag (e.g., work, personal)"
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addTag();
-              }
-            }}
-          />
-          <Button type="button" variant="subtle" onClick={addTag} className="shrink-0">
-            <PlusIcon className="h-4 w-4" />
-          </Button>
-        </div>
-        {values.tags && values.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {values.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  className="hover:text-accent-foreground"
-                  aria-label={`Remove ${tag} tag`}
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : null}
-        {errors.tags ? <p className="text-xs text-red-600">{errors.tags}</p> : null}
-      </div>
+      <TaskFormTags
+        tags={values.tags || []}
+        onChange={(tags) => updateField("tags", tags)}
+        error={errors.tags}
+      />
 
-      <div className="space-y-2">
-        <Label>Subtasks</Label>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Add subtask"
-            value={newSubtask}
-            onChange={(e) => setNewSubtask(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addSubtask();
-              }
-            }}
-          />
-          <Button type="button" variant="subtle" onClick={addSubtask} className="shrink-0">
-            <PlusIcon className="h-4 w-4" />
-          </Button>
-        </div>
-        {values.subtasks && values.subtasks.length > 0 ? (
-          <div className="space-y-1">
-            {values.subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                className="flex items-center gap-2 rounded-lg border border-card-border bg-background p-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleSubtask(subtask.id)}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border hover:border-accent hover:bg-accent/10"
-                  aria-label={subtask.completed ? "Mark as incomplete" : "Mark as complete"}
-                >
-                  {subtask.completed ? <CheckIcon className="h-3 w-3 text-accent" /> : null}
-                </button>
-                <span className={`flex-1 text-sm ${subtask.completed ? "text-foreground-muted line-through" : "text-foreground"}`}>
-                  {subtask.title}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeSubtask(subtask.id)}
-                  className="shrink-0 text-foreground-muted hover:text-red-600"
-                  aria-label="Remove subtask"
-                >
-                  <XIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {errors.subtasks ? <p className="text-xs text-red-600">{errors.subtasks}</p> : null}
-      </div>
+      <TaskFormSubtasks
+        subtasks={values.subtasks || []}
+        onChange={(subtasks) => updateField("subtasks", subtasks)}
+        error={errors.subtasks}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         {onDelete ? (
