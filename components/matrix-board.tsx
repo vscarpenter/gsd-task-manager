@@ -5,6 +5,7 @@ import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSen
 import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
+import { MatrixEmptyState } from "@/components/matrix-empty-state";
 import { AppFooter } from "@/components/app-footer";
 import { FilterBar } from "@/components/filter-bar";
 import { FilterPopover } from "@/components/filter-popover";
@@ -14,6 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { quadrants, quadrantOrder } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
+import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { applyFilters } from "@/lib/filters";
 import type { FilterCriteria } from "@/lib/filters";
 import type { QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
@@ -27,6 +29,7 @@ import {
 } from "@/lib/tasks";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
+import { DND_CONFIG, TOAST_DURATION } from "@/lib/constants";
 
 // Lazy load heavy components
 const HelpDialog = lazy(() => import("@/components/help-dialog").then(m => ({ default: m.HelpDialog })));
@@ -52,17 +55,6 @@ function toDraft(task: TaskRecord): TaskDraft {
   };
 }
 
-function isTypingElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tag = target.tagName.toLowerCase();
-  if (tag === "input" || tag === "textarea" || tag === "select") {
-    return true;
-  }
-  return target.isContentEditable;
-}
-
 export function MatrixBoard() {
   const { all } = useTasks();
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,13 +74,13 @@ export function MatrixBoard() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8 // Prevent accidental drags
+        distance: DND_CONFIG.POINTER_DISTANCE
       }
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5
+        delay: DND_CONFIG.TOUCH_DELAY,
+        tolerance: DND_CONFIG.TOUCH_TOLERANCE
       }
     })
   );
@@ -152,7 +144,7 @@ export function MatrixBoard() {
         async () => {
           await createTask(toDraft(taskData));
         },
-        5000
+        TOAST_DURATION.LONG
       );
     } catch (error) {
       handleError(error, {
@@ -218,7 +210,7 @@ export function MatrixBoard() {
 
   const handleImportComplete = () => {
     setPendingImportContents(null);
-    showToast("Tasks imported successfully", undefined, 3000);
+    showToast("Tasks imported successfully", undefined, TOAST_DURATION.SHORT);
   };
 
   const handleSelectSmartView = (criteria: FilterCriteria) => {
@@ -231,7 +223,7 @@ export function MatrixBoard() {
   };
 
   const handleSmartViewSaved = () => {
-    showToast("Smart View saved successfully", undefined, 3000);
+    showToast("Smart View saved successfully", undefined, TOAST_DURATION.SHORT);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -257,34 +249,15 @@ export function MatrixBoard() {
     }
   };
 
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (isTypingElement(event.target)) {
-        return;
-      }
-
-      if (event.key === "n" || event.key === "N") {
-        event.preventDefault();
-        setDialogState({ mode: "create" });
-        return;
-      }
-
-      if (event.key === "/") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-
-      if (event.key === "?" || (event.shiftKey && event.key === "/")) {
-        event.preventDefault();
-        setHelpOpen(true);
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
+  // Handle keyboard shortcuts
+  useKeyboardShortcuts(
+    {
+      onNewTask: () => setDialogState({ mode: "create" }),
+      onSearch: () => searchInputRef.current?.focus(),
+      onHelp: () => setHelpOpen(true)
+    },
+    searchInputRef
+  );
 
   const taskBeingEdited = dialogState?.mode === "edit" ? dialogState.task : undefined;
   const activeTaskDraft = taskBeingEdited ? toDraft(taskBeingEdited) : undefined;
@@ -334,103 +307,7 @@ export function MatrixBoard() {
           paddingBottom: "max(2.5rem, calc(5rem + env(safe-area-inset-bottom)))"
         }}>
           {!hasTasks ? (
-            <div className="mx-auto max-w-3xl space-y-8">
-              {/* Welcome header */}
-              <div className="rounded-3xl border border-card-border bg-gradient-to-br from-background-muted to-background p-8 text-center shadow-sm">
-                <h2 className="text-2xl font-bold text-foreground">Welcome to GSD Task Manager</h2>
-                <p className="mt-3 text-base text-foreground-muted">
-                  <span className="font-semibold">Get Stuff Done</span> using the Eisenhower Matrix — a proven productivity framework that helps you prioritize what truly matters.
-                </p>
-              </div>
-
-              {/* Matrix explanation */}
-              <div className="rounded-3xl border border-card-border bg-card p-8 shadow-sm">
-                <h3 className="text-lg font-semibold text-foreground">How the Eisenhower Matrix Works</h3>
-                <p className="mt-2 text-sm text-foreground-muted">
-                  Tasks are organized into four quadrants based on urgency and importance:
-                </p>
-
-                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* Q1 */}
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-blue-500" />
-                      <h4 className="font-semibold text-blue-900">Do First</h4>
-                    </div>
-                    <p className="mt-2 text-xs text-blue-700">
-                      Urgent + Important<br />
-                      Crises and deadlines requiring immediate attention
-                    </p>
-                  </div>
-
-                  {/* Q2 */}
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-amber-500" />
-                      <h4 className="font-semibold text-amber-900">Schedule</h4>
-                    </div>
-                    <p className="mt-2 text-xs text-amber-700">
-                      Not Urgent + Important<br />
-                      Long-term goals and strategic planning
-                    </p>
-                  </div>
-
-                  {/* Q3 */}
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                      <h4 className="font-semibold text-emerald-900">Delegate</h4>
-                    </div>
-                    <p className="mt-2 text-xs text-emerald-700">
-                      Urgent + Not Important<br />
-                      Tasks that can be delegated to others
-                    </p>
-                  </div>
-
-                  {/* Q4 */}
-                  <div className="rounded-xl border border-purple-200 bg-purple-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-purple-500" />
-                      <h4 className="font-semibold text-purple-900">Eliminate</h4>
-                    </div>
-                    <p className="mt-2 text-xs text-purple-700">
-                      Not Urgent + Not Important<br />
-                      Time-wasters to minimize or eliminate
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick tips */}
-              <div className="rounded-3xl border border-card-border bg-card p-8 shadow-sm">
-                <h3 className="text-lg font-semibold text-foreground">Quick Tips</h3>
-                <ul className="mt-4 space-y-2 text-sm text-foreground-muted">
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-foreground-muted">•</span>
-                    <span>Press <kbd className="rounded border border-border bg-background-muted px-1.5 py-0.5 text-xs font-semibold text-foreground">n</kbd> to create a new task</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-foreground-muted">•</span>
-                    <span>All your data stays private in your browser — nothing is sent to any server</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-foreground-muted">•</span>
-                    <span>Export your tasks regularly to keep a backup</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 text-foreground-muted">•</span>
-                    <span>Press <kbd className="rounded border border-border bg-background-muted px-1.5 py-0.5 text-xs font-semibold text-foreground">?</kbd> anytime to see all keyboard shortcuts</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* CTA */}
-              <div className="text-center">
-                <Button className="px-8 py-3 text-base" onClick={() => setDialogState({ mode: "create" })}>
-                  Create your first task
-                </Button>
-              </div>
-            </div>
+            <MatrixEmptyState onCreateTask={() => setDialogState({ mode: "create" })} />
           ) : visibleCount === 0 ? (
             <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
               <h2 className="text-lg font-semibold text-foreground">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>

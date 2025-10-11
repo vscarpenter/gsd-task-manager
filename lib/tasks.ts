@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
+import { generateId } from "@/lib/id-generator";
 import { parseQuadrantFlags, resolveQuadrantId } from "@/lib/quadrants";
 import { importPayloadSchema, taskDraftSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
@@ -15,7 +15,7 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
   const now = isoNow();
   const record: TaskRecord = {
     ...validated,
-    id: nanoid(12),
+    id: generateId(),
     quadrant: resolveQuadrantId(validated.urgent, validated.important),
     completed: false,
     createdAt: now,
@@ -86,6 +86,26 @@ function calculateNextDueDate(currentDueDate: string | undefined, recurrence: st
   return next.toISOString();
 }
 
+/**
+ * Create a new recurring task instance based on a completed task
+ */
+function createRecurringInstance(existing: TaskRecord): TaskRecord {
+  const now = isoNow();
+  const nextDueDate = calculateNextDueDate(existing.dueDate, existing.recurrence);
+
+  return {
+    ...existing,
+    id: generateId(),
+    completed: false,
+    dueDate: nextDueDate,
+    createdAt: now,
+    updatedAt: now,
+    parentTaskId: existing.parentTaskId ?? existing.id,
+    // Reset subtasks to uncompleted for new instance
+    subtasks: existing.subtasks.map(subtask => ({ ...subtask, completed: false }))
+  };
+}
+
 export async function toggleCompleted(id: string, completed: boolean): Promise<TaskRecord> {
   const db = getDb();
   const existing = await db.tasks.get(id);
@@ -95,22 +115,7 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
 
   // If marking as completed and task has recurrence, create a new instance
   if (completed && existing.recurrence !== "none") {
-    const now = isoNow();
-    const nextDueDate = calculateNextDueDate(existing.dueDate, existing.recurrence);
-
-    // Create new recurring instance
-    const newInstance: TaskRecord = {
-      ...existing,
-      id: nanoid(12),
-      completed: false,
-      dueDate: nextDueDate,
-      createdAt: now,
-      updatedAt: now,
-      parentTaskId: existing.parentTaskId ?? existing.id, // Track original recurring task
-      // Reset subtasks to uncompleted for new instance
-      subtasks: existing.subtasks.map(st => ({ ...st, completed: false }))
-    };
-
+    const newInstance = createRecurringInstance(existing);
     await db.tasks.add(newInstance);
   }
 
@@ -170,6 +175,30 @@ export async function exportTasks(): Promise<ImportPayload> {
   } satisfies ImportPayload;
 }
 
+/**
+ * Regenerate IDs for tasks that conflict with existing IDs
+ *
+ * Prevents ID collisions when merging imported tasks with existing tasks.
+ * Also regenerates subtask IDs to maintain consistency.
+ */
+function regenerateConflictingIds(tasks: TaskRecord[], existingIds: Set<string>): TaskRecord[] {
+  return tasks.map(task => {
+    // If ID already exists, regenerate it
+    if (existingIds.has(task.id)) {
+      return {
+        ...task,
+        id: generateId(),
+        // Also regenerate subtask IDs to avoid conflicts
+        subtasks: task.subtasks.map(subtask => ({
+          ...subtask,
+          id: generateId()
+        }))
+      };
+    }
+    return task;
+  });
+}
+
 export async function importTasks(payload: ImportPayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   const parsed = importPayloadSchema.parse(payload);
@@ -183,23 +212,7 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       // Merge mode: keep existing, add imported with regenerated IDs if needed
       const existingTasks = await db.tasks.toArray();
       const existingIds = new Set(existingTasks.map(t => t.id));
-
-      const tasksToImport = parsed.tasks.map(task => {
-        // If ID already exists, regenerate it
-        if (existingIds.has(task.id)) {
-          return {
-            ...task,
-            id: nanoid(12),
-            // Also regenerate subtask IDs to avoid conflicts
-            subtasks: task.subtasks.map(st => ({
-              ...st,
-              id: nanoid(12)
-            }))
-          };
-        }
-        return task;
-      });
-
+      const tasksToImport = regenerateConflictingIds(parsed.tasks, existingIds);
       await db.tasks.bulkAdd(tasksToImport);
     }
   });
@@ -258,7 +271,7 @@ export async function addSubtask(taskId: string, title: string): Promise<TaskRec
   }
 
   const newSubtask = {
-    id: nanoid(12),
+    id: generateId(),
     title,
     completed: false
   };
