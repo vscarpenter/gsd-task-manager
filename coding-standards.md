@@ -1,67 +1,144 @@
-# Code Development Guidelines
+# Vinny’s Coding Standards (LLM-Optimized Edition)
 
-## Core Philosophy
-- **Favor simplicity over cleverness** - Write code that's easy to understand first, optimize later if needed
-- **Start minimal and iterate** - Build the smallest working solution, then enhance based on actual requirements
-- **Optimize for the next developer** - Write code as if the person maintaining it is a violent psychopath who knows where you live
+## 🎯 Core Principles
+- **Simplicity over cleverness.** Prefer clarity to novelty.  
+- **Build small, iterate fast.** Deliver working code before optimizing.  
+- **Code for humans.** Write as if the next developer is tired and in a hurry.  
+- **Prefer boring tech.** Stability > hype.  
+- **Automate consistency.** Enforce linting, tests, and formatting in CI.
 
-## Readability & Maintainability
-- **Use descriptive names** - Variables, functions, and classes should clearly express their purpose
-- **Keep functions small and focused** - Each function should do one thing well (single responsibility principle)
-- **Minimize nesting** - Use early returns, guard clauses, and clear conditional logic
-- **Add comments for "why," not "what"** - The code should be self-documenting for what it does
-- **Follow consistent formatting** - Use team-agreed linting rules and code formatting standards
+---
 
-## DRY (Don't Repeat Yourself) - Applied Thoughtfully
-- **Extract common patterns** but avoid premature abstraction
-- **Create reusable functions/modules** when you see the same logic 3+ times
-- **Use configuration over duplication** for environment-specific values
-- **Balance DRY with readability** - sometimes a little duplication is clearer than complex abstraction
+## ✨ Code Quality
 
-## Anti-Over-Engineering Principles
-- **YAGNI (You Aren't Gonna Need It)** - Don't build features for hypothetical future requirements
-- **Choose boring technology** - Use well-established patterns and libraries unless there's a compelling reason not to
-- **Avoid premature optimization** - Make it work correctly first, then measure and optimize bottlenecks
-- **Question every layer of abstraction** - Each abstraction should solve a real, current problem
-- **Prefer composition over inheritance** - Build functionality by combining simple pieces
+**Naming & Clarity**
+- Use descriptive names, no `data`, `temp`, or single letters.  
+- Functions ≤ 30 lines, single responsibility.  
+- Max 3 levels of nesting; use early returns.  
+- Comments explain *why*, not *what*.  
+- Limit files to ~300 lines; split by responsibility.
 
-## Code Generation Instructions
-When working with Claude Code, include these guidelines in your prompts:
+**Structure & Abstraction**
+- Apply **DRY** only after 3+ repetitions.  
+- Follow **YAGNI** — don’t build for hypothetical futures.  
+- Prefer **composition** over inheritance.  
+- Duplicate if it’s clearer than abstracting.  
+- No magic numbers; use named constants.  
+- Inject dependencies (I/O, time, randomness).  
 
-### Essential Prompt Elements
-- "Keep it simple and readable"
-- "Use standard patterns and avoid clever tricks"
-- "Include clear variable names and brief comments explaining complex logic"
-- "Don't abstract until you see repeated patterns"
-- "Focus on solving the immediate problem efficiently"
+**Guardrails**
+- Validate inputs, sanitize outputs.  
+- No hard-coded environment values.  
+- Document public APIs with usage examples.
 
-### Example Prompt Template
+---
+
+## 🧪 Testing & Error Handling
+
+**Testing**
+- Test all public APIs and critical paths (≈80 % coverage).  
+- Use clear behavior-based test names.  
+- Follow *Arrange-Act-Assert* pattern.  
+- Include positive and negative cases.  
+
+**Error Handling**
+- Fail fast with clear messages.  
+- Never swallow exceptions.  
+- Log with context (no secrets).  
+- Retry transient failures; use circuit breakers for dependencies.
+
+---
+
+## 🔒 Security
+- Validate and sanitize all user inputs.  
+- Use parameterized queries (no SQL concatenation).  
+- Apply least-privilege principles.  
+- Never commit secrets; rotate regularly.  
+- Keep dependencies patched and scanned.  
+
+---
+
+## 🚀 Release & Operations
+
+**Deployment**
+- Use **feature flags** (start OFF, roll out gradually).  
+- Maintain **backward compatibility** with existing APIs/data.  
+- Include **rollback scripts** for DB migrations.  
+- Require passing CI/CD checks before merge.  
+- Services must be **healthy before traffic**.
+
+**Rollback & Monitoring**
+- **15-minute rule:** Roll back if not fixed in 15 min.  
+- Auto-rollback on >5 % error rate or 2× latency.  
+- Structured JSON logs with correlation IDs.  
+- Track the *Four Golden Signals* (latency, traffic, errors, saturation).  
+- Add metrics for key business KPIs.  
+- Document alert thresholds.
+
+---
+
+## 🤝 Collaboration
+
+**Code Reviews**
+- Keep PRs ≤ 400 lines.  
+- Review for correctness first, style second.  
+- Give constructive feedback with examples.  
+- Respond within 1 business day.  
+- Include context in PR descriptions.
+
+**Documentation**
+- README: setup + run instructions.  
+- Inline comments for complex logic.  
+- Architecture Decision Records (ADRs) for major choices.  
+- Keep docs near code.  
+
+**Version Control**
+- Use **semantic versioning (MAJOR.MINOR.PATCH)**.  
+- Clear, imperative commit messages (use *conventional commits* if possible).  
+- Protect `main`/`master`.  
+- Squash merges; tag releases consistently.
+
+---
+
+## ⚙️ Technical Debt
+- Mark debt with `TODO` or `FIXME` + ticket number.  
+- Review and prioritize quarterly.  
+- Pay down **high-interest** debt first (security, perf).  
+- Allocate ~20 % sprint capacity for debt reduction.  
+- Record debt decisions in ADRs.
+
+---
+
+## 💡 Claude / Codex / LLM Integration
+
+**Prompt Template**
 ```
-Generate [specific functionality] that:
-- Uses clear, descriptive variable and function names
-- Follows [language/framework] best practices
-- Includes error handling where appropriate
-- Has minimal complexity and nesting
-- Includes brief comments for any non-obvious logic
-- Avoids premature optimization
-- Uses well-established libraries and patterns
+Build [feature] that:
+- Uses clear naming
+- Validates inputs, handles errors
+- Includes tests for core cases
+- Follows [framework] conventions
+- Avoids premature abstraction
+- Keeps functions <30 lines
 ```
 
-## Quality Checklist
-Before considering code complete, verify:
-- [ ] Can a new team member understand this code in 5 minutes?
-- [ ] Are variable and function names self-explanatory?
-- [ ] Is the happy path clear and the error handling robust?
-- [ ] Could this be simpler without losing functionality?
-- [ ] Are there any "clever" parts that could be made more straightforward?
-- [ ] Does it solve the actual problem without extra features?
+**Quality Checklist**
+- [ ] Understandable in 5 min  
+- [ ] Self-explanatory names  
+- [ ] Comprehensive error handling  
+- [ ] Simplicity favored over abstraction  
+- [ ] Tests + security checks included  
 
-## Red Flags to Watch For
-- Functions longer than 20-30 lines
-- More than 3 levels of nesting
-- Variable names like `data`, `item`, `temp`, or single letters (except loop counters)
-- Complex inheritance hierarchies
-- Abstractions that are only used once
-- Code that requires extensive comments to explain what it does (vs. why)
+**Red Flags**
+- > 30 line functions  
+- > 3 nesting levels  
+- Unused abstractions or commented-out code  
+- TODOs without ticket links  
+- Copy-pasted logic (3+ times = refactor)
 
-Remember: The goal is code that your team can quickly understand, modify, and extend without archaeological excavation of the original author's intent.
+---
+
+## 🧭 Guiding Principle
+> *Code should be safe to modify, easy to reason about, and boring to maintain.*
+
+When in doubt, **simplify.**
