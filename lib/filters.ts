@@ -189,13 +189,22 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
     }
   },
   {
-    name: "Recently Completed",
+    name: "This Week's Wins",
     description: "Completed tasks from the last 7 days",
-    icon: "✅",
+    icon: "🏆",
     isBuiltIn: true,
     criteria: {
       status: 'completed'
       // Will need special handling for completed in the past 7 days
+    }
+  },
+  {
+    name: "All Completed",
+    description: "All completed tasks across all time",
+    icon: "✅",
+    isBuiltIn: true,
+    criteria: {
+      status: 'completed'
     }
   },
   {
