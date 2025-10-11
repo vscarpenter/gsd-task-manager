@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
-import { logError, getUserErrorMessage, ErrorActions } from "@/lib/error-logger";
+import { logError, getUserErrorMessage } from "@/lib/error-logger";
 import type { ErrorContext } from "@/lib/error-logger";
 
 /**

@@ -57,7 +57,10 @@ function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete }: TaskCar
             <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
           </button>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold leading-snug text-foreground truncate">
+            <h3 className={cn(
+              "text-sm font-semibold leading-snug text-foreground truncate",
+              task.completed && "line-through"
+            )}>
               {task.title}
             </h3>
             {task.description ? (
