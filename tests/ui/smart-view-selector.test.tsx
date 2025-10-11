@@ -15,7 +15,8 @@ const builtInViews: SmartView[] = [
     icon: "📅",
     criteria: { dueToday: true },
     isBuiltIn: true,
-    createdAt: "2024-01-01T00:00:00.000Z"
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z"
   },
   {
     id: "this-week",
@@ -23,7 +24,8 @@ const builtInViews: SmartView[] = [
     icon: "📆",
     criteria: { dueThisWeek: true },
     isBuiltIn: true,
-    createdAt: "2024-01-01T00:00:00.000Z"
+    createdAt: "2024-01-01T00:00:00.000Z",
+    updatedAt: "2024-01-01T00:00:00.000Z"
   }
 ];
 
@@ -44,7 +46,8 @@ describe("SmartViewSelector", () => {
     name: "My Custom View",
     criteria: { tags: ["work"], status: "active" },
     isBuiltIn: false,
-    createdAt: "2024-01-15T00:00:00.000Z"
+    createdAt: "2024-01-15T00:00:00.000Z",
+    updatedAt: "2024-01-15T00:00:00.000Z"
   };
 
   beforeEach(() => {

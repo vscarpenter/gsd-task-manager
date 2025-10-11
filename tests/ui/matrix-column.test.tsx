@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MatrixColumn } from "@/components/matrix-column";
 import type { TaskRecord } from "@/lib/types";
@@ -52,7 +52,9 @@ describe("MatrixColumn", () => {
       tags: [],
       subtasks: [],
       createdAt: "2024-01-01T00:00:00.000Z",
-      updatedAt: "2024-01-01T00:00:00.000Z"
+      updatedAt: "2024-01-01T00:00:00.000Z",
+    notificationEnabled: true,
+    notificationSent: false
     },
     {
       id: "task-2",
@@ -67,7 +69,9 @@ describe("MatrixColumn", () => {
       tags: [],
       subtasks: [],
       createdAt: "2024-01-02T00:00:00.000Z",
-      updatedAt: "2024-01-02T00:00:00.000Z"
+      updatedAt: "2024-01-02T00:00:00.000Z",
+    notificationEnabled: true,
+    notificationSent: false
     }
   ];
 

@@ -81,3 +81,72 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Handle notification clicks
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // If app is already open, focus it
+      for (const client of clientList) {
+        if (client.url.includes(self.registration.scope) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      if (clients.openWindow) {
+        return clients.openWindow("/");
+      }
+    })
+  );
+});
+
+// Handle periodic background sync for notifications
+// Supported on Chrome/Edge (desktop/mobile), not yet on Safari/iOS
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag === "check-notifications") {
+    event.waitUntil(checkAndNotifyTasks());
+  }
+});
+
+// Handle push notifications (for future enhancement)
+self.addEventListener("push", (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  const data = event.data.json();
+  const title = data.title || "GSD Task Manager";
+  const options = {
+    body: data.body || "You have a task reminder",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || "task-reminder",
+    data: data.data || {}
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+/**
+ * Check tasks and send notifications (background sync version)
+ * This is a simplified version that works in service worker context
+ */
+async function checkAndNotifyTasks() {
+  try {
+    // Open IndexedDB and check for due tasks
+    // Note: This would require importing Dexie or using native IndexedDB API
+    // For now, we'll rely on the active polling when app is open
+    // This is a placeholder for future enhancement if needed
+
+    // Update badge count
+    if ("setAppBadge" in self.navigator) {
+      // In a real implementation, query IndexedDB for task count
+      // For now, this is a placeholder
+      await self.navigator.setAppBadge(0);
+    }
+  } catch (error) {
+    console.error("Error in background notification check:", error);
+  }
+}

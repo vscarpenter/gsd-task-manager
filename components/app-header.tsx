@@ -1,7 +1,7 @@
 "use client";
 
-import { RefObject } from "react";
-import { PlusIcon, SearchIcon, HelpCircleIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { RefObject, useState, useEffect } from "react";
+import { PlusIcon, SearchIcon, HelpCircleIcon, EyeIcon, EyeOffIcon, BellIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SettingsMenu } from "@/components/settings-menu";
 import { SmartViewSelector } from "@/components/smart-view-selector";
 import type { FilterCriteria } from "@/lib/filters";
+import { getDueSoonCount } from "@/lib/notification-checker";
 
 interface AppHeaderProps {
   onNewTask: () => void;
@@ -25,6 +26,7 @@ interface AppHeaderProps {
   currentFilterCriteria?: FilterCriteria;
   showCompleted: boolean;
   onToggleCompleted: () => void;
+  onOpenNotifications: () => void;
 }
 
 export function AppHeader({
@@ -40,8 +42,23 @@ export function AppHeader({
   onOpenFilters, // eslint-disable-line @typescript-eslint/no-unused-vars
   currentFilterCriteria,
   showCompleted,
-  onToggleCompleted
+  onToggleCompleted,
+  onOpenNotifications
 }: AppHeaderProps) {
+  const [dueSoonCount, setDueSoonCount] = useState<number>(0);
+
+  // Update due soon count periodically
+  useEffect(() => {
+    const updateCount = async () => {
+      const count = await getDueSoonCount();
+      setDueSoonCount(count);
+    };
+
+    updateCount();
+    const interval = setInterval(updateCount, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -72,6 +89,30 @@ export function AppHeader({
               </TooltipTrigger>
               <TooltipContent>
                 <p>{showCompleted ? "Hide" : "Show"} Completed Tasks</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-10 w-10 p-0"
+                  onClick={onOpenNotifications}
+                  aria-label="Notification settings"
+                >
+                  <BellIcon className="h-5 w-5" />
+                  {dueSoonCount > 0 && (
+                    <span className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-semibold text-white">
+                      {dueSoonCount > 9 ? "9+" : dueSoonCount}
+                    </span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {dueSoonCount > 0
+                    ? `${dueSoonCount} task${dueSoonCount !== 1 ? "s" : ""} due soon`
+                    : "Notification settings"}
+                </p>
               </TooltipContent>
             </Tooltip>
             <ThemeToggle />
