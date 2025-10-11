@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useAllTags } from "@/lib/use-all-tags";
+import { TagAutocompleteInput } from "@/components/tag-autocomplete-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, XIcon } from "lucide-react";
@@ -19,12 +20,22 @@ interface TaskFormTagsProps {
  */
 export function TaskFormTags({ tags, onChange, error }: TaskFormTagsProps) {
   const [newTag, setNewTag] = useState("");
+  const allTags = useAllTags();
+
+  // Filter out tags that are already added to this task
+  const availableSuggestions = allTags.filter((t) => !tags.includes(t));
 
   const addTag = () => {
     const trimmed = newTag.trim();
     if (!trimmed) return;
     if (tags.includes(trimmed)) return;
     onChange([...tags, trimmed]);
+    setNewTag("");
+  };
+
+  const handleSelectTag = (tag: string) => {
+    if (tags.includes(tag)) return;
+    onChange([...tags, tag]);
     setNewTag("");
   };
 
@@ -36,16 +47,13 @@ export function TaskFormTags({ tags, onChange, error }: TaskFormTagsProps) {
     <div className="space-y-2">
       <Label>Tags</Label>
       <div className="flex gap-2">
-        <Input
+        <TagAutocompleteInput
           placeholder="Add tag (e.g., work, personal)"
           value={newTag}
-          onChange={(e) => setNewTag(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addTag();
-            }
-          }}
+          onChange={setNewTag}
+          suggestions={availableSuggestions}
+          onSelect={handleSelectTag}
+          onEnterWithoutSelection={addTag}
         />
         <Button type="button" variant="subtle" onClick={addTag} className="shrink-0">
           <PlusIcon className="h-4 w-4" />

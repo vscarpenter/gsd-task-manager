@@ -39,6 +39,28 @@ const defaultValues: TaskDraft = {
   subtasks: []
 };
 
+// Generate time options in 15-minute increments with 12-hour AM/PM format
+function generateTimeOptions(): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const h24 = hour.toString().padStart(2, '0');
+      const m = minute.toString().padStart(2, '0');
+      const value = `${h24}:${m}`;
+
+      // Convert to 12-hour format
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const label = `${h12}:${m} ${period}`;
+
+      options.push({ value, label });
+    }
+  }
+  return options;
+}
+
+const TIME_OPTIONS = generateTimeOptions();
+
 function isoToDateInput(isoValue?: string): string {
   if (!isoValue) {
     return "";
@@ -50,11 +72,27 @@ function isoToDateInput(isoValue?: string): string {
   return date.toISOString().slice(0, 10);
 }
 
-function dateInputToIso(value?: string): string | undefined {
-  if (!value) {
+function isoToTimeInput(isoValue?: string): string {
+  if (!isoValue) {
+    return "";
+  }
+  const date = new Date(isoValue);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  // Get local time in HH:MM format
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function dateTimeInputToIso(dateValue?: string, timeValue?: string): string | undefined {
+  if (!dateValue) {
     return undefined;
   }
-  const iso = new Date(`${value}T00:00:00`).toISOString();
+  // If time is provided, use it; otherwise default to start of day
+  const time = timeValue || "00:00";
+  const iso = new Date(`${dateValue}T${time}:00`).toISOString();
   return iso;
 }
 
@@ -68,6 +106,7 @@ export function TaskForm({
   const [values, setValues] = useState<TaskDraft>({ ...defaultValues, ...initialValues });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<string>(isoToTimeInput(initialValues.dueDate));
 
   const updateField = <Key extends keyof TaskDraft>(key: Key, value: TaskDraft[Key]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -81,7 +120,7 @@ export function TaskForm({
     try {
       const normalized: TaskDraft = {
         ...values,
-        dueDate: dateInputToIso(isoToDateInput(values.dueDate))
+        dueDate: dateTimeInputToIso(isoToDateInput(values.dueDate), selectedTime)
       };
       const validated = taskDraftSchema.parse({
         ...normalized,
@@ -179,15 +218,39 @@ export function TaskForm({
 
       <div className="space-y-1">
         <Label htmlFor="due-date">Due date</Label>
-        <Input
-          id="due-date"
-          type="date"
-          value={isoToDateInput(values.dueDate)}
-          onChange={(event) => {
-            const nextIso = dateInputToIso(event.target.value);
-            updateField("dueDate", nextIso);
-          }}
-        />
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input
+            id="due-date"
+            type="date"
+            value={isoToDateInput(values.dueDate)}
+            onChange={(event) => {
+              const nextIso = dateTimeInputToIso(event.target.value, selectedTime);
+              updateField("dueDate", nextIso);
+            }}
+          />
+          <div className="space-y-1">
+            <select
+              id="due-time"
+              value={selectedTime}
+              onChange={(event) => {
+                setSelectedTime(event.target.value);
+                // Update the dueDate with the new time if a date is already set
+                if (values.dueDate) {
+                  const nextIso = dateTimeInputToIso(isoToDateInput(values.dueDate), event.target.value);
+                  updateField("dueDate", nextIso);
+                }
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">No specific time</option>
+              {TIME_OPTIONS.map((timeOption) => (
+                <option key={timeOption.value} value={timeOption.value}>
+                  {timeOption.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         {errors.dueDate ? <p className="text-xs text-red-600">{errors.dueDate}</p> : null}
       </div>
 
