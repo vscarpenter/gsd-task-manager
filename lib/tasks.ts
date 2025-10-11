@@ -22,7 +22,9 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     updatedAt: now,
     recurrence: validated.recurrence ?? "none",
     tags: validated.tags ?? [],
-    subtasks: validated.subtasks ?? []
+    subtasks: validated.subtasks ?? [],
+    notificationEnabled: validated.notificationEnabled ?? true,
+    notificationSent: false
   };
 
   const db = getDb();
@@ -45,15 +47,28 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
     dueDate: updates.dueDate ?? existing.dueDate,
     recurrence: updates.recurrence ?? existing.recurrence,
     tags: updates.tags ?? existing.tags,
-    subtasks: updates.subtasks ?? existing.subtasks
+    subtasks: updates.subtasks ?? existing.subtasks,
+    notifyBefore: updates.notifyBefore ?? existing.notifyBefore,
+    notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled
   };
 
   const validated = taskDraftSchema.parse(nextDraft);
+
+  // Check if due date changed - if so, reset notification state
+  const dueDateChanged = updates.dueDate !== undefined && updates.dueDate !== existing.dueDate;
+  const notifyBeforeChanged = updates.notifyBefore !== undefined && updates.notifyBefore !== existing.notifyBefore;
+
   const nextRecord: TaskRecord = {
     ...existing,
     ...validated,
     quadrant: resolveQuadrantId(validated.urgent, validated.important),
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    // Reset notification state if due date or reminder time changed
+    ...(dueDateChanged || notifyBeforeChanged ? {
+      notificationSent: false,
+      lastNotificationAt: undefined,
+      snoozedUntil: undefined
+    } : {})
   };
 
   await db.tasks.put(nextRecord);
@@ -102,7 +117,11 @@ function createRecurringInstance(existing: TaskRecord): TaskRecord {
     updatedAt: now,
     parentTaskId: existing.parentTaskId ?? existing.id,
     // Reset subtasks to uncompleted for new instance
-    subtasks: existing.subtasks.map(subtask => ({ ...subtask, completed: false }))
+    subtasks: existing.subtasks.map(subtask => ({ ...subtask, completed: false })),
+    // Reset notification state for new instance
+    notificationSent: false,
+    lastNotificationAt: undefined,
+    snoozedUntil: undefined
   };
 }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppHeader } from "@/components/app-header";
@@ -32,7 +32,8 @@ describe("AppHeader", () => {
     onHelp: vi.fn(),
     onSelectSmartView: vi.fn(),
     onOpenFilters: vi.fn(),
-    onToggleCompleted: vi.fn()
+    onToggleCompleted: vi.fn(),
+    onOpenNotifications: vi.fn()
   };
 
   const searchInputRef = { current: null };

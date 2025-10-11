@@ -24,6 +24,12 @@ export interface TaskRecord {
   tags: string[];
   subtasks: Subtask[];
   parentTaskId?: string; // For recurring task instances
+  // Notification fields
+  notifyBefore?: number; // minutes before due date
+  notificationEnabled: boolean;
+  notificationSent: boolean;
+  lastNotificationAt?: string;
+  snoozedUntil?: string;
 }
 
 export interface TaskDraft {
@@ -35,10 +41,23 @@ export interface TaskDraft {
   recurrence?: RecurrenceType;
   tags?: string[];
   subtasks?: Subtask[];
+  notifyBefore?: number;
+  notificationEnabled?: boolean;
 }
 
 export interface ImportPayload {
   tasks: TaskRecord[];
   exportedAt: string;
   version: string;
+}
+
+export interface NotificationSettings {
+  id: "settings";
+  enabled: boolean;
+  defaultReminder: number; // minutes before due date
+  soundEnabled: boolean;
+  quietHoursStart?: string; // HH:mm format
+  quietHoursEnd?: string; // HH:mm format
+  permissionAsked: boolean;
+  updatedAt: string;
 }

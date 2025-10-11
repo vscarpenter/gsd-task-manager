@@ -23,7 +23,9 @@ export const taskDraftSchema = z.object({
   dueDate: z.string().datetime({ offset: true }).optional(),
   recurrence: recurrenceTypeSchema.default("none"),
   tags: z.array(z.string().min(1).max(30)).default([]),
-  subtasks: z.array(subtaskSchema).default([])
+  subtasks: z.array(subtaskSchema).default([]),
+  notifyBefore: z.number().int().min(0).optional(), // minutes before due date
+  notificationEnabled: z.boolean().default(true)
 });
 
 export const taskRecordSchema = taskDraftSchema
@@ -33,7 +35,10 @@ export const taskRecordSchema = taskDraftSchema
     completed: z.boolean(),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
-    parentTaskId: z.string().min(4).optional()
+    parentTaskId: z.string().min(4).optional(),
+    notificationSent: z.boolean().default(false),
+    lastNotificationAt: z.string().datetime({ offset: true }).optional(),
+    snoozedUntil: z.string().datetime({ offset: true }).optional()
   })
   .strict();
 
@@ -41,4 +46,15 @@ export const importPayloadSchema = z.object({
   tasks: z.array(taskRecordSchema),
   exportedAt: z.string().datetime({ offset: true }),
   version: z.string()
+});
+
+export const notificationSettingsSchema = z.object({
+  id: z.literal("settings").default("settings"),
+  enabled: z.boolean().default(true),
+  defaultReminder: z.number().int().min(0).default(15), // minutes before due date
+  soundEnabled: z.boolean().default(true),
+  quietHoursStart: z.string().optional(), // HH:mm format
+  quietHoursEnd: z.string().optional(), // HH:mm format
+  permissionAsked: z.boolean().default(false),
+  updatedAt: z.string().datetime({ offset: true })
 });
