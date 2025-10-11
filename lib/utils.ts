@@ -14,11 +14,13 @@ export function formatDueDate(value?: string): string {
   }
 
   const date = new Date(value);
-  return date.toLocaleDateString(undefined, {
+  const dayOfWeek = date.toLocaleDateString(undefined, { weekday: "long" });
+  const dateStr = date.toLocaleDateString(undefined, {
     month: "short",
-    day: "2-digit",
+    day: "numeric",
     year: "numeric"
   });
+  return `${dayOfWeek} - ${dateStr}`;
 }
 
 export function formatRelative(value?: string): string {
