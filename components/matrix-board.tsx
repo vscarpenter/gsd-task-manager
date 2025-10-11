@@ -25,6 +25,8 @@ import {
   toggleCompleted,
   updateTask
 } from "@/lib/tasks";
+import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
+import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
 
 // Lazy load heavy components
 const HelpDialog = lazy(() => import("@/components/help-dialog").then(m => ({ default: m.HelpDialog })));
@@ -74,6 +76,7 @@ export function MatrixBoard() {
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const { handleError, handleSuccess } = useErrorHandlerWithUndo();
 
   // Configure sensors for drag-and-drop (mouse + touch)
   const sensors = useSensors(
@@ -125,8 +128,12 @@ export function MatrixBoard() {
       }
       closeDialog();
     } catch (error) {
-      console.error(error);
-      window.alert("Unable to save task. Please try again.");
+      handleError(error, {
+        action: dialogState?.mode === "edit" ? ErrorActions.UPDATE_TASK : ErrorActions.CREATE_TASK,
+        taskId: dialogState?.task?.id,
+        userMessage: ErrorMessages.TASK_SAVE_FAILED,
+        timestamp: new Date().toISOString()
+      });
     } finally {
       setIsLoading(false);
     }
@@ -140,24 +147,20 @@ export function MatrixBoard() {
       await deleteTask(task.id);
       closeDialog();
 
-      showToast(
+      handleSuccess(
         `Deleted "${task.title}"`,
-        {
-          label: "Undo",
-          onClick: async () => {
-            try {
-              await createTask(toDraft(taskData));
-            } catch (error) {
-              console.error(error);
-              window.alert("Failed to restore task.");
-            }
-          }
+        async () => {
+          await createTask(toDraft(taskData));
         },
         5000
       );
     } catch (error) {
-      console.error(error);
-      window.alert("Failed to delete task.");
+      handleError(error, {
+        action: ErrorActions.DELETE_TASK,
+        taskId: task.id,
+        userMessage: ErrorMessages.TASK_DELETE_FAILED,
+        timestamp: new Date().toISOString()
+      });
     }
   };
 
@@ -165,8 +168,12 @@ export function MatrixBoard() {
     try {
       await toggleCompleted(task.id, completed);
     } catch (error) {
-      console.error(error);
-      window.alert("Failed to update task state.");
+      handleError(error, {
+        action: ErrorActions.TOGGLE_TASK,
+        taskId: task.id,
+        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
+        timestamp: new Date().toISOString()
+      });
     }
   };
 
@@ -182,8 +189,11 @@ export function MatrixBoard() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
-      window.alert("Export failed. Please try again.");
+      handleError(error, {
+        action: ErrorActions.EXPORT_TASKS,
+        userMessage: ErrorMessages.EXPORT_FAILED,
+        timestamp: new Date().toISOString()
+      });
     } finally {
       setIsLoading(false);
     }
@@ -197,8 +207,12 @@ export function MatrixBoard() {
       setPendingImportContents(contents);
       setImportDialogOpen(true);
     } catch (error) {
-      console.error(error);
-      window.alert("Invalid file format. Please select a valid JSON export file.");
+      handleError(error, {
+        action: ErrorActions.PARSE_JSON,
+        userMessage: ErrorMessages.IMPORT_INVALID_FORMAT,
+        timestamp: new Date().toISOString(),
+        metadata: { fileName: file.name }
+      });
     }
   };
 
@@ -233,8 +247,13 @@ export function MatrixBoard() {
     try {
       await moveTaskToQuadrant(taskId, targetQuadrant);
     } catch (error) {
-      console.error(error);
-      showToast("Failed to move task. Please try again.", undefined, 3000);
+      handleError(error, {
+        action: ErrorActions.MOVE_TASK,
+        taskId,
+        userMessage: ErrorMessages.TASK_MOVE_FAILED,
+        timestamp: new Date().toISOString(),
+        metadata: { targetQuadrant }
+      });
     }
   };
 

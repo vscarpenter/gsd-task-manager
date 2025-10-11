@@ -140,9 +140,8 @@ export function TaskForm({
           }
         }
         setErrors(fieldErrors);
-      } else {
-        console.error(error);
       }
+      // Note: onSubmit handler in parent component will handle non-validation errors
       setSubmitting(false);
       return;
     }
