@@ -40,3 +40,5 @@ pnpm-debug.log*
 .build-info.json
 .build-env.sh
 .claude/settings.local.json
+
+*.tsbuildinfo
