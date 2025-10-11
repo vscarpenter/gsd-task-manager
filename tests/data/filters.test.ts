@@ -18,7 +18,9 @@ describe("Filter utilities", () => {
       tags: ["work", "bug"],
       subtasks: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      notificationEnabled: true,
+      notificationSent: false
     },
     {
       id: "2",
@@ -33,7 +35,9 @@ describe("Filter utilities", () => {
       tags: ["planning"],
       subtasks: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      notificationEnabled: true,
+      notificationSent: false
     },
     {
       id: "3",
@@ -48,7 +52,9 @@ describe("Filter utilities", () => {
       tags: ["work"],
       subtasks: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      notificationEnabled: true,
+      notificationSent: false
     },
     {
       id: "4",
@@ -63,7 +69,9 @@ describe("Filter utilities", () => {
       tags: ["personal"],
       subtasks: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      notificationEnabled: true,
+      notificationSent: false
     },
     {
       id: "5",
@@ -78,7 +86,9 @@ describe("Filter utilities", () => {
       tags: [],
       subtasks: [{ id: "sub1", title: "Subtask 1", completed: false }],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      notificationEnabled: true,
+      notificationSent: false
     }
   ];
 

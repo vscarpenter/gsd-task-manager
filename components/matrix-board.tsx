@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
@@ -9,6 +9,8 @@ import { MatrixEmptyState } from "@/components/matrix-empty-state";
 import { AppFooter } from "@/components/app-footer";
 import { FilterBar } from "@/components/filter-bar";
 import { FilterPopover } from "@/components/filter-popover";
+import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
+import { NotificationSettingsDialog } from "@/components/notification-settings-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,6 +32,7 @@ import {
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
 import { DND_CONFIG, TOAST_DURATION } from "@/lib/constants";
+import { notificationChecker } from "@/lib/notification-checker";
 
 // Lazy load heavy components
 const HelpDialog = lazy(() => import("@/components/help-dialog").then(m => ({ default: m.HelpDialog })));
@@ -51,7 +54,9 @@ function toDraft(task: TaskRecord): TaskDraft {
     dueDate: task.dueDate,
     recurrence: task.recurrence,
     tags: task.tags,
-    subtasks: task.subtasks
+    subtasks: task.subtasks,
+    notifyBefore: task.notifyBefore,
+    notificationEnabled: task.notificationEnabled
   };
 }
 
@@ -65,11 +70,21 @@ export function MatrixBoard() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [saveSmartViewOpen, setSaveSmartViewOpen] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
+
+  // Start notification checker when component mounts
+  useEffect(() => {
+    notificationChecker.start(); // Uses default interval from constants
+
+    return () => {
+      notificationChecker.stop();
+    };
+  }, []);
 
   // Configure sensors for drag-and-drop (mouse + touch)
   const sensors = useSensors(
@@ -281,6 +296,8 @@ export function MatrixBoard() {
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="space-y-8">
+        <NotificationPermissionPrompt />
+
         <AppHeader
           onNewTask={() => setDialogState({ mode: "create" })}
           onSearchChange={setSearchQuery}
@@ -295,6 +312,7 @@ export function MatrixBoard() {
           currentFilterCriteria={filterCriteria}
           showCompleted={showCompleted}
           onToggleCompleted={() => setShowCompleted(!showCompleted)}
+          onOpenNotifications={() => setNotificationSettingsOpen(true)}
         />
 
         {/* Active Filter Chips */}
@@ -388,6 +406,11 @@ export function MatrixBoard() {
           onChange={setFilterCriteria}
           onSaveAsSmartView={handleSaveSmartView}
           availableTags={availableTags}
+        />
+
+        <NotificationSettingsDialog
+          open={notificationSettingsOpen}
+          onOpenChange={setNotificationSettingsOpen}
         />
 
         <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>

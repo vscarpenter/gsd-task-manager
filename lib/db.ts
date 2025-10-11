@@ -1,10 +1,11 @@
 import Dexie, { Table } from "dexie";
-import type { TaskRecord } from "@/lib/types";
+import type { TaskRecord, NotificationSettings } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
   smartViews!: Table<SmartView, string>;
+  notificationSettings!: Table<NotificationSettings, string>;
 
   constructor() {
     super("GsdTaskManager");
@@ -46,6 +47,25 @@ class GsdDatabase extends Dexie {
       tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed]",
       smartViews: "id, name, isBuiltIn, createdAt"
     });
+
+    // Version 5: Add notification fields and settings table
+    this.version(5)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id"
+      })
+      .upgrade((trans) => {
+        // Migrate existing tasks to have notification fields with defaults
+        return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
+          if (task.notificationEnabled === undefined) {
+            task.notificationEnabled = true;
+          }
+          if (task.notificationSent === undefined) {
+            task.notificationSent = false;
+          }
+        });
+      });
   }
 }
 

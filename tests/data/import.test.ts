@@ -50,7 +50,9 @@ describe("Import functionality", () => {
             updatedAt: new Date().toISOString(),
             recurrence: "none",
             tags: [],
-            subtasks: []
+            subtasks: [],
+            notificationEnabled: true,
+            notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),
@@ -81,7 +83,9 @@ describe("Import functionality", () => {
             updatedAt: new Date().toISOString(),
             recurrence: "none",
             tags: [],
-            subtasks: []
+            subtasks: [],
+            notificationEnabled: true,
+            notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),
@@ -120,7 +124,9 @@ describe("Import functionality", () => {
             updatedAt: new Date().toISOString(),
             recurrence: "none",
             tags: ["imported"],
-            subtasks: []
+            subtasks: [],
+            notificationEnabled: true,
+            notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),
@@ -162,7 +168,9 @@ describe("Import functionality", () => {
                 title: "Existing subtask",
                 completed: false
               }
-            ]
+            ],
+            notificationEnabled: true,
+            notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),
@@ -192,7 +200,9 @@ describe("Import functionality", () => {
                 title: "Imported subtask",
                 completed: false
               }
-            ]
+            ],
+            notificationEnabled: true,
+            notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),
@@ -237,7 +247,9 @@ describe("Import functionality", () => {
             updatedAt: new Date().toISOString(),
             recurrence: "none",
             tags: [],
-            subtasks: []
+            subtasks: [],
+          notificationEnabled: true,
+          notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),
@@ -276,7 +288,9 @@ describe("Import functionality", () => {
             subtasks: [
               { id: "sub-5678", title: "Imported subtask 1", completed: false },
               { id: "sub-9012", title: "Imported subtask 2", completed: true }
-            ]
+            ],
+            notificationEnabled: true,
+            notificationSent: false
           }
         ],
         exportedAt: new Date().toISOString(),

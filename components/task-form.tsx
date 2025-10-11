@@ -36,7 +36,9 @@ const defaultValues: TaskDraft = {
   dueDate: undefined,
   recurrence: "none",
   tags: [],
-  subtasks: []
+  subtasks: [],
+  notifyBefore: 15, // Default to 15 minutes before
+  notificationEnabled: true
 };
 
 // Generate time options in 15-minute increments with 12-hour AM/PM format
@@ -269,6 +271,39 @@ export function TaskForm({
         </select>
         <p className="text-xs text-foreground-muted">When completed, create a new instance automatically</p>
       </div>
+
+      {values.dueDate && (
+        <div className="space-y-1">
+          <Label htmlFor="notifyBefore">Reminder</Label>
+          <select
+            id="notifyBefore"
+            value={values.notifyBefore ?? 15}
+            onChange={(event) => updateField("notifyBefore", event.target.value === "" ? undefined : Number(event.target.value))}
+            disabled={values.notificationEnabled === false}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="0">At due time</option>
+            <option value="5">5 minutes before</option>
+            <option value="15">15 minutes before</option>
+            <option value="30">30 minutes before</option>
+            <option value="60">1 hour before</option>
+            <option value="120">2 hours before</option>
+            <option value="1440">1 day before</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="notificationEnabled"
+              checked={values.notificationEnabled ?? true}
+              onChange={(event) => updateField("notificationEnabled", event.target.checked)}
+              className="h-4 w-4 rounded border-input text-blue-600 focus:ring-2 focus:ring-blue-500"
+            />
+            <label htmlFor="notificationEnabled" className="text-xs text-foreground-muted cursor-pointer">
+              Enable notification for this task
+            </label>
+          </div>
+        </div>
+      )}
 
       <TaskFormTags
         tags={values.tags || []}
