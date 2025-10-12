@@ -17,15 +17,14 @@ describe("FilterBar", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("displays quadrant filter chips", () => {
+  it("displays quadrant filter chip with count", () => {
     const criteria: FilterCriteria = {
       quadrants: ["urgent-important", "not-urgent-important"]
     };
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/do first/i)).toBeInTheDocument();
-    expect(screen.getByText(/schedule/i)).toBeInTheDocument();
+    expect(screen.getByText("2 quadrants")).toBeInTheDocument();
   });
 
   it("displays status filter chip", () => {
@@ -35,18 +34,17 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/status: active/i)).toBeInTheDocument();
+    expect(screen.getByText("active")).toBeInTheDocument();
   });
 
-  it("displays tags filter chips", () => {
+  it("displays tags filter chip with count", () => {
     const criteria: FilterCriteria = {
       tags: ["work", "urgent"]
     };
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/tag: work/i)).toBeInTheDocument();
-    expect(screen.getByText(/tag: urgent/i)).toBeInTheDocument();
+    expect(screen.getByText("2 tags")).toBeInTheDocument();
   });
 
   it("displays overdue filter chip", () => {
@@ -56,7 +54,7 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/overdue/i)).toBeInTheDocument();
+    expect(screen.getByText("overdue")).toBeInTheDocument();
   });
 
   it("displays due today filter chip", () => {
@@ -66,7 +64,7 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/due today/i)).toBeInTheDocument();
+    expect(screen.getByText("due today")).toBeInTheDocument();
   });
 
   it("displays due this week filter chip", () => {
@@ -74,9 +72,9 @@ describe("FilterBar", () => {
       dueThisWeek: true
     };
 
-    render(<FilterBar criteria={criteria} onChange=  {mockOnChange} />);
+    render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/due this week/i)).toBeInTheDocument();
+    expect(screen.getByText("this week")).toBeInTheDocument();
   });
 
   it("displays no deadline filter chip", () => {
@@ -86,7 +84,7 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/no deadline/i)).toBeInTheDocument();
+    expect(screen.getByText("no deadline")).toBeInTheDocument();
   });
 
   it("displays date range filter chip", () => {
@@ -99,7 +97,7 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/date range/i)).toBeInTheDocument();
+    expect(screen.getByText("custom date range")).toBeInTheDocument();
   });
 
   it("displays recurrence filter chips", () => {
@@ -109,8 +107,7 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/recurs: daily/i)).toBeInTheDocument();
-    expect(screen.getByText(/recurs: weekly/i)).toBeInTheDocument();
+    expect(screen.getByText("daily, weekly")).toBeInTheDocument();
   });
 
   it("removes quadrant filter when chip is clicked", async () => {
@@ -121,14 +118,12 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    const chip = screen.getByText(/do first/i).closest("button");
+    const chip = screen.getByText("2 quadrants").closest("button");
     if (chip) {
       await user.click(chip);
     }
 
-    expect(mockOnChange).toHaveBeenCalledWith({
-      quadrants: ["not-urgent-important"]
-    });
+    expect(mockOnChange).toHaveBeenCalledWith({});
   });
 
   it("removes tag filter when chip is clicked", async () => {
@@ -139,14 +134,12 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    const chip = screen.getByText(/tag: work/i).closest("button");
+    const chip = screen.getByText("2 tags").closest("button");
     if (chip) {
       await user.click(chip);
     }
 
-    expect(mockOnChange).toHaveBeenCalledWith({
-      tags: ["urgent"]
-    });
+    expect(mockOnChange).toHaveBeenCalledWith({});
   });
 
   it("removes status filter when chip is clicked", async () => {
@@ -157,7 +150,7 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    const chip = screen.getByText(/status: completed/i).closest("button");
+    const chip = screen.getByText("completed").closest("button");
     if (chip) {
       await user.click(chip);
     }
@@ -191,10 +184,10 @@ describe("FilterBar", () => {
 
     render(<FilterBar criteria={criteria} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/do first/i)).toBeInTheDocument();
-    expect(screen.getByText(/status: active/i)).toBeInTheDocument();
-    expect(screen.getByText(/tag: work/i)).toBeInTheDocument();
-    expect(screen.getByText(/overdue/i)).toBeInTheDocument();
-    expect(screen.getByText(/recurs: daily/i)).toBeInTheDocument();
+    expect(screen.getByText("1 quadrant")).toBeInTheDocument();
+    expect(screen.getByText("active")).toBeInTheDocument();
+    expect(screen.getByText("1 tag")).toBeInTheDocument();
+    expect(screen.getByText("overdue")).toBeInTheDocument();
+    expect(screen.getByText("daily")).toBeInTheDocument();
   });
 });

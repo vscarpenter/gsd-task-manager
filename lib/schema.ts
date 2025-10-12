@@ -24,6 +24,7 @@ export const taskDraftSchema = z.object({
   recurrence: recurrenceTypeSchema.default("none"),
   tags: z.array(z.string().min(1).max(30)).default([]),
   subtasks: z.array(subtaskSchema).default([]),
+  dependencies: z.array(z.string().min(4)).default([]), // IDs of tasks that must be completed first
   notifyBefore: z.number().int().min(0).optional(), // minutes before due date
   notificationEnabled: z.boolean().default(true)
 });

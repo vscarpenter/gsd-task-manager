@@ -11,6 +11,8 @@ import { FilterBar } from "@/components/filter-bar";
 import { FilterPopover } from "@/components/filter-popover";
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
 import { NotificationSettingsDialog } from "@/components/notification-settings-dialog";
+import { BulkActionsBar } from "@/components/bulk-actions-bar";
+import { BulkTagDialog } from "@/components/bulk-tag-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -55,6 +57,7 @@ function toDraft(task: TaskRecord): TaskDraft {
     recurrence: task.recurrence,
     tags: task.tags,
     subtasks: task.subtasks,
+    dependencies: task.dependencies,
     notifyBefore: task.notifyBefore,
     notificationEnabled: task.notificationEnabled
   };
@@ -73,6 +76,9 @@ export function MatrixBoard() {
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
@@ -95,6 +101,13 @@ export function MatrixBoard() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  // Auto-enable selection mode when first task is selected
+  useEffect(() => {
+    if (selectedTaskIds.size > 0 && !selectionMode) {
+      setSelectionMode(true);
+    }
+  }, [selectedTaskIds.size, selectionMode]);
 
   // Configure sensors for drag-and-drop (mouse + touch)
   const sensors = useSensors(
@@ -288,6 +301,130 @@ export function MatrixBoard() {
     }
   };
 
+  // Bulk operation handlers
+  const handleToggleSelect = (task: TaskRecord) => {
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(task.id)) {
+        next.delete(task.id);
+      } else {
+        next.add(task.id);
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTaskIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedTaskIds.size === 0) return;
+
+    const tasksToDelete = all.filter(t => selectedTaskIds.has(t.id));
+    const count = tasksToDelete.length;
+
+    try {
+      await Promise.all(tasksToDelete.map(task => deleteTask(task.id)));
+      handleClearSelection();
+      showToast(`Deleted ${count} task${count === 1 ? "" : "s"}`, undefined, TOAST_DURATION.SHORT);
+    } catch (error) {
+      handleError(error, {
+        action: ErrorActions.DELETE_TASK,
+        userMessage: ErrorMessages.TASK_DELETE_FAILED,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleBulkComplete = async () => {
+    if (selectedTaskIds.size === 0) return;
+
+    const tasksToComplete = all.filter(t => selectedTaskIds.has(t.id) && !t.completed);
+    const count = tasksToComplete.length;
+
+    try {
+      await Promise.all(tasksToComplete.map(task => toggleCompleted(task.id, true)));
+      handleClearSelection();
+      showToast(`Completed ${count} task${count === 1 ? "" : "s"}`, undefined, TOAST_DURATION.SHORT);
+    } catch (error) {
+      handleError(error, {
+        action: ErrorActions.TOGGLE_TASK,
+        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleBulkUncomplete = async () => {
+    if (selectedTaskIds.size === 0) return;
+
+    const tasksToUncomplete = all.filter(t => selectedTaskIds.has(t.id) && t.completed);
+    const count = tasksToUncomplete.length;
+
+    try {
+      await Promise.all(tasksToUncomplete.map(task => toggleCompleted(task.id, false)));
+      handleClearSelection();
+      showToast(`Marked ${count} task${count === 1 ? "" : "s"} as incomplete`, undefined, TOAST_DURATION.SHORT);
+    } catch (error) {
+      handleError(error, {
+        action: ErrorActions.TOGGLE_TASK,
+        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleBulkMoveToQuadrant = async (quadrantId: QuadrantId) => {
+    if (selectedTaskIds.size === 0) return;
+
+    const tasksToMove = all.filter(t => selectedTaskIds.has(t.id));
+    const count = tasksToMove.length;
+
+    try {
+      await Promise.all(tasksToMove.map(task => moveTaskToQuadrant(task.id, quadrantId)));
+      handleClearSelection();
+      const quadrantName = quadrants.find(q => q.id === quadrantId)?.title;
+      showToast(`Moved ${count} task${count === 1 ? "" : "s"} to ${quadrantName}`, undefined, TOAST_DURATION.SHORT);
+    } catch (error) {
+      handleError(error, {
+        action: ErrorActions.MOVE_TASK,
+        userMessage: ErrorMessages.TASK_MOVE_FAILED,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleBulkAddTags = () => {
+    setBulkTagDialogOpen(true);
+  };
+
+  const handleBulkAddTagsConfirm = async (tagsToAdd: string[]) => {
+    if (selectedTaskIds.size === 0 || tagsToAdd.length === 0) return;
+
+    const tasksToUpdate = all.filter(t => selectedTaskIds.has(t.id));
+    const count = tasksToUpdate.length;
+
+    try {
+      await Promise.all(
+        tasksToUpdate.map(task => {
+          const existingTags = new Set(task.tags);
+          tagsToAdd.forEach(tag => existingTags.add(tag));
+          return updateTask(task.id, { ...toDraft(task), tags: Array.from(existingTags) });
+        })
+      );
+      handleClearSelection();
+      showToast(`Added tags to ${count} task${count === 1 ? "" : "s"}`, undefined, TOAST_DURATION.SHORT);
+    } catch (error) {
+      handleError(error, {
+        action: ErrorActions.UPDATE_TASK,
+        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
   // Handle keyboard shortcuts
   useKeyboardShortcuts(
     {
@@ -371,6 +508,9 @@ export function MatrixBoard() {
                   onEdit={(task) => setDialogState({ mode: "edit", task })}
                   onDelete={handleDelete}
                   onToggleComplete={handleComplete}
+                  selectionMode={selectionMode}
+                  selectedTaskIds={selectedTaskIds}
+                  onToggleSelect={handleToggleSelect}
                 />
               ))}
             </div>
@@ -378,6 +518,25 @@ export function MatrixBoard() {
         </main>
 
         <AppFooter />
+
+        {/* Bulk actions bar */}
+        <BulkActionsBar
+          selectedCount={selectedTaskIds.size}
+          onClearSelection={handleClearSelection}
+          onBulkDelete={handleBulkDelete}
+          onBulkComplete={handleBulkComplete}
+          onBulkUncomplete={handleBulkUncomplete}
+          onBulkMoveToQuadrant={handleBulkMoveToQuadrant}
+          onBulkAddTags={handleBulkAddTags}
+        />
+
+        {/* Bulk tag dialog */}
+        <BulkTagDialog
+          open={bulkTagDialogOpen}
+          onOpenChange={setBulkTagDialogOpen}
+          onConfirm={handleBulkAddTagsConfirm}
+          selectedCount={selectedTaskIds.size}
+        />
 
         {/* Lazy-loaded dialogs with Suspense fallback */}
         {helpOpen && (
@@ -431,6 +590,7 @@ export function MatrixBoard() {
             {dialogState !== null && (
               <Suspense fallback={<div className="flex items-center justify-center p-8"><Spinner /></div>}>
                 <TaskForm
+                  taskId={taskBeingEdited?.id}
                   initialValues={activeTaskDraft}
                   onSubmit={handleSubmit}
                   onCancel={closeDialog}

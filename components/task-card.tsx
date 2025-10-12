@@ -12,9 +12,12 @@ interface TaskCardProps {
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (task: TaskRecord) => void;
 }
 
-function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete }: TaskCardProps) {
+function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
   // Memoize expensive computations
   const dueLabel = useMemo(() => formatDueDate(task.dueDate), [task.dueDate]);
   const taskIsOverdue = useMemo(() => !task.completed && isOverdue(task.dueDate), [task.completed, task.dueDate]);
@@ -42,20 +45,31 @@ function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete }: TaskCar
         "group flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm transition",
         task.completed ? "opacity-60" : "opacity-100",
         isDragging && "cursor-grabbing",
-        taskIsOverdue ? "border-red-300 bg-red-50/50" : "border-card-border"
+        taskIsOverdue ? "border-red-300 bg-red-50/50" : "border-card-border",
+        selectionMode && isSelected && "ring-2 ring-accent ring-offset-2"
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 min-w-0 flex-1">
-          <button
-            type="button"
-            className="cursor-grab touch-none shrink-0 rounded p-0.5 opacity-0 transition group-hover:opacity-100 hover:bg-background-muted"
-            aria-label="Drag to move task"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
-          </button>
+          {selectionMode ? (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect?.(task)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
+              aria-label={`Select ${task.title}`}
+            />
+          ) : (
+            <button
+              type="button"
+              className="cursor-grab touch-none shrink-0 rounded p-0.5 opacity-0 transition group-hover:opacity-100 hover:bg-background-muted"
+              aria-label="Drag to move task"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
+            </button>
+          )}
           <div className="min-w-0 flex-1">
             <h3 className={cn(
               "text-sm font-semibold leading-snug text-foreground truncate",
@@ -175,6 +189,8 @@ export const TaskCard = memo(TaskCardComponent, (prevProps, nextProps) => {
     prevProps.task.updatedAt === nextProps.task.updatedAt &&
     prevProps.task.tags.length === nextProps.task.tags.length &&
     prevProps.task.subtasks.length === nextProps.task.subtasks.length &&
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.isSelected === nextProps.isSelected &&
     JSON.stringify(prevProps.task.tags) === JSON.stringify(nextProps.task.tags) &&
     JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks)
   );

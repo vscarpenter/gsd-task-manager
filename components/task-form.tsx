@@ -7,12 +7,14 @@ import type { TaskDraft, RecurrenceType } from "@/lib/types";
 import { TogglePill } from "@/components/toggle-pill";
 import { TaskFormTags } from "@/components/task-form-tags";
 import { TaskFormSubtasks } from "@/components/task-form-subtasks";
+import { TaskFormDependencies } from "@/components/task-form-dependencies";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 interface TaskFormProps {
+  taskId?: string; // ID of task being edited (undefined for new tasks)
   initialValues?: TaskDraft;
   onSubmit: (task: TaskDraft) => Promise<void> | void;
   onCancel: () => void;
@@ -37,6 +39,7 @@ const defaultValues: TaskDraft = {
   recurrence: "none",
   tags: [],
   subtasks: [],
+  dependencies: [],
   notifyBefore: 15, // Default to 15 minutes before
   notificationEnabled: true
 };
@@ -99,6 +102,7 @@ function dateTimeInputToIso(dateValue?: string, timeValue?: string): string | un
 }
 
 export function TaskForm({
+  taskId,
   initialValues = defaultValues,
   onSubmit,
   onCancel,
@@ -315,6 +319,12 @@ export function TaskForm({
         subtasks={values.subtasks || []}
         onChange={(subtasks) => updateField("subtasks", subtasks)}
         error={errors.subtasks}
+      />
+
+      <TaskFormDependencies
+        taskId={taskId}
+        dependencies={values.dependencies || []}
+        onChange={(dependencies) => updateField("dependencies", dependencies)}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
