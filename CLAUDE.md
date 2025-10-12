@@ -27,10 +27,12 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 ## Architecture
 
 ### Data Layer
-- **IndexedDB via Dexie** (`lib/db.ts`): Single `GsdDatabase` instance with `tasks` table (v2 with recurrence, tags, subtasks support)
-- **CRUD Operations** (`lib/tasks.ts`): All task mutations (create, update, delete, toggle, import/export) plus subtask management (addSubtask, deleteSubtask, toggleSubtask)
+- **IndexedDB via Dexie** (`lib/db.ts`): Single `GsdDatabase` instance with `tasks`, `smartViews`, and `notificationSettings` tables (v6 with dependencies support)
+- **CRUD Operations** (`lib/tasks.ts`): All task mutations (create, update, delete, toggle, import/export) plus subtask management (addSubtask, deleteSubtask, toggleSubtask) and dependency management (addDependency, removeDependency)
 - **Live Queries** (`lib/use-tasks.ts`): React hook `useTasks()` returns `{ all, byQuadrant }` with live updates
 - **Schema Validation** (`lib/schema.ts`): Zod schemas for TaskDraft, TaskRecord, Subtask, ImportPayload, and RecurrenceType
+- **Analytics** (`lib/analytics.ts`): Productivity metrics calculation including completion rates, streaks, and trends
+- **Dependencies** (`lib/dependencies.ts`): Task dependency validation and relationship queries (circular dependency detection, blocking/blocked tasks)
 
 ### Quadrant System
 Tasks are classified by `urgent` and `important` boolean flags, which derive a quadrant ID:
@@ -44,17 +46,35 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 ### Component Structure
 - **App Router** (`app/`):
   - `app/(matrix)/page.tsx` - Main matrix view (renders MatrixBoard)
+  - `app/(dashboard)/dashboard/page.tsx` - Analytics dashboard with metrics and charts
   - `app/(pwa)/install/page.tsx` - PWA installation instructions
   - `app/layout.tsx` - Root layout with theme provider and PWA registration
 - **UI Components** (`components/ui/`): shadcn-style primitives (button, dialog, input, etc.)
 - **Domain Components** (`components/`):
-  - `matrix-board.tsx` - 2×2 grid container, orchestrates task state
-  - `matrix-column.tsx` - Single quadrant column with tasks
-  - `task-card.tsx` - Individual task with complete/edit/delete actions
-  - `task-form.tsx` - Create/edit task dialog with zod validation
-  - `import-dialog.tsx` - Import mode selection dialog (merge vs replace)
-  - `app-header.tsx` - Search, new task button, export/import buttons, theme toggle
-  - `app-footer.tsx` - Footer with credits and build info
+  - **Matrix View**:
+    - `matrix-board.tsx` - 2×2 grid container, orchestrates task state and bulk operations
+    - `matrix-column.tsx` - Single quadrant column with tasks
+    - `task-card.tsx` - Individual task with complete/edit/delete actions, selection mode
+  - **Task Management**:
+    - `task-form.tsx` - Create/edit task dialog with zod validation
+    - `task-form-tags.tsx` - Tag input with autocomplete
+    - `task-form-subtasks.tsx` - Subtask checklist editor
+    - `task-form-dependencies.tsx` - Dependency selector with circular dependency prevention
+  - **Bulk Operations**:
+    - `bulk-actions-bar.tsx` - Floating action bar for multi-select operations
+    - `bulk-tag-dialog.tsx` - Dialog for adding tags to multiple tasks
+  - **Dashboard** (`components/dashboard/`):
+    - `stats-card.tsx` - Metric display with optional trend indicators
+    - `completion-chart.tsx` - Line/bar chart for completed vs created tasks
+    - `quadrant-distribution.tsx` - Pie chart showing task distribution
+    - `streak-indicator.tsx` - Visual display of current/longest completion streaks
+    - `tag-analytics.tsx` - Table with tag usage and completion rates
+    - `upcoming-deadlines.tsx` - Grouped display of overdue/due today/due this week tasks
+  - **Navigation & Settings**:
+    - `app-header.tsx` - Search, new task button, settings menu, smart view selector, theme toggle
+    - `view-toggle.tsx` - Matrix/Dashboard navigation toggle
+    - `app-footer.tsx` - Footer with credits and build info
+    - `import-dialog.tsx` - Import mode selection dialog (merge vs replace)
 
 ### Key Patterns
 - **Client-side only**: All components use `"use client"` - no server rendering
@@ -141,12 +161,99 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
   - To re-enable: uncomment button and wire up `onOpenFilters` prop
   - FilterPopover component ready for use when needed
 
+## Feature Highlights (v3.0)
+
+### Dashboard & Analytics
+- **Comprehensive Metrics** (`lib/analytics.ts`):
+  - Completion statistics: today, this week, this month
+  - Completion rate: percentage of completed vs total tasks
+  - Active and longest streak tracking
+  - Quadrant distribution analysis
+  - Tag-based statistics with completion rates
+  - Trend data for 7/30/90 day periods
+- **Interactive Visualizations** (`components/dashboard/*`):
+  - Stats cards with trend indicators (up/down arrows)
+  - Completion trend chart (toggleable line/bar view, 7/30/90 day periods)
+  - Quadrant distribution pie chart
+  - Streak indicator with flame icon
+  - Tag analytics table with progress bars
+  - Upcoming deadlines widget (overdue, due today, due this week)
+- **Navigation**: ViewToggle component in header for Matrix ↔ Dashboard switching
+- **Route**: `/dashboard` with full analytics dashboard layout
+- **Dependencies**: Added `recharts@^3.2.1` and `date-fns@^4.1.0`
+
+### Batch Operations
+- **Selection Mode**:
+  - Click anywhere on task card to select/deselect (replaces drag handle in selection mode)
+  - Visual ring indicator on selected tasks
+  - Auto-enables when first task is selected
+- **Bulk Actions Bar** (`components/bulk-actions-bar.tsx`):
+  - Floating action bar fixed at bottom center with animation
+  - Shows selection count with clear button
+  - Complete/Uncomplete buttons for batch status changes
+  - Move to Quadrant dropdown menu
+  - Add Tags button opens bulk tag dialog
+  - Delete button with red styling for batch deletion
+- **Bulk Tag Dialog** (`components/bulk-tag-dialog.tsx`):
+  - Tag autocomplete with existing tag suggestions
+  - Add multiple tags at once to all selected tasks
+  - Automatic tag deduplication
+  - Shows selected task count in title
+- **State Management**:
+  - `selectionMode` boolean state
+  - `selectedTaskIds` Set<string> for efficient lookups
+  - All bulk operations with toast notifications
+  - Error handling for failed operations
+- **Implementation**: Integrated into MatrixBoard with 8 bulk operation handlers
+
+### Task Dependencies
+- **Data Model**:
+  - `dependencies: string[]` field on TaskRecord storing IDs of blocking tasks
+  - Database v6 migration with automatic empty array default
+  - Zod schema validation for dependencies array
+- **Dependency Logic** (`lib/dependencies.ts`):
+  - `wouldCreateCircularDependency()` - Validates no circular refs using BFS
+  - `getBlockingTasks()` - Get tasks that must be completed first
+  - `getBlockedTasks()` - Get tasks waiting on this task
+  - `getUncompletedBlockingTasks()` - Filter to only incomplete blockers
+  - `isTaskBlocked()` / `isTaskBlocking()` - Status check helpers
+  - `getReadyTasks()` - Filter tasks with no blocking dependencies
+  - `validateDependencies()` - Comprehensive validation with error messages
+- **UI Components**:
+  - **TaskFormDependencies** (`components/task-form-dependencies.tsx`):
+    - Search and filter available tasks (excludes self, completed, circular)
+    - Autocomplete dropdown with task title and description
+    - Selected dependencies displayed as chips with remove buttons
+    - Real-time circular dependency warning
+    - Shows dependency count
+  - **Task Form Integration**:
+    - Added `taskId` prop to TaskForm for edit mode
+    - Integrated dependency selector below subtasks
+    - Passes task ID for circular dependency checking
+- **CRUD Operations** (`lib/tasks.ts`):
+  - `addDependency()` - Add single dependency with duplicate check
+  - `removeDependency()` - Remove single dependency
+  - `removeDependencyReferences()` - Cleanup when deleting a task
+  - Updated `createTask()` and `updateTask()` to handle dependencies field
+- **User Experience**:
+  - Can't depend on self or completed tasks
+  - Can't create circular dependencies (validated in real-time)
+  - Search filters to relevant tasks only
+  - Clear visual feedback for selected dependencies
+
 ## Development Notes
-- Changes to task schema require updating fixtures in `lib/schema.ts` and export/import logic
-- Database migrations handled in `lib/db.ts` - current version is 2
+- Changes to task schema require updating fixtures in `lib/schema.ts`, export/import logic, and test fixtures in `tests/`
+- Database migrations handled in `lib/db.ts` - current version is 6 (v1→v6: tags/subtasks→filters→notifications→dependencies)
 - When modifying quadrant logic, update both `lib/quadrants.ts` and UI rendering in matrix components
 - PWA updates require changes to manifest.json, icons, and sw.js together
 - Run `pnpm typecheck` and `pnpm lint` before committing
 - Static export mode means no runtime server features (no API routes, no SSR)
-- New task fields (recurrence, tags, subtasks) are all optional with sensible defaults
+- New task fields (recurrence, tags, subtasks, dependencies) are all optional with sensible defaults
 - Import mode parameter defaults to "replace" for backward compatibility in lib/tasks.ts functions
+- Dependencies:
+  - Always validate circular dependencies before adding relationships
+  - Clean up dependency references when deleting tasks (use `removeDependencyReferences()`)
+  - Consider blocking/blocked relationships when implementing dependency-aware features
+- Dashboard uses `recharts` for visualizations - keep chart configurations simple for better TypeScript inference
+- Batch operations use Set<string> for `selectedTaskIds` for O(1) lookup performance
+- Always leverage @coding-standards.md for coding standards and guidelines

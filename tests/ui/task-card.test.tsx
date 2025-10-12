@@ -37,6 +37,7 @@ describe("TaskCard", () => {
     recurrence: "none",
     tags: [],
     subtasks: [],
+      dependencies: [],
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
   notificationEnabled: true,

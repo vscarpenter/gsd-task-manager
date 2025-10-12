@@ -24,6 +24,7 @@ export interface TaskRecord {
   tags: string[];
   subtasks: Subtask[];
   parentTaskId?: string; // For recurring task instances
+  dependencies: string[]; // IDs of tasks that must be completed first
   // Notification fields
   notifyBefore?: number; // minutes before due date
   notificationEnabled: boolean;
@@ -41,6 +42,7 @@ export interface TaskDraft {
   recurrence?: RecurrenceType;
   tags?: string[];
   subtasks?: Subtask[];
+  dependencies?: string[];
   notifyBefore?: number;
   notificationEnabled?: boolean;
 }

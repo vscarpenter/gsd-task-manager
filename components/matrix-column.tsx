@@ -14,9 +14,21 @@ interface MatrixColumnProps {
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  selectionMode?: boolean;
+  selectedTaskIds?: Set<string>;
+  onToggleSelect?: (task: TaskRecord) => void;
 }
 
-function MatrixColumnComponent({ quadrant, tasks, onEdit, onDelete, onToggleComplete }: MatrixColumnProps) {
+function MatrixColumnComponent({
+  quadrant,
+  tasks,
+  onEdit,
+  onDelete,
+  onToggleComplete,
+  selectionMode,
+  selectedTaskIds,
+  onToggleSelect
+}: MatrixColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: quadrant.id
   });
@@ -57,6 +69,9 @@ function MatrixColumnComponent({ quadrant, tasks, onEdit, onDelete, onToggleComp
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onToggleComplete={onToggleComplete}
+                selectionMode={selectionMode}
+                isSelected={selectedTaskIds?.has(task.id)}
+                onToggleSelect={onToggleSelect}
               />
             ))
           )}

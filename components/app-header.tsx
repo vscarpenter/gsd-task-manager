@@ -9,6 +9,7 @@ import { GsdLogo } from "@/components/gsd-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SettingsMenu } from "@/components/settings-menu";
 import { SmartViewSelector } from "@/components/smart-view-selector";
+import { ViewToggle } from "@/components/view-toggle";
 import type { FilterCriteria } from "@/lib/filters";
 import { getDueSoonCount } from "@/lib/notification-checker";
 
@@ -73,7 +74,10 @@ export function AppHeader({
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <ViewToggle />
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2">
             <SettingsMenu onExport={onExport} onImport={onImport} isLoading={isLoading} />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -132,6 +136,7 @@ export function AppHeader({
             <Button onClick={onNewTask} className="sm:hidden" aria-label="Create task">
               <PlusIcon className="h-4 w-4" />
             </Button>
+            </div>
           </div>
         </div>
 

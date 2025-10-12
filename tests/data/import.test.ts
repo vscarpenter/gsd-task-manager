@@ -23,6 +23,7 @@ describe("Import functionality", () => {
     recurrence: "none",
     tags: [],
     subtasks: [],
+      dependencies: [],
     ...overrides
   });
 
@@ -51,6 +52,7 @@ describe("Import functionality", () => {
             recurrence: "none",
             tags: [],
             subtasks: [],
+      dependencies: [],
             notificationEnabled: true,
             notificationSent: false
           }
@@ -84,6 +86,7 @@ describe("Import functionality", () => {
             recurrence: "none",
             tags: [],
             subtasks: [],
+      dependencies: [],
             notificationEnabled: true,
             notificationSent: false
           }
@@ -125,6 +128,7 @@ describe("Import functionality", () => {
             recurrence: "none",
             tags: ["imported"],
             subtasks: [],
+      dependencies: [],
             notificationEnabled: true,
             notificationSent: false
           }
@@ -169,6 +173,7 @@ describe("Import functionality", () => {
                 completed: false
               }
             ],
+            dependencies: [],
             notificationEnabled: true,
             notificationSent: false
           }
@@ -201,6 +206,7 @@ describe("Import functionality", () => {
                 completed: false
               }
             ],
+            dependencies: [],
             notificationEnabled: true,
             notificationSent: false
           }
@@ -248,6 +254,7 @@ describe("Import functionality", () => {
             recurrence: "none",
             tags: [],
             subtasks: [],
+      dependencies: [],
           notificationEnabled: true,
           notificationSent: false
           }
@@ -289,6 +296,7 @@ describe("Import functionality", () => {
               { id: "sub-5678", title: "Imported subtask 1", completed: false },
               { id: "sub-9012", title: "Imported subtask 2", completed: true }
             ],
+            dependencies: [],
             notificationEnabled: true,
             notificationSent: false
           }
