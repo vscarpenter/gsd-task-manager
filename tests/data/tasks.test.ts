@@ -32,6 +32,7 @@ describe("Task CRUD operations", () => {
     recurrence: "none",
     tags: [],
     subtasks: [],
+      dependencies: [],
     ...overrides
   });
 

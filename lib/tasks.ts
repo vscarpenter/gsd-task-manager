@@ -23,6 +23,7 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     recurrence: validated.recurrence ?? "none",
     tags: validated.tags ?? [],
     subtasks: validated.subtasks ?? [],
+    dependencies: validated.dependencies ?? [],
     notificationEnabled: validated.notificationEnabled ?? true,
     notificationSent: false
   };
@@ -48,6 +49,7 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
     recurrence: updates.recurrence ?? existing.recurrence,
     tags: updates.tags ?? existing.tags,
     subtasks: updates.subtasks ?? existing.subtasks,
+    dependencies: updates.dependencies ?? existing.dependencies,
     notifyBefore: updates.notifyBefore ?? existing.notifyBefore,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled
   };
@@ -323,4 +325,70 @@ export async function deleteSubtask(taskId: string, subtaskId: string): Promise<
 
   await db.tasks.put(nextRecord);
   return nextRecord;
+}
+
+/**
+ * Add a dependency to a task
+ */
+export async function addDependency(taskId: string, dependencyId: string): Promise<TaskRecord> {
+  const db = getDb();
+  const existing = await db.tasks.get(taskId);
+  if (!existing) {
+    throw new Error(`Task ${taskId} not found`);
+  }
+
+  // Check if dependency already exists
+  if (existing.dependencies.includes(dependencyId)) {
+    return existing;
+  }
+
+  const nextRecord: TaskRecord = {
+    ...existing,
+    dependencies: [...existing.dependencies, dependencyId],
+    updatedAt: isoNow()
+  };
+
+  await db.tasks.put(nextRecord);
+  return nextRecord;
+}
+
+/**
+ * Remove a dependency from a task
+ */
+export async function removeDependency(taskId: string, dependencyId: string): Promise<TaskRecord> {
+  const db = getDb();
+  const existing = await db.tasks.get(taskId);
+  if (!existing) {
+    throw new Error(`Task ${taskId} not found`);
+  }
+
+  const nextRecord: TaskRecord = {
+    ...existing,
+    dependencies: existing.dependencies.filter(depId => depId !== dependencyId),
+    updatedAt: isoNow()
+  };
+
+  await db.tasks.put(nextRecord);
+  return nextRecord;
+}
+
+/**
+ * Remove all references to a task from other tasks' dependencies
+ * Should be called before deleting a task to clean up dependencies
+ */
+export async function removeDependencyReferences(taskId: string): Promise<void> {
+  const db = getDb();
+  const allTasks = await db.tasks.toArray();
+
+  // Find all tasks that depend on this task
+  const tasksToUpdate = allTasks.filter(task =>
+    task.dependencies && task.dependencies.includes(taskId)
+  );
+
+  // Remove this task from their dependencies
+  await Promise.all(
+    tasksToUpdate.map(task =>
+      removeDependency(task.id, taskId)
+    )
+  );
 }

@@ -66,6 +66,22 @@ class GsdDatabase extends Dexie {
           }
         });
       });
+
+    // Version 6: Add dependencies field for task dependencies
+    this.version(6)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id"
+      })
+      .upgrade((trans) => {
+        // Migrate existing tasks to have dependencies field with empty array default
+        return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
+          if (task.dependencies === undefined) {
+            task.dependencies = [];
+          }
+        });
+      });
   }
 }
 
