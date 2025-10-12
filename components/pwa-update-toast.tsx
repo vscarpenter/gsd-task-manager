@@ -30,14 +30,15 @@ export function PwaUpdateToast() {
   const handleUpdate = () => {
     if (!waitingWorker) return;
 
-    // Tell the waiting service worker to take over
-    waitingWorker.postMessage({ type: "SKIP_WAITING" });
-
     // Listen for the service worker to actually take over
+    // IMPORTANT: Attach listener BEFORE posting message to avoid race condition
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       // Reload the page to use the new service worker
       window.location.reload();
     });
+
+    // Tell the waiting service worker to take over
+    waitingWorker.postMessage({ type: "SKIP_WAITING" });
   };
 
   const handleDismiss = () => {
