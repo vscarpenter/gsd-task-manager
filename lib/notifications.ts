@@ -5,6 +5,19 @@ import type { TaskRecord, NotificationSettings } from "@/lib/types";
 import { notificationSettingsSchema } from "@/lib/schema";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
 
+async function getActiveServiceWorker(): Promise<ServiceWorkerRegistration | undefined> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return undefined;
+  }
+
+  try {
+    return await navigator.serviceWorker.ready;
+  } catch (error) {
+    console.error("Error resolving service worker registration:", error);
+    return undefined;
+  }
+}
+
 /**
  * Check if the browser supports notifications
  */
@@ -147,34 +160,39 @@ export async function showTaskNotification(
     }
   }
 
-  const title = getNotificationTitle(task, minutesUntil);
-  const body = task.description || "Task reminder";
-  const icon = "/icon-192.png"; // Use PWA icon
-  const badge = "/icon-192.png";
-  const tag = `task-${task.id}`; // Prevents duplicate notifications
-
   try {
-    const notification = new Notification(title, {
-      body,
-      icon,
-      badge,
-      tag,
+    const title = getNotificationTitle(task, minutesUntil);
+    const options: NotificationOptions = {
+      body: task.description || "Task reminder",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: `task-${task.id}`,
       requireInteraction: false,
       silent: !settings.soundEnabled,
       data: {
         taskId: task.id,
         dueDate: task.dueDate
       }
-    });
+    };
 
-    // Handle notification click
+    const registration = await getActiveServiceWorker();
+
+    if (registration?.showNotification) {
+      await registration.showNotification(title, options);
+      return;
+    }
+
+    if (typeof Notification === "undefined") {
+      return;
+    }
+
+    const notification = new Notification(title, options);
+
     notification.onclick = () => {
       window.focus();
-      // Navigate to task (could enhance this to highlight specific task)
       notification.close();
     };
 
-    // Auto-close after configured duration if not interacted with
     setTimeout(() => {
       notification.close();
     }, NOTIFICATION_TIMING.AUTO_CLOSE_DURATION);

@@ -7,7 +7,8 @@ import {
   isInQuietHours,
   showTaskNotification,
   checkNotificationPermission,
-  setAppBadge
+  setAppBadge,
+  isNotificationSupported
 } from "@/lib/notifications";
 import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
@@ -33,16 +34,19 @@ class NotificationChecker {
     this.isChecking = true;
 
     try {
+      if (!isNotificationSupported()) {
+        return;
+      }
+
+      const permission = checkNotificationPermission();
+      if (permission !== "granted") {
+        return;
+      }
+
       const settings = await getNotificationSettings();
 
       // If notifications disabled globally, skip
       if (!settings.enabled) {
-        return;
-      }
-
-      // Check permission
-      const permission = checkNotificationPermission();
-      if (permission !== "granted") {
         return;
       }
 
