@@ -36,6 +36,9 @@ pnpm-debug.log*
 
 # Temp files
 
+# Planning documents
+sync.md
+
 # Build info
 .build-info.json
 .build-env.sh
