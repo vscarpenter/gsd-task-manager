@@ -86,6 +86,16 @@ export function MatrixBoard() {
     };
   }, []);
 
+  // Handle PWA shortcut for new task
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("action") === "new-task") {
+      setDialogState({ mode: "create" });
+      // Clean up URL without reload
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   // Configure sensors for drag-and-drop (mouse + touch)
   const sensors = useSensors(
     useSensor(PointerSensor, {
