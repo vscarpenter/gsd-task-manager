@@ -14,6 +14,40 @@ export function PwaRegister() {
         const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
         console.log("Service worker registered successfully");
 
+        // Check for updates when page becomes visible
+        const checkForUpdates = () => {
+          registration.update().catch((error) => {
+            console.error("Service worker update check failed:", error);
+          });
+        };
+
+        // Check for updates when the page becomes visible
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            checkForUpdates();
+          }
+        });
+
+        // Listen for service worker updates
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              // New service worker is ready
+              console.log("New service worker available");
+
+              // Dispatch custom event to notify PwaUpdateToast
+              window.dispatchEvent(
+                new CustomEvent("pwa-update-available", {
+                  detail: newWorker
+                })
+              );
+            }
+          });
+        });
+
         // Register periodic background sync if supported
         // Supported on Chrome/Edge (desktop/mobile), not yet on Safari/iOS
         if (registration && "periodicSync" in registration) {
