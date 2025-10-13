@@ -8,9 +8,12 @@ import { QuadrantDistribution } from "@/components/dashboard/quadrant-distributi
 import { StreakIndicator } from "@/components/dashboard/streak-indicator";
 import { TagAnalytics } from "@/components/dashboard/tag-analytics";
 import { UpcomingDeadlines } from "@/components/dashboard/upcoming-deadlines";
+import { ViewToggle } from "@/components/view-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useTasks } from "@/lib/use-tasks";
 import { calculateMetrics, getCompletionTrend, getStreakData } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
  * Dashboard page showing productivity metrics and analytics
@@ -25,7 +28,16 @@ export default function DashboardPage() {
   const streakData = useMemo(() => getStreakData(tasks), [tasks]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <TooltipProvider delayDuration={300}>
+      <div className="min-h-screen bg-background">
+        {/* Navigation Bar */}
+        <div className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
+          <div className="flex items-center justify-between px-6 py-4">
+            <ViewToggle />
+            <ThemeToggle />
+          </div>
+        </div>
+
       {/* Header */}
       <div className="border-b border-border bg-background-muted px-6 py-8">
         <div className="mx-auto max-w-7xl">
@@ -179,5 +191,6 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 }

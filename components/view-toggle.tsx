@@ -9,13 +9,14 @@ import { LayoutGridIcon, BarChart3Icon } from "lucide-react";
  */
 export function ViewToggle() {
   const pathname = usePathname();
-  const isMatrix = pathname === "/";
-  const isDashboard = pathname === "/dashboard";
+  const isMatrix = pathname === "/" || pathname === "/index.html";
+  const isDashboard = pathname === "/dashboard" || pathname === "/dashboard.html";
 
   return (
     <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
       <Link
         href="/"
+        prefetch={false}
         className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
           isMatrix
             ? "bg-background text-foreground shadow-sm"
@@ -27,6 +28,7 @@ export function ViewToggle() {
       </Link>
       <Link
         href="/dashboard"
+        prefetch={false}
         className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
           isDashboard
             ? "bg-background text-foreground shadow-sm"
