@@ -209,6 +209,37 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
 // Memoize the component to prevent unnecessary re-renders
 export const TaskCard = memo(TaskCardComponent, (prevProps, nextProps) => {
   // Custom comparison function for better performance
+
+  // Check if dependency-related tasks changed (for accurate badge rendering)
+  // Get all tasks that might affect this card's dependency badges
+  const prevDependencyIds = new Set([
+    ...prevProps.task.dependencies, // Tasks this task depends on
+    ...prevProps.allTasks.filter(t => t.dependencies.includes(prevProps.task.id)).map(t => t.id) // Tasks that depend on this task
+  ]);
+  const nextDependencyIds = new Set([
+    ...nextProps.task.dependencies,
+    ...nextProps.allTasks.filter(t => t.dependencies.includes(nextProps.task.id)).map(t => t.id)
+  ]);
+
+  // If the set of related tasks changed, re-render
+  if (prevDependencyIds.size !== nextDependencyIds.size) {
+    return false;
+  }
+
+  // Check if any dependency-related task's completion status or title changed
+  for (const depId of prevDependencyIds) {
+    const prevDepTask = prevProps.allTasks.find(t => t.id === depId);
+    const nextDepTask = nextProps.allTasks.find(t => t.id === depId);
+
+    if (!prevDepTask || !nextDepTask) {
+      return false; // Task was added or removed
+    }
+
+    if (prevDepTask.completed !== nextDepTask.completed || prevDepTask.title !== nextDepTask.title) {
+      return false; // Completion status or title changed
+    }
+  }
+
   return (
     prevProps.task.id === nextProps.task.id &&
     prevProps.task.title === nextProps.task.title &&
