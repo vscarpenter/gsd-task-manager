@@ -27,13 +27,10 @@ describe("AppHeader", () => {
   const mockHandlers = {
     onNewTask: vi.fn(),
     onSearchChange: vi.fn(),
-    onExport: vi.fn(),
-    onImport: vi.fn(),
     onHelp: vi.fn(),
+    onOpenSettings: vi.fn(),
     onSelectSmartView: vi.fn(),
-    onOpenFilters: vi.fn(),
-    onToggleCompleted: vi.fn(),
-    onOpenNotifications: vi.fn()
+    onOpenFilters: vi.fn()
   };
 
   const searchInputRef = { current: null };
@@ -42,9 +39,7 @@ describe("AppHeader", () => {
     ...mockHandlers,
     searchQuery: "",
     searchInputRef,
-    isLoading: false,
-    currentFilterCriteria: {},
-    showCompleted: false
+    currentFilterCriteria: {}
   };
 
   beforeEach(() => {
@@ -102,42 +97,27 @@ describe("AppHeader", () => {
     expect(screen.getByTestId("smart-view-selector")).toBeInTheDocument();
   });
 
-  it("renders settings menu", () => {
+  it("renders settings button", () => {
     render(<AppHeader {...defaultProps} />);
 
-    expect(screen.getByTestId("settings-menu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /settings/i })).toBeInTheDocument();
   });
 
-  it("renders theme toggle", () => {
+  it("renders user guide button", () => {
     render(<AppHeader {...defaultProps} />);
 
-    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /user guide/i })).toBeInTheDocument();
   });
 
-  it("renders help button", () => {
-    render(<AppHeader {...defaultProps} />);
-
-    expect(screen.getByRole("button", { name: /help/i })).toBeInTheDocument();
-  });
-
-  it("calls onHelp when help button is clicked", async () => {
+  it("calls onHelp when user guide button is clicked", async () => {
     const user = userEvent.setup();
     const onHelp = vi.fn();
 
     render(<AppHeader {...defaultProps} onHelp={onHelp} />);
 
-    await user.click(screen.getByRole("button", { name: /help/i }));
+    await user.click(screen.getByRole("button", { name: /user guide/i }));
 
     expect(onHelp).toHaveBeenCalled();
-  });
-
-  it("displays loading spinner when isLoading is true", () => {
-    render(<AppHeader {...defaultProps} isLoading={true} />);
-
-    // Settings menu should show loading spinner
-    // The spinner is rendered by the SettingsMenu component which we've mocked
-    // So we just verify the component renders without errors
-    expect(screen.getByTestId("settings-menu")).toBeInTheDocument();
   });
 
   it("handles search input correctly", () => {

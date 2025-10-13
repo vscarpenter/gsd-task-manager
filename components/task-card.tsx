@@ -1,14 +1,16 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon } from "lucide-react";
+import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { TaskRecord } from "@/lib/types";
 import { formatDueDate, cn, isOverdue, isDueToday } from "@/lib/utils";
+import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
 
 interface TaskCardProps {
   task: TaskRecord;
+  allTasks: TaskRecord[];
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
@@ -17,7 +19,7 @@ interface TaskCardProps {
   onToggleSelect?: (task: TaskRecord) => void;
 }
 
-function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
+function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
   // Memoize expensive computations
   const dueLabel = useMemo(() => formatDueDate(task.dueDate), [task.dueDate]);
   const taskIsOverdue = useMemo(() => !task.completed && isOverdue(task.dueDate), [task.completed, task.dueDate]);
@@ -26,6 +28,12 @@ function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete, selection
     completedSubtasks: task.subtasks.filter(st => st.completed).length,
     totalSubtasks: task.subtasks.length
   }), [task.subtasks]);
+
+  // Dependency calculations
+  const blockingTasks = useMemo(() => getUncompletedBlockingTasks(task, allTasks), [task, allTasks]);
+  const blockedTasks = useMemo(() => getBlockedTasks(task.id, allTasks), [task.id, allTasks]);
+  const isBlocked = blockingTasks.length > 0;
+  const isBlocking = blockedTasks.length > 0;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id
@@ -130,6 +138,30 @@ function TaskCardComponent({ task, onEdit, onDelete, onToggleComplete, selection
         </div>
       ) : null}
 
+      {/* Dependency indicators */}
+      {(isBlocked || isBlocking) && !task.completed ? (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {isBlocked ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-2 py-0.5 text-amber-700 dark:text-amber-300 font-medium"
+              title={`Blocked by: ${blockingTasks.map(t => t.title).join(", ")}`}
+            >
+              <LockIcon className="h-3 w-3" />
+              Blocked by {blockingTasks.length}
+            </span>
+          ) : null}
+          {isBlocking ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 px-2 py-0.5 text-blue-700 dark:text-blue-300 font-medium"
+              title={`Blocking: ${blockedTasks.map(t => t.title).join(", ")}`}
+            >
+              <LinkIcon className="h-3 w-3" />
+              Blocking {blockedTasks.length}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
         <div className="flex items-center gap-2">
           {taskIsOverdue ? (
@@ -189,9 +221,12 @@ export const TaskCard = memo(TaskCardComponent, (prevProps, nextProps) => {
     prevProps.task.updatedAt === nextProps.task.updatedAt &&
     prevProps.task.tags.length === nextProps.task.tags.length &&
     prevProps.task.subtasks.length === nextProps.task.subtasks.length &&
+    prevProps.task.dependencies.length === nextProps.task.dependencies.length &&
     prevProps.selectionMode === nextProps.selectionMode &&
     prevProps.isSelected === nextProps.isSelected &&
+    prevProps.allTasks.length === nextProps.allTasks.length &&
     JSON.stringify(prevProps.task.tags) === JSON.stringify(nextProps.task.tags) &&
-    JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks)
+    JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks) &&
+    JSON.stringify(prevProps.task.dependencies) === JSON.stringify(nextProps.task.dependencies)
   );
 });
