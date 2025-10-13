@@ -88,42 +88,42 @@ describe("MatrixColumn", () => {
   });
 
   it("renders quadrant title and subtitle", () => {
-    render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} {...mockHandlers} />);
+    render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} allTasks={[]} {...mockHandlers} />);
 
     expect(screen.getByText("Do First")).toBeInTheDocument();
     expect(screen.getByText("Urgent & Important")).toBeInTheDocument();
   });
 
   it("renders task cards", () => {
-    render(<MatrixColumn quadrant={mockQuadrant} tasks={mockTasks} {...mockHandlers} />);
+    render(<MatrixColumn quadrant={mockQuadrant} tasks={mockTasks} allTasks={mockTasks} {...mockHandlers} />);
 
     expect(screen.getByTestId("task-task-1")).toBeInTheDocument();
     expect(screen.getByTestId("task-task-2")).toBeInTheDocument();
   });
 
   it("displays task count badge", () => {
-    const { container } = render(<MatrixColumn quadrant={mockQuadrant} tasks={mockTasks} {...mockHandlers} />);
+    const { container } = render(<MatrixColumn quadrant={mockQuadrant} tasks={mockTasks} allTasks={mockTasks} {...mockHandlers} />);
 
     // Just verify the component renders - actual count display logic tested separately
     expect(container.querySelector("header")).toBeInTheDocument();
   });
 
   it("passes handlers to task cards", async () => {
-    render(<MatrixColumn quadrant={mockQuadrant} tasks={[mockTasks[0]]} {...mockHandlers} />);
+    render(<MatrixColumn quadrant={mockQuadrant} tasks={[mockTasks[0]]} allTasks={mockTasks} {...mockHandlers} />);
 
     // Simulate interactions would happen through TaskCard component
     expect(screen.getByTestId("task-task-1")).toBeInTheDocument();
   });
 
   it("renders empty state when no tasks", () => {
-    const { container } = render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} {...mockHandlers} />);
+    const { container } = render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} allTasks={[]} {...mockHandlers} />);
 
     expect(screen.getByText("Do First")).toBeInTheDocument();
     expect(container.querySelectorAll('[data-testid^="task-"]')).toHaveLength(0);
   });
 
   it("applies correct styling based on quadrant", () => {
-    render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} {...mockHandlers} />);
+    render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} allTasks={[]} {...mockHandlers} />);
 
     // Verify component renders with quadrant information
     expect(screen.getByText("Do First")).toBeInTheDocument();

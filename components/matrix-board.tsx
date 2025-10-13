@@ -10,7 +10,7 @@ import { AppFooter } from "@/components/app-footer";
 import { FilterBar } from "@/components/filter-bar";
 import { FilterPopover } from "@/components/filter-popover";
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
-import { NotificationSettingsDialog } from "@/components/notification-settings-dialog";
+import { SettingsDialog } from "@/components/settings-dialog";
 import { BulkActionsBar } from "@/components/bulk-actions-bar";
 import { BulkTagDialog } from "@/components/bulk-tag-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,8 +36,10 @@ import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
 import { DND_CONFIG, TOAST_DURATION } from "@/lib/constants";
 import { notificationChecker } from "@/lib/notification-checker";
 
+// Import UserGuideDialog normally to avoid chunk loading issues
+import { UserGuideDialog } from "@/components/user-guide-dialog";
+
 // Lazy load heavy components
-const HelpDialog = lazy(() => import("@/components/help-dialog").then(m => ({ default: m.HelpDialog })));
 const ImportDialog = lazy(() => import("@/components/import-dialog").then(m => ({ default: m.ImportDialog })));
 const TaskForm = lazy(() => import("@/components/task-form").then(m => ({ default: m.TaskForm })));
 const SaveSmartViewDialog = lazy(() => import("@/components/save-smart-view-dialog").then(m => ({ default: m.SaveSmartViewDialog })));
@@ -73,7 +75,7 @@ export function MatrixBoard() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [saveSmartViewOpen, setSaveSmartViewOpen] = useState(false);
-  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -449,17 +451,12 @@ export function MatrixBoard() {
           onNewTask={() => setDialogState({ mode: "create" })}
           onSearchChange={setSearchQuery}
           searchQuery={searchQuery}
-          onExport={handleExport}
-          onImport={handleImport}
           searchInputRef={searchInputRef}
           onHelp={() => setHelpOpen(true)}
-          isLoading={isLoading}
+          onOpenSettings={() => setSettingsOpen(true)}
           onSelectSmartView={handleSelectSmartView}
           onOpenFilters={() => setFilterPopoverOpen(true)}
           currentFilterCriteria={filterCriteria}
-          showCompleted={showCompleted}
-          onToggleCompleted={() => setShowCompleted(!showCompleted)}
-          onOpenNotifications={() => setNotificationSettingsOpen(true)}
         />
 
         {/* Active Filter Chips */}
@@ -505,6 +502,7 @@ export function MatrixBoard() {
                   key={quadrant.id}
                   quadrant={quadrant}
                   tasks={filteredQuadrants[quadrant.id] ?? []}
+                  allTasks={all}
                   onEdit={(task) => setDialogState({ mode: "edit", task })}
                   onDelete={handleDelete}
                   onToggleComplete={handleComplete}
@@ -538,12 +536,8 @@ export function MatrixBoard() {
           selectedCount={selectedTaskIds.size}
         />
 
-        {/* Lazy-loaded dialogs with Suspense fallback */}
-        {helpOpen && (
-          <Suspense fallback={<div className="sr-only">Loading...</div>}>
-            <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-          </Suspense>
-        )}
+        {/* User Guide */}
+        <UserGuideDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
         {importDialogOpen && (
           <Suspense fallback={<div className="sr-only">Loading...</div>}>
@@ -577,9 +571,15 @@ export function MatrixBoard() {
           availableTags={availableTags}
         />
 
-        <NotificationSettingsDialog
-          open={notificationSettingsOpen}
-          onOpenChange={setNotificationSettingsOpen}
+        {/* Settings Dialog */}
+        <SettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          showCompleted={showCompleted}
+          onToggleCompleted={() => setShowCompleted(!showCompleted)}
+          onExport={handleExport}
+          onImport={handleImport}
+          isLoading={isLoading}
         />
 
         <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>

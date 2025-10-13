@@ -51,7 +51,7 @@ describe("TaskCard", () => {
   };
 
   it("renders task title and description", () => {
-    render(<TaskCard task={mockTask} {...mockHandlers} />);
+    render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
 
     expect(screen.getByText("Test Task")).toBeInTheDocument();
     expect(screen.getByText("Test description")).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("TaskCard", () => {
 
   it("calls onToggleComplete when checkbox is clicked", async () => {
     const user = userEvent.setup();
-    render(<TaskCard task={mockTask} {...mockHandlers} />);
+    render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
 
     const checkbox = screen.getByRole("button", { name: /mark as complete/i });
     await user.click(checkbox);
@@ -69,7 +69,7 @@ describe("TaskCard", () => {
 
   it("calls onEdit when edit button is clicked", async () => {
     const user = userEvent.setup();
-    render(<TaskCard task={mockTask} {...mockHandlers} />);
+    render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
 
     const editButton = screen.getByRole("button", { name: /edit task/i });
     await user.click(editButton);
@@ -79,7 +79,7 @@ describe("TaskCard", () => {
 
   it("calls onDelete when delete button is clicked", async () => {
     const user = userEvent.setup();
-    render(<TaskCard task={mockTask} {...mockHandlers} />);
+    render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
 
     const deleteButton = screen.getByRole("button", { name: /delete task/i });
     await user.click(deleteButton);
@@ -89,7 +89,7 @@ describe("TaskCard", () => {
 
   it("renders with reduced opacity when completed", () => {
     const completedTask = { ...mockTask, completed: true };
-    const { container } = render(<TaskCard task={completedTask} {...mockHandlers} />);
+    const { container } = render(<TaskCard task={completedTask} allTasks={[completedTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
     expect(article).toHaveClass("opacity-60");
@@ -97,7 +97,7 @@ describe("TaskCard", () => {
 
   it("displays tags when present", () => {
     const taskWithTags = { ...mockTask, tags: ["work", "urgent"] };
-    render(<TaskCard task={taskWithTags} {...mockHandlers} />);
+    render(<TaskCard task={taskWithTags} allTasks={[taskWithTags]} {...mockHandlers} />);
 
     expect(screen.getByText("work")).toBeInTheDocument();
     expect(screen.getByText("urgent")).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe("TaskCard", () => {
         { id: "sub-3", title: "Subtask 3", completed: true }
       ]
     };
-    render(<TaskCard task={taskWithSubtasks} {...mockHandlers} />);
+    render(<TaskCard task={taskWithSubtasks} allTasks={[taskWithSubtasks]} {...mockHandlers} />);
 
     expect(screen.getByText("2/3")).toBeInTheDocument();
   });
@@ -122,7 +122,7 @@ describe("TaskCard", () => {
     yesterday.setDate(yesterday.getDate() - 1);
     const overdueTask = { ...mockTask, dueDate: yesterday.toISOString() };
 
-    render(<TaskCard task={overdueTask} {...mockHandlers} />);
+    render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     expect(screen.getByText("Overdue")).toBeInTheDocument();
   });
@@ -131,14 +131,14 @@ describe("TaskCard", () => {
     const today = new Date();
     const todayTask = { ...mockTask, dueDate: today.toISOString() };
 
-    render(<TaskCard task={todayTask} {...mockHandlers} />);
+    render(<TaskCard task={todayTask} allTasks={[todayTask]} {...mockHandlers} />);
 
     expect(screen.getByText("Due today")).toBeInTheDocument();
   });
 
   it("displays recurrence icon for recurring tasks", () => {
     const recurringTask = { ...mockTask, recurrence: "daily" as const };
-    const { container } = render(<TaskCard task={recurringTask} {...mockHandlers} />);
+    const { container } = render(<TaskCard task={recurringTask} allTasks={[recurringTask]} {...mockHandlers} />);
 
     // Look for the repeat icon (RepeatIcon from lucide-react)
     const repeatIcon = container.querySelector('[title="Recurs daily"]');
@@ -149,7 +149,7 @@ describe("TaskCard", () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const overdueTask = { ...mockTask, dueDate: yesterday.toISOString() };
-    const { container } = render(<TaskCard task={overdueTask} {...mockHandlers} />);
+    const { container } = render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
     expect(article).toHaveClass("border-red-300");
@@ -164,21 +164,21 @@ describe("TaskCard", () => {
       completed: true
     };
 
-    render(<TaskCard task={completedOverdueTask} {...mockHandlers} />);
+    render(<TaskCard task={completedOverdueTask} allTasks={[completedOverdueTask]} {...mockHandlers} />);
 
     expect(screen.queryByText("Overdue")).not.toBeInTheDocument();
   });
 
   it("renders without description when not provided", () => {
     const taskWithoutDescription = { ...mockTask, description: "" };
-    render(<TaskCard task={taskWithoutDescription} {...mockHandlers} />);
+    render(<TaskCard task={taskWithoutDescription} allTasks={[taskWithoutDescription]} {...mockHandlers} />);
 
     expect(screen.getByText("Test Task")).toBeInTheDocument();
     expect(screen.queryByText("Test description")).not.toBeInTheDocument();
   });
 
   it("displays 'No due date' when dueDate is undefined", () => {
-    render(<TaskCard task={mockTask} {...mockHandlers} />);
+    render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
 
     expect(screen.getByText(/due no due date/i)).toBeInTheDocument();
   });

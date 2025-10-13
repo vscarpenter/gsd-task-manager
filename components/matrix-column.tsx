@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 interface MatrixColumnProps {
   quadrant: QuadrantMeta;
   tasks: TaskRecord[];
+  allTasks: TaskRecord[];
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
@@ -22,6 +23,7 @@ interface MatrixColumnProps {
 function MatrixColumnComponent({
   quadrant,
   tasks,
+  allTasks,
   onEdit,
   onDelete,
   onToggleComplete,
@@ -66,6 +68,7 @@ function MatrixColumnComponent({
               <TaskCard
                 key={task.id}
                 task={task}
+                allTasks={allTasks}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onToggleComplete={onToggleComplete}
