@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { CheckCheckIcon, Trash2Icon, XIcon, TagIcon, Grid2x2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { QuadrantId } from "@/lib/types";
@@ -27,6 +28,25 @@ export function BulkActionsBar({
   onBulkMoveToQuadrant,
   onBulkAddTags
 }: BulkActionsBarProps) {
+  const [moveDropdownOpen, setMoveDropdownOpen] = useState(false);
+  const moveDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moveDropdownRef.current && !moveDropdownRef.current.contains(event.target as Node)) {
+        setMoveDropdownOpen(false);
+      }
+    };
+
+    if (moveDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [moveDropdownOpen]);
+
   if (selectedCount === 0) {
     return null;
   }
@@ -75,33 +95,39 @@ export function BulkActionsBar({
             </Button>
 
             {/* Move to quadrant dropdown */}
-            <div className="relative group">
+            <div className="relative" ref={moveDropdownRef}>
               <Button
                 variant="ghost"
                 className="gap-2 px-3 py-1.5 text-xs"
                 title="Move to quadrant"
+                onClick={() => setMoveDropdownOpen(!moveDropdownOpen)}
               >
                 <Grid2x2Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">Move</span>
               </Button>
 
               {/* Dropdown menu */}
-              <div className="absolute bottom-full left-0 mb-2 hidden w-48 rounded-lg border border-border bg-card shadow-lg group-hover:block">
-                <div className="p-2">
-                  <p className="px-2 py-1 text-xs font-semibold text-foreground-muted">
-                    Move to quadrant
-                  </p>
-                  {quadrants.map(quadrant => (
-                    <button
-                      key={quadrant.id}
-                      onClick={() => onBulkMoveToQuadrant(quadrant.id)}
-                      className="w-full rounded px-2 py-1.5 text-left text-sm text-foreground hover:bg-background-muted transition-colors"
-                    >
-                      {quadrant.title}
-                    </button>
-                  ))}
+              {moveDropdownOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-border bg-card shadow-lg">
+                  <div className="p-2">
+                    <p className="px-2 py-1 text-xs font-semibold text-foreground-muted">
+                      Move to quadrant
+                    </p>
+                    {quadrants.map(quadrant => (
+                      <button
+                        key={quadrant.id}
+                        onClick={() => {
+                          onBulkMoveToQuadrant(quadrant.id);
+                          setMoveDropdownOpen(false);
+                        }}
+                        className="w-full rounded px-2 py-1.5 text-left text-sm text-foreground hover:bg-background-muted transition-colors"
+                      >
+                        {quadrant.title}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Add tags */}

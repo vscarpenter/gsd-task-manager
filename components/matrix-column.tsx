@@ -15,6 +15,7 @@ interface MatrixColumnProps {
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  onShare?: (task: TaskRecord) => void;
   selectionMode?: boolean;
   selectedTaskIds?: Set<string>;
   onToggleSelect?: (task: TaskRecord) => void;
@@ -27,6 +28,7 @@ function MatrixColumnComponent({
   onEdit,
   onDelete,
   onToggleComplete,
+  onShare,
   selectionMode,
   selectedTaskIds,
   onToggleSelect
@@ -72,6 +74,7 @@ function MatrixColumnComponent({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onToggleComplete={onToggleComplete}
+                onShare={onShare}
                 selectionMode={selectionMode}
                 isSelected={selectedTaskIds?.has(task.id)}
                 onToggleSelect={onToggleSelect}
@@ -90,6 +93,9 @@ export const MatrixColumn = memo(MatrixColumnComponent, (prevProps, nextProps) =
   return (
     prevProps.quadrant.id === nextProps.quadrant.id &&
     prevProps.tasks.length === nextProps.tasks.length &&
-    prevProps.tasks === nextProps.tasks // Reference equality check
+    prevProps.tasks === nextProps.tasks && // Reference equality check
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.selectedTaskIds === nextProps.selectedTaskIds &&
+    prevProps.allTasks.length === nextProps.allTasks.length
   );
 });

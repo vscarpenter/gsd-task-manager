@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon } from "lucide-react";
+import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { TaskRecord } from "@/lib/types";
@@ -14,12 +14,13 @@ interface TaskCardProps {
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  onShare?: (task: TaskRecord) => void;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
 }
 
-function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
+function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
   // Memoize expensive computations
   const dueLabel = useMemo(() => formatDueDate(task.dueDate), [task.dueDate]);
   const taskIsOverdue = useMemo(() => !task.completed && isOverdue(task.dueDate), [task.completed, task.dueDate]);
@@ -184,6 +185,16 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 transition sm:group-hover:opacity-100">
+          {onShare && (
+            <button
+              type="button"
+              onClick={() => onShare(task)}
+              className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation"
+              aria-label="Share task"
+            >
+              <Share2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onEdit(task)}
