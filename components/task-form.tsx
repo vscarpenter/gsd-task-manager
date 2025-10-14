@@ -168,6 +168,7 @@ export function TaskForm({
           onChange={(event) => updateField("title", event.target.value)}
           placeholder="Add a task name"
           required
+          autoFocus
         />
         {errors.title ? <p className="text-xs text-red-600">{errors.title}</p> : null}
       </div>

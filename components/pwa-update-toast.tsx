@@ -28,17 +28,50 @@ export function PwaUpdateToast() {
   }, []);
 
   const handleUpdate = () => {
-    if (!waitingWorker) return;
+    if (!waitingWorker) {
+      // Fallback: just reload if we don't have a waiting worker reference
+      console.log("No waiting worker, forcing reload");
+      window.location.reload();
+      return;
+    }
+
+    let reloadTriggered = false;
+
+    // Function to perform the reload (prevent duplicate reloads)
+    const performReload = () => {
+      if (!reloadTriggered) {
+        reloadTriggered = true;
+        console.log("Reloading page with new service worker");
+        window.location.reload();
+      }
+    };
 
     // Listen for the service worker to actually take over
     // IMPORTANT: Attach listener BEFORE posting message to avoid race condition
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      // Reload the page to use the new service worker
-      window.location.reload();
-    });
+    const controllerChangeHandler = () => {
+      console.log("Service worker controller changed");
+      performReload();
+    };
 
-    // Tell the waiting service worker to take over
-    waitingWorker.postMessage({ type: "SKIP_WAITING" });
+    navigator.serviceWorker.addEventListener("controllerchange", controllerChangeHandler);
+
+    // Fallback: If controllerchange doesn't fire within 2 seconds (iOS/Safari issue),
+    // reload anyway to ensure the user gets the update
+    const fallbackTimeout = setTimeout(() => {
+      console.log("Fallback reload triggered (controllerchange not fired)");
+      performReload();
+    }, 2000);
+
+    try {
+      // Tell the waiting service worker to take over
+      console.log("Posting SKIP_WAITING message to service worker");
+      waitingWorker.postMessage({ type: "SKIP_WAITING" });
+    } catch (error) {
+      console.error("Failed to post SKIP_WAITING message:", error);
+      // If posting the message fails, clear timeout and just reload
+      clearTimeout(fallbackTimeout);
+      performReload();
+    }
   };
 
   const handleDismiss = () => {

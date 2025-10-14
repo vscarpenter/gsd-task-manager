@@ -13,6 +13,7 @@ import { NotificationPermissionPrompt } from "@/components/notification-permissi
 import { SettingsDialog } from "@/components/settings-dialog";
 import { BulkActionsBar } from "@/components/bulk-actions-bar";
 import { BulkTagDialog } from "@/components/bulk-tag-dialog";
+import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -81,6 +82,8 @@ export function MatrixBoard() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
+  const [shareTaskDialogOpen, setShareTaskDialogOpen] = useState(false);
+  const [taskToShare, setTaskToShare] = useState<TaskRecord | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
@@ -321,6 +324,16 @@ export function MatrixBoard() {
     setSelectionMode(false);
   };
 
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) {
+      // Exiting selection mode - clear selections
+      handleClearSelection();
+    } else {
+      // Entering selection mode
+      setSelectionMode(true);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedTaskIds.size === 0) return;
 
@@ -427,6 +440,11 @@ export function MatrixBoard() {
     }
   };
 
+  const handleShare = (task: TaskRecord) => {
+    setTaskToShare(task);
+    setShareTaskDialogOpen(true);
+  };
+
   // Handle keyboard shortcuts
   useKeyboardShortcuts(
     {
@@ -457,6 +475,9 @@ export function MatrixBoard() {
           onSelectSmartView={handleSelectSmartView}
           onOpenFilters={() => setFilterPopoverOpen(true)}
           currentFilterCriteria={filterCriteria}
+          selectionMode={selectionMode}
+          onToggleSelectionMode={handleToggleSelectionMode}
+          selectedCount={selectedTaskIds.size}
         />
 
         {/* Active Filter Chips */}
@@ -506,6 +527,7 @@ export function MatrixBoard() {
                   onEdit={(task) => setDialogState({ mode: "edit", task })}
                   onDelete={handleDelete}
                   onToggleComplete={handleComplete}
+                  onShare={handleShare}
                   selectionMode={selectionMode}
                   selectedTaskIds={selectedTaskIds}
                   onToggleSelect={handleToggleSelect}
@@ -534,6 +556,13 @@ export function MatrixBoard() {
           onOpenChange={setBulkTagDialogOpen}
           onConfirm={handleBulkAddTagsConfirm}
           selectedCount={selectedTaskIds.size}
+        />
+
+        {/* Share task dialog */}
+        <ShareTaskDialog
+          task={taskToShare}
+          open={shareTaskDialogOpen}
+          onOpenChange={setShareTaskDialogOpen}
         />
 
         {/* User Guide */}
