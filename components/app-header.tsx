@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
-import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon, CheckSquareIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +20,9 @@ interface AppHeaderProps {
   onSelectSmartView: (criteria: FilterCriteria) => void;
   onOpenFilters: () => void;
   currentFilterCriteria?: FilterCriteria;
+  selectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
+  selectedCount?: number;
 }
 
 export function AppHeader({
@@ -31,7 +34,10 @@ export function AppHeader({
   onOpenSettings,
   onSelectSmartView,
   onOpenFilters, // eslint-disable-line @typescript-eslint/no-unused-vars
-  currentFilterCriteria
+  currentFilterCriteria,
+  selectionMode = false,
+  onToggleSelectionMode,
+  selectedCount = 0
 }: AppHeaderProps) {
 
   return (
@@ -51,15 +57,32 @@ export function AppHeader({
             <ViewToggle />
             <div className="h-6 w-px bg-border" />
             <div className="flex items-center gap-2">
+              {onToggleSelectionMode && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={selectionMode ? "primary" : "ghost"}
+                      className="h-12 w-12 p-0 hidden sm:flex"
+                      onClick={onToggleSelectionMode}
+                      aria-label={selectionMode ? "Exit selection mode" : "Select tasks"}
+                    >
+                      <CheckSquareIcon className="h-7 w-7" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{selectionMode ? `Exit selection (${selectedCount} selected)` : "Select tasks"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-10 w-10 p-0"
+                    className="h-12 w-12 p-0"
                     onClick={onOpenSettings}
                     aria-label="Settings"
                   >
-                    <SettingsIcon className="h-5 w-5" />
+                    <SettingsIcon className="h-7 w-7" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -68,8 +91,8 @@ export function AppHeader({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button className="h-10 w-10 p-0" onClick={onHelp} aria-label="User Guide">
-                    <HelpCircleIcon className="h-5 w-5" />
+                  <Button className="h-12 w-12 p-0" onClick={onHelp} aria-label="User Guide">
+                    <HelpCircleIcon className="h-7 w-7" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
