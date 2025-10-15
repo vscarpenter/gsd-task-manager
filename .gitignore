@@ -45,3 +45,7 @@ sync.md
 .claude/settings.local.json
 
 *.tsbuildinfo
+
+# SnoanQube
+sonar-project.properties
+.scannerwork
