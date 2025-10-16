@@ -1,0 +1,29 @@
+{
+  "name": "gsd-sync-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for GSD Task Manager sync backend",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "db:migrations:create": "wrangler d1 migrations create gsd-sync",
+    "db:migrations:apply": "wrangler d1 migrations apply gsd-sync --local",
+    "db:migrations:apply:remote": "wrangler d1 migrations apply gsd-sync --remote",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "itty-router": "^5.0.18",
+    "jose": "^5.10.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250110.0",
+    "@types/node": "^20.19.19",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.43.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,79 @@
+name = "gsd-sync-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-10"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Local development
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+# Staging environment
+[env.staging]
+name = "gsd-sync-worker-staging"
+vars = { ENVIRONMENT = "staging" }
+
+# Production environment
+[env.production]
+name = "gsd-sync-worker-production"
+vars = { ENVIRONMENT = "production" }
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "gsd-sync"
+database_id = "3c66c1eb-da4e-4c94-949a-cb8024118515"  # Replace after creating database
+
+# KV Namespace binding for sessions and rate limiting
+[[kv_namespaces]]
+binding = "KV"
+id = "51489275f274487f8447e9ac5d3d78c1"  # Replace after creating KV namespace
+
+# R2 Bucket binding for backups
+[[r2_buckets]]
+binding = "R2_BACKUPS"
+bucket_name = "gsd-backups"
+
+# OAuth Configuration
+# Client IDs are public and stored as vars
+# Client Secrets must be set via: wrangler secret put SECRET_NAME
+[vars]
+GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
+OAUTH_REDIRECT_URI = "https://gsd-sync-worker.vscarpenter.workers.dev/api/auth/oauth/callback"
+
+# Secrets (set via: wrangler secret put SECRET_NAME)
+# Required secrets:
+# - JWT_SECRET: Secret key for signing JWTs
+# - ENCRYPTION_SALT: Additional salt for server-side operations
+# - GOOGLE_CLIENT_SECRET: Google OAuth client secret
+# - APPLE_CLIENT_ID: Apple Services ID (e.g., com.gsd.taskmanager.signin)
+# - APPLE_TEAM_ID: Apple Developer Team ID
+# - APPLE_KEY_ID: Apple Sign in with Apple Key ID
+# - APPLE_PRIVATE_KEY: Apple private key (.p8 file contents)
+
+# Analytics Engine binding (optional, for monitoring)
+# [[analytics_engine_datasets]]
+# binding = "ANALYTICS"
+
+# Durable Objects (for future real-time sync features)
+# [[durable_objects.bindings]]
+# name = "SYNC_COORDINATOR"
+# class_name = "SyncCoordinator"
+# script_name = "gsd-sync-worker"
+
+# Cron triggers for cleanup tasks
+[triggers]
+crons = [
+  "0 2 * * *"  # Daily at 2 AM UTC: cleanup old sessions, deleted tasks
+]
+
+# Limits and configuration
+[limits]
+cpu_ms = 50  # Default: 50ms per request
+
+[observability]
+[observability.logs]
+enabled = false
+head_sampling_rate = 1
+invocation_logs = true
+persist = true

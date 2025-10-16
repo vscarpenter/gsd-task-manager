@@ -46,6 +46,11 @@ sync.md
 
 *.tsbuildinfo
 
-# SnoanQube
+# SonarQube
 sonar-project.properties
 .scannerwork
+
+# Cloudflare Worker
+worker/.wrangler
+worker/.dev.vars
+worker/wrangler.toml.local

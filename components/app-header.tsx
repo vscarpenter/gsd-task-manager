@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { GsdLogo } from "@/components/gsd-logo";
 import { SmartViewSelector } from "@/components/smart-view-selector";
 import { ViewToggle } from "@/components/view-toggle";
+import { SyncButton } from "@/components/sync/sync-button";
 import type { FilterCriteria } from "@/lib/filters";
 
 interface AppHeaderProps {
@@ -56,6 +57,7 @@ export function AppHeader({
           <div className="flex items-center gap-3">
             <ViewToggle />
             <div className="h-6 w-px bg-border" />
+            <SyncButton />
             <div className="flex items-center gap-2">
               {onToggleSelectionMode && (
                 <Tooltip>
