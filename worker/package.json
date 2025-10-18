@@ -5,13 +5,17 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --env development",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
+    "deploy:all": "bash deploy-all-envs.sh",
+    "setup:all": "bash setup-all-envs.sh",
     "db:migrations:create": "wrangler d1 migrations create gsd-sync",
     "db:migrations:apply": "wrangler d1 migrations apply gsd-sync --local",
     "db:migrations:apply:remote": "wrangler d1 migrations apply gsd-sync --remote",
     "tail": "wrangler tail",
+    "tail:staging": "wrangler tail --env staging",
+    "tail:production": "wrangler tail --env production",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

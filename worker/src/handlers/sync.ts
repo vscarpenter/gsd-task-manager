@@ -5,9 +5,6 @@ import type {
   PullRequest,
   PushResponse,
   PullResponse,
-  RejectedOperation,
-  ConflictInfo,
-  EncryptedTaskBlob,
   VectorClock,
   StatusResponse,
   DeviceInfo,
@@ -17,7 +14,6 @@ import {
   pushRequestSchema,
   pullRequestSchema,
   resolveRequestSchema,
-  updateDeviceRequestSchema,
 } from '../schemas';
 import { compareVectorClocks, mergeVectorClocks } from '../utils/vector-clock';
 import { generateId } from '../utils/crypto';

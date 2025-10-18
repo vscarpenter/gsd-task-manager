@@ -215,7 +215,7 @@ export async function login(request: Request, env: Env): Promise<Response> {
  * Refresh JWT token
  * POST /api/auth/refresh
  */
-export async function refresh(request: Request, env: Env, ctx: RequestContext): Promise<Response> {
+export async function refresh(_request: Request, env: Env, ctx: RequestContext): Promise<Response> {
   try {
     if (!ctx.userId || !ctx.deviceId || !ctx.email) {
       return errorResponse('Invalid token', 401);
@@ -256,7 +256,7 @@ export async function refresh(request: Request, env: Env, ctx: RequestContext): 
  * Logout and revoke token
  * POST /api/auth/logout
  */
-export async function logout(request: Request, env: Env, ctx: RequestContext): Promise<Response> {
+export async function logout(_request: Request, env: Env, ctx: RequestContext): Promise<Response> {
   try {
     if (!ctx.userId) {
       return errorResponse('Not authenticated', 401);

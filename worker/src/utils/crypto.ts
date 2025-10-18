@@ -95,10 +95,10 @@ export async function sha256(data: string): Promise<string> {
 }
 
 /**
- * Convert ArrayBuffer to Base64 string
+ * Convert ArrayBuffer or Uint8Array to Base64 string
  */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   const binary = String.fromCharCode(...bytes);
   return btoa(binary);
 }

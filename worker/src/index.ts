@@ -1,4 +1,4 @@
-import { Router } from 'itty-router';
+import { Router, type IRequest } from 'itty-router';
 import type { Env, RequestContext } from './types';
 import { authMiddleware } from './middleware/auth';
 import { rateLimitMiddleware } from './middleware/rate-limit';
@@ -26,13 +26,13 @@ router.get('/health', (request: Request) => {
 });
 
 // OAuth endpoints (no auth required)
-router.get('/api/auth/oauth/:provider/start', async (request: Request, env: Env) => {
+router.get('/api/auth/oauth/:provider/start', async (request: IRequest, env: Env) => {
   const origin = request.headers.get('Origin');
   const provider = request.params?.provider as 'google' | 'apple';
   if (provider !== 'google' && provider !== 'apple') {
     return errorResponse('Invalid provider', 400, origin);
   }
-  return oidcHandlers.initiateOAuth(request, env, provider);
+  return oidcHandlers.initiateOAuth(request as unknown as Request, env, provider);
 });
 
 router.post('/api/auth/oauth/callback', async (request: Request, env: Env) => {
@@ -51,7 +51,7 @@ router.post('/api/auth/encryption-salt', async (request: Request, env: Env) => {
   if (authResult) return authResult;
 
   try {
-    const body = await request.json();
+    const body = await request.json() as { encryptionSalt?: string };
     const { encryptionSalt } = body;
 
     if (!encryptionSalt || typeof encryptionSalt !== 'string') {
@@ -221,7 +221,7 @@ export default {
   },
 
   // Cron trigger for cleanup tasks
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     logger.info('Starting scheduled cleanup tasks');
 
     try {

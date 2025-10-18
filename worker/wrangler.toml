@@ -4,45 +4,83 @@ compatibility_date = "2025-01-10"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
-# Local development
+# ========================================
+# DEVELOPMENT ENVIRONMENT
+# ========================================
 [env.development]
-vars = { ENVIRONMENT = "development" }
+name = "gsd-sync-worker-dev"
 
-# Staging environment
+[env.development.vars]
+ENVIRONMENT = "development"
+GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
+OAUTH_REDIRECT_URI = "http://localhost:3000/oauth-callback.html"  # Dev uses localhost
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "gsd-sync-dev"
+database_id = "d2b3a578-3489-42ce-bd40-ead2a4094880"
+
+[[env.development.kv_namespaces]]
+binding = "KV"
+id = "c19b2c3573c949849c131bbff8a58a94"
+
+[[env.development.r2_buckets]]
+binding = "R2_BACKUPS"
+bucket_name = "gsd-backups-dev"
+
+# ========================================
+# STAGING ENVIRONMENT
+# ========================================
 [env.staging]
 name = "gsd-sync-worker-staging"
-vars = { ENVIRONMENT = "staging" }
 
-# Production environment
+[env.staging.vars]
+ENVIRONMENT = "staging"
+GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
+OAUTH_REDIRECT_URI = "https://gsd-dev.vinny.dev/oauth-callback.html"  # Staging uses dev domain
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "gsd-sync-staging"
+database_id = "f8f9e865-78ab-476f-8776-6ca0d16a0196"  # Run setup-all-envs.sh to populate
+
+[[env.staging.kv_namespaces]]
+binding = "KV"
+id = "8bca8bbbf219439ca0311b0744414be1"  # Run setup-all-envs.sh to populate
+
+[[env.staging.r2_buckets]]
+binding = "R2_BACKUPS"
+bucket_name = "gsd-backups-staging"
+
+# ========================================
+# PRODUCTION ENVIRONMENT
+# ========================================
 [env.production]
 name = "gsd-sync-worker-production"
-vars = { ENVIRONMENT = "production" }
 
-# D1 Database binding
-[[d1_databases]]
-binding = "DB"
-database_name = "gsd-sync"
-database_id = "3c66c1eb-da4e-4c94-949a-cb8024118515"  # Replace after creating database
-
-# KV Namespace binding for sessions and rate limiting
-[[kv_namespaces]]
-binding = "KV"
-id = "51489275f274487f8447e9ac5d3d78c1"  # Replace after creating KV namespace
-
-# R2 Bucket binding for backups
-[[r2_buckets]]
-binding = "R2_BACKUPS"
-bucket_name = "gsd-backups"
-
-# OAuth Configuration
-# Client IDs are public and stored as vars
-# Client Secrets must be set via: wrangler secret put SECRET_NAME
-[vars]
+[env.production.vars]
 ENVIRONMENT = "production"
 GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
-OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback.html"
+OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback.html"  # Production domain
 
-# Secrets (set via: wrangler secret put SECRET_NAME)
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "gsd-sync-production"
+database_id = "d537d6bb-253f-4d3d-8f77-5d143b14c0b0"
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = "aad1efc07bf649d9b2b5d9805b8040d0"
+
+[[env.production.r2_buckets]]
+binding = "R2_BACKUPS"
+bucket_name = "gsd-backups-production"
+
+# ========================================
+# SHARED CONFIGURATION
+# ========================================
+
+# Secrets (set via: wrangler secret put SECRET_NAME --env <environment>)
 # Required secrets:
 # - JWT_SECRET: Secret key for signing JWTs
 # - ENCRYPTION_SALT: Additional salt for server-side operations

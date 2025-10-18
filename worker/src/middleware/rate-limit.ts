@@ -1,5 +1,5 @@
 import type { Env, RequestContext } from '../types';
-import { errorResponse, createCorsHeaders } from './cors';
+import { createCorsHeaders } from './cors';
 
 export interface RateLimitConfig {
   maxRequests: number;
