@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://gsd-sync-worker.vscarpenter.workers.dev http://localhost:8787; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:;">
+  <title>Completing Sign In...</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-icon svg {
+      width: 36px;
+      height: 36px;
+      stroke: white;
+      stroke-width: 3;
+      fill: none;
+    }
+
+    .error-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #ef4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .error-icon svg {
+      width: 36px;
+      height: 36px;
+      stroke: white;
+      stroke-width: 3;
+      fill: none;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #1a1a1a;
+    }
+
+    p {
+      font-size: 16px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .error-message {
+      margin-top: 16px;
+      padding: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: #991b1b;
+      font-size: 14px;
+    }
+
+    .countdown {
+      margin-top: 16px;
+      font-size: 14px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon" id="icon">
+      <div class="spinner"></div>
+    </div>
+    <h1 id="heading">Completing sign in...</h1>
+    <p id="message">Please wait while we complete your authentication.</p>
+    <div id="error-details"></div>
+    <div id="countdown" class="countdown"></div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // Parse URL parameters
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const error = params.get('error');
+      const errorDescription = params.get('error_description');
+
+      // UI elements
+      const iconEl = document.getElementById('icon');
+      const headingEl = document.getElementById('heading');
+      const messageEl = document.getElementById('message');
+      const errorDetailsEl = document.getElementById('error-details');
+      const countdownEl = document.getElementById('countdown');
+
+      // State management
+      let closeTimer = null;
+
+      // Update UI to show success state
+      function showSuccess() {
+        iconEl.innerHTML = '<div class="success-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>';
+        headingEl.textContent = 'Sign in successful!';
+        messageEl.textContent = 'You can now close this window.';
+        startCountdown(1);
+      }
+
+      // Update UI to show error state
+      function showError(errorMsg) {
+        iconEl.innerHTML = '<div class="error-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>';
+        headingEl.textContent = 'Sign in failed';
+        messageEl.textContent = 'An error occurred during authentication.';
+        
+        if (errorMsg) {
+          errorDetailsEl.innerHTML = '<div class="error-message">' + escapeHtml(errorMsg) + '</div>';
+        }
+
+        // Only start countdown if we have a parent window to close to
+        if (window.opener) {
+          startCountdown(3);
+        } else {
+          messageEl.textContent = 'Please close this window and try again from the main application.';
+        }
+      }
+
+      // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Start countdown timer and auto-close
+      function startCountdown(seconds) {
+        let remaining = seconds;
+        
+        function updateCountdown() {
+          if (remaining > 0) {
+            countdownEl.textContent = 'Closing in ' + remaining + ' second' + (remaining === 1 ? '' : 's') + '...';
+            remaining--;
+            closeTimer = setTimeout(updateCountdown, 1000);
+          } else {
+            closeWindow();
+          }
+        }
+
+        updateCountdown();
+      }
+
+      // Close the popup window
+      function closeWindow() {
+        if (closeTimer) {
+          clearTimeout(closeTimer);
+        }
+        try {
+          window.close();
+        } catch (e) {
+          console.error('Failed to close window:', e);
+        }
+      }
+
+      // Send postMessage to parent window
+      function sendMessageToParent(data) {
+        if (!window.opener) {
+          console.error('No parent window available');
+          return;
+        }
+
+        try {
+          const origin = window.location.origin;
+          window.opener.postMessage(data, origin);
+        } catch (e) {
+          console.error('Failed to send postMessage:', e);
+        }
+      }
+
+      // Handle OAuth error from provider
+      function handleOAuthError() {
+        const errorMsg = errorDescription || error || 'Unknown error occurred';
+        showError(errorMsg);
+        sendMessageToParent({
+          type: 'oauth_error',
+          error: errorMsg
+        });
+      }
+
+      // Exchange authorization code for tokens
+      async function exchangeCodeForTokens() {
+        try {
+          // Determine worker API URL based on environment
+          const workerUrl = window.location.hostname === 'localhost'
+            ? 'http://localhost:8787'
+            : 'https://gsd-sync-worker.vscarpenter.workers.dev';
+
+          const response = await fetch(workerUrl + '/api/auth/oauth/callback', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              code: code,
+              state: state
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to complete authentication');
+          }
+
+          const authData = await response.json();
+
+          // Send success message to parent
+          sendMessageToParent({
+            type: 'oauth_success',
+            state: state,
+            authData: authData
+          });
+
+          // Show success UI
+          showSuccess();
+
+        } catch (err) {
+          console.error('Token exchange failed:', err);
+          showError(err.message || 'Network error. Please check your connection.');
+          sendMessageToParent({
+            type: 'oauth_error',
+            error: err.message || 'Network error'
+          });
+        }
+      }
+
+      // Main execution
+      function init() {
+        // Check if window.opener exists
+        if (!window.opener) {
+          showError('This page must be opened from the main application.');
+          return;
+        }
+
+        // Check for OAuth provider error
+        if (error) {
+          handleOAuthError();
+          return;
+        }
+
+        // Validate required parameters
+        if (!code || !state) {
+          showError('Invalid callback parameters. Missing authorization code or state.');
+          sendMessageToParent({
+            type: 'oauth_error',
+            error: 'Invalid callback parameters'
+          });
+          return;
+        }
+
+        // Exchange code for tokens
+        exchangeCodeForTokens();
+      }
+
+      // Start when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

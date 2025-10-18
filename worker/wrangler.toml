@@ -38,8 +38,9 @@ bucket_name = "gsd-backups"
 # Client IDs are public and stored as vars
 # Client Secrets must be set via: wrangler secret put SECRET_NAME
 [vars]
+ENVIRONMENT = "production"
 GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
-OAUTH_REDIRECT_URI = "https://gsd-sync-worker.vscarpenter.workers.dev/api/auth/oauth/callback"
+OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback.html"
 
 # Secrets (set via: wrangler secret put SECRET_NAME)
 # Required secrets:
@@ -76,4 +77,3 @@ cpu_ms = 50  # Default: 50ms per request
 enabled = false
 head_sampling_rate = 1
 invocation_logs = true
-persist = true

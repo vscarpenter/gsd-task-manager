@@ -6,6 +6,7 @@ import { useSync } from '@/lib/hooks/use-sync';
 import { useToast } from '@/components/ui/toast';
 import { useState } from 'react';
 import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
+import { getCryptoManager } from '@/lib/sync/crypto';
 
 const TOAST_DURATION = {
   SHORT: 3000,
@@ -21,6 +22,20 @@ export function SyncButton() {
   const handleSync = async () => {
     if (!isEnabled) {
       // Open sync settings dialog to let user enable sync
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    // Check if encryption is initialized
+    const crypto = getCryptoManager();
+
+    if (!crypto.isInitialized()) {
+      // Encryption not initialized - need to re-enter passphrase
+      showToast(
+        'Please enter your encryption passphrase to sync',
+        undefined,
+        TOAST_DURATION.MEDIUM
+      );
       setAuthDialogOpen(true);
       return;
     }

@@ -1,14 +1,14 @@
 import Dexie, { Table } from "dexie";
 import type { TaskRecord, NotificationSettings } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
-import type { SyncQueueItem, SyncConfig, DeviceInfo } from "@/lib/sync/types";
+import type { SyncQueueItem, SyncConfig, DeviceInfo, EncryptionConfig } from "@/lib/sync/types";
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
   smartViews!: Table<SmartView, string>;
   notificationSettings!: Table<NotificationSettings, string>;
   syncQueue!: Table<SyncQueueItem, string>;
-  syncMetadata!: Table<SyncConfig | DeviceInfo, string>;
+  syncMetadata!: Table<SyncConfig | DeviceInfo | EncryptionConfig, string>;
   deviceInfo!: Table<DeviceInfo, string>;
 
   constructor() {

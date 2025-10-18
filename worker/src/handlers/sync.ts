@@ -21,6 +21,10 @@ import {
 } from '../schemas';
 import { compareVectorClocks, mergeVectorClocks } from '../utils/vector-clock';
 import { generateId } from '../utils/crypto';
+import { TTL, STORAGE } from '../config';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('SYNC');
 
 /**
  * Push local changes to server
@@ -31,6 +35,7 @@ export async function push(
   env: Env,
   ctx: RequestContext
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
   try {
     const userId = ctx.userId!;
     const body = await request.json();
@@ -142,7 +147,7 @@ export async function push(
 
         results.accepted.push(op.taskId);
       } catch (error: any) {
-        console.error(`Error processing task ${op.taskId}:`, error);
+        logger.error('Task processing failed', error, { userId, taskId: op.taskId, operation: 'push' });
         results.rejected.push({
           taskId: op.taskId,
           reason: 'validation_error',
@@ -183,13 +188,21 @@ export async function push(
       )
       .run();
 
-    return jsonResponse(results);
+    logger.info('Push completed', {
+      userId,
+      deviceId: validated.deviceId,
+      accepted: results.accepted.length,
+      rejected: results.rejected.length,
+      conflicts: results.conflicts.length,
+    });
+
+    return jsonResponse(results, 200, origin);
   } catch (error: any) {
-    console.error('Push error:', error);
+    logger.error('Push failed', error, { userId: ctx.userId, operation: 'push' });
     if (error.name === 'ZodError') {
-      return errorResponse('Invalid request data', 400);
+      return errorResponse('Invalid request data', 400, origin);
     }
-    return errorResponse('Push failed', 500);
+    return errorResponse('Push failed', 500, origin);
   }
 }
 
@@ -202,6 +215,7 @@ export async function pull(
   env: Env,
   ctx: RequestContext
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
   try {
     const userId = ctx.userId!;
     const body = await request.json();
@@ -311,13 +325,21 @@ export async function pull(
       )
       .run();
 
-    return jsonResponse(response);
+    logger.info('Pull completed', {
+      userId,
+      deviceId: validated.deviceId,
+      tasksCount: response.tasks.length,
+      deletedCount: response.deletedTaskIds.length,
+      conflicts: response.conflicts.length,
+    });
+
+    return jsonResponse(response, 200, origin);
   } catch (error: any) {
-    console.error('Pull error:', error);
+    logger.error('Pull failed', error, { userId: ctx.userId, operation: 'pull' });
     if (error.name === 'ZodError') {
-      return errorResponse('Invalid request data', 400);
+      return errorResponse('Invalid request data', 400, origin);
     }
-    return errorResponse('Pull failed', 500);
+    return errorResponse('Pull failed', 500, origin);
   }
 }
 
@@ -330,6 +352,7 @@ export async function resolve(
   env: Env,
   ctx: RequestContext
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
   try {
     const userId = ctx.userId!;
     const body = await request.json();
@@ -364,13 +387,15 @@ export async function resolve(
         .run();
     }
 
-    return jsonResponse({ success: true });
+    logger.info('Conflict resolved', { userId, taskId: validated.taskId });
+
+    return jsonResponse({ success: true }, 200, origin);
   } catch (error: any) {
-    console.error('Resolve error:', error);
+    logger.error('Conflict resolution failed', error, { userId: ctx.userId, operation: 'resolve' });
     if (error.name === 'ZodError') {
-      return errorResponse('Invalid request data', 400);
+      return errorResponse('Invalid request data', 400, origin);
     }
-    return errorResponse('Conflict resolution failed', 500);
+    return errorResponse('Conflict resolution failed', 500, origin);
   }
 }
 
@@ -383,6 +408,7 @@ export async function status(
   env: Env,
   ctx: RequestContext
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
   try {
     const userId = ctx.userId!;
 
@@ -423,14 +449,14 @@ export async function status(
       pendingPullCount: 0, // Would need more complex query
       conflictCount: (conflictCount?.count as number) || 0,
       deviceCount: (deviceCount?.count as number) || 0,
-      storageUsed: ((taskCount?.count as number) || 0) * 1024, // Rough estimate
-      storageQuota: 10 * 1024 * 1024, // 10MB default
+      storageUsed: ((taskCount?.count as number) || 0) * STORAGE.TASK_SIZE_ESTIMATE,
+      storageQuota: STORAGE.DEFAULT_QUOTA,
     };
 
-    return jsonResponse(response);
+    return jsonResponse(response, 200, origin);
   } catch (error) {
-    console.error('Status error:', error);
-    return errorResponse('Status check failed', 500);
+    logger.error('Status check failed', error as Error, { userId: ctx.userId, operation: 'status' });
+    return errorResponse('Status check failed', 500, origin);
   }
 }
 
@@ -443,6 +469,7 @@ export async function listDevices(
   env: Env,
   ctx: RequestContext
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
   try {
     const userId = ctx.userId!;
     const currentDeviceId = ctx.deviceId!;
@@ -461,10 +488,10 @@ export async function listDevices(
       isCurrent: d.id === currentDeviceId,
     }));
 
-    return jsonResponse({ devices: deviceList });
+    return jsonResponse({ devices: deviceList }, 200, origin);
   } catch (error) {
-    console.error('List devices error:', error);
-    return errorResponse('Failed to list devices', 500);
+    logger.error('List devices failed', error as Error, { userId: ctx.userId, operation: 'list_devices' });
+    return errorResponse('Failed to list devices', 500, origin);
   }
 }
 
@@ -477,13 +504,15 @@ export async function revokeDevice(
   env: Env,
   ctx: RequestContext
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  let deviceId: string | undefined;
   try {
     const userId = ctx.userId!;
     const url = new URL(request.url);
-    const deviceId = url.pathname.split('/').pop();
+    deviceId = url.pathname.split('/').pop();
 
     if (!deviceId) {
-      return errorResponse('Device ID required', 400);
+      return errorResponse('Device ID required', 400, origin);
     }
 
     // Deactivate device
@@ -500,16 +529,18 @@ export async function revokeDevice(
       if (session && (session as any).deviceId === deviceId) {
         const jti = key.name.split(':')[2];
         await env.KV.put(`revoked:${userId}:${jti}`, 'true', {
-          expirationTtl: 60 * 60 * 24 * 7,
+          expirationTtl: TTL.REVOCATION,
         });
         await env.KV.delete(key.name);
       }
     }
 
-    return jsonResponse({ success: true });
+    logger.info('Device revoked', { userId, deviceId });
+
+    return jsonResponse({ success: true }, 200, origin);
   } catch (error) {
-    console.error('Revoke device error:', error);
-    return errorResponse('Failed to revoke device', 500);
+    logger.error('Revoke device failed', error as Error, { userId: ctx.userId, deviceId, operation: 'revoke_device' });
+    return errorResponse('Failed to revoke device', 500, origin);
   }
 }
 

@@ -6,13 +6,25 @@ import { Button } from "@/components/ui/button";
 import { XIcon, CloudIcon } from "lucide-react";
 import { OAuthButtons } from "@/components/sync/oauth-buttons";
 import { EncryptionPassphraseDialog } from "@/components/sync/encryption-passphrase-dialog";
-import { isEncryptionConfigured } from "@/lib/sync/crypto";
+import { isEncryptionConfigured, getCryptoManager, clearCryptoManager } from "@/lib/sync/crypto";
 import { toast } from "sonner";
+import { getDb } from "@/lib/db";
 
 interface SyncAuthDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+}
+
+interface OAuthData {
+  userId: string;
+  deviceId: string;
+  email: string;
+  token: string;
+  expiresAt: number;
+  requiresEncryptionSetup?: boolean;
+  encryptionSalt?: string;
+  provider: string;
 }
 
 export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogProps) {
@@ -21,8 +33,8 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
   const [syncStatus, setSyncStatus] = useState<{ enabled: boolean; email: string | null; provider?: string } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showEncryptionDialog, setShowEncryptionDialog] = useState(false);
-  const [pendingOAuthData, setPendingOAuthData] = useState<any>(null);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [serverEncryptionSalt, setServerEncryptionSalt] = useState<string | null>(null);
 
   // Ensure we're mounted on client side
   useEffect(() => {
@@ -33,52 +45,74 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
   useEffect(() => {
     const loadStatus = async () => {
       // Get sync config from IndexedDB
-      const { getDb } = await import('@/lib/db');
-      const db = await getDb();
+      const db = getDb();
       const config = await db.syncMetadata.get('sync_config');
 
-      setSyncStatus({
-        enabled: !!config?.value?.enabled,
-        email: config?.value?.email || null,
-        provider: config?.value?.provider || null,
-      });
+      if (config && config.key === 'sync_config') {
+        setSyncStatus({
+          enabled: !!config.enabled,
+          email: config.email || null,
+          provider: config.provider || undefined,
+        });
+
+        // If sync is enabled but encryption is not initialized, prompt for passphrase
+        if (config.enabled) {
+          const crypto = getCryptoManager();
+          const hasConfig = await isEncryptionConfigured();
+
+          if (hasConfig && !crypto.isInitialized()) {
+            // Need to re-enter passphrase
+            setIsNewUser(false);
+            setShowEncryptionDialog(true);
+          }
+        }
+      } else {
+        setSyncStatus({ enabled: false, email: null });
+      }
     };
     if (isOpen) {
       loadStatus();
     }
   }, [isOpen]);
 
-  const handleOAuthSuccess = async (authData: any) => {
+  const handleOAuthSuccess = async (authData: OAuthData) => {
     try {
       // Store auth data in IndexedDB
-      const { getDb } = await import('@/lib/db');
-      const db = await getDb();
+      const db = getDb();
+
+      // Get existing config to preserve fields like vectorClock, serverUrl, etc.
+      const existingConfig = await db.syncMetadata.get('sync_config');
+      const existingSyncConfig = existingConfig && existingConfig.key === 'sync_config' ? existingConfig : null;
 
       await db.syncMetadata.put({
         key: 'sync_config',
-        value: {
-          enabled: true,
-          userId: authData.userId,
-          deviceId: authData.deviceId,
-          email: authData.email,
-          token: authData.token,
-          expiresAt: authData.expiresAt,
-          provider: authData.provider,
-        },
+        enabled: true,
+        userId: authData.userId,
+        deviceId: authData.deviceId,
+        deviceName: existingSyncConfig?.deviceName || 'Device',
+        email: authData.email,
+        token: authData.token,
+        tokenExpiresAt: authData.expiresAt,
+        lastSyncAt: existingSyncConfig?.lastSyncAt || null,
+        vectorClock: existingSyncConfig?.vectorClock || {},
+        conflictStrategy: existingSyncConfig?.conflictStrategy || 'last_write_wins',
+        serverUrl: existingSyncConfig?.serverUrl || 'https://gsd-sync-worker.vscarpenter.workers.dev',
+        provider: authData.provider,
       });
 
       // Check if user needs to set up encryption
       const hasEncryption = await isEncryptionConfigured();
 
+      // Store encryption salt from server if available
+      setServerEncryptionSalt(authData.encryptionSalt || null);
+
       if (authData.requiresEncryptionSetup || !hasEncryption) {
-        // New user - show encryption passphrase dialog
+        // New user or existing user on new device - show encryption passphrase dialog
         setIsNewUser(true);
-        setPendingOAuthData(authData);
         setShowEncryptionDialog(true);
       } else {
-        // Existing user - show encryption passphrase dialog to unlock
+        // Existing user with encryption - show encryption passphrase dialog to unlock
         setIsNewUser(false);
-        setPendingOAuthData(authData);
         setShowEncryptionDialog(true);
       }
     } catch (err) {
@@ -95,18 +129,18 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
   const handleEncryptionComplete = async () => {
     // Encryption setup complete
     setShowEncryptionDialog(false);
-    setPendingOAuthData(null);
 
     // Reload sync status
-    const { getDb } = await import('@/lib/db');
-    const db = await getDb();
+    const db = getDb();
     const config = await db.syncMetadata.get('sync_config');
 
-    setSyncStatus({
-      enabled: !!config?.value?.enabled,
-      email: config?.value?.email || null,
-      provider: config?.value?.provider || null,
-    });
+    if (config && config.key === 'sync_config') {
+      setSyncStatus({
+        enabled: !!config.enabled,
+        email: config.email || null,
+        provider: config.provider || undefined,
+      });
+    }
 
     toast.success("Sync enabled successfully!");
 
@@ -121,14 +155,12 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
     setIsLoading(true);
     try {
       // Disable sync and clear data
-      const { getDb } = await import('@/lib/db');
-      const db = await getDb();
+      const db = getDb();
 
       await db.syncMetadata.delete('sync_config');
       await db.syncMetadata.delete('encryption_salt');
 
       // Clear crypto manager
-      const { clearCryptoManager } = await import('@/lib/sync/crypto');
       clearCryptoManager();
 
       setSyncStatus({ enabled: false, email: null });
@@ -236,7 +268,7 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
               <p className="mb-2 font-medium text-foreground">🔐 End-to-end encrypted</p>
               <p>
                 Your tasks are encrypted on your device before syncing. After signing in,
-                you'll create a separate encryption passphrase for maximum security.
+                you&apos;ll create a separate encryption passphrase for maximum security.
               </p>
             </div>
           </>
@@ -251,8 +283,8 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
         onComplete={handleEncryptionComplete}
         onCancel={() => {
           setShowEncryptionDialog(false);
-          setPendingOAuthData(null);
         }}
+        serverEncryptionSalt={serverEncryptionSalt}
       />
     </>
   );

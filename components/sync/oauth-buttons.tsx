@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-const WORKER_URL = "https://gsd-sync-worker.vscarpenter.workers.dev";
+// Use local worker for development, production worker for deployed app
+const WORKER_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? "http://localhost:8787"
+  : "https://gsd-sync-worker.vscarpenter.workers.dev";
 
 interface OAuthButtonsProps {
   onSuccess: (authData: {
@@ -91,7 +94,7 @@ export function OAuthButtons({ onSuccess, onError }: OAuthButtonsProps) {
       <Button
         onClick={() => handleOAuth('google')}
         disabled={loading !== null}
-        variant="outline"
+        variant="subtle"
         className="w-full"
         type="button"
       >
@@ -111,7 +114,7 @@ export function OAuthButtons({ onSuccess, onError }: OAuthButtonsProps) {
       <Button
         onClick={() => handleOAuth('apple')}
         disabled={loading !== null}
-        variant="outline"
+        variant="subtle"
         className="w-full"
         type="button"
       >

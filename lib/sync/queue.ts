@@ -94,6 +94,34 @@ export class SyncQueue {
     const db = getDb();
     return db.syncQueue.where('taskId').equals(taskId).toArray();
   }
+
+  /**
+   * Populate queue with all existing tasks (for initial sync)
+   * This should be called when sync is first enabled
+   */
+  async populateFromExistingTasks(): Promise<number> {
+    const db = getDb();
+
+    // Get all existing tasks
+    const tasks = await db.tasks.toArray();
+
+    if (tasks.length === 0) {
+      return 0;
+    }
+
+    // Add each task to the sync queue as a "create" operation
+    let count = 0;
+    for (const task of tasks) {
+      // Check if this task is already in the queue
+      const existing = await this.getForTask(task.id);
+      if (existing.length === 0) {
+        await this.enqueue('create', task.id, task, task.vectorClock || {});
+        count++;
+      }
+    }
+
+    return count;
+  }
 }
 
 // Singleton instance

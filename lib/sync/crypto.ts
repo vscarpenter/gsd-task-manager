@@ -234,7 +234,7 @@ export async function getStoredEncryptionSalt(): Promise<Uint8Array | null> {
   const db = await getDb();
 
   const config = await db.syncMetadata.get('encryption_salt');
-  if (!config?.value?.salt) return null;
+  if (!config || config.key !== 'encryption_salt' || !config.value?.salt) return null;
 
   return new Uint8Array(config.value.salt);
 }

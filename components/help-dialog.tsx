@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon, StarIcon, EyeIcon } from "lucide-react";
+import { LightbulbIcon, KeyboardIcon, RepeatIcon, TagIcon, CheckSquareIcon, CalendarIcon, SparklesIcon, StarIcon, EyeIcon, CloudIcon } from "lucide-react";
 
 interface HelpDialogProps {
   open: boolean;
@@ -74,6 +74,12 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                 description="Tasks display overdue warnings (red) for past-due items and due today alerts (amber) for immediate tasks. Visual cues help you prioritize time-sensitive work."
                 tip="Set due dates for Q1 tasks and use them to track deadlines."
               />
+              <FeatureBox
+                icon={<CloudIcon className="h-4 w-4" />}
+                title="Cloud Sync (Optional)"
+                description="Sync your tasks across all your devices with end-to-end encryption. Sign in with Google or Apple, create a separate encryption passphrase, and your tasks will sync bidirectionally between all devices. Your passphrase never leaves your device - only you can decrypt your data."
+                tip="Same email + same passphrase = all your tasks everywhere!"
+              />
             </div>
           </section>
 
@@ -124,7 +130,8 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
               <Tip text="Use tags to group related tasks across quadrants" />
               <Tip text="Break large Q2 projects into smaller subtasks for momentum" />
               <Tip text="Export your tasks regularly as a backup" />
-              <Tip text="All data is stored locally - nothing sent to servers" />
+              <Tip text="Data is stored locally by default - enable cloud sync to access tasks on all devices" />
+              <Tip text="Cloud sync uses end-to-end encryption - only you can decrypt your tasks" />
             </div>
           </section>
 

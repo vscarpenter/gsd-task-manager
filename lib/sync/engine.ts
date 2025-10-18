@@ -48,6 +48,20 @@ export class SyncEngine {
       const api = getApiClient(config.serverUrl);
       api.setToken(config.token);
 
+      // Check if we need to populate queue with existing tasks
+      const queue = getSyncQueue();
+      const pendingCount = await queue.getPendingCount();
+      const db = getDb();
+      const taskCount = await db.tasks.count();
+
+      // If queue is empty but we have tasks, populate the queue
+      if (pendingCount === 0 && taskCount > 0) {
+        const count = await queue.populateFromExistingTasks();
+        if (count > 0) {
+          console.log(`Populated sync queue with ${count} existing tasks`);
+        }
+      }
+
       // Phase 1: Push local changes
       const pushResult = await this.pushLocalChanges(config, crypto, api);
 
@@ -178,8 +192,11 @@ export class SyncEngine {
     // Decrypt and apply remote changes
     for (const encTask of response.tasks) {
       try {
+        console.log(`Decrypting task ${encTask.id}...`);
         const decrypted = await crypto.decrypt(encTask.encryptedBlob, encTask.nonce);
+        console.log(`Decrypted successfully, parsing...`);
         const task = taskRecordSchema.parse(JSON.parse(decrypted));
+        console.log(`Parsed task ${task.id}: ${task.title}`);
 
         // Check for local conflicts
         const localTask = await db.tasks.get(task.id);
@@ -203,12 +220,15 @@ export class SyncEngine {
         }
 
         // No conflict or remote is newer, apply change
+        console.log(`Saving task ${task.id} to IndexedDB...`);
         await db.tasks.put({
           ...task,
           vectorClock: encTask.vectorClock,
         });
+        console.log(`Task ${task.id} saved successfully`);
       } catch (error) {
         console.error(`Failed to process task ${encTask.id}:`, error);
+        console.error('Error details:', error);
       }
     }
 

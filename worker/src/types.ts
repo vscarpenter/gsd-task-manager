@@ -21,6 +21,7 @@ export interface RequestContext {
   userId?: string;
   deviceId?: string;
   email?: string;
+  rateLimitHeaders?: Record<string, string>;
 }
 
 // Vector Clock for causality tracking

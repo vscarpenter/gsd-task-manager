@@ -16,6 +16,7 @@ interface EncryptionPassphraseDialogProps {
   isNewUser: boolean; // true = create new passphrase, false = enter existing
   onComplete: () => void;
   onCancel?: () => void;
+  serverEncryptionSalt?: string | null; // Salt from server (existing user on new device)
 }
 
 export function EncryptionPassphraseDialog({
@@ -23,6 +24,7 @@ export function EncryptionPassphraseDialog({
   isNewUser,
   onComplete,
   onCancel,
+  serverEncryptionSalt,
 }: EncryptionPassphraseDialogProps) {
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
@@ -54,7 +56,34 @@ export function EncryptionPassphraseDialog({
     try {
       if (isNewUser) {
         // Create new encryption setup
-        const salt = generateEncryptionSalt();
+        let salt: Uint8Array;
+
+        if (serverEncryptionSalt) {
+          // Use salt from server (existing user on new device)
+          const saltArray = serverEncryptionSalt.split(',').map(Number);
+          salt = new Uint8Array(saltArray);
+        } else {
+          // Generate new salt (truly new user)
+          salt = generateEncryptionSalt();
+
+          // Upload salt to server
+          const { getDb } = await import('@/lib/db');
+          const db = getDb();
+          const config = await db.syncMetadata.get('sync_config');
+
+          if (config && config.key === 'sync_config' && config.token) {
+            const saltString = Array.from(salt).join(',');
+            await fetch('https://gsd-sync-worker.vscarpenter.workers.dev/api/auth/encryption-salt', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.token}`,
+              },
+              body: JSON.stringify({ encryptionSalt: saltString }),
+            });
+          }
+        }
+
         await storeEncryptionConfig(passphrase, salt);
       } else {
         // Initialize from existing setup
@@ -242,7 +271,7 @@ export function EncryptionPassphraseDialog({
                 Why a separate passphrase?
               </p>
               <p>
-                Your tasks are encrypted end-to-end. Since you're using Google/Apple
+                Your tasks are encrypted end-to-end. Since you&apos;re using Google/Apple
                 Sign-In (no password), we need a separate passphrase to encrypt your
                 data. This ensures true zero-knowledge encryption where only you can
                 decrypt your tasks.

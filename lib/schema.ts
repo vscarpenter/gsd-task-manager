@@ -45,6 +45,7 @@ export const taskRecordSchema = taskDraftSchema
 		notificationSent: z.boolean().default(false),
 		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
 		snoozedUntil: z.string().datetime({ offset: true }).optional(),
+		vectorClock: z.record(z.string(), z.number()).default({}),
 	})
 	.strict();
 

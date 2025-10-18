@@ -3,23 +3,10 @@ import type { Env } from '../types';
 import { jsonResponse, errorResponse } from '../middleware/cors';
 import { generateId } from '../utils/crypto';
 import { createToken } from '../utils/jwt';
+import { GOOGLE_CONFIG, APPLE_CONFIG, getRedirectUri, TTL } from '../config';
+import { createLogger } from '../utils/logger';
 
-// Google OIDC configuration
-export const GOOGLE_CONFIG = {
-  issuer: 'https://accounts.google.com',
-  authorization_endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  token_endpoint: 'https://oauth2.googleapis.com/token',
-  userinfo_endpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
-  jwks_uri: 'https://www.googleapis.com/oauth2/v3/certs',
-};
-
-// Apple OIDC configuration
-export const APPLE_CONFIG = {
-  issuer: 'https://appleid.apple.com',
-  authorization_endpoint: 'https://appleid.apple.com/auth/authorize',
-  token_endpoint: 'https://appleid.apple.com/auth/token',
-  jwks_uri: 'https://appleid.apple.com/auth/keys',
-};
+const logger = createLogger('OIDC');
 
 /**
  * Initiate OAuth flow
@@ -30,36 +17,43 @@ export async function initiateOAuth(
   env: Env,
   provider: 'google' | 'apple'
 ): Promise<Response> {
+  const origin = request.headers.get('Origin');
+
   try {
     const config = provider === 'google' ? GOOGLE_CONFIG : APPLE_CONFIG;
     const clientId = provider === 'google' ? env.GOOGLE_CLIENT_ID : env.APPLE_CLIENT_ID;
 
     if (!clientId) {
-      return errorResponse(`${provider} OAuth not configured`, 500);
+      return errorResponse(`${provider} OAuth not configured`, 500, origin);
     }
+
+    // Determine redirect URI based on origin
+    const redirectUri = getRedirectUri(origin, env.OAUTH_REDIRECT_URI);
 
     // Generate state and PKCE verifier
     const state = generateRandomString(32);
     const codeVerifier = generateRandomString(64);
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    // Store state and verifier in KV (short-lived)
+    // Store state, verifier, and redirectUri in KV (short-lived)
     await env.KV.put(
       `oauth_state:${state}`,
       JSON.stringify({
         codeVerifier,
         provider,
+        redirectUri,
         createdAt: Date.now(),
       }),
-      { expirationTtl: 600 } // 10 minutes
+      { expirationTtl: TTL.OAUTH_STATE }
     );
 
     // Build authorization URL
     const authUrl = new URL(config.authorization_endpoint);
     authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', env.OAUTH_REDIRECT_URI);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'openid email profile');
+    authUrl.searchParams.set('scope', config.scope);
+    
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
@@ -68,13 +62,15 @@ export async function initiateOAuth(
       authUrl.searchParams.set('response_mode', 'form_post');
     }
 
+    logger.info('OAuth flow initiated', { provider, state });
+
     return jsonResponse({
       authUrl: authUrl.toString(),
       state,
-    });
+    }, 200, origin);
   } catch (error: any) {
-    console.error('OAuth initiation error:', error);
-    return errorResponse('Failed to initiate OAuth', 500);
+    logger.error('OAuth initiation failed', error, { provider });
+    return errorResponse('Failed to initiate OAuth', 500, origin);
   }
 }
 
@@ -83,6 +79,8 @@ export async function initiateOAuth(
  * POST /api/auth/oauth/callback
  */
 export async function handleOAuthCallback(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+
   try {
     // Parse request body or query params (Apple uses POST, Google uses GET redirect)
     let code: string | null = null;
@@ -91,19 +89,24 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const url = new URL(request.url);
     const contentType = request.headers.get('content-type');
 
-    if (request.method === 'POST' && contentType?.includes('application/x-www-form-urlencoded')) {
+    if (request.method === 'POST' && contentType?.includes('application/json')) {
+      // JSON POST from our callback page
+      const body = await request.json();
+      code = body.code;
+      state = body.state;
+    } else if (request.method === 'POST' && contentType?.includes('application/x-www-form-urlencoded')) {
       // Apple form post
       const formData = await request.formData();
       code = formData.get('code') as string;
       state = formData.get('state') as string;
     } else {
-      // Google query params
+      // Google query params (GET redirect)
       code = url.searchParams.get('code');
       state = url.searchParams.get('state');
     }
 
     if (!code || !state) {
-      return errorResponse('Invalid callback parameters', 400);
+      return errorResponse('Invalid callback parameters', 400, origin);
     }
 
     // Retrieve state from KV
@@ -111,11 +114,11 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const stateDataStr = await env.KV.get(stateKey);
 
     if (!stateDataStr) {
-      return errorResponse('Invalid or expired state', 400);
+      return errorResponse('Invalid or expired state', 400, origin);
     }
 
     const stateData = JSON.parse(stateDataStr);
-    const { codeVerifier, provider } = stateData;
+    const { codeVerifier, provider, redirectUri } = stateData;
 
     // Delete used state
     await env.KV.delete(stateKey);
@@ -123,17 +126,19 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const config = provider === 'google' ? GOOGLE_CONFIG : APPLE_CONFIG;
     const clientId = provider === 'google' ? env.GOOGLE_CLIENT_ID : env.APPLE_CLIENT_ID;
 
-    // Exchange code for tokens
+    // Exchange code for tokens (use the same redirect_uri that was used in the auth request)
     const tokenParams = new URLSearchParams({
       client_id: clientId,
       code,
-      redirect_uri: env.OAUTH_REDIRECT_URI,
+      redirect_uri: redirectUri || env.OAUTH_REDIRECT_URI,
       grant_type: 'authorization_code',
       code_verifier: codeVerifier,
     });
 
-    // Apple requires client_secret
-    if (provider === 'apple') {
+    // Add client_secret for both providers
+    if (provider === 'google') {
+      tokenParams.set('client_secret', env.GOOGLE_CLIENT_SECRET);
+    } else if (provider === 'apple') {
       const clientSecret = await generateAppleClientSecret(env);
       tokenParams.set('client_secret', clientSecret);
     }
@@ -146,15 +151,15 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error('Token exchange failed:', errorText);
-      return errorResponse('Token exchange failed', 500);
+      logger.error('Token exchange failed', new Error(errorText), { provider, state });
+      return errorResponse('Token exchange failed', 500, origin);
     }
 
     const tokens = await tokenResponse.json();
     const idToken = tokens.id_token;
 
     if (!idToken) {
-      return errorResponse('No ID token received', 500);
+      return errorResponse('No ID token received', 500, origin);
     }
 
     // Verify ID token
@@ -170,19 +175,20 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const emailVerified = payload.email_verified as boolean;
 
     if (!email || !emailVerified) {
-      return errorResponse('Email not verified', 400);
+      return errorResponse('Email not verified', 400, origin);
     }
 
     const now = Date.now();
 
     // Find or create user
     let user = await env.DB.prepare(
-      'SELECT id, email, account_status FROM users WHERE auth_provider = ? AND provider_user_id = ?'
+      'SELECT id, email, account_status, encryption_salt FROM users WHERE auth_provider = ? AND provider_user_id = ?'
     )
       .bind(provider, providerUserId)
       .first();
 
     const isNewUser = !user;
+    const encryptionSalt = user?.encryption_salt as string | null;
 
     if (!user) {
       // Create new user
@@ -198,7 +204,7 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     } else {
       // Check account status
       if (user.account_status !== 'active') {
-        return errorResponse('Account is suspended or deleted', 403);
+        return errorResponse('Account is suspended or deleted', 403, origin);
       }
 
       // Update last login
@@ -235,8 +241,15 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
         expiresAt,
         lastActivity: now,
       }),
-      { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+      { expirationTtl: TTL.SESSION }
     );
+
+    logger.info('OAuth callback successful', {
+      userId: user.id as string,
+      deviceId,
+      provider,
+      isNewUser,
+    });
 
     return jsonResponse({
       userId: user.id,
@@ -244,18 +257,20 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       email: user.email,
       token,
       expiresAt,
-      requiresEncryptionSetup: isNewUser, // Flag to show encryption passphrase dialog
+      requiresEncryptionSetup: !encryptionSalt, // Need to setup if no salt exists
+      encryptionSalt: encryptionSalt || undefined, // Return salt if it exists
       provider,
-    });
+    }, 200, origin);
   } catch (error: any) {
-    console.error('OAuth callback error:', error);
+    logger.error('OAuth callback failed', error, { provider: 'unknown' });
     return jsonResponse(
       {
         error: 'OAuth callback failed',
         message: error.message,
         stack: error.stack?.split('\n').slice(0, 3).join('\n'),
       },
-      500
+      500,
+      origin
     );
   }
 }

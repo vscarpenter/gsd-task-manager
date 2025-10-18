@@ -23,6 +23,7 @@ export interface SyncConfig {
   vectorClock: VectorClock;
   conflictStrategy: 'last_write_wins' | 'manual';
   serverUrl: string;
+  provider?: string | null;
 }
 
 // Sync queue item (pending operations)
@@ -42,6 +43,14 @@ export interface DeviceInfo {
   deviceId: string;
   deviceName: string;
   createdAt: string;
+}
+
+// Encryption config
+export interface EncryptionConfig {
+  key: 'encryption_salt';
+  value: {
+    salt: number[];
+  };
 }
 
 // Encrypted task blob for transmission

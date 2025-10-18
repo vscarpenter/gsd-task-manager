@@ -1,5 +1,5 @@
 import type { Env, RequestContext } from '../types';
-import { errorResponse } from './cors';
+import { errorResponse, createCorsHeaders } from './cors';
 
 export interface RateLimitConfig {
   maxRequests: number;
@@ -40,6 +40,13 @@ export const rateLimitMiddleware = async (
   if (count >= config.maxRequests) {
     const retryAfter = config.windowSeconds - (now % config.windowSeconds);
 
+    const headers = createCorsHeaders();
+    headers.set('Content-Type', 'application/json');
+    headers.set('Retry-After', retryAfter.toString());
+    headers.set('X-RateLimit-Limit', config.maxRequests.toString());
+    headers.set('X-RateLimit-Remaining', '0');
+    headers.set('X-RateLimit-Reset', (now + retryAfter).toString());
+
     return new Response(
       JSON.stringify({
         error: 'Rate limit exceeded',
@@ -47,13 +54,7 @@ export const rateLimitMiddleware = async (
       }),
       {
         status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': retryAfter.toString(),
-          'X-RateLimit-Limit': config.maxRequests.toString(),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': (now + retryAfter).toString(),
-        },
+        headers,
       }
     );
   }
@@ -63,10 +64,12 @@ export const rateLimitMiddleware = async (
     expirationTtl: config.windowSeconds * 2, // Extra buffer for cleanup
   });
 
-  // Add rate limit headers to response
-  request.headers.set('X-RateLimit-Limit', config.maxRequests.toString());
-  request.headers.set('X-RateLimit-Remaining', (config.maxRequests - count - 1).toString());
-  request.headers.set('X-RateLimit-Reset', (now + config.windowSeconds).toString());
+  // Store rate limit info in context for handlers to add to response headers
+  ctx.rateLimitHeaders = {
+    'X-RateLimit-Limit': config.maxRequests.toString(),
+    'X-RateLimit-Remaining': (config.maxRequests - count - 1).toString(),
+    'X-RateLimit-Reset': (now + config.windowSeconds).toString(),
+  };
 
   return;
 };
