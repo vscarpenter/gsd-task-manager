@@ -31,6 +31,8 @@ export interface TaskRecord {
   notificationSent: boolean;
   lastNotificationAt?: string;
   snoozedUntil?: string;
+  // Sync fields
+  vectorClock?: { [deviceId: string]: number }; // For distributed sync conflict detection
 }
 
 export interface TaskDraft {
