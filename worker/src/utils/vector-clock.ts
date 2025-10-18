@@ -21,8 +21,8 @@ export function compareVectorClocks(
   }
 
   if (!aGreater && !bGreater) return 'identical';
-  if (aGreater && !bGreater) return 'a_before_b';
-  if (bGreater && !aGreater) return 'b_before_a';
+  if (aGreater && !bGreater) return 'b_before_a'; // A has larger counters → B happened before A
+  if (bGreater && !aGreater) return 'a_before_b'; // B has larger counters → A happened before B
   return 'concurrent';
 }
 

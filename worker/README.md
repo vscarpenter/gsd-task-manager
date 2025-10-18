@@ -10,8 +10,57 @@ Cloudflare Worker backend for GSD Task Manager secure sync feature.
 - **Rate limiting**: Per-user, per-endpoint protection
 - **Device management**: Multi-device support with remote revocation
 - **Automatic cleanup**: Scheduled cron jobs for old data
+- **Multi-environment support**: Separate development, staging, and production deployments
 
-## Setup
+## Quick Start (Multi-Environment Setup)
+
+### Automated Setup for All Environments
+
+The easiest way to set up all environments (development, staging, production):
+
+```bash
+cd worker
+npm install
+
+# Authenticate with Cloudflare
+npx wrangler login
+
+# Run automated setup (creates all resources and sets secrets)
+npm run setup:all
+```
+
+This will:
+- Create D1 databases, KV namespaces, and R2 buckets for all environments
+- Generate and set JWT secrets for each environment
+- Apply database schemas
+- Update `wrangler.toml` with resource IDs
+
+### Deploy to All Environments
+
+```bash
+# Deploy to all environments sequentially
+npm run deploy:all
+```
+
+Or deploy to individual environments:
+
+```bash
+npm run deploy              # Development
+npm run deploy:staging      # Staging
+npm run deploy:production   # Production
+```
+
+### Monitor Logs
+
+```bash
+npm run tail                # Development
+npm run tail:staging        # Staging
+npm run tail:production     # Production
+```
+
+## Manual Setup (Advanced)
+
+If you prefer manual setup or need to configure a single environment:
 
 ### Prerequisites
 
@@ -23,28 +72,28 @@ Cloudflare Worker backend for GSD Task Manager secure sync feature.
 
 ```bash
 cd worker
-pnpm install
+npm install
 ```
 
 ### Configure Cloudflare Resources
 
 1. **Create D1 Database**:
 ```bash
-wrangler d1 create gsd-sync
+npx wrangler d1 create gsd-sync-dev
 ```
 
 Copy the `database_id` from the output and update `wrangler.toml`.
 
 2. **Create KV Namespace**:
 ```bash
-wrangler kv:namespace create "KV"
+npx wrangler kv namespace create "KV" --env development
 ```
 
 Copy the `id` from the output and update `wrangler.toml`.
 
 3. **Create R2 Bucket**:
 ```bash
-wrangler r2 bucket create gsd-backups
+npx wrangler r2 bucket create gsd-backups-dev
 ```
 
 4. **Set Secrets**:

@@ -91,9 +91,9 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
 
     if (request.method === 'POST' && contentType?.includes('application/json')) {
       // JSON POST from our callback page
-      const body = await request.json();
-      code = body.code;
-      state = body.state;
+      const body = await request.json() as { code?: string; state?: string };
+      code = body.code ?? null;
+      state = body.state ?? null;
     } else if (request.method === 'POST' && contentType?.includes('application/x-www-form-urlencoded')) {
       // Apple form post
       const formData = await request.formData();
@@ -155,7 +155,7 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       return errorResponse('Token exchange failed', 500, origin);
     }
 
-    const tokens = await tokenResponse.json();
+    const tokens = await tokenResponse.json() as { id_token?: string; access_token?: string };
     const idToken = tokens.id_token;
 
     if (!idToken) {
