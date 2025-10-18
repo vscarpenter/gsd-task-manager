@@ -2,7 +2,9 @@
 
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
-Live running app at [gsd.vinny.dev](https://gsd.vinny.dev)
+**🚀 Live App:** [gsd.vinny.dev](https://gsd.vinny.dev)
+**📦 Current Version:** 3.5.0
+**🔄 Latest:** Multi-environment worker deployment with TypeScript fixes and critical bug fixes
 
 ## What is the Eisenhower Matrix?
 
@@ -23,21 +25,42 @@ The matrix divides tasks into four quadrants:
 
 GSD Task Manager is a **completely private** task manager that runs entirely in your browser. Your tasks never leave your device — everything is stored locally using IndexedDB.
 
-### Features
+### Core Features
 
-✅ **Privacy-first** — All data stays on your device
-✅ **Works offline** — Install as a PWA (Progressive Web App)
-✅ **Eisenhower Matrix** — Organize tasks by urgency and importance
-✅ **Dashboard & Analytics** — Visualize productivity patterns and task metrics
-✅ **Batch Operations** — Select and manage multiple tasks at once
-✅ **Task Dependencies** — Define which tasks must be completed before others
-✅ **Recurring Tasks** — Automatically recreate tasks on a schedule
-✅ **Tags & Labels** — Categorize tasks with custom tags
-✅ **Subtasks & Checklists** — Break down complex tasks into steps
-✅ **Smart Notifications** — Get reminders before tasks are due
-✅ **Export/Import** — Back up your tasks as JSON with merge or replace modes
-✅ **Keyboard shortcuts** — Fast task entry and navigation
-✅ **Dark mode** — Easy on the eyes
+#### 📊 **Task Management**
+✅ **Eisenhower Matrix** — Organize tasks by urgency and importance across four quadrants
+✅ **Task Dependencies** — Define blocking relationships between tasks with circular dependency prevention
+✅ **Recurring Tasks** — Automatically recreate tasks on daily, weekly, or monthly schedules
+✅ **Tags & Labels** — Categorize tasks with custom tags for easy filtering
+✅ **Subtasks & Checklists** — Break down complex tasks into manageable steps with progress tracking
+✅ **Batch Operations** — Select and manage multiple tasks at once (complete, move, tag, delete)
+✅ **Smart Search** — Search across titles, descriptions, tags, and subtasks
+
+#### 📈 **Analytics & Insights**
+✅ **Dashboard View** — Visualize productivity patterns with interactive charts
+✅ **Completion Metrics** — Track daily, weekly, and monthly completion rates
+✅ **Streak Tracking** — Monitor current and longest completion streaks
+✅ **Quadrant Distribution** — Analyze where your time and energy is focused
+✅ **Tag Analytics** — View completion rates and usage statistics per tag
+✅ **Trend Analysis** — 7/30/90-day trend views with line and bar charts
+
+#### 🔐 **Privacy & Data**
+✅ **Privacy-first** — All data stored locally in IndexedDB (no server by default)
+✅ **End-to-End Encryption** — Optional cloud sync with client-side encryption (coming soon)
+✅ **Export/Import** — Back up tasks as JSON with merge or replace modes
+✅ **Works Offline** — Full functionality without internet connection
+
+#### 📱 **PWA & Notifications**
+✅ **Install as PWA** — Works on desktop and mobile with offline support
+✅ **Smart Notifications** — Configurable reminders (5min to 1 day before due)
+✅ **Auto-Updates** — Service worker updates with user-friendly notifications
+✅ **Periodic Sync** — Background sync for installed PWAs (Chrome/Edge)
+
+#### 🎨 **User Experience**
+✅ **Dark Mode** — Automatic theme switching with system preference support
+✅ **Keyboard Shortcuts** — Fast navigation (`n` for new task, `/` for search, `?` for help)
+✅ **Drag & Drop** — Reorder tasks and move between quadrants
+✅ **Responsive Design** — Optimized for desktop, tablet, and mobile
 
 ## How to Use
 
@@ -192,4 +215,112 @@ Visit the [Install page](https://gsd.vinny.dev/install.html) for detailed instru
 
 ---
 
-For developers interested in contributing or self-hosting, see [TECHNICAL.md](./TECHNICAL.md).
+## 🔧 Backend & Infrastructure (Optional)
+
+GSD Task Manager works completely offline by default, but includes an **optional cloud sync backend** powered by Cloudflare Workers.
+
+### Cloud Sync Features (Coming Soon)
+
+The backend provides:
+- **End-to-End Encryption** — Server never sees plaintext task data
+- **OAuth Authentication** — Secure login with Google or Apple
+- **Multi-Device Sync** — Keep tasks in sync across devices using vector clocks
+- **Conflict Resolution** — Automatic handling of concurrent edits
+- **Device Management** — Manage and revoke access for specific devices
+
+### Multi-Environment Deployment
+
+The worker backend supports three environments:
+
+| Environment | Purpose | URL |
+|------------|---------|-----|
+| **Development** | Local testing | `localhost:3000` |
+| **Staging** | Pre-production testing | `gsd-dev.vinny.dev` |
+| **Production** | Live app | `gsd.vinny.dev` |
+
+Each environment has isolated:
+- D1 databases for encrypted task storage
+- KV namespaces for sessions and rate limiting
+- R2 buckets for backup storage
+- Environment-specific secrets and OAuth configurations
+
+### Recent Updates
+
+**v3.5.0** (Latest)
+- ✅ Multi-environment worker deployment (dev, staging, prod)
+- ✅ Fixed critical vector clock causality bug
+- ✅ Resolved 18 TypeScript errors for improved type safety
+- ✅ Bash 3.2 compatibility for macOS deployment scripts
+- ✅ Enhanced PWA error handling for periodic sync
+- ✅ Automated setup and deployment scripts
+
+**v3.0.0**
+- ✅ Dashboard and analytics system
+- ✅ Batch operations and task dependencies
+- ✅ Enhanced PWA with update notifications
+
+**v2.0.0**
+- ✅ Recurring tasks and smart views
+- ✅ Tags, subtasks, and advanced filtering
+
+---
+
+## 📚 Developer Documentation
+
+For developers interested in contributing, self-hosting, or deploying the backend:
+
+- **[TECHNICAL.md](./TECHNICAL.md)** — Architecture, database schema, and development guide
+- **[worker/README.md](./worker/README.md)** — Multi-environment setup and deployment
+- **[CLAUDE.md](./CLAUDE.md)** — Project context for AI assistants
+
+### Quick Start for Developers
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Deploy to staging
+cd scripts && ./deploy-dev.sh
+
+# Deploy worker to all environments (optional)
+cd worker && npm run deploy:all
+```
+
+### Tech Stack
+
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Data Layer:** Dexie (IndexedDB), Zod validation
+- **Charts:** Recharts for analytics visualizations
+- **Backend (Optional):** Cloudflare Workers, D1, KV, R2
+- **Auth (Optional):** OAuth 2.0 with Google/Apple
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](./LICENSE) for details
+
+---
+
+## 🙏 Acknowledgments
+
+- Inspired by the Eisenhower Matrix productivity framework
+- Built with [Claude Code](https://claude.com/claude-code)
+- Deployed on [Cloudflare Pages](https://pages.cloudflare.com/) and [Workers](https://workers.cloudflare.com/)

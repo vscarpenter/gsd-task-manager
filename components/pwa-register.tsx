@@ -84,11 +84,16 @@ export function PwaRegister() {
 					} catch (error) {
 						// Silently fail if periodic sync isn't supported or fails
 						// This is an enhancement feature and shouldn't block the app
-						if (
-							error instanceof Error &&
-							!error.message.includes("InvalidStateError")
-						) {
-							console.error("Periodic sync registration failed:", error);
+						// Common errors:
+						// - NotAllowedError: PWA not installed or permission denied
+						// - InvalidStateError: Service worker state issues
+						if (error instanceof Error) {
+							const errorName = (error as DOMException).name;
+							const suppressedErrors = ["NotAllowedError", "InvalidStateError"];
+
+							if (!suppressedErrors.includes(errorName)) {
+								console.warn("Periodic sync registration failed:", error.message);
+							}
 						}
 					}
 				}
