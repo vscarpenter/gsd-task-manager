@@ -4,6 +4,9 @@ import { parseQuadrantFlags, resolveQuadrantId } from "@/lib/quadrants";
 import { importPayloadSchema, taskDraftSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
+import { getSyncQueue } from "@/lib/sync/queue";
+import { incrementVectorClock } from "@/lib/sync/vector-clock";
+import { getSyncConfig } from "@/lib/sync/config";
 
 export async function listTasks(): Promise<TaskRecord[]> {
   const db = getDb();
@@ -13,6 +16,12 @@ export async function listTasks(): Promise<TaskRecord[]> {
 export async function createTask(input: TaskDraft): Promise<TaskRecord> {
   const validated = taskDraftSchema.parse(input);
   const now = isoNow();
+
+  // Get device ID and initialize vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const vectorClock = incrementVectorClock({}, deviceId);
+
   const record: TaskRecord = {
     ...validated,
     id: generateId(),
@@ -25,11 +34,19 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     subtasks: validated.subtasks ?? [],
     dependencies: validated.dependencies ?? [],
     notificationEnabled: validated.notificationEnabled ?? true,
-    notificationSent: false
+    notificationSent: false,
+    vectorClock
   };
 
   const db = getDb();
   await db.tasks.add(record);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('create', record.id, record, record.vectorClock || {});
+  }
+
   return record;
 }
 
@@ -60,11 +77,18 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
   const dueDateChanged = updates.dueDate !== undefined && updates.dueDate !== existing.dueDate;
   const notifyBeforeChanged = updates.notifyBefore !== undefined && updates.notifyBefore !== existing.notifyBefore;
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     ...validated,
     quadrant: resolveQuadrantId(validated.urgent, validated.important),
     updatedAt: isoNow(),
+    vectorClock: newClock,
     // Reset notification state if due date or reminder time changed
     ...(dueDateChanged || notifyBeforeChanged ? {
       notificationSent: false,
@@ -74,6 +98,13 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', id, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
@@ -106,9 +137,14 @@ function calculateNextDueDate(currentDueDate: string | undefined, recurrence: st
 /**
  * Create a new recurring task instance based on a completed task
  */
-function createRecurringInstance(existing: TaskRecord): TaskRecord {
+async function createRecurringInstance(existing: TaskRecord): Promise<TaskRecord> {
   const now = isoNow();
   const nextDueDate = calculateNextDueDate(existing.dueDate, existing.recurrence);
+
+  // Initialize new vector clock for new instance
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const vectorClock = incrementVectorClock({}, deviceId);
 
   return {
     ...existing,
@@ -118,6 +154,7 @@ function createRecurringInstance(existing: TaskRecord): TaskRecord {
     createdAt: now,
     updatedAt: now,
     parentTaskId: existing.parentTaskId ?? existing.id,
+    vectorClock,
     // Reset subtasks to uncompleted for new instance
     subtasks: existing.subtasks.map(subtask => ({ ...subtask, completed: false })),
     // Reset notification state for new instance
@@ -134,25 +171,54 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
     throw new Error(`Task ${id} not found`);
   }
 
+  // Get sync config for vector clock and queue
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+
   // If marking as completed and task has recurrence, create a new instance
   if (completed && existing.recurrence !== "none") {
-    const newInstance = createRecurringInstance(existing);
+    const newInstance = await createRecurringInstance(existing);
     await db.tasks.add(newInstance);
+
+    // Enqueue creation of new recurring instance if sync is enabled
+    if (syncConfig?.enabled) {
+      const queue = getSyncQueue();
+      await queue.enqueue('create', newInstance.id, newInstance, newInstance.vectorClock || {});
+    }
   }
+
+  // Increment vector clock for the completed task
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
 
   const nextRecord: TaskRecord = {
     ...existing,
     completed,
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', id, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
 export async function deleteTask(id: string): Promise<void> {
   const db = getDb();
   await db.tasks.delete(id);
+
+  // Enqueue sync operation if sync is enabled
+  const syncConfig = await getSyncConfig();
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('delete', id, null, {});
+  }
 }
 
 /**
@@ -168,15 +234,29 @@ export async function moveTaskToQuadrant(id: string, targetQuadrant: QuadrantId)
 
   const { urgent, important } = parseQuadrantFlags(targetQuadrant);
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     urgent,
     important,
     quadrant: targetQuadrant,
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', id, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
@@ -271,13 +351,27 @@ export async function toggleSubtask(taskId: string, subtaskId: string, completed
     st.id === subtaskId ? { ...st, completed } : st
   );
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     subtasks: updatedSubtasks,
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
@@ -297,13 +391,27 @@ export async function addSubtask(taskId: string, title: string): Promise<TaskRec
     completed: false
   };
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     subtasks: [...existing.subtasks, newSubtask],
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
@@ -317,13 +425,27 @@ export async function deleteSubtask(taskId: string, subtaskId: string): Promise<
     throw new Error(`Task ${taskId} not found`);
   }
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     subtasks: existing.subtasks.filter(st => st.id !== subtaskId),
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
@@ -342,13 +464,27 @@ export async function addDependency(taskId: string, dependencyId: string): Promi
     return existing;
   }
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     dependencies: [...existing.dependencies, dependencyId],
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 
@@ -362,13 +498,27 @@ export async function removeDependency(taskId: string, dependencyId: string): Pr
     throw new Error(`Task ${taskId} not found`);
   }
 
+  // Increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const currentClock = existing.vectorClock || {};
+  const newClock = incrementVectorClock(currentClock, deviceId);
+
   const nextRecord: TaskRecord = {
     ...existing,
     dependencies: existing.dependencies.filter(depId => depId !== dependencyId),
-    updatedAt: isoNow()
+    updatedAt: isoNow(),
+    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
+
+  // Enqueue sync operation if sync is enabled
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+  }
+
   return nextRecord;
 }
 

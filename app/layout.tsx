@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { PwaRegister } from "@/components/pwa-register";
@@ -70,6 +71,7 @@ export default function RootLayout({
               <PwaRegister />
               <InstallPwaPrompt />
               <PwaUpdateToast />
+              <Toaster richColors position="top-center" />
             </ToastProvider>
           </ThemeProvider>
         </ErrorBoundary>

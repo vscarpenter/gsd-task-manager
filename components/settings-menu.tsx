@@ -1,9 +1,11 @@
 "use client";
 
-import { ChangeEvent, useRef, useState } from "react";
-import { SettingsIcon, UploadIcon, DownloadIcon } from "lucide-react";
+import { ChangeEvent, useRef, useState, useEffect } from "react";
+import { SettingsIcon, UploadIcon, DownloadIcon, CloudIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SyncAuthDialog } from "@/components/sync/sync-auth-dialog";
+import { getSyncStatus } from "@/lib/sync/config";
 
 interface SettingsMenuProps {
   onExport: () => Promise<void>;
@@ -13,7 +15,18 @@ interface SettingsMenuProps {
 
 export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check sync status on mount and when dialog closes
+  useEffect(() => {
+    const checkSyncStatus = async () => {
+      const status = await getSyncStatus();
+      setSyncEnabled(status.enabled);
+    };
+    checkSyncStatus();
+  }, [syncDialogOpen]);
 
   const handleImportChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -27,6 +40,11 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
 
   const handleExport = async () => {
     await onExport();
+    setIsOpen(false);
+  };
+
+  const handleOpenSyncDialog = () => {
+    setSyncDialogOpen(true);
     setIsOpen(false);
   };
 
@@ -58,7 +76,7 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
           />
 
           {/* Dropdown Menu */}
-          <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg border border-card-border bg-card shadow-lg">
+          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-card-border bg-card shadow-lg">
             <div className="p-2">
               <input
                 ref={fileInputRef}
@@ -68,6 +86,23 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
                 onChange={handleImportChange}
                 aria-hidden
               />
+
+              <button
+                onClick={handleOpenSyncDialog}
+                className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-background-muted"
+              >
+                <span className="flex items-center gap-3">
+                  <CloudIcon className="h-4 w-4" />
+                  Sync Settings
+                </span>
+                {syncEnabled && (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    ON
+                  </span>
+                )}
+              </button>
+
+              <div className="my-2 h-px bg-border" />
 
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -90,6 +125,16 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
           </div>
         </>
       )}
+
+      {/* Sync Auth Dialog */}
+      <SyncAuthDialog
+        isOpen={syncDialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
+        onSuccess={() => {
+          // Refresh sync status
+          getSyncStatus().then((status) => setSyncEnabled(status.enabled));
+        }}
+      />
     </div>
   );
 }
