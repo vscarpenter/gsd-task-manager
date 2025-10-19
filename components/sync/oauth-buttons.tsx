@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { isOAuthOriginAllowed, OAUTH_STATE_CONFIG, getOAuthEnvironment } from "@/lib/oauth-config";
+import { validateOAuthMessage, type OAuthSuccessMessage, type OAuthErrorMessage } from "@/lib/oauth-schemas";
 
 // Use local worker for development, production worker for deployed app
 const WORKER_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -21,8 +23,45 @@ interface OAuthButtonsProps {
   onError: (error: Error) => void;
 }
 
+/**
+ * State management for OAuth flows
+ * Tracks pending authentication attempts with timestamps for validation
+ */
+interface PendingOAuthState {
+  timestamp: number;
+  provider: 'google' | 'apple';
+  popup: Window | null;
+}
+
 export function OAuthButtons({ onSuccess, onError }: OAuthButtonsProps) {
   const [loading, setLoading] = useState<'google' | 'apple' | null>(null);
+
+  // Track pending OAuth states with automatic cleanup
+  const pendingStates = useRef<Map<string, PendingOAuthState>>(new Map());
+
+  // Cleanup expired states periodically
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      const expiredStates: string[] = [];
+
+      pendingStates.current.forEach((state, key) => {
+        if (now - state.timestamp > OAUTH_STATE_CONFIG.MAX_STATE_AGE_MS) {
+          expiredStates.push(key);
+        }
+      });
+
+      expiredStates.forEach((key) => {
+        console.warn('[OAuth Security] Expired state cleaned up:', {
+          state: key.substring(0, 8) + '...',
+          environment: getOAuthEnvironment(),
+        });
+        pendingStates.current.delete(key);
+      });
+    }, OAUTH_STATE_CONFIG.CLEANUP_INTERVAL_MS);
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
     setLoading(provider);
@@ -36,6 +75,11 @@ export function OAuthButtons({ onSuccess, onError }: OAuthButtonsProps) {
       }
 
       const { authUrl, state } = await response.json();
+
+      // Validate state token length (basic sanity check)
+      if (!state || state.length < OAUTH_STATE_CONFIG.MIN_STATE_LENGTH) {
+        throw new Error('Invalid state token received from server');
+      }
 
       // Open popup for OAuth flow
       const width = 500;
@@ -53,23 +97,118 @@ export function OAuthButtons({ onSuccess, onError }: OAuthButtonsProps) {
         throw new Error("Popup blocked. Please allow popups for this site.");
       }
 
-      // Listen for callback message from popup
+      // Store state for validation (with timestamp for expiry check)
+      pendingStates.current.set(state, {
+        timestamp: Date.now(),
+        provider,
+        popup,
+      });
+
+      console.info('[OAuth Security] Flow initiated:', {
+        provider,
+        state: state.substring(0, 8) + '...',
+        environment: getOAuthEnvironment(),
+      });
+
+      // Listen for callback message from popup with multi-layer security
       const messageHandler = (event: MessageEvent) => {
-        // Verify origin
-        if (event.origin !== window.location.origin) {
+        // LAYER 1: Origin Validation
+        // Only accept messages from trusted origins
+        if (!isOAuthOriginAllowed(event.origin)) {
+          console.warn('[OAuth Security] Rejected postMessage from untrusted origin:', {
+            origin: event.origin,
+            expected: 'one of allowed origins',
+            environment: getOAuthEnvironment(),
+          });
           return;
         }
 
-        if (event.data.type === 'oauth_success' && event.data.state === state) {
+        // LAYER 2: Message Structure Validation
+        // Validate payload structure with Zod schema
+        const validation = validateOAuthMessage(event.data);
+        if (!validation.success) {
+          console.warn('[OAuth Security] Invalid message structure:', {
+            error: validation.error,
+            origin: event.origin,
+            environment: getOAuthEnvironment(),
+          });
+          return;
+        }
+
+        const message = validation.data!;
+
+        // LAYER 3: State Validation
+        // Verify state exists and hasn't expired
+        if (message.type === 'oauth_success') {
+          const successMessage = message as OAuthSuccessMessage;
+          const pendingState = pendingStates.current.get(successMessage.state);
+
+          if (!pendingState) {
+            console.warn('[OAuth Security] Unknown or reused state token:', {
+              state: successMessage.state.substring(0, 8) + '...',
+              origin: event.origin,
+              environment: getOAuthEnvironment(),
+            });
+            return;
+          }
+
+          // Check state hasn't expired
+          const stateAge = Date.now() - pendingState.timestamp;
+          if (stateAge > OAUTH_STATE_CONFIG.MAX_STATE_AGE_MS) {
+            console.warn('[OAuth Security] Expired state token:', {
+              state: successMessage.state.substring(0, 8) + '...',
+              ageMs: stateAge,
+              maxAgeMs: OAUTH_STATE_CONFIG.MAX_STATE_AGE_MS,
+              environment: getOAuthEnvironment(),
+            });
+            pendingStates.current.delete(successMessage.state);
+            return;
+          }
+
+          // LAYER 4: Provider Validation
+          // Ensure provider matches what we initiated
+          if (successMessage.authData.provider !== pendingState.provider) {
+            console.warn('[OAuth Security] Provider mismatch:', {
+              expected: pendingState.provider,
+              received: successMessage.authData.provider,
+              environment: getOAuthEnvironment(),
+            });
+            return;
+          }
+
+          // All validations passed - process success
+          console.info('[OAuth Security] Authentication successful:', {
+            provider: successMessage.authData.provider,
+            userId: successMessage.authData.userId,
+            environment: getOAuthEnvironment(),
+          });
+
+          // Cleanup
           window.removeEventListener('message', messageHandler);
+          pendingStates.current.delete(successMessage.state);
           popup?.close();
           setLoading(null);
-          onSuccess(event.data.authData);
-        } else if (event.data.type === 'oauth_error') {
+
+          onSuccess(successMessage.authData);
+        } else if (message.type === 'oauth_error') {
+          const errorMessage = message as OAuthErrorMessage;
+
+          console.error('[OAuth Security] Authentication failed:', {
+            error: errorMessage.error,
+            state: errorMessage.state,
+            origin: event.origin,
+            environment: getOAuthEnvironment(),
+          });
+
+          // Cleanup
           window.removeEventListener('message', messageHandler);
+          if (errorMessage.state) {
+            pendingStates.current.delete(errorMessage.state);
+          }
           popup?.close();
           setLoading(null);
-          onError(new Error(event.data.error || 'OAuth failed'));
+
+          onError(new Error(errorMessage.error || 'OAuth failed'));
         }
       };
 
@@ -80,10 +219,21 @@ export function OAuthButtons({ onSuccess, onError }: OAuthButtonsProps) {
         if (popup.closed) {
           clearInterval(checkClosed);
           window.removeEventListener('message', messageHandler);
+          pendingStates.current.delete(state);
           setLoading(null);
+
+          console.info('[OAuth Security] Popup closed by user:', {
+            provider,
+            environment: getOAuthEnvironment(),
+          });
         }
       }, 500);
     } catch (error) {
+      console.error('[OAuth Security] Flow initiation failed:', {
+        provider,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        environment: getOAuthEnvironment(),
+      });
       setLoading(null);
       onError(error as Error);
     }
