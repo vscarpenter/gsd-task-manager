@@ -84,6 +84,13 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
       const existingConfig = await db.syncMetadata.get('sync_config');
       const existingSyncConfig = existingConfig && existingConfig.key === 'sync_config' ? existingConfig : null;
 
+      // Use same-origin for deployed environments (CloudFront will proxy /api/* to worker)
+      const serverUrl = existingSyncConfig?.serverUrl || (
+        window.location.hostname === 'localhost'
+          ? 'http://localhost:8787'
+          : window.location.origin
+      );
+
       await db.syncMetadata.put({
         key: 'sync_config',
         enabled: true,
@@ -96,7 +103,7 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
         lastSyncAt: existingSyncConfig?.lastSyncAt || null,
         vectorClock: existingSyncConfig?.vectorClock || {},
         conflictStrategy: existingSyncConfig?.conflictStrategy || 'last_write_wins',
-        serverUrl: existingSyncConfig?.serverUrl || 'https://gsd-sync-worker.vscarpenter.workers.dev',
+        serverUrl,
         provider: authData.provider,
       });
 

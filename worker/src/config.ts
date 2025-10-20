@@ -91,7 +91,7 @@ export function getRedirectUri(origin: string | null | undefined, fallback: stri
 
   // Use origin-specific callback for allowed origins
   if (isOriginAllowed(origin)) {
-    return `${origin}/oauth-callback.html`;
+    return `${origin}/oauth-callback`;
   }
 
   return fallback;

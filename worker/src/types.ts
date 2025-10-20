@@ -14,6 +14,7 @@ export interface Env {
   APPLE_KEY_ID: string;
   APPLE_PRIVATE_KEY: string;
   OAUTH_REDIRECT_URI: string;
+  OAUTH_CALLBACK_BASE?: string; // Optional: set in production for CloudFront proxy
 }
 
 // Request context (extended by middleware)

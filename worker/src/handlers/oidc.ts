@@ -3,7 +3,7 @@ import type { Env } from '../types';
 import { jsonResponse, errorResponse } from '../middleware/cors';
 import { generateId } from '../utils/crypto';
 import { createToken } from '../utils/jwt';
-import { GOOGLE_CONFIG, APPLE_CONFIG, getRedirectUri, TTL } from '../config';
+import { GOOGLE_CONFIG, APPLE_CONFIG, TTL } from '../config';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('OIDC');
@@ -27,21 +27,26 @@ export async function initiateOAuth(
       return errorResponse(`${provider} OAuth not configured`, 500, origin);
     }
 
-    // Determine redirect URI based on origin
-    const redirectUri = getRedirectUri(origin, env.OAUTH_REDIRECT_URI);
+    // Use environment-configured callback URL for production (CloudFront), fall back to request-based detection
+    // OAUTH_CALLBACK_BASE is set in production to "https://gsd.vinny.dev" for CloudFront proxy
+    // For other environments, we detect from Origin header or OAUTH_REDIRECT_URI
+    const callbackBase = env.OAUTH_CALLBACK_BASE || origin || env.OAUTH_REDIRECT_URI.replace('/oauth-callback', '');
+    const workerCallbackUri = `${callbackBase}/api/auth/oauth/callback`;
+    const appOrigin = callbackBase;
 
     // Generate state and PKCE verifier
     const state = generateRandomString(32);
     const codeVerifier = generateRandomString(64);
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    // Store state, verifier, and redirectUri in KV (short-lived)
+    // Store state, verifier, and app origin in KV (short-lived)
     await env.KV.put(
       `oauth_state:${state}`,
       JSON.stringify({
         codeVerifier,
         provider,
-        redirectUri,
+        redirectUri: workerCallbackUri,
+        appOrigin,
         createdAt: Date.now(),
       }),
       { expirationTtl: TTL.OAUTH_STATE }
@@ -50,10 +55,10 @@ export async function initiateOAuth(
     // Build authorization URL
     const authUrl = new URL(config.authorization_endpoint);
     authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('redirect_uri', workerCallbackUri);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', config.scope);
-    
+
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
@@ -62,7 +67,23 @@ export async function initiateOAuth(
       authUrl.searchParams.set('response_mode', 'form_post');
     }
 
-    logger.info('OAuth flow initiated', { provider, state });
+    logger.info('OAuth flow initiated', {
+      provider,
+      state,
+      workerCallbackUri,
+      appOrigin,
+      origin,
+      requestUrl: request.url,
+      headers: {
+        origin: request.headers.get('Origin'),
+        referer: request.headers.get('Referer'),
+        host: request.headers.get('Host'),
+        xForwardedHost: request.headers.get('X-Forwarded-Host'),
+        xForwardedProto: request.headers.get('X-Forwarded-Proto'),
+        cloudFrontForwardedProto: request.headers.get('CloudFront-Forwarded-Proto'),
+        cloudFrontViewerCountry: request.headers.get('CloudFront-Viewer-Country')
+      }
+    });
 
     return jsonResponse({
       authUrl: authUrl.toString(),
@@ -118,7 +139,7 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     }
 
     const stateData = JSON.parse(stateDataStr);
-    const { codeVerifier, provider, redirectUri } = stateData;
+    const { codeVerifier, provider, redirectUri, appOrigin } = stateData;
 
     // Delete used state
     await env.KV.delete(stateKey);
@@ -143,6 +164,14 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       tokenParams.set('client_secret', clientSecret);
     }
 
+    logger.info('Token exchange request', {
+      provider,
+      state,
+      redirect_uri: tokenParams.get('redirect_uri'),
+      client_id: tokenParams.get('client_id'),
+      token_endpoint: config.token_endpoint,
+    });
+
     const tokenResponse = await fetch(config.token_endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -151,7 +180,12 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      logger.error('Token exchange failed', new Error(errorText), { provider, state });
+      logger.error('Token exchange failed', new Error(errorText), {
+        provider,
+        state,
+        redirect_uri: tokenParams.get('redirect_uri'),
+        error: errorText,
+      });
       return errorResponse('Token exchange failed', 500, origin);
     }
 
@@ -251,18 +285,96 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       isNewUser,
     });
 
-    return jsonResponse({
+    const authData = {
       userId: user.id,
       deviceId,
       email: user.email,
       token,
       expiresAt,
-      requiresEncryptionSetup: !encryptionSalt, // Need to setup if no salt exists
-      encryptionSalt: encryptionSalt || undefined, // Return salt if it exists
+      requiresEncryptionSetup: !encryptionSalt,
+      encryptionSalt: encryptionSalt || undefined,
       provider,
-    }, 200, origin);
+    };
+
+    // Check if this is a redirect flow (from PWA) or popup flow
+    // If appOrigin is stored, this is a redirect flow - redirect back to the app
+    // Otherwise, this is a popup flow - return JSON
+    if (appOrigin) {
+      // Build redirect URL with auth data as query params
+      const redirectUrl = new URL('/oauth-callback', appOrigin);
+      redirectUrl.searchParams.set('success', 'true');
+      redirectUrl.searchParams.set('userId', authData.userId as string);
+      redirectUrl.searchParams.set('deviceId', authData.deviceId as string);
+      redirectUrl.searchParams.set('email', authData.email as string);
+      redirectUrl.searchParams.set('token', authData.token as string);
+      redirectUrl.searchParams.set('expiresAt', authData.expiresAt.toString());
+      redirectUrl.searchParams.set('requiresEncryptionSetup', authData.requiresEncryptionSetup.toString());
+      if (authData.encryptionSalt) {
+        redirectUrl.searchParams.set('encryptionSalt', authData.encryptionSalt);
+      }
+      redirectUrl.searchParams.set('provider', authData.provider as string);
+      redirectUrl.searchParams.set('state', state);
+
+      // Use HTTP 302 redirect to send user back to app with auth data
+      // This avoids any HTML escaping issues with special characters in the token
+      logger.info('OAuth redirect flow: redirecting to app', {
+        appOrigin,
+        redirectUrl: redirectUrl.toString(),
+      });
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': redirectUrl.toString(),
+          'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        },
+      });
+    }
+
+    // Popup flow: return JSON for postMessage
+    logger.info('OAuth popup flow: returning JSON', { origin });
+    return jsonResponse(authData, 200, origin);
   } catch (error: any) {
     logger.error('OAuth callback failed', error, { provider: 'unknown' });
+
+    // Try to get the state from request to determine if this is redirect or popup flow
+    const url = new URL(request.url);
+    const state = url.searchParams.get('state');
+    let errorAppOrigin: string | null = null;
+
+    if (state) {
+      try {
+        const stateDataStr = await env.KV.get(`oauth_state:${state}`);
+        if (stateDataStr) {
+          const stateData = JSON.parse(stateDataStr);
+          errorAppOrigin = stateData.appOrigin;
+        }
+      } catch (e) {
+        // Ignore errors when trying to retrieve state
+      }
+    }
+
+    // If we have an appOrigin, redirect to app's error page
+    // Otherwise use origin header as fallback for redirect
+    const redirectTarget = errorAppOrigin || origin;
+
+    if (redirectTarget) {
+      // Build error redirect URL
+      const redirectUrl = new URL('/oauth-callback', redirectTarget);
+      redirectUrl.searchParams.set('success', 'false');
+      redirectUrl.searchParams.set('error', error.message || 'OAuth callback failed');
+
+      // Use HTTP 302 redirect
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': redirectUrl.toString(),
+          'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        },
+      });
+    }
+
+    // No redirect target available: return JSON error
     return jsonResponse(
       {
         error: 'OAuth callback failed',

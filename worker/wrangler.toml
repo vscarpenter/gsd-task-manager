@@ -13,7 +13,7 @@ name = "gsd-sync-worker-dev"
 [env.development.vars]
 ENVIRONMENT = "development"
 GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
-OAUTH_REDIRECT_URI = "http://localhost:3000/oauth-callback.html"  # Dev uses localhost
+OAUTH_REDIRECT_URI = "http://localhost:3000/oauth-callback"  # Dev uses localhost
 
 [[env.development.d1_databases]]
 binding = "DB"
@@ -37,7 +37,7 @@ name = "gsd-sync-worker-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
-OAUTH_REDIRECT_URI = "https://gsd-dev.vinny.dev/oauth-callback.html"  # Staging uses dev domain
+OAUTH_REDIRECT_URI = "https://gsd-dev.vinny.dev/oauth-callback"  # Staging uses dev domain
 
 [[env.staging.d1_databases]]
 binding = "DB"
@@ -61,7 +61,8 @@ name = "gsd-sync-worker-production"
 [env.production.vars]
 ENVIRONMENT = "production"
 GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
-OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback.html"  # Production domain
+OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback"  # Production domain
+OAUTH_CALLBACK_BASE = "https://gsd.vinny.dev"  # Base URL for OAuth callbacks (CloudFront proxy)
 
 [[env.production.d1_databases]]
 binding = "DB"

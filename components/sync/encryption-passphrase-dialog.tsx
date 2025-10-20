@@ -73,7 +73,12 @@ export function EncryptionPassphraseDialog({
 
           if (config && config.key === 'sync_config' && config.token) {
             const saltString = Array.from(salt).join(',');
-            await fetch('https://gsd-sync-worker.vscarpenter.workers.dev/api/auth/encryption-salt', {
+            // Use same-origin API call (CloudFront will proxy to worker)
+            const apiUrl = window.location.hostname === 'localhost'
+              ? 'http://localhost:8787/api/auth/encryption-salt'
+              : `${window.location.origin}/api/auth/encryption-salt`;
+
+            await fetch(apiUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
