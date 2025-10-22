@@ -62,6 +62,7 @@ name = "gsd-sync-worker-production"
 ENVIRONMENT = "production"
 GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
 OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback.html"  # Production domain
+OAUTH_CALLBACK_BASE = "https://gsd.vinny.dev"  # Base URL for OAuth callbacks (CloudFront proxy)
 
 [[env.production.d1_databases]]
 binding = "DB"

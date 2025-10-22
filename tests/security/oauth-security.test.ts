@@ -20,6 +20,7 @@ describe('OAuth Security - Origin Validation', () => {
 
   it('should allow worker domains', () => {
     expect(isOAuthOriginAllowed('https://gsd-sync-worker.vscarpenter.workers.dev')).toBe(true);
+    expect(isOAuthOriginAllowed('https://gsd-sync-worker-production.vscarpenter.workers.dev')).toBe(true);
     expect(isOAuthOriginAllowed('https://gsd-sync-worker-dev.vscarpenter.workers.dev')).toBe(true);
   });
 

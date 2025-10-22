@@ -101,6 +101,14 @@ class GsdDatabase extends Dexie {
         // Initialize sync metadata with defaults
         const deviceId = crypto.randomUUID();
 
+        // Use same-origin for deployed environments (CloudFront will proxy /api/* to worker)
+        // For local development, connect directly to worker
+        const serverUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+          ? 'http://localhost:8787'
+          : typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://gsd.vinny.dev';
+
         trans.table("syncMetadata").add({
           key: "sync_config",
           enabled: false,
@@ -113,7 +121,7 @@ class GsdDatabase extends Dexie {
           lastSyncAt: null,
           vectorClock: {},
           conflictStrategy: "last_write_wins",
-          serverUrl: "https://gsd-sync-worker.vscarpenter.workers.dev"
+          serverUrl
         });
 
         // Add deviceInfo
