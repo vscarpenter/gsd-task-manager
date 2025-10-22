@@ -3,7 +3,7 @@ import type { Env } from '../types';
 import { jsonResponse, errorResponse } from '../middleware/cors';
 import { generateId } from '../utils/crypto';
 import { createToken } from '../utils/jwt';
-import { GOOGLE_CONFIG, APPLE_CONFIG, getRedirectUri, TTL } from '../config';
+import { GOOGLE_CONFIG, APPLE_CONFIG, TTL } from '../config';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('OIDC');
@@ -27,21 +27,30 @@ export async function initiateOAuth(
       return errorResponse(`${provider} OAuth not configured`, 500, origin);
     }
 
-    // Determine redirect URI based on origin
-    const redirectUri = getRedirectUri(origin, env.OAUTH_REDIRECT_URI);
+    // Determine the worker's callback URI (where OAuth provider redirects)
+    // In development: http://localhost:8787/api/auth/oauth/callback
+    // In production: https://gsd-api.vinny.dev/api/auth/oauth/callback
+    const requestUrl = new URL(request.url);
+    const workerOrigin = `${requestUrl.protocol}//${requestUrl.host}`;
+    const workerCallbackUri = `${workerOrigin}/api/auth/oauth/callback`;
+    
+    // Determine the app origin (where we'll redirect after processing)
+    // Use OAUTH_CALLBACK_BASE if set, otherwise use Origin header
+    const appOrigin = env.OAUTH_CALLBACK_BASE || origin || env.OAUTH_REDIRECT_URI.replace('/oauth-callback.html', '');
 
     // Generate state and PKCE verifier
     const state = generateRandomString(32);
     const codeVerifier = generateRandomString(64);
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    // Store state, verifier, and redirectUri in KV (short-lived)
+    // Store state, verifier, and app origin in KV (short-lived)
     await env.KV.put(
       `oauth_state:${state}`,
       JSON.stringify({
         codeVerifier,
         provider,
-        redirectUri,
+        redirectUri: workerCallbackUri,
+        appOrigin,
         createdAt: Date.now(),
       }),
       { expirationTtl: TTL.OAUTH_STATE }
@@ -50,10 +59,10 @@ export async function initiateOAuth(
     // Build authorization URL
     const authUrl = new URL(config.authorization_endpoint);
     authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('redirect_uri', workerCallbackUri);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', config.scope);
-    
+
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
@@ -62,7 +71,23 @@ export async function initiateOAuth(
       authUrl.searchParams.set('response_mode', 'form_post');
     }
 
-    logger.info('OAuth flow initiated', { provider, state });
+    logger.info('OAuth flow initiated', {
+      provider,
+      state,
+      workerCallbackUri,
+      appOrigin,
+      origin,
+      requestUrl: request.url,
+      headers: {
+        origin: request.headers.get('Origin'),
+        referer: request.headers.get('Referer'),
+        host: request.headers.get('Host'),
+        xForwardedHost: request.headers.get('X-Forwarded-Host'),
+        xForwardedProto: request.headers.get('X-Forwarded-Proto'),
+        cloudFrontForwardedProto: request.headers.get('CloudFront-Forwarded-Proto'),
+        cloudFrontViewerCountry: request.headers.get('CloudFront-Viewer-Country')
+      }
+    });
 
     return jsonResponse({
       authUrl: authUrl.toString(),
@@ -118,7 +143,7 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     }
 
     const stateData = JSON.parse(stateDataStr);
-    const { codeVerifier, provider, redirectUri } = stateData;
+    const { codeVerifier, provider, redirectUri, appOrigin } = stateData;
 
     // Delete used state
     await env.KV.delete(stateKey);
@@ -143,6 +168,14 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       tokenParams.set('client_secret', clientSecret);
     }
 
+    logger.info('Token exchange request', {
+      provider,
+      state,
+      redirect_uri: tokenParams.get('redirect_uri'),
+      client_id: tokenParams.get('client_id'),
+      token_endpoint: config.token_endpoint,
+    });
+
     const tokenResponse = await fetch(config.token_endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -151,7 +184,12 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      logger.error('Token exchange failed', new Error(errorText), { provider, state });
+      logger.error('Token exchange failed', new Error(errorText), {
+        provider,
+        state,
+        redirect_uri: tokenParams.get('redirect_uri'),
+        error: errorText,
+      });
       return errorResponse('Token exchange failed', 500, origin);
     }
 
@@ -244,35 +282,180 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       { expirationTtl: TTL.SESSION }
     );
 
-    logger.info('OAuth callback successful', {
-      userId: user.id as string,
-      deviceId,
-      provider,
-      isNewUser,
-    });
-
-    return jsonResponse({
+    const authData = {
       userId: user.id,
       deviceId,
       email: user.email,
       token,
       expiresAt,
-      requiresEncryptionSetup: !encryptionSalt, // Need to setup if no salt exists
-      encryptionSalt: encryptionSalt || undefined, // Return salt if it exists
+      requiresEncryptionSetup: !encryptionSalt,
+      encryptionSalt: encryptionSalt || undefined,
       provider,
-    }, 200, origin);
+    };
+
+    // Store result in KV for later retrieval by the app
+    await env.KV.put(
+      `oauth_result:${state}`,
+      JSON.stringify({
+        status: 'success',
+        authData,
+        appOrigin,
+        createdAt: Date.now(),
+      }),
+      { expirationTtl: TTL.OAUTH_STATE }
+    );
+
+    logger.info('OAuth callback successful', {
+      userId: user.id as string,
+      deviceId,
+      provider,
+      isNewUser,
+      state,
+      appOrigin,
+    });
+
+    if (appOrigin) {
+      const redirectUrl = new URL('/oauth-callback.html', appOrigin);
+      redirectUrl.searchParams.set('success', 'true');
+      redirectUrl.searchParams.set('state', state);
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': redirectUrl.toString(),
+          'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        },
+      });
+    }
+
+    // Fallback: return JSON if we don't have an app origin (should not happen in production)
+    return jsonResponse(
+      {
+        status: 'success',
+        state,
+      },
+      200,
+      origin
+    );
   } catch (error: any) {
     logger.error('OAuth callback failed', error, { provider: 'unknown' });
+
+    // Try to get the state from request to determine if this is redirect or popup flow
+    const url = new URL(request.url);
+    const state = url.searchParams.get('state');
+    let errorAppOrigin: string | null = null;
+
+    if (state) {
+      try {
+        const stateDataStr = await env.KV.get(`oauth_state:${state}`);
+        if (stateDataStr) {
+          const stateData = JSON.parse(stateDataStr);
+          errorAppOrigin = stateData.appOrigin;
+        }
+      } catch (e) {
+        // Ignore errors when trying to retrieve state
+      }
+    }
+
+    const resultKey = state ? `oauth_result:${state}` : null;
+    const message = error instanceof Error ? error.message : 'OAuth callback failed';
+
+    if (resultKey) {
+      await env.KV.put(
+        resultKey,
+        JSON.stringify({
+          status: 'error',
+          error: message,
+          appOrigin: errorAppOrigin || origin || null,
+          createdAt: Date.now(),
+        }),
+        { expirationTtl: TTL.OAUTH_STATE }
+      );
+    }
+
+    const redirectTarget = errorAppOrigin || origin;
+
+    if (redirectTarget && state) {
+      const redirectUrl = new URL('/oauth-callback.html', redirectTarget);
+      redirectUrl.searchParams.set('success', 'false');
+      redirectUrl.searchParams.set('state', state);
+      redirectUrl.searchParams.set('error', encodeURIComponent(message));
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': redirectUrl.toString(),
+          'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        },
+      });
+    }
+
     return jsonResponse(
       {
         error: 'OAuth callback failed',
-        message: error.message,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+        message,
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined,
       },
       500,
       origin
     );
   }
+}
+
+/**
+ * Retrieve OAuth result using state token
+ * GET /api/auth/oauth/result?state=...
+ */
+export async function getOAuthResult(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  const url = new URL(request.url);
+  const state = url.searchParams.get('state');
+
+  if (!state) {
+    return errorResponse('Missing state parameter', 400, origin);
+  }
+
+  const resultKey = `oauth_result:${state}`;
+  const resultStr = await env.KV.get(resultKey);
+
+  if (!resultStr) {
+    return jsonResponse(
+      {
+        status: 'expired',
+        message: 'OAuth result not found or expired',
+      },
+      410,
+      origin
+    );
+  }
+
+  await env.KV.delete(resultKey);
+
+  const result = JSON.parse(resultStr) as {
+    status: 'success' | 'error';
+    authData?: Record<string, unknown>;
+    error?: string;
+  };
+
+  if (result.status === 'error') {
+    return jsonResponse(
+      {
+        status: 'error',
+        error: result.error || 'OAuth failed',
+      },
+      200,
+      origin
+    );
+  }
+
+  return jsonResponse(
+    {
+      status: 'success',
+      authData: result.authData,
+    },
+    200,
+    origin
+  );
 }
 
 /**

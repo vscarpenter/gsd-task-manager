@@ -1,6 +1,6 @@
 {
   "name": "gsd-sync-worker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Cloudflare Worker for GSD Task Manager sync backend",
   "main": "src/index.ts",
   "scripts": {

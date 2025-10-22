@@ -46,6 +46,11 @@ export function jsonResponse(data: any, status = 200, origin?: string | null): R
     headers.set(key, value);
   }
 
+  // Prevent caching of API responses (critical for sync freshness)
+  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
+
   return new Response(JSON.stringify(data), {
     status,
     headers,

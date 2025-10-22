@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import React, { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ErrorBoundaryProps {
@@ -12,7 +12,7 @@ interface ErrorBoundaryState {
   error?: Error;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -60,4 +60,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return this.props.children;
   }
+}
+
+export function ErrorBoundary({ children }: ErrorBoundaryProps) {
+  return <ErrorBoundaryClass>{children}</ErrorBoundaryClass>;
 }

@@ -10,6 +10,7 @@
 export const ALLOWED_OAUTH_ORIGINS = [
   // Production
   'https://gsd.vinny.dev',
+  'https://gsd-sync-worker-production.vscarpenter.workers.dev',
 
   // Development/Staging
   'https://gsd-dev.vinny.dev',

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { PwaRegister } from "@/components/pwa-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
+import { ClientLayout } from "@/components/client-layout";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -67,7 +68,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>
-              {children}
+              <ClientLayout>
+                {children}
+              </ClientLayout>
               <PwaRegister />
               <InstallPwaPrompt />
               <PwaUpdateToast />
