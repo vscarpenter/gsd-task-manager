@@ -43,6 +43,10 @@ router.get('/api/auth/oauth/callback', async (request: Request, env: Env) => {
   return oidcHandlers.handleOAuthCallback(request, env);
 });
 
+router.get('/api/auth/oauth/result', async (request: Request, env: Env) => {
+  return oidcHandlers.getOAuthResult(request, env);
+});
+
 // Save encryption salt
 router.post('/api/auth/encryption-salt', async (request: Request, env: Env) => {
   const origin = request.headers.get('Origin');
