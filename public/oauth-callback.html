@@ -147,74 +147,192 @@
       const error = urlParams.get('error');
 
       // Determine worker API URL based on environment
+      // Use window.location.origin for production (CloudFront proxies /api/* to worker)
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const workerBaseUrl = isLocalhost 
+      const workerBaseUrl = isLocalhost
         ? 'http://localhost:8787'
-        : 'https://gsd-api.vinny.dev';
+        : window.location.origin;
+
+      // Detect if running in standalone PWA mode (especially iOS)
+      function isStandalonePWA() {
+        // iOS Safari standalone mode
+        const isIOSStandalone = ('standalone' in window.navigator) && window.navigator.standalone === true;
+
+        // Standard PWA display mode (Android, desktop)
+        const isDisplayStandalone = window.matchMedia('(display-mode: standalone)').matches;
+        const isDisplayMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+
+        return isIOSStandalone || isDisplayStandalone || isDisplayMinimalUI;
+      }
+
+      // Detect iOS platform
+      function isIOS() {
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        return /iphone|ipad|ipod/.test(userAgent);
+      }
+
+      const isInStandalonePWA = isStandalonePWA();
+      const isIOSDevice = isIOS();
 
       // Show error state
-      function showError(message) {
+      async function showError(message) {
         document.getElementById('loading-state').style.display = 'none';
         document.getElementById('success-state').style.display = 'none';
         document.getElementById('error-state').style.display = 'block';
         document.getElementById('error-message').textContent = message;
 
-        // Broadcast error via oauth-handshake
-        broadcastOAuthState(state, false, message);
+        // Broadcast error via oauth-handshake (await to ensure it completes before redirect)
+        await broadcastOAuthState(state, false, message);
 
-        // Auto-close after 3 seconds
-        let countdown = 3;
-        const countdownEl = document.getElementById('error-countdown');
-        countdownEl.textContent = `Closing in ${countdown} seconds...`;
-        
-        const interval = setInterval(function() {
-          countdown--;
-          if (countdown > 0) {
-            countdownEl.textContent = `Closing in ${countdown} seconds...`;
-          } else {
-            clearInterval(interval);
+        // For standalone PWA (especially iOS): redirect back to app
+        if (isInStandalonePWA) {
+          let countdown = 2;
+          const countdownEl = document.getElementById('error-countdown');
+          countdownEl.textContent = `Redirecting to app in ${countdown} seconds...`;
+
+          const interval = setInterval(function() {
+            countdown--;
+            if (countdown > 0) {
+              countdownEl.textContent = `Redirecting to app in ${countdown} seconds...`;
+            } else {
+              clearInterval(interval);
+              // Redirect back to main app
+              window.location.href = '/?oauth_complete=true';
+            }
+          }, 1000);
+        } else {
+          // For popup flow: try to close window
+          let countdown = 3;
+          const countdownEl = document.getElementById('error-countdown');
+          countdownEl.textContent = `Closing in ${countdown} seconds...`;
+
+          const interval = setInterval(function() {
+            countdown--;
+            if (countdown > 0) {
+              countdownEl.textContent = `Closing in ${countdown} seconds...`;
+            } else {
+              clearInterval(interval);
+              if (window.opener) {
+                window.close();
+              } else {
+                countdownEl.textContent = 'Please close this window manually.';
+              }
+            }
+          }, 1000);
+        }
+      }
+
+      // Show success state
+      async function showSuccess() {
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('error-state').style.display = 'none';
+        document.getElementById('success-state').style.display = 'block';
+
+        // Broadcast success via oauth-handshake (await to ensure fetch completes before redirect)
+        await broadcastOAuthState(state, true);
+
+        // For standalone PWA (especially iOS): redirect back to app immediately
+        if (isInStandalonePWA) {
+          const countdownEl = document.getElementById('success-countdown');
+          countdownEl.textContent = 'Redirecting to app...';
+
+          // Small delay to show success state, then redirect
+          setTimeout(function() {
+            window.location.href = '/?oauth_complete=true';
+          }, 500);
+        } else {
+          // For popup flow: try to close window
+          let countdown = 1;
+          const countdownEl = document.getElementById('success-countdown');
+          countdownEl.textContent = `Closing in ${countdown} second...`;
+
+          setTimeout(function() {
             if (window.opener) {
               window.close();
             } else {
               countdownEl.textContent = 'Please close this window manually.';
             }
-          }
-        }, 1000);
-      }
-
-      // Show success state
-      function showSuccess() {
-        document.getElementById('loading-state').style.display = 'none';
-        document.getElementById('error-state').style.display = 'none';
-        document.getElementById('success-state').style.display = 'block';
-
-        // Broadcast success via oauth-handshake
-        broadcastOAuthState(state, true);
-
-        // Auto-close after 1 second
-        let countdown = 1;
-        const countdownEl = document.getElementById('success-countdown');
-        countdownEl.textContent = `Closing in ${countdown} second...`;
-        
-        setTimeout(function() {
-          if (window.opener) {
-            window.close();
-          } else {
-            countdownEl.textContent = 'Please close this window manually.';
-          }
-        }, 1000);
+          }, 1000);
+        }
       }
 
       // Broadcast OAuth state using the oauth-handshake protocol
-      function broadcastOAuthState(state, success, errorMsg) {
+      // This now fetches the auth result from the worker and stores it in localStorage
+      // before redirecting, which is critical for PWA standalone mode
+      async function broadcastOAuthState(state, success, errorMsg) {
         if (!state) return;
+
+        let result = null;
+
+        // If successful, fetch the auth result from the worker
+        if (success) {
+          try {
+            console.info('[OAuth Callback] Fetching auth result from worker', {
+              state: state.substring(0, 8) + '...',
+              workerUrl: workerBaseUrl,
+            });
+
+            const response = await fetch(`${workerBaseUrl}/api/auth/oauth/result?state=${encodeURIComponent(state)}`, {
+              method: 'GET',
+              headers: {
+                Accept: 'application/json',
+              },
+              credentials: 'omit',
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok && data.status === 'success' && data.authData) {
+              console.info('[OAuth Callback] Auth result fetched successfully');
+              result = {
+                status: 'success',
+                state: state,
+                authData: data.authData
+              };
+            } else {
+              console.warn('[OAuth Callback] Failed to fetch auth result', {
+                status: response.status,
+                data: data
+              });
+              const message = (data && data.message) || 'Failed to complete OAuth.';
+              result = {
+                status: 'error',
+                state: state,
+                error: message
+              };
+            }
+          } catch (error) {
+            console.error('[OAuth Callback] Error fetching auth result:', error);
+            result = {
+              status: 'error',
+              state: state,
+              error: error instanceof Error ? error.message : 'Network error while completing OAuth.'
+            };
+          }
+        } else {
+          result = {
+            status: 'error',
+            state: state,
+            error: errorMsg || 'OAuth failed'
+          };
+        }
+
+        // Store the result in localStorage with the correct key
+        // This is critical for PWA mode where the redirect causes a new page load
+        try {
+          localStorage.setItem('oauth_handshake_result', JSON.stringify(result));
+          console.info('[OAuth Callback] Stored result in localStorage');
+        } catch (e) {
+          console.warn('[OAuth Callback] Failed to store result in localStorage:', e);
+        }
 
         const payload = {
           type: 'oauth_handshake',
           state: state,
           success: success,
           error: errorMsg || null,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          result: result
         };
 
         // Try BroadcastChannel
@@ -225,7 +343,7 @@
             channel.close();
           }
         } catch (e) {
-          console.warn('BroadcastChannel failed:', e);
+          console.warn('[OAuth Callback] BroadcastChannel failed:', e);
         }
 
         // Try postMessage to opener
@@ -233,15 +351,15 @@
           try {
             window.opener.postMessage(payload, window.location.origin);
           } catch (e) {
-            console.warn('postMessage to opener failed:', e);
+            console.warn('[OAuth Callback] postMessage to opener failed:', e);
           }
         }
 
-        // Try localStorage
+        // Try localStorage for state (legacy)
         try {
           localStorage.setItem('oauth_handshake_state', JSON.stringify(payload));
         } catch (e) {
-          console.warn('localStorage failed:', e);
+          console.warn('[OAuth Callback] localStorage failed:', e);
         }
       }
 
@@ -249,25 +367,25 @@
       async function handleCallback() {
         // Validate state parameter
         if (!state) {
-          showError('Invalid callback: missing state parameter.');
+          await showError('Invalid callback: missing state parameter.');
           return;
         }
 
         // Check for error from worker redirect
         if (success === 'false' || error) {
           const message = error ? decodeURIComponent(error) : 'Authentication failed';
-          showError(message);
+          await showError(message);
           return;
         }
 
         // Success case - worker has already processed the callback
         if (success === 'true') {
-          showSuccess();
+          await showSuccess();
           return;
         }
 
         // Fallback: no success parameter, show error
-        showError('Invalid callback response from server.');
+        await showError('Invalid callback response from server.');
       }
 
       // Start the callback process
