@@ -276,13 +276,18 @@ export class SyncEngine {
           console.log(`[SYNC DEBUG] Found local task: ${localTask.title} (updated: ${localTask.updatedAt})`);
           console.log(`[SYNC DEBUG] Local vector clock:`, localTask.vectorClock);
 
-          // FIX #3: Only trigger conflict if local task was actually modified since last sync
-          const localModifiedAfterSync = config.lastSyncAt &&
-            new Date(localTask.updatedAt).getTime() > config.lastSyncAt;
+          // FIX #3 (SECURITY): Check if we can safely skip conflict detection
+          // Only skip if we KNOW the task was NOT modified locally (i.e., lastSyncAt exists AND task is older)
+          // If lastSyncAt is null (reinstall/reset), we MUST check vector clocks to prevent data loss
+          const taskNotModifiedSinceLastSync = config.lastSyncAt &&
+            new Date(localTask.updatedAt).getTime() <= config.lastSyncAt;
 
-          console.log(`[SYNC DEBUG] Local modified after sync: ${localModifiedAfterSync}`);
+          console.log(`[SYNC DEBUG] Task not modified since last sync: ${taskNotModifiedSinceLastSync}`);
+          console.log(`[SYNC DEBUG] Will check vector clocks: ${!taskNotModifiedSinceLastSync}`);
 
-          if (localModifiedAfterSync) {
+          // If we don't know when last sync was (null), OR task was modified after sync,
+          // check vector clocks to prevent data loss
+          if (!taskNotModifiedSinceLastSync) {
             const comparison = compareVectorClocks(
               localTask.vectorClock || {},
               encTask.vectorClock
@@ -301,6 +306,8 @@ export class SyncEngine {
               });
               continue;
             }
+          } else {
+            console.log(`[SYNC DEBUG] Skipping conflict check - task confirmed unmodified since last sync`);
           }
         } else if (localTask) {
           console.log(`[SYNC DEBUG] Local task exists but is completed, applying remote`);
