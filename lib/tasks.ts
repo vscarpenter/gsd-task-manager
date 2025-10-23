@@ -191,10 +191,12 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
   const currentClock = existing.vectorClock || {};
   const newClock = incrementVectorClock(currentClock, deviceId);
 
+  const now = isoNow();
   const nextRecord: TaskRecord = {
     ...existing,
     completed,
-    updatedAt: isoNow(),
+    completedAt: completed ? now : undefined, // Set completedAt when marking complete, clear when uncompleting
+    updatedAt: now,
     vectorClock: newClock
   };
 

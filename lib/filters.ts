@@ -30,6 +30,10 @@ export interface FilterCriteria {
   // Recurrence filters
   recurrence?: RecurrenceType[];
 
+  // Date-based filters
+  recentlyAdded?: boolean; // Tasks created in the last 7 days
+  recentlyCompleted?: boolean; // Tasks completed in the last 7 days
+
   // Text search
   searchQuery?: string;
 }
@@ -114,6 +118,25 @@ export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria): Tas
     filtered = filtered.filter(task => criteria.recurrence!.includes(task.recurrence));
   }
 
+  // Filter by recently added (created in last 7 days)
+  if (criteria.recentlyAdded) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    filtered = filtered.filter(task => {
+      const createdDate = new Date(task.createdAt);
+      return createdDate >= sevenDaysAgo;
+    });
+  }
+
+  // Filter by recently completed (completed in last 7 days)
+  if (criteria.recentlyCompleted) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    filtered = filtered.filter(task => {
+      if (!task.completed || !task.completedAt) return false;
+      const completedDate = new Date(task.completedAt);
+      return completedDate >= sevenDaysAgo;
+    });
+  }
+
   // Filter by search query
   if (criteria.searchQuery && criteria.searchQuery.trim()) {
     const query = criteria.searchQuery.trim().toLowerCase();
@@ -184,8 +207,8 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
     icon: "✨",
     isBuiltIn: true,
     criteria: {
-      status: 'active'
-      // Will need special handling for createdAt in the past 7 days
+      status: 'active',
+      recentlyAdded: true
     }
   },
   {
@@ -194,8 +217,8 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
     icon: "🏆",
     isBuiltIn: true,
     criteria: {
-      status: 'completed'
-      // Will need special handling for completed in the past 7 days
+      status: 'completed',
+      recentlyCompleted: true
     }
   },
   {
@@ -233,6 +256,8 @@ export function isEmptyFilter(criteria: FilterCriteria): boolean {
     !criteria.dueThisWeek &&
     !criteria.noDueDate &&
     (!criteria.recurrence || criteria.recurrence.length === 0) &&
+    !criteria.recentlyAdded &&
+    !criteria.recentlyCompleted &&
     (!criteria.searchQuery || criteria.searchQuery.trim() === '')
   );
 }
@@ -263,6 +288,9 @@ export function getFilterDescription(criteria: FilterCriteria): string {
   if (criteria.recurrence && criteria.recurrence.length > 0) {
     parts.push(`${criteria.recurrence.join(', ')} recurrence`);
   }
+
+  if (criteria.recentlyAdded) parts.push('recently added');
+  if (criteria.recentlyCompleted) parts.push('recently completed');
 
   if (criteria.searchQuery && criteria.searchQuery.trim()) {
     parts.push(`"${criteria.searchQuery.trim()}"`);

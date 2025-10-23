@@ -17,6 +17,7 @@ export interface TaskRecord {
   quadrant: QuadrantId;
   dueDate?: string;
   completed: boolean;
+  completedAt?: string; // Timestamp when task was marked complete
   createdAt: string;
   updatedAt: string;
   // New fields for enhancements
