@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
@@ -37,11 +37,12 @@ interface ToastProviderProps {
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const hideToast = useCallback((id: string) => {
+  // React Compiler handles optimization automatically
+  const hideToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  };
 
-  const showToast = useCallback((message: string, action?: Toast["action"], duration = 5000) => {
+  const showToast = (message: string, action?: Toast["action"], duration = 5000) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     const toast: Toast = { id, message, action, duration };
     setToasts((prev) => [...prev, toast]);
@@ -49,7 +50,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     if (duration > 0) {
       setTimeout(() => hideToast(id), duration);
     }
-  }, [hideToast]);
+  };
 
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>

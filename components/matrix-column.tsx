@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { QuadrantMeta } from "@/lib/quadrants";
@@ -37,8 +37,8 @@ function MatrixColumnComponent({
     id: quadrant.id
   });
 
-  // Memoize task IDs array to prevent unnecessary SortableContext re-renders
-  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
+  // React Compiler handles optimization automatically
+  const taskIds = tasks.map((task) => task.id);
 
   return (
     <section
