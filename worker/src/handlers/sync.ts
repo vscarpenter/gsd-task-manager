@@ -230,9 +230,10 @@ export async function pull(
     };
 
     // Fetch tasks updated since last sync
+    // FIX #4: Use >= instead of > to catch edge-case millisecond timing
     const tasks = await env.DB.prepare(
       `SELECT * FROM encrypted_tasks
-       WHERE user_id = ? AND updated_at > ? AND deleted_at IS NULL
+       WHERE user_id = ? AND updated_at >= ? AND deleted_at IS NULL
        ORDER BY updated_at ASC
        LIMIT ?`
     )
@@ -246,24 +247,42 @@ export async function pull(
       tasks.results = tasks.results.slice(0, limit);
     }
 
+    // FIX #6: Debug logging for pull processing
+    logger.info('Processing tasks for pull', {
+      userId,
+      deviceId: validated.deviceId,
+      tasksFound: tasks.results?.length || 0,
+      clientVectorClock: validated.lastVectorClock,
+    });
+
     // Process tasks
     for (const task of tasks.results || []) {
       const taskClock: VectorClock = JSON.parse(task.vector_clock as string);
       const comparison = compareVectorClocks(validated.lastVectorClock, taskClock);
 
+      logger.info('Comparing vector clocks', {
+        taskId: task.id,
+        comparison,
+        clientClock: validated.lastVectorClock,
+        serverClock: taskClock,
+      });
+
       // Check for conflicts
       if (comparison === 'concurrent') {
+        logger.info('Concurrent conflict detected', {
+          taskId: task.id,
+          clientClock: validated.lastVectorClock,
+          serverClock: taskClock,
+        });
+
         response.conflicts.push({
           taskId: task.id as string,
           reason: 'concurrent_edit',
           existingClock: validated.lastVectorClock,
           incomingClock: taskClock,
         });
-        continue;
-      }
-
-      // Only send if server has newer version
-      if (comparison === 'a_before_b' || comparison === 'identical') {
+        // FIX #1: Still send task data for client-side conflict resolution
+        // Client needs the remote version to perform last-write-wins resolution
         response.tasks.push({
           id: task.id as string,
           encryptedBlob: task.encrypted_blob as string,
@@ -273,13 +292,39 @@ export async function pull(
           updatedAt: task.updated_at as number,
           checksum: task.checksum as string,
         });
+        continue;
+      }
+
+      // Only send if server has newer version
+      if (comparison === 'a_before_b' || comparison === 'identical') {
+        logger.info('Sending task to client', {
+          taskId: task.id,
+          comparison,
+          serverUpdatedAt: task.updated_at,
+        });
+
+        response.tasks.push({
+          id: task.id as string,
+          encryptedBlob: task.encrypted_blob as string,
+          nonce: task.nonce as string,
+          version: task.version as number,
+          vectorClock: taskClock,
+          updatedAt: task.updated_at as number,
+          checksum: task.checksum as string,
+        });
+      } else {
+        logger.info('Skipping task (client has newer version)', {
+          taskId: task.id,
+          comparison,
+        });
       }
     }
 
     // Fetch deleted tasks
+    // FIX #4: Use >= for consistency with updated_at query
     const deletedTasks = await env.DB.prepare(
       `SELECT id FROM encrypted_tasks
-       WHERE user_id = ? AND deleted_at > ? AND deleted_at IS NOT NULL
+       WHERE user_id = ? AND deleted_at >= ? AND deleted_at IS NOT NULL
        ORDER BY deleted_at ASC
        LIMIT ?`
     )
