@@ -75,15 +75,15 @@ export function SettingsDialog({
 		about: false,
 	});
 
-	useEffect(() => {
-		setMounted(true);
-		loadNotificationSettings();
-	}, []);
-
 	const loadNotificationSettings = async () => {
 		const settings = await getNotificationSettings();
 		setNotificationSettings(settings);
 	};
+
+	useEffect(() => {
+		setMounted(true);
+		loadNotificationSettings();
+	}, []);
 
 	const handleNotificationToggle = async () => {
 		if (!notificationSettings) return;

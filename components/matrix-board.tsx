@@ -151,10 +151,8 @@ export function MatrixBoard() {
     );
   }, [all, filterCriteria, searchQuery, showCompleted]);
 
-  const visibleCount = useMemo(
-    () => quadrantOrder.reduce((total, id) => total + (filteredQuadrants[id]?.length ?? 0), 0),
-    [filteredQuadrants]
-  );
+  // React Compiler handles optimization automatically
+  const visibleCount = quadrantOrder.reduce((total, id) => total + (filteredQuadrants[id]?.length ?? 0), 0);
 
   const closeDialog = () => setDialogState(null);
 

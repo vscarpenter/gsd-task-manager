@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { BellIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,19 +21,19 @@ export function NotificationPermissionPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  const checkShouldShow = useCallback(async () => {
-    // Don't show if already dismissed in this session
-    if (isDismissed) {
-      return;
+  useEffect(() => {
+    async function checkAndShow() {
+      // Don't show if already dismissed in this session
+      if (isDismissed) {
+        return;
+      }
+
+      const should = await shouldAskForPermission();
+      setShowPrompt(should);
     }
 
-    const should = await shouldAskForPermission();
-    setShowPrompt(should);
+    checkAndShow();
   }, [isDismissed]);
-
-  useEffect(() => {
-    checkShouldShow();
-  }, [checkShouldShow]);
 
   const handleEnable = async () => {
     const granted = await requestNotificationPermission();

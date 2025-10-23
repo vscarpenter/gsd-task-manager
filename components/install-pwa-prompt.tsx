@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/routes";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -12,7 +13,19 @@ interface BeforeInstallPromptEvent extends Event {
 export function InstallPwaPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [browserType, setBrowserType] = useState<"chrome" | "safari" | "other">("other");
+
+  // Detect browser type on initialization (not in effect)
+  const [browserType] = useState<"chrome" | "safari" | "other">(() => {
+    if (typeof window === 'undefined') return 'other';
+
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    if (userAgent.includes("chrome") && !userAgent.includes("edg")) {
+      return "chrome";
+    } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
+      return "safari";
+    }
+    return "other";
+  });
 
   useEffect(() => {
     // Check if already installed
@@ -35,14 +48,6 @@ export function InstallPwaPrompt() {
       if (daysSinceDismissed < 7) {
         return;
       }
-    }
-
-    // Detect browser type
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    if (userAgent.includes("chrome") && !userAgent.includes("edg")) {
-      setBrowserType("chrome");
-    } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
-      setBrowserType("safari");
     }
 
     // Listen for the beforeinstallprompt event
@@ -74,7 +79,7 @@ export function InstallPwaPrompt() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       // If no install prompt (e.g., Safari), redirect to instructions
-      window.location.href = "/install";
+      window.location.href = ROUTES.INSTALL;
       return;
     }
 
@@ -97,7 +102,7 @@ export function InstallPwaPrompt() {
   };
 
   const handleLearnMore = () => {
-    window.location.href = "/install";
+    window.location.href = ROUTES.INSTALL;
   };
 
   if (!showPrompt) {

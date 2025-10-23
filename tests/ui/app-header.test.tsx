@@ -23,6 +23,16 @@ vi.mock("@/components/theme-toggle", () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme Toggle</button>
 }));
 
+// Mock ViewToggle component (uses Next.js router)
+vi.mock("@/components/view-toggle", () => ({
+  ViewToggle: () => <div data-testid="view-toggle">View Toggle</div>
+}));
+
+// Mock SyncButton component (uses sync context)
+vi.mock("@/components/sync/sync-button", () => ({
+  SyncButton: () => <button data-testid="sync-button">Sync</button>
+}));
+
 describe("AppHeader", () => {
   const mockHandlers = {
     onNewTask: vi.fn(),
