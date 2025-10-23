@@ -139,6 +139,25 @@ class GsdDatabase extends Dexie {
           }
         });
       });
+
+    // Version 8: Add completedAt field for Smart Views date filtering
+    this.version(8)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key"
+      })
+      .upgrade((trans) => {
+        // Migrate existing completed tasks to set completedAt = updatedAt as best guess
+        return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
+          if (task.completed && !task.completedAt) {
+            task.completedAt = task.updatedAt;
+          }
+        });
+      });
   }
 }
 

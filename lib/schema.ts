@@ -39,6 +39,7 @@ export const taskRecordSchema = taskDraftSchema
 		id: z.string().min(4),
 		quadrant: quadrantIdSchema,
 		completed: z.boolean(),
+		completedAt: z.string().datetime({ offset: true }).optional(),
 		createdAt: z.string().datetime({ offset: true }),
 		updatedAt: z.string().datetime({ offset: true }),
 		parentTaskId: z.string().min(4).optional(),

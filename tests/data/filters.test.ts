@@ -49,12 +49,13 @@ describe("Filter utilities", () => {
       important: false,
       quadrant: "urgent-not-important",
       completed: true,
+      completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Completed 2 days ago
       dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
       recurrence: "none",
       tags: ["work"],
       subtasks: [],
       dependencies: [],
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // Created 10 days ago
       updatedAt: new Date().toISOString(),
       notificationEnabled: true,
       notificationSent: false
@@ -216,6 +217,26 @@ describe("Filter utilities", () => {
       expect(result[0].id).toBe("5");
     });
 
+    it("should filter by recently added (last 7 days)", () => {
+      const criteria: FilterCriteria = {
+        recentlyAdded: true
+      };
+      const result = applyFilters(sampleTasks, criteria);
+      // Should include tasks 1, 2, 4, 5 (all created recently), but not task 3 (created 10 days ago)
+      expect(result.length).toBe(4);
+      expect(result.every(t => t.id !== "3")).toBe(true);
+    });
+
+    it("should filter by recently completed (last 7 days)", () => {
+      const criteria: FilterCriteria = {
+        recentlyCompleted: true
+      };
+      const result = applyFilters(sampleTasks, criteria);
+      // Should include task 3 (completed 2 days ago)
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("3");
+    });
+
     it("should combine multiple filters (AND logic)", () => {
       const criteria: FilterCriteria = {
         quadrants: ["urgent-important"],
@@ -344,6 +365,20 @@ describe("Filter utilities", () => {
       expect(view).toBeDefined();
       expect(view?.criteria.noDueDate).toBe(true);
       expect(view?.criteria.status).toBe('active');
+    });
+
+    it("should have Recently Added view", () => {
+      const view = BUILT_IN_SMART_VIEWS.find(v => v.name === "Recently Added");
+      expect(view).toBeDefined();
+      expect(view?.criteria.recentlyAdded).toBe(true);
+      expect(view?.criteria.status).toBe('active');
+    });
+
+    it("should have This Week's Wins view", () => {
+      const view = BUILT_IN_SMART_VIEWS.find(v => v.name === "This Week's Wins");
+      expect(view).toBeDefined();
+      expect(view?.criteria.recentlyCompleted).toBe(true);
+      expect(view?.criteria.status).toBe('completed');
     });
   });
 });

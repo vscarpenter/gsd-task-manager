@@ -141,7 +141,8 @@ export function MatrixBoard() {
     const criteriaWithSearch: FilterCriteria = {
       ...filterCriteria,
       searchQuery: searchQuery.trim() || undefined,
-      status: showCompleted ? 'all' : 'active'
+      // Only override status if Smart View doesn't specify one
+      status: filterCriteria.status || (showCompleted ? 'all' : 'active')
     };
     const filtered = applyFilters(all, criteriaWithSearch);
 

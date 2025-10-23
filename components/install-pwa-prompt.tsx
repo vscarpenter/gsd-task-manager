@@ -13,19 +13,17 @@ interface BeforeInstallPromptEvent extends Event {
 export function InstallPwaPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [browserType, setBrowserType] = useState<"chrome" | "safari" | "other">("other");
 
-  // Detect browser type on initialization (not in effect)
-  const [browserType] = useState<"chrome" | "safari" | "other">(() => {
-    if (typeof window === 'undefined') return 'other';
-
+  // Detect browser type after hydration
+  useEffect(() => {
     const userAgent = window.navigator.userAgent.toLowerCase();
     if (userAgent.includes("chrome") && !userAgent.includes("edg")) {
-      return "chrome";
+      setBrowserType("chrome");
     } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
-      return "safari";
+      setBrowserType("safari");
     }
-    return "other";
-  });
+  }, []);
 
   useEffect(() => {
     // Check if already installed
