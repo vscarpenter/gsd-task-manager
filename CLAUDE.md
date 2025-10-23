@@ -23,6 +23,39 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - `pnpm build` - Build production bundle and surface type errors
 - `pnpm export` - Generate static export for S3/CloudFront deployment
 - `pnpm start` - Start production server (note: app uses static export)
+- `./scripts/deploy-cloudfront-function.sh` - Deploy CloudFront Function for edge URL rewriting
+
+#### CloudFront Edge Routing
+
+**IMPORTANT**: The production app uses a CloudFront Function for SPA routing. Next.js static exports with `trailingSlash: true` create files like `/dashboard/index.html`, but S3 bucket endpoints don't automatically serve `index.html` for directory paths (would return 403).
+
+**How it works**:
+- CloudFront Function runs at edge locations with sub-millisecond latency
+- Rewrites directory paths before request reaches S3:
+  - `/dashboard/` → `/dashboard/index.html`
+  - `/install/` → `/install/index.html`
+  - `/` → `/index.html`
+
+**Files**:
+- `cloudfront-function-url-rewrite.js` - Edge function code (JavaScript runtime, not Node.js)
+- `scripts/deploy-cloudfront-function.sh` - Automated deployment script
+
+**When to redeploy**:
+- After adding new routes in App Router
+- If URL routing behavior changes
+- When modifying the rewrite logic
+
+**Deployment**:
+```bash
+./scripts/deploy-cloudfront-function.sh
+```
+
+This script automatically:
+1. Creates or updates the CloudFront Function
+2. Publishes the function to production
+3. Attaches it to the distribution's default cache behavior
+4. Invalidates the CloudFront cache
+5. Propagates changes to all edge locations (2-3 min)
 
 ## Architecture
 
@@ -256,4 +289,13 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
   - Consider blocking/blocked relationships when implementing dependency-aware features
 - Dashboard uses `recharts` for visualizations - keep chart configurations simple for better TypeScript inference
 - Batch operations use Set<string> for `selectedTaskIds` for O(1) lookup performance
+- CloudFront Function:
+  - Required for production SPA routing (S3 bucket endpoints don't auto-serve index.html for directory paths)
+  - If adding new App Router routes, deploy CloudFront Function after deploying static files: `./scripts/deploy-cloudfront-function.sh`
+  - The function rewrites URLs at edge before reaching S3 (e.g., `/dashboard/` → `/dashboard/index.html`)
+  - Changes propagate to edge locations in 2-3 minutes
+- Navigation:
+  - Use `useViewTransition()` hook for client-side navigation with smooth View Transitions API
+  - The hook automatically adds trailing slashes to routes (required for static export with trailingSlash: true)
+  - View transitions only work in Chrome/Edge 111+, Safari 18+ (gracefully degrades in Firefox)
 - Always leverage @coding-standards.md for coding standards and guidelines

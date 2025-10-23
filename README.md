@@ -244,9 +244,44 @@ Each environment has isolated:
 - R2 buckets for backup storage
 - Environment-specific secrets and OAuth configurations
 
+### CloudFront Edge Routing
+
+The production deployment uses a **CloudFront Function** for intelligent URL routing at edge locations:
+
+**Purpose**: Next.js static exports with `trailingSlash: true` create files like `/dashboard/index.html`, but S3 bucket endpoints don't automatically serve `index.html` for directory paths. Without URL rewriting, navigating to `/dashboard/` would return a 403 error.
+
+**Solution**: A CloudFront Function runs on every request with sub-millisecond latency to rewrite URLs before they reach S3:
+- `/dashboard/` → `/dashboard/index.html` ✅
+- `/install/` → `/install/index.html` ✅
+- `/` → `/index.html` ✅
+
+**Files**:
+- `cloudfront-function-url-rewrite.js` - Edge function code (JavaScript runtime)
+- `scripts/deploy-cloudfront-function.sh` - Automated deployment script
+
+**Deployment**:
+```bash
+# Deploy or update the CloudFront Function
+./scripts/deploy-cloudfront-function.sh
+```
+
+This creates the function, publishes it, attaches it to the CloudFront distribution, and invalidates the cache. Changes propagate to all edge locations within 2-3 minutes.
+
+**Why CloudFront Functions?**
+- Runs at CloudFront edge (sub-ms latency, closer to users than Lambda@Edge)
+- Lightweight JavaScript runtime (no Node.js overhead)
+- Processes 100% of viewer requests before reaching origin (S3)
+- Cost-effective at scale (charged per million requests)
+
 ### Recent Updates
 
-**v3.5.0** (Latest)
+**v3.7.1** (Latest)
+- ✅ Next.js 16 with Turbopack and React Compiler
+- ✅ View Transitions API for smooth page animations
+- ✅ CloudFront edge routing for static export SPA navigation
+- ✅ Fixed React Compiler warnings and removed manual memoization
+
+**v3.5.0**
 - ✅ Multi-environment worker deployment (dev, staging, prod)
 - ✅ Fixed critical vector clock causality bug
 - ✅ Resolved 18 TypeScript errors for improved type safety

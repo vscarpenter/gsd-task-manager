@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { LayoutGridIcon, BarChart3Icon } from "lucide-react";
 import { useViewTransition } from "@/lib/use-view-transition";
+import { ROUTES, isRouteActive } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,13 +13,13 @@ export function ViewToggle() {
   const pathname = usePathname();
   const { navigateWithTransition, isPending } = useViewTransition();
 
-  const isMatrix = pathname === "/" || pathname === "/index.html";
-  const isDashboard = pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard.html";
+  const isMatrix = isRouteActive(pathname, 'HOME');
+  const isDashboard = isRouteActive(pathname, 'DASHBOARD');
 
   return (
     <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
       <button
-        onClick={() => navigateWithTransition("/")}
+        onClick={() => navigateWithTransition(ROUTES.HOME)}
         disabled={isPending}
         className={cn(
           "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
@@ -34,7 +35,7 @@ export function ViewToggle() {
         <span className="hidden sm:inline">Matrix</span>
       </button>
       <button
-        onClick={() => navigateWithTransition("/dashboard")}
+        onClick={() => navigateWithTransition(ROUTES.DASHBOARD)}
         disabled={isPending}
         className={cn(
           "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",

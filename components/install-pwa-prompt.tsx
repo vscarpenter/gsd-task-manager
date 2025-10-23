@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/routes";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -78,7 +79,7 @@ export function InstallPwaPrompt() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       // If no install prompt (e.g., Safari), redirect to instructions
-      window.location.href = "/install";
+      window.location.href = ROUTES.INSTALL;
       return;
     }
 
@@ -101,7 +102,7 @@ export function InstallPwaPrompt() {
   };
 
   const handleLearnMore = () => {
-    window.location.href = "/install";
+    window.location.href = ROUTES.INSTALL;
   };
 
   if (!showPrompt) {
