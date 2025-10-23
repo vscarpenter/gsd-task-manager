@@ -58,8 +58,13 @@ export function useViewTransition() {
 
     // View Transitions API provides smooth animations but lacks universal browser support.
     // Graceful degradation ensures all users can navigate, even without animations.
+    // Note: For static exports with trailingSlash: true, always add trailing slash to routes
+    const normalizedHref = (typeof href === 'string' && !href.endsWith('/') && href !== '/')
+      ? `${href}/` as Route<T>
+      : href;
+
     if (!doc.startViewTransition) {
-      router.push(href);
+      router.push(normalizedHref);
       return;
     }
 
@@ -67,7 +72,7 @@ export function useViewTransition() {
     // during the transition, preventing UI flickering and improving performance.
     doc.startViewTransition(() => {
       startTransition(() => {
-        router.push(href);
+        router.push(normalizedHref);
       });
     });
   };

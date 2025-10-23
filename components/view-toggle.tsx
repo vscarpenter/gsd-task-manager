@@ -13,7 +13,7 @@ export function ViewToggle() {
   const { navigateWithTransition, isPending } = useViewTransition();
 
   const isMatrix = pathname === "/" || pathname === "/index.html";
-  const isDashboard = pathname === "/dashboard" || pathname === "/dashboard.html";
+  const isDashboard = pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard.html";
 
   return (
     <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
