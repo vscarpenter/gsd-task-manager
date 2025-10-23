@@ -16,6 +16,11 @@ export function SmartViewSelector({ onSelectView, currentCriteria }: SmartViewSe
   const [isOpen, setIsOpen] = useState(false);
   const [selectedView, setSelectedView] = useState<SmartView | null>(null);
 
+  const loadViews = async () => {
+    const allViews = await getSmartViews();
+    setViews(allViews);
+  };
+
   useEffect(() => {
     loadViews();
   }, []);
@@ -26,11 +31,6 @@ export function SmartViewSelector({ onSelectView, currentCriteria }: SmartViewSe
       setSelectedView(null);
     }
   }, [currentCriteria, selectedView]);
-
-  const loadViews = async () => {
-    const allViews = await getSmartViews();
-    setViews(allViews);
-  };
 
   const handleSelectView = (view: SmartView) => {
     setSelectedView(view);

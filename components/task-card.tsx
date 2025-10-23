@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -21,18 +21,16 @@ interface TaskCardProps {
 }
 
 function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
-  // Memoize expensive computations
-  const dueLabel = useMemo(() => formatDueDate(task.dueDate), [task.dueDate]);
-  const taskIsOverdue = useMemo(() => !task.completed && isOverdue(task.dueDate), [task.completed, task.dueDate]);
-  const taskIsDueToday = useMemo(() => !task.completed && isDueToday(task.dueDate), [task.completed, task.dueDate]);
-  const { completedSubtasks, totalSubtasks } = useMemo(() => ({
-    completedSubtasks: task.subtasks.filter(st => st.completed).length,
-    totalSubtasks: task.subtasks.length
-  }), [task.subtasks]);
+  // React Compiler handles optimization automatically
+  const dueLabel = formatDueDate(task.dueDate);
+  const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
+  const taskIsDueToday = !task.completed && isDueToday(task.dueDate);
+  const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+  const totalSubtasks = task.subtasks.length;
 
-  // Dependency calculations
-  const blockingTasks = useMemo(() => getUncompletedBlockingTasks(task, allTasks), [task, allTasks]);
-  const blockedTasks = useMemo(() => getBlockedTasks(task.id, allTasks), [task.id, allTasks]);
+  // Dependency calculations - keep for complex external function calls
+  const blockingTasks = getUncompletedBlockingTasks(task, allTasks);
+  const blockedTasks = getBlockedTasks(task.id, allTasks);
   const isBlocked = blockingTasks.length > 0;
   const isBlocking = blockedTasks.length > 0;
 

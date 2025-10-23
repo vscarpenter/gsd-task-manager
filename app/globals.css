@@ -129,3 +129,53 @@ main {
     @apply text-sm text-foreground-muted;
   }
 }
+
+/* View Transitions */
+@media (prefers-reduced-motion: no-preference) {
+  /* Fade transition for root element */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Slide-up animation for incoming page */
+  ::view-transition-new(root) {
+    animation-name: slide-from-bottom;
+  }
+
+  /* Slide-up animation for outgoing page */
+  ::view-transition-old(root) {
+    animation-name: slide-to-top;
+  }
+
+  @keyframes slide-from-bottom {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-to-top {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
