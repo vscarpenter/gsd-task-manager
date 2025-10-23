@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true
   },
-  typedRoutes: true
+  typedRoutes: true,
+  reactCompiler: true
 };
 
 export default nextConfig;
