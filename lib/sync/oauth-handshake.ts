@@ -71,6 +71,41 @@ function ensureInitialized() {
 
   window.addEventListener('message', handleMessageEvent);
   window.addEventListener('storage', handleStorageEvent);
+
+  // Check for existing OAuth result in localStorage (critical for PWA standalone mode)
+  // After OAuth callback redirects back to the app, the result is already in storage
+  // but nobody has read it yet
+  try {
+    const existingResult = localStorage.getItem(RESULT_KEY);
+    if (existingResult) {
+      console.info('[OAuthHandshake] Found existing result in localStorage on init');
+      const result = JSON.parse(existingResult) as OAuthHandshakeEvent;
+
+      // Only process if we haven't already processed this state
+      if (!processedStates.has(result.state)) {
+        console.info('[OAuthHandshake] Processing existing result', {
+          state: result.state.substring(0, 8) + '...',
+          status: result.status
+        });
+        processedStates.add(result.state);
+
+        // Clear the result from localStorage to prevent duplicate processing
+        try {
+          localStorage.removeItem(RESULT_KEY);
+          localStorage.removeItem(STORAGE_KEY); // Also clear the legacy key
+        } catch (e) {
+          console.warn('[OAuthHandshake] Failed to clear processed result from storage:', e);
+        }
+
+        // Delay slightly to allow subscribers to register first
+        setTimeout(() => {
+          notifyListeners(result);
+        }, 100);
+      }
+    }
+  } catch (error) {
+    console.warn('[OAuthHandshake] Failed to check for existing result:', error);
+  }
 }
 
 function handleMessageEvent(event: MessageEvent) {
