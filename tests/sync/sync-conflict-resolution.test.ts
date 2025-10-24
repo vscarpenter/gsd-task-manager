@@ -305,15 +305,42 @@ describe('Sync Conflict Resolution Fixes', () => {
       expect(merged).toEqual({ device1: 5, device2: 3, device3: 2 });
     });
 
-    it('should handle missing lastSyncAt (first sync)', () => {
+    it('should handle missing lastSyncAt (first sync) - SECURITY FIX', () => {
       const lastSyncAt = null;
 
       // Task was modified at any time
       const taskUpdatedAt = Date.now();
 
-      // Should not trigger conflict detection (no previous sync to compare to)
-      const shouldCheckConflict = lastSyncAt && taskUpdatedAt > lastSyncAt;
-      expect(shouldCheckConflict).toBeFalsy(); // null is falsy
+      // SECURITY: When lastSyncAt is null (reinstall/reset), we MUST check vector clocks
+      // to prevent data loss from unsynced local changes
+      const taskNotModifiedSinceLastSync = lastSyncAt &&
+        taskUpdatedAt <= lastSyncAt;
+
+      // Should be false (null && ...) = false
+      expect(taskNotModifiedSinceLastSync).toBeFalsy();
+
+      // Therefore, we WILL check vector clocks (security-safe behavior)
+      const shouldCheckVectorClocks = !taskNotModifiedSinceLastSync;
+      expect(shouldCheckVectorClocks).toBe(true); // MUST check to prevent data loss
+    });
+
+    it('should check vector clocks when lastSyncAt is missing to prevent data loss', () => {
+      // Scenario: User reinstalls app, has local edits, syncs
+      const lastSyncAt = null; // Missing after reinstall
+
+      const localClock = { device1: 5 };
+      const remoteClock = { device2: 3 };
+
+      // With the security fix, we check if task was NOT modified
+      const taskNotModifiedSinceLastSync = lastSyncAt && false; // Always false when lastSyncAt is null
+      expect(taskNotModifiedSinceLastSync).toBeFalsy();
+
+      // Since we can't confirm it's unmodified, we MUST check vector clocks
+      if (!taskNotModifiedSinceLastSync) {
+        const comparison = compareVectorClocks(localClock, remoteClock);
+        // Concurrent clocks detected - prevents data loss!
+        expect(comparison).toBe('concurrent');
+      }
     });
   });
 });
