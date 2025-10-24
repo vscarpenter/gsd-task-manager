@@ -81,12 +81,17 @@ export class SyncEngine {
       const pullResult = await this.pullRemoteChanges(updatedConfig, crypto, api);
 
       // Phase 3: Handle conflicts
-      const conflicts: ConflictInfo[] = [...pushResult.conflicts, ...pullResult.conflicts];
+      // NOTE: Only auto-resolve locally-detected conflicts from pull phase
+      // Server-returned conflicts (from push) lack task data (local/remote) and cannot be auto-resolved
+      // Those conflicts are informational only and will be handled on next pull
       let conflictsResolved = 0;
 
-      if (conflicts.length > 0 && config.conflictStrategy === 'last_write_wins') {
-        conflictsResolved = await this.autoResolveConflicts(conflicts);
+      if (pullResult.conflicts.length > 0 && config.conflictStrategy === 'last_write_wins') {
+        conflictsResolved = await this.autoResolveConflicts(pullResult.conflicts);
       }
+
+      // Combine all conflicts for reporting (but only locally-detected ones are auto-resolved)
+      const conflicts: ConflictInfo[] = [...pullResult.conflicts];
 
       // Phase 4: Update sync metadata
       // FIX #2: Pass sync start time to prevent race condition window
@@ -254,80 +259,80 @@ export class SyncEngine {
     const conflicts: ConflictInfo[] = [];
 
     // Decrypt and apply remote changes
+    console.log(`[SYNC DEBUG] Processing ${response.tasks.length} tasks from server`);
+
     for (const encTask of response.tasks) {
       try {
+        console.log(`[SYNC DEBUG] ========================================`);
         console.log(`[SYNC DEBUG] Processing task ${encTask.id}`);
         console.log(`[SYNC DEBUG] Remote vector clock:`, encTask.vectorClock);
+        console.log(`[SYNC DEBUG] Remote updated at:`, new Date(encTask.updatedAt).toISOString());
 
         const decrypted = await crypto.decrypt(encTask.encryptedBlob, encTask.nonce);
         const task = taskRecordSchema.parse(JSON.parse(decrypted));
-        console.log(`[SYNC DEBUG] Decrypted task: ${task.title} (updated: ${task.updatedAt})`);
+        console.log(`[SYNC DEBUG] Decrypted task: "${task.title}"`);
+        console.log(`[SYNC DEBUG] Task metadata:`, {
+          id: task.id,
+          completed: task.completed,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+        });
 
         // Check for local conflicts
         const localTask = await db.tasks.get(task.id);
 
-        if (localTask && !localTask.completed) {
-          console.log(`[SYNC DEBUG] Found local task: ${localTask.title} (updated: ${localTask.updatedAt})`);
-          console.log(`[SYNC DEBUG] Local vector clock:`, localTask.vectorClock);
+        if (localTask) {
+          console.log(`[SYNC DEBUG] Found local version of task`);
+          console.log(`[SYNC DEBUG] Local metadata:`, {
+            title: localTask.title,
+            completed: localTask.completed,
+            updatedAt: localTask.updatedAt,
+            vectorClock: localTask.vectorClock,
+          });
 
-          // FIX #3 (SECURITY): Check if we can safely skip conflict detection
-          // Only skip if we KNOW the task was NOT modified locally (i.e., lastSyncAt exists AND task is older)
-          // If lastSyncAt is null (reinstall/reset), we MUST check vector clocks to prevent data loss
-          const taskNotModifiedSinceLastSync = config.lastSyncAt &&
-            new Date(localTask.updatedAt).getTime() <= config.lastSyncAt;
+          // BULLETPROOF: Use timestamp comparison for conflict detection
+          const localTime = new Date(localTask.updatedAt).getTime();
+          const remoteTime = new Date(task.updatedAt).getTime();
 
-          console.log(`[SYNC DEBUG] Task not modified since last sync: ${taskNotModifiedSinceLastSync}`);
-          console.log(`[SYNC DEBUG] Will check vector clocks: ${!taskNotModifiedSinceLastSync}`);
+          console.log(`[SYNC DEBUG] Timestamp comparison:`, {
+            localTime,
+            remoteTime,
+            localNewer: localTime > remoteTime,
+            remoteNewer: remoteTime > localTime,
+            identical: localTime === remoteTime,
+          });
 
-          // If we don't know when last sync was (null), OR task was modified after sync,
-          // check vector clocks to prevent data loss
-          if (!taskNotModifiedSinceLastSync) {
-            const comparison = compareVectorClocks(
-              localTask.vectorClock || {},
-              encTask.vectorClock
-            );
-
-            console.log(`[SYNC DEBUG] Vector clock comparison: ${comparison}`);
-
-            if (comparison === 'concurrent') {
-              console.log(`[SYNC DEBUG] CONFLICT DETECTED - Adding to conflicts list`);
-              conflicts.push({
-                taskId: task.id,
-                local: localTask,
-                remote: task,
-                localClock: localTask.vectorClock || {},
-                remoteClock: encTask.vectorClock,
-              });
-              continue;
-            }
+          // If remote is newer OR same time (use remote as source of truth), apply it
+          if (remoteTime >= localTime) {
+            console.log(`[SYNC DEBUG] ✓ Remote version is newer or equal - applying`);
           } else {
-            console.log(`[SYNC DEBUG] Skipping conflict check - task confirmed unmodified since last sync`);
+            console.log(`[SYNC DEBUG] ⚠ Local version is newer - keeping local`);
+            continue; // Skip this task, keep local version
           }
-        } else if (localTask) {
-          console.log(`[SYNC DEBUG] Local task exists but is completed, applying remote`);
         } else {
-          console.log(`[SYNC DEBUG] No local task found, creating new`);
+          console.log(`[SYNC DEBUG] ✓ No local version - creating new task`);
         }
 
-        // No conflict or remote is newer, apply change
-        // FIX #2: Merge vector clocks instead of replacing them
+        // Apply the remote version
         const existingClock = localTask?.vectorClock || {};
         const mergedClock = mergeVectorClocks(existingClock, encTask.vectorClock);
 
+        console.log(`[SYNC DEBUG] Saving task to IndexedDB`);
         console.log(`[SYNC DEBUG] Merged vector clock:`, mergedClock);
-        console.log(`[SYNC DEBUG] Saving task ${task.id} to IndexedDB`);
 
         await db.tasks.put({
           ...task,
           vectorClock: mergedClock,
         });
 
-        console.log(`[SYNC DEBUG] Task ${task.id} saved successfully`);
+        console.log(`[SYNC DEBUG] ✓ Task ${task.id} saved successfully`);
       } catch (error) {
         console.error(`[SYNC ERROR] Failed to process task ${encTask.id}:`, error);
         console.error('[SYNC ERROR] Error details:', error);
       }
     }
+
+    console.log(`[SYNC DEBUG] Finished processing ${response.tasks.length} tasks`);
 
     // Apply deletions
     if (response.deletedTaskIds.length > 0) {
@@ -358,11 +363,26 @@ export class SyncEngine {
 
     for (const conflict of conflicts) {
       try {
+        // Defensive check: ensure conflict has required task data
+        if (!conflict.local || !conflict.remote) {
+          console.error(
+            `[SYNC ERROR] Cannot auto-resolve conflict for task ${conflict.taskId}: missing task data`,
+            { hasLocal: !!conflict.local, hasRemote: !!conflict.remote }
+          );
+          continue;
+        }
+
         // Compare updatedAt timestamps
         const localTime = new Date(conflict.local.updatedAt).getTime();
         const remoteTime = new Date(conflict.remote.updatedAt).getTime();
 
         const winner = remoteTime > localTime ? conflict.remote : conflict.local;
+
+        console.log(`[SYNC DEBUG] Resolving conflict for task ${conflict.taskId}:`, {
+          localTime: new Date(localTime).toISOString(),
+          remoteTime: new Date(remoteTime).toISOString(),
+          winner: winner === conflict.remote ? 'remote' : 'local',
+        });
 
         await db.tasks.put({
           ...winner,

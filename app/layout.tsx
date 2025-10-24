@@ -11,6 +11,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { ClientLayout } from "@/components/client-layout";
+import { SyncDebugInstaller } from "@/components/sync-debug-installer";
 
 // const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 // const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -75,6 +76,7 @@ export default function RootLayout({
               <PwaRegister />
               <InstallPwaPrompt />
               <PwaUpdateToast />
+              <SyncDebugInstaller />
               <Toaster richColors position="top-center" />
             </ToastProvider>
           </ThemeProvider>

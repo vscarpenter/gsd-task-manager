@@ -263,3 +263,44 @@ export async function getSyncStatus() {
     serverUrl: config?.serverUrl || null,
   };
 }
+
+/**
+ * Reset sync state and perform full sync from server
+ * This clears lastSyncAt and vector clocks to force a complete pull
+ * Useful for debugging sync issues or recovering from inconsistent state
+ */
+export async function resetAndFullSync(): Promise<void> {
+  const config = await getSyncConfig();
+  if (!config || !config.enabled) {
+    throw new Error('Sync not enabled');
+  }
+
+  const db = getDb();
+
+  console.log('[SYNC RESET] Starting full sync reset...');
+  console.log('[SYNC RESET] Current state:', {
+    lastSyncAt: config.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
+    vectorClock: config.vectorClock,
+    pendingOps: await db.syncQueue.count(),
+  });
+
+  // Step 1: Clear sync queue (don't push local changes)
+  await db.syncQueue.clear();
+  console.log('[SYNC RESET] Cleared sync queue');
+
+  // Step 2: Reset sync metadata to force full pull
+  await db.syncMetadata.put({
+    ...config,
+    lastSyncAt: 0, // Set to 0 to pull all tasks from server
+    vectorClock: {}, // Reset vector clock
+    key: 'sync_config',
+  });
+  console.log('[SYNC RESET] Reset sync metadata (lastSyncAt=0, vectorClock={})');
+
+  // Step 3: Clear all local tasks
+  const taskCount = await db.tasks.count();
+  await db.tasks.clear();
+  console.log(`[SYNC RESET] Cleared ${taskCount} local tasks`);
+
+  console.log('[SYNC RESET] Reset complete. Run sync() to pull all tasks from server.');
+}
