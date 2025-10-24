@@ -47,9 +47,9 @@ export async function push(
     // Process each operation
     for (const op of validated.operations) {
       try {
-        // Fetch existing task (if any)
+        // FIX #3: Fetch existing task including soft-deleted ones for proper conflict detection
         const existing = await env.DB.prepare(
-          'SELECT * FROM encrypted_tasks WHERE id = ? AND user_id = ? AND deleted_at IS NULL'
+          'SELECT * FROM encrypted_tasks WHERE id = ? AND user_id = ?'
         )
           .bind(op.taskId, userId)
           .first();
@@ -57,6 +57,51 @@ export async function push(
         // Handle delete operation
         if (op.type === 'delete') {
           if (existing) {
+            // FIX #3: Check for delete conflicts using vector clocks
+            const existingClock: VectorClock = JSON.parse(existing.vector_clock as string);
+            const comparison = compareVectorClocks(existingClock, op.vectorClock);
+
+            logger.info('Delete operation vector clock comparison', {
+              taskId: op.taskId,
+              comparison,
+              existingClock,
+              incomingClock: op.vectorClock,
+            });
+
+            // If incoming delete is stale or concurrent, report conflict
+            if (comparison === 'a_before_b') {
+              // Server version is newer than delete request - conflict!
+              logger.info('Delete conflict: server has newer version', {
+                taskId: op.taskId,
+                existingClock,
+                incomingClock: op.vectorClock,
+              });
+
+              results.conflicts.push({
+                taskId: op.taskId,
+                reason: 'delete_conflict',
+                existingClock,
+                incomingClock: op.vectorClock,
+              });
+              continue;
+            } else if (comparison === 'concurrent') {
+              // Concurrent edits - conflict!
+              logger.info('Delete conflict: concurrent modifications', {
+                taskId: op.taskId,
+                existingClock,
+                incomingClock: op.vectorClock,
+              });
+
+              results.conflicts.push({
+                taskId: op.taskId,
+                reason: 'concurrent_edit',
+                existingClock,
+                incomingClock: op.vectorClock,
+              });
+              continue;
+            }
+
+            // Delete is newer or equal, proceed with soft delete
             await env.DB.prepare(
               `UPDATE encrypted_tasks
                SET deleted_at = ?, updated_at = ?, vector_clock = ?, last_modified_device = ?

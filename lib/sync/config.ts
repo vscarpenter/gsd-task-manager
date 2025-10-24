@@ -6,6 +6,7 @@
 import { getDb } from '@/lib/db';
 import { getCryptoManager } from './crypto';
 import { getApiClient } from './api-client';
+import { getSyncQueue } from './queue';
 import type { SyncConfig, RegisterRequest, LoginRequest } from './types';
 
 /**
@@ -109,6 +110,16 @@ export async function enableSync(
   // Set token in API client
   const api = getApiClient(current.serverUrl);
   api.setToken(token);
+
+  // FIX #1: Populate sync queue with existing tasks for initial sync
+  // This happens ONCE when sync is enabled, not on every sync
+  // Prevents infinite re-queue loop that was causing sync failures
+  const taskCount = await db.tasks.count();
+  if (taskCount > 0) {
+    const queue = getSyncQueue();
+    const populatedCount = await queue.populateFromExistingTasks();
+    console.log(`[SYNC] Initial sync setup: queued ${populatedCount} existing tasks`);
+  }
 }
 
 /**
