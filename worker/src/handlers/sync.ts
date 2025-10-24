@@ -296,73 +296,40 @@ export async function pull(
     logger.info('Processing tasks for pull', {
       userId,
       deviceId: validated.deviceId,
+      sinceTimestamp,
+      sinceDate: sinceTimestamp > 0 ? new Date(sinceTimestamp).toISOString() : 'epoch',
       tasksFound: tasks.results?.length || 0,
       clientVectorClock: validated.lastVectorClock,
     });
 
-    // Process tasks
+    // BULLETPROOF FIX: Always send all tasks updated since lastSyncAt
+    // Vector clocks are only used for conflict detection, NOT for filtering
+    // This ensures new tasks from other devices always get pulled
     for (const task of tasks.results || []) {
       const taskClock: VectorClock = JSON.parse(task.vector_clock as string);
-      const comparison = compareVectorClocks(validated.lastVectorClock, taskClock);
 
-      logger.info('Comparing vector clocks', {
+      logger.info('Processing task for pull', {
         taskId: task.id,
-        comparison,
-        clientClock: validated.lastVectorClock,
+        taskUpdatedAt: task.updated_at,
+        taskUpdatedDate: new Date(task.updated_at as number).toISOString(),
         serverClock: taskClock,
       });
 
-      // Check for conflicts
-      if (comparison === 'concurrent') {
-        logger.info('Concurrent conflict detected', {
-          taskId: task.id,
-          clientClock: validated.lastVectorClock,
-          serverClock: taskClock,
-        });
+      // Always send the task - let client handle conflicts and deduplication
+      response.tasks.push({
+        id: task.id as string,
+        encryptedBlob: task.encrypted_blob as string,
+        nonce: task.nonce as string,
+        version: task.version as number,
+        vectorClock: taskClock,
+        updatedAt: task.updated_at as number,
+        checksum: task.checksum as string,
+      });
 
-        response.conflicts.push({
-          taskId: task.id as string,
-          reason: 'concurrent_edit',
-          existingClock: validated.lastVectorClock,
-          incomingClock: taskClock,
-        });
-        // FIX #1: Still send task data for client-side conflict resolution
-        // Client needs the remote version to perform last-write-wins resolution
-        response.tasks.push({
-          id: task.id as string,
-          encryptedBlob: task.encrypted_blob as string,
-          nonce: task.nonce as string,
-          version: task.version as number,
-          vectorClock: taskClock,
-          updatedAt: task.updated_at as number,
-          checksum: task.checksum as string,
-        });
-        continue;
-      }
-
-      // Only send if server has newer version
-      if (comparison === 'a_before_b' || comparison === 'identical') {
-        logger.info('Sending task to client', {
-          taskId: task.id,
-          comparison,
-          serverUpdatedAt: task.updated_at,
-        });
-
-        response.tasks.push({
-          id: task.id as string,
-          encryptedBlob: task.encrypted_blob as string,
-          nonce: task.nonce as string,
-          version: task.version as number,
-          vectorClock: taskClock,
-          updatedAt: task.updated_at as number,
-          checksum: task.checksum as string,
-        });
-      } else {
-        logger.info('Skipping task (client has newer version)', {
-          taskId: task.id,
-          comparison,
-        });
-      }
+      logger.info('Task queued for client', {
+        taskId: task.id,
+        reason: 'timestamp-based-pull',
+      });
     }
 
     // Fetch deleted tasks
