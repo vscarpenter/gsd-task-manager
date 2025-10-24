@@ -213,13 +213,22 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
 
 export async function deleteTask(id: string): Promise<void> {
   const db = getDb();
+
+  // FIX #3: Read task BEFORE deleting to preserve vector clock
+  // This is critical for conflict detection on the server
+  const task = await db.tasks.get(id);
+  const vectorClock = task?.vectorClock || {};
+
   await db.tasks.delete(id);
 
   // Enqueue sync operation if sync is enabled
   const syncConfig = await getSyncConfig();
   if (syncConfig?.enabled) {
     const queue = getSyncQueue();
-    await queue.enqueue('delete', id, null, {});
+    // Increment vector clock for delete operation
+    const deviceId = syncConfig.deviceId || 'local';
+    const deleteClock = incrementVectorClock(vectorClock, deviceId);
+    await queue.enqueue('delete', id, null, deleteClock);
   }
 }
 

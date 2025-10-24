@@ -61,19 +61,12 @@ export class SyncEngine {
       const api = getApiClient(config.serverUrl);
       api.setToken(config.token);
 
-      // Check if we need to populate queue with existing tasks
-      const queue = getSyncQueue();
-      const pendingCount = await queue.getPendingCount();
-      const db = getDb();
-      const taskCount = await db.tasks.count();
+      // FIX #1: Removed queue auto-population to prevent infinite re-sync loop
+      // Queue population now happens ONCE in enableSync() when sync is first enabled
+      // This prevents already-synced tasks from being re-queued on every sync
 
-      // If queue is empty but we have tasks, populate the queue
-      if (pendingCount === 0 && taskCount > 0) {
-        const count = await queue.populateFromExistingTasks();
-        if (count > 0) {
-          console.log(`Populated sync queue with ${count} existing tasks`);
-        }
-      }
+      // Capture sync start time BEFORE push/pull operations
+      const syncStartTime = Date.now();
 
       // Phase 1: Push local changes
       const pushResult = await this.pushLocalChanges(config, crypto, api);
@@ -96,7 +89,8 @@ export class SyncEngine {
       }
 
       // Phase 4: Update sync metadata
-      await this.updateSyncMetadata(updatedConfig, pullResult.serverVectorClock);
+      // FIX #2: Pass sync start time to prevent race condition window
+      await this.updateSyncMetadata(updatedConfig, pullResult.serverVectorClock, syncStartTime);
 
       const result: SyncResult = {
         status: conflicts.length > 0 && updatedConfig.conflictStrategy === 'manual' ? 'conflict' : 'success',
@@ -387,16 +381,18 @@ export class SyncEngine {
   /**
    * Update sync metadata after successful sync
    */
-  private async updateSyncMetadata(config: SyncConfig, serverClock: VectorClock): Promise<void> {
+  private async updateSyncMetadata(config: SyncConfig, serverClock: VectorClock, syncStartTime: number): Promise<void> {
     const db = getDb();
 
     const mergedClock = mergeVectorClocks(config.vectorClock, serverClock);
 
+    // FIX #2: Use sync START time instead of END time to prevent race condition
+    // Tasks updated after sync starts will be caught in the next sync
     // FIX #4: Subtract 1ms to work properly with >= in server queries
     // This prevents re-fetching the same tasks on next sync
     await db.syncMetadata.put({
       ...config,
-      lastSyncAt: Date.now() - 1,
+      lastSyncAt: syncStartTime - 1,
       vectorClock: mergedClock,
       key: 'sync_config',
     });
