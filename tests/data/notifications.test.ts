@@ -460,11 +460,15 @@ describe("Notifications module", () => {
 			const task = createTask({ title: "Important Task" });
 
 			const mockShowNotification = vi.fn().mockResolvedValue(undefined);
-			global.navigator.serviceWorker = {
-				ready: Promise.resolve({
-					showNotification: mockShowNotification,
-				} as any),
-			} as any;
+			Object.defineProperty(global.navigator, 'serviceWorker', {
+				value: {
+					ready: Promise.resolve({
+						showNotification: mockShowNotification,
+					} as any),
+				} as any,
+				writable: true,
+				configurable: true,
+			});
 
 			await showTaskNotification(task, 15);
 
@@ -490,7 +494,11 @@ describe("Notifications module", () => {
 			const task = createTask({ title: "Test Task" });
 
 			// No service worker
-			global.navigator.serviceWorker = undefined as any;
+			Object.defineProperty(global.navigator, 'serviceWorker', {
+				value: undefined as any,
+				writable: true,
+				configurable: true,
+			});
 
 			await showTaskNotification(task, 15);
 
@@ -517,7 +525,11 @@ describe("Notifications module", () => {
 			const task = createTask({ title: "Task" });
 
 			// No service worker to test Notification constructor
-			global.navigator.serviceWorker = undefined as any;
+			Object.defineProperty(global.navigator, 'serviceWorker', {
+				value: undefined as any,
+				writable: true,
+				configurable: true,
+			});
 
 			// Due now
 			await showTaskNotification(task, 0);
