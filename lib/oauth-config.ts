@@ -55,11 +55,16 @@ export function isOAuthOriginAllowed(origin: string): boolean {
     return true;
   }
 
-  // Allow any localhost/127.0.0.1 port for development flexibility
-  if (
-    origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:')
-  ) {
+  // Allow specific localhost/127.0.0.1 ports for development
+  // Restricting to known ports (3000 for Next.js dev, 8787 for Wrangler)
+  // reduces attack surface from malicious local applications
+  const allowedDevPorts = ['3000', '8787'];
+  const isAllowedDevOrigin = allowedDevPorts.some(port =>
+    origin === `http://localhost:${port}` ||
+    origin === `http://127.0.0.1:${port}`
+  );
+
+  if (isAllowedDevOrigin) {
     return true;
   }
 

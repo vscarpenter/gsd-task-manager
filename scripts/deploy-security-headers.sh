@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Deploy CloudFront Function for URL rewriting
-# This script creates a CloudFront Function and attaches it to the distribution
+# Deploy CloudFront Function for Security Headers
+# This script creates a CloudFront Function and attaches it to the distribution (viewer-response)
 
 set -e  # Exit on error
 
@@ -10,9 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Get the project root (parent of scripts directory)
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-FUNCTION_NAME="gsd-url-rewrite"
+FUNCTION_NAME="gsd-security-headers"
 DISTRIBUTION_ID="E1T6GDX0TQEP94"
-FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-url-rewrite.js"
+FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-security-headers.js"
 
 echo "🚀 Deploying CloudFront Function: $FUNCTION_NAME"
 echo "📂 Using function file: $FUNCTION_FILE"
@@ -28,7 +28,7 @@ if [ -z "$FUNCTION_EXISTS" ]; then
   # Create the function
   FUNCTION_ARN=$(aws cloudfront create-function \
     --name "$FUNCTION_NAME" \
-    --function-config Comment="URL rewrite for Next.js static export with trailing slashes",Runtime="cloudfront-js-2.0" \
+    --function-config Comment="Security headers (CSP, X-Frame-Options, etc.) for GSD Task Manager",Runtime="cloudfront-js-2.0" \
     --function-code fileb://"$FUNCTION_FILE" \
     --query 'FunctionSummary.FunctionMetadata.FunctionARN' \
     --output text)
@@ -44,7 +44,7 @@ else
   FUNCTION_ARN=$(aws cloudfront update-function \
     --name "$FUNCTION_NAME" \
     --if-match "$ETAG" \
-    --function-config Comment="URL rewrite for Next.js static export with trailing slashes",Runtime="cloudfront-js-2.0" \
+    --function-config Comment="Security headers (CSP, X-Frame-Options, etc.) for GSD Task Manager",Runtime="cloudfront-js-2.0" \
     --function-code fileb://"$FUNCTION_FILE" \
     --query 'FunctionSummary.FunctionMetadata.FunctionARN' \
     --output text)
@@ -72,15 +72,35 @@ echo "🔗 Attaching function to distribution..."
 # Extract just the DistributionConfig
 jq '.DistributionConfig' /tmp/dist-config.json > /tmp/dist-config-only.json
 
-# Add the function association to DefaultCacheBehavior
-jq --arg arn "$FUNCTION_ARN" \
-  '.DefaultCacheBehavior.FunctionAssociations.Quantity = 1 |
-   .DefaultCacheBehavior.FunctionAssociations.Items = [
-     {
-       "FunctionARN": $arn,
-       "EventType": "viewer-request"
-     }
-   ]' /tmp/dist-config-only.json > /tmp/dist-config-updated.json
+# Get existing viewer-request function (if any)
+VIEWER_REQUEST_FUNCTION=$(jq -r '.DefaultCacheBehavior.FunctionAssociations.Items[] | select(.EventType == "viewer-request") | .FunctionARN' /tmp/dist-config-only.json || echo "")
+
+# Build function associations array
+if [ -z "$VIEWER_REQUEST_FUNCTION" ]; then
+  # Only viewer-response (this function)
+  jq --arg arn "$FUNCTION_ARN" \
+    '.DefaultCacheBehavior.FunctionAssociations.Quantity = 1 |
+     .DefaultCacheBehavior.FunctionAssociations.Items = [
+       {
+         "FunctionARN": $arn,
+         "EventType": "viewer-response"
+       }
+     ]' /tmp/dist-config-only.json > /tmp/dist-config-updated.json
+else
+  # Both viewer-request and viewer-response
+  jq --arg arn "$FUNCTION_ARN" --arg vr_arn "$VIEWER_REQUEST_FUNCTION" \
+    '.DefaultCacheBehavior.FunctionAssociations.Quantity = 2 |
+     .DefaultCacheBehavior.FunctionAssociations.Items = [
+       {
+         "FunctionARN": $vr_arn,
+         "EventType": "viewer-request"
+       },
+       {
+         "FunctionARN": $arn,
+         "EventType": "viewer-response"
+       }
+     ]' /tmp/dist-config-only.json > /tmp/dist-config-updated.json
+fi
 
 # Update the distribution
 aws cloudfront update-distribution \
@@ -107,9 +127,13 @@ rm -f /tmp/dist-config.json /tmp/dist-config-only.json /tmp/dist-config-updated.
 echo ""
 echo "🎉 Deployment complete!"
 echo ""
-echo "The CloudFront Function is now deployed and will rewrite:"
-echo "  /dashboard/ → /dashboard/index.html"
-echo "  /install/ → /install/index.html"
+echo "Security headers are now being added to all responses:"
+echo "  - Content-Security-Policy (CSP)"
+echo "  - X-Frame-Options: DENY"
+echo "  - X-Content-Type-Options: nosniff"
+echo "  - X-XSS-Protection: 1; mode=block"
+echo "  - Referrer-Policy: strict-origin-when-cross-origin"
+echo "  - Permissions-Policy: geolocation=(), microphone=(), camera=()"
 echo ""
 echo "Cache invalidation is in progress. Changes may take a few minutes to propagate."
 echo "You can check the status at: https://console.aws.amazon.com/cloudfront/v3/home#/distributions/$DISTRIBUTION_ID"
