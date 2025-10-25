@@ -1,115 +1,104 @@
 /**
  * Sync debugging utilities
- * These functions are exposed to window.syncDebug for manual testing
+ * Run these in browser console to diagnose sync issues
  */
 
-import { getSyncConfig, resetAndFullSync } from './config';
-import { getSyncQueue } from './queue';
-import { getSyncEngine } from './engine';
 import { getDb } from '@/lib/db';
+import { getSyncQueue } from './queue';
 
-export interface SyncDebugTools {
-  /**
-   * Get current sync state (config, queue, tasks)
-   */
-  getState: () => Promise<{
-    config: any;
-    queue: any[];
-    taskCount: number;
-    syncQueueCount: number;
-  }>;
-
-  /**
-   * Reset sync state and pull all tasks from server
-   * WARNING: Clears all local tasks and pending operations
-   */
-  fullReset: () => Promise<void>;
-
-  /**
-   * Manually trigger a sync operation
-   */
-  sync: () => Promise<any>;
-
-  /**
-   * View pending sync queue
-   */
-  viewQueue: () => Promise<any[]>;
-
-  /**
-   * Clear sync queue without syncing
-   */
-  clearQueue: () => Promise<void>;
-}
-
-export function createSyncDebugTools(): SyncDebugTools {
+export async function debugSyncQueue() {
+  const db = getDb();
+  const queue = getSyncQueue();
+  
+  console.log('=== SYNC QUEUE DEBUG ===');
+  
+  // Get all pending operations
+  const pending = await queue.getPending();
+  console.log(`Total pending operations: ${pending.length}`);
+  
+  if (pending.length > 0) {
+    console.log('\nPending operations:');
+    for (const op of pending) {
+      console.log({
+        id: op.id,
+        taskId: op.taskId,
+        operation: op.operation,
+        timestamp: new Date(op.timestamp).toISOString(),
+        retryCount: op.retryCount,
+        consolidatedFrom: op.consolidatedFrom?.length || 0,
+        hasPayload: !!op.payload,
+      });
+    }
+    
+    // Check for duplicate taskIds
+    const taskIds = pending.map(op => op.taskId);
+    const duplicates = taskIds.filter((id, index) => taskIds.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+      console.warn('\n⚠️  DUPLICATE TASK IDS IN QUEUE:', [...new Set(duplicates)]);
+    }
+  }
+  
+  // Get sync config
+  const configData = await db.syncMetadata.get('sync_config');
+  const config = configData && 'enabled' in configData ? configData : null;
+  console.log('\n=== SYNC CONFIG ===');
+  console.log({
+    enabled: config?.enabled,
+    lastSyncAt: config?.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
+    consecutiveFailures: config?.consecutiveFailures,
+    nextRetryAt: config?.nextRetryAt ? new Date(config.nextRetryAt).toISOString() : null,
+    vectorClock: config?.vectorClock,
+  });
+  
+  // Get all tasks
+  const tasks = await db.tasks.toArray();
+  console.log('\n=== TASKS ===');
+  console.log(`Total tasks: ${tasks.length}`);
+  
   return {
-    getState: async () => {
-      const config = await getSyncConfig();
-      const queue = getSyncQueue();
-      const pending = await queue.getPending();
-      const db = getDb();
-      const taskCount = await db.tasks.count();
-      const syncQueueCount = await db.syncQueue.count();
-
-      return {
-        config: {
-          enabled: config?.enabled,
-          email: config?.email,
-          deviceId: config?.deviceId,
-          lastSyncAt: config?.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
-          vectorClock: config?.vectorClock,
-          serverUrl: config?.serverUrl,
-        },
-        queue: pending,
-        taskCount,
-        syncQueueCount,
-      };
-    },
-
-    fullReset: async () => {
-      console.log('[SYNC DEBUG] ⚠️  WARNING: This will clear all local tasks!');
-      console.log('[SYNC DEBUG] Make sure tasks are synced to server before proceeding.');
-
-      await resetAndFullSync();
-
-      console.log('[SYNC DEBUG] ✅ Reset complete. Now call syncDebug.sync() to pull from server.');
-    },
-
-    sync: async () => {
-      const engine = getSyncEngine();
-      const result = await engine.sync();
-      console.log('[SYNC DEBUG] Sync result:', result);
-      return result;
-    },
-
-    viewQueue: async () => {
-      const queue = getSyncQueue();
-      const pending = await queue.getPending();
-      console.log('[SYNC DEBUG] Pending sync operations:', pending);
-      return pending;
-    },
-
-    clearQueue: async () => {
-      const db = getDb();
-      const count = await db.syncQueue.count();
-      await db.syncQueue.clear();
-      console.log(`[SYNC DEBUG] Cleared ${count} pending operations`);
-    },
+    pendingOps: pending,
+    config,
+    tasks,
   };
 }
 
+export async function clearStuckOperations() {
+  const queue = getSyncQueue();
+  const pending = await queue.getPending();
+  
+  console.log(`Found ${pending.length} pending operations`);
+  
+  if (pending.length === 0) {
+    console.log('No operations to clear');
+    return;
+  }
+  
+  const confirm = window.confirm(
+    `Are you sure you want to clear ${pending.length} pending operations? This cannot be undone.`
+  );
+  
+  if (confirm) {
+    await queue.clear();
+    console.log('✓ Queue cleared');
+  } else {
+    console.log('Cancelled');
+  }
+}
+
 /**
- * Install debug tools on window object (client-side only)
+ * Install debug tools on window object for console access
  */
 export function installSyncDebugTools() {
   if (typeof window !== 'undefined') {
-    (window as any).syncDebug = createSyncDebugTools();
-    console.log('[SYNC DEBUG] Debug tools installed on window.syncDebug');
-    console.log('[SYNC DEBUG] Available commands:');
-    console.log('  - syncDebug.getState() - View current sync state');
-    console.log('  - syncDebug.viewQueue() - View pending operations');
-    console.log('  - syncDebug.sync() - Manually trigger sync');
-    console.log('  - syncDebug.clearQueue() - Clear pending operations');
-    console.log('  - syncDebug.fullReset() - Reset and pull all from server (DESTRUCTIVE)');
+    (window as any).debugSyncQueue = debugSyncQueue;
+    (window as any).clearStuckOperations = clearStuckOperations;
+    console.log('[SYNC DEBUG] Debug tools installed. Available functions:');
+    console.log('  - debugSyncQueue()');
+    console.log('  - clearStuckOperations()');
   }
+}
+
+// Auto-install in browser environment
+if (typeof window !== 'undefined') {
+  installSyncDebugTools();
 }

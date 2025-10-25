@@ -17,6 +17,7 @@ coverage
 
 # AI files
 .kiro
+.mcp.json
 
 # Logs
 npm-debug.log*

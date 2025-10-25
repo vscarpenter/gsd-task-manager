@@ -92,6 +92,10 @@ export function OAuthCallbackHandler() {
         conflictStrategy: existingSyncConfig?.conflictStrategy || 'last_write_wins',
         serverUrl,
         provider: authData.provider,
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
       });
 
       console.log('[OAuthCallbackHandler] Stored sync config in IndexedDB:', {
