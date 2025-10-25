@@ -46,6 +46,10 @@ const STORAGE_KEY = 'oauth_handshake_state';
 const RESULT_KEY = 'oauth_handshake_result';
 const CHANNEL_NAME = 'oauth-handshake';
 
+// Use sessionStorage instead of localStorage for better security
+// sessionStorage is cleared when the browser tab is closed, reducing XSS attack surface
+const storage = typeof window !== 'undefined' ? sessionStorage : null;
+
 const listeners = new Set<(event: OAuthHandshakeEvent) => void>();
 const processedStates = new Set<string>();
 const pendingFetches = new Map<string, Promise<void>>();
@@ -72,13 +76,13 @@ function ensureInitialized() {
   window.addEventListener('message', handleMessageEvent);
   window.addEventListener('storage', handleStorageEvent);
 
-  // Check for existing OAuth result in localStorage (critical for PWA standalone mode)
+  // Check for existing OAuth result in sessionStorage (critical for PWA standalone mode)
   // After OAuth callback redirects back to the app, the result is already in storage
   // but nobody has read it yet
   try {
-    const existingResult = localStorage.getItem(RESULT_KEY);
+    const existingResult = storage?.getItem(RESULT_KEY);
     if (existingResult) {
-      console.info('[OAuthHandshake] Found existing result in localStorage on init');
+      console.info('[OAuthHandshake] Found existing result in sessionStorage on init');
       const result = JSON.parse(existingResult) as OAuthHandshakeEvent;
 
       // Only process if we haven't already processed this state
@@ -89,10 +93,10 @@ function ensureInitialized() {
         });
         processedStates.add(result.state);
 
-        // Clear the result from localStorage to prevent duplicate processing
+        // Clear the result from sessionStorage to prevent duplicate processing
         try {
-          localStorage.removeItem(RESULT_KEY);
-          localStorage.removeItem(STORAGE_KEY); // Also clear the legacy key
+          storage?.removeItem(RESULT_KEY);
+          storage?.removeItem(STORAGE_KEY); // Also clear the legacy key
         } catch (e) {
           console.warn('[OAuthHandshake] Failed to clear processed result from storage:', e);
         }
@@ -308,7 +312,7 @@ export function announceOAuthState(state: string, success: boolean, error?: stri
     payload.result = result;
 
     try {
-      localStorage.setItem(RESULT_KEY, JSON.stringify(result));
+      storage?.setItem(RESULT_KEY, JSON.stringify(result));
     } catch (err) {
       console.warn('[OAuthHandshake] Failed to write handshake result to storage:', err);
     }
@@ -330,7 +334,7 @@ export function announceOAuthState(state: string, success: boolean, error?: stri
     }
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      storage?.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
       console.warn('[OAuthHandshake] Failed to write localStorage payload:', err);
     }

@@ -10,7 +10,7 @@ import {
 
 describe("Error Logger module", () => {
 	const originalEnv = process.env.NODE_ENV;
-	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+	let consoleErrorSpy: any;
 
 	beforeEach(() => {
 		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -18,7 +18,7 @@ describe("Error Logger module", () => {
 
 	afterEach(() => {
 		consoleErrorSpy.mockRestore();
-		process.env.NODE_ENV = originalEnv;
+		vi.stubEnv('NODE_ENV', originalEnv);
 	});
 
 	describe("logError", () => {
@@ -95,7 +95,7 @@ describe("Error Logger module", () => {
 		});
 
 		it("should log to console in development mode", () => {
-			process.env.NODE_ENV = "development";
+			vi.stubEnv('NODE_ENV', 'development');
 
 			const error = new Error("Dev error");
 			const context: ErrorContext = {
@@ -118,7 +118,7 @@ describe("Error Logger module", () => {
 		});
 
 		it("should log minimal info in production mode", () => {
-			process.env.NODE_ENV = "production";
+			vi.stubEnv('NODE_ENV', 'production');
 
 			const error = new Error("Prod error");
 			const context: ErrorContext = {
