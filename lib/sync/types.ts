@@ -24,6 +24,11 @@ export interface SyncConfig {
   conflictStrategy: 'last_write_wins' | 'manual';
   serverUrl: string;
   provider?: string | null;
+  // Retry tracking fields
+  consecutiveFailures: number;
+  lastFailureAt: number | null;
+  lastFailureReason: string | null;
+  nextRetryAt: number | null;
 }
 
 // Sync queue item (pending operations)
@@ -35,6 +40,8 @@ export interface SyncQueueItem {
   retryCount: number;
   payload: TaskRecord | null;
   vectorClock: VectorClock;
+  consolidatedFrom?: string[]; // IDs of operations merged into this one
+  lastAttemptAt?: number; // Timestamp of last sync attempt
 }
 
 // Device info

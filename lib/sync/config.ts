@@ -41,7 +41,11 @@ async function ensureSyncConfigInitialized(): Promise<void> {
       lastSyncAt: null,
       vectorClock: {},
       conflictStrategy: 'last_write_wins' as const,
-      serverUrl
+      serverUrl,
+      consecutiveFailures: 0,
+      lastFailureAt: null,
+      lastFailureReason: null,
+      nextRetryAt: null,
     });
   }
 }
@@ -53,7 +57,27 @@ export async function getSyncConfig(): Promise<SyncConfig | null> {
   await ensureSyncConfigInitialized();
   const db = getDb();
   const config = await db.syncMetadata.get('sync_config');
-  return config as SyncConfig | null;
+  
+  if (!config) {
+    return null;
+  }
+  
+  // Handle legacy configs without retry tracking fields
+  const syncConfig = config as SyncConfig;
+  if (syncConfig.consecutiveFailures === undefined) {
+    syncConfig.consecutiveFailures = 0;
+  }
+  if (syncConfig.lastFailureAt === undefined) {
+    syncConfig.lastFailureAt = null;
+  }
+  if (syncConfig.lastFailureReason === undefined) {
+    syncConfig.lastFailureReason = null;
+  }
+  if (syncConfig.nextRetryAt === undefined) {
+    syncConfig.nextRetryAt = null;
+  }
+  
+  return syncConfig;
 }
 
 /**
@@ -120,6 +144,15 @@ export async function enableSync(
     const populatedCount = await queue.populateFromExistingTasks();
     console.log(`[SYNC] Initial sync setup: queued ${populatedCount} existing tasks`);
   }
+
+  // Start health monitor when sync is enabled
+  // Note: The useSync hook also manages this, but we start it here for immediate monitoring
+  const { getHealthMonitor } = await import('./health-monitor');
+  const healthMonitor = getHealthMonitor();
+  if (!healthMonitor.isActive()) {
+    console.log('[SYNC] Starting health monitor (sync enabled)');
+    healthMonitor.start();
+  }
 }
 
 /**
@@ -131,6 +164,14 @@ export async function disableSync(): Promise<void> {
 
   if (!current) {
     return;
+  }
+
+  // Stop health monitor when sync is disabled
+  const { getHealthMonitor } = await import('./health-monitor');
+  const healthMonitor = getHealthMonitor();
+  if (healthMonitor.isActive()) {
+    console.log('[SYNC] Stopping health monitor (sync disabled)');
+    healthMonitor.stop();
   }
 
   // Clear crypto manager
