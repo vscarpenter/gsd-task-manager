@@ -70,17 +70,16 @@ GSD Task Manager implements a **privacy-first, end-to-end encrypted sync system*
 
 GSD uses the **Authorization Code Flow with PKCE**:
 
-```
-Client → Authorization Request → Authorization Server
-         (with code_challenge)
-                                        ↓
-                               User Authenticates
-                                        ↓
-Authorization Server → Redirect with Code → Client
-                                        ↓
-Client → Token Exchange (with code_verifier) → Authorization Server
-                                        ↓
-Authorization Server → ID Token + Access Token → Client
+```mermaid
+graph LR
+    A[Client] -->|1. Authorization Request<br/>with code_challenge| B[Authorization Server]
+    B -->|2. User Authenticates| B
+    B -->|3. Redirect with Code| A
+    A -->|4. Token Exchange<br/>with code_verifier| B
+    B -->|5. ID Token + Access Token| A
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
 ```
 
 ---
@@ -119,54 +118,64 @@ Authorization Server → ID Token + Access Token → Client
 
 ### High-Level Components
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    GSD Task Manager                          │
-│  ┌────────────┐     ┌──────────────┐    ┌───────────────┐  │
-│  │   Client   │────▶│ OAuth Buttons│───▶│ OAuth Callback│  │
-│  │  (Browser) │     │  Component   │    │   Handler     │  │
-│  └────────────┘     └──────────────┘    └───────────────┘  │
-└────────────┬────────────────────────────────────┬───────────┘
-             │                                     │
-             │ HTTPS                               │ HTTPS
-             ▼                                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Cloudflare Worker (Backend)                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │ OAuth Start  │  │ OAuth Callback│  │ OAuth Result │     │
-│  │   Handler    │  │   Handler     │  │   Endpoint   │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-│         │                  │                  │             │
-│         │                  ▼                  │             │
-│         │          ┌──────────────┐           │             │
-│         │          │  KV Storage  │           │             │
-│         │          │ (State/JWT)  │           │             │
-│         │          └──────────────┘           │             │
-│         ▼                  │                  ▼             │
-│  ┌──────────────┐         │          ┌──────────────┐     │
-│  │ D1 Database  │◀────────┘          │  JWT Tokens  │     │
-│  │ (Users/Devs) │                    │  (Sessions)  │     │
-│  └──────────────┘                    └──────────────┘     │
-└────────────┬───────────────────────────────────────────────┘
-             │ HTTPS
-             ▼
-┌─────────────────────────────────────────────────────────────┐
-│           OAuth Provider (Google / Apple)                    │
-│  ┌──────────────┐           ┌──────────────┐               │
-│  │ Authorization│           │ Token        │               │
-│  │ Endpoint     │           │ Endpoint     │               │
-│  └──────────────┘           └──────────────┘               │
-│                    ┌──────────────┐                         │
-│                    │ JWKS URI     │                         │
-│                    │ (Public Keys)│                         │
-│                    └──────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Client["GSD Task Manager (Browser)"]
+        C1[Client/Browser]
+        C2[OAuth Buttons Component]
+        C3[OAuth Callback Handler]
+        C1 --> C2
+        C2 --> C3
+    end
+
+    subgraph Worker["Cloudflare Worker (Backend)"]
+        W1[OAuth Start Handler]
+        W2[OAuth Callback Handler]
+        W3[OAuth Result Endpoint]
+        W4[(KV Storage<br/>State/JWT)]
+        W5[(D1 Database<br/>Users/Devices)]
+        W6[JWT Tokens<br/>Sessions]
+
+        W1 --> W4
+        W2 --> W4
+        W2 --> W5
+        W3 --> W4
+        W3 --> W6
+    end
+
+    subgraph Provider["OAuth Provider (Google/Apple)"]
+        P1[Authorization Endpoint]
+        P2[Token Endpoint]
+        P3[JWKS URI<br/>Public Keys]
+    end
+
+    C1 -.HTTPS.-> W1
+    C3 -.HTTPS.-> W3
+    W1 -.HTTPS.-> P1
+    W2 -.HTTPS.-> P2
+    W2 -.HTTPS.-> P3
+
+    style Client fill:#e1f5ff
+    style Worker fill:#fff4e1
+    style Provider fill:#e8f5e9
 ```
 
 ### Data Flow
 
-```
-User Click → Client → Worker → OAuth Provider → Worker → KV → Client
+```mermaid
+graph LR
+    A[User Click] --> B[Client]
+    B --> C[Worker]
+    C --> D[OAuth Provider]
+    D --> C
+    C --> E[KV Storage]
+    E --> B
+
+    style A fill:#f0f0f0
+    style B fill:#e1f5ff
+    style C fill:#fff4e1
+    style D fill:#e8f5e9
+    style E fill:#ffe1f5
 ```
 
 ### Storage Locations
@@ -1572,114 +1581,76 @@ npx wrangler kv:key list --namespace-id=<KV_ID> --prefix="oauth_result:"
 
 ### Desktop Popup Flow
 
-```
-┌──────┐       ┌────────┐       ┌────────┐       ┌─────────┐       ┌─────────┐
-│ User │       │ Client │       │ Worker │       │ Provider│       │Callback │
-└──┬───┘       └───┬────┘       └───┬────┘       └────┬────┘       └────┬────┘
-   │               │                │                 │                  │
-   │  Click "Sign In"               │                 │                  │
-   ├──────────────>│                │                 │                  │
-   │               │ GET /oauth/google/start         │                  │
-   │               ├───────────────>│                 │                  │
-   │               │                │ Generate state, │                  │
-   │               │                │ PKCE verifier   │                  │
-   │               │                │ Store in KV     │                  │
-   │               │<───────────────┤                 │                  │
-   │               │ { authUrl, state }              │                  │
-   │               │                │                 │                  │
-   │               │ window.open(authUrl)            │                  │
-   │               ├────────────────────────────────>│                  │
-   │               │                │                 │                  │
-   │  Authenticate │                │                 │                  │
-   ├──────────────────────────────────────────────>│                  │
-   │               │                │                 │                  │
-   │               │                │ Redirect with code               │
-   │               │                │<────────────────┤                  │
-   │               │                │                 │                  │
-   │               │ POST /oauth/callback            │                  │
-   │               │                │ { code, state } │                  │
-   │               │                │                 │                  │
-   │               │                │ Verify state    │                  │
-   │               │                │ Exchange code   │                  │
-   │               │                │ for tokens      │                  │
-   │               │                ├────────────────>│                  │
-   │               │                │<────────────────┤                  │
-   │               │                │ { id_token, ... }                 │
-   │               │                │                 │                  │
-   │               │                │ Verify JWT      │                  │
-   │               │                │ Create user     │                  │
-   │               │                │ Store result    │                  │
-   │               │                │ in KV           │                  │
-   │               │                │                 │                  │
-   │               │                │ 302 Redirect    │                  │
-   │               │                ├─────────────────────────────────>│
-   │               │                │                 │                  │
-   │               │                │                 │ Fetch result     │
-   │               │                │                 │ from KV          │
-   │               │                │<────────────────────────────────┤
-   │               │                │ { authData }    │                  │
-   │               │                │                 │                  │
-   │               │                │                 │ postMessage      │
-   │               │<─────────────────────────────────────────────────┤
-   │               │ { type: 'oauth_handshake', authData, ... }       │
-   │               │                │                 │                  │
-   │               │ Process authData                │                  │
-   │               │ Store in IndexedDB              │                  │
-   │               │ Prompt encryption               │                  │
-   │<──────────────┤                │                 │                  │
-   │               │                │                 │                  │
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant Worker
+    participant Provider as OAuth Provider
+    participant Callback as Callback Page
+
+    User->>Client: Click "Sign In"
+    Client->>Worker: GET /oauth/google/start
+    Worker->>Worker: Generate state, PKCE verifier<br/>Store in KV
+    Worker-->>Client: { authUrl, state }
+
+    Client->>Provider: window.open(authUrl)
+    User->>Provider: Authenticate
+    Provider-->>Worker: Redirect with code
+
+    Worker->>Worker: POST /oauth/callback<br/>{ code, state }
+    Worker->>Worker: Verify state<br/>Exchange code for tokens
+    Worker->>Provider: Exchange code
+    Provider-->>Worker: { id_token, access_token }
+
+    Worker->>Worker: Verify JWT<br/>Create user<br/>Store result in KV
+    Worker-->>Callback: 302 Redirect
+
+    Callback->>Worker: Fetch result from KV
+    Worker-->>Callback: { authData }
+
+    Callback->>Client: postMessage<br/>{ type: 'oauth_handshake', authData }
+
+    Client->>Client: Process authData<br/>Store in IndexedDB<br/>Prompt encryption
+    Client-->>User: Encryption Dialog
 ```
 
 ### iOS PWA Redirect Flow
 
-```
-┌──────┐       ┌────────┐       ┌────────┐       ┌─────────┐       ┌─────────┐
-│ User │       │ Client │       │ Worker │       │ Provider│       │Callback │
-└──┬───┘       └───┬────┘       └───┬────┘       └────┬────┘       └────┬────┘
-   │               │                │                 │                  │
-   │  Click "Sign In"               │                 │                  │
-   ├──────────────>│                │                 │                  │
-   │               │ GET /oauth/google/start         │                  │
-   │               ├───────────────>│                 │                  │
-   │               │<───────────────┤                 │                  │
-   │               │ { authUrl, state }              │                  │
-   │               │                │                 │                  │
-   │               │ window.location.href = authUrl  │                  │
-   │               ├────────────────────────────────>│                  │
-   │               │ (entire app navigates away)     │                  │
-   │               │                │                 │                  │
-   │  Authenticate │                │                 │                  │
-   ├──────────────────────────────────────────────>│                  │
-   │               │                │                 │                  │
-   │               │                │ Redirect with code               │
-   │               │                │<────────────────┤                  │
-   │               │                │                 │                  │
-   │               │ POST /oauth/callback            │                  │
-   │               │                │ { code, state } │                  │
-   │               │                │ (process same as popup)           │
-   │               │                │                 │                  │
-   │               │                │ 302 Redirect    │                  │
-   │               │                ├─────────────────────────────────>│
-   │               │                │                 │                  │
-   │               │                │                 │ Fetch result     │
-   │               │                │<────────────────────────────────┤
-   │               │                │ { authData }    │                  │
-   │               │                │                 │                  │
-   │               │                │                 │ localStorage.setItem
-   │               │                │                 │ ('oauth_handshake_result', result)
-   │               │                │                 │                  │
-   │               │                │                 │ window.location.href = '/'
-   │               │<─────────────────────────────────────────────────┤
-   │               │ (app reloads)  │                 │                  │
-   │               │                │                 │                  │
-   │               │ On init: check localStorage     │                  │
-   │               │ Read 'oauth_handshake_result'   │                  │
-   │               │ Notify listeners                │                  │
-   │               │                │                 │                  │
-   │<──────────────┤                │                 │                  │
-   │  Encryption   │                │                 │                  │
-   │  Dialog       │                │                 │                  │
-   │               │                │                 │                  │
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant Worker
+    participant Provider as OAuth Provider
+    participant Callback as Callback Page
+
+    User->>Client: Click "Sign In"
+    Client->>Worker: GET /oauth/google/start
+    Worker-->>Client: { authUrl, state }
+
+    Note over Client,Provider: Entire app navigates away
+    Client->>Provider: window.location.href = authUrl
+    User->>Provider: Authenticate
+    Provider-->>Worker: Redirect with code
+
+    Worker->>Worker: POST /oauth/callback<br/>{ code, state }<br/>(process same as popup)
+    Worker->>Provider: Exchange code
+    Provider-->>Worker: { id_token, access_token }
+
+    Worker->>Worker: Verify JWT, Create user<br/>Store result in KV
+    Worker-->>Callback: 302 Redirect
+
+    Callback->>Worker: Fetch result from KV
+    Worker-->>Callback: { authData }
+
+    Callback->>Callback: localStorage.setItem<br/>('oauth_handshake_result', result)
+    Callback->>Client: window.location.href = '/'
+
+    Note over Client: App reloads completely
+
+    Client->>Client: On init: check localStorage<br/>Read 'oauth_handshake_result'<br/>Notify listeners
+    Client-->>User: Encryption Dialog
 ```
 
 ---
