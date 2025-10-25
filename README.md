@@ -28,38 +28,63 @@ GSD Task Manager is a **completely private** task manager that runs entirely in 
 ### Core Features
 
 #### 📊 **Task Management**
+
 ✅ **Eisenhower Matrix** — Organize tasks by urgency and importance across four quadrants
+
 ✅ **Task Dependencies** — Define blocking relationships between tasks with circular dependency prevention
+
 ✅ **Recurring Tasks** — Automatically recreate tasks on daily, weekly, or monthly schedules
+
 ✅ **Tags & Labels** — Categorize tasks with custom tags for easy filtering
+
 ✅ **Subtasks & Checklists** — Break down complex tasks into manageable steps with progress tracking
+
 ✅ **Batch Operations** — Select and manage multiple tasks at once (complete, move, tag, delete)
+
 ✅ **Smart Search** — Search across titles, descriptions, tags, and subtasks
 
 #### 📈 **Analytics & Insights**
+
 ✅ **Dashboard View** — Visualize productivity patterns with interactive charts
+
 ✅ **Completion Metrics** — Track daily, weekly, and monthly completion rates
+
 ✅ **Streak Tracking** — Monitor current and longest completion streaks
+
 ✅ **Quadrant Distribution** — Analyze where your time and energy is focused
+
 ✅ **Tag Analytics** — View completion rates and usage statistics per tag
+
 ✅ **Trend Analysis** — 7/30/90-day trend views with line and bar charts
 
 #### 🔐 **Privacy & Data**
+
 ✅ **Privacy-first** — All data stored locally in IndexedDB (no server by default)
+
 ✅ **End-to-End Encryption** — Optional cloud sync with client-side encryption (coming soon)
+
 ✅ **Export/Import** — Back up tasks as JSON with merge or replace modes
+
 ✅ **Works Offline** — Full functionality without internet connection
 
 #### 📱 **PWA & Notifications**
+
 ✅ **Install as PWA** — Works on desktop and mobile with offline support
+
 ✅ **Smart Notifications** — Configurable reminders (5min to 1 day before due)
+
 ✅ **Auto-Updates** — Service worker updates with user-friendly notifications
+
 ✅ **Periodic Sync** — Background sync for installed PWAs (Chrome/Edge)
 
 #### 🎨 **User Experience**
+
 ✅ **Dark Mode** — Automatic theme switching with system preference support
+
 ✅ **Keyboard Shortcuts** — Fast navigation (`n` for new task, `/` for search, `?` for help)
+
 ✅ **Drag & Drop** — Reorder tasks and move between quadrants
+
 ✅ **Responsive Design** — Optimized for desktop, tablet, and mobile
 
 ## How to Use
