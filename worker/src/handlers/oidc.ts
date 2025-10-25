@@ -246,16 +246,47 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
         );
       }
 
-      // Create new user
-      const userId = generateId();
-      await env.DB.prepare(
-        `INSERT INTO users (id, email, auth_provider, provider_user_id, created_at, updated_at, account_status)
-         VALUES (?, ?, ?, ?, ?, ?, 'active')`
-      )
-        .bind(userId, email, provider, providerUserId, now, now)
-        .run();
+      // Create new user with race condition protection
+      try {
+        const userId = generateId();
+        await env.DB.prepare(
+          `INSERT INTO users (id, email, auth_provider, provider_user_id, created_at, updated_at, account_status)
+           VALUES (?, ?, ?, ?, ?, ?, 'active')`
+        )
+          .bind(userId, email, provider, providerUserId, now, now)
+          .run();
 
-      user = { id: userId, email, account_status: 'active' };
+        user = { id: userId, email, account_status: 'active' };
+      } catch (error: any) {
+        // Handle race condition: concurrent insert with same email
+        if (error.message?.includes('UNIQUE constraint failed: users.email')) {
+          logger.warn('Race condition detected: concurrent user creation', {
+            email,
+            provider,
+            error: error.message,
+          });
+
+          // Re-query to get the actual provider that won the race
+          const actualUser = await env.DB.prepare(
+            'SELECT auth_provider FROM users WHERE email = ?'
+          )
+            .bind(email)
+            .first();
+
+          if (actualUser) {
+            const providerName = actualUser.auth_provider === 'google' ? 'Google' : 'Apple';
+            return errorResponse(
+              `This email is already registered with ${providerName}. Please sign in with ${providerName} or use a different email address.`,
+              409,
+              origin
+            );
+          }
+        }
+
+        // Re-throw if it's a different error
+        logger.error('User creation failed', error, { email, provider });
+        throw error;
+      }
     } else {
       // Check account status
       if (user.account_status !== 'active') {
