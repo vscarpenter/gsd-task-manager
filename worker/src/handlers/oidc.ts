@@ -229,6 +229,23 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const encryptionSalt = user?.encryption_salt as string | null;
 
     if (!user) {
+      // Check if email is already registered with a different provider
+      const existingUser = await env.DB.prepare(
+        'SELECT auth_provider FROM users WHERE email = ?'
+      )
+        .bind(email)
+        .first();
+
+      if (existingUser) {
+        const existingProvider = existingUser.auth_provider as string;
+        const providerName = existingProvider === 'google' ? 'Google' : 'Apple';
+        return errorResponse(
+          `This email is already registered with ${providerName}. Please sign in with ${providerName} or use a different email address.`,
+          409,
+          origin
+        );
+      }
+
       // Create new user
       const userId = generateId();
       await env.DB.prepare(
