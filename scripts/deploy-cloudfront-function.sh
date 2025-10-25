@@ -28,7 +28,7 @@ if [ -z "$FUNCTION_EXISTS" ]; then
   # Create the function
   FUNCTION_ARN=$(aws cloudfront create-function \
     --name "$FUNCTION_NAME" \
-    --function-config Comment="URL rewrite for Next.js static export with trailing slashes",Runtime="cloudfront-js-2.0" \
+    --function-config '{"Comment":"URL rewrite for Next.js static export with trailing slashes","Runtime":"cloudfront-js-2.0"}' \
     --function-code fileb://"$FUNCTION_FILE" \
     --query 'FunctionSummary.FunctionMetadata.FunctionARN' \
     --output text)
@@ -44,7 +44,7 @@ else
   FUNCTION_ARN=$(aws cloudfront update-function \
     --name "$FUNCTION_NAME" \
     --if-match "$ETAG" \
-    --function-config Comment="URL rewrite for Next.js static export with trailing slashes",Runtime="cloudfront-js-2.0" \
+    --function-config '{"Comment":"URL rewrite for Next.js static export with trailing slashes","Runtime":"cloudfront-js-2.0"}' \
     --function-code fileb://"$FUNCTION_FILE" \
     --query 'FunctionSummary.FunctionMetadata.FunctionARN' \
     --output text)
