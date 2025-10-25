@@ -71,15 +71,18 @@ GSD Task Manager implements a **privacy-first, end-to-end encrypted sync system*
 GSD uses the **Authorization Code Flow with PKCE**:
 
 ```mermaid
-graph LR
+graph TD
     A[Client] -->|1. Authorization Request<br/>with code_challenge| B[Authorization Server]
-    B -->|2. User Authenticates| B
-    B -->|3. Redirect with Code| A
-    A -->|4. Token Exchange<br/>with code_verifier| B
-    B -->|5. ID Token + Access Token| A
+    B -->|2. User Authenticates| C[User Authentication]
+    C -->|3. Authorization Code| B
+    B -->|4. Redirect with Code| D[Client]
+    D -->|5. Token Exchange<br/>with code + code_verifier| B
+    B -->|6. ID Token + Access Token| D
 
     style A fill:#e1f5ff
     style B fill:#fff4e1
+    style C fill:#e8f5e9
+    style D fill:#e1f5ff
 ```
 
 ---
@@ -163,19 +166,21 @@ graph TB
 ### Data Flow
 
 ```mermaid
-graph LR
+graph TD
     A[User Click] --> B[Client]
     B --> C[Worker]
     C --> D[OAuth Provider]
-    D --> C
-    C --> E[KV Storage]
-    E --> B
+    D --> C2[Worker]
+    C2 --> E[KV Storage]
+    E --> B2[Client]
 
     style A fill:#f0f0f0
     style B fill:#e1f5ff
     style C fill:#fff4e1
     style D fill:#e8f5e9
     style E fill:#ffe1f5
+    style C2 fill:#fff4e1
+    style B2 fill:#e1f5ff
 ```
 
 ### Storage Locations
