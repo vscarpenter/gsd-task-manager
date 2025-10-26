@@ -100,7 +100,32 @@ export function EncryptionPassphraseDialog({
         }
       }
 
-      // Success
+      // Success - queue existing tasks for initial sync
+      if (isNewUser) {
+        try {
+          const { getSyncEngine } = await import('@/lib/sync/engine');
+          const engine = getSyncEngine();
+          const queuedCount = await engine.queueExistingTasks();
+          
+          if (queuedCount > 0) {
+            console.log(`[SYNC] Queued ${queuedCount} existing tasks for initial sync`);
+            
+            // Import toast dynamically to show notification
+            const { toast } = await import('sonner');
+            toast.success(`${queuedCount} task${queuedCount === 1 ? '' : 's'} queued for sync`);
+            
+            // Trigger automatic sync after a short delay
+            setTimeout(async () => {
+              const { getSyncCoordinator } = await import('@/lib/sync/sync-coordinator');
+              const coordinator = getSyncCoordinator();
+              await coordinator.requestSync('auto');
+            }, 1000);
+          }
+        } catch (err) {
+          console.error('[SYNC] Failed to queue existing tasks:', err);
+        }
+      }
+      
       setPassphrase("");
       setConfirmPassphrase("");
       onComplete();

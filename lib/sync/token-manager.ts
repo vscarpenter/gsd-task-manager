@@ -140,10 +140,16 @@ export class TokenManager {
       throw new Error('Sync config not found');
     }
 
+    // Convert expiresAt from seconds to milliseconds if needed
+    // JWT tokens typically use seconds, but JavaScript Date uses milliseconds
+    const tokenExpiresAt = expiresAt < 10000000000 
+      ? expiresAt * 1000  // Convert seconds to milliseconds
+      : expiresAt;         // Already in milliseconds
+
     await db.syncMetadata.put({
       ...config,
       token,
-      tokenExpiresAt: expiresAt,
+      tokenExpiresAt,
       key: 'sync_config',
     });
 

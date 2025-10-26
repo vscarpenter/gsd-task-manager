@@ -65,6 +65,7 @@ export function AppHeader({
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const [, setTick] = useState(0); // Force re-render for relative time updates
 
   // Poll last sync time from coordinator
   useEffect(() => {
@@ -86,6 +87,15 @@ export function AppHeader({
     const interval = setInterval(updateLastSync, 5000);
     return () => clearInterval(interval);
   }, [isEnabled]);
+
+  // Force re-render every 30 seconds to update relative time display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 30000); // Update every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Poll pending operation count
   useEffect(() => {
