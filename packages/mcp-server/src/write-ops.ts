@@ -110,16 +110,23 @@ async function ensureEncryption(config: GsdConfig): Promise<void> {
 }
 
 /**
+ * Sync operation for push request
+ */
+interface SyncOperation {
+  type: 'create' | 'update' | 'delete';
+  taskId: string;
+  encryptedBlob?: string;
+  nonce?: string;
+  vectorClock: Record<string, number>;
+  checksum?: string;
+}
+
+/**
  * Push encrypted task data to sync API
  */
 async function pushToSync(
   config: GsdConfig,
-  tasks: Array<{
-    id: string;
-    encryptedBlob: string;
-    nonce: string;
-    deleted?: boolean;
-  }>
+  operations: SyncOperation[]
 ): Promise<void> {
   const deviceId = getDeviceIdFromToken(config.authToken);
 
@@ -131,8 +138,8 @@ async function pushToSync(
     },
     body: JSON.stringify({
       deviceId,
-      tasks,
-      vectorClock: {}, // Simplified: let server handle vector clock
+      operations,
+      clientVectorClock: {}, // Simplified: let server handle vector clock
     }),
   });
 
@@ -203,9 +210,11 @@ export async function createTask(
   // Push to sync
   await pushToSync(config, [
     {
-      id: taskId,
+      type: 'create',
+      taskId,
       encryptedBlob: ciphertext,
       nonce,
+      vectorClock: {}, // Simplified: let server manage
     },
   ]);
 
@@ -258,9 +267,11 @@ export async function updateTask(
   // Push to sync
   await pushToSync(config, [
     {
-      id: updatedTask.id,
+      type: 'update',
+      taskId: updatedTask.id,
       encryptedBlob: ciphertext,
       nonce,
+      vectorClock: {}, // Simplified: let server manage
     },
   ]);
 
@@ -295,13 +306,12 @@ export async function deleteTask(config: GsdConfig, taskId: string): Promise<voi
     throw new Error(`❌ Task not found: ${taskId}\n\nThe task may have already been deleted.`);
   }
 
-  // Push deletion (empty blob with deleted flag)
+  // Push deletion
   await pushToSync(config, [
     {
-      id: taskId,
-      encryptedBlob: '',
-      nonce: '',
-      deleted: true,
+      type: 'delete',
+      taskId,
+      vectorClock: {}, // Simplified: let server manage
     },
   ]);
 }
@@ -342,12 +352,7 @@ export async function bulkUpdateTasks(
   }
 
   const errors: string[] = [];
-  const updatedTasks: Array<{
-    id: string;
-    encryptedBlob: string;
-    nonce: string;
-    deleted?: boolean;
-  }> = [];
+  const operations: SyncOperation[] = [];
 
   const cryptoManager = getCryptoManager();
   const now = Date.now();
@@ -390,11 +395,10 @@ export async function bulkUpdateTasks(
 
         case 'delete':
           // Delete operation
-          updatedTasks.push({
-            id: task.id,
-            encryptedBlob: '',
-            nonce: '',
-            deleted: true,
+          operations.push({
+            type: 'delete',
+            taskId: task.id,
+            vectorClock: {}, // Simplified: let server manage
           });
           continue;
 
@@ -406,10 +410,12 @@ export async function bulkUpdateTasks(
       const taskJson = JSON.stringify(updatedTask);
       const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
 
-      updatedTasks.push({
-        id: task.id,
+      operations.push({
+        type: 'update',
+        taskId: task.id,
         encryptedBlob: ciphertext,
         nonce,
+        vectorClock: {}, // Simplified: let server manage
       });
     } catch (error) {
       errors.push(
@@ -419,20 +425,20 @@ export async function bulkUpdateTasks(
   }
 
   // Push all updates at once
-  if (updatedTasks.length > 0) {
+  if (operations.length > 0) {
     try {
-      await pushToSync(config, updatedTasks);
+      await pushToSync(config, operations);
     } catch (error) {
       throw new Error(
         `❌ Bulk update failed\n\n` +
           `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
-          `None of the ${updatedTasks.length} tasks were updated.`
+          `None of the ${operations.length} tasks were updated.`
       );
     }
   }
 
   return {
-    updated: updatedTasks.length,
+    updated: operations.length,
     errors,
   };
 }

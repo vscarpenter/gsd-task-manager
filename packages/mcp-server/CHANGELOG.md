@@ -5,6 +5,28 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed write operations payload structure to match Worker API schema
+  - Changed `tasks` array to `operations` array in push requests
+  - Changed `vectorClock` to `clientVectorClock` in push payload
+  - Added required `type` field to all operations ('create', 'update', 'delete')
+  - Changed operation field `id` to `taskId` to match Worker schema
+  - Removed `deleted` boolean field in favor of `type: 'delete'`
+  - Added per-operation `vectorClock` field (empty object, server-managed)
+  - **Impact**: Write operations were 100% non-functional in v0.4.0 due to schema mismatch causing 400 errors from Worker
+
+### Technical Details
+- Updated `pushToSync()` function signature to accept `SyncOperation[]` instead of custom task structure
+- Added `SyncOperation` interface matching Worker's `syncOperationSchema` (from `worker/src/schemas.ts`)
+- Updated all write operation callers:
+  - `createTask()` - passes `type: 'create'`
+  - `updateTask()` - passes `type: 'update'`
+  - `deleteTask()` - passes `type: 'delete'`
+  - `bulkUpdateTasks()` - passes appropriate type for each bulk operation
+- All operations now conform to Zod schema validation in `pushRequestSchema`
+
 ## [0.4.0] - 2025-10-26 🔥
 
 ### ⚠️ BREAKING CHANGES
