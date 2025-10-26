@@ -6,6 +6,7 @@
 import { getDb } from '@/lib/db';
 import { getApiClient } from './api-client';
 import type { SyncConfig } from './types';
+import { normalizeTokenExpiration } from './utils';
 
 const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -140,11 +141,8 @@ export class TokenManager {
       throw new Error('Sync config not found');
     }
 
-    // Convert expiresAt from seconds to milliseconds if needed
-    // JWT tokens typically use seconds, but JavaScript Date uses milliseconds
-    const tokenExpiresAt = expiresAt < 10000000000 
-      ? expiresAt * 1000  // Convert seconds to milliseconds
-      : expiresAt;         // Already in milliseconds
+    // Normalize token expiration to milliseconds (handles both seconds and milliseconds)
+    const tokenExpiresAt = normalizeTokenExpiration(expiresAt);
 
     await db.syncMetadata.put({
       ...config,
