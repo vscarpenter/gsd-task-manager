@@ -1,25 +1,46 @@
 {
-  "name": "@gsd/mcp-server",
-  "version": "0.2.0",
+  "name": "gsd-mcp-server",
+  "version": "0.2.1",
   "description": "MCP server for GSD Task Manager - decrypted read-only access to synced tasks",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "gsd-mcp-server": "dist/index.js"
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "task-manager",
     "productivity",
-    "claude"
+    "claude",
+    "claude-desktop",
+    "eisenhower-matrix",
+    "encryption",
+    "privacy"
   ],
   "author": "Vinny Carpenter",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vscarpenter/gsd-taskmanager.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/vscarpenter/gsd-taskmanager#readme",
+  "bugs": {
+    "url": "https://github.com/vscarpenter/gsd-taskmanager/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "zod": "^3.24.1"

@@ -1,6 +1,36 @@
 # GSD Task Manager MCP Server
 
+[![npm version](https://badge.fury.io/js/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Model Context Protocol (MCP) server for GSD Task Manager. Provides read-only access to your synced tasks through Claude Desktop and other MCP-compatible AI assistants.
+
+## Quick Start
+
+```bash
+# Install via npx (no installation needed!)
+npx gsd-mcp-server
+```
+
+Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "gsd-tasks": {
+      "command": "npx",
+      "args": ["-y", "gsd-mcp-server"],
+      "env": {
+        "GSD_API_URL": "https://gsd.vinny.dev",
+        "GSD_AUTH_TOKEN": "your-jwt-token-here",
+        "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
+      }
+    }
+  }
+}
+```
+
+See [Installation](#installation) section below for detailed setup instructions.
 
 ## Features
 
@@ -31,21 +61,24 @@ Model Context Protocol (MCP) server for GSD Task Manager. Provides read-only acc
 
 ## Installation
 
-### 1. Install Dependencies
+**Two installation options:**
 
-From the `packages/mcp-server` directory:
+### Option A: Use Published Package (Recommended)
 
-```bash
-npm install
-```
+No installation needed! Use `npx` to run the package directly from npm.
 
-### 2. Build the Server
+### Option B: Build from Source
 
-```bash
-npm run build
-```
+For development or if you want to modify the code:
 
-### 3. Get Your Auth Token
+1. Clone the repository
+2. Navigate to `packages/mcp-server`
+3. Install dependencies: `npm install`
+4. Build the server: `npm run build`
+
+## Setup
+
+### 1. Get Your Auth Token
 
 You'll need a JWT token from your GSD sync setup. Two options:
 
@@ -60,12 +93,32 @@ You'll need a JWT token from your GSD sync setup. Two options:
 2. Intercept the callback response
 3. Extract the `token` field from the JSON response
 
-### 4. Configure Claude Desktop
+### 2. Configure Claude Desktop
 
 Add the MCP server to your Claude Desktop config:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Using published package (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "gsd-tasks": {
+      "command": "npx",
+      "args": ["-y", "gsd-mcp-server"],
+      "env": {
+        "GSD_API_URL": "https://gsd.vinny.dev",
+        "GSD_AUTH_TOKEN": "your-jwt-token-here",
+        "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
+      }
+    }
+  }
+}
+```
+
+**Using local build (for development):**
 
 ```json
 {
@@ -76,7 +129,7 @@ Add the MCP server to your Claude Desktop config:
         "/absolute/path/to/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
-        "GSD_API_URL": "https://gsd-sync-worker-production.vscarpenter.workers.dev",
+        "GSD_API_URL": "https://gsd.vinny.dev",
         "GSD_AUTH_TOKEN": "your-jwt-token-here",
         "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
       }
@@ -85,15 +138,16 @@ Add the MCP server to your Claude Desktop config:
 }
 ```
 
-**Important Notes**:
-- Replace `/absolute/path/to/gsd-taskmanager` with your actual project path
-- Use your Worker API URL (development, staging, or production)
-- Token will expire - you'll need to update it periodically (every 7 days)
+**Configuration Notes**:
+- Replace `your-jwt-token-here` with your actual token from Step 1
+- Replace `your-passphrase-here` with your sync encryption passphrase
+- `GSD_API_URL`: Use `https://gsd.vinny.dev` for production (or your custom Worker URL)
+- Token expires every 7 days - you'll need to update it periodically
 - **Optional**: Add `GSD_ENCRYPTION_PASSPHRASE` to enable decrypted task access (v0.2.0)
   - Without it: Only metadata tools work (sync status, devices, stats)
   - With it: Full task content access (list, search, read tasks)
 
-### 5. Restart Claude Desktop
+### 3. Restart Claude Desktop
 
 Close and reopen Claude Desktop to load the MCP server.
 
@@ -285,9 +339,11 @@ Search tasks by text query across titles, descriptions, tags, and subtasks. **Re
 - Try accessing the URL in your browser: `{GSD_API_URL}/health`
 
 ### "Cannot find module" error
-- Run `npm run build` to compile TypeScript
-- Check that the path in Claude config is absolute and correct
-- Verify that `dist/index.js` exists after building
+- **If using npx**: Ensure you have internet connection (npx needs to download the package)
+- **If using local build**:
+  - Run `npm run build` to compile TypeScript
+  - Check that the path in Claude config is absolute and correct
+  - Verify that `dist/index.js` exists after building
 
 ### "Encryption passphrase not provided" (v0.2.0)
 - This error appears when using decryption tools without the passphrase
@@ -320,12 +376,22 @@ npm run build
 
 **Testing Locally** (without Claude Desktop):
 ```bash
-export GSD_API_URL="https://sync.gsd.vinny.dev"
+export GSD_API_URL="https://gsd.vinny.dev"
 export GSD_AUTH_TOKEN="your-jwt-token"
+export GSD_ENCRYPTION_PASSPHRASE="your-passphrase"
 npm start
 ```
 
 Then send MCP protocol JSON over stdin (advanced).
+
+**Publishing to npm**:
+```bash
+# Update version (patch/minor/major)
+npm version patch
+
+# Publish (requires 2FA code)
+npm publish --access public --otp=YOUR_CODE
+```
 
 ## Future Enhancements
 

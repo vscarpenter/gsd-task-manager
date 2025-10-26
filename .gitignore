@@ -55,3 +55,16 @@ sonar-project.properties
 worker/.wrangler
 worker/.dev.vars
 worker/wrangler.toml.local
+
+# Sensitive configuration files (prevent credential leaks)
+**/claude-config.json
+!**/claude-config.example.json
+packages/mcp-server/test-*.sh
+!packages/mcp-server/test-manual.sh
+!packages/mcp-server/test-setup.sh
+!packages/mcp-server/test-env-vars.js
+packages/mcp-server/debug-*.sh
+!packages/mcp-server/debug-*.example.sh
+worker/cf-dev-config.json
+*SETUP_GUIDE.md
+gitleaks-report.json
