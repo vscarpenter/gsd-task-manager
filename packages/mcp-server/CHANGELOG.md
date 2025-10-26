@@ -5,6 +5,24 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Added missing checksum calculation for write operations
+  - Worker requires SHA-256 checksum of plaintext JSON for create/update operations
+  - Added `hash()` method to `CryptoManager` using Web Crypto API
+  - Updated all write operations to calculate and include checksum
+  - **Impact**: Tasks created without checksum were silently rejected by Worker (appeared successful but not stored)
+
+### Technical Details
+- Added `CryptoManager.hash()` method using `webcrypto.subtle.digest('SHA-256')`
+- Updated `createTask()` to calculate checksum before push
+- Updated `updateTask()` to calculate checksum before push
+- Updated `bulkUpdateTasks()` to calculate checksums for all operations
+- Checksum is SHA-256 hash of plaintext JSON (before encryption)
+- Worker validates checksum on line 125 of `worker/src/handlers/sync.ts`
+- Schema says checksum is optional, but Worker code requires it for create/update
+
 ## [0.4.2] - 2025-10-26 🐛
 
 ### Fixed

@@ -118,7 +118,7 @@ interface SyncOperation {
   encryptedBlob?: string;
   nonce?: string;
   vectorClock: Record<string, number>;
-  checksum?: string;
+  checksum?: string; // SHA-256 hash of plaintext JSON (required for create/update)
 }
 
 /**
@@ -202,10 +202,11 @@ export async function createTask(
     updatedAt: now,
   };
 
-  // Encrypt task
+  // Encrypt task and calculate checksum
   const cryptoManager = getCryptoManager();
   const taskJson = JSON.stringify(newTask);
   const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+  const checksum = await cryptoManager.hash(taskJson);
 
   // Push to sync
   await pushToSync(config, [
@@ -215,6 +216,7 @@ export async function createTask(
       encryptedBlob: ciphertext,
       nonce,
       vectorClock: {}, // Simplified: let server manage
+      checksum,
     },
   ]);
 
@@ -259,10 +261,11 @@ export async function updateTask(
     updatedTask.quadrantId = deriveQuadrantId(updatedTask.urgent, updatedTask.important);
   }
 
-  // Encrypt task
+  // Encrypt task and calculate checksum
   const cryptoManager = getCryptoManager();
   const taskJson = JSON.stringify(updatedTask);
   const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+  const checksum = await cryptoManager.hash(taskJson);
 
   // Push to sync
   await pushToSync(config, [
@@ -272,6 +275,7 @@ export async function updateTask(
       encryptedBlob: ciphertext,
       nonce,
       vectorClock: {}, // Simplified: let server manage
+      checksum,
     },
   ]);
 
@@ -406,9 +410,10 @@ export async function bulkUpdateTasks(
           throw new Error(`Unknown operation type: ${(operation as any).type}`);
       }
 
-      // Encrypt updated task
+      // Encrypt updated task and calculate checksum
       const taskJson = JSON.stringify(updatedTask);
       const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+      const checksum = await cryptoManager.hash(taskJson);
 
       operations.push({
         type: 'update',
@@ -416,6 +421,7 @@ export async function bulkUpdateTasks(
         encryptedBlob: ciphertext,
         nonce,
         vectorClock: {}, // Simplified: let server manage
+        checksum,
       });
     } catch (error) {
       errors.push(
