@@ -476,4 +476,222 @@ describe('TokenManager', () => {
       expect(stillNeedsRefresh).toBe(false);
     });
   });
+
+  describe('Issue #2: Token Expiration Normalization Integration', () => {
+    it('should normalize token expiration from seconds when refreshing token', async () => {
+      await db.syncMetadata.put({
+        key: 'sync_config',
+        enabled: true,
+        userId: 'user1',
+        deviceId: 'device1',
+        deviceName: 'Test Device',
+        email: 'test@example.com',
+        token: 'old-token',
+        tokenExpiresAt: Date.now() + 2 * 60 * 1000, // 2 minutes (needs refresh)
+        lastSyncAt: null,
+        vectorClock: {},
+        conflictStrategy: 'last_write_wins',
+        serverUrl: 'http://localhost:8787',
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+      });
+
+      // Mock refreshToken to return expiresAt in seconds (typical JWT format)
+      const expiresAtSeconds = 1735689600; // Jan 1, 2025 00:00:00 UTC in seconds
+      mockApi.refreshToken.mockResolvedValue({
+        token: 'new-token',
+        expiresAt: expiresAtSeconds,
+      });
+
+      const result = await tokenManager.ensureValidToken();
+      expect(result).toBe(true);
+
+      // Verify stored value was normalized to milliseconds
+      const config = await db.syncMetadata.get('sync_config') as SyncConfig;
+      expect(config.tokenExpiresAt).toBe(expiresAtSeconds * 1000);
+      expect(config.tokenExpiresAt).toBe(1735689600000);
+    });
+
+    it('should handle token expiration already in milliseconds when refreshing', async () => {
+      await db.syncMetadata.put({
+        key: 'sync_config',
+        enabled: true,
+        userId: 'user1',
+        deviceId: 'device1',
+        deviceName: 'Test Device',
+        email: 'test@example.com',
+        token: 'old-token',
+        tokenExpiresAt: Date.now() + 2 * 60 * 1000, // 2 minutes (needs refresh)
+        lastSyncAt: null,
+        vectorClock: {},
+        conflictStrategy: 'last_write_wins',
+        serverUrl: 'http://localhost:8787',
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+      });
+
+      // Mock refreshToken to return expiresAt already in milliseconds
+      const expiresAtMs = 1735689600000; // Jan 1, 2025 00:00:00 UTC in milliseconds
+      mockApi.refreshToken.mockResolvedValue({
+        token: 'new-token',
+        expiresAt: expiresAtMs,
+      });
+
+      const result = await tokenManager.ensureValidToken();
+      expect(result).toBe(true);
+
+      // Verify stored value remained unchanged (already in milliseconds)
+      const config = await db.syncMetadata.get('sync_config') as SyncConfig;
+      expect(config.tokenExpiresAt).toBe(expiresAtMs);
+      expect(config.tokenExpiresAt).toBe(1735689600000);
+    });
+
+    it('should normalize token expiration on 401 error recovery', async () => {
+      await db.syncMetadata.put({
+        key: 'sync_config',
+        enabled: true,
+        userId: 'user1',
+        deviceId: 'device1',
+        deviceName: 'Test Device',
+        email: 'test@example.com',
+        token: 'expired-token',
+        tokenExpiresAt: Date.now() - 1000, // Already expired
+        lastSyncAt: null,
+        vectorClock: {},
+        conflictStrategy: 'last_write_wins',
+        serverUrl: 'http://localhost:8787',
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+      });
+
+      // Mock refresh with token in seconds
+      const expiresAtSeconds = 1735689600;
+      mockApi.refreshToken.mockResolvedValue({
+        token: 'refreshed-token-after-401',
+        expiresAt: expiresAtSeconds,
+      });
+
+      const result = await tokenManager.handleUnauthorized();
+      expect(result).toBe(true);
+
+      // Verify normalization occurred
+      const config = await db.syncMetadata.get('sync_config') as SyncConfig;
+      expect(config.tokenExpiresAt).toBe(expiresAtSeconds * 1000);
+    });
+
+    it('should handle threshold boundary value (seconds) correctly', async () => {
+      await db.syncMetadata.put({
+        key: 'sync_config',
+        enabled: true,
+        userId: 'user1',
+        deviceId: 'device1',
+        deviceName: 'Test Device',
+        email: 'test@example.com',
+        token: 'old-token',
+        tokenExpiresAt: Date.now() + 1 * 60 * 1000,
+        lastSyncAt: null,
+        vectorClock: {},
+        conflictStrategy: 'last_write_wins',
+        serverUrl: 'http://localhost:8787',
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+      });
+
+      // Just below 10 billion threshold (should be treated as seconds)
+      const expiresAtSeconds = 9_999_999_999;
+      mockApi.refreshToken.mockResolvedValue({
+        token: 'new-token',
+        expiresAt: expiresAtSeconds,
+      });
+
+      await tokenManager.ensureValidToken();
+
+      const config = await db.syncMetadata.get('sync_config') as SyncConfig;
+      // Should be multiplied by 1000
+      expect(config.tokenExpiresAt).toBe(expiresAtSeconds * 1000);
+    });
+
+    it('should handle threshold boundary value (milliseconds) correctly', async () => {
+      await db.syncMetadata.put({
+        key: 'sync_config',
+        enabled: true,
+        userId: 'user1',
+        deviceId: 'device1',
+        deviceName: 'Test Device',
+        email: 'test@example.com',
+        token: 'old-token',
+        tokenExpiresAt: Date.now() + 1 * 60 * 1000,
+        lastSyncAt: null,
+        vectorClock: {},
+        conflictStrategy: 'last_write_wins',
+        serverUrl: 'http://localhost:8787',
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+      });
+
+      // At threshold (should be treated as milliseconds)
+      const expiresAtMs = 10_000_000_000;
+      mockApi.refreshToken.mockResolvedValue({
+        token: 'new-token',
+        expiresAt: expiresAtMs,
+      });
+
+      await tokenManager.ensureValidToken();
+
+      const config = await db.syncMetadata.get('sync_config') as SyncConfig;
+      // Should NOT be multiplied
+      expect(config.tokenExpiresAt).toBe(expiresAtMs);
+    });
+
+    it('should handle realistic JWT token expiration (1 hour from now in seconds)', async () => {
+      await db.syncMetadata.put({
+        key: 'sync_config',
+        enabled: true,
+        userId: 'user1',
+        deviceId: 'device1',
+        deviceName: 'Test Device',
+        email: 'test@example.com',
+        token: 'old-token',
+        tokenExpiresAt: Date.now() + 1 * 60 * 1000,
+        lastSyncAt: null,
+        vectorClock: {},
+        conflictStrategy: 'last_write_wins',
+        serverUrl: 'http://localhost:8787',
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+      });
+
+      // Typical JWT: current time + 1 hour (in seconds)
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const oneHourLaterSeconds = nowSeconds + 3600;
+
+      mockApi.refreshToken.mockResolvedValue({
+        token: 'new-jwt-token',
+        expiresAt: oneHourLaterSeconds,
+      });
+
+      await tokenManager.ensureValidToken();
+
+      const config = await db.syncMetadata.get('sync_config') as SyncConfig;
+      // Should be normalized to milliseconds
+      expect(config.tokenExpiresAt).toBe(oneHourLaterSeconds * 1000);
+
+      // Verify it's approximately 1 hour from now
+      const timeUntilExpiry = config.tokenExpiresAt - Date.now();
+      expect(timeUntilExpiry).toBeGreaterThan(55 * 60 * 1000); // At least 55 minutes
+      expect(timeUntilExpiry).toBeLessThanOrEqual(60 * 60 * 1000); // At most 60 minutes
+    });
+  });
 });
