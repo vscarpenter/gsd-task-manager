@@ -333,11 +333,13 @@ export function getUpcomingDeadlines(tasks: DecryptedTask[]): UpcomingDeadlines 
   return {
     overdue: active
       .filter((t) => isBefore(new Date(t.dueDate!), today))
-      .sort((a, b) => a.dueDate! - b.dueDate!),
-    dueToday: active.filter((t) => isDueToday(t, today)).sort((a, b) => a.dueDate! - b.dueDate!),
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
+    dueToday: active
+      .filter((t) => isDueToday(t, today))
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
     dueThisWeek: active
       .filter((t) => isDueThisWeek(t, today))
-      .sort((a, b) => a.dueDate! - b.dueDate!),
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
   };
 }
 

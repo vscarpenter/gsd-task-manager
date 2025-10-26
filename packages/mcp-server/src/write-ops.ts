@@ -17,9 +17,9 @@ export interface CreateTaskInput {
   description?: string;
   urgent: boolean;
   important: boolean;
-  dueDate?: number | null;
+  dueDate?: string; // ISO datetime string, optional
   tags?: string[];
-  subtasks?: Array<{ text: string; completed: boolean }>;
+  subtasks?: Array<{ title: string; completed: boolean }>;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
 }
@@ -33,9 +33,9 @@ export interface UpdateTaskInput {
   description?: string;
   urgent?: boolean;
   important?: boolean;
-  dueDate?: number | null;
+  dueDate?: string; // ISO datetime string, optional
   tags?: string[];
-  subtasks?: Array<{ id: string; text: string; completed: boolean }>;
+  subtasks?: Array<{ id: string; title: string; completed: boolean }>;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
   completed?: boolean;
@@ -49,7 +49,7 @@ export type BulkOperation =
   | { type: 'move_quadrant'; urgent: boolean; important: boolean }
   | { type: 'add_tags'; tags: string[] }
   | { type: 'remove_tags'; tags: string[] }
-  | { type: 'set_due_date'; dueDate: number | null }
+  | { type: 'set_due_date'; dueDate?: string } // ISO datetime string, optional
   | { type: 'delete' };
 
 /**
@@ -196,7 +196,7 @@ export async function createTask(
   const subtasksWithIds = input.subtasks
     ? input.subtasks.map((st) => ({
         id: generateTaskId(),
-        text: st.text,
+        title: st.title,
         completed: st.completed,
       }))
     : [];
@@ -209,13 +209,14 @@ export async function createTask(
     important: input.important,
     quadrant,
     completed: false,
-    dueDate: input.dueDate ?? null,
+    ...(input.dueDate && { dueDate: input.dueDate }), // Only include if set
     tags: input.tags || [],
     subtasks: subtasksWithIds,
     recurrence: input.recurrence || 'none',
     dependencies: input.dependencies || [],
     createdAt: now,
     updatedAt: now,
+    vectorClock: {}, // Initialize with empty vector clock
   };
 
   // Encrypt task and calculate checksum
@@ -256,14 +257,13 @@ export async function updateTask(
     throw new Error(`❌ Task not found: ${input.id}\n\nThe task may have been deleted.`);
   }
 
-  // Merge updates
+  // Merge updates (handle optional fields carefully)
   const updatedTask: DecryptedTask = {
     ...currentTask,
     title: input.title ?? currentTask.title,
     description: input.description ?? currentTask.description,
     urgent: input.urgent ?? currentTask.urgent,
     important: input.important ?? currentTask.important,
-    dueDate: input.dueDate !== undefined ? input.dueDate : currentTask.dueDate,
     tags: input.tags ?? currentTask.tags,
     subtasks: input.subtasks ?? currentTask.subtasks,
     recurrence: input.recurrence ?? currentTask.recurrence,
@@ -271,6 +271,22 @@ export async function updateTask(
     completed: input.completed ?? currentTask.completed,
     updatedAt: new Date().toISOString(),
   };
+
+  // Handle dueDate separately (can be set or cleared)
+  if (input.dueDate !== undefined) {
+    if (input.dueDate) {
+      updatedTask.dueDate = input.dueDate;
+    } else {
+      delete updatedTask.dueDate; // Remove field if clearing
+    }
+  }
+
+  // Set completedAt when marking complete
+  if (input.completed === true && !currentTask.completed) {
+    updatedTask.completedAt = new Date().toISOString();
+  } else if (input.completed === false) {
+    delete updatedTask.completedAt; // Clear when uncompleting
+  }
 
   // Recalculate quadrant if urgent/important changed
   if (input.urgent !== undefined || input.important !== undefined) {
@@ -384,6 +400,12 @@ export async function bulkUpdateTasks(
       switch (operation.type) {
         case 'complete':
           updatedTask = { ...task, completed: operation.completed, updatedAt: now };
+          // Set/clear completedAt
+          if (operation.completed && !task.completed) {
+            updatedTask.completedAt = now;
+          } else if (!operation.completed) {
+            delete updatedTask.completedAt;
+          }
           break;
 
         case 'move_quadrant':
@@ -410,7 +432,13 @@ export async function bulkUpdateTasks(
         }
 
         case 'set_due_date':
-          updatedTask = { ...task, dueDate: operation.dueDate, updatedAt: now };
+          updatedTask = { ...task, updatedAt: now };
+          // Set or clear dueDate
+          if (operation.dueDate) {
+            updatedTask.dueDate = operation.dueDate;
+          } else {
+            delete updatedTask.dueDate;
+          }
           break;
 
         case 'delete':

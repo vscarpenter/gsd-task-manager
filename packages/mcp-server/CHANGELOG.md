@@ -5,6 +5,29 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed additional schema mismatches preventing task sync
+  - Changed `dueDate: number | null` → `dueDate?: string` (optional ISO datetime)
+  - Changed `subtasks[].text` → `subtasks[].title` (frontend uses 'title')
+  - **Impact**: v0.4.5 tasks failed with "Expected string, received null" error on dueDate field
+- Added missing optional fields:
+  - `completedAt?: string` - ISO datetime when task was completed
+  - `vectorClock?: Record<string, number>` - For sync conflict resolution
+- Updated all write operations to handle optional fields correctly:
+  - `dueDate` only included when set (not null)
+  - `completedAt` set automatically when marking task complete
+  - `vectorClock` initialized with empty object
+- Fixed analytics date sorting to handle ISO datetime strings
+
+### Technical Details
+- Frontend schema expects `dueDate: z.string().datetime().optional()` (can be undefined, NOT null)
+- Frontend subtask schema uses `title`, not `text` (line 19 of lib/schema.ts)
+- Updated CreateTaskInput, UpdateTaskInput, and BulkOperation types
+- Fixed searchTasks to search subtask.title instead of subtask.text
+- Updated date comparisons in analytics to parse ISO strings before sorting
+
 ## [0.4.5] - 2025-10-26 🐛
 
 ### Fixed

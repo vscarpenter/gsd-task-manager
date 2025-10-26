@@ -60,17 +60,19 @@ export interface DecryptedTask {
   important: boolean;
   quadrant: string; // Frontend uses 'quadrant', not 'quadrantId'
   completed: boolean;
-  dueDate: number | null;
+  completedAt?: string; // ISO datetime when task was completed
+  dueDate?: string; // ISO datetime string, optional (NOT null)
   tags: string[];
   subtasks: Array<{
     id: string;
-    text: string;
+    title: string; // Frontend uses 'title', not 'text'
     completed: boolean;
   }>;
   recurrence: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies: string[];
   createdAt: string; // Frontend expects ISO datetime string
   updatedAt: string; // Frontend expects ISO datetime string
+  vectorClock?: Record<string, number>; // For sync conflict resolution
 }
 
 /**
@@ -432,6 +434,6 @@ export async function searchTasks(
       task.title.toLowerCase().includes(queryLower) ||
       task.description.toLowerCase().includes(queryLower) ||
       task.tags.some((tag) => tag.toLowerCase().includes(queryLower)) ||
-      task.subtasks.some((subtask) => subtask.text.toLowerCase().includes(queryLower))
+      task.subtasks.some((subtask) => subtask.title.toLowerCase().includes(queryLower))
   );
 }
