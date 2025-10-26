@@ -47,6 +47,31 @@ router.get('/api/auth/oauth/result', async (request: Request, env: Env) => {
   return oidcHandlers.getOAuthResult(request, env);
 });
 
+// Get encryption salt
+router.get('/api/auth/encryption-salt', async (request: Request, env: Env) => {
+  const origin = request.headers.get('Origin');
+  const ctx: RequestContext = {};
+  const authResult = await authMiddleware(request, env, ctx);
+  if (authResult) return authResult;
+
+  try {
+    const user = await env.DB.prepare('SELECT encryption_salt FROM users WHERE id = ?')
+      .bind(ctx.userId)
+      .first();
+
+    if (!user) {
+      return errorResponse('User not found', 404, origin);
+    }
+
+    return jsonResponse({
+      encryptionSalt: user.encryption_salt as string | null,
+    }, 200, origin);
+  } catch (error) {
+    logger.error('Get encryption salt failed', error as Error, { userId: ctx.userId });
+    return errorResponse('Failed to get encryption salt', 500, origin);
+  }
+});
+
 // Save encryption salt
 router.post('/api/auth/encryption-salt', async (request: Request, env: Env) => {
   const origin = request.headers.get('Origin');

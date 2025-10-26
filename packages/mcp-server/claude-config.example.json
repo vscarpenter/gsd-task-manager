@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "gsd-tasks": {
+      "command": "node",
+      "args": [
+        "/REPLACE/WITH/ABSOLUTE/PATH/gsd-taskmanager/packages/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "GSD_API_URL": "https://sync.gsd.vinny.dev",
+        "GSD_AUTH_TOKEN": "your-jwt-token-here"
+      }
+    }
+  }
+}
