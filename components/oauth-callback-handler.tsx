@@ -78,6 +78,12 @@ export function OAuthCallbackHandler() {
           ? 'http://localhost:8787'
           : window.location.origin);
 
+      // Convert expiresAt from seconds to milliseconds if needed
+      // JWT tokens typically use seconds, but JavaScript Date uses milliseconds
+      const tokenExpiresAt = authData.expiresAt < 10000000000 
+        ? authData.expiresAt * 1000  // Convert seconds to milliseconds
+        : authData.expiresAt;         // Already in milliseconds
+
       await db.syncMetadata.put({
         key: 'sync_config',
         enabled: true,
@@ -86,7 +92,7 @@ export function OAuthCallbackHandler() {
         deviceName: existingSyncConfig?.deviceName || 'Device',
         email: authData.email,
         token: authData.token,
-        tokenExpiresAt: authData.expiresAt,
+        tokenExpiresAt,
         lastSyncAt: existingSyncConfig?.lastSyncAt || null,
         vectorClock: existingSyncConfig?.vectorClock || {},
         conflictStrategy: existingSyncConfig?.conflictStrategy || 'last_write_wins',
