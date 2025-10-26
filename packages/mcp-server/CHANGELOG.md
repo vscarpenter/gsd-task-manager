@@ -5,6 +5,23 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Added validation of Worker push response rejected array
+  - MCP server was not checking if Worker rejected operations
+  - Only checked HTTP status (200 OK) and conflicts array
+  - Worker can reject operations and still return 200 OK with rejected array
+  - Now throws detailed error if any operations are rejected
+  - **Impact**: v0.4.0-0.4.3 appeared to succeed but tasks were silently rejected
+
+### Technical Details
+- Updated `pushToSync()` to parse full `PushResponse` structure
+- Added check for `rejected` array in Worker response
+- Throws error with detailed rejection reasons (taskId, reason, details)
+- Now properly validates that `accepted` array contains the task IDs
+- This will surface the actual rejection reason from Worker
+
 ## [0.4.3] - 2025-10-26 🐛
 
 ### Fixed

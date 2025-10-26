@@ -152,11 +152,27 @@ async function pushToSync(
     );
   }
 
-  // Check for conflicts in response
+  // Check response for rejected operations and conflicts
   const result = (await response.json()) as {
+    accepted?: string[];
+    rejected?: Array<{ taskId: string; reason: string; details: string }>;
     conflicts?: Array<unknown>;
-    success?: boolean;
+    serverVectorClock?: Record<string, number>;
   };
+
+  // Check for rejected operations
+  if (result.rejected && result.rejected.length > 0) {
+    const rejectionDetails = result.rejected
+      .map((r) => `  - Task ${r.taskId}: ${r.reason} - ${r.details}`)
+      .join('\n');
+    throw new Error(
+      `❌ Worker rejected ${result.rejected.length} operation(s)\n\n` +
+        `${rejectionDetails}\n\n` +
+        `Your changes were not saved to the server.`
+    );
+  }
+
+  // Check for conflicts
   if (result.conflicts && result.conflicts.length > 0) {
     console.warn(`⚠️  Warning: ${result.conflicts.length} conflict(s) detected`);
     console.warn('Last-write-wins strategy applied - your changes took precedence');
