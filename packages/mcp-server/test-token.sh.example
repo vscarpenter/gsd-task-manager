@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Example test script for MCP server
+# Copy to test-token.sh and replace with your actual credentials
+
+# IMPORTANT: Never commit the actual test-token.sh file!
+# This file is listed in .gitignore
+
+export GSD_AUTH_TOKEN="YOUR_JWT_TOKEN_HERE"
+export GSD_API_URL="https://gsd.vinny.dev"
+export GSD_ENCRYPTION_PASSPHRASE="YOUR_PASSPHRASE_HERE"
+
+# Test the token
+curl -s "$GSD_API_URL/api/sync/status" \
+  -H "Authorization: Bearer $GSD_AUTH_TOKEN" | jq .

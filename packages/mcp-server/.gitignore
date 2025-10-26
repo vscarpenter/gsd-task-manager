@@ -4,3 +4,10 @@ dist/
 .env
 .env.local
 *.tsbuildinfo
+
+# Sensitive files - DO NOT COMMIT
+claude-config.json
+test-*.sh
+debug-*.sh
+*-token*.sh
+*-passphrase*.sh

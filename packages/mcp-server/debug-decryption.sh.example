@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Example debug script for testing decryption
+# Copy to debug-decryption.sh and replace with your actual credentials
+
+# IMPORTANT: Never commit the actual debug-decryption.sh file!
+# This file is listed in .gitignore
+
+API_URL="https://gsd.vinny.dev"
+AUTH_TOKEN="YOUR_JWT_TOKEN_HERE"
+PASSPHRASE="YOUR_PASSPHRASE_HERE"
+
+echo "Testing decryption with MCP server..."
+echo "API URL: $API_URL"
+
+# Add your decryption test logic here
