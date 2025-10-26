@@ -5,6 +5,23 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed task schema to match frontend expectations
+  - Changed `quadrantId` → `quadrant` (frontend schema uses 'quadrant')
+  - Changed `createdAt` from number → ISO string datetime
+  - Changed `updatedAt` from number → ISO string datetime
+  - **Impact**: v0.4.0-0.4.4 tasks created by MCP failed Zod validation in webapp causing "unrecognized key 'quadrantId'" error
+
+### Technical Details
+- Updated `DecryptedTask` interface in `src/tools.ts`
+- Updated all write operations to use `quadrant` field name
+- Renamed `deriveQuadrantId()` → `deriveQuadrant()`
+- Changed timestamp generation from `Date.now()` → `new Date().toISOString()`
+- Frontend expects ISO 8601 datetime strings, not Unix timestamps
+- Frontend schema in `lib/schema.ts` uses `quadrant: quadrantIdSchema`
+
 ## [0.4.4] - 2025-10-26 🐛
 
 ### Fixed

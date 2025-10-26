@@ -163,7 +163,7 @@ export function calculateMetrics(tasks: DecryptedTask[]): ProductivityMetrics {
   };
 
   active.forEach((task) => {
-    quadrantDistribution[task.quadrantId as QuadrantId]++;
+    quadrantDistribution[task.quadrant as QuadrantId]++;
   });
 
   // Tag statistics
@@ -305,7 +305,7 @@ export function getQuadrantPerformance(tasks: DecryptedTask[]): QuadrantPerforma
 
   return quadrants
     .map((quadrant) => {
-      const quadrantTasks = tasks.filter((t) => t.quadrantId === quadrant.id);
+      const quadrantTasks = tasks.filter((t) => t.quadrant === quadrant.id);
       const completed = quadrantTasks.filter((t) => t.completed).length;
       const active = quadrantTasks.filter((t) => !t.completed).length;
       const total = quadrantTasks.length;

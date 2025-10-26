@@ -63,9 +63,9 @@ function generateTaskId(): string {
 }
 
 /**
- * Derive quadrant ID from urgent/important flags
+ * Derive quadrant from urgent/important flags
  */
-function deriveQuadrantId(urgent: boolean, important: boolean): string {
+function deriveQuadrant(urgent: boolean, important: boolean): string {
   if (urgent && important) return 'urgent-important';
   if (!urgent && important) return 'not-urgent-important';
   if (urgent && !important) return 'urgent-not-important';
@@ -188,9 +188,9 @@ export async function createTask(
 ): Promise<DecryptedTask> {
   await ensureEncryption(config);
 
-  const now = Date.now();
+  const now = new Date().toISOString();
   const taskId = generateTaskId();
-  const quadrantId = deriveQuadrantId(input.urgent, input.important);
+  const quadrant = deriveQuadrant(input.urgent, input.important);
 
   // Generate IDs for subtasks if provided
   const subtasksWithIds = input.subtasks
@@ -207,7 +207,7 @@ export async function createTask(
     description: input.description || '',
     urgent: input.urgent,
     important: input.important,
-    quadrantId,
+    quadrant,
     completed: false,
     dueDate: input.dueDate ?? null,
     tags: input.tags || [],
@@ -269,12 +269,12 @@ export async function updateTask(
     recurrence: input.recurrence ?? currentTask.recurrence,
     dependencies: input.dependencies ?? currentTask.dependencies,
     completed: input.completed ?? currentTask.completed,
-    updatedAt: Date.now(),
+    updatedAt: new Date().toISOString(),
   };
 
   // Recalculate quadrant if urgent/important changed
   if (input.urgent !== undefined || input.important !== undefined) {
-    updatedTask.quadrantId = deriveQuadrantId(updatedTask.urgent, updatedTask.important);
+    updatedTask.quadrant = deriveQuadrant(updatedTask.urgent, updatedTask.important);
   }
 
   // Encrypt task and calculate checksum
@@ -375,7 +375,7 @@ export async function bulkUpdateTasks(
   const operations: SyncOperation[] = [];
 
   const cryptoManager = getCryptoManager();
-  const now = Date.now();
+  const now = new Date().toISOString();
 
   for (const task of tasksToUpdate) {
     try {
@@ -391,7 +391,7 @@ export async function bulkUpdateTasks(
             ...task,
             urgent: operation.urgent,
             important: operation.important,
-            quadrantId: deriveQuadrantId(operation.urgent, operation.important),
+            quadrant: deriveQuadrant(operation.urgent, operation.important),
             updatedAt: now,
           };
           break;

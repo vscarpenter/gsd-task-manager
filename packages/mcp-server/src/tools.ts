@@ -51,14 +51,14 @@ const encryptedTaskBlobSchema = z.object({
 
 export type EncryptedTaskBlob = z.infer<typeof encryptedTaskBlobSchema>;
 
-// Decrypted task structure (matches GSD TaskRecord)
+// Decrypted task structure (matches GSD TaskRecord from frontend)
 export interface DecryptedTask {
   id: string;
   title: string;
   description: string;
   urgent: boolean;
   important: boolean;
-  quadrantId: string;
+  quadrant: string; // Frontend uses 'quadrant', not 'quadrantId'
   completed: boolean;
   dueDate: number | null;
   tags: string[];
@@ -69,8 +69,8 @@ export interface DecryptedTask {
   }>;
   recurrence: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies: string[];
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string; // Frontend expects ISO datetime string
+  updatedAt: string; // Frontend expects ISO datetime string
 }
 
 /**
@@ -382,7 +382,7 @@ export async function listTasks(
 
       // Apply filters if provided
       if (filters) {
-        if (filters.quadrant && task.quadrantId !== filters.quadrant) continue;
+        if (filters.quadrant && task.quadrant !== filters.quadrant) continue;
         if (filters.completed !== undefined && task.completed !== filters.completed)
           continue;
         if (
