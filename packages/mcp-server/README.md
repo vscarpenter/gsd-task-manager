@@ -7,12 +7,13 @@ Model Context Protocol (MCP) server for GSD Task Manager. Provides read-only acc
 
 ## Quick Start
 
+**First time? Run the interactive setup wizard:**
+
 ```bash
-# Install via npx (no installation needed!)
-npx gsd-mcp-server
+npx gsd-mcp-server --setup
 ```
 
-Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+The wizard will guide you through configuration and test your connection. Once complete, add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
@@ -34,12 +35,41 @@ See [Installation](#installation) section below for detailed setup instructions.
 
 ## Features
 
+**Write Operations** (v0.4.0) 🆕 🔥
+- ✅ **Create Tasks** - Add new tasks with natural language
+- ✅ **Update Tasks** - Modify any task property (title, description, quadrant, tags, etc.)
+- ✅ **Complete Tasks** - Mark tasks as done or incomplete
+- ✅ **Delete Tasks** - Permanently remove tasks
+- ✅ **Bulk Operations** - Update up to 50 tasks at once (complete, move quadrants, add/remove tags, etc.)
+- 🔒 **Safety Features** - Bulk limits (50 tasks max), validation, clear error messages
+- 🔐 **Encrypted Sync** - All changes encrypted before sending to server
+
+**Quick Start Helpers** (v0.3.2)
+- ✅ **6 Built-in Prompts** - One-click workflows (daily standup, weekly review, focus mode, etc.)
+- ✅ **Comprehensive Help Tool** - In-Claude documentation with topic filtering
+- ✅ Zero learning curve - Discover features as you use them
+
+**Interactive Setup & Validation** (v0.3.0)
+- ✅ Interactive setup wizard (`--setup`)
+- ✅ Configuration validator (`--validate`)
+- ✅ Automatic connectivity and auth testing
+- ✅ Enhanced error messages with actionable guidance
+- ✅ Multi-device support (fixes hardcoded device ID)
+
+**Analytics & Insights** (v0.3.0) 🆕
+- ✅ Comprehensive productivity metrics
+- ✅ Quadrant distribution analysis
+- ✅ Tag-based analytics with completion rates
+- ✅ Upcoming deadline tracking (overdue, today, this week)
+- ✅ AI-friendly task insights summaries
+- ✅ Streak tracking (current and longest)
+
 **Metadata Access** (v0.1.0)
 - ✅ Sync status monitoring
 - ✅ Device management overview
 - ✅ Task statistics (metadata only)
 
-**Decrypted Task Access** (v0.2.0) 🆕
+**Decrypted Task Access** (v0.2.0)
 - ✅ List all tasks with full content (opt-in)
 - ✅ Search tasks by title, description, tags, subtasks
 - ✅ Filter by quadrant, completion status, tags
@@ -47,10 +77,10 @@ See [Installation](#installation) section below for detailed setup instructions.
 - 🔒 Privacy-first: Requires user-provided encryption passphrase
 - 🔒 Read-only: Cannot modify or create tasks
 
-**Planned** (Future v0.3.0+)
+**Planned** (Future v0.4.0+)
 - Write operations (create, update, delete tasks)
-- Advanced analytics queries
 - AI-powered task suggestions
+- Bulk operations support
 
 ## Prerequisites
 
@@ -58,6 +88,38 @@ See [Installation](#installation) section below for detailed setup instructions.
 2. **OAuth Authentication** completed (Google or Apple)
 3. **Node.js** 18+ installed
 4. **Claude Desktop** or another MCP-compatible client
+
+## CLI Usage
+
+The MCP server includes interactive tools for easy setup and troubleshooting:
+
+```bash
+# Interactive setup wizard (recommended for first-time users)
+npx gsd-mcp-server --setup
+
+# Validate existing configuration
+npx gsd-mcp-server --validate
+
+# Show help and usage information
+npx gsd-mcp-server --help
+
+# Run as MCP server (normal mode - used by Claude Desktop)
+npx gsd-mcp-server
+```
+
+**Setup Wizard Features:**
+- ✅ Tests API connectivity before configuration
+- ✅ Validates authentication token
+- ✅ Tests encryption passphrase (if provided)
+- ✅ Generates ready-to-use Claude Desktop config
+- ✅ Provides platform-specific config file paths
+
+**Validation Tool Features:**
+- ✅ Checks environment variables
+- ✅ Tests API connectivity and authentication
+- ✅ Verifies encryption setup
+- ✅ Validates device registration
+- ✅ Provides actionable error messages
 
 ## Installation
 
@@ -153,6 +215,21 @@ Close and reopen Claude Desktop to load the MCP server.
 
 ## Usage
 
+### Built-in Prompts (v0.3.2)
+
+The MCP server includes 6 pre-configured conversation starters that appear in Claude Desktop:
+
+1. **daily-standup** - Daily task review with overdue items and productivity summary
+2. **weekly-review** - Weekly productivity analysis with completion stats and trends
+3. **focus-mode** - Get urgent and important tasks (Q1: Do First) to work on now
+4. **upcoming-deadlines** - Show all overdue, due today, and due this week tasks
+5. **productivity-report** - Comprehensive report with metrics, streaks, and insights
+6. **tag-analysis** - Analyze task distribution and completion rates by tags/projects
+
+**How to use:** Click the "Use Prompt" button in Claude Desktop, or just ask directly!
+
+### Natural Language Queries
+
 Once configured, you can ask Claude questions like:
 
 **Sync Status** (v0.1.0)
@@ -179,7 +256,36 @@ Once configured, you can ask Claude questions like:
 - "What are my urgent tasks?"
 - "Find tasks mentioning [name or topic]"
 
-Claude will use the MCP tools to fetch real-time data from your Worker API.
+**Analytics & Insights** (v0.3.0 - requires passphrase)
+- "What's my productivity this week?"
+- "Show me my completion streak"
+- "Analyze my task distribution across quadrants"
+- "What tags do I use most?"
+- "Which quadrant has the best completion rate?"
+- "Show me overdue tasks"
+- "Give me a productivity summary"
+
+**Configuration & Troubleshooting** (v0.3.0)
+- "Validate my MCP configuration"
+- "Check if my setup is working correctly"
+- "Diagnose connection issues"
+
+**Help & Discovery** (v0.3.2)
+- "Help me use the GSD MCP server"
+- "Show me usage examples"
+- "What tools are available?"
+- "How do I troubleshoot issues?"
+
+**Write Operations** (v0.4.0) 🆕
+- "Create a task: Finish quarterly report, urgent and important, due Friday"
+- "Mark task #abc123 as complete"
+- "Move all #work tasks to the Schedule quadrant"
+- "Update task #xyz789 to add tags #project-alpha and #high-priority"
+- "Delete completed tasks from last month"
+- "Complete all tasks tagged #quick-wins"
+- "Change due date of task #def456 to next Monday"
+
+Claude will use the MCP tools to fetch real-time data from your Worker API and can now modify your tasks!
 
 ## Available Tools
 
@@ -292,6 +398,257 @@ Search tasks by text query across titles, descriptions, tags, and subtasks. **Re
 
 **Returns**: Array of matching tasks (same structure as `list_tasks`)
 
+---
+
+### `get_productivity_metrics` (v0.3.0)
+Get comprehensive productivity metrics. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Returns**:
+```json
+{
+  "completedToday": 5,
+  "completedThisWeek": 23,
+  "completedThisMonth": 87,
+  "activeStreak": 7,
+  "longestStreak": 14,
+  "completionRate": 68,
+  "quadrantDistribution": {
+    "urgent-important": 12,
+    "not-urgent-important": 18,
+    "urgent-not-important": 5,
+    "not-urgent-not-important": 3
+  },
+  "tagStats": [...],
+  "overdueCount": 2,
+  "dueTodayCount": 3,
+  "dueThisWeekCount": 7,
+  "noDueDateCount": 15,
+  "activeTasks": 38,
+  "completedTasks": 42,
+  "totalTasks": 80
+}
+```
+
+### `get_quadrant_analysis` (v0.3.0)
+Analyze task distribution and performance across quadrants. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Returns**:
+```json
+[
+  {
+    "quadrantId": "urgent-important",
+    "name": "Q1: Do First",
+    "completionRate": 85,
+    "totalTasks": 20,
+    "completedTasks": 17,
+    "activeTasks": 3
+  },
+  ...
+]
+```
+
+### `get_tag_analytics` (v0.3.0)
+Get statistics for all tags with usage and completion rates. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Parameters**:
+- `limit` (optional): Maximum number of tags to return
+
+**Returns**:
+```json
+[
+  {
+    "tag": "#work",
+    "count": 35,
+    "completedCount": 28,
+    "completionRate": 80
+  },
+  ...
+]
+```
+
+### `get_upcoming_deadlines` (v0.3.0)
+Get tasks grouped by deadline urgency. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Returns**:
+```json
+{
+  "overdue": [...],
+  "dueToday": [...],
+  "dueThisWeek": [...]
+}
+```
+
+### `get_task_insights` (v0.3.0)
+Generate AI-friendly summary of task insights. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Returns**: Plain text summary with key metrics, streaks, deadlines, and recommendations.
+
+### `validate_config` (v0.3.0)
+Validate MCP server configuration and diagnose issues.
+
+**Returns**:
+```json
+{
+  "checks": [
+    {
+      "name": "API Connectivity",
+      "status": "success",
+      "details": "Connected to https://gsd.vinny.dev"
+    },
+    {
+      "name": "Authentication",
+      "status": "success",
+      "details": "Token valid (3 devices registered)"
+    },
+    {
+      "name": "Encryption",
+      "status": "success",
+      "details": "Successfully decrypted 42 tasks"
+    }
+  ]
+}
+```
+
+### `get_help` (v0.3.2)
+Get comprehensive help documentation including available tools, usage examples, and troubleshooting tips.
+
+**Parameters**:
+- `topic` (optional): Filter help by topic
+  - `tools` - List all available tools
+  - `analytics` - Analytics capabilities
+  - `setup` - Setup and configuration guide
+  - `examples` - Usage examples
+  - `troubleshooting` - Common issues and solutions
+
+**Returns**: Markdown-formatted help text
+
+**Example Usage:**
+- "Help me use the GSD MCP server"
+- "Show me analytics examples"
+- "How do I troubleshoot authentication issues?"
+
+---
+
+## Write Operation Tools (v0.4.0)
+
+###`create_task`
+Create a new task with natural language input. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Parameters**:
+- `title` (required): Task title
+- `urgent` (required): Is this task urgent? (time-sensitive)
+- `important` (required): Is this task important? (high-value, strategic)
+- `description` (optional): Task description
+- `dueDate` (optional): Due date as Unix timestamp (milliseconds)
+- `tags` (optional): Array of tags (e.g., `["#work", "#project-alpha"]`)
+- `subtasks` (optional): Array of subtask objects `{text, completed}`
+- `recurrence` (optional): `'none'` | `'daily'` | `'weekly'` | `'monthly'`
+- `dependencies` (optional): Array of task IDs that must be completed first
+
+**Returns**: The newly created task object with generated ID
+
+**Example:**
+```
+Create a task:
+- Title: "Finish quarterly report"
+- Urgent: true
+- Important: true
+- Due date: Friday at 5pm
+- Tags: #work, #finance
+```
+
+### `update_task`
+Update an existing task. All fields except ID are optional. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Parameters**:
+- `id` (required): Task ID to update
+- `title` (optional): New task title
+- `description` (optional): New description
+- `urgent` (optional): Change urgency (moves between quadrants)
+- `important` (optional): Change importance (moves between quadrants)
+- `dueDate` (optional): New due date (null to clear)
+- `tags` (optional): Replace all tags
+- `subtasks` (optional): Replace all subtasks
+- `recurrence` (optional): Change recurrence pattern
+- `dependencies` (optional): Replace all dependencies
+- `completed` (optional): Mark as complete/incomplete
+
+**Returns**: The updated task object
+
+**Example:**
+```
+Update task abc123:
+- Move to "Schedule" quadrant (urgent=false, important=true)
+- Add tags: #project-alpha, #q1-goals
+```
+
+### `complete_task`
+Mark a task as complete or incomplete. Quick shortcut for updating completion status. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Parameters**:
+- `id` (required): Task ID
+- `completed` (required): `true` to mark complete, `false` to mark incomplete
+
+**Returns**: The updated task object
+
+**Example:**
+```
+Mark task xyz789 as complete
+```
+
+### `delete_task`
+Permanently delete a task. **This action cannot be undone.** **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Parameters**:
+- `id` (required): Task ID to delete
+
+**Returns**: Confirmation message
+
+**Example:**
+```
+Delete task def456
+```
+
+**⚠️ Warning**: Deleted tasks cannot be recovered!
+
+### `bulk_update_tasks`
+Update multiple tasks at once. Limited to 50 tasks per operation for safety. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+
+**Parameters**:
+- `taskIds` (required): Array of task IDs to update (max 50)
+- `operation` (required): Operation object with `type` field
+  - `type: 'complete'` - Mark all as complete/incomplete
+    - `completed`: boolean
+  - `type: 'move_quadrant'` - Move all to a quadrant
+    - `urgent`: boolean
+    - `important`: boolean
+  - `type: 'add_tags'` - Add tags to all tasks
+    - `tags`: string[]
+  - `type: 'remove_tags'` - Remove tags from all tasks
+    - `tags`: string[]
+  - `type: 'set_due_date'` - Set due date for all tasks
+    - `dueDate`: number | null
+  - `type: 'delete'` - Delete all tasks
+- `maxTasks` (optional): Safety limit (default: 50)
+
+**Returns**: Result object with `updated` count and `errors` array
+
+**Examples:**
+```
+Complete all tasks tagged #quick-wins
+
+Move all #work tasks to the Schedule quadrant
+
+Add #priority tag to all overdue tasks
+
+Delete all completed tasks from last year
+```
+
+**🔒 Safety Features**:
+- Maximum 50 tasks per operation
+- Clear error messages for each failed task
+- Transactional (all-or-nothing for the API push)
+
 ## Privacy & Security
 
 **What This Server Can Access** (varies by configuration):
@@ -303,22 +660,23 @@ Search tasks by text query across titles, descriptions, tags, and subtasks. **Re
 - ❌ Task content (titles, descriptions, etc.)
 - ❌ Task details (quadrants, tags, due dates)
 
-**With `GSD_ENCRYPTION_PASSPHRASE` (v0.2.0 full access)**:
+**With `GSD_ENCRYPTION_PASSPHRASE` (v0.2.0+ full access)**:
 - ✅ All metadata (same as above)
 - ✅ Task titles and descriptions
 - ✅ Quadrant classifications, tags, due dates
 - ✅ Subtasks and checklists
 - ✅ Task dependencies
 - ✅ All decrypted task content
-- ❌ Cannot create or modify tasks (read-only)
+- ✅ **Can create, update, and delete tasks** (v0.4.0+)
 
 **Security Model**:
 - 🔒 **End-to-end encryption maintained**: Tasks encrypted in database, decrypted locally
 - 🔒 **Zero-knowledge server**: Worker cannot decrypt your tasks
 - 🔒 **Passphrase stays local**: Never sent to server, stored only in Claude Desktop config
 - 🔒 **Opt-in decryption**: Decryption disabled by default, requires explicit passphrase
-- 🔒 **Read-only access**: MCP server cannot modify, create, or delete tasks
+- ✍️ **Write operations** (v0.4.0): Full task management with encryption
 - 🔐 **JWT authentication**: Uses existing OAuth tokens with 7-day expiry
+- 🛡️ **Safety limits**: Bulk operations limited to 50 tasks, clear validation
 
 **See `DECRYPTION.md` for detailed security documentation.**
 
@@ -395,25 +753,21 @@ npm publish --access public --otp=YOUR_CODE
 
 ## Future Enhancements
 
-**Write Operations** (v0.3.0)
+**Write Operations** (v0.4.0)
 - Create new tasks via natural language
 - Update existing tasks (title, description, quadrant, etc.)
 - Complete/uncomplete tasks
 - Delete tasks
 - Conflict resolution for concurrent edits
+- Batch operations support
 
-**Advanced Analytics** (v0.4.0)
-- Productivity trends over time
-- Quadrant distribution analysis
-- Tag-based insights
-- Completion rate tracking
-- Workload balancing recommendations
-
-**AI-Powered Features** (v0.5.0)
-- Smart task suggestions based on patterns
+**Advanced Features** (v0.5.0+)
+- AI-powered task suggestions based on patterns
 - Priority recommendations using AI
 - Deadline predictions
+- Historical trend analysis (7/30/90 day views)
 - Cross-integration with calendar/email (MCP chaining)
+- Custom analytics queries
 
 ## Architecture
 
@@ -473,7 +827,21 @@ MIT - Same as GSD Task Manager
 
 ---
 
-**Status**: v0.2.0 (Decrypted Task Access)
+**Status**: v0.4.0 (Write Operations) 🔥
+**New in v0.4.0**:
+- ✍️ **Full task management** - Create, update, delete tasks
+- 🔄 **Bulk operations** - Update up to 50 tasks at once
+- 🔐 **Encrypted writes** - All changes encrypted before sync
+- 🛡️ **Safety features** - Bulk limits, validation, clear errors
+- 📊 **18 total MCP tools** (13 read + 5 write)
+
+**Previous Releases**:
+- v0.3.2 - Built-in prompts, help tool
+- v0.3.0 - Interactive setup, analytics, validation
+- v0.2.0 - Decrypted task access
+- v0.1.0 - Metadata-only access
+
 **Privacy**: Opt-in decryption with local passphrase
-**Security**: E2E encryption maintained, zero-knowledge server, read-only access
-**Deployment**: Worker deployed ✅ | MCP server built ✅ | Ready for testing
+**Security**: E2E encryption maintained, zero-knowledge server
+**Capabilities**: Full task management (create, read, update, delete)
+**Deployment**: Published to npm ✅ | Ready for production ✅

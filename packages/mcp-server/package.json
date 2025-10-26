@@ -1,7 +1,7 @@
 {
   "name": "gsd-mcp-server",
-  "version": "0.2.1",
-  "description": "MCP server for GSD Task Manager - decrypted read-only access to synced tasks",
+  "version": "0.4.0",
+  "description": "MCP server for GSD Task Manager - full task management with create/update/delete, analytics, interactive setup, and validation",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

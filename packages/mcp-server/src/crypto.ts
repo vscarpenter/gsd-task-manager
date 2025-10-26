@@ -49,8 +49,45 @@ export class CryptoManager {
       keyMaterial,
       { name: ALGORITHM, length: KEY_LENGTH },
       false,
-      ['decrypt'] // We only need decrypt in MCP server
+      ['encrypt', 'decrypt'] // Support both encrypt and decrypt for write operations
     );
+  }
+
+  /**
+   * Encrypt plaintext data
+   * Returns object with ciphertext and nonce (both base64)
+   */
+  async encrypt(plaintext: string): Promise<{ ciphertext: string; nonce: string }> {
+    if (!this.encryptionKey) {
+      throw new Error('Encryption key not initialized. Call deriveKey() first.');
+    }
+
+    // Generate random nonce (96 bits / 12 bytes)
+    const nonce = webcrypto.getRandomValues(new Uint8Array(NONCE_LENGTH));
+
+    const encoder = new TextEncoder();
+    const plaintextBuffer = encoder.encode(plaintext);
+
+    try {
+      const ciphertextBuffer = await webcrypto.subtle.encrypt(
+        {
+          name: ALGORITHM,
+          iv: nonce,
+          tagLength: 128,
+        },
+        this.encryptionKey,
+        plaintextBuffer
+      );
+
+      return {
+        ciphertext: this.bufferToBase64(new Uint8Array(ciphertextBuffer)),
+        nonce: this.bufferToBase64(nonce),
+      };
+    } catch (error) {
+      throw new Error(
+        `Encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   /**
