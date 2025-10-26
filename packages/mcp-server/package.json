@@ -1,6 +1,6 @@
 {
   "name": "gsd-mcp-server",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "MCP server for GSD Task Manager - full task management with create/update/delete, analytics, interactive setup, and validation",
   "type": "module",
   "main": "dist/index.js",

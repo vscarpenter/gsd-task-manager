@@ -5,6 +5,22 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed JWT payload schema mismatch between MCP server and Worker
+  - Changed `user_id` → `sub` (JWT standard subject field)
+  - Changed `device_id` → `deviceId` (camelCase to match Worker)
+  - Added `email` and `jti` fields to match Worker's JWT structure
+  - Added `getUserIdFromToken()` helper function
+  - **Impact**: JWT parsing was failing with "user_id and device_id are missing" error, preventing all operations
+
+### Technical Details
+- Updated `jwtPayloadSchema` in `src/jwt.ts` to match `worker/src/utils/jwt.ts`
+- Worker generates JWT with standard `sub` field (RFC 7519), not custom `user_id`
+- Worker uses camelCase `deviceId`, not snake_case `device_id`
+- MCP server now correctly parses tokens from actual Worker OAuth flow
+
 ## [0.4.1] - 2025-10-26 🐛
 
 ### Fixed

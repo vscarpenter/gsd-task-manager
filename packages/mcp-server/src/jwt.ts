@@ -5,13 +5,15 @@
 import { z } from 'zod';
 
 /**
- * JWT payload schema
+ * JWT payload schema (matches Worker's jwt.ts structure)
  */
 const jwtPayloadSchema = z.object({
-  user_id: z.string(),
-  device_id: z.string(),
-  iat: z.number(), // Issued at
-  exp: z.number(), // Expiration
+  sub: z.string(),      // User ID (subject)
+  email: z.string(),
+  deviceId: z.string(), // Device ID (camelCase)
+  jti: z.string(),      // JWT ID
+  iat: z.number(),      // Issued at
+  exp: z.number(),      // Expiration
 });
 
 export type JWTPayload = z.infer<typeof jwtPayloadSchema>;
@@ -46,7 +48,15 @@ export function parseJWT(token: string): JWTPayload {
  */
 export function getDeviceIdFromToken(token: string): string {
   const payload = parseJWT(token);
-  return payload.device_id;
+  return payload.deviceId;
+}
+
+/**
+ * Extract user ID from JWT token
+ */
+export function getUserIdFromToken(token: string): string {
+  const payload = parseJWT(token);
+  return payload.sub;
 }
 
 /**
