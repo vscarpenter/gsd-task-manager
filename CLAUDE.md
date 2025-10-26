@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Next.js 15 App Router. All data is stored locally in IndexedDB via Dexie, with JSON export/import for backups. The app is a PWA that works completely offline.
+GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Next.js 16 App Router. All data is stored locally in IndexedDB via Dexie, with JSON export/import for backups. The app is a PWA that works completely offline.
+
+**v5.0.0 Features:**
+- **Optional Cloud Sync** — End-to-end encrypted multi-device sync via Cloudflare Workers (OAuth with Google/Apple)
+- **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
+- **Zero-Knowledge Architecture** — Worker stores only encrypted blobs; decryption happens locally
 
 ## Core Commands
 
@@ -122,6 +127,59 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - `public/manifest.json` - App metadata for installation
 - `public/sw.js` - Service worker for offline caching
 - `components/pwa-register.tsx` - Client component that registers SW on mount
+
+### Cloud Sync Architecture (Optional, v5.0.0)
+- **Backend**: Cloudflare Workers + D1 (SQLite) + KV + R2
+- **Authentication**: OAuth 2.0 with Google and Apple (OIDC-compliant)
+- **Encryption**: AES-256-GCM with PBKDF2 key derivation (600k iterations)
+- **Multi-Environment**: Dev, staging, prod with isolated databases and secrets
+- **Sync Protocol**: Vector clock-based conflict resolution with cascade sync
+- **Zero-Knowledge**: Worker stores only encrypted blobs + metadata, cannot decrypt task content
+
+**Key Files**:
+- `worker/src/index.ts` - Main Worker entry point with API routes
+- `worker/src/routes/` - API endpoints for auth, sync, devices
+- `worker/src/db/` - D1 database queries and migrations
+- `lib/sync/` - Client-side sync logic with encryption (frontend)
+
+**API Endpoints**:
+- `/api/auth/login/:provider` - OAuth initiation
+- `/api/auth/callback/:provider` - OAuth callback
+- `/api/sync/push` - Upload encrypted task changes
+- `/api/sync/pull` - Fetch encrypted task updates
+- `/api/sync/status` - Sync health check
+- `/api/devices` - Device management
+
+### MCP Server Architecture (v5.0.0)
+- **Purpose**: Enable Claude Desktop to access and analyze tasks via natural language
+- **Location**: `packages/mcp-server/` - Standalone npm package
+- **Runtime**: Node.js 18+ with TypeScript
+- **Communication**: stdio transport (JSON-RPC 2.0) with Claude Desktop
+- **Security**: Read-only access, decryption happens locally on user's machine
+
+**Key Modules**:
+- `packages/mcp-server/src/index.ts` - MCP server entry point, tool registration
+- `packages/mcp-server/src/crypto.ts` - Encryption/decryption using Node.js Web Crypto API
+- `packages/mcp-server/src/tools.ts` - API client and 6 MCP tool implementations
+
+**Available MCP Tools**:
+1. `list_tasks` - List decrypted tasks with optional filtering (quadrant, status, tags)
+2. `get_task` - Get detailed task information by ID
+3. `search_tasks` - Search across titles, descriptions, tags, subtasks
+4. `get_sync_status` - Check sync health and storage usage
+5. `list_devices` - View all registered devices
+6. `get_task_stats` - Get task statistics and metadata
+
+**Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with:
+- `GSD_API_BASE_URL` - Worker API URL (https://gsd.vinny.dev)
+- `GSD_AUTH_TOKEN` - JWT token from OAuth flow (7-day expiration)
+- `GSD_ENCRYPTION_PASSPHRASE` - User's passphrase for local decryption
+
+**Security Model**:
+- Encryption passphrase stored only in Claude Desktop config (never in cloud)
+- End-to-end encryption maintained (Worker cannot decrypt tasks)
+- Read-only access (Claude cannot modify, create, or delete tasks)
+- Opt-in feature (requires explicit passphrase configuration)
 
 ## Testing Guidelines
 - Place UI tests in `tests/ui/`, data logic in `tests/data/`
@@ -274,6 +332,71 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
   - Search filters to relevant tasks only
   - Clear visual feedback for selected dependencies
 
+## Feature Highlights (v5.0.0)
+
+### OAuth Cloud Sync
+- **End-to-End Encryption**: AES-256-GCM with PBKDF2 key derivation (600k iterations, OWASP 2023)
+- **Zero-Knowledge Architecture**: Worker stores only encrypted task blobs; cannot decrypt task content
+- **OAuth Authentication**: Secure login with Google or Apple (OIDC-compliant)
+- **Multi-Device Sync**: Vector clock-based synchronization across unlimited devices
+- **Conflict Resolution**: Automatic cascade sync for concurrent edits with manual resolution UI
+- **Device Management**: View, manage, and revoke access for specific devices
+- **Session Management**: JWT tokens with 7-day expiration and refresh flow
+
+**Implementation Details**:
+- `worker/src/index.ts` - Cloudflare Worker with Hono router
+- `worker/src/routes/auth.ts` - OAuth login, callback, registration, salt endpoints
+- `worker/src/routes/sync.ts` - Push, pull, status endpoints with vector clock logic
+- `worker/src/routes/devices.ts` - Device listing and management
+- `worker/src/db/` - D1 database queries with prepared statements
+- `lib/sync/` - Frontend sync client with encryption (AES-GCM wrapper)
+- Multi-environment deployment: dev (`localhost:3000`), staging (`gsd-dev.vinny.dev`), prod (`gsd.vinny.dev`)
+
+**Security Features**:
+- Encryption salt stored encrypted in D1 (useless without user's passphrase)
+- PBKDF2 with 600,000 iterations (OWASP 2023 recommendation)
+- Nonce per encryption operation (96-bit random)
+- JWT tokens signed with HS256 (256-bit secret per environment)
+- Rate limiting via KV (100 requests/minute per IP)
+- CORS restrictions (only allow origin: https://gsd.vinny.dev in prod)
+
+### MCP Server for Claude Desktop
+- **Natural Language Task Access**: Query tasks with plain English ("What are my urgent tasks this week?")
+- **6 MCP Tools**: list_tasks, get_task, search_tasks, get_sync_status, list_devices, get_task_stats
+- **Local Decryption**: Encryption passphrase stored only in Claude Desktop config (never in cloud)
+- **Read-Only Access**: Claude cannot modify, create, or delete tasks (safe exploration)
+- **Privacy-Preserved**: End-to-end encryption maintained throughout (Worker → MCP → Claude)
+
+**Implementation Details**:
+- `packages/mcp-server/src/index.ts` - MCP server using `@modelcontextprotocol/sdk`
+- `packages/mcp-server/src/crypto.ts` - Node.js Web Crypto API port of client-side crypto
+- `packages/mcp-server/src/tools.ts` - API client with fetch + JWT auth, tool handlers
+- stdio transport (JSON-RPC 2.0) spawned by Claude Desktop
+- Stateless tool calls (no persistent state, ephemeral decryption)
+
+**Usage Examples**:
+- "What are my urgent tasks?" → Uses `list_tasks` with filter
+- "Find tasks about the quarterly report" → Uses `search_tasks`
+- "How many tasks do I have in Q2?" → Uses `list_tasks` + analysis
+- "Check my sync status" → Uses `get_sync_status`
+
+**Configuration**: Claude Desktop config JSON with environment variables:
+```json
+{
+  "mcpServers": {
+    "gsd-taskmanager": {
+      "command": "npx",
+      "args": ["-y", "@gsd/mcp-server"],
+      "env": {
+        "GSD_API_BASE_URL": "https://gsd.vinny.dev",
+        "GSD_AUTH_TOKEN": "eyJ...",
+        "GSD_ENCRYPTION_PASSPHRASE": "user's passphrase"
+      }
+    }
+  }
+}
+```
+
 ## Development Notes
 - Changes to task schema require updating fixtures in `lib/schema.ts`, export/import logic, and test fixtures in `tests/`
 - Database migrations handled in `lib/db.ts` - current version is 6 (v1→v6: tags/subtasks→filters→notifications→dependencies)
@@ -298,4 +421,21 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
   - Use `useViewTransition()` hook for client-side navigation with smooth View Transitions API
   - The hook automatically adds trailing slashes to routes (required for static export with trailingSlash: true)
   - View transitions only work in Chrome/Edge 111+, Safari 18+ (gracefully degrades in Firefox)
+- Cloud Sync (v5.0.0):
+  - **Worker Deployment**: Use `npm run deploy:all` in `worker/` to deploy to dev, staging, prod
+  - **Environment Setup**: Run `./worker/scripts/setup-{env}.sh` to create D1, KV, R2 resources
+  - **Migrations**: Use `npm run migrations:{env}` to apply D1 schema changes
+  - **Secrets**: Set OAuth client IDs, secrets, JWT secret per environment via `wrangler secret put`
+  - **Testing**: Use `./worker/test-*.sh` scripts for manual API testing with curl
+  - **JWT Tokens**: Expire after 7 days; frontend should handle refresh flow (401 → re-auth)
+  - **Encryption**: Never log or expose encryption salts or passphrases in Worker code
+- MCP Server (v5.0.0):
+  - **Location**: All MCP code in `packages/mcp-server/` (standalone package)
+  - **Building**: Run `npm run build` in `packages/mcp-server/` before testing
+  - **Testing**: Configure Claude Desktop with local `node dist/index.js` for development
+  - **Tools**: Add new MCP tools in `tools.ts` following existing pattern (schema + handler)
+  - **Security**: MCP tools must be read-only; never implement write operations without user consent
+  - **Decryption**: Use `CryptoManager` singleton from `crypto.ts` for all decryption
+  - **Error Handling**: Provide clear error messages (e.g., "Token expired" vs generic "Auth failed")
+  - **Documentation**: Update `packages/mcp-server/README.md` when adding new tools
 - Always leverage @coding-standards.md for coding standards and guidelines

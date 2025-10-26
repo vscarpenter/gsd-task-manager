@@ -3,8 +3,8 @@
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
 **🚀 Live App:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**📦 Current Version:** 3.5.0
-**🔄 Latest:** Multi-environment worker deployment with TypeScript fixes and critical bug fixes
+**📦 Current Version:** 5.0.0
+**🔄 Latest:** MCP Server for AI-powered task management with Claude Desktop + OAuth sync with end-to-end encryption
 
 ## What is the Eisenhower Matrix?
 
@@ -29,19 +29,13 @@ GSD Task Manager is a **completely private** task manager that runs entirely in 
 
 #### 📊 **Task Management**
 
-✅ **Eisenhower Matrix** — Organize tasks by urgency and importance across four quadrants
-
-✅ **Task Dependencies** — Define blocking relationships between tasks with circular dependency prevention
-
-✅ **Recurring Tasks** — Automatically recreate tasks on daily, weekly, or monthly schedules
-
-✅ **Tags & Labels** — Categorize tasks with custom tags for easy filtering
-
-✅ **Subtasks & Checklists** — Break down complex tasks into manageable steps with progress tracking
-
-✅ **Batch Operations** — Select and manage multiple tasks at once (complete, move, tag, delete)
-
-✅ **Smart Search** — Search across titles, descriptions, tags, and subtasks
+- ✅ **Eisenhower Matrix** — Organize tasks by urgency and importance across four quadrants
+- ✅ **Task Dependencies** — Define blocking relationships between tasks with circular dependency prevention
+- ✅ **Recurring Tasks** — Automatically recreate tasks on daily, weekly, or monthly schedules
+- ✅ **Tags & Labels** — Categorize tasks with custom tags for easy filtering
+- ✅ **Subtasks & Checklists** — Break down complex tasks into manageable steps with progress tracking
+- ✅ **Batch Operations** — Select and manage multiple tasks at once (complete, move, tag, delete)
+- ✅ **Smart Search** — Search across titles, descriptions, tags, and subtasks
 
 #### 📈 **Analytics & Insights**
 
@@ -61,7 +55,7 @@ GSD Task Manager is a **completely private** task manager that runs entirely in 
 
 ✅ **Privacy-first** — All data stored locally in IndexedDB (no server by default)
 
-✅ **End-to-End Encryption** — Optional cloud sync with client-side encryption (coming soon)
+✅ **End-to-End Encryption** — Optional cloud sync with client-side encryption (OAuth-based, fully implemented)
 
 ✅ **Export/Import** — Back up tasks as JSON with merge or replace modes
 
@@ -244,14 +238,15 @@ Visit the [Install page](https://gsd.vinny.dev/install.html) for detailed instru
 
 GSD Task Manager works completely offline by default, but includes an **optional cloud sync backend** powered by Cloudflare Workers.
 
-### Cloud Sync Features (Coming Soon)
+### Cloud Sync Features (Fully Implemented)
 
-The backend provides:
-- **End-to-End Encryption** — Server never sees plaintext task data
-- **OAuth Authentication** — Secure login with Google or Apple
-- **Multi-Device Sync** — Keep tasks in sync across devices using vector clocks
-- **Conflict Resolution** — Automatic handling of concurrent edits
+The backend provides optional cloud sync with enterprise-grade security:
+- **End-to-End Encryption** — Zero-knowledge architecture: server never sees plaintext task data
+- **OAuth Authentication** — Secure login with Google or Apple (OIDC-compliant)
+- **Multi-Device Sync** — Keep tasks in sync across unlimited devices using vector clocks
+- **Conflict Resolution** — Automatic handling of concurrent edits with cascade sync
 - **Device Management** — Manage and revoke access for specific devices
+- **MCP Server Integration** — AI-powered task management through Claude Desktop (see below)
 
 ### Multi-Environment Deployment
 
@@ -298,9 +293,56 @@ This creates the function, publishes it, attaches it to the CloudFront distribut
 - Processes 100% of viewer requests before reaching origin (S3)
 - Cost-effective at scale (charged per million requests)
 
+### MCP Server for AI-Powered Task Management (v5.0.0) 🆕
+
+The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or ChatGPG to access and analyze your tasks through natural language.
+
+**What is MCP?**
+- MCP is Anthropic's protocol for connecting AI assistants to external data sources
+- The GSD MCP Server runs locally on your machine and communicates with Claude, ChatGPT or any other AI tool
+- Provides secure, read-only access to your synced tasks
+
+**Features:**
+- ✅ **Decrypted Task Access** — Claude can read all your task content (titles, descriptions, tags, subtasks)
+- ✅ **Natural Language Queries** — Ask "What are my urgent tasks this week?" or "Show me all #work tasks"
+- ✅ **Smart Search & Filtering** — Search across all task content, filter by quadrant, status, or tags
+- ✅ **Privacy-First** — Encryption passphrase stored locally, decryption happens on your machine
+- ✅ **Read-Only** — Claude cannot modify, create, or delete tasks (safe exploration)
+- ✅ **Zero-Knowledge Server** — Your Worker still can't decrypt tasks; MCP server handles decryption locally
+
+**Available Tools:**
+1. `list_tasks` — List all decrypted tasks with optional filtering (quadrant, status, tags)
+2. `get_task` — Get detailed information about a specific task by ID
+3. `search_tasks` — Search across titles, descriptions, tags, and subtasks
+4. `get_sync_status` — Check sync health (last sync time, conflicts, storage)
+5. `list_devices` — View all registered devices
+6. `get_task_stats` — Get task statistics and metadata
+
+**Use Cases:**
+- **Weekly Planning** — "What are my urgent tasks this week?"
+- **Task Discovery** — "Find all tasks mentioning the quarterly report"
+- **Productivity Analysis** — "How many tasks do I have in each quadrant?"
+- **Smart Prioritization** — "Which tasks should I focus on today?"
+
+**Security:**
+- Encryption passphrase stored only in local Claude Desktop config (never in cloud)
+- End-to-end encryption maintained (Worker still can't decrypt tasks)
+- Read-only access prevents accidental modifications
+- Opt-in feature (requires explicit passphrase configuration)
+
+**Setup:**
+See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detailed setup instructions and [MCP_SERVER_SUMMARY.md](./MCP_SERVER_SUMMARY.md) for implementation details.
+
 ### Recent Updates
 
-**v3.7.1** (Latest)
+**v5.0.0** (Latest) 🎉
+- ✅ **MCP Server for Claude Desktop** — AI-powered task management with natural language queries
+- ✅ **Decrypted Task Access** — 6 MCP tools for reading and analyzing tasks
+- ✅ **OAuth Cloud Sync** — Full end-to-end encrypted sync with Google/Apple login
+- ✅ **Security Hardening** — Comprehensive security audit and fixes
+- ✅ **Cascade Sync** — Reliable multi-device synchronization with conflict resolution
+
+**v3.7.1**
 - ✅ Next.js 16 with Turbopack and React Compiler
 - ✅ View Transitions API for smooth page animations
 - ✅ CloudFront edge routing for static export SPA navigation
@@ -383,4 +425,3 @@ MIT License - see [LICENSE](./LICENSE) for details
 
 - Inspired by the Eisenhower Matrix productivity framework
 - Built with [Claude Code](https://claude.com/claude-code)
-- Deployed on [Cloudflare Pages](https://pages.cloudflare.com/) and [Workers](https://workers.cloudflare.com/)
