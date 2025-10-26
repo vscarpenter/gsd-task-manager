@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +31,20 @@ export function EncryptionPassphraseDialog({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ensure we're mounted on client side
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,15 +124,26 @@ export function EncryptionPassphraseDialog({
             const { toast } = await import('sonner');
             toast.success(`${queuedCount} task${queuedCount === 1 ? '' : 's'} queued for sync`);
             
-            // Trigger automatic sync after a short delay
-            setTimeout(async () => {
-              const { getSyncCoordinator } = await import('@/lib/sync/sync-coordinator');
-              const coordinator = getSyncCoordinator();
-              await coordinator.requestSync('auto');
+            // Trigger automatic sync after dialog close animation (1s delay)
+            syncTimeoutRef.current = setTimeout(async () => {
+              try {
+                const { getSyncCoordinator } = await import('@/lib/sync/sync-coordinator');
+                const coordinator = getSyncCoordinator();
+                await coordinator.requestSync('auto');
+              } catch (err) {
+                console.error('[SYNC] Auto-sync after encryption setup failed:', err);
+                // Don't show user error - this is best-effort auto-sync
+                // User can manually trigger sync from Settings if needed
+              }
             }, 1000);
           }
         } catch (err) {
           console.error('[SYNC] Failed to queue existing tasks:', err);
+          const { toast } = await import('sonner');
+          toast.error('Failed to queue tasks for sync. You can manually sync from Settings.', {
+            duration: 5000,
+          });
+          // Continue - encryption setup succeeded even if queueing failed
         }
       }
       

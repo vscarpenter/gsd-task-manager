@@ -11,6 +11,7 @@ import {
   type OAuthHandshakeEvent,
   type OAuthAuthData,
 } from '@/lib/sync/oauth-handshake';
+import { normalizeTokenExpiration } from '@/lib/sync/utils';
 
 /**
  * OAuth callback handler - processes OAuth success data from sessionStorage
@@ -78,11 +79,8 @@ export function OAuthCallbackHandler() {
           ? 'http://localhost:8787'
           : window.location.origin);
 
-      // Convert expiresAt from seconds to milliseconds if needed
-      // JWT tokens typically use seconds, but JavaScript Date uses milliseconds
-      const tokenExpiresAt = authData.expiresAt < 10000000000 
-        ? authData.expiresAt * 1000  // Convert seconds to milliseconds
-        : authData.expiresAt;         // Already in milliseconds
+      // Normalize token expiration to milliseconds (handles both seconds and milliseconds)
+      const tokenExpiresAt = normalizeTokenExpiration(authData.expiresAt);
 
       await db.syncMetadata.put({
         key: 'sync_config',
