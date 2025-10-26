@@ -856,6 +856,58 @@ export class SyncEngine {
       isRunning: this.isRunning,
     };
   }
+
+  /**
+   * Queue all existing tasks for initial sync
+   * Called when sync is first enabled or re-enabled
+   * @returns Number of tasks queued
+   */
+  async queueExistingTasks(): Promise<number> {
+    const db = getDb();
+    const queue = getSyncQueue();
+    const config = await this.getSyncConfig();
+
+    if (!config || !config.enabled) {
+      console.log('[SYNC] Cannot queue tasks: sync not enabled');
+      return 0;
+    }
+
+    console.log('[SYNC] Queueing existing tasks for initial sync...');
+
+    // Get all tasks from IndexedDB
+    const allTasks = await db.tasks.toArray();
+    console.log(`[SYNC] Found ${allTasks.length} tasks in IndexedDB`);
+
+    // Get all pending operations to check for duplicates
+    const pendingOps = await queue.getPending();
+    const queuedTaskIds = new Set(pendingOps.map(op => op.taskId));
+
+    let queuedCount = 0;
+    let skippedCount = 0;
+
+    for (const task of allTasks) {
+      // Skip if already in queue
+      if (queuedTaskIds.has(task.id)) {
+        console.log(`[SYNC] Skipping task ${task.id} - already in queue`);
+        skippedCount++;
+        continue;
+      }
+
+      // Queue as 'create' operation with current vector clock
+      await queue.enqueue(
+        'create',
+        task.id,
+        task,
+        task.vectorClock || {}
+      );
+
+      queuedCount++;
+    }
+
+    console.log(`[SYNC] Queued ${queuedCount} tasks for initial sync (skipped ${skippedCount} already queued)`);
+
+    return queuedCount;
+  }
 }
 
 // Singleton instance
