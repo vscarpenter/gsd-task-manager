@@ -1,0 +1,55 @@
+# Source files (we only need dist/)
+src/
+tsconfig.json
+*.ts
+!*.d.ts
+
+# Documentation (keep only README.md and LICENSE)
+TESTING.md
+TESTING_V0.2.md
+QUICKSTART.md
+DECRYPTION.md
+DEPLOYMENT_COMPLETE.md
+README-SECURITY.md
+
+# Test scripts and configs (SECURITY: May contain hardcoded credentials)
+*.sh
+test-*.js
+test-*.json
+check-*.sh
+debug-*.sh
+claude-config*.json
+!*.example
+
+# Environment files
+.env
+.env.*
+.env.example
+
+# Development files
+node_modules/
+.DS_Store
+*.log
+npm-debug.log*
+.npmrc
+
+# Test files
+__tests__/
+*.test.js
+*.spec.js
+test/
+tests/
+
+# Build artifacts
+*.tsbuildinfo
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
