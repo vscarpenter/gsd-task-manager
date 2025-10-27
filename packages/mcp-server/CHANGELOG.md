@@ -5,6 +5,119 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2025-10-27 🐛
+
+### Fixed
+- **CRITICAL**: Fixed MCP tool input schemas to match internal types
+  - Changed `dueDate` schema from `type: 'number'` → `type: 'string'` in all tools
+  - Changed subtasks schema from `text` field → `title` field in all tools
+  - **Impact**: v0.4.6 MCP tools accepted wrong input types, causing validation errors in webapp
+
+### Technical Details
+- Updated `create_task` tool input schema (line 245-265)
+- Updated `update_task` tool input schema (line 307-328)
+- Updated `bulk_update_tasks` tool input schema (line 420-423)
+- MCP tools now correctly describe ISO 8601 datetime strings for dueDate
+- MCP tools now correctly describe subtask.title instead of subtask.text
+- Claude Desktop will now send correct data types when calling tools
+
+### Root Cause
+- Internal types (CreateTaskInput, UpdateTaskInput) were updated in v0.4.6
+- MCP tool schemas in src/index.ts were not updated to match
+- Claude Desktop used tool schemas to construct API calls
+- Resulted in type mismatch: Claude sent numbers, code expected strings
+
+## [0.4.6] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed additional schema mismatches preventing task sync
+  - Changed `dueDate: number | null` → `dueDate?: string` (optional ISO datetime)
+  - Changed `subtasks[].text` → `subtasks[].title` (frontend uses 'title')
+  - **Impact**: v0.4.5 tasks failed with "Expected string, received null" error on dueDate field
+- Added missing optional fields:
+  - `completedAt?: string` - ISO datetime when task was completed
+  - `vectorClock?: Record<string, number>` - For sync conflict resolution
+- Updated all write operations to handle optional fields correctly:
+  - `dueDate` only included when set (not null)
+  - `completedAt` set automatically when marking task complete
+  - `vectorClock` initialized with empty object
+- Fixed analytics date sorting to handle ISO datetime strings
+
+### Technical Details
+- Frontend schema expects `dueDate: z.string().datetime().optional()` (can be undefined, NOT null)
+- Frontend subtask schema uses `title`, not `text` (line 19 of lib/schema.ts)
+- Updated CreateTaskInput, UpdateTaskInput, and BulkOperation types
+- Fixed searchTasks to search subtask.title instead of subtask.text
+- Updated date comparisons in analytics to parse ISO strings before sorting
+
+## [0.4.5] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed task schema to match frontend expectations
+  - Changed `quadrantId` → `quadrant` (frontend schema uses 'quadrant')
+  - Changed `createdAt` from number → ISO string datetime
+  - Changed `updatedAt` from number → ISO string datetime
+  - **Impact**: v0.4.0-0.4.4 tasks created by MCP failed Zod validation in webapp causing "unrecognized key 'quadrantId'" error
+
+### Technical Details
+- Updated `DecryptedTask` interface in `src/tools.ts`
+- Updated all write operations to use `quadrant` field name
+- Renamed `deriveQuadrantId()` → `deriveQuadrant()`
+- Changed timestamp generation from `Date.now()` → `new Date().toISOString()`
+- Frontend expects ISO 8601 datetime strings, not Unix timestamps
+- Frontend schema in `lib/schema.ts` uses `quadrant: quadrantIdSchema`
+
+## [0.4.4] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Added validation of Worker push response rejected array
+  - MCP server was not checking if Worker rejected operations
+  - Only checked HTTP status (200 OK) and conflicts array
+  - Worker can reject operations and still return 200 OK with rejected array
+  - Now throws detailed error if any operations are rejected
+  - **Impact**: v0.4.0-0.4.3 appeared to succeed but tasks were silently rejected
+
+### Technical Details
+- Updated `pushToSync()` to parse full `PushResponse` structure
+- Added check for `rejected` array in Worker response
+- Throws error with detailed rejection reasons (taskId, reason, details)
+- Now properly validates that `accepted` array contains the task IDs
+- This will surface the actual rejection reason from Worker
+
+## [0.4.3] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Added missing checksum calculation for write operations
+  - Worker requires SHA-256 checksum of plaintext JSON for create/update operations
+  - Added `hash()` method to `CryptoManager` using Web Crypto API
+  - Updated all write operations to calculate and include checksum
+  - **Impact**: Tasks created without checksum were silently rejected by Worker (appeared successful but not stored)
+
+### Technical Details
+- Added `CryptoManager.hash()` method using `webcrypto.subtle.digest('SHA-256')`
+- Updated `createTask()` to calculate checksum before push
+- Updated `updateTask()` to calculate checksum before push
+- Updated `bulkUpdateTasks()` to calculate checksums for all operations
+- Checksum is SHA-256 hash of plaintext JSON (before encryption)
+- Worker validates checksum on line 125 of `worker/src/handlers/sync.ts`
+- Schema says checksum is optional, but Worker code requires it for create/update
+
+## [0.4.2] - 2025-10-26 🐛
+
+### Fixed
+- **CRITICAL**: Fixed JWT payload schema mismatch between MCP server and Worker
+  - Changed `user_id` → `sub` (JWT standard subject field)
+  - Changed `device_id` → `deviceId` (camelCase to match Worker)
+  - Added `email` and `jti` fields to match Worker's JWT structure
+  - Added `getUserIdFromToken()` helper function
+  - **Impact**: JWT parsing was failing with "user_id and device_id are missing" error, preventing all operations
+
+### Technical Details
+- Updated `jwtPayloadSchema` in `src/jwt.ts` to match `worker/src/utils/jwt.ts`
+- Worker generates JWT with standard `sub` field (RFC 7519), not custom `user_id`
+- Worker uses camelCase `deviceId`, not snake_case `device_id`
+- MCP server now correctly parses tokens from actual Worker OAuth flow
+
 ## [0.4.1] - 2025-10-26 🐛
 
 ### Fixed

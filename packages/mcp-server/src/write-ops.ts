@@ -17,9 +17,9 @@ export interface CreateTaskInput {
   description?: string;
   urgent: boolean;
   important: boolean;
-  dueDate?: number | null;
+  dueDate?: string; // ISO datetime string, optional
   tags?: string[];
-  subtasks?: Array<{ text: string; completed: boolean }>;
+  subtasks?: Array<{ title: string; completed: boolean }>;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
 }
@@ -33,9 +33,9 @@ export interface UpdateTaskInput {
   description?: string;
   urgent?: boolean;
   important?: boolean;
-  dueDate?: number | null;
+  dueDate?: string; // ISO datetime string, optional
   tags?: string[];
-  subtasks?: Array<{ id: string; text: string; completed: boolean }>;
+  subtasks?: Array<{ id: string; title: string; completed: boolean }>;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
   completed?: boolean;
@@ -49,7 +49,7 @@ export type BulkOperation =
   | { type: 'move_quadrant'; urgent: boolean; important: boolean }
   | { type: 'add_tags'; tags: string[] }
   | { type: 'remove_tags'; tags: string[] }
-  | { type: 'set_due_date'; dueDate: number | null }
+  | { type: 'set_due_date'; dueDate?: string } // ISO datetime string, optional
   | { type: 'delete' };
 
 /**
@@ -63,9 +63,9 @@ function generateTaskId(): string {
 }
 
 /**
- * Derive quadrant ID from urgent/important flags
+ * Derive quadrant from urgent/important flags
  */
-function deriveQuadrantId(urgent: boolean, important: boolean): string {
+function deriveQuadrant(urgent: boolean, important: boolean): string {
   if (urgent && important) return 'urgent-important';
   if (!urgent && important) return 'not-urgent-important';
   if (urgent && !important) return 'urgent-not-important';
@@ -118,7 +118,7 @@ interface SyncOperation {
   encryptedBlob?: string;
   nonce?: string;
   vectorClock: Record<string, number>;
-  checksum?: string;
+  checksum?: string; // SHA-256 hash of plaintext JSON (required for create/update)
 }
 
 /**
@@ -152,11 +152,27 @@ async function pushToSync(
     );
   }
 
-  // Check for conflicts in response
+  // Check response for rejected operations and conflicts
   const result = (await response.json()) as {
+    accepted?: string[];
+    rejected?: Array<{ taskId: string; reason: string; details: string }>;
     conflicts?: Array<unknown>;
-    success?: boolean;
+    serverVectorClock?: Record<string, number>;
   };
+
+  // Check for rejected operations
+  if (result.rejected && result.rejected.length > 0) {
+    const rejectionDetails = result.rejected
+      .map((r) => `  - Task ${r.taskId}: ${r.reason} - ${r.details}`)
+      .join('\n');
+    throw new Error(
+      `❌ Worker rejected ${result.rejected.length} operation(s)\n\n` +
+        `${rejectionDetails}\n\n` +
+        `Your changes were not saved to the server.`
+    );
+  }
+
+  // Check for conflicts
   if (result.conflicts && result.conflicts.length > 0) {
     console.warn(`⚠️  Warning: ${result.conflicts.length} conflict(s) detected`);
     console.warn('Last-write-wins strategy applied - your changes took precedence');
@@ -172,15 +188,15 @@ export async function createTask(
 ): Promise<DecryptedTask> {
   await ensureEncryption(config);
 
-  const now = Date.now();
+  const now = new Date().toISOString();
   const taskId = generateTaskId();
-  const quadrantId = deriveQuadrantId(input.urgent, input.important);
+  const quadrant = deriveQuadrant(input.urgent, input.important);
 
   // Generate IDs for subtasks if provided
   const subtasksWithIds = input.subtasks
     ? input.subtasks.map((st) => ({
         id: generateTaskId(),
-        text: st.text,
+        title: st.title,
         completed: st.completed,
       }))
     : [];
@@ -191,21 +207,23 @@ export async function createTask(
     description: input.description || '',
     urgent: input.urgent,
     important: input.important,
-    quadrantId,
+    quadrant,
     completed: false,
-    dueDate: input.dueDate ?? null,
+    ...(input.dueDate && { dueDate: input.dueDate }), // Only include if set
     tags: input.tags || [],
     subtasks: subtasksWithIds,
     recurrence: input.recurrence || 'none',
     dependencies: input.dependencies || [],
     createdAt: now,
     updatedAt: now,
+    vectorClock: {}, // Initialize with empty vector clock
   };
 
-  // Encrypt task
+  // Encrypt task and calculate checksum
   const cryptoManager = getCryptoManager();
   const taskJson = JSON.stringify(newTask);
   const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+  const checksum = await cryptoManager.hash(taskJson);
 
   // Push to sync
   await pushToSync(config, [
@@ -215,6 +233,7 @@ export async function createTask(
       encryptedBlob: ciphertext,
       nonce,
       vectorClock: {}, // Simplified: let server manage
+      checksum,
     },
   ]);
 
@@ -238,31 +257,47 @@ export async function updateTask(
     throw new Error(`❌ Task not found: ${input.id}\n\nThe task may have been deleted.`);
   }
 
-  // Merge updates
+  // Merge updates (handle optional fields carefully)
   const updatedTask: DecryptedTask = {
     ...currentTask,
     title: input.title ?? currentTask.title,
     description: input.description ?? currentTask.description,
     urgent: input.urgent ?? currentTask.urgent,
     important: input.important ?? currentTask.important,
-    dueDate: input.dueDate !== undefined ? input.dueDate : currentTask.dueDate,
     tags: input.tags ?? currentTask.tags,
     subtasks: input.subtasks ?? currentTask.subtasks,
     recurrence: input.recurrence ?? currentTask.recurrence,
     dependencies: input.dependencies ?? currentTask.dependencies,
     completed: input.completed ?? currentTask.completed,
-    updatedAt: Date.now(),
+    updatedAt: new Date().toISOString(),
   };
+
+  // Handle dueDate separately (can be set or cleared)
+  if (input.dueDate !== undefined) {
+    if (input.dueDate) {
+      updatedTask.dueDate = input.dueDate;
+    } else {
+      delete updatedTask.dueDate; // Remove field if clearing
+    }
+  }
+
+  // Set completedAt when marking complete
+  if (input.completed === true && !currentTask.completed) {
+    updatedTask.completedAt = new Date().toISOString();
+  } else if (input.completed === false) {
+    delete updatedTask.completedAt; // Clear when uncompleting
+  }
 
   // Recalculate quadrant if urgent/important changed
   if (input.urgent !== undefined || input.important !== undefined) {
-    updatedTask.quadrantId = deriveQuadrantId(updatedTask.urgent, updatedTask.important);
+    updatedTask.quadrant = deriveQuadrant(updatedTask.urgent, updatedTask.important);
   }
 
-  // Encrypt task
+  // Encrypt task and calculate checksum
   const cryptoManager = getCryptoManager();
   const taskJson = JSON.stringify(updatedTask);
   const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+  const checksum = await cryptoManager.hash(taskJson);
 
   // Push to sync
   await pushToSync(config, [
@@ -272,6 +307,7 @@ export async function updateTask(
       encryptedBlob: ciphertext,
       nonce,
       vectorClock: {}, // Simplified: let server manage
+      checksum,
     },
   ]);
 
@@ -355,7 +391,7 @@ export async function bulkUpdateTasks(
   const operations: SyncOperation[] = [];
 
   const cryptoManager = getCryptoManager();
-  const now = Date.now();
+  const now = new Date().toISOString();
 
   for (const task of tasksToUpdate) {
     try {
@@ -364,6 +400,12 @@ export async function bulkUpdateTasks(
       switch (operation.type) {
         case 'complete':
           updatedTask = { ...task, completed: operation.completed, updatedAt: now };
+          // Set/clear completedAt
+          if (operation.completed && !task.completed) {
+            updatedTask.completedAt = now;
+          } else if (!operation.completed) {
+            delete updatedTask.completedAt;
+          }
           break;
 
         case 'move_quadrant':
@@ -371,7 +413,7 @@ export async function bulkUpdateTasks(
             ...task,
             urgent: operation.urgent,
             important: operation.important,
-            quadrantId: deriveQuadrantId(operation.urgent, operation.important),
+            quadrant: deriveQuadrant(operation.urgent, operation.important),
             updatedAt: now,
           };
           break;
@@ -390,7 +432,13 @@ export async function bulkUpdateTasks(
         }
 
         case 'set_due_date':
-          updatedTask = { ...task, dueDate: operation.dueDate, updatedAt: now };
+          updatedTask = { ...task, updatedAt: now };
+          // Set or clear dueDate
+          if (operation.dueDate) {
+            updatedTask.dueDate = operation.dueDate;
+          } else {
+            delete updatedTask.dueDate;
+          }
           break;
 
         case 'delete':
@@ -406,9 +454,10 @@ export async function bulkUpdateTasks(
           throw new Error(`Unknown operation type: ${(operation as any).type}`);
       }
 
-      // Encrypt updated task
+      // Encrypt updated task and calculate checksum
       const taskJson = JSON.stringify(updatedTask);
       const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+      const checksum = await cryptoManager.hash(taskJson);
 
       operations.push({
         type: 'update',
@@ -416,6 +465,7 @@ export async function bulkUpdateTasks(
         encryptedBlob: ciphertext,
         nonce,
         vectorClock: {}, // Simplified: let server manage
+        checksum,
       });
     } catch (error) {
       errors.push(

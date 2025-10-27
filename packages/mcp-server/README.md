@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Model Context Protocol (MCP) server for GSD Task Manager. Provides read-only access to your synced tasks through Claude Desktop and other MCP-compatible AI assistants.
+Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task management** capabilities including create, read, update, and delete operations through Claude Desktop and other MCP-compatible AI assistants. All operations maintain end-to-end encryption.
 
 ## Quick Start
 
@@ -75,12 +75,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Filter by quadrant, completion status, tags
 - ✅ Get individual task details
 - 🔒 Privacy-first: Requires user-provided encryption passphrase
-- 🔒 Read-only: Cannot modify or create tasks
-
-**Planned** (Future v0.4.0+)
-- Write operations (create, update, delete tasks)
-- AI-powered task suggestions
-- Bulk operations support
+- ✅ Full CRUD operations: Create, read, update, delete tasks (v0.4.0+)
 
 ## Prerequisites
 
@@ -366,18 +361,19 @@ List all decrypted tasks with optional filtering. **Requires `GSD_ENCRYPTION_PAS
     "description": "Complete Q4 financial analysis",
     "urgent": true,
     "important": true,
-    "quadrantId": "urgent-important",
+    "quadrant": "urgent-important",
     "completed": false,
-    "dueDate": 1735948800000,
+    "dueDate": "2025-01-03T17:00:00.000Z",
     "tags": ["#work", "#finance"],
     "subtasks": [
-      { "id": "sub-1", "text": "Gather data", "completed": true },
-      { "id": "sub-2", "text": "Write analysis", "completed": false }
+      { "id": "sub-1", "title": "Gather data", "completed": true },
+      { "id": "sub-2", "title": "Write analysis", "completed": false }
     ],
     "recurrence": "none",
     "dependencies": [],
-    "createdAt": 1735171200000,
-    "updatedAt": 1735257600000
+    "createdAt": "2024-12-26T00:00:00.000Z",
+    "updatedAt": "2024-12-27T00:00:00.000Z",
+    "vectorClock": {}
   }
 ]
 ```
@@ -539,9 +535,9 @@ Create a new task with natural language input. **Requires `GSD_ENCRYPTION_PASSPH
 - `urgent` (required): Is this task urgent? (time-sensitive)
 - `important` (required): Is this task important? (high-value, strategic)
 - `description` (optional): Task description
-- `dueDate` (optional): Due date as Unix timestamp (milliseconds)
+- `dueDate` (optional): Due date as ISO 8601 datetime string (e.g., `"2025-10-27T17:00:00.000Z"`)
 - `tags` (optional): Array of tags (e.g., `["#work", "#project-alpha"]`)
-- `subtasks` (optional): Array of subtask objects `{text, completed}`
+- `subtasks` (optional): Array of subtask objects `{title, completed}`
 - `recurrence` (optional): `'none'` | `'daily'` | `'weekly'` | `'monthly'`
 - `dependencies` (optional): Array of task IDs that must be completed first
 
@@ -566,9 +562,9 @@ Update an existing task. All fields except ID are optional. **Requires `GSD_ENCR
 - `description` (optional): New description
 - `urgent` (optional): Change urgency (moves between quadrants)
 - `important` (optional): Change importance (moves between quadrants)
-- `dueDate` (optional): New due date (null to clear)
+- `dueDate` (optional): New due date as ISO 8601 datetime string (empty string to clear)
 - `tags` (optional): Replace all tags
-- `subtasks` (optional): Replace all subtasks
+- `subtasks` (optional): Replace all subtasks (objects with `{id, title, completed}`)
 - `recurrence` (optional): Change recurrence pattern
 - `dependencies` (optional): Replace all dependencies
 - `completed` (optional): Mark as complete/incomplete
@@ -627,7 +623,7 @@ Update multiple tasks at once. Limited to 50 tasks per operation for safety. **R
   - `type: 'remove_tags'` - Remove tags from all tasks
     - `tags`: string[]
   - `type: 'set_due_date'` - Set due date for all tasks
-    - `dueDate`: number | null
+    - `dueDate`: ISO 8601 datetime string (empty string to clear)
   - `type: 'delete'` - Delete all tasks
 - `maxTasks` (optional): Safety limit (default: 50)
 
@@ -753,14 +749,6 @@ npm publish --access public --otp=YOUR_CODE
 
 ## Future Enhancements
 
-**Write Operations** (v0.4.0)
-- Create new tasks via natural language
-- Update existing tasks (title, description, quadrant, etc.)
-- Complete/uncomplete tasks
-- Delete tasks
-- Conflict resolution for concurrent edits
-- Batch operations support
-
 **Advanced Features** (v0.5.0+)
 - AI-powered task suggestions based on patterns
 - Priority recommendations using AI
@@ -768,6 +756,8 @@ npm publish --access public --otp=YOUR_CODE
 - Historical trend analysis (7/30/90 day views)
 - Cross-integration with calendar/email (MCP chaining)
 - Custom analytics queries
+- Conflict resolution UI for concurrent edits
+- Task templates and quick creation workflows
 
 ## Architecture
 
@@ -827,15 +817,28 @@ MIT - Same as GSD Task Manager
 
 ---
 
-**Status**: v0.4.0 (Write Operations) 🔥
-**New in v0.4.0**:
+**Status**: v0.4.7 (Production Ready) ✅🔥
+
+**Current Release (v0.4.7)**:
 - ✍️ **Full task management** - Create, update, delete tasks
-- 🔄 **Bulk operations** - Update up to 50 tasks at once
+- 🔄 **Bulk operations** - Update up to 50 tasks at once (complete, move, tag, delete)
 - 🔐 **Encrypted writes** - All changes encrypted before sync
 - 🛡️ **Safety features** - Bulk limits, validation, clear errors
 - 📊 **18 total MCP tools** (13 read + 5 write)
+- ✅ **Production tested** - All write operations verified end-to-end
+- 🐛 **Bug fixes** - 7 critical schema and sync issues resolved (v0.4.1-v0.4.7)
 
-**Previous Releases**:
+**Bug Fixes (v0.4.1-v0.4.7)**:
+- v0.4.1: Fixed Worker API payload structure
+- v0.4.2: Fixed JWT token schema (sub, deviceId)
+- v0.4.3: Added SHA-256 checksum calculation
+- v0.4.4: Added Worker rejection array checking
+- v0.4.5: Fixed field names (quadrant, timestamps)
+- v0.4.6: Fixed type mismatches (dueDate, subtasks.title)
+- v0.4.7: Fixed MCP tool input schemas
+
+**Previous Feature Releases**:
+- v0.4.0 - Write operations (create, update, delete)
 - v0.3.2 - Built-in prompts, help tool
 - v0.3.0 - Interactive setup, analytics, validation
 - v0.2.0 - Decrypted task access
@@ -843,5 +846,5 @@ MIT - Same as GSD Task Manager
 
 **Privacy**: Opt-in decryption with local passphrase
 **Security**: E2E encryption maintained, zero-knowledge server
-**Capabilities**: Full task management (create, read, update, delete)
-**Deployment**: Published to npm ✅ | Ready for production ✅
+**Capabilities**: Full CRUD task management with natural language interface
+**Deployment**: Published to npm ✅ | Production ready ✅ | All tests passed ✅
