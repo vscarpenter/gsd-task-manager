@@ -5,6 +5,28 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2025-10-27 🐛
+
+### Fixed
+- **CRITICAL**: Fixed MCP tool input schemas to match internal types
+  - Changed `dueDate` schema from `type: 'number'` → `type: 'string'` in all tools
+  - Changed subtasks schema from `text` field → `title` field in all tools
+  - **Impact**: v0.4.6 MCP tools accepted wrong input types, causing validation errors in webapp
+
+### Technical Details
+- Updated `create_task` tool input schema (line 245-265)
+- Updated `update_task` tool input schema (line 307-328)
+- Updated `bulk_update_tasks` tool input schema (line 420-423)
+- MCP tools now correctly describe ISO 8601 datetime strings for dueDate
+- MCP tools now correctly describe subtask.title instead of subtask.text
+- Claude Desktop will now send correct data types when calling tools
+
+### Root Cause
+- Internal types (CreateTaskInput, UpdateTaskInput) were updated in v0.4.6
+- MCP tool schemas in src/index.ts were not updated to match
+- Claude Desktop used tool schemas to construct API calls
+- Resulted in type mismatch: Claude sent numbers, code expected strings
+
 ## [0.4.6] - 2025-10-26 🐛
 
 ### Fixed
