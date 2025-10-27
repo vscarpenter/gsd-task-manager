@@ -295,6 +295,8 @@ This creates the function, publishes it, attaches it to the CloudFront distribut
 
 ### MCP Server for AI-Powered Task Management (v5.0.0) 🆕
 
+**📦 npm Package:** [gsd-mcp-server](https://www.npmjs.com/package/gsd-mcp-server)
+
 The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or ChatGPG to access and analyze your tasks through natural language.
 
 **What is MCP?**
