@@ -243,8 +243,8 @@ const tools: Tool[] = [
           description: 'Is this task important? (high-value, strategic)',
         },
         dueDate: {
-          type: 'number',
-          description: 'Due date as Unix timestamp (milliseconds)',
+          type: 'string',
+          description: 'Due date as ISO 8601 datetime string (e.g., "2025-10-27T12:00:00.000Z")',
         },
         tags: {
           type: 'array',
@@ -256,10 +256,10 @@ const tools: Tool[] = [
           items: {
             type: 'object',
             properties: {
-              text: { type: 'string' },
+              title: { type: 'string' },
               completed: { type: 'boolean' },
             },
-            required: ['text', 'completed'],
+            required: ['title', 'completed'],
           },
           description: 'Subtasks/checklist items',
         },
@@ -305,8 +305,8 @@ const tools: Tool[] = [
           description: 'Change importance (moves between quadrants)',
         },
         dueDate: {
-          type: 'number',
-          description: 'New due date as Unix timestamp (null to clear)',
+          type: 'string',
+          description: 'New due date as ISO 8601 datetime string (empty string to clear)',
         },
         tags: {
           type: 'array',
@@ -319,10 +319,10 @@ const tools: Tool[] = [
             type: 'object',
             properties: {
               id: { type: 'string' },
-              text: { type: 'string' },
+              title: { type: 'string' },
               completed: { type: 'boolean' },
             },
-            required: ['id', 'text', 'completed'],
+            required: ['id', 'title', 'completed'],
           },
           description: 'Replace subtasks entirely',
         },
@@ -418,8 +418,8 @@ const tools: Tool[] = [
               description: 'For type=add_tags or remove_tags: array of tags',
             },
             dueDate: {
-              type: 'number',
-              description: 'For type=set_due_date: Unix timestamp (null to clear)',
+              type: 'string',
+              description: 'For type=set_due_date: ISO 8601 datetime string (empty string to clear)',
             },
           },
           required: ['type'],
@@ -511,7 +511,7 @@ async function main() {
   const server = new Server(
     {
       name: 'gsd-task-manager',
-      version: '0.4.1',
+      version: '0.4.5',
     },
     {
       capabilities: {

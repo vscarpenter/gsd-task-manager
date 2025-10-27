@@ -123,6 +123,17 @@ export class CryptoManager {
   }
 
   /**
+   * Hash data with SHA-256
+   * Used for checksums and integrity verification
+   */
+  async hash(data: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(data);
+    const hashBuffer = await webcrypto.subtle.digest('SHA-256', dataBuffer);
+    return this.bufferToBase64(new Uint8Array(hashBuffer));
+  }
+
+  /**
    * Check if encryption key is initialized
    */
   isInitialized(): boolean {
