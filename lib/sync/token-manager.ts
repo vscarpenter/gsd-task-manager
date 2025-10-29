@@ -5,10 +5,12 @@
 
 import { getDb } from '@/lib/db';
 import { getApiClient } from './api-client';
+import { createLogger } from '@/lib/logger';
 import type { SyncConfig } from './types';
 import { normalizeTokenExpiration } from './utils';
 
 const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+const logger = createLogger('SYNC_TOKEN');
 
 export class TokenManager {
   /**
@@ -46,11 +48,11 @@ export class TokenManager {
     const needsRefresh = await this.needsRefresh();
     
     if (!needsRefresh) {
-      console.log('[TOKEN] Token is valid, no refresh needed');
+      logger.debug('Token is valid, no refresh needed');
       return true;
     }
 
-    console.log('[TOKEN] Token needs refresh, attempting refresh...');
+    logger.info('Token needs refresh, attempting refresh');
     
     // Attempt to refresh token
     try {
@@ -62,13 +64,14 @@ export class TokenManager {
       // Update stored token and expiration
       await this.updateTokenInConfig(response.token, response.expiresAt);
       
-      console.log('[TOKEN] Token refreshed successfully', {
+      logger.info('Token refreshed successfully', {
         expiresAt: new Date(response.expiresAt).toISOString(),
       });
-      
+
       return true;
     } catch (error) {
-      console.error('[TOKEN] Token refresh failed:', error);
+      const refreshError = error instanceof Error ? error : new Error('Token refresh failed');
+      logger.error('Token refresh failed', refreshError);
       return false;
     }
   }
@@ -78,12 +81,12 @@ export class TokenManager {
    * Returns true if token was refreshed successfully
    */
   async handleUnauthorized(): Promise<boolean> {
-    console.log('[TOKEN] Handling 401 Unauthorized error');
-    
+    logger.info('Handling 401 Unauthorized error');
+
     const config = await this.getSyncConfig();
-    
+
     if (!config || !config.enabled || !config.token) {
-      console.error('[TOKEN] Cannot refresh token: sync not configured');
+      logger.error('Cannot refresh token: sync not configured');
       return false;
     }
 
@@ -96,13 +99,14 @@ export class TokenManager {
       // Update stored token and expiration
       await this.updateTokenInConfig(response.token, response.expiresAt);
       
-      console.log('[TOKEN] Token refreshed after 401 error', {
+      logger.info('Token refreshed after 401 error', {
         expiresAt: new Date(response.expiresAt).toISOString(),
       });
-      
+
       return true;
     } catch (error) {
-      console.error('[TOKEN] Token refresh failed after 401:', error);
+      const refreshError = error instanceof Error ? error : new Error('Token refresh failed after 401');
+      logger.error('Token refresh failed after 401', refreshError);
       return false;
     }
   }

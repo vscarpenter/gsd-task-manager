@@ -68,6 +68,7 @@ function ensureInitialized() {
         handleBroadcastPayload(event.data as BroadcastPayload);
       });
     } catch (error) {
+      // Keep as console.warn since this is UI/browser capability warning
       console.warn('[OAuthHandshake] Failed to initialize BroadcastChannel:', error);
       broadcastChannel = null;
     }
