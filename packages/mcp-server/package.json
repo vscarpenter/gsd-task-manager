@@ -1,6 +1,6 @@
 {
   "name": "gsd-mcp-server",
-  "version": "0.4.7",
+  "version": "0.5.0",
   "description": "MCP server for GSD Task Manager - full task management with create/update/delete, analytics, interactive setup, and validation",
   "type": "module",
   "main": "dist/index.js",
@@ -17,6 +17,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -47,7 +51,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.3"
+    "@vitest/ui": "^4.0.4",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.4"
   },
   "engines": {
     "node": ">=18.0.0"
