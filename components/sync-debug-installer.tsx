@@ -5,13 +5,14 @@ import { installSyncDebugTools } from '@/lib/sync/debug';
 
 /**
  * Installs sync debug tools on window.syncDebug
- * Only runs in development or when explicitly enabled
+ * Only runs in development mode for security
  */
 export function SyncDebugInstaller() {
   useEffect(() => {
-    // Always install debug tools (production enabled for debugging sync issues)
-    // TODO: Remove production access after sync issues are resolved
-    installSyncDebugTools();
+    // Only install debug tools in development environment
+    if (process.env.NODE_ENV === 'development') {
+      installSyncDebugTools();
+    }
   }, []);
 
   return null;

@@ -36,6 +36,7 @@ import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
 import { DND_CONFIG, TOAST_DURATION } from "@/lib/constants";
 import { notificationChecker } from "@/lib/notification-checker";
+import * as bulkOps from "@/lib/bulk-operations";
 
 // Import UserGuideDialog normally to avoid chunk loading issues
 import { UserGuideDialog } from "@/components/user-guide-dialog";
@@ -319,95 +320,60 @@ export function MatrixBoard() {
   };
 
   const handleClearSelection = () => {
-    setSelectedTaskIds(new Set());
-    setSelectionMode(false);
+    bulkOps.clearSelection(setSelectedTaskIds, setSelectionMode);
   };
 
   const handleToggleSelectionMode = () => {
-    if (selectionMode) {
-      // Exiting selection mode - clear selections
-      handleClearSelection();
-    } else {
-      // Entering selection mode
-      setSelectionMode(true);
-    }
+    bulkOps.toggleSelectionMode(selectionMode, handleClearSelection, setSelectionMode);
   };
 
   const handleBulkDelete = async () => {
-    if (selectedTaskIds.size === 0) return;
-
-    const tasksToDelete = all.filter(t => selectedTaskIds.has(t.id));
-    const count = tasksToDelete.length;
-
-    try {
-      await Promise.all(tasksToDelete.map(task => deleteTask(task.id)));
-      handleClearSelection();
-      showToast(`Deleted ${count} task${count === 1 ? "" : "s"}`, undefined, TOAST_DURATION.SHORT);
-    } catch (error) {
-      handleError(error, {
-        action: ErrorActions.DELETE_TASK,
-        userMessage: ErrorMessages.TASK_DELETE_FAILED,
-        timestamp: new Date().toISOString()
-      });
-    }
+    await bulkOps.bulkDelete(
+      selectedTaskIds,
+      all,
+      (message) => {
+        handleClearSelection();
+        showToast(message, undefined, TOAST_DURATION.SHORT);
+      },
+      handleError
+    );
   };
 
   const handleBulkComplete = async () => {
-    if (selectedTaskIds.size === 0) return;
-
-    const tasksToComplete = all.filter(t => selectedTaskIds.has(t.id) && !t.completed);
-    const count = tasksToComplete.length;
-
-    try {
-      await Promise.all(tasksToComplete.map(task => toggleCompleted(task.id, true)));
-      handleClearSelection();
-      showToast(`Completed ${count} task${count === 1 ? "" : "s"}`, undefined, TOAST_DURATION.SHORT);
-    } catch (error) {
-      handleError(error, {
-        action: ErrorActions.TOGGLE_TASK,
-        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
-        timestamp: new Date().toISOString()
-      });
-    }
+    await bulkOps.bulkComplete(
+      selectedTaskIds,
+      all,
+      (message) => {
+        handleClearSelection();
+        showToast(message, undefined, TOAST_DURATION.SHORT);
+      },
+      handleError
+    );
   };
 
   const handleBulkUncomplete = async () => {
-    if (selectedTaskIds.size === 0) return;
-
-    const tasksToUncomplete = all.filter(t => selectedTaskIds.has(t.id) && t.completed);
-    const count = tasksToUncomplete.length;
-
-    try {
-      await Promise.all(tasksToUncomplete.map(task => toggleCompleted(task.id, false)));
-      handleClearSelection();
-      showToast(`Marked ${count} task${count === 1 ? "" : "s"} as incomplete`, undefined, TOAST_DURATION.SHORT);
-    } catch (error) {
-      handleError(error, {
-        action: ErrorActions.TOGGLE_TASK,
-        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
-        timestamp: new Date().toISOString()
-      });
-    }
+    await bulkOps.bulkUncomplete(
+      selectedTaskIds,
+      all,
+      (message) => {
+        handleClearSelection();
+        showToast(message, undefined, TOAST_DURATION.SHORT);
+      },
+      handleError
+    );
   };
 
   const handleBulkMoveToQuadrant = async (quadrantId: QuadrantId) => {
-    if (selectedTaskIds.size === 0) return;
-
-    const tasksToMove = all.filter(t => selectedTaskIds.has(t.id));
-    const count = tasksToMove.length;
-
-    try {
-      await Promise.all(tasksToMove.map(task => moveTaskToQuadrant(task.id, quadrantId)));
-      handleClearSelection();
-      const quadrantName = quadrants.find(q => q.id === quadrantId)?.title;
-      showToast(`Moved ${count} task${count === 1 ? "" : "s"} to ${quadrantName}`, undefined, TOAST_DURATION.SHORT);
-    } catch (error) {
-      handleError(error, {
-        action: ErrorActions.MOVE_TASK,
-        userMessage: ErrorMessages.TASK_MOVE_FAILED,
-        timestamp: new Date().toISOString()
-      });
-    }
+    await bulkOps.bulkMoveToQuadrant(
+      selectedTaskIds,
+      all,
+      quadrantId,
+      (message) => {
+        handleClearSelection();
+        showToast(message, undefined, TOAST_DURATION.SHORT);
+      },
+      handleError
+    );
   };
 
   const handleBulkAddTags = () => {
@@ -415,28 +381,17 @@ export function MatrixBoard() {
   };
 
   const handleBulkAddTagsConfirm = async (tagsToAdd: string[]) => {
-    if (selectedTaskIds.size === 0 || tagsToAdd.length === 0) return;
-
-    const tasksToUpdate = all.filter(t => selectedTaskIds.has(t.id));
-    const count = tasksToUpdate.length;
-
-    try {
-      await Promise.all(
-        tasksToUpdate.map(task => {
-          const existingTags = new Set(task.tags);
-          tagsToAdd.forEach(tag => existingTags.add(tag));
-          return updateTask(task.id, { ...toDraft(task), tags: Array.from(existingTags) });
-        })
-      );
-      handleClearSelection();
-      showToast(`Added tags to ${count} task${count === 1 ? "" : "s"}`, undefined, TOAST_DURATION.SHORT);
-    } catch (error) {
-      handleError(error, {
-        action: ErrorActions.UPDATE_TASK,
-        userMessage: ErrorMessages.TASK_UPDATE_FAILED,
-        timestamp: new Date().toISOString()
-      });
-    }
+    await bulkOps.bulkAddTags(
+      tagsToAdd,
+      selectedTaskIds,
+      all,
+      toDraft,
+      (message) => {
+        handleClearSelection();
+        showToast(message, undefined, TOAST_DURATION.SHORT);
+      },
+      handleError
+    );
   };
 
   const handleShare = (task: TaskRecord) => {
