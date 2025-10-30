@@ -1,7 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useMemo, useRef, useState, useEffect } from "react";
-import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext } from "@dnd-kit/core";
 import { PlusIcon } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { MatrixColumn } from "@/components/matrix-column";
@@ -21,22 +21,23 @@ import { useToast } from "@/components/ui/toast";
 import { quadrants, quadrantOrder } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
 import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
-import { applyFilters } from "@/lib/filters";
 import type { FilterCriteria } from "@/lib/filters";
 import type { QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import {
   createTask,
   deleteTask,
   exportToJson,
-  moveTaskToQuadrant,
   toggleCompleted,
   updateTask
 } from "@/lib/tasks";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
-import { DND_CONFIG, TOAST_DURATION } from "@/lib/constants";
+import { TOAST_DURATION } from "@/lib/constants";
 import { notificationChecker } from "@/lib/notification-checker";
 import * as bulkOps from "@/lib/bulk-operations";
+import { useMatrixDialogs } from "@/lib/use-matrix-dialogs";
+import { useDragAndDrop } from "@/lib/use-drag-and-drop";
+import { extractAvailableTags, getFilteredQuadrants, getVisibleTaskCount } from "@/lib/matrix-filters";
 
 // Import UserGuideDialog normally to avoid chunk loading issues
 import { UserGuideDialog } from "@/components/user-guide-dialog";
@@ -45,11 +46,6 @@ import { UserGuideDialog } from "@/components/user-guide-dialog";
 const ImportDialog = lazy(() => import("@/components/import-dialog").then(m => ({ default: m.ImportDialog })));
 const TaskForm = lazy(() => import("@/components/task-form").then(m => ({ default: m.TaskForm })));
 const SaveSmartViewDialog = lazy(() => import("@/components/save-smart-view-dialog").then(m => ({ default: m.SaveSmartViewDialog })));
-
-interface DialogState {
-  mode: "create" | "edit";
-  task?: TaskRecord;
-}
 
 function toDraft(task: TaskRecord): TaskDraft {
   return {
@@ -72,22 +68,14 @@ export function MatrixBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
   const [showCompleted, setShowCompleted] = useState(false);
-  const [dialogState, setDialogState] = useState<DialogState | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
-  const [saveSmartViewOpen, setSaveSmartViewOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [pendingImportContents, setPendingImportContents] = useState<string | null>(null);
+  const dialogs = useMatrixDialogs();
+  const { showToast } = useToast();
+  const { handleError, handleSuccess } = useErrorHandlerWithUndo();
+  const { sensors, handleDragEnd } = useDragAndDrop(handleError);
   const [isLoading, setIsLoading] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
-  const [bulkTagDialogOpen, setBulkTagDialogOpen] = useState(false);
-  const [shareTaskDialogOpen, setShareTaskDialogOpen] = useState(false);
-  const [taskToShare, setTaskToShare] = useState<TaskRecord | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { showToast } = useToast();
-  const { handleError, handleSuccess } = useErrorHandlerWithUndo();
 
   // Start notification checker when component mounts
   useEffect(() => {
@@ -102,11 +90,11 @@ export function MatrixBoard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("action") === "new-task") {
-      setDialogState({ mode: "create" });
+      dialogs.setDialogState({ mode: "create" });
       // Clean up URL without reload
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [dialogs]);
 
   // Auto-enable selection mode when first task is selected
   useEffect(() => {
@@ -115,62 +103,31 @@ export function MatrixBoard() {
     }
   }, [selectedTaskIds.size, selectionMode]);
 
-  // Configure sensors for drag-and-drop (mouse + touch)
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: DND_CONFIG.POINTER_DISTANCE
-      }
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: DND_CONFIG.TOUCH_DELAY,
-        tolerance: DND_CONFIG.TOUCH_TOLERANCE
-      }
-    })
+  // Extract all unique tags from tasks
+  const availableTags = useMemo(() => extractAvailableTags(all), [all]);
+
+  // Filter and group tasks by quadrant
+  const filteredQuadrants = useMemo(
+    () => getFilteredQuadrants(all, filterCriteria, searchQuery, showCompleted),
+    [all, filterCriteria, searchQuery, showCompleted]
   );
 
-  // Extract all unique tags from tasks
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    all.forEach(task => task.tags.forEach(tag => tagSet.add(tag)));
-    return Array.from(tagSet).sort();
-  }, [all]);
-
-  const filteredQuadrants = useMemo(() => {
-    // First apply advanced filters, including completed status
-    const criteriaWithSearch: FilterCriteria = {
-      ...filterCriteria,
-      searchQuery: searchQuery.trim() || undefined,
-      // Only override status if Smart View doesn't specify one
-      status: filterCriteria.status || (showCompleted ? 'all' : 'active')
-    };
-    const filtered = applyFilters(all, criteriaWithSearch);
-
-    // Group filtered tasks by quadrant
-    return Object.fromEntries(
-      quadrantOrder.map((id) => [id, filtered.filter(task => task.quadrant === id)])
-    );
-  }, [all, filterCriteria, searchQuery, showCompleted]);
-
-  // React Compiler handles optimization automatically
-  const visibleCount = quadrantOrder.reduce((total, id) => total + (filteredQuadrants[id]?.length ?? 0), 0);
-
-  const closeDialog = () => setDialogState(null);
+  // Calculate total visible task count
+  const visibleCount = getVisibleTaskCount(filteredQuadrants);
 
   const handleSubmit = async (draft: TaskDraft) => {
     setIsLoading(true);
     try {
-      if (dialogState?.mode === "edit" && dialogState.task) {
-        await updateTask(dialogState.task.id, draft);
+      if (dialogs.dialogState?.mode === "edit" && dialogs.dialogState.task) {
+        await updateTask(dialogs.dialogState.task.id, draft);
       } else {
         await createTask(draft);
       }
-      closeDialog();
+      dialogs.closeDialog();
     } catch (error) {
       handleError(error, {
-        action: dialogState?.mode === "edit" ? ErrorActions.UPDATE_TASK : ErrorActions.CREATE_TASK,
-        taskId: dialogState?.task?.id,
+        action: dialogs.dialogState?.mode === "edit" ? ErrorActions.UPDATE_TASK : ErrorActions.CREATE_TASK,
+        taskId: dialogs.dialogState?.task?.id,
         userMessage: ErrorMessages.TASK_SAVE_FAILED,
         timestamp: new Date().toISOString()
       });
@@ -185,7 +142,7 @@ export function MatrixBoard() {
       const taskData = { ...task };
 
       await deleteTask(task.id);
-      closeDialog();
+      dialogs.closeDialog();
 
       handleSuccess(
         `Deleted "${task.title}"`,
@@ -253,8 +210,8 @@ export function MatrixBoard() {
       const contents = await file.text();
       // Validate JSON format before showing dialog
       JSON.parse(contents);
-      setPendingImportContents(contents);
-      setImportDialogOpen(true);
+      dialogs.setPendingImportContents(contents);
+      dialogs.setImportDialogOpen(true);
     } catch (error) {
       handleError(error, {
         action: ErrorActions.PARSE_JSON,
@@ -266,7 +223,7 @@ export function MatrixBoard() {
   };
 
   const handleImportComplete = () => {
-    setPendingImportContents(null);
+    dialogs.setPendingImportContents(null);
     showToast("Tasks imported successfully", undefined, TOAST_DURATION.SHORT);
   };
 
@@ -276,34 +233,11 @@ export function MatrixBoard() {
   };
 
   const handleSaveSmartView = () => {
-    setSaveSmartViewOpen(true);
+    dialogs.setSaveSmartViewOpen(true);
   };
 
   const handleSmartViewSaved = () => {
     showToast("Smart View saved successfully", undefined, TOAST_DURATION.SHORT);
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const taskId = active.id as string;
-    const targetQuadrant = over.id as QuadrantId;
-
-    try {
-      await moveTaskToQuadrant(taskId, targetQuadrant);
-    } catch (error) {
-      handleError(error, {
-        action: ErrorActions.MOVE_TASK,
-        taskId,
-        userMessage: ErrorMessages.TASK_MOVE_FAILED,
-        timestamp: new Date().toISOString(),
-        metadata: { targetQuadrant }
-      });
-    }
   };
 
   // Bulk operation handlers
@@ -377,7 +311,7 @@ export function MatrixBoard() {
   };
 
   const handleBulkAddTags = () => {
-    setBulkTagDialogOpen(true);
+    dialogs.setBulkTagDialogOpen(true);
   };
 
   const handleBulkAddTagsConfirm = async (tagsToAdd: string[]) => {
@@ -394,22 +328,17 @@ export function MatrixBoard() {
     );
   };
 
-  const handleShare = (task: TaskRecord) => {
-    setTaskToShare(task);
-    setShareTaskDialogOpen(true);
-  };
-
   // Handle keyboard shortcuts
   useKeyboardShortcuts(
     {
-      onNewTask: () => setDialogState({ mode: "create" }),
+      onNewTask: () => dialogs.setDialogState({ mode: "create" }),
       onSearch: () => searchInputRef.current?.focus(),
-      onHelp: () => setHelpOpen(true)
+      onHelp: () => dialogs.setHelpOpen(true)
     },
     searchInputRef
   );
 
-  const taskBeingEdited = dialogState?.mode === "edit" ? dialogState.task : undefined;
+  const taskBeingEdited = dialogs.dialogState?.mode === "edit" ? dialogs.dialogState.task : undefined;
   const activeTaskDraft = taskBeingEdited ? toDraft(taskBeingEdited) : undefined;
 
   const hasTasks = all.length > 0;
@@ -420,14 +349,14 @@ export function MatrixBoard() {
         <NotificationPermissionPrompt />
 
         <AppHeader
-          onNewTask={() => setDialogState({ mode: "create" })}
+          onNewTask={() => dialogs.setDialogState({ mode: "create" })}
           onSearchChange={setSearchQuery}
           searchQuery={searchQuery}
           searchInputRef={searchInputRef}
-          onHelp={() => setHelpOpen(true)}
-          onOpenSettings={() => setSettingsOpen(true)}
+          onHelp={() => dialogs.setHelpOpen(true)}
+          onOpenSettings={() => dialogs.setSettingsOpen(true)}
           onSelectSmartView={handleSelectSmartView}
-          onOpenFilters={() => setFilterPopoverOpen(true)}
+          onOpenFilters={() => dialogs.setFilterPopoverOpen(true)}
           currentFilterCriteria={filterCriteria}
           selectionMode={selectionMode}
           onToggleSelectionMode={handleToggleSelectionMode}
@@ -446,7 +375,7 @@ export function MatrixBoard() {
 
         {/* Floating Action Button - Mobile Only */}
         <button
-          onClick={() => setDialogState({ mode: "create" })}
+          onClick={() => dialogs.setDialogState({ mode: "create" })}
           className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-all hover:bg-accent-hover active:scale-95 md:hidden touch-manipulation"
           style={{
             paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))"
@@ -460,7 +389,7 @@ export function MatrixBoard() {
           paddingBottom: "max(2.5rem, calc(5rem + env(safe-area-inset-bottom)))"
         }}>
           {!hasTasks ? (
-            <MatrixEmptyState onCreateTask={() => setDialogState({ mode: "create" })} />
+            <MatrixEmptyState onCreateTask={() => dialogs.setDialogState({ mode: "create" })} />
           ) : visibleCount === 0 ? (
             <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
               <h2 className="text-lg font-semibold text-foreground">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
@@ -478,10 +407,10 @@ export function MatrixBoard() {
                   quadrant={quadrant}
                   tasks={filteredQuadrants[quadrant.id] ?? []}
                   allTasks={all}
-                  onEdit={(task) => setDialogState({ mode: "edit", task })}
+                  onEdit={(task) => dialogs.setDialogState({ mode: "edit", task })}
                   onDelete={handleDelete}
                   onToggleComplete={handleComplete}
-                  onShare={handleShare}
+                  onShare={dialogs.openShareDialog}
                   selectionMode={selectionMode}
                   selectedTaskIds={selectedTaskIds}
                   onToggleSelect={handleToggleSelect}
@@ -506,39 +435,39 @@ export function MatrixBoard() {
 
         {/* Bulk tag dialog */}
         <BulkTagDialog
-          open={bulkTagDialogOpen}
-          onOpenChange={setBulkTagDialogOpen}
+          open={dialogs.bulkTagDialogOpen}
+          onOpenChange={dialogs.setBulkTagDialogOpen}
           onConfirm={handleBulkAddTagsConfirm}
           selectedCount={selectedTaskIds.size}
         />
 
         {/* Share task dialog */}
         <ShareTaskDialog
-          task={taskToShare}
-          open={shareTaskDialogOpen}
-          onOpenChange={setShareTaskDialogOpen}
+          task={dialogs.taskToShare}
+          open={dialogs.shareTaskDialogOpen}
+          onOpenChange={dialogs.setShareTaskDialogOpen}
         />
 
         {/* User Guide */}
-        <UserGuideDialog open={helpOpen} onOpenChange={setHelpOpen} />
+        <UserGuideDialog open={dialogs.helpOpen} onOpenChange={dialogs.setHelpOpen} />
 
-        {importDialogOpen && (
+        {dialogs.importDialogOpen && (
           <Suspense fallback={<div className="sr-only">Loading...</div>}>
             <ImportDialog
-              open={importDialogOpen}
-              onOpenChange={setImportDialogOpen}
-              fileContents={pendingImportContents}
+              open={dialogs.importDialogOpen}
+              onOpenChange={dialogs.setImportDialogOpen}
+              fileContents={dialogs.pendingImportContents}
               existingTaskCount={all.length}
               onImportComplete={handleImportComplete}
             />
           </Suspense>
         )}
 
-        {saveSmartViewOpen && (
+        {dialogs.saveSmartViewOpen && (
           <Suspense fallback={<div className="sr-only">Loading...</div>}>
             <SaveSmartViewDialog
-              open={saveSmartViewOpen}
-              onOpenChange={setSaveSmartViewOpen}
+              open={dialogs.saveSmartViewOpen}
+              onOpenChange={dialogs.setSaveSmartViewOpen}
               criteria={filterCriteria}
               onSaved={handleSmartViewSaved}
             />
@@ -546,8 +475,8 @@ export function MatrixBoard() {
         )}
 
         <FilterPopover
-          open={filterPopoverOpen}
-          onOpenChange={setFilterPopoverOpen}
+          open={dialogs.filterPopoverOpen}
+          onOpenChange={dialogs.setFilterPopoverOpen}
           criteria={filterCriteria}
           onChange={setFilterCriteria}
           onSaveAsSmartView={handleSaveSmartView}
@@ -556,8 +485,8 @@ export function MatrixBoard() {
 
         {/* Settings Dialog */}
         <SettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
+          open={dialogs.settingsOpen}
+          onOpenChange={dialogs.setSettingsOpen}
           showCompleted={showCompleted}
           onToggleCompleted={() => setShowCompleted(!showCompleted)}
           onExport={handleExport}
@@ -565,20 +494,20 @@ export function MatrixBoard() {
           isLoading={isLoading}
         />
 
-        <Dialog open={dialogState !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
+        <Dialog open={dialogs.dialogState !== null} onOpenChange={(open) => (open ? null : dialogs.closeDialog())}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{dialogState?.mode === "edit" ? "Edit task" : "Create task"}</DialogTitle>
+              <DialogTitle>{dialogs.dialogState?.mode === "edit" ? "Edit task" : "Create task"}</DialogTitle>
             </DialogHeader>
-            {dialogState !== null && (
+            {dialogs.dialogState !== null && (
               <Suspense fallback={<div className="flex items-center justify-center p-8"><Spinner /></div>}>
                 <TaskForm
                   taskId={taskBeingEdited?.id}
                   initialValues={activeTaskDraft}
                   onSubmit={handleSubmit}
-                  onCancel={closeDialog}
+                  onCancel={dialogs.closeDialog}
                   onDelete={taskBeingEdited ? () => handleDelete(taskBeingEdited) : undefined}
-                  submitLabel={dialogState?.mode === "edit" ? "Update task" : "Add task"}
+                  submitLabel={dialogs.dialogState?.mode === "edit" ? "Update task" : "Add task"}
                 />
               </Suspense>
             )}
