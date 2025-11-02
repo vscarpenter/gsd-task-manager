@@ -68,7 +68,7 @@ export function MatrixBoard() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Use custom hooks for bulk selection and task operations
-  const bulkSelection = useBulkSelection(all);
+  const bulkSelection = useBulkSelection(all, () => dialogs.setBulkTagDialogOpen(true));
   const taskOps = useTaskOperations(
     dialogs.dialogState,
     dialogs.closeDialog,
