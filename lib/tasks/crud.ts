@@ -283,8 +283,9 @@ export async function deleteTask(id: string): Promise<void> {
     // This is critical for conflict detection on the server
     const task = await db.tasks.get(id);
     if (!task) {
-      logger.warn('Task not found for deletion', { taskId: id });
-      throw new Error(`Task ${id} not found`);
+      // Idempotent delete: if task doesn't exist, operation succeeds without error
+      logger.info('Task already deleted or does not exist', { taskId: id });
+      return;
     }
 
     const vectorClock = task.vectorClock || {};
