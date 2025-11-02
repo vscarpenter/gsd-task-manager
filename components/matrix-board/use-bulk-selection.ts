@@ -9,7 +9,10 @@ import * as bulkOps from "@/lib/bulk-operations";
  * Custom hook for managing bulk selection and bulk operations
  * Handles selection mode, selected task IDs, and bulk action callbacks
  */
-export function useBulkSelection(allTasks: TaskRecord[]) {
+export function useBulkSelection(
+  allTasks: TaskRecord[],
+  onOpenBulkTagDialog: () => void
+) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
@@ -92,9 +95,8 @@ export function useBulkSelection(allTasks: TaskRecord[]) {
   }, [selectedTaskIds, allTasks, handleClearSelection, showToast, handleError]);
 
   const handleBulkAddTags = useCallback(() => {
-    // This just opens the dialog, actual adding is handled by a separate callback
-    return true;
-  }, []);
+    onOpenBulkTagDialog();
+  }, [onOpenBulkTagDialog]);
 
   return {
     selectionMode,
