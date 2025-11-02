@@ -3,10 +3,10 @@
 import { getDb } from "@/lib/db";
 import type { TaskRecord, NotificationSettings } from "@/lib/types";
 import { notificationSettingsSchema } from "@/lib/schema";
-import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
+import { NOTIFICATION_TIMING, NOTIFICATION_ASSETS, TIME_UTILS } from "@/lib/constants";
 
 async function getActiveServiceWorker(): Promise<ServiceWorkerRegistration | undefined> {
-  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator) || !navigator.serviceWorker) {
     return undefined;
   }
 
@@ -96,7 +96,7 @@ export async function getNotificationSettings(): Promise<NotificationSettings> {
     const defaultSettings: NotificationSettings = {
       id: "settings",
       enabled: true,
-      defaultReminder: 15, // 15 minutes before
+      defaultReminder: NOTIFICATION_TIMING.DEFAULT_REMINDER_MINUTES,
       soundEnabled: true,
       permissionAsked: false,
       updatedAt: new Date().toISOString()
@@ -153,28 +153,13 @@ export async function showTaskNotification(
   }
 
   // Check if snoozed
-  if (task.snoozedUntil) {
-    const snoozeDate = new Date(task.snoozedUntil);
-    if (snoozeDate > new Date()) {
-      return; // Still snoozed
-    }
+  if (isTaskSnoozed(task)) {
+    return;
   }
 
   try {
     const title = getNotificationTitle(task, minutesUntil);
-    const options: NotificationOptions = {
-      body: task.description || "Task reminder",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      tag: `task-${task.id}`,
-      requireInteraction: false,
-      silent: !settings.soundEnabled,
-      data: {
-        taskId: task.id,
-        dueDate: task.dueDate
-      }
-    };
-
+    const options = createNotificationOptions(task, settings);
     const registration = await getActiveServiceWorker();
 
     if (registration?.showNotification) {
@@ -186,19 +171,55 @@ export async function showTaskNotification(
       return;
     }
 
-    const notification = new Notification(title, options);
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
-    setTimeout(() => {
-      notification.close();
-    }, NOTIFICATION_TIMING.AUTO_CLOSE_DURATION);
+    displayFallbackNotification(title, options);
   } catch (error) {
     console.error("Error showing notification:", error);
   }
+}
+
+/**
+ * Check if the task is currently snoozed
+ */
+function isTaskSnoozed(task: TaskRecord): boolean {
+  if (!task.snoozedUntil) return false;
+  return new Date(task.snoozedUntil) > new Date();
+}
+
+/**
+ * Create notification options object
+ */
+function createNotificationOptions(
+  task: TaskRecord,
+  settings: NotificationSettings
+): NotificationOptions {
+  return {
+    body: task.description || "Task reminder",
+    icon: NOTIFICATION_ASSETS.ICON_192,
+    badge: NOTIFICATION_ASSETS.BADGE,
+    tag: `task-${task.id}`,
+    requireInteraction: false,
+    silent: !settings.soundEnabled,
+    data: {
+      taskId: task.id,
+      dueDate: task.dueDate
+    }
+  };
+}
+
+/**
+ * Display notification using fallback Notification API
+ */
+function displayFallbackNotification(title: string, options: NotificationOptions): void {
+  const notification = new Notification(title, options);
+
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+
+  setTimeout(() => {
+    notification.close();
+  }, NOTIFICATION_TIMING.AUTO_CLOSE_DURATION);
 }
 
 /**
@@ -260,8 +281,8 @@ export async function showTestNotification(): Promise<boolean> {
   try {
     const notification = new Notification("Test Notification", {
       body: "Your notifications are working correctly!",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: NOTIFICATION_ASSETS.ICON_192,
+      badge: NOTIFICATION_ASSETS.BADGE,
       tag: "test-notification",
       requireInteraction: false
     });

@@ -4,6 +4,7 @@
  */
 
 import { getDb } from '@/lib/db';
+import { ENV_CONFIG } from '@/lib/env-config';
 import { getCryptoManager } from './crypto';
 import { getApiClient } from './api-client';
 import { getSyncQueue } from './queue';
@@ -21,14 +22,6 @@ async function ensureSyncConfigInitialized(): Promise<void> {
     const deviceId = crypto.randomUUID();
     const deviceName = typeof navigator !== 'undefined' && navigator?.userAgent?.includes('Mac') ? 'Mac' : 'Desktop';
 
-    // Use same-origin for deployed environments (CloudFront will proxy /api/* to worker)
-    // For local development, connect directly to worker
-    const serverUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-      ? 'http://localhost:8787'
-      : typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://gsd.vinny.dev';
-
     await db.syncMetadata.add({
       key: 'sync_config',
       enabled: false,
@@ -41,7 +34,7 @@ async function ensureSyncConfigInitialized(): Promise<void> {
       lastSyncAt: null,
       vectorClock: {},
       conflictStrategy: 'last_write_wins' as const,
-      serverUrl,
+      serverUrl: ENV_CONFIG.apiBaseUrl,
       consecutiveFailures: 0,
       lastFailureAt: null,
       lastFailureReason: null,

@@ -46,7 +46,19 @@ export const NOTIFICATION_TIMING = {
   /** Default check interval when app is open (1 minute) */
   DEFAULT_CHECK_INTERVAL_MINUTES: 1,
   /** Background sync interval for PWA when closed (15 minutes) */
-  BACKGROUND_SYNC_INTERVAL_MINUTES: 15
+  BACKGROUND_SYNC_INTERVAL_MINUTES: 15,
+  /** Default reminder time before task due date (15 minutes) */
+  DEFAULT_REMINDER_MINUTES: 15
+} as const;
+
+/**
+ * PWA and notification asset paths
+ */
+export const NOTIFICATION_ASSETS = {
+  /** Path to 192x192 icon for notifications and PWA */
+  ICON_192: '/icon-192.png',
+  /** Path to badge icon for notifications */
+  BADGE: '/icon-192.png'
 } as const;
 
 /**

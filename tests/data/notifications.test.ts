@@ -42,10 +42,13 @@ describe("Notifications module", () => {
 			onclick: null,
 		};
 
-		// Mock Notification constructor
-		mockNotificationConstructor = vi
-			.fn()
-			.mockReturnValue(mockNotificationInstance);
+		// Mock Notification constructor - must be a proper constructor function
+		mockNotificationConstructor = vi.fn(function Notification(title: string, options: any) {
+			const instance = Object.create(mockNotificationInstance);
+			instance.title = title;
+			instance.options = options;
+			return instance;
+		});
 		mockNotificationConstructor.permission = "default";
 		mockNotificationConstructor.requestPermission = vi
 			.fn()
