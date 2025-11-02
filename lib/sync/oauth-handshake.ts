@@ -7,6 +7,7 @@
  */
 
 import { toast } from 'sonner';
+import { ENV_CONFIG } from '@/lib/env-config';
 
 export interface OAuthAuthData {
   userId: string;
@@ -173,10 +174,7 @@ function notifyListeners(event: OAuthHandshakeEvent) {
 
 async function fetchOAuthResult(state: string): Promise<OAuthHandshakeEvent> {
   try {
-    // Determine worker URL based on environment
-    const workerUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-      ? 'http://localhost:8787'
-      : window.location.origin;
+    const workerUrl = ENV_CONFIG.apiBaseUrl;
 
     console.info('[OAuthHandshake] Fetching result from worker', {
       state: state.substring(0, 8) + '...',
