@@ -1,12 +1,12 @@
 "use client";
 
 import { ChangeEvent, useRef, useState, useEffect } from "react";
-import { SettingsIcon, UploadIcon, DownloadIcon, CloudIcon, LogOutIcon } from "lucide-react";
+import { SettingsIcon, UploadIcon, DownloadIcon, CloudIcon, LogOutIcon, AlertTriangleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SyncAuthDialog } from "@/components/sync/sync-auth-dialog";
 import { getSyncStatus, disableSync } from "@/lib/sync/config";
-import { clearCryptoManager } from "@/lib/sync/crypto";
 import { getDb } from "@/lib/db";
 import { toast } from "sonner";
 
@@ -22,6 +22,8 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check sync status on mount and when dialog closes
@@ -55,16 +57,37 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
   };
 
   const handleLogout = async () => {
+    // Check for pending sync operations
+    const status = await getSyncStatus();
+    if (status.pendingCount > 0) {
+      setPendingChanges(status.pendingCount);
+      setShowLogoutConfirm(true);
+      return;
+    }
+
+    // No pending changes, proceed with logout
+    await performLogout();
+  };
+
+  const performLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Use disableSync for proper cleanup:
+      // - Stops health monitor (background sync)
+      // - Clears API token from client
+      // - Clears crypto manager
+      // - Resets sync config (preserves deviceId)
+      // - Clears sync queue (removes pending operations)
+      await disableSync();
+
+      // Also delete encryption salt (disableSync doesn't handle this)
       const db = getDb();
-      await db.syncMetadata.delete("sync_config");
       await db.syncMetadata.delete("encryption_salt");
-      clearCryptoManager();
 
       setSyncEnabled(false);
       setUserEmail(null);
       setIsOpen(false);
+      setShowLogoutConfirm(false);
 
       toast.success("Logged out successfully");
     } catch (err) {
@@ -179,6 +202,46 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
           getSyncStatus().then((status) => setSyncEnabled(status.enabled));
         }}
       />
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangleIcon className="h-5 w-5 text-amber-500" />
+              Unsynchronized Changes
+            </DialogTitle>
+            <DialogDescription>
+              You have {pendingChanges} unsynchronized {pendingChanges === 1 ? 'change' : 'changes'}.
+              If you logout now, these changes will be lost and cannot be recovered.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-foreground-muted">
+              <strong>Recommendation:</strong> Wait for sync to complete or ensure you have a recent backup.
+            </p>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+              <Button
+                variant="subtle"
+                onClick={() => setShowLogoutConfirm(false)}
+                disabled={isLoggingOut}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={performLogout}
+                disabled={isLoggingOut}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isLoggingOut ? "Logging out..." : "Logout Anyway"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
