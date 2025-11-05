@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SyncAuthDialog } from "@/components/sync/sync-auth-dialog";
 import { getSyncStatus, disableSync } from "@/lib/sync/config";
-import { clearCryptoManager } from "@/lib/sync/crypto";
 import { getDb } from "@/lib/db";
 import { toast } from "sonner";
 
@@ -57,10 +56,17 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Use disableSync for proper cleanup:
+      // - Stops health monitor (background sync)
+      // - Clears API token from client
+      // - Clears crypto manager
+      // - Resets sync config (preserves deviceId)
+      // - Clears sync queue (removes pending operations)
+      await disableSync();
+
+      // Also delete encryption salt (disableSync doesn't handle this)
       const db = getDb();
-      await db.syncMetadata.delete("sync_config");
       await db.syncMetadata.delete("encryption_salt");
-      clearCryptoManager();
 
       setSyncEnabled(false);
       setUserEmail(null);
