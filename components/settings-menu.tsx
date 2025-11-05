@@ -1,11 +1,14 @@
 "use client";
 
 import { ChangeEvent, useRef, useState, useEffect } from "react";
-import { SettingsIcon, UploadIcon, DownloadIcon, CloudIcon } from "lucide-react";
+import { SettingsIcon, UploadIcon, DownloadIcon, CloudIcon, LogOutIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SyncAuthDialog } from "@/components/sync/sync-auth-dialog";
-import { getSyncStatus } from "@/lib/sync/config";
+import { getSyncStatus, disableSync } from "@/lib/sync/config";
+import { clearCryptoManager } from "@/lib/sync/crypto";
+import { getDb } from "@/lib/db";
+import { toast } from "sonner";
 
 interface SettingsMenuProps {
   onExport: () => Promise<void>;
@@ -17,6 +20,8 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
   const [isOpen, setIsOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check sync status on mount and when dialog closes
@@ -24,6 +29,7 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
     const checkSyncStatus = async () => {
       const status = await getSyncStatus();
       setSyncEnabled(status.enabled);
+      setUserEmail(status.email);
     };
     checkSyncStatus();
   }, [syncDialogOpen]);
@@ -46,6 +52,27 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
   const handleOpenSyncDialog = () => {
     setSyncDialogOpen(true);
     setIsOpen(false);
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const db = getDb();
+      await db.syncMetadata.delete("sync_config");
+      await db.syncMetadata.delete("encryption_salt");
+      clearCryptoManager();
+
+      setSyncEnabled(false);
+      setUserEmail(null);
+      setIsOpen(false);
+
+      toast.success("Logged out successfully");
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Logout failed";
+      toast.error(errorMsg);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -87,22 +114,39 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
                 aria-hidden
               />
 
-              <button
-                onClick={handleOpenSyncDialog}
-                className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-background-muted"
-              >
-                <span className="flex items-center gap-3">
-                  <CloudIcon className="h-4 w-4" />
-                  Sync Settings
-                </span>
-                {syncEnabled && (
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    ON
-                  </span>
-                )}
-              </button>
+              {syncEnabled && userEmail ? (
+                <>
+                  <div className="px-3 py-2 mb-2">
+                    <p className="text-xs text-foreground-muted mb-1">Signed in as</p>
+                    <p className="text-sm font-medium text-foreground truncate">{userEmail}</p>
+                  </div>
 
-              <div className="my-2 h-px bg-border" />
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-background-muted disabled:opacity-50"
+                  >
+                    <LogOutIcon className="h-4 w-4" />
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                  </button>
+
+                  <div className="my-2 h-px bg-border" />
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleOpenSyncDialog}
+                    className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-background-muted"
+                  >
+                    <span className="flex items-center gap-3">
+                      <CloudIcon className="h-4 w-4" />
+                      Enable Sync
+                    </span>
+                  </button>
+
+                  <div className="my-2 h-px bg-border" />
+                </>
+              )}
 
               <button
                 onClick={() => fileInputRef.current?.click()}
