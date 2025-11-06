@@ -24,6 +24,7 @@ export function SyncButton() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const [hasAuthError, setHasAuthError] = useState(false);
 
   // Poll pending operation count
   useEffect(() => {
@@ -62,6 +63,33 @@ export function SyncButton() {
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, [nextRetryAt]);
+
+  // Detect authentication errors and show actionable toast
+  useEffect(() => {
+    if (!error) {
+      setHasAuthError(false);
+      return;
+    }
+
+    // Check if error is authentication-related
+    const isAuthError = error.includes('Authentication expired') ||
+                       error.includes('Please sign in again') ||
+                       error.includes('authentication token');
+
+    if (isAuthError) {
+      setHasAuthError(true);
+
+      // Show toast with re-login action button
+      showToast(
+        error,
+        {
+          label: 'Re-login',
+          onClick: () => setAuthDialogOpen(true),
+        },
+        TOAST_DURATION.LONG
+      );
+    }
+  }, [error, showToast]);
 
   // Monitor health and show toast notifications for issues
   useEffect(() => {
@@ -129,6 +157,17 @@ export function SyncButton() {
       return;
     }
 
+    // Check for active authentication error - open dialog instead of retrying
+    if (hasAuthError) {
+      showToast(
+        'Please re-login to continue syncing',
+        undefined,
+        TOAST_DURATION.MEDIUM
+      );
+      setAuthDialogOpen(true);
+      return;
+    }
+
     // Check if encryption is initialized
     const crypto = getCryptoManager();
 
@@ -176,6 +215,11 @@ export function SyncButton() {
       return <CloudOffIcon className="h-5 w-5" />;
     }
 
+    // Show auth error with distinct red alert icon
+    if (hasAuthError) {
+      return <AlertCircleIcon className="h-5 w-5 text-red-600 animate-pulse" />;
+    }
+
     // Show retry countdown icon when in backoff
     if (retryCountdown !== null && retryCountdown > 0) {
       return <ClockIcon className="h-5 w-5 text-orange-500" />;
@@ -200,6 +244,11 @@ export function SyncButton() {
       return 'Sync not enabled';
     }
 
+    // Show auth error with clear call to action
+    if (hasAuthError) {
+      return 'Authentication expired - Click to re-login';
+    }
+
     // Show retry countdown in tooltip
     if (retryCountdown !== null && retryCountdown > 0) {
       return `Retrying in ${retryCountdown}s...`;
@@ -215,7 +264,7 @@ export function SyncButton() {
       case 'conflict':
         return 'Conflicts resolved';
       default:
-        return pendingCount > 0 
+        return pendingCount > 0
           ? `${pendingCount} pending operation${pendingCount !== 1 ? 's' : ''}`
           : 'Sync with cloud';
     }
@@ -235,10 +284,20 @@ export function SyncButton() {
             >
               {getIcon()}
 
+              {/* Auth error indicator - takes priority over other badges */}
+              {hasAuthError && (
+                <Badge
+                  variant="default"
+                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-red-600 text-white text-xs"
+                >
+                  !
+                </Badge>
+              )}
+
               {/* Badge overlay showing pending operation count */}
-              {isEnabled && pendingCount > 0 && (
-                <Badge 
-                  variant="default" 
+              {isEnabled && !hasAuthError && pendingCount > 0 && (
+                <Badge
+                  variant="default"
                   className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-blue-500 text-white text-xs"
                 >
                   {pendingCount}
@@ -251,7 +310,7 @@ export function SyncButton() {
               )}
 
               {/* Retry countdown overlay */}
-              {retryCountdown !== null && retryCountdown > 0 && (
+              {!hasAuthError && retryCountdown !== null && retryCountdown > 0 && (
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-medium text-orange-500">
                   {retryCountdown}s
                 </span>
