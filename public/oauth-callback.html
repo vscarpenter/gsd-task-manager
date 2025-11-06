@@ -371,6 +371,49 @@
           return;
         }
 
+        // Check if this state has already been processed
+        // This prevents duplicate processing if the page is reloaded or navigated to again
+        const processedStatesKey = 'oauth_processed_states';
+        try {
+          const processedStatesStr = localStorage.getItem(processedStatesKey);
+          const processedStates = processedStatesStr ? JSON.parse(processedStatesStr) : {};
+
+          if (processedStates[state]) {
+            console.info('[OAuth Callback] State already processed, redirecting to app', {
+              state: state.substring(0, 8) + '...',
+              processedAt: new Date(processedStates[state]).toISOString(),
+            });
+
+            // Redirect to app immediately to avoid re-processing
+            if (isInStandalonePWA) {
+              window.location.href = '/?oauth_complete=true';
+            } else {
+              await showError('This sign-in link has already been used. You can close this window.');
+            }
+            return;
+          }
+
+          // Mark this state as processed immediately
+          processedStates[state] = Date.now();
+
+          // Keep only the last 10 states to prevent localStorage bloat
+          const stateKeys = Object.keys(processedStates);
+          if (stateKeys.length > 10) {
+            const sortedKeys = stateKeys.sort((a, b) => processedStates[b] - processedStates[a]);
+            const keysToKeep = sortedKeys.slice(0, 10);
+            const newProcessedStates = {};
+            keysToKeep.forEach(key => {
+              newProcessedStates[key] = processedStates[key];
+            });
+            localStorage.setItem(processedStatesKey, JSON.stringify(newProcessedStates));
+          } else {
+            localStorage.setItem(processedStatesKey, JSON.stringify(processedStates));
+          }
+        } catch (e) {
+          console.warn('[OAuth Callback] Failed to check/mark processed state:', e);
+          // Continue anyway - better to potentially duplicate than to break login
+        }
+
         // Check for error from worker redirect
         if (success === 'false' || error) {
           const message = error ? decodeURIComponent(error) : 'Authentication failed';
