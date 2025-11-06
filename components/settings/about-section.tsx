@@ -32,13 +32,13 @@ export function AboutSection({ isExpanded, onToggle }: AboutSectionProps) {
 					<div className="flex justify-between">
 						<span className="text-foreground-muted">Version</span>
 						<span className="font-medium text-foreground">
-							{process.env.NEXT_PUBLIC_BUILD_VERSION || "3.0.1"}
+							{process.env.NEXT_PUBLIC_BUILD_NUMBER || "5.3.0"}
 						</span>
 					</div>
 					<div className="flex justify-between">
 						<span className="text-foreground-muted">Build Date</span>
 						<span className="font-medium text-foreground">
-							{process.env.NEXT_PUBLIC_BUILD_DATE || "Oct 12, 2025"}
+							{process.env.NEXT_PUBLIC_BUILD_DATE || "dev build"}
 						</span>
 					</div>
 				</div>
