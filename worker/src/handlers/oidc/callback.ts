@@ -41,6 +41,11 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     }
 
     if (!code || !state) {
+      logger.warn('Invalid callback parameters', {
+        hasCode: !!code,
+        hasState: !!state,
+        url: request.url,
+      });
       return errorResponse('Invalid callback parameters', 400, origin);
     }
 
@@ -49,11 +54,35 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const stateDataStr = await env.KV.get(stateKey);
 
     if (!stateDataStr) {
-      return errorResponse('Invalid or expired state', 400, origin);
+      logger.warn('OAuth state not found in KV', {
+        statePrefix: state.substring(0, 8) + '...',
+        stateLength: state.length,
+        stateKey,
+        url: request.url,
+        timeNow: new Date().toISOString(),
+        userAgent: request.headers.get('User-Agent'),
+        origin,
+      });
+      return errorResponse(
+        'OAuth session expired or invalid. Please try signing in again. (State not found - this may happen if the sign-in flow took longer than 30 minutes)',
+        400,
+        origin
+      );
     }
 
     const stateData = JSON.parse(stateDataStr);
-    const { codeVerifier, provider, redirectUri, appOrigin } = stateData;
+    const { codeVerifier, provider, redirectUri, appOrigin, createdAt } = stateData;
+
+    // Log timing information for diagnostics
+    const now = Date.now();
+    const flowDuration = createdAt ? now - createdAt : null;
+    logger.info('OAuth callback received - state valid', {
+      provider,
+      statePrefix: state.substring(0, 8) + '...',
+      flowDurationMs: flowDuration,
+      flowDurationSec: flowDuration ? Math.round(flowDuration / 1000) : null,
+      userAgent: request.headers.get('User-Agent'),
+    });
 
     // Delete used state
     await env.KV.delete(stateKey);

@@ -14,7 +14,7 @@ export const ALLOWED_ORIGINS = [
 // Session and token TTL values (in seconds)
 export const TTL = {
   SESSION: 60 * 60 * 24 * 7,      // 7 days - session lifetime
-  OAUTH_STATE: 600,               // 10 minutes - OAuth state validity
+  OAUTH_STATE: 1800,              // 30 minutes - OAuth state validity (increased for mobile/PWA flows)
   REVOCATION: 60 * 60 * 24 * 7,   // 7 days - keep revocation records
 } as const;
 
