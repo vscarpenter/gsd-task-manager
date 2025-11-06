@@ -11,6 +11,7 @@ import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
 import { getCryptoManager } from '@/lib/sync/crypto';
 import { getSyncQueue } from '@/lib/sync/queue';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
+import { isAuthError } from '@/lib/sync/error-categorizer';
 
 const TOAST_DURATION = {
   SHORT: 3000,
@@ -71,12 +72,11 @@ export function SyncButton() {
       return;
     }
 
-    // Check if error is authentication-related
-    const isAuthError = error.includes('Authentication expired') ||
-                       error.includes('Please sign in again') ||
-                       error.includes('authentication token');
+    // Use centralized error categorization for consistency
+    const errorObj = new Error(error);
+    const authErrorDetected = isAuthError(errorObj);
 
-    if (isAuthError) {
+    if (authErrorDetected) {
       setHasAuthError(true);
 
       // Show toast with re-login action button
@@ -331,6 +331,8 @@ export function SyncButton() {
         isOpen={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
         onSuccess={() => {
+          // Clear auth error state to allow sync after successful re-authentication
+          setHasAuthError(false);
           // Dialog will close automatically, and useSync hook will detect the change
           setAuthDialogOpen(false);
         }}
