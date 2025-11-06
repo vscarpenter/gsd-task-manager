@@ -78,27 +78,44 @@ function ensureInitialized() {
   window.addEventListener('message', handleMessageEvent);
   window.addEventListener('storage', handleStorageEvent);
 
-  // Check for existing OAuth result in sessionStorage (critical for PWA standalone mode)
+  // Check for existing OAuth result in storage (critical for PWA standalone mode)
   // After OAuth callback redirects back to the app, the result is already in storage
   // but nobody has read it yet
+  // IMPORTANT: Check BOTH sessionStorage AND localStorage because:
+  // - oauth-callback.html stores in localStorage (for PWA cross-page persistence)
+  // - This handler uses sessionStorage by default (for security)
+  // - iOS PWA standalone mode may clear sessionStorage on redirect
   try {
-    const existingResult = storage?.getItem(RESULT_KEY);
+    // Try sessionStorage first (preferred for security)
+    let existingResult = storage?.getItem(RESULT_KEY);
+    let storageSource = 'sessionStorage';
+
+    // Fall back to localStorage if not found in sessionStorage
+    if (!existingResult && typeof window !== 'undefined') {
+      existingResult = localStorage.getItem(RESULT_KEY);
+      storageSource = 'localStorage';
+    }
+
     if (existingResult) {
-      console.info('[OAuthHandshake] Found existing result in sessionStorage on init');
+      console.info(`[OAuthHandshake] Found existing result in ${storageSource} on init`);
       const result = JSON.parse(existingResult) as OAuthHandshakeEvent;
 
       // Only process if we haven't already processed this state
       if (!processedStates.has(result.state)) {
         console.info('[OAuthHandshake] Processing existing result', {
           state: result.state.substring(0, 8) + '...',
-          status: result.status
+          status: result.status,
+          source: storageSource,
         });
         processedStates.add(result.state);
 
-        // Clear the result from sessionStorage to prevent duplicate processing
+        // Clear the result from BOTH storage locations to prevent duplicate processing
         try {
           storage?.removeItem(RESULT_KEY);
-          storage?.removeItem(STORAGE_KEY); // Also clear the legacy key
+          storage?.removeItem(STORAGE_KEY);
+          localStorage.removeItem(RESULT_KEY);
+          localStorage.removeItem(STORAGE_KEY);
+          console.info('[OAuthHandshake] Cleared result from both storage locations');
         } catch (e) {
           console.warn('[OAuthHandshake] Failed to clear processed result from storage:', e);
         }
