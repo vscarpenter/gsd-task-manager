@@ -93,8 +93,6 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     // Verify ID token and extract user info
     const { email, providerUserId } = await verifyIdToken(provider, tokens.id_token!, env);
 
-    const now = Date.now();
-
     // Find or create user
     let user = await env.DB.prepare(
       'SELECT id, email, account_status, encryption_salt FROM users WHERE auth_provider = ? AND provider_user_id = ?'
