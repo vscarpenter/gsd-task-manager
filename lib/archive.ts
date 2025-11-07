@@ -7,6 +7,9 @@
 
 import { getDb } from "@/lib/db";
 import type { TaskRecord, ArchiveSettings } from "@/lib/types";
+import { getSyncQueue } from "@/lib/sync/queue";
+import { incrementVectorClock } from "@/lib/sync/vector-clock";
+import { getSyncConfig } from "@/lib/sync/config";
 
 /**
  * Get archive settings from database
@@ -66,6 +69,12 @@ export async function archiveOldTasks(
 
   const now = new Date().toISOString();
 
+  // Enqueue delete operations for sync before archiving
+  const queue = getSyncQueue();
+  for (const task of tasksToArchive) {
+    await queue.enqueue('delete', task.id, task, task.vectorClock || {});
+  }
+
   // Move tasks to archive table
   const archivedTasks: TaskRecord[] = tasksToArchive.map((task) => ({
     ...task,
@@ -100,11 +109,23 @@ export async function restoreTask(taskId: string): Promise<void> {
     throw new Error("Task not found in archive");
   }
 
-  // Remove archivedAt timestamp
-  const { archivedAt, ...taskWithoutArchive } = archivedTask;
+  // Get device ID and increment vector clock for sync
+  const syncConfig = await getSyncConfig();
+  const deviceId = syncConfig?.deviceId || 'local';
+  const vectorClock = incrementVectorClock(archivedTask.vectorClock || {}, deviceId);
+
+  // Remove archivedAt timestamp and update vector clock
+  const { archivedAt: _archivedAt, ...taskWithoutArchive } = {
+    ...archivedTask,
+    vectorClock
+  };
 
   // Move back to main tasks table
   await db.tasks.add(taskWithoutArchive);
+
+  // Enqueue update operation for sync
+  const queue = getSyncQueue();
+  await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive, vectorClock);
 
   // Remove from archive
   await db.archivedTasks.delete(taskId);

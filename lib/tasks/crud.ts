@@ -394,6 +394,8 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
       completedAt: undefined,
       notificationSent: false,
       lastNotificationAt: undefined,
+      snoozedUntil: undefined,
+      archivedAt: undefined,
       vectorClock
     };
 

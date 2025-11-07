@@ -29,6 +29,7 @@ import { notificationChecker } from "@/lib/notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
+import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useBulkSelection } from "./use-bulk-selection";
 import { useTaskOperations } from "./use-task-operations";
 
@@ -80,6 +81,9 @@ export function MatrixBoard() {
     bulkSelection.handleClearSelection
   );
 
+  // Enable auto-archive background task
+  useAutoArchive();
+
   // Start notification checker when component mounts
   useEffect(() => {
     notificationChecker.start();
@@ -103,6 +107,8 @@ export function MatrixBoard() {
     const highlightId = params.get("highlight");
 
     if (highlightId) {
+      // Intentionally setting state in effect to handle URL parameter on mount/task changes
+      // This is a valid pattern for URL-driven UI state initialization
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setHighlightedTaskId(highlightId);
 
@@ -117,7 +123,8 @@ export function MatrixBoard() {
         }
       }, 100);
 
-      // Clear highlight after animation
+      // Clear highlight after animation completes
+      // This setState is intentional as part of the highlight lifecycle
       setTimeout(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setHighlightedTaskId(null);
