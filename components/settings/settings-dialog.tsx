@@ -112,7 +112,7 @@ export function SettingsDialog({
 
 	const handleViewArchive = () => {
 		onOpenChange(false); // Close settings dialog
-		router.push("/archive/");
+		router.push("/archive");
 	};
 
 	// Calculate storage stats
