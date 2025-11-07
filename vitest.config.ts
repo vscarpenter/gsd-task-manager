@@ -10,11 +10,12 @@ export default defineConfig({
     setupFiles: "./vitest.setup.ts",
     css: true,
     coverage: {
-      enabled: true,
-      reporter: ["text", "lcov", "html"],
+      enabled: false, // Only enable when --coverage flag is passed
+      reporter: ["text", "lcov", "html", "json-summary"],
       provider: "v8",
       include: ["lib/**/*.ts", "components/**/*.tsx"],
       exclude: ["**/*.test.ts", "**/*.test.tsx", "**/*.config.ts", "**/types.ts"],
+      reportOnFailure: true, // Generate coverage report even if tests fail
       thresholds: {
         statements: 80,
         lines: 80,

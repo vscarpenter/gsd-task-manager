@@ -41,10 +41,17 @@ export async function handleSyncError(
     pendingCount,
   });
 
-  // Record sync error to history
+  // Record sync error to history (best-effort, don't block retry logic if history write fails)
   const syncEndTime = Date.now();
   const syncDuration = syncEndTime - syncStartTime;
-  await recordSyncError(syncError.message, deviceId, triggeredBy, syncDuration);
+  try {
+    await recordSyncError(syncError.message, deviceId, triggeredBy, syncDuration);
+  } catch (historyError) {
+    logger.error(
+      'Failed to record sync error to history',
+      historyError instanceof Error ? historyError : new Error(String(historyError))
+    );
+  }
 
   // Handle transient errors: log, record failure, schedule retry
   if (errorCategory === 'transient') {
