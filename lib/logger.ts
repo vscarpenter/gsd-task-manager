@@ -36,6 +36,7 @@ export type LogContext =
   | 'SYNC_HEALTH'
   | 'SYNC_TOKEN'
   | 'SYNC_ERROR'
+  | 'SYNC_HISTORY'
   | 'TASK_CRUD'
   | 'AUTO_ARCHIVE'
   | 'AUTH'

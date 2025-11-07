@@ -74,3 +74,15 @@ export interface ArchiveSettings {
   enabled: boolean;
   archiveAfterDays: 30 | 60 | 90; // Days after completion before archiving
 }
+export interface SyncHistoryRecord {
+  id: string;
+  timestamp: string; // ISO 8601 timestamp
+  status: "success" | "error" | "conflict";
+  pushedCount: number; // Number of local changes pushed
+  pulledCount: number; // Number of remote changes pulled
+  conflictsResolved: number; // Number of conflicts automatically resolved
+  errorMessage?: string; // Error message if status is "error"
+  duration?: number; // Sync duration in milliseconds
+  deviceId: string; // Device that performed the sync
+  triggeredBy: "user" | "auto"; // Whether sync was manual or automatic
+}
