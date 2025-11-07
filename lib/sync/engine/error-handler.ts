@@ -9,6 +9,7 @@ import { createLogger } from '@/lib/logger';
 import type { RetryManager } from '../retry-manager';
 import type { TokenManager } from '../token-manager';
 import type { SyncResult } from '../types';
+import { recordSyncError } from '@/lib/sync-history';
 
 const logger = createLogger('SYNC_ERROR');
 
@@ -20,7 +21,10 @@ export async function handleSyncError(
   pushResult: any,
   pullResult: any,
   retryManager: RetryManager,
-  tokenManager: TokenManager
+  tokenManager: TokenManager,
+  deviceId: string,
+  triggeredBy: 'user' | 'auto',
+  syncStartTime: number
 ): Promise<SyncResult> {
   const syncError = error instanceof Error ? error : new Error('Sync failed');
   const errorCategory = categorizeError(syncError);
@@ -36,6 +40,11 @@ export async function handleSyncError(
     pulled: pullResult?.tasks.length || 0,
     pendingCount,
   });
+
+  // Record sync error to history
+  const syncEndTime = Date.now();
+  const syncDuration = syncEndTime - syncStartTime;
+  await recordSyncError(syncError.message, deviceId, triggeredBy, syncDuration);
 
   // Handle transient errors: log, record failure, schedule retry
   if (errorCategory === 'transient') {

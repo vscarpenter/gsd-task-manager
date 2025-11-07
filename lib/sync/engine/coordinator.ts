@@ -23,6 +23,7 @@ import {
   getStatus as getSyncStatus,
   queueExistingTasks as queueAllExistingTasks,
 } from './metadata-manager';
+import { recordSyncSuccess } from '@/lib/sync-history';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -45,6 +46,7 @@ export class SyncEngine {
     // Declare at function level so they're accessible in catch block
     let pushResult: any = null;
     let pullResult: any = null;
+    let syncStartTime = Date.now(); // Declare here for error handler access
 
     try {
       this.isRunning = true;
@@ -110,7 +112,7 @@ export class SyncEngine {
 
       // Capture sync start time BEFORE push/pull operations
       // This timestamp will be used as lastSyncAt to prevent race conditions
-      const syncStartTime = Date.now();
+      syncStartTime = Date.now();
 
       logger.debug('Sync timing window captured', {
         syncStartTime,
@@ -230,15 +232,32 @@ export class SyncEngine {
         syncDuration: `${syncDuration}ms`,
       });
 
+      // Record successful sync to history
+      await recordSyncSuccess(
+        result.pushedCount || 0,
+        result.pulledCount || 0,
+        result.conflictsResolved || 0,
+        config.deviceId,
+        priority,
+        syncDuration
+      );
+
       return result;
     } catch (error) {
+      // Get config for deviceId (may not be available if error occurred early)
+      const config = await getSyncConfig();
+      const deviceId = config?.deviceId || 'unknown';
+
       // Delegate error handling to error handler
       return await handleSyncError(
         error,
         pushResult,
         pullResult,
         this.retryManager,
-        this.tokenManager
+        this.tokenManager,
+        deviceId,
+        priority,
+        syncStartTime
       );
     } finally {
       this.isRunning = false;
