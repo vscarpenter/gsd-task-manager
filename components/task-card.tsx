@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon } from "lucide-react";
+import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon, CopyIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { TaskRecord } from "@/lib/types";
@@ -15,12 +15,15 @@ interface TaskCardProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
+  onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
+  taskRef?: (el: HTMLElement | null) => void;
+  isHighlighted?: boolean;
 }
 
-function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, selectionMode, isSelected, onToggleSelect }: TaskCardProps) {
+function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, onDuplicate, selectionMode, isSelected, onToggleSelect, taskRef, isHighlighted }: TaskCardProps) {
   // React Compiler handles optimization automatically
   const dueLabel = formatDueDate(task.dueDate);
   const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
@@ -46,14 +49,20 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
 
   return (
     <article
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        if (taskRef && node) {
+          taskRef(node);
+        }
+      }}
       style={style}
       className={cn(
         "group flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm transition",
         task.completed ? "opacity-60" : "opacity-100",
         isDragging && "cursor-grabbing",
         taskIsOverdue ? "border-red-300 bg-red-50/50" : "border-card-border",
-        selectionMode && isSelected && "ring-2 ring-accent ring-offset-2"
+        selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
+        isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -191,6 +200,16 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
               aria-label="Share task"
             >
               <Share2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
+            </button>
+          )}
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={() => onDuplicate(task)}
+              className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation"
+              aria-label="Duplicate task"
+            >
+              <CopyIcon className="h-4 w-4 sm:h-3 sm:w-3" />
             </button>
           )}
           <button

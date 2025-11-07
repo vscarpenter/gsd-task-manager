@@ -16,9 +16,12 @@ interface MatrixColumnProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
+  onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   selectionMode?: boolean;
   selectedTaskIds?: Set<string>;
   onToggleSelect?: (task: TaskRecord) => void;
+  taskRefs?: React.MutableRefObject<Map<string, HTMLElement>>;
+  highlightedTaskId?: string | null;
 }
 
 function MatrixColumnComponent({
@@ -29,9 +32,12 @@ function MatrixColumnComponent({
   onDelete,
   onToggleComplete,
   onShare,
+  onDuplicate,
   selectionMode,
   selectedTaskIds,
-  onToggleSelect
+  onToggleSelect,
+  taskRefs,
+  highlightedTaskId
 }: MatrixColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: quadrant.id
@@ -75,9 +81,16 @@ function MatrixColumnComponent({
                 onDelete={onDelete}
                 onToggleComplete={onToggleComplete}
                 onShare={onShare}
+                onDuplicate={onDuplicate}
                 selectionMode={selectionMode}
                 isSelected={selectedTaskIds?.has(task.id)}
                 onToggleSelect={onToggleSelect}
+                taskRef={(el) => {
+                  if (el && taskRefs) {
+                    taskRefs.current.set(task.id, el);
+                  }
+                }}
+                isHighlighted={highlightedTaskId === task.id}
               />
             ))
           )}

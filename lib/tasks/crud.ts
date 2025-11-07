@@ -365,6 +365,53 @@ export async function moveTaskToQuadrant(id: string, targetQuadrant: QuadrantId)
 }
 
 /**
+ * Duplicate a task - copies all properties except ID
+ */
+export async function duplicateTask(id: string): Promise<TaskRecord> {
+  try {
+    const db = getDb();
+    const original = await db.tasks.get(id);
+
+    if (!original) {
+      throw new Error(`Task with id ${id} not found`);
+    }
+
+    const now = isoNow();
+
+    // Get device ID and initialize vector clock for sync
+    const syncConfig = await getSyncConfig();
+    const deviceId = syncConfig?.deviceId || 'local';
+    const vectorClock = incrementVectorClock({}, deviceId);
+
+    // Create duplicate with new ID and updated timestamps
+    const duplicate: TaskRecord = {
+      ...original,
+      id: generateId(),
+      title: `${original.title} (Copy)`,
+      createdAt: now,
+      updatedAt: now,
+      completed: false,
+      completedAt: undefined,
+      notificationSent: false,
+      lastNotificationAt: undefined,
+      vectorClock
+    };
+
+    await db.tasks.add(duplicate);
+
+    // Queue for sync if enabled
+    const queue = getSyncQueue();
+    await queue.enqueue('create', duplicate.id, duplicate, vectorClock);
+
+    logger.info('Task duplicated', { originalId: id, newId: duplicate.id });
+    return duplicate;
+  } catch (error) {
+    logger.error('Failed to duplicate task', error instanceof Error ? error : undefined, { taskId: id });
+    throw new Error(`Failed to duplicate task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
  * Clear all tasks from the database
  */
 export async function clearTasks(): Promise<void> {

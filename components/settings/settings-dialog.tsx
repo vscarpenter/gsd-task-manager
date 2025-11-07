@@ -17,7 +17,9 @@ import type { NotificationSettings } from "@/lib/types";
 import { AppearanceSettings } from "./appearance-settings";
 import { NotificationSettingsSection } from "./notification-settings";
 import { DataManagement } from "./data-management";
+import { ArchiveSettings } from "./archive-settings";
 import { AboutSection } from "./about-section";
+import { useRouter } from "next/navigation";
 
 interface SettingsDialogProps {
 	open: boolean;
@@ -39,6 +41,7 @@ export function SettingsDialog({
 	isLoading,
 }: SettingsDialogProps) {
 	const { all: tasks } = useTasks();
+	const router = useRouter();
 	const [mounted, setMounted] = useState(false);
 	const [notificationSettings, setNotificationSettings] =
 		useState<NotificationSettings | null>(null);
@@ -47,6 +50,7 @@ export function SettingsDialog({
 	const [expandedSections, setExpandedSections] = useState({
 		appearance: true,
 		notifications: false,
+		archive: false,
 		data: false,
 		about: false,
 	});
@@ -106,6 +110,11 @@ export function SettingsDialog({
 		}));
 	};
 
+	const handleViewArchive = () => {
+		onOpenChange(false); // Close settings dialog
+		router.push("/archive/");
+	};
+
 	// Calculate storage stats
 	const activeTasks = tasks.filter((t) => !t.completed).length;
 	const completedTasks = tasks.filter((t) => t.completed).length;
@@ -142,6 +151,13 @@ export function SettingsDialog({
 						settings={notificationSettings}
 						onNotificationToggle={handleNotificationToggle}
 						onDefaultReminderChange={handleDefaultReminderChange}
+					/>
+
+					{/* Archive Section */}
+					<ArchiveSettings
+						isExpanded={expandedSections.archive}
+						onToggle={() => toggleSection("archive")}
+						onViewArchive={handleViewArchive}
 					/>
 
 					{/* Data & Backup Section */}

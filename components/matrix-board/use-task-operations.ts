@@ -9,7 +9,8 @@ import {
   deleteTask,
   exportToJson,
   toggleCompleted,
-  updateTask
+  updateTask,
+  duplicateTask
 } from "@/lib/tasks";
 import * as bulkOps from "@/lib/bulk-operations";
 
@@ -152,6 +153,24 @@ export function useTaskOperations(
     );
   }, [selectedTaskIds, allTasks, handleClearSelection, showToast, handleError]);
 
+  const handleDuplicate = useCallback(async (task: TaskRecord) => {
+    try {
+      await duplicateTask(task.id);
+      showToast(
+        `"${task.title}" duplicated successfully`,
+        undefined,
+        TOAST_DURATION.SHORT
+      );
+    } catch (error) {
+      handleError(error, {
+        action: ErrorActions.CREATE_TASK,
+        taskId: task.id,
+        userMessage: "Failed to duplicate task",
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [showToast, handleError]);
+
   return {
     isLoading,
     handleSubmit,
@@ -159,5 +178,6 @@ export function useTaskOperations(
     handleComplete,
     handleExport,
     handleBulkAddTagsConfirm,
+    handleDuplicate,
   };
 }
