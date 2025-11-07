@@ -1,5 +1,5 @@
 import Dexie, { Table } from "dexie";
-import type { TaskRecord, NotificationSettings, ArchiveSettings } from "@/lib/types";
+import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryRecord } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, SyncConfig, DeviceInfo, EncryptionConfig } from "@/lib/sync/types";
 import { ENV_CONFIG } from "@/lib/env-config";
@@ -13,6 +13,7 @@ class GsdDatabase extends Dexie {
   syncMetadata!: Table<SyncConfig | DeviceInfo | EncryptionConfig, string>;
   deviceInfo!: Table<DeviceInfo, string>;
   archiveSettings!: Table<ArchiveSettings, string>;
+  syncHistory!: Table<SyncHistoryRecord, string>;
 
   constructor() {
     super("GsdTaskManager");
@@ -41,6 +42,20 @@ class GsdDatabase extends Dexie {
             task.subtasks = [];
           }
         });
+      });
+
+    // Version 10: Add syncHistory table for tracking sync operations
+    this.version(10)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId"
       });
 
     // Version 3: Add indexes for better query performance and fix test issues
@@ -74,6 +89,20 @@ class GsdDatabase extends Dexie {
         });
       });
 
+    // Version 10: Add syncHistory table for tracking sync operations
+    this.version(10)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId"
+      });
+
     // Version 6: Add dependencies field for task dependencies
     this.version(6)
       .stores({
@@ -88,6 +117,20 @@ class GsdDatabase extends Dexie {
             task.dependencies = [];
           }
         });
+      });
+
+    // Version 10: Add syncHistory table for tracking sync operations
+    this.version(10)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId"
       });
 
     // Version 7: Add sync support
@@ -135,6 +178,20 @@ class GsdDatabase extends Dexie {
         });
       });
 
+    // Version 10: Add syncHistory table for tracking sync operations
+    this.version(10)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId"
+      });
+
     // Version 8: Add completedAt field for Smart Views date filtering
     this.version(8)
       .stores({
@@ -152,6 +209,20 @@ class GsdDatabase extends Dexie {
             task.completedAt = task.updatedAt;
           }
         });
+      });
+
+    // Version 10: Add syncHistory table for tracking sync operations
+    this.version(10)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId"
       });
 
     // Version 9: Add archivedTasks table and archiveSettings
@@ -174,7 +245,22 @@ class GsdDatabase extends Dexie {
           archiveAfterDays: 30
         });
       });
+
+    // Version 10: Add syncHistory table for tracking sync operations
+    this.version(10)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId"
+      });
   }
+
 }
 
 let dbInstance: GsdDatabase | null = null;
@@ -184,10 +270,13 @@ export function getDb(): GsdDatabase {
     return dbInstance;
   }
 
+
   if (typeof indexedDB === "undefined") {
     throw new Error("IndexedDB is not available in this environment.");
   }
 
+
   dbInstance = new GsdDatabase();
   return dbInstance;
 }
+
