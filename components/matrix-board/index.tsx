@@ -29,6 +29,7 @@ import { notificationChecker } from "@/lib/notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
+import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useBulkSelection } from "./use-bulk-selection";
 import { useTaskOperations } from "./use-task-operations";
 
@@ -61,11 +62,13 @@ export function MatrixBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
   const [showCompleted, setShowCompleted] = useState(false);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const dialogs = useMatrixDialogs();
   const { showToast } = useToast();
   const { handleError } = useErrorHandlerWithUndo();
   const { sensors, handleDragEnd } = useDragAndDrop(handleError);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const taskRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   // Use custom hooks for bulk selection and task operations
   const bulkSelection = useBulkSelection(all, () => dialogs.setBulkTagDialogOpen(true));
@@ -77,6 +80,9 @@ export function MatrixBoard() {
     bulkSelection.selectedTaskIds,
     bulkSelection.handleClearSelection
   );
+
+  // Enable auto-archive background task
+  useAutoArchive();
 
   // Start notification checker when component mounts
   useEffect(() => {
@@ -94,6 +100,38 @@ export function MatrixBoard() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, [dialogs]);
+
+  // Handle highlight parameter from dashboard
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get("highlight");
+
+    if (highlightId) {
+      // Intentionally setting state in effect to handle URL parameter on mount/task changes
+      // This is a valid pattern for URL-driven UI state initialization
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHighlightedTaskId(highlightId);
+
+      // Wait for tasks to render, then scroll to highlighted task
+      setTimeout(() => {
+        const taskElement = taskRefs.current.get(highlightId);
+        if (taskElement) {
+          taskElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        }
+      }, 100);
+
+      // Clear highlight after animation completes
+      // This setState is intentional as part of the highlight lifecycle
+      setTimeout(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setHighlightedTaskId(null);
+        window.history.replaceState({}, "", window.location.pathname);
+      }, 3000);
+    }
+  }, [all]);
 
   // Extract all unique tags from tasks
   const availableTags = useMemo(() => extractAvailableTags(all), [all]);
@@ -222,9 +260,12 @@ export function MatrixBoard() {
                   onDelete={taskOps.handleDelete}
                   onToggleComplete={taskOps.handleComplete}
                   onShare={dialogs.openShareDialog}
+                  onDuplicate={taskOps.handleDuplicate}
                   selectionMode={bulkSelection.selectionMode}
                   selectedTaskIds={bulkSelection.selectedTaskIds}
                   onToggleSelect={bulkSelection.handleToggleSelect}
+                  taskRefs={taskRefs}
+                  highlightedTaskId={highlightedTaskId}
                 />
               ))}
             </div>

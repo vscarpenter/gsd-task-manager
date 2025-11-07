@@ -19,7 +19,8 @@ export {
   toggleCompleted,
   deleteTask,
   moveTaskToQuadrant,
-  clearTasks
+  clearTasks,
+  duplicateTask
 } from "./tasks/crud";
 
 // Subtask operations

@@ -1,16 +1,18 @@
 import Dexie, { Table } from "dexie";
-import type { TaskRecord, NotificationSettings } from "@/lib/types";
+import type { TaskRecord, NotificationSettings, ArchiveSettings } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, SyncConfig, DeviceInfo, EncryptionConfig } from "@/lib/sync/types";
 import { ENV_CONFIG } from "@/lib/env-config";
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
+  archivedTasks!: Table<TaskRecord, string>;
   smartViews!: Table<SmartView, string>;
   notificationSettings!: Table<NotificationSettings, string>;
   syncQueue!: Table<SyncQueueItem, string>;
   syncMetadata!: Table<SyncConfig | DeviceInfo | EncryptionConfig, string>;
   deviceInfo!: Table<DeviceInfo, string>;
+  archiveSettings!: Table<ArchiveSettings, string>;
 
   constructor() {
     super("GsdTaskManager");
@@ -149,6 +151,27 @@ class GsdDatabase extends Dexie {
           if (task.completed && !task.completedAt) {
             task.completedAt = task.updatedAt;
           }
+        });
+      });
+
+    // Version 9: Add archivedTasks table and archiveSettings
+    this.version(9)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id"
+      })
+      .upgrade((trans) => {
+        // Initialize archive settings with defaults
+        return trans.table("archiveSettings").add({
+          id: "settings",
+          enabled: false,
+          archiveAfterDays: 30
         });
       });
   }

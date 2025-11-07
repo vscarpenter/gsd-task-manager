@@ -170,6 +170,21 @@ main {
       opacity: 0;
     }
   }
+
+  @keyframes pulse-highlight {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
+  }
+
+  .animate-pulse-highlight {
+    animation: pulse-highlight 1.5s ease-in-out 2;
+  }
 }
 
 /* Respect reduced motion preference */

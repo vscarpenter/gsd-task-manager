@@ -34,6 +34,8 @@ export interface TaskRecord {
   snoozedUntil?: string;
   // Sync fields
   vectorClock?: { [deviceId: string]: number }; // For distributed sync conflict detection
+  // Archive field
+  archivedAt?: string; // Timestamp when task was archived
 }
 
 export interface TaskDraft {
@@ -65,4 +67,10 @@ export interface NotificationSettings {
   quietHoursEnd?: string; // HH:mm format
   permissionAsked: boolean;
   updatedAt: string;
+}
+
+export interface ArchiveSettings {
+  id: "settings";
+  enabled: boolean;
+  archiveAfterDays: 30 | 60 | 90; // Days after completion before archiving
 }
