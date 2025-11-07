@@ -232,15 +232,22 @@ export class SyncEngine {
         syncDuration: `${syncDuration}ms`,
       });
 
-      // Record successful sync to history
-      await recordSyncSuccess(
-        result.pushedCount || 0,
-        result.pulledCount || 0,
-        result.conflictsResolved || 0,
-        config.deviceId,
-        priority,
-        syncDuration
-      );
+      // Record successful sync to history (best-effort, don't fail sync if history write fails)
+      try {
+        await recordSyncSuccess(
+          result.pushedCount || 0,
+          result.pulledCount || 0,
+          result.conflictsResolved || 0,
+          config.deviceId,
+          priority,
+          syncDuration
+        );
+      } catch (historyError) {
+        logger.error(
+          'Failed to record sync success to history',
+          historyError instanceof Error ? historyError : new Error(String(historyError))
+        );
+      }
 
       return result;
     } catch (error) {
