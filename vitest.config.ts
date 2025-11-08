@@ -13,7 +13,14 @@ export default defineConfig({
       enabled: false, // Only enable when --coverage flag is passed
       reporter: ["text", "lcov", "html", "json-summary"],
       provider: "v8",
-      include: ["lib/**/*.ts", "components/**/*.tsx"],
+      include: [
+        "lib/**/*.ts",
+        "components/**/*.tsx",
+        "app/**/*.ts",
+        "app/**/*.tsx",
+        "scripts/**/*.ts",
+        "scripts/**/*.js"
+      ],
       exclude: ["**/*.test.ts", "**/*.test.tsx", "**/*.config.ts", "**/types.ts"],
       reportOnFailure: true, // Generate coverage report even if tests fail
       thresholds: {
