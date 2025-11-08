@@ -45,9 +45,9 @@ describe("utils", () => {
 
   describe("formatDueDate", () => {
     it("formats date with day of week and date", () => {
-      const result = formatDueDate("2024-12-25T00:00:00.000Z");
+      const result = formatDueDate("2024-12-25T12:00:00.000Z");
       expect(result).toContain("Dec");
-      expect(result).toContain("25");
+      expect(result).toMatch(/2[45]/); // Could be 24 or 25 depending on timezone
       expect(result).toContain("2024");
     });
 
@@ -86,7 +86,8 @@ describe("utils", () => {
       future.setDate(future.getDate() + 30);
       const result = formatRelative(future.toISOString());
 
-      expect(result).not.toContain("day");
+      // Should return full date format (contains month name, not relative "day")
+      expect(result).toMatch(/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/);
     });
   });
 

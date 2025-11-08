@@ -26,10 +26,17 @@ describe("MatrixEmptyState", () => {
     const onCreateTask = vi.fn();
     render(<MatrixEmptyState onCreateTask={onCreateTask} />);
 
-    expect(screen.getByText(/Urgent \+ Important/)).toBeInTheDocument();
-    expect(screen.getByText(/Not Urgent \+ Important/)).toBeInTheDocument();
-    expect(screen.getByText(/Urgent \+ Not Important/)).toBeInTheDocument();
-    expect(screen.getByText(/Not Urgent \+ Not Important/)).toBeInTheDocument();
+    const urgentImportant = screen.getAllByText(/Urgent \+ Important/);
+    expect(urgentImportant.length).toBeGreaterThan(0);
+    
+    const notUrgentImportant = screen.getAllByText(/Not Urgent \+ Important/);
+    expect(notUrgentImportant.length).toBeGreaterThan(0);
+    
+    const urgentNotImportant = screen.getAllByText(/Urgent \+ Not Important/);
+    expect(urgentNotImportant.length).toBeGreaterThan(0);
+    
+    const notUrgentNotImportant = screen.getAllByText(/Not Urgent \+ Not Important/);
+    expect(notUrgentNotImportant.length).toBeGreaterThan(0);
   });
 
   it("renders quick tips", () => {

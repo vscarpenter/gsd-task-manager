@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { useAllTags } from "@/lib/use-all-tags";
-import { addTask } from "@/lib/tasks";
+import { createTask } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
 import type { TaskRecord } from "@/lib/types";
 
@@ -20,7 +20,7 @@ describe("useAllTags", () => {
   });
 
   it("returns unique tags from all tasks", async () => {
-    await addTask({
+    await createTask({
       title: "Task 1",
       urgent: false,
       important: false,
@@ -29,7 +29,7 @@ describe("useAllTags", () => {
       dependencies: [],
     });
 
-    await addTask({
+    await createTask({
       title: "Task 2",
       urgent: false,
       important: false,
@@ -49,7 +49,7 @@ describe("useAllTags", () => {
   });
 
   it("returns sorted tags alphabetically", async () => {
-    await addTask({
+    await createTask({
       title: "Task 1",
       urgent: false,
       important: false,
@@ -66,7 +66,7 @@ describe("useAllTags", () => {
   });
 
   it("deduplicates tags across tasks", async () => {
-    await addTask({
+    await createTask({
       title: "Task 1",
       urgent: false,
       important: false,
@@ -75,7 +75,7 @@ describe("useAllTags", () => {
       dependencies: [],
     });
 
-    await addTask({
+    await createTask({
       title: "Task 2",
       urgent: false,
       important: false,
@@ -93,7 +93,7 @@ describe("useAllTags", () => {
   });
 
   it("handles tasks with no tags", async () => {
-    await addTask({
+    await createTask({
       title: "Task 1",
       urgent: false,
       important: false,
@@ -102,7 +102,7 @@ describe("useAllTags", () => {
       dependencies: [],
     });
 
-    await addTask({
+    await createTask({
       title: "Task 2",
       urgent: false,
       important: false,

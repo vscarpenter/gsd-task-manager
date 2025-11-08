@@ -54,14 +54,11 @@ export async function archiveOldTasks(
   const cutoffIso = cutoffDate.toISOString();
 
   // Find completed tasks older than cutoff
-  const tasksToArchive = await db.tasks
-    .where("completed")
-    .equals(1)
-    .and((task) => {
-      if (!task.completedAt) return false;
-      return task.completedAt < cutoffIso;
-    })
-    .toArray();
+  const allTasks = await db.tasks.toArray();
+  const tasksToArchive = allTasks.filter((task) => {
+    if (!task.completed || !task.completedAt) return false;
+    return task.completedAt < cutoffIso;
+  });
 
   if (tasksToArchive.length === 0) {
     return 0;
