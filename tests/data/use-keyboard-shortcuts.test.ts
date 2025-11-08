@@ -107,14 +107,20 @@ describe("useKeyboardShortcuts", () => {
     renderHook(() => useKeyboardShortcuts(mockHandlers));
 
     const div = document.createElement("div");
-    div.contentEditable = "true";
+    div.setAttribute("contenteditable", "true");
     document.body.appendChild(div);
 
+    // Verify isContentEditable is set
+    expect(div.isContentEditable).toBe(true);
+
+    // Create event that will bubble to window with contentEditable div as target
     const event = new KeyboardEvent("keydown", {
       key: "n",
       bubbles: true,
     });
-    Object.defineProperty(event, "target", { value: div, enumerable: true });
+    
+    // Dispatch from the contentEditable element so it bubbles to window
+    // The event.target will be the div
     div.dispatchEvent(event);
 
     expect(mockHandlers.onNewTask).not.toHaveBeenCalled();

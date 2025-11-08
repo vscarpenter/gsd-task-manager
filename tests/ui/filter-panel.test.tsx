@@ -60,7 +60,7 @@ describe("FilterPanel", () => {
       />
     );
 
-    expect(screen.getByText(/2 active/)).toBeInTheDocument();
+    expect(screen.getByText(/active, 1 tag/)).toBeInTheDocument();
   });
 
   it("toggles quadrant filters", async () => {

@@ -26,7 +26,7 @@ import type { ErrorContext } from "@/lib/error-logger";
 export function useErrorHandler() {
   const { showToast } = useToast();
 
-  const handleError = useCallback(
+  return useCallback(
     (error: unknown, context: ErrorContext) => {
       // Log the error with full context
       logError(error, context);
@@ -37,8 +37,6 @@ export function useErrorHandler() {
     },
     [showToast]
   );
-
-  return handleError;
 }
 
 /**

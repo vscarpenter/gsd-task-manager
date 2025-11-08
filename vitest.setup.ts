@@ -14,3 +14,12 @@ if (!window.matchMedia) {
     dispatchEvent: () => false
   }) as MediaQueryList;
 }
+
+// Polyfill for isContentEditable property in jsdom
+Object.defineProperty(HTMLElement.prototype, 'isContentEditable', {
+  get: function() {
+    const contentEditable = this.getAttribute('contenteditable');
+    return contentEditable === 'true' || contentEditable === '';
+  },
+  configurable: true
+});
