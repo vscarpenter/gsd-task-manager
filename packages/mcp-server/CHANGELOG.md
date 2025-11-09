@@ -5,6 +5,26 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2025-11-09 🔧
+
+### Changed
+- **Code Organization**: Refactored `write-ops.ts` into modular architecture
+  - Split 494-line file into 4 focused modules for better maintainability
+  - `write-ops/types.ts` (58 lines) - Type definitions and interfaces
+  - `write-ops/helpers.ts` (124 lines) - Helper functions (ID generation, encryption, sync)
+  - `write-ops/task-operations.ts` (183 lines) - Individual task CRUD operations
+  - `write-ops/bulk-operations.ts` (151 lines) - Bulk update operations
+  - Maintained backward compatibility via re-export layer in `write-ops.ts`
+  - All modules now comply with 300-line coding standards limit
+  - Zero functional changes - purely internal refactoring
+
+### Technical Details
+- Part of Phase 3 coding standards compliance initiative
+- Single responsibility principle applied to each module
+- Improved testability and maintainability
+- No breaking changes - all existing imports continue to work
+- TypeScript compilation verified successful
+
 ## [0.4.7] - 2025-10-27 🐛
 
 ### Fixed
