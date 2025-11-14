@@ -144,79 +144,6 @@ GSD is built on a **local-first** architecture, meaning your browser is the sour
 - ✅ **No third-party cookies** — Zero cross-site tracking
 - ✅ **Open source** — Verify privacy claims by reading the code
 
-### IndexedDB Implementation Details
-
-**Database Schema** (`lib/db.ts`, `lib/schema.ts`):
-
-```typescript
-// Task data model (Zod schema + TypeScript types)
-interface TaskRecord {
-  // Identity
-  id: string;                        // nanoid (4-21 chars, URL-safe)
-
-  // Core properties
-  title: string;                     // 1-80 chars
-  description: string;               // 0-600 chars
-  urgent: boolean;
-  important: boolean;
-  quadrant: QuadrantId;              // Derived from urgent + important
-
-  // Status
-  completed: boolean;
-  completedAt?: string;              // ISO 8601 datetime
-
-  // Metadata
-  createdAt: string;                 // ISO 8601 datetime
-  updatedAt: string;                 // ISO 8601 datetime
-
-  // Advanced features
-  dueDate?: string;                  // ISO 8601 datetime
-  recurrence: 'none' | 'daily' | 'weekly' | 'monthly';
-  tags: string[];                    // Max 30 chars each
-  subtasks: Subtask[];               // {id, title, completed}
-  dependencies: string[];            // Task IDs that must complete first
-
-  // Notifications
-  notifyBefore?: number;             // Minutes before due date
-  notificationEnabled: boolean;
-  notificationSent: boolean;
-  lastNotificationAt?: string;
-  snoozedUntil?: string;
-
-  // Sync (if enabled)
-  vectorClock: Record<string, number>; // Causality tracking for conflict resolution
-  parentTaskId?: string;             // For recurring task instances
-}
-```
-
-**Indexes for Performance** (version 10):
-- `id` — Primary key, clustered index
-- `quadrant` — Filter by quadrant in O(log n)
-- `completed` — Separate active/completed lists
-- `dueDate` — Sort by deadline
-- `recurrence` — Filter recurring tasks
-- `*tags` — Multi-entry index for tag filtering
-- `createdAt`, `updatedAt` — Sort by date
-- `[quadrant+completed]` — Compound index for filtered queries
-- `*dependencies` — Multi-entry index for dependency lookups
-- `completedAt` — Smart views date filtering
-
-**Live Queries** (`lib/use-tasks.ts`):
-```typescript
-import { useLiveQuery } from 'dexie-react-hooks';
-
-function useTasks() {
-  const all = useLiveQuery(() => db.tasks.toArray(), []);
-  const byQuadrant = useMemo(() =>
-    groupBy(all, task => task.quadrant),
-    [all]
-  );
-
-  return { all, byQuadrant };
-}
-```
-
-This React hook returns live data—any change to IndexedDB instantly updates all components. No manual refresh, no polling, no stale data. Dexie's observability system ensures UI stays in sync with database state.
 
 ### What Data Never Leaves Your Device
 
@@ -291,17 +218,6 @@ See "Cloud Sync" section below for details on the encrypted sync architecture.
 ### Data Ownership and Export Capabilities
 
 **You own your data completely.** No lock-in, no proprietary formats, no barriers to migration.
-
-**Export/Import** (`lib/tasks.ts`, `components/import-dialog.tsx`):
-
-```typescript
-// Export format (JSON)
-interface ExportPayload {
-  tasks: TaskRecord[];
-  exportedAt: string;    // ISO 8601 datetime
-  version: string;       // App version for compatibility
-}
-```
 
 **Export features:**
 - One-click download of all tasks as JSON
@@ -430,30 +346,6 @@ interface ExportPayload {
 - **Delete selected**: Confirmation dialog, then permanent removal
 - **Assign Dependencies**: (Future feature) Set blocking relationships
 
-**Implementation:**
-```typescript
-// State management in MatrixBoard
-const [selectionMode, setSelectionMode] = useState(false);
-const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
-
-// Bulk complete (lib/bulk-operations.ts)
-export async function bulkComplete(
-  taskIds: Set<string>,
-  completed: boolean
-): Promise<void> {
-  const now = new Date().toISOString();
-  await db.tasks.bulkUpdate(
-    Array.from(taskIds).map(id => ({
-      key: id,
-      changes: {
-        completed,
-        completedAt: completed ? now : undefined,
-        updatedAt: now
-      }
-    }))
-  );
-}
-```
 
 **Use cases:**
 - **Weekly review**: Select all Q4 tasks → bulk delete
@@ -473,13 +365,6 @@ export async function bulkComplete(
 **Purpose:**
 Define prerequisite relationships between tasks to enforce proper sequencing in complex projects.
 
-**How it works** (`lib/dependencies.ts`):
-
-```typescript
-// Task A depends on Task B means: Task B must complete before Task A can start
-task.dependencies: string[] // Array of task IDs that block this task
-```
-
 **UI** (`components/task-form-dependencies.tsx`):
 
 1. Open task form (create or edit)
@@ -497,39 +382,6 @@ task.dependencies: string[] // Array of task IDs that block this task
 - ✅ Can depend on tasks in any quadrant
 - ✅ Can have multiple dependencies (task blocked by 5 others = valid)
 
-**Circular Dependency Detection:**
-```typescript
-function wouldCreateCircularDependency(
-  taskId: string,
-  dependencyId: string,
-  allTasks: TaskRecord[]
-): boolean {
-  // Breadth-first search from dependencyId
-  // If we reach taskId, adding this dependency would create a cycle
-  const visited = new Set<string>();
-  const queue = [dependencyId];
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (visited.has(current)) continue;
-    visited.add(current);
-
-    if (current === taskId) return true; // Cycle detected!
-
-    const deps = allTasks.find(t => t.id === current)?.dependencies || [];
-    queue.push(...deps);
-  }
-
-  return false;
-}
-```
-
-**Dependency-aware features:**
-
-- `getBlockingTasks(task)` — Returns tasks that must complete first
-- `getBlockedTasks(taskId)` — Returns tasks waiting on this task
-- `isTaskBlocked(task)` — True if has uncompleted dependencies
-- `getReadyTasks(tasks)` — Filter to only tasks with no blockers
 
 **Use cases:**
 
@@ -564,22 +416,6 @@ Automatically recreate tasks on a schedule for habits, routines, and periodic wo
    - **New due date** calculated based on recurrence type
    - `parentTaskId` set to original task ID (links instances)
 
-**Due date calculation:**
-```typescript
-function getNextDueDate(current: string, recurrence: RecurrenceType): string {
-  const date = new Date(current);
-
-  if (recurrence === 'daily') {
-    date.setDate(date.getDate() + 1);
-  } else if (recurrence === 'weekly') {
-    date.setDate(date.getDate() + 7);
-  } else if (recurrence === 'monthly') {
-    date.setMonth(date.getMonth() + 1);
-  }
-
-  return date.toISOString();
-}
-```
 
 **Visual indicators:**
 - Recurring tasks show ⟳ (repeat icon) on task card
@@ -619,19 +455,6 @@ Cross-cutting categorization beyond quadrants (projects, contexts, priorities).
 - Color assignment deterministic (hash tag name → color)
 - Clicking tag (future feature) filters to that tag
 
-**Tag analytics** (`lib/analytics.ts`, `components/dashboard/tag-analytics.tsx`):
-```typescript
-interface TagStatistic {
-  tag: string;
-  count: number;           // Total tasks with this tag
-  completedCount: number;
-  completionRate: number;  // Percentage (0-100)
-}
-
-// Example output:
-// #work: 35 tasks, 28 completed, 80% completion rate
-// #personal: 20 tasks, 12 completed, 60% completion rate
-```
 
 **Search integration:**
 - Global search (`/` keyboard shortcut) searches tag content
@@ -655,17 +478,6 @@ interface TagStatistic {
 **Purpose:**
 Break down complex tasks into smaller, actionable steps with progress tracking.
 
-**Data model** (`lib/schema.ts`):
-```typescript
-interface Subtask {
-  id: string;        // nanoid (unique within task)
-  title: string;     // 1-100 chars
-  completed: boolean;
-}
-
-// Stored on task record:
-task.subtasks: Subtask[]
-```
 
 **UI** (`components/task-form-subtasks.tsx`):
 - Text input to add new subtask
@@ -674,15 +486,6 @@ task.subtasks: Subtask[]
 - Click X to remove subtask
 - Reorder via drag-and-drop (future feature)
 
-**Progress tracking** (`components/task-card.tsx`):
-```tsx
-// Visual progress bar on task card
-const completed = subtasks.filter(s => s.completed).length;
-const total = subtasks.length;
-const percentage = Math.round((completed / total) * 100);
-
-// Display: "2/5" with progress bar (40% filled)
-```
 
 **Recurring task behavior:**
 - When recurring task completes → new instance created
@@ -726,24 +529,6 @@ Save common filter combinations for quick access to specific task subsets.
 - Click to apply saved filters instantly
 - Delete custom views via trash icon
 
-**Filter Criteria** (`lib/filters.ts`):
-```typescript
-interface FilterCriteria {
-  quadrants?: QuadrantId[];     // Filter by Q1, Q2, Q3, Q4
-  status?: 'active' | 'completed' | 'all';
-  tags?: string[];              // Match any of these tags
-  dueDateRange?: {
-    start?: string;  // ISO date
-    end?: string;    // ISO date
-    preset?: 'overdue' | 'today' | 'this-week' | 'no-date';
-  };
-  recurrence?: RecurrenceType[]; // Filter by recurrence pattern
-  hasSubtasks?: boolean;
-  hasDependencies?: boolean;
-  isBlocked?: boolean;           // Has uncompleted dependencies
-  searchQuery?: string;          // Text search
-}
-```
 
 **Filter application** (`lib/filters.ts:applyFilters()`):
 - Filters applied in sequence (AND logic)
@@ -777,41 +562,6 @@ interface FilterCriteria {
 **Overview** (`app/(dashboard)/dashboard/page.tsx`):
 Comprehensive productivity analytics with interactive visualizations. Toggle between Matrix and Dashboard views via header.
 
-**Analytics Engine** (`lib/analytics.ts`):
-
-**Core Metrics:**
-```typescript
-interface ProductivityMetrics {
-  // Completion counts
-  completedToday: number;
-  completedThisWeek: number;
-  completedThisMonth: number;
-
-  // Streaks
-  activeStreak: number;      // Consecutive days with completed tasks
-  longestStreak: number;
-
-  // Rates
-  completionRate: number;    // Percentage of completed vs total
-
-  // Distribution
-  quadrantDistribution: Record<QuadrantId, number>; // Active tasks per quadrant
-
-  // Tags
-  tagStats: TagStatistic[];  // Sorted by count descending
-
-  // Deadlines
-  overdueCount: number;
-  dueTodayCount: number;
-  dueThisWeekCount: number;
-  noDueDateCount: number;
-
-  // Counts
-  activeTasks: number;
-  completedTasks: number;
-  totalTasks: number;
-}
-```
 
 **Visualization Components** (`components/dashboard/`):
 
@@ -854,69 +604,6 @@ interface ProductivityMetrics {
    - Color-coded (red for overdue, amber for today)
    - Empty state if no deadlines
 
-**Insights Derived:**
-
-**Completion Patterns:**
-```typescript
-// Streak calculation algorithm
-function getStreakData(tasks: TaskRecord[]): StreakData {
-  // Group tasks by completion date (YYYY-MM-DD)
-  const completionDates = new Set<string>();
-
-  // Current streak: count consecutive days from today backwards
-  let currentStreak = 0;
-  let checkDate = new Date();
-
-  while (completionDates.has(checkDate.toISOString().split('T')[0])) {
-    currentStreak++;
-    checkDate = subDays(checkDate, 1);
-  }
-
-  // Longest streak: find max consecutive days in history
-  // (Algorithm: sort dates, find longest gap-free sequence)
-
-  return { current: currentStreak, longest: longestStreak };
-}
-```
-
-**Productivity Insights:**
-
-- **High Q1 concentration** → Reactive firefighting, poor planning
-- **High Q2 concentration** → Proactive, strategic, sustainable
-- **Low completion rate** → Overcommitting or unrealistic planning
-- **High completion rate** → Good task sizing and follow-through
-- **Increasing trend** → Momentum building, positive habits
-- **Decreasing trend** → Burnout risk, need to reassess workload
-
-**Use cases:**
-
-- **Weekly reviews**: Check last 7 days completion, adjust planning
-- **Monthly retrospectives**: Review quadrant distribution, rebalance priorities
-- **Streak motivation**: Gamify daily task completion
-- **Tag analysis**: Identify neglected projects (low completion rate tags)
-
-#### Focus Mode and Time Management
-
-**Purpose:**
-Minimize distractions and concentrate on high-priority work.
-
-**Current Implementation:**
-- Filter to Q1 (Do First) quadrant only
-- Sort by due date (urgent deadlines first)
-- Hide completed tasks
-- Minimize UI chrome (future feature: full-screen mode)
-
-**Planned Features** (v6.0+):
-- Pomodoro timer integration (25 min work, 5 min break)
-- Daily focus selection (pick 3 tasks for the day)
-- Distraction blocking (hide Q3/Q4 tasks entirely)
-- Time tracking per task (started at, elapsed time)
-
-**Best Practices:**
-- Start day with Q2 tasks (important, not urgent)
-- Reserve Q1 time for true emergencies only
-- Batch Q3 tasks for specific time blocks
-- Review dashboard before focus sessions (identify priorities)
 
 ### Synchronization and Backup
 
@@ -1004,40 +691,7 @@ Minimize distractions and concentrate on high-priority work.
 **The Problem:**
 Two devices edit the same task offline, then both sync. Which version wins?
 
-**GSD's Solution: Vector Clocks** (`lib/sync/types.ts`):
 
-```typescript
-// Each device increments its counter on every task change
-interface VectorClock {
-  [deviceId: string]: number;
-}
-
-// Example:
-// Device A edits task: {A: 1}
-// Device B edits same task: {B: 1}
-// When syncing: Compare vector clocks to detect concurrent edits
-```
-
-**Conflict Detection:**
-```typescript
-function detectConflict(
-  localClock: VectorClock,
-  remoteClock: VectorClock
-): boolean {
-  // Conflict if neither clock dominates the other
-  // (neither clock has all entries ≥ the other)
-
-  const localDominates = Object.keys(remoteClock).every(
-    deviceId => (localClock[deviceId] || 0) >= remoteClock[deviceId]
-  );
-
-  const remoteDominates = Object.keys(localClock).every(
-    deviceId => (remoteClock[deviceId] || 0) >= localClock[deviceId]
-  );
-
-  return !localDominates && !remoteDominates;
-}
-```
 
 **Resolution Strategies:**
 
@@ -1117,66 +771,6 @@ Sync conflict detected (neither clock dominates):
 
 GSD's export format is intentionally simple to facilitate migration:
 
-```json
-{
-  "tasks": [
-    {
-      "id": "abc123",
-      "title": "Finish report",
-      "description": "Quarterly analysis",
-      "urgent": true,
-      "important": true,
-      "quadrant": "urgent-important",
-      "completed": false,
-      "dueDate": "2025-01-10T17:00:00.000Z",
-      "tags": ["#work", "#finance"],
-      "subtasks": [...],
-      "dependencies": [],
-      "recurrence": "none",
-      "createdAt": "2025-01-01T00:00:00.000Z",
-      "updatedAt": "2025-01-08T00:00:00.000Z"
-    }
-  ],
-  "exportedAt": "2025-01-08T12:00:00.000Z",
-  "version": "5.5.0"
-}
-```
-
-**Transformation Examples:**
-
-**Export to Todoist CSV:**
-```python
-import json, csv
-
-with open('gsd-export.json') as f:
-    data = json.load(f)
-
-with open('todoist-import.csv', 'w') as f:
-    writer = csv.writer(f)
-    writer.writerow(['Task', 'Priority', 'Due Date', 'Labels'])
-
-    for task in data['tasks']:
-        priority = 1 if task['urgent'] and task['important'] else 4
-        labels = ','.join(task['tags'])
-        writer.writerow([task['title'], priority, task.get('dueDate'), labels])
-```
-
-**Export to Markdown Checklist:**
-```python
-with open('tasks.md', 'w') as f:
-    f.write('# GSD Tasks\n\n')
-
-    for quadrant in ['urgent-important', 'not-urgent-important',
-                      'urgent-not-important', 'not-urgent-not-important']:
-        tasks = [t for t in data['tasks'] if t['quadrant'] == quadrant]
-        if tasks:
-            f.write(f'## {quadrant.replace("-", " ").title()}\n\n')
-            for task in tasks:
-                check = 'x' if task['completed'] else ' '
-                f.write(f'- [{check}] {task["title"]}\n')
-                if task['description']:
-                    f.write(f'  {task["description"]}\n')
-```
 
 **No Vendor Lock-In:**
 - Standard JSON format
