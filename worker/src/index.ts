@@ -25,9 +25,13 @@ router.get('/health', (request: Request) => {
   return jsonResponse({ status: 'ok', timestamp: Date.now() }, 200, origin);
 });
 
-// OAuth endpoints (no auth required)
+// OAuth endpoints (rate limited, no auth required)
 router.get('/api/auth/oauth/:provider/start', async (request: IRequest, env: Env) => {
   const origin = request.headers.get('Origin');
+  const ctx: RequestContext = {};
+  const rateLimitResult = await rateLimitMiddleware(request as unknown as Request, env, ctx);
+  if (rateLimitResult) return rateLimitResult;
+
   const provider = request.params?.provider as 'google' | 'apple';
   if (provider !== 'google' && provider !== 'apple') {
     return errorResponse('Invalid provider', 400, origin);
@@ -36,14 +40,26 @@ router.get('/api/auth/oauth/:provider/start', async (request: IRequest, env: Env
 });
 
 router.post('/api/auth/oauth/callback', async (request: Request, env: Env) => {
+  const ctx: RequestContext = {};
+  const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
+  if (rateLimitResult) return rateLimitResult;
+
   return oidcHandlers.handleOAuthCallback(request, env);
 });
 
 router.get('/api/auth/oauth/callback', async (request: Request, env: Env) => {
+  const ctx: RequestContext = {};
+  const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
+  if (rateLimitResult) return rateLimitResult;
+
   return oidcHandlers.handleOAuthCallback(request, env);
 });
 
 router.get('/api/auth/oauth/result', async (request: Request, env: Env) => {
+  const ctx: RequestContext = {};
+  const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
+  if (rateLimitResult) return rateLimitResult;
+
   return oidcHandlers.getOAuthResult(request, env);
 });
 

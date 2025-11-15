@@ -203,7 +203,7 @@ async function fetchOAuthResult(state: string): Promise<OAuthHandshakeEvent> {
       headers: {
         Accept: 'application/json',
       },
-      credentials: 'omit',
+      credentials: 'include',
     });
 
     const data = await response.json().catch(() => ({}));

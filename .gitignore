@@ -66,5 +66,8 @@ packages/mcp-server/test-*.sh
 packages/mcp-server/debug-*.sh
 !packages/mcp-server/debug-*.example.sh
 worker/cf-dev-config.json
+client-id.secret
+worker/secrets.txt
+worker/secrets-dev.txt
 *SETUP_GUIDE.md
 gitleaks-report.json

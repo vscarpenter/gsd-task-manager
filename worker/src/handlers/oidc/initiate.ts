@@ -1,8 +1,9 @@
 import type { Env } from '../../types';
 import { jsonResponse, errorResponse } from '../../middleware/cors';
-import { GOOGLE_CONFIG, APPLE_CONFIG, TTL } from '../../config';
+import { GOOGLE_CONFIG, APPLE_CONFIG, TTL, OAUTH_COOKIE, isOriginAllowed } from '../../config';
 import { createLogger } from '../../utils/logger';
 import { generateRandomString, generateCodeChallenge } from './helpers';
+import { createCookie } from '../../utils/cookies';
 
 const logger = createLogger('OIDC:Initiate');
 
@@ -15,14 +16,15 @@ export async function initiateOAuth(
   env: Env,
   provider: 'google' | 'apple'
 ): Promise<Response> {
-  const origin = request.headers.get('Origin');
+  const requestOrigin = request.headers.get('Origin');
+  const allowedOrigin = requestOrigin && isOriginAllowed(requestOrigin, env.ENVIRONMENT) ? requestOrigin : null;
 
   try {
     const config = provider === 'google' ? GOOGLE_CONFIG : APPLE_CONFIG;
     const clientId = provider === 'google' ? env.GOOGLE_CLIENT_ID : env.APPLE_CLIENT_ID;
 
     if (!clientId) {
-      return errorResponse(`${provider} OAuth not configured`, 500, origin);
+      return errorResponse(`${provider} OAuth not configured`, 500, allowedOrigin || undefined);
     }
 
     // Determine the worker's callback URI (where OAuth provider redirects)
@@ -34,12 +36,16 @@ export async function initiateOAuth(
 
     // Determine the app origin (where we'll redirect after processing)
     // Use OAUTH_CALLBACK_BASE if set, otherwise use Origin header
-    const appOrigin = env.OAUTH_CALLBACK_BASE || origin || env.OAUTH_REDIRECT_URI.replace('/oauth-callback.html', '');
+    const trustedAppOrigin =
+      env.OAUTH_CALLBACK_BASE ||
+      allowedOrigin ||
+      env.OAUTH_REDIRECT_URI.replace('/oauth-callback.html', '');
 
     // Generate state and PKCE verifier
     const state = generateRandomString(32);
     const codeVerifier = generateRandomString(64);
     const codeChallenge = await generateCodeChallenge(codeVerifier);
+    const sessionId = crypto.randomUUID();
 
     // Store state, verifier, and app origin in KV (short-lived)
     await env.KV.put(
@@ -48,7 +54,8 @@ export async function initiateOAuth(
         codeVerifier,
         provider,
         redirectUri: workerCallbackUri,
-        appOrigin,
+        appOrigin: trustedAppOrigin,
+        sessionId,
         createdAt: Date.now(),
       }),
       { expirationTtl: TTL.OAUTH_STATE }
@@ -73,8 +80,8 @@ export async function initiateOAuth(
       provider,
       state,
       workerCallbackUri,
-      appOrigin,
-      origin,
+      appOrigin: trustedAppOrigin,
+      origin: allowedOrigin || 'default',
       requestUrl: request.url,
       headers: {
         origin: request.headers.get('Origin'),
@@ -87,12 +94,22 @@ export async function initiateOAuth(
       }
     });
 
-    return jsonResponse({
+    const response = jsonResponse({
       authUrl: authUrl.toString(),
       state,
-    }, 200, origin);
+    }, 200, allowedOrigin || undefined);
+
+    const cookie = createCookie(OAUTH_COOKIE.name, sessionId, {
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: requestUrl.protocol === 'https:',
+      maxAge: OAUTH_COOKIE.maxAge,
+    });
+    response.headers.append('Set-Cookie', cookie);
+
+    return response;
   } catch (error: any) {
     logger.error('OAuth initiation failed', error, { provider });
-    return errorResponse('Failed to initiate OAuth', 500, origin);
+    return errorResponse('Failed to initiate OAuth', 500, allowedOrigin || undefined);
   }
 }

@@ -1,5 +1,7 @@
 import type { Env } from '../../types';
 import { jsonResponse, errorResponse } from '../../middleware/cors';
+import { OAUTH_COOKIE } from '../../config';
+import { createCookie, getCookie } from '../../utils/cookies';
 
 /**
  * Retrieve OAuth result using state token
@@ -12,6 +14,12 @@ export async function getOAuthResult(request: Request, env: Env): Promise<Respon
 
   if (!state) {
     return errorResponse('Missing state parameter', 400, origin);
+  }
+
+  const oauthSession = getCookie(request.headers.get('Cookie'), OAUTH_COOKIE.name);
+
+  if (!oauthSession) {
+    return errorResponse('Missing OAuth session cookie', 401, origin);
   }
 
   const resultKey = `oauth_result:${state}`;
@@ -28,16 +36,29 @@ export async function getOAuthResult(request: Request, env: Env): Promise<Respon
     );
   }
 
-  await env.KV.delete(resultKey);
-
   const result = JSON.parse(resultStr) as {
     status: 'success' | 'error';
     authData?: Record<string, unknown>;
     error?: string;
+    sessionId?: string | null;
   };
 
+  if (!result.sessionId || result.sessionId !== oauthSession) {
+    return errorResponse('OAuth session validation failed', 401, origin);
+  }
+
+  await env.KV.delete(resultKey);
+
+  const clearCookie = createCookie(OAUTH_COOKIE.name, '', {
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: url.protocol === 'https:',
+    maxAge: 0,
+    expires: new Date(0),
+  });
+
   if (result.status === 'error') {
-    return jsonResponse(
+    const response = jsonResponse(
       {
         status: 'error',
         error: result.error || 'OAuth failed',
@@ -45,9 +66,11 @@ export async function getOAuthResult(request: Request, env: Env): Promise<Respon
       200,
       origin
     );
+    response.headers.append('Set-Cookie', clearCookie);
+    return response;
   }
 
-  return jsonResponse(
+  const response = jsonResponse(
     {
       status: 'success',
       authData: result.authData,
@@ -55,4 +78,6 @@ export async function getOAuthResult(request: Request, env: Env): Promise<Respon
     200,
     origin
   );
+  response.headers.append('Set-Cookie', clearCookie);
+  return response;
 }

@@ -71,7 +71,12 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     }
 
     const stateData = JSON.parse(stateDataStr);
-    const { codeVerifier, provider, redirectUri, appOrigin, createdAt } = stateData;
+    const { codeVerifier, provider, redirectUri, appOrigin, createdAt, sessionId } = stateData;
+
+    if (!sessionId) {
+      logger.warn('OAuth state missing session binding', { statePrefix: state.substring(0, 8) + '...' });
+      return errorResponse('OAuth session invalid or expired. Please retry sign in.', 400, origin);
+    }
 
     // Log timing information for diagnostics
     const now = Date.now();
@@ -223,6 +228,7 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
         status: 'success',
         authData,
         appOrigin,
+        sessionId,
         createdAt: Date.now(),
       }),
       { expirationTtl: TTL.OAUTH_STATE }
@@ -267,13 +273,15 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const url = new URL(request.url);
     const state = url.searchParams.get('state');
     let errorAppOrigin: string | null = null;
+    let errorSessionId: string | null = null;
 
     if (state) {
       try {
         const stateDataStr = await env.KV.get(`oauth_state:${state}`);
         if (stateDataStr) {
           const stateData = JSON.parse(stateDataStr);
-          errorAppOrigin = stateData.appOrigin;
+          errorAppOrigin = stateData.appOrigin || null;
+          errorSessionId = stateData.sessionId || null;
         }
       } catch (e) {
         // Ignore errors when trying to retrieve state
@@ -290,6 +298,7 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
           status: 'error',
           error: message,
           appOrigin: errorAppOrigin || origin || null,
+          sessionId: errorSessionId,
           createdAt: Date.now(),
         }),
         { expirationTtl: TTL.OAUTH_STATE }
