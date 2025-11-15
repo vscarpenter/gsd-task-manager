@@ -105,7 +105,7 @@ graph TD
 | Popup blockers | Graceful fallback to redirect |
 | iOS PWA limitations | State handshake via localStorage + redirect |
 | Token exposure in URLs | Store results in KV, fetch with state token |
-| Replay attacks | Single-use state tokens with 10-minute TTL |
+| Replay attacks | Single-use state tokens with 30-minute TTL |
 | Cross-tab communication | BroadcastChannel + postMessage + localStorage |
 
 ### Alternative Approaches (Not Used)
@@ -226,7 +226,7 @@ graph TD
      redirectUri: 'https://gsd.vinny.dev/api/auth/oauth/callback',
      appOrigin: 'https://gsd.vinny.dev',
      createdAt: Date.now(),
-   }), { expirationTtl: 600 }); // 10 minutes
+   }), { expirationTtl: 1800 }); // 30 minutes
    ```
 
 4. **Worker returns authorization URL:**
@@ -394,7 +394,7 @@ graph TD
      status: 'success',
      authData,
      createdAt: Date.now(),
-   }), { expirationTtl: 600 }); // 10 minutes, single-use
+   }), { expirationTtl: 1800 }); // 30 minutes, single-use
    ```
 
 9. **Worker redirects to callback page:**
@@ -919,7 +919,7 @@ useEffect(() => {
   const cleanupInterval = setInterval(() => {
     const now = Date.now();
     pendingStates.current.forEach((state, key) => {
-      if (now - state.timestamp > 600_000) { // 10 minutes
+      if (now - state.timestamp > 1_800_000) { // 30 minutes
         state.popup?.close();
         pendingStates.current.delete(key);
       }
@@ -1512,7 +1512,7 @@ npx wrangler kv:key list --namespace-id=<KV_ID> --prefix="oauth_result:"
 
 **Symptom:** Callback fails with "Invalid or expired state"
 
-**Cause:** State token expired (>10 minutes) or already used
+**Cause:** State token expired (>30 minutes) or already used
 
 **Solution:**
 - Click "Continue with Google" again
