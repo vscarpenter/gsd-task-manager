@@ -209,6 +209,7 @@ describe('OAuth Handshake', () => {
         expect.objectContaining({
           method: 'GET',
           headers: { Accept: 'application/json' },
+          credentials: 'include',
         })
       );
 

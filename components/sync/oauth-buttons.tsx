@@ -132,7 +132,7 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
             Accept: "application/json",
           },
           mode: "cors",
-          credentials: "omit",
+          credentials: "include",
         });
       } catch (fetchError) {
         setLoading(null);

@@ -14,8 +14,13 @@ export const ALLOWED_ORIGINS = [
 // Session and token TTL values (in seconds)
 export const TTL = {
   SESSION: 60 * 60 * 24 * 7,      // 7 days - session lifetime
-  OAUTH_STATE: 1800,              // 30 minutes - OAuth state validity (increased for mobile/PWA flows)
+  OAUTH_STATE: 900,               // 15 minutes - OAuth state validity (reduced from 30 for security)
   REVOCATION: 60 * 60 * 24 * 7,   // 7 days - keep revocation records
+} as const;
+
+export const OAUTH_COOKIE = {
+  name: 'gsd_oauth_session',
+  maxAge: TTL.OAUTH_STATE,
 } as const;
 
 // Cleanup retention periods (in days)
@@ -63,8 +68,13 @@ export const APPLE_CONFIG = {
 
 /**
  * Check if an origin is allowed
+ * @param origin - The origin to check
+ * @param environment - Optional environment string ('development', 'staging', 'production')
  */
-export function isOriginAllowed(origin: string | null | undefined): boolean {
+export function isOriginAllowed(
+  origin: string | null | undefined,
+  environment?: string
+): boolean {
   if (!origin) return false;
 
   // Check exact match in allowed list
@@ -72,12 +82,15 @@ export function isOriginAllowed(origin: string | null | undefined): boolean {
     return true;
   }
 
-  // Allow any localhost/127.0.0.1 port for development
-  if (
-    origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:')
-  ) {
-    return true;
+  // Only allow wildcard localhost ports in development environment
+  // In staging/production, only the specific localhost:3000 from ALLOWED_ORIGINS is allowed
+  if (environment === 'development') {
+    if (
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:')
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -86,11 +99,15 @@ export function isOriginAllowed(origin: string | null | undefined): boolean {
 /**
  * Get the appropriate redirect URI based on origin
  */
-export function getRedirectUri(origin: string | null | undefined, fallback: string): string {
+export function getRedirectUri(
+  origin: string | null | undefined,
+  fallback: string,
+  environment?: string
+): string {
   if (!origin) return fallback;
 
   // Use origin-specific callback for allowed origins
-  if (isOriginAllowed(origin)) {
+  if (isOriginAllowed(origin, environment)) {
     return `${origin}/oauth-callback.html`;
   }
 

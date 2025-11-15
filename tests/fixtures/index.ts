@@ -485,13 +485,15 @@ export function mockDateNow(timestamp: number) {
  */
 export function mockFetch(response: Response | ((url: string, init?: RequestInit) => Response)) {
   const original = global.fetch;
-  
+
   if (typeof response === 'function') {
-    global.fetch = vi.fn(response as any);
+    global.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      return response(input.toString(), init);
+    }) as typeof fetch;
   } else {
-    global.fetch = vi.fn(async () => response);
+    global.fetch = vi.fn(async () => response) as typeof fetch;
   }
-  
+
   return {
     restore: () => {
       global.fetch = original;

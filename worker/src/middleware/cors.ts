@@ -1,13 +1,14 @@
 // CORS middleware and headers
 
 import { ALLOWED_ORIGINS, isOriginAllowed } from '../config';
+import type { Env } from '../types';
 
 // Get CORS headers based on request origin
-export function getCorsHeaders(origin?: string | null): Record<string, string> {
+export function getCorsHeaders(origin?: string | null, environment?: string): Record<string, string> {
   // Check if origin is in allowed list
   let allowedOrigin = ALLOWED_ORIGINS[0]; // Default to production
 
-  if (origin && isOriginAllowed(origin)) {
+  if (origin && isOriginAllowed(origin, environment)) {
     allowedOrigin = origin;
   }
 
@@ -15,6 +16,7 @@ export function getCorsHeaders(origin?: string | null): Record<string, string> {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
   };
 }
@@ -40,6 +42,7 @@ export function jsonResponse(data: any, status = 200, origin?: string | null): R
   for (const [key, value] of Object.entries(cors)) {
     headers.set(key, value);
   }
+  headers.set('Vary', 'Origin');
 
   // Add security headers
   for (const [key, value] of Object.entries(securityHeaders)) {
@@ -69,5 +72,6 @@ export function createCorsHeaders(origin?: string | null): Headers {
   for (const [key, value] of Object.entries(cors)) {
     headers.set(key, value);
   }
+  headers.set('Vary', 'Origin');
   return headers;
 }

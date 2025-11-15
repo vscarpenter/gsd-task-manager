@@ -158,6 +158,7 @@ describe('OAuthButtons', () => {
           expect.objectContaining({
             method: 'GET',
             headers: { Accept: 'application/json' },
+            credentials: 'include',
           })
         );
       });
@@ -177,6 +178,7 @@ describe('OAuthButtons', () => {
           expect.objectContaining({
             method: 'GET',
             headers: { Accept: 'application/json' },
+            credentials: 'include',
           })
         );
       });
