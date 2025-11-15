@@ -1,7 +1,6 @@
 // CORS middleware and headers
 
 import { ALLOWED_ORIGINS, isOriginAllowed } from '../config';
-import type { Env } from '../types';
 
 // Get CORS headers based on request origin
 export function getCorsHeaders(origin?: string | null, environment?: string): Record<string, string> {
