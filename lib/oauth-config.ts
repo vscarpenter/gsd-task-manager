@@ -31,8 +31,8 @@ export const ALLOWED_OAUTH_ORIGINS = [
 
 // State token configuration
 export const OAUTH_STATE_CONFIG = {
-  // Maximum age for OAuth state tokens (10 minutes)
-  MAX_STATE_AGE_MS: 10 * 60 * 1000,
+  // Maximum age for OAuth state tokens (30 minutes - matches backend TTL for iPad PWA compatibility)
+  MAX_STATE_AGE_MS: 30 * 60 * 1000,
 
   // Minimum length for state tokens
   MIN_STATE_LENGTH: 32,
