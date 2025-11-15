@@ -18,8 +18,10 @@ import { AppearanceSettings } from "./appearance-settings";
 import { NotificationSettingsSection } from "./notification-settings";
 import { DataManagement } from "./data-management";
 import { ArchiveSettings } from "./archive-settings";
+import { SyncSettings } from "./sync-settings";
 import { AboutSection } from "./about-section";
 import { useRouter } from "next/navigation";
+import { getSyncStatus } from "@/lib/sync/config";
 
 interface SettingsDialogProps {
 	open: boolean;
@@ -45,11 +47,14 @@ export function SettingsDialog({
 	const [mounted, setMounted] = useState(false);
 	const [notificationSettings, setNotificationSettings] =
 		useState<NotificationSettings | null>(null);
+	const [syncEnabled, setSyncEnabled] = useState(false);
+	const [pendingSync, setPendingSync] = useState(0);
 
 	// Section expansion state
 	const [expandedSections, setExpandedSections] = useState({
 		appearance: true,
 		notifications: false,
+		sync: false,
 		archive: false,
 		data: false,
 		about: false,
@@ -60,9 +65,16 @@ export function SettingsDialog({
 		setNotificationSettings(settings);
 	};
 
+	const loadSyncStatus = async () => {
+		const status = await getSyncStatus();
+		setSyncEnabled(status.enabled);
+		setPendingSync(status.pendingCount);
+	};
+
 	useEffect(() => {
 		setMounted(true);
 		loadNotificationSettings();
+		loadSyncStatus();
 	}, []);
 
 	const handleNotificationToggle = async () => {
@@ -115,6 +127,11 @@ export function SettingsDialog({
 		router.push("/archive");
 	};
 
+	const handleViewSyncHistory = () => {
+		onOpenChange(false); // Close settings dialog
+		router.push("/sync-history");
+	};
+
 	// Calculate storage stats
 	const activeTasks = tasks.filter((t) => !t.completed).length;
 	const completedTasks = tasks.filter((t) => t.completed).length;
@@ -153,6 +170,15 @@ export function SettingsDialog({
 						onDefaultReminderChange={handleDefaultReminderChange}
 					/>
 
+					{/* Cloud Sync Section - Only show when sync is enabled */}
+					{syncEnabled && (
+						<SyncSettings
+							isExpanded={expandedSections.sync}
+							onToggle={() => toggleSection("sync")}
+							onViewHistory={handleViewSyncHistory}
+						/>
+					)}
+
 					{/* Archive Section */}
 					<ArchiveSettings
 						isExpanded={expandedSections.archive}
@@ -171,6 +197,8 @@ export function SettingsDialog({
 						onExport={onExport}
 						onImportClick={handleImportClick}
 						isLoading={isLoading}
+						syncEnabled={syncEnabled}
+						pendingSync={pendingSync}
 					/>
 
 					{/* About Section */}
