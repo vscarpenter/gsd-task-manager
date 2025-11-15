@@ -1,12 +1,14 @@
 "use client";
 
-import { DatabaseIcon, DownloadIcon, UploadIcon, ChevronRightIcon } from "lucide-react";
+import { useState } from "react";
+import { DatabaseIcon, DownloadIcon, UploadIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ResetEverythingDialog } from "@/components/reset-everything-dialog";
 
 interface DataManagementProps {
 	isExpanded: boolean;
@@ -18,6 +20,8 @@ interface DataManagementProps {
 	onExport: () => Promise<void>;
 	onImportClick: () => void;
 	isLoading?: boolean;
+	syncEnabled?: boolean;
+	pendingSync?: number;
 }
 
 export function DataManagement({
@@ -30,7 +34,11 @@ export function DataManagement({
 	onExport,
 	onImportClick,
 	isLoading,
+	syncEnabled = false,
+	pendingSync = 0,
 }: DataManagementProps) {
+	const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
 	return (
 		<Collapsible open={isExpanded} onOpenChange={onToggle}>
 			<CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg bg-background-muted p-4 hover:bg-background-muted/80">
@@ -94,14 +102,36 @@ export function DataManagement({
 					</p>
 				</div>
 
-				{/* Clear Data Warning */}
-				<div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20 p-3">
-					<p className="text-xs text-red-600 dark:text-red-400 mb-2">
-						⚠️ Clearing data is permanent and cannot be undone. Export your tasks
-						first.
-					</p>
+				{/* Reset Everything Section */}
+				<div className="pt-2 border-t border-border">
+					<div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20 p-3 mb-3">
+						<p className="text-xs text-red-600 dark:text-red-400">
+							⚠️ Clearing data is permanent and cannot be undone. Export your tasks
+							first.
+						</p>
+					</div>
+					<Button
+						variant="subtle"
+						className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+						onClick={() => setResetDialogOpen(true)}
+						disabled={isLoading}
+					>
+						<Trash2Icon className="mr-2 h-4 w-4" />
+						Reset Everything
+					</Button>
 				</div>
 			</CollapsibleContent>
+
+			{/* Reset Dialog */}
+			<ResetEverythingDialog
+				open={resetDialogOpen}
+				onOpenChange={setResetDialogOpen}
+				onExport={onExport}
+				activeTasks={activeTasks}
+				completedTasks={completedTasks}
+				syncEnabled={syncEnabled}
+				pendingSync={pendingSync}
+			/>
 		</Collapsible>
 	);
 }
