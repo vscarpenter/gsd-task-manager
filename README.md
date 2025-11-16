@@ -6,6 +6,10 @@
 **📦 Current Version:** 5.0.0
 **🔄 Latest:** MCP Server for AI-powered task management with Claude Desktop + OAuth sync with end-to-end encryption
 
+[![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
+[![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## What is the Eisenhower Matrix?
 
 The Eisenhower Matrix is a productivity framework that helps you prioritize tasks by urgency and importance. It's named after President Dwight D. Eisenhower, who famously said: *"What is important is seldom urgent, and what is urgent is seldom important."*
@@ -282,6 +286,7 @@ This creates the function, publishes it, attaches it to the CloudFront distribut
 ### MCP Server for AI-Powered Task Management (v5.0.0) 🆕
 
 **📦 npm Package:** [gsd-mcp-server](https://www.npmjs.com/package/gsd-mcp-server)
+[![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server) [![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 
 The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or ChatGPG to access and analyze your tasks through natural language.
 
