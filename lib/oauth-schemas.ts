@@ -25,7 +25,7 @@ export const OAuthSuccessMessageSchema = z.object({
     expiresAt: z.number().positive({ message: 'Invalid expiration timestamp' }),
     requiresEncryptionSetup: z.boolean(),
     provider: z.enum(['google', 'apple'], {
-      errorMap: () => ({ message: 'Invalid OAuth provider' }),
+      error: 'Invalid OAuth provider',
     }),
     encryptionSalt: z.string().optional(),
   }),
@@ -69,7 +69,7 @@ export function validateOAuthMessage(data: unknown): {
     return { success: true, data: parsed };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorDetails = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errorDetails = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
       return {
         success: false,
         error: `Invalid OAuth message structure: ${errorDetails}`,

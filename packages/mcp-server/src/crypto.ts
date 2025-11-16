@@ -6,10 +6,15 @@
 
 import { webcrypto } from 'node:crypto';
 
+/**
+ * Encryption configuration
+ * These constants match the frontend encryption implementation for compatibility
+ */
 const PBKDF2_ITERATIONS = 600_000; // OWASP 2023 recommendation
-const KEY_LENGTH = 256;
+const KEY_LENGTH = 256; // AES-256
 const ALGORITHM = 'AES-GCM';
-const NONCE_LENGTH = 12; // 96 bits
+const NONCE_LENGTH = 12; // 96 bits / 12 bytes
+const TAG_LENGTH = 128; // 128 bits for AES-GCM authentication tag
 
 export class CryptoManager {
   private encryptionKey: webcrypto.CryptoKey | null = null;
@@ -73,7 +78,7 @@ export class CryptoManager {
         {
           name: ALGORITHM,
           iv: nonce,
-          tagLength: 128,
+          tagLength: TAG_LENGTH,
         },
         this.encryptionKey,
         plaintextBuffer
@@ -107,7 +112,7 @@ export class CryptoManager {
         {
           name: ALGORITHM,
           iv: nonceBuffer,
-          tagLength: 128,
+          tagLength: TAG_LENGTH,
         },
         this.encryptionKey,
         ciphertextBuffer
