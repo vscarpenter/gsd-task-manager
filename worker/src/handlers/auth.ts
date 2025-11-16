@@ -84,8 +84,10 @@ export async function register(request: Request, env: Env): Promise<Response> {
     }
     return jsonResponse({
       error: 'Registration failed',
-      message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      message: env.ENVIRONMENT === 'development' ? error.message : 'An error occurred during registration',
+      ...(env.ENVIRONMENT === 'development' && {
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      })
     }, 500);
   }
 }
@@ -106,24 +108,29 @@ export async function login(request: Request, env: Env): Promise<Response> {
       .bind(validated.email)
       .first();
 
-    if (!user) {
+    // Always perform password verification, even if user doesn't exist
+    // This prevents timing attacks by ensuring consistent response times
+    const dummySalt = 'Q5J6K8L9M0N1P2R3S4T5U6W7X8Y9Z0A1B2C3D4E5F6G7H8';  // Dummy salt for non-existent users
+    const dummyHash = 'VGhpcyBpcyBhIGR1bW15IGhhc2ggZm9yIHRpbWluZyBhdHRhY2sgcHJldmVudGlvbg==';
+
+    const actualSalt = user ? (user.salt as string) : dummySalt;
+    const actualHash = user ? (user.password_hash as string) : dummyHash;
+
+    // Always verify password (even with dummy values)
+    const isValid = await verifyPassword(
+      validated.passwordHash,
+      actualSalt,
+      actualHash
+    );
+
+    // Check results AFTER verification completes
+    if (!user || !isValid) {
       return errorResponse('Invalid credentials', 401);
     }
 
     // Check account status
     if (user.account_status !== 'active') {
       return errorResponse('Account is suspended or deleted', 403);
-    }
-
-    // Verify password
-    const isValid = await verifyPassword(
-      validated.passwordHash,
-      user.salt as string,
-      user.password_hash as string
-    );
-
-    if (!isValid) {
-      return errorResponse('Invalid credentials', 401);
     }
 
     const now = Date.now();

@@ -6,3 +6,6 @@ dist
 .DS_Store
 secrets.txt
 secrets-*.txt
+
+# Secret management scripts (contain sensitive credentials)
+set-google-client-id.sh

@@ -325,8 +325,10 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     return jsonResponse(
       {
         error: 'OAuth callback failed',
-        message,
-        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined,
+        message: env.ENVIRONMENT === 'development' ? message : 'OAuth authentication failed',
+        ...(env.ENVIRONMENT === 'development' && error instanceof Error && {
+          stack: error.stack?.split('\n').slice(0, 3).join('\n')
+        })
       },
       500,
       origin

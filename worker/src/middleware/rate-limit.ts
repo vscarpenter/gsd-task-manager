@@ -10,6 +10,7 @@ export interface RateLimitConfig {
 const rateLimits: Record<string, RateLimitConfig> = {
   '/api/auth/login': { maxRequests: 10, windowSeconds: 60 },
   '/api/auth/register': { maxRequests: 5, windowSeconds: 60 },
+  '/api/auth/refresh': { maxRequests: 20, windowSeconds: 3600 }, // 20 refreshes per hour
   '/api/sync/push': { maxRequests: 60, windowSeconds: 60 },
   '/api/sync/pull': { maxRequests: 60, windowSeconds: 60 },
   default: { maxRequests: 100, windowSeconds: 60 },

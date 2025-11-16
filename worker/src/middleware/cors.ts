@@ -29,6 +29,16 @@ export const securityHeaders = {
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy':
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://accounts.google.com https://appleid.apple.com; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: https:; " +
+    "font-src 'self'; " +
+    "connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:3000 http://127.0.0.1:3000; " +
+    "frame-ancestors 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self' https://accounts.google.com https://appleid.apple.com;",
 };
 
 // Helper to create JSON response with proper headers

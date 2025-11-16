@@ -156,6 +156,10 @@ router.post('/api/auth/refresh', async (request: Request, env: Env) => {
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
 
+  // Add rate limiting to prevent abuse
+  const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
+  if (rateLimitResult) return rateLimitResult;
+
   // Refresh logic: issue new JWT
   if (!ctx.userId || !ctx.deviceId || !ctx.email) {
     return errorResponse('Invalid token', 401, origin);
@@ -257,8 +261,10 @@ export default {
       return jsonResponse(
         {
           error: 'Internal Server Error',
-          message: env.ENVIRONMENT === 'development' ? error.message : undefined,
-          stack: env.ENVIRONMENT === 'development' ? error.stack : undefined,
+          ...(env.ENVIRONMENT === 'development' && {
+            message: error.message,
+            stack: error.stack
+          })
         },
         500
       );
