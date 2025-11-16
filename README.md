@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vscarpenter-gsd-task-manager-badge.png)](https://mseep.ai/app/vscarpenter-gsd-task-manager)
+
 # GSD Task Manager
 
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
