@@ -12,7 +12,7 @@ name = "gsd-sync-worker-dev"
 
 [env.development.vars]
 ENVIRONMENT = "development"
-GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
+# GOOGLE_CLIENT_ID moved to secrets - set via: wrangler secret put GOOGLE_CLIENT_ID --env development
 OAUTH_REDIRECT_URI = "http://localhost:3000/oauth-callback.html"  # Dev uses localhost
 
 [[env.development.d1_databases]]
@@ -36,7 +36,7 @@ name = "gsd-sync-worker-staging"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
-GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
+# GOOGLE_CLIENT_ID moved to secrets - set via: wrangler secret put GOOGLE_CLIENT_ID --env staging
 OAUTH_REDIRECT_URI = "https://gsd-dev.vinny.dev/oauth-callback.html"  # Staging uses dev domain
 
 [[env.staging.d1_databases]]
@@ -60,7 +60,7 @@ name = "gsd-sync-worker-production"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-GOOGLE_CLIENT_ID = "76193013447-jmjtno9hmhrofa50q6ptooh73h5qhvqg.apps.googleusercontent.com"
+# GOOGLE_CLIENT_ID moved to secrets - set via: wrangler secret put GOOGLE_CLIENT_ID --env production
 OAUTH_REDIRECT_URI = "https://gsd.vinny.dev/oauth-callback.html"  # Production domain
 OAUTH_CALLBACK_BASE = "https://gsd.vinny.dev"  # Base URL for OAuth callbacks (CloudFront proxy)
 
@@ -85,6 +85,7 @@ bucket_name = "gsd-backups-production"
 # Required secrets:
 # - JWT_SECRET: Secret key for signing JWTs
 # - ENCRYPTION_SALT: Additional salt for server-side operations
+# - GOOGLE_CLIENT_ID: Google OAuth client ID (moved from vars for defense in depth)
 # - GOOGLE_CLIENT_SECRET: Google OAuth client secret
 # - APPLE_CLIENT_ID: Apple Services ID (e.g., com.gsd.taskmanager.signin)
 # - APPLE_TEAM_ID: Apple Developer Team ID

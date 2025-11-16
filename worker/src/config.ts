@@ -40,6 +40,10 @@ export const RATE_LIMITS = {
     maxRequests: 10,     // Max auth attempts per window
     windowMs: 60 * 1000, // 1 minute window
   },
+  REFRESH_OPERATIONS: {
+    maxRequests: 20,               // Max refresh attempts per window
+    windowMs: 60 * 60 * 1000,      // 1 hour window
+  },
 } as const;
 
 // Storage quotas (in bytes)
@@ -66,6 +70,9 @@ export const APPLE_CONFIG = {
   scope: 'openid email name',
 } as const;
 
+// Allowed development ports for localhost
+const ALLOWED_DEV_PORTS = ['3000', '3001', '5173', '8080'];
+
 /**
  * Check if an origin is allowed
  * @param origin - The origin to check
@@ -82,14 +89,20 @@ export function isOriginAllowed(
     return true;
   }
 
-  // Only allow wildcard localhost ports in development environment
+  // Only allow specific localhost ports in development environment
   // In staging/production, only the specific localhost:3000 from ALLOWED_ORIGINS is allowed
   if (environment === 'development') {
     if (
       origin.startsWith('http://localhost:') ||
       origin.startsWith('http://127.0.0.1:')
     ) {
-      return true;
+      try {
+        const url = new URL(origin);
+        const port = url.port || '80';
+        return ALLOWED_DEV_PORTS.includes(port);
+      } catch {
+        return false;
+      }
     }
   }
 
