@@ -21,7 +21,15 @@ interface ShareTaskDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-type ShareTab = "email" | "copy";
+type ShareTab = "native" | "email" | "copy";
+
+/**
+ * Check if the Web Share API is available
+ * Supported on mobile browsers (iOS Safari 12.2+, Chrome Android 61+)
+ */
+function canUseWebShare(): boolean {
+	return typeof navigator !== "undefined" && navigator.share !== undefined;
+}
 
 function formatTaskDetails(task: TaskRecord): string {
 	const lines: string[] = [];
@@ -60,7 +68,7 @@ function formatTaskDetails(task: TaskRecord): string {
 	lines.push("");
 	lines.push(`Created: ${new Date(task.createdAt).toLocaleDateString()}`);
 	lines.push("");
-	lines.push("Sent from GSD Task Manager");
+	lines.push("Sent from GSD Task Manager (https://gsd.vinny.dev)");
 
 	return lines.join("\n");
 }
@@ -70,7 +78,9 @@ export function ShareTaskDialog({
 	open,
 	onOpenChange,
 }: ShareTaskDialogProps) {
-	const [activeTab, setActiveTab] = useState<ShareTab>("email");
+	const [activeTab, setActiveTab] = useState<ShareTab>(
+		canUseWebShare() ? "native" : "email",
+	);
 	const [recipientEmail, setRecipientEmail] = useState("");
 	const { showToast } = useToast();
 
@@ -111,6 +121,23 @@ export function ShareTaskDialog({
 		}
 	};
 
+	const handleNativeShare = async () => {
+		try {
+			await navigator.share({
+				title: `Task: ${task.title}`,
+				text: taskDetails,
+			});
+			showToast("Task shared successfully", undefined, 3000);
+			onOpenChange(false);
+		} catch (error) {
+			// AbortError means user cancelled the share - don't show error
+			if ((error as Error).name !== "AbortError") {
+				console.error("Failed to share task:", error);
+				showToast("Failed to share task", undefined, 3000);
+			}
+		}
+	};
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-lg">
@@ -120,13 +147,28 @@ export function ShareTaskDialog({
 						Share Task: {task.title}
 					</DialogTitle>
 					<DialogDescription>
-						Share this task via email or copy the details to your clipboard
+						{canUseWebShare()
+							? "Share this task to any app, via email, or copy to clipboard"
+							: "Share this task via email or copy the details to your clipboard"}
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4">
 					{/* Tab buttons */}
 					<div className="flex gap-2 border-b border-border">
+						{canUseWebShare() && (
+							<button
+								onClick={() => setActiveTab("native")}
+								className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+									activeTab === "native"
+										? "border-accent text-accent"
+										: "border-transparent text-foreground-muted hover:text-foreground"
+								}`}
+							>
+								<Share2Icon className="h-4 w-4" />
+								Share
+							</button>
+						)}
 						<button
 							onClick={() => setActiveTab("email")}
 							className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
@@ -150,6 +192,26 @@ export function ShareTaskDialog({
 							Copy Details
 						</button>
 					</div>
+
+					{/* Native Share tab content */}
+					{activeTab === "native" && (
+						<div className="space-y-3">
+							<div className="space-y-1">
+								<label className="text-sm font-medium text-foreground">
+									Task Details
+								</label>
+								<div className="rounded-md border border-border bg-background-muted p-3 max-h-64 overflow-y-auto">
+									<pre className="text-xs font-mono whitespace-pre-wrap text-foreground">
+										{taskDetails}
+									</pre>
+								</div>
+							</div>
+							<p className="text-xs text-foreground-muted">
+								Share this task to WhatsApp, Messages, Slack, email, or any
+								installed app on your device
+							</p>
+						</div>
+					)}
 
 					{/* Email tab content */}
 					{activeTab === "email" && (
@@ -208,7 +270,12 @@ export function ShareTaskDialog({
 						<Button variant="subtle" onClick={() => onOpenChange(false)}>
 							Cancel
 						</Button>
-						{activeTab === "email" ? (
+						{activeTab === "native" ? (
+							<Button onClick={handleNativeShare} className="gap-2">
+								<Share2Icon className="h-4 w-4" />
+								Share
+							</Button>
+						) : activeTab === "email" ? (
 							<Button onClick={handleOpenEmailClient} className="gap-2">
 								<MailIcon className="h-4 w-4" />
 								Open Email Client
