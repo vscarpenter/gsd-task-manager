@@ -1,274 +1,136 @@
 "use client";
 
-import { CloudIcon, CloudOffIcon, CheckCircleIcon, XCircleIcon, AlertCircleIcon, ClockIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSync } from '@/lib/hooks/use-sync';
 import { useToast } from '@/components/ui/toast';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
 import { getCryptoManager } from '@/lib/sync/crypto';
-import { getSyncQueue } from '@/lib/sync/queue';
-import { getHealthMonitor } from '@/lib/sync/health-monitor';
-import { isAuthError } from '@/lib/sync/error-categorizer';
-
-const TOAST_DURATION = {
-  SHORT: 3000,
-  MEDIUM: 5000,
-  LONG: 7000,
-};
+import { SYNC_TOAST_DURATION } from '@/lib/constants/sync';
+import { useSyncHealth } from '@/components/sync/use-sync-health';
+import { useSyncStatus, type IconType } from '@/components/sync/use-sync-status';
+import {
+  CloudIcon,
+  CloudOffIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  AlertCircleIcon,
+  ClockIcon,
+} from 'lucide-react';
 
 export function SyncButton() {
   const { sync, isSyncing, status, error, isEnabled, lastResult, nextRetryAt } = useSync();
   const { showToast } = useToast();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
-  const [hasAuthError, setHasAuthError] = useState(false);
 
-  // Poll pending operation count
-  useEffect(() => {
-    const updatePendingCount = async () => {
-      if (!isEnabled) {
-        setPendingCount(0);
-        return;
-      }
-      
-      const queue = getSyncQueue();
-      const count = await queue.getPendingCount();
-      setPendingCount(count);
-    };
+  // Extract health monitoring logic
+  useSyncHealth({
+    isEnabled,
+    onHealthIssue: showToast,
+    onSync: handleSync,
+  });
 
-    updatePendingCount();
-
-    // Poll every 2 seconds
-    const interval = setInterval(updatePendingCount, 2000);
-    return () => clearInterval(interval);
-  }, [isEnabled]);
-
-  // Update retry countdown
-  useEffect(() => {
-    const updateCountdown = () => {
-      if (nextRetryAt && nextRetryAt > Date.now()) {
-        const secondsRemaining = Math.ceil((nextRetryAt - Date.now()) / 1000);
-        setRetryCountdown(secondsRemaining);
-      } else {
-        setRetryCountdown(null);
-      }
-    };
-
-    updateCountdown();
-
-    // Update every second
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [nextRetryAt]);
-
-  // Detect authentication errors and show actionable toast
-  useEffect(() => {
-    if (!error) {
-      setHasAuthError(false);
-      return;
-    }
-
-    // Use centralized error categorization for consistency
-    const errorObj = new Error(error);
-    const authErrorDetected = isAuthError(errorObj);
-
-    if (authErrorDetected) {
-      setHasAuthError(true);
-
-      // Show toast with re-login action button
+  // Extract status display logic
+  const { iconType, tooltip, pendingCount, hasAuthError, retryCountdown } = useSyncStatus({
+    isEnabled,
+    status,
+    error,
+    nextRetryAt,
+    onAuthError: (message, action, duration) => {
       showToast(
-        error,
+        message,
         {
           label: 'Re-login',
           onClick: () => setAuthDialogOpen(true),
         },
-        TOAST_DURATION.LONG
+        duration
       );
-    }
-  }, [error, showToast]);
+    },
+  });
 
-  // Monitor health and show toast notifications for issues
-  useEffect(() => {
+  const icon = getIconComponent(iconType);
+
+  async function handleSync() {
     if (!isEnabled) {
-      return;
-    }
-
-    let lastNotificationTime = 0;
-    const NOTIFICATION_COOLDOWN = 5 * 60 * 1000; // 5 minutes between notifications
-
-    const checkHealthAndNotify = async () => {
-      const now = Date.now();
-      
-      // Avoid notification spam
-      if (now - lastNotificationTime < NOTIFICATION_COOLDOWN) {
-        return;
-      }
-
-      const healthMonitor = getHealthMonitor();
-      const report = await healthMonitor.check();
-
-      // Show toast for health issues
-      if (!report.healthy && report.issues.length > 0) {
-        for (const issue of report.issues) {
-          // Only show error severity issues as toasts
-          if (issue.severity === 'error') {
-            showToast(
-              `${issue.message}. ${issue.suggestedAction}`,
-              undefined,
-              TOAST_DURATION.LONG
-            );
-            lastNotificationTime = now;
-          } else if (issue.severity === 'warning' && issue.type === 'stale_queue') {
-            // Show stale queue warnings
-            showToast(
-              issue.message,
-              {
-                label: 'Sync Now',
-                onClick: handleSync,
-              },
-              TOAST_DURATION.LONG
-            );
-            lastNotificationTime = now;
-          }
-        }
-      }
-    };
-
-    // Check health every 5 minutes
-    const interval = setInterval(checkHealthAndNotify, 5 * 60 * 1000);
-    
-    // Run initial check after 10 seconds (give time for sync to initialize)
-    const initialTimeout = setTimeout(checkHealthAndNotify, 10000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(initialTimeout);
-    };
-  }, [isEnabled, showToast]);
-
-  const handleSync = async () => {
-    if (!isEnabled) {
-      // Open sync settings dialog to let user enable sync
       setAuthDialogOpen(true);
       return;
     }
 
-    // Check for active authentication error - open dialog instead of retrying
     if (hasAuthError) {
       showToast(
         'Please re-login to continue syncing',
         undefined,
-        TOAST_DURATION.MEDIUM
+        SYNC_TOAST_DURATION.MEDIUM
       );
       setAuthDialogOpen(true);
       return;
     }
 
-    // Check if encryption is initialized
     const crypto = getCryptoManager();
-
     if (!crypto.isInitialized()) {
-      // Encryption not initialized - need to re-enter passphrase
       showToast(
         'Please enter your encryption passphrase to sync',
         undefined,
-        TOAST_DURATION.MEDIUM
+        SYNC_TOAST_DURATION.MEDIUM
       );
       setAuthDialogOpen(true);
       return;
     }
 
-    // Coordinator handles queuing and execution
     await sync();
+    showSyncResultToast(lastResult);
+  }
 
-    // Show toast notification based on result
-    if (lastResult) {
-      if (lastResult.status === 'success') {
-        showToast(
-          `Sync complete: Pushed ${lastResult.pushedCount || 0} changes, pulled ${lastResult.pulledCount || 0} changes.`,
-          undefined,
-          TOAST_DURATION.SHORT
-        );
-      } else if (lastResult.status === 'conflict') {
-        showToast(
-          `Sync conflicts detected: ${lastResult.conflicts?.length || 0} conflicts were auto-resolved.`,
-          undefined,
-          TOAST_DURATION.MEDIUM
-        );
-      } else if (lastResult.status === 'error') {
-        showToast(
-          `Sync failed: ${lastResult.error || 'An error occurred during sync.'}`,
-          undefined,
-          TOAST_DURATION.LONG
-        );
-      }
+  function showSyncResultToast(result: typeof lastResult) {
+    if (!result) return;
+
+    if (result.status === 'success') {
+      showToast(
+        `Sync complete: Pushed ${result.pushedCount || 0} changes, pulled ${result.pulledCount || 0} changes.`,
+        undefined,
+        SYNC_TOAST_DURATION.SHORT
+      );
+    } else if (result.status === 'conflict') {
+      showToast(
+        `Sync conflicts detected: ${result.conflicts?.length || 0} conflicts were auto-resolved.`,
+        undefined,
+        SYNC_TOAST_DURATION.MEDIUM
+      );
+    } else if (result.status === 'error') {
+      showToast(
+        `Sync failed: ${result.error || 'An error occurred during sync.'}`,
+        undefined,
+        SYNC_TOAST_DURATION.LONG
+      );
     }
-  };
+  }
 
-  // Determine icon and styling based on status
-  const getIcon = () => {
-    if (!isEnabled) {
-      return <CloudOffIcon className="h-5 w-5" />;
-    }
+  function handleAuthSuccess() {
+    setAuthDialogOpen(false);
+  }
 
-    // Show auth error with distinct red alert icon
-    if (hasAuthError) {
-      return <AlertCircleIcon className="h-5 w-5 text-red-600 animate-pulse" />;
-    }
-
-    // Show retry countdown icon when in backoff
-    if (retryCountdown !== null && retryCountdown > 0) {
-      return <ClockIcon className="h-5 w-5 text-orange-500" />;
-    }
-
-    switch (status) {
-      case 'syncing':
+  function getIconComponent(type: IconType) {
+    switch (type) {
+      case 'cloud-off':
+        return <CloudOffIcon className="h-5 w-5" />;
+      case 'alert-auth':
+        return <AlertCircleIcon className="h-5 w-5 text-red-600 animate-pulse" />;
+      case 'clock':
+        return <ClockIcon className="h-5 w-5 text-orange-500" />;
+      case 'cloud-syncing':
         return <CloudIcon className="h-5 w-5 animate-pulse" />;
-      case 'success':
+      case 'check-success':
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case 'error':
+      case 'x-error':
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
-      case 'conflict':
+      case 'alert-conflict':
         return <AlertCircleIcon className="h-5 w-5 text-yellow-500" />;
-      default:
+      case 'cloud-idle':
         return <CloudIcon className="h-5 w-5" />;
     }
-  };
-
-  const getTooltip = () => {
-    if (!isEnabled) {
-      return 'Sync not enabled';
-    }
-
-    // Show auth error with clear call to action
-    if (hasAuthError) {
-      return 'Authentication expired - Click to re-login';
-    }
-
-    // Show retry countdown in tooltip
-    if (retryCountdown !== null && retryCountdown > 0) {
-      return `Retrying in ${retryCountdown}s...`;
-    }
-
-    switch (status) {
-      case 'syncing':
-        return 'Syncing...';
-      case 'success':
-        return 'Sync successful';
-      case 'error':
-        return error || 'Sync failed';
-      case 'conflict':
-        return 'Conflicts resolved';
-      default:
-        return pendingCount > 0
-          ? `${pendingCount} pending operation${pendingCount !== 1 ? 's' : ''}`
-          : 'Sync with cloud';
-    }
-  };
+  }
 
   return (
     <>
@@ -280,11 +142,10 @@ export function SyncButton() {
               onClick={handleSync}
               disabled={isSyncing}
               className="relative h-12 w-12 p-0"
-              aria-label={getTooltip()}
+              aria-label={tooltip}
             >
-              {getIcon()}
+              {icon}
 
-              {/* Auth error indicator - takes priority over other badges */}
               {hasAuthError && (
                 <Badge
                   variant="default"
@@ -294,7 +155,6 @@ export function SyncButton() {
                 </Badge>
               )}
 
-              {/* Badge overlay showing pending operation count */}
               {isEnabled && !hasAuthError && pendingCount > 0 && (
                 <Badge
                   variant="default"
@@ -304,12 +164,10 @@ export function SyncButton() {
                 </Badge>
               )}
 
-              {/* Small indicator dot when sync is disabled */}
               {!isEnabled && (
                 <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gray-400" />
               )}
 
-              {/* Retry countdown overlay */}
               {!hasAuthError && retryCountdown !== null && retryCountdown > 0 && (
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-medium text-orange-500">
                   {retryCountdown}s
@@ -318,7 +176,7 @@ export function SyncButton() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{getTooltip()}</p>
+            <p>{tooltip}</p>
             {status === 'error' && error && (
               <p className="text-xs text-red-400 mt-1">{error}</p>
             )}
@@ -326,16 +184,10 @@ export function SyncButton() {
         </Tooltip>
       </TooltipProvider>
 
-      {/* Sync Auth Dialog */}
       <SyncAuthDialog
         isOpen={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
-        onSuccess={() => {
-          // Clear auth error state to allow sync after successful re-authentication
-          setHasAuthError(false);
-          // Dialog will close automatically, and useSync hook will detect the change
-          setAuthDialogOpen(false);
-        }}
+        onSuccess={handleAuthSuccess}
       />
     </>
   );

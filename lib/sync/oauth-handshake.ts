@@ -8,6 +8,7 @@
 
 import { toast } from 'sonner';
 import { ENV_CONFIG } from '@/lib/env-config';
+import { OAUTH_CONFIG } from '@/lib/constants/sync';
 
 export interface OAuthAuthData {
   userId: string;
@@ -123,7 +124,7 @@ function ensureInitialized() {
         // Delay slightly to allow subscribers to register first
         setTimeout(() => {
           notifyListeners(result);
-        }, 100);
+        }, OAUTH_CONFIG.LISTENER_REGISTRATION_DELAY_MS);
       }
     }
   } catch (error) {

@@ -2,30 +2,53 @@ import type { TaskRecord } from "@/lib/types";
 
 /**
  * Check if adding a dependency would create a circular dependency
+ *
+ * WHY THIS MATTERS:
+ * Circular dependencies create deadlocks where Task A blocks Task B, and Task B blocks Task A.
+ * For example: "Write code" depends on "Review code", and "Review code" depends on "Write code"
+ * → Neither task can ever be started!
+ *
+ * HOW IT WORKS (Breadth-First Search):
+ * We use BFS instead of DFS because:
+ * 1. BFS finds the shortest path to a cycle (better error messages)
+ * 2. BFS is iterative (no stack overflow risk for deep dependency trees)
+ * 3. BFS explores all immediate dependencies before going deeper
+ *
+ * ALGORITHM:
+ * 1. Start from the proposed dependency task
+ * 2. Follow all of its dependencies (and their dependencies, etc.)
+ * 3. If we ever circle back to the original task → CIRCULAR!
+ * 4. If we exhaust all paths without finding original task → SAFE
+ *
  * @param taskId - ID of the task that would have the dependency added
  * @param dependencyId - ID of the task to add as a dependency
  * @param allTasks - All tasks in the system
  * @returns true if circular dependency would be created
+ *
+ * @example
+ * Tasks: A → [B], B → [C], C → []
+ * wouldCreateCircularDependency('C', 'A', tasks) → true (would create C → A → B → C)
+ * wouldCreateCircularDependency('A', 'C', tasks) → false (already exists A → B → C)
  */
 export function wouldCreateCircularDependency(
   taskId: string,
   dependencyId: string,
   allTasks: TaskRecord[]
 ): boolean {
-  // Can't depend on itself
+  // Can't depend on itself (trivial cycle)
   if (taskId === dependencyId) {
     return true;
   }
 
-  // Build a map of task dependencies for quick lookup
+  // Build a map of task dependencies for O(1) lookup during BFS
   const dependencyMap = new Map<string, string[]>();
   allTasks.forEach(task => {
     dependencyMap.set(task.id, task.dependencies || []);
   });
 
-  // Check if the dependency task (or any of its dependencies) already depends on this task
-  const visited = new Set<string>();
-  const queue: string[] = [dependencyId];
+  // BFS: Check if the dependency task (or any of its transitive dependencies) already depends on this task
+  const visited = new Set<string>(); // Prevent infinite loops and redundant checks
+  const queue: string[] = [dependencyId]; // Start from the proposed dependency
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;

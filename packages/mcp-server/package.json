@@ -1,6 +1,6 @@
 {
   "name": "gsd-mcp-server",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "MCP server for GSD Task Manager - full task management with create/update/delete, analytics, interactive setup, and validation",
   "type": "module",
   "main": "dist/index.js",
@@ -46,14 +46,14 @@
     "url": "https://github.com/vscarpenter/gsd-taskmanager/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
-    "zod": "^3.24.1"
+    "@modelcontextprotocol/sdk": "^1.22.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "@vitest/ui": "^4.0.4",
+    "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.9",
     "typescript": "^5.7.3",
-    "vitest": "^4.0.4"
+    "vitest": "^4.0.9"
   },
   "engines": {
     "node": ">=18.0.0"

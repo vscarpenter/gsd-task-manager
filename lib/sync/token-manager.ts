@@ -8,8 +8,8 @@ import { getApiClient } from './api-client';
 import { createLogger } from '@/lib/logger';
 import type { SyncConfig } from './types';
 import { normalizeTokenExpiration } from './utils';
+import { TOKEN_CONFIG } from '@/lib/constants/sync';
 
-const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const logger = createLogger('SYNC_TOKEN');
 
 export class TokenManager {
@@ -24,9 +24,9 @@ export class TokenManager {
     }
 
     const timeUntilExpiry = await this.getTimeUntilExpiry();
-    
-    // Need refresh if token expires within 5 minutes or already expired
-    return timeUntilExpiry <= TOKEN_REFRESH_THRESHOLD_MS;
+
+    // Need refresh if token expires within threshold or already expired
+    return timeUntilExpiry <= TOKEN_CONFIG.REFRESH_THRESHOLD_MS;
   }
 
   /**

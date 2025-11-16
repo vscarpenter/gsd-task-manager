@@ -4,44 +4,11 @@
  */
 
 import { getDb } from '@/lib/db';
-import { ENV_CONFIG } from '@/lib/env-config';
 import { getCryptoManager } from './crypto';
 import { getApiClient } from './api-client';
 import { getSyncQueue } from './queue';
+import { ensureSyncConfigInitialized, migrateLegacyConfig } from './config-migration';
 import type { SyncConfig, RegisterRequest, LoginRequest } from './types';
-
-/**
- * Initialize sync configuration if it doesn't exist
- */
-async function ensureSyncConfigInitialized(): Promise<void> {
-  const db = getDb();
-  const config = await db.syncMetadata.get('sync_config');
-
-  if (!config) {
-    // Initialize sync config for the first time
-    const deviceId = crypto.randomUUID();
-    const deviceName = typeof navigator !== 'undefined' && navigator?.userAgent?.includes('Mac') ? 'Mac' : 'Desktop';
-
-    await db.syncMetadata.add({
-      key: 'sync_config',
-      enabled: false,
-      userId: null,
-      deviceId,
-      deviceName,
-      email: null,
-      token: null,
-      tokenExpiresAt: null,
-      lastSyncAt: null,
-      vectorClock: {},
-      conflictStrategy: 'last_write_wins' as const,
-      serverUrl: ENV_CONFIG.apiBaseUrl,
-      consecutiveFailures: 0,
-      lastFailureAt: null,
-      lastFailureReason: null,
-      nextRetryAt: null,
-    });
-  }
-}
 
 /**
  * Get sync configuration
@@ -50,26 +17,14 @@ export async function getSyncConfig(): Promise<SyncConfig | null> {
   await ensureSyncConfigInitialized();
   const db = getDb();
   const config = await db.syncMetadata.get('sync_config');
-  
+
   if (!config) {
     return null;
   }
-  
-  // Handle legacy configs without retry tracking fields
-  const syncConfig = config as SyncConfig;
-  if (syncConfig.consecutiveFailures === undefined) {
-    syncConfig.consecutiveFailures = 0;
-  }
-  if (syncConfig.lastFailureAt === undefined) {
-    syncConfig.lastFailureAt = null;
-  }
-  if (syncConfig.lastFailureReason === undefined) {
-    syncConfig.lastFailureReason = null;
-  }
-  if (syncConfig.nextRetryAt === undefined) {
-    syncConfig.nextRetryAt = null;
-  }
-  
+
+  // Migrate legacy configs
+  const syncConfig = migrateLegacyConfig(config as SyncConfig);
+
   return syncConfig;
 }
 
@@ -92,6 +47,64 @@ export async function updateSyncConfig(updates: Partial<SyncConfig>): Promise<vo
 }
 
 /**
+ * Initialize crypto manager with user password
+ */
+async function initializeCrypto(password: string, salt: string): Promise<void> {
+  const crypto = getCryptoManager();
+  await crypto.deriveKey(password, salt);
+}
+
+/**
+ * Queue existing tasks for initial sync
+ */
+async function queueExistingTasks(): Promise<void> {
+  const db = getDb();
+  const taskCount = await db.tasks.count();
+
+  if (taskCount > 0) {
+    const queue = getSyncQueue();
+    const populatedCount = await queue.populateFromExistingTasks();
+    console.log(`[SYNC] Initial sync setup: queued ${populatedCount} existing tasks`);
+  }
+}
+
+/**
+ * Start health monitoring
+ */
+async function startHealthMonitor(): Promise<void> {
+  const { getHealthMonitor } = await import('./health-monitor');
+  const healthMonitor = getHealthMonitor();
+
+  if (!healthMonitor.isActive()) {
+    console.log('[SYNC] Starting health monitor (sync enabled)');
+    healthMonitor.start();
+  }
+}
+
+/**
+ * Update sync config with auth credentials
+ */
+async function updateAuthCredentials(
+  current: SyncConfig,
+  userId: string,
+  email: string,
+  token: string,
+  expiresAt: number
+): Promise<void> {
+  const db = getDb();
+
+  await db.syncMetadata.put({
+    ...current,
+    enabled: true,
+    userId,
+    email,
+    token,
+    tokenExpiresAt: expiresAt,
+    key: 'sync_config',
+  });
+}
+
+/**
  * Enable sync (typically called after successful auth)
  */
 export async function enableSync(
@@ -102,7 +115,6 @@ export async function enableSync(
   salt: string,
   password: string
 ): Promise<void> {
-  const db = getDb();
   const current = await getSyncConfig();
 
   if (!current) {
@@ -110,72 +122,52 @@ export async function enableSync(
   }
 
   // Initialize crypto manager with password
-  const crypto = getCryptoManager();
-  await crypto.deriveKey(password, salt);
+  await initializeCrypto(password, salt);
 
-  // Update config
-  await db.syncMetadata.put({
-    ...current,
-    enabled: true,
-    userId,
-    email,
-    token,
-    tokenExpiresAt: expiresAt,
-    key: 'sync_config',
-  });
+  // Update config with auth credentials
+  await updateAuthCredentials(current, userId, email, token, expiresAt);
 
   // Set token in API client
   const api = getApiClient(current.serverUrl);
   api.setToken(token);
 
-  // FIX #1: Populate sync queue with existing tasks for initial sync
-  // This happens ONCE when sync is enabled, not on every sync
-  // Prevents infinite re-queue loop that was causing sync failures
-  const taskCount = await db.tasks.count();
-  if (taskCount > 0) {
-    const queue = getSyncQueue();
-    const populatedCount = await queue.populateFromExistingTasks();
-    console.log(`[SYNC] Initial sync setup: queued ${populatedCount} existing tasks`);
-  }
+  // Queue existing tasks for initial sync
+  await queueExistingTasks();
 
-  // Start health monitor when sync is enabled
-  // Note: The useSync hook also manages this, but we start it here for immediate monitoring
-  const { getHealthMonitor } = await import('./health-monitor');
-  const healthMonitor = getHealthMonitor();
-  if (!healthMonitor.isActive()) {
-    console.log('[SYNC] Starting health monitor (sync enabled)');
-    healthMonitor.start();
-  }
+  // Start health monitor
+  await startHealthMonitor();
 }
 
 /**
- * Disable sync (logout)
+ * Stop health monitoring
  */
-export async function disableSync(): Promise<void> {
-  const db = getDb();
-  const current = await getSyncConfig();
-
-  if (!current) {
-    return;
-  }
-
-  // Stop health monitor when sync is disabled
+async function stopHealthMonitor(): Promise<void> {
   const { getHealthMonitor } = await import('./health-monitor');
   const healthMonitor = getHealthMonitor();
+
   if (healthMonitor.isActive()) {
     console.log('[SYNC] Stopping health monitor (sync disabled)');
     healthMonitor.stop();
   }
+}
 
-  // Clear crypto manager
+/**
+ * Clear crypto and API credentials
+ */
+function clearCredentials(serverUrl: string): void {
   const crypto = getCryptoManager();
   crypto.clear();
 
-  // Clear API token
-  const api = getApiClient(current.serverUrl);
+  const api = getApiClient(serverUrl);
   api.setToken(null);
+}
 
-  // Update config
+/**
+ * Reset sync config to disabled state
+ */
+async function resetSyncConfig(current: SyncConfig): Promise<void> {
+  const db = getDb();
+
   await db.syncMetadata.put({
     ...current,
     enabled: false,
@@ -190,6 +182,26 @@ export async function disableSync(): Promise<void> {
 
   // Clear sync queue
   await db.syncQueue.clear();
+}
+
+/**
+ * Disable sync (logout)
+ */
+export async function disableSync(): Promise<void> {
+  const current = await getSyncConfig();
+
+  if (!current) {
+    return;
+  }
+
+  // Stop health monitor
+  await stopHealthMonitor();
+
+  // Clear credentials
+  clearCredentials(current.serverUrl);
+
+  // Reset config
+  await resetSyncConfig(current);
 }
 
 /**
@@ -209,7 +221,7 @@ export async function registerSyncAccount(
 
   const request: RegisterRequest = {
     email,
-    password: password,  // Server will hash with its salt
+    password: password,
     deviceName: deviceName || config.deviceName,
   };
 
@@ -247,7 +259,7 @@ export async function loginSyncAccount(
 
   const request: LoginRequest = {
     email,
-    passwordHash: password,  // Server will hash with its salt
+    passwordHash: password,
     deviceId: config.deviceId,
     deviceName: config.deviceName,
   };
@@ -299,6 +311,37 @@ export async function getSyncStatus() {
 }
 
 /**
+ * Clear sync queue and local tasks
+ */
+async function clearLocalData(): Promise<number> {
+  const db = getDb();
+
+  await db.syncQueue.clear();
+  console.log('[SYNC RESET] Cleared sync queue');
+
+  const taskCount = await db.tasks.count();
+  await db.tasks.clear();
+  console.log(`[SYNC RESET] Cleared ${taskCount} local tasks`);
+
+  return taskCount;
+}
+
+/**
+ * Reset sync metadata for full pull
+ */
+async function resetSyncMetadata(config: SyncConfig): Promise<void> {
+  const db = getDb();
+
+  await db.syncMetadata.put({
+    ...config,
+    lastSyncAt: 0,
+    vectorClock: {},
+    key: 'sync_config',
+  });
+  console.log('[SYNC RESET] Reset sync metadata (lastSyncAt=0, vectorClock={})');
+}
+
+/**
  * Reset sync state and perform full sync from server
  * This clears lastSyncAt and vector clocks to force a complete pull
  * Useful for debugging sync issues or recovering from inconsistent state
@@ -318,23 +361,11 @@ export async function resetAndFullSync(): Promise<void> {
     pendingOps: await db.syncQueue.count(),
   });
 
-  // Step 1: Clear sync queue (don't push local changes)
-  await db.syncQueue.clear();
-  console.log('[SYNC RESET] Cleared sync queue');
+  // Clear local data
+  await clearLocalData();
 
-  // Step 2: Reset sync metadata to force full pull
-  await db.syncMetadata.put({
-    ...config,
-    lastSyncAt: 0, // Set to 0 to pull all tasks from server
-    vectorClock: {}, // Reset vector clock
-    key: 'sync_config',
-  });
-  console.log('[SYNC RESET] Reset sync metadata (lastSyncAt=0, vectorClock={})');
-
-  // Step 3: Clear all local tasks
-  const taskCount = await db.tasks.count();
-  await db.tasks.clear();
-  console.log(`[SYNC RESET] Cleared ${taskCount} local tasks`);
+  // Reset sync metadata
+  await resetSyncMetadata(config);
 
   console.log('[SYNC RESET] Reset complete. Run sync() to pull all tasks from server.');
 }
