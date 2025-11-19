@@ -13,34 +13,42 @@ import {
 import { getDb } from '@/lib/db';
 import type { SyncConfig } from '@/lib/sync/types';
 
-// Mock dependencies
+// Mock dependencies - shared objects so we can spy on methods
+const mockCrypto = {
+  deriveKey: vi.fn().mockResolvedValue(undefined),
+  clear: vi.fn(),
+};
+
 vi.mock('@/lib/sync/crypto', () => ({
-  getCryptoManager: vi.fn(() => ({
-    deriveKey: vi.fn().mockResolvedValue(undefined),
-    clear: vi.fn(),
-  })),
+  getCryptoManager: vi.fn(() => mockCrypto),
 }));
+
+const mockApiClient = {
+  setToken: vi.fn(),
+  register: vi.fn(),
+  login: vi.fn(),
+};
 
 vi.mock('@/lib/sync/api-client', () => ({
-  getApiClient: vi.fn(() => ({
-    setToken: vi.fn(),
-    register: vi.fn(),
-    login: vi.fn(),
-  })),
+  getApiClient: vi.fn(() => mockApiClient),
 }));
+
+const mockQueue = {
+  populateFromExistingTasks: vi.fn().mockResolvedValue(5),
+};
 
 vi.mock('@/lib/sync/queue', () => ({
-  getSyncQueue: vi.fn(() => ({
-    populateFromExistingTasks: vi.fn().mockResolvedValue(5),
-  })),
+  getSyncQueue: vi.fn(() => mockQueue),
 }));
 
+const mockMonitor = {
+  isActive: vi.fn().mockReturnValue(false),
+  start: vi.fn(),
+  stop: vi.fn(),
+};
+
 vi.mock('@/lib/sync/health-monitor', () => ({
-  getHealthMonitor: vi.fn(() => ({
-    isActive: vi.fn().mockReturnValue(false),
-    start: vi.fn(),
-    stop: vi.fn(),
-  })),
+  getHealthMonitor: vi.fn(() => mockMonitor),
 }));
 
 describe('Sync Config', () => {
@@ -90,12 +98,15 @@ describe('Sync Config', () => {
       expect(config?.deviceName).toBe('Test Device');
     });
 
-    it('should return null when config does not exist', async () => {
+    it('should auto-create config if it does not exist', async () => {
       await db.syncMetadata.clear();
 
       const config = await getSyncConfig();
 
-      expect(config).toBeNull();
+      // Config should be auto-created by ensureSyncConfigInitialized()
+      expect(config).not.toBeNull();
+      expect(config?.enabled).toBe(false);
+      expect(config?.deviceId).toBeDefined();
     });
 
     it('should migrate legacy config', async () => {
@@ -130,12 +141,14 @@ describe('Sync Config', () => {
       expect(updated?.deviceId).toBe('device-123'); // Original value preserved
     });
 
-    it('should throw error when config not initialized', async () => {
+    it('should auto-create config and update it', async () => {
       await db.syncMetadata.clear();
 
-      await expect(
-        updateSyncConfig({ enabled: true })
-      ).rejects.toThrow('Sync config not initialized');
+      // updateSyncConfig calls getSyncConfig which auto-initializes
+      await updateSyncConfig({ enabled: true });
+
+      const config = await getSyncConfig();
+      expect(config?.enabled).toBe(true);
     });
 
     it('should update vector clock', async () => {
@@ -200,8 +213,6 @@ describe('Sync Config', () => {
     });
 
     it('should set token in API client', async () => {
-      const { getApiClient } = await import('@/lib/sync/api-client');
-      const mockApi = (getApiClient as any)();
       const token = 'test-token-456';
 
       await enableSync(
@@ -213,7 +224,7 @@ describe('Sync Config', () => {
         'password'
       );
 
-      expect(mockApi.setToken).toHaveBeenCalledWith(token);
+      expect(mockApiClient.setToken).toHaveBeenCalledWith(token);
     });
 
     it('should queue existing tasks when tasks exist', async () => {
@@ -282,19 +293,22 @@ describe('Sync Config', () => {
       expect(mockMonitor.start).toHaveBeenCalled();
     });
 
-    it('should throw error when config not initialized', async () => {
+    it('should work with auto-created config', async () => {
       await db.syncMetadata.clear();
 
-      await expect(
-        enableSync(
-          'user-123',
-          'test@example.com',
-          'token',
-          Date.now() + 86400000,
-          'salt',
-          'password'
-        )
-      ).rejects.toThrow('Sync config not initialized');
+      // enableSync calls getSyncConfig which auto-initializes
+      await enableSync(
+        'user-123',
+        'test@example.com',
+        'token',
+        Date.now() + 86400000,
+        'salt',
+        'password'
+      );
+
+      const config = await getSyncConfig();
+      expect(config?.enabled).toBe(true);
+      expect(config?.userId).toBe('user-123');
     });
   });
 
@@ -374,9 +388,6 @@ describe('Sync Config', () => {
 
   describe('registerSyncAccount', () => {
     it('should register new account and enable sync', async () => {
-      const { getApiClient } = await import('@/lib/sync/api-client');
-      const mockApi = (getApiClient as any)();
-
       const mockRegisterResponse = {
         userId: 'user-new',
         deviceId: 'device-new',
@@ -385,11 +396,11 @@ describe('Sync Config', () => {
         salt: 'new-salt',
       };
 
-      mockApi.register.mockResolvedValue(mockRegisterResponse);
+      mockApiClient.register.mockResolvedValue(mockRegisterResponse);
 
       await registerSyncAccount('new@example.com', 'password123', 'My Device');
 
-      expect(mockApi.register).toHaveBeenCalledWith({
+      expect(mockApiClient.register).toHaveBeenCalledWith({
         email: 'new@example.com',
         password: 'password123',
         deviceName: 'My Device',
@@ -404,10 +415,7 @@ describe('Sync Config', () => {
     });
 
     it('should use default device name if not provided', async () => {
-      const { getApiClient } = await import('@/lib/sync/api-client');
-      const mockApi = (getApiClient as any)();
-
-      mockApi.register.mockResolvedValue({
+      mockApiClient.register.mockResolvedValue({
         userId: 'user-new',
         deviceId: 'device-new',
         token: 'new-token',
@@ -417,27 +425,35 @@ describe('Sync Config', () => {
 
       await registerSyncAccount('new@example.com', 'password123');
 
-      expect(mockApi.register).toHaveBeenCalledWith(
+      expect(mockApiClient.register).toHaveBeenCalledWith(
         expect.objectContaining({
           deviceName: 'Test Device', // From mockSyncConfig
         })
       );
     });
 
-    it('should throw error when config not initialized', async () => {
+    it('should work with auto-created config', async () => {
       await db.syncMetadata.clear();
 
-      await expect(
-        registerSyncAccount('new@example.com', 'password123')
-      ).rejects.toThrow('Sync config not initialized');
+      mockApiClient.register.mockResolvedValue({
+        userId: 'user-new',
+        deviceId: 'device-new',
+        token: 'new-token',
+        expiresAt: Date.now() + 86400000,
+        salt: 'new-salt',
+      });
+
+      // registerSyncAccount calls getSyncConfig which auto-initializes
+      await registerSyncAccount('new@example.com', 'password123');
+
+      const config = await getSyncConfig();
+      expect(config?.enabled).toBe(true);
+      expect(config?.userId).toBe('user-new');
     });
   });
 
   describe('loginSyncAccount', () => {
     it('should login and enable sync', async () => {
-      const { getApiClient } = await import('@/lib/sync/api-client');
-      const mockApi = (getApiClient as any)();
-
       const mockLoginResponse = {
         userId: 'user-existing',
         deviceId: 'device-123',
@@ -447,11 +463,11 @@ describe('Sync Config', () => {
         syncRequired: true,
       };
 
-      mockApi.login.mockResolvedValue(mockLoginResponse);
+      mockApiClient.login.mockResolvedValue(mockLoginResponse);
 
       await loginSyncAccount('existing@example.com', 'password123');
 
-      expect(mockApi.login).toHaveBeenCalledWith({
+      expect(mockApiClient.login).toHaveBeenCalledWith({
         email: 'existing@example.com',
         passwordHash: 'password123',
         deviceId: 'device-123',
@@ -466,17 +482,16 @@ describe('Sync Config', () => {
     });
 
     it('should update device ID if changed', async () => {
-      const { getApiClient } = await import('@/lib/sync/api-client');
-      const mockApi = (getApiClient as any)();
-
-      mockApi.login.mockResolvedValue({
+      const mockLoginResponse = {
         userId: 'user-existing',
         deviceId: 'device-new-id',
         token: 'login-token',
         expiresAt: Date.now() + 86400000,
         salt: 'login-salt',
         syncRequired: true,
-      });
+      };
+
+      mockApiClient.login.mockResolvedValue(mockLoginResponse);
 
       await loginSyncAccount('existing@example.com', 'password123');
 
@@ -485,12 +500,24 @@ describe('Sync Config', () => {
       expect(config?.deviceId).toBe('device-new-id');
     });
 
-    it('should throw error when config not initialized', async () => {
+    it('should work with auto-created config', async () => {
       await db.syncMetadata.clear();
 
-      await expect(
-        loginSyncAccount('existing@example.com', 'password123')
-      ).rejects.toThrow('Sync config not initialized');
+      mockApiClient.login.mockResolvedValue({
+        userId: 'user-existing',
+        deviceId: 'device-existing',
+        token: 'login-token',
+        expiresAt: Date.now() + 86400000,
+        salt: 'login-salt',
+        syncRequired: true,
+      });
+
+      // loginSyncAccount calls getSyncConfig which auto-initializes
+      await loginSyncAccount('existing@example.com', 'password123');
+
+      const config = await getSyncConfig();
+      expect(config?.enabled).toBe(true);
+      expect(config?.userId).toBe('user-existing');
     });
   });
 
@@ -546,16 +573,15 @@ describe('Sync Config', () => {
       expect(status.serverUrl).toBe('https://test-api.example.com');
     });
 
-    it('should return null values when sync not configured', async () => {
-      await db.syncMetadata.clear();
-
+    it('should return default values when sync not enabled', async () => {
+      // Don't clear syncMetadata - just use the default config from beforeEach
       const status = await getSyncStatus();
 
       expect(status.enabled).toBe(false);
       expect(status.email).toBeNull();
       expect(status.lastSyncAt).toBeNull();
-      expect(status.deviceId).toBeNull();
-      expect(status.serverUrl).toBeNull();
+      expect(status.deviceId).toBeDefined(); // Auto-created by DB migration
+      expect(status.serverUrl).toBeDefined(); // Auto-created by DB migration
     });
 
     it('should include pending operation count', async () => {

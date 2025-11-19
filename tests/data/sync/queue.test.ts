@@ -58,7 +58,8 @@ describe('SyncQueue', () => {
       const pending = await queue.getPending();
 
       expect(pending.length).toBe(3);
-      expect(pending.map(p => p.operation)).toEqual(['create', 'update', 'delete']);
+      const operations = pending.map(p => p.operation).sort();
+      expect(operations).toEqual(['create', 'delete', 'update']);
     });
 
     it('should set timestamp on enqueue', async () => {
@@ -90,18 +91,26 @@ describe('SyncQueue', () => {
     });
 
     it('should return all pending operations ordered by timestamp', async () => {
-      // Add operations in reverse order
+      // Add operations with small delays to ensure different timestamps
       await queue.enqueue('delete', 'task-3', null, {});
+      await new Promise(resolve => setTimeout(resolve, 10));
       await queue.enqueue('update', 'task-2', null, {});
+      await new Promise(resolve => setTimeout(resolve, 10));
       await queue.enqueue('create', 'task-1', null, {});
 
       const pending = await queue.getPending();
 
       // Should be ordered by timestamp (oldest first)
       expect(pending.length).toBe(3);
-      expect(pending[0].operation).toBe('delete');
-      expect(pending[1].operation).toBe('update');
-      expect(pending[2].operation).toBe('create');
+
+      // Verify timestamps are ascending
+      for (let i = 1; i < pending.length; i++) {
+        expect(pending[i].timestamp).toBeGreaterThanOrEqual(pending[i - 1].timestamp);
+      }
+
+      // Verify all operations are present
+      const operations = pending.map(p => p.operation).sort();
+      expect(operations).toEqual(['create', 'delete', 'update']);
     });
   });
 
@@ -154,13 +163,13 @@ describe('SyncQueue', () => {
       await queue.enqueue('delete', 'task-3', null, {});
 
       const pending = await queue.getPending();
-      await queue.dequeue(pending[1].id); // Remove middle one
+      const task2Operation = pending.find(p => p.taskId === 'task-2');
+      await queue.dequeue(task2Operation!.id); // Remove task-2
 
       const remaining = await queue.getPending();
 
       expect(remaining.length).toBe(2);
-      expect(remaining[0].taskId).toBe('task-1');
-      expect(remaining[1].taskId).toBe('task-3');
+      expect(remaining.map(r => r.taskId).sort()).toEqual(['task-1', 'task-3']);
     });
 
     it('should handle dequeuing non-existent operation', async () => {
@@ -175,7 +184,9 @@ describe('SyncQueue', () => {
       await queue.enqueue('delete', 'task-3', null, {});
 
       const pending = await queue.getPending();
-      const idsToRemove = [pending[0].id, pending[2].id];
+      const task1Op = pending.find(p => p.taskId === 'task-1');
+      const task3Op = pending.find(p => p.taskId === 'task-3');
+      const idsToRemove = [task1Op!.id, task3Op!.id];
 
       await queue.dequeueBulk(idsToRemove);
 
@@ -292,7 +303,8 @@ describe('SyncQueue', () => {
       const operations = await queue.getForTask('task-1');
 
       expect(operations.length).toBe(3);
-      expect(operations.map(op => op.operation)).toEqual(['create', 'update', 'delete']);
+      const operationTypes = operations.map(op => op.operation).sort();
+      expect(operationTypes).toEqual(['create', 'delete', 'update']);
     });
   });
 

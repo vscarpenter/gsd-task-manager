@@ -174,8 +174,8 @@ describe('Database', () => {
 
       await db.tasks.bulkAdd(tasks);
 
-      const completed = await db.tasks.where('completed').equals(1).toArray();
-      const active = await db.tasks.where('completed').equals(0).toArray();
+      const completed = await db.tasks.where('completed').equals(true).toArray();
+      const active = await db.tasks.where('completed').equals(false).toArray();
 
       expect(completed.length).toBe(1);
       expect(completed[0].id).toBe('task-1');
@@ -225,7 +225,7 @@ describe('Database', () => {
 
       const urgentImportantActive = await db.tasks
         .where('[quadrant+completed]')
-        .equals(['urgent-important', 0])
+        .equals(['urgent-important', false])
         .toArray();
 
       expect(urgentImportantActive.length).toBe(1);
@@ -575,8 +575,8 @@ describe('Database', () => {
         },
       ]);
 
-      const builtIn = await db.smartViews.where('isBuiltIn').equals(1).toArray();
-      const custom = await db.smartViews.where('isBuiltIn').equals(0).toArray();
+      const builtIn = await db.smartViews.where('isBuiltIn').equals(true).toArray();
+      const custom = await db.smartViews.where('isBuiltIn').equals(false).toArray();
 
       expect(builtIn.length).toBe(1);
       expect(custom.length).toBe(1);
@@ -887,7 +887,7 @@ describe('Database', () => {
         tasks.map(task => ({ ...task, completed: true, completedAt: Date.now() }))
       );
 
-      const completed = await db.tasks.where('completed').equals(1).count();
+      const completed = await db.tasks.where('completed').equals(true).count();
 
       expect(completed).toBe(5);
     });
