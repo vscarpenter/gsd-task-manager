@@ -659,24 +659,36 @@ Comprehensive productivity analytics with interactive visualizations. Toggle bet
 
 1. **Manual Sync**
    - Click sync button in header
-   - Triggers immediate push → pull → conflict resolution cycle
+   - Forces immediate sync (bypasses throttling)
    - Shows spinner during sync
-   - Toast notification on success/failure
+   - Toast notification on completion
 
-2. **Automatic Sync** (when PWA installed)
-   - Periodic Background Sync API (Chrome/Edge only)
-   - Runs every 12 hours when app closed
-   - Push pending changes, pull remote changes
-   - Displays notification if conflicts detected
+2. **Automatic Background Sync** ⭐ NEW (v5.7.0)
+   - **Enabled by default** when sync is turned on
+   - Configurable interval (1-30 minutes, default: 2 minutes)
+   - Smart triggers:
+     - **Periodic**: Syncs every N minutes when changes are pending
+     - **Tab Focus**: Syncs when returning to the tab after being away
+     - **Network Reconnect**: Syncs immediately when coming back online
+     - **Debounced After Edits**: Syncs 30 seconds after the last task change
+   - Respects conditions: only syncs when online + changes pending
+   - Minimum 15-second interval between syncs (prevents spam)
+   - Can be disabled in Settings → Cloud Sync
 
-3. **On App Load**
-   - If last sync > 1 hour ago, auto-sync on app open
-   - Silent sync (no UI indication unless errors)
+3. **Service Worker Background Sync** (when PWA installed, Chrome/Edge only)
+   - Periodic Background Sync API for true background syncing
+   - Syncs even when app is closed (if PWA installed)
+   - Requires sync enabled + PWA installed
+   - Fallback to automatic background sync on unsupported browsers
 
-**Sync Settings** (`components/settings-dialog.tsx`):
-- Enable/disable sync toggle
+**Sync Settings** (`components/settings/sync-settings.tsx`):
+- Auto-sync toggle (enable/disable automatic background sync)
+- Sync interval slider (1-30 minutes)
+- Real-time interval preview
+- Helpful explanations of all sync triggers
 - View last sync timestamp
-- Manual trigger button
+- Manual sync button (always available)
+- View sync history
 - Device list with last seen
 - Sign out button (clears JWT, stops sync)
 

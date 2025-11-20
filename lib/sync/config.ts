@@ -47,6 +47,39 @@ export async function updateSyncConfig(updates: Partial<SyncConfig>): Promise<vo
 }
 
 /**
+ * Get auto-sync configuration
+ * Returns defaults if not set
+ */
+export async function getAutoSyncConfig(): Promise<import('./types').BackgroundSyncConfig> {
+  const config = await getSyncConfig();
+
+  return {
+    enabled: config?.autoSyncEnabled ?? true,
+    intervalMinutes: config?.autoSyncIntervalMinutes ?? 2,
+    syncOnFocus: true,
+    syncOnOnline: true,
+    debounceAfterChangeMs: 30000, // 30 seconds
+  };
+}
+
+/**
+ * Update auto-sync preferences
+ */
+export async function updateAutoSyncConfig(
+  enabled: boolean,
+  intervalMinutes: number
+): Promise<void> {
+  // Clamp interval to valid range (1-30 minutes)
+  const clampedInterval = Math.max(1, Math.min(30, intervalMinutes));
+
+  await updateSyncConfig({
+    autoSyncEnabled: enabled,
+    autoSyncIntervalMinutes: clampedInterval,
+  });
+}
+
+
+/**
  * Initialize crypto manager with user password
  */
 async function initializeCrypto(password: string, salt: string): Promise<void> {
@@ -127,6 +160,11 @@ export async function enableSync(
   // Update config with auth credentials
   await updateAuthCredentials(current, userId, email, token, expiresAt);
 
+  // Set default auto-sync config if not present
+  if (current.autoSyncEnabled === undefined) {
+    await updateAutoSyncConfig(true, 2); // Default: enabled, 2 min interval
+  }
+
   // Set token in API client
   const api = getApiClient(current.serverUrl);
   api.setToken(token);
@@ -137,6 +175,7 @@ export async function enableSync(
   // Start health monitor
   await startHealthMonitor();
 }
+
 
 /**
  * Stop health monitoring

@@ -206,6 +206,115 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **Pure analytics functions:** All metric calculations are side-effect-free for testability
 - **Transaction-based batch operations:** Ensure atomicity (all-or-nothing) for bulk updates
 
+### Automatic Background Sync (v5.7.0)
+
+**Purpose:** Automatically sync changes in the background without user intervention, improving multi-device workflows.
+
+**Architecture:**
+
+**Core Components:**
+- **BackgroundSyncManager** (`lib/sync/background-sync.ts`) — Singleton class managing automatic sync lifecycle
+  - `start()` — Initiates periodic sync and event listeners
+  - `stop()` — Cleanup: clears intervals, removes event listeners
+  - `scheduleDebouncedSync()` — Debounced sync trigger for task operations
+  - `isRunning()` — Check if background sync is active
+
+**Configuration:**
+- `SyncConfig` extended with:
+  - `autoSyncEnabled?: boolean` — Toggle auto-sync (default: `true`)
+  - `autoSyncIntervalMinutes?: number` — Sync interval 1-30 min (default: `2`)
+- `BackgroundSyncConfig` type defines runtime configuration:
+  - `enabled` — Auto-sync on/off
+  - `intervalMinutes` — Periodic sync interval
+  - `syncOnFocus` — Sync when tab becomes visible (default: `true`)
+  - `syncOnOnline` — Sync when network reconnects (default: `true`)
+  - `debounceAfterChangeMs` — Delay after task edits (default: `30000` = 30s)
+
+**Smart Triggers:**
+
+1. **Periodic Interval** (`setInterval`)
+   - Runs every N minutes (user-configurable)
+   - Only syncs if: online + pending changes > 0
+   - Minimum 15-second throttle between syncs
+
+2. **Tab Visibility** (`document.visibilitychange`)
+   - Syncs when tab becomes visible after being hidden
+   - Prevents sync spam with MIN_SYNC_INTERVAL_MS check
+
+3. **Network Reconnect** (`window.online` event)
+   - Triggers sync immediately when coming back online
+   - Pushes queued offline changes
+
+4. **Debounced After Task Changes**
+   - 30-second debounce timer after any task CRUD operation
+   - Resets on new changes (coalesce rapid edits)
+   - Integrated in `lib/tasks/crud.ts` via `scheduleSyncAfterChange()`
+
+**Integration Points:**
+
+- **useSync Hook** (`lib/hooks/use-sync.ts`)
+  - Starts/stops `BackgroundSyncManager` based on sync enabled state
+  - Loads auto-sync config and monitors changes every 500ms
+  - Returns `autoSyncEnabled` and `autoSyncInterval` to UI
+
+- **Task Operations** (`lib/tasks/crud.ts`, `lib/tasks/subtasks.ts`, `lib/tasks/dependencies.ts`)
+  - After every `queue.enqueue()`, calls `scheduleDebouncedSync()`
+  - Applies to: create, update, delete, toggle, move, duplicate
+
+- **Settings UI** (`components/settings/sync-settings.tsx`)
+  - Toggle switch for auto-sync on/off
+  - Range slider + number input for interval (1-30 min)
+  - Real-time config updates with 1-second debounce
+  - Displays all sync trigger explanations
+
+**Sync Priority System:**
+
+- **User-initiated sync** (`requestSync('user')`) > **Auto-sync** (`requestSync('auto')`)
+- `SyncCoordinator` ensures only one sync runs at a time
+- Queues additional requests with deduplication (highest priority wins)
+
+**Performance Optimizations:**
+
+- Checks `navigator.onLine` before attempting sync (abort if offline)
+- Checks `syncQueue.getPendingCount()` (skip if no changes)
+- 15-second minimum interval prevents excessive syncs
+- All intervals cleaned up on unmount/disable (no memory leaks)
+
+**Lifecycle:**
+
+```typescript
+// Start (when sync enabled)
+useEffect(() => {
+  if (isEnabled && autoConfig.enabled) {
+    bgSyncManager.start(autoConfig);
+  }
+}, [isEnabled]);
+
+// Stop (on disable or unmount)
+return () => {
+  bgSyncManager.stop();
+};
+```
+
+**Configuration Defaults:**
+
+```typescript
+{
+  enabled: true,               // Auto-sync on by default
+  intervalMinutes: 2,          // Sync every 2 minutes
+  syncOnFocus: true,           // Sync on tab focus
+  syncOnOnline: true,          // Sync on reconnect
+  debounceAfterChangeMs: 30000 // 30s debounce
+}
+```
+
+**User Preferences:**
+
+Users can customize via **Settings → Cloud Sync**:
+- Toggle auto-sync on/off
+- Adjust interval (1-30 minutes)
+- Manual sync button always available (bypasses throttling)
+
 ### PWA Configuration
 
 - `public/manifest.json` — App metadata for installation

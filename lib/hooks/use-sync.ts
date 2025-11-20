@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { getSyncEngine } from '@/lib/sync/engine';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
+import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
+import { getAutoSyncConfig } from '@/lib/sync/config';
 import type { SyncResult } from '@/lib/sync/types';
 
 export interface UseSyncResult {
@@ -16,7 +18,10 @@ export interface UseSyncResult {
   pendingRequests: number;
   nextRetryAt: number | null;
   retryCount: number;
+  autoSyncEnabled: boolean;
+  autoSyncInterval: number;
 }
+
 
 export function useSync(): UseSyncResult {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -27,15 +32,17 @@ export function useSync(): UseSyncResult {
   const [pendingRequests, setPendingRequests] = useState(0);
   const [nextRetryAt, setNextRetryAt] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [autoSyncInterval, setAutoSyncInterval] = useState(2);
 
   // Check if sync is enabled on mount and periodically
-  // Start/stop health monitor based on sync enabled state
+  // Start/stop health monitor and background sync manager based on sync enabled state
   useEffect(() => {
     const checkEnabled = async () => {
       const engine = getSyncEngine();
       const enabled = await engine.isEnabled();
       setIsEnabled(enabled);
-      
+
       // Start or stop health monitor based on sync state
       const healthMonitor = getHealthMonitor();
       if (enabled && !healthMonitor.isActive()) {
@@ -45,6 +52,23 @@ export function useSync(): UseSyncResult {
         console.log('[SYNC] Stopping health monitor (sync disabled)');
         healthMonitor.stop();
       }
+
+      // Start or stop background sync manager
+      const bgSyncManager = getBackgroundSyncManager();
+      if (enabled) {
+        const autoSyncConfig = await getAutoSyncConfig();
+
+        if (autoSyncConfig.enabled && !bgSyncManager.isRunning()) {
+          console.log('[SYNC] Starting background sync manager');
+          await bgSyncManager.start(autoSyncConfig);
+        } else if (!autoSyncConfig.enabled && bgSyncManager.isRunning()) {
+          console.log('[SYNC] Stopping background sync manager (disabled in settings)');
+          bgSyncManager.stop();
+        }
+      } else if (bgSyncManager.isRunning()) {
+        console.log('[SYNC] Stopping background sync manager (sync disabled)');
+        bgSyncManager.stop();
+      }
     };
 
     checkEnabled();
@@ -53,11 +77,17 @@ export function useSync(): UseSyncResult {
     const interval = setInterval(checkEnabled, 2000);
     return () => {
       clearInterval(interval);
-      
+
       // Stop health monitor on unmount
       const healthMonitor = getHealthMonitor();
       if (healthMonitor.isActive()) {
         healthMonitor.stop();
+      }
+
+      // Stop background sync manager on unmount
+      const bgSyncManager = getBackgroundSyncManager();
+      if (bgSyncManager.isRunning()) {
+        bgSyncManager.stop();
       }
     };
   }, []);
@@ -67,17 +97,22 @@ export function useSync(): UseSyncResult {
     const updateStatus = async () => {
       const coordinator = getSyncCoordinator();
       const coordStatus = await coordinator.getStatus();
-      
+
       setIsSyncing(coordStatus.isRunning);
       setPendingRequests(coordStatus.pendingRequests);
       setNextRetryAt(coordStatus.nextRetryAt);
       setRetryCount(coordStatus.retryCount);
-      
+
+      // Update auto-sync config
+      const autoConfig = await getAutoSyncConfig();
+      setAutoSyncEnabled(autoConfig.enabled);
+      setAutoSyncInterval(autoConfig.intervalMinutes);
+
       // Update last result if available
       if (coordStatus.lastResult) {
         setLastResult(coordStatus.lastResult);
       }
-      
+
       // Update error state if there's a recent error
       if (coordStatus.lastError) {
         setError(coordStatus.lastError);
@@ -103,24 +138,24 @@ export function useSync(): UseSyncResult {
 
     const checkHealth = async () => {
       const now = Date.now();
-      
+
       // Only check once per interval to avoid spam
       if (now - lastHealthCheckTime < HEALTH_CHECK_NOTIFICATION_INTERVAL) {
         return;
       }
-      
+
       lastHealthCheckTime = now;
-      
+
       const healthMonitor = getHealthMonitor();
       const report = await healthMonitor.check();
-      
+
       // Log health check results
       console.log('[SYNC] Health check result:', {
         healthy: report.healthy,
         issuesCount: report.issues.length,
         timestamp: new Date(report.timestamp).toISOString(),
       });
-      
+
       // Note: Toast notifications would be shown here if we had access to the toast context
       // For now, we just log the issues. The health monitor integration is complete,
       // and toast notifications can be added by components that use this hook.
@@ -138,10 +173,10 @@ export function useSync(): UseSyncResult {
 
     // Run initial check after 1 second
     const initialTimeout = setTimeout(checkHealth, 1000);
-    
+
     // Check periodically
     const interval = setInterval(checkHealth, HEALTH_CHECK_NOTIFICATION_INTERVAL);
-    
+
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
@@ -159,11 +194,11 @@ export function useSync(): UseSyncResult {
 
       // Get the final status after sync completes
       const coordStatus = await coordinator.getStatus();
-      
+
       // Use the actual result from coordinator
       if (coordStatus.lastResult) {
         setLastResult(coordStatus.lastResult);
-        
+
         if (coordStatus.lastResult.status === 'success') {
           setStatus('success');
         } else if (coordStatus.lastResult.status === 'conflict') {
@@ -208,5 +243,7 @@ export function useSync(): UseSyncResult {
     pendingRequests,
     nextRetryAt,
     retryCount,
+    autoSyncEnabled,
+    autoSyncInterval,
   };
 }

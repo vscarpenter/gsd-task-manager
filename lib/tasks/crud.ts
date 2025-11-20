@@ -1,13 +1,25 @@
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { parseQuadrantFlags, resolveQuadrantId } from "@/lib/quadrants";
-import { taskDraftSchema } from "@/lib/schema";
+import { taskDraftSchema, taskRecordSchema } from "@/lib/schema"; // Modified: Added taskRecordSchema
 import type { QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { incrementVectorClock } from "@/lib/sync/vector-clock";
 import { getSyncConfig } from "@/lib/sync/config";
+import { getBackgroundSyncManager } from "@/lib/sync/background-sync"; // Added
 import { createLogger } from "@/lib/logger";
+
+/**
+ * Schedule debounced background sync after task change
+ * Only triggers if auto-sync is enabled and running
+ */
+function scheduleSyncAfterChange(): void {
+  const bgSyncManager = getBackgroundSyncManager();
+  if (bgSyncManager.isRunning()) {
+    bgSyncManager.scheduleDebouncedSync();
+  }
+}
 
 const logger = createLogger('TASK_CRUD');
 
@@ -65,6 +77,7 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
       const queue = getSyncQueue();
       await queue.enqueue('create', record.id, record, record.vectorClock || {});
       logger.debug('Task creation queued for sync', { taskId: record.id });
+      scheduleSyncAfterChange();
     }
 
     return record;
@@ -138,6 +151,7 @@ export async function updateTask(id: string, updates: Partial<TaskDraft>): Promi
       const queue = getSyncQueue();
       await queue.enqueue('update', id, nextRecord, nextRecord.vectorClock || {});
       logger.debug('Task update queued for sync', { taskId: id });
+      scheduleSyncAfterChange();
     }
 
     return nextRecord;
@@ -238,6 +252,7 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
         const queue = getSyncQueue();
         await queue.enqueue('create', newInstance.id, newInstance, newInstance.vectorClock || {});
         logger.debug('Recurring task instance queued for sync', { taskId: newInstance.id });
+        scheduleSyncAfterChange();
       }
     }
 
@@ -263,6 +278,7 @@ export async function toggleCompleted(id: string, completed: boolean): Promise<T
       const queue = getSyncQueue();
       await queue.enqueue('update', id, nextRecord, nextRecord.vectorClock || {});
       logger.debug('Task completion queued for sync', { taskId: id });
+      scheduleSyncAfterChange();
     }
 
     return nextRecord;
@@ -304,6 +320,7 @@ export async function deleteTask(id: string): Promise<void> {
       const deleteClock = incrementVectorClock(vectorClock, deviceId);
       await queue.enqueue('delete', id, null, deleteClock);
       logger.debug('Task deletion queued for sync', { taskId: id });
+      scheduleSyncAfterChange();
     }
   } catch (error) {
     logger.error('Failed to delete task', error instanceof Error ? error : undefined, { taskId: id });
@@ -355,6 +372,7 @@ export async function moveTaskToQuadrant(id: string, targetQuadrant: QuadrantId)
       const queue = getSyncQueue();
       await queue.enqueue('update', id, nextRecord, nextRecord.vectorClock || {});
       logger.debug('Task quadrant move queued for sync', { taskId: id });
+      scheduleSyncAfterChange();
     }
 
     return nextRecord;
@@ -404,6 +422,7 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
     // Queue for sync if enabled
     const queue = getSyncQueue();
     await queue.enqueue('create', duplicate.id, duplicate, vectorClock);
+    scheduleSyncAfterChange();
 
     logger.info('Task duplicated', { originalId: id, newId: duplicate.id });
     return duplicate;

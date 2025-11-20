@@ -29,6 +29,18 @@ export interface SyncConfig {
   lastFailureAt: number | null;
   lastFailureReason: string | null;
   nextRetryAt: number | null;
+  // Auto-sync configuration
+  autoSyncEnabled?: boolean;
+  autoSyncIntervalMinutes?: number;
+}
+
+// Background sync configuration
+export interface BackgroundSyncConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  syncOnFocus: boolean;
+  syncOnOnline: boolean;
+  debounceAfterChangeMs: number;
 }
 
 // Sync queue item (pending operations)
