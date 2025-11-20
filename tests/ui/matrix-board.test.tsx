@@ -4,6 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { MatrixBoard } from '@/components/matrix-board';
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
+import { ToastProvider } from '@/components/ui/toast';
+
+// Helper to render with providers
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <ToastProvider>
+      {ui}
+    </ToastProvider>
+  );
+};
 
 // Mock next-themes
 vi.mock('next-themes', () => ({
@@ -39,7 +49,7 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Initial Rendering', () => {
     it('should render empty state when no tasks exist', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
@@ -47,7 +57,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should render all four quadrants', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText(/urgent & important/i)).toBeInTheDocument();
@@ -58,7 +68,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should render app header with controls', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         // Search should be present
@@ -81,13 +91,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['work'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -97,13 +107,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['personal'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -111,7 +121,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should display tasks in correct quadrants', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText('Urgent Important Task')).toBeInTheDocument();
@@ -120,7 +130,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should show task tags', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText('work')).toBeInTheDocument();
@@ -137,17 +147,17 @@ describe('MatrixBoard Integration Tests', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: true,
-        completedAt: Date.now(),
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        completedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
 
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.queryByText('Completed Task')).not.toBeInTheDocument();
@@ -166,13 +176,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['coding', 'javascript'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -182,13 +192,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['coding', 'python'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-3',
@@ -198,13 +208,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: false,
           quadrant: 'not-urgent-not-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['meetings'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -212,7 +222,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should filter tasks by title', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -226,7 +236,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should filter tasks by description', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -239,7 +249,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should filter tasks by tags', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -251,7 +261,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should clear search results when search is cleared', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -273,7 +283,7 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Keyboard Shortcuts', () => {
     it('should open new task dialog with "n" key', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await user.keyboard('n');
 
@@ -283,7 +293,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should focus search input with "/" key', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await user.keyboard('/');
 
@@ -294,7 +304,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should open help dialog with "?" key', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await user.keyboard('?');
 
@@ -307,7 +317,7 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Task Creation', () => {
     it('should create a new task', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       const newTaskButton = await screen.findByRole('button', { name: /new task/i });
       await user.click(newTaskButton);
@@ -358,18 +368,18 @@ describe('MatrixBoard Integration Tests', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
     });
 
     it('should edit an existing task', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Find and click the edit button on the task
       const taskCard = await screen.findByText('Task to Edit');
@@ -413,18 +423,18 @@ describe('MatrixBoard Integration Tests', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
     });
 
     it('should toggle task completion', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Find the complete checkbox
       const taskCard = await screen.findByText('Task to Complete');
@@ -455,18 +465,18 @@ describe('MatrixBoard Integration Tests', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
     });
 
     it('should delete a task', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Find and click delete button
       const taskCard = await screen.findByText('Task to Delete');
@@ -496,13 +506,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'bulk-2',
@@ -512,13 +522,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'bulk-3',
@@ -528,13 +538,13 @@ describe('MatrixBoard Integration Tests', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -542,7 +552,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should enter selection mode when task is selected', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Click on first task to select it
       const task1 = await screen.findByText('Bulk Task 1');
@@ -557,7 +567,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should select multiple tasks', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Select first task
       const task1 = await screen.findByText('Bulk Task 1');
@@ -574,7 +584,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should bulk delete selected tasks', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Select tasks
       const task1 = await screen.findByText('Bulk Task 1');
@@ -600,7 +610,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should bulk complete selected tasks', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Select tasks
       const task1 = await screen.findByText('Bulk Task 1');
@@ -656,7 +666,7 @@ describe('MatrixBoard Integration Tests', () => {
         configurable: true,
       });
 
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // New task dialog should open automatically
       await waitFor(() => {
@@ -667,7 +677,7 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Empty States', () => {
     it('should show empty state with no tasks', async () => {
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
@@ -684,16 +694,16 @@ describe('MatrixBoard Integration Tests', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
 
-      render(<MatrixBoard />);
+      renderWithProviders(<MatrixBoard />);
 
       // Search for non-existent term
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);

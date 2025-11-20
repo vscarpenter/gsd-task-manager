@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StatsCard } from '@/components/dashboard/stats-card';
@@ -195,9 +195,9 @@ describe('Dashboard Components', () => {
 
     it('should render tag statistics', () => {
       const tagStats = [
-        { tag: 'work', count: 15, completionRate: 80 },
-        { tag: 'personal', count: 10, completionRate: 60 },
-        { tag: 'urgent', count: 5, completionRate: 100 },
+        { tag: 'work', count: 15, completionRate: 80, completedCount: 0 },
+        { tag: 'personal', count: 10, completionRate: 60, completedCount: 0 },
+        { tag: 'urgent', count: 5, completionRate: 100, completedCount: 0 },
       ];
 
       render(<TagAnalytics tagStats={tagStats} />);
@@ -213,7 +213,7 @@ describe('Dashboard Components', () => {
 
     it('should show completion rate progress bars', () => {
       const tagStats = [
-        { tag: 'work', count: 10, completionRate: 75 },
+        { tag: 'work', count: 10, completionRate: 75, completedCount: 0 },
       ];
 
       render(<TagAnalytics tagStats={tagStats} />);
@@ -224,7 +224,7 @@ describe('Dashboard Components', () => {
 
     it('should handle 0% completion rate', () => {
       const tagStats = [
-        { tag: 'new', count: 5, completionRate: 0 },
+        { tag: 'new', count: 5, completionRate: 0, completedCount: 0 },
       ];
 
       render(<TagAnalytics tagStats={tagStats} />);
@@ -234,7 +234,7 @@ describe('Dashboard Components', () => {
 
     it('should handle 100% completion rate', () => {
       const tagStats = [
-        { tag: 'done', count: 5, completionRate: 100 },
+        { tag: 'done', count: 5, completionRate: 100, completedCount: 0 },
       ];
 
       render(<TagAnalytics tagStats={tagStats} />);
@@ -250,20 +250,20 @@ describe('Dashboard Components', () => {
     const testTasks: TaskRecord[] = [
       {
         id: 'overdue-1',
-        title: 'Overdue Task',
+        title: 'Late Task',
         description: '',
         urgent: true,
         important: true,
         quadrant: 'urgent-important',
         completed: false,
         dueDate: new Date(now - oneDayMs).toISOString(),
-        createdAt: now,
-        updatedAt: now,
+        createdAt: new Date(now).toISOString(),
+        updatedAt: new Date(now).toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       },
       {
         id: 'today-1',
@@ -274,13 +274,13 @@ describe('Dashboard Components', () => {
         quadrant: 'urgent-important',
         completed: false,
         dueDate: new Date(now).toISOString(),
-        createdAt: now,
-        updatedAt: now,
+        createdAt: new Date(now).toISOString(),
+        updatedAt: new Date(now).toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       },
       {
         id: 'week-1',
@@ -291,13 +291,13 @@ describe('Dashboard Components', () => {
         quadrant: 'not-urgent-important',
         completed: false,
         dueDate: new Date(now + 3 * oneDayMs).toISOString(),
-        createdAt: now,
-        updatedAt: now,
+        createdAt: new Date(now).toISOString(),
+        updatedAt: new Date(now).toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       },
     ];
 
@@ -360,7 +360,7 @@ describe('Dashboard Components', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: true,
-          completedAt: Date.now(),
+          completedAt: new Date().toISOString(),
           dueDate: new Date(Date.now() - oneDayMs).toISOString(),
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -368,7 +368,7 @@ describe('Dashboard Components', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 

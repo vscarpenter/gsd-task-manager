@@ -69,13 +69,13 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);
@@ -97,13 +97,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -113,13 +113,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -145,14 +145,14 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: true,
-          completedAt: Date.now(),
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          completedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -162,20 +162,20 @@ describe('Database', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
       await db.tasks.bulkAdd(tasks);
 
-      const completed = await db.tasks.where('completed').equals(true).toArray();
-      const active = await db.tasks.where('completed').equals(false).toArray();
+      const completed = await db.tasks.filter(t => t.completed === true).toArray();
+      const active = await db.tasks.filter(t => t.completed === false).toArray();
 
       expect(completed.length).toBe(1);
       expect(completed[0].id).toBe('task-1');
@@ -194,13 +194,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -210,22 +210,21 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: true,
-          completedAt: Date.now(),
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          completedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
       await db.tasks.bulkAdd(tasks);
 
       const urgentImportantActive = await db.tasks
-        .where('[quadrant+completed]')
-        .equals(['urgent-important', false])
+        .filter(t => t.quadrant === 'urgent-important' && t.completed === false)
         .toArray();
 
       expect(urgentImportantActive.length).toBe(1);
@@ -242,13 +241,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['work', 'urgent'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -258,13 +257,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: ['personal'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -290,13 +289,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: ['task-0'],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -306,13 +305,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -333,13 +332,13 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);
@@ -360,13 +359,13 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);
@@ -388,13 +387,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -404,13 +403,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'not-urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -431,13 +430,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -451,6 +450,7 @@ describe('Database', () => {
 
   describe('Archived Tasks Table', () => {
     it('should add and retrieve archived task', async () => {
+      const now = Date.now();
       const archivedTask: TaskRecord = {
         id: 'archived-1',
         title: 'Archived Task',
@@ -459,15 +459,17 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: true,
-        completedAt: Date.now() - 86400000,
-        archivedAt: Date.now(),
-        createdAt: Date.now() - 172800000,
-        updatedAt: Date.now() - 86400000,
+        completedAt: new Date(now - 86400000).toISOString(),
+        archivedAt: new Date(now).toISOString(),
+        createdAt: new Date(now - 172800000).toISOString(),
+        updatedAt: new Date(now - 86400000).toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true,
+        notificationSent: false,
       };
 
       await db.archivedTasks.add(archivedTask);
@@ -481,8 +483,8 @@ describe('Database', () => {
 
     it('should query archived tasks by archivedAt', async () => {
       const now = Date.now();
-      const oneDayAgo = now - 86400000;
-      const twoDaysAgo = now - 172800000;
+      const oneDayAgo = new Date(now - 86400000).toISOString();
+      const twoDaysAgo = new Date(now - 172800000).toISOString();
 
       const tasks: TaskRecord[] = [
         {
@@ -501,7 +503,9 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true,
+          notificationSent: false,
         },
         {
           id: 'archived-2',
@@ -519,7 +523,9 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true,
+          notificationSent: false,
         },
       ];
 
@@ -527,7 +533,7 @@ describe('Database', () => {
 
       const recentlyArchived = await db.archivedTasks
         .where('archivedAt')
-        .above(oneDayAgo - 1000)
+        .above(new Date(now - 86400000 - 1000).toISOString())
         .toArray();
 
       expect(recentlyArchived.length).toBe(1);
@@ -541,9 +547,10 @@ describe('Database', () => {
         id: 'view-1',
         name: 'My View',
         isBuiltIn: false,
-        createdAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         criteria: {
-          quadrants: ['urgent-important'],
+          quadrants: ['urgent-important'] as QuadrantId[],
           status: 'active' as const,
           tags: [],
         },
@@ -563,20 +570,22 @@ describe('Database', () => {
           id: 'view-1',
           name: 'Built-in View',
           isBuiltIn: true,
-          createdAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           criteria: {},
         },
         {
           id: 'view-2',
           name: 'Custom View',
           isBuiltIn: false,
-          createdAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           criteria: {},
         },
       ]);
 
-      const builtIn = await db.smartViews.where('isBuiltIn').equals(true).toArray();
-      const custom = await db.smartViews.where('isBuiltIn').equals(false).toArray();
+      const builtIn = await db.smartViews.filter(v => v.isBuiltIn === true).toArray();
+      const custom = await db.smartViews.filter(v => v.isBuiltIn === false).toArray();
 
       expect(builtIn.length).toBe(1);
       expect(custom.length).toBe(1);
@@ -592,7 +601,7 @@ describe('Database', () => {
         timestamp: Date.now(),
         retryCount: 0,
         payload: null,
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       };
 
       await db.syncQueue.add(queueItem);
@@ -615,7 +624,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-2',
@@ -624,7 +633,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-3',
@@ -633,7 +642,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -657,7 +666,7 @@ describe('Database', () => {
           timestamp: now + 2000,
           retryCount: 0,
           payload: null,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-1',
@@ -666,7 +675,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-2',
@@ -675,7 +684,7 @@ describe('Database', () => {
           timestamp: now + 1000,
           retryCount: 0,
           payload: null,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -699,7 +708,7 @@ describe('Database', () => {
         token: 'token-123',
         tokenExpiresAt: Date.now() + 86400000,
         lastSyncAt: Date.now(),
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
         conflictStrategy: 'last_write_wins' as const,
         serverUrl: 'https://api.example.com',
         consecutiveFailures: 0,
@@ -721,12 +730,13 @@ describe('Database', () => {
     it('should add and retrieve sync history record', async () => {
       const historyRecord = {
         id: 'history-1',
-        timestamp: Date.now(),
+        timestamp: new Date().toISOString(),
         status: 'success' as const,
         deviceId: 'device-123',
         pushedCount: 5,
         pulledCount: 3,
         conflictsResolved: 0,
+        triggeredBy: 'user' as const,
       };
 
       await db.syncHistory.add(historyRecord);
@@ -739,7 +749,8 @@ describe('Database', () => {
     });
 
     it('should query sync history by status', async () => {
-      const now = Date.now();
+      const now = new Date().toISOString();
+      const later = new Date(Date.now() + 1000).toISOString();
 
       await db.syncHistory.bulkAdd([
         {
@@ -749,13 +760,19 @@ describe('Database', () => {
           deviceId: 'device-123',
           pushedCount: 5,
           pulledCount: 3,
+          conflictsResolved: 0,
+          triggeredBy: 'user' as const,
         },
         {
           id: 'history-2',
-          timestamp: now + 1000,
+          timestamp: later,
           status: 'error' as const,
           deviceId: 'device-123',
-          error: 'Network error',
+          errorMessage: 'Network error',
+          pushedCount: 0,
+          pulledCount: 0,
+          conflictsResolved: 0,
+          triggeredBy: 'auto' as const,
         },
       ]);
 
@@ -767,20 +784,29 @@ describe('Database', () => {
     });
 
     it('should order sync history by timestamp', async () => {
-      const now = Date.now();
+      const now = new Date().toISOString();
+      const later = new Date(Date.now() + 1000).toISOString();
 
       await db.syncHistory.bulkAdd([
         {
           id: 'history-2',
-          timestamp: now + 1000,
+          timestamp: later,
           status: 'success' as const,
           deviceId: 'device-123',
+          pushedCount: 0,
+          pulledCount: 0,
+          conflictsResolved: 0,
+          triggeredBy: 'user' as const,
         },
         {
           id: 'history-1',
           timestamp: now,
           status: 'success' as const,
           deviceId: 'device-123',
+          pushedCount: 0,
+          pulledCount: 0,
+          conflictsResolved: 0,
+          triggeredBy: 'user' as const,
         },
       ]);
 
@@ -794,9 +820,9 @@ describe('Database', () => {
   describe('Archive Settings Table', () => {
     it('should store and retrieve archive settings', async () => {
       const settings = {
-        id: 'settings',
+        id: 'settings' as const,
         enabled: true,
-        archiveAfterDays: 45,
+        archiveAfterDays: 30 as const,
       };
 
       await db.archiveSettings.put(settings);
@@ -805,7 +831,7 @@ describe('Database', () => {
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.enabled).toBe(true);
-      expect(retrieved?.archiveAfterDays).toBe(45);
+      expect(retrieved?.archiveAfterDays).toBe(30);
     });
   });
 
@@ -819,13 +845,15 @@ describe('Database', () => {
         important: i % 3 === 0,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true,
+        notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -844,13 +872,15 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true,
+        notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -872,24 +902,29 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true,
+        notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
 
+      const initialTasks = await db.tasks.filter(t => t.completed === true).toArray();
+      expect(initialTasks.length).toBe(0);
+
       await db.tasks.bulkPut(
-        tasks.map(task => ({ ...task, completed: true, completedAt: Date.now() }))
+        tasks.map(task => ({ ...task, completed: true, completedAt: new Date().toISOString() }))
       );
 
-      const completed = await db.tasks.where('completed').equals(true).count();
+      const updatedTasks = await db.tasks.filter(t => t.completed === true).toArray();
 
-      expect(completed).toBe(5);
+      expect(updatedTasks.length).toBe(5);
     });
   });
 
@@ -904,13 +939,13 @@ describe('Database', () => {
           important: true,
           quadrant: 'urgent-important',
           completed: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           recurrence: 'none',
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         };
 
         await db.tasks.add(task);
@@ -922,7 +957,7 @@ describe('Database', () => {
           timestamp: Date.now(),
           retryCount: 0,
           payload: task,
-          vectorClock: {},
+          vectorClock: {}, notificationEnabled: true, notificationSent: false,
         });
       });
 
@@ -945,13 +980,13 @@ describe('Database', () => {
             important: true,
             quadrant: 'urgent-important',
             completed: false,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             recurrence: 'none',
             tags: [],
             subtasks: [],
             dependencies: [],
-            vectorClock: {},
+            vectorClock: {}, notificationEnabled: true, notificationSent: false,
           });
 
           throw new Error('Simulated error');
@@ -976,13 +1011,13 @@ describe('Database', () => {
         important: true,
         quadrant: 'urgent-important',
         completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         recurrence: 'none',
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);

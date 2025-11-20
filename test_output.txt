@@ -1,0 +1,68 @@
+
+> gsd-taskmanager@5.7.0 test /Users/vinnycarpenter/Projects/gsd-taskmanager
+> vitest run tests/data/db.test.ts
+
+
+[1m[46m RUN [49m[22m [36mv4.0.9 [39m[90m/Users/vinnycarpenter/Projects/gsd-taskmanager[39m
+
+ [31m❯[39m tests/data/db.test.ts [2m([22m[2m34 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 77[2mms[22m[39m
+       [32m✓[39m should initialize database with correct name[32m 10[2mms[22m[39m
+       [32m✓[39m should create tasks table[32m 2[2mms[22m[39m
+       [32m✓[39m should create all required tables[32m 1[2mms[22m[39m
+       [32m✓[39m should be a singleton instance[32m 1[2mms[22m[39m
+       [32m✓[39m should add and retrieve a task[32m 2[2mms[22m[39m
+       [32m✓[39m should query tasks by quadrant[32m 3[2mms[22m[39m
+       [32m✓[39m should query tasks by completion status[32m 2[2mms[22m[39m
+       [32m✓[39m should query tasks by compound index [quadrant+completed][32m 2[2mms[22m[39m
+       [32m✓[39m should query tasks by tags using multi-entry index[32m 2[2mms[22m[39m
+       [32m✓[39m should query tasks by dependencies using multi-entry index[32m 2[2mms[22m[39m
+       [32m✓[39m should update a task[32m 2[2mms[22m[39m
+       [32m✓[39m should delete a task[32m 1[2mms[22m[39m
+       [32m✓[39m should count tasks[32m 2[2mms[22m[39m
+       [32m✓[39m should clear all tasks[32m 1[2mms[22m[39m
+       [32m✓[39m should add and retrieve archived task[32m 1[2mms[22m[39m
+       [32m✓[39m should query archived tasks by archivedAt[32m 2[2mms[22m[39m
+       [32m✓[39m should add and retrieve smart view[32m 1[2mms[22m[39m
+       [32m✓[39m should query smart views by isBuiltIn[32m 2[2mms[22m[39m
+       [32m✓[39m should add and retrieve sync queue item[32m 1[2mms[22m[39m
+       [32m✓[39m should query queue items by operation[32m 3[2mms[22m[39m
+       [32m✓[39m should order queue items by timestamp[32m 2[2mms[22m[39m
+       [32m✓[39m should store sync config[32m 2[2mms[22m[39m
+       [32m✓[39m should add and retrieve sync history record[32m 2[2mms[22m[39m
+       [32m✓[39m should query sync history by status[32m 2[2mms[22m[39m
+       [32m✓[39m should order sync history by timestamp[32m 1[2mms[22m[39m
+       [32m✓[39m should store and retrieve archive settings[32m 1[2mms[22m[39m
+       [32m✓[39m should perform bulk add[32m 7[2mms[22m[39m
+       [32m✓[39m should perform bulk delete[32m 2[2mms[22m[39m
+[31m       [31m×[31m should perform bulk update[39m[32m 4[2mms[22m[39m
+       [32m✓[39m should support transactions across multiple tables[32m 2[2mms[22m[39m
+       [32m✓[39m should rollback transaction on error[32m 2[2mms[22m[39m
+       [32m✓[39m should throw error when adding duplicate primary key[32m 2[2mms[22m[39m
+       [32m✓[39m should handle getting non-existent record[32m 1[2mms[22m[39m
+       [32m✓[39m should handle deleting non-existent record[32m 2[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/data/db.test.ts[2m > [22mDatabase[2m > [22mBulk Operations[2m > [22mshould perform bulk update
+[31m[1mDataError[22m: Data provided to an operation does not meet requirements.
+ DataError: Data provided to an operation does not meet requirements.[39m
+[90m [2m❯[22m valueToKey node_modules/.pnpm/fake-indexeddb@6.2.5/node_modules/fake-indexeddb/build/esm/lib/valueToKey.js:[2m10:11[22m[39m
+[90m [2m❯[22m cmp node_modules/.pnpm/fake-indexeddb@6.2.5/node_modules/fake-indexeddb/build/esm/lib/cmp.js:[2m27:11[22m[39m
+[90m [2m❯[22m Function.bound node_modules/.pnpm/fake-indexeddb@6.2.5/node_modules/fake-indexeddb/build/esm/FDBKeyRange.js:[2m31:23[22m[39m
+[90m [2m❯[22m makeIDBKeyRange node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m3081:33[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m3330:43[22m[39m
+[90m [2m❯[22m executePromiseTask node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m784:13[22m[39m
+[90m [2m❯[22m new DexiePromise node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m615:9[22m[39m
+[90m [2m❯[22m Object.count node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m3327:28[22m[39m
+[90m [2m❯[22m Object.tableClone.<computed> [as count] node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m4865:50[22m[39m
+[90m [2m❯[22m Object.count node_modules/.pnpm/dexie@4.2.1/node_modules/dexie/dist/dexie.js:[2m4392:38[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m33 passed[39m[22m[90m (34)[39m
+[2m   Start at [22m 20:47:12
+[2m   Duration [22m 651ms[2m (transform 41ms, setup 55ms, collect 44ms, tests 77ms, environment 269ms, prepare 4ms)[22m
+
+ ELIFECYCLE  Test failed. See above for more details.

@@ -44,20 +44,6 @@ class GsdDatabase extends Dexie {
         });
       });
 
-    // Version 10: Add syncHistory table for tracking sync operations
-    this.version(10)
-      .stores({
-        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
-        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
-        smartViews: "id, name, isBuiltIn, createdAt",
-        notificationSettings: "id",
-        syncQueue: "id, taskId, operation, timestamp, retryCount",
-        syncMetadata: "key",
-        deviceInfo: "key",
-        archiveSettings: "id",
-        syncHistory: "id, timestamp, status, deviceId"
-      });
-
     // Version 3: Add indexes for better query performance and fix test issues
     // Add createdAt and updatedAt indexes for sorting and filtering
     this.version(3).stores({
@@ -89,20 +75,6 @@ class GsdDatabase extends Dexie {
         });
       });
 
-    // Version 10: Add syncHistory table for tracking sync operations
-    this.version(10)
-      .stores({
-        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
-        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
-        smartViews: "id, name, isBuiltIn, createdAt",
-        notificationSettings: "id",
-        syncQueue: "id, taskId, operation, timestamp, retryCount",
-        syncMetadata: "key",
-        deviceInfo: "key",
-        archiveSettings: "id",
-        syncHistory: "id, timestamp, status, deviceId"
-      });
-
     // Version 6: Add dependencies field for task dependencies
     this.version(6)
       .stores({
@@ -117,20 +89,6 @@ class GsdDatabase extends Dexie {
             task.dependencies = [];
           }
         });
-      });
-
-    // Version 10: Add syncHistory table for tracking sync operations
-    this.version(10)
-      .stores({
-        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
-        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
-        smartViews: "id, name, isBuiltIn, createdAt",
-        notificationSettings: "id",
-        syncQueue: "id, taskId, operation, timestamp, retryCount",
-        syncMetadata: "key",
-        deviceInfo: "key",
-        archiveSettings: "id",
-        syncHistory: "id, timestamp, status, deviceId"
       });
 
     // Version 7: Add sync support
@@ -178,20 +136,6 @@ class GsdDatabase extends Dexie {
         });
       });
 
-    // Version 10: Add syncHistory table for tracking sync operations
-    this.version(10)
-      .stores({
-        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
-        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
-        smartViews: "id, name, isBuiltIn, createdAt",
-        notificationSettings: "id",
-        syncQueue: "id, taskId, operation, timestamp, retryCount",
-        syncMetadata: "key",
-        deviceInfo: "key",
-        archiveSettings: "id",
-        syncHistory: "id, timestamp, status, deviceId"
-      });
-
     // Version 8: Add completedAt field for Smart Views date filtering
     this.version(8)
       .stores({
@@ -209,20 +153,6 @@ class GsdDatabase extends Dexie {
             task.completedAt = task.updatedAt;
           }
         });
-      });
-
-    // Version 10: Add syncHistory table for tracking sync operations
-    this.version(10)
-      .stores({
-        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
-        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
-        smartViews: "id, name, isBuiltIn, createdAt",
-        notificationSettings: "id",
-        syncQueue: "id, taskId, operation, timestamp, retryCount",
-        syncMetadata: "key",
-        deviceInfo: "key",
-        archiveSettings: "id",
-        syncHistory: "id, timestamp, status, deviceId"
       });
 
     // Version 9: Add archivedTasks table and archiveSettings
@@ -279,4 +209,3 @@ export function getDb(): GsdDatabase {
   dbInstance = new GsdDatabase();
   return dbInstance;
 }
-
