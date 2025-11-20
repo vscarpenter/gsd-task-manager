@@ -310,15 +310,15 @@ describe('Dashboard Components', () => {
     it('should show overdue tasks', () => {
       render(<UpcomingDeadlines tasks={testTasks} />);
 
-      expect(screen.getByText('Overdue Task')).toBeInTheDocument();
+      expect(screen.getByText('Late Task')).toBeInTheDocument();
       expect(screen.getByText(/overdue/i)).toBeInTheDocument();
     });
 
     it('should show tasks due today', () => {
       render(<UpcomingDeadlines tasks={testTasks} />);
 
-      expect(screen.getByText('Due Today')).toBeInTheDocument();
-      expect(screen.getByText(/due today/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Due Today/i })).toBeInTheDocument();
+      expect(screen.getByText(/due today \(1\)/i)).toBeInTheDocument();
     });
 
     it('should show tasks due this week', () => {
@@ -331,15 +331,15 @@ describe('Dashboard Components', () => {
       render(<UpcomingDeadlines tasks={testTasks} />);
 
       // Should have section headers or content
-      expect(screen.getByText(/overdue/i)).toBeInTheDocument();
-      expect(screen.getByText(/today/i) || screen.getByText(/due today/i)).toBeInTheDocument();
+      expect(screen.getByText(/overdue \(1\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/due today \(1\)/i)).toBeInTheDocument();
     });
 
     it('should make tasks clickable to navigate', () => {
       const onTaskClick = vi.fn();
       render(<UpcomingDeadlines tasks={testTasks} onTaskClick={onTaskClick} />);
 
-      expect(screen.getByText('Overdue Task')).toBeInTheDocument();
+      expect(screen.getByText('Late Task')).toBeInTheDocument();
     });
 
     it('should show count of overdue tasks', () => {
@@ -377,7 +377,7 @@ describe('Dashboard Components', () => {
       // Completed task should not be displayed
       expect(screen.queryByText('Completed Overdue')).not.toBeInTheDocument();
       // But uncompleted tasks should still be visible
-      expect(screen.getByText('Overdue Task')).toBeInTheDocument();
+      expect(screen.getByText('Late Task')).toBeInTheDocument();
     });
   });
 });

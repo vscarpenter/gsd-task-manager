@@ -468,8 +468,6 @@ describe('Database', () => {
         subtasks: [],
         dependencies: [],
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
-        notificationEnabled: true,
-        notificationSent: false,
       };
 
       await db.archivedTasks.add(archivedTask);
@@ -504,8 +502,6 @@ describe('Database', () => {
           subtasks: [],
           dependencies: [],
           vectorClock: {}, notificationEnabled: true, notificationSent: false,
-          notificationEnabled: true,
-          notificationSent: false,
         },
         {
           id: 'archived-2',
@@ -524,8 +520,6 @@ describe('Database', () => {
           subtasks: [],
           dependencies: [],
           vectorClock: {}, notificationEnabled: true, notificationSent: false,
-          notificationEnabled: true,
-          notificationSent: false,
         },
       ];
 
@@ -852,8 +846,6 @@ describe('Database', () => {
         subtasks: [],
         dependencies: [],
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
-        notificationEnabled: true,
-        notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -879,8 +871,6 @@ describe('Database', () => {
         subtasks: [],
         dependencies: [],
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
-        notificationEnabled: true,
-        notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -909,8 +899,6 @@ describe('Database', () => {
         subtasks: [],
         dependencies: [],
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
-        notificationEnabled: true,
-        notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);

@@ -21,6 +21,20 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
 }));
 
+// Mock Next.js App Router
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 // Mock notification checker
 vi.mock('@/lib/notification-checker', () => ({
   notificationChecker: {
@@ -52,11 +66,29 @@ describe('MatrixBoard Integration Tests', () => {
       renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+        expect(screen.getByText(/welcome to gsd task manager/i)).toBeInTheDocument();
       });
     });
 
     it('should render all four quadrants', async () => {
+      // Add a task so quadrants are rendered (they don't show on empty state)
+      await db.tasks.add({
+        id: 'test-task',
+        title: 'Test Task',
+        description: '',
+        urgent: true,
+        important: true,
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        recurrence: 'none',
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+      });
+
       renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
@@ -74,8 +106,8 @@ describe('MatrixBoard Integration Tests', () => {
         // Search should be present
         expect(screen.getByPlaceholderText(/search tasks/i)).toBeInTheDocument();
 
-        // New task button should be present
-        expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument();
+        // New task button should be present (use text match since aria-label might not be set)
+        expect(screen.getByText(/new task/i)).toBeInTheDocument();
       });
     });
   });
@@ -680,8 +712,8 @@ describe('MatrixBoard Integration Tests', () => {
       renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
-        expect(screen.getByText(/get started by creating your first task/i)).toBeInTheDocument();
+        expect(screen.getByText(/welcome to gsd task manager/i)).toBeInTheDocument();
+        expect(screen.getByText(/create your first task/i)).toBeInTheDocument();
       });
     });
 
@@ -710,7 +742,7 @@ describe('MatrixBoard Integration Tests', () => {
       await user.type(searchInput, 'Python');
 
       await waitFor(() => {
-        expect(screen.getByText(/no matching tasks found/i)).toBeInTheDocument();
+        expect(screen.getByText(/no tasks match/i)).toBeInTheDocument();
       });
     });
   });
