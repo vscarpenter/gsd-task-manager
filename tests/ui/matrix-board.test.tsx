@@ -629,6 +629,22 @@ describe('MatrixBoard Integration Tests', () => {
   });
 
   describe('URL Parameters', () => {
+    let originalLocation: Location;
+
+    beforeEach(() => {
+      // Capture original window.location before each test
+      originalLocation = window.location;
+    });
+
+    afterEach(() => {
+      // Restore original window.location after each test
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      });
+    });
+
     it('should handle new task action from URL parameter', async () => {
       // Mock window.location.search
       Object.defineProperty(window, 'location', {
@@ -637,6 +653,7 @@ describe('MatrixBoard Integration Tests', () => {
           search: '?action=new-task',
         },
         writable: true,
+        configurable: true,
       });
 
       render(<MatrixBoard />);
