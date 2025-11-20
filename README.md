@@ -1,5 +1,3 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vscarpenter-gsd-task-manager-badge.png)](https://mseep.ai/app/vscarpenter-gsd-task-manager)
-
 # GSD Task Manager
 
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
@@ -407,6 +405,10 @@ Contributions are welcome! Please:
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+---
+
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vscarpenter-gsd-task-manager-badge.png)](https://mseep.ai/app/vscarpenter-gsd-task-manager)
 
 ---
 
