@@ -200,5 +200,22 @@ export async function pushLocalChanges(
 
   logger.debug('Push phase complete');
 
-  return response;
+  // Return enriched response with operation details for notifications
+  return {
+    ...response,
+    rejectedOps: response.rejected.map(r => {
+      const op = pendingOps.find(o => o.taskId === r.taskId);
+      return {
+        ...r,
+        operation: op?.operation,
+      };
+    }),
+    conflictedOps: response.conflicts.map((c: any) => {
+      const op = pendingOps.find(o => o.taskId === c.taskId);
+      return {
+        ...c,
+        operation: op?.operation,
+      };
+    }),
+  };
 }

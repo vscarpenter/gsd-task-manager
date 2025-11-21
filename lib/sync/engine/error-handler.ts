@@ -10,6 +10,7 @@ import type { RetryManager } from '../retry-manager';
 import type { TokenManager } from '../token-manager';
 import type { SyncResult } from '../types';
 import { recordSyncError } from '@/lib/sync-history';
+import { notifySyncError } from '@/lib/sync/notifications';
 
 const logger = createLogger('SYNC_ERROR');
 
@@ -34,7 +35,7 @@ export async function handleSyncError(
   const pendingCount = await queue.getPendingCount();
 
   // Log error with context
-  logger.error('Sync operation failed', syncError, {
+  logger.error(`Sync operation failed: ${syncError.message}`, syncError, {
     category: errorCategory,
     pushed: pushResult?.accepted.length || 0,
     pulled: pullResult?.tasks.length || 0,
@@ -60,7 +61,7 @@ export async function handleSyncError(
     const retryCount = await retryManager.getRetryCount();
     const shouldRetry = await retryManager.shouldRetry();
 
-    logger.info('Transient error - will retry with backoff', {
+    logger.error(`Transient error - will retry with backoff: ${syncError.message}`, syncError, {
       consecutiveFailures: retryCount,
       shouldRetry,
       nextRetryDelay: shouldRetry ? `${retryManager.getNextRetryDelay(retryCount) / 1000}s` : 'max retries exceeded',
@@ -68,14 +69,28 @@ export async function handleSyncError(
 
     if (shouldRetry) {
       const delay = retryManager.getNextRetryDelay(retryCount);
+      const errorMsg = `Network error. Will retry automatically in ${Math.round(delay / 1000)}s.`;
+
+      // Notify user for manual syncs
+      if (triggeredBy === 'user') {
+        notifySyncError(errorMsg, false, { enabled: true });
+      }
+
       return {
         status: 'error',
-        error: `Network error. Will retry automatically in ${Math.round(delay / 1000)}s.`,
+        error: errorMsg,
       };
     } else {
+      const errorMsg = 'Sync failed after multiple retries. Please check your connection and try again.';
+
+      // Notify user for manual syncs (permanent failure)
+      if (triggeredBy === 'user') {
+        notifySyncError(errorMsg, true, { enabled: true });
+      }
+
       return {
         status: 'error',
-        error: 'Sync failed after multiple retries. Please check your connection and try again.',
+        error: errorMsg,
       };
     }
   }
@@ -88,29 +103,51 @@ export async function handleSyncError(
 
     if (refreshed) {
       logger.info('Token refreshed successfully - user should retry sync');
+      const errorMsg = 'Authentication refreshed. Please try syncing again.';
+
+      // Notify user for manual syncs
+      if (triggeredBy === 'user') {
+        notifySyncError(errorMsg, false, { enabled: true });
+      }
 
       return {
         status: 'error',
-        error: 'Authentication refreshed. Please try syncing again.',
+        error: errorMsg,
       };
     } else {
       logger.warn('Token refresh failed - user must re-authenticate');
+      const errorMsg = 'Authentication expired. Please sign in again.';
+
+      // Notify user (permanent auth failure)
+      if (triggeredBy === 'user') {
+        notifySyncError(errorMsg, true, { enabled: true });
+      }
 
       return {
         status: 'error',
-        error: 'Authentication expired. Please sign in again.',
+        error: errorMsg,
       };
     }
   }
 
   // Handle permanent errors: log, notify user, don't retry
   if (errorCategory === 'permanent') {
-    logger.warn('Permanent error - will not retry', { errorMessage: syncError.message });
+    logger.error(`Permanent error - will not retry: ${syncError.message}`, syncError, {
+      category: 'permanent',
+      errorType: syncError.constructor.name,
+    });
+
+    const errorMsg = `Sync error: ${syncError.message}. Please check your data and try again.`;
+
+    // Notify user (permanent error)
+    if (triggeredBy === 'user') {
+      notifySyncError(errorMsg, true, { enabled: true });
+    }
 
     // Don't record failure for permanent errors (no retry needed)
     return {
       status: 'error',
-      error: `Sync error: ${syncError.message}. Please check your data and try again.`,
+      error: errorMsg,
     };
   }
 

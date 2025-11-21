@@ -24,6 +24,12 @@ import {
   queueExistingTasks as queueAllExistingTasks,
 } from './metadata-manager';
 import { recordSyncSuccess } from '@/lib/sync-history';
+import {
+  notifyRejectedOperations,
+  notifyConflicts,
+  notifySyncSuccess,
+  notifySyncError,
+} from '@/lib/sync/notifications';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -231,6 +237,30 @@ export class SyncEngine {
         conflictsRemaining: result.conflicts?.length || 0,
         syncDuration: `${syncDuration}ms`,
       });
+
+      // ENHANCEMENT: Show user-friendly notifications for sync results
+      // Only show notifications for user-triggered syncs to avoid notification spam
+      const shouldNotify = priority === 'user';
+
+      // Notify about rejected operations
+      if (shouldNotify && pushResult.rejectedOps && pushResult.rejectedOps.length > 0) {
+        notifyRejectedOperations(pushResult.rejectedOps, { enabled: true });
+      }
+
+      // Notify about conflicts
+      if (shouldNotify && pushResult.conflictedOps && pushResult.conflictedOps.length > 0) {
+        notifyConflicts(pushResult.conflictedOps, { enabled: true });
+      }
+
+      // Notify about successful sync (if there were changes)
+      if (shouldNotify && result.status === 'success') {
+        notifySyncSuccess(
+          result.pushedCount || 0,
+          result.pulledCount || 0,
+          result.conflictsResolved || 0,
+          { enabled: true }
+        );
+      }
 
       // Record successful sync to history (best-effort, don't fail sync if history write fails)
       try {

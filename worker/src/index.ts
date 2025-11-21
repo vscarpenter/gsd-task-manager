@@ -3,7 +3,7 @@ import type { Env, RequestContext } from './types';
 import { authMiddleware } from './middleware/auth';
 import { rateLimitMiddleware } from './middleware/rate-limit';
 import { createCorsHeaders, jsonResponse, errorResponse } from './middleware/cors';
-import { TTL, RETENTION } from './config';
+import { TTL } from './config';
 import { createLogger } from './utils/logger';
 import * as oidcHandlers from './handlers/oidc';
 import * as syncHandlers from './handlers/sync';
@@ -273,30 +273,19 @@ export default {
 
   // Cron trigger for cleanup tasks
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    logger.info('Starting scheduled cleanup tasks');
+    const { runCleanup } = await import('./handlers/cleanup');
 
     try {
-      // Clean up old deleted tasks
-      const deletedTasksThreshold = Date.now() - RETENTION.DELETED_TASKS * 24 * 60 * 60 * 1000;
-      await env.DB.prepare('DELETE FROM encrypted_tasks WHERE deleted_at < ?')
-        .bind(deletedTasksThreshold)
-        .run();
+      const result = await runCleanup(env);
 
-      // Clean up old conflict logs
-      const conflictLogsThreshold = Date.now() - RETENTION.CONFLICT_LOGS * 24 * 60 * 60 * 1000;
-      await env.DB.prepare('DELETE FROM conflict_log WHERE resolved_at < ?')
-        .bind(conflictLogsThreshold)
-        .run();
-
-      // Clean up inactive devices
-      const inactiveDevicesThreshold = Date.now() - RETENTION.INACTIVE_DEVICES * 24 * 60 * 60 * 1000;
-      await env.DB.prepare('DELETE FROM devices WHERE last_seen_at < ? AND is_active = 0')
-        .bind(inactiveDevicesThreshold)
-        .run();
-
-      logger.info('Cleanup tasks completed successfully');
+      logger.info('Scheduled cleanup completed', {
+        deletedTasks: result.deletedTasks,
+        conflictLogs: result.conflictLogs,
+        inactiveDevices: result.inactiveDevices,
+        totalDuration: `${result.duration}ms`,
+      });
     } catch (error) {
-      logger.error('Cleanup tasks failed', error as Error);
+      logger.error('Scheduled cleanup failed', error as Error);
     }
   },
 };
