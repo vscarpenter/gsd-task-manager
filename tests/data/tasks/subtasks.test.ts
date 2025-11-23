@@ -71,6 +71,12 @@ describe('Task Subtask Operations', () => {
     vi.clearAllMocks();
     mockEnqueue.mockClear();
 
+    // Reset sync config to disabled state
+    (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      enabled: false,
+      deviceId: 'test-device',
+    });
+
     // Create mock database
     mockDb = {
       tasks: {

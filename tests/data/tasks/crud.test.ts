@@ -10,10 +10,14 @@ import {
   clearTasks,
 } from '@/lib/tasks';
 import { getDb } from '@/lib/db';
+import { getSyncConfig } from '@/lib/sync/config';
 import type { TaskDraft, TaskRecord } from '@/lib/types';
 
 // Mock dependencies
 const mockEnqueue = vi.fn();
+const mockScheduleDebouncedSync = vi.fn();
+const mockIsRunning = vi.fn(() => false);
+
 vi.mock('@/lib/db');
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(() => ({
@@ -26,7 +30,12 @@ vi.mock('@/lib/sync/config', () => ({
     deviceId: 'test-device',
   })),
 }));
-vi.mock('@/lib/sync/background-sync');
+vi.mock('@/lib/sync/background-sync', () => ({
+  getBackgroundSyncManager: vi.fn(() => ({
+    isRunning: mockIsRunning,
+    scheduleDebouncedSync: mockScheduleDebouncedSync,
+  })),
+}));
 vi.mock('@/lib/logger', () => ({
   default: {
     error: vi.fn(),
@@ -62,6 +71,14 @@ describe('Task CRUD Operations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockEnqueue.mockClear();
+    mockScheduleDebouncedSync.mockClear();
+    mockIsRunning.mockReturnValue(false);
+
+    // Reset sync config to disabled state
+    (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      enabled: false,
+      deviceId: 'test-device',
+    });
 
     // Create mock database
     mockDb = {

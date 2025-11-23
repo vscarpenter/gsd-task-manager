@@ -5,19 +5,17 @@ import {
   requestNotificationPermission,
   shouldAskForPermission,
   isInQuietHours,
-  getNotificationSettings,
-  updateNotificationSettings,
 } from '@/lib/notifications';
 
-// Mock the settings functions
-vi.mock('@/lib/notifications', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...(actual as any),
-    getNotificationSettings: vi.fn(),
-    updateNotificationSettings: vi.fn(),
-  };
-});
+// Mock the settings functions at the correct import path
+// Must use vi.fn() directly in factory due to hoisting
+vi.mock('@/lib/notifications/settings', () => ({
+  getNotificationSettings: vi.fn(),
+  updateNotificationSettings: vi.fn(),
+}));
+
+// Import mocked functions after mock is set up
+import { getNotificationSettings, updateNotificationSettings } from '@/lib/notifications/settings';
 
 describe('Notification Permissions', () => {
   beforeEach(() => {
