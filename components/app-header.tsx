@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { GsdLogo } from "@/components/gsd-logo";
-import { SmartViewSelector } from "@/components/smart-view-selector";
+import { SmartViewPills } from "@/components/smart-view-pills";
 import { ViewToggle } from "@/components/view-toggle";
 import { SyncButton } from "@/components/sync/sync-button";
+import { QuickSettingsPanel } from "@/components/quick-settings-panel";
 import { useSync } from "@/lib/hooks/use-sync";
 import { getSyncQueue } from "@/lib/sync/queue";
 import type { FilterCriteria } from "@/lib/filters";
@@ -42,6 +43,8 @@ interface AppHeaderProps {
   onSelectSmartView: (criteria: FilterCriteria) => void;
   onOpenFilters: () => void;
   currentFilterCriteria?: FilterCriteria;
+  activeSmartViewId?: string | null;
+  onActiveViewChange?: (viewId: string | null) => void;
   selectionMode?: boolean;
   onToggleSelectionMode?: () => void;
   selectedCount?: number;
@@ -57,6 +60,8 @@ export function AppHeader({
   onSelectSmartView,
   onOpenFilters, // eslint-disable-line @typescript-eslint/no-unused-vars
   currentFilterCriteria,
+  activeSmartViewId,
+  onActiveViewChange,
   selectionMode = false,
   onToggleSelectionMode,
   selectedCount = 0
@@ -201,21 +206,15 @@ export function AppHeader({
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-12 w-12 p-0"
-                    onClick={onOpenSettings}
-                    aria-label="Settings"
-                  >
-                    <SettingsIcon className="h-7 w-7" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Settings</p>
-                </TooltipContent>
-              </Tooltip>
+              <QuickSettingsPanel onOpenFullSettings={onOpenSettings}>
+                <Button
+                  variant="ghost"
+                  className="h-12 w-12 p-0"
+                  aria-label="Quick Settings"
+                >
+                  <SettingsIcon className="h-7 w-7" />
+                </Button>
+              </QuickSettingsPanel>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button className="h-12 w-12 p-0" onClick={onHelp} aria-label="User Guide">
@@ -248,7 +247,12 @@ export function AppHeader({
             aria-label="Search tasks"
           />
         </div>
-        <SmartViewSelector onSelectView={onSelectSmartView} currentCriteria={currentFilterCriteria} />
+        <SmartViewPills
+          onSelectView={onSelectSmartView}
+          currentCriteria={currentFilterCriteria}
+          activeViewId={activeSmartViewId}
+          onActiveViewChange={onActiveViewChange}
+        />
         {/* Add Filter button temporarily disabled - Smart Views provide sufficient filtering */}
         {/* <Button variant="subtle" onClick={onOpenFilters}>
           <PlusIcon className="mr-2 h-4 w-4" /> Add Filter

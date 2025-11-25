@@ -11,6 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { GettingStartedSection } from "@/components/user-guide/getting-started-section";
+import { PowerFeaturesSection } from "@/components/user-guide/power-features-section";
 import { MatrixSection } from "@/components/user-guide/matrix-section";
 import { TaskManagementSection } from "@/components/user-guide/task-management-section";
 import { AdvancedFeaturesSection } from "@/components/user-guide/advanced-features-section";
@@ -30,6 +31,7 @@ interface UserGuideDialogProps {
 export function UserGuideDialog({ open, onOpenChange }: UserGuideDialogProps) {
 	const [expandedSections, setExpandedSections] = useState({
 		gettingStarted: true,
+		powerFeatures: false,
 		matrix: false,
 		taskManagement: false,
 		advancedFeatures: false,
@@ -68,6 +70,12 @@ export function UserGuideDialog({ open, onOpenChange }: UserGuideDialogProps) {
 					<GettingStartedSection
 						expanded={expandedSections.gettingStarted}
 						onToggle={() => toggleSection("gettingStarted")}
+					/>
+
+					{/* Power Features (v5.10.0) */}
+					<PowerFeaturesSection
+						expanded={expandedSections.powerFeatures}
+						onToggle={() => toggleSection("powerFeatures")}
 					/>
 
 					{/* Eisenhower Matrix */}

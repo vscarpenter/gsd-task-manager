@@ -23,9 +23,10 @@ export function ShortcutsSection({
 			<div className="space-y-4 text-sm">
 				<div>
 					<h4 className="font-semibold text-foreground mb-2">
-						Essential Shortcuts
+						Global Shortcuts
 					</h4>
 					<div className="space-y-2">
+						<ShortcutRow shortcut="⌘K / Ctrl+K" description="Open command palette (universal search & actions)" />
 						<ShortcutRow shortcut="N" description="Create new task" />
 						<ShortcutRow shortcut="/" description="Focus search bar" />
 						<ShortcutRow shortcut="?" description="Open this user guide" />
@@ -35,9 +36,37 @@ export function ShortcutsSection({
 
 				<div>
 					<h4 className="font-semibold text-foreground mb-2">
+						Command Palette Shortcuts
+					</h4>
+					<div className="space-y-2">
+						<ShortcutRow shortcut="⌘M / Ctrl+M" description="View matrix" />
+						<ShortcutRow shortcut="⌘D / Ctrl+D" description="View dashboard" />
+						<ShortcutRow shortcut="⌘T / Ctrl+T" description="Toggle theme" />
+						<ShortcutRow shortcut="⌘N / Ctrl+N" description="Create new task" />
+						<ShortcutRow shortcut="⌘, / Ctrl+," description="Open settings" />
+					</div>
+				</div>
+
+				<div>
+					<h4 className="font-semibold text-foreground mb-2">
+						Smart View Shortcuts
+					</h4>
+					<div className="space-y-2">
+						<ShortcutRow shortcut="1-9" description="Activate pinned smart view at position" />
+						<ShortcutRow shortcut="0" description="Clear active smart view filter" />
+					</div>
+					<p className="text-xs text-foreground-muted mt-2">
+						💡 Pin your favorite smart views using the "More" button (⋯) in the header, then use number keys for instant access!
+					</p>
+				</div>
+
+				<div>
+					<h4 className="font-semibold text-foreground mb-2">
 						Power User Tips
 					</h4>
 					<ul className="space-y-2 text-foreground-muted">
+						<li>💡 Use ⌘K command palette to discover all available actions</li>
+						<li>💡 Pin your most-used smart views for instant number-key access</li>
 						<li>💡 Use tags strategically—they're your custom categories</li>
 						<li>💡 Review Dashboard weekly to spot trends</li>
 						<li>💡 Set recurring tasks for weekly/monthly reviews</li>
@@ -50,16 +79,14 @@ export function ShortcutsSection({
 						</li>
 						<li>💡 Use dependencies to sequence projects correctly</li>
 						<li>
-							💡 Hide completed tasks during work, show them for review
+							💡 Use Quick Settings panel for theme/notifications without full settings
 						</li>
 					</ul>
 				</div>
 
 				<div className="rounded-lg bg-accent/10 border border-accent/20 p-3">
 					<p className="text-foreground">
-						<strong>Hidden Gem:</strong> Click Matrix/Dashboard toggle to
-						quickly switch views. Use Matrix for planning, Dashboard for
-						reflection on what you accomplished!
+						<strong>🎯 Pro Workflow:</strong> Press ⌘K to open the command palette, type a few letters of any task/action/view, and hit Enter. Navigate your entire workflow without touching the mouse!
 					</p>
 				</div>
 			</div>

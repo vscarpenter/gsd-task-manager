@@ -3,7 +3,7 @@
 **Get Stuff Done** — A privacy-first, open-source task manager built on the Eisenhower Matrix productivity framework.
 
 - **Live App**: [gsd.vinny.dev](https://gsd.vinny.dev)
-- **Version**: 5.5.0
+- **Version**: 5.10.0
 - **License**: MIT
 - **Tech Stack**: Next.js 16, React 19, TypeScript, IndexedDB, Cloudflare Workers
 
@@ -18,6 +18,7 @@ GSD Task Manager is a modern web application that helps users prioritize tasks u
 - **Zero tracking, zero analytics, zero data collection** — Your task data never leaves your device unless you explicitly enable encrypted sync
 - **Framework-driven productivity** — The Eisenhower Matrix forces intentional prioritization, helping you focus on what matters rather than what's merely urgent
 - **Power-user features without complexity** — Dependencies, recurring tasks, subtasks, batch operations, and advanced analytics—all with a clean, intuitive interface
+- **Command-driven workflow** — Universal ⌘K command palette for instant access to any action, task, or setting
 - **Progressive Web App** — Install on any device, works completely offline, no app store required
 - **AI-powered with Claude Desktop** — Natural language task management through the MCP server (optional)
 
@@ -994,6 +995,238 @@ GSD's export format is intentionally simple to facilitate migration:
 2. Toast appears: "New version available. Refresh?"
 3. User clicks "Refresh" → app reloads with updates
 4. User clicks "Dismiss" → update deferred until next visit
+
+---
+
+## UI/UX Enhancements (v5.10.0)
+
+### Command Palette — Universal Search and Action Interface
+
+The **Command Palette** is GSD's power-user feature for instant access to any action, task, or setting through a single keyboard shortcut.
+
+**Opening the Command Palette:**
+- Press `⌘K` (Mac) or `Ctrl+K` (Windows/Linux) anywhere in the app
+- Keyboard-first interface with no mouse required
+- Remembers your last search query when reopened
+
+**Features:**
+
+1. **Universal Search**
+   - Search across all tasks by title, description, tags, and subtasks
+   - Real-time filtering as you type (shows top 10 matches)
+   - Task results include quadrant badge, completion status, and tags
+   - Click any task to navigate to it in the matrix view
+
+2. **Quick Actions**
+   - Create new task (`⌘N`)
+   - Toggle theme (`⌘T`)
+   - Export/import tasks
+   - Trigger sync (if enabled)
+   - Toggle selection mode
+   - Clear selection (when active)
+
+3. **Navigation**
+   - View matrix (`⌘M`)
+   - View dashboard (`⌘D`)
+   - View archived tasks
+   - View sync history (if sync enabled)
+
+4. **Smart Views**
+   - All 7 built-in smart views accessible instantly
+   - Apply any view filter with a single click
+   - Displays view name and description for context
+
+5. **Settings**
+   - Open settings (`⌘,`)
+   - Open user guide (`?`)
+
+**Implementation Details:**
+- Built with `cmdk` library (v1.1.1) for accessible keyboard navigation
+- Uses Radix UI Dialog primitives for accessibility
+- Fuzzy search matches against action labels and keywords
+- Grouped sections (Tasks, Actions, Navigation, Smart Views, Settings)
+- Arrow keys to navigate, Enter to select, Escape to close
+- Displays keyboard shortcuts for each action when available
+
+**Use Cases:**
+- **Quick task lookup**: Type "quarterly report" to find related tasks instantly
+- **Fast navigation**: `⌘K` → "dashboard" → Enter (3 keystrokes to dashboard)
+- **Action discovery**: Explore all available actions without memorizing shortcuts
+- **Theme switching**: `⌘K` → `⌘T` → toggle theme (or use command palette to trigger)
+
+**Keyboard Navigation:**
+```
+⌘K / Ctrl+K      Open/close command palette
+↑ / ↓             Navigate items
+Enter             Execute action/select task
+Escape            Close palette
+```
+
+---
+
+### Quick Settings Panel — Streamlined Preference Access
+
+The **Quick Settings Panel** provides instant access to frequently-adjusted preferences without opening the full settings dialog.
+
+**Opening the Panel:**
+- Click the settings icon in the header (gear icon)
+- Panel slides out from the right side
+- Non-modal (can click outside to close)
+
+**Settings Available:**
+
+1. **Theme**
+   - Light / Dark / System (auto)
+   - Three-button toggle for instant switching
+   - Icon indicators (sun, moon, monitor)
+   - Changes apply immediately
+
+2. **Show Completed Tasks**
+   - Toggle switch to show/hide completed tasks in matrix view
+   - Syncs with matrix board state
+   - Useful for focusing on active work vs. reviewing accomplishments
+
+3. **Notifications**
+   - Enable/disable browser notifications
+   - Requests permission on first enable
+   - Applies to all task due date reminders
+
+4. **Auto-Sync Interval** (conditional)
+   - Only shown if sync is enabled AND auto-sync is on
+   - Slider control from 1-30 minutes
+   - Real-time preview (e.g., "Tasks sync automatically every 5 minutes")
+   - Changes apply immediately to sync schedule
+
+**Link to Full Settings:**
+- "All settings" button at bottom of panel
+- Opens full settings dialog with tabs for advanced options
+
+**Implementation Details:**
+- Built with Radix UI Sheet primitive (slide-out panel)
+- Uses Radix UI Slider for sync interval control
+- State managed by `useQuickSettings` hook
+- Emits CustomEvents for cross-component reactivity:
+  - `toggle-completed` — Syncs show/hide completed state with matrix board
+  - Settings persisted to IndexedDB (appPreferences table)
+
+**Use Cases:**
+- **Theme switching**: Quickly adapt to changing lighting conditions
+- **Focus mode**: Hide completed tasks to focus on active work
+- **Sync tuning**: Adjust sync frequency based on network conditions or battery life
+- **Notification management**: Disable reminders during focused work sessions
+
+---
+
+### Smart View Pinning — Instant Filter Access
+
+**Smart View Pinning** allows you to pin up to 5 frequently-used smart views to the header for instant access with keyboard shortcuts.
+
+**Pinning Smart Views:**
+1. Click the "More" button (three dots) in the header smart view area
+2. Opens the full Smart View Selector dialog
+3. Click the pin icon next to any smart view to pin/unpin
+4. Pinned views appear as pills in the header (max 5)
+
+**Keyboard Shortcuts:**
+- `1-9` — Activate pinned smart view at that position (e.g., `2` activates 2nd pinned view)
+- `0` — Clear active smart view filter (show all tasks)
+- Shortcuts disabled when typing in input fields (automatic detection)
+
+**Visual Indicators:**
+- Active view highlighted with primary button styling (blue background)
+- Inactive views shown with subtle button styling (gray background)
+- Keyboard shortcut badge shown on desktop (`1`, `2`, etc.)
+- "Clear" button appears when a view is active (shows `0` shortcut)
+
+**Horizontal Scrolling:**
+- Pills scroll horizontally on narrow screens
+- No visible scrollbar (cleaner UI)
+- Touch-friendly swipe gestures on mobile
+
+**"More" Button:**
+- Opens full smart view selector for all 7+ views
+- Highlighted with ring indicator if no view is currently active
+- Access to custom smart view creation (future feature)
+
+**Implementation Details:**
+- Pinned view IDs stored in `appPreferences` table (IndexedDB)
+- `getPinnedSmartViews()` loads pinned views on component mount
+- `pinnedViewsChanged` CustomEvent emitted when pins change (reactivity)
+- `useSmartViewShortcuts` hook handles keyboard shortcuts with typing detection
+- `isTypingElement()` helper prevents shortcuts when typing in inputs
+
+**Use Cases:**
+- **Daily workflow**: Pin "Today's Focus" for quick access at start of day (`1` → today's tasks)
+- **Weekly planning**: Pin "This Week" for planning sessions (`2` → week view)
+- **Sprint tracking**: Pin custom sprint view for agile workflows
+- **Context switching**: Quick toggle between work/personal views with number keys
+
+**Example Pin Setup:**
+```
+1. 📅 Today's Focus          (Shortcut: 1)
+2. 📆 This Week              (Shortcut: 2)
+3. ⏰ Overdue Backlog        (Shortcut: 3)
+4. 🔁 Recurring Tasks        (Shortcut: 4)
+5. ✅ Recently Completed     (Shortcut: 5)
+
+Press 0 to clear and view all tasks
+```
+
+---
+
+### Enhanced Keyboard Navigation
+
+GSD v5.10.0 introduces comprehensive keyboard shortcuts for power users who prefer keyboard-driven workflows.
+
+**Global Shortcuts** (work anywhere in app):
+```
+⌘K / Ctrl+K      Open command palette
+n                 Create new task
+/                 Focus search bar
+?                 Show help dialog
+Escape            Close dialogs/modals
+```
+
+**Smart View Shortcuts:**
+```
+1-9               Activate pinned smart view at position
+0                 Clear active smart view filter
+```
+
+**Command Palette Shortcuts:**
+```
+⌘M / Ctrl+M      View matrix
+⌘D / Ctrl+D      View dashboard
+⌘T / Ctrl+T      Toggle theme
+⌘, / Ctrl+,      Open settings
+⌘N / Ctrl+N      Create new task
+```
+
+**Task Form Shortcuts:**
+```
+Tab               Move to next field
+Shift+Tab         Move to previous field
+Enter             Submit form (if valid)
+Escape            Cancel and close
+```
+
+**Navigation Shortcuts:**
+```
+Arrow keys        Navigate command palette items
+Enter             Execute action/select item
+Escape            Close palette/dialog
+```
+
+**Accessibility Features:**
+- All shortcuts respect typing context (disabled in input fields)
+- Screen reader announcements for state changes
+- Focus management (dialog open → focus first input, close → return to trigger)
+- ARIA labels and live regions for non-visual feedback
+
+**Discovering Shortcuts:**
+- Open command palette (`⌘K`) to see all shortcuts
+- Hover tooltips show keyboard shortcuts on desktop
+- Help dialog (`?`) lists all shortcuts with descriptions
 
 ---
 

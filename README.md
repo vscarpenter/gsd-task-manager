@@ -3,8 +3,8 @@
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
 **🚀 Live App:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**📦 Current Version:** 5.0.0
-**🔄 Latest:** MCP Server for AI-powered task management with Claude Desktop + OAuth sync with end-to-end encryption
+**📦 Current Version:** 5.10.0
+**🔄 Latest:** Command Palette (⌘K), Quick Settings Panel, and Smart View Pinning for enhanced productivity workflows
 
 [![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
@@ -67,7 +67,10 @@ GSD Task Manager is a **completely private** task manager that runs entirely in 
 #### 🎨 **User Experience**
 
 - ✅ **Dark Mode** — Automatic theme switching with system preference support
-- ✅ **Keyboard Shortcuts** — Fast navigation (`n` for new task, `/` for search, `?` for help)
+- ✅ **Command Palette** — Universal search and action interface with ⌘K / Ctrl+K shortcut
+- ✅ **Quick Settings Panel** — Slide-out panel for frequently-adjusted preferences (theme, notifications, sync interval)
+- ✅ **Smart View Pinning** — Pin up to 5 smart views to header with keyboard shortcuts (1-9, 0 to clear)
+- ✅ **Keyboard Shortcuts** — Fast navigation (`n` for new task, `⌘K` for command palette, `?` for help)
 - ✅ **Drag & Drop** — Reorder tasks and move between quadrants
 - ✅ **Responsive Design** — Optimized for desktop, tablet, and mobile
 
@@ -174,9 +177,23 @@ Automatically recreate tasks on a schedule:
 
 ### Keyboard Shortcuts
 
+**Global Shortcuts:**
+- `⌘K` / `Ctrl+K` — Open command palette (universal search and actions)
 - `n` — Create a new task
 - `/` — Focus the search bar
 - `?` — Show help dialog
+
+**Smart View Shortcuts:**
+- `1-9` — Activate pinned smart view at that position
+- `0` — Clear active smart view filter
+
+**Command Palette Shortcuts:**
+- `⌘M` / `Ctrl+M` — View matrix
+- `⌘D` / `Ctrl+D` — View dashboard
+- `⌘T` / `Ctrl+T` — Toggle theme
+- `⌘,` / `Ctrl+,` — Open settings
+
+Use the command palette (⌘K) to discover all available shortcuts and actions!
 
 ### Backing Up Your Data
 
@@ -328,7 +345,14 @@ See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detaile
 
 ### Recent Updates
 
-**v5.0.0** (Latest) 🎉
+**v5.10.0** (Latest) 🎉
+- ✅ **Command Palette** — Universal ⌘K interface for quick actions, navigation, and task search
+- ✅ **Quick Settings Panel** — Slide-out panel for frequently-adjusted settings (theme, notifications, auto-sync)
+- ✅ **Smart View Pinning** — Pin up to 5 smart views to header with keyboard shortcuts (1-9, 0 to clear)
+- ✅ **Enhanced Keyboard Navigation** — Comprehensive shortcuts for power users (⌘M, ⌘D, ⌘T, etc.)
+- ✅ **Improved UX** — Streamlined workflows for theme switching, notification toggles, and sync interval adjustments
+
+**v5.0.0**
 - ✅ **MCP Server for Claude Desktop** — AI-powered task management with natural language queries
 - ✅ **Decrypted Task Access** — 6 MCP tools for reading and analyzing tasks
 - ✅ **OAuth Cloud Sync** — Full end-to-end encrypted sync with Google/Apple login
