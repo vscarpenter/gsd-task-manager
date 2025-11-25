@@ -11,6 +11,11 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
 - **Zero-Knowledge Architecture** — Worker stores only encrypted blobs; decryption happens locally
 
+**v5.10.0 Features (UI/UX Enhancements):**
+- **Enhanced Smart Views** — Pin up to 5 smart views to header for quick access (keyboard shortcuts 1-9, 0 to clear)
+- **Command Palette** — Global ⌘K/Ctrl+K shortcut for quick actions, navigation, and task search
+- **Quick Settings Panel** — Slide-out panel for frequently-adjusted settings (theme, show completed, notifications, sync interval)
+
 ## Core Commands
 
 ### Development
@@ -65,7 +70,7 @@ This script automatically:
 ## Architecture
 
 ### Data Layer
-- **IndexedDB via Dexie** (`lib/db.ts`): Single `GsdDatabase` instance with `tasks`, `smartViews`, and `notificationSettings` tables (v6 with dependencies support)
+- **IndexedDB via Dexie** (`lib/db.ts`): Single `GsdDatabase` instance with `tasks`, `smartViews`, `notificationSettings`, and `appPreferences` tables (v11 with app preferences)
 - **CRUD Operations** (`lib/tasks.ts`): All task mutations (create, update, delete, toggle, import/export) plus subtask management (addSubtask, deleteSubtask, toggleSubtask) and dependency management (addDependency, removeDependency)
 - **Bulk Operations** (`lib/bulk-operations.ts`): Batch operations for multi-select (delete, complete, uncomplete, move, add tags) - extracted from matrix-board for code organization
 - **Live Queries** (`lib/use-tasks.ts`): React hook `useTasks()` returns `{ all, byQuadrant }` with live updates
@@ -131,7 +136,11 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
     - `shortcuts-section.tsx` - Keyboard shortcuts
     - `pwa-section.tsx` - PWA features
   - **Navigation & Settings**:
-    - `app-header.tsx` - Search, new task button, settings menu, smart view selector, theme toggle
+    - `app-header.tsx` - Search, new task button, settings menu, smart view pills, theme toggle
+    - `smart-view-pills.tsx` - Horizontal scrollable pills for pinned smart views with keyboard shortcuts (1-9, 0 to clear)
+    - `smart-view-selector.tsx` - Full smart view selector with pin/unpin functionality
+    - `command-palette.tsx` - Global command palette (⌘K/Ctrl+K) with action search and task quick-open
+    - `quick-settings-panel.tsx` - Slide-out panel for frequently-adjusted settings (theme, show completed, notifications, sync)
     - `view-toggle.tsx` - Matrix/Dashboard navigation toggle
     - `app-footer.tsx` - Footer with credits and build info
     - `import-dialog.tsx` - Import mode selection dialog (merge vs replace)
@@ -140,7 +149,7 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **Client-side only**: All components use `"use client"` - no server rendering
 - **Live reactivity**: `useTasks()` hook returns live data via `useLiveQuery` from dexie-react-hooks
 - **Validation**: All task operations validate with zod schemas before persisting
-- **Keyboard shortcuts**: Implemented via `useEffect` listeners (n=new, /=search, ?=help)
+- **Keyboard shortcuts**: Implemented via `useEffect` listeners (n=new, /=search, ?=help, ⌘K/Ctrl+K=command palette, 1-9=smart view selection, 0=clear view)
 - **Recurring tasks**: When completed, automatically create new instance with updated due date
 - **Enhanced search**: Search includes tags and subtasks in addition to title/description
 - **Visual indicators**: Overdue warnings (red), due today alerts (amber), recurrence icons, subtask progress bars
@@ -569,7 +578,7 @@ analytics/
 
 ## Development Notes
 - Changes to task schema require updating fixtures in `lib/schema.ts`, export/import logic, and test fixtures in `tests/`
-- Database migrations handled in `lib/db.ts` - current version is 6 (v1→v6: tags/subtasks→filters→notifications→dependencies)
+- Database migrations handled in `lib/db.ts` - current version is 11 (v1→v11: tags/subtasks→filters→notifications→dependencies→appPreferences)
 - When modifying quadrant logic, update both `lib/quadrants.ts` and UI rendering in matrix components
 - PWA updates require changes to manifest.json, icons, and sw.js together
 - Run `pnpm typecheck` and `pnpm lint` before committing
@@ -608,6 +617,12 @@ analytics/
   - **Decryption**: Use `CryptoManager` singleton from `crypto.ts` for all decryption
   - **Error Handling**: Provide clear error messages (e.g., "Token expired" vs generic "Auth failed")
   - **Documentation**: Update `packages/mcp-server/README.md` when adding new tools
+- **UI/UX Enhancements (v5.10.0)**:
+  - **Smart View Pinning**: Store pinned view IDs in `appPreferences` table; emit `pinnedViewsChanged` CustomEvent when views are pinned/unpinned
+  - **Command Palette**: Uses `cmdk` library (v1.1.1); actions built with `buildCommandActions()` and filtered in `useCommandPalette` hook
+  - **Quick Settings**: Uses Radix UI Sheet and Slider primitives; settings loaded from `getSyncConfig()` (not `getSyncStatus()` for auto-sync properties)
+  - **Keyboard Shortcuts**: Smart view shortcuts (1-9, 0) implemented in `useSmartViewShortcuts` with typing context detection via `isTypingElement()`
+  - **Button Component**: Only supports variants "primary" | "subtle" | "ghost"; no `size` prop (use className for sizing)
 - Always leverage @coding-standards.md for coding standards and guidelines
 
 ## Modular Architecture (Refactoring - October 2025)

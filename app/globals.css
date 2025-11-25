@@ -98,6 +98,16 @@ main {
   border-radius: 9999px;
 }
 
+/* Hide scrollbar utility for horizontal scroll containers */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
 ::-webkit-scrollbar-track {
   background-color: rgb(var(--background-muted) / 0.5);
 }

@@ -86,3 +86,9 @@ export interface SyncHistoryRecord {
   deviceId: string; // Device that performed the sync
   triggeredBy: "user" | "auto"; // Whether sync was manual or automatic
 }
+
+export interface AppPreferences {
+  id: "preferences";
+  pinnedSmartViewIds: string[]; // IDs of smart views pinned to header
+  maxPinnedViews: number; // Maximum number of views that can be pinned (default: 5)
+}

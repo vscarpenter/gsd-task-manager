@@ -1,5 +1,5 @@
 import Dexie, { Table } from "dexie";
-import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryRecord } from "@/lib/types";
+import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryRecord, AppPreferences } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, SyncConfig, DeviceInfo, EncryptionConfig } from "@/lib/sync/types";
 import { ENV_CONFIG } from "@/lib/env-config";
@@ -14,6 +14,7 @@ class GsdDatabase extends Dexie {
   deviceInfo!: Table<DeviceInfo, string>;
   archiveSettings!: Table<ArchiveSettings, string>;
   syncHistory!: Table<SyncHistoryRecord, string>;
+  appPreferences!: Table<AppPreferences, string>;
 
   constructor() {
     super("GsdTaskManager");
@@ -188,6 +189,29 @@ class GsdDatabase extends Dexie {
         deviceInfo: "key",
         archiveSettings: "id",
         syncHistory: "id, timestamp, status, deviceId"
+      });
+
+    // Version 11: Add appPreferences table for storing user preferences
+    this.version(11)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId",
+        appPreferences: "id"
+      })
+      .upgrade((trans) => {
+        // Initialize app preferences with defaults
+        return trans.table("appPreferences").add({
+          id: "preferences",
+          pinnedSmartViewIds: [],
+          maxPinnedViews: 5
+        });
       });
   }
 
