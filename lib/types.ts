@@ -92,3 +92,23 @@ export interface AppPreferences {
   pinnedSmartViewIds: string[]; // IDs of smart views pinned to header
   maxPinnedViews: number; // Maximum number of views that can be pinned (default: 5)
 }
+
+/**
+ * Convert a TaskRecord to a TaskDraft for editing
+ * Extracts only the editable fields from a task
+ */
+export function toDraft(task: TaskRecord): TaskDraft {
+  return {
+    title: task.title,
+    description: task.description,
+    urgent: task.urgent,
+    important: task.important,
+    dueDate: task.dueDate,
+    recurrence: task.recurrence,
+    tags: task.tags,
+    subtasks: task.subtasks,
+    dependencies: task.dependencies,
+    notifyBefore: task.notifyBefore,
+    notificationEnabled: task.notificationEnabled,
+  };
+}

@@ -18,7 +18,8 @@ import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { useSmartViewShortcuts } from "@/lib/use-smart-view-shortcuts";
 import type { FilterCriteria } from "@/lib/filters";
 import type { SmartView } from "@/lib/filters";
-import type { TaskDraft, TaskRecord } from "@/lib/types";
+import type { TaskRecord } from "@/lib/types";
+import { toDraft } from "@/lib/types";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { extractAvailableTags, getFilteredQuadrants, getVisibleTaskCount } from "@/lib/matrix-filters";
 import { useMatrixDialogs } from "@/lib/use-matrix-dialogs";
@@ -43,22 +44,6 @@ import {
   useUrlHighlightParam,
   useSmartViewHandlers,
 } from "./use-event-handlers";
-
-function toDraft(task: TaskRecord): TaskDraft {
-  return {
-    title: task.title,
-    description: task.description,
-    urgent: task.urgent,
-    important: task.important,
-    dueDate: task.dueDate,
-    recurrence: task.recurrence,
-    tags: task.tags,
-    subtasks: task.subtasks,
-    dependencies: task.dependencies,
-    notifyBefore: task.notifyBefore,
-    notificationEnabled: task.notificationEnabled
-  };
-}
 
 export function MatrixBoard() {
   const { all } = useTasks();
