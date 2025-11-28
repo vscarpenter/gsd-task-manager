@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
 import { logError, getUserErrorMessage } from "@/lib/error-logger";
 import type { ErrorContext } from "@/lib/error-logger";
+import { TOAST_DURATION } from "@/lib/constants";
 
 /**
  * Hook for consistent error handling across the application
@@ -33,7 +34,7 @@ export function useErrorHandler() {
 
       // Show user-friendly error message
       const userMessage = getUserErrorMessage(error, context.userMessage);
-      showToast(userMessage, undefined, 5000);
+      showToast(userMessage, undefined, TOAST_DURATION.LONG);
     },
     [showToast]
   );
@@ -63,13 +64,13 @@ export function useErrorHandlerWithUndo() {
     (error: unknown, context: ErrorContext) => {
       logError(error, context);
       const userMessage = getUserErrorMessage(error, context.userMessage);
-      showToast(userMessage, undefined, 5000);
+      showToast(userMessage, undefined, TOAST_DURATION.LONG);
     },
     [showToast]
   );
 
   const handleSuccess = useCallback(
-    (message: string, undoAction: () => Promise<void>, duration = 5000) => {
+    (message: string, undoAction: () => Promise<void>, duration = TOAST_DURATION.LONG) => {
       showToast(
         message,
         {
@@ -83,7 +84,7 @@ export function useErrorHandlerWithUndo() {
                 userMessage: 'Failed to undo operation',
                 timestamp: new Date().toISOString()
               });
-              showToast('Failed to undo operation', undefined, 3000);
+              showToast('Failed to undo operation', undefined, TOAST_DURATION.SHORT);
             }
           }
         },

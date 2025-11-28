@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { OAUTH_STATE_CONFIG, getOAuthEnvironment } from "@/lib/oauth-config";
 import { canUsePopups, getPlatformInfo } from "@/lib/pwa-detection";
+import { OAUTH_POPUP } from "@/lib/constants/ui";
 import {
   subscribeToOAuthHandshake,
   type OAuthHandshakeEvent,
@@ -164,15 +165,13 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
       });
 
       if (usePopup) {
-        const width = 500;
-        const height = 600;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
+        const left = window.screen.width / 2 - OAUTH_POPUP.WIDTH / 2;
+        const top = window.screen.height / 2 - OAUTH_POPUP.HEIGHT / 2;
 
         const popup = window.open(
           authUrl,
           `${provider}_oauth`,
-          `width=${width},height=${height},left=${left},top=${top}`
+          `width=${OAUTH_POPUP.WIDTH},height=${OAUTH_POPUP.HEIGHT},left=${left},top=${top}`
         );
 
         if (!popup) {

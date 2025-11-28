@@ -6,6 +6,23 @@
  */
 
 /**
+ * Time duration constants in milliseconds
+ * Use these instead of inline calculations like `7 * 24 * 60 * 60 * 1000`
+ */
+export const TIME_MS = {
+  /** One second in milliseconds */
+  SECOND: 1000,
+  /** One minute in milliseconds */
+  MINUTE: 60 * 1000,
+  /** One hour in milliseconds */
+  HOUR: 60 * 60 * 1000,
+  /** One day in milliseconds */
+  DAY: 24 * 60 * 60 * 1000,
+  /** One week in milliseconds */
+  WEEK: 7 * 24 * 60 * 60 * 1000,
+} as const;
+
+/**
  * Drag-and-drop configuration
  */
 export const DND_CONFIG = {

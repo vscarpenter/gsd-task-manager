@@ -23,7 +23,7 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
   const status = await getSyncStatus(config);
 
   // For now, return derived stats from sync status
-  // TODO: Add dedicated stats endpoint to Worker for more detailed task metadata
+  // TODO #90: Add dedicated stats endpoint to Worker for more detailed task metadata
   return {
     totalTasks: status.pendingPushCount + status.pendingPullCount,
     activeTasks: status.pendingPushCount + status.pendingPullCount,
