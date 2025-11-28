@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SCHEMA_LIMITS } from "./constants/schema";
 
 export const quadrantIdSchema = z.enum([
 	"urgent-important",
@@ -15,28 +16,28 @@ export const recurrenceTypeSchema = z.enum([
 ]);
 
 export const subtaskSchema = z.object({
-	id: z.string().min(4),
-	title: z.string().min(1).max(100),
+	id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
+	title: z.string().min(1).max(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH),
 	completed: z.boolean(),
 });
 
 export const taskDraftSchema = z.object({
-	title: z.string().min(1).max(80),
-	description: z.string().max(600).default(""),
+	title: z.string().min(1).max(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH),
+	description: z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH).default(""),
 	urgent: z.boolean(),
 	important: z.boolean(),
 	dueDate: z.string().datetime({ offset: true }).optional(),
 	recurrence: recurrenceTypeSchema.default("none"),
-	tags: z.array(z.string().min(1).max(30)).default([]),
+	tags: z.array(z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH)).default([]),
 	subtasks: z.array(subtaskSchema).default([]),
-	dependencies: z.array(z.string().min(4)).default([]), // IDs of tasks that must be completed first
+	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
 });
 
 export const taskRecordSchema = taskDraftSchema
 	.extend({
-		id: z.string().min(4),
+		id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
 		quadrant: quadrantIdSchema,
 		completed: z.boolean(),
 		completedAt: z.string().datetime({ offset: true }).optional(),

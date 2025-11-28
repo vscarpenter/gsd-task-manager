@@ -1,6 +1,7 @@
 // CORS middleware and headers
 
 import { ALLOWED_ORIGINS, isOriginAllowed } from '../config';
+import { SECURITY_HEADERS } from '../constants/security';
 
 // Get CORS headers based on request origin
 export function getCorsHeaders(origin?: string | null, environment?: string): Record<string, string> {
@@ -16,7 +17,7 @@ export function getCorsHeaders(origin?: string | null, environment?: string): Re
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Max-Age': '86400',
+    'Access-Control-Max-Age': String(SECURITY_HEADERS.CORS_MAX_AGE_SECONDS),
   };
 }
 
@@ -28,7 +29,7 @@ export const securityHeaders = {
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Strict-Transport-Security': `max-age=${SECURITY_HEADERS.HSTS_MAX_AGE_SECONDS}; includeSubDomains`,
   'Content-Security-Policy':
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' https://accounts.google.com https://appleid.apple.com; " +

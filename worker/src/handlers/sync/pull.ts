@@ -9,7 +9,7 @@ import { jsonResponse, errorResponse } from '../../middleware/cors';
 import { pullRequestSchema } from '../../schemas';
 import { generateId } from '../../utils/crypto';
 import { createLogger } from '../../utils/logger';
-import { getServerVectorClock } from './helpers';
+import { getServerVectorClock, parseVectorClock } from './helpers';
 
 const logger = createLogger('SYNC:PULL');
 
@@ -72,7 +72,7 @@ export async function pull(
     // Vector clocks are only used for conflict detection, NOT for filtering
     // This ensures new tasks from other devices always get pulled
     for (const task of tasks.results || []) {
-      const taskClock: VectorClock = JSON.parse(task.vector_clock as string);
+      const taskClock = parseVectorClock(task.vector_clock as string);
 
       logger.info('Processing task for pull', {
         taskId: task.id as string,

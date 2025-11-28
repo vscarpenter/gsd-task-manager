@@ -8,6 +8,9 @@ import { getRetryManager } from './retry-manager';
 import { getSyncQueue } from './queue';
 import type { SyncResult, SyncConfig } from './types';
 import { getDb } from '@/lib/db';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SYNC_ENGINE');
 
 export interface SyncStatus {
   isRunning: boolean;
@@ -39,11 +42,11 @@ export class SyncCoordinator {
    * Multiple pending requests are deduplicated (highest priority wins)
    */
   async requestSync(priority: 'user' | 'auto' = 'auto'): Promise<void> {
-    console.log('[SYNC COORDINATOR] Sync requested with priority:', priority);
+    logger.debug('Sync requested', { priority });
 
     // If sync is already running, queue the request
     if (this.isRunning) {
-      console.log('[SYNC COORDINATOR] Sync already running, queuing request');
+      logger.debug('Sync already running, queuing request');
       this.queueRequest(priority);
       return;
     }
@@ -85,7 +88,7 @@ export class SyncCoordinator {
    * Cancel all pending sync requests
    */
   cancelPending(): void {
-    console.log(`[SYNC COORDINATOR] Cancelling ${this.pendingRequests.length} pending requests`);
+    logger.debug('Cancelling pending requests', { count: this.pendingRequests.length });
     this.pendingRequests = [];
   }
 
@@ -99,11 +102,11 @@ export class SyncCoordinator {
 
     if (existingIndex >= 0) {
       // Update timestamp of existing request
-      console.log('[SYNC COORDINATOR] Updating existing queued request');
+      logger.debug('Updating existing queued request');
       this.pendingRequests[existingIndex].timestamp = Date.now();
     } else {
       // Add new request
-      console.log('[SYNC COORDINATOR] Adding new queued request');
+      logger.debug('Adding new queued request');
       this.pendingRequests.push({
         priority,
         timestamp: Date.now(),
@@ -114,12 +117,12 @@ export class SyncCoordinator {
     if (this.pendingRequests.length > 1) {
       const hasUser = this.pendingRequests.some(req => req.priority === 'user');
       if (hasUser) {
-        console.log('[SYNC COORDINATOR] Deduplicating: keeping only user priority request');
+        logger.debug('Deduplicating: keeping only user priority request');
         this.pendingRequests = this.pendingRequests.filter(req => req.priority === 'user');
       }
     }
 
-    console.log(`[SYNC COORDINATOR] Queue size: ${this.pendingRequests.length}`);
+    logger.debug('Queue size updated', { queueSize: this.pendingRequests.length });
   }
 
   /**
@@ -129,12 +132,12 @@ export class SyncCoordinator {
     this.isRunning = true;
 
     try {
-      console.log('[SYNC COORDINATOR] Starting sync execution with priority:', priority);
+      logger.debug('Starting sync execution', { priority });
       const result = await this.engine.sync(priority);
       this.lastResult = result;
-      console.log('[SYNC COORDINATOR] Sync completed:', result.status);
+      logger.info('Sync completed', { status: result.status });
     } catch (error) {
-      console.error('[SYNC COORDINATOR] Sync failed:', error);
+      logger.error('Sync failed', error instanceof Error ? error : new Error(String(error)));
       this.lastResult = {
         status: 'error',
         error: error instanceof Error ? error.message : 'Sync failed',
@@ -151,7 +154,7 @@ export class SyncCoordinator {
   private async processQueue(): Promise<void> {
     // If no pending requests, we're done
     if (this.pendingRequests.length === 0) {
-      console.log('[SYNC COORDINATOR] No pending requests to process');
+      logger.debug('No pending requests to process');
       return;
     }
 
@@ -162,7 +165,7 @@ export class SyncCoordinator {
       return;
     }
 
-    console.log('[SYNC COORDINATOR] Processing queued sync request:', nextRequest.priority);
+    logger.debug('Processing queued sync request', { priority: nextRequest.priority });
 
     // Execute the queued sync
     await this.executeSync(nextRequest.priority);
