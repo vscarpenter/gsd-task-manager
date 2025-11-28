@@ -10,7 +10,7 @@ import { pushRequestSchema } from '../../schemas';
 import { compareVectorClocks } from '../../utils/vector-clock';
 import { generateId } from '../../utils/crypto';
 import { createLogger } from '../../utils/logger';
-import { getServerVectorClock } from './helpers';
+import { getServerVectorClock, parseVectorClock } from './helpers';
 
 const logger = createLogger('SYNC:PUSH');
 
@@ -50,7 +50,7 @@ export async function push(
         if (op.type === 'delete') {
           if (existing) {
             // FIX #3: Check for delete conflicts using vector clocks
-            const existingClock: VectorClock = JSON.parse(existing.vector_clock as string);
+            const existingClock = parseVectorClock(existing.vector_clock as string);
             const comparison = compareVectorClocks(existingClock, op.vectorClock);
 
             logger.info('Delete operation vector clock comparison', {
@@ -125,7 +125,7 @@ export async function push(
 
         // Check for conflicts
         if (existing) {
-          const existingClock: VectorClock = JSON.parse(existing.vector_clock as string);
+          const existingClock = parseVectorClock(existing.vector_clock as string);
           const comparison = compareVectorClocks(existingClock, op.vectorClock);
 
           if (comparison === 'concurrent') {

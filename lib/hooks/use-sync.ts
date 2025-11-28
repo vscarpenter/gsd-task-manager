@@ -6,7 +6,12 @@ import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
+import { UI_TIMING } from '@/lib/constants/ui';
+import { createLogger } from '@/lib/logger';
 import type { SyncResult } from '@/lib/sync/types';
+
+const logger = createLogger('SYNC_ENGINE');
 
 export interface UseSyncResult {
   sync: () => Promise<void>;
@@ -46,10 +51,10 @@ export function useSync(): UseSyncResult {
       // Start or stop health monitor based on sync state
       const healthMonitor = getHealthMonitor();
       if (enabled && !healthMonitor.isActive()) {
-        console.log('[SYNC] Starting health monitor (sync enabled)');
+        logger.debug('Starting health monitor (sync enabled)');
         healthMonitor.start();
       } else if (!enabled && healthMonitor.isActive()) {
-        console.log('[SYNC] Stopping health monitor (sync disabled)');
+        logger.debug('Stopping health monitor (sync disabled)');
         healthMonitor.stop();
       }
 
@@ -59,22 +64,22 @@ export function useSync(): UseSyncResult {
         const autoSyncConfig = await getAutoSyncConfig();
 
         if (autoSyncConfig.enabled && !bgSyncManager.isRunning()) {
-          console.log('[SYNC] Starting background sync manager');
+          logger.debug('Starting background sync manager');
           await bgSyncManager.start(autoSyncConfig);
         } else if (!autoSyncConfig.enabled && bgSyncManager.isRunning()) {
-          console.log('[SYNC] Stopping background sync manager (disabled in settings)');
+          logger.debug('Stopping background sync manager (disabled in settings)');
           bgSyncManager.stop();
         }
       } else if (bgSyncManager.isRunning()) {
-        console.log('[SYNC] Stopping background sync manager (sync disabled)');
+        logger.debug('Stopping background sync manager (sync disabled)');
         bgSyncManager.stop();
       }
     };
 
     checkEnabled();
 
-    // Check every 2 seconds to detect auth changes
-    const interval = setInterval(checkEnabled, 2000);
+    // Check periodically to detect auth changes
+    const interval = setInterval(checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
     return () => {
       clearInterval(interval);
 
@@ -121,8 +126,8 @@ export function useSync(): UseSyncResult {
 
     updateStatus();
 
-    // Poll every 500ms for responsive UI updates
-    const interval = setInterval(updateStatus, 500);
+    // Poll for responsive UI updates
+    const interval = setInterval(updateStatus, UI_TIMING.STATUS_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -134,13 +139,12 @@ export function useSync(): UseSyncResult {
     }
 
     let lastHealthCheckTime = 0;
-    const HEALTH_CHECK_NOTIFICATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
     const checkHealth = async () => {
       const now = Date.now();
 
       // Only check once per interval to avoid spam
-      if (now - lastHealthCheckTime < HEALTH_CHECK_NOTIFICATION_INTERVAL) {
+      if (now - lastHealthCheckTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) {
         return;
       }
 
@@ -150,10 +154,9 @@ export function useSync(): UseSyncResult {
       const report = await healthMonitor.check();
 
       // Log health check results
-      console.log('[SYNC] Health check result:', {
+      logger.debug('Health check result', {
         healthy: report.healthy,
         issuesCount: report.issues.length,
-        timestamp: new Date(report.timestamp).toISOString(),
       });
 
       // Note: Toast notifications would be shown here if we had access to the toast context
@@ -161,7 +164,7 @@ export function useSync(): UseSyncResult {
       // and toast notifications can be added by components that use this hook.
       if (!report.healthy && report.issues.length > 0) {
         for (const issue of report.issues) {
-          console.warn('[SYNC] Health issue detected:', {
+          logger.warn('Health issue detected', {
             type: issue.type,
             severity: issue.severity,
             message: issue.message,
@@ -171,11 +174,11 @@ export function useSync(): UseSyncResult {
       }
     };
 
-    // Run initial check after 1 second
-    const initialTimeout = setTimeout(checkHealth, 1000);
+    // Run initial check after a short delay
+    const initialTimeout = setTimeout(checkHealth, UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
 
     // Check periodically
-    const interval = setInterval(checkHealth, HEALTH_CHECK_NOTIFICATION_INTERVAL);
+    const interval = setInterval(checkHealth, SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -216,20 +219,20 @@ export function useSync(): UseSyncResult {
         setLastResult({ status: 'success' });
       }
 
-      // Auto-reset status to idle after 3 seconds
+      // Auto-reset status to idle
       setTimeout(() => {
         setStatus('idle');
-      }, 3000);
+      }, UI_TIMING.AUTO_RESET_TIMEOUT_MS);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed';
       setStatus('error');
       setError(errorMessage);
       setLastResult({ status: 'error', error: errorMessage });
 
-      // Auto-reset after 3 seconds
+      // Auto-reset after timeout
       setTimeout(() => {
         setStatus('idle');
-      }, 3000);
+      }, UI_TIMING.AUTO_RESET_TIMEOUT_MS);
     }
   }, []);
 

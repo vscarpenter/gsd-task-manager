@@ -1,4 +1,5 @@
 import type { Env } from '../../types';
+import { JWT_CONFIG } from '../../constants/security';
 
 /**
  * Generate random string for state and code verifier
@@ -80,7 +81,7 @@ export async function generateAppleClientSecret(env: Env): Promise<string> {
   const payload = {
     iss: env.APPLE_TEAM_ID,
     iat: now,
-    exp: now + 3600, // 1 hour
+    exp: now + JWT_CONFIG.APPLE_JWT_EXP_SECONDS,
     aud: 'https://appleid.apple.com',
     sub: env.APPLE_CLIENT_ID,
   };

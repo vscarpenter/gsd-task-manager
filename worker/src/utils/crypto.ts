@@ -1,6 +1,8 @@
 // Server-side cryptography utilities
 // Note: Server never has access to user's encryption keys
 
+import { WORKER_CRYPTO, CRYPTO_BUFFER } from '../constants/security';
+
 /**
  * Hash password using Argon2id (via Cloudflare's crypto API)
  * Falls back to PBKDF2 if Argon2 not available
@@ -25,11 +27,11 @@ export async function hashPassword(password: string, salt: string): Promise<stri
     {
       name: 'PBKDF2',
       salt: saltBuffer,
-      iterations: 100_000, // Cloudflare Workers maximum
+      iterations: WORKER_CRYPTO.PBKDF2_ITERATIONS,
       hash: 'SHA-256',
     },
     keyMaterial,
-    256
+    WORKER_CRYPTO.KEY_LENGTH_BITS
   );
 
   return arrayBufferToBase64(derivedBits);
@@ -67,7 +69,7 @@ function constantTimeCompare(a: string, b: string): boolean {
  * Generate cryptographically secure random salt
  */
 export function generateSalt(): string {
-  const buffer = new Uint8Array(32);
+  const buffer = new Uint8Array(CRYPTO_BUFFER.SALT_BYTES);
   crypto.getRandomValues(buffer);
   return arrayBufferToBase64(buffer);
 }
@@ -76,7 +78,7 @@ export function generateSalt(): string {
  * Generate cryptographically secure random ID
  */
 export function generateId(): string {
-  const buffer = new Uint8Array(16);
+  const buffer = new Uint8Array(CRYPTO_BUFFER.ID_BYTES);
   crypto.getRandomValues(buffer);
   return arrayBufferToBase64(buffer)
     .replace(/\+/g, '-')
