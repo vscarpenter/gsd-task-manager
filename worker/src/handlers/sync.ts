@@ -11,4 +11,5 @@ export { push } from './sync/push';
 export { pull } from './sync/pull';
 export { resolve } from './sync/resolve';
 export { status } from './sync/status';
+export { stats } from './sync/stats';
 export { listDevices, revokeDevice } from './sync/devices';

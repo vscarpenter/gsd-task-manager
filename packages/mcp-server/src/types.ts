@@ -35,9 +35,31 @@ export const taskStatsSchema = z.object({
   newestTask: z.number().nullable(),
 });
 
+export const statsResponseSchema = z.object({
+  tasks: z.array(
+    z.object({
+      id: z.string(),
+      encryptedBlob: z.string(),
+      nonce: z.string(),
+      createdAt: z.number(),
+      updatedAt: z.number(),
+      deletedAt: z.number().nullable(),
+    })
+  ),
+  metadata: z.object({
+    totalCount: z.number(),
+    activeCount: z.number(),
+    deletedCount: z.number(),
+    oldestTaskDate: z.number().nullable(),
+    newestTaskDate: z.number().nullable(),
+    storageUsed: z.number(),
+  }),
+});
+
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 export type Device = z.infer<typeof deviceSchema>;
 export type TaskStats = z.infer<typeof taskStatsSchema>;
+export type StatsResponse = z.infer<typeof statsResponseSchema>;
 
 // Encrypted task blob from API
 export const encryptedTaskBlobSchema = z.object({

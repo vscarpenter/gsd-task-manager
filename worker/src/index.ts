@@ -231,6 +231,13 @@ router.get('/api/sync/status', async (request: Request, env: Env) => {
   return syncHandlers.status(request, env, ctx);
 });
 
+router.get('/api/stats', async (request: Request, env: Env) => {
+  const ctx: RequestContext = {};
+  const authResult = await authMiddleware(request, env, ctx);
+  if (authResult) return authResult;
+  return syncHandlers.stats(request, env, ctx);
+});
+
 // Device management endpoints
 router.get('/api/devices', async (request: Request, env: Env) => {
   const ctx: RequestContext = {};
