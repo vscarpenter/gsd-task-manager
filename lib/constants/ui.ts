@@ -55,6 +55,8 @@ export const HTTP_STATUS = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
+  /** Resource no longer available (used for expired OAuth results) */
+  GONE: 410,
   CONFLICT: 409,
   TOO_MANY_REQUESTS: 429,
   INTERNAL_ERROR: 500,

@@ -1,12 +1,12 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "6.1.0",
+	"version": "6.1.1",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
 		"clean": "rimraf .next out",
 		"prebuild": "npm run clean",
-		"build": "node scripts/generate-build-info.js && bash -c 'source .build-env.sh && next build'",
+		"build": "node scripts/generate-build-info.js && bash -c 'source .build-env.sh && next build 2>&1 | grep -v baseline-browser-mapping'",
 		"start": "next start",
 		"lint": "eslint .",
 		"test": "vitest run",
@@ -35,9 +35,9 @@
 		"date-fns": "^4.1.0",
 		"dexie": "^4.2.1",
 		"dexie-react-hooks": "^4.2.0",
-		"lucide-react": "^0.553.0",
+		"lucide-react": "^0.555.0",
 		"nanoid": "^5.1.6",
-		"next": "16.0.3",
+		"next": "16.0.5",
 		"next-themes": "^0.4.6",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
@@ -58,7 +58,7 @@
 		"autoprefixer": "^10.4.22",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"eslint": "^9.39.1",
-		"eslint-config-next": "16.0.3",
+		"eslint-config-next": "16.0.5",
 		"fake-indexeddb": "^6.2.4",
 		"jsdom": "^27.2.0",
 		"postcss": "^8.5.6",
@@ -71,7 +71,8 @@
 	},
 	"pnpm": {
 		"overrides": {
-			"js-yaml": ">=4.1.1"
+			"js-yaml": ">=4.1.1",
+			"baseline-browser-mapping": "^2.8.32"
 		}
 	},
 	"license": "MIT"

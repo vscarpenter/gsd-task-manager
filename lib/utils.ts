@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { TIME_MS } from "@/lib/constants";
 
 export function cn(...classNames: Array<string | undefined | false | null>): string {
   return clsx(classNames);
@@ -32,8 +33,7 @@ export function formatRelative(value?: string): string {
   const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
   const now = new Date();
   const diff = date.getTime() - now.getTime();
-  const dayMs = 1000 * 60 * 60 * 24;
-  const dayDelta = Math.round(diff / dayMs);
+  const dayDelta = Math.round(diff / TIME_MS.DAY);
 
   if (Math.abs(dayDelta) > 6) {
     return formatDueDate(value);
@@ -79,7 +79,7 @@ export function isDueThisWeek(value?: string): boolean {
   }
   const date = new Date(value);
   const now = new Date();
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const weekFromNow = new Date(now.getTime() + TIME_MS.WEEK);
 
   // Include overdue tasks - if it's overdue, you need to handle it this week
   // Also include tasks due within the next 7 days
