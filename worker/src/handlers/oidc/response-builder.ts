@@ -45,6 +45,27 @@ export function buildErrorRedirect(redirectTarget: string, state: string, messag
 }
 
 /**
+ * Build redirect response for state-expired/not-found errors
+ * Redirects directly to the app with a friendly error message
+ * Used when we can't use oauth-callback.html because state is invalid
+ */
+export function buildStateExpiredRedirect(appOrigin: string, message: string): Response {
+  // Redirect to app root with error parameters
+  // The app will show a toast with the error message
+  const redirectUrl = new URL('/', appOrigin);
+  redirectUrl.searchParams.set('oauth_error', 'session_expired');
+  redirectUrl.searchParams.set('oauth_message', message);
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: redirectUrl.toString(),
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    },
+  });
+}
+
+/**
  * Build JSON response for failed OAuth callback
  */
 export function buildErrorJson(

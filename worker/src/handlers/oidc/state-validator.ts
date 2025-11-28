@@ -40,6 +40,25 @@ export async function validateOAuthState(
   const stateDataStr = await env.KV.get(stateKey);
 
   if (!stateDataStr) {
+    // Check if this state was already processed (OAuth result exists)
+    // This handles duplicate callbacks or page refreshes
+    const resultKey = `oauth_result:${state}`;
+    const existingResult = await env.KV.get(resultKey);
+
+    if (existingResult) {
+      logger.info('OAuth state not found but result exists - likely duplicate callback', {
+        statePrefix: state.substring(0, 8) + '...',
+        hasResult: true,
+      });
+
+      return {
+        success: false,
+        error:
+          'This sign-in link has already been used. If you just signed in, please return to the app.',
+        statusCode: 400,
+      };
+    }
+
     logger.warn('OAuth state not found in KV', {
       statePrefix: state.substring(0, 8) + '...',
       stateLength: state.length,
@@ -53,8 +72,7 @@ export async function validateOAuthState(
     return {
       success: false,
       error:
-        'OAuth session expired or invalid. Please try signing in again. ' +
-        '(State not found - this may happen if the sign-in flow took longer than 30 minutes)',
+        'Sign-in session expired. Please try signing in again.',
       statusCode: 400,
     };
   }

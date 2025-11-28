@@ -10,6 +10,7 @@ import {
   RESULT_KEY,
   CHANNEL_NAME,
   storage,
+  safeLocalStorage,
   processedStates,
   notifyListeners,
   isInitialized,
@@ -124,8 +125,8 @@ function recoverExistingResult(): void {
     let storageSource = 'sessionStorage';
 
     // Fall back to localStorage if not found in sessionStorage
-    if (!existingResult && typeof window !== 'undefined') {
-      existingResult = localStorage.getItem(RESULT_KEY);
+    if (!existingResult) {
+      existingResult = safeLocalStorage?.getItem(RESULT_KEY) ?? null;
       storageSource = 'localStorage';
     }
 
@@ -169,8 +170,8 @@ function clearStoredResults(): void {
   try {
     storage?.removeItem(RESULT_KEY);
     storage?.removeItem(STORAGE_KEY);
-    localStorage.removeItem(RESULT_KEY);
-    localStorage.removeItem(STORAGE_KEY);
+    safeLocalStorage?.removeItem(RESULT_KEY);
+    safeLocalStorage?.removeItem(STORAGE_KEY);
     console.info('[OAuthHandshake] Cleared result from both storage locations');
   } catch (e) {
     console.warn('[OAuthHandshake] Failed to clear processed result from storage:', e);

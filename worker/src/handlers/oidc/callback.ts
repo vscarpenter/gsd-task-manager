@@ -14,7 +14,9 @@ import {
   buildErrorJson,
   getErrorContext,
   storeErrorResult,
+  buildStateExpiredRedirect,
 } from './response-builder';
+import { getAppOriginFromRequest } from './helpers';
 
 const logger = createLogger('OIDC:Callback');
 
@@ -41,6 +43,22 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     // Validate OAuth state from KV
     const stateResult = await validateOAuthState(state, env, request, origin);
     if (!stateResult.success) {
+      // For state-not-found errors, redirect back to app with friendly error
+      // This handles cases like: expired states, PWA lifecycle issues, cached OAuth URLs
+      const appOrigin = getAppOriginFromRequest(request, env);
+
+      logger.warn('OAuth state validation failed, redirecting to app', {
+        error: stateResult.error,
+        statusCode: stateResult.statusCode,
+        appOrigin,
+        statePrefix: state.substring(0, 8) + '...',
+      });
+
+      if (appOrigin) {
+        return buildStateExpiredRedirect(appOrigin, stateResult.error);
+      }
+
+      // Fallback to JSON error if no app origin can be determined
       return errorResponse(stateResult.error, stateResult.statusCode, origin);
     }
 

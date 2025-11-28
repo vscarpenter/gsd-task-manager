@@ -3,7 +3,6 @@ import type {
   RequestContext,
   PullRequest,
   PullResponse,
-  VectorClock,
 } from '../../types';
 import { jsonResponse, errorResponse } from '../../middleware/cors';
 import { pullRequestSchema } from '../../schemas';

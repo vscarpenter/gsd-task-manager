@@ -1,5 +1,49 @@
 import type { Env } from '../../types';
 import { JWT_CONFIG } from '../../constants/security';
+import { ALLOWED_ORIGINS } from '../../config';
+
+/**
+ * Determine the app origin from request context
+ * Used when OAuth state is not available (expired/invalid)
+ * Returns the most likely app origin based on request headers and environment
+ */
+export function getAppOriginFromRequest(request: Request, env: Env): string | null {
+  // Priority 1: Use OAUTH_CALLBACK_BASE if set (explicit configuration)
+  if (env.OAUTH_CALLBACK_BASE) {
+    return env.OAUTH_CALLBACK_BASE;
+  }
+
+  // Priority 2: Check Referer header (might contain app origin)
+  const referer = request.headers.get('Referer');
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const refererOrigin = refererUrl.origin;
+      if (ALLOWED_ORIGINS.includes(refererOrigin)) {
+        return refererOrigin;
+      }
+    } catch {
+      // Invalid referer URL, continue to next option
+    }
+  }
+
+  // Priority 3: Check Origin header
+  const origin = request.headers.get('Origin');
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    return origin;
+  }
+
+  // Priority 4: Derive from environment
+  if (env.ENVIRONMENT === 'production') {
+    return 'https://gsd.vinny.dev';
+  }
+  if (env.ENVIRONMENT === 'staging' || env.ENVIRONMENT === 'development') {
+    return 'https://gsd-dev.vinny.dev';
+  }
+
+  // Priority 5: Default to production
+  return 'https://gsd.vinny.dev';
+}
 
 /**
  * Generate random string for state and code verifier
