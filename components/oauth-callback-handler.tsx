@@ -26,7 +26,23 @@ export function OAuthCallbackHandler() {
   const [processingState, setProcessingState] = useState<string | null>(null);
 
   useEffect(() => {
-    // Clean query param if present
+    // Handle OAuth error redirect (from worker when state is expired/invalid)
+    const oauthError = searchParams.get('oauth_error');
+    const oauthMessage = searchParams.get('oauth_message');
+
+    if (oauthError === 'session_expired' && oauthMessage) {
+      // Show friendly error message and prompt to retry
+      console.error('[OAuthCallbackHandler] OAuth session expired:', oauthMessage);
+      toast.error('Sign-in session expired. Please try again.', {
+        description: 'This can happen if the sign-in flow was interrupted or took too long.',
+        duration: 6000,
+      });
+      // Clean up URL parameters
+      router.replace('/');
+      return;
+    }
+
+    // Clean query param if present (normal success flow)
     if (searchParams.get('oauth_complete') === 'true') {
       router.replace('/');
     }

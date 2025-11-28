@@ -3,7 +3,6 @@ import type {
   RequestContext,
   PushRequest,
   PushResponse,
-  VectorClock,
 } from '../../types';
 import { jsonResponse, errorResponse } from '../../middleware/cors';
 import { pushRequestSchema } from '../../schemas';

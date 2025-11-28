@@ -33,6 +33,19 @@ let _broadcastChannel: BroadcastChannel | null = null;
 export const storage = typeof window !== 'undefined' ? sessionStorage : null;
 
 /**
+ * Safe localStorage reference
+ * In Safari private browsing or restricted iframes, accessing localStorage can throw
+ */
+export const safeLocalStorage: Storage | null = (() => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+})();
+
+/**
  * Get initialization state
  */
 export function isInitialized(): boolean {

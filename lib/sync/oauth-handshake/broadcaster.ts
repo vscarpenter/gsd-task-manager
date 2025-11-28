@@ -51,6 +51,12 @@ export function announceOAuthState(state: string, success: boolean, error?: stri
     notifyListeners(result);
   })().catch((err) => {
     console.error('[OAuthHandshake] Failed to broadcast handshake result:', err);
+    // Notify listeners so they can show error feedback to user
+    notifyListeners({
+      status: 'error',
+      state,
+      error: 'Failed to complete OAuth handshake. Please try again.',
+    });
   });
 }
 
