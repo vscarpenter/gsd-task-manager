@@ -183,3 +183,22 @@ export interface DeviceInfo {
   isActive: boolean;
   isCurrent: boolean;
 }
+
+export interface StatsResponse {
+  tasks: Array<{
+    id: string;
+    encryptedBlob: string;
+    nonce: string;
+    createdAt: number;
+    updatedAt: number;
+    deletedAt: number | null;
+  }>;
+  metadata: {
+    totalCount: number;
+    activeCount: number;
+    deletedCount: number;
+    oldestTaskDate: number | null;
+    newestTaskDate: number | null;
+    storageUsed: number;
+  };
+}

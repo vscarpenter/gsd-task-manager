@@ -12,24 +12,44 @@ export async function getSyncStatus(config: GsdConfig): Promise<SyncStatus> {
 }
 
 /**
- * Get task statistics without accessing encrypted content
- * Derives stats from sync status metadata
+ * Get task statistics using the dedicated /api/stats endpoint
+ * Returns metadata without decrypting tasks (more efficient than getDetailedTaskStats)
  */
 export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
-  // Since the Worker doesn't have a dedicated stats endpoint yet,
-  // we'll use the status endpoint and derive stats from it
-  // In the future, we can add a dedicated /api/stats endpoint to the Worker
+  try {
+    // Try new /api/stats endpoint for better metadata
+    const response = await fetch(`${config.apiBaseUrl}/api/stats`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${config.authToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        totalTasks: data.metadata.totalCount,
+        activeTasks: data.metadata.activeCount,
+        deletedTasks: data.metadata.deletedCount,
+        lastUpdated: data.metadata.newestTaskDate,
+        oldestTask: data.metadata.oldestTaskDate,
+        newestTask: data.metadata.newestTaskDate,
+      };
+    }
+  } catch (error) {
+    // Fall back to old approach if new endpoint not available
+    console.error('Failed to fetch from /api/stats, falling back to /api/sync/status');
+  }
+
+  // Fallback: use the status endpoint and derive basic stats
   const status = await getSyncStatus(config);
-
-  // For now, return derived stats from sync status
-  // TODO #90: Add dedicated stats endpoint to Worker for more detailed task metadata
   return {
     totalTasks: status.pendingPushCount + status.pendingPullCount,
     activeTasks: status.pendingPushCount + status.pendingPullCount,
-    deletedTasks: 0, // Not available from current API
+    deletedTasks: 0,
     lastUpdated: status.lastSyncAt,
-    oldestTask: null, // Not available from current API
-    newestTask: null, // Not available from current API
+    oldestTask: null,
+    newestTask: null,
   };
 }

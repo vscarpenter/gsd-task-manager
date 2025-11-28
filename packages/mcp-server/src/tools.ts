@@ -46,5 +46,9 @@ export { searchTasks } from './tools/search-tasks.js';
 // Re-export sync tools
 export { getSyncStatus, getTaskStats } from './tools/sync-status.js';
 
+// Re-export task stats tool
+export { getDetailedTaskStats } from './tools/task-stats.js';
+export type { DetailedTaskStats } from './tools/task-stats.js';
+
 // Re-export device tools
 export { listDevices } from './tools/devices.js';
