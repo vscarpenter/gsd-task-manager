@@ -1,11 +1,20 @@
 import type { Env } from '../../types';
-import { jsonResponse, errorResponse } from '../../middleware/cors';
-import { generateId } from '../../utils/crypto';
-import { createToken } from '../../utils/jwt';
-import { TTL } from '../../config';
+import { errorResponse } from '../../middleware/cors';
 import { createLogger } from '../../utils/logger';
 import { exchangeCodeForTokens } from './token-exchange';
 import { verifyIdToken } from './id-verification';
+import { parseOAuthRequest } from './request-parser';
+import { validateOAuthState, deleteOAuthState } from './state-validator';
+import { findOrCreateUser } from './user-manager';
+import { createDevice, createSession, buildAuthData, storeOAuthResult } from './session-manager';
+import {
+  buildSuccessRedirect,
+  buildSuccessJson,
+  buildErrorRedirect,
+  buildErrorJson,
+  getErrorContext,
+  storeErrorResult,
+} from './response-builder';
 
 const logger = createLogger('OIDC:Callback');
 
@@ -17,28 +26,8 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
   const origin = request.headers.get('Origin');
 
   try {
-    // Parse request body or query params (Apple uses POST, Google uses GET redirect)
-    let code: string | null = null;
-    let state: string | null = null;
-
-    const url = new URL(request.url);
-    const contentType = request.headers.get('content-type');
-
-    if (request.method === 'POST' && contentType?.includes('application/json')) {
-      // JSON POST from our callback page
-      const body = await request.json() as { code?: string; state?: string };
-      code = body.code ?? null;
-      state = body.state ?? null;
-    } else if (request.method === 'POST' && contentType?.includes('application/x-www-form-urlencoded')) {
-      // Apple form post
-      const formData = await request.formData();
-      code = formData.get('code') as string;
-      state = formData.get('state') as string;
-    } else {
-      // Google query params (GET redirect)
-      code = url.searchParams.get('code');
-      state = url.searchParams.get('state');
-    }
+    // Parse request to extract code and state
+    const { code, state } = await parseOAuthRequest(request);
 
     if (!code || !state) {
       logger.warn('Invalid callback parameters', {
@@ -49,48 +38,17 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       return errorResponse('Invalid callback parameters', 400, origin);
     }
 
-    // Retrieve state from KV
-    const stateKey = `oauth_state:${state}`;
-    const stateDataStr = await env.KV.get(stateKey);
-
-    if (!stateDataStr) {
-      logger.warn('OAuth state not found in KV', {
-        statePrefix: state.substring(0, 8) + '...',
-        stateLength: state.length,
-        stateKey,
-        url: request.url,
-        timeNow: new Date().toISOString(),
-        userAgent: request.headers.get('User-Agent'),
-        origin,
-      });
-      return errorResponse(
-        'OAuth session expired or invalid. Please try signing in again. (State not found - this may happen if the sign-in flow took longer than 30 minutes)',
-        400,
-        origin
-      );
+    // Validate OAuth state from KV
+    const stateResult = await validateOAuthState(state, env, request, origin);
+    if (!stateResult.success) {
+      return errorResponse(stateResult.error, stateResult.statusCode, origin);
     }
 
-    const stateData = JSON.parse(stateDataStr);
-    const { codeVerifier, provider, redirectUri, appOrigin, createdAt, sessionId } = stateData;
-
-    if (!sessionId) {
-      logger.warn('OAuth state missing session binding', { statePrefix: state.substring(0, 8) + '...' });
-      return errorResponse('OAuth session invalid or expired. Please retry sign in.', 400, origin);
-    }
-
-    // Log timing information for diagnostics
-    const now = Date.now();
-    const flowDuration = createdAt ? now - createdAt : null;
-    logger.info('OAuth callback received - state valid', {
-      provider,
-      statePrefix: state.substring(0, 8) + '...',
-      flowDurationMs: flowDuration,
-      flowDurationSec: flowDuration ? Math.round(flowDuration / 1000) : null,
-      userAgent: request.headers.get('User-Agent'),
-    });
+    const { stateData } = stateResult;
+    const { codeVerifier, provider, redirectUri, appOrigin, sessionId } = stateData;
 
     // Delete used state
-    await env.KV.delete(stateKey);
+    await deleteOAuthState(state, env);
 
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(provider, code, codeVerifier, redirectUri, env);
@@ -99,143 +57,23 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
     const { email, providerUserId } = await verifyIdToken(provider, tokens.id_token!, env);
 
     // Find or create user
-    let user = await env.DB.prepare(
-      'SELECT id, email, account_status, encryption_salt FROM users WHERE auth_provider = ? AND provider_user_id = ?'
-    )
-      .bind(provider, providerUserId)
-      .first();
-
-    const isNewUser = !user;
-    const encryptionSalt = user?.encryption_salt as string | null;
-
-    if (!user) {
-      // Check if email is already registered with a different provider
-      const existingUser = await env.DB.prepare(
-        'SELECT auth_provider FROM users WHERE email = ?'
-      )
-        .bind(email)
-        .first();
-
-      if (existingUser) {
-        const existingProvider = existingUser.auth_provider as string;
-        const providerName = existingProvider === 'google' ? 'Google' : 'Apple';
-        return errorResponse(
-          `This email is already registered with ${providerName}. Please sign in with ${providerName} or use a different email address.`,
-          409,
-          origin
-        );
-      }
-
-      // Create new user with race condition protection
-      try {
-        const userId = generateId();
-        await env.DB.prepare(
-          `INSERT INTO users (id, email, auth_provider, provider_user_id, created_at, updated_at, account_status)
-           VALUES (?, ?, ?, ?, ?, ?, 'active')`
-        )
-          .bind(userId, email, provider, providerUserId, now, now)
-          .run();
-
-        user = { id: userId, email, account_status: 'active' };
-      } catch (error: any) {
-        // Handle race condition: concurrent insert with same email
-        if (error.message?.includes('UNIQUE constraint failed: users.email')) {
-          logger.warn('Race condition detected: concurrent user creation', {
-            email,
-            provider,
-            error: error.message,
-          });
-
-          // Re-query to get the actual provider that won the race
-          const actualUser = await env.DB.prepare(
-            'SELECT auth_provider FROM users WHERE email = ?'
-          )
-            .bind(email)
-            .first();
-
-          if (actualUser) {
-            const providerName = actualUser.auth_provider === 'google' ? 'Google' : 'Apple';
-            return errorResponse(
-              `This email is already registered with ${providerName}. Please sign in with ${providerName} or use a different email address.`,
-              409,
-              origin
-            );
-          }
-        }
-
-        // Re-throw if it's a different error
-        logger.error('User creation failed', error, { email, provider });
-        throw error;
-      }
-    } else {
-      // Check account status
-      if (user.account_status !== 'active') {
-        return errorResponse('Account is suspended or deleted', 403, origin);
-      }
-
-      // Update last login
-      await env.DB.prepare('UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?')
-        .bind(now, now, user.id)
-        .run();
+    const userResult = await findOrCreateUser(provider, providerUserId, email, env);
+    if (!userResult.success) {
+      return errorResponse(userResult.error, userResult.statusCode, origin);
     }
 
-    // Create device
-    const deviceId = generateId();
-    const deviceName = `${provider === 'google' ? 'Google' : 'Apple'} Device`;
+    const { user, isNewUser } = userResult;
 
-    await env.DB.prepare(
-      `INSERT INTO devices (id, user_id, device_name, last_seen_at, created_at, is_active)
-       VALUES (?, ?, ?, ?, ?, 1)`
-    )
-      .bind(deviceId, user.id, deviceName, now, now)
-      .run();
+    // Create device and session
+    const deviceId = await createDevice(user.id, provider, env);
+    const session = await createSession(user.id, user.email, deviceId, env);
 
-    // Generate JWT token
-    const { token, jti, expiresAt } = await createToken(
-      user.id as string,
-      user.email as string,
-      deviceId,
-      env.JWT_SECRET
-    );
-
-    // Store session in KV
-    await env.KV.put(
-      `session:${user.id}:${jti}`,
-      JSON.stringify({
-        deviceId,
-        issuedAt: now,
-        expiresAt,
-        lastActivity: now,
-      }),
-      { expirationTtl: TTL.SESSION }
-    );
-
-    const authData = {
-      userId: user.id,
-      deviceId,
-      email: user.email,
-      token,
-      expiresAt,
-      requiresEncryptionSetup: !encryptionSalt,
-      encryptionSalt: encryptionSalt || undefined,
-      provider,
-    };
-
-    // Store result in KV for later retrieval by the app
-    await env.KV.put(
-      `oauth_result:${state}`,
-      JSON.stringify({
-        status: 'success',
-        authData,
-        appOrigin,
-        sessionId,
-        createdAt: Date.now(),
-      }),
-      { expirationTtl: TTL.OAUTH_STATE }
-    );
+    // Build auth data and store result
+    const authData = buildAuthData(user.id, user.email, session, user.encryption_salt, provider);
+    await storeOAuthResult(state, authData, appOrigin, sessionId, env);
 
     logger.info('OAuth callback successful', {
-      userId: user.id as string,
+      userId: user.id,
       deviceId,
       provider,
       isNewUser,
@@ -243,95 +81,47 @@ export async function handleOAuthCallback(request: Request, env: Env): Promise<R
       appOrigin,
     });
 
+    // Return redirect or JSON response
     if (appOrigin) {
-      const redirectUrl = new URL('/oauth-callback.html', appOrigin);
-      redirectUrl.searchParams.set('success', 'true');
-      redirectUrl.searchParams.set('state', state);
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': redirectUrl.toString(),
-          'Cache-Control': 'no-store, no-cache, must-revalidate, private',
-        },
-      });
+      return buildSuccessRedirect(appOrigin, state);
     }
 
-    // Fallback: return JSON if we don't have an app origin (should not happen in production)
-    return jsonResponse(
-      {
-        status: 'success',
-        state,
-      },
-      200,
-      origin
-    );
-  } catch (error: any) {
-    logger.error('OAuth callback failed', error, { provider: 'unknown' });
-
-    // Try to get the state from request to determine if this is redirect or popup flow
-    const url = new URL(request.url);
-    const state = url.searchParams.get('state');
-    let errorAppOrigin: string | null = null;
-    let errorSessionId: string | null = null;
-
-    if (state) {
-      try {
-        const stateDataStr = await env.KV.get(`oauth_state:${state}`);
-        if (stateDataStr) {
-          const stateData = JSON.parse(stateDataStr);
-          errorAppOrigin = stateData.appOrigin || null;
-          errorSessionId = stateData.sessionId || null;
-        }
-      } catch (e) {
-        // Ignore errors when trying to retrieve state
-      }
-    }
-
-    const resultKey = state ? `oauth_result:${state}` : null;
-    const message = error instanceof Error ? error.message : 'OAuth callback failed';
-
-    if (resultKey) {
-      await env.KV.put(
-        resultKey,
-        JSON.stringify({
-          status: 'error',
-          error: message,
-          appOrigin: errorAppOrigin || origin || null,
-          sessionId: errorSessionId,
-          createdAt: Date.now(),
-        }),
-        { expirationTtl: TTL.OAUTH_STATE }
-      );
-    }
-
-    const redirectTarget = errorAppOrigin || origin;
-
-    if (redirectTarget && state) {
-      const redirectUrl = new URL('/oauth-callback.html', redirectTarget);
-      redirectUrl.searchParams.set('success', 'false');
-      redirectUrl.searchParams.set('state', state);
-      redirectUrl.searchParams.set('error', encodeURIComponent(message));
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': redirectUrl.toString(),
-          'Cache-Control': 'no-store, no-cache, must-revalidate, private',
-        },
-      });
-    }
-
-    return jsonResponse(
-      {
-        error: 'OAuth callback failed',
-        message: env.ENVIRONMENT === 'development' ? message : 'OAuth authentication failed',
-        ...(env.ENVIRONMENT === 'development' && error instanceof Error && {
-          stack: error.stack?.split('\n').slice(0, 3).join('\n')
-        })
-      },
-      500,
-      origin
-    );
+    return buildSuccessJson(state, origin);
+  } catch (error: unknown) {
+    return handleCallbackError(error, request, env, origin);
   }
+}
+
+/**
+ * Handle errors during OAuth callback
+ */
+async function handleCallbackError(
+  error: unknown,
+  request: Request,
+  env: Env,
+  origin: string | null
+): Promise<Response> {
+  logger.error('OAuth callback failed', error as Error, { provider: 'unknown' });
+
+  const url = new URL(request.url);
+  const state = url.searchParams.get('state');
+
+  if (!state) {
+    return buildErrorJson(error, origin, env);
+  }
+
+  // Try to get context from state
+  const { appOrigin, sessionId } = await getErrorContext(state, env);
+  const message = error instanceof Error ? error.message : 'OAuth callback failed';
+
+  // Store error result for later retrieval
+  await storeErrorResult(state, message, appOrigin || origin, sessionId, env);
+
+  const redirectTarget = appOrigin || origin;
+
+  if (redirectTarget) {
+    return buildErrorRedirect(redirectTarget, state, message);
+  }
+
+  return buildErrorJson(error, origin, env);
 }

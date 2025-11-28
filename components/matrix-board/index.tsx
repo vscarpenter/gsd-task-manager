@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState } from "react";
 import { DndContext } from "@dnd-kit/core";
 import { PlusIcon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -10,27 +10,18 @@ import { MatrixColumn } from "@/components/matrix-column";
 import { MatrixEmptyState } from "@/components/matrix-empty-state";
 import { AppFooter } from "@/components/app-footer";
 import { FilterBar } from "@/components/filter-bar";
-import { FilterPopover } from "@/components/filter-popover";
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
-import { SettingsDialog } from "@/components/settings-dialog";
-import { BulkActionsBar } from "@/components/bulk-actions-bar";
-import { BulkTagDialog } from "@/components/bulk-tag-dialog";
-import { ShareTaskDialog } from "@/components/share-task-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { quadrants } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
 import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { useSmartViewShortcuts } from "@/lib/use-smart-view-shortcuts";
-import { getPinnedSmartViews } from "@/lib/smart-views";
 import type { FilterCriteria } from "@/lib/filters";
 import type { SmartView } from "@/lib/filters";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { extractAvailableTags, getFilteredQuadrants, getVisibleTaskCount } from "@/lib/matrix-filters";
 import { useMatrixDialogs } from "@/lib/use-matrix-dialogs";
-import { notificationChecker } from "@/lib/notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
@@ -41,14 +32,17 @@ import { useSync } from "@/lib/hooks/use-sync";
 import { exportTasks } from "@/lib/tasks";
 import type { CommandActionHandlers } from "@/lib/command-actions";
 
-// Import UserGuideDialog normally to avoid chunk loading issues
-import { UserGuideDialog } from "@/components/user-guide-dialog";
 import { CommandPalette } from "@/components/command-palette";
-
-// Lazy load heavy components
-const ImportDialog = lazy(() => import("@/components/import-dialog").then(m => ({ default: m.ImportDialog })));
-const TaskForm = lazy(() => import("@/components/task-form").then(m => ({ default: m.TaskForm })));
-const SaveSmartViewDialog = lazy(() => import("@/components/save-smart-view-dialog").then(m => ({ default: m.SaveSmartViewDialog })));
+import { MatrixDialogs } from "./matrix-dialogs";
+import {
+  usePinnedSmartViews,
+  useToggleCompletedListener,
+  useTaskHighlighting,
+  useNotificationChecker,
+  usePwaNewTaskShortcut,
+  useUrlHighlightParam,
+  useSmartViewHandlers,
+} from "./use-event-handlers";
 
 function toDraft(task: TaskRecord): TaskDraft {
   return {
@@ -98,106 +92,20 @@ export function MatrixBoard() {
   // Enable auto-archive background task
   useAutoArchive();
 
-  // Load pinned smart views
-  useEffect(() => {
-    const loadPinnedViews = async () => {
-      const views = await getPinnedSmartViews();
-      setPinnedSmartViews(views);
-    };
+  // Use extracted event handler hooks
+  usePinnedSmartViews(setPinnedSmartViews);
+  useToggleCompletedListener(setShowCompleted);
+  useTaskHighlighting(setHighlightedTaskId, { taskRefs });
+  useNotificationChecker();
+  usePwaNewTaskShortcut((state) => dialogs.setDialogState(state));
+  useUrlHighlightParam(all.length, setHighlightedTaskId, { taskRefs });
 
-    loadPinnedViews();
-
-    // Listen for changes to pinned views
-    const handlePinnedViewsChanged = () => {
-      loadPinnedViews();
-    };
-
-    window.addEventListener('pinnedViewsChanged', handlePinnedViewsChanged);
-    return () => window.removeEventListener('pinnedViewsChanged', handlePinnedViewsChanged);
-  }, []);
-
-  // Listen for Quick Settings show completed toggle
-  useEffect(() => {
-    const handleToggleCompleted = (event: CustomEvent) => {
-      setShowCompleted(event.detail.show);
-    };
-
-    window.addEventListener('toggle-completed', handleToggleCompleted as EventListener);
-    return () => window.removeEventListener('toggle-completed', handleToggleCompleted as EventListener);
-  }, []);
-
-  // Listen for Command Palette task highlighting
-  useEffect(() => {
-    const handleHighlightTask = (event: CustomEvent<{ taskId: string }>) => {
-      const taskId = event.detail.taskId;
-      setHighlightedTaskId(taskId);
-
-      // Scroll to task after render
-      setTimeout(() => {
-        const taskElement = taskRefs.current.get(taskId);
-        if (taskElement) {
-          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 100);
-
-      // Clear highlight after animation completes
-      setTimeout(() => {
-        setHighlightedTaskId(null);
-      }, 3000);
-    };
-
-    window.addEventListener('highlightTask', handleHighlightTask as EventListener);
-    return () => window.removeEventListener('highlightTask', handleHighlightTask as EventListener);
-  }, []);
-
-  // Start notification checker when component mounts
-  useEffect(() => {
-    notificationChecker.start();
-    return () => {
-      notificationChecker.stop();
-    };
-  }, []);
-
-  // Handle PWA shortcut for new task
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("action") === "new-task") {
-      dialogs.setDialogState({ mode: "create" });
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, [dialogs]);
-
-  // Handle highlight parameter from dashboard
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const highlightId = params.get("highlight");
-
-    if (highlightId) {
-      // Intentionally setting state in effect to handle URL parameter on mount/task changes
-      // This is a valid pattern for URL-driven UI state initialization
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHighlightedTaskId(highlightId);
-
-      // Wait for tasks to render, then scroll to highlighted task
-      setTimeout(() => {
-        const taskElement = taskRefs.current.get(highlightId);
-        if (taskElement) {
-          taskElement.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-          });
-        }
-      }, 100);
-
-      // Clear highlight after animation completes
-      // This setState is intentional as part of the highlight lifecycle
-      setTimeout(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setHighlightedTaskId(null);
-        window.history.replaceState({}, "", window.location.pathname);
-      }, 3000);
-    }
-  }, [all]);
+  // Smart view handlers
+  const { handleSelectSmartView, handleClearSmartView } = useSmartViewHandlers(
+    setFilterCriteria,
+    setSearchQuery,
+    setActiveSmartViewId
+  );
 
   // Extract all unique tags from tasks
   const availableTags = useMemo(() => extractAvailableTags(all), [all]);
@@ -210,17 +118,6 @@ export function MatrixBoard() {
 
   // Calculate total visible task count
   const visibleCount = getVisibleTaskCount(filteredQuadrants);
-
-  const handleSelectSmartView = (criteria: FilterCriteria) => {
-    setFilterCriteria(criteria);
-    setSearchQuery("");
-  };
-
-  const handleClearSmartView = () => {
-    setFilterCriteria({});
-    setSearchQuery("");
-    setActiveSmartViewId(null);
-  };
 
   const handleSaveSmartView = () => {
     dialogs.setSaveSmartViewOpen(true);
@@ -404,97 +301,59 @@ export function MatrixBoard() {
 
         <AppFooter />
 
-        {/* Bulk actions bar */}
-        <BulkActionsBar
+        {/* All dialogs extracted to separate component */}
+        <MatrixDialogs
+          // Bulk actions
+          bulkTagDialogOpen={dialogs.bulkTagDialogOpen}
+          setBulkTagDialogOpen={dialogs.setBulkTagDialogOpen}
           selectedCount={bulkSelection.selectedTaskIds.size}
+          onBulkAddTagsConfirm={taskOps.handleBulkAddTagsConfirm}
           onClearSelection={bulkSelection.handleClearSelection}
           onBulkDelete={bulkSelection.handleBulkDelete}
           onBulkComplete={bulkSelection.handleBulkComplete}
           onBulkUncomplete={bulkSelection.handleBulkUncomplete}
           onBulkMoveToQuadrant={bulkSelection.handleBulkMoveToQuadrant}
           onBulkAddTags={bulkSelection.handleBulkAddTags}
-        />
-
-        {/* Bulk tag dialog */}
-        <BulkTagDialog
-          open={dialogs.bulkTagDialogOpen}
-          onOpenChange={dialogs.setBulkTagDialogOpen}
-          onConfirm={taskOps.handleBulkAddTagsConfirm}
-          selectedCount={bulkSelection.selectedTaskIds.size}
-        />
-
-        {/* Share task dialog */}
-        <ShareTaskDialog
-          task={dialogs.taskToShare}
-          open={dialogs.shareTaskDialogOpen}
-          onOpenChange={dialogs.setShareTaskDialogOpen}
-        />
-
-        {/* User Guide */}
-        <UserGuideDialog open={dialogs.helpOpen} onOpenChange={dialogs.setHelpOpen} />
-
-        {dialogs.importDialogOpen && (
-          <Suspense fallback={<div className="sr-only">Loading...</div>}>
-            <ImportDialog
-              open={dialogs.importDialogOpen}
-              onOpenChange={dialogs.setImportDialogOpen}
-              fileContents={dialogs.pendingImportContents}
-              existingTaskCount={all.length}
-              onImportComplete={handleImportComplete}
-            />
-          </Suspense>
-        )}
-
-        {dialogs.saveSmartViewOpen && (
-          <Suspense fallback={<div className="sr-only">Loading...</div>}>
-            <SaveSmartViewDialog
-              open={dialogs.saveSmartViewOpen}
-              onOpenChange={dialogs.setSaveSmartViewOpen}
-              criteria={filterCriteria}
-              onSaved={handleSmartViewSaved}
-            />
-          </Suspense>
-        )}
-
-        <FilterPopover
-          open={dialogs.filterPopoverOpen}
-          onOpenChange={dialogs.setFilterPopoverOpen}
-          criteria={filterCriteria}
-          onChange={setFilterCriteria}
+          // Share dialog
+          taskToShare={dialogs.taskToShare}
+          shareTaskDialogOpen={dialogs.shareTaskDialogOpen}
+          setShareTaskDialogOpen={dialogs.setShareTaskDialogOpen}
+          // Help dialog
+          helpOpen={dialogs.helpOpen}
+          setHelpOpen={dialogs.setHelpOpen}
+          // Import dialog
+          importDialogOpen={dialogs.importDialogOpen}
+          setImportDialogOpen={dialogs.setImportDialogOpen}
+          pendingImportContents={dialogs.pendingImportContents}
+          existingTaskCount={all.length}
+          onImportComplete={handleImportComplete}
+          // Save smart view dialog
+          saveSmartViewOpen={dialogs.saveSmartViewOpen}
+          setSaveSmartViewOpen={dialogs.setSaveSmartViewOpen}
+          filterCriteria={filterCriteria}
+          onSmartViewSaved={handleSmartViewSaved}
+          // Filter popover
+          filterPopoverOpen={dialogs.filterPopoverOpen}
+          setFilterPopoverOpen={dialogs.setFilterPopoverOpen}
+          onFilterChange={setFilterCriteria}
           onSaveAsSmartView={handleSaveSmartView}
           availableTags={availableTags}
-        />
-
-        {/* Settings Dialog */}
-        <SettingsDialog
-          open={dialogs.settingsOpen}
-          onOpenChange={dialogs.setSettingsOpen}
+          // Settings dialog
+          settingsOpen={dialogs.settingsOpen}
+          setSettingsOpen={dialogs.setSettingsOpen}
           showCompleted={showCompleted}
           onToggleCompleted={() => setShowCompleted(!showCompleted)}
           onExport={taskOps.handleExport}
           onImport={handleImport}
           isLoading={taskOps.isLoading}
+          // Task form dialog
+          dialogState={dialogs.dialogState}
+          closeDialog={dialogs.closeDialog}
+          taskBeingEdited={taskBeingEdited}
+          activeTaskDraft={activeTaskDraft}
+          onSubmit={taskOps.handleSubmit}
+          onDelete={taskOps.handleDelete}
         />
-
-        <Dialog open={dialogs.dialogState !== null} onOpenChange={(open) => (open ? null : dialogs.closeDialog())}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{dialogs.dialogState?.mode === "edit" ? "Edit task" : "Create task"}</DialogTitle>
-            </DialogHeader>
-            {dialogs.dialogState !== null && (
-              <Suspense fallback={<div className="flex items-center justify-center p-8"><Spinner /></div>}>
-                <TaskForm
-                  taskId={taskBeingEdited?.id}
-                  initialValues={activeTaskDraft}
-                  onSubmit={taskOps.handleSubmit}
-                  onCancel={dialogs.closeDialog}
-                  onDelete={taskBeingEdited ? () => taskOps.handleDelete(taskBeingEdited) : undefined}
-                  submitLabel={dialogs.dialogState?.mode === "edit" ? "Update task" : "Add task"}
-                />
-              </Suspense>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </DndContext>
   );
