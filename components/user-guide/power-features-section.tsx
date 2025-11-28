@@ -2,7 +2,7 @@
 "use client";
 
 import { ZapIcon, KeyboardIcon, SettingsIcon, CommandIcon } from "lucide-react";
-import { GuideSection, FeatureBlock } from "./shared-components";
+import { GuideSection, AdvancedFeature } from "./shared-components";
 
 interface PowerFeaturesSectionProps {
 	expanded: boolean;
@@ -22,7 +22,7 @@ export function PowerFeaturesSection({
 		>
 			<div className="space-y-4 text-sm">
 				{/* Command Palette */}
-				<FeatureBlock
+				<AdvancedFeature
 					icon={<CommandIcon className="h-4 w-4" />}
 					title="Command Palette"
 					description="Universal search and action interface"
@@ -63,10 +63,10 @@ export function PowerFeaturesSection({
 							</ol>
 						</div>
 					</div>
-				</FeatureBlock>
+				</AdvancedFeature>
 
 				{/* Quick Settings Panel */}
-				<FeatureBlock
+				<AdvancedFeature
 					icon={<SettingsIcon className="h-4 w-4" />}
 					title="Quick Settings Panel"
 					description="Frequently-adjusted preferences in a slide-out panel"
@@ -94,10 +94,10 @@ export function PowerFeaturesSection({
 							</p>
 						</div>
 					</div>
-				</FeatureBlock>
+				</AdvancedFeature>
 
 				{/* Smart View Pinning */}
-				<FeatureBlock
+				<AdvancedFeature
 					icon={<KeyboardIcon className="h-4 w-4" />}
 					title="Smart View Pinning"
 					description="Pin up to 5 smart views for instant keyboard access"
@@ -126,7 +126,7 @@ export function PowerFeaturesSection({
 							</p>
 						</div>
 					</div>
-				</FeatureBlock>
+				</AdvancedFeature>
 
 				{/* Combined Power User Workflow */}
 				<div className="rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-2 border-blue-200 dark:border-blue-800 p-4">

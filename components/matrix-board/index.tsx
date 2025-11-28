@@ -116,6 +116,40 @@ export function MatrixBoard() {
     return () => window.removeEventListener('pinnedViewsChanged', handlePinnedViewsChanged);
   }, []);
 
+  // Listen for Quick Settings show completed toggle
+  useEffect(() => {
+    const handleToggleCompleted = (event: CustomEvent) => {
+      setShowCompleted(event.detail.show);
+    };
+
+    window.addEventListener('toggle-completed', handleToggleCompleted as EventListener);
+    return () => window.removeEventListener('toggle-completed', handleToggleCompleted as EventListener);
+  }, []);
+
+  // Listen for Command Palette task highlighting
+  useEffect(() => {
+    const handleHighlightTask = (event: CustomEvent<{ taskId: string }>) => {
+      const taskId = event.detail.taskId;
+      setHighlightedTaskId(taskId);
+
+      // Scroll to task after render
+      setTimeout(() => {
+        const taskElement = taskRefs.current.get(taskId);
+        if (taskElement) {
+          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+
+      // Clear highlight after animation completes
+      setTimeout(() => {
+        setHighlightedTaskId(null);
+      }, 3000);
+    };
+
+    window.addEventListener('highlightTask', handleHighlightTask as EventListener);
+    return () => window.removeEventListener('highlightTask', handleHighlightTask as EventListener);
+  }, []);
+
   // Start notification checker when component mounts
   useEffect(() => {
     notificationChecker.start();
