@@ -1,91 +1,120 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { PaletteIcon, EyeIcon, EyeOffIcon, ChevronRightIcon } from "lucide-react";
-import { Label } from "@/components/ui/label";
+import { SunIcon, MoonIcon, MonitorIcon, CheckIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 interface AppearanceSettingsProps {
-	isExpanded: boolean;
-	onToggle: () => void;
 	showCompleted: boolean;
 	onToggleCompleted: () => void;
 }
 
+/**
+ * iOS-style appearance settings with inline controls
+ */
 export function AppearanceSettings({
-	isExpanded,
-	onToggle,
 	showCompleted,
 	onToggleCompleted,
 }: AppearanceSettingsProps) {
 	const { theme, setTheme } = useTheme();
 
 	return (
-		<Collapsible open={isExpanded} onOpenChange={onToggle}>
-			<CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg bg-background-muted p-4 hover:bg-background-muted/80">
-				<div className="flex items-center gap-3">
-					<PaletteIcon className="h-5 w-5 text-accent" />
-					<span className="font-semibold text-foreground">Appearance</span>
-				</div>
-				<ChevronRightIcon
-					className={`h-5 w-5 text-foreground-muted transition-transform ${
-						isExpanded ? "rotate-90" : ""
-					}`}
-				/>
-			</CollapsibleTrigger>
-			<CollapsibleContent className="px-4 pb-4 pt-4 space-y-4">
-				{/* Theme Selection */}
-				<div className="space-y-2">
-					<Label htmlFor="theme-select">Theme</Label>
-					<Select value={theme} onValueChange={setTheme}>
-						<SelectTrigger id="theme-select">
-							<SelectValue placeholder="Select theme" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="system">System</SelectItem>
-							<SelectItem value="light">Light</SelectItem>
-							<SelectItem value="dark">Dark</SelectItem>
-						</SelectContent>
-					</Select>
-					<p className="text-xs text-foreground-muted">
-						Choose your preferred theme. Changes apply immediately.
-					</p>
-				</div>
-
-				{/* Show Completed Tasks */}
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-3">
-						{showCompleted ? (
-							<EyeIcon className="h-4 w-4 text-foreground-muted" />
-						) : (
-							<EyeOffIcon className="h-4 w-4 text-foreground-muted" />
-						)}
-						<div>
-							<Label htmlFor="show-completed">Show completed tasks</Label>
-							<p className="text-xs text-foreground-muted">
-								Display completed tasks in the matrix view
-							</p>
-						</div>
-					</div>
-					<Switch
-						id="show-completed"
-						checked={showCompleted}
-						onCheckedChange={onToggleCompleted}
+		<>
+			{/* Theme Selection Row */}
+			<SettingsRow
+				label="Theme"
+				description="Choose your visual style"
+			>
+				<div className="flex gap-1 bg-background-muted rounded-lg p-1">
+					<ThemeOption
+						icon={SunIcon}
+						label="Light"
+						isActive={theme === "light"}
+						onClick={() => setTheme("light")}
+					/>
+					<ThemeOption
+						icon={MoonIcon}
+						label="Dark"
+						isActive={theme === "dark"}
+						onClick={() => setTheme("dark")}
+					/>
+					<ThemeOption
+						icon={MonitorIcon}
+						label="Auto"
+						isActive={theme === "system"}
+						onClick={() => setTheme("system")}
 					/>
 				</div>
-			</CollapsibleContent>
-		</Collapsible>
+			</SettingsRow>
+
+			{/* Show Completed Toggle Row */}
+			<SettingsRow
+				label="Show completed"
+				description="Display finished tasks in the matrix"
+			>
+				<Switch
+					checked={showCompleted}
+					onCheckedChange={onToggleCompleted}
+				/>
+			</SettingsRow>
+		</>
+	);
+}
+
+/**
+ * Reusable settings row component
+ */
+function SettingsRow({
+	label,
+	description,
+	children,
+}: {
+	label: string;
+	description?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
+			<div className="flex-1 min-w-0">
+				<p className="text-sm font-medium text-foreground">{label}</p>
+				{description && (
+					<p className="text-xs text-foreground-muted mt-0.5 truncate">{description}</p>
+				)}
+			</div>
+			<div className="flex-shrink-0">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * Theme option button
+ */
+function ThemeOption({
+	icon: Icon,
+	label,
+	isActive,
+	onClick,
+}: {
+	icon: React.ComponentType<{ className?: string }>;
+	label: string;
+	isActive: boolean;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			onClick={onClick}
+			className={`
+				relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
+				transition-all duration-200
+				${isActive
+					? "bg-card text-foreground shadow-sm"
+					: "text-foreground-muted hover:text-foreground"
+				}
+			`}
+			aria-pressed={isActive}
+		>
+			<Icon className="w-3.5 h-3.5" />
+			<span>{label}</span>
+		</button>
 	);
 }

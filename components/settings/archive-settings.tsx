@@ -1,16 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDownIcon, ArchiveIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronRightIcon, ArchiveIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { getArchiveSettings, updateArchiveSettings, archiveOldTasks, getArchivedCount } from "@/lib/archive";
 import type { ArchiveSettings as ArchiveSettingsType } from "@/lib/types";
 import { toast } from "sonner";
@@ -21,6 +13,15 @@ interface ArchiveSettingsProps {
 	onViewArchive: () => void;
 }
 
+const ARCHIVE_DAYS_OPTIONS = [
+	{ value: "30", label: "30 days" },
+	{ value: "60", label: "60 days" },
+	{ value: "90", label: "90 days" },
+];
+
+/**
+ * iOS-style archive settings
+ */
 export function ArchiveSettings({
 	isExpanded,
 	onToggle,
@@ -68,7 +69,7 @@ export function ArchiveSettings({
 		setIsArchiving(true);
 		try {
 			const count = await archiveOldTasks(settings.archiveAfterDays);
-			await loadSettings(); // Refresh archived count
+			await loadSettings();
 			toast.success(`Archived ${count} task${count !== 1 ? 's' : ''}`);
 		} catch (err) {
 			const errorMsg =
@@ -79,112 +80,167 @@ export function ArchiveSettings({
 		}
 	};
 
-	if (!settings) return null;
+	if (!settings) {
+		return (
+			<div className="px-4 py-3.5">
+				<p className="text-sm text-foreground-muted">Loading...</p>
+			</div>
+		);
+	}
+
+	const currentDays = ARCHIVE_DAYS_OPTIONS.find(
+		opt => opt.value === settings.archiveAfterDays.toString()
+	);
 
 	return (
-		<div className="rounded-lg border border-border bg-card">
-			<button
-				onClick={onToggle}
-				className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-background-muted"
-			>
-				<div className="flex items-center gap-3">
-					<ArchiveIcon className="h-5 w-5 text-foreground-muted" />
-					<div>
-						<h3 className="font-semibold text-foreground">
-							Archive Settings
-						</h3>
-						<p className="text-sm text-foreground-muted">
-							Auto-archive completed tasks
-						</p>
-					</div>
-				</div>
-				<ChevronDownIcon
-					className={`h-5 w-5 text-foreground-muted transition-transform ${
-						isExpanded ? "rotate-180" : ""
-					}`}
+		<>
+			{/* Auto-Archive Toggle */}
+			<SettingsRow label="Auto-archive" description="Archive old completed tasks">
+				<Switch
+					checked={settings.enabled}
+					onCheckedChange={handleToggleEnabled}
 				/>
-			</button>
+			</SettingsRow>
 
-			{isExpanded && (
-				<div className="space-y-4 border-t border-border p-4">
-					{/* Enable/Disable Auto-Archive */}
-					<div className="flex items-center justify-between gap-3">
-						<div className="flex-1">
-							<p className="text-sm font-medium text-foreground">
-								Auto-Archive
-							</p>
-							<p className="text-xs text-foreground-muted">
-								Automatically archive old completed tasks
-							</p>
-						</div>
-						<Switch
-							checked={settings.enabled}
-							onCheckedChange={handleToggleEnabled}
-						/>
-					</div>
-
-					{/* Archive After Days */}
-					<div className="flex items-center justify-between gap-3">
-						<div className="flex-1">
-							<p className="text-sm font-medium text-foreground">
-								Archive After
-							</p>
-							<p className="text-xs text-foreground-muted">
-								Days after completion before archiving
-							</p>
-						</div>
-						<Select
-							value={settings.archiveAfterDays.toString()}
-							onValueChange={handleDaysChange}
-							disabled={!settings.enabled}
-						>
-							<SelectTrigger className="w-24">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="30">30 days</SelectItem>
-								<SelectItem value="60">60 days</SelectItem>
-								<SelectItem value="90">90 days</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-
-					{/* Archive Now Button */}
-					<div className="flex items-center justify-between gap-3 pt-2">
-						<div className="flex-1">
-							<p className="text-sm font-medium text-foreground">
-								Archive Now
-							</p>
-							<p className="text-xs text-foreground-muted">
-								Manually archive old completed tasks
-							</p>
-						</div>
-						<Button
-							variant="subtle"
-							onClick={handleArchiveNow}
-							disabled={isArchiving}
-							className="text-sm h-auto py-1 px-3"
-						>
-							{isArchiving ? "Archiving..." : "Archive"}
-						</Button>
-					</div>
-
-					{/* View Archive Link */}
-					{archivedCount > 0 && (
-						<div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-							<p className="text-sm text-foreground-muted">
-								{archivedCount} archived task{archivedCount !== 1 ? 's' : ''}
-							</p>
-							<button
-								onClick={onViewArchive}
-								className="text-sm text-accent hover:underline"
-							>
-								View Archive
-							</button>
-						</div>
-					)}
-				</div>
+			{/* Archive After Days */}
+			{settings.enabled && (
+				<SettingsSelectRow
+					label="Archive after"
+					value={currentDays?.label || "30 days"}
+					options={ARCHIVE_DAYS_OPTIONS}
+					onChange={handleDaysChange}
+				/>
 			)}
+
+			{/* Archive Now Action */}
+			<ActionRow
+				icon={ArchiveIcon}
+				label="Archive now"
+				description="Manually archive completed tasks"
+				onClick={handleArchiveNow}
+				disabled={isArchiving}
+				actionLabel={isArchiving ? "Archiving..." : "Run"}
+			/>
+
+			{/* View Archive Link */}
+			{archivedCount > 0 && (
+				<button
+					onClick={onViewArchive}
+					className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
+					           text-left hover:bg-background-muted/50 transition-colors"
+				>
+					<div className="flex items-center gap-3">
+						<span className="text-sm font-medium text-foreground">View archive</span>
+						<span className="text-xs text-foreground-muted">
+							{archivedCount} task{archivedCount !== 1 ? 's' : ''}
+						</span>
+					</div>
+					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
+				</button>
+			)}
+		</>
+	);
+}
+
+/**
+ * Settings row with inline content
+ */
+function SettingsRow({
+	label,
+	description,
+	children,
+}: {
+	label: string;
+	description?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
+			<div className="flex-1 min-w-0">
+				<p className="text-sm font-medium text-foreground">{label}</p>
+				{description && (
+					<p className="text-xs text-foreground-muted mt-0.5">{description}</p>
+				)}
+			</div>
+			<div className="flex-shrink-0">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * Settings row with dropdown select
+ */
+function SettingsSelectRow({
+	label,
+	value,
+	options,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	options: { value: string; label: string }[];
+	onChange: (value: string) => void;
+}) {
+	return (
+		<div className="relative">
+			<label className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px] cursor-pointer">
+				<span className="text-sm font-medium text-foreground">{label}</span>
+				<div className="flex items-center gap-1">
+					<select
+						value={options.find(opt => opt.label === value)?.value || options[0].value}
+						onChange={(e) => onChange(e.target.value)}
+						className="appearance-none bg-transparent text-sm text-foreground-muted
+						           text-right pr-5 cursor-pointer focus:outline-none"
+					>
+						{options.map((opt) => (
+							<option key={opt.value} value={opt.value}>
+								{opt.label}
+							</option>
+						))}
+					</select>
+					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50 absolute right-4" />
+				</div>
+			</label>
+		</div>
+	);
+}
+
+/**
+ * Action row with button
+ */
+function ActionRow({
+	icon: Icon,
+	label,
+	description,
+	onClick,
+	disabled,
+	actionLabel,
+}: {
+	icon: React.ComponentType<{ className?: string }>;
+	label: string;
+	description?: string;
+	onClick: () => void;
+	disabled?: boolean;
+	actionLabel: string;
+}) {
+	return (
+		<div className="flex items-center gap-3 px-4 py-3.5 min-h-[52px]">
+			<Icon className="w-5 h-5 text-accent flex-shrink-0" />
+			<div className="flex-1 min-w-0">
+				<p className="text-sm font-medium text-foreground">{label}</p>
+				{description && (
+					<p className="text-xs text-foreground-muted mt-0.5">{description}</p>
+				)}
+			</div>
+			<button
+				onClick={onClick}
+				disabled={disabled}
+				className="px-3 py-1.5 text-xs font-medium text-accent bg-accent/10
+				           rounded-lg hover:bg-accent/20 transition-colors
+				           disabled:opacity-50 disabled:cursor-not-allowed"
+			>
+				{actionLabel}
+			</button>
 		</div>
 	);
 }

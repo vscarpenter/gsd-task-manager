@@ -1,15 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CloudIcon, ChevronRightIcon, HistoryIcon, ZapIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronRightIcon, HistoryIcon, ZapIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { getAutoSyncConfig, updateAutoSyncConfig } from "@/lib/sync/config";
 import { toast } from "sonner";
 
@@ -19,6 +12,18 @@ interface SyncSettingsProps {
 	onViewHistory: () => void;
 }
 
+const SYNC_INTERVAL_OPTIONS = [
+	{ value: "1", label: "1 minute" },
+	{ value: "2", label: "2 minutes" },
+	{ value: "5", label: "5 minutes" },
+	{ value: "10", label: "10 minutes" },
+	{ value: "15", label: "15 minutes" },
+	{ value: "30", label: "30 minutes" },
+];
+
+/**
+ * iOS-style sync settings
+ */
 export function SyncSettings({
 	isExpanded,
 	onToggle,
@@ -27,10 +32,18 @@ export function SyncSettings({
 	const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
 	const [syncInterval, setSyncInterval] = useState(2);
 	const [isLoading, setIsLoading] = useState(false);
+	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-	// Load auto-sync config on mount
 	useEffect(() => {
 		loadConfig();
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (updateTimeoutRef.current) {
+				clearTimeout(updateTimeoutRef.current);
+			}
+		};
 	}, []);
 
 	const loadConfig = async () => {
@@ -57,137 +70,140 @@ export function SyncSettings({
 		}
 	};
 
-	const handleIntervalChange = async (value: number) => {
-		// Clamp value to valid range
-		const clampedValue = Math.max(1, Math.min(30, value));
-		setSyncInterval(clampedValue);
+	const handleIntervalChange = async (value: string) => {
+		const newInterval = parseInt(value);
+		setSyncInterval(newInterval);
 
-		// Debounce the actual update
 		if (updateTimeoutRef.current) {
 			clearTimeout(updateTimeoutRef.current);
 		}
 
 		updateTimeoutRef.current = setTimeout(async () => {
 			try {
-				await updateAutoSyncConfig(autoSyncEnabled, clampedValue);
-				toast.success(`Sync interval set to ${clampedValue} minute${clampedValue !== 1 ? 's' : ''}`);
+				await updateAutoSyncConfig(autoSyncEnabled, newInterval);
+				toast.success(`Sync interval set to ${newInterval} minute${newInterval !== 1 ? 's' : ''}`);
 			} catch (error) {
 				console.error('[SYNC SETTINGS] Failed to update interval:', error);
 				toast.error('Failed to update sync interval');
 			}
-		}, 1000); // Wait 1 second after user stops typing
+		}, 500);
 	};
 
-	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-	// Cleanup timeout on unmount
-	useEffect(() => {
-		return () => {
-			if (updateTimeoutRef.current) {
-				clearTimeout(updateTimeoutRef.current);
-			}
-		};
-	}, []);
+	const currentInterval = SYNC_INTERVAL_OPTIONS.find(
+		opt => opt.value === syncInterval.toString()
+	);
 
 	return (
-		<Collapsible open={isExpanded} onOpenChange={onToggle}>
-			<CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg bg-background-muted p-4 hover:bg-background-muted/80">
-				<div className="flex items-center gap-3">
-					<CloudIcon className="h-5 w-5 text-accent" />
-					<span className="font-semibold text-foreground">Cloud Sync</span>
-				</div>
-				<ChevronRightIcon
-					className={`h-5 w-5 text-foreground-muted transition-transform ${isExpanded ? "rotate-90" : ""
-						}`}
+		<>
+			{/* Auto-Sync Toggle */}
+			<SettingsRow label="Auto-sync" description="Sync changes in the background">
+				<Switch
+					checked={autoSyncEnabled}
+					onCheckedChange={handleAutoSyncToggle}
+					disabled={isLoading}
 				/>
-			</CollapsibleTrigger>
-			<CollapsibleContent className="px-4 pb-4 pt-4 space-y-6">
-				{/* Auto-Sync Settings */}
-				<div className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div className="space-y-0.5">
-							<Label htmlFor="auto-sync-toggle" className="text-sm font-medium">
-								Automatic Sync
-							</Label>
-							<p className="text-xs text-foreground-muted">
-								Sync changes automatically in the background
-							</p>
+			</SettingsRow>
+
+			{/* Sync Interval */}
+			{autoSyncEnabled && (
+				<SettingsSelectRow
+					label="Sync interval"
+					value={currentInterval?.label || "2 minutes"}
+					options={SYNC_INTERVAL_OPTIONS}
+					onChange={handleIntervalChange}
+				/>
+			)}
+
+			{/* Smart Sync Info */}
+			{autoSyncEnabled && (
+				<div className="px-4 py-3.5">
+					<div className="flex items-start gap-3 p-3 bg-background-muted/50 rounded-lg">
+						<ZapIcon className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+						<div className="text-xs text-foreground-muted space-y-1">
+							<p className="font-medium text-foreground">Smart triggers</p>
+							<ul className="space-y-0.5">
+								<li>• When returning to this tab</li>
+								<li>• When reconnecting to internet</li>
+								<li>• 30s after making changes</li>
+							</ul>
 						</div>
-						<Switch
-							id="auto-sync-toggle"
-							checked={autoSyncEnabled}
-							onCheckedChange={handleAutoSyncToggle}
-							disabled={isLoading}
-						/>
 					</div>
-
-					{/* Sync Interval Selector */}
-					{autoSyncEnabled && (
-						<div className="space-y-2 pl-2 border-l-2 border-accent/20">
-							<Label htmlFor="sync-interval" className="text-sm font-medium">
-								Sync Interval: {syncInterval} minute{syncInterval !== 1 ? 's' : ''}
-							</Label>
-							<div className="flex items-center gap-2">
-								<input
-									id="sync-interval"
-									type="range"
-									min="1"
-									max="30"
-									step="1"
-									value={syncInterval}
-									onChange={(e) => handleIntervalChange(parseInt(e.target.value))}
-									className="flex-1 h-2 bg-background-muted rounded-lg appearance-none cursor-pointer accent-accent"
-								/>
-								<input
-									type="number"
-									min="1"
-									max="30"
-									value={syncInterval}
-									onChange={(e) => handleIntervalChange(parseInt(e.target.value) || 1)}
-									className="w-16 px-2 py-1 text-sm bg-background-muted border border-foreground-muted/20 rounded text-center"
-								/>
-							</div>
-							<p className="text-xs text-foreground-muted">
-								Changes sync every {syncInterval} minute{syncInterval !== 1 ? 's' : ''} when pending
-							</p>
-
-							{/* Auto-sync triggers info */}
-							<div className="mt-3 p-3 bg-background-muted/50 rounded-lg space-y-1.5">
-								<div className="flex items-start gap-2">
-									<ZapIcon className="h-3.5 w-3.5 text-accent mt-0.5 flex-shrink-0" />
-									<p className="text-xs text-foreground-muted">
-										Auto-sync also triggers when:
-									</p>
-								</div>
-								<ul className="text-xs text-foreground-muted space-y-1 pl-5">
-									<li>• Returning to this tab after being away</li>
-									<li>• Reconnecting to the internet</li>
-									<li>• 30 seconds after making changes</li>
-								</ul>
-								<p className="text-xs text-foreground-muted mt-2 pt-2 border-t border-foreground-muted/10">
-									Manual sync button always available for instant sync
-								</p>
-							</div>
-						</div>
-					)}
 				</div>
+			)}
 
-				{/* Sync History */}
-				<div className="space-y-2 pt-2 border-t border-foreground-muted/10">
-					<Button
-						variant="subtle"
-						className="w-full justify-start"
-						onClick={onViewHistory}
+			{/* View History */}
+			<button
+				onClick={onViewHistory}
+				className="w-full flex items-center gap-3 px-4 py-3.5 min-h-[52px]
+				           text-left hover:bg-background-muted/50 transition-colors"
+			>
+				<HistoryIcon className="w-5 h-5 text-accent flex-shrink-0" />
+				<span className="flex-1 text-sm font-medium text-foreground">Sync history</span>
+				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
+			</button>
+		</>
+	);
+}
+
+/**
+ * Settings row with inline content
+ */
+function SettingsRow({
+	label,
+	description,
+	children,
+}: {
+	label: string;
+	description?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
+			<div className="flex-1 min-w-0">
+				<p className="text-sm font-medium text-foreground">{label}</p>
+				{description && (
+					<p className="text-xs text-foreground-muted mt-0.5">{description}</p>
+				)}
+			</div>
+			<div className="flex-shrink-0">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * Settings row with dropdown select
+ */
+function SettingsSelectRow({
+	label,
+	value,
+	options,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	options: { value: string; label: string }[];
+	onChange: (value: string) => void;
+}) {
+	return (
+		<div className="relative">
+			<label className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px] cursor-pointer">
+				<span className="text-sm font-medium text-foreground">{label}</span>
+				<div className="flex items-center gap-1">
+					<select
+						value={options.find(opt => opt.label === value)?.value || options[0].value}
+						onChange={(e) => onChange(e.target.value)}
+						className="appearance-none bg-transparent text-sm text-foreground-muted
+						           text-right pr-5 cursor-pointer focus:outline-none"
 					>
-						<HistoryIcon className="mr-2 h-4 w-4" />
-						View Sync History
-					</Button>
-					<p className="text-xs text-foreground-muted px-2">
-						View past sync operations, including pushed and pulled tasks,
-						conflicts resolved, and errors.
-					</p>
+						{options.map((opt) => (
+							<option key={opt.value} value={opt.value}>
+								{opt.label}
+							</option>
+						))}
+					</select>
+					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50 absolute right-4" />
 				</div>
-			</CollapsibleContent>
-		</Collapsible>
+			</label>
+		</div>
 	);
 }
