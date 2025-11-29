@@ -1,113 +1,155 @@
 "use client";
 
-import { BellIcon, ChevronRightIcon } from "lucide-react";
-import { Label } from "@/components/ui/label";
+import { ChevronRightIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import type { NotificationSettings } from "@/lib/types";
 
 interface NotificationSettingsProps {
-	isExpanded: boolean;
-	onToggle: () => void;
 	settings: NotificationSettings | null;
 	onNotificationToggle: () => Promise<void>;
 	onDefaultReminderChange: (value: string) => Promise<void>;
 }
 
+const REMINDER_OPTIONS = [
+	{ value: "15", label: "15 minutes" },
+	{ value: "30", label: "30 minutes" },
+	{ value: "60", label: "1 hour" },
+	{ value: "120", label: "2 hours" },
+	{ value: "1440", label: "1 day" },
+];
+
+/**
+ * iOS-style notification settings with inline controls
+ */
 export function NotificationSettingsSection({
-	isExpanded,
-	onToggle,
 	settings,
 	onNotificationToggle,
 	onDefaultReminderChange,
 }: NotificationSettingsProps) {
+	if (!settings) {
+		return (
+			<div className="px-4 py-3.5">
+				<p className="text-sm text-foreground-muted">Loading...</p>
+			</div>
+		);
+	}
+
+	const currentReminder = REMINDER_OPTIONS.find(
+		(opt) => opt.value === settings.defaultReminder.toString()
+	);
+
 	return (
-		<Collapsible open={isExpanded} onOpenChange={onToggle}>
-			<CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg bg-background-muted p-4 hover:bg-background-muted/80">
-				<div className="flex items-center gap-3">
-					<BellIcon className="h-5 w-5 text-accent" />
-					<span className="font-semibold text-foreground">Notifications</span>
-				</div>
-				<ChevronRightIcon
-					className={`h-5 w-5 text-foreground-muted transition-transform ${
-						isExpanded ? "rotate-90" : ""
-					}`}
+		<>
+			{/* Enable Notifications Row */}
+			<SettingsRow label="Push notifications" description="Get reminded about tasks">
+				<Switch
+					checked={settings.enabled}
+					onCheckedChange={onNotificationToggle}
 				/>
-			</CollapsibleTrigger>
-			<CollapsibleContent className="px-4 pb-4 pt-4 space-y-4">
-				{settings && (
-					<>
-						{/* Enable Notifications */}
-						<div className="flex items-center justify-between">
-							<div>
-								<Label htmlFor="enable-notifications">
-									Enable browser notifications
-								</Label>
-								<p className="text-xs text-foreground-muted">
-									Show browser notifications for task reminders
-								</p>
-							</div>
-							<Switch
-								id="enable-notifications"
-								checked={settings.enabled}
-								onCheckedChange={onNotificationToggle}
-							/>
-						</div>
+			</SettingsRow>
 
-						{/* Default Reminder Time */}
-						{settings.enabled && (
-							<div className="space-y-2">
-								<Label htmlFor="default-reminder">Default reminder time</Label>
-								<Select
-									value={settings.defaultReminder.toString()}
-									onValueChange={onDefaultReminderChange}
-								>
-									<SelectTrigger id="default-reminder">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="15">15 minutes before</SelectItem>
-										<SelectItem value="30">30 minutes before</SelectItem>
-										<SelectItem value="60">1 hour before</SelectItem>
-										<SelectItem value="120">2 hours before</SelectItem>
-										<SelectItem value="1440">1 day before</SelectItem>
-									</SelectContent>
-								</Select>
-								<p className="text-xs text-foreground-muted">
-									Default reminder time for new tasks with due dates
-								</p>
-							</div>
-						)}
+			{/* Reminder Time Row - Only show when enabled */}
+			{settings.enabled && (
+				<SettingsSelectRow
+					label="Default reminder"
+					value={currentReminder?.label || "30 minutes"}
+					options={REMINDER_OPTIONS}
+					onChange={onDefaultReminderChange}
+				/>
+			)}
 
-						{/* Permission Status */}
-						{"Notification" in window && (
-							<div className="rounded-lg border border-border bg-background-muted/50 p-3">
-								<p className="text-xs text-foreground-muted">
-									Browser permission:{" "}
-									<span className="font-medium text-foreground">
-										{Notification.permission === "granted"
-											? "Granted ✓"
-											: Notification.permission === "denied"
-												? "Denied"
-												: "Not requested"}
-									</span>
-								</p>
-							</div>
-						)}
-					</>
+			{/* Permission Status Row */}
+			{"Notification" in window && (
+				<SettingsRow label="Browser permission">
+					<PermissionBadge permission={Notification.permission} />
+				</SettingsRow>
+			)}
+		</>
+	);
+}
+
+/**
+ * Settings row with inline content
+ */
+function SettingsRow({
+	label,
+	description,
+	children,
+}: {
+	label: string;
+	description?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
+			<div className="flex-1 min-w-0">
+				<p className="text-sm font-medium text-foreground">{label}</p>
+				{description && (
+					<p className="text-xs text-foreground-muted mt-0.5">{description}</p>
 				)}
-			</CollapsibleContent>
-		</Collapsible>
+			</div>
+			<div className="flex-shrink-0">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * Settings row with dropdown select (iOS-style disclosure)
+ */
+function SettingsSelectRow({
+	label,
+	value,
+	options,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	options: { value: string; label: string }[];
+	onChange: (value: string) => void;
+}) {
+	return (
+		<div className="relative">
+			<label className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px] cursor-pointer">
+				<span className="text-sm font-medium text-foreground">{label}</span>
+				<div className="flex items-center gap-1">
+					<select
+						value={options.find(opt => opt.label === value)?.value || options[0].value}
+						onChange={(e) => onChange(e.target.value)}
+						className="appearance-none bg-transparent text-sm text-foreground-muted
+						           text-right pr-5 cursor-pointer focus:outline-none"
+					>
+						{options.map((opt) => (
+							<option key={opt.value} value={opt.value}>
+								{opt.label}
+							</option>
+						))}
+					</select>
+					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50 absolute right-4" />
+				</div>
+			</label>
+		</div>
+	);
+}
+
+/**
+ * Permission status badge
+ */
+function PermissionBadge({ permission }: { permission: NotificationPermission }) {
+	const styles = {
+		granted: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+		denied: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+		default: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+	};
+
+	const labels = {
+		granted: "Granted",
+		denied: "Denied",
+		default: "Not set",
+	};
+
+	return (
+		<span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[permission]}`}>
+			{labels[permission]}
+		</span>
 	);
 }

@@ -23,6 +23,22 @@ import { AboutSection } from "./about-section";
 import { useRouter } from "next/navigation";
 import { getSyncStatus } from "@/lib/sync/config";
 
+/**
+ * iOS-style settings group container
+ */
+function SettingsGroup({ label, children }: { label: string; children: React.ReactNode }) {
+	return (
+		<div className="space-y-2">
+			<h3 className="text-xs font-medium uppercase tracking-wider text-foreground-muted px-4">
+				{label}
+			</h3>
+			<div className="bg-card rounded-xl border border-card-border shadow-sm overflow-hidden divide-y divide-border">
+				{children}
+			</div>
+		</div>
+	);
+}
+
 interface SettingsDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -143,69 +159,75 @@ export function SettingsDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-				<DialogHeader>
-					<DialogTitle className="text-2xl font-bold text-foreground">
-						Settings
-					</DialogTitle>
-					<DialogDescription className="text-foreground-muted">
-						Configure appearance, notifications, and data management preferences
-					</DialogDescription>
-				</DialogHeader>
-				<div className="space-y-4">
-					{/* Appearance Section */}
-					<AppearanceSettings
-						isExpanded={expandedSections.appearance}
-						onToggle={() => toggleSection("appearance")}
-						showCompleted={showCompleted}
-						onToggleCompleted={onToggleCompleted}
-					/>
+			<DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto bg-background-muted/50 dark:bg-background p-0">
+				<div className="sticky top-0 z-10 bg-background-muted/80 dark:bg-background/80 backdrop-blur-xl px-6 pt-6 pb-4 border-b border-border/50">
+					<DialogHeader>
+						<DialogTitle className="text-xl font-semibold text-foreground">
+							Settings
+						</DialogTitle>
+						<DialogDescription className="text-sm text-foreground-muted">
+							Preferences and configuration
+						</DialogDescription>
+					</DialogHeader>
+				</div>
 
-					{/* Notifications Section */}
-					<NotificationSettingsSection
-						isExpanded={expandedSections.notifications}
-						onToggle={() => toggleSection("notifications")}
-						settings={notificationSettings}
-						onNotificationToggle={handleNotificationToggle}
-						onDefaultReminderChange={handleDefaultReminderChange}
-					/>
-
-					{/* Cloud Sync Section - Only show when sync is enabled */}
-					{syncEnabled && (
-						<SyncSettings
-							isExpanded={expandedSections.sync}
-							onToggle={() => toggleSection("sync")}
-							onViewHistory={handleViewSyncHistory}
+				<div className="px-4 py-6 space-y-8">
+					{/* Appearance Group */}
+					<SettingsGroup label="Appearance">
+						<AppearanceSettings
+							showCompleted={showCompleted}
+							onToggleCompleted={onToggleCompleted}
 						/>
+					</SettingsGroup>
+
+					{/* Notifications Group */}
+					<SettingsGroup label="Notifications">
+						<NotificationSettingsSection
+							settings={notificationSettings}
+							onNotificationToggle={handleNotificationToggle}
+							onDefaultReminderChange={handleDefaultReminderChange}
+						/>
+					</SettingsGroup>
+
+					{/* Cloud Sync Group - Only show when sync is enabled */}
+					{syncEnabled && (
+						<SettingsGroup label="Cloud Sync">
+							<SyncSettings
+								isExpanded={expandedSections.sync}
+								onToggle={() => toggleSection("sync")}
+								onViewHistory={handleViewSyncHistory}
+							/>
+						</SettingsGroup>
 					)}
 
-					{/* Archive Section */}
-					<ArchiveSettings
-						isExpanded={expandedSections.archive}
-						onToggle={() => toggleSection("archive")}
-						onViewArchive={handleViewArchive}
-					/>
+					{/* Archive Group */}
+					<SettingsGroup label="Archive">
+						<ArchiveSettings
+							isExpanded={expandedSections.archive}
+							onToggle={() => toggleSection("archive")}
+							onViewArchive={handleViewArchive}
+						/>
+					</SettingsGroup>
 
-					{/* Data & Backup Section */}
-					<DataManagement
-						isExpanded={expandedSections.data}
-						onToggle={() => toggleSection("data")}
-						activeTasks={activeTasks}
-						completedTasks={completedTasks}
-						totalTasks={tasks.length}
-						estimatedSize={estimatedSize}
-						onExport={onExport}
-						onImportClick={handleImportClick}
-						isLoading={isLoading}
-						syncEnabled={syncEnabled}
-						pendingSync={pendingSync}
-					/>
+					{/* Data & Storage Group */}
+					<SettingsGroup label="Data & Storage">
+						<DataManagement
+							activeTasks={activeTasks}
+							completedTasks={completedTasks}
+							totalTasks={tasks.length}
+							estimatedSize={estimatedSize}
+							onExport={onExport}
+							onImportClick={handleImportClick}
+							isLoading={isLoading}
+							syncEnabled={syncEnabled}
+							pendingSync={pendingSync}
+						/>
+					</SettingsGroup>
 
-					{/* About Section */}
-					<AboutSection
-						isExpanded={expandedSections.about}
-						onToggle={() => toggleSection("about")}
-					/>
+					{/* About Group */}
+					<SettingsGroup label="About">
+						<AboutSection />
+					</SettingsGroup>
 				</div>
 			</DialogContent>
 		</Dialog>

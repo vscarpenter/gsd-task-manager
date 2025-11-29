@@ -1,18 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { DatabaseIcon, DownloadIcon, UploadIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { DownloadIcon, UploadIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
 import { ResetEverythingDialog } from "@/components/reset-everything-dialog";
 
 interface DataManagementProps {
-	isExpanded: boolean;
-	onToggle: () => void;
 	activeTasks: number;
 	completedTasks: number;
 	totalTasks: number;
@@ -24,9 +16,10 @@ interface DataManagementProps {
 	pendingSync?: number;
 }
 
+/**
+ * iOS-style data management settings
+ */
 export function DataManagement({
-	isExpanded,
-	onToggle,
 	activeTasks,
 	completedTasks,
 	totalTasks,
@@ -40,87 +33,54 @@ export function DataManagement({
 	const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
 	return (
-		<Collapsible open={isExpanded} onOpenChange={onToggle}>
-			<CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg bg-background-muted p-4 hover:bg-background-muted/80">
-				<div className="flex items-center gap-3">
-					<DatabaseIcon className="h-5 w-5 text-accent" />
-					<span className="font-semibold text-foreground">Data & Backup</span>
+		<>
+			{/* Storage Stats Row */}
+			<SettingsRow label="Local storage">
+				<div className="text-right">
+					<p className="text-sm font-medium text-foreground">{estimatedSize} KB</p>
+					<p className="text-xs text-foreground-muted">{totalTasks} tasks</p>
 				</div>
-				<ChevronRightIcon
-					className={`h-5 w-5 text-foreground-muted transition-transform ${
-						isExpanded ? "rotate-90" : ""
-					}`}
-				/>
-			</CollapsibleTrigger>
-			<CollapsibleContent className="px-4 pb-4 pt-4 space-y-4">
-				{/* Storage Stats */}
-				<div className="rounded-lg border border-border bg-background-muted/50 p-4">
-					<h4 className="text-sm font-semibold text-foreground mb-2">Storage</h4>
-					<div className="space-y-1 text-xs text-foreground-muted">
-						<p>
-							Active tasks:{" "}
-							<span className="font-medium text-foreground">{activeTasks}</span>
-						</p>
-						<p>
-							Completed tasks:{" "}
-							<span className="font-medium text-foreground">{completedTasks}</span>
-						</p>
-						<p>
-							Total tasks:{" "}
-							<span className="font-medium text-foreground">{totalTasks}</span>
-						</p>
-						<p>
-							Estimated size:{" "}
-							<span className="font-medium text-foreground">{estimatedSize} KB</span>
-						</p>
-					</div>
-				</div>
+			</SettingsRow>
 
-				{/* Export/Import Actions */}
-				<div className="space-y-2">
-					<Button
-						variant="subtle"
-						className="w-full justify-start"
-						onClick={onExport}
-						disabled={isLoading}
-					>
-						<DownloadIcon className="mr-2 h-4 w-4" />
-						Export Tasks
-					</Button>
-					<Button
-						variant="subtle"
-						className="w-full justify-start"
-						onClick={onImportClick}
-						disabled={isLoading}
-					>
-						<UploadIcon className="mr-2 h-4 w-4" />
-						Import Tasks
-					</Button>
-					<p className="text-xs text-foreground-muted px-2">
-						Export your tasks as JSON for backup or transfer. Import to restore or
-						merge tasks.
-					</p>
+			{/* Task Breakdown Row */}
+			<SettingsRow label="Tasks breakdown">
+				<div className="flex gap-4 text-xs">
+					<span className="text-foreground-muted">
+						Active: <span className="font-medium text-foreground">{activeTasks}</span>
+					</span>
+					<span className="text-foreground-muted">
+						Done: <span className="font-medium text-foreground">{completedTasks}</span>
+					</span>
 				</div>
+			</SettingsRow>
 
-				{/* Reset Everything Section */}
-				<div className="pt-2 border-t border-border">
-					<div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20 p-3 mb-3">
-						<p className="text-xs text-red-600 dark:text-red-400">
-							⚠️ Clearing data is permanent and cannot be undone. Export your tasks
-							first.
-						</p>
-					</div>
-					<Button
-						variant="subtle"
-						className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-						onClick={() => setResetDialogOpen(true)}
-						disabled={isLoading}
-					>
-						<Trash2Icon className="mr-2 h-4 w-4" />
-						Reset Everything
-					</Button>
-				</div>
-			</CollapsibleContent>
+			{/* Export Row */}
+			<ActionRow
+				icon={DownloadIcon}
+				label="Export tasks"
+				description="Download as JSON backup"
+				onClick={onExport}
+				disabled={isLoading}
+			/>
+
+			{/* Import Row */}
+			<ActionRow
+				icon={UploadIcon}
+				label="Import tasks"
+				description="Restore from JSON file"
+				onClick={onImportClick}
+				disabled={isLoading}
+			/>
+
+			{/* Danger Zone - Reset */}
+			<ActionRow
+				icon={Trash2Icon}
+				label="Reset everything"
+				description="Delete all local data"
+				onClick={() => setResetDialogOpen(true)}
+				disabled={isLoading}
+				variant="danger"
+			/>
 
 			{/* Reset Dialog */}
 			<ResetEverythingDialog
@@ -132,6 +92,71 @@ export function DataManagement({
 				syncEnabled={syncEnabled}
 				pendingSync={pendingSync}
 			/>
-		</Collapsible>
+		</>
+	);
+}
+
+/**
+ * Settings row with inline content
+ */
+function SettingsRow({
+	label,
+	children,
+}: {
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
+			<p className="text-sm font-medium text-foreground">{label}</p>
+			<div className="flex-shrink-0">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * Actionable row with icon and disclosure indicator
+ */
+function ActionRow({
+	icon: Icon,
+	label,
+	description,
+	onClick,
+	disabled,
+	variant = "default",
+}: {
+	icon: React.ComponentType<{ className?: string }>;
+	label: string;
+	description?: string;
+	onClick: () => void;
+	disabled?: boolean;
+	variant?: "default" | "danger";
+}) {
+	const isDanger = variant === "danger";
+
+	return (
+		<button
+			onClick={onClick}
+			disabled={disabled}
+			className={`
+				w-full flex items-center gap-3 px-4 py-3.5 min-h-[52px] text-left
+				transition-colors disabled:opacity-50
+				${isDanger
+					? "hover:bg-red-50 dark:hover:bg-red-950/20"
+					: "hover:bg-background-muted/50"
+				}
+			`}
+		>
+			<Icon className={`w-5 h-5 ${isDanger ? "text-red-500" : "text-accent"}`} />
+			<div className="flex-1 min-w-0">
+				<p className={`text-sm font-medium ${isDanger ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
+					{label}
+				</p>
+				{description && (
+					<p className="text-xs text-foreground-muted mt-0.5">{description}</p>
+				)}
+			</div>
+			<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50 flex-shrink-0" />
+		</button>
 	);
 }
