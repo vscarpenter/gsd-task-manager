@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLinkIcon, ShieldCheckIcon } from "lucide-react";
+import { SettingsRow } from "./shared-components";
 
 /**
  * iOS-style about section
@@ -48,20 +49,3 @@ export function AboutSection() {
 	);
 }
 
-/**
- * Settings row with inline content
- */
-function SettingsRow({
-	label,
-	children,
-}: {
-	label: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
-			<p className="text-sm font-medium text-foreground">{label}</p>
-			<div className="flex-shrink-0">{children}</div>
-		</div>
-	);
-}

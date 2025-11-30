@@ -66,15 +66,6 @@ export function SettingsDialog({
 	const [syncEnabled, setSyncEnabled] = useState(false);
 	const [pendingSync, setPendingSync] = useState(0);
 
-	// Section expansion state
-	const [expandedSections, setExpandedSections] = useState({
-		appearance: true,
-		notifications: false,
-		sync: false,
-		archive: false,
-		data: false,
-		about: false,
-	});
 
 	const loadNotificationSettings = async () => {
 		const settings = await getNotificationSettings();
@@ -129,13 +120,6 @@ export function SettingsDialog({
 			}
 		};
 		input.click();
-	};
-
-	const toggleSection = (section: keyof typeof expandedSections) => {
-		setExpandedSections((prev) => ({
-			...prev,
-			[section]: !prev[section],
-		}));
 	};
 
 	const handleViewArchive = () => {
@@ -193,8 +177,6 @@ export function SettingsDialog({
 					{syncEnabled && (
 						<SettingsGroup label="Cloud Sync">
 							<SyncSettings
-								isExpanded={expandedSections.sync}
-								onToggle={() => toggleSection("sync")}
 								onViewHistory={handleViewSyncHistory}
 							/>
 						</SettingsGroup>
@@ -203,8 +185,6 @@ export function SettingsDialog({
 					{/* Archive Group */}
 					<SettingsGroup label="Archive">
 						<ArchiveSettings
-							isExpanded={expandedSections.archive}
-							onToggle={() => toggleSection("archive")}
 							onViewArchive={handleViewArchive}
 						/>
 					</SettingsGroup>

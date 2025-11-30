@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DownloadIcon, UploadIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
 import { ResetEverythingDialog } from "@/components/reset-everything-dialog";
+import { SettingsRow } from "./shared-components";
 
 interface DataManagementProps {
 	activeTasks: number;
@@ -93,24 +94,6 @@ export function DataManagement({
 				pendingSync={pendingSync}
 			/>
 		</>
-	);
-}
-
-/**
- * Settings row with inline content
- */
-function SettingsRow({
-	label,
-	children,
-}: {
-	label: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
-			<p className="text-sm font-medium text-foreground">{label}</p>
-			<div className="flex-shrink-0">{children}</div>
-		</div>
 	);
 }
 
