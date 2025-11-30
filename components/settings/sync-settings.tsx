@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChevronRightIcon, HistoryIcon, ZapIcon } from "lucide-react";
+import { HistoryIcon, ZapIcon, ChevronRightIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { getAutoSyncConfig, updateAutoSyncConfig } from "@/lib/sync/config";
 import { toast } from "sonner";
+import { createLogger } from "@/lib/logger";
+import { SettingsRow, SettingsSelectRow } from "./shared-components";
+
+const logger = createLogger("UI");
 
 interface SyncSettingsProps {
-	isExpanded: boolean;
-	onToggle: () => void;
 	onViewHistory: () => void;
 }
 
@@ -25,8 +27,6 @@ const SYNC_INTERVAL_OPTIONS = [
  * iOS-style sync settings
  */
 export function SyncSettings({
-	isExpanded,
-	onToggle,
 	onViewHistory,
 }: SyncSettingsProps) {
 	const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
@@ -52,7 +52,7 @@ export function SyncSettings({
 			setAutoSyncEnabled(config.enabled);
 			setSyncInterval(config.intervalMinutes);
 		} catch (error) {
-			console.error('[SYNC SETTINGS] Failed to load config:', error);
+			logger.error("Failed to load sync config", error instanceof Error ? error : undefined);
 		}
 	};
 
@@ -63,7 +63,7 @@ export function SyncSettings({
 			setAutoSyncEnabled(checked);
 			toast.success(checked ? 'Auto-sync enabled' : 'Auto-sync disabled');
 		} catch (error) {
-			console.error('[SYNC SETTINGS] Failed to toggle auto-sync:', error);
+			logger.error("Failed to toggle auto-sync", error instanceof Error ? error : undefined);
 			toast.error('Failed to update auto-sync settings');
 		} finally {
 			setIsLoading(false);
@@ -83,7 +83,7 @@ export function SyncSettings({
 				await updateAutoSyncConfig(autoSyncEnabled, newInterval);
 				toast.success(`Sync interval set to ${newInterval} minute${newInterval !== 1 ? 's' : ''}`);
 			} catch (error) {
-				console.error('[SYNC SETTINGS] Failed to update interval:', error);
+				logger.error("Failed to update sync interval", error instanceof Error ? error : undefined);
 				toast.error('Failed to update sync interval');
 			}
 		}, 500);
@@ -145,65 +145,3 @@ export function SyncSettings({
 	);
 }
 
-/**
- * Settings row with inline content
- */
-function SettingsRow({
-	label,
-	description,
-	children,
-}: {
-	label: string;
-	description?: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
-			<div className="flex-1 min-w-0">
-				<p className="text-sm font-medium text-foreground">{label}</p>
-				{description && (
-					<p className="text-xs text-foreground-muted mt-0.5">{description}</p>
-				)}
-			</div>
-			<div className="flex-shrink-0">{children}</div>
-		</div>
-	);
-}
-
-/**
- * Settings row with dropdown select
- */
-function SettingsSelectRow({
-	label,
-	value,
-	options,
-	onChange,
-}: {
-	label: string;
-	value: string;
-	options: { value: string; label: string }[];
-	onChange: (value: string) => void;
-}) {
-	return (
-		<div className="relative">
-			<label className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px] cursor-pointer">
-				<span className="text-sm font-medium text-foreground">{label}</span>
-				<div className="flex items-center gap-1">
-					<select
-						value={options.find(opt => opt.label === value)?.value || options[0].value}
-						onChange={(e) => onChange(e.target.value)}
-						className="appearance-none bg-transparent text-sm text-foreground-muted
-						           text-right pr-5 cursor-pointer focus:outline-none"
-					>
-						{options.map((opt) => (
-							<option key={opt.value} value={opt.value}>
-								{opt.label}
-							</option>
-						))}
-					</select>
-					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50 absolute right-4" />
-				</div>
-			</label>
-		</div>
-	);
-}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { SunIcon, MoonIcon, MonitorIcon, CheckIcon } from "lucide-react";
+import { SunIcon, MoonIcon, MonitorIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { SettingsRow } from "./shared-components";
 
 interface AppearanceSettingsProps {
 	showCompleted: boolean;
@@ -58,31 +59,6 @@ export function AppearanceSettings({
 				/>
 			</SettingsRow>
 		</>
-	);
-}
-
-/**
- * Reusable settings row component
- */
-function SettingsRow({
-	label,
-	description,
-	children,
-}: {
-	label: string;
-	description?: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
-			<div className="flex-1 min-w-0">
-				<p className="text-sm font-medium text-foreground">{label}</p>
-				{description && (
-					<p className="text-xs text-foreground-muted mt-0.5 truncate">{description}</p>
-				)}
-			</div>
-			<div className="flex-shrink-0">{children}</div>
-		</div>
 	);
 }
 
