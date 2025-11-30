@@ -1,6 +1,5 @@
-import { z } from 'zod';
 import { apiRequest } from '../api/client.js';
-import { syncStatusSchema, taskStatsSchema } from '../types.js';
+import { syncStatusSchema, statsResponseSchema } from '../types.js';
 import type { GsdConfig, SyncStatus, TaskStats } from '../types.js';
 
 /**
@@ -27,7 +26,8 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const json: unknown = await response.json();
+      const data = statsResponseSchema.parse(json);
       return {
         totalTasks: data.metadata.totalCount,
         activeTasks: data.metadata.activeCount,
