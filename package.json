@@ -57,6 +57,7 @@
 		"@vitest/coverage-v8": "^4.0.9",
 		"autoprefixer": "^10.4.22",
 		"babel-plugin-react-compiler": "^1.0.0",
+		"baseline-browser-mapping": "^2.8.32",
 		"eslint": "^9.39.1",
 		"eslint-config-next": "16.0.5",
 		"fake-indexeddb": "^6.2.4",
