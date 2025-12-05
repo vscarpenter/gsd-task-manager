@@ -528,9 +528,8 @@ describe('OAuthCallbackHandler', () => {
       consoleErrorSpy.mockRestore();
     });
 
-    // Skipping: Duplicate state prevention is not implemented in the component
-    // This test was added speculatively but the feature doesn't exist
-    it.skip('should prevent duplicate processing of same state', async () => {
+    // Duplicate state prevention IS implemented via processingState check in component (lines 71-73)
+    it('should prevent duplicate processing of same state', async () => {
       render(<OAuthCallbackHandler />);
 
       const authData: OAuthAuthData = {
@@ -546,18 +545,25 @@ describe('OAuthCallbackHandler', () => {
 
       const sameState = 'duplicate-state';
 
-      // Call with same state twice
+      // First call - should process normally
       await oauthCallback({
         status: 'success',
         authData,
         state: sameState,
       });
 
-      // Clear mocks
+      // Wait for first callback to fully process (state update + toast)
+      await waitFor(() => {
+        expect(mockToast.info).toHaveBeenCalledWith(
+          expect.stringContaining('Processing OAuth')
+        );
+      });
+
+      // Clear mocks after first call is fully processed
       mockToast.info.mockClear();
       mockToast.success.mockClear();
 
-      // Call again with same state
+      // Call again with same state - should be blocked by processingState check
       await oauthCallback({
         status: 'success',
         authData,

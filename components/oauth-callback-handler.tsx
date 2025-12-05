@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getDb } from '@/lib/db';
 import { toast } from 'sonner';
@@ -23,7 +23,8 @@ export function OAuthCallbackHandler() {
   const [showEncryptionDialog, setShowEncryptionDialog] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [serverEncryptionSalt, setServerEncryptionSalt] = useState<string | null>(null);
-  const [processingState, setProcessingState] = useState<string | null>(null);
+  // Use ref instead of state for synchronous duplicate state prevention
+  const processingStateRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Handle OAuth error redirect (from worker when state is expired/invalid)
@@ -68,11 +69,12 @@ export function OAuthCallbackHandler() {
   }, []);
 
   const processAuthData = async (authData: OAuthAuthData, state: string) => {
-    if (processingState === state) {
+    // Synchronous duplicate check using ref (React state updates are async/batched)
+    if (processingStateRef.current === state) {
       return;
     }
 
-    setProcessingState(state);
+    processingStateRef.current = state;
 
     try {
       console.log('[OAuthCallbackHandler] Processing OAuth handshake result:', {

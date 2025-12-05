@@ -43,6 +43,8 @@
   "exclude": [
     "node_modules",
     "worker",
-    "packages"
+    "packages",
+    "vitest.config.ts",
+    "vitest.setup.ts"
   ]
 }
