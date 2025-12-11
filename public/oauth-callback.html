@@ -153,8 +153,49 @@
         ? 'http://localhost:8787'
         : window.location.origin;
 
+      // Detect if this window was opened as a popup
+      // More reliable than checking window.opener (which can be null after cross-origin navigation)
+      function isPopupWindow() {
+        // Check if window has a name that matches our OAuth popup naming convention
+        const hasOAuthWindowName = window.name && (
+          window.name.includes('oauth') ||
+          window.name.includes('_oauth') ||
+          window.name === 'google_oauth' ||
+          window.name === 'apple_oauth'
+        );
+
+        // Check if window was opened (opener might be null after cross-origin nav, but history.length will be 1)
+        const hasShortHistory = window.history.length <= 2;
+
+        // Check window features that indicate a popup
+        const isSmallWindow = window.outerWidth < 700 && window.outerHeight < 800;
+
+        // If we have an opener, definitely a popup
+        if (window.opener) {
+          return true;
+        }
+
+        // If window name matches our OAuth pattern, treat as popup
+        if (hasOAuthWindowName) {
+          return true;
+        }
+
+        // If it's a small window with short history, likely a popup
+        if (isSmallWindow && hasShortHistory) {
+          return true;
+        }
+
+        return false;
+      }
+
       // Detect if running in standalone PWA mode (especially iOS)
       function isStandalonePWA() {
+        // If we're in a popup window, we're NOT in standalone PWA mode
+        // This is critical because display-mode: standalone can match in popup windows
+        if (isPopupWindow()) {
+          return false;
+        }
+
         // iOS Safari standalone mode
         const isIOSStandalone = ('standalone' in window.navigator) && window.navigator.standalone === true;
 
@@ -171,8 +212,19 @@
         return /iphone|ipad|ipod/.test(userAgent);
       }
 
+      const isPopup = isPopupWindow();
       const isInStandalonePWA = isStandalonePWA();
       const isIOSDevice = isIOS();
+
+      console.info('[OAuth Callback] Window detection:', {
+        isPopup,
+        isInStandalonePWA,
+        isIOSDevice,
+        hasOpener: !!window.opener,
+        windowName: window.name,
+        historyLength: window.history.length,
+        windowSize: `${window.outerWidth}x${window.outerHeight}`,
+      });
 
       // Show error state
       async function showError(message) {
@@ -212,11 +264,19 @@
               countdownEl.textContent = `Closing in ${countdown} seconds...`;
             } else {
               clearInterval(interval);
-              if (window.opener) {
+              // Try to close the window - this works for popups even if opener is null
+              // (window.opener can be null after cross-origin navigation during OAuth)
+              try {
                 window.close();
-              } else {
-                countdownEl.textContent = 'Please close this window manually.';
+              } catch (e) {
+                console.warn('[OAuth Callback] window.close() failed:', e);
               }
+              // If close didn't work, show manual close message after a brief delay
+              setTimeout(function() {
+                if (!window.closed) {
+                  countdownEl.textContent = 'Please close this window manually.';
+                }
+              }, 100);
             }
           }, 1000);
         }
@@ -247,11 +307,19 @@
           countdownEl.textContent = `Closing in ${countdown} second...`;
 
           setTimeout(function() {
-            if (window.opener) {
+            // Try to close the window - this works for popups even if opener is null
+            // (window.opener can be null after cross-origin navigation during OAuth)
+            try {
               window.close();
-            } else {
-              countdownEl.textContent = 'Please close this window manually.';
+            } catch (e) {
+              console.warn('[OAuth Callback] window.close() failed:', e);
             }
+            // If close didn't work, show manual close message after a brief delay
+            setTimeout(function() {
+              if (!window.closed) {
+                countdownEl.textContent = 'Please close this window manually.';
+              }
+            }, 100);
           }, 1000);
         }
       }
