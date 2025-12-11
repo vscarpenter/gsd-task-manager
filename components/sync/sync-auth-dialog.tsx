@@ -33,9 +33,13 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
 
   // Load sync status when dialog opens
   useEffect(() => {
+    let cancelled = false;
+
     const loadStatus = async () => {
       const db = getDb();
       const config = await db.syncMetadata.get("sync_config");
+
+      if (cancelled) return;
 
       if (config && config.key === "sync_config") {
         setSyncStatus({
@@ -49,10 +53,21 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
           const hasConfig = await isEncryptionConfigured();
 
           if (hasConfig && !crypto.isInitialized()) {
-            setIsNewUser(false);
-            setServerEncryptionSalt(null);
-            setShowEncryptionDialog(true);
-            toast.info("Please enter your encryption passphrase to unlock sync.");
+            // Add a small delay before showing encryption dialog
+            // This gives OAuthCallbackHandler time to handle OAuth flow
+            // and prevents duplicate encryption dialogs
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (cancelled) return;
+
+            // Re-check if crypto was initialized while we waited
+            // (OAuthCallbackHandler might have shown its own dialog)
+            if (!crypto.isInitialized() && !showEncryptionDialog) {
+              setIsNewUser(false);
+              setServerEncryptionSalt(null);
+              setShowEncryptionDialog(true);
+              toast.info("Please enter your encryption passphrase to unlock sync.");
+            }
           }
         }
       } else {
@@ -63,7 +78,11 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
     if (isOpen) {
       loadStatus();
     }
-  }, [isOpen]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, showEncryptionDialog]);
 
   // Listen for OAuth handshake results while dialog is open
   useEffect(() => {
