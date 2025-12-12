@@ -46,14 +46,14 @@
     "url": "https://github.com/vscarpenter/gsd-taskmanager/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.22.0",
-    "zod": "^4.1.12"
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "@vitest/ui": "^4.0.9",
+    "@vitest/ui": "^4.0.15",
     "typescript": "^5.7.3",
-    "vitest": "^4.0.9"
+    "vitest": "^4.0.15"
   },
   "engines": {
     "node": ">=18.0.0"
