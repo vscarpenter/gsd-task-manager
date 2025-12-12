@@ -48,7 +48,6 @@ sync.md
 *.tsbuildinfo
 
 # SonarQube
-sonar-project.properties
 .scannerwork
 
 # Cloudflare Worker
