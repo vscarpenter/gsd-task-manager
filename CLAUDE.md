@@ -16,6 +16,13 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - **Command Palette** — Global ⌘K/Ctrl+K shortcut for quick actions, navigation, and task search
 - **Quick Settings Panel** — Slide-out panel for frequently-adjusted settings (theme, show completed, notifications, sync interval)
 
+**v6.x Features (Current - 6.1.4):**
+- **iOS-style Settings Dialog** — Redesigned settings with grouped layout and modular sections
+- **Archive View** — `/archive` route for viewing and managing completed/archived tasks
+- **Sync History** — `/sync-history` route for viewing sync operation history
+- **Background Sync** — Configurable auto-sync with visibility and online event listeners
+- **Sync Notifications** — Optional notifications for sync status changes
+
 ## Core Commands
 
 ### Development
@@ -94,6 +101,8 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **App Router** (`app/`):
   - `app/(matrix)/page.tsx` - Main matrix view (renders MatrixBoard)
   - `app/(dashboard)/dashboard/page.tsx` - Analytics dashboard with metrics and charts
+  - `app/(archive)/archive/page.tsx` - Archive view for completed/archived tasks
+  - `app/(sync)/sync-history/page.tsx` - Sync operation history view
   - `app/(pwa)/install/page.tsx` - PWA installation instructions
   - `app/layout.tsx` - Root layout with theme provider and PWA registration
 - **UI Components** (`components/ui/`): shadcn-style primitives (button, dialog, input, etc.)
@@ -109,8 +118,20 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
     - `task-form-dependencies.tsx` - Dependency selector with circular dependency prevention
   - **Sync Components** (`components/sync/`):
     - `sync-button.tsx` - Main sync button UI component
+    - `sync-auth-dialog.tsx` - OAuth login/logout dialog with encryption passphrase handling
+    - `oauth-buttons.tsx` - Google/Apple OAuth sign-in buttons with popup/redirect flow
+    - `encryption-passphrase-dialog.tsx` - Dialog for setting/entering encryption passphrase
     - `use-sync-health.ts` - Health monitoring hook
     - `use-sync-status.ts` - Status display logic hook
+  - **Settings Components** (`components/settings/`):
+    - `settings-dialog.tsx` - Main iOS-style settings dialog with tabbed sections
+    - `appearance-settings.tsx` - Theme and display preferences
+    - `notification-settings.tsx` - Notification configuration
+    - `sync-settings.tsx` - Cloud sync settings and status
+    - `archive-settings.tsx` - Auto-archive and retention settings
+    - `data-management.tsx` - Import/export and data operations
+    - `about-section.tsx` - App version and links
+    - `shared-components.tsx` - Reusable settings UI primitives
   - **Bulk Operations**:
     - `bulk-actions-bar.tsx` - Floating action bar for multi-select operations
     - `bulk-tag-dialog.tsx` - Dialog for adding tags to multiple tasks
@@ -271,6 +292,19 @@ lib/sync/
 ├── config.ts             # Main sync configuration management
 └── config-migration.ts   # Legacy config migration logic
 ```
+
+**lib/sync/oauth-handshake/** (OAuth Communication)
+```
+lib/sync/oauth-handshake/
+├── index.ts          # Re-exports (subscribeToOAuthHandshake, announceOAuthState)
+├── types.ts          # OAuthHandshakeEvent, OAuthAuthData, BroadcastPayload types
+├── state.ts          # Shared state (listeners, processedStates, BroadcastChannel)
+├── broadcaster.ts    # announceOAuthState() - multi-channel OAuth result broadcasting
+├── subscriber.ts     # subscribeToOAuthHandshake() - event subscription
+├── fetcher.ts        # fetchOAuthResult() - retrieves auth data from worker
+└── initializer.ts    # Module initialization, event listeners, result recovery
+```
+**Purpose**: Handles communication between OAuth popup/redirect and main app window using multiple channels (BroadcastChannel, postMessage, localStorage) for cross-tab and PWA compatibility.
 
 **components/task-form/** (Task Form Component)
 ```
@@ -623,6 +657,11 @@ analytics/
   - **Quick Settings**: Uses Radix UI Sheet and Slider primitives; settings loaded from `getSyncConfig()` (not `getSyncStatus()` for auto-sync properties)
   - **Keyboard Shortcuts**: Smart view shortcuts (1-9, 0) implemented in `useSmartViewShortcuts` with typing context detection via `isTypingElement()`
   - **Button Component**: Only supports variants "primary" | "subtle" | "ghost"; no `size` prop (use className for sizing)
+- **OAuth Popup Handling (v6.1.4)**:
+  - **Popup Detection**: `public/oauth-callback.html` uses multiple heuristics (window.opener, window.name, size, history length) since `window.opener` can be null after cross-origin OAuth navigation
+  - **PWA vs Popup**: Must distinguish between standalone PWA mode (redirects to `/`) and popup windows (should call `window.close()`)
+  - **Multi-channel Communication**: OAuth results broadcast via BroadcastChannel, postMessage, and localStorage for cross-tab/PWA compatibility
+  - **Duplicate Dialog Prevention**: `OAuthCallbackHandler` and `SyncAuthDialog` both handle OAuth events; `SyncAuthDialog` adds delay to avoid duplicate encryption dialogs
 - Always leverage @coding-standards.md for coding standards and guidelines
 
 ## Modular Architecture (Refactoring - October 2025)
