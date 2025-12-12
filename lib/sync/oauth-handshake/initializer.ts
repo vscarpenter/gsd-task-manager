@@ -60,8 +60,15 @@ function setupEventListeners(): void {
 
 /**
  * Handle postMessage events
+ * Validates origin to prevent cross-origin message injection attacks (CWE-346)
  */
 function handleMessageEvent(event: MessageEvent): void {
+  // Validate origin - only accept messages from same origin
+  // OAuth callback page (public/oauth-callback.html) is hosted on same origin
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+
   if (!event.data || event.data.type !== 'oauth_handshake') return;
   handleBroadcastPayload(event.data as BroadcastPayload);
 }
