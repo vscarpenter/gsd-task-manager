@@ -54,7 +54,7 @@ export function ArchiveSettings({
 	};
 
 	const handleDaysChange = async (value: string) => {
-		const days = parseInt(value) as 30 | 60 | 90;
+		const days = Number.parseInt(value, 10) as 30 | 60 | 90;
 		await updateArchiveSettings({ archiveAfterDays: days });
 		await loadSettings();
 		toast.success(`Archive period set to ${days} days`);

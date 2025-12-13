@@ -102,7 +102,7 @@ export function SettingsDialog({
 	};
 
 	const handleDefaultReminderChange = async (value: string) => {
-		const minutes = parseInt(value);
+		const minutes = Number.parseInt(value, 10);
 		await updateNotificationSettings({ defaultReminder: minutes });
 		await loadNotificationSettings();
 	};
