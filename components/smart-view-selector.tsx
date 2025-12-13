@@ -117,9 +117,15 @@ export function SmartViewSelector({
   return (
     <div className="relative">
       {trigger ? (
-        <div onClick={() => setIsOpen(!isOpen)}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="appearance-none bg-transparent border-none p-0 m-0 cursor-pointer"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+        >
           {trigger}
-        </div>
+        </button>
       ) : (
         <Button
           variant="subtle"

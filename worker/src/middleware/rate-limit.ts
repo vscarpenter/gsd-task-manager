@@ -55,7 +55,7 @@ export const rateLimitMiddleware = async (
 
   // Get current count from KV
   const currentCount = await env.KV.get(key);
-  const count = currentCount ? parseInt(currentCount, 10) : 0;
+  const count = currentCount ? Number.parseInt(currentCount, 10) : 0;
 
   // Check if rate limit exceeded
   if (count >= config.maxRequests) {

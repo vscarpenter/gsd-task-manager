@@ -71,7 +71,7 @@ export function SyncSettings({
 	};
 
 	const handleIntervalChange = async (value: string) => {
-		const newInterval = parseInt(value);
+		const newInterval = Number.parseInt(value, 10);
 		setSyncInterval(newInterval);
 
 		if (updateTimeoutRef.current) {

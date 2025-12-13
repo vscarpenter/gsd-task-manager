@@ -31,7 +31,7 @@ export class CryptoManager {
 
     // Salt comes from Worker as comma-separated byte values (e.g., "140,160,92,...")
     // This matches how GSD client stores it: Array.from(salt)
-    const saltNumbers = salt.split(',').map(n => parseInt(n.trim(), 10));
+    const saltNumbers = salt.split(',').map(n => Number.parseInt(n.trim(), 10));
     const saltBuffer = new Uint8Array(saltNumbers);
 
     // Import passphrase as key material

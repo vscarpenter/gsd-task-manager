@@ -46,7 +46,7 @@ export function useSmartViewShortcuts({
 
       // Handle number keys 1-9
       if (event.key >= '1' && event.key <= '9') {
-        const index = parseInt(event.key) - 1;
+        const index = Number.parseInt(event.key, 10) - 1;
         const view = views[index];
 
         if (view) {

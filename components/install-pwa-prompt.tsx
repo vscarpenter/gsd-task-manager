@@ -39,7 +39,7 @@ export function InstallPwaPrompt() {
     // Check if user has dismissed the prompt before
     const dismissed = localStorage.getItem("gsd-pwa-dismissed");
     if (dismissed) {
-      const dismissedTime = parseInt(dismissed, 10);
+      const dismissedTime = Number.parseInt(dismissed, 10);
       const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
 
       // Show again after 7 days

@@ -197,9 +197,9 @@ export function ShareTaskDialog({
 					{activeTab === "native" && (
 						<div className="space-y-3">
 							<div className="space-y-1">
-								<label className="text-sm font-medium text-foreground">
+								<p className="text-sm font-medium text-foreground">
 									Task Details
-								</label>
+								</p>
 								<div className="rounded-md border border-border bg-background-muted p-3 max-h-64 overflow-y-auto">
 									<pre className="text-xs font-mono whitespace-pre-wrap text-foreground">
 										{taskDetails}
@@ -233,9 +233,9 @@ export function ShareTaskDialog({
 							</div>
 
 							<div className="space-y-1">
-								<label className="text-sm font-medium text-foreground">
+								<p className="text-sm font-medium text-foreground">
 									Email Preview
-								</label>
+								</p>
 								<div className="rounded-md border border-border bg-background-muted p-3 max-h-64 overflow-y-auto">
 									<pre className="text-xs font-mono whitespace-pre-wrap text-foreground">
 										{taskDetails}
@@ -249,9 +249,9 @@ export function ShareTaskDialog({
 					{activeTab === "copy" && (
 						<div className="space-y-3">
 							<div className="space-y-1">
-								<label className="text-sm font-medium text-foreground">
+								<p className="text-sm font-medium text-foreground">
 									Task Details
-								</label>
+								</p>
 								<div className="rounded-md border border-border bg-background-muted p-3 max-h-64 overflow-y-auto">
 									<pre className="text-xs font-mono whitespace-pre-wrap text-foreground">
 										{taskDetails}
