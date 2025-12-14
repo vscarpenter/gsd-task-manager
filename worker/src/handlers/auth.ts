@@ -3,6 +3,73 @@ import { jsonResponse, errorResponse } from '../middleware/cors';
 import { registerRequestSchema, loginRequestSchema } from '../schemas';
 import { hashPassword, verifyPassword, generateSalt, generateId } from '../utils/crypto';
 import { createToken } from '../utils/jwt';
+import { TTL } from '../config';
+
+// ============================================================================
+// Helper Types
+// ============================================================================
+
+interface UserRecord {
+  id: string;
+  email: string;
+  password_hash: string;
+  salt: string;
+  account_status: string;
+}
+
+interface SessionData {
+  deviceId: string;
+  issuedAt: number;
+  expiresAt: number;
+  lastActivity: number;
+}
+
+// ============================================================================
+// Database Helpers - Registration
+// ============================================================================
+
+/** Check if email already exists in database */
+async function checkEmailExists(env: Env, email: string): Promise<boolean> {
+  const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?')
+    .bind(email)
+    .first();
+  return !!existing;
+}
+
+/** Create new user in database */
+async function createUser(
+  env: Env, userId: string, email: string, passwordHash: string, salt: string, now: number
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO users (id, email, password_hash, salt, created_at, updated_at, account_status)
+     VALUES (?, ?, ?, ?, ?, ?, 'active')`
+  ).bind(userId, email, passwordHash, salt, now, now).run();
+}
+
+/** Create new device in database */
+async function createDevice(
+  env: Env, deviceId: string, userId: string, deviceName: string, now: number
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO devices (id, user_id, device_name, last_seen_at, created_at, is_active)
+     VALUES (?, ?, ?, ?, ?, 1)`
+  ).bind(deviceId, userId, deviceName, now, now).run();
+}
+
+/** Store session in KV with TTL */
+async function storeSession(
+  env: Env, userId: string, jti: string, session: SessionData
+): Promise<void> {
+  await env.KV.put(
+    `session:${userId}:${jti}`,
+    JSON.stringify(session),
+    { expirationTtl: TTL.SESSION }
+  );
+}
+
+// ============================================================================
+// Registration Handler
+// ============================================================================
 
 /**
  * Register a new user account
@@ -13,84 +80,108 @@ export async function register(request: Request, env: Env): Promise<Response> {
     const body = await request.json();
     const validated = registerRequestSchema.parse(body) as RegisterRequest;
 
-    // Check if email already exists
-    const existingUser = await env.DB.prepare(
-      'SELECT id FROM users WHERE email = ?'
-    )
-      .bind(validated.email)
-      .first();
-
-    if (existingUser) {
+    if (await checkEmailExists(env, validated.email)) {
       return errorResponse('Email already registered', 409);
     }
 
-    // Generate user ID and salt
     const userId = generateId();
     const salt = generateSalt();
     const now = Date.now();
-
-    // Hash password with salt
     const passwordHash = await hashPassword(validated.password, salt);
 
-    // Create user in database
-    await env.DB.prepare(
-      `INSERT INTO users (id, email, password_hash, salt, created_at, updated_at, account_status)
-       VALUES (?, ?, ?, ?, ?, ?, 'active')`
-    )
-      .bind(userId, validated.email, passwordHash, salt, now, now)
-      .run();
+    await createUser(env, userId, validated.email, passwordHash, salt, now);
 
-    // Create initial device
     const deviceId = generateId();
-    await env.DB.prepare(
-      `INSERT INTO devices (id, user_id, device_name, last_seen_at, created_at, is_active)
-       VALUES (?, ?, ?, ?, ?, 1)`
-    )
-      .bind(deviceId, userId, validated.deviceName, now, now)
-      .run();
+    await createDevice(env, deviceId, userId, validated.deviceName, now);
 
-    // Generate JWT token
-    const { token, jti, expiresAt } = await createToken(
-      userId,
-      validated.email,
-      deviceId,
-      env.JWT_SECRET
-    );
+    const { token, jti, expiresAt } = await createToken(userId, validated.email, deviceId, env.JWT_SECRET);
+    await storeSession(env, userId, jti, { deviceId, issuedAt: now, expiresAt, lastActivity: now });
 
-    // Store session in KV
-    await env.KV.put(
-      `session:${userId}:${jti}`,
-      JSON.stringify({
-        deviceId,
-        issuedAt: now,
-        expiresAt,
-        lastActivity: now,
-      }),
-      { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
-    );
-
-    return jsonResponse({
-      userId,
-      deviceId,
-      salt,
-      token,
-      expiresAt,
-    }, 201);
-
-  } catch (error: any) {
-    console.error('Register error:', error);
-    if (error.name === 'ZodError') {
-      return errorResponse('Invalid request data: ' + error.message, 400);
-    }
-    return jsonResponse({
-      error: 'Registration failed',
-      message: env.ENVIRONMENT === 'development' ? error.message : 'An error occurred during registration',
-      ...(env.ENVIRONMENT === 'development' && {
-        stack: error.stack?.split('\n').slice(0, 3).join('\n')
-      })
-    }, 500);
+    return jsonResponse({ userId, deviceId, salt, token, expiresAt }, 201);
+  } catch (error: unknown) {
+    return handleRegistrationError(error, env);
   }
 }
+
+/** Handle registration errors with appropriate responses */
+function handleRegistrationError(error: unknown, env: Env): Response {
+  console.error('Register error:', error);
+  const err = error as { name?: string; message?: string; stack?: string };
+
+  if (err.name === 'ZodError') {
+    return errorResponse('Invalid request data: ' + err.message, 400);
+  }
+
+  return jsonResponse({
+    error: 'Registration failed',
+    message: env.ENVIRONMENT === 'development' ? err.message : 'An error occurred during registration',
+    ...(env.ENVIRONMENT === 'development' && { stack: err.stack?.split('\n').slice(0, 3).join('\n') })
+  }, 500);
+}
+
+// ============================================================================
+// Database Helpers - Login
+// ============================================================================
+
+// Dummy values for timing attack prevention
+const TIMING_ATTACK_DUMMY_SALT = 'Q5J6K8L9M0N1P2R3S4T5U6W7X8Y9Z0A1B2C3D4E5F6G7H8';
+const TIMING_ATTACK_DUMMY_HASH = 'VGhpcyBpcyBhIGR1bW15IGhhc2ggZm9yIHRpbWluZyBhdHRhY2sgcHJldmVudGlvbg==';
+
+/** Find user by email */
+async function findUserByEmail(env: Env, email: string): Promise<UserRecord | null> {
+  const result = await env.DB.prepare(
+    'SELECT id, email, password_hash, salt, account_status FROM users WHERE email = ?'
+  ).bind(email).first();
+  return result as UserRecord | null;
+}
+
+/** Verify credentials with timing attack protection */
+async function verifyCredentials(
+  passwordHash: string, user: UserRecord | null
+): Promise<boolean> {
+  const actualSalt = user ? user.salt : TIMING_ATTACK_DUMMY_SALT;
+  const actualHash = user ? user.password_hash : TIMING_ATTACK_DUMMY_HASH;
+  return verifyPassword(passwordHash, actualSalt, actualHash);
+}
+
+/** Check if device exists and is active */
+async function checkDeviceExists(env: Env, deviceId: string, userId: string): Promise<boolean> {
+  const device = await env.DB.prepare(
+    'SELECT id FROM devices WHERE id = ? AND user_id = ? AND is_active = 1'
+  ).bind(deviceId, userId).first();
+  return !!device;
+}
+
+/** Update device last seen timestamp */
+async function updateDeviceLastSeen(env: Env, deviceId: string, now: number): Promise<void> {
+  await env.DB.prepare('UPDATE devices SET last_seen_at = ? WHERE id = ?')
+    .bind(now, deviceId).run();
+}
+
+/** Update user last login timestamp */
+async function updateUserLastLogin(env: Env, userId: string, now: number): Promise<void> {
+  await env.DB.prepare('UPDATE users SET last_login_at = ? WHERE id = ?')
+    .bind(now, userId).run();
+}
+
+/** Handle device management during login - returns deviceId and syncRequired flag */
+async function handleDeviceForLogin(
+  env: Env, userId: string, providedDeviceId: string | undefined, deviceName: string, now: number
+): Promise<{ deviceId: string; syncRequired: boolean }> {
+  if (providedDeviceId && await checkDeviceExists(env, providedDeviceId, userId)) {
+    await updateDeviceLastSeen(env, providedDeviceId, now);
+    return { deviceId: providedDeviceId, syncRequired: false };
+  }
+
+  // Create new device if none provided or existing was revoked
+  const newDeviceId = generateId();
+  await createDevice(env, newDeviceId, userId, deviceName || 'Unknown Device', now);
+  return { deviceId: newDeviceId, syncRequired: true };
+}
+
+// ============================================================================
+// Login Handler
+// ============================================================================
 
 /**
  * Login to existing account
@@ -101,121 +192,40 @@ export async function login(request: Request, env: Env): Promise<Response> {
     const body = await request.json();
     const validated = loginRequestSchema.parse(body) as LoginRequest;
 
-    // Find user by email
-    const user = await env.DB.prepare(
-      'SELECT id, email, password_hash, salt, account_status FROM users WHERE email = ?'
-    )
-      .bind(validated.email)
-      .first();
+    const user = await findUserByEmail(env, validated.email);
+    const isValid = await verifyCredentials(validated.passwordHash, user);
 
-    // Always perform password verification, even if user doesn't exist
-    // This prevents timing attacks by ensuring consistent response times
-    const dummySalt = 'Q5J6K8L9M0N1P2R3S4T5U6W7X8Y9Z0A1B2C3D4E5F6G7H8';  // Dummy salt for non-existent users
-    const dummyHash = 'VGhpcyBpcyBhIGR1bW15IGhhc2ggZm9yIHRpbWluZyBhdHRhY2sgcHJldmVudGlvbg==';
-
-    const actualSalt = user ? (user.salt as string) : dummySalt;
-    const actualHash = user ? (user.password_hash as string) : dummyHash;
-
-    // Always verify password (even with dummy values)
-    const isValid = await verifyPassword(
-      validated.passwordHash,
-      actualSalt,
-      actualHash
-    );
-
-    // Check results AFTER verification completes
     if (!user || !isValid) {
       return errorResponse('Invalid credentials', 401);
     }
-
-    // Check account status
     if (user.account_status !== 'active') {
       return errorResponse('Account is suspended or deleted', 403);
     }
 
     const now = Date.now();
-    let deviceId = validated.deviceId;
-    let syncRequired = false;
-
-    // Check if device exists
-    if (deviceId) {
-      const existingDevice = await env.DB.prepare(
-        'SELECT id FROM devices WHERE id = ? AND user_id = ? AND is_active = 1'
-      )
-        .bind(deviceId, user.id)
-        .first();
-
-      if (!existingDevice) {
-        // Device was revoked or doesn't exist, create new one
-        deviceId = generateId();
-        await env.DB.prepare(
-          `INSERT INTO devices (id, user_id, device_name, last_seen_at, created_at, is_active)
-           VALUES (?, ?, ?, ?, ?, 1)`
-        )
-          .bind(deviceId, user.id, validated.deviceName || 'Unknown Device', now, now)
-          .run();
-        syncRequired = true;
-      } else {
-        // Update last seen
-        await env.DB.prepare(
-          'UPDATE devices SET last_seen_at = ? WHERE id = ?'
-        )
-          .bind(now, deviceId)
-          .run();
-      }
-    } else {
-      // Create new device
-      deviceId = generateId();
-      await env.DB.prepare(
-        `INSERT INTO devices (id, user_id, device_name, last_seen_at, created_at, is_active)
-         VALUES (?, ?, ?, ?, ?, 1)`
-      )
-        .bind(deviceId, user.id, validated.deviceName || 'Unknown Device', now, now)
-        .run();
-      syncRequired = true;
-    }
-
-    // Update last login
-    await env.DB.prepare('UPDATE users SET last_login_at = ? WHERE id = ?')
-      .bind(now, user.id)
-      .run();
-
-    // Generate JWT token
-    const { token, jti, expiresAt } = await createToken(
-      user.id as string,
-      user.email as string,
-      deviceId,
-      env.JWT_SECRET
+    const { deviceId, syncRequired } = await handleDeviceForLogin(
+      env, user.id, validated.deviceId, validated.deviceName || '', now
     );
 
-    // Store session in KV
-    await env.KV.put(
-      `session:${user.id}:${jti}`,
-      JSON.stringify({
-        deviceId,
-        issuedAt: now,
-        expiresAt,
-        lastActivity: now,
-      }),
-      { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
-    );
+    await updateUserLastLogin(env, user.id, now);
 
-    return jsonResponse({
-      userId: user.id,
-      deviceId,
-      salt: user.salt,
-      token,
-      expiresAt,
-      syncRequired,
-    });
+    const { token, jti, expiresAt } = await createToken(user.id, user.email, deviceId, env.JWT_SECRET);
+    await storeSession(env, user.id, jti, { deviceId, issuedAt: now, expiresAt, lastActivity: now });
 
-  } catch (error: any) {
-    console.error('Login error:', error);
-    if (error.name === 'ZodError') {
-      return errorResponse('Invalid request data', 400);
-    }
-    return errorResponse('Login failed', 500);
+    return jsonResponse({ userId: user.id, deviceId, salt: user.salt, token, expiresAt, syncRequired });
+  } catch (error: unknown) {
+    return handleLoginError(error);
   }
+}
+
+/** Handle login errors with appropriate responses */
+function handleLoginError(error: unknown): Response {
+  console.error('Login error:', error);
+  const err = error as { name?: string };
+  if (err.name === 'ZodError') {
+    return errorResponse('Invalid request data', 400);
+  }
+  return errorResponse('Login failed', 500);
 }
 
 /**
@@ -245,7 +255,7 @@ export async function refresh(_request: Request, env: Env, ctx: RequestContext):
         expiresAt,
         lastActivity: Date.now(),
       }),
-      { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+      { expirationTtl: TTL.SESSION }
     );
 
     return jsonResponse({
@@ -275,7 +285,7 @@ export async function logout(_request: Request, env: Env, ctx: RequestContext): 
     for (const key of sessions.keys) {
       const jti = key.name.split(':')[2];
       await env.KV.put(`revoked:${ctx.userId}:${jti}`, 'true', {
-        expirationTtl: 60 * 60 * 24 * 7, // Keep revocation record for 7 days
+        expirationTtl: TTL.SESSION, // Keep revocation record for session duration
       });
       await env.KV.delete(key.name);
     }

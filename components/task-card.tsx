@@ -234,58 +234,83 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
   );
 }
 
-// Memoize the component to prevent unnecessary re-renders
-export const TaskCard = memo(TaskCardComponent, (prevProps, nextProps) => {
-  // Custom comparison function for better performance
+// ============================================================================
+// Memo Comparison Helpers
+// Each helper handles one aspect of comparison, keeping functions under 30 lines
+// ============================================================================
 
-  // Check if dependency-related tasks changed (for accurate badge rendering)
-  // Get all tasks that might affect this card's dependency badges
-  const prevDependencyIds = new Set([
-    ...prevProps.task.dependencies, // Tasks this task depends on
-    ...prevProps.allTasks.filter(t => t.dependencies.includes(prevProps.task.id)).map(t => t.id) // Tasks that depend on this task
+/** Get IDs of tasks related to this task via dependencies */
+function getRelatedDependencyIds(task: TaskRecord, allTasks: TaskRecord[]): Set<string> {
+  return new Set([
+    ...task.dependencies,
+    ...allTasks.filter(t => t.dependencies.includes(task.id)).map(t => t.id)
   ]);
-  const nextDependencyIds = new Set([
-    ...nextProps.task.dependencies,
-    ...nextProps.allTasks.filter(t => t.dependencies.includes(nextProps.task.id)).map(t => t.id)
-  ]);
+}
 
-  // If the set of related tasks changed, re-render
-  if (prevDependencyIds.size !== nextDependencyIds.size) {
-    return false;
+/** Check if dependency-related tasks changed in ways that affect rendering */
+function haveDependenciesChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
+  const prevIds = getRelatedDependencyIds(prevProps.task, prevProps.allTasks);
+  const nextIds = getRelatedDependencyIds(nextProps.task, nextProps.allTasks);
+
+  if (prevIds.size !== nextIds.size) return true;
+
+  for (const depId of prevIds) {
+    const prevTask = prevProps.allTasks.find(t => t.id === depId);
+    const nextTask = nextProps.allTasks.find(t => t.id === depId);
+    if (!prevTask || !nextTask) return true;
+    if (prevTask.completed !== nextTask.completed || prevTask.title !== nextTask.title) return true;
   }
+  return false;
+}
 
-  // Check if any dependency-related task's completion status or title changed
-  for (const depId of prevDependencyIds) {
-    const prevDepTask = prevProps.allTasks.find(t => t.id === depId);
-    const nextDepTask = nextProps.allTasks.find(t => t.id === depId);
-
-    if (!prevDepTask || !nextDepTask) {
-      return false; // Task was added or removed
-    }
-
-    if (prevDepTask.completed !== nextDepTask.completed || prevDepTask.title !== nextDepTask.title) {
-      return false; // Completion status or title changed
-    }
-  }
-
+/** Check if core task properties changed */
+function haveTaskPropertiesChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
+  const prev = prevProps.task;
+  const next = nextProps.task;
   return (
-    prevProps.task.id === nextProps.task.id &&
-    prevProps.task.title === nextProps.task.title &&
-    prevProps.task.description === nextProps.task.description &&
-    prevProps.task.completed === nextProps.task.completed &&
-    prevProps.task.urgent === nextProps.task.urgent &&
-    prevProps.task.important === nextProps.task.important &&
-    prevProps.task.dueDate === nextProps.task.dueDate &&
-    prevProps.task.recurrence === nextProps.task.recurrence &&
-    prevProps.task.updatedAt === nextProps.task.updatedAt &&
-    prevProps.task.tags.length === nextProps.task.tags.length &&
-    prevProps.task.subtasks.length === nextProps.task.subtasks.length &&
-    prevProps.task.dependencies.length === nextProps.task.dependencies.length &&
-    prevProps.selectionMode === nextProps.selectionMode &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.allTasks.length === nextProps.allTasks.length &&
-    JSON.stringify(prevProps.task.tags) === JSON.stringify(nextProps.task.tags) &&
-    JSON.stringify(prevProps.task.subtasks) === JSON.stringify(nextProps.task.subtasks) &&
-    JSON.stringify(prevProps.task.dependencies) === JSON.stringify(nextProps.task.dependencies)
+    prev.id !== next.id ||
+    prev.title !== next.title ||
+    prev.description !== next.description ||
+    prev.completed !== next.completed ||
+    prev.urgent !== next.urgent ||
+    prev.important !== next.important ||
+    prev.dueDate !== next.dueDate ||
+    prev.recurrence !== next.recurrence ||
+    prev.updatedAt !== next.updatedAt
   );
-});
+}
+
+/** Check if arrays (tags, subtasks, dependencies) changed */
+function haveArraysChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
+  const prev = prevProps.task;
+  const next = nextProps.task;
+  return (
+    prev.tags.length !== next.tags.length ||
+    prev.subtasks.length !== next.subtasks.length ||
+    prev.dependencies.length !== next.dependencies.length ||
+    JSON.stringify(prev.tags) !== JSON.stringify(next.tags) ||
+    JSON.stringify(prev.subtasks) !== JSON.stringify(next.subtasks) ||
+    JSON.stringify(prev.dependencies) !== JSON.stringify(next.dependencies)
+  );
+}
+
+/** Check if UI state props changed */
+function hasUIStateChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
+  return (
+    prevProps.selectionMode !== nextProps.selectionMode ||
+    prevProps.isSelected !== nextProps.isSelected ||
+    prevProps.allTasks.length !== nextProps.allTasks.length
+  );
+}
+
+/** Main comparison function for React.memo - composed from helpers */
+function areTaskCardPropsEqual(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
+  if (haveDependenciesChanged(prevProps, nextProps)) return false;
+  if (haveTaskPropertiesChanged(prevProps, nextProps)) return false;
+  if (haveArraysChanged(prevProps, nextProps)) return false;
+  if (hasUIStateChanged(prevProps, nextProps)) return false;
+  return true;
+}
+
+// Memoize the component to prevent unnecessary re-renders
+export const TaskCard = memo(TaskCardComponent, areTaskCardPropsEqual);

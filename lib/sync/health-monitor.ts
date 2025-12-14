@@ -77,69 +77,60 @@ export class HealthMonitor {
    */
   async check(): Promise<HealthReport> {
     console.log('[HEALTH] Running health check...');
-    
-    const issues: HealthIssue[] = [];
     const timestamp = Date.now();
 
     try {
-      // Get sync config
       const config = await this.getSyncConfig();
-      
       if (!config || !config.enabled) {
         console.log('[HEALTH] Sync not enabled, skipping health check');
-        return {
-          healthy: true,
-          issues: [],
-          timestamp,
-        };
+        return { healthy: true, issues: [], timestamp };
       }
 
-      // Check 1: Stale queue operations (>1 hour old)
-      const staleIssue = await this.checkStaleOperations();
-      if (staleIssue) {
-        issues.push(staleIssue);
-      }
+      const issues = await this.runAllHealthChecks(config);
+      this.logHealthCheckResults(issues);
 
-      // Check 2: Token expiration
-      const tokenIssue = await this.checkTokenExpiration();
-      if (tokenIssue) {
-        issues.push(tokenIssue);
-      }
-
-      // Check 3: Server connectivity
-      const connectivityIssue = await this.checkServerConnectivity(config);
-      if (connectivityIssue) {
-        issues.push(connectivityIssue);
-      }
-
-      const healthy = issues.length === 0;
-
-      console.log('[HEALTH] Health check complete:', {
-        healthy,
-        issuesFound: issues.length,
-        issues: issues.map(i => ({ type: i.type, severity: i.severity })),
-      });
-
-      return {
-        healthy,
-        issues,
-        timestamp,
-      };
+      return { healthy: issues.length === 0, issues, timestamp };
     } catch (error) {
       console.error('[HEALTH] Health check error:', error);
-      
-      // Return error as health issue
-      return {
-        healthy: false,
-        issues: [{
-          type: 'server_unreachable',
-          severity: 'error',
-          message: 'Health check failed',
-          suggestedAction: 'Check your internet connection and try again',
-        }],
-        timestamp,
-      };
+      return this.createErrorReport(timestamp);
     }
+  }
+
+  /** Run all health checks and collect issues */
+  private async runAllHealthChecks(config: SyncConfig): Promise<HealthIssue[]> {
+    const issues: HealthIssue[] = [];
+    const staleIssue = await this.checkStaleOperations();
+    const tokenIssue = await this.checkTokenExpiration();
+    const connectivityIssue = await this.checkServerConnectivity(config);
+
+    if (staleIssue) issues.push(staleIssue);
+    if (tokenIssue) issues.push(tokenIssue);
+    if (connectivityIssue) issues.push(connectivityIssue);
+
+    return issues;
+  }
+
+  /** Log health check results */
+  private logHealthCheckResults(issues: HealthIssue[]): void {
+    console.log('[HEALTH] Health check complete:', {
+      healthy: issues.length === 0,
+      issuesFound: issues.length,
+      issues: issues.map(i => ({ type: i.type, severity: i.severity })),
+    });
+  }
+
+  /** Create error report for failed health check */
+  private createErrorReport(timestamp: number): HealthReport {
+    return {
+      healthy: false,
+      issues: [{
+        type: 'server_unreachable',
+        severity: 'error',
+        message: 'Health check failed',
+        suggestedAction: 'Check your internet connection and try again',
+      }],
+      timestamp,
+    };
   }
 
   /**
@@ -177,8 +168,28 @@ export class HealthMonitor {
     };
   }
 
+  /** Create expired token issue */
+  private createExpiredTokenIssue(): HealthIssue {
+    return {
+      type: 'token_expired',
+      severity: 'error',
+      message: 'Authentication token has expired',
+      suggestedAction: 'Sign in again to continue syncing',
+    };
+  }
+
+  /** Create token refresh failed issue */
+  private createRefreshFailedIssue(): HealthIssue {
+    return {
+      type: 'token_expired',
+      severity: 'warning',
+      message: 'Authentication token is expiring soon and refresh failed',
+      suggestedAction: 'Sign in again to continue syncing',
+    };
+  }
+
   /**
-   * Check token expiration
+   * Check token expiration and attempt refresh if needed
    */
   private async checkTokenExpiration(): Promise<HealthIssue | null> {
     const tokenManager = getTokenManager();
@@ -186,35 +197,21 @@ export class HealthMonitor {
 
     if (timeUntilExpiry < 0) {
       console.log('[HEALTH] Token has expired');
-      return {
-        type: 'token_expired',
-        severity: 'error',
-        message: 'Authentication token has expired',
-        suggestedAction: 'Sign in again to continue syncing',
-      };
+      return this.createExpiredTokenIssue();
     }
 
-    // Check if token needs refresh (within 5 minutes)
     const needsRefresh = await tokenManager.needsRefresh();
-    if (needsRefresh) {
-      console.log('[HEALTH] Token needs refresh, attempting automatic refresh...');
-      
-      // Attempt automatic refresh
-      const refreshed = await tokenManager.ensureValidToken();
-      
-      if (!refreshed) {
-        console.log('[HEALTH] Token refresh failed');
-        return {
-          type: 'token_expired',
-          severity: 'warning',
-          message: 'Authentication token is expiring soon and refresh failed',
-          suggestedAction: 'Sign in again to continue syncing',
-        };
-      }
-      
-      console.log('[HEALTH] Token refreshed successfully');
+    if (!needsRefresh) return null;
+
+    console.log('[HEALTH] Token needs refresh, attempting automatic refresh...');
+    const refreshed = await tokenManager.ensureValidToken();
+
+    if (!refreshed) {
+      console.log('[HEALTH] Token refresh failed');
+      return this.createRefreshFailedIssue();
     }
 
+    console.log('[HEALTH] Token refreshed successfully');
     return null;
   }
 
