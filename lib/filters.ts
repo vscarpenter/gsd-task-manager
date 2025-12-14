@@ -1,5 +1,6 @@
 import type { QuadrantId, RecurrenceType, TaskRecord } from "@/lib/types";
 import { isOverdue, isDueToday, isDueThisWeek } from "@/lib/utils";
+import { TIME_MS } from "@/lib/constants";
 
 // Re-export types for convenience
 export type { QuadrantId, RecurrenceType };
@@ -52,109 +53,132 @@ export interface SmartView {
   updatedAt: string;
 }
 
+// ============================================================================
+// Individual Filter Functions
+// Each function handles one filter criterion, keeping functions under 30 lines
+// ============================================================================
+
+/** Filter tasks by quadrant membership */
+function filterByQuadrants(tasks: TaskRecord[], quadrants?: QuadrantId[]): TaskRecord[] {
+  if (!quadrants || quadrants.length === 0) return tasks;
+  return tasks.filter(task => quadrants.includes(task.quadrant));
+}
+
+/** Filter tasks by completion status */
+function filterByStatus(tasks: TaskRecord[], status?: 'all' | 'active' | 'completed'): TaskRecord[] {
+  if (!status || status === 'all') return tasks;
+  return tasks.filter(task => status === 'completed' ? task.completed : !task.completed);
+}
+
+/** Filter tasks that have ALL specified tags */
+function filterByTags(tasks: TaskRecord[], tags?: string[]): TaskRecord[] {
+  if (!tags || tags.length === 0) return tasks;
+  return tasks.filter(task => tags.every(tag => task.tags.includes(tag)));
+}
+
+/** Filter tasks within a date range */
+function filterByDueDateRange(tasks: TaskRecord[], range?: { start?: string; end?: string }): TaskRecord[] {
+  if (!range) return tasks;
+  const { start, end } = range;
+  return tasks.filter(task => {
+    if (!task.dueDate) return false;
+    const dueDate = new Date(task.dueDate);
+    if (start && dueDate < new Date(start)) return false;
+    if (end && dueDate > new Date(end)) return false;
+    return true;
+  });
+}
+
+/** Filter for overdue tasks only */
+function filterByOverdue(tasks: TaskRecord[], overdue?: boolean): TaskRecord[] {
+  if (!overdue) return tasks;
+  return tasks.filter(task => !task.completed && isOverdue(task.dueDate));
+}
+
+/** Filter for tasks due today */
+function filterByDueToday(tasks: TaskRecord[], dueToday?: boolean): TaskRecord[] {
+  if (!dueToday) return tasks;
+  return tasks.filter(task => !task.completed && isDueToday(task.dueDate));
+}
+
+/** Filter for tasks due within the current week */
+function filterByDueThisWeek(tasks: TaskRecord[], dueThisWeek?: boolean): TaskRecord[] {
+  if (!dueThisWeek) return tasks;
+  return tasks.filter(task => !task.completed && isDueThisWeek(task.dueDate));
+}
+
+/** Filter for tasks without due dates */
+function filterByNoDueDate(tasks: TaskRecord[], noDueDate?: boolean): TaskRecord[] {
+  if (!noDueDate) return tasks;
+  return tasks.filter(task => !task.dueDate);
+}
+
+/** Filter tasks by recurrence type */
+function filterByRecurrence(tasks: TaskRecord[], recurrence?: RecurrenceType[]): TaskRecord[] {
+  if (!recurrence || recurrence.length === 0) return tasks;
+  return tasks.filter(task => recurrence.includes(task.recurrence));
+}
+
+/** Filter tasks created within the last 7 days */
+function filterByRecentlyAdded(tasks: TaskRecord[], recentlyAdded?: boolean): TaskRecord[] {
+  if (!recentlyAdded) return tasks;
+  const sevenDaysAgo = new Date(Date.now() - TIME_MS.WEEK);
+  return tasks.filter(task => new Date(task.createdAt) >= sevenDaysAgo);
+}
+
+/** Filter tasks completed within the last 7 days */
+function filterByRecentlyCompleted(tasks: TaskRecord[], recentlyCompleted?: boolean): TaskRecord[] {
+  if (!recentlyCompleted) return tasks;
+  const sevenDaysAgo = new Date(Date.now() - TIME_MS.WEEK);
+  return tasks.filter(task => {
+    if (!task.completed || !task.completedAt) return false;
+    return new Date(task.completedAt) >= sevenDaysAgo;
+  });
+}
+
+/** Filter tasks by search query across title, description, tags, and subtasks */
+function filterBySearchQuery(tasks: TaskRecord[], searchQuery?: string): TaskRecord[] {
+  if (!searchQuery || !searchQuery.trim()) return tasks;
+  const query = searchQuery.trim().toLowerCase();
+  return tasks.filter(task => {
+    const searchableText = [
+      task.title,
+      task.description,
+      task.quadrant,
+      task.dueDate ?? "",
+      ...task.tags,
+      ...task.subtasks.map(st => st.title)
+    ].join(" ").toLowerCase();
+    return searchableText.includes(query);
+  });
+}
+
+// ============================================================================
+// Main Filter Function
+// Composes individual filters using a pipeline pattern
+// ============================================================================
+
 /**
  * Apply filter criteria to a list of tasks
+ * Composes individual filter functions for maintainability
  */
 export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria): TaskRecord[] {
-  let filtered = [...tasks];
+  let result = [...tasks];
 
-  // Filter by quadrants
-  if (criteria.quadrants && criteria.quadrants.length > 0) {
-    filtered = filtered.filter(task => criteria.quadrants!.includes(task.quadrant));
-  }
+  result = filterByQuadrants(result, criteria.quadrants);
+  result = filterByStatus(result, criteria.status);
+  result = filterByTags(result, criteria.tags);
+  result = filterByDueDateRange(result, criteria.dueDateRange);
+  result = filterByOverdue(result, criteria.overdue);
+  result = filterByDueToday(result, criteria.dueToday);
+  result = filterByDueThisWeek(result, criteria.dueThisWeek);
+  result = filterByNoDueDate(result, criteria.noDueDate);
+  result = filterByRecurrence(result, criteria.recurrence);
+  result = filterByRecentlyAdded(result, criteria.recentlyAdded);
+  result = filterByRecentlyCompleted(result, criteria.recentlyCompleted);
+  result = filterBySearchQuery(result, criteria.searchQuery);
 
-  // Filter by status
-  if (criteria.status && criteria.status !== 'all') {
-    if (criteria.status === 'active') {
-      filtered = filtered.filter(task => !task.completed);
-    } else if (criteria.status === 'completed') {
-      filtered = filtered.filter(task => task.completed);
-    }
-  }
-
-  // Filter by tags (task must have ALL specified tags)
-  if (criteria.tags && criteria.tags.length > 0) {
-    filtered = filtered.filter(task =>
-      criteria.tags!.every(tag => task.tags.includes(tag))
-    );
-  }
-
-  // Filter by due date range
-  if (criteria.dueDateRange) {
-    const { start, end } = criteria.dueDateRange;
-    filtered = filtered.filter(task => {
-      if (!task.dueDate) return false;
-      const dueDate = new Date(task.dueDate);
-
-      if (start && dueDate < new Date(start)) return false;
-      if (end && dueDate > new Date(end)) return false;
-
-      return true;
-    });
-  }
-
-  // Filter by overdue
-  if (criteria.overdue) {
-    filtered = filtered.filter(task => !task.completed && isOverdue(task.dueDate));
-  }
-
-  // Filter by due today
-  if (criteria.dueToday) {
-    filtered = filtered.filter(task => !task.completed && isDueToday(task.dueDate));
-  }
-
-  // Filter by due this week
-  if (criteria.dueThisWeek) {
-    filtered = filtered.filter(task => !task.completed && isDueThisWeek(task.dueDate));
-  }
-
-  // Filter by no due date
-  if (criteria.noDueDate) {
-    filtered = filtered.filter(task => !task.dueDate);
-  }
-
-  // Filter by recurrence types
-  if (criteria.recurrence && criteria.recurrence.length > 0) {
-    filtered = filtered.filter(task => criteria.recurrence!.includes(task.recurrence));
-  }
-
-  // Filter by recently added (created in last 7 days)
-  if (criteria.recentlyAdded) {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    filtered = filtered.filter(task => {
-      const createdDate = new Date(task.createdAt);
-      return createdDate >= sevenDaysAgo;
-    });
-  }
-
-  // Filter by recently completed (completed in last 7 days)
-  if (criteria.recentlyCompleted) {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    filtered = filtered.filter(task => {
-      if (!task.completed || !task.completedAt) return false;
-      const completedDate = new Date(task.completedAt);
-      return completedDate >= sevenDaysAgo;
-    });
-  }
-
-  // Filter by search query
-  if (criteria.searchQuery && criteria.searchQuery.trim()) {
-    const query = criteria.searchQuery.trim().toLowerCase();
-    filtered = filtered.filter(task => {
-      const searchableText = [
-        task.title,
-        task.description,
-        task.quadrant,
-        task.dueDate ?? "",
-        ...task.tags,
-        ...task.subtasks.map(st => st.title)
-      ].join(" ").toLowerCase();
-
-      return searchableText.includes(query);
-    });
-  }
-
-  return filtered;
+  return result;
 }
 
 /**

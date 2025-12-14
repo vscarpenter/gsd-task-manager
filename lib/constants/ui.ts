@@ -18,6 +18,12 @@ export const UI_TIMING = {
 
   /** Initial delay before first health check (1 second) */
   INITIAL_HEALTH_CHECK_DELAY_MS: 1000,
+
+  /** Delay to give OAuthCallbackHandler time to process (500ms) */
+  OAUTH_CALLBACK_DELAY_MS: 500,
+
+  /** Delay before refreshing sync status display (600ms) */
+  STATUS_REFRESH_DELAY_MS: 600,
 } as const;
 
 /**

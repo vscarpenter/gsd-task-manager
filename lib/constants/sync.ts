@@ -65,6 +65,12 @@ export const ENCRYPTION_CONFIG = {
 
   /** AES-GCM tag length in bits */
   TAG_LENGTH: 128,
+
+  /** Minimum passphrase length for encryption */
+  PASSPHRASE_MIN_LENGTH: 12,
+
+  /** Delay after encryption setup before triggering auto-sync (1 second) */
+  AUTO_SYNC_DELAY_MS: 1000,
 } as const;
 
 /**

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import type { TaskRecord } from "@/lib/types";
 import { formatDueDate } from "@/lib/utils";
+import { TOAST_DURATION } from "@/lib/constants";
 
 interface ShareTaskDialogProps {
 	task: TaskRecord | null;
@@ -31,46 +32,70 @@ function canUseWebShare(): boolean {
 	return typeof navigator !== "undefined" && navigator.share !== undefined;
 }
 
-function formatTaskDetails(task: TaskRecord): string {
-	const lines: string[] = [];
+// ============================================================================
+// Task Formatting Helpers
+// Each helper handles one section, keeping functions under 30 lines
+// ============================================================================
 
-	lines.push(`Task: ${task.title}`);
-	lines.push("");
+/** Format task header with title */
+function formatTaskHeader(task: TaskRecord): string[] {
+	return [`Task: ${task.title}`, ""];
+}
 
-	if (task.description) {
-		lines.push("Description:");
-		lines.push(task.description);
-		lines.push("");
-	}
+/** Format optional task description */
+function formatTaskDescription(task: TaskRecord): string[] {
+	if (!task.description) return [];
+	return ["Description:", task.description, ""];
+}
 
-	lines.push("Details:");
+/** Format task metadata: status, priority, due date, tags */
+function formatTaskMetadata(task: TaskRecord): string[] {
+	const lines: string[] = ["Details:"];
 	lines.push(`Status: ${task.completed ? "Completed" : "To Do"}`);
-	lines.push(
-		`Priority: ${task.urgent && task.important ? "Urgent & Important" : task.urgent ? "Urgent" : task.important ? "Important" : "Low Priority"}`,
-	);
+
+	const priority = task.urgent && task.important
+		? "Urgent & Important"
+		: task.urgent ? "Urgent" : task.important ? "Important" : "Low Priority";
+	lines.push(`Priority: ${priority}`);
 
 	if (task.dueDate) {
 		lines.push(`Due: ${formatDueDate(task.dueDate)}`);
 	}
-
 	if (task.tags.length > 0) {
 		lines.push(`Tags: ${task.tags.join(", ")}`);
 	}
+	return lines;
+}
 
-	if (task.subtasks.length > 0) {
-		lines.push("");
-		lines.push("Subtasks:");
-		task.subtasks.forEach((subtask) => {
-			lines.push(`  ${subtask.completed ? "☑" : "☐"} ${subtask.title}`);
-		});
-	}
+/** Format subtasks list with checkboxes */
+function formatTaskSubtasks(task: TaskRecord): string[] {
+	if (task.subtasks.length === 0) return [];
+	const lines = ["", "Subtasks:"];
+	task.subtasks.forEach((subtask) => {
+		lines.push(`  ${subtask.completed ? "☑" : "☐"} ${subtask.title}`);
+	});
+	return lines;
+}
 
-	lines.push("");
-	lines.push(`Created: ${new Date(task.createdAt).toLocaleDateString()}`);
-	lines.push("");
-	lines.push("Sent from GSD Task Manager (https://gsd.vinny.dev)");
+/** Format footer with creation date and attribution */
+function formatTaskFooter(task: TaskRecord): string[] {
+	return [
+		"",
+		`Created: ${new Date(task.createdAt).toLocaleDateString()}`,
+		"",
+		"Sent from GSD Task Manager (https://gsd.vinny.dev)",
+	];
+}
 
-	return lines.join("\n");
+/** Compose all sections into complete task details */
+function formatTaskDetails(task: TaskRecord): string {
+	return [
+		...formatTaskHeader(task),
+		...formatTaskDescription(task),
+		...formatTaskMetadata(task),
+		...formatTaskSubtasks(task),
+		...formatTaskFooter(task),
+	].join("\n");
 }
 
 export function ShareTaskDialog({
@@ -114,10 +139,10 @@ export function ShareTaskDialog({
 	const handleCopyDetails = async () => {
 		try {
 			await navigator.clipboard.writeText(taskDetails);
-			showToast("Task details copied to clipboard", undefined, 3000);
+			showToast("Task details copied to clipboard", undefined, TOAST_DURATION.SHORT);
 			onOpenChange(false);
 		} catch {
-			showToast("Failed to copy to clipboard", undefined, 3000);
+			showToast("Failed to copy to clipboard", undefined, TOAST_DURATION.SHORT);
 		}
 	};
 
@@ -127,13 +152,13 @@ export function ShareTaskDialog({
 				title: `Task: ${task.title}`,
 				text: taskDetails,
 			});
-			showToast("Task shared successfully", undefined, 3000);
+			showToast("Task shared successfully", undefined, TOAST_DURATION.SHORT);
 			onOpenChange(false);
 		} catch (error) {
 			// AbortError means user cancelled the share - don't show error
 			if ((error as Error).name !== "AbortError") {
 				console.error("Failed to share task:", error);
-				showToast("Failed to share task", undefined, 3000);
+				showToast("Failed to share task", undefined, TOAST_DURATION.SHORT);
 			}
 		}
 	};
