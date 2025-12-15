@@ -6,8 +6,8 @@
  *
  * CloudFront Functions run at CloudFront edge locations with sub-millisecond latency.
  *
- * Note: Security headers are handled by a separate CloudFront Function
- * (cloudfront-function-security-headers.js) attached to viewer-response events.
+ * Note: Security headers are handled by a CloudFront Response Headers Policy
+ * (gsd-security-headers) which is the AWS-recommended approach.
  *
  * @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions.html
  */
