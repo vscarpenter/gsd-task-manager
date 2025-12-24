@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
@@ -11,8 +12,20 @@ import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { ClientLayout } from "@/components/client-layout";
 import { SyncDebugInstaller } from "@/components/sync-debug-installer";
 
-// Temporarily using system fonts due to Google Fonts fetch issues during build
-// TODO: Download fonts locally and use next/font/local for better offline support
+// Local fonts for better offline PWA support and reliability
+const inter = localFont({
+  src: "../fonts/Inter-Variable.woff2",
+  variable: "--font-sans",
+  display: "swap",
+  weight: "100 900",
+});
+
+const jetbrainsMono = localFont({
+  src: "../fonts/JetBrainsMono-Variable.woff2",
+  variable: "--font-mono",
+  display: "swap",
+  weight: "100 800",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -64,14 +77,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={cn("font-sans bg-canvas text-foreground antialiased")}
-        style={{
-          // @ts-expect-error - CSS custom properties
-          '--font-sans': 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          '--font-mono': 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-        }}
-      >
+      <body className={cn(inter.variable, jetbrainsMono.variable, "font-sans bg-canvas text-foreground antialiased")}>
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>
