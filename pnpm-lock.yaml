@@ -6,8 +6,8 @@ settings:
 
 overrides:
   js-yaml: '>=4.1.1'
-  baseline-browser-mapping: ^2.9.7
-  vite: ^7.2.7
+  baseline-browser-mapping: ^2.9.11
+  vite: ^7.3.0
 
 importers:
 
@@ -123,7 +123,7 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       baseline-browser-mapping:
-        specifier: ^2.9.7
+        specifier: ^2.9.11
         version: 2.9.11
       eslint:
         specifier: ^9.39.2
@@ -150,7 +150,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vite:
-        specifier: ^7.2.7
+        specifier: ^7.3.0
         version: 7.3.0(@types/node@25.0.3)(jiti@1.21.7)
       vitest:
         specifier: ^4.0.16
@@ -1889,7 +1889,7 @@ packages:
     resolution: {integrity: sha512-EcA07pHJouywpzsoTUqNh5NwGayl2PPVEJKUSinGGSxFGYn+shYbqMGBg6FXDqgXum9Ou/ecb+411ssw8HImJQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
-      vite: ^7.2.7
+      vite: ^7.3.0
 
   '@vitest/coverage-v8@4.0.16':
     resolution: {integrity: sha512-2rNdjEIsPRzsdu6/9Eq0AYAzYdpP6Bx9cje9tL3FE5XzXRQF1fNU9pe/1yE8fCrS0HD+fBtt6gLPh6LI57tX7A==}
@@ -1907,7 +1907,7 @@ packages:
     resolution: {integrity: sha512-yb6k4AZxJTB+q9ycAvsoxGn+j/po0UaPgajllBgt1PzoMAAmJGYFdDk0uCcRcxb3BrME34I6u8gHZTQlkqSZpg==}
     peerDependencies:
       msw: ^2.4.9
-      vite: ^7.2.7
+      vite: ^7.3.0
     peerDependenciesMeta:
       msw:
         optional: true
