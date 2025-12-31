@@ -230,11 +230,32 @@ class GsdDatabase extends Dexie {
       })
       .upgrade((trans) => {
         // Migrate existing tasks to have time tracking fields with defaults
+        // Issue #8: Added validation for corrupt data during migration
         return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
+          // Initialize timeEntries with validation
           if (task.timeEntries === undefined) {
             task.timeEntries = [];
+          } else if (!Array.isArray(task.timeEntries)) {
+            // Reset corrupt data to empty array
+            console.warn(`[DB Migration] Task ${task.id} had corrupt timeEntries, resetting to []`);
+            task.timeEntries = [];
+          } else {
+            // Validate existing entries structure
+            task.timeEntries = task.timeEntries.filter(entry => {
+              const isValid = entry && typeof entry.id === 'string' && typeof entry.startedAt === 'string';
+              if (!isValid) {
+                console.warn(`[DB Migration] Task ${task.id} had invalid time entry, removing`);
+              }
+              return isValid;
+            });
           }
+
+          // Initialize timeSpent with validation
           if (task.timeSpent === undefined) {
+            task.timeSpent = 0;
+          } else if (typeof task.timeSpent !== 'number' || task.timeSpent < 0 || !Number.isFinite(task.timeSpent)) {
+            // Reset corrupt data to 0
+            console.warn(`[DB Migration] Task ${task.id} had corrupt timeSpent (${task.timeSpent}), resetting to 0`);
             task.timeSpent = 0;
           }
         });

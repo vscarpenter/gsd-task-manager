@@ -3,7 +3,7 @@ import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
-import { TOAST_DURATION } from "@/lib/constants";
+import { TOAST_DURATION, TIME_TRACKING } from "@/lib/constants";
 import {
   createTask,
   deleteTask,
@@ -16,6 +16,22 @@ import {
   stopTimeTracking
 } from "@/lib/tasks";
 import * as bulkOps from "@/lib/bulk-operations";
+import type { TimeEntry } from "@/lib/types";
+
+/**
+ * Find the most recently ended time entry (simplified from Issue #12 logic)
+ */
+function getMostRecentlyEndedEntry(entries: TimeEntry[] | undefined): TimeEntry | undefined {
+  if (!entries || entries.length === 0) return undefined;
+
+  const endedEntries = entries.filter(e => e.endedAt);
+  if (endedEntries.length === 0) return undefined;
+
+  // Return the entry with the latest endedAt timestamp
+  return endedEntries.reduce((latest, current) =>
+    new Date(current.endedAt!).getTime() > new Date(latest.endedAt!).getTime() ? current : latest
+  );
+}
 
 function toDraft(task: TaskRecord): TaskDraft {
   return {
@@ -180,11 +196,11 @@ export function useTaskOperations(
       if (minutes === 0) {
         showToast("Snooze cleared", undefined, TOAST_DURATION.SHORT);
       } else {
-        const label = minutes < 60
+        const label = minutes < TIME_TRACKING.MINUTES_PER_HOUR
           ? `${minutes} minutes`
-          : minutes < 1440
-            ? `${Math.round(minutes / 60)} hour${minutes >= 120 ? 's' : ''}`
-            : `${Math.round(minutes / 1440)} day${minutes >= 2880 ? 's' : ''}`;
+          : minutes < TIME_TRACKING.MINUTES_PER_DAY
+            ? `${Math.round(minutes / TIME_TRACKING.MINUTES_PER_HOUR)} hour${minutes >= 2 * TIME_TRACKING.MINUTES_PER_HOUR ? 's' : ''}`
+            : `${Math.round(minutes / TIME_TRACKING.MINUTES_PER_DAY)} day${minutes >= 2 * TIME_TRACKING.MINUTES_PER_DAY ? 's' : ''}`;
         showToast(`Notifications snoozed for ${label}`, undefined, TOAST_DURATION.SHORT);
       }
     } catch (error) {
@@ -214,14 +230,15 @@ export function useTaskOperations(
   const handleStopTimer = useCallback(async (taskId: string) => {
     try {
       const task = await stopTimeTracking(taskId);
-      const runningEntry = task.timeEntries?.find(e => e.endedAt && !task.timeEntries?.some(other => other.startedAt > e.startedAt));
-      if (runningEntry?.endedAt) {
-        const start = new Date(runningEntry.startedAt).getTime();
-        const end = new Date(runningEntry.endedAt).getTime();
-        const minutes = Math.round((end - start) / 60000);
-        const label = minutes < 60
+      // Simplified entry lookup (Issue #12)
+      const stoppedEntry = getMostRecentlyEndedEntry(task.timeEntries);
+      if (stoppedEntry?.endedAt) {
+        const start = new Date(stoppedEntry.startedAt).getTime();
+        const end = new Date(stoppedEntry.endedAt).getTime();
+        const minutes = Math.round((end - start) / TIME_TRACKING.MS_PER_MINUTE);
+        const label = minutes < TIME_TRACKING.MINUTES_PER_HOUR
           ? `${minutes} min`
-          : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+          : `${Math.floor(minutes / TIME_TRACKING.MINUTES_PER_HOUR)}h ${minutes % TIME_TRACKING.MINUTES_PER_HOUR}m`;
         showToast(`Timer stopped: ${label}`, undefined, TOAST_DURATION.SHORT);
       } else {
         showToast("Timer stopped", undefined, TOAST_DURATION.SHORT);

@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/logger";
 import type { TaskRecord, TimeEntry } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TIME_TRACKING");
 
@@ -15,7 +16,7 @@ function calculateTimeSpent(entries: TimeEntry[]): number {
     if (!entry.endedAt) return total; // Don't count running entries
     const start = new Date(entry.startedAt).getTime();
     const end = new Date(entry.endedAt).getTime();
-    const minutes = Math.round((end - start) / 60000);
+    const minutes = Math.round((end - start) / TIME_TRACKING.MS_PER_MINUTE);
     return total + Math.max(0, minutes);
   }, 0);
 }
@@ -202,7 +203,7 @@ export function getRunningElapsedMinutes(task: TaskRecord): number {
 
   const start = new Date(runningEntry.startedAt).getTime();
   const now = Date.now();
-  return Math.floor((now - start) / 60000);
+  return Math.floor((now - start) / TIME_TRACKING.MS_PER_MINUTE);
 }
 
 /**
@@ -210,10 +211,10 @@ export function getRunningElapsedMinutes(task: TaskRecord): number {
  */
 export function formatTimeSpent(minutes: number): string {
   if (minutes < 1) return "< 1m";
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < TIME_TRACKING.MINUTES_PER_HOUR) return `${minutes}m`;
 
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
+  const hours = Math.floor(minutes / TIME_TRACKING.MINUTES_PER_HOUR);
+  const remainingMinutes = minutes % TIME_TRACKING.MINUTES_PER_HOUR;
 
   if (remainingMinutes === 0) return `${hours}h`;
   return `${hours}h ${remainingMinutes}m`;

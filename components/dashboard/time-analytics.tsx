@@ -18,6 +18,65 @@ const QUADRANT_LABELS: Record<string, { name: string; color: string }> = {
   "not-urgent-not-important": { name: "Eliminate (Q4)", color: "bg-gray-400" },
 };
 
+/** Empty state when no time tracking data exists */
+function EmptyState({ className }: { className?: string }) {
+  return (
+    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
+      <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+        <ClockIcon className="h-5 w-5 text-accent" />
+        Time Tracking
+      </h3>
+      <p className="mt-4 text-sm text-foreground-muted">
+        No time tracking data yet. Start tracking time on tasks to see analytics here.
+      </p>
+    </div>
+  );
+}
+
+/** Progress bar showing time spent in a quadrant */
+function QuadrantBar({ dist, totalMinutes }: { dist: QuadrantTimeDistribution; totalMinutes: number }) {
+  const config = QUADRANT_LABELS[dist.quadrantId];
+  const percentage = totalMinutes > 0 ? Math.round((dist.totalMinutes / totalMinutes) * 100) : 0;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-foreground">{config.name}</span>
+        <span className="text-foreground-muted">
+          {formatDuration(dist.totalMinutes)} ({percentage}%)
+        </span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-background-muted overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all", config.color)}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Estimation insights panel */
+function EstimationInsights({ overCount, underCount }: { overCount: number; underCount: number }) {
+  if (overCount === 0 && underCount === 0) return null;
+
+  return (
+    <div className="mt-6 rounded-lg bg-background-muted p-4">
+      <h4 className="text-sm font-medium text-foreground">Estimation Insights</h4>
+      <div className="mt-2 flex gap-6 text-sm">
+        <div>
+          <span className="text-red-600 font-medium">{overCount}</span>
+          <span className="text-foreground-muted"> tasks over estimate</span>
+        </div>
+        <div>
+          <span className="text-green-600 font-medium">{underCount}</span>
+          <span className="text-foreground-muted"> tasks under estimate</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Display time tracking analytics on the dashboard
  */
@@ -25,21 +84,8 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
   const hasTimeData = summary.tasksWithTimeTracking > 0 || summary.tasksWithEstimates > 0;
 
   if (!hasTimeData) {
-    return (
-      <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
-        <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-          <ClockIcon className="h-5 w-5 text-accent" />
-          Time Tracking
-        </h3>
-        <p className="mt-4 text-sm text-foreground-muted">
-          No time tracking data yet. Start tracking time on tasks to see analytics here.
-        </p>
-      </div>
-    );
+    return <EmptyState className={className} />;
   }
-
-  const totalTrackedHours = Math.floor(summary.totalMinutesTracked / 60);
-  const accuracyLabel = getAccuracyLabel(summary.estimationAccuracy);
 
   return (
     <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
@@ -66,7 +112,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
           icon={TrendingUpIcon}
           label="Estimation Accuracy"
           value={summary.estimationAccuracy > 0 ? `${summary.estimationAccuracy}%` : "N/A"}
-          subtitle={accuracyLabel}
+          subtitle={getAccuracyLabel(summary.estimationAccuracy)}
           valueColor={getAccuracyColor(summary.estimationAccuracy)}
         />
         <StatBlock
@@ -83,49 +129,14 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
         <div className="mt-6">
           <h4 className="text-sm font-medium text-foreground-muted">Time by Quadrant</h4>
           <div className="mt-3 space-y-3">
-            {quadrantDistribution.map((dist) => {
-              const config = QUADRANT_LABELS[dist.quadrantId];
-              const percentage = summary.totalMinutesTracked > 0
-                ? Math.round((dist.totalMinutes / summary.totalMinutesTracked) * 100)
-                : 0;
-
-              return (
-                <div key={dist.quadrantId} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">{config.name}</span>
-                    <span className="text-foreground-muted">
-                      {formatDuration(dist.totalMinutes)} ({percentage}%)
-                    </span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-background-muted overflow-hidden">
-                    <div
-                      className={cn("h-full rounded-full transition-all", config.color)}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {quadrantDistribution.map((dist) => (
+              <QuadrantBar key={dist.quadrantId} dist={dist} totalMinutes={summary.totalMinutesTracked} />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Estimation Insight */}
-      {(summary.overEstimateTasks > 0 || summary.underEstimateTasks > 0) && (
-        <div className="mt-6 rounded-lg bg-background-muted p-4">
-          <h4 className="text-sm font-medium text-foreground">Estimation Insights</h4>
-          <div className="mt-2 flex gap-6 text-sm">
-            <div>
-              <span className="text-red-600 font-medium">{summary.overEstimateTasks}</span>
-              <span className="text-foreground-muted"> tasks over estimate</span>
-            </div>
-            <div>
-              <span className="text-green-600 font-medium">{summary.underEstimateTasks}</span>
-              <span className="text-foreground-muted"> tasks under estimate</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <EstimationInsights overCount={summary.overEstimateTasks} underCount={summary.underEstimateTasks} />
     </div>
   );
 }
