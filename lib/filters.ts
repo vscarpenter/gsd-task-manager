@@ -1,6 +1,7 @@
 import type { QuadrantId, RecurrenceType, TaskRecord } from "@/lib/types";
 import { isOverdue, isDueToday, isDueThisWeek } from "@/lib/utils";
 import { TIME_MS } from "@/lib/constants";
+import { getUncompletedBlockingTasks } from "@/lib/dependencies";
 
 // Re-export types for convenience
 export type { QuadrantId, RecurrenceType };
@@ -34,6 +35,9 @@ export interface FilterCriteria {
   // Date-based filters
   recentlyAdded?: boolean; // Tasks created in the last 7 days
   recentlyCompleted?: boolean; // Tasks completed in the last 7 days
+
+  // Dependency filters
+  readyToWork?: boolean; // Tasks with no uncompleted blocking dependencies
 
   // Text search
   searchQuery?: string;
@@ -136,6 +140,15 @@ function filterByRecentlyCompleted(tasks: TaskRecord[], recentlyCompleted?: bool
   });
 }
 
+/** Filter tasks that have no uncompleted blocking dependencies (ready to work) */
+function filterByReadyToWork(tasks: TaskRecord[], allTasks: TaskRecord[], readyToWork?: boolean): TaskRecord[] {
+  if (!readyToWork) return tasks;
+  return tasks.filter(task => {
+    const blockingTasks = getUncompletedBlockingTasks(task, allTasks);
+    return blockingTasks.length === 0;
+  });
+}
+
 /** Filter tasks by search query across title, description, tags, and subtasks */
 function filterBySearchQuery(tasks: TaskRecord[], searchQuery?: string): TaskRecord[] {
   if (!searchQuery || !searchQuery.trim()) return tasks;
@@ -161,8 +174,11 @@ function filterBySearchQuery(tasks: TaskRecord[], searchQuery?: string): TaskRec
 /**
  * Apply filter criteria to a list of tasks
  * Composes individual filter functions for maintainability
+ * @param tasks - The tasks to filter
+ * @param criteria - The filter criteria to apply
+ * @param allTasks - Optional: all tasks in the system (needed for dependency-based filters like readyToWork)
  */
-export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria): TaskRecord[] {
+export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria, allTasks?: TaskRecord[]): TaskRecord[] {
   let result = [...tasks];
 
   result = filterByQuadrants(result, criteria.quadrants);
@@ -176,6 +192,7 @@ export function applyFilters(tasks: TaskRecord[], criteria: FilterCriteria): Tas
   result = filterByRecurrence(result, criteria.recurrence);
   result = filterByRecentlyAdded(result, criteria.recentlyAdded);
   result = filterByRecentlyCompleted(result, criteria.recentlyCompleted);
+  result = filterByReadyToWork(result, allTasks ?? tasks, criteria.readyToWork);
   result = filterBySearchQuery(result, criteria.searchQuery);
 
   return result;
@@ -263,6 +280,16 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
       status: 'active',
       recurrence: ['daily', 'weekly', 'monthly']
     }
+  },
+  {
+    name: "Ready to Work",
+    description: "Tasks with no blocking dependencies - start now!",
+    icon: "🚀",
+    isBuiltIn: true,
+    criteria: {
+      status: 'active',
+      readyToWork: true
+    }
   }
 ];
 
@@ -282,6 +309,7 @@ export function isEmptyFilter(criteria: FilterCriteria): boolean {
     (!criteria.recurrence || criteria.recurrence.length === 0) &&
     !criteria.recentlyAdded &&
     !criteria.recentlyCompleted &&
+    !criteria.readyToWork &&
     (!criteria.searchQuery || criteria.searchQuery.trim() === '')
   );
 }
@@ -315,6 +343,7 @@ export function getFilterDescription(criteria: FilterCriteria): string {
 
   if (criteria.recentlyAdded) parts.push('recently added');
   if (criteria.recentlyCompleted) parts.push('recently completed');
+  if (criteria.readyToWork) parts.push('ready to work');
 
   if (criteria.searchQuery && criteria.searchQuery.trim()) {
     parts.push(`"${criteria.searchQuery.trim()}"`);

@@ -8,6 +8,7 @@
  * - Completion trends over time
  * - Recurrence breakdowns
  * - Quadrant performance analysis
+ * - Time tracking analytics
  */
 
 // Re-export all types
@@ -18,6 +19,12 @@ export type {
 } from "./metrics";
 
 export type { StreakData } from "./streaks";
+
+export type {
+  TimeTrackingSummary,
+  QuadrantTimeDistribution,
+  TaskTimeComparison
+} from "./time-tracking";
 
 // Re-export all functions
 export {
@@ -33,3 +40,10 @@ export {
   getCompletionTrend,
   getRecurrenceBreakdown
 } from "./trends";
+
+export {
+  calculateTimeTrackingSummary,
+  getTimeByQuadrant,
+  getTimeComparisonData,
+  formatDuration
+} from "./time-tracking";

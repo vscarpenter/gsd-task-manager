@@ -82,6 +82,7 @@ function mergeTaskUpdates(
     dependencies: updates.dependencies ?? existing.dependencies,
     notifyBefore: updates.notifyBefore ?? existing.notifyBefore,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled,
+    estimatedMinutes: updates.estimatedMinutes ?? existing.estimatedMinutes,
   };
 }
 

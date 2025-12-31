@@ -27,3 +27,18 @@ export { moveTaskToQuadrant } from "./move";
 
 // Duplicate task
 export { duplicateTask } from "./duplicate";
+
+// Snooze operations
+export { snoozeTask, clearSnooze, isTaskSnoozed, getRemainingSnoozeMinutes } from "./snooze";
+
+// Time tracking operations
+export {
+  startTimeTracking,
+  stopTimeTracking,
+  deleteTimeEntry,
+  hasRunningTimer,
+  getRunningEntry,
+  getRunningElapsedMinutes,
+  formatTimeSpent,
+  formatEstimate,
+} from "./time-tracking";

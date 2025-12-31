@@ -8,6 +8,14 @@ export interface Subtask {
   completed: boolean;
 }
 
+/** A time tracking entry for when user actively works on a task */
+export interface TimeEntry {
+  id: string;
+  startedAt: string; // ISO 8601 timestamp
+  endedAt?: string;  // ISO 8601 timestamp, null if currently running
+  notes?: string;    // Optional notes about what was done
+}
+
 export interface TaskRecord {
   id: string;
   title: string;
@@ -36,6 +44,10 @@ export interface TaskRecord {
   vectorClock?: { [deviceId: string]: number }; // For distributed sync conflict detection
   // Archive field
   archivedAt?: string; // Timestamp when task was archived
+  // Time tracking fields
+  estimatedMinutes?: number; // Estimated time to complete task
+  timeSpent?: number; // Total time spent in minutes (calculated from timeEntries)
+  timeEntries?: TimeEntry[]; // Array of time tracking sessions
 }
 
 export interface TaskDraft {
@@ -50,6 +62,7 @@ export interface TaskDraft {
   dependencies?: string[];
   notifyBefore?: number;
   notificationEnabled?: boolean;
+  estimatedMinutes?: number; // Estimated time to complete task
 }
 
 export interface ImportPayload {
@@ -110,5 +123,6 @@ export function toDraft(task: TaskRecord): TaskDraft {
     dependencies: task.dependencies,
     notifyBefore: task.notifyBefore,
     notificationEnabled: task.notificationEnabled,
+    estimatedMinutes: task.estimatedMinutes,
   };
 }

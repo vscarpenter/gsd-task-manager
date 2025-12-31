@@ -20,7 +20,19 @@ export {
   deleteTask,
   moveTaskToQuadrant,
   clearTasks,
-  duplicateTask
+  duplicateTask,
+  snoozeTask,
+  clearSnooze,
+  isTaskSnoozed,
+  getRemainingSnoozeMinutes,
+  startTimeTracking,
+  stopTimeTracking,
+  deleteTimeEntry,
+  hasRunningTimer,
+  getRunningEntry,
+  getRunningElapsedMinutes,
+  formatTimeSpent,
+  formatEstimate,
 } from "./tasks/crud";
 
 // Subtask operations

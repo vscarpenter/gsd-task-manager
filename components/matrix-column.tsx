@@ -17,6 +17,9 @@ interface MatrixColumnProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
   selectionMode?: boolean;
   selectedTaskIds?: Set<string>;
   onToggleSelect?: (task: TaskRecord) => void;
@@ -33,6 +36,9 @@ function MatrixColumnComponent({
   onToggleComplete,
   onShare,
   onDuplicate,
+  onSnooze,
+  onStartTimer,
+  onStopTimer,
   selectionMode,
   selectedTaskIds,
   onToggleSelect,
@@ -82,6 +88,9 @@ function MatrixColumnComponent({
                 onToggleComplete={onToggleComplete}
                 onShare={onShare}
                 onDuplicate={onDuplicate}
+                onSnooze={onSnooze}
+                onStartTimer={onStartTimer}
+                onStopTimer={onStopTimer}
                 selectionMode={selectionMode}
                 isSelected={selectedTaskIds?.has(task.id)}
                 onToggleSelect={onToggleSelect}

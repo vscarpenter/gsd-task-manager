@@ -273,6 +273,9 @@ export function MatrixBoard() {
                   onToggleComplete={taskOps.handleComplete}
                   onShare={dialogs.openShareDialog}
                   onDuplicate={taskOps.handleDuplicate}
+                  onSnooze={taskOps.handleSnooze}
+                  onStartTimer={taskOps.handleStartTimer}
+                  onStopTimer={taskOps.handleStopTimer}
                   selectionMode={bulkSelection.selectionMode}
                   selectedTaskIds={bulkSelection.selectedTaskIds}
                   onToggleSelect={bulkSelection.handleToggleSelect}
