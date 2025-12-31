@@ -7,6 +7,8 @@ import { CSS } from "@dnd-kit/utilities";
 import type { TaskRecord } from "@/lib/types";
 import { formatDueDate, cn, isOverdue, isDueToday } from "@/lib/utils";
 import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
+import { SnoozeDropdown } from "@/components/snooze-dropdown";
+import { TaskTimer } from "@/components/task-timer";
 
 interface TaskCardProps {
   task: TaskRecord;
@@ -16,6 +18,9 @@ interface TaskCardProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
@@ -23,7 +28,7 @@ interface TaskCardProps {
   isHighlighted?: boolean;
 }
 
-function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, onDuplicate, selectionMode, isSelected, onToggleSelect, taskRef, isHighlighted }: TaskCardProps) {
+function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, onDuplicate, onSnooze, onStartTimer, onStopTimer, selectionMode, isSelected, onToggleSelect, taskRef, isHighlighted }: TaskCardProps) {
   // React Compiler handles optimization automatically
   const dueLabel = formatDueDate(task.dueDate);
   const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
@@ -170,6 +175,16 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
         </div>
       ) : null}
 
+      {/* Time tracking */}
+      {onStartTimer && onStopTimer && !task.completed && (task.estimatedMinutes || task.timeSpent || task.timeEntries?.some(e => !e.endedAt)) ? (
+        <TaskTimer
+          task={task}
+          onStartTimer={onStartTimer}
+          onStopTimer={onStopTimer}
+          compact
+        />
+      ) : null}
+
       <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
         <div className="flex items-center gap-2">
           {taskIsOverdue ? (
@@ -211,6 +226,9 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
             >
               <CopyIcon className="h-4 w-4 sm:h-3 sm:w-3" />
             </button>
+          )}
+          {onSnooze && task.dueDate && !task.completed && (
+            <SnoozeDropdown task={task} onSnooze={onSnooze} />
           )}
           <button
             type="button"

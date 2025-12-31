@@ -10,7 +10,10 @@ import {
   exportToJson,
   toggleCompleted,
   updateTask,
-  duplicateTask
+  duplicateTask,
+  snoozeTask,
+  startTimeTracking,
+  stopTimeTracking
 } from "@/lib/tasks";
 import * as bulkOps from "@/lib/bulk-operations";
 
@@ -171,6 +174,68 @@ export function useTaskOperations(
     }
   }, [showToast, handleError]);
 
+  const handleSnooze = useCallback(async (taskId: string, minutes: number) => {
+    try {
+      await snoozeTask(taskId, minutes);
+      if (minutes === 0) {
+        showToast("Snooze cleared", undefined, TOAST_DURATION.SHORT);
+      } else {
+        const label = minutes < 60
+          ? `${minutes} minutes`
+          : minutes < 1440
+            ? `${Math.round(minutes / 60)} hour${minutes >= 120 ? 's' : ''}`
+            : `${Math.round(minutes / 1440)} day${minutes >= 2880 ? 's' : ''}`;
+        showToast(`Notifications snoozed for ${label}`, undefined, TOAST_DURATION.SHORT);
+      }
+    } catch (error) {
+      handleError(error, {
+        action: "SNOOZE_TASK",
+        taskId,
+        userMessage: "Failed to snooze task",
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [showToast, handleError]);
+
+  const handleStartTimer = useCallback(async (taskId: string) => {
+    try {
+      await startTimeTracking(taskId);
+      showToast("Timer started", undefined, TOAST_DURATION.SHORT);
+    } catch (error) {
+      handleError(error, {
+        action: "START_TIMER",
+        taskId,
+        userMessage: "Failed to start timer",
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [showToast, handleError]);
+
+  const handleStopTimer = useCallback(async (taskId: string) => {
+    try {
+      const task = await stopTimeTracking(taskId);
+      const runningEntry = task.timeEntries?.find(e => e.endedAt && !task.timeEntries?.some(other => other.startedAt > e.startedAt));
+      if (runningEntry?.endedAt) {
+        const start = new Date(runningEntry.startedAt).getTime();
+        const end = new Date(runningEntry.endedAt).getTime();
+        const minutes = Math.round((end - start) / 60000);
+        const label = minutes < 60
+          ? `${minutes} min`
+          : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+        showToast(`Timer stopped: ${label}`, undefined, TOAST_DURATION.SHORT);
+      } else {
+        showToast("Timer stopped", undefined, TOAST_DURATION.SHORT);
+      }
+    } catch (error) {
+      handleError(error, {
+        action: "STOP_TIMER",
+        taskId,
+        userMessage: "Failed to stop timer",
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [showToast, handleError]);
+
   return {
     isLoading,
     handleSubmit,
@@ -179,5 +244,8 @@ export function useTaskOperations(
     handleExport,
     handleBulkAddTagsConfirm,
     handleDuplicate,
+    handleSnooze,
+    handleStartTimer,
+    handleStopTimer,
   };
 }

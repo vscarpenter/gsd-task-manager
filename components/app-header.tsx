@@ -58,7 +58,7 @@ export function AppHeader({
   onHelp,
   onOpenSettings,
   onSelectSmartView,
-  onOpenFilters, // eslint-disable-line @typescript-eslint/no-unused-vars
+  onOpenFilters,
   currentFilterCriteria,
   activeSmartViewId,
   onActiveViewChange,
@@ -253,10 +253,9 @@ export function AppHeader({
           activeViewId={activeSmartViewId}
           onActiveViewChange={onActiveViewChange}
         />
-        {/* Add Filter button temporarily disabled - Smart Views provide sufficient filtering */}
-        {/* <Button variant="subtle" onClick={onOpenFilters}>
+        <Button variant="subtle" onClick={onOpenFilters}>
           <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
-        </Button> */}
+        </Button>
       </div>
       </header>
     </TooltipProvider>

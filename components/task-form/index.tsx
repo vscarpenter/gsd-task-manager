@@ -133,20 +133,46 @@ export function TaskForm({
         {errors.dueDate ? <p className="text-xs text-red-600">{errors.dueDate}</p> : null}
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="recurrence">Recurrence</Label>
-        <select
-          id="recurrence"
-          value={values.recurrence}
-          onChange={(event) => updateField("recurrence", event.target.value as RecurrenceType)}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <option value="none">None</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-        <p className="text-xs text-foreground-muted">When completed, create a new instance automatically</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="recurrence">Recurrence</Label>
+          <select
+            id="recurrence"
+            value={values.recurrence}
+            onChange={(event) => updateField("recurrence", event.target.value as RecurrenceType)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <p className="text-xs text-foreground-muted">Create new instance on completion</p>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="estimatedMinutes">Time Estimate</Label>
+          <select
+            id="estimatedMinutes"
+            value={values.estimatedMinutes ?? ""}
+            onChange={(event) => updateField("estimatedMinutes", event.target.value === "" ? undefined : Number(event.target.value))}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="">No estimate</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="90">1.5 hours</option>
+            <option value="120">2 hours</option>
+            <option value="180">3 hours</option>
+            <option value="240">4 hours</option>
+            <option value="480">8 hours (1 day)</option>
+            <option value="960">2 days</option>
+            <option value="2400">5 days</option>
+          </select>
+          <p className="text-xs text-foreground-muted">Helps track time vs. estimate</p>
+        </div>
       </div>
 
       {values.dueDate && (

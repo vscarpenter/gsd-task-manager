@@ -21,6 +21,13 @@ export const subtaskSchema = z.object({
 	completed: z.boolean(),
 });
 
+export const timeEntrySchema = z.object({
+	id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
+	startedAt: z.string().datetime({ offset: true }),
+	endedAt: z.string().datetime({ offset: true }).optional(),
+	notes: z.string().max(200).optional(),
+});
+
 export const taskDraftSchema = z.object({
 	title: z.string().min(1).max(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH),
 	description: z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH).default(""),
@@ -33,6 +40,7 @@ export const taskDraftSchema = z.object({
 	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
+	estimatedMinutes: z.number().int().min(1).max(10080).optional(), // Max 7 days = 10080 minutes
 });
 
 export const taskRecordSchema = taskDraftSchema
@@ -48,6 +56,9 @@ export const taskRecordSchema = taskDraftSchema
 		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
 		snoozedUntil: z.string().datetime({ offset: true }).optional(),
 		vectorClock: z.record(z.string(), z.number()).default({}),
+		// Time tracking fields
+		timeSpent: z.number().int().min(0).optional(), // Total minutes spent (calculated)
+		timeEntries: z.array(timeEntrySchema).default([]),
 	})
 	.strict();
 

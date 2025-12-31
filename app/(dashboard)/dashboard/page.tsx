@@ -8,10 +8,11 @@ import { QuadrantDistribution } from "@/components/dashboard/quadrant-distributi
 import { StreakIndicator } from "@/components/dashboard/streak-indicator";
 import { TagAnalytics } from "@/components/dashboard/tag-analytics";
 import { UpcomingDeadlines } from "@/components/dashboard/upcoming-deadlines";
+import { TimeAnalytics } from "@/components/dashboard/time-analytics";
 import { ViewToggle } from "@/components/view-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTasks } from "@/lib/use-tasks";
-import { calculateMetrics, getCompletionTrend, getStreakData } from "@/lib/analytics";
+import { calculateMetrics, getCompletionTrend, getStreakData, calculateTimeTrackingSummary, getTimeByQuadrant } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -26,6 +27,8 @@ export default function DashboardPage() {
   const metrics = useMemo(() => calculateMetrics(tasks), [tasks]);
   const trendData = useMemo(() => getCompletionTrend(tasks, trendPeriod), [tasks, trendPeriod]);
   const streakData = useMemo(() => getStreakData(tasks), [tasks]);
+  const timeTrackingSummary = useMemo(() => calculateTimeTrackingSummary(tasks), [tasks]);
+  const timeByQuadrant = useMemo(() => getTimeByQuadrant(tasks), [tasks]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -156,6 +159,12 @@ export default function DashboardPage() {
             {metrics.tagStats.length > 0 && (
               <TagAnalytics tagStats={metrics.tagStats} maxTags={10} />
             )}
+
+            {/* Time Tracking Analytics */}
+            <TimeAnalytics
+              summary={timeTrackingSummary}
+              quadrantDistribution={timeByQuadrant}
+            />
 
             {/* Summary Card */}
             <div className="rounded-xl border border-border bg-gradient-to-br from-accent/5 to-accent/10 p-6 shadow-sm">

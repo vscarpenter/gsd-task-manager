@@ -213,6 +213,32 @@ class GsdDatabase extends Dexie {
           maxPinnedViews: 5
         });
       });
+
+    // Version 12: Add time tracking fields
+    this.version(12)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId",
+        appPreferences: "id"
+      })
+      .upgrade((trans) => {
+        // Migrate existing tasks to have time tracking fields with defaults
+        return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
+          if (task.timeEntries === undefined) {
+            task.timeEntries = [];
+          }
+          if (task.timeSpent === undefined) {
+            task.timeSpent = 0;
+          }
+        });
+      });
   }
 
 }

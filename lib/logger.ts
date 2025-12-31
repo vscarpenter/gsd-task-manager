@@ -38,6 +38,7 @@ export type LogContext =
   | 'SYNC_ERROR'
   | 'SYNC_HISTORY'
   | 'TASK_CRUD'
+  | 'TIME_TRACKING'
   | 'AUTO_ARCHIVE'
   | 'AUTH'
   | 'UI'
