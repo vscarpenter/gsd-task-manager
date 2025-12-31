@@ -92,3 +92,23 @@ export const TIME_UTILS = {
   timeToMinutes: (hour: number, min: number) =>
     hour * NOTIFICATION_TIMING.MINUTES_PER_HOUR + min
 } as const;
+
+/**
+ * Time tracking constants
+ */
+export const TIME_TRACKING = {
+  /** Milliseconds per minute (for time calculations) */
+  MS_PER_MINUTE: 60000,
+  /** Minutes per hour */
+  MINUTES_PER_HOUR: 60,
+  /** Minutes per day */
+  MINUTES_PER_DAY: 24 * 60,
+  /** Minutes per week */
+  MINUTES_PER_WEEK: 7 * 24 * 60,
+  /** Maximum snooze duration in minutes (1 year) - prevents unreasonably long snoozes */
+  MAX_SNOOZE_MINUTES: 365 * 24 * 60,
+  /** Seconds per minute */
+  SECONDS_PER_MINUTE: 60,
+  /** Seconds per hour */
+  SECONDS_PER_HOUR: 3600,
+} as const;

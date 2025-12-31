@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PlayIcon, PauseIcon, ClockIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskRecord } from "@/lib/types";
@@ -9,6 +9,7 @@ import {
   getRunningEntry,
   formatTimeSpent,
 } from "@/lib/tasks";
+import { TIME_TRACKING } from "@/lib/constants";
 
 interface TaskTimerProps {
   task: TaskRecord;
@@ -24,16 +25,16 @@ interface TaskTimerProps {
 function calculateElapsedMinutes(startedAt: string): number {
   const start = new Date(startedAt).getTime();
   const now = Date.now();
-  return Math.floor((now - start) / 60000);
+  return Math.floor((now - start) / TIME_TRACKING.MS_PER_MINUTE);
 }
 
 /**
  * Format elapsed seconds to mm:ss or hh:mm:ss
  */
 function formatElapsedTime(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  const hours = Math.floor(totalSeconds / TIME_TRACKING.SECONDS_PER_HOUR);
+  const minutes = Math.floor((totalSeconds % TIME_TRACKING.SECONDS_PER_HOUR) / TIME_TRACKING.SECONDS_PER_MINUTE);
+  const seconds = totalSeconds % TIME_TRACKING.SECONDS_PER_MINUTE;
 
   const pad = (n: number) => n.toString().padStart(2, "0");
 
@@ -87,9 +88,20 @@ export function TaskTimer({
     }
   };
 
-  const totalTimeSpent = (task.timeSpent || 0) + calculateElapsedMinutes(runningEntry?.startedAt || new Date().toISOString());
+  // Only calculate elapsed minutes when timer is actually running (fixes Issue #2: race condition)
+  const currentElapsedMinutes = runningEntry ? calculateElapsedMinutes(runningEntry.startedAt) : 0;
+  const totalTimeSpent = (task.timeSpent || 0) + currentElapsedMinutes;
   const estimatedMinutes = task.estimatedMinutes;
   const isOverEstimate = estimatedMinutes !== undefined && estimatedMinutes > 0 && totalTimeSpent > estimatedMinutes;
+
+  // Dynamic ARIA label including elapsed time for screen readers (fixes Issue #7)
+  const ariaLabel = useMemo(() => {
+    if (isRunning) {
+      return `Stop timer. Elapsed: ${formatElapsedTime(elapsedSeconds)}. Total tracked: ${formatTimeSpent(totalTimeSpent)}`;
+    }
+    const tracked = task.timeSpent ? formatTimeSpent(task.timeSpent) : "no time tracked";
+    return `Start timer. ${tracked}`;
+  }, [isRunning, elapsedSeconds, totalTimeSpent, task.timeSpent]);
 
   if (compact) {
     return (
@@ -105,7 +117,7 @@ export function TaskTimer({
           isLoading && "opacity-50 cursor-not-allowed",
           className
         )}
-        aria-label={isRunning ? "Stop timer" : "Start timer"}
+        aria-label={ariaLabel}
       >
         {isRunning ? (
           <>
@@ -139,7 +151,7 @@ export function TaskTimer({
             : "bg-background-muted text-foreground-muted hover:bg-accent hover:text-white",
           isLoading && "opacity-50 cursor-not-allowed"
         )}
-        aria-label={isRunning ? "Stop timer" : "Start timer"}
+        aria-label={ariaLabel}
       >
         {isRunning ? (
           <PauseIcon className="h-4 w-4" />

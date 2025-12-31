@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { TaskRecord } from "@/lib/types";
 import { isTaskSnoozed, getRemainingSnoozeMinutes } from "@/lib/tasks";
+import { TIME_TRACKING } from "@/lib/constants";
 
 interface SnoozeDropdownProps {
   task: TaskRecord;
@@ -24,17 +25,19 @@ interface SnoozeDropdownProps {
 const SNOOZE_OPTIONS = [
   { label: "15 minutes", minutes: 15 },
   { label: "30 minutes", minutes: 30 },
-  { label: "1 hour", minutes: 60 },
-  { label: "3 hours", minutes: 180 },
-  { label: "Tomorrow", minutes: 24 * 60 },
-  { label: "Next week", minutes: 7 * 24 * 60 },
+  { label: "1 hour", minutes: TIME_TRACKING.MINUTES_PER_HOUR },
+  { label: "3 hours", minutes: 3 * TIME_TRACKING.MINUTES_PER_HOUR },
+  { label: "Tomorrow", minutes: TIME_TRACKING.MINUTES_PER_DAY },
+  { label: "Next week", minutes: TIME_TRACKING.MINUTES_PER_WEEK },
 ] as const;
 
 /** Format remaining snooze time for display */
 function formatRemainingTime(minutes: number): string {
-  if (minutes < 60) return `${minutes}m`;
-  if (minutes < 24 * 60) return `${Math.round(minutes / 60)}h`;
-  return `${Math.round(minutes / (24 * 60))}d`;
+  if (minutes < TIME_TRACKING.MINUTES_PER_HOUR) return `${minutes}m`;
+  if (minutes < TIME_TRACKING.MINUTES_PER_DAY) {
+    return `${Math.round(minutes / TIME_TRACKING.MINUTES_PER_HOUR)}h`;
+  }
+  return `${Math.round(minutes / TIME_TRACKING.MINUTES_PER_DAY)}d`;
 }
 
 export function SnoozeDropdown({ task, onSnooze, className }: SnoozeDropdownProps) {

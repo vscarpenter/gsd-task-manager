@@ -3,18 +3,28 @@ import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TASK_CRUD");
 
 /**
  * Snooze a task's notifications for a specified duration
  * @param id - The task ID to snooze
- * @param minutes - Number of minutes to snooze (0 to clear snooze)
+ * @param minutes - Number of minutes to snooze (0 to clear snooze, max 1 year)
+ * @throws Error if minutes exceeds MAX_SNOOZE_MINUTES or is negative
  */
 export async function snoozeTask(
   id: string,
   minutes: number
 ): Promise<TaskRecord> {
+  // Validate snooze duration (Issue #10: missing validation)
+  if (minutes < 0) {
+    throw new Error("Snooze duration cannot be negative");
+  }
+  if (minutes > TIME_TRACKING.MAX_SNOOZE_MINUTES) {
+    throw new Error(`Snooze duration cannot exceed ${TIME_TRACKING.MAX_SNOOZE_MINUTES} minutes (1 year)`);
+  }
+
   try {
     const db = getDb();
     const existing = await db.tasks.get(id);
@@ -29,7 +39,7 @@ export async function snoozeTask(
 
     // Calculate snooze end time (or clear if minutes is 0)
     const snoozedUntil = minutes > 0
-      ? new Date(Date.now() + minutes * 60 * 1000).toISOString()
+      ? new Date(Date.now() + minutes * TIME_TRACKING.MS_PER_MINUTE).toISOString()
       : undefined;
 
     const nextRecord: TaskRecord = {
@@ -92,5 +102,5 @@ export function isTaskSnoozed(task: TaskRecord): boolean {
 export function getRemainingSnoozeMinutes(task: TaskRecord): number {
   if (!task.snoozedUntil) return 0;
   const remaining = new Date(task.snoozedUntil).getTime() - Date.now();
-  return Math.max(0, Math.ceil(remaining / (60 * 1000)));
+  return Math.max(0, Math.ceil(remaining / TIME_TRACKING.MS_PER_MINUTE));
 }

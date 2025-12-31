@@ -9,6 +9,8 @@
  */
 
 import type { TaskRecord, QuadrantId } from "@/lib/types";
+import { TIME_TRACKING } from "@/lib/constants";
+import { formatTimeSpent } from "@/lib/tasks/crud/time-tracking";
 
 /** Summary of time tracking data */
 export interface TimeTrackingSummary {
@@ -168,15 +170,11 @@ export function getTimeComparisonData(tasks: TaskRecord[]): TaskTimeComparison[]
 
 /**
  * Format minutes to a human-readable duration
+ * Issue #11: Consolidated to use formatTimeSpent to avoid code duplication
  */
 export function formatDuration(minutes: number): string {
-  if (minutes < 60) {
-    return `${minutes}m`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) {
-    return `${hours}h`;
-  }
-  return `${hours}h ${mins}m`;
+  // Use the canonical formatTimeSpent implementation
+  // Minor difference: formatTimeSpent returns "< 1m" for 0, formatDuration returns "0m"
+  if (minutes === 0) return "0m";
+  return formatTimeSpent(minutes);
 }
