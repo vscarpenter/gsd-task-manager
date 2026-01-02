@@ -63,12 +63,13 @@ function remapTaskReferences(
   }
 
   return tasks.map(task => {
-    const updatedDependencies = (task.dependencies ?? []).map(depId => idMap.get(depId) ?? depId);
+    const originalDeps = task.dependencies ?? [];
+    const updatedDependencies = originalDeps.map(depId => idMap.get(depId) ?? depId);
     const updatedParentTaskId = task.parentTaskId ? (idMap.get(task.parentTaskId) ?? task.parentTaskId) : undefined;
 
     const dependenciesChanged =
-      updatedDependencies.length !== (task.dependencies ?? []).length ||
-      updatedDependencies.some((depId, index) => depId !== (task.dependencies ?? [])[index]);
+      updatedDependencies.length !== originalDeps.length ||
+      updatedDependencies.some((depId, index) => depId !== originalDeps[index]);
 
     const parentChanged = updatedParentTaskId !== task.parentTaskId;
 
