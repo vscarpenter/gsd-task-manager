@@ -67,8 +67,8 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Data**: All user data stays local. Export/import via JSON.
 
 ## References
-- See `gsd-task-manager-spec.md` for product scope and behavior.
-- See `AGENTS.md` for additional contribution standards.
+- See `CLAUDE.md` for product scope, architecture, and development guidance.
+- See `coding-standards.md` for contribution standards.
 
 ---
 

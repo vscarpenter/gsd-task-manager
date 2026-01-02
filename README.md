@@ -341,7 +341,7 @@ The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or
 - Opt-in feature (requires explicit passphrase configuration)
 
 **Setup:**
-See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detailed setup instructions and [MCP_SERVER_SUMMARY.md](./MCP_SERVER_SUMMARY.md) for implementation details.
+See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detailed setup instructions.
 
 ### Recent Updates
 
