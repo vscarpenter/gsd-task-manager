@@ -4,17 +4,32 @@ import { useSync } from '@/lib/hooks/use-sync';
 import { getSyncEngine } from '@/lib/sync/engine';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
+import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
+import { getAutoSyncConfig } from '@/lib/sync/config';
 import type { SyncResult } from '@/lib/sync/types';
 
 // Mock the sync modules
 vi.mock('@/lib/sync/engine');
 vi.mock('@/lib/sync/sync-coordinator');
 vi.mock('@/lib/sync/health-monitor');
+vi.mock('@/lib/sync/background-sync', () => ({
+  getBackgroundSyncManager: vi.fn(),
+}));
+vi.mock('@/lib/sync/config', () => ({
+  getAutoSyncConfig: vi.fn(),
+}));
 
 describe('useSync', () => {
   let mockEngine: any;
   let mockCoordinator: any;
   let mockHealthMonitor: any;
+  let mockBackgroundSyncManager: any;
+
+  const flushAsync = async () => {
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+  };
 
   beforeEach(() => {
     // Setup mock engine
@@ -51,6 +66,21 @@ describe('useSync', () => {
       }),
     };
     vi.mocked(getHealthMonitor).mockReturnValue(mockHealthMonitor);
+
+    mockBackgroundSyncManager = {
+      isRunning: vi.fn().mockReturnValue(false),
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn(),
+    };
+    vi.mocked(getBackgroundSyncManager).mockReturnValue(mockBackgroundSyncManager);
+
+    vi.mocked(getAutoSyncConfig).mockResolvedValue({
+      enabled: true,
+      intervalMinutes: 2,
+      syncOnFocus: true,
+      syncOnOnline: true,
+      debounceAfterChangeMs: 30000,
+    });
   });
 
   afterEach(() => {
@@ -74,8 +104,7 @@ describe('useSync', () => {
     it('should check if sync is enabled on mount', async () => {
       renderHook(() => useSync());
 
-      // Wait for the effect to run
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockEngine.isEnabled).toHaveBeenCalled();
     });
@@ -85,8 +114,7 @@ describe('useSync', () => {
 
       renderHook(() => useSync());
 
-      // Wait for the effect to run
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockHealthMonitor.start).toHaveBeenCalled();
     });
@@ -96,8 +124,7 @@ describe('useSync', () => {
 
       renderHook(() => useSync());
 
-      // Wait for the effect to run
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockHealthMonitor.start).not.toHaveBeenCalled();
     });
@@ -108,14 +135,14 @@ describe('useSync', () => {
       mockEngine.isEnabled.mockResolvedValue(false);
       const { result } = renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
       expect(result.current.isEnabled).toBe(false);
     });
 
     it('should poll coordinator status', async () => {
       renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockCoordinator.getStatus).toHaveBeenCalled();
     });
@@ -301,7 +328,7 @@ describe('useSync', () => {
 
       renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockHealthMonitor.start).toHaveBeenCalled();
     });
@@ -311,7 +338,7 @@ describe('useSync', () => {
 
       renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockHealthMonitor.start).not.toHaveBeenCalled();
     });
@@ -324,7 +351,7 @@ describe('useSync', () => {
 
       const { unmount } = renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       unmount();
 
@@ -384,7 +411,7 @@ describe('useSync', () => {
     it('should check sync enabled status on mount', async () => {
       renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockEngine.isEnabled).toHaveBeenCalled();
     });
@@ -392,7 +419,7 @@ describe('useSync', () => {
     it('should poll coordinator status on mount', async () => {
       renderHook(() => useSync());
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await flushAsync();
 
       expect(mockCoordinator.getStatus).toHaveBeenCalled();
     });

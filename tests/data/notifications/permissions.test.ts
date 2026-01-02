@@ -203,9 +203,14 @@ describe('Notification Permissions', () => {
   });
 
   describe('isInQuietHours', () => {
+    const setLocalTime = (hours: number, minutes: number) => {
+      vi.setSystemTime(new Date(2025, 0, 15, hours, minutes));
+    };
+
     beforeEach(() => {
-      // Mock current time to 14:30 (2:30 PM)
-      vi.setSystemTime(new Date('2025-01-15T14:30:00Z'));
+      vi.useFakeTimers();
+      // Mock current time to 14:30 (2:30 PM) local time
+      setLocalTime(14, 30);
     });
 
     afterEach(() => {
@@ -262,7 +267,7 @@ describe('Notification Permissions', () => {
 
     it('should handle overnight quiet hours correctly (inside range, after start)', () => {
       // Current time: 23:00, Quiet hours: 22:00 - 08:00
-      vi.setSystemTime(new Date('2025-01-15T23:00:00Z'));
+      setLocalTime(23, 0);
 
       const result = isInQuietHours({
         quietHoursStart: '22:00',
@@ -274,7 +279,7 @@ describe('Notification Permissions', () => {
 
     it('should handle overnight quiet hours correctly (inside range, before end)', () => {
       // Current time: 07:00, Quiet hours: 22:00 - 08:00
-      vi.setSystemTime(new Date('2025-01-15T07:00:00Z'));
+      setLocalTime(7, 0);
 
       const result = isInQuietHours({
         quietHoursStart: '22:00',
@@ -286,7 +291,7 @@ describe('Notification Permissions', () => {
 
     it('should handle overnight quiet hours correctly (outside range)', () => {
       // Current time: 10:00, Quiet hours: 22:00 - 08:00
-      vi.setSystemTime(new Date('2025-01-15T10:00:00Z'));
+      setLocalTime(10, 0);
 
       const result = isInQuietHours({
         quietHoursStart: '22:00',
@@ -298,7 +303,7 @@ describe('Notification Permissions', () => {
 
     it('should handle edge case at exact start time', () => {
       // Current time: 22:00, Quiet hours: 22:00 - 08:00
-      vi.setSystemTime(new Date('2025-01-15T22:00:00Z'));
+      setLocalTime(22, 0);
 
       const result = isInQuietHours({
         quietHoursStart: '22:00',
@@ -310,7 +315,7 @@ describe('Notification Permissions', () => {
 
     it('should handle edge case at exact end time', () => {
       // Current time: 08:00, Quiet hours: 22:00 - 08:00
-      vi.setSystemTime(new Date('2025-01-15T08:00:00Z'));
+      setLocalTime(8, 0);
 
       const result = isInQuietHours({
         quietHoursStart: '22:00',

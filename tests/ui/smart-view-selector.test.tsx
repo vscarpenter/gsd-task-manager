@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SmartViewSelector } from "@/components/smart-view-selector";
 import type { SmartView } from "@/lib/filters";
+import { renderWithAct } from "../utils/render-with-act";
 
 // Mock the smart views module
 const mockGetSmartViews = vi.fn();
 const mockDeleteSmartView = vi.fn();
+const mockGetAppPreferences = vi.fn();
+const mockPinSmartView = vi.fn();
+const mockUnpinSmartView = vi.fn();
 
 const builtInViews: SmartView[] = [
   {
@@ -31,7 +35,10 @@ const builtInViews: SmartView[] = [
 
 vi.mock("@/lib/smart-views", () => ({
   getSmartViews: () => mockGetSmartViews(),
-  deleteSmartView: (id: string) => mockDeleteSmartView(id)
+  deleteSmartView: (id: string) => mockDeleteSmartView(id),
+  getAppPreferences: () => mockGetAppPreferences(),
+  pinSmartView: (id: string) => mockPinSmartView(id),
+  unpinSmartView: (id: string) => mockUnpinSmartView(id),
 }));
 
 describe("SmartViewSelector", () => {
@@ -54,17 +61,18 @@ describe("SmartViewSelector", () => {
     vi.clearAllMocks();
     // By default, return only built-in views
     mockGetSmartViews.mockResolvedValue(builtInViews);
+    mockGetAppPreferences.mockResolvedValue({ pinnedSmartViewIds: [], maxPinnedViews: 5 });
   });
 
-  it("renders the selector button", () => {
-    render(<SmartViewSelector {...defaultProps} />);
+  it("renders the selector button", async () => {
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     expect(screen.getByRole("button", { name: /smart views/i })).toBeInTheDocument();
   });
 
   it("opens dropdown when button is clicked", async () => {
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -75,7 +83,7 @@ describe("SmartViewSelector", () => {
 
   it("displays built-in smart views", async () => {
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -89,7 +97,7 @@ describe("SmartViewSelector", () => {
     mockGetSmartViews.mockResolvedValue([...builtInViews, customSmartView]);
 
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -100,7 +108,7 @@ describe("SmartViewSelector", () => {
 
   it("calls onSelect when a smart view is clicked", async () => {
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -119,7 +127,7 @@ describe("SmartViewSelector", () => {
     mockGetSmartViews.mockResolvedValue([...builtInViews, customSmartView]);
 
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -134,7 +142,7 @@ describe("SmartViewSelector", () => {
 
   it("does not show delete button for built-in views", async () => {
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -156,7 +164,7 @@ describe("SmartViewSelector", () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -178,7 +186,7 @@ describe("SmartViewSelector", () => {
     mockGetSmartViews.mockResolvedValue(builtInViews);
 
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     await user.click(screen.getByRole("button", { name: /smart views/i }));
 
@@ -191,7 +199,7 @@ describe("SmartViewSelector", () => {
 
   it("closes dropdown after selecting a view", async () => {
     const user = userEvent.setup();
-    render(<SmartViewSelector {...defaultProps} />);
+    await renderWithAct(<SmartViewSelector {...defaultProps} />);
 
     // Open dropdown
     await user.click(screen.getByRole("button", { name: /smart views/i }));
