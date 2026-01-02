@@ -1,11 +1,22 @@
 import type { Env, RequestContext } from '../types';
 import { createCorsHeaders } from './cors';
 import { RATE_LIMITS } from '../config';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('RATE_LIMIT');
 
 export interface RateLimitConfig {
   maxRequests: number;
   windowSeconds: number;
 }
+
+/** Thresholds for security alerting */
+const SECURITY_THRESHOLDS = {
+  /** Percentage of limit that triggers a warning log */
+  WARNING_PERCENT: 80,
+  /** Number of consecutive blocked requests before escalating to error log */
+  BLOCKED_ESCALATION: 3,
+} as const;
 
 // Rate limit configurations per endpoint
 // Uses centralized config from config.ts
@@ -61,6 +72,36 @@ export const rateLimitMiddleware = async (
   if (count >= config.maxRequests) {
     const retryAfter = config.windowSeconds - (now % config.windowSeconds);
 
+    // Track consecutive blocks for this user/path to detect brute-force patterns
+    const blockKey = `ratelimit:blocked:${userId}:${path}`;
+    const blockedCountStr = await env.KV.get(blockKey);
+    const blockedCount = blockedCountStr ? Number.parseInt(blockedCountStr, 10) + 1 : 1;
+
+    await env.KV.put(blockKey, blockedCount.toString(), {
+      expirationTtl: config.windowSeconds * 5, // Track for 5 windows
+    });
+
+    // Log rate limit violation with security context
+    const isAuthEndpoint = path.includes('/auth/');
+    const logContext = {
+      userId: userId === 'anonymous' ? undefined : userId,
+      path,
+      blockedCount,
+      windowSeconds: config.windowSeconds,
+      isAuthEndpoint,
+    };
+
+    if (blockedCount >= SECURITY_THRESHOLDS.BLOCKED_ESCALATION) {
+      // Escalate to error level for potential brute-force attack
+      logger.error('Potential brute-force detected: repeated rate limit violations', undefined, {
+        ...logContext,
+        severity: 'HIGH',
+        recommendation: 'Consider IP-based blocking if pattern continues',
+      });
+    } else {
+      logger.warn('Rate limit exceeded', logContext);
+    }
+
     const headers = createCorsHeaders();
     headers.set('Content-Type', 'application/json');
     headers.set('Retry-After', retryAfter.toString());
@@ -78,6 +119,18 @@ export const rateLimitMiddleware = async (
         headers,
       }
     );
+  }
+
+  // Log warning when approaching rate limit (80% threshold)
+  const usagePercent = (count / config.maxRequests) * 100;
+  if (usagePercent >= SECURITY_THRESHOLDS.WARNING_PERCENT && count === Math.floor(config.maxRequests * 0.8)) {
+    logger.info('Rate limit warning: approaching limit', {
+      userId: userId === 'anonymous' ? undefined : userId,
+      path,
+      currentCount: count,
+      maxRequests: config.maxRequests,
+      usagePercent: Math.round(usagePercent),
+    });
   }
 
   // Increment counter

@@ -14,11 +14,15 @@ import { getSyncConfig } from '@/lib/sync/config';
 import type { TaskDraft, TaskRecord } from '@/lib/types';
 
 // Mock dependencies
+const mockRemoveDependencyReferences = vi.hoisted(() => vi.fn());
 const mockEnqueue = vi.fn();
 const mockScheduleDebouncedSync = vi.fn();
 const mockIsRunning = vi.fn(() => false);
 
 vi.mock('@/lib/db');
+vi.mock('@/lib/tasks/dependencies', () => ({
+  removeDependencyReferences: mockRemoveDependencyReferences,
+}));
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(() => ({
     enqueue: mockEnqueue,
@@ -73,6 +77,7 @@ describe('Task CRUD Operations', () => {
     mockEnqueue.mockClear();
     mockScheduleDebouncedSync.mockClear();
     mockIsRunning.mockReturnValue(false);
+    mockRemoveDependencyReferences.mockClear();
 
     // Reset sync config to disabled state
     (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -333,10 +338,15 @@ describe('Task CRUD Operations', () => {
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
+      mockRemoveDependencyReferences.mockResolvedValue(undefined);
       mockDb.tasks.delete.mockResolvedValue(undefined);
 
       await deleteTask('task-1');
 
+      expect(mockRemoveDependencyReferences).toHaveBeenCalledWith('task-1');
+      expect(mockRemoveDependencyReferences.mock.invocationCallOrder[0]).toBeLessThan(
+        mockDb.tasks.delete.mock.invocationCallOrder[0]
+      );
       expect(mockDb.tasks.delete).toHaveBeenCalledWith('task-1');
     });
 
@@ -344,6 +354,7 @@ describe('Task CRUD Operations', () => {
       mockDb.tasks.get.mockResolvedValue(null);
 
       await expect(deleteTask('nonexistent')).resolves.not.toThrow();
+      expect(mockRemoveDependencyReferences).not.toHaveBeenCalled();
     });
   });
 

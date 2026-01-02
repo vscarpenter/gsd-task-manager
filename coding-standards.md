@@ -72,7 +72,7 @@ Build incrementally to ensure quality:
 - Functions should be 30 lines or fewer with single responsibility
 - Maximum 3 levels of nesting; use early returns
 - Comments explain WHY, not WHAT
-- Limit files to approximately 350-400 lines; split by responsibility
+- Limit code files to approximately 350-400 lines; split by responsibility
 
 ### Structure & Abstraction
 
@@ -218,4 +218,4 @@ Build [feature] that:
 
 ---
 
-*Document Version 4.4 | Vinny Carpenter*
+*Document Version 4.5 | Vinny Carpenter*

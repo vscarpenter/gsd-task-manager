@@ -28,6 +28,7 @@ export function TaskManagementSection({
 						"Title should be action-oriented (start with a verb)",
 						"Use description for context, not just details",
 						"Set due dates for time-sensitive work",
+						"Add time estimates to track estimation accuracy",
 					]}
 				/>
 
