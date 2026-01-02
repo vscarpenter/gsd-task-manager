@@ -8,6 +8,9 @@ import {
 	CheckSquareIcon,
 	LinkIcon,
 	CalendarIcon,
+	TimerIcon,
+	BellOffIcon,
+	ArchiveIcon,
 } from "lucide-react";
 import { GuideSection, AdvancedFeature } from "./shared-components";
 
@@ -28,6 +31,88 @@ export function AdvancedFeaturesSection({
 			onToggle={onToggle}
 		>
 			<div className="space-y-4">
+				{/* Time Tracking - New in v6.4.0 */}
+				<AdvancedFeature
+					icon={<TimerIcon className="h-4 w-4" />}
+					title="Time Tracking"
+					description="Track how long you actually spend on tasks."
+				>
+					<ul className="text-sm text-foreground-muted space-y-1 list-disc list-inside">
+						<li>
+							<strong>Start/Stop Timer:</strong> Click the play button on any
+							task card
+						</li>
+						<li>
+							<strong>Time Estimates:</strong> Set expected duration when
+							creating tasks
+						</li>
+						<li>
+							<strong>Live Counter:</strong> See elapsed time update in
+							real-time
+						</li>
+						<li>
+							<strong>Analytics:</strong> View time spent per quadrant in
+							Dashboard
+						</li>
+						<li>
+							<strong>Estimation Accuracy:</strong> Compare estimates vs actual
+							time
+						</li>
+					</ul>
+					<div className="mt-2 rounded bg-green-50 dark:bg-green-950/30 p-2 text-xs text-green-700 dark:text-green-300">
+						💡 Tip: Track time to understand where your hours really go!
+					</div>
+				</AdvancedFeature>
+
+				{/* Snooze Notifications - New */}
+				<AdvancedFeature
+					icon={<BellOffIcon className="h-4 w-4" />}
+					title="Snooze Notifications"
+					description="Temporarily silence reminders when you need focus time."
+				>
+					<ul className="text-sm text-foreground-muted space-y-1 list-disc list-inside">
+						<li>Click the bell icon on any task to snooze</li>
+						<li>
+							<strong>Options:</strong> 15 min, 30 min, 1 hour, 3 hours,
+							tomorrow, next week
+						</li>
+						<li>Visual indicator shows remaining snooze time</li>
+						<li>Clear snooze anytime to resume notifications</li>
+					</ul>
+				</AdvancedFeature>
+
+				{/* Task Archive - New in v6.x */}
+				<AdvancedFeature
+					icon={<ArchiveIcon className="h-4 w-4" />}
+					title="Task Archive"
+					description="Keep your task list clean while preserving history."
+				>
+					<ul className="text-sm text-foreground-muted space-y-1 list-disc list-inside">
+						<li>
+							<strong>Auto-archive:</strong> Completed tasks archived after
+							30/60/90 days
+						</li>
+						<li>
+							<strong>Manual archive:</strong> Archive tasks immediately via
+							Settings
+						</li>
+						<li>
+							<strong>View archive:</strong> See all archived tasks in dedicated
+							view
+						</li>
+						<li>
+							<strong>Restore:</strong> Bring archived tasks back to active list
+						</li>
+						<li>
+							<strong>Permanent delete:</strong> Remove archived tasks forever
+						</li>
+					</ul>
+					<div className="mt-2 text-xs text-foreground-muted">
+						Access via <strong>Settings → Archive</strong> or{" "}
+						<strong>⌘K → "archive"</strong>
+					</div>
+				</AdvancedFeature>
+
 				<AdvancedFeature
 					icon={<RepeatIcon className="h-4 w-4" />}
 					title="Recurring Tasks"
@@ -110,7 +195,7 @@ export function AdvancedFeaturesSection({
 						<li>Visual indicators: Red for overdue, amber for due today</li>
 						<li>Browser notifications (if enabled)</li>
 						<li>Customize reminder time (15min to 1 day before)</li>
-						<li>Snooze notifications if needed</li>
+						<li>Snooze notifications if you need focus time</li>
 						<li>Badge API shows count on PWA icon</li>
 					</ul>
 				</AdvancedFeature>

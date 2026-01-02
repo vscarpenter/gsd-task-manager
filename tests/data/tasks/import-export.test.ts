@@ -195,6 +195,52 @@ describe('Task Import/Export Operations', () => {
       expect(regeneratedTask.subtasks[0].title).toBe('Subtask 1');
     });
 
+    it('should remap dependencies and parentTaskId when IDs are regenerated', async () => {
+      const existingTask = { ...sampleTask1, id: 'task-2', title: 'Existing Task' };
+      const parentTask = { ...sampleTask1, id: 'task-2', title: 'Parent Task', dependencies: [] };
+      const childTask = {
+        ...sampleTask1,
+        id: 'task-3',
+        title: 'Child Task',
+        dependencies: ['task-2'],
+        parentTaskId: 'task-2',
+      };
+      const dependentTask = {
+        ...sampleTask1,
+        id: 'task-4',
+        title: 'Dependent Task',
+        dependencies: ['task-2'],
+      };
+
+      const payload: ImportPayload = {
+        tasks: [parentTask, childTask, dependentTask],
+        exportedAt: '2025-01-17T10:00:00Z',
+        version: '1.0.0',
+      };
+
+      mockDb.tasks.toArray.mockResolvedValue([existingTask]);
+      mockDb.tasks.bulkAdd.mockResolvedValue(undefined);
+
+      await importTasks(payload, 'merge');
+
+      const importedTasks = mockDb.tasks.bulkAdd.mock.calls[0][0];
+      const importedParent = importedTasks.find((task: TaskRecord) => task.title === 'Parent Task');
+      const importedChild = importedTasks.find((task: TaskRecord) => task.title === 'Child Task');
+      const importedDependent = importedTasks.find((task: TaskRecord) => task.title === 'Dependent Task');
+
+      expect(importedParent).toBeDefined();
+      expect(importedChild).toBeDefined();
+      expect(importedDependent).toBeDefined();
+
+      const parentId = importedParent!.id;
+
+      expect(parentId).not.toBe('task-2');
+      expect(importedChild!.parentTaskId).toBe(parentId);
+      expect(importedChild!.dependencies).toContain(parentId);
+      expect(importedChild!.dependencies).not.toContain('task-2');
+      expect(importedDependent!.dependencies).toContain(parentId);
+    });
+
     it('should validate payload with schema', async () => {
       const invalidPayload = {
         tasks: [{ id: '1', title: 'Invalid' }], // Missing required fields

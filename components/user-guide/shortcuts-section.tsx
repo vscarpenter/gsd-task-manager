@@ -45,6 +45,9 @@ export function ShortcutsSection({
 						<ShortcutRow shortcut="⌘N / Ctrl+N" description="Create new task" />
 						<ShortcutRow shortcut="⌘, / Ctrl+," description="Open settings" />
 					</div>
+					<p className="text-xs text-foreground-muted mt-2">
+						💡 Use ⌘K then type "archive" or "sync history" to navigate to those views.
+					</p>
 				</div>
 
 				<div>

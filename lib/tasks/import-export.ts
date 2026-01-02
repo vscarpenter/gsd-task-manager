@@ -24,13 +24,20 @@ export async function exportTasks(): Promise<ImportPayload> {
  * Prevents ID collisions when merging imported tasks with existing tasks.
  * Also regenerates subtask IDs to maintain consistency.
  */
-function regenerateConflictingIds(tasks: TaskRecord[], existingIds: Set<string>): TaskRecord[] {
-  return tasks.map(task => {
+function regenerateConflictingIds(
+  tasks: TaskRecord[],
+  existingIds: Set<string>
+): { tasks: TaskRecord[]; idMap: Map<string, string> } {
+  const idMap = new Map<string, string>();
+
+  const updatedTasks = tasks.map(task => {
     // If ID already exists, regenerate it
     if (existingIds.has(task.id)) {
+      const newId = generateId();
+      idMap.set(task.id, newId);
       return {
         ...task,
-        id: generateId(),
+        id: newId,
         // Also regenerate subtask IDs to avoid conflicts
         subtasks: task.subtasks.map(subtask => ({
           ...subtask,
@@ -39,6 +46,41 @@ function regenerateConflictingIds(tasks: TaskRecord[], existingIds: Set<string>)
       };
     }
     return task;
+  });
+
+  return { tasks: updatedTasks, idMap };
+}
+
+/**
+ * Update task references (dependencies, parentTaskId) after ID regeneration
+ */
+function remapTaskReferences(
+  tasks: TaskRecord[],
+  idMap: Map<string, string>
+): TaskRecord[] {
+  if (idMap.size === 0) {
+    return tasks;
+  }
+
+  return tasks.map(task => {
+    const updatedDependencies = (task.dependencies ?? []).map(depId => idMap.get(depId) ?? depId);
+    const updatedParentTaskId = task.parentTaskId ? (idMap.get(task.parentTaskId) ?? task.parentTaskId) : undefined;
+
+    const dependenciesChanged =
+      updatedDependencies.length !== (task.dependencies ?? []).length ||
+      updatedDependencies.some((depId, index) => depId !== (task.dependencies ?? [])[index]);
+
+    const parentChanged = updatedParentTaskId !== task.parentTaskId;
+
+    if (!dependenciesChanged && !parentChanged) {
+      return task;
+    }
+
+    return {
+      ...task,
+      dependencies: updatedDependencies,
+      parentTaskId: updatedParentTaskId,
+    };
   });
 }
 
@@ -58,7 +100,8 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       // Merge mode: keep existing, add imported with regenerated IDs if needed
       const existingTasks = await db.tasks.toArray();
       const existingIds = new Set(existingTasks.map(t => t.id));
-      const tasksToImport = regenerateConflictingIds(parsed.tasks, existingIds);
+      const { tasks: regeneratedTasks, idMap } = regenerateConflictingIds(parsed.tasks, existingIds);
+      const tasksToImport = remapTaskReferences(regeneratedTasks, idMap);
       await db.tasks.bulkAdd(tasksToImport);
     }
   });

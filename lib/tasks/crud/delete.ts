@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
+import { removeDependencyReferences } from "@/lib/tasks/dependencies";
 import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -24,6 +25,7 @@ export async function deleteTask(id: string): Promise<void> {
     const vectorClock = task.vectorClock || {};
     const taskTitle = task.title;
 
+    await removeDependencyReferences(id);
     await db.tasks.delete(id);
 
     logger.info("Task deleted", { taskId: id, title: taskTitle });
