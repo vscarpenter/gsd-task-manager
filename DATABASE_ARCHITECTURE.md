@@ -4,7 +4,7 @@
 
 GSD Task Manager uses **IndexedDB** via **Dexie.js** for client-side data persistence. The database follows a **zero-knowledge architecture** with optional end-to-end encrypted cloud sync. All data is stored locally in the browser, with JSON export/import for backups.
 
-**Current Schema Version:** 10
+**Current Schema Version:** 12
 
 ---
 
@@ -43,6 +43,9 @@ erDiagram
         string snoozedUntil "ISO timestamp"
         object vectorClock "device_id to version_num"
         string archivedAt "ISO timestamp (when archived)"
+        number estimatedMinutes "Planned time to complete"
+        number timeSpent "Total minutes worked"
+        array timeEntries "Array of TimeEntry objects"
     }
 
     archivedTasks {
@@ -134,6 +137,12 @@ erDiagram
         string deviceId "FK to deviceInfo.deviceId, indexed"
         string triggeredBy "user|auto"
     }
+
+    appPreferences {
+        string id PK "Singleton: always 'preferences'"
+        array pinnedSmartViewIds "IDs of pinned smart views"
+        number maxPinnedViews "Default 5"
+    }
 ```
 
 ---
@@ -151,6 +160,7 @@ erDiagram
 - **Tags:** Multi-entry index for fast filtering
 - **Notifications:** Tracks sent state and snooze timing
 - **Sync:** Vector clock for distributed conflict detection
+- **Time Tracking:** `estimatedMinutes` for planning, `timeEntries` array for actual work sessions, `timeSpent` for totals
 
 **Indexes:**
 ```
@@ -336,6 +346,21 @@ deviceId
 
 ---
 
+### 10. **appPreferences** (Singleton User Preferences)
+**Purpose:** Stores user interface preferences like pinned smart views.
+
+**Key Features:**
+- Singleton table (always `id="preferences"`)
+- Stores pinned smart view IDs for quick access in header
+- Configurable maximum pinned views (default: 5)
+
+**Indexes:**
+```
+id (primary, fixed to "preferences")
+```
+
+---
+
 ## Schema Rules & Constraints
 
 ### Field-Level Validation (Zod Schemas)
@@ -360,6 +385,19 @@ deviceId
   dependencies: string[] (task IDs, min 4 chars each)
   notifyBefore?: number (int, min 0, in minutes)
   notificationEnabled: boolean (default true)
+  estimatedMinutes?: number (int, min 0, planned duration)
+  timeSpent?: number (calculated from timeEntries)
+  timeEntries?: TimeEntry[] (work sessions)
+}
+```
+
+#### **TimeEntry** (Embedded Time Tracking Session)
+```typescript
+{
+  id: string (UUID)
+  startedAt: string (ISO 8601 datetime)
+  endedAt?: string (ISO 8601 datetime, null if running)
+  notes?: string (optional work notes)
 }
 ```
 
@@ -545,6 +583,15 @@ syncHistory: id, timestamp, status, deviceId
 - Created `syncHistory` table
 - No data migration
 
+### Version 10 → 11 (App Preferences)
+- Created `appPreferences` table for UI preferences
+- Initialized with `pinnedSmartViewIds=[]`, `maxPinnedViews=5`
+
+### Version 11 → 12 (Time Tracking)
+- Added `estimatedMinutes`, `timeSpent`, `timeEntries` fields to tasks
+- Migration validates and repairs corrupt data
+- Backfilled defaults: `timeEntries=[]`, `timeSpent=0`
+
 ---
 
 ## Data Integrity Rules
@@ -661,11 +708,15 @@ syncHistory: id, timestamp, status, deviceId
 
 ## Future Schema Changes (Planned)
 
-### Version 11 (Potential)
+### Version 13+ (Potential)
 - **Attachments:** Add `attachments[]` field (file references, not blobs)
 - **Subtask Dependencies:** Nested dependencies within subtasks
-- **Time Tracking:** Add `estimatedMinutes`, `actualMinutes` fields
 - **Custom Fields:** User-defined metadata (JSON object)
+- **Task Templates:** Reusable task configurations
+
+### Recently Implemented
+- **v11:** App preferences (pinned smart views)
+- **v12:** Time tracking (`estimatedMinutes`, `timeSpent`, `timeEntries`)
 
 ### Backward Compatibility
 - All migrations include `.upgrade()` hooks

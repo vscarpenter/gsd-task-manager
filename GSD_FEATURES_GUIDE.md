@@ -3,7 +3,7 @@
 **Get Stuff Done** — A privacy-first, open-source task manager built on the Eisenhower Matrix productivity framework.
 
 - **Live App**: [gsd.vinny.dev](https://gsd.vinny.dev)
-- **Version**: 5.10.0
+- **Version**: 6.5.0
 - **License**: MIT
 - **Tech Stack**: Next.js 16, React 19, TypeScript, IndexedDB, Cloudflare Workers
 
@@ -122,8 +122,8 @@ GSD is built on a **local-first** architecture, meaning your browser is the sour
 
 1. **IndexedDB as Primary Storage** (`lib/db.ts`)
    - All tasks stored in browser's IndexedDB (Dexie wrapper for developer ergonomics)
-   - Database schema: `tasks`, `archivedTasks`, `smartViews`, `notificationSettings`, `syncQueue`, `syncMetadata`, `deviceInfo`, `archiveSettings`, `syncHistory`
-   - Current schema version: 10 (migrations handle backward compatibility)
+   - Database schema: `tasks`, `archivedTasks`, `smartViews`, `notificationSettings`, `syncQueue`, `syncMetadata`, `deviceInfo`, `archiveSettings`, `syncHistory`, `appPreferences`
+   - Current schema version: 12 (migrations handle backward compatibility)
    - Supports millions of tasks without performance degradation
 
 2. **No Server by Default**
@@ -2622,17 +2622,14 @@ location.reload();
 - `dd` — Delete task
 - `:q` — Close dialog
 
-**Pomodoro Timer** (v6.0+):
-- Click task → "Start Pomodoro"
-- 25 min timer starts
-- Desktop notification when complete
-- 5 min break, then repeat
-- Tracked in task metadata
-
-**Time Tracking** (v6.0+):
-- Task property: `timeTrackedMinutes`
-- Dashboard widget: Total hours tracked
-- Analytics: Time per quadrant, time per tag
+**Time Tracking** (v6.5.0):
+- **Start/Stop Timer**: Click play icon on task card to track time
+- **Time Entries**: Each work session stored with start/end times and optional notes
+- **Automatic Calculation**: `timeSpent` auto-calculated from completed entries
+- **Estimated vs Actual**: Set `estimatedMinutes` to compare planned vs actual time
+- **Live Timer Display**: Running timer shows elapsed time (mm:ss or hh:mm:ss)
+- **Dashboard Analytics**: Time spent per quadrant, per tag visualization
+- **Task Properties**: `timeEntries[]`, `timeSpent`, `estimatedMinutes`
 
 ---
 

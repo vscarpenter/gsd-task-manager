@@ -4,7 +4,7 @@ Developer guide for GSD Task Manager contributors and self-hosters.
 
 ## Tech Stack
 
-- **Framework:** Next.js 15 (App Router, static export)
+- **Framework:** Next.js 16 (App Router, static export)
 - **Language:** TypeScript (strict mode)
 - **Styling:** Tailwind CSS
 - **UI Components:** shadcn-inspired primitives
@@ -49,10 +49,17 @@ Development server runs at `http://localhost:3000`.
 
 All task data is stored client-side using IndexedDB via Dexie.
 
-- **Database setup:** `lib/db.ts` — Single `GsdDatabase` instance (v6) with three tables:
-  - `tasks` — Task records with quadrant, completion, due dates, tags, subtasks, and dependencies
+- **Database setup:** `lib/db.ts` — Single `GsdDatabase` instance (v12) with tables:
+  - `tasks` — Task records with quadrant, completion, due dates, tags, subtasks, dependencies, and time tracking
+  - `archivedTasks` — Completed tasks moved to archive after retention period
   - `smartViews` — Custom saved filter configurations
   - `notificationSettings` — User notification preferences
+  - `syncQueue` — Pending sync operations for offline support
+  - `syncMetadata` — OAuth tokens, device info, sync configuration
+  - `deviceInfo` — Device UUID and name for multi-device sync
+  - `archiveSettings` — Auto-archive configuration
+  - `syncHistory` — Audit log of sync operations
+  - `appPreferences` — UI preferences like pinned smart views
 - **CRUD operations:** `lib/tasks.ts` — All task mutations (create, update, delete, toggle, import/export)
   - Subtask management: `addSubtask`, `deleteSubtask`, `toggleSubtask`
   - Dependency management: `addDependency`, `removeDependency`, `removeDependencyReferences`
@@ -62,10 +69,16 @@ All task data is stored client-side using IndexedDB via Dexie.
 **Database Migrations:**
 - v1: Initial tasks table
 - v2: Added recurrence, tags, subtasks fields
-- v3: Added notification fields (notifyBefore, notificationEnabled, notificationSent)
+- v3: Added performance indexes (createdAt, updatedAt, compound)
 - v4: Added smartViews table for custom filters
-- v5: Added notificationSettings table
+- v5: Added notification fields and notificationSettings table
 - v6: Added dependencies field for task dependencies
+- v7: Added sync support (syncQueue, syncMetadata, deviceInfo, vectorClock)
+- v8: Added completedAt field for date-based filtering
+- v9: Added archivedTasks table and archiveSettings
+- v10: Added syncHistory table for sync audit logging
+- v11: Added appPreferences table for UI preferences (pinned views)
+- v12: Added time tracking fields (estimatedMinutes, timeSpent, timeEntries)
 
 ### v3.0 Features Architecture
 
@@ -161,6 +174,8 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 **App Router** (`app/`):
 - `app/(matrix)/page.tsx` — Main matrix view (renders MatrixBoard)
 - `app/(dashboard)/dashboard/page.tsx` — Dashboard view with analytics and visualizations
+- `app/(archive)/archive/page.tsx` — Archive view for completed/archived tasks
+- `app/(sync)/sync-history/page.tsx` — Sync operation history view
 - `app/(pwa)/install/page.tsx` — PWA installation instructions
 - `app/layout.tsx` — Root layout with theme provider and PWA registration
 
@@ -169,35 +184,62 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 
 **Domain Components** (`components/`):
 - **Matrix View:**
-  - `matrix-board.tsx` — 2×2 grid container, orchestrates task state and selection mode
+  - `matrix-board/` — Modular matrix board with orchestration hooks
   - `matrix-column.tsx` — Single quadrant column with tasks
   - `task-card.tsx` — Individual task with complete/edit/delete actions and selection checkbox
 - **Task Management:**
-  - `task-form.tsx` — Create/edit task dialog with Zod validation
+  - `task-form/` — Modular task form (index.tsx, use-task-form.ts, validation.ts)
   - `task-form-tags.tsx` — Tag input with autocomplete
   - `task-form-subtasks.tsx` — Subtask checklist management
   - `task-form-dependencies.tsx` — Dependency selector with circular prevention
+  - `task-timer.tsx` — Time tracking timer component
+  - `snooze-dropdown.tsx` — Task snooze functionality
 - **Dashboard:**
-  - `dashboard/stats-card.tsx` — Metric display cards
-  - `dashboard/completion-trend.tsx` — Line chart showing 7-day completion trend
-  - `dashboard/quadrant-distribution.tsx` — Bar chart of task distribution
-  - `dashboard/activity-heatmap.tsx` — Day-of-week completion heatmap
+  - `dashboard/stats-card.tsx` — Metric display cards with trend indicators
+  - `dashboard/completion-chart.tsx` — Line/bar chart (7/30/90 day periods)
+  - `dashboard/quadrant-distribution.tsx` — Pie chart of task distribution
+  - `dashboard/streak-indicator.tsx` — Visual completion streak display
+  - `dashboard/tag-analytics.tsx` — Tag usage and completion rates table
+  - `dashboard/upcoming-deadlines.tsx` — Grouped deadline display
+  - `dashboard/time-analytics.tsx` — Time tracking visualizations
+- **Sync Components** (`components/sync/`):
+  - `sync-button.tsx` — Main sync button UI with status indicators
+  - `sync-auth-dialog.tsx` — OAuth login/logout dialog
+  - `oauth-buttons.tsx` — Google/Apple OAuth sign-in buttons
+  - `encryption-passphrase-dialog.tsx` — Encryption passphrase setup/entry
+  - `use-sync-health.ts` — Health monitoring hook
+  - `use-sync-status.ts` — Status display logic hook
+- **Settings Components** (`components/settings/`):
+  - `settings-dialog.tsx` — iOS-style settings with tabbed sections
+  - `appearance-settings.tsx` — Theme and display preferences
+  - `notification-settings.tsx` — Notification configuration
+  - `sync-settings.tsx` — Cloud sync settings and status
+  - `archive-settings.tsx` — Auto-archive and retention settings
+  - `data-management.tsx` — Import/export and data operations
+  - `about-section.tsx` — App version and links
 - **Batch Operations:**
   - `bulk-actions-bar.tsx` — Floating action bar for batch operations
+  - `bulk-tag-dialog.tsx` — Dialog for adding tags to multiple tasks
 - **Navigation & Layout:**
-  - `app-header.tsx` — Search, new task, view toggle, settings menu
+  - `app-header.tsx` — Search, new task, smart view pills, settings menu
+  - `command-palette.tsx` — Global ⌘K/Ctrl+K command palette
+  - `quick-settings-panel.tsx` — Slide-out quick settings panel
+  - `smart-view-pills.tsx` — Pinned smart views in header
+  - `smart-view-selector.tsx` — Full smart view selector with pin/unpin
   - `view-toggle.tsx` — Switch between Matrix and Dashboard views
   - `app-footer.tsx` — Footer with credits and attribution
-- **Dialogs & Settings:**
+- **User Guide** (`components/user-guide/`):
+  - `user-guide-dialog.tsx` — Main dialog wrapper (modularized)
+  - 11 section components for different topics
+- **Dialogs:**
   - `import-dialog.tsx` — Import mode selection (merge vs replace)
-  - `settings-menu.tsx` — Export/import controls
 
 ### Key Patterns
 
 - **Client-side only:** All components use `"use client"` — no server rendering
 - **Live reactivity:** `useTasks()` hook returns live data via `useLiveQuery` from dexie-react-hooks
 - **Validation:** All task operations validate with Zod schemas before persisting
-- **Keyboard shortcuts:** Implemented via `useEffect` listeners (n=new, /=search, ?=help)
+- **Keyboard shortcuts:** Global shortcuts (n=new, /=search, ?=help, ⌘K=command palette, 1-9=smart view, 0=clear)
 - **Recurring tasks:** Auto-create new instances on completion with updated due dates
 - **Enhanced search:** Full-text search includes title, description, tags, and subtask content
 - **Visual indicators:** Overdue (red border), due today (amber label), recurrence icon, progress bars
@@ -205,6 +247,8 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **Circular dependency prevention:** Real-time validation using BFS algorithm in UI
 - **Pure analytics functions:** All metric calculations are side-effect-free for testability
 - **Transaction-based batch operations:** Ensure atomicity (all-or-nothing) for bulk updates
+- **Time tracking:** Start/stop timers, automatic time calculation, session history
+- **Modular architecture:** Large files split into <300 line modules (sync engine, user guide, etc.)
 
 ### Automatic Background Sync (v5.7.0)
 
@@ -336,10 +380,11 @@ Tests use Vitest with Testing Library for component and integration testing.
   - Filter and analytics logic
 - **Coverage thresholds:** 80% statements, 80% lines, 80% functions, 75% branches (configured in `vitest.config.ts`)
 
-**Test Suite Stats (v3.0):**
-- Total tests: 177
+**Test Suite Stats (v6.x):**
+- Data layer coverage: 90%+ (tasks.ts, filters.ts, dependencies.ts, analytics.ts)
 - Dependencies module: 98.74% coverage
 - All tests passing with comprehensive edge case coverage
+- Coverage target: ≥80% statements
 
 Run tests:
 
@@ -402,9 +447,9 @@ Output is in the `out/` directory. Upload to your static hosting provider.
   - Selection state uses `Set<string>` for O(1) lookup
   - Clear selection state after operations complete
 - **Database Migrations:**
-  - Current version: v6
+  - Current version: v12
   - Always provide upgrade function with default values for new fields
-  - Test migration by exporting v2 data and importing into v6
+  - Test migration by exporting old data and importing into latest version
 - **Import/Export:**
   - Merge mode auto-regenerates IDs for duplicates (prevents conflicts)
   - Replace mode shows warning with existing task count

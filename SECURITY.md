@@ -6,22 +6,26 @@ This document outlines the security measures implemented in GSD Task Manager and
 
 - [Overview](#overview)
 - [Client-Side Security](#client-side-security)
+- [Cloud Sync Security](#cloud-sync-security-optional-v500)
+- [MCP Server Security](#mcp-server-security-optional-v500)
 - [CloudFront Security Headers](#cloudfront-security-headers)
 - [Deployment Instructions](#deployment-instructions)
 - [Security Best Practices](#security-best-practices)
+- [Security Audit Results](#security-audit-results)
 
 ## Overview
 
-GSD Task Manager is a privacy-first application where all data is stored locally in the browser using IndexedDB. No user data is transmitted to external servers.
+GSD Task Manager is a privacy-first application where all data is stored locally in the browser using IndexedDB by default. **Optional cloud sync** (v5.0.0+) enables multi-device access with end-to-end encryption—the server stores only encrypted blobs and cannot decrypt task content.
 
 ## Client-Side Security
 
 ### Implemented Protections
 
-1. **Local Data Storage Only**
+1. **Local Data Storage by Default**
    - All tasks stored in IndexedDB (client-side)
-   - No external API calls or data transmission
+   - No external API calls or data transmission in local-only mode
    - Export/import functionality for user-controlled backups
+   - Optional cloud sync requires explicit user opt-in
 
 2. **Input Validation**
    - Zod schema validation for all task operations
@@ -32,6 +36,100 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Regular `pnpm audit` checks for vulnerabilities
    - Automated security updates via Dependabot/Renovate
    - All packages kept at stable, non-canary versions
+
+## Cloud Sync Security (Optional, v5.0.0+)
+
+When users enable cloud sync, the following security measures protect their data:
+
+### End-to-End Encryption
+
+1. **Encryption Algorithm: AES-256-GCM**
+   - Authenticated encryption with associated data (AEAD)
+   - 256-bit key derived from user passphrase
+   - Unique 96-bit random nonce per encryption operation
+   - SHA-256 checksums for data integrity
+
+2. **Key Derivation: PBKDF2**
+   - 600,000 iterations (OWASP 2023 recommendation)
+   - User passphrase + server-provided salt
+   - Salt stored encrypted in Cloudflare D1 (useless without passphrase)
+   - Keys never leave user's device
+
+3. **Zero-Knowledge Architecture**
+   - Worker stores only encrypted blobs
+   - Server cannot decrypt task content (no access to passphrase)
+   - Encryption/decryption happens entirely in browser/MCP client
+   - Even Cloudflare employees cannot read your tasks
+
+### OAuth Authentication
+
+1. **Providers**
+   - Google (OIDC-compliant)
+   - Apple (OIDC-compliant)
+
+2. **Security Features**
+   - PKCE (Proof Key for Code Exchange) prevents code interception
+   - State parameter prevents CSRF attacks
+   - ID token signature verification (JWT)
+   - Short-lived session tokens (24 hours)
+
+3. **Token Management**
+   - JWT tokens with 7-day expiration
+   - HS256 signature with 256-bit secret per environment
+   - Tokens stored in IndexedDB (browser-encrypted at rest)
+   - Refresh flow on token expiration
+
+### Rate Limiting
+
+- 100 requests/minute per IP via Cloudflare KV
+- Prevents brute-force attacks on authentication
+- Distributed rate limiting across edge locations
+
+### Network Security
+
+- HTTPS-only communication
+- CORS restricted to production domain (https://gsd.vinny.dev)
+- HSTS headers enforce secure connections
+- TLS 1.2+ required
+
+## MCP Server Security (Optional, v5.0.0+)
+
+The MCP server allows Claude Desktop to access tasks via natural language queries.
+
+### Security Model
+
+1. **Read-Only Access**
+   - MCP tools can only read tasks, not modify/delete
+   - No write operations implemented
+   - Safe exploration without data modification risk
+
+2. **Local Decryption**
+   - Encryption passphrase stored only in Claude Desktop config
+   - Passphrase never transmitted to Worker
+   - Decryption happens on user's local machine
+
+3. **Opt-In Feature**
+   - Requires explicit configuration by user
+   - Must set passphrase in Claude Desktop config manually
+   - Not enabled by default
+
+### Configuration Security
+
+```json
+// Claude Desktop config (~/Library/Application Support/Claude/claude_desktop_config.json)
+{
+  "mcpServers": {
+    "gsd-taskmanager": {
+      "env": {
+        "GSD_AUTH_TOKEN": "eyJ...",  // JWT from OAuth
+        "GSD_ENCRYPTION_PASSPHRASE": "..." // User's passphrase
+      }
+    }
+  }
+}
+```
+
+**Important**: The config file contains sensitive credentials. Ensure appropriate file permissions.
 
 ## CloudFront Security Headers
 
@@ -48,10 +146,10 @@ script-src 'self' 'unsafe-inline' 'unsafe-eval';
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self' data:;
-connect-src 'self';
+connect-src 'self' https://gsd-dev.vinny.dev https://accounts.google.com https://appleid.apple.com;
 frame-ancestors 'none';
 base-uri 'self';
-form-action 'self';
+form-action 'self' https://accounts.google.com https://appleid.apple.com;
 ```
 
 **Production (Recommended):**
@@ -61,13 +159,13 @@ script-src 'self';
 style-src 'self';
 img-src 'self' data: blob:;
 font-src 'self';
-connect-src 'self';
+connect-src 'self' https://gsd.vinny.dev https://accounts.google.com https://appleid.apple.com;
 frame-ancestors 'none';
 base-uri 'self';
-form-action 'self';
+form-action 'self' https://accounts.google.com https://appleid.apple.com;
 ```
 
-> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. This requires proper asset hashing and may need adjustments based on your build configuration.
+> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. The `connect-src` and `form-action` include OAuth providers for cloud sync authentication.
 
 #### 2. X-Frame-Options
 ```
@@ -234,19 +332,23 @@ If you discover a security vulnerability, please:
 
 ## Security Audit Results
 
-### Last Audit: 2025-10-04
+### Last Audit: 2026-01-02
 
 - ✅ All high/critical vulnerabilities resolved
 - ✅ Upgraded from canary to stable releases
 - ✅ Added error handling to import functions
-- ⚠️ 1 moderate dev-only vulnerability in esbuild (via vitest) - acceptable for development
+- ✅ End-to-end encryption implemented for cloud sync
+- ✅ OAuth PKCE flow implemented for authentication
+- ✅ MCP server read-only access enforced
 
 ### Resolved Issues
 
 1. **nanoid vulnerability** - Upgraded from 4.0.2 to 5.1.6
-2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 15.5.4
-3. **React RC versions** - Upgraded to stable 19.2.0
+2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 16.1.1
+3. **React RC versions** - Upgraded to stable 19.2.3
 4. **Missing error handling** - Added try-catch to importFromJson()
+5. **Cloud sync security** - AES-256-GCM with PBKDF2 key derivation (600k iterations)
+6. **OAuth security** - PKCE + state parameter + ID token verification
 
 ## References
 
