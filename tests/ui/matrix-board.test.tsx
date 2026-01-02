@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MatrixBoard } from '@/components/matrix-board';
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
 import { ToastProvider } from '@/components/ui/toast';
+import { renderWithAct } from '../utils/render-with-act';
 
 // Helper to render with providers
-const renderWithProviders = (ui: React.ReactElement) => {
-  return render(
+const renderWithProviders = (ui: React.ReactElement) =>
+  renderWithAct(
     <ToastProvider>
       {ui}
     </ToastProvider>
   );
-};
 
 // Mock next-themes
 vi.mock('next-themes', () => ({
@@ -43,6 +43,79 @@ vi.mock('@/lib/notification-checker', () => ({
   },
 }));
 
+vi.mock('@/lib/hooks/use-sync', () => ({
+  useSync: () => ({
+    sync: vi.fn(),
+    isSyncing: false,
+    status: 'idle',
+    error: null,
+    isEnabled: false,
+    lastResult: null,
+    pendingRequests: 0,
+    nextRetryAt: null,
+    retryCount: 0,
+    autoSyncEnabled: true,
+    autoSyncInterval: 2,
+  }),
+}));
+
+vi.mock('@/components/sync/sync-button', () => ({
+  SyncButton: () => <div data-testid="sync-button" />,
+}));
+
+vi.mock('@/components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useToast: () => ({
+    showToast: vi.fn(),
+    hideToast: vi.fn(),
+  }),
+}));
+
+vi.mock('@dnd-kit/core', async () => {
+  const actual = await vi.importActual<typeof import('@dnd-kit/core')>('@dnd-kit/core');
+  return {
+    ...actual,
+    DndContext: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  };
+});
+
+vi.mock('@/components/command-palette', () => ({
+  CommandPalette: () => null,
+}));
+
+vi.mock('@/components/bulk-tag-dialog', () => ({
+  BulkTagDialog: () => null,
+}));
+
+vi.mock('@/components/settings-dialog', () => ({
+  SettingsDialog: () => null,
+}));
+
+vi.mock('@/components/quick-settings-panel', () => ({
+  QuickSettingsPanel: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="quick-settings-panel">{children}</div>
+  ),
+}));
+
+vi.mock('@/lib/use-auto-archive', () => ({
+  useAutoArchive: () => undefined,
+}));
+
+vi.mock('@/components/matrix-board/use-event-handlers', async () => {
+  const actual = await vi.importActual<
+    typeof import('@/components/matrix-board/use-event-handlers')
+  >('@/components/matrix-board/use-event-handlers');
+
+  return {
+    ...actual,
+    usePinnedSmartViews: () => undefined,
+    useToggleCompletedListener: () => undefined,
+    useTaskHighlighting: () => undefined,
+    useNotificationChecker: () => undefined,
+    useUrlHighlightParam: () => undefined,
+  };
+});
+
 describe('MatrixBoard Integration Tests', () => {
   let db: ReturnType<typeof getDb>;
   const user = userEvent.setup();
@@ -63,7 +136,7 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Initial Rendering', () => {
     it('should render empty state when no tasks exist', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText(/welcome to gsd task manager/i)).toBeInTheDocument();
@@ -89,25 +162,25 @@ describe('MatrixBoard Integration Tests', () => {
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
 
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/urgent & important/i)).toBeInTheDocument();
-        expect(screen.getByText(/not urgent & important/i)).toBeInTheDocument();
-        expect(screen.getByText(/urgent & not important/i)).toBeInTheDocument();
-        expect(screen.getByText(/not urgent & not important/i)).toBeInTheDocument();
+        expect(screen.getByText(/do first/i)).toBeInTheDocument();
+        expect(screen.getByText(/schedule/i)).toBeInTheDocument();
+        expect(screen.getByText(/delegate/i)).toBeInTheDocument();
+        expect(screen.getByText(/eliminate/i)).toBeInTheDocument();
       });
     });
 
     it('should render app header with controls', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         // Search should be present
         expect(screen.getByPlaceholderText(/search tasks/i)).toBeInTheDocument();
 
         // New task button should be present (use text match since aria-label might not be set)
-        expect(screen.getByText(/new task/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^new task$/i })).toBeInTheDocument();
       });
     });
   });
@@ -153,7 +226,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should display tasks in correct quadrants', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText('Urgent Important Task')).toBeInTheDocument();
@@ -162,7 +235,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should show task tags', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText('work')).toBeInTheDocument();
@@ -189,7 +262,7 @@ describe('MatrixBoard Integration Tests', () => {
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
 
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.queryByText('Completed Task')).not.toBeInTheDocument();
@@ -254,7 +327,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should filter tasks by title', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -268,7 +341,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should filter tasks by description', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -281,7 +354,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should filter tasks by tags', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -293,7 +366,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should clear search results when search is cleared', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);
 
@@ -315,17 +388,17 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Keyboard Shortcuts', () => {
     it('should open new task dialog with "n" key', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await user.keyboard('n');
 
       await waitFor(() => {
-        expect(screen.getByText(/create new task/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /create task/i })).toBeInTheDocument();
       });
     });
 
     it('should focus search input with "/" key', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await user.keyboard('/');
 
@@ -336,7 +409,7 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should open help dialog with "?" key', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await user.keyboard('?');
 
@@ -349,9 +422,10 @@ describe('MatrixBoard Integration Tests', () => {
 
   describe('Task Creation', () => {
     it('should create a new task', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
-      const newTaskButton = await screen.findByRole('button', { name: /new task/i });
+      const newTaskButtons = await screen.findAllByRole('button', { name: /^new task$/i });
+      const newTaskButton = newTaskButtons[0];
       await user.click(newTaskButton);
 
       // Wait for form to appear
@@ -366,16 +440,9 @@ describe('MatrixBoard Integration Tests', () => {
       const descriptionInput = screen.getByLabelText(/description/i);
       await user.type(descriptionInput, 'Test description');
 
-      // Mark as urgent and important
-      const urgentCheckbox = screen.getByLabelText(/urgent/i);
-      const importantCheckbox = screen.getByLabelText(/important/i);
-
-      await user.click(urgentCheckbox);
-      await user.click(importantCheckbox);
-
       // Submit the form
-      const createButton = screen.getByRole('button', { name: /create/i });
-      await user.click(createButton);
+      const saveButton = screen.getByRole('button', { name: /add task/i });
+      await user.click(saveButton);
 
       // Verify task appears
       await waitFor(() => {
@@ -411,11 +478,13 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should edit an existing task', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       // Find and click the edit button on the task
       const taskCard = await screen.findByText('Task to Edit');
-      const editButton = within(taskCard.closest('[data-task-card]')!).getByLabelText(/edit/i);
+      const card = taskCard.closest('article');
+      expect(card).toBeTruthy();
+      const editButton = within(card as HTMLElement).getByLabelText(/edit task/i);
 
       await user.click(editButton);
 
@@ -430,7 +499,7 @@ describe('MatrixBoard Integration Tests', () => {
       await user.type(titleInput, 'Updated Task Title');
 
       // Save changes
-      const saveButton = screen.getByRole('button', { name: /save/i });
+      const saveButton = screen.getByRole('button', { name: /update task/i });
       await user.click(saveButton);
 
       // Verify changes
@@ -466,14 +535,16 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should toggle task completion', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
-      // Find the complete checkbox
+      // Find the complete button
       const taskCard = await screen.findByText('Task to Complete');
-      const checkbox = within(taskCard.closest('[data-task-card]')!).getByRole('checkbox');
+      const card = taskCard.closest('article');
+      expect(card).toBeTruthy();
+      const completeButton = within(card as HTMLElement).getByRole('button', { name: /mark as complete/i });
 
       // Complete the task
-      await user.click(checkbox);
+      await user.click(completeButton);
 
       // Task should be hidden (default behavior)
       await waitFor(() => {
@@ -508,11 +579,13 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should delete a task', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       // Find and click delete button
       const taskCard = await screen.findByText('Task to Delete');
-      const deleteButton = within(taskCard.closest('[data-task-card]')!).getByLabelText(/delete/i);
+      const card = taskCard.closest('article');
+      expect(card).toBeTruthy();
+      const deleteButton = within(card as HTMLElement).getByLabelText(/delete task/i);
 
       await user.click(deleteButton);
 
@@ -584,49 +657,55 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should enter selection mode when task is selected', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
-      // Click on first task to select it
-      const task1 = await screen.findByText('Bulk Task 1');
-      const taskCard = task1.closest('[data-task-card]')!;
+      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      await user.click(selectionToggle);
 
-      await user.click(taskCard);
+      const taskCheckbox = await screen.findByRole('checkbox', { name: /select bulk task 1/i });
+      await user.click(taskCheckbox);
 
       // Selection indicator should appear
       await waitFor(() => {
-        expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/1 selected/i).length).toBeGreaterThan(0);
       });
     });
 
     it('should select multiple tasks', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
+
+      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      await user.click(selectionToggle);
 
       // Select first task
-      const task1 = await screen.findByText('Bulk Task 1');
-      await user.click(task1.closest('[data-task-card]')!);
+      const task1Checkbox = await screen.findByRole('checkbox', { name: /select bulk task 1/i });
+      await user.click(task1Checkbox);
 
       // Select second task
-      const task2 = await screen.findByText('Bulk Task 2');
-      await user.click(task2.closest('[data-task-card]')!);
+      const task2Checkbox = await screen.findByRole('checkbox', { name: /select bulk task 2/i });
+      await user.click(task2Checkbox);
 
       // Should show 2 selected
       await waitFor(() => {
-        expect(screen.getByText(/2 selected/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/2 selected/i).length).toBeGreaterThan(0);
       });
     });
 
     it('should bulk delete selected tasks', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
+
+      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      await user.click(selectionToggle);
 
       // Select tasks
-      const task1 = await screen.findByText('Bulk Task 1');
-      const task2 = await screen.findByText('Bulk Task 2');
+      const task1Checkbox = await screen.findByRole('checkbox', { name: /select bulk task 1/i });
+      const task2Checkbox = await screen.findByRole('checkbox', { name: /select bulk task 2/i });
 
-      await user.click(task1.closest('[data-task-card]')!);
-      await user.click(task2.closest('[data-task-card]')!);
+      await user.click(task1Checkbox);
+      await user.click(task2Checkbox);
 
       // Click bulk delete button
-      const deleteButton = await screen.findByRole('button', { name: /delete/i });
+      const deleteButton = await screen.findByTitle(/delete selected tasks/i);
       await user.click(deleteButton);
 
       // Tasks should be deleted
@@ -642,17 +721,20 @@ describe('MatrixBoard Integration Tests', () => {
     });
 
     it('should bulk complete selected tasks', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
+
+      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      await user.click(selectionToggle);
 
       // Select tasks
-      const task1 = await screen.findByText('Bulk Task 1');
-      const task2 = await screen.findByText('Bulk Task 2');
+      const task1Checkbox = await screen.findByRole('checkbox', { name: /select bulk task 1/i });
+      const task2Checkbox = await screen.findByRole('checkbox', { name: /select bulk task 2/i });
 
-      await user.click(task1.closest('[data-task-card]')!);
-      await user.click(task2.closest('[data-task-card]')!);
+      await user.click(task1Checkbox);
+      await user.click(task2Checkbox);
 
       // Click bulk complete button
-      const completeButton = await screen.findByRole('button', { name: /complete/i });
+      const completeButton = await screen.findByTitle(/mark selected as complete/i);
       await user.click(completeButton);
 
       // Tasks should be hidden (completed)
@@ -671,45 +753,31 @@ describe('MatrixBoard Integration Tests', () => {
   });
 
   describe('URL Parameters', () => {
-    let originalLocation: Location;
+    let originalUrl: string;
 
     beforeEach(() => {
-      // Capture original window.location before each test
-      originalLocation = window.location;
+      originalUrl = window.location.href;
     });
 
     afterEach(() => {
-      // Restore original window.location after each test
-      Object.defineProperty(window, 'location', {
-        value: originalLocation,
-        writable: true,
-        configurable: true,
-      });
+      window.history.replaceState({}, '', originalUrl);
     });
 
     it('should handle new task action from URL parameter', async () => {
-      // Mock window.location.search
-      Object.defineProperty(window, 'location', {
-        value: {
-          ...window.location,
-          search: '?action=new-task',
-        },
-        writable: true,
-        configurable: true,
-      });
+      window.history.pushState({}, '', '/?action=new-task');
 
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       // New task dialog should open automatically
       await waitFor(() => {
-        expect(screen.getByText(/create new task/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /create task/i })).toBeInTheDocument();
       });
     });
   });
 
   describe('Empty States', () => {
     it('should show empty state with no tasks', async () => {
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
         expect(screen.getByText(/welcome to gsd task manager/i)).toBeInTheDocument();
@@ -735,7 +803,7 @@ describe('MatrixBoard Integration Tests', () => {
         vectorClock: {}, notificationEnabled: true, notificationSent: false,
       });
 
-      renderWithProviders(<MatrixBoard />);
+      await renderWithProviders(<MatrixBoard />);
 
       // Search for non-existent term
       const searchInput = await screen.findByPlaceholderText(/search tasks/i);

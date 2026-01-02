@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { OAuthHandshakeEvent, OAuthAuthData } from '@/lib/sync/oauth-handshake';
 
@@ -263,10 +263,12 @@ describe('SyncAuthDialog', () => {
         provider: 'google',
       };
 
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state-token',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'success',
+          authData,
+          state: 'test-state-token',
+        });
       });
 
       await waitFor(() => {
@@ -290,10 +292,12 @@ describe('SyncAuthDialog', () => {
       await user.click(signInButton);
 
       // Simulate OAuth error
-      oauthCallback?.({
-        status: 'error',
-        error: 'Authentication failed',
-        state: 'test-state-token',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'error',
+          error: 'Authentication failed',
+          state: 'test-state-token',
+        });
       });
 
       await waitFor(() => {
@@ -315,10 +319,12 @@ describe('SyncAuthDialog', () => {
 
       // First attempt - error
       await user.click(signInButton);
-      oauthCallback?.({
-        status: 'error',
-        error: 'First error',
-        state: 'state1',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'error',
+          error: 'First error',
+          state: 'state1',
+        });
       });
 
       await waitFor(() => {
@@ -563,10 +569,12 @@ describe('SyncAuthDialog', () => {
         provider: 'google',
       };
 
-      oauthCallback?.({
-        status: 'success',
-        authData: authData1,
-        state: 'state1',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'success',
+          authData: authData1,
+          state: 'state1',
+        });
       });
 
       await waitFor(() => {
@@ -574,10 +582,12 @@ describe('SyncAuthDialog', () => {
       });
 
       // Second OAuth event with different state should be ignored
-      oauthCallback?.({
-        status: 'error',
-        error: 'Should be ignored',
-        state: 'state2',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'error',
+          error: 'Should be ignored',
+          state: 'state2',
+        });
       });
 
       // onSuccess should not be called again
@@ -598,10 +608,12 @@ describe('SyncAuthDialog', () => {
         provider: 'google',
       };
 
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'success',
+          authData,
+          state: 'test-state',
+        });
       });
 
       // Should not show success toast
@@ -669,10 +681,12 @@ describe('SyncAuthDialog', () => {
         provider: 'google',
       });
 
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state',
+      await act(async () => {
+        oauthCallback?.({
+          status: 'success',
+          authData,
+          state: 'test-state',
+        });
       });
 
       // Wait for the status refresh (happens after 600ms timeout)

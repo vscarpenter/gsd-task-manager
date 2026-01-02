@@ -36,6 +36,7 @@ describe('Task Import/Export Operations', () => {
     notifyBefore: 15,
     notificationEnabled: true,
     notificationSent: false,
+    timeEntries: [],
   };
 
   const sampleTask2: TaskRecord = {
@@ -58,6 +59,7 @@ describe('Task Import/Export Operations', () => {
     notifyBefore: 15,
     notificationEnabled: true,
     notificationSent: false,
+    timeEntries: [],
   };
 
   beforeEach(() => {

@@ -333,8 +333,23 @@ describe("Filter utilities", () => {
   });
 
   describe("BUILT_IN_SMART_VIEWS", () => {
-    it("should have 8 built-in smart views", () => {
-      expect(BUILT_IN_SMART_VIEWS).toHaveLength(8);
+    it("should include expected built-in smart views", () => {
+      const names = BUILT_IN_SMART_VIEWS.map(view => view.name);
+      const expectedNames = [
+        "Today's Focus",
+        "This Week",
+        "Overdue Backlog",
+        "No Deadline",
+        "Recently Added",
+        "This Week's Wins",
+        "All Completed",
+        "Recurring Tasks",
+        "Ready to Work",
+      ];
+
+      expectedNames.forEach(name => {
+        expect(names).toContain(name);
+      });
     });
 
     it("should all be marked as built-in", () => {
