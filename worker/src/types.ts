@@ -23,6 +23,7 @@ export interface RequestContext {
   deviceId?: string;
   email?: string;
   rateLimitHeaders?: Record<string, string>;
+  executionCtx?: ExecutionContext; // For waitUntil() in non-blocking operations
 }
 
 // Vector Clock for causality tracking

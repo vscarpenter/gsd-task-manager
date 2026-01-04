@@ -26,9 +26,9 @@ router.get('/health', (request: Request) => {
 });
 
 // OAuth endpoints (rate limited, no auth required)
-router.get('/api/auth/oauth/:provider/start', async (request: IRequest, env: Env) => {
+router.get('/api/auth/oauth/:provider/start', async (request: IRequest, env: Env, executionCtx: ExecutionContext) => {
   const origin = request.headers.get('Origin');
-  const ctx: RequestContext = {};
+  const ctx: RequestContext = { executionCtx };
   const rateLimitResult = await rateLimitMiddleware(request as unknown as Request, env, ctx);
   if (rateLimitResult) return rateLimitResult;
 
@@ -39,24 +39,24 @@ router.get('/api/auth/oauth/:provider/start', async (request: IRequest, env: Env
   return oidcHandlers.initiateOAuth(request as unknown as Request, env, provider);
 });
 
-router.post('/api/auth/oauth/callback', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.post('/api/auth/oauth/callback', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
   if (rateLimitResult) return rateLimitResult;
 
   return oidcHandlers.handleOAuthCallback(request, env);
 });
 
-router.get('/api/auth/oauth/callback', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.get('/api/auth/oauth/callback', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
   if (rateLimitResult) return rateLimitResult;
 
   return oidcHandlers.handleOAuthCallback(request, env);
 });
 
-router.get('/api/auth/oauth/result', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.get('/api/auth/oauth/result', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
   if (rateLimitResult) return rateLimitResult;
 
@@ -64,9 +64,9 @@ router.get('/api/auth/oauth/result', async (request: Request, env: Env) => {
 });
 
 // Get encryption salt
-router.get('/api/auth/encryption-salt', async (request: Request, env: Env) => {
+router.get('/api/auth/encryption-salt', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
   const origin = request.headers.get('Origin');
-  const ctx: RequestContext = {};
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
 
@@ -89,9 +89,9 @@ router.get('/api/auth/encryption-salt', async (request: Request, env: Env) => {
 });
 
 // Save encryption salt
-router.post('/api/auth/encryption-salt', async (request: Request, env: Env) => {
+router.post('/api/auth/encryption-salt', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
   const origin = request.headers.get('Origin');
-  const ctx: RequestContext = {};
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
 
@@ -118,9 +118,9 @@ router.post('/api/auth/encryption-salt', async (request: Request, env: Env) => {
 });
 
 // Protected endpoints (auth required)
-router.post('/api/auth/logout', async (request: Request, env: Env) => {
+router.post('/api/auth/logout', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
   const origin = request.headers.get('Origin');
-  const ctx: RequestContext = {};
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
 
@@ -150,9 +150,9 @@ router.post('/api/auth/logout', async (request: Request, env: Env) => {
   }
 });
 
-router.post('/api/auth/refresh', async (request: Request, env: Env) => {
+router.post('/api/auth/refresh', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
   const origin = request.headers.get('Origin');
-  const ctx: RequestContext = {};
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
 
@@ -199,8 +199,8 @@ router.post('/api/auth/refresh', async (request: Request, env: Env) => {
 });
 
 // Sync endpoints (auth + rate limiting)
-router.post('/api/sync/push', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.post('/api/sync/push', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
@@ -208,8 +208,8 @@ router.post('/api/sync/push', async (request: Request, env: Env) => {
   return syncHandlers.push(request, env, ctx);
 });
 
-router.post('/api/sync/pull', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.post('/api/sync/pull', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   const rateLimitResult = await rateLimitMiddleware(request, env, ctx);
@@ -217,37 +217,37 @@ router.post('/api/sync/pull', async (request: Request, env: Env) => {
   return syncHandlers.pull(request, env, ctx);
 });
 
-router.post('/api/sync/resolve', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.post('/api/sync/resolve', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   return syncHandlers.resolve(request, env, ctx);
 });
 
-router.get('/api/sync/status', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.get('/api/sync/status', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   return syncHandlers.status(request, env, ctx);
 });
 
-router.get('/api/stats', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.get('/api/stats', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   return syncHandlers.stats(request, env, ctx);
 });
 
 // Device management endpoints
-router.get('/api/devices', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.get('/api/devices', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   return syncHandlers.listDevices(request, env, ctx);
 });
 
-router.delete('/api/devices/:id', async (request: Request, env: Env) => {
-  const ctx: RequestContext = {};
+router.delete('/api/devices/:id', async (request: Request, env: Env, executionCtx: ExecutionContext) => {
+  const ctx: RequestContext = { executionCtx };
   const authResult = await authMiddleware(request, env, ctx);
   if (authResult) return authResult;
   return syncHandlers.revokeDevice(request, env, ctx);
