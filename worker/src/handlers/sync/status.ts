@@ -18,36 +18,39 @@ export async function status(
   try {
     const userId = ctx.userId!;
 
-    // Get sync metadata
-    const metadata = await env.DB.prepare(
-      `SELECT last_sync_at FROM sync_metadata
-       WHERE user_id = ?
-       ORDER BY last_sync_at DESC
-       LIMIT 1`
-    )
-      .bind(userId)
-      .first();
+    // Run all queries in parallel to reduce latency
+    const [metadata, taskCount, conflictCount, deviceCount] = await Promise.all([
+      // Get sync metadata
+      env.DB.prepare(
+        `SELECT last_sync_at FROM sync_metadata
+         WHERE user_id = ?
+         ORDER BY last_sync_at DESC
+         LIMIT 1`
+      )
+        .bind(userId)
+        .first(),
 
-    // Count tasks
-    const taskCount = await env.DB.prepare(
-      'SELECT COUNT(*) as count FROM encrypted_tasks WHERE user_id = ? AND deleted_at IS NULL'
-    )
-      .bind(userId)
-      .first();
+      // Count tasks
+      env.DB.prepare(
+        'SELECT COUNT(*) as count FROM encrypted_tasks WHERE user_id = ? AND deleted_at IS NULL'
+      )
+        .bind(userId)
+        .first(),
 
-    // Count conflicts
-    const conflictCount = await env.DB.prepare(
-      'SELECT COUNT(*) as count FROM conflict_log WHERE user_id = ? AND resolution = "manual"'
-    )
-      .bind(userId)
-      .first();
+      // Count conflicts
+      env.DB.prepare(
+        'SELECT COUNT(*) as count FROM conflict_log WHERE user_id = ? AND resolution = "manual"'
+      )
+        .bind(userId)
+        .first(),
 
-    // Count devices
-    const deviceCount = await env.DB.prepare(
-      'SELECT COUNT(*) as count FROM devices WHERE user_id = ? AND is_active = 1'
-    )
-      .bind(userId)
-      .first();
+      // Count devices
+      env.DB.prepare(
+        'SELECT COUNT(*) as count FROM devices WHERE user_id = ? AND is_active = 1'
+      )
+        .bind(userId)
+        .first(),
+    ]);
 
     const response: StatusResponse = {
       lastSyncAt: (metadata?.last_sync_at as number) || null,

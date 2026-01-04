@@ -27,7 +27,7 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
     ctx.deviceId = payload.deviceId as string;
     ctx.email = payload.email as string;
 
-    // Verify token hasn't been revoked (check KV)
+    // Verify token hasn't been revoked (check KV) - must await for security
     const revokedKey = `revoked:${ctx.userId}:${payload.jti}`;
     const isRevoked = await env.KV.get(revokedKey);
 
@@ -35,17 +35,22 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
       return errorResponse('Token has been revoked', 401);
     }
 
-    // Update last activity timestamp in KV
+    // Update last activity timestamp in KV (fire-and-forget, non-blocking)
+    // This is just for activity tracking, so we don't need to await
     const sessionKey = `session:${ctx.userId}:${payload.jti}`;
-    const session = await env.KV.get(sessionKey, 'json');
-
-    if (session) {
-      await env.KV.put(
-        sessionKey,
-        JSON.stringify({ ...session, lastActivity: Date.now() }),
-        { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
-      );
-    }
+    env.KV.get(sessionKey, 'json').then((session) => {
+      if (session) {
+        env.KV.put(
+          sessionKey,
+          JSON.stringify({ ...session, lastActivity: Date.now() }),
+          { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+        ).catch(() => {
+          // Silently ignore session update failures - not critical
+        });
+      }
+    }).catch(() => {
+      // Silently ignore session read failures - not critical
+    });
 
     // Continue to next handler
     return;
