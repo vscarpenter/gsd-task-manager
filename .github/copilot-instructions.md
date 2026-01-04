@@ -15,13 +15,13 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Theme & PWA**: Theme provider and PWA registration in `app/layout.tsx`.
 
 ## Developer Workflows
-- **Install**: `pnpm install` (commit `pnpm-lock.yaml`)
-- **Dev Server**: `pnpm dev` (runs at http://localhost:3000)
-- **Lint**: `pnpm lint` (ESLint + TypeScript)
-- **Test**: `pnpm test` (Vitest, CI mode)
-- **Coverage**: `pnpm test -- --coverage` (target ≥80%)
-- **Build**: `pnpm build` (production build, type errors)
-- **Export**: `pnpm export` (static bundle for S3/CloudFront)
+- **Install**: `bun install` (generates `bun.lock`)
+- **Dev Server**: `bun dev` (runs at http://localhost:3000)
+- **Lint**: `bun lint` (ESLint + TypeScript)
+- **Test**: `bun test` (Vitest, CI mode)
+- **Coverage**: `bun test -- --coverage` (target ≥80%)
+- **Build**: `bun run build` (production build, type errors)
+- **Export**: `bun run export` (static bundle for S3/CloudFront)
 
 ## Coding Conventions
 - **TypeScript strict mode**; 2-space indentation; arrow-style React components.
@@ -63,7 +63,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 
 ## PWA & Privacy
 - **Client-side only**: No network-only dependencies or persistent cookies.
-- **Manifest & Icons**: Update `manifest.json`, icons, and caching rules together. Verify with `pnpm export`.
+- **Manifest & Icons**: Update `manifest.json`, icons, and caching rules together. Verify with `bun run export`.
 - **Data**: All user data stays local. Export/import via JSON.
 
 ## References

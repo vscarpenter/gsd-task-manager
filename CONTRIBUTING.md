@@ -10,7 +10,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to keep our com
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm
+- [Bun](https://bun.sh) (latest version)
 - Git
 - A GitHub account
 
@@ -25,12 +25,12 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to keep our com
 
 3. Install dependencies:
    ```bash
-   pnpm install
+   bun install
    ```
 
 4. Start the development server:
    ```bash
-   pnpm dev
+   bun dev
    ```
    The app will be available at http://localhost:3000
 
@@ -56,16 +56,16 @@ Run these commands to ensure your code meets quality standards:
 
 ```bash
 # Type checking
-pnpm typecheck
+bun typecheck
 
 # Linting
-pnpm lint
+bun lint
 
 # Tests
-pnpm test
+bun test
 
 # Build verification
-pnpm build
+bun run build
 ```
 
 All checks must pass before submitting a PR.
@@ -75,7 +75,7 @@ All checks must pass before submitting a PR.
 - Write tests for new features and bug fixes
 - Place UI tests in `tests/ui/`, data logic in `tests/data/`
 - Maintain ≥80% code coverage
-- Run `pnpm test:watch` during development
+- Run `bun test:watch` during development
 
 ### Commit Messages
 

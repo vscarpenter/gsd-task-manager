@@ -25,7 +25,7 @@ The Worker needs a new endpoint to retrieve your encryption salt:
 
 ```bash
 cd /Users/vinnycarpenter/Projects/gsd-taskmanager/worker
-pnpm deploy:production
+bun deploy:production
 ```
 
 This adds `GET /api/auth/encryption-salt` to retrieve your salt.
@@ -180,7 +180,7 @@ The metadata-only tools (sync status, devices, stats) will still work.
 
 **Solution**: Deploy the updated Worker:
 ```bash
-cd worker && pnpm deploy:production
+cd worker && bun deploy:production
 ```
 
 ### "Encryption not set up for this account"

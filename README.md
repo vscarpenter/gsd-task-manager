@@ -396,13 +396,13 @@ For developers interested in contributing, self-hosting, or deploying the backen
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Run development server
-pnpm dev
+bun dev
 
 # Build for production
-pnpm build
+bun run build
 
 # Deploy to staging
 cd scripts && ./deploy-dev.sh
