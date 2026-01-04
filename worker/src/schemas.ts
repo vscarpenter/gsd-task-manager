@@ -5,13 +5,13 @@ export const vectorClockSchema = z.record(z.string(), z.number().int().min(0));
 
 // Auth schemas
 export const registerRequestSchema = z.object({
-  email: z.string().email().max(255),
+  email: z.email().max(255),
   password: z.string().min(12).max(128),
   deviceName: z.string().min(1).max(100),
 });
 
 export const loginRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   passwordHash: z.string(),
   deviceId: z.string().optional(),
   deviceName: z.string().max(100).optional(),
