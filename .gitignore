@@ -1,6 +1,6 @@
 # Dependencies
 node_modules
-.pnpm-store/
+.bun/
 
 # Next.js build output
 .next
@@ -21,7 +21,6 @@ dist
 # Logs
 npm-debug.log*
 yarn-debug.log*
-pnpm-debug.log*
 *.log
 
 # Environment files

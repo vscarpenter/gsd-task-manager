@@ -1379,7 +1379,7 @@ window.addEventListener('storage', handleMessage);
 **OAuth Security Tests:**
 
 ```bash
-pnpm test tests/security/oauth-security.test.ts
+bun test tests/security/oauth-security.test.ts
 ```
 
 **Coverage:**

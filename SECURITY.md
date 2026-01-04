@@ -33,7 +33,7 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Try-catch blocks around JSON parsing
 
 3. **Dependency Management**
-   - Regular `pnpm audit` checks for vulnerabilities
+   - Regular `bun pm audit` checks for vulnerabilities
    - Automated security updates via Dependabot/Renovate
    - All packages kept at stable, non-canary versions
 
@@ -283,8 +283,7 @@ See `cloudfront-security-headers.json` for the configuration structure that can 
 
 1. **Regular Audits**
    ```bash
-   pnpm audit
-   pnpm audit --fix
+   bun pm audit
    ```
 
 2. **Keep Dependencies Updated**

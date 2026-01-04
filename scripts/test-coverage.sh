@@ -13,7 +13,7 @@ echo ""
 
 # Run tests with coverage
 echo "Running tests with coverage..."
-pnpm test -- --coverage --no-coverage.thresholds 2>&1
+bun test -- --coverage --no-coverage.thresholds 2>&1
 TEST_EXIT_CODE=$?
 
 echo ""
@@ -37,7 +37,7 @@ if [ ! -d "coverage" ]; then
   echo ""
   echo "To fix this:"
   echo ""
-  echo "  1. Run 'pnpm test' to see detailed test failures"
+  echo "  1. Run 'bun test' to see detailed test failures"
   echo "  2. Fix tests that have unhandled promises or cleanup issues"
   echo "  3. Look for errors about 'test environment torn down'"
   echo "  4. Ensure all tests properly clean up timers/promises"

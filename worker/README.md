@@ -64,9 +64,9 @@ If you prefer manual setup or need to configure a single environment:
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm
+- [Bun](https://bun.sh) (latest version)
 - Cloudflare account with Workers enabled
-- Wrangler CLI installed globally: `npm install -g wrangler`
+- Wrangler CLI installed globally: `bun add -g wrangler`
 
 ### Installation
 
@@ -109,41 +109,41 @@ wrangler secret put ENCRYPTION_SALT
 
 ```bash
 # Local development database
-pnpm db:migrations:apply
+bun db:migrations:apply
 
 # Remote production database
-pnpm db:migrations:apply:remote
+bun db:migrations:apply:remote
 ```
 
 ## Development
 
 ### Run locally
 ```bash
-pnpm dev
+bun dev
 ```
 
 The worker will be available at `http://localhost:8787`.
 
 ### Type checking
 ```bash
-pnpm typecheck
+bun typecheck
 ```
 
 ## Deployment
 
 ### Deploy to staging
 ```bash
-pnpm deploy:staging
+bun deploy:staging
 ```
 
 ### Deploy to production
 ```bash
-pnpm deploy:production
+bun deploy:production
 ```
 
 ### View logs
 ```bash
-pnpm tail
+bun tail
 ```
 
 ## API Endpoints
@@ -286,7 +286,7 @@ pnpm tail
 
 ### "Database not found" error
 - Ensure D1 database is created and ID is in `wrangler.toml`
-- Run migrations: `pnpm db:migrations:apply:remote`
+- Run migrations: `bun db:migrations:apply:remote`
 
 ### "KV namespace not found" error
 - Create KV namespace: `wrangler kv:namespace create "KV"`

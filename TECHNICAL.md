@@ -19,29 +19,28 @@ Developer guide for GSD Task Manager contributors and self-hosters.
 
 ### Prerequisites
 
-- Node.js 18+
-- pnpm 8+
+- [Bun](https://bun.sh) (latest version)
 
 ### Installation
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
 Development server runs at `http://localhost:3000`.
 
 ## Available Scripts
 
-- `pnpm dev` — Start Next.js development server
-- `pnpm build` — Build production bundle (includes type checking)
-- `pnpm export` — Generate static export for S3/CloudFront
-- `pnpm start` — Start production server (note: app uses static export)
-- `pnpm typecheck` — Run TypeScript type checking without emitting files
-- `pnpm lint` — Run ESLint with Next.js config
-- `pnpm test` — Run Vitest tests in CI mode
-- `pnpm test:watch` — Run Vitest in watch mode
-- `pnpm test -- --coverage` — Generate coverage report (target: ≥80% statements)
+- `bun dev` — Start Next.js development server
+- `bun run build` — Build production bundle (includes type checking)
+- `bun run export` — Generate static export for S3/CloudFront
+- `bun start` — Start production server (note: app uses static export)
+- `bun typecheck` — Run TypeScript type checking without emitting files
+- `bun lint` — Run ESLint with Next.js config
+- `bun test` — Run Vitest tests in CI mode
+- `bun test:watch` — Run Vitest in watch mode
+- `bun test -- --coverage` — Generate coverage report (target: ≥80% statements)
 
 ## Architecture
 
@@ -389,9 +388,9 @@ Tests use Vitest with Testing Library for component and integration testing.
 Run tests:
 
 ```bash
-pnpm test              # CI mode
-pnpm test:watch        # Watch mode
-pnpm test -- --coverage # With coverage report
+bun test              # CI mode
+bun test:watch        # Watch mode
+bun test -- --coverage # With coverage report
 ```
 
 ## Code Style
@@ -409,8 +408,8 @@ pnpm test -- --coverage # With coverage report
 GSD uses static export for deployment to S3 + CloudFront:
 
 ```bash
-pnpm build
-pnpm export
+bun run build
+bun run export
 ```
 
 Output is in the `out/` directory. Upload to your static hosting provider.
@@ -429,7 +428,7 @@ Output is in the `out/` directory. Upload to your static hosting provider.
   - Export/import logic in `lib/tasks.ts`
 - When modifying quadrant logic, update both `lib/quadrants.ts` and UI rendering in matrix components
 - PWA updates require changes to `manifest.json`, icons, and `sw.js` together
-- Run `pnpm typecheck` and `pnpm lint` before committing
+- Run `bun typecheck` and `bun lint` before committing
 
 ### v3.0-Specific Notes
 
@@ -460,7 +459,7 @@ Output is in the `out/` directory. Upload to your static hosting provider.
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests and linting (`pnpm test && pnpm lint && pnpm typecheck`)
+4. Run tests and linting (`bun test && bun lint && bun typecheck`)
 5. Commit your changes with a clear message
 6. Push to your fork and open a pull request
 

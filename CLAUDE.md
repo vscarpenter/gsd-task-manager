@@ -26,20 +26,20 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 ## Core Commands
 
 ### Development
-- `pnpm install` - Install dependencies (generates pnpm-lock.yaml)
-- `pnpm dev` - Start development server at http://localhost:3000
-- `pnpm typecheck` - Run TypeScript type checking without emitting files
+- `bun install` - Install dependencies (generates bun.lock)
+- `bun dev` - Start development server at http://localhost:3000
+- `bun typecheck` - Run TypeScript type checking without emitting files
 
 ### Testing & Quality
-- `pnpm test` - Run Vitest tests in CI mode
-- `pnpm test:watch` - Run Vitest in watch mode during development
-- `pnpm test -- --coverage` - Generate coverage report (target: ≥80% statements)
-- `pnpm lint` - Run ESLint with Next.js config
+- `bun test` - Run Vitest tests in CI mode
+- `bun test:watch` - Run Vitest in watch mode during development
+- `bun test -- --coverage` - Generate coverage report (target: ≥80% statements)
+- `bun lint` - Run ESLint with Next.js config
 
 ### Build & Deployment
-- `pnpm build` - Build production bundle and surface type errors
-- `pnpm export` - Generate static export for S3/CloudFront deployment
-- `pnpm start` - Start production server (note: app uses static export)
+- `bun run build` - Build production bundle and surface type errors
+- `bun run export` - Generate static export for S3/CloudFront deployment
+- `bun start` - Start production server (note: app uses static export)
 - `./scripts/deploy-cloudfront-function.sh` - Deploy CloudFront Function for edge URL rewriting
 
 #### CloudFront Edge Routing
@@ -615,7 +615,7 @@ analytics/
 - Database migrations handled in `lib/db.ts` - current version is 11 (v1→v11: tags/subtasks→filters→notifications→dependencies→appPreferences)
 - When modifying quadrant logic, update both `lib/quadrants.ts` and UI rendering in matrix components
 - PWA updates require changes to manifest.json, icons, and sw.js together
-- Run `pnpm typecheck` and `pnpm lint` before committing
+- Run `bun typecheck` and `bun lint` before committing
 - Static export mode means no runtime server features (no API routes, no SSR)
 - New task fields (recurrence, tags, subtasks, dependencies) are all optional with sensible defaults
 - Import mode parameter defaults to "replace" for backward compatibility in lib/tasks.ts functions

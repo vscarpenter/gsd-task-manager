@@ -2066,8 +2066,7 @@ See [MCP Server README](./packages/mcp-server/README.md) for full documentation.
 ### Local Development Setup
 
 **Prerequisites:**
-- Node.js 18+ (LTS recommended)
-- pnpm 8+ (faster than npm, disk-efficient)
+- [Bun](https://bun.sh) (latest version)
 - Git
 
 **Installation:**
@@ -2078,10 +2077,10 @@ git clone https://github.com/yourusername/gsd-taskmanager.git
 cd gsd-taskmanager
 
 # 2. Install dependencies
-pnpm install
+bun install
 
 # 3. Start development server
-pnpm dev
+bun dev
 
 # 4. Open browser
 open http://localhost:3000
@@ -2091,13 +2090,13 @@ open http://localhost:3000
 
 ```bash
 # Frontend
-pnpm dev          # Start Next.js dev server (hot reload)
-pnpm build        # Build production bundle
-pnpm start        # Start production server (requires build)
-pnpm typecheck    # Run TypeScript compiler (no emit)
-pnpm lint         # Run ESLint
-pnpm test         # Run Vitest tests (CI mode)
-pnpm test:watch   # Run tests in watch mode
+bun dev           # Start Next.js dev server (hot reload)
+bun run build     # Build production bundle
+bun start         # Start production server (requires build)
+bun typecheck     # Run TypeScript compiler (no emit)
+bun lint          # Run ESLint
+bun test          # Run Vitest tests (CI mode)
+bun test:watch    # Run tests in watch mode
 
 # Worker (optional, for sync development)
 cd worker/
@@ -2129,16 +2128,16 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
 
 ```bash
 # Run all tests
-pnpm test
+bun test
 
 # Run specific test file
-pnpm test tasks.test.ts
+bun test tasks.test.ts
 
 # Run with coverage
-pnpm test -- --coverage
+bun test -- --coverage
 
 # Watch mode (re-run on file changes)
-pnpm test:watch
+bun test:watch
 ```
 
 **Debugging:**
@@ -2344,10 +2343,10 @@ pnpm test:watch
 
 4. **Test Locally**
    ```bash
-   pnpm typecheck  # No TypeScript errors
-   pnpm lint       # No ESLint errors
-   pnpm test       # All tests pass
-   pnpm build      # Production build succeeds
+   bun typecheck   # No TypeScript errors
+   bun lint        # No ESLint errors
+   bun test        # All tests pass
+   bun run build   # Production build succeeds
    ```
 
 5. **Commit**

@@ -5,7 +5,7 @@ Follow these steps to deploy your GSD Sync Worker to Cloudflare.
 ## Prerequisites
 
 - Cloudflare account (free tier is sufficient)
-- Node.js 18+ and pnpm installed
+- [Bun](https://bun.sh) (latest version)
 
 ## Step 1: Authenticate with Cloudflare
 
@@ -132,7 +132,7 @@ npx wrangler d1 execute gsd-sync --remote --file=./schema.sql
 ## Step 7: Test Locally
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 **Expected output:**
