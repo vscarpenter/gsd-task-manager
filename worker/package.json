@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "itty-router": "^5.0.18",
-    "jose": "^5.10.0",
+    "jose": "^6.1.3",
     "zod": "^4.3.5"
   },
   "devDependencies": {
