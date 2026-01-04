@@ -26,11 +26,11 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250110.0",
+    "@cloudflare/workers-types": "^4.20260103.0",
     "@types/node": "^25.0.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16",
-    "wrangler": "^4.43.0"
+    "wrangler": "^4.54.0"
   },
   "license": "MIT"
 }
