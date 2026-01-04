@@ -73,13 +73,6 @@ export async function pull(
     for (const task of tasks.results || []) {
       const taskClock = parseVectorClock(task.vector_clock as string);
 
-      logger.info('Processing task for pull', {
-        taskId: task.id as string,
-        taskUpdatedAt: task.updated_at as number,
-        taskUpdatedDate: new Date(task.updated_at as number).toISOString(),
-        serverClock: taskClock,
-      });
-
       // Always send the task - let client handle conflicts and deduplication
       response.tasks.push({
         id: task.id as string,
@@ -89,11 +82,6 @@ export async function pull(
         vectorClock: taskClock,
         updatedAt: task.updated_at as number,
         checksum: task.checksum as string,
-      });
-
-      logger.info('Task queued for client', {
-        taskId: task.id as string,
-        reason: 'timestamp-based-pull',
       });
     }
 
