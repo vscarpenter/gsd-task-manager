@@ -1,6 +1,6 @@
 {
   "name": "gsd-sync-worker",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cloudflare Worker for GSD Task Manager sync backend",
   "main": "src/index.ts",
   "scripts": {
@@ -16,17 +16,20 @@
     "tail": "wrangler tail",
     "tail:staging": "wrangler tail --env staging",
     "tail:production": "wrangler tail --env production",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "itty-router": "^5.0.18",
     "jose": "^5.10.0",
-    "zod": "^3.25.76"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250110.0",
     "@types/node": "^25.0.3",
     "typescript": "^5.9.3",
+    "vitest": "^4.0.16",
     "wrangler": "^4.43.0"
   },
   "license": "MIT"
