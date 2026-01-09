@@ -6,20 +6,41 @@
  */
 
 /**
+ * Base time unit conversion constants
+ * Single source of truth for time conversions to avoid duplication
+ */
+export const TIME_UNITS = {
+  /** Seconds in one minute */
+  SECONDS_PER_MINUTE: 60,
+  /** Minutes in one hour */
+  MINUTES_PER_HOUR: 60,
+  /** Minutes in one day */
+  MINUTES_PER_DAY: 24 * 60, // 1440
+  /** Minutes in one week */
+  MINUTES_PER_WEEK: 7 * 24 * 60, // 10080
+  /** Seconds in one hour */
+  SECONDS_PER_HOUR: 60 * 60, // 3600
+  /** Milliseconds in one second */
+  MS_PER_SECOND: 1000,
+  /** Milliseconds in one minute */
+  MS_PER_MINUTE: 60 * 1000, // 60000
+} as const;
+
+/**
  * Time duration constants in milliseconds
  * Use these instead of inline calculations like `7 * 24 * 60 * 60 * 1000`
  */
 export const TIME_MS = {
   /** One second in milliseconds */
-  SECOND: 1000,
+  SECOND: TIME_UNITS.MS_PER_SECOND,
   /** One minute in milliseconds */
-  MINUTE: 60 * 1000,
+  MINUTE: TIME_UNITS.MS_PER_MINUTE,
   /** One hour in milliseconds */
-  HOUR: 60 * 60 * 1000,
+  HOUR: TIME_UNITS.MINUTES_PER_HOUR * TIME_UNITS.MS_PER_MINUTE,
   /** One day in milliseconds */
-  DAY: 24 * 60 * 60 * 1000,
+  DAY: TIME_UNITS.MINUTES_PER_DAY * TIME_UNITS.MS_PER_MINUTE,
   /** One week in milliseconds */
-  WEEK: 7 * 24 * 60 * 60 * 1000,
+  WEEK: TIME_UNITS.MINUTES_PER_WEEK * TIME_UNITS.MS_PER_MINUTE,
 } as const;
 
 /**
@@ -46,18 +67,19 @@ export const TOAST_DURATION = {
 
 /**
  * Browser notification timing constants
+ * References TIME_UNITS for base conversions to avoid duplication
  */
 export const NOTIFICATION_TIMING = {
   /** Duration to show notification before auto-closing (10 seconds) */
   AUTO_CLOSE_DURATION: 10000,
   /** Duration to show test notification (5 seconds) */
   TEST_NOTIFICATION_DURATION: 5000,
-  /** Milliseconds in one minute */
-  MS_PER_MINUTE: 60000,
-  /** Minutes in one hour */
-  MINUTES_PER_HOUR: 60,
-  /** Minutes in one day */
-  MINUTES_PER_DAY: 1440,
+  /** Milliseconds in one minute - references TIME_UNITS */
+  MS_PER_MINUTE: TIME_UNITS.MS_PER_MINUTE,
+  /** Minutes in one hour - references TIME_UNITS */
+  MINUTES_PER_HOUR: TIME_UNITS.MINUTES_PER_HOUR,
+  /** Minutes in one day - references TIME_UNITS */
+  MINUTES_PER_DAY: TIME_UNITS.MINUTES_PER_DAY,
   /** How many minutes past due we still send notifications (1 hour) */
   OVERDUE_NOTIFICATION_THRESHOLD: -60,
   /** Default check interval when app is open (1 minute) */
@@ -95,20 +117,21 @@ export const TIME_UTILS = {
 
 /**
  * Time tracking constants
+ * References TIME_UNITS for base conversions to avoid duplication
  */
 export const TIME_TRACKING = {
-  /** Milliseconds per minute (for time calculations) */
-  MS_PER_MINUTE: 60000,
-  /** Minutes per hour */
-  MINUTES_PER_HOUR: 60,
-  /** Minutes per day */
-  MINUTES_PER_DAY: 24 * 60,
-  /** Minutes per week */
-  MINUTES_PER_WEEK: 7 * 24 * 60,
+  /** Milliseconds per minute - references TIME_UNITS */
+  MS_PER_MINUTE: TIME_UNITS.MS_PER_MINUTE,
+  /** Minutes per hour - references TIME_UNITS */
+  MINUTES_PER_HOUR: TIME_UNITS.MINUTES_PER_HOUR,
+  /** Minutes per day - references TIME_UNITS */
+  MINUTES_PER_DAY: TIME_UNITS.MINUTES_PER_DAY,
+  /** Minutes per week - references TIME_UNITS */
+  MINUTES_PER_WEEK: TIME_UNITS.MINUTES_PER_WEEK,
   /** Maximum snooze duration in minutes (1 year) - prevents unreasonably long snoozes */
   MAX_SNOOZE_MINUTES: 365 * 24 * 60,
-  /** Seconds per minute */
-  SECONDS_PER_MINUTE: 60,
-  /** Seconds per hour */
-  SECONDS_PER_HOUR: 3600,
+  /** Seconds per minute - references TIME_UNITS */
+  SECONDS_PER_MINUTE: TIME_UNITS.SECONDS_PER_MINUTE,
+  /** Seconds per hour - references TIME_UNITS */
+  SECONDS_PER_HOUR: TIME_UNITS.SECONDS_PER_HOUR,
 } as const;

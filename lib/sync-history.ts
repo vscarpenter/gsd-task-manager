@@ -7,6 +7,7 @@ import { getDb } from '@/lib/db';
 import { generateId } from '@/lib/id-generator';
 import type { SyncHistoryRecord } from '@/lib/types';
 import { createLogger } from '@/lib/logger';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 
 const logger = createLogger('SYNC_HISTORY');
 
@@ -90,7 +91,7 @@ export async function recordSyncError(
 /**
  * Get recent sync history (limited to MAX_HISTORY_RECORDS)
  */
-export async function getRecentHistory(limit: number = 50): Promise<SyncHistoryRecord[]> {
+export async function getRecentHistory(limit: number = SYNC_CONFIG.DEFAULT_HISTORY_LIMIT): Promise<SyncHistoryRecord[]> {
   const db = getDb();
 
   const records = await db.syncHistory
@@ -105,7 +106,7 @@ export async function getRecentHistory(limit: number = 50): Promise<SyncHistoryR
 /**
  * Get sync history for a specific device
  */
-export async function getHistoryForDevice(deviceId: string, limit: number = 50): Promise<SyncHistoryRecord[]> {
+export async function getHistoryForDevice(deviceId: string, limit: number = SYNC_CONFIG.DEFAULT_HISTORY_LIMIT): Promise<SyncHistoryRecord[]> {
   const db = getDb();
 
   const records = await db.syncHistory

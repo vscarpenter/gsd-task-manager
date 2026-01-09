@@ -3,6 +3,8 @@
  * Centralizes UI-specific configuration values
  */
 
+import { TIME_UNITS } from "@/lib/constants";
+
 /**
  * Polling and check intervals for UI updates
  */
@@ -39,6 +41,7 @@ export const OAUTH_POPUP = {
 
 /**
  * Time picker configuration
+ * References TIME_UNITS for base conversions to avoid duplication
  */
 export const TIME_PICKER = {
   /** Increment between time options in minutes */
@@ -47,8 +50,16 @@ export const TIME_PICKER = {
   /** Hour value for 12-hour AM/PM conversion */
   HOURS_12: 12,
 
-  /** Minutes in one hour */
-  MINUTES_PER_HOUR: 60,
+  /** Minutes in one hour - references TIME_UNITS */
+  MINUTES_PER_HOUR: TIME_UNITS.MINUTES_PER_HOUR,
+} as const;
+
+/**
+ * Search and filtering configuration
+ */
+export const SEARCH_CONFIG = {
+  /** Maximum search results to display in command palette */
+  MAX_COMMAND_PALETTE_RESULTS: 10,
 } as const;
 
 /**

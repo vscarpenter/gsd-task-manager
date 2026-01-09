@@ -6,6 +6,9 @@
 import { getDb } from '@/lib/db';
 import type { SyncQueueItem } from './types';
 import { mergeVectorClocks } from './vector-clock';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SYNC_QUEUE');
 
 export class QueueOptimizer {
   /**
@@ -26,20 +29,20 @@ export class QueueOptimizer {
       return;
     }
     
-    console.log(`[QUEUE OPTIMIZER] Consolidating ${operations.length} operations for task ${taskId}`);
-    
+    logger.debug('Consolidating operations for task', { taskId, operationCount: operations.length });
+
     // Check if there's a delete operation (it supersedes everything)
     const deleteOp = operations.find(op => op.operation === 'delete');
-    
+
     if (deleteOp) {
       // Delete supersedes all previous operations
       // Remove all operations except the delete
       const idsToRemove = operations
         .filter(op => op.id !== deleteOp.id)
         .map(op => op.id);
-      
+
       if (idsToRemove.length > 0) {
-        console.log(`[QUEUE OPTIMIZER] Delete operation found, removing ${idsToRemove.length} superseded operations`);
+        logger.debug('Delete operation found, removing superseded operations', { taskId, removedCount: idsToRemove.length });
         await db.syncQueue.bulkDelete(idsToRemove);
         
         // Update delete operation to track what was consolidated
@@ -57,7 +60,7 @@ export class QueueOptimizer {
     
     if (createOp && updateOps.length > 0) {
       // Consolidate create + updates into single create with final state
-      console.log(`[QUEUE OPTIMIZER] Consolidating create + ${updateOps.length} updates into single create`);
+      logger.debug('Consolidating create + updates into single create', { taskId, updateCount: updateOps.length });
       
       // Use the latest update's payload (most recent state)
       // updateOps are already sorted by timestamp from the query
@@ -85,7 +88,7 @@ export class QueueOptimizer {
       
     } else if (updateOps.length > 1) {
       // Multiple updates - consolidate into single update with latest payload
-      console.log(`[QUEUE OPTIMIZER] Consolidating ${updateOps.length} updates into single update`);
+      logger.debug('Consolidating multiple updates into single update', { taskId, updateCount: updateOps.length });
       
       // Keep the first update, merge others into it
       const firstUpdate = updateOps[0];
@@ -122,25 +125,26 @@ export class QueueOptimizer {
       return 0;
     }
     
-    console.log(`[QUEUE OPTIMIZER] Starting consolidation of ${countBefore} operations`);
-    
+    logger.debug('Starting queue consolidation', { operationCount: countBefore });
+
     // Get all unique task IDs in the queue
     const allOperations = await db.syncQueue.toArray();
     const taskIds = [...new Set(allOperations.map(op => op.taskId))];
-    
-    console.log(`[QUEUE OPTIMIZER] Found ${taskIds.length} unique tasks in queue`);
-    
+
+    logger.debug('Found unique tasks in queue', { taskCount: taskIds.length });
+
     // Log operations per task to detect duplicates
     const taskCounts = new Map<string, number>();
     for (const op of allOperations) {
       taskCounts.set(op.taskId, (taskCounts.get(op.taskId) || 0) + 1);
     }
-    
+
     const duplicateTasks = Array.from(taskCounts.entries()).filter(([_, count]) => count > 1);
     if (duplicateTasks.length > 0) {
-      console.log(`[QUEUE OPTIMIZER] Tasks with multiple operations:`, 
-        duplicateTasks.map(([taskId, count]) => `${taskId}: ${count} ops`)
-      );
+      logger.debug('Tasks with multiple operations found', {
+        duplicateTaskCount: duplicateTasks.length,
+        details: duplicateTasks.map(([taskId, count]) => ({ taskId, count }))
+      });
     }
     
     // Consolidate operations for each task
@@ -151,17 +155,17 @@ export class QueueOptimizer {
     // Get count after consolidation
     const countAfter = await db.syncQueue.count();
     const removed = countBefore - countAfter;
-    
-    console.log(`[QUEUE OPTIMIZER] Consolidation complete: removed ${removed} operations (${countBefore} → ${countAfter})`);
-    
+
+    logger.info('Queue consolidation complete', { removed, countBefore, countAfter });
+
     // Verify no duplicate taskIds remain
     const afterOps = await db.syncQueue.toArray();
     const afterTaskIds = afterOps.map(op => op.taskId);
     const afterDuplicates = afterTaskIds.filter((id, index) => afterTaskIds.indexOf(id) !== index);
     if (afterDuplicates.length > 0) {
-      console.error(`[QUEUE OPTIMIZER ERROR] Duplicate taskIds still exist after consolidation:`, 
-        [...new Set(afterDuplicates)]
-      );
+      logger.error('Duplicate taskIds still exist after consolidation', undefined, {
+        duplicates: [...new Set(afterDuplicates)]
+      });
     }
     
     return removed;
@@ -197,7 +201,7 @@ export class QueueOptimizer {
       .map(op => op.id);
     
     if (idsToRemove.length > 0) {
-      console.log(`[QUEUE OPTIMIZER] Pruning ${idsToRemove.length} operations superseded by delete for task ${taskId}`);
+      logger.debug('Pruning operations superseded by delete', { taskId, prunedCount: idsToRemove.length });
       await db.syncQueue.bulkDelete(idsToRemove);
       
       // Update delete operation to track what was pruned
