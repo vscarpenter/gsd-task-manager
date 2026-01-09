@@ -8,7 +8,8 @@
 import type { TaskRecord } from "@/lib/types";
 
 /**
- * Props interface for TaskCard component (duplicated here for type safety)
+ * Props interface for TaskCard component
+ * This is the canonical definition, imported by components/task-card.tsx
  */
 export interface TaskCardProps {
   task: TaskRecord;
@@ -74,17 +75,34 @@ function haveTaskPropertiesChanged(prevProps: TaskCardProps, nextProps: TaskCard
   );
 }
 
+/** Compare string arrays element-by-element (faster than JSON.stringify) */
+function areStringArraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/** Compare subtask arrays by checking each property */
+function areSubtasksEqual(a: TaskRecord['subtasks'], b: TaskRecord['subtasks']): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].title !== b[i].title || a[i].completed !== b[i].completed) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** Check if arrays (tags, subtasks, dependencies) changed */
 function haveArraysChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
   const prev = prevProps.task;
   const next = nextProps.task;
   return (
-    prev.tags.length !== next.tags.length ||
-    prev.subtasks.length !== next.subtasks.length ||
-    prev.dependencies.length !== next.dependencies.length ||
-    JSON.stringify(prev.tags) !== JSON.stringify(next.tags) ||
-    JSON.stringify(prev.subtasks) !== JSON.stringify(next.subtasks) ||
-    JSON.stringify(prev.dependencies) !== JSON.stringify(next.dependencies)
+    !areStringArraysEqual(prev.tags, next.tags) ||
+    !areSubtasksEqual(prev.subtasks, next.subtasks) ||
+    !areStringArraysEqual(prev.dependencies, next.dependencies)
   );
 }
 
