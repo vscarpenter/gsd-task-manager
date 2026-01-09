@@ -40,6 +40,12 @@ export const SYNC_CONFIG = {
 
   /** Initial health check delay (10 seconds) */
   INITIAL_HEALTH_CHECK_DELAY_MS: 10000,
+
+  /** Initial sync delay after starting background sync (10 seconds) */
+  INITIAL_SYNC_DELAY_MS: 10000,
+
+  /** Default limit for sync history queries */
+  DEFAULT_HISTORY_LIMIT: 50,
 } as const;
 
 /**

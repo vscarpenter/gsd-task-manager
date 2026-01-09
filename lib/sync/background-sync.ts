@@ -6,6 +6,10 @@
 import { getSyncCoordinator } from './sync-coordinator';
 import { getSyncQueue } from './queue';
 import type { BackgroundSyncConfig } from './types';
+import { createLogger } from '@/lib/logger';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
+
+const logger = createLogger('SYNC_ENGINE');
 
 export class BackgroundSyncManager {
     // Interval-based periodic sync
@@ -32,14 +36,14 @@ export class BackgroundSyncManager {
      */
     async start(config: BackgroundSyncConfig): Promise<void> {
         if (this.isActive) {
-            console.warn('[BACKGROUND SYNC] Already running, stopping previous instance');
+            logger.warn('Background sync already running, stopping previous instance');
             this.stop();
         }
 
         this.config = config;
         this.isActive = true;
 
-        console.log('[BACKGROUND SYNC] Starting with config:', {
+        logger.info('Starting background sync', {
             enabled: config.enabled,
             intervalMinutes: config.intervalMinutes,
             syncOnFocus: config.syncOnFocus,
@@ -47,7 +51,7 @@ export class BackgroundSyncManager {
         });
 
         if (!config.enabled) {
-            console.log('[BACKGROUND SYNC] Auto-sync disabled in config, not starting');
+            logger.debug('Auto-sync disabled in config, not starting');
             return;
         }
 
@@ -64,12 +68,12 @@ export class BackgroundSyncManager {
             this.setupOnlineListener();
         }
 
-        // Perform initial sync after a short delay (10 seconds)
+        // Perform initial sync after a short delay
         setTimeout(() => {
             if (this.isActive) {
                 this.performSyncIfNeeded('initial');
             }
-        }, 10000);
+        }, SYNC_CONFIG.INITIAL_SYNC_DELAY_MS);
     }
 
     /**
@@ -81,7 +85,7 @@ export class BackgroundSyncManager {
             return;
         }
 
-        console.log('[BACKGROUND SYNC] Stopping');
+        logger.debug('Stopping background sync');
 
         this.isActive = false;
         this.config = null;
@@ -109,7 +113,7 @@ export class BackgroundSyncManager {
             this.onlineHandler = null;
         }
 
-        console.log('[BACKGROUND SYNC] Stopped and cleaned up');
+        logger.debug('Background sync stopped and cleaned up');
     }
 
     /**
@@ -135,7 +139,7 @@ export class BackgroundSyncManager {
 
         const delayMs = this.config.debounceAfterChangeMs;
 
-        console.log(`[BACKGROUND SYNC] Scheduling debounced sync in ${delayMs}ms`);
+        logger.debug('Scheduling debounced sync', { delayMs });
 
         this.debounceTimeout = setTimeout(() => {
             if (this.isActive) {
@@ -151,7 +155,7 @@ export class BackgroundSyncManager {
     private startPeriodicSync(intervalMinutes: number): void {
         const intervalMs = intervalMinutes * 60 * 1000;
 
-        console.log(`[BACKGROUND SYNC] Setting up periodic sync every ${intervalMinutes} minute(s)`);
+        logger.debug('Setting up periodic sync', { intervalMinutes, intervalMs });
 
         this.syncInterval = setInterval(() => {
             if (this.isActive) {
@@ -167,13 +171,13 @@ export class BackgroundSyncManager {
     private setupVisibilityListener(): void {
         this.visibilityChangeHandler = () => {
             if (document.visibilityState === 'visible' && this.isActive) {
-                console.log('[BACKGROUND SYNC] Tab became visible, triggering sync');
+                logger.debug('Tab became visible, triggering sync');
                 this.performSyncIfNeeded('visibility');
             }
         };
 
         document.addEventListener('visibilitychange', this.visibilityChangeHandler);
-        console.log('[BACKGROUND SYNC] Visibility change listener registered');
+        logger.debug('Visibility change listener registered');
     }
 
     /**
@@ -183,13 +187,13 @@ export class BackgroundSyncManager {
     private setupOnlineListener(): void {
         this.onlineHandler = () => {
             if (this.isActive) {
-                console.log('[BACKGROUND SYNC] Network reconnected, triggering sync');
+                logger.debug('Network reconnected, triggering sync');
                 this.performSyncIfNeeded('online');
             }
         };
 
         window.addEventListener('online', this.onlineHandler);
-        console.log('[BACKGROUND SYNC] Online event listener registered');
+        logger.debug('Online event listener registered');
     }
 
     /**
@@ -199,7 +203,7 @@ export class BackgroundSyncManager {
     private async performSyncIfNeeded(trigger: 'initial' | 'periodic' | 'debounced' | 'visibility' | 'online'): Promise<void> {
         // Check if online
         if (!navigator.onLine) {
-            console.log(`[BACKGROUND SYNC] Skipping (${trigger}): offline`);
+            logger.debug('Skipping sync: offline', { trigger });
             return;
         }
 
@@ -208,7 +212,10 @@ export class BackgroundSyncManager {
         const timeSinceLastSync = now - this.lastSyncTimestamp;
 
         if (timeSinceLastSync < this.MIN_SYNC_INTERVAL_MS) {
-            console.log(`[BACKGROUND SYNC] Skipping (${trigger}): too soon since last sync (${Math.round(timeSinceLastSync / 1000)}s ago)`);
+            logger.debug('Skipping sync: too soon since last sync', {
+                trigger,
+                timeSinceLastSyncSec: Math.round(timeSinceLastSync / 1000)
+            });
             return;
         }
 
@@ -218,21 +225,21 @@ export class BackgroundSyncManager {
             const pendingCount = await queue.getPendingCount();
 
             if (pendingCount === 0) {
-                console.log(`[BACKGROUND SYNC] Skipping (${trigger}): no pending changes`);
+                logger.debug('Skipping sync: no pending changes', { trigger });
                 return;
             }
 
             // All conditions met, perform sync
-            console.log(`[BACKGROUND SYNC] Triggering sync (${trigger}): ${pendingCount} pending changes`);
+            logger.info('Triggering background sync', { trigger, pendingCount });
 
             this.lastSyncTimestamp = now;
 
             const coordinator = getSyncCoordinator();
             await coordinator.requestSync('auto');
 
-            console.log(`[BACKGROUND SYNC] Sync completed (${trigger})`);
+            logger.debug('Background sync completed', { trigger });
         } catch (error) {
-            console.error(`[BACKGROUND SYNC] Error during sync (${trigger}):`, error);
+            logger.error('Error during background sync', error instanceof Error ? error : undefined, { trigger });
         }
     }
 }

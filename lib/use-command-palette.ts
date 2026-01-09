@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import type { CommandAction } from "@/lib/command-actions";
 import type { TaskRecord } from "@/lib/types";
 import { applyFilters } from "@/lib/filters";
+import { SEARCH_CONFIG } from "@/lib/constants/ui";
 
 interface UseCommandPaletteOptions {
   actions: CommandAction[];
@@ -73,8 +74,8 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
       status: 'active' // Only show active tasks in command palette
     });
 
-    // Limit to top 10 matches
-    return results.slice(0, 10);
+    // Limit to top matches
+    return results.slice(0, SEARCH_CONFIG.MAX_COMMAND_PALETTE_RESULTS);
   }, [search, tasks]);
 
   // Execute an action and close palette
