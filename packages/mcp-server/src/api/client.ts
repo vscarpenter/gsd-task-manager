@@ -1,39 +1,47 @@
 import { z } from 'zod';
 import type { GsdConfig } from '../types.js';
+import { fetchWithRetry, DEFAULT_RETRY_CONFIG, type RetryConfig } from './retry.js';
 
 /**
  * Make authenticated API request to GSD Worker
  * Handles all HTTP errors with detailed user-friendly messages
+ * Includes automatic retry with exponential backoff for transient failures
  */
 export async function apiRequest<T>(
   config: GsdConfig,
   endpoint: string,
-  schema: z.ZodType<T>
+  schema: z.ZodType<T>,
+  retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
 ): Promise<T> {
   const url = `${config.apiBaseUrl}${endpoint}`;
 
-  const response = await fetchWithErrorHandling(url, config);
-  validateResponseStatus(response, endpoint, config);
+  const response = await fetchWithErrorHandling(url, config, retryConfig);
+  await validateResponseStatus(response, endpoint, config);
 
   const data = await response.json();
   return schema.parse(data);
 }
 
 /**
- * Fetch URL with network error handling
+ * Fetch URL with network error handling and automatic retry
  */
 async function fetchWithErrorHandling(
   url: string,
-  config: GsdConfig
+  config: GsdConfig,
+  retryConfig: RetryConfig
 ): Promise<Response> {
   try {
-    return await fetch(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${config.authToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    return await fetchWithRetry(
+      () =>
+        fetch(url, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${config.authToken}`,
+            'Content-Type': 'application/json',
+          },
+        }),
+      retryConfig
+    );
   } catch (error) {
     throw new Error(
       `❌ Failed to connect to ${config.apiBaseUrl}\n\n` +
@@ -42,6 +50,7 @@ async function fetchWithErrorHandling(
         `  1. Your internet connection\n` +
         `  2. GSD_API_URL is correct (${config.apiBaseUrl})\n` +
         `  3. The Worker is deployed and accessible\n\n` +
+        `Retried ${retryConfig.maxRetries} times before giving up.\n\n` +
         `Run: npx gsd-mcp-server --validate`
     );
   }

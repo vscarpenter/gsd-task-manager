@@ -217,27 +217,58 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - `/api/sync/status` - Sync health check
 - `/api/devices` - Device management
 
-### MCP Server Architecture (v5.0.0)
+### MCP Server Architecture (v5.0.0, updated v0.6.0)
 - **Purpose**: Enable Claude Desktop to access and analyze tasks via natural language
 - **Location**: `packages/mcp-server/` - Standalone npm package
 - **Runtime**: Node.js 18+ with TypeScript
 - **Communication**: stdio transport (JSON-RPC 2.0) with Claude Desktop
-- **Security**: Read-only access, decryption happens locally on user's machine
+- **Security**: Full CRUD with encryption, decryption happens locally on user's machine
 
-**Key Modules** (modularized in v5.6.1):
+**Key Modules** (modularized in v5.6.1, enhanced v0.6.0):
 - `packages/mcp-server/src/index.ts` - MCP server entry point, tool registration
 - `packages/mcp-server/src/crypto.ts` - Encryption/decryption using Node.js Web Crypto API
 - `packages/mcp-server/src/tools/` - Individual MCP tool implementations (see Modular Architecture section)
-- `packages/mcp-server/src/api/` - HTTP client with error handling
+- `packages/mcp-server/src/api/` - HTTP client with retry logic and error handling
 - `packages/mcp-server/src/cli/` - Setup wizard and validation utilities
+- `packages/mcp-server/src/cache.ts` - In-memory TTL cache for task data (v0.6.0)
+- `packages/mcp-server/src/dependencies.ts` - Circular dependency validation (v0.6.0)
 
-**Available MCP Tools**:
+**Available MCP Tools (20 total)**:
+
+*Read Tools (7)*:
 1. `list_tasks` - List decrypted tasks with optional filtering (quadrant, status, tags)
 2. `get_task` - Get detailed task information by ID
 3. `search_tasks` - Search across titles, descriptions, tags, subtasks
-4. `get_sync_status` - Check sync health and storage usage
+4. `get_sync_status` - Check sync health, storage usage, and token status
 5. `list_devices` - View all registered devices
 6. `get_task_stats` - Get task statistics and metadata
+7. `get_token_status` - Check JWT token expiration and health (v0.6.0)
+
+*Write Tools (5)*:
+1. `create_task` - Create new task with all properties (supports dryRun)
+2. `update_task` - Update existing task properties (supports dryRun)
+3. `complete_task` - Toggle task completion status (supports dryRun)
+4. `delete_task` - Permanently delete a task (supports dryRun)
+5. `bulk_update_tasks` - Update up to 50 tasks at once (supports dryRun)
+
+*Analytics Tools (5)*:
+1. `get_productivity_metrics` - Comprehensive productivity statistics
+2. `get_quadrant_analysis` - Task distribution across quadrants
+3. `get_tag_analytics` - Tag usage and completion rates
+4. `get_upcoming_deadlines` - Overdue, due today, due this week
+5. `get_task_insights` - AI-friendly summary and recommendations
+
+*System Tools (3)*:
+1. `validate_config` - Diagnose configuration issues
+2. `get_help` - In-Claude documentation with topics
+3. `get_cache_stats` - Cache performance monitoring (v0.6.0)
+
+**v0.6.0 Enhancements**:
+- **Retry Logic**: Automatic retry with exponential backoff for transient failures (500, 502, 503, 504, 429)
+- **Token Monitoring**: Proactive warnings for expiring tokens (healthy/warning/critical/expired)
+- **Caching**: In-memory TTL cache (30s default) with automatic invalidation on writes
+- **Dry-Run Mode**: Preview changes on all write operations before committing
+- **Dependency Validation**: Circular dependency detection using BFS algorithm
 
 **Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with:
 - `GSD_API_BASE_URL` - Worker API URL (https://gsd.vinny.dev)
@@ -247,7 +278,8 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 **Security Model**:
 - Encryption passphrase stored only in Claude Desktop config (never in cloud)
 - End-to-end encryption maintained (Worker cannot decrypt tasks)
-- Read-only access (Claude cannot modify, create, or delete tasks)
+- Full CRUD operations with encrypted sync (v0.4.0+)
+- Dry-run mode for safe operation preview (v0.6.0)
 - Opt-in feature (requires explicit passphrase configuration)
 
 ## Modular Architecture (v5.6.1 Refactoring)
@@ -325,10 +357,11 @@ components/sync/
 
 ### MCP Server Modules
 
-**packages/mcp-server/src/api/** (HTTP Client)
+**packages/mcp-server/src/api/** (HTTP Client with Retry)
 ```
 api/
-└── client.ts         # API request handling with error categorization
+├── client.ts         # API request handling with error categorization
+└── retry.ts          # Exponential backoff retry logic (v0.6.0)
 ```
 
 **packages/mcp-server/src/encryption/** (Encryption)
@@ -340,7 +373,19 @@ encryption/
 **packages/mcp-server/src/tools/** (MCP Tools)
 ```
 tools/
-├── list-tasks.ts     # List tasks with filters
+├── handlers/         # Tool request handlers
+│   ├── index.ts      # Handler dispatcher
+│   ├── read-handlers.ts    # Read operation handlers (includes token status)
+│   ├── write-handlers.ts   # Write operation handlers (with dry-run support)
+│   ├── analytics-handlers.ts
+│   └── system-handlers.ts  # System handlers (includes cache stats)
+├── schemas/          # MCP tool schema definitions
+│   ├── index.ts      # All tool exports (20 tools)
+│   ├── read-tools.ts # 7 read tool schemas
+│   ├── write-tools.ts # 5 write tool schemas (all with dryRun)
+│   ├── analytics-tools.ts # 5 analytics tool schemas
+│   └── system-tools.ts # 3 system tool schemas
+├── list-tasks.ts     # List tasks with filters and caching
 ├── get-task.ts       # Get single task by ID
 ├── search-tasks.ts   # Search across task fields
 ├── sync-status.ts    # Sync status and statistics
@@ -364,10 +409,21 @@ analytics/
 └── aggregator.ts     # AI insights generation
 ```
 
+**packages/mcp-server/src/write-ops/** (Write Operations - v0.6.0)
+```
+write-ops/
+├── types.ts          # WriteOptions, CreateTaskInput, UpdateTaskInput, BulkOperation
+├── helpers.ts        # ID generation, encryption helpers, sync push with retry
+├── task-operations.ts # CRUD operations with dry-run support
+└── bulk-operations.ts # Bulk update operations
+```
+
 **Key Module Files**:
 - `types.ts` - Shared type definitions
 - `constants.ts` - Shared constants
 - `tools.ts` - Backward compatibility re-export layer
+- `cache.ts` - TTL-based in-memory cache for tasks (v0.6.0)
+- `dependencies.ts` - Circular dependency validation using BFS (v0.6.0)
 
 ### Refactoring Principles Applied
 
@@ -642,13 +698,17 @@ analytics/
   - **Testing**: Use `./worker/test-*.sh` scripts for manual API testing with curl
   - **JWT Tokens**: Expire after 7 days; frontend should handle refresh flow (401 → re-auth)
   - **Encryption**: Never log or expose encryption salts or passphrases in Worker code
-- MCP Server (v5.0.0):
+- MCP Server (v5.0.0, enhanced v0.6.0):
   - **Location**: All MCP code in `packages/mcp-server/` (standalone package)
   - **Building**: Run `npm run build` in `packages/mcp-server/` before testing
-  - **Testing**: Configure Claude Desktop with local `node dist/index.js` for development
-  - **Tools**: Add new MCP tools in `tools.ts` following existing pattern (schema + handler)
-  - **Security**: MCP tools must be read-only; never implement write operations without user consent
-  - **Decryption**: Use `CryptoManager` singleton from `crypto.ts` for all decryption
+  - **Testing**: Configure Claude Desktop with local `node dist/index.js` for development; run `npm test` for unit tests
+  - **Tools**: Add schemas in `tools/schemas/`, handlers in `tools/handlers/`, update dispatcher in `tools/handlers/index.ts`
+  - **Write Operations**: All write tools support `dryRun` parameter; use for previewing changes
+  - **Caching**: Use `getTaskCache()` from `cache.ts`; cache auto-invalidates on writes
+  - **Retry Logic**: Use `fetchWithRetry()` from `api/retry.ts` for resilient API calls
+  - **Dependencies**: Validate with `validateDependencies()` from `dependencies.ts` before creating/updating tasks
+  - **Token Status**: Check token health with `getTokenStatus()` helper; 4 tiers (healthy/warning/critical/expired)
+  - **Decryption**: Use `CryptoManager` singleton from `crypto.ts` for all encryption/decryption
   - **Error Handling**: Provide clear error messages (e.g., "Token expired" vs generic "Auth failed")
   - **Documentation**: Update `packages/mcp-server/README.md` when adding new tools
 - **UI/UX Enhancements (v5.10.0)**:

@@ -17,6 +17,7 @@ export type {
   UpdateTaskInput,
   BulkOperation,
   SyncOperation,
+  WriteOptions,
 } from './write-ops/types.js';
 
 // Export helper functions
@@ -27,12 +28,15 @@ export {
   pushToSync,
 } from './write-ops/helpers.js';
 
-// Export task operations
+// Export task operations and result types
 export {
   createTask,
   updateTask,
   completeTask,
   deleteTask,
+  type CreateTaskResult,
+  type UpdateTaskResult,
+  type DeleteTaskResult,
 } from './write-ops/task-operations.js';
 
 // Export bulk operations

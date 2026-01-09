@@ -32,7 +32,24 @@ export const getHelpTool: Tool = {
   },
 };
 
+export const getCacheStatsTool: Tool = {
+  name: 'get_cache_stats',
+  description:
+    'Get task cache statistics including hit rate, cache size, and TTL configuration. Useful for monitoring MCP server performance and debugging caching behavior.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      reset: {
+        type: 'boolean',
+        description: 'If true, reset cache statistics after retrieving them',
+      },
+    },
+    required: [],
+  },
+};
+
 export const systemTools: Tool[] = [
   validateConfigTool,
   getHelpTool,
+  getCacheStatsTool,
 ];

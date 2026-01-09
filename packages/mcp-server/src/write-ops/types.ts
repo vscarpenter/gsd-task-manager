@@ -3,6 +3,13 @@
  */
 
 /**
+ * Common options for write operations
+ */
+export interface WriteOptions {
+  dryRun?: boolean; // If true, validate without persisting
+}
+
+/**
  * Task creation input
  */
 export interface CreateTaskInput {
@@ -15,6 +22,7 @@ export interface CreateTaskInput {
   subtasks?: Array<{ title: string; completed: boolean }>;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
+  dryRun?: boolean;
 }
 
 /**
@@ -32,6 +40,7 @@ export interface UpdateTaskInput {
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
   completed?: boolean;
+  dryRun?: boolean;
 }
 
 /**

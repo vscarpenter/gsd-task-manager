@@ -102,6 +102,17 @@ export const searchTasksTool: Tool = {
   },
 };
 
+export const getTokenStatusTool: Tool = {
+  name: 'get_token_status',
+  description:
+    'Check authentication token status including expiration date, days remaining, and warnings. Use this to proactively check if re-authentication is needed. Returns status (healthy/warning/critical/expired), expiration details, and re-authentication instructions if needed.',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    required: [],
+  },
+};
+
 export const readTools: Tool[] = [
   getSyncStatusTool,
   listDevicesTool,
@@ -109,4 +120,5 @@ export const readTools: Tool[] = [
   listTasksTool,
   getTaskTool,
   searchTasksTool,
+  getTokenStatusTool,
 ];
