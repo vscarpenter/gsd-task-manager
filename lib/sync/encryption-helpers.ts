@@ -89,9 +89,16 @@ export async function uploadSaltToServer(salt: Uint8Array): Promise<void> {
 // Post-Setup Sync Helpers
 // ============================================================================
 
+/**
+ * Reference type for timeout tracking (generic, not React-specific)
+ */
+export interface TimeoutRef {
+  current: NodeJS.Timeout | null;
+}
+
 /** Queue existing tasks for sync and trigger auto-sync */
 export async function queueAndTriggerSync(
-  syncTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>
+  syncTimeoutRef: TimeoutRef
 ): Promise<void> {
   const { getSyncEngine } = await import('@/lib/sync/engine');
   const engine = getSyncEngine();
