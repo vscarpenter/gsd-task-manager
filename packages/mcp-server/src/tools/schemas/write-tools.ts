@@ -8,7 +8,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 export const createTaskTool: Tool = {
   name: 'create_task',
   description:
-    'Create a new task with natural language input. Supports all task properties including title, description, urgency, importance, due dates, tags, subtasks, recurrence, and dependencies. Requires GSD_ENCRYPTION_PASSPHRASE.',
+    'Create a new task with natural language input. Supports all task properties including title, description, urgency, importance, due dates, tags, subtasks, recurrence, and dependencies. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview without saving.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -59,6 +59,10 @@ export const createTaskTool: Tool = {
         items: { type: 'string' },
         description: 'Task IDs that must be completed before this task',
       },
+      dryRun: {
+        type: 'boolean',
+        description: 'If true, validate and show what would be created without actually saving',
+      },
     },
     required: ['title', 'urgent', 'important'],
   },
@@ -67,7 +71,7 @@ export const createTaskTool: Tool = {
 export const updateTaskTool: Tool = {
   name: 'update_task',
   description:
-    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Requires GSD_ENCRYPTION_PASSPHRASE.',
+    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -127,6 +131,10 @@ export const updateTaskTool: Tool = {
         type: 'boolean',
         description: 'Mark as complete/incomplete',
       },
+      dryRun: {
+        type: 'boolean',
+        description: 'If true, validate and show what would change without actually saving',
+      },
     },
     required: ['id'],
   },
@@ -135,7 +143,7 @@ export const updateTaskTool: Tool = {
 export const completeTaskTool: Tool = {
   name: 'complete_task',
   description:
-    'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Requires GSD_ENCRYPTION_PASSPHRASE.',
+    'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -147,6 +155,10 @@ export const completeTaskTool: Tool = {
         type: 'boolean',
         description: 'True to mark complete, false to mark incomplete',
       },
+      dryRun: {
+        type: 'boolean',
+        description: 'If true, validate and show what would change without actually saving',
+      },
     },
     required: ['id', 'completed'],
   },
@@ -155,13 +167,17 @@ export const completeTaskTool: Tool = {
 export const deleteTaskTool: Tool = {
   name: 'delete_task',
   description:
-    'Permanently delete a task. This action cannot be undone. Use with caution. Requires GSD_ENCRYPTION_PASSPHRASE.',
+    'Permanently delete a task. This action cannot be undone. Use with caution. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview what would be deleted.',
   inputSchema: {
     type: 'object',
     properties: {
       id: {
         type: 'string',
         description: 'Task ID to delete',
+      },
+      dryRun: {
+        type: 'boolean',
+        description: 'If true, show what would be deleted without actually deleting',
       },
     },
     required: ['id'],
@@ -171,7 +187,7 @@ export const deleteTaskTool: Tool = {
 export const bulkUpdateTasksTool: Tool = {
   name: 'bulk_update_tasks',
   description:
-    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation for safety. Requires GSD_ENCRYPTION_PASSPHRASE.',
+    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation for safety. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -217,6 +233,10 @@ export const bulkUpdateTasksTool: Tool = {
       maxTasks: {
         type: 'number',
         description: 'Safety limit (default: 50)',
+      },
+      dryRun: {
+        type: 'boolean',
+        description: 'If true, validate and show what would change without actually saving',
       },
     },
     required: ['taskIds', 'operation'],

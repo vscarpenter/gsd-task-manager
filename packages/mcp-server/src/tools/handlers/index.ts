@@ -11,6 +11,7 @@ import {
   handleListTasks,
   handleGetTask,
   handleSearchTasks,
+  handleGetTokenStatus,
 } from './read-handlers.js';
 import {
   handleGetProductivityMetrics,
@@ -29,6 +30,7 @@ import {
 import {
   handleValidateConfig,
   handleGetHelp,
+  handleGetCacheStats,
 } from './system-handlers.js';
 
 // Re-export all handlers
@@ -73,6 +75,9 @@ export async function handleToolCall(
       case 'search_tasks':
         return await handleSearchTasks(config, args as any);
 
+      case 'get_token_status':
+        return await handleGetTokenStatus(config);
+
       // Analytics tools
       case 'get_productivity_metrics':
         return await handleGetProductivityMetrics(config);
@@ -111,6 +116,9 @@ export async function handleToolCall(
 
       case 'get_help':
         return await handleGetHelp(args as any);
+
+      case 'get_cache_stats':
+        return await handleGetCacheStats(args as any);
 
       default:
         throw new Error(`Unknown tool: ${name}`);

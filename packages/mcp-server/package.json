@@ -1,18 +1,37 @@
 {
   "name": "gsd-mcp-server",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "MCP server for GSD Task Manager - full task management with create/update/delete, analytics, interactive setup, and validation",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/crypto.d.ts",
+      "import": "./dist/crypto.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
   "bin": {
     "gsd-mcp-server": "dist/index.js"
   },
   "files": [
     "dist/**/*",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*",
+    "!dist/__tests__/**",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -30,10 +49,22 @@
     "productivity",
     "claude",
     "claude-desktop",
+    "anthropic",
+    "ai",
+    "llm",
+    "ai-assistant",
     "eisenhower-matrix",
+    "todo",
+    "gtd",
+    "tasks",
     "encryption",
-    "privacy"
+    "privacy",
+    "e2e-encryption"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "author": "Vinny Carpenter",
   "license": "MIT",
   "repository": {

@@ -7,6 +7,8 @@ import type { GsdConfig } from '../tools.js';
 import type { SyncOperation } from './types.js';
 import { getCryptoManager } from '../crypto.js';
 import { getDeviceIdFromToken } from '../jwt.js';
+import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
+import { getTaskCache } from '../cache.js';
 
 /**
  * Generate unique ID for new tasks
@@ -30,6 +32,7 @@ export function deriveQuadrant(urgent: boolean, important: boolean): string {
 
 /**
  * Initialize encryption for write operations
+ * Includes retry logic for fetching encryption salt
  */
 export async function ensureEncryption(config: GsdConfig): Promise<void> {
   if (!config.encryptionPassphrase) {
@@ -43,14 +46,18 @@ export async function ensureEncryption(config: GsdConfig): Promise<void> {
 
   const cryptoManager = getCryptoManager();
   if (!cryptoManager.isInitialized()) {
-    // Fetch salt and initialize (same as read operations)
-    const response = await fetch(`${config.apiBaseUrl}/api/auth/encryption-salt`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${config.authToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Fetch salt with retry logic
+    const response = await fetchWithRetry(
+      () =>
+        fetch(`${config.apiBaseUrl}/api/auth/encryption-salt`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${config.authToken}`,
+            'Content-Type': 'application/json',
+          },
+        }),
+      DEFAULT_RETRY_CONFIG
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch encryption salt: ${response.status}`);
@@ -67,32 +74,39 @@ export async function ensureEncryption(config: GsdConfig): Promise<void> {
 
 /**
  * Push encrypted task data to sync API
+ * Includes retry logic for transient failures
  */
 export async function pushToSync(
   config: GsdConfig,
   operations: SyncOperation[]
 ): Promise<void> {
   const deviceId = getDeviceIdFromToken(config.authToken);
-
-  const response = await fetch(`${config.apiBaseUrl}/api/sync/push`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.authToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      deviceId,
-      operations,
-      clientVectorClock: {}, // Simplified: let server handle vector clock
-    }),
+  const payload = JSON.stringify({
+    deviceId,
+    operations,
+    clientVectorClock: {}, // Simplified: let server handle vector clock
   });
+
+  const response = await fetchWithRetry(
+    () =>
+      fetch(`${config.apiBaseUrl}/api/sync/push`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: payload,
+      }),
+    DEFAULT_RETRY_CONFIG
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
       `❌ Failed to push task changes (${response.status})\n\n` +
         `Error: ${errorText}\n\n` +
-        `Your changes were not saved to the server.`
+        `Your changes were not saved to the server.\n` +
+        `Retried ${DEFAULT_RETRY_CONFIG.maxRetries} times before giving up.`
     );
   }
 
@@ -121,4 +135,8 @@ export async function pushToSync(
     console.warn(`⚠️  Warning: ${result.conflicts.length} conflict(s) detected`);
     console.warn('Last-write-wins strategy applied - your changes took precedence');
   }
+
+  // Invalidate cache after successful write
+  const cache = getTaskCache();
+  cache.invalidate();
 }

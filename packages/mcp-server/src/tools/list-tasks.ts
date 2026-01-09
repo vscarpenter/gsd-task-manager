@@ -2,25 +2,45 @@ import { getDeviceIdFromToken } from '../jwt.js';
 import { initializeEncryption } from '../encryption/manager.js';
 import { getCryptoManager } from '../crypto.js';
 import { MAX_TASKS_PER_PULL } from '../constants.js';
+import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
+import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
 import type {
   GsdConfig,
   DecryptedTask,
   TaskFilters,
-  EncryptedTaskBlob,
   PullTasksResponse,
 } from '../types.js';
 
 /**
  * List all tasks (decrypted)
  * Requires encryption passphrase to be set
+ * Uses in-memory cache to reduce API calls
  */
 export async function listTasks(
   config: GsdConfig,
   filters?: TaskFilters
 ): Promise<DecryptedTask[]> {
+  const cache = getTaskCache();
+  const cacheKey = generateTaskListCacheKey(filters);
+
+  // Check cache first (only for unfiltered requests to ensure consistency)
+  if (!filters) {
+    const cachedTasks = cache.getTaskList(cacheKey);
+    if (cachedTasks) {
+      return cachedTasks;
+    }
+  }
+
+  // Fetch and decrypt tasks
   const deviceId = extractDeviceId(config);
   const encryptedTasks = await fetchEncryptedTasks(config, deviceId);
   const decryptedTasks = await decryptTaskBatch(encryptedTasks, config);
+
+  // Cache unfiltered results
+  if (!filters) {
+    cache.setTaskList(cacheKey, decryptedTasks);
+  }
+
   return applyTaskFilters(decryptedTasks, filters);
 }
 
@@ -41,31 +61,38 @@ function extractDeviceId(config: GsdConfig): string {
 }
 
 /**
- * Fetch encrypted tasks from Worker API
+ * Fetch encrypted tasks from Worker API with retry support
  */
 async function fetchEncryptedTasks(
   config: GsdConfig,
   deviceId: string
 ): Promise<PullTasksResponse['tasks']> {
+  const payload = JSON.stringify({
+    deviceId,
+    lastVectorClock: {}, // Empty clock to get all tasks
+    sinceTimestamp: 1, // Start from epoch + 1ms to get all tasks
+    limit: MAX_TASKS_PER_PULL,
+  });
+
   let response: Response;
   try {
-    response = await fetch(`${config.apiBaseUrl}/api/sync/pull`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.authToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        deviceId,
-        lastVectorClock: {}, // Empty clock to get all tasks
-        sinceTimestamp: 1, // Start from epoch + 1ms to get all tasks
-        limit: MAX_TASKS_PER_PULL,
-      }),
-    });
+    response = await fetchWithRetry(
+      () =>
+        fetch(`${config.apiBaseUrl}/api/sync/pull`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${config.authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: payload,
+        }),
+      DEFAULT_RETRY_CONFIG
+    );
   } catch (error) {
     throw new Error(
       `❌ Failed to fetch tasks\n\n` +
         `Network error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
+        `Retried ${DEFAULT_RETRY_CONFIG.maxRetries} times.\n` +
         `Run: npx gsd-mcp-server --validate`
     );
   }

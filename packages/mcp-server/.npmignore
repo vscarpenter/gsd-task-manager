@@ -4,13 +4,15 @@ tsconfig.json
 *.ts
 !*.d.ts
 
-# Documentation (keep only README.md and LICENSE)
+# Documentation (keep only README.md, CHANGELOG.md, and LICENSE)
 TESTING.md
 TESTING_V0.2.md
 QUICKSTART.md
 DECRYPTION.md
 DEPLOYMENT_COMPLETE.md
 README-SECURITY.md
+QUICK_TEST.md
+TEST_PLAN.md
 
 # Test scripts and configs (SECURITY: May contain hardcoded credentials)
 *.sh
@@ -19,6 +21,7 @@ test-*.json
 check-*.sh
 debug-*.sh
 claude-config*.json
+decode-jwt.cjs
 !*.example
 
 # Environment files
@@ -32,13 +35,22 @@ node_modules/
 *.log
 npm-debug.log*
 .npmrc
+vitest.config.ts
+pnpm-lock.yaml
 
-# Test files
+# Test files (both source and compiled)
 __tests__/
 *.test.js
+*.test.ts
+*.test.d.ts
 *.spec.js
+*.spec.ts
+*.spec.d.ts
 test/
 tests/
+dist/__tests__/
+dist/**/*.test.*
+dist/**/*.spec.*
 
 # Build artifacts
 *.tsbuildinfo

@@ -11,6 +11,7 @@ import {
   listTasksTool,
   getTaskTool,
   searchTasksTool,
+  getTokenStatusTool,
   getProductivityMetricsTool,
   getQuadrantAnalysisTool,
   getTagAnalyticsTool,
@@ -23,16 +24,19 @@ import {
   bulkUpdateTasksTool,
   validateConfigTool,
   getHelpTool,
+  getCacheStatsTool,
 } from '../../tools/schemas/index.js';
 
 describe('Tool Schemas', () => {
   describe('Schema Count Validation', () => {
-    it('should have exactly 18 tools total', () => {
-      expect(allTools).toHaveLength(18);
+    it('should have exactly 20 tools total', () => {
+      // 7 read + 5 write + 5 analytics + 3 system
+      expect(allTools).toHaveLength(20);
     });
 
-    it('should have 6 read tools', () => {
-      expect(readTools).toHaveLength(6);
+    it('should have 7 read tools', () => {
+      // get_sync_status, list_devices, get_task_stats, list_tasks, get_task, search_tasks, get_token_status
+      expect(readTools).toHaveLength(7);
     });
 
     it('should have 5 write tools', () => {
@@ -43,8 +47,9 @@ describe('Tool Schemas', () => {
       expect(analyticsTools).toHaveLength(5);
     });
 
-    it('should have 2 system tools', () => {
-      expect(systemTools).toHaveLength(2);
+    it('should have 3 system tools', () => {
+      // validate_config, get_help, get_cache_stats
+      expect(systemTools).toHaveLength(3);
     });
   });
 
@@ -118,6 +123,11 @@ describe('Tool Schemas', () => {
       expect(searchTasksTool.inputSchema.required).toContain('query');
       expect(searchTasksTool.inputSchema.properties).toHaveProperty('query');
     });
+
+    it('get_token_status should have no required parameters', () => {
+      expect(getTokenStatusTool.name).toBe('get_token_status');
+      expect(getTokenStatusTool.inputSchema.required).toHaveLength(0);
+    });
   });
 
   describe('Analytics Tools', () => {
@@ -143,6 +153,14 @@ describe('Tool Schemas', () => {
     it('all write tools should mention encryption requirement', () => {
       writeTools.forEach((tool) => {
         expect(tool.description).toMatch(/GSD_ENCRYPTION_PASSPHRASE/i);
+      });
+    });
+
+    it('all write tools should have optional dryRun parameter', () => {
+      writeTools.forEach((tool) => {
+        expect(tool.inputSchema.properties).toHaveProperty('dryRun');
+        // dryRun should not be required
+        expect(tool.inputSchema.required).not.toContain('dryRun');
       });
     });
 
@@ -227,6 +245,12 @@ describe('Tool Schemas', () => {
       expect(topicProp.enum).toContain('setup');
       expect(topicProp.enum).toContain('examples');
       expect(topicProp.enum).toContain('troubleshooting');
+    });
+
+    it('get_cache_stats should have optional reset parameter', () => {
+      expect(getCacheStatsTool.name).toBe('get_cache_stats');
+      expect(getCacheStatsTool.inputSchema.required).toHaveLength(0);
+      expect(getCacheStatsTool.inputSchema.properties).toHaveProperty('reset');
     });
   });
 

@@ -35,13 +35,21 @@ See [Installation](#installation) section below for detailed setup instructions.
 
 ## Features
 
-**Write Operations** (v0.4.0) 🆕 🔥
-- ✅ **Create Tasks** - Add new tasks with natural language
-- ✅ **Update Tasks** - Modify any task property (title, description, quadrant, tags, etc.)
-- ✅ **Complete Tasks** - Mark tasks as done or incomplete
-- ✅ **Delete Tasks** - Permanently remove tasks
-- ✅ **Bulk Operations** - Update up to 50 tasks at once (complete, move quadrants, add/remove tags, etc.)
-- 🔒 **Safety Features** - Bulk limits (50 tasks max), validation, clear error messages
+**Reliability & Performance** (v0.6.0) 🆕 🔥
+- ✅ **Retry Logic** - Automatic exponential backoff for transient failures (500, 502, 503, 504, 429)
+- ✅ **Token Monitoring** - Proactive warnings for expiring tokens (healthy/warning/critical/expired)
+- ✅ **Caching** - In-memory TTL cache (30s) with automatic invalidation on writes
+- ✅ **Dry-Run Mode** - Preview all write operations before committing
+- ✅ **Dependency Validation** - Circular dependency detection using BFS algorithm
+- ✅ **Cache Stats Tool** - Monitor cache hit rates and performance
+
+**Write Operations** (v0.4.0)
+- ✅ **Create Tasks** - Add new tasks with natural language (supports dryRun)
+- ✅ **Update Tasks** - Modify any task property (supports dryRun)
+- ✅ **Complete Tasks** - Mark tasks as done or incomplete (supports dryRun)
+- ✅ **Delete Tasks** - Permanently remove tasks (supports dryRun)
+- ✅ **Bulk Operations** - Update up to 50 tasks at once (supports dryRun)
+- 🔒 **Safety Features** - Bulk limits (50 tasks max), validation, dry-run preview
 - 🔐 **Encrypted Sync** - All changes encrypted before sending to server
 
 **Quick Start Helpers** (v0.3.2)
@@ -56,7 +64,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Enhanced error messages with actionable guidance
 - ✅ Multi-device support (fixes hardcoded device ID)
 
-**Analytics & Insights** (v0.3.0) 🆕
+**Analytics & Insights** (v0.3.0)
 - ✅ Comprehensive productivity metrics
 - ✅ Quadrant distribution analysis
 - ✅ Tag-based analytics with completion rates
@@ -65,12 +73,12 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Streak tracking (current and longest)
 
 **Metadata Access** (v0.1.0)
-- ✅ Sync status monitoring
+- ✅ Sync status monitoring (now includes token status)
 - ✅ Device management overview
 - ✅ Task statistics (metadata only)
 
 **Decrypted Task Access** (v0.2.0)
-- ✅ List all tasks with full content (opt-in)
+- ✅ List all tasks with full content (opt-in, cached)
 - ✅ Search tasks by title, description, tags, subtasks
 - ✅ Filter by quadrant, completion status, tags
 - ✅ Get individual task details
@@ -523,11 +531,60 @@ Get comprehensive help documentation including available tools, usage examples, 
 - "Show me analytics examples"
 - "How do I troubleshoot authentication issues?"
 
+### `get_token_status` (v0.6.0)
+Check authentication token status including expiration date, days remaining, and warnings.
+
+**Returns**:
+```json
+{
+  "status": "warning",
+  "expiresAt": "2025-01-15T12:00:00.000Z",
+  "daysRemaining": 5,
+  "message": "Token expires in 5 days. Consider re-authenticating soon.",
+  "needsReauth": false
+}
+```
+
+**Status Levels**:
+- `healthy` - More than 7 days until expiration
+- `warning` - 2-7 days until expiration
+- `critical` - Less than 2 days until expiration
+- `expired` - Token has expired
+
+**Example Usage:**
+- "Check my token status"
+- "Is my authentication about to expire?"
+- "Do I need to re-authenticate?"
+
+### `get_cache_stats` (v0.6.0)
+Get task cache statistics including hit rate, cache size, and TTL configuration.
+
+**Parameters**:
+- `reset` (optional): If true, reset statistics after retrieving them
+
+**Returns**:
+```json
+{
+  "hits": 42,
+  "misses": 8,
+  "hitRate": 84,
+  "size": 15,
+  "maxEntries": 1000,
+  "ttlMs": 30000,
+  "lastInvalidation": "2025-01-09T12:00:00.000Z"
+}
+```
+
+**Example Usage:**
+- "Show me cache performance"
+- "What's my cache hit rate?"
+- "Reset cache statistics"
+
 ---
 
-## Write Operation Tools (v0.4.0)
+## Write Operation Tools (v0.4.0, enhanced v0.6.0)
 
-###`create_task`
+### `create_task`
 Create a new task with natural language input. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
 
 **Parameters**:
@@ -540,8 +597,9 @@ Create a new task with natural language input. **Requires `GSD_ENCRYPTION_PASSPH
 - `subtasks` (optional): Array of subtask objects `{title, completed}`
 - `recurrence` (optional): `'none'` | `'daily'` | `'weekly'` | `'monthly'`
 - `dependencies` (optional): Array of task IDs that must be completed first
+- `dryRun` (optional): If true, validate and preview without saving (v0.6.0)
 
-**Returns**: The newly created task object with generated ID
+**Returns**: The newly created task object with generated ID (or preview if dryRun)
 
 **Example:**
 ```
@@ -566,10 +624,11 @@ Update an existing task. All fields except ID are optional. **Requires `GSD_ENCR
 - `tags` (optional): Replace all tags
 - `subtasks` (optional): Replace all subtasks (objects with `{id, title, completed}`)
 - `recurrence` (optional): Change recurrence pattern
-- `dependencies` (optional): Replace all dependencies
+- `dependencies` (optional): Replace all dependencies (validated for circular refs)
 - `completed` (optional): Mark as complete/incomplete
+- `dryRun` (optional): If true, validate and preview changes without saving (v0.6.0)
 
-**Returns**: The updated task object
+**Returns**: The updated task object with list of changes (or preview if dryRun)
 
 **Example:**
 ```
@@ -584,8 +643,9 @@ Mark a task as complete or incomplete. Quick shortcut for updating completion st
 **Parameters**:
 - `id` (required): Task ID
 - `completed` (required): `true` to mark complete, `false` to mark incomplete
+- `dryRun` (optional): If true, preview the change without saving (v0.6.0)
 
-**Returns**: The updated task object
+**Returns**: The updated task object (or preview if dryRun)
 
 **Example:**
 ```
@@ -597,15 +657,26 @@ Permanently delete a task. **This action cannot be undone.** **Requires `GSD_ENC
 
 **Parameters**:
 - `id` (required): Task ID to delete
+- `dryRun` (optional): If true, preview what would be deleted without actually deleting (v0.6.0)
 
-**Returns**: Confirmation message
+**Returns**: Confirmation with task title and any affected dependent tasks
 
 **Example:**
 ```
 Delete task def456
 ```
 
-**⚠️ Warning**: Deleted tasks cannot be recovered!
+**⚠️ Warning**: Deleted tasks cannot be recovered! Use `dryRun: true` to preview first.
+
+**Dry-Run Response** (v0.6.0):
+```json
+{
+  "taskId": "def456",
+  "taskTitle": "Example Task",
+  "dryRun": true,
+  "affectedTasks": ["Task that depends on this one"]
+}
+```
 
 ### `bulk_update_tasks`
 Update multiple tasks at once. Limited to 50 tasks per operation for safety. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
@@ -626,8 +697,9 @@ Update multiple tasks at once. Limited to 50 tasks per operation for safety. **R
     - `dueDate`: ISO 8601 datetime string (empty string to clear)
   - `type: 'delete'` - Delete all tasks
 - `maxTasks` (optional): Safety limit (default: 50)
+- `dryRun` (optional): If true, validate and preview without saving (v0.6.0)
 
-**Returns**: Result object with `updated` count and `errors` array
+**Returns**: Result object with `updated` count and `errors` array (or preview if dryRun)
 
 **Examples:**
 ```
@@ -764,17 +836,41 @@ npm publish --access public --otp=YOUR_CODE
 ```
 packages/mcp-server/
 ├── src/
-│   ├── index.ts      # MCP server setup, tool routing
-│   ├── tools.ts      # Tool implementations, API calls
-│   └── crypto.ts     # Encryption/decryption (v0.2.0)
-├── dist/             # Compiled JavaScript (generated)
+│   ├── index.ts           # MCP server setup, tool registration
+│   ├── tools.ts           # Backward-compatible re-exports
+│   ├── crypto.ts          # Encryption/decryption (v0.2.0)
+│   ├── cache.ts           # TTL-based in-memory cache (v0.6.0)
+│   ├── dependencies.ts    # Circular dependency validation (v0.6.0)
+│   ├── api/
+│   │   ├── client.ts      # HTTP client with error handling
+│   │   └── retry.ts       # Exponential backoff retry (v0.6.0)
+│   ├── tools/
+│   │   ├── handlers/      # Tool request handlers
+│   │   │   ├── index.ts   # Handler dispatcher
+│   │   │   ├── read-handlers.ts
+│   │   │   ├── write-handlers.ts
+│   │   │   ├── analytics-handlers.ts
+│   │   │   └── system-handlers.ts
+│   │   └── schemas/       # MCP tool schemas (20 tools)
+│   │       ├── index.ts
+│   │       ├── read-tools.ts     # 7 read tools
+│   │       ├── write-tools.ts    # 5 write tools
+│   │       ├── analytics-tools.ts # 5 analytics tools
+│   │       └── system-tools.ts   # 3 system tools
+│   ├── write-ops/         # Write operations (v0.6.0)
+│   │   ├── types.ts       # Input/output types
+│   │   ├── helpers.ts     # ID gen, encryption, sync push
+│   │   ├── task-operations.ts  # CRUD with dry-run
+│   │   └── bulk-operations.ts  # Bulk updates
+│   ├── analytics/         # Analytics calculations
+│   └── cli/               # Setup wizard, validation
+├── dist/                  # Compiled JavaScript (generated)
 ├── package.json
 ├── tsconfig.json
-├── README.md         # This file
-├── QUICKSTART.md     # Quick setup guide
-├── DECRYPTION.md     # Security documentation (v0.2.0)
-├── TESTING.md        # Testing procedures
-└── TESTING_V0.2.md   # v0.2.0 testing guide
+├── README.md              # This file
+├── QUICKSTART.md          # Quick setup guide
+├── DECRYPTION.md          # Security documentation (v0.2.0)
+└── TESTING.md             # Testing procedures
 ```
 
 **Tech Stack**:
@@ -782,6 +878,7 @@ packages/mcp-server/
 - `zod` - Runtime schema validation
 - `typescript` - Type safety
 - `node:crypto` (webcrypto) - AES-256-GCM encryption (v0.2.0)
+- `vitest` - Testing framework (v0.6.0)
 
 **Communication Flow**:
 ```
@@ -817,16 +914,20 @@ MIT - Same as GSD Task Manager
 
 ---
 
-**Status**: v0.4.7 (Production Ready) ✅🔥
+**Status**: v0.6.0 (Production Ready) ✅🔥
 
-**Current Release (v0.4.7)**:
-- ✍️ **Full task management** - Create, update, delete tasks
-- 🔄 **Bulk operations** - Update up to 50 tasks at once (complete, move, tag, delete)
-- 🔐 **Encrypted writes** - All changes encrypted before sync
-- 🛡️ **Safety features** - Bulk limits, validation, clear errors
-- 📊 **18 total MCP tools** (13 read + 5 write)
-- ✅ **Production tested** - All write operations verified end-to-end
-- 🐛 **Bug fixes** - 7 critical schema and sync issues resolved (v0.4.1-v0.4.7)
+**Current Release (v0.6.0)**:
+- 🔄 **Retry Logic** - Automatic exponential backoff for transient failures
+- ⏰ **Token Monitoring** - Proactive expiration warnings (healthy/warning/critical/expired)
+- 🚀 **Caching** - In-memory TTL cache (30s) with auto-invalidation on writes
+- 🔍 **Dry-Run Mode** - Preview all write operations before committing
+- 🔗 **Dependency Validation** - Circular dependency detection using BFS
+- 📊 **20 total MCP tools** (7 read + 5 write + 5 analytics + 3 system)
+- ✅ **70 passing tests** - Comprehensive schema and integration coverage
+
+**New Tools (v0.6.0)**:
+- `get_token_status` - Check JWT token health and expiration
+- `get_cache_stats` - Monitor cache performance and hit rates
 
 **Bug Fixes (v0.4.1-v0.4.7)**:
 - v0.4.1: Fixed Worker API payload structure
@@ -847,4 +948,5 @@ MIT - Same as GSD Task Manager
 **Privacy**: Opt-in decryption with local passphrase
 **Security**: E2E encryption maintained, zero-knowledge server
 **Capabilities**: Full CRUD task management with natural language interface
+**Reliability**: Automatic retry, caching, dry-run preview (v0.6.0)
 **Deployment**: Published to npm ✅ | Production ready ✅ | All tests passed ✅

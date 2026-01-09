@@ -1,4 +1,5 @@
 import { getSyncStatus, listTasks, type GsdConfig } from '../../tools.js';
+import { getTaskCache } from '../../cache.js';
 
 /**
  * System tool handlers for configuration validation and help
@@ -274,7 +275,7 @@ npx gsd-mcp-server --validate
 - **Validation:** Run \`npx gsd-mcp-server --validate\`
 - **Issues/Support:** https://github.com/vscarpenter/gsd-taskmanager/issues
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 **Status:** Production-ready
 **Privacy:** End-to-end encrypted, zero-knowledge server
 **Capabilities:** Full task management (create, read, update, delete)
@@ -286,6 +287,53 @@ npx gsd-mcp-server --validate
       {
         type: 'text' as const,
         text: helpText.trim(),
+      },
+    ],
+  };
+}
+
+/**
+ * Handle get_cache_stats tool
+ * Returns task cache statistics for performance monitoring
+ */
+export async function handleGetCacheStats(args: { reset?: boolean }) {
+  const cache = getTaskCache();
+  const stats = cache.getStats();
+
+  const result = {
+    performance: {
+      hitRate: `${(stats.hitRate * 100).toFixed(1)}%`,
+      hits: stats.hits,
+      misses: stats.misses,
+    },
+    taskListCache: {
+      currentSize: stats.taskListCache.size,
+      maxEntries: stats.taskListCache.maxEntries,
+      ttlSeconds: stats.taskListCache.ttlMs / 1000,
+    },
+    singleTaskCache: {
+      currentSize: stats.singleTaskCache.size,
+      maxEntries: stats.singleTaskCache.maxEntries,
+      ttlSeconds: stats.singleTaskCache.ttlMs / 1000,
+    },
+    notes: [
+      'Cache is invalidated after every write operation',
+      'TTL-based expiration ensures data freshness',
+      'Hit rate improves with repeated read operations',
+    ],
+  };
+
+  // Reset stats if requested
+  if (args.reset) {
+    cache.resetStats();
+    (result as { statsReset?: boolean }).statsReset = true;
+  }
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(result, null, 2),
       },
     ],
   };
