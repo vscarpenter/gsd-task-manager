@@ -347,13 +347,17 @@ describe('sync/debug', () => {
   describe('installSyncDebugTools', () => {
     it('should install debug functions on window object', () => {
       // Clear any existing functions
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).debugSyncQueue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).clearStuckOperations;
 
       installSyncDebugTools();
 
       // Verify functions are installed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).debugSyncQueue).toBe(debugSyncQueue);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).clearStuckOperations).toBe(clearStuckOperations);
 
       // Verify installation message
@@ -366,11 +370,13 @@ describe('sync/debug', () => {
 
     it('should be callable multiple times without error', () => {
       installSyncDebugTools();
-      
+
       expect(() => installSyncDebugTools()).not.toThrow();
-      
+
       // Functions should still be available
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).debugSyncQueue).toBe(debugSyncQueue);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).clearStuckOperations).toBe(clearStuckOperations);
     });
 
@@ -378,7 +384,9 @@ describe('sync/debug', () => {
       installSyncDebugTools();
 
       // Verify we can call the functions from window
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(typeof (window as any).debugSyncQueue).toBe('function');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(typeof (window as any).clearStuckOperations).toBe('function');
     });
   });

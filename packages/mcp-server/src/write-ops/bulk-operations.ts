@@ -108,6 +108,7 @@ export async function bulkUpdateTasks(
           continue;
 
         default:
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           throw new Error(`Unknown operation type: ${(operation as any).type}`);
       }
 

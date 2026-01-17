@@ -8,7 +8,6 @@ import {
   subscribeToOAuthHandshake,
   announceOAuthState,
   retryOAuthHandshake,
-  type OAuthHandshakeEvent,
   type OAuthAuthData,
 } from '@/lib/sync/oauth-handshake';
 import { createMockFetchResponse, createMockErrorResponse, mockConsole } from '../fixtures';

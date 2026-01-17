@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path');
 
 const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
@@ -10,15 +12,12 @@ const BUILD_INFO_FILE = path.join(__dirname, '..', '.build-info.json');
 const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
 const baseVersion = packageJson.version || '0.1.0';
 
-// Parse semantic version (e.g., "0.1.6" -> { major: 0, minor: 1, patch: 6 })
-const [major, minor, patch] = baseVersion.split('.').map(Number);
-
 // Read or initialize build info
 let buildInfo = { version: baseVersion };
 if (fs.existsSync(BUILD_INFO_FILE)) {
   try {
     buildInfo = JSON.parse(fs.readFileSync(BUILD_INFO_FILE, 'utf8'));
-  } catch (err) {
+  } catch {
     console.warn('Failed to read build info, using package.json version');
   }
 }

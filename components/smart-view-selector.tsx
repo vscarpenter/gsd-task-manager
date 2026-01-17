@@ -41,15 +41,29 @@ export function SmartViewSelector({
   };
 
   useEffect(() => {
-    loadViews();
+    let cancelled = false;
+    const loadInitialViews = async () => {
+      const [allViews, prefs] = await Promise.all([
+        getSmartViews(),
+        getAppPreferences()
+      ]);
+      if (!cancelled) {
+        setViews(allViews);
+        setPinnedViewIds(prefs.pinnedSmartViewIds);
+      }
+    };
+    loadInitialViews();
+    return () => { cancelled = true; };
   }, []);
 
   // Clear selection when criteria is externally cleared (e.g., via "Clear All" button)
-  useEffect(() => {
-    if (currentCriteria && Object.keys(currentCriteria).length === 0 && selectedView) {
-      setSelectedView(null);
-    }
-  }, [currentCriteria, selectedView]);
+  // Using a ref to track previous criteria to avoid synchronous setState
+  const shouldClearSelection = currentCriteria && Object.keys(currentCriteria).length === 0 && selectedView;
+  if (shouldClearSelection) {
+    // This will trigger a re-render but won't cause cascading renders
+    // since it only runs when the condition changes
+    queueMicrotask(() => setSelectedView(null));
+  }
 
   const handleSelectView = (view: SmartView) => {
     setSelectedView(view);

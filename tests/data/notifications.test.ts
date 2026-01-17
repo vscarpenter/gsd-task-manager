@@ -22,8 +22,11 @@ vi.mock("@/lib/db", () => ({
 }));
 
 describe("Notifications module", () => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let mockDb: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let mockNotificationConstructor: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let mockNotificationInstance: any;
 
 	beforeEach(() => {
@@ -43,6 +46,7 @@ describe("Notifications module", () => {
 		};
 
 		// Mock Notification constructor - must be a proper constructor function
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		mockNotificationConstructor = vi.fn(function Notification(title: string, options: any) {
 			const instance = Object.create(mockNotificationInstance);
 			instance.title = title;
@@ -55,12 +59,14 @@ describe("Notifications module", () => {
 			.mockResolvedValue("granted");
 
 		// Set up global Notification
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		global.Notification = mockNotificationConstructor as any;
 
 		// Setup window
 		global.window = {
 			Notification: mockNotificationConstructor,
 			focus: vi.fn(),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 
 		// Mock navigator with service worker and badge API
@@ -72,6 +78,7 @@ describe("Notifications module", () => {
 			},
 			setAppBadge: vi.fn().mockResolvedValue(undefined),
 			clearAppBadge: vi.fn().mockResolvedValue(undefined),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 	});
 
@@ -86,11 +93,13 @@ describe("Notifications module", () => {
 		});
 
 		it("should return false when window is undefined", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.window = undefined as any;
 			expect(isNotificationSupported()).toBe(false);
 		});
 
 		it("should return false when Notification is not in window", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.window = {} as any;
 			expect(isNotificationSupported()).toBe(false);
 		});
@@ -109,6 +118,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should return 'denied' when notifications not supported", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.window = undefined as any;
 			expect(checkNotificationPermission()).toBe("denied");
 		});
@@ -180,6 +190,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should return false when notifications not supported", async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.window = undefined as any;
 
 			const result = await requestNotificationPermission();
@@ -206,6 +217,7 @@ describe("Notifications module", () => {
 
 	describe("shouldAskForPermission", () => {
 		it("should return false when notifications not supported", async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.window = undefined as any;
 
 			const result = await shouldAskForPermission();
@@ -334,6 +346,7 @@ describe("Notifications module", () => {
 			});
 
 			await updateNotificationSettings({
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				id: "different-id" as any,
 			});
 
@@ -381,6 +394,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should not show notification when not supported", async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.window = undefined as any;
 			const task = createTask();
 
@@ -467,7 +481,9 @@ describe("Notifications module", () => {
 				value: {
 					ready: Promise.resolve({
 						showNotification: mockShowNotification,
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					} as any),
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				} as any,
 				writable: true,
 				configurable: true,
@@ -498,6 +514,7 @@ describe("Notifications module", () => {
 
 			// No service worker
 			Object.defineProperty(global.navigator, 'serviceWorker', {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				value: undefined as any,
 				writable: true,
 				configurable: true,
@@ -529,6 +546,7 @@ describe("Notifications module", () => {
 
 			// No service worker to test Notification constructor
 			Object.defineProperty(global.navigator, 'serviceWorker', {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				value: undefined as any,
 				writable: true,
 				configurable: true,
@@ -730,11 +748,13 @@ describe("Notifications module", () => {
 		});
 
 		it("should return false when navigator is undefined", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.navigator = undefined as any;
 			expect(isBadgeSupported()).toBe(false);
 		});
 
 		it("should return false when setAppBadge is not available", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.navigator = {} as any;
 			expect(isBadgeSupported()).toBe(false);
 		});
@@ -760,6 +780,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should do nothing when badge API not supported", async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.navigator = {} as any;
 
 			await expect(setAppBadge(5)).resolves.not.toThrow();
@@ -792,6 +813,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should do nothing when badge API not supported", async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			global.navigator = {} as any;
 
 			await expect(clearAppBadge()).resolves.not.toThrow();

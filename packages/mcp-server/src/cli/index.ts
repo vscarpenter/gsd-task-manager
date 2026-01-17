@@ -95,6 +95,7 @@ export function getClaudeConfigPath(): string {
  * Create readline interface for user input
  */
 export function createReadline() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createInterface } = require('node:readline');
   return createInterface({
     input: process.stdin,
@@ -126,6 +127,7 @@ export async function promptPassword(question: string): Promise<string> {
 
   return new Promise((resolve) => {
     // Disable echo for password input
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const stdin = process.stdin as any;
     const originalMode = stdin.isTTY && stdin.setRawMode ? stdin.setRawMode(false) : null;
 

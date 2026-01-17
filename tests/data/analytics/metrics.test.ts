@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { calculateMetrics, getQuadrantPerformance } from '@/lib/analytics/metrics';
 import type { TaskRecord } from '@/lib/types';
-import { isoNow } from '@/lib/utils';
 
 // Mock date-fns to control time
 vi.mock('date-fns', async () => {

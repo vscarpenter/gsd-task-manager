@@ -11,8 +11,6 @@ export type ErrorCategory = 'transient' | 'auth' | 'permanent';
  * Categorize a sync error to determine handling strategy
  */
 export function categorizeError(error: Error): ErrorCategory {
-  const message = error.message.toLowerCase();
-  
   // Check for auth errors first
   if (isAuthError(error)) {
     return 'auth';

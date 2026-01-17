@@ -39,7 +39,7 @@ function validateEncryptionConfig(config: GsdConfig): void {
  */
 async function fetchEncryptionSalt(config: GsdConfig): Promise<string> {
   const response = await fetchSaltEndpoint(config);
-  validateSaltResponse(response, config);
+  validateSaltResponse(response);
 
   const data = (await response.json()) as { encryptionSalt: string };
   validateSaltData(data, config);
@@ -71,7 +71,7 @@ async function fetchSaltEndpoint(config: GsdConfig): Promise<Response> {
 /**
  * Validate salt endpoint HTTP response
  */
-function validateSaltResponse(response: Response, config: GsdConfig): void {
+function validateSaltResponse(response: Response): void {
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error(

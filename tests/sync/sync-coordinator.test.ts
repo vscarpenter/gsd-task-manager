@@ -141,6 +141,7 @@ describe('SyncCoordinator', () => {
       
       // Verify the queued sync was executed with user priority
       const calls = mockSyncFn.mock.calls;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(calls.some((call: any[]) => call[0] === 'user')).toBe(true);
     });
   });

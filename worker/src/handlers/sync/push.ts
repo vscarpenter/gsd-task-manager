@@ -178,12 +178,12 @@ export async function push(
         }
 
         results.accepted.push(op.taskId);
-      } catch (error: any) {
-        logger.error('Task processing failed', error, { userId, taskId: op.taskId, operation: 'push' });
+      } catch (error: unknown) {
+        logger.error('Task processing failed', error as Error, { userId, taskId: op.taskId, operation: 'push' });
         results.rejected.push({
           taskId: op.taskId,
           reason: 'validation_error',
-          details: error.message,
+          details: (error as Error).message,
         });
       }
     }
@@ -229,9 +229,9 @@ export async function push(
     });
 
     return jsonResponse(results, 200, origin);
-  } catch (error: any) {
-    logger.error('Push failed', error, { userId: ctx.userId, operation: 'push' });
-    if (error.name === 'ZodError') {
+  } catch (error: unknown) {
+    logger.error('Push failed', error as Error, { userId: ctx.userId, operation: 'push' });
+    if ((error as Error).name === 'ZodError') {
       return errorResponse('Invalid request data', 400, origin);
     }
     return errorResponse('Push failed', 500, origin);

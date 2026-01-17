@@ -42,6 +42,7 @@ describe('pushLocalChanges', () => {
       })),
       decrypt: vi.fn(async () => JSON.stringify(createMockTask())),
       hash: vi.fn(async () => 'checksum-abc123'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Create mock API client
@@ -49,6 +50,7 @@ describe('pushLocalChanges', () => {
       setToken: vi.fn(),
       push: vi.fn(async () => createMockPushResponse()),
       pull: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     context = {
@@ -207,7 +209,8 @@ describe('pushLocalChanges', () => {
       const config = createMockSyncConfig();
       const task1 = createMockTask({ id: 'task-1' });
       const task2 = createMockTask({ id: 'task-2' });
-      const task3 = createMockTask({ id: 'task-3' });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _task3 = createMockTask({ id: 'task-3' });
 
       await queue.enqueue('create', 'task-1', task1, {});
       await queue.enqueue('update', 'task-2', task2, {});
@@ -247,6 +250,7 @@ describe('pushLocalChanges', () => {
 
       // Both operations should be sent
       const pushCall = vi.mocked(mockApi.push).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const task1Ops = pushCall.operations.filter((op: any) => op.taskId === 'task-1');
       expect(task1Ops).toHaveLength(2);
     });

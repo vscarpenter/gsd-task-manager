@@ -117,6 +117,8 @@ export async function fetchWithRetry(
  * Format retry information for error messages
  */
 export function formatRetryInfo(attempts: number, config: RetryConfig): string {
+  // config is available for future use (e.g., including max retries in message)
+  void config;
   if (attempts === 0) return '';
   return `\n\nRetried ${attempts} time${attempts > 1 ? 's' : ''} before failing.`;
 }

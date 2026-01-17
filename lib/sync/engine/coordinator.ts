@@ -8,9 +8,8 @@ import { getApiClient } from '../api-client';
 import { getTokenManager } from '../token-manager';
 import { getRetryManager } from '../retry-manager';
 import { getQueueOptimizer } from '../queue-optimizer';
-import { categorizeError, type ErrorCategory } from '../error-categorizer';
 import { createLogger } from '@/lib/logger';
-import type { SyncResult, ConflictInfo } from '../types';
+import type { SyncResult, ConflictInfo, SyncConfig, VectorClock, RejectedOperation } from '../types';
 import { pushLocalChanges } from './push-handler';
 import { pullRemoteChanges } from './pull-handler';
 import { autoResolveConflicts } from './conflict-resolver';
@@ -28,7 +27,6 @@ import {
   notifyRejectedOperations,
   notifyConflicts,
   notifySyncSuccess,
-  notifySyncError,
 } from '@/lib/sync/notifications';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -42,9 +40,42 @@ interface SyncContext {
   api: ReturnType<typeof getApiClient>;
 }
 
+/** Rejected operation with enriched operation info for notifications */
+interface RejectedOpNotification {
+  taskId: string;
+  reason: string;
+  details: string;
+  operation?: string;
+}
+
+/** Conflicted operation with enriched operation info for notifications */
+interface ConflictedOpNotification {
+  taskId: string;
+  reason: string;
+  operation?: string;
+}
+
+/** Result from push operation */
+interface PushResult {
+  accepted: string[];
+  rejected: RejectedOperation[];
+  conflicts: ConflictInfo[];
+  serverVectorClock: VectorClock;
+  rejectedOps?: RejectedOpNotification[];
+  conflictedOps?: ConflictedOpNotification[];
+}
+
+/** Result from pull operation - tasks are encrypted blobs used for counting */
+interface PullResult {
+  tasks: { id: string }[];
+  deletedTaskIds: string[];
+  conflicts: ConflictInfo[];
+  serverVectorClock: VectorClock;
+}
+
 interface SyncOperationResult {
-  pushResult: any;
-  pullResult: any;
+  pushResult: PushResult;
+  pullResult: PullResult;
   updatedConfig: NonNullable<Awaited<ReturnType<typeof getSyncConfig>>>;
 }
 
@@ -63,7 +94,7 @@ export class SyncEngine {
   // ============================================================================
 
   /** Check if sync can proceed based on backoff rules */
-  private async checkBackoffStatus(priority: 'user' | 'auto', config: any): Promise<SyncResult | null> {
+  private async checkBackoffStatus(priority: 'user' | 'auto', config: SyncConfig): Promise<SyncResult | null> {
     if (priority === 'auto') {
       const canSync = await this.retryManager.canSyncNow();
       if (!canSync) {
@@ -81,7 +112,7 @@ export class SyncEngine {
   }
 
   /** Validate and prepare sync prerequisites: token, queue optimization, crypto */
-  private async prepareSyncPrerequisites(config: any): Promise<SyncContext> {
+  private async prepareSyncPrerequisites(config: SyncConfig): Promise<SyncContext> {
     const tokenValid = await this.tokenManager.ensureValidToken();
     if (!tokenValid) {
       throw new Error('Failed to refresh authentication token. Please sign in again.');
@@ -105,34 +136,35 @@ export class SyncEngine {
 
   /** Execute push and pull with automatic 401 retry */
   private async executeSyncOperations(
-    config: any,
+    config: SyncConfig,
     syncContext: SyncContext
   ): Promise<SyncOperationResult> {
     const { crypto, api } = syncContext;
 
     try {
       const pushResult = await pushLocalChanges(config, syncContext);
-      let updatedConfig = await getSyncConfig();
+      const updatedConfig = await getSyncConfig();
       if (!updatedConfig || !updatedConfig.enabled) {
         throw new Error('Sync config lost or disabled after push');
       }
 
       const pullResult = await pullRemoteChanges(updatedConfig, syncContext);
       return { pushResult, pullResult, updatedConfig };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return this.handleAuthRetry(error, config, { crypto, api });
     }
   }
 
   /** Handle 401 errors with token refresh and retry */
   private async handleAuthRetry(
-    error: any,
-    config: any,
+    error: unknown,
+    config: SyncConfig,
     syncContext: SyncContext
   ): Promise<SyncOperationResult> {
     const { crypto, api } = syncContext;
 
-    if (!error.message?.includes('401') && !error.message?.toLowerCase().includes('unauthorized')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (!errorMessage.includes('401') && !errorMessage.toLowerCase().includes('unauthorized')) {
       throw error;
     }
 
@@ -162,7 +194,7 @@ export class SyncEngine {
   }
 
   /** Resolve conflicts if needed based on strategy */
-  private async resolveConflicts(pullResult: any, config: any): Promise<number> {
+  private async resolveConflicts(pullResult: PullResult, config: SyncConfig): Promise<number> {
     if (pullResult.conflicts.length === 0 || config.conflictStrategy !== 'last_write_wins') {
       return 0;
     }
@@ -185,13 +217,13 @@ export class SyncEngine {
   }
 
   /** Send user notifications about sync results */
-  private notifySyncResults(pushResult: any, result: SyncResult, priority: 'user' | 'auto'): void {
+  private notifySyncResults(pushResult: PushResult, result: SyncResult, priority: 'user' | 'auto'): void {
     if (priority !== 'user') return;
 
-    if (pushResult.rejectedOps?.length > 0) {
+    if (pushResult.rejectedOps && pushResult.rejectedOps.length > 0) {
       notifyRejectedOperations(pushResult.rejectedOps, { enabled: true });
     }
-    if (pushResult.conflictedOps?.length > 0) {
+    if (pushResult.conflictedOps && pushResult.conflictedOps.length > 0) {
       notifyConflicts(pushResult.conflictedOps, { enabled: true });
     }
     if (result.status === 'success') {
@@ -234,8 +266,8 @@ export class SyncEngine {
       return { status: 'already_running' };
     }
 
-    let pushResult: any = null;
-    let pullResult: any = null;
+    let pushResult: PushResult | null = null;
+    let pullResult: PullResult | null = null;
     let syncStartTime = Date.now();
 
     try {
@@ -303,7 +335,7 @@ export class SyncEngine {
   }
 
   /** Log current config status for debugging */
-  private logConfigStatus(config: any): void {
+  private logConfigStatus(config: SyncConfig): void {
     logger.debug('Sync config loaded', {
       deviceId: config.deviceId,
       userId: config.userId || undefined,
@@ -314,7 +346,7 @@ export class SyncEngine {
   }
 
   /** Log sync timing window for debugging */
-  private logTimingWindow(config: any, syncStartTime: number): void {
+  private logTimingWindow(config: SyncConfig, syncStartTime: number): void {
     logger.debug('Sync timing window captured', {
       syncStartTime,
       previousLastSyncAt: config.lastSyncAt,
@@ -324,11 +356,11 @@ export class SyncEngine {
 
   /** Build the final SyncResult object */
   private buildSyncResult(
-    pushResult: any,
-    pullResult: any,
+    pushResult: PushResult,
+    pullResult: PullResult,
     conflicts: ConflictInfo[],
     conflictsResolved: number,
-    config: any,
+    config: SyncConfig,
     syncEndTime: number
   ): SyncResult {
     return {

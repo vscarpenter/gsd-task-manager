@@ -3,7 +3,7 @@
  * Provides mock data structures, factory functions, and common test helpers
  */
 
-import { vi, expect } from 'vitest';
+import { vi } from 'vitest';
 import type {
   TaskRecord,
   TaskDraft,
@@ -310,6 +310,7 @@ export function createMockSyncHistoryRecord(
  * Create a mock fetch Response object
  */
 export function createMockFetchResponse(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any,
   options?: { ok?: boolean; status?: number; statusText?: string }
 ): Response {
@@ -357,21 +358,27 @@ export function createMockDexieTable<T>() {
   
   return {
     toArray: vi.fn(async () => [...data]),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get: vi.fn(async (id: any) => data.find((item: any) => item.id === id)),
     add: vi.fn(async (item: T) => {
       data.push(item);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (item as any).id;
     }),
     put: vi.fn(async (item: T) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const index = data.findIndex((d: any) => d.id === (item as any).id);
       if (index >= 0) {
         data[index] = item;
       } else {
         data.push(item);
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (item as any).id;
     }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     update: vi.fn(async (id: any, changes: Partial<T>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const index = data.findIndex((item: any) => item.id === id);
       if (index >= 0) {
         data[index] = { ...data[index], ...changes };
@@ -379,7 +386,9 @@ export function createMockDexieTable<T>() {
       }
       return 0;
     }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: vi.fn(async (id: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const index = data.findIndex((item: any) => item.id === id);
       if (index >= 0) {
         data.splice(index, 1);
@@ -505,6 +514,7 @@ export function mockFetch(response: Response | ((url: string, init?: RequestInit
  * Assert that a promise rejects with a specific error message
  */
 export async function expectToReject(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   promise: Promise<any>,
   expectedMessage?: string
 ): Promise<void> {

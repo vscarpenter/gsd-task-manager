@@ -35,6 +35,7 @@ vi.mock('@/lib/db', () => ({
 }));
 
 vi.mock('@/lib/sync/oauth-handshake', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subscribeToOAuthHandshake: (callback: any) => mockSubscribeToOAuthHandshake(callback),
 }));
 
@@ -86,7 +87,9 @@ import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
 describe('SyncAuthDialog', () => {
   let oauthCallback: ((event: OAuthHandshakeEvent) => void) | null = null;
   let unsubscribeFn: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockCryptoManager: any;
 
   beforeEach(() => {

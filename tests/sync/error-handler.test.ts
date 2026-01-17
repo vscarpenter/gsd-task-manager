@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { handleSyncError } from '@/lib/sync/engine/error-handler';
 import { RetryManager } from '@/lib/sync/retry-manager';
 import { TokenManager } from '@/lib/sync/token-manager';
-import { SyncQueue } from '@/lib/sync/queue';
 import * as syncHistory from '@/lib/sync-history';
 
 // Mock dependencies
@@ -47,6 +46,7 @@ describe('error-handler', () => {
       shouldRetry: vi.fn(),
       getNextRetryDelay: vi.fn(),
       canSyncNow: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Create mock token manager
@@ -55,6 +55,7 @@ describe('error-handler', () => {
       ensureValidToken: vi.fn(),
       needsRefresh: vi.fn(),
       getTimeUntilExpiry: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Mock recordSyncError
@@ -413,7 +414,8 @@ describe('error-handler', () => {
         vi.clearAllMocks();
         vi.mocked(mockTokenManager.handleUnauthorized).mockResolvedValue(true);
 
-        const result = await handleSyncError(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _result = await handleSyncError(
           error,
           { accepted: [] },
           { tasks: [] },

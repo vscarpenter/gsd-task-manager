@@ -198,6 +198,7 @@ describe('Sync Config', () => {
 
     it('should initialize crypto with password and salt', async () => {
       const { getCryptoManager } = await import('@/lib/sync/crypto');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockCrypto = (getCryptoManager as any)();
 
       await enableSync(
@@ -263,6 +264,7 @@ describe('Sync Config', () => {
       ]);
 
       const { getSyncQueue } = await import('@/lib/sync/queue');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockQueue = (getSyncQueue as any)();
 
       await enableSync(
@@ -279,6 +281,7 @@ describe('Sync Config', () => {
 
     it('should start health monitor', async () => {
       const { getHealthMonitor } = await import('@/lib/sync/health-monitor');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockMonitor = (getHealthMonitor as any)();
 
       await enableSync(
@@ -361,6 +364,7 @@ describe('Sync Config', () => {
 
     it('should stop health monitor', async () => {
       const { getHealthMonitor } = await import('@/lib/sync/health-monitor');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockMonitor = (getHealthMonitor as any)();
       mockMonitor.isActive.mockReturnValue(true);
 
@@ -371,6 +375,7 @@ describe('Sync Config', () => {
 
     it('should clear crypto manager', async () => {
       const { getCryptoManager } = await import('@/lib/sync/crypto');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockCrypto = (getCryptoManager as any)();
 
       await disableSync();

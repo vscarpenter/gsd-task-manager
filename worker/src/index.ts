@@ -257,20 +257,20 @@ router.delete('/api/devices/:id', async (request: Request, env: Env, executionCt
 router.all('*', () => errorResponse('Not Found', 404));
 
 // Main fetch handler
-export default {
+const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
       // Handle the request with router
       const response = await router.fetch(request, env, ctx);
       return response;
-    } catch (error: any) {
-      logger.error('Worker error', error);
+    } catch (error: unknown) {
+      logger.error('Worker error', error as Error);
       return jsonResponse(
         {
           error: 'Internal Server Error',
           ...(env.ENVIRONMENT === 'development' && {
-            message: error.message,
-            stack: error.stack
+            message: (error as Error).message,
+            stack: (error as Error).stack
           })
         },
         500
@@ -279,6 +279,7 @@ export default {
   },
 
   // Cron trigger for cleanup tasks
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     const { runCleanup } = await import('./handlers/cleanup');
 
@@ -296,3 +297,5 @@ export default {
     }
   },
 };
+
+export default worker;

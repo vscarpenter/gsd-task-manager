@@ -6,6 +6,7 @@ import { getDb } from '@/lib/db';
 vi.mock('@/lib/db');
 
 describe('Notification Settings', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
 
   beforeEach(() => {

@@ -2,7 +2,7 @@
  * Tests for metadata manager - sync configuration and metadata updates
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import {
   updateSyncMetadata,
@@ -348,6 +348,7 @@ describe('MetadataManager', () => {
       await db.syncMetadata.add(createMockSyncConfig({ enabled: true }));
 
       const taskWithoutClock = createMockTask({ id: 'task-1' });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (taskWithoutClock as any).vectorClock;
       await db.tasks.add(taskWithoutClock);
 

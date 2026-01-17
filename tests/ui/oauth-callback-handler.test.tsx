@@ -39,6 +39,7 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@/lib/sync/oauth-handshake', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subscribeToOAuthHandshake: (callback: any) => mockSubscribeToOAuthHandshake(callback),
 }));
 
@@ -52,6 +53,7 @@ import { getDb } from '@/lib/db';
 
 describe('OAuthCallbackHandler', () => {
   let db: ReturnType<typeof getDb>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let oauthCallback: any;
 
   beforeEach(async () => {

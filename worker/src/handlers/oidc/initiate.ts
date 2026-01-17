@@ -108,8 +108,8 @@ export async function initiateOAuth(
     response.headers.append('Set-Cookie', cookie);
 
     return response;
-  } catch (error: any) {
-    logger.error('OAuth initiation failed', error, { provider });
+  } catch (error: unknown) {
+    logger.error('OAuth initiation failed', error as Error, { provider });
     return errorResponse('Failed to initiate OAuth', 500, allowedOrigin || undefined);
   }
 }

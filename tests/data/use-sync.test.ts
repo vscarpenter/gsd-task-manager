@@ -6,6 +6,8 @@ import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
+// Type import used for documentation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { SyncResult } from '@/lib/sync/types';
 
 // Mock the sync modules
@@ -20,9 +22,13 @@ vi.mock('@/lib/sync/config', () => ({
 }));
 
 describe('useSync', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockEngine: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockCoordinator: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockHealthMonitor: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockBackgroundSyncManager: any;
 
   const flushAsync = async () => {

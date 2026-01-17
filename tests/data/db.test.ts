@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getDb } from '@/lib/db';
-import type { TaskRecord } from '@/lib/types';
+import type { TaskRecord, QuadrantId } from '@/lib/types';
 
 describe('Database', () => {
   let db: ReturnType<typeof getDb>;
@@ -716,6 +716,7 @@ describe('Database', () => {
       const retrieved = await db.syncMetadata.get('sync_config');
 
       expect(retrieved).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((retrieved as any)?.userId).toBe('user-123');
     });
   });

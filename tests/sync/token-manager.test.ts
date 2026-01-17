@@ -23,6 +23,7 @@ vi.mock('@/lib/sync/api-client', () => {
 describe('TokenManager', () => {
   let tokenManager: TokenManager;
   let db: ReturnType<typeof getDb>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockApi: any;
 
   beforeEach(async () => {

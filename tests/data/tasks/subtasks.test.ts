@@ -7,7 +7,7 @@ import {
 import { getDb } from '@/lib/db';
 import { getSyncConfig } from '@/lib/sync/config';
 import { getSyncQueue } from '@/lib/sync/queue';
-import type { TaskRecord, Subtask } from '@/lib/types';
+import type { TaskRecord } from '@/lib/types';
 
 // Mock dependencies
 const mockEnqueue = vi.fn();
@@ -39,8 +39,8 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 describe('Task Subtask Operations', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
-  let mockQueue: any;
 
   const baseTask: TaskRecord = {
     id: 'task-1',

@@ -61,12 +61,15 @@ import { recordSyncSuccess } from '@/lib/sync-history';
 // Create mock instances
 const mockCrypto = {
   isInitialized: vi.fn(() => true),
-  encrypt: vi.fn(async (data: string) => ({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  encrypt: vi.fn(async (_data: string) => ({
     ciphertext: 'encrypted',
     nonce: 'nonce',
   })),
-  decrypt: vi.fn(async (data: string) => 'decrypted'),
-  hash: vi.fn(async (data: string) => 'hash'),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  decrypt: vi.fn(async (_data: string) => 'decrypted'),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  hash: vi.fn(async (_data: string) => 'hash'),
 };
 
 const mockApiClient = {
@@ -287,7 +290,9 @@ describe('SyncEngine', () => {
       mockPullResult.conflicts = [
         {
           taskId: 'task-1',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           localVersion: { id: 'task-1', title: 'Local', updatedAt: Date.now() - 1000 } as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           remoteVersion: { id: 'task-1', title: 'Remote', updatedAt: Date.now() } as any,
         },
       ];
@@ -304,7 +309,9 @@ describe('SyncEngine', () => {
       mockPullResult.conflicts = [
         {
           taskId: 'task-1',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           localVersion: { id: 'task-1', title: 'Local', updatedAt: Date.now() - 1000 } as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           remoteVersion: { id: 'task-1', title: 'Remote', updatedAt: Date.now() } as any,
         },
       ];
@@ -330,7 +337,8 @@ describe('SyncEngine', () => {
       const sync1 = engine.sync('user');
       const sync2 = engine.sync('user');
 
-      const [result1, result2] = await Promise.all([sync1, sync2]);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const [_result1, result2] = await Promise.all([sync1, sync2]);
 
       expect(result2.status).toBe('already_running');
     });
@@ -483,7 +491,8 @@ describe('SyncEngine', () => {
       const testError = new Error('Test error');
       vi.mocked(pushLocalChanges).mockRejectedValue(testError);
 
-      const result = await engine.sync('user');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _result = await engine.sync('user');
 
       expect(handleSyncError).toHaveBeenCalledWith(
         testError,
@@ -503,7 +512,8 @@ describe('SyncEngine', () => {
       const testError = new Error('Pull failed');
       vi.mocked(pullRemoteChanges).mockRejectedValue(testError);
 
-      const result = await engine.sync('user');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _result = await engine.sync('user');
 
       expect(handleSyncError).toHaveBeenCalled();
     });

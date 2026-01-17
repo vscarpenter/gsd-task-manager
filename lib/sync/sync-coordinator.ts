@@ -71,7 +71,6 @@ export class SyncCoordinator {
   async getStatus(): Promise<SyncStatus> {
     const config = await this.getSyncConfig();
     const retryCount = await this.retryManager.getRetryCount();
-    const pendingCount = await this.syncQueue.getPendingCount();
 
     return {
       isRunning: this.isRunning,

@@ -6,10 +6,6 @@ import {
 	calculateTagStatistics,
 	getRecurrenceBreakdown,
 	getQuadrantPerformance,
-	type ProductivityMetrics,
-	type TrendDataPoint,
-	type StreakData,
-	type TagStatistic,
 } from "@/lib/analytics";
 import type { TaskRecord } from "@/lib/types";
 

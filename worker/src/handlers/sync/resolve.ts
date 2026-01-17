@@ -53,9 +53,9 @@ export async function resolve(
     logger.info('Conflict resolved', { userId, taskId: validated.taskId });
 
     return jsonResponse({ success: true }, 200, origin);
-  } catch (error: any) {
-    logger.error('Conflict resolution failed', error, { userId: ctx.userId, operation: 'resolve' });
-    if (error.name === 'ZodError') {
+  } catch (error: unknown) {
+    logger.error('Conflict resolution failed', error as Error, { userId: ctx.userId, operation: 'resolve' });
+    if ((error as Error).name === 'ZodError') {
       return errorResponse('Invalid request data', 400, origin);
     }
     return errorResponse('Conflict resolution failed', 500, origin);

@@ -21,7 +21,7 @@ async function validateConnectivity(apiUrl: string): Promise<boolean> {
       console.log(`⚠ Warning: Got status ${response.status}`);
       return false;
     }
-  } catch (error) {
+  } catch {
     console.log('✗ Failed to connect');
     console.log('Continuing anyway - you may need to check your URL later.\n');
     return false;

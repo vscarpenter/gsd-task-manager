@@ -29,6 +29,7 @@ export function generateInsightsSummary(tasks: DecryptedTask[]): string {
 /**
  * Add overall task overview insights
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addOverviewInsights(insights: string[], metrics: any): void {
   insights.push(
     `Task Overview: ${metrics.totalTasks} total tasks (${metrics.activeTasks} active, ${metrics.completedTasks} completed)`
@@ -39,6 +40,7 @@ function addOverviewInsights(insights: string[], metrics: any): void {
 /**
  * Add streak insights
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addStreakInsights(insights: string[], metrics: any): void {
   if (metrics.activeStreak > 0) {
     const streakDays = metrics.activeStreak > 1 ? 's' : '';
@@ -51,6 +53,7 @@ function addStreakInsights(insights: string[], metrics: any): void {
 /**
  * Add recent activity insights
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addActivityInsights(insights: string[], metrics: any): void {
   if (metrics.completedToday > 0) {
     const taskPlural = metrics.completedToday > 1 ? 's' : '';
@@ -61,6 +64,7 @@ function addActivityInsights(insights: string[], metrics: any): void {
 /**
  * Add deadline insights
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addDeadlineInsights(insights: string[], deadlines: any): void {
   if (deadlines.overdue.length > 0) {
     const taskPlural = deadlines.overdue.length > 1 ? 's' : '';
@@ -76,6 +80,7 @@ function addDeadlineInsights(insights: string[], deadlines: any): void {
 /**
  * Add quadrant distribution insights
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addQuadrantInsights(insights: string[], quadrants: any[]): void {
   const topQuadrant = quadrants[0];
   if (topQuadrant && topQuadrant.activeTasks > 0) {
@@ -88,6 +93,7 @@ function addQuadrantInsights(insights: string[], quadrants: any[]): void {
 /**
  * Add tag usage insights
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addTagInsights(insights: string[], metrics: any): void {
   if (metrics.tagStats.length > 0) {
     const topTag = metrics.tagStats[0];

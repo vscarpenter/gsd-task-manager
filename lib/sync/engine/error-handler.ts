@@ -4,7 +4,7 @@
  */
 
 import { getSyncQueue } from '../queue';
-import { categorizeError, type ErrorCategory } from '../error-categorizer';
+import { categorizeError } from '../error-categorizer';
 import { createLogger } from '@/lib/logger';
 import type { RetryManager } from '../retry-manager';
 import type { TokenManager } from '../token-manager';
@@ -14,13 +14,23 @@ import { notifySyncError } from '@/lib/sync/notifications';
 
 const logger = createLogger('SYNC_ERROR');
 
+/** Partial push result for error logging context */
+interface PartialPushResult {
+  accepted: string[];
+}
+
+/** Partial pull result for error logging context */
+interface PartialPullResult {
+  tasks: unknown[];
+}
+
 /**
  * Handle sync error with categorized recovery strategy
  */
 export async function handleSyncError(
   error: unknown,
-  pushResult: any,
-  pullResult: any,
+  pushResult: PartialPushResult | null,
+  pullResult: PartialPullResult | null,
   retryManager: RetryManager,
   tokenManager: TokenManager,
   deviceId: string,

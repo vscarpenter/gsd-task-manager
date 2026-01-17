@@ -65,7 +65,6 @@ export function OAuthCallbackHandler() {
     return () => {
       unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const processAuthData = async (authData: OAuthAuthData, state: string) => {

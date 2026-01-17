@@ -3,7 +3,6 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { useAllTags } from "@/lib/use-all-tags";
 import { createTask } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
-import type { TaskRecord } from "@/lib/types";
 
 describe("useAllTags", () => {
   beforeEach(async () => {

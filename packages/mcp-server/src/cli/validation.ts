@@ -58,7 +58,7 @@ async function validateApiConnection(apiUrl: string): Promise<ValidationCheck> {
         details: `Connected but got status ${response.status}`,
       };
     }
-  } catch (error) {
+  } catch {
     return {
       name: 'API Connectivity',
       status: '✗',
@@ -70,6 +70,7 @@ async function validateApiConnection(apiUrl: string): Promise<ValidationCheck> {
 /**
  * Create sync status check result
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createSyncStatusCheck(status: any): ValidationCheck {
   const hasConflicts = status.conflictCount > 0;
   return {
@@ -149,7 +150,7 @@ async function validateDeviceAccess(config: GsdConfig): Promise<ValidationCheck>
       status: '✓',
       details: `${devices.length} total devices, ${activeDevices} active`,
     };
-  } catch (error) {
+  } catch {
     return {
       name: 'Device Management',
       status: '⚠',

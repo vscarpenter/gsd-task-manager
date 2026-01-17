@@ -18,7 +18,6 @@ import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { useSmartViewShortcuts } from "@/lib/use-smart-view-shortcuts";
 import type { FilterCriteria } from "@/lib/filters";
 import type { SmartView } from "@/lib/filters";
-import type { TaskRecord } from "@/lib/types";
 import { toDraft } from "@/lib/types";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { extractAvailableTags, getFilteredQuadrants, getVisibleTaskCount } from "@/lib/matrix-filters";

@@ -11,6 +11,7 @@
  *
  * @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions.html
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handler(event) {
   var request = event.request;
   var uri = request.uri;

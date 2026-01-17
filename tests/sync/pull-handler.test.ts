@@ -34,16 +34,20 @@ describe('pullRemoteChanges', () => {
     // Create mock crypto manager
     mockCrypto = {
       isInitialized: vi.fn(() => true),
-      encrypt: vi.fn(async (data: string) => ({
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      encrypt: vi.fn(async (_data: string) => ({
         ciphertext: 'encrypted',
         nonce: 'nonce',
       })),
-      decrypt: vi.fn(async (ciphertext: string, nonce: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      decrypt: vi.fn(async (_ciphertext: string, _nonce: string) => {
         // Return a valid task JSON
         const task = createMockTask({ id: 'decrypted-task' });
         return JSON.stringify(task);
       }),
-      hash: vi.fn(async (data: string) => 'hash'),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      hash: vi.fn(async (_data: string) => 'hash'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     // Create mock API client
@@ -51,6 +55,7 @@ describe('pullRemoteChanges', () => {
       setToken: vi.fn(),
       push: vi.fn(),
       pull: vi.fn(async () => createMockPullResponse()),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
     context = {

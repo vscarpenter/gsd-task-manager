@@ -5,11 +5,11 @@ import {
 	ErrorActions,
 	ErrorMessages,
 	type ErrorContext,
-	type LoggedError,
 } from "@/lib/error-logger";
 
 describe("Error Logger module", () => {
 	const originalEnv = process.env.NODE_ENV;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let consoleErrorSpy: any;
 
 	beforeEach(() => {
@@ -140,6 +140,7 @@ describe("Error Logger module", () => {
 			);
 
 			// Should NOT include originalError in production
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const callArgs = consoleErrorSpy.mock.calls[0][1] as any;
 			expect(callArgs.originalError).toBeUndefined();
 		});

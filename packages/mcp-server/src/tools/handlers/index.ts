@@ -55,6 +55,8 @@ export async function handleToolCall(
   isError?: boolean;
 }> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const typedArgs = args as any;
     switch (name) {
       // Read tools
       case 'get_sync_status':
@@ -67,13 +69,13 @@ export async function handleToolCall(
         return await handleGetTaskStats(config);
 
       case 'list_tasks':
-        return await handleListTasks(config, args as any);
+        return await handleListTasks(config, typedArgs);
 
       case 'get_task':
-        return await handleGetTask(config, args as any);
+        return await handleGetTask(config, typedArgs);
 
       case 'search_tasks':
-        return await handleSearchTasks(config, args as any);
+        return await handleSearchTasks(config, typedArgs);
 
       case 'get_token_status':
         return await handleGetTokenStatus(config);
@@ -86,7 +88,7 @@ export async function handleToolCall(
         return await handleGetQuadrantAnalysis(config);
 
       case 'get_tag_analytics':
-        return await handleGetTagAnalytics(config, args as any);
+        return await handleGetTagAnalytics(config, typedArgs);
 
       case 'get_upcoming_deadlines':
         return await handleGetUpcomingDeadlines(config);
@@ -96,29 +98,29 @@ export async function handleToolCall(
 
       // Write tools
       case 'create_task':
-        return await handleCreateTask(config, args as any);
+        return await handleCreateTask(config, typedArgs);
 
       case 'update_task':
-        return await handleUpdateTask(config, args as any);
+        return await handleUpdateTask(config, typedArgs);
 
       case 'complete_task':
-        return await handleCompleteTask(config, args as any);
+        return await handleCompleteTask(config, typedArgs);
 
       case 'delete_task':
-        return await handleDeleteTask(config, args as any);
+        return await handleDeleteTask(config, typedArgs);
 
       case 'bulk_update_tasks':
-        return await handleBulkUpdateTasks(config, args as any);
+        return await handleBulkUpdateTasks(config, typedArgs);
 
       // System tools
       case 'validate_config':
         return await handleValidateConfig(config);
 
       case 'get_help':
-        return await handleGetHelp(args as any);
+        return await handleGetHelp(typedArgs);
 
       case 'get_cache_stats':
-        return await handleGetCacheStats(args as any);
+        return await handleGetCacheStats(typedArgs);
 
       default:
         throw new Error(`Unknown tool: ${name}`);
