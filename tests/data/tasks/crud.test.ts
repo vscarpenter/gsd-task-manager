@@ -56,6 +56,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 describe('Task CRUD Operations', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
 
   const baseDraft: TaskDraft = {

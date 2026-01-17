@@ -13,10 +13,7 @@ import {
   searchTasksTool,
   getTokenStatusTool,
   getProductivityMetricsTool,
-  getQuadrantAnalysisTool,
   getTagAnalyticsTool,
-  getUpcomingDeadlinesTool,
-  getTaskInsightsTool,
   createTaskTool,
   updateTaskTool,
   completeTaskTool,
@@ -212,6 +209,7 @@ describe('Tool Schemas', () => {
     });
 
     it('bulk_update_tasks should have operation type enum', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const operationProp = bulkUpdateTasksTool.inputSchema.properties?.operation as any;
       expect(operationProp).toBeDefined();
       expect(operationProp.properties.type).toHaveProperty('enum');
@@ -238,6 +236,7 @@ describe('Tool Schemas', () => {
     });
 
     it('get_help topic should have valid enum values', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const topicProp = getHelpTool.inputSchema.properties?.topic as any;
       expect(topicProp).toHaveProperty('enum');
       expect(topicProp.enum).toContain('tools');
@@ -256,6 +255,7 @@ describe('Tool Schemas', () => {
 
   describe('Schema Consistency', () => {
     it('quadrant enum should be consistent across tools', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const listTasksQuadrant = (listTasksTool.inputSchema.properties?.quadrant as any)?.enum;
       expect(listTasksQuadrant).toEqual([
         'urgent-important',
@@ -266,14 +266,18 @@ describe('Tool Schemas', () => {
     });
 
     it('recurrence enum should be consistent across tools', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createRecurrence = (createTaskTool.inputSchema.properties?.recurrence as any)?.enum;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateRecurrence = (updateTaskTool.inputSchema.properties?.recurrence as any)?.enum;
       expect(createRecurrence).toEqual(['none', 'daily', 'weekly', 'monthly']);
       expect(updateRecurrence).toEqual(['none', 'daily', 'weekly', 'monthly']);
     });
 
     it('subtasks structure should be consistent across create and update', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createSubtasks = createTaskTool.inputSchema.properties?.subtasks as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateSubtasks = updateTaskTool.inputSchema.properties?.subtasks as any;
 
       expect(createSubtasks.items.properties).toHaveProperty('title');

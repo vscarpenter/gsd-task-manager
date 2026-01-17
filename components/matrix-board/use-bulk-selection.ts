@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import type { TaskRecord, QuadrantId } from "@/lib/types";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
@@ -13,17 +13,14 @@ export function useBulkSelection(
   allTasks: TaskRecord[],
   onOpenBulkTagDialog: () => void
 ) {
-  const [selectionMode, setSelectionMode] = useState(false);
+  const [manualSelectionMode, setManualSelectionMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
   const { handleError } = useErrorHandlerWithUndo();
 
-  // Auto-enable selection mode when first task is selected
-  useEffect(() => {
-    if (selectedTaskIds.size > 0 && !selectionMode) {
-      setSelectionMode(true);
-    }
-  }, [selectedTaskIds.size, selectionMode]);
+  // Derive selectionMode: true if manually enabled OR if any tasks are selected
+  const selectionMode = manualSelectionMode || selectedTaskIds.size > 0;
+  const setSelectionMode = setManualSelectionMode;
 
   const handleToggleSelect = useCallback((task: TaskRecord) => {
     setSelectedTaskIds(prev => {
@@ -39,11 +36,11 @@ export function useBulkSelection(
 
   const handleClearSelection = useCallback(() => {
     bulkOps.clearSelection(setSelectedTaskIds, setSelectionMode);
-  }, []);
+  }, [setSelectionMode]);
 
   const handleToggleSelectionMode = useCallback(() => {
     bulkOps.toggleSelectionMode(selectionMode, handleClearSelection, setSelectionMode);
-  }, [selectionMode, handleClearSelection]);
+  }, [selectionMode, handleClearSelection, setSelectionMode]);
 
   const handleBulkDelete = useCallback(async () => {
     await bulkOps.bulkDelete(

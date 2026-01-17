@@ -13,6 +13,7 @@ vi.mock('@/lib/db');
 vi.mock('@/lib/logger');
 
 describe('Task Import/Export Operations', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
 
   const sampleTask1: TaskRecord = {
@@ -125,6 +126,7 @@ describe('Task Import/Export Operations', () => {
 
     it('should throw error on invalid task data', async () => {
       // Task with extra fields that violate schema
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const taskWithExtra = { ...sampleTask1, extraField: 'should-cause-error' } as any;
       mockDb.tasks.toArray.mockResolvedValue([taskWithExtra]);
 
@@ -248,6 +250,7 @@ describe('Task Import/Export Operations', () => {
         tasks: [{ id: '1', title: 'Invalid' }], // Missing required fields
         exportedAt: '2025-01-17T10:00:00Z',
         version: '1.0.0',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       await expect(importTasks(invalidPayload, 'replace')).rejects.toThrow();

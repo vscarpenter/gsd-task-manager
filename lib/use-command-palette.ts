@@ -17,6 +17,14 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
   const [search, setSearch] = useState('');
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
 
+  // Reset search when closing
+  useEffect(() => {
+    if (!open) {
+      setSearch('');
+      setSelectedActionId(null);
+    }
+  }, [open]);
+
   // Open/close with ⌘K / Ctrl+K
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -33,14 +41,6 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [open]);
-
-  // Reset search when closing
-  useEffect(() => {
-    if (!open) {
-      setSearch('');
-      setSelectedActionId(null);
-    }
   }, [open]);
 
   // Filter actions by search query

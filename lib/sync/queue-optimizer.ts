@@ -4,7 +4,6 @@
  */
 
 import { getDb } from '@/lib/db';
-import type { SyncQueueItem } from './types';
 import { mergeVectorClocks } from './vector-clock';
 import { createLogger } from '@/lib/logger';
 
@@ -139,7 +138,7 @@ export class QueueOptimizer {
       taskCounts.set(op.taskId, (taskCounts.get(op.taskId) || 0) + 1);
     }
 
-    const duplicateTasks = Array.from(taskCounts.entries()).filter(([_, count]) => count > 1);
+    const duplicateTasks = Array.from(taskCounts.entries()).filter(([, count]) => count > 1);
     if (duplicateTasks.length > 0) {
       logger.debug('Tasks with multiple operations found', {
         duplicateTaskCount: duplicateTasks.length,

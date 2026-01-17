@@ -38,7 +38,9 @@ describe('OAuth Security - Origin Validation', () => {
   });
 
   it('should reject null or undefined origins', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(isOAuthOriginAllowed(null as any)).toBe(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(isOAuthOriginAllowed(undefined as any)).toBe(false);
   });
 

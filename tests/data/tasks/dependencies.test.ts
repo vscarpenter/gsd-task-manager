@@ -39,7 +39,9 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 describe('Task Dependency Operations', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   let mockQueue: any;
 
   const baseTask: TaskRecord = {
@@ -317,6 +319,7 @@ describe('Task Dependency Operations', () => {
     });
 
     it('should handle task with undefined dependencies array', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const task1 = { ...baseTask, id: 'task-1', dependencies: undefined } as any;
       const taskTarget = { ...baseTask, id: 'task-target', dependencies: [] };
 

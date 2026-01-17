@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 // Get token from Claude Desktop config
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path');
 
 const configPath = path.join(

@@ -120,7 +120,7 @@ export class CryptoManager {
 
       const decoder = new TextDecoder();
       return decoder.decode(plaintextBuffer);
-    } catch (error) {
+    } catch {
       throw new Error(
         'Decryption failed - data may be corrupted or passphrase is incorrect'
       );

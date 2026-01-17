@@ -43,6 +43,7 @@ export const securityHeaders = {
 };
 
 // Helper to create JSON response with proper headers
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function jsonResponse(data: any, status = 200, origin?: string | null): Response {
   const headers = new Headers();
   headers.set('Content-Type', 'application/json; charset=utf-8');

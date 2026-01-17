@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { CompletionChart } from '@/components/dashboard/completion-chart';
 import { QuadrantDistribution } from '@/components/dashboard/quadrant-distribution';

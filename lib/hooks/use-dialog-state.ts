@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+
+// Check if we're in a browser environment
+const isBrowser = typeof window !== "undefined";
 
 /**
  * Common state management for dialog components
@@ -55,12 +58,8 @@ export interface UseDialogStateResult {
 export function useDialogState(): UseDialogStateResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  // Track component mount for SSR hydration
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Initialize mounted based on whether we're in browser (avoids useEffect)
+  const [mounted] = useState(() => isBrowser);
 
   const clearError = useCallback(() => {
     setError(null);

@@ -8,7 +8,6 @@ import { autoResolveConflicts } from '@/lib/sync/engine/conflict-resolver';
 import { compareVectorClocks, mergeVectorClocks } from '@/lib/sync/vector-clock';
 import {
   createMockTask,
-  createMockConflictInfo,
   createMockVectorClock,
   mockConsole,
 } from '../fixtures';
@@ -204,6 +203,7 @@ describe('Conflict Resolution', () => {
     it('should skip conflicts with missing local data', async () => {
       const conflict: ConflictInfo = {
         taskId: 'task-5',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         local: null as any, // missing local
         remote: createMockTask({ id: 'task-5' }),
         localClock: createMockVectorClock(),
@@ -223,6 +223,7 @@ describe('Conflict Resolution', () => {
       const conflict: ConflictInfo = {
         taskId: 'task-6',
         local: createMockTask({ id: 'task-6' }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         remote: null as any, // missing remote
         localClock: createMockVectorClock(),
         remoteClock: createMockVectorClock(),
@@ -264,6 +265,7 @@ describe('Conflict Resolution', () => {
       const conflicts: ConflictInfo[] = [
         {
           taskId: 'task-8',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           local: null as any, // will fail
           remote: createMockTask({ id: 'task-8' }),
           localClock: createMockVectorClock(),

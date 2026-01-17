@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getHealthMonitor } from '@/lib/sync/health-monitor';
+import { getHealthMonitor, type HealthIssue } from '@/lib/sync/health-monitor';
 import { SYNC_CONFIG, SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 
 interface SyncHealthOptions {
@@ -39,7 +39,7 @@ export function useSyncHealth({ isEnabled, onHealthIssue, onSync }: SyncHealthOp
       }
     };
 
-    const handleHealthIssues = (issues: any[], now: number) => {
+    const handleHealthIssues = (issues: HealthIssue[], now: number) => {
       for (const issue of issues) {
         if (shouldShowErrorIssue(issue)) {
           showErrorIssue(issue);
@@ -51,20 +51,20 @@ export function useSyncHealth({ isEnabled, onHealthIssue, onSync }: SyncHealthOp
       }
     };
 
-    const shouldShowErrorIssue = (issue: any) => {
+    const shouldShowErrorIssue = (issue: HealthIssue) => {
       return issue.severity === 'error';
     };
 
-    const shouldShowStaleQueueWarning = (issue: any) => {
+    const shouldShowStaleQueueWarning = (issue: HealthIssue) => {
       return issue.severity === 'warning' && issue.type === 'stale_queue';
     };
 
-    const showErrorIssue = (issue: any) => {
+    const showErrorIssue = (issue: HealthIssue) => {
       const message = `${issue.message}. ${issue.suggestedAction}`;
       onHealthIssue(message, undefined, SYNC_TOAST_DURATION.LONG);
     };
 
-    const showStaleQueueWarning = (issue: any) => {
+    const showStaleQueueWarning = (issue: HealthIssue) => {
       onHealthIssue(
         issue.message,
         {

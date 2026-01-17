@@ -4,7 +4,6 @@ import { memo } from "react";
 import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon, CopyIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { TaskRecord } from "@/lib/types";
 import { formatDueDate, cn, isOverdue, isDueToday } from "@/lib/utils";
 import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
 import { SnoozeDropdown } from "@/components/snooze-dropdown";

@@ -90,7 +90,9 @@ export async function clearStuckOperations() {
  */
 export function installSyncDebugTools() {
   if (typeof window !== 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).debugSyncQueue = debugSyncQueue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).clearStuckOperations = clearStuckOperations;
     console.log('[SYNC DEBUG] Debug tools installed. Available functions:');
     console.log('  - debugSyncQueue()');

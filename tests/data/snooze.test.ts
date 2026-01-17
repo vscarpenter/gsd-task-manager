@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { snoozeTask, clearSnooze, isTaskSnoozed, getRemainingSnoozeMinutes } from '@/lib/tasks/crud/snooze';
 import { TIME_TRACKING } from '@/lib/constants';
 import type { TaskRecord } from '@/lib/types';
-import { getDb } from '@/lib/db';
 
 // Mock dependencies
 const mockPut = vi.fn();

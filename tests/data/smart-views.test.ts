@@ -8,7 +8,6 @@ import {
   clearCustomSmartViews,
 } from '@/lib/smart-views';
 import { getDb } from '@/lib/db';
-import type { SmartView } from '@/lib/filters';
 
 // Mock nanoid to get predictable IDs
 vi.mock('nanoid', () => ({

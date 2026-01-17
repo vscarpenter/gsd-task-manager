@@ -97,6 +97,7 @@ export async function pull(
       .all();
 
     response.deletedTaskIds = (deletedTasks.results || []).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (t: any) => t.id as string
     );
 
@@ -140,9 +141,9 @@ export async function pull(
     });
 
     return jsonResponse(response, 200, origin);
-  } catch (error: any) {
-    logger.error('Pull failed', error, { userId: ctx.userId, operation: 'pull' });
-    if (error.name === 'ZodError') {
+  } catch (error: unknown) {
+    logger.error('Pull failed', error as Error, { userId: ctx.userId, operation: 'pull' });
+    if ((error as Error).name === 'ZodError') {
       return errorResponse('Invalid request data', 400, origin);
     }
     return errorResponse('Pull failed', 500, origin);

@@ -8,7 +8,7 @@ import {
 } from '@/lib/tasks/crud/time-tracking';
 import { formatDuration } from '@/lib/analytics/time-tracking';
 import { TIME_TRACKING } from '@/lib/constants';
-import type { TaskRecord, TimeEntry } from '@/lib/types';
+import type { TaskRecord } from '@/lib/types';
 
 // Mock the logger
 vi.mock('@/lib/logger', () => ({

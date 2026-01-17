@@ -9,7 +9,6 @@
  */
 
 import type { TaskRecord, QuadrantId } from "@/lib/types";
-import { TIME_TRACKING } from "@/lib/constants";
 import { formatTimeSpent } from "@/lib/tasks/crud/time-tracking";
 
 /** Summary of time tracking data */

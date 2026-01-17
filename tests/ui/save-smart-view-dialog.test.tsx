@@ -8,6 +8,7 @@ import type { FilterCriteria } from "@/lib/filters";
 const mockCreateSmartView = vi.fn();
 
 vi.mock("@/lib/smart-views", () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createSmartView: (view: any) => mockCreateSmartView(view)
 }));
 
@@ -211,8 +212,8 @@ describe("SaveSmartViewDialog", () => {
     });
 
     // Re-open dialog to check if form is reset
-    const { rerender } = render(<SaveSmartViewDialog {...defaultProps} open={true} />);
-    
+    render(<SaveSmartViewDialog {...defaultProps} open={true} />);
+
     expect(screen.getByLabelText(/name/i)).toHaveValue("");
     expect(screen.getByLabelText(/description/i)).toHaveValue("");
     expect(screen.getByLabelText(/icon/i)).toHaveValue("");

@@ -7,7 +7,15 @@ import type { QuadrantId, TaskDraft, TaskRecord } from "@/lib/types";
 import { deleteTask, toggleCompleted, moveTaskToQuadrant, updateTask } from "@/lib/tasks";
 import { quadrants } from "@/lib/quadrants";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
-import { TOAST_DURATION } from "@/lib/constants";
+
+/**
+ * Context object passed to error handlers for bulk operations
+ */
+interface BulkErrorContext {
+  action: string;
+  userMessage: string;
+  timestamp: string;
+}
 
 /**
  * Clear selection state and exit selection mode.
@@ -45,7 +53,7 @@ export async function bulkDelete(
   selectedTaskIds: Set<string>,
   allTasks: TaskRecord[],
   onSuccess: (message: string) => void,
-  onError: (error: unknown, context: any) => void
+  onError: (error: unknown, context: BulkErrorContext) => void
 ): Promise<void> {
   if (selectedTaskIds.size === 0) return;
 
@@ -72,7 +80,7 @@ export async function bulkComplete(
   selectedTaskIds: Set<string>,
   allTasks: TaskRecord[],
   onSuccess: (message: string) => void,
-  onError: (error: unknown, context: any) => void
+  onError: (error: unknown, context: BulkErrorContext) => void
 ): Promise<void> {
   if (selectedTaskIds.size === 0) return;
 
@@ -99,7 +107,7 @@ export async function bulkUncomplete(
   selectedTaskIds: Set<string>,
   allTasks: TaskRecord[],
   onSuccess: (message: string) => void,
-  onError: (error: unknown, context: any) => void
+  onError: (error: unknown, context: BulkErrorContext) => void
 ): Promise<void> {
   if (selectedTaskIds.size === 0) return;
 
@@ -126,7 +134,7 @@ export async function bulkMoveToQuadrant(
   allTasks: TaskRecord[],
   quadrantId: QuadrantId,
   onSuccess: (message: string) => void,
-  onError: (error: unknown, context: any) => void
+  onError: (error: unknown, context: BulkErrorContext) => void
 ): Promise<void> {
   if (selectedTaskIds.size === 0) return;
 
@@ -156,7 +164,7 @@ export async function bulkAddTags(
   allTasks: TaskRecord[],
   toDraft: (task: TaskRecord) => TaskDraft,
   onSuccess: (message: string) => void,
-  onError: (error: unknown, context: any) => void
+  onError: (error: unknown, context: BulkErrorContext) => void
 ): Promise<void> {
   if (selectedTaskIds.size === 0 || tagsToAdd.length === 0) return;
 

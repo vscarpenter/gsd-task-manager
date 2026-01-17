@@ -25,6 +25,7 @@ const {
 
 // Mock modules
 vi.mock('@/lib/sync/oauth-handshake', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subscribeToOAuthHandshake: (callback: any) => mockSubscribeToOAuthHandshake(callback),
 }));
 
@@ -61,6 +62,7 @@ describe('OAuthButtons', () => {
       focus: vi.fn(),
       close: vi.fn(),
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     global.window.open = mockWindowOpen as any;
 
     // Setup default mock implementations
@@ -510,7 +512,9 @@ describe('OAuthButtons', () => {
       mockCanUsePopups.mockReturnValue(false);
 
       // Mock window.location.href
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).location;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       window.location = { href: '' } as any;
 
       render(<OAuthButtons />);

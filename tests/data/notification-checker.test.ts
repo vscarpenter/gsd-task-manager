@@ -26,6 +26,7 @@ vi.mock("@/lib/notifications", () => ({
 }));
 
 describe("NotificationChecker", () => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let mockDb: any;
 	let mockTasks: TaskRecord[];
 
@@ -98,7 +99,9 @@ describe("NotificationChecker", () => {
 		notificationChecker.stop();
 		// Reset the singleton's internal state by accessing private properties
 		// This is necessary because the checker is a singleton
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(notificationChecker as any).lastCheck = null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(notificationChecker as any).isChecking = false;
 	});
 
@@ -341,6 +344,7 @@ describe("NotificationChecker", () => {
 			vi.setSystemTime(now);
 
 			// Set the isChecking flag manually to simulate an ongoing check
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(notificationChecker as any).isChecking = true;
 
 			// Try to start a check while one is "in progress"
@@ -350,6 +354,7 @@ describe("NotificationChecker", () => {
 			expect(mockDb.tasks.toArray).not.toHaveBeenCalled();
 
 			// Reset the flag
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(notificationChecker as any).isChecking = false;
 		});
 

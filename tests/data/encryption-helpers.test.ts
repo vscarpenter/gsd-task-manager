@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validatePassphrase, getOrCreateSalt, buildSaltApiUrl } from '@/lib/sync/encryption-helpers';
+import { validatePassphrase, getOrCreateSalt } from '@/lib/sync/encryption-helpers';
 
 describe('validatePassphrase', () => {
   it('returns valid when passphrase meets minimum length', () => {

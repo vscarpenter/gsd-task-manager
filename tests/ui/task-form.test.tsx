@@ -379,15 +379,15 @@ describe("TaskForm", () => {
     const user = userEvent.setup();
     render(<TaskForm {...defaultHandlers} />);
 
-    // Try to add empty tag
-    const tagInput = screen.getByPlaceholderText(/add tag/i);
+    // Try to add empty tag - focus input first by getting it
+    screen.getByPlaceholderText(/add tag/i);
     await user.keyboard("{Enter}");
 
     // Should not add any tags
     expect(screen.queryByRole("button", { name: /remove .* tag/i })).not.toBeInTheDocument();
 
-    // Try to add empty subtask
-    const subtaskInput = screen.getByPlaceholderText(/add subtask/i);
+    // Try to add empty subtask - focus input first by getting it
+    screen.getByPlaceholderText(/add subtask/i);
     await user.keyboard("{Enter}");
 
     // Should not add any subtasks

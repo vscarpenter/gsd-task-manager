@@ -112,6 +112,7 @@ export async function restoreTask(taskId: string): Promise<void> {
   const vectorClock = incrementVectorClock(archivedTask.vectorClock || {}, deviceId);
 
   // Remove archivedAt timestamp and update vector clock
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { archivedAt: _archivedAt, ...taskWithoutArchive } = {
     ...archivedTask,
     vectorClock

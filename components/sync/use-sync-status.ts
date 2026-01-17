@@ -84,21 +84,23 @@ export function useSyncStatus({
     return () => clearInterval(interval);
   }, [nextRetryAt]);
 
-  // Detect authentication errors
+  // Detect authentication errors - derive from error state
+  const authErrorDetected = error ? isAuthError(new Error(error)) : false;
+
+  // Update hasAuthError state and trigger callback when auth error is detected
   useEffect(() => {
     if (!error) {
-      setHasAuthError(false);
+      if (hasAuthError) {
+        setHasAuthError(false);
+      }
       return;
     }
 
-    const errorObj = new Error(error);
-    const authErrorDetected = isAuthError(errorObj);
-
-    if (authErrorDetected) {
+    if (authErrorDetected && !hasAuthError) {
       setHasAuthError(true);
       onAuthError(error, undefined, SYNC_TOAST_DURATION.LONG);
     }
-  }, [error, onAuthError]);
+  }, [error, authErrorDetected, hasAuthError, onAuthError]);
 
   const iconType = getIconType({
     isEnabled,

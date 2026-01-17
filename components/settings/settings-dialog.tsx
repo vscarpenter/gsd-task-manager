@@ -60,29 +60,34 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
 	const { all: tasks } = useTasks();
 	const router = useRouter();
-	const [mounted, setMounted] = useState(false);
 	const [notificationSettings, setNotificationSettings] =
 		useState<NotificationSettings | null>(null);
 	const [syncEnabled, setSyncEnabled] = useState(false);
 	const [pendingSync, setPendingSync] = useState(0);
+	const [dataLoaded, setDataLoaded] = useState(false);
 
+	useEffect(() => {
+		let cancelled = false;
+		const loadData = async () => {
+			const [settings, status] = await Promise.all([
+				getNotificationSettings(),
+				getSyncStatus(),
+			]);
+			if (!cancelled) {
+				setNotificationSettings(settings);
+				setSyncEnabled(status.enabled);
+				setPendingSync(status.pendingCount);
+				setDataLoaded(true);
+			}
+		};
+		loadData();
+		return () => { cancelled = true; };
+	}, []);
 
 	const loadNotificationSettings = async () => {
 		const settings = await getNotificationSettings();
 		setNotificationSettings(settings);
 	};
-
-	const loadSyncStatus = async () => {
-		const status = await getSyncStatus();
-		setSyncEnabled(status.enabled);
-		setPendingSync(status.pendingCount);
-	};
-
-	useEffect(() => {
-		setMounted(true);
-		loadNotificationSettings();
-		loadSyncStatus();
-	}, []);
 
 	const handleNotificationToggle = async () => {
 		if (!notificationSettings) return;
@@ -137,7 +142,7 @@ export function SettingsDialog({
 	const completedTasks = tasks.filter((t) => t.completed).length;
 	const estimatedSize = (JSON.stringify(tasks).length / 1024).toFixed(1);
 
-	if (!mounted) {
+	if (!dataLoaded) {
 		return null; // Prevent SSR mismatch
 	}
 

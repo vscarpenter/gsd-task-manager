@@ -47,6 +47,7 @@
         "baseline-browser-mapping": "^2.9.11",
         "eslint": "^9.39.2",
         "eslint-config-next": "16.1.1",
+        "eslint-plugin-react-hooks": "7",
         "fake-indexeddb": "^6.2.5",
         "jsdom": "^27.4.0",
         "postcss": "^8.5.6",

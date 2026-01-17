@@ -16,14 +16,17 @@ describe("useViewTransition", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Save original startViewTransition if it exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     originalStartViewTransition = (document as any).startViewTransition;
   });
 
   afterEach(() => {
     // Restore original startViewTransition
     if (originalStartViewTransition) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (document as any).startViewTransition = originalStartViewTransition;
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (document as any).startViewTransition;
     }
   });
@@ -39,6 +42,7 @@ describe("useViewTransition", () => {
 
   it("detects when View Transition API is not supported", () => {
     // Ensure startViewTransition is not available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (document as any).startViewTransition;
 
     const { result } = renderHook(() => useViewTransition());
@@ -61,6 +65,7 @@ describe("useViewTransition", () => {
       };
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (document as any).startViewTransition = mockStartViewTransition;
 
     const { result } = renderHook(() => useViewTransition());
@@ -75,6 +80,7 @@ describe("useViewTransition", () => {
   });
 
   it("normalizes routes by adding trailing slash", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (document as any).startViewTransition;
 
     const { result } = renderHook(() => useViewTransition());
@@ -87,6 +93,7 @@ describe("useViewTransition", () => {
   });
 
   it("does not add trailing slash to root route", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (document as any).startViewTransition;
 
     const { result } = renderHook(() => useViewTransition());
@@ -99,6 +106,7 @@ describe("useViewTransition", () => {
   });
 
   it("does not add trailing slash if already present", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (document as any).startViewTransition;
 
     const { result } = renderHook(() => useViewTransition());
@@ -122,6 +130,7 @@ describe("useViewTransition", () => {
       };
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (document as any).startViewTransition = mockStartViewTransition;
 
     const { result } = renderHook(() => useViewTransition());
@@ -136,6 +145,7 @@ describe("useViewTransition", () => {
   });
 
   it("handles navigation without View Transition API gracefully", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (document as any).startViewTransition;
 
     const { result } = renderHook(() => useViewTransition());

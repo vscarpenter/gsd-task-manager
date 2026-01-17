@@ -33,7 +33,14 @@ export function SmartViewPills({
   };
 
   useEffect(() => {
-    loadPinnedViews();
+    let cancelled = false;
+    const loadInitialViews = async () => {
+      const views = await getPinnedSmartViews();
+      if (!cancelled) {
+        setPinnedViews(views);
+      }
+    };
+    loadInitialViews();
 
     // Listen for changes to pinned views (when user pins/unpins from selector)
     const handlePinnedViewsChanged = () => {
@@ -41,7 +48,10 @@ export function SmartViewPills({
     };
 
     window.addEventListener('pinnedViewsChanged', handlePinnedViewsChanged);
-    return () => window.removeEventListener('pinnedViewsChanged', handlePinnedViewsChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('pinnedViewsChanged', handlePinnedViewsChanged);
+    };
   }, []);
 
   const handleSelectView = (view: SmartView) => {

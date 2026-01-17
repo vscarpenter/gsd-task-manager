@@ -210,11 +210,12 @@ export async function pushLocalChanges(
         operation: op?.operation,
       };
     }),
-    conflictedOps: response.conflicts.map((c: any) => {
+    conflictedOps: response.conflicts.map((c: { taskId: string }) => {
       const op = pendingOps.find(o => o.taskId === c.taskId);
       return {
-        ...c,
+        taskId: c.taskId,
         operation: op?.operation,
+        reason: 'concurrent_edit',
       };
     }),
   };

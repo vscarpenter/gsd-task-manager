@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { getSyncQueue } from '@/lib/sync/queue';
-import { getDb } from '@/lib/db';
 import type { SyncQueueItem } from '@/lib/sync/types';
 
 export function SyncDebugPanel() {
