@@ -345,8 +345,16 @@ describe('EncryptionPassphraseDialog', () => {
 
       // Error should be logged but no user toast
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[SYNC] Auto-sync after encryption setup failed:',
-        expect.any(Error)
+        '[SYNC_CRYPTO]',
+        expect.objectContaining({
+          context: 'SYNC_CRYPTO',
+          level: 'ERROR',
+          message: 'Auto-sync after encryption setup failed',
+          metadata: expect.objectContaining({
+            errorMessage: 'Sync failed',
+            errorType: 'Error',
+          }),
+        })
       );
 
       // Only the success toast from queueing, no error toast

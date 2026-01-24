@@ -206,7 +206,24 @@ export function generateEncryptionSalt(): Uint8Array {
 
 /**
  * Store encryption key and salt in IndexedDB
- * Key is exported as JWK and stored securely (IndexedDB only, never sent to server)
+ *
+ * SECURITY NOTE: Salt Storage Architecture
+ * ----------------------------------------
+ * The salt is stored in IndexedDB and synced to the server during sync operations.
+ * This is intentional to enable multi-device decryption. The threat model accepts that:
+ *
+ * 1. If the server is compromised, attackers gain access to encrypted blobs + salts
+ * 2. However, they still need the user's passphrase to derive the encryption key
+ * 3. With PBKDF2 at 600K iterations, brute-force attacks are computationally expensive
+ * 4. The passphrase never leaves the client and is never transmitted
+ *
+ * Alternative architectures considered:
+ * - Separate salts for local/server: Would break multi-device sync
+ * - Client-only salt: Would prevent data recovery on new devices
+ * - Server-derived salt: Would require server to participate in encryption (breaks zero-knowledge)
+ *
+ * Current approach prioritizes: Usability + Multi-device + Zero-knowledge architecture
+ * Trade-off: Server compromise exposes salts (but not keys or plaintext data)
  */
 export async function storeEncryptionConfig(
   passphrase: string,
@@ -220,7 +237,8 @@ export async function storeEncryptionConfig(
   const saltBase64 = btoa(String.fromCharCode(...salt));
   await cryptoManager.deriveKey(passphrase, saltBase64);
 
-  // Store salt in sync metadata (we need it for future key derivations)
+  // Store salt in sync metadata (synced to server for multi-device support)
+  // The passphrase is NEVER stored or transmitted - only the salt
   await db.syncMetadata.put({
     key: 'encryption_salt',
     value: { salt: Array.from(salt) },

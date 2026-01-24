@@ -1,5 +1,7 @@
 import type { Env } from '../../types';
 import { createLogger } from '../../utils/logger';
+import { getCookie } from '../../utils/cookies';
+import { OAUTH_COOKIE } from '../../config';
 
 const logger = createLogger('OIDC:StateValidator');
 
@@ -87,6 +89,40 @@ export async function validateOAuthState(
     return {
       success: false,
       error: 'OAuth session invalid or expired. Please retry sign in.',
+      statusCode: 400,
+    };
+  }
+
+  // Verify session cookie matches stored sessionId (cryptographic binding)
+  // This prevents OAuth CSRF attacks where an attacker tricks a victim into using a pre-generated state
+  const cookieHeader = request.headers.get('Cookie');
+  const sessionCookie = getCookie(cookieHeader, OAUTH_COOKIE.name);
+
+  if (!sessionCookie) {
+    logger.warn('OAuth session cookie missing - possible CSRF attempt', {
+      statePrefix: state.substring(0, 8) + '...',
+      hasCookieHeader: !!cookieHeader,
+      userAgent: request.headers.get('User-Agent'),
+    });
+
+    return {
+      success: false,
+      error: 'Session verification failed. Please ensure cookies are enabled and try again.',
+      statusCode: 400,
+    };
+  }
+
+  if (sessionCookie !== stateData.sessionId) {
+    logger.warn('OAuth session cookie mismatch - possible CSRF attempt', {
+      statePrefix: state.substring(0, 8) + '...',
+      storedSessionPrefix: stateData.sessionId.substring(0, 8) + '...',
+      cookieSessionPrefix: sessionCookie.substring(0, 8) + '...',
+      userAgent: request.headers.get('User-Agent'),
+    });
+
+    return {
+      success: false,
+      error: 'Session verification failed. Please try signing in again.',
       statusCode: 400,
     };
   }

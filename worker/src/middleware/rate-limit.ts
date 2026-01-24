@@ -54,15 +54,33 @@ export const rateLimitMiddleware = async (
 ): Promise<Response | void> => {
   const url = new URL(request.url);
   const path = url.pathname;
-  const userId = ctx.userId || 'anonymous';
+
+  // Use userId if authenticated, otherwise use client IP for rate limiting
+  // This prevents all anonymous users from sharing a single rate limit bucket
+  // which could be exploited for DoS or cause legitimate users to be blocked
+  const clientIp = request.headers.get('CF-Connecting-IP') ||
+                   request.headers.get('X-Real-IP') ||
+                   request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim();
+
+  const rateLimitKey = ctx.userId || clientIp || 'anonymous';
+  const isAnonymous = !ctx.userId;
 
   // Get rate limit config for this endpoint
-  const config = rateLimits[path] || rateLimits.default;
+  // Apply stricter limits for anonymous/unauthenticated requests
+  let config = rateLimits[path] || rateLimits.default;
 
-  // Create rate limit key
+  if (isAnonymous && !path.includes('/auth/')) {
+    // Non-auth endpoints get stricter limits for anonymous users
+    config = {
+      maxRequests: Math.floor(config.maxRequests / 2),
+      windowSeconds: config.windowSeconds,
+    };
+  }
+
+  // Create rate limit key based on user ID or client IP
   const now = Math.floor(Date.now() / 1000);
   const window = Math.floor(now / config.windowSeconds);
-  const key = `ratelimit:${userId}:${path}:${window}`;
+  const key = `ratelimit:${rateLimitKey}:${path}:${window}`;
 
   // Get current count from KV
   const currentCount = await env.KV.get(key);
@@ -72,8 +90,8 @@ export const rateLimitMiddleware = async (
   if (count >= config.maxRequests) {
     const retryAfter = config.windowSeconds - (now % config.windowSeconds);
 
-    // Track consecutive blocks for this user/path to detect brute-force patterns
-    const blockKey = `ratelimit:blocked:${userId}:${path}`;
+    // Track consecutive blocks for this user/IP/path to detect brute-force patterns
+    const blockKey = `ratelimit:blocked:${rateLimitKey}:${path}`;
     const blockedCountStr = await env.KV.get(blockKey);
     const blockedCount = blockedCountStr ? Number.parseInt(blockedCountStr, 10) + 1 : 1;
 
@@ -84,11 +102,13 @@ export const rateLimitMiddleware = async (
     // Log rate limit violation with security context
     const isAuthEndpoint = path.includes('/auth/');
     const logContext = {
-      userId: userId === 'anonymous' ? undefined : userId,
+      userId: ctx.userId,
+      clientIp: isAnonymous ? rateLimitKey : undefined,
       path,
       blockedCount,
       windowSeconds: config.windowSeconds,
       isAuthEndpoint,
+      isAnonymous,
     };
 
     if (blockedCount >= SECURITY_THRESHOLDS.BLOCKED_ESCALATION) {
@@ -125,11 +145,13 @@ export const rateLimitMiddleware = async (
   const usagePercent = (count / config.maxRequests) * 100;
   if (usagePercent >= SECURITY_THRESHOLDS.WARNING_PERCENT && count === Math.floor(config.maxRequests * 0.8)) {
     logger.info('Rate limit warning: approaching limit', {
-      userId: userId === 'anonymous' ? undefined : userId,
+      userId: ctx.userId,
+      clientIp: isAnonymous ? rateLimitKey : undefined,
       path,
       currentCount: count,
       maxRequests: config.maxRequests,
       usagePercent: Math.round(usagePercent),
+      isAnonymous,
     });
   }
 
