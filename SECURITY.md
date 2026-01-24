@@ -51,15 +51,23 @@ When users enable cloud sync, the following security measures protect their data
 
 2. **Key Derivation: PBKDF2**
    - 600,000 iterations (OWASP 2023 recommendation)
-   - User passphrase + server-provided salt
-   - Salt stored encrypted in Cloudflare D1 (useless without passphrase)
-   - Keys never leave user's device
+   - User passphrase + randomly generated salt
+   - Salt synced to server for multi-device support (see Salt Architecture below)
+   - Derived keys never leave user's device
 
 3. **Zero-Knowledge Architecture**
    - Worker stores only encrypted blobs
    - Server cannot decrypt task content (no access to passphrase)
    - Encryption/decryption happens entirely in browser/MCP client
    - Even Cloudflare employees cannot read your tasks
+
+4. **Salt Architecture (Threat Model)**
+   - Salt is generated client-side (32 random bytes) and synced to server
+   - Server stores salt alongside encrypted task blobs
+   - **If server is compromised**: Attacker gains salts + encrypted data
+   - **Protection**: Passphrase is required to derive key (never transmitted)
+   - **Brute-force mitigation**: 600K PBKDF2 iterations makes attacks expensive
+   - **Design rationale**: Enables multi-device sync while maintaining zero-knowledge
 
 ### OAuth Authentication
 
@@ -331,16 +339,23 @@ If you discover a security vulnerability, please:
 
 ## Security Audit Results
 
-### Last Audit: 2026-01-02
+### Last Audit: 2026-01-23
 
-- ✅ All high/critical vulnerabilities resolved
-- ✅ Upgraded from canary to stable releases
-- ✅ Added error handling to import functions
+- ✅ All critical vulnerabilities resolved
+- ✅ Dependency vulnerabilities patched (wrangler, hono, MCP SDK)
+- ✅ Token storage architecture reviewed and documented
 - ✅ End-to-end encryption implemented for cloud sync
 - ✅ OAuth PKCE flow implemented for authentication
 - ✅ MCP server read-only access enforced
 
-### Resolved Issues
+### Resolved Issues (2026-01-23)
+
+1. **Hono JWT Algorithm Confusion (H1)** - Added override for hono ≥4.11.4 (fixes GHSA-3vhc-576x-3qv4, GHSA-f67f-6cw9-8mq4)
+2. **Wrangler OS Command Injection (H2)** - Upgraded wrangler to ^4.59.1 (fixes GHSA-36p8-mvp6-cv38)
+3. **Undici Decompression DoS (M3)** - Fixed transitively via wrangler update (fixes GHSA-g9mf-h72j-4rw9)
+4. **MCP SDK update** - Upgraded @modelcontextprotocol/sdk to ^1.25.3
+
+### Previously Resolved Issues
 
 1. **nanoid vulnerability** - Upgraded from 4.0.2 to 5.1.6
 2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 16.1.1
@@ -348,6 +363,10 @@ If you discover a security vulnerability, please:
 4. **Missing error handling** - Added try-catch to importFromJson()
 5. **Cloud sync security** - AES-256-GCM with PBKDF2 key derivation (600k iterations)
 6. **OAuth security** - PKCE + state parameter + ID token verification
+
+### Known Trade-offs (Documented)
+
+1. **Token Storage in IndexedDB** - Required for offline-first PWA. Mitigated by React XSS protection, CSP headers, and E2E encryption of task data. See `worker/src/constants/security.ts:57-80` for full rationale.
 
 ## References
 
