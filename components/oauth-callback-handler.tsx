@@ -32,12 +32,49 @@ export function OAuthCallbackHandler() {
     const oauthMessage = searchParams.get('oauth_message');
 
     if (oauthError === 'session_expired' && oauthMessage) {
-      // Show friendly error message and prompt to retry
       console.error('[OAuthCallbackHandler] OAuth session expired:', oauthMessage);
-      toast.error('Sign-in session expired. Please try again.', {
-        description: 'This can happen if the sign-in flow was interrupted or took too long.',
-        duration: 6000,
-      });
+
+      // Check if we're in a popup window (OAuth flow that redirected to main app on error)
+      const isPopup = window.opener !== null || window.name.includes('oauth');
+
+      if (isPopup) {
+        // Broadcast error to main window via BroadcastChannel
+        try {
+          const channel = new BroadcastChannel('oauth-handshake');
+          channel.postMessage({
+            type: 'oauth_handshake',
+            success: false,
+            error: 'Sign-in session expired. Please try again.',
+            timestamp: Date.now(),
+          });
+          channel.close();
+        } catch (e) {
+          console.warn('[OAuthCallbackHandler] BroadcastChannel failed:', e);
+        }
+
+        // Try to close the popup - the main window will show the error
+        try {
+          window.close();
+        } catch (e) {
+          console.warn('[OAuthCallbackHandler] window.close() failed:', e);
+        }
+
+        // If popup didn't close, show message to close manually
+        setTimeout(() => {
+          if (!window.closed) {
+            toast.error('Sign-in failed. Please close this window and try again.', {
+              duration: 10000,
+            });
+          }
+        }, 100);
+      } else {
+        // Main window - show toast directly
+        toast.error('Sign-in session expired. Please try again.', {
+          description: 'This can happen if the sign-in flow was interrupted or took too long.',
+          duration: 6000,
+        });
+      }
+
       // Clean up URL parameters
       router.replace('/');
       return;
