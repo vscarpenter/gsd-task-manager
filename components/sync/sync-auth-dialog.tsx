@@ -123,7 +123,9 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
           onSuccess();
         }
       } else {
-        if (activeState && activeState !== event.state) {
+        // Skip if this is for a different OAuth flow, but always process error-only events
+        const isErrorOnlyEvent = event.state === '__error_only__';
+        if (!isErrorOnlyEvent && activeState && activeState !== event.state) {
           return;
         }
 

@@ -99,7 +99,25 @@ function handleStorageEvent(event: StorageEvent): void {
  * Handle incoming broadcast payload
  */
 export function handleBroadcastPayload(payload: BroadcastPayload | null): void {
-  if (!payload || !payload.state) return;
+  if (!payload) return;
+
+  // Handle error-only messages (e.g., when popup redirects to main app on OAuth failure)
+  // These messages have success=false and error but may not have a state
+  if (!payload.state && payload.success === false && payload.error) {
+    console.info('[OAuthHandshake] Error-only broadcast received', {
+      error: payload.error,
+    });
+    // Notify listeners with a generic error event using a placeholder state
+    notifyListeners({
+      status: 'error',
+      state: '__error_only__',
+      error: payload.error,
+    });
+    return;
+  }
+
+  // Regular state-based messages require a valid state
+  if (!payload.state) return;
 
   // Ignore duplicate notifications
   if (processedStates.has(payload.state)) {

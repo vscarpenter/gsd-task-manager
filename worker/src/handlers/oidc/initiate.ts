@@ -28,11 +28,13 @@ export async function initiateOAuth(
     }
 
     // Determine the worker's callback URI (where OAuth provider redirects)
-    // In development: http://localhost:8787/api/auth/oauth/callback
-    // In production: https://gsd-api.vinny.dev/api/auth/oauth/callback
+    // IMPORTANT: Use OAUTH_CALLBACK_BASE to ensure callback domain matches cookie domain.
+    // When behind CloudFront proxy, request.host might be the worker's direct domain,
+    // but cookies are set for the frontend domain. Using OAUTH_CALLBACK_BASE ensures
+    // Google redirects to the same domain where the session cookie was set.
     const requestUrl = new URL(request.url);
-    const workerOrigin = `${requestUrl.protocol}//${requestUrl.host}`;
-    const workerCallbackUri = `${workerOrigin}/api/auth/oauth/callback`;
+    const callbackBase = env.OAUTH_CALLBACK_BASE || `${requestUrl.protocol}//${requestUrl.host}`;
+    const workerCallbackUri = `${callbackBase}/api/auth/oauth/callback`;
 
     // Determine the app origin (where we'll redirect after processing)
     // Use OAUTH_CALLBACK_BASE if set, otherwise use Origin header
