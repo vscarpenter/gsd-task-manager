@@ -21,6 +21,9 @@ export const ROUTES = {
 
   /** PWA installation instructions */
   INSTALL: '/install' as Route,
+
+  /** Architecture documentation */
+  DOCS: '/docs' as Route,
 } as const;
 
 /**
@@ -36,6 +39,7 @@ export const ROUTE_VARIANTS = {
   HOME: ['/', '/index.html'] as const,
   DASHBOARD: ['/dashboard', '/dashboard/', '/dashboard.html'] as const,
   INSTALL: ['/install', '/install/', '/install.html'] as const,
+  DOCS: ['/docs', '/docs/', '/docs.html'] as const,
 } as const;
 
 /**
