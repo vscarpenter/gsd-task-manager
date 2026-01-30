@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LayoutGridIcon, BarChart3Icon } from "lucide-react";
+import { LayoutGridIcon, BarChart3Icon, BookOpenIcon } from "lucide-react";
 import { useViewTransition } from "@/lib/use-view-transition";
 import { ROUTES, isRouteActive } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ export function ViewToggle() {
 
   const isMatrix = isRouteActive(pathname, 'HOME');
   const isDashboard = isRouteActive(pathname, 'DASHBOARD');
+  const isDocs = isRouteActive(pathname, 'DOCS');
 
   return (
     <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
@@ -49,6 +50,22 @@ export function ViewToggle() {
       >
         <BarChart3Icon className="h-4 w-4" />
         <span className="hidden sm:inline">Dashboard</span>
+      </button>
+      <button
+        onClick={() => navigateWithTransition(ROUTES.DOCS)}
+        disabled={isPending}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+          isDocs && "bg-background text-foreground shadow-sm",
+          !isDocs && "text-foreground-muted hover:text-foreground",
+          isPending && "opacity-50 cursor-wait"
+        )}
+        aria-label="Switch to Docs view"
+        aria-current={isDocs ? "page" : undefined}
+      >
+        <BookOpenIcon className="h-4 w-4" />
+        <span className="hidden sm:inline">Docs</span>
       </button>
     </div>
   );
