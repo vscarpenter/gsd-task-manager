@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -81,14 +82,16 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>
-              <ClientLayout>
-                {children}
-              </ClientLayout>
-              <PwaRegister />
-              <InstallPwaPrompt />
-              <PwaUpdateToast />
-              <SyncDebugInstaller />
-              <Toaster richColors position="top-center" />
+              <TooltipProvider>
+                <ClientLayout>
+                  {children}
+                </ClientLayout>
+                <PwaRegister />
+                <InstallPwaPrompt />
+                <PwaUpdateToast />
+                <SyncDebugInstaller />
+                <Toaster richColors position="top-center" />
+              </TooltipProvider>
             </ToastProvider>
           </ThemeProvider>
         </ErrorBoundary>
