@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   vectorClockSchema,
-  registerRequestSchema,
-  loginRequestSchema,
   syncOperationSchema,
   pushRequestSchema,
   pullRequestSchema,
@@ -31,108 +29,6 @@ describe('vectorClockSchema', () => {
 
   it('rejects non-number values', () => {
     expect(() => vectorClockSchema.parse({ device: 'not a number' })).toThrow();
-  });
-});
-
-describe('registerRequestSchema', () => {
-  it('accepts valid registration request', () => {
-    const validRequest = {
-      email: 'user@example.com',
-      password: 'securepassword123',
-      deviceName: 'My iPhone',
-    };
-    expect(() => registerRequestSchema.parse(validRequest)).not.toThrow();
-  });
-
-  it('rejects invalid email format', () => {
-    const invalidRequest = {
-      email: 'not-an-email',
-      password: 'securepassword123',
-      deviceName: 'My iPhone',
-    };
-    expect(() => registerRequestSchema.parse(invalidRequest)).toThrow();
-  });
-
-  it('rejects email exceeding max length (255)', () => {
-    const invalidRequest = {
-      email: 'a'.repeat(250) + '@test.com',
-      password: 'securepassword123',
-      deviceName: 'My iPhone',
-    };
-    expect(() => registerRequestSchema.parse(invalidRequest)).toThrow();
-  });
-
-  it('rejects password shorter than 12 characters', () => {
-    const invalidRequest = {
-      email: 'user@example.com',
-      password: 'short',
-      deviceName: 'My iPhone',
-    };
-    expect(() => registerRequestSchema.parse(invalidRequest)).toThrow();
-  });
-
-  it('rejects password exceeding 128 characters', () => {
-    const invalidRequest = {
-      email: 'user@example.com',
-      password: 'a'.repeat(129),
-      deviceName: 'My iPhone',
-    };
-    expect(() => registerRequestSchema.parse(invalidRequest)).toThrow();
-  });
-
-  it('rejects empty device name', () => {
-    const invalidRequest = {
-      email: 'user@example.com',
-      password: 'securepassword123',
-      deviceName: '',
-    };
-    expect(() => registerRequestSchema.parse(invalidRequest)).toThrow();
-  });
-
-  it('rejects device name exceeding 100 characters', () => {
-    const invalidRequest = {
-      email: 'user@example.com',
-      password: 'securepassword123',
-      deviceName: 'a'.repeat(101),
-    };
-    expect(() => registerRequestSchema.parse(invalidRequest)).toThrow();
-  });
-});
-
-describe('loginRequestSchema', () => {
-  it('accepts valid login request with required fields', () => {
-    const validRequest = {
-      email: 'user@example.com',
-      passwordHash: 'hashedPasswordValue',
-    };
-    expect(() => loginRequestSchema.parse(validRequest)).not.toThrow();
-  });
-
-  it('accepts login request with optional deviceId and deviceName', () => {
-    const validRequest = {
-      email: 'user@example.com',
-      passwordHash: 'hashedPasswordValue',
-      deviceId: 'device-123',
-      deviceName: 'My Device',
-    };
-    expect(() => loginRequestSchema.parse(validRequest)).not.toThrow();
-  });
-
-  it('rejects invalid email format', () => {
-    const invalidRequest = {
-      email: 'invalid-email',
-      passwordHash: 'hashedPasswordValue',
-    };
-    expect(() => loginRequestSchema.parse(invalidRequest)).toThrow();
-  });
-
-  it('rejects device name exceeding 100 characters', () => {
-    const invalidRequest = {
-      email: 'user@example.com',
-      passwordHash: 'hashedPasswordValue',
-      deviceName: 'a'.repeat(101),
-    };
-    expect(() => loginRequestSchema.parse(invalidRequest)).toThrow();
   });
 });
 

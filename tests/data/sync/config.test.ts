@@ -4,8 +4,6 @@ import {
   updateSyncConfig,
   enableSync,
   disableSync,
-  registerSyncAccount,
-  loginSyncAccount,
   isSyncEnabled,
   getSyncStatus,
   resetAndFullSync,
@@ -25,8 +23,6 @@ vi.mock('@/lib/sync/crypto', () => ({
 
 const mockApiClient = {
   setToken: vi.fn(),
-  register: vi.fn(),
-  login: vi.fn(),
 };
 
 vi.mock('@/lib/sync/api-client', () => ({
@@ -388,141 +384,6 @@ describe('Sync Config', () => {
 
       // Should not throw
       await expect(disableSync()).resolves.not.toThrow();
-    });
-  });
-
-  describe('registerSyncAccount', () => {
-    it('should register new account and enable sync', async () => {
-      const mockRegisterResponse = {
-        userId: 'user-new',
-        deviceId: 'device-new',
-        token: 'new-token',
-        expiresAt: Date.now() + 86400000,
-        salt: 'new-salt',
-      };
-
-      mockApiClient.register.mockResolvedValue(mockRegisterResponse);
-
-      await registerSyncAccount('new@example.com', 'password123', 'My Device');
-
-      expect(mockApiClient.register).toHaveBeenCalledWith({
-        email: 'new@example.com',
-        password: 'password123',
-        deviceName: 'My Device',
-      });
-
-      const config = await getSyncConfig();
-
-      expect(config?.enabled).toBe(true);
-      expect(config?.userId).toBe('user-new');
-      expect(config?.email).toBe('new@example.com');
-      expect(config?.deviceId).toBe('device-new');
-    });
-
-    it('should use default device name if not provided', async () => {
-      mockApiClient.register.mockResolvedValue({
-        userId: 'user-new',
-        deviceId: 'device-new',
-        token: 'new-token',
-        expiresAt: Date.now() + 86400000,
-        salt: 'new-salt',
-      });
-
-      await registerSyncAccount('new@example.com', 'password123');
-
-      expect(mockApiClient.register).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: 'Test Device', // From mockSyncConfig
-        })
-      );
-    });
-
-    it('should work with auto-created config', async () => {
-      await db.syncMetadata.clear();
-
-      mockApiClient.register.mockResolvedValue({
-        userId: 'user-new',
-        deviceId: 'device-new',
-        token: 'new-token',
-        expiresAt: Date.now() + 86400000,
-        salt: 'new-salt',
-      });
-
-      // registerSyncAccount calls getSyncConfig which auto-initializes
-      await registerSyncAccount('new@example.com', 'password123');
-
-      const config = await getSyncConfig();
-      expect(config?.enabled).toBe(true);
-      expect(config?.userId).toBe('user-new');
-    });
-  });
-
-  describe('loginSyncAccount', () => {
-    it('should login and enable sync', async () => {
-      const mockLoginResponse = {
-        userId: 'user-existing',
-        deviceId: 'device-123',
-        token: 'login-token',
-        expiresAt: Date.now() + 86400000,
-        salt: 'login-salt',
-        syncRequired: true,
-      };
-
-      mockApiClient.login.mockResolvedValue(mockLoginResponse);
-
-      await loginSyncAccount('existing@example.com', 'password123');
-
-      expect(mockApiClient.login).toHaveBeenCalledWith({
-        email: 'existing@example.com',
-        passwordHash: 'password123',
-        deviceId: 'device-123',
-        deviceName: 'Test Device',
-      });
-
-      const config = await getSyncConfig();
-
-      expect(config?.enabled).toBe(true);
-      expect(config?.userId).toBe('user-existing');
-      expect(config?.email).toBe('existing@example.com');
-    });
-
-    it('should update device ID if changed', async () => {
-      const mockLoginResponse = {
-        userId: 'user-existing',
-        deviceId: 'device-new-id',
-        token: 'login-token',
-        expiresAt: Date.now() + 86400000,
-        salt: 'login-salt',
-        syncRequired: true,
-      };
-
-      mockApiClient.login.mockResolvedValue(mockLoginResponse);
-
-      await loginSyncAccount('existing@example.com', 'password123');
-
-      const config = await getSyncConfig();
-
-      expect(config?.deviceId).toBe('device-new-id');
-    });
-
-    it('should work with auto-created config', async () => {
-      await db.syncMetadata.clear();
-
-      mockApiClient.login.mockResolvedValue({
-        userId: 'user-existing',
-        deviceId: 'device-existing',
-        token: 'login-token',
-        expiresAt: Date.now() + 86400000,
-        salt: 'login-salt',
-        syncRequired: true,
-      });
-
-      // loginSyncAccount calls getSyncConfig which auto-initializes
-      await loginSyncAccount('existing@example.com', 'password123');
-
-      const config = await getSyncConfig();
-      expect(config?.enabled).toBe(true);
-      expect(config?.userId).toBe('user-existing');
     });
   });
 

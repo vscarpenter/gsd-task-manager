@@ -79,20 +79,6 @@ export interface SyncMetadata {
   sync_status: 'success' | 'conflict' | 'error';
 }
 
-// Authentication request types
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  deviceName: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  passwordHash: string;
-  deviceId?: string;
-  deviceName?: string;
-}
-
 // OAuth authentication responses
 export interface OAuthResponse {
   userId: string;
@@ -156,7 +142,7 @@ export interface PushRequest {
 
 export interface RejectedOperation {
   taskId: string;
-  reason: 'version_mismatch' | 'conflict' | 'validation_error';
+  reason: 'version_mismatch' | 'conflict' | 'validation_error' | 'quota_exceeded';
   details: string;
 }
 

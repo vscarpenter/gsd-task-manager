@@ -12,6 +12,7 @@ import {
   type OAuthAuthData,
 } from '@/lib/sync/oauth-handshake';
 import { normalizeTokenExpiration } from '@/lib/sync/utils';
+import { getEnvironmentConfig } from '@/lib/env-config';
 
 /**
  * OAuth callback handler - processes OAuth success data from sessionStorage
@@ -127,11 +128,8 @@ export function OAuthCallbackHandler() {
       const existingSyncConfig =
         existingConfig && existingConfig.key === 'sync_config' ? existingConfig : null;
 
-      const serverUrl =
-        existingSyncConfig?.serverUrl ||
-        (window.location.hostname === 'localhost'
-          ? 'http://localhost:8787'
-          : window.location.origin);
+      const { apiBaseUrl } = getEnvironmentConfig();
+      const serverUrl = existingSyncConfig?.serverUrl || apiBaseUrl;
 
       // Normalize token expiration to milliseconds (handles both seconds and milliseconds)
       const tokenExpiresAt = normalizeTokenExpiration(authData.expiresAt);

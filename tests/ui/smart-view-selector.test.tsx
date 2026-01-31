@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { SmartViewSelector } from "@/components/smart-view-selector";
 import type { SmartView } from "@/lib/filters";
 import { renderWithAct } from "../utils/render-with-act";

@@ -16,7 +16,5 @@ export {
   getSyncStatus,
   enableSync,
   disableSync,
-  registerSyncAccount,
-  loginSyncAccount,
   resetAndFullSync,
 } from "./config/index";

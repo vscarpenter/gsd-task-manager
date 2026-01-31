@@ -10,6 +10,7 @@ import { compareVectorClocks } from '../../utils/vector-clock';
 import { generateId } from '../../utils/crypto';
 import { createLogger } from '../../utils/logger';
 import { getServerVectorClock, parseVectorClock } from './helpers';
+import { STORAGE } from '../../config';
 
 const logger = createLogger('SYNC:PUSH');
 
@@ -27,6 +28,21 @@ export async function push(
     const userId = ctx.userId!;
     const body = await request.json();
     const validated = pushRequestSchema.parse(body) as PushRequest;
+    const deviceId = ctx.deviceId!;
+
+    if (validated.deviceId !== deviceId) {
+      logger.warn('Device mismatch on push', { userId, tokenDeviceId: deviceId, bodyDeviceId: validated.deviceId });
+      return errorResponse('Device mismatch', 403, origin);
+    }
+
+    const maxTasks = Math.floor(STORAGE.DEFAULT_QUOTA / STORAGE.TASK_SIZE_ESTIMATE);
+    const countResult = await env.DB.prepare(
+      'SELECT COUNT(*) as count FROM encrypted_tasks WHERE user_id = ? AND deleted_at IS NULL'
+    )
+      .bind(userId)
+      .first();
+    let activeTaskCount = (countResult?.count as number) || 0;
+    let newTaskCount = 0;
 
     const results: PushResponse = {
       accepted: [],
@@ -102,11 +118,15 @@ export async function push(
                 Date.now(),
                 Date.now(),
                 JSON.stringify(op.vectorClock),
-                validated.deviceId,
+                deviceId,
                 op.taskId,
                 userId
               )
               .run();
+
+            if (!existing.deleted_at) {
+              activeTaskCount = Math.max(0, activeTaskCount - 1);
+            }
           }
           results.accepted.push(op.taskId);
           continue;
@@ -149,13 +169,22 @@ export async function push(
               op.nonce,
               JSON.stringify(op.vectorClock),
               Date.now(),
-              validated.deviceId,
+              deviceId,
               op.checksum,
               op.taskId,
               userId
             )
             .run();
         } else {
+          if (activeTaskCount + newTaskCount + 1 > maxTasks) {
+            results.rejected.push({
+              taskId: op.taskId,
+              reason: 'quota_exceeded',
+              details: 'Storage quota exceeded',
+            });
+            continue;
+          }
+
           // Insert new task
           await env.DB.prepare(
             `INSERT INTO encrypted_tasks
@@ -171,10 +200,12 @@ export async function push(
               JSON.stringify(op.vectorClock),
               Date.now(),
               Date.now(),
-              validated.deviceId,
+              deviceId,
               op.checksum
             )
             .run();
+
+          newTaskCount += 1;
         }
 
         results.accepted.push(op.taskId);
@@ -199,7 +230,7 @@ export async function push(
     )
       .bind(
         userId,
-        validated.deviceId,
+        deviceId,
         Date.now(),
         JSON.stringify(validated.clientVectorClock),
         results.conflicts.length > 0 ? 'conflict' : 'success'
@@ -214,7 +245,7 @@ export async function push(
       .bind(
         generateId(),
         userId,
-        validated.deviceId,
+        deviceId,
         JSON.stringify(validated.clientVectorClock),
         Date.now()
       )
@@ -222,7 +253,7 @@ export async function push(
 
     logger.info('Push completed', {
       userId,
-      deviceId: validated.deviceId,
+      deviceId,
       accepted: results.accepted.length,
       rejected: results.rejected.length,
       conflicts: results.conflicts.length,

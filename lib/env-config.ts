@@ -31,7 +31,7 @@ function detectEnvironment(): Environment {
 
   const hostname = window.location.hostname;
 
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')) {
     return 'development';
   }
 
@@ -47,16 +47,18 @@ function detectEnvironment(): Environment {
  */
 export function getEnvironmentConfig(): EnvironmentConfig {
   const environment = detectEnvironment();
+  const apiBaseUrlOverride = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // API Base URL configuration
   const apiBaseUrl =
-    environment === 'development'
+    apiBaseUrlOverride ||
+    (environment === 'development'
       ? 'http://localhost:8787'
       : environment === 'staging'
       ? 'https://api-dev.vinny.dev'
       : typeof window !== 'undefined'
       ? window.location.origin // Use same-origin (CloudFront proxies /api/* to worker)
-      : 'https://gsd.vinny.dev';
+      : 'https://gsd.vinny.dev');
 
   // OAuth Callback URL configuration
   const oauthCallbackUrl =
