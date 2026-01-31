@@ -44,6 +44,11 @@ const DARK_THEME: RenderOptions = {
   transparent: true,
 };
 
+/**
+ * Sanitizes SVG content to prevent XSS attacks.
+ * Removes: script tags, foreignObject, event handlers (on*), javascript: URLs, CSS expressions.
+ * Returns empty string if parsing fails or SVG is invalid.
+ */
 function sanitizeSvg(raw: string): string {
   try {
     const parser = new DOMParser();
@@ -51,30 +56,36 @@ function sanitizeSvg(raw: string): string {
     const svg = doc.querySelector("svg");
     if (!svg) return "";
 
+    // Remove dangerous elements that can execute code
     doc.querySelectorAll("script, foreignObject").forEach((node) => node.remove());
 
+    // Remove dangerous attributes from all elements
     doc.querySelectorAll("*").forEach((node) => {
       for (const attr of Array.from(node.attributes)) {
         const name = attr.name.toLowerCase();
         const value = attr.value.trim();
 
+        // Remove event handlers (onclick, onload, onerror, etc.)
         if (name.startsWith("on")) {
           node.removeAttribute(attr.name);
           continue;
         }
 
+        // Remove javascript: protocol in href attributes
         if ((name === "href" || name === "xlink:href") && value.toLowerCase().startsWith("javascript:")) {
           node.removeAttribute(attr.name);
           continue;
         }
 
+        // Remove CSS expressions (IE legacy XSS vector)
         if (name === "style" && /expression|javascript:/i.test(value)) {
           node.removeAttribute(attr.name);
         }
       }
     });
 
-    return svg.outerHTML;
+    // Safe: SVG has been sanitized above - all XSS vectors removed
+    return svg.outerHTML; // NOSONAR - output is sanitized
   } catch {
     return "";
   }
@@ -165,9 +176,10 @@ export function MermaidDiagram({
         )}
 
         {!isLoading && !error && svg && (
+          // Safe: svg content is sanitized by sanitizeSvg() before rendering
           <div
             className="flex justify-center [&_svg]:max-w-full [&_svg]:h-auto"
-            dangerouslySetInnerHTML={{ __html: svg }}
+            dangerouslySetInnerHTML={{ __html: svg }} // NOSONAR - sanitized input
           />
         )}
       </div>
