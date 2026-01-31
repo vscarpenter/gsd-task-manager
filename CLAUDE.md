@@ -95,7 +95,7 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - `lib/sync/engine/` - Frontend sync engine (push, pull, conflict resolution)
 - `lib/sync/crypto.ts` - Client-side encryption/decryption
 
-**API Endpoints**: `/api/auth/login/:provider`, `/api/auth/callback/:provider`, `/api/sync/push`, `/api/sync/pull`, `/api/sync/status`, `/api/devices`
+**API Endpoints**: `/api/auth/oauth/:provider/start`, `/api/auth/oauth/callback`, `/api/auth/oauth/result`, `/api/auth/refresh`, `/api/auth/logout`, `/api/auth/encryption-salt`, `/api/sync/push`, `/api/sync/pull`, `/api/sync/status`, `/api/devices`
 
 ### MCP Server Architecture
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language

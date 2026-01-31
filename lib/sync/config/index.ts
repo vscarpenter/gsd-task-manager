@@ -21,8 +21,5 @@ export { enableSync } from "./enable";
 // Disable sync
 export { disableSync } from "./disable";
 
-// Account operations
-export { registerSyncAccount, loginSyncAccount } from "./account";
-
 // Reset operations
 export { resetAndFullSync } from "./reset";

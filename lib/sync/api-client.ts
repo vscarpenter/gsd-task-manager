@@ -9,10 +9,6 @@ import {
   SyncValidationError,
 } from './errors';
 import type {
-  RegisterRequest,
-  RegisterResponse,
-  LoginRequest,
-  LoginResponse,
   PushRequest,
   PushResponse,
   PullRequest,
@@ -146,21 +142,6 @@ export class SyncApiClient {
   }
 
   // Authentication endpoints
-
-  async register(data: RegisterRequest): Promise<RegisterResponse> {
-    return this.request<RegisterResponse>('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
   async logout(): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>('/api/auth/logout', {
       method: 'POST',

@@ -48,129 +48,6 @@ describe('SyncApiClient', () => {
   });
 
   describe('Authentication Endpoints', () => {
-    describe('register()', () => {
-      it('should make POST request to /api/auth/register', async () => {
-        const mockResponse = {
-          userId: 'user-123',
-          deviceId: 'device-123',
-          token: 'new-token',
-          expiresAt: Date.now() + 86400000,
-          salt: 'test-salt',
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await client.register({
-          email: 'test@example.com',
-          password: 'password123',
-          deviceName: 'Test Device',
-        });
-
-        expect(result).toEqual(mockResponse);
-        expect(global.fetch).toHaveBeenCalledWith(
-          `${baseUrl}/api/auth/register`,
-          expect.objectContaining({
-            method: 'POST',
-            headers: expect.objectContaining({
-              'Content-Type': 'application/json',
-            }),
-          })
-        );
-      });
-
-      it('should throw SyncNetworkError on 500 error', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-          statusText: 'Internal Server Error',
-          json: async () => ({ error: 'Server error' }),
-        });
-
-        await expect(
-          client.register({
-            email: 'test@example.com',
-            password: 'password123',
-            deviceName: 'Test Device',
-          })
-        ).rejects.toThrow(SyncNetworkError);
-      });
-
-      it('should throw SyncValidationError on 400 error', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: false,
-          status: 400,
-          statusText: 'Bad Request',
-          json: async () => ({ error: 'Invalid email format' }),
-        });
-
-        await expect(
-          client.register({
-            email: 'invalid-email',
-            password: 'password123',
-            deviceName: 'Test Device',
-          })
-        ).rejects.toThrow(SyncValidationError);
-      });
-    });
-
-    describe('login()', () => {
-      it('should make POST request to /api/auth/login', async () => {
-        const mockResponse = {
-          userId: 'user-123',
-          deviceId: 'device-123',
-          token: 'new-token',
-          expiresAt: Date.now() + 86400000,
-          salt: 'test-salt',
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await client.login({
-          email: 'test@example.com',
-          passwordHash: 'hashed-password',
-          deviceId: 'device-123',
-          deviceName: 'Test Device',
-        });
-
-        expect(result).toEqual(mockResponse);
-        expect(global.fetch).toHaveBeenCalledWith(
-          `${baseUrl}/api/auth/login`,
-          expect.objectContaining({
-            method: 'POST',
-          })
-        );
-      });
-
-      it('should throw SyncAuthError on 401 error', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: false,
-          status: 401,
-          statusText: 'Unauthorized',
-          json: async () => ({ error: 'Invalid credentials' }),
-        });
-
-        await expect(
-          client.login({
-            email: 'test@example.com',
-            passwordHash: 'wrong-password',
-            deviceId: 'device-123',
-            deviceName: 'Test Device',
-          })
-        ).rejects.toThrow(SyncAuthError);
-      });
-    });
-
     describe('logout()', () => {
       beforeEach(() => {
         client.setToken(testToken);
@@ -439,7 +316,7 @@ describe('SyncApiClient', () => {
   describe('Error Handling', () => {
     it('should categorize 401 as SyncAuthError', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -447,12 +324,12 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncAuthError);
+      await expect(client.listDevices()).rejects.toThrow(SyncAuthError);
     });
 
     it('should categorize 403 as SyncAuthError', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 403,
         statusText: 'Forbidden',
@@ -460,12 +337,12 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncAuthError);
+      await expect(client.listDevices()).rejects.toThrow(SyncAuthError);
     });
 
     it('should categorize 500 as SyncNetworkError', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -473,12 +350,12 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncNetworkError);
+      await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should categorize 503 as SyncNetworkError', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 503,
         statusText: 'Service Unavailable',
@@ -486,12 +363,12 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncNetworkError);
+      await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should categorize 400 as SyncValidationError', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 400,
         statusText: 'Bad Request',
@@ -499,12 +376,12 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncValidationError);
+      await expect(client.listDevices()).rejects.toThrow(SyncValidationError);
     });
 
     it('should categorize 422 as SyncValidationError', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 422,
         statusText: 'Unprocessable Entity',
@@ -512,20 +389,20 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncValidationError);
+      await expect(client.listDevices()).rejects.toThrow(SyncValidationError);
     });
 
     it('should handle network errors (fetch throws)', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncNetworkError);
+      await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should handle invalid JSON response', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -535,13 +412,13 @@ describe('SyncApiClient', () => {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await expect(client.register({} as any)).rejects.toThrow(SyncNetworkError);
+      await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should preserve error context', async () => {
       const errorMessage = 'Custom error message';
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -550,7 +427,7 @@ describe('SyncApiClient', () => {
 
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await client.register({} as any);
+        await client.listDevices();
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(SyncAuthError);
@@ -590,13 +467,26 @@ describe('SyncApiClient', () => {
 
     it('should include Content-Type header', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await client.register({} as any);
+      await client.push({
+        operations: [
+          {
+            type: 'create',
+            taskId: 'task-1',
+            encryptedBlob: 'encrypted-data',
+            nonce: 'test-nonce',
+            vectorClock: {},
+            checksum: 'test-checksum',
+          },
+        ],
+        deviceId: 'device-123',
+        clientVectorClock: {},
+      });
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -610,7 +500,7 @@ describe('SyncApiClient', () => {
 
     it('should include Authorization header when token is set and auth is required', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -627,15 +517,17 @@ describe('SyncApiClient', () => {
       );
     });
 
-    it('should not include Authorization header for unauthenticated endpoints', async () => {
+    it('should omit Authorization header when token is missing', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
 
+      client.setToken(null);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await client.register({} as any);
+      await client.listDevices();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const callArgs = (global.fetch as any).mock.calls[0][1];

@@ -150,15 +150,18 @@ bun tail
 
 ### Authentication
 
-**POST /api/auth/register**
-- Register new user account
-- Body: `{ email, password, deviceName }`
-- Returns: `{ userId, deviceId, salt, token, expiresAt }`
+**GET /api/auth/oauth/:provider/start**
+- Start OAuth flow (`provider` is `google` or `apple`)
+- Returns: redirect
 
-**POST /api/auth/login**
-- Login to existing account
-- Body: `{ email, passwordHash, deviceId?, deviceName? }`
-- Returns: `{ userId, deviceId, salt, token, expiresAt, syncRequired }`
+**GET /api/auth/oauth/callback**
+**POST /api/auth/oauth/callback**
+- OAuth callback handler
+- Returns: `{ success, stateId }` (stored for result polling)
+
+**GET /api/auth/oauth/result**
+- Retrieve OAuth result by state
+- Returns: `{ userId, deviceId, token, expiresAt, encryptionSalt? }`
 
 **POST /api/auth/refresh**
 - Refresh JWT token
@@ -169,6 +172,11 @@ bun tail
 - Logout and revoke token
 - Headers: `Authorization: Bearer <token>`
 - Returns: `{ success: true }`
+
+**GET /api/auth/encryption-salt**
+- Fetch encryption salt for authenticated user
+- Headers: `Authorization: Bearer <token>`
+- Returns: `{ encryptionSalt }`
 
 ### Sync Operations
 
@@ -224,11 +232,12 @@ bun tail
 │    └─ Rate Limiting (KV-based)                          │
 ├─────────────────────────────────────────────────────────┤
 │  Handlers                                               │
-│    ├─ auth.ts (register, login, logout, refresh)       │
+│    ├─ oidc.ts (initiate, callback, result)             │
+│    ├─ auth (refresh, logout)                           │
 │    └─ sync.ts (push, pull, resolve, status, devices)   │
 ├─────────────────────────────────────────────────────────┤
 │  Utilities                                              │
-│    ├─ crypto.ts (password hashing, salt generation)    │
+│    ├─ crypto.ts (ID generation)                        │
 │    ├─ jwt.ts (token creation, verification)            │
 │    └─ vector-clock.ts (conflict detection)             │
 └─────────────────────────────────────────────────────────┘
@@ -244,7 +253,7 @@ bun tail
 
 ### Encryption
 - **Client-side**: AES-256-GCM with PBKDF2 key derivation (600k iterations)
-- **Server-side**: Argon2id password hashing
+- **Server-side**: No passwords stored (OAuth-only)
 - **Transport**: TLS 1.3 enforced
 
 ### Authentication

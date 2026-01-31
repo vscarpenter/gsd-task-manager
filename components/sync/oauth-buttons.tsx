@@ -5,25 +5,12 @@ import { Button } from "@/components/ui/button";
 import { OAUTH_STATE_CONFIG, getOAuthEnvironment } from "@/lib/oauth-config";
 import { canUsePopups, getPlatformInfo } from "@/lib/pwa-detection";
 import { OAUTH_POPUP } from "@/lib/constants/ui";
+import { getEnvironmentConfig } from "@/lib/env-config";
 import {
   subscribeToOAuthHandshake,
   type OAuthHandshakeEvent,
   type OAuthAuthData,
 } from "@/lib/sync/oauth-handshake";
-
-function getWorkerURL(): string {
-  if (typeof window === "undefined") {
-    return "https://gsd.vinny.dev";
-  }
-
-  if (window.location.hostname === "localhost") {
-    return "http://localhost:8787";
-  }
-
-  return window.location.origin;
-}
-
-const WORKER_URL = getWorkerURL();
 
 interface OAuthButtonsProps {
   onSuccess?: (authData: OAuthAuthData) => void;
@@ -114,16 +101,17 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
     try {
       const usePopup = canUsePopups();
       const platformInfo = getPlatformInfo();
+      const { apiBaseUrl } = getEnvironmentConfig();
 
       console.info("[OAuth] Initiating flow:", {
         provider,
         usePopup,
         platform: platformInfo,
         environment: getOAuthEnvironment(),
-        workerUrl: WORKER_URL,
+        workerUrl: apiBaseUrl,
       });
 
-      const workerEndpoint = `${WORKER_URL}/api/auth/oauth/${provider}/start`;
+      const workerEndpoint = `${apiBaseUrl}/api/auth/oauth/${provider}/start`;
 
       let response;
       try {

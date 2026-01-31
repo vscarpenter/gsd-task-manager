@@ -38,6 +38,28 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
       return errorResponse('Token has been revoked', 401);
     }
 
+    // Enforce account status on every request
+    const userStatus = await env.DB.prepare('SELECT account_status FROM users WHERE id = ?')
+      .bind(ctx.userId)
+      .first();
+
+    if (!userStatus || userStatus.account_status !== 'active') {
+      logger.warn('Blocked request for inactive account', { userId: ctx.userId });
+      return errorResponse('Account is suspended or deleted', 403);
+    }
+
+    // Enforce device status on every request
+    const deviceStatus = await env.DB.prepare(
+      'SELECT is_active FROM devices WHERE id = ? AND user_id = ?'
+    )
+      .bind(ctx.deviceId, ctx.userId)
+      .first();
+
+    if (!deviceStatus || deviceStatus.is_active !== 1) {
+      logger.warn('Blocked request for inactive device', { userId: ctx.userId, deviceId: ctx.deviceId });
+      return errorResponse('Device revoked or inactive', 403);
+    }
+
     // Update last activity timestamp in KV (non-blocking via waitUntil)
     // This is for activity tracking - uses waitUntil to guarantee completion
     const sessionKey = `session:${ctx.userId}:${payload.jti}`;

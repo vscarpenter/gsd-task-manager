@@ -190,25 +190,9 @@ npx wrangler deploy
 # Test health endpoint
 curl https://gsd-sync-worker.your-subdomain.workers.dev/health
 
-# Test registration (replace with your worker URL)
-curl -X POST https://gsd-sync-worker.your-subdomain.workers.dev/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "MySecurePassword123!",
-    "deviceName": "Test Device"
-  }'
-```
-
-**Expected response:**
-```json
-{
-  "userId": "...",
-  "deviceId": "...",
-  "salt": "...",
-  "token": "...",
-  "expiresAt": 1234567890
-}
+# Test auth-protected endpoint (replace with your worker URL and OAuth token)
+curl https://gsd-sync-worker.your-subdomain.workers.dev/api/sync/status \
+  -H "Authorization: Bearer <token>"
 ```
 
 ## Troubleshooting

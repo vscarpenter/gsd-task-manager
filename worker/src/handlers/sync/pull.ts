@@ -26,6 +26,12 @@ export async function pull(
     const userId = ctx.userId!;
     const body = await request.json();
     const validated = pullRequestSchema.parse(body) as PullRequest;
+    const deviceId = ctx.deviceId!;
+
+    if (validated.deviceId !== deviceId) {
+      logger.warn('Device mismatch on pull', { userId, tokenDeviceId: deviceId, bodyDeviceId: validated.deviceId });
+      return errorResponse('Device mismatch', 403, origin);
+    }
 
     const limit = validated.limit || 50;
     const sinceTimestamp = validated.sinceTimestamp || 0;
@@ -60,7 +66,7 @@ export async function pull(
     // FIX #6: Debug logging for pull processing
     logger.info('Processing tasks for pull', {
       userId,
-      deviceId: validated.deviceId,
+      deviceId,
       sinceTimestamp,
       sinceDate: sinceTimestamp > 0 ? new Date(sinceTimestamp).toISOString() : 'epoch',
       tasksFound: tasks.results?.length || 0,
@@ -112,7 +118,7 @@ export async function pull(
     )
       .bind(
         userId,
-        validated.deviceId,
+        deviceId,
         Date.now(),
         JSON.stringify(response.serverVectorClock)
       )
@@ -126,7 +132,7 @@ export async function pull(
       .bind(
         generateId(),
         userId,
-        validated.deviceId,
+        deviceId,
         JSON.stringify(response.serverVectorClock),
         Date.now()
       )
@@ -134,7 +140,7 @@ export async function pull(
 
     logger.info('Pull completed', {
       userId,
-      deviceId: validated.deviceId,
+      deviceId,
       tasksCount: response.tasks.length,
       deletedCount: response.deletedTaskIds.length,
       conflicts: response.conflicts.length,

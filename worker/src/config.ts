@@ -36,10 +36,6 @@ export const RATE_LIMITS = {
     maxRequests: 100,    // Max requests per window
     windowMs: 60 * 1000, // 1 minute window
   },
-  AUTH_OPERATIONS: {
-    maxRequests: 10,     // Max auth attempts per window
-    windowMs: 60 * 1000, // 1 minute window
-  },
   REFRESH_OPERATIONS: {
     maxRequests: 20,               // Max refresh attempts per window
     windowMs: 60 * 60 * 1000,      // 1 hour window
@@ -50,6 +46,16 @@ export const RATE_LIMITS = {
 export const STORAGE = {
   DEFAULT_QUOTA: 10 * 1024 * 1024,  // 10MB default quota per user
   TASK_SIZE_ESTIMATE: 1024,         // Rough estimate per task
+} as const;
+
+// Sync payload limits (defense-in-depth against abuse)
+export const SYNC_LIMITS = {
+  MAX_OPERATIONS_PER_PUSH: 200,
+  MAX_ENCRYPTED_BLOB_CHARS: 400_000, // ~300KB payload (base64)
+  MAX_NONCE_CHARS: 64,
+  MAX_CHECKSUM_CHARS: 128,
+  MAX_TASK_ID_CHARS: 128,
+  MAX_VECTOR_CLOCK_ENTRIES: 100,
 } as const;
 
 // OAuth provider configurations

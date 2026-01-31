@@ -44,6 +44,42 @@ const DARK_THEME: RenderOptions = {
   transparent: true,
 };
 
+function sanitizeSvg(raw: string): string {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(raw, "image/svg+xml");
+    const svg = doc.querySelector("svg");
+    if (!svg) return "";
+
+    doc.querySelectorAll("script, foreignObject").forEach((node) => node.remove());
+
+    doc.querySelectorAll("*").forEach((node) => {
+      for (const attr of Array.from(node.attributes)) {
+        const name = attr.name.toLowerCase();
+        const value = attr.value.trim();
+
+        if (name.startsWith("on")) {
+          node.removeAttribute(attr.name);
+          continue;
+        }
+
+        if ((name === "href" || name === "xlink:href") && value.toLowerCase().startsWith("javascript:")) {
+          node.removeAttribute(attr.name);
+          continue;
+        }
+
+        if (name === "style" && /expression|javascript:/i.test(value)) {
+          node.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    return svg.outerHTML;
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Renders a Mermaid diagram using beautiful-mermaid library
  * Supports automatic theme switching based on app theme
@@ -77,7 +113,11 @@ export function MermaidDiagram({
       try {
         const result = await renderMermaid(code.trim(), renderOptions);
         if (mounted) {
-          setSvg(result);
+          const sanitized = sanitizeSvg(result);
+          if (!sanitized) {
+            throw new Error("Rendered diagram was blocked by sanitizer");
+          }
+          setSvg(sanitized);
         }
       } catch (err) {
         if (mounted) {

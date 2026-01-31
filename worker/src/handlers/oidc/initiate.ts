@@ -80,20 +80,10 @@ export async function initiateOAuth(
 
     logger.info('OAuth flow initiated', {
       provider,
-      state,
+      statePrefix: state.substring(0, 8) + '...',
       workerCallbackUri,
       appOrigin: trustedAppOrigin,
       origin: allowedOrigin || 'default',
-      requestUrl: request.url,
-      headers: {
-        origin: request.headers.get('Origin'),
-        referer: request.headers.get('Referer'),
-        host: request.headers.get('Host'),
-        xForwardedHost: request.headers.get('X-Forwarded-Host'),
-        xForwardedProto: request.headers.get('X-Forwarded-Proto'),
-        cloudFrontForwardedProto: request.headers.get('CloudFront-Forwarded-Proto'),
-        cloudFrontViewerCountry: request.headers.get('CloudFront-Viewer-Country')
-      }
     });
 
     const response = jsonResponse({

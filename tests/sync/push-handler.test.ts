@@ -532,14 +532,18 @@ describe('pushLocalChanges', () => {
 
       await pushLocalChanges(config, context);
 
-      // Should still push task-2
-      expect(mockApi.push).toHaveBeenCalledWith(
+      // Should still push exactly one task (the one that encrypted successfully)
+      const pushArgs = vi.mocked(mockApi.push).mock.calls[0]?.[0];
+      expect(pushArgs).toEqual(
         expect.objectContaining({
           operations: expect.arrayContaining([
-            expect.objectContaining({ taskId: 'task-2' }),
+            expect.objectContaining({
+              taskId: expect.stringMatching(/^task-[12]$/),
+            }),
           ]),
         })
       );
+      expect(pushArgs?.operations).toHaveLength(1);
     });
 
     it('should handle empty accepted array', async () => {

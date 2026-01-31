@@ -105,36 +105,6 @@ export interface SyncResult {
 
 // API request/response types
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  deviceName: string;
-}
-
-export interface RegisterResponse {
-  userId: string;
-  deviceId: string;
-  salt: string;
-  token: string;
-  expiresAt: number;
-}
-
-export interface LoginRequest {
-  email: string;
-  passwordHash: string;
-  deviceId?: string;
-  deviceName?: string;
-}
-
-export interface LoginResponse {
-  userId: string;
-  deviceId: string;
-  salt: string;
-  token: string;
-  expiresAt: number;
-  syncRequired: boolean;
-}
-
 export interface PushRequest {
   deviceId: string;
   operations: SyncOperation[];
@@ -159,7 +129,7 @@ export interface PushResponse {
 
 export interface RejectedOperation {
   taskId: string;
-  reason: 'version_mismatch' | 'conflict' | 'validation_error';
+  reason: 'version_mismatch' | 'conflict' | 'validation_error' | 'quota_exceeded';
   details: string;
 }
 

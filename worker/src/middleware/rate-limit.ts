@@ -34,14 +34,6 @@ const SECURITY_THRESHOLDS = {
 // Rate limit configurations per endpoint
 // Uses centralized config from config.ts
 const rateLimits: Record<string, RateLimitConfig> = {
-  '/api/auth/login': {
-    maxRequests: RATE_LIMITS.AUTH_OPERATIONS.maxRequests,
-    windowSeconds: RATE_LIMITS.AUTH_OPERATIONS.windowMs / 1000,
-  },
-  '/api/auth/register': {
-    maxRequests: 5,
-    windowSeconds: 60,
-  },
   '/api/auth/refresh': {
     maxRequests: RATE_LIMITS.REFRESH_OPERATIONS.maxRequests,
     windowSeconds: RATE_LIMITS.REFRESH_OPERATIONS.windowMs / 1000,
