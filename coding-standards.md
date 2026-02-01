@@ -6,11 +6,11 @@
 
 ## Part 1: Agentic Behavior Guidelines
 
-These directives govern how LLMs should approach complex, multi-step tasks requiring sustained autonomous work.
+These directives govern how LLMs approach complex, multi-step tasks requiring sustained autonomous work. Every directive in this section is actionable and applies to every coding session.
 
 ### Context Management & Sustained Work
 
-For lengthy tasks, follow these requirements:
+For lengthy tasks, YOU MUST follow these requirements:
 
 1. Before writing code, outline your implementation plan with clear milestones.
 2. Work systematically through each milestone, committing functional changes frequently.
@@ -19,6 +19,8 @@ For lengthy tasks, follow these requirements:
 5. Never leave significant work uncommitted.
 
 > **Critical:** If you find yourself 80% through context with major uncommitted work, stop adding features and commit immediately.
+
+**Compaction Directive:** When compacting, always preserve the full list of modified files, current task status, test commands, and next steps. Do not discard working state during summarization.
 
 ### Reflection After Tool Results
 
@@ -33,7 +35,7 @@ Use extended thinking to analyze results and plan your next action. If results a
 
 ### Solution Quality Requirements
 
-Every solution must meet these standards:
+Every solution YOU MUST meet these standards:
 
 - Implement robust, general-purpose logic that handles all valid inputs correctly
 - Avoid hardcoded values, magic numbers, or logic tailored to specific test inputs
@@ -49,9 +51,17 @@ Build incrementally to ensure quality:
 
 - Get a minimal working version first, then extend
 - Avoid writing large amounts of code before testing any of it
-- After implementing, verify your solution works by running tests or manual checks
+- Run the full test suite after every file modification and fix failures before proceeding
 - Do not assume code is correct without execution
-- If tests fail, analyze the failure before making changes
+- If tests fail, analyze the failure and diagnose root cause before making changes
+
+### Progress Updates
+
+After completing each milestone or significant tool operation, provide a brief summary of what was done, what changed, and what comes next. Do not skip status updates after tool calls.
+
+### Error Learning
+
+After encountering a mistake or suboptimal solution, analyze what went wrong and propose a specific CLAUDE.md update to prevent recurrence. Actively improve the development process.
 
 ---
 
@@ -83,11 +93,33 @@ Build incrementally to ensure quality:
 - No magic numbers; use named constants
 - Inject dependencies (I/O, time, randomness)
 
+### File Boundaries
+
+- Do not modify files outside the current working directory without explicit permission
+- Do not edit configuration files, CI/CD pipelines, or infrastructure code unless the task specifically requires it
+- When uncertain about scope, ask before modifying files in shared or upstream directories
+
 ### Guardrails
 
 - Validate inputs, sanitize outputs
 - No hard-coded environment values
 - Document public APIs with usage examples
+
+### Subagents
+
+- Use subagents liberally to keep main context window clean and focused
+- Offload research, exploration, file analysis, and codebase scanning to subagents
+- For complex problems, use parallel subagents for independent analysis tasks
+- Chain subagents sequentially when tasks have dependencies (plan > implement > test)
+- One well-defined task per subagent for focused execution
+- Subagents MUST return concise summaries, not raw output, to preserve main context
+- Use read-only tools (Read, Grep, Glob) for research subagents; grant write access only to implementation subagents
+- Prefer Haiku-model subagents for simple research, scanning, and exploration tasks to control costs
+- Reserve Sonnet or Opus for subagents that reason about architecture or write complex implementations
+- During implementation, delegate tasks to available subagents based on their expertise:
+  - Use Explore subagent for codebase scanning, pattern discovery, and reading files
+  - Use general-purpose subagent for multi-step implementation tasks requiring file modifications
+  - Use dedicated review subagents for code quality, security, and test coverage checks
 
 ---
 
@@ -95,10 +127,12 @@ Build incrementally to ensure quality:
 
 ### Testing Standards
 
+- Write tests BEFORE implementation when feasible (TDD approach)
 - Test all public APIs and critical paths (target approximately 80% coverage)
 - Use clear behavior-based test names
 - Follow Arrange-Act-Assert pattern
 - Include positive and negative cases
+- Run the full test suite after every modification; do not proceed with failing tests
 
 ### Error Handling
 
@@ -119,63 +153,7 @@ Build incrementally to ensure quality:
 
 ---
 
-## Part 5: Release & Operations
-
-### Deployment
-
-- Use feature flags (start OFF, roll out gradually)
-- Maintain backward compatibility with existing APIs and data
-- Include rollback scripts for DB migrations
-- Require passing CI/CD checks before merge
-- Services must be healthy before receiving traffic
-
-### Rollback & Monitoring
-
-- **15-minute rule:** Roll back if not fixed in 15 minutes
-- Auto-rollback on greater than 5% error rate or 2x latency
-- Structured JSON logs with correlation IDs
-- Track the Four Golden Signals (latency, traffic, errors, saturation)
-- Add metrics for key business KPIs
-- Document alert thresholds
-
----
-
-## Part 6: Collaboration
-
-### Code Reviews
-
-- Keep PRs to 400 lines or fewer
-- Review for correctness first, style second
-- Give constructive feedback with examples
-- Include context in PR descriptions
-
-### Documentation
-
-- README: setup and run instructions
-- Inline comments for complex logic
-- Architecture Decision Records (ADRs) for major choices
-- Keep docs near code
-
-### Version Control
-
-- Use semantic versioning (MAJOR.MINOR.PATCH)
-- Clear, imperative commit messages (use conventional commits if possible)
-- Protect main/master branches
-- Squash merges; tag releases consistently
-
----
-
-## Part 7: Technical Debt
-
-- Mark debt with TODO or FIXME plus ticket number
-- Review and prioritize quarterly
-- Pay down high-interest debt first (security, performance)
-- Allocate approximately 20% sprint capacity for debt reduction
-- Record debt decisions in ADRs
-
----
-
-## Part 8: Quick Reference
+## Part 5: Quick Reference
 
 ### Prompt Template
 
@@ -191,6 +169,31 @@ Build [feature] that:
   - Keeps functions <30 lines
 ```
 
+### Verification Shortcuts
+
+When I type **"qcheck"**, perform this analysis:
+
+```
+You are a SKEPTICAL senior software engineer. For every MAJOR code change:
+1. Does this follow our coding standards?
+2. Are there comprehensive tests?
+3. Is error handling adequate?
+4. Does this maintain existing patterns?
+5. Are there any security concerns?
+6. Is the code maintainable and readable?
+```
+
+When I type **"qcode"**, do this:
+
+```
+Implement your plan and ensure:
+- All new tests pass
+- Run existing tests to ensure nothing breaks
+- Run linting/formatting tools
+- Verify type checking passes
+- Code follows established patterns
+```
+
 ### Quality Checklist
 
 - [ ] Understandable in 5 minutes
@@ -200,17 +203,19 @@ Build [feature] that:
 - [ ] Tests and security checks included
 - [ ] No hardcoded values or magic numbers
 - [ ] All work committed before context exhaustion
+- [ ] Test suite passes after every modification
 
 ### Red Flags
 
-⚠ Functions exceeding 40 lines  
-⚠ More than 3 nesting levels  
-⚠ Unused abstractions or commented-out code  
-⚠ TODOs without ticket links  
-⚠ Copy-pasted logic (3+ times requires refactor)  
-⚠ Hardcoded test values or magic numbers  
-⚠ Trial-and-error fixes without root cause analysis  
-⚠ Large uncommitted changes late in context
+- Functions exceeding 40 lines
+- More than 3 nesting levels
+- Unused abstractions or commented-out code
+- TODOs without ticket links
+- Copy-pasted logic (3+ times requires refactor)
+- Hardcoded test values or magic numbers
+- Trial-and-error fixes without root cause analysis
+- Large uncommitted changes late in context
+- Modifying files outside the task's scope
 
 ### Guiding Principle
 
@@ -218,4 +223,4 @@ Build [feature] that:
 
 ---
 
-*Document Version 4.5 | Vinny Carpenter*
+*Document Version 5.0 | Vinny Carpenter*
