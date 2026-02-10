@@ -39,7 +39,7 @@
 		"dexie-react-hooks": "^4.2.0",
 		"lucide-react": "^0.562.0",
 		"nanoid": "^5.1.6",
-		"next": "16.1.1",
+		"next": "16.1.6",
 		"next-themes": "^0.4.6",
 		"react": "^19.2.3",
 		"react-dom": "^19.2.3",
@@ -61,7 +61,7 @@
 		"babel-plugin-react-compiler": "^1.0.0",
 		"baseline-browser-mapping": "^2.9.11",
 		"eslint": "^9.39.2",
-		"eslint-config-next": "16.1.1",
+		"eslint-config-next": "16.1.6",
 		"eslint-plugin-react-hooks": "7",
 		"fake-indexeddb": "^6.2.5",
 		"jsdom": "^27.4.0",
@@ -81,7 +81,8 @@
 		"baseline-browser-mapping": "^2.9.11",
 		"vite": "^7.3.0",
 		"esbuild": ">=0.25.0",
-		"hono": ">=4.11.4"
+		"@isaacs/brace-expansion": ">=5.0.1",
+		"hono": ">=4.11.7"
 	},
 	"license": "MIT"
 }
