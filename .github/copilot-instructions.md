@@ -56,9 +56,9 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - `bun dev` — Dev server at http://localhost:3000
 - `bun typecheck` — TypeScript type checking (no emit)
 - `bun lint` — ESLint with Next.js config
-- `bun test` — Vitest CI mode
-- `bun test:watch` — Vitest watch mode
-- `bun test -- --coverage` — Coverage report (target: ≥80% statements/lines/functions, ≥75% branches)
+- `bun run test` — Vitest CI mode (`bun test` invokes bun's built-in runner, not vitest)
+- `bun run test:watch` — Vitest watch mode
+- `bun run test -- --coverage` — Coverage report (target: ≥80% statements/lines/functions, ≥75% branches)
 - `bun run build` — Production build (includes typecheck)
 - `bun run export` — Static export for S3/CloudFront
 

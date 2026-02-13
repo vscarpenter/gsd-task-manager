@@ -38,9 +38,9 @@ Development server runs at `http://localhost:3000`.
 - `bun start` — Start production server (note: app uses static export)
 - `bun typecheck` — Run TypeScript type checking without emitting files
 - `bun lint` — Run ESLint with Next.js config
-- `bun test` — Run Vitest tests in CI mode
-- `bun test:watch` — Run Vitest in watch mode
-- `bun test -- --coverage` — Generate coverage report (target: ≥80% statements)
+- `bun run test` — Run Vitest tests in CI mode (`bun test` invokes bun's built-in runner, not vitest)
+- `bun run test:watch` — Run Vitest in watch mode
+- `bun run test -- --coverage` — Generate coverage report (target: ≥80% statements)
 
 ## Architecture
 
@@ -388,9 +388,9 @@ Tests use Vitest with Testing Library for component and integration testing.
 Run tests:
 
 ```bash
-bun test              # CI mode
-bun test:watch        # Watch mode
-bun test -- --coverage # With coverage report
+bun run test              # CI mode
+bun run test:watch        # Watch mode
+bun run test -- --coverage # With coverage report
 ```
 
 ## Code Style
@@ -459,7 +459,7 @@ Output is in the `out/` directory. Upload to your static hosting provider.
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests and linting (`bun test && bun lint && bun typecheck`)
+4. Run tests and linting (`bun run test && bun lint && bun typecheck`)
 5. Commit your changes with a clear message
 6. Push to your fork and open a pull request
 

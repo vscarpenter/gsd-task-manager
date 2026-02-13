@@ -191,6 +191,7 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
         window.location.href = authUrl;
       }
     } catch (error) {
+      setLoading(null);
       console.error("[OAuth] Flow failed:", error);
       if (error instanceof Error && error.message) {
         onError?.(error);

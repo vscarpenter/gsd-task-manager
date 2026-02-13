@@ -62,7 +62,7 @@ bun typecheck
 bun lint
 
 # Tests
-bun test
+bun run test
 
 # Build verification
 bun run build
@@ -75,7 +75,7 @@ All checks must pass before submitting a PR.
 - Write tests for new features and bug fixes
 - Place UI tests in `tests/ui/`, data logic in `tests/data/`
 - Maintain ≥80% code coverage
-- Run `bun test:watch` during development
+- Run `bun run test:watch` during development
 
 ### Commit Messages
 

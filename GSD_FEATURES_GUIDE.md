@@ -2095,8 +2095,8 @@ bun run build     # Build production bundle
 bun start         # Start production server (requires build)
 bun typecheck     # Run TypeScript compiler (no emit)
 bun lint          # Run ESLint
-bun test          # Run Vitest tests (CI mode)
-bun test:watch    # Run tests in watch mode
+bun run test      # Run Vitest tests (CI mode)
+bun run test:watch # Run tests in watch mode
 
 # Worker (optional, for sync development)
 cd worker/
@@ -2128,16 +2128,16 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
 
 ```bash
 # Run all tests
-bun test
+bun run test
 
 # Run specific test file
-bun test tasks.test.ts
+bun run test tasks.test.ts
 
 # Run with coverage
-bun test -- --coverage
+bun run test -- --coverage
 
 # Watch mode (re-run on file changes)
-bun test:watch
+bun run test:watch
 ```
 
 **Debugging:**
@@ -2345,7 +2345,7 @@ bun test:watch
    ```bash
    bun typecheck   # No TypeScript errors
    bun lint        # No ESLint errors
-   bun test        # All tests pass
+   bun run test    # All tests pass
    bun run build   # Production build succeeds
    ```
 
