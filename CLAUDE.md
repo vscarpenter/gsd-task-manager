@@ -22,9 +22,9 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - `bun typecheck` - Run TypeScript type checking
 
 ### Testing & Quality
-- `bun test` - Run Vitest tests in CI mode
-- `bun test:watch` - Run Vitest in watch mode
-- `bun test -- --coverage` - Generate coverage report (target: ≥80%)
+- `bun run test` - Run Vitest tests in CI mode (`bun test` invokes bun's built-in runner, not vitest)
+- `bun run test:watch` - Run Vitest in watch mode
+- `bun run test -- --coverage` - Generate coverage report (target: ≥80%)
 - `bun lint` - Run ESLint
 
 ### Build & Deployment
@@ -159,7 +159,7 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - `SyncAuthDialog` adds delay to avoid duplicate encryption dialogs
 
 ### Pre-commit
-- Run `bun typecheck` and `bun lint` before committing
+- Run `bun run test`, `bun typecheck`, and `bun lint` before committing
 - Static export mode means no API routes or SSR
 
 ## Modular Architecture
@@ -178,5 +178,9 @@ The codebase follows coding standards (<350 lines per file, <30 lines per functi
 - **packages/mcp-server/src/write-ops/**: task-operations, bulk-operations with dry-run support
 
 All modules maintain backward compatibility through re-export layers.
+
+## Git Workflow 
+
+For git operations: when asked to commit and push, write a descriptive conventional commit message, bump the version if appropriate, and create a PR unless told otherwise. Standard workflow: commit → push → create PR.
 
 Always leverage @coding-standards.md for coding standards and guidelines.

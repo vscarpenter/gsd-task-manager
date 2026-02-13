@@ -43,6 +43,17 @@ vi.mock('@/lib/oauth-config', () => ({
   getOAuthEnvironment: () => 'local',
 }));
 
+vi.mock('@/lib/env-config', () => ({
+  getEnvironmentConfig: () => ({
+    apiBaseUrl: 'http://localhost:8787',
+    oauthCallbackUrl: 'http://localhost:3000/auth/callback',
+    isDevelopment: true,
+    isProduction: false,
+    isStaging: false,
+    environment: 'development',
+  }),
+}));
+
 // Import component after mocks
 import { OAuthButtons } from '@/components/sync/oauth-buttons';
 
@@ -511,11 +522,12 @@ describe('OAuthButtons', () => {
       const user = userEvent.setup();
       mockCanUsePopups.mockReturnValue(false);
 
-      // Mock window.location.href
+      // Save original location and replace with mock
+      const originalLocation = window.location;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).location;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      window.location = { href: '' } as any;
+      window.location = { href: '', hostname: 'localhost' } as any;
 
       render(<OAuthButtons />);
 
@@ -525,6 +537,9 @@ describe('OAuthButtons', () => {
       await waitFor(() => {
         expect(window.location.href).toBe('https://accounts.google.com/oauth');
       });
+
+      // Restore original location to prevent test contamination
+      window.location = originalLocation;
     });
   });
 
