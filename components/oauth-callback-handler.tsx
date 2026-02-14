@@ -27,85 +27,7 @@ export function OAuthCallbackHandler() {
   // Use ref instead of state for synchronous duplicate state prevention
   const processingStateRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    // Handle OAuth error redirect (from worker when state is expired/invalid)
-    const oauthError = searchParams.get('oauth_error');
-    const oauthMessage = searchParams.get('oauth_message');
-
-    if (oauthError === 'session_expired' && oauthMessage) {
-      console.error('[OAuthCallbackHandler] OAuth session expired:', oauthMessage);
-
-      // Check if we're in a popup window (OAuth flow that redirected to main app on error)
-      const isPopup = window.opener !== null || window.name.includes('oauth');
-
-      if (isPopup) {
-        // Broadcast error to main window via BroadcastChannel
-        try {
-          const channel = new BroadcastChannel('oauth-handshake');
-          channel.postMessage({
-            type: 'oauth_handshake',
-            success: false,
-            error: 'Sign-in session expired. Please try again.',
-            timestamp: Date.now(),
-          });
-          channel.close();
-        } catch (e) {
-          console.warn('[OAuthCallbackHandler] BroadcastChannel failed:', e);
-        }
-
-        // Try to close the popup - the main window will show the error
-        try {
-          window.close();
-        } catch (e) {
-          console.warn('[OAuthCallbackHandler] window.close() failed:', e);
-        }
-
-        // If popup didn't close, show message to close manually
-        setTimeout(() => {
-          if (!window.closed) {
-            toast.error('Sign-in failed. Please close this window and try again.', {
-              duration: 10000,
-            });
-          }
-        }, 100);
-      } else {
-        // Main window - show toast directly
-        toast.error('Sign-in session expired. Please try again.', {
-          description: 'This can happen if the sign-in flow was interrupted or took too long.',
-          duration: 6000,
-        });
-      }
-
-      // Clean up URL parameters
-      router.replace('/');
-      return;
-    }
-
-    // Clean query param if present (normal success flow)
-    if (searchParams.get('oauth_complete') === 'true') {
-      router.replace('/');
-    }
-  }, [searchParams, router]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToOAuthHandshake(async (event: OAuthHandshakeEvent) => {
-      if (event.status === 'success') {
-        await processAuthData(event.authData, event.state);
-      } else {
-        console.error('[OAuthCallbackHandler] OAuth handshake error:', {
-          state: event.state.substring(0, 8) + '...',
-          error: event.error,
-        });
-        toast.error(event.error || 'Sign in failed. Please try again.');
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  const processAuthData = async (authData: OAuthAuthData, state: string) => {
+  async function processAuthData(authData: OAuthAuthData, state: string) {
     // Synchronous duplicate check using ref (React state updates are async/batched)
     if (processingStateRef.current === state) {
       return;
@@ -183,7 +105,85 @@ export function OAuthCallbackHandler() {
         }`
       );
     }
-  };
+  }
+
+  useEffect(() => {
+    // Handle OAuth error redirect (from worker when state is expired/invalid)
+    const oauthError = searchParams.get('oauth_error');
+    const oauthMessage = searchParams.get('oauth_message');
+
+    if (oauthError === 'session_expired' && oauthMessage) {
+      console.error('[OAuthCallbackHandler] OAuth session expired:', oauthMessage);
+
+      // Check if we're in a popup window (OAuth flow that redirected to main app on error)
+      const isPopup = window.opener !== null || window.name.includes('oauth');
+
+      if (isPopup) {
+        // Broadcast error to main window via BroadcastChannel
+        try {
+          const channel = new BroadcastChannel('oauth-handshake');
+          channel.postMessage({
+            type: 'oauth_handshake',
+            success: false,
+            error: 'Sign-in session expired. Please try again.',
+            timestamp: Date.now(),
+          });
+          channel.close();
+        } catch (e) {
+          console.warn('[OAuthCallbackHandler] BroadcastChannel failed:', e);
+        }
+
+        // Try to close the popup - the main window will show the error
+        try {
+          window.close();
+        } catch (e) {
+          console.warn('[OAuthCallbackHandler] window.close() failed:', e);
+        }
+
+        // If popup didn't close, show message to close manually
+        setTimeout(() => {
+          if (!window.closed) {
+            toast.error('Sign-in failed. Please close this window and try again.', {
+              duration: 10000,
+            });
+          }
+        }, 100);
+      } else {
+        // Main window - show toast directly
+        toast.error('Sign-in session expired. Please try again.', {
+          description: 'This can happen if the sign-in flow was interrupted or took too long.',
+          duration: 6000,
+        });
+      }
+
+      // Clean up URL parameters
+      router.replace('/');
+      return;
+    }
+
+    // Clean query param if present (normal success flow)
+    if (searchParams.get('oauth_complete') === 'true') {
+      router.replace('/');
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToOAuthHandshake(async (event: OAuthHandshakeEvent) => {
+      if (event.status === 'success') {
+        await processAuthData(event.authData, event.state);
+      } else {
+        console.error('[OAuthCallbackHandler] OAuth handshake error:', {
+          state: event.state.substring(0, 8) + '...',
+          error: event.error,
+        });
+        toast.error(event.error || 'Sign in failed. Please try again.');
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <>

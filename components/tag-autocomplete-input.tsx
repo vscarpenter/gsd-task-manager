@@ -42,6 +42,10 @@ export function TagAutocompleteInput({
     : [];
 
   const showDropdown = isOpen && filteredSuggestions.length > 0;
+  const activeIndex =
+    highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length
+      ? highlightedIndex
+      : -1;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -60,13 +64,9 @@ export function TagAutocompleteInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Reset highlighted index when suggestions change
-  useEffect(() => {
-    setHighlightedIndex(-1);
-  }, [filteredSuggestions.length, value]);
-
   const handleInputChange = (newValue: string) => {
     onChange(newValue);
+    setHighlightedIndex(-1);
     setIsOpen(true);
   };
 
@@ -100,8 +100,8 @@ export function TagAutocompleteInput({
 
       case "Enter":
         event.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
-          handleSelectSuggestion(filteredSuggestions[highlightedIndex]);
+        if (activeIndex >= 0) {
+          handleSelectSuggestion(filteredSuggestions[activeIndex]);
         } else if (onEnterWithoutSelection) {
           // If no suggestion is highlighted, let the parent handle Enter (manual add)
           onEnterWithoutSelection();
@@ -135,7 +135,7 @@ export function TagAutocompleteInput({
         aria-controls="tag-suggestions"
         aria-autocomplete="list"
         aria-activedescendant={
-          highlightedIndex >= 0 ? `tag-suggestion-${highlightedIndex}` : undefined
+          activeIndex >= 0 ? `tag-suggestion-${activeIndex}` : undefined
         }
       />
 
@@ -152,9 +152,9 @@ export function TagAutocompleteInput({
                 key={tag}
                 id={`tag-suggestion-${index}`}
                 role="option"
-                aria-selected={index === highlightedIndex}
+                aria-selected={index === activeIndex}
                 className={`cursor-pointer px-3 py-2 text-sm ${
-                  index === highlightedIndex
+                  index === activeIndex
                     ? "bg-accent text-accent-foreground"
                     : "hover:bg-accent/50"
                 }`}

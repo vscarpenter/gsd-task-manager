@@ -37,15 +37,16 @@ export function AboutSection() {
 			</div>
 
 			{/* GitHub Link Row */}
-			<button
-				onClick={() => window.open("https://github.com/vscarpenter/gsd-task-manager", "_blank")}
+			<a
+				href="https://github.com/vscarpenter/gsd-task-manager"
+				target="_blank"
+				rel="noopener noreferrer"
 				className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
 				           text-left hover:bg-background-muted/50 transition-colors"
 			>
 				<span className="text-sm font-medium text-accent">View on GitHub</span>
 				<ExternalLinkIcon className="w-4 h-4 text-foreground-muted/50" />
-			</button>
+			</a>
 		</>
 	);
 }
-

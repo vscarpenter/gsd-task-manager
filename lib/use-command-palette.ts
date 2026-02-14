@@ -13,17 +13,20 @@ interface UseCommandPaletteOptions {
  * Hook to manage command palette state and filtering
  */
 export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
 
-  // Reset search when closing
-  useEffect(() => {
-    if (!open) {
-      setSearch('');
-      setSelectedActionId(null);
-    }
-  }, [open]);
+  const setOpen = useCallback((next: boolean | ((previous: boolean) => boolean)) => {
+    setOpenState((previous) => {
+      const resolved = typeof next === 'function' ? next(previous) : next;
+      if (!resolved) {
+        setSearch('');
+        setSelectedActionId(null);
+      }
+      return resolved;
+    });
+  }, []);
 
   // Open/close with ⌘K / Ctrl+K
   useEffect(() => {
@@ -41,7 +44,7 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [open]);
+  }, [open, setOpen]);
 
   // Filter actions by search query
   const filteredActions = useMemo(() => {
@@ -82,8 +85,7 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
   const executeAction = useCallback((action: CommandAction) => {
     action.onExecute();
     setOpen(false);
-    setSearch('');
-  }, []);
+  }, [setOpen]);
 
   // Handle task selection (navigate to matrix and highlight)
   const selectTask = useCallback((taskId: string) => {
@@ -93,8 +95,7 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
     }));
 
     setOpen(false);
-    setSearch('');
-  }, []);
+  }, [setOpen]);
 
   return {
     open,

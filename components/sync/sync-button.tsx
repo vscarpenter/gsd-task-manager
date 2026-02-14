@@ -38,7 +38,7 @@ export function SyncButton() {
     status,
     error,
     nextRetryAt,
-    onAuthError: (message, action, duration) => {
+    onAuthError: (message, _action, duration) => {
       showToast(
         message,
         {

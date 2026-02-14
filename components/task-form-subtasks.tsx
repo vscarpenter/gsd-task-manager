@@ -60,7 +60,13 @@ export function TaskFormSubtasks({ subtasks, onChange, error }: TaskFormSubtasks
             }
           }}
         />
-        <Button type="button" variant="subtle" onClick={addSubtask} className="shrink-0">
+        <Button
+          type="button"
+          variant="subtle"
+          onClick={addSubtask}
+          className="shrink-0"
+          aria-label="Add subtask"
+        >
           <PlusIcon className="h-4 w-4" />
         </Button>
       </div>

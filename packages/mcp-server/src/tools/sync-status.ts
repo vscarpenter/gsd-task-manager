@@ -37,7 +37,7 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
         newestTask: data.metadata.newestTaskDate,
       };
     }
-  } catch (error) {
+  } catch {
     // Fall back to old approach if new endpoint not available
     console.error('Failed to fetch from /api/stats, falling back to /api/sync/status');
   }

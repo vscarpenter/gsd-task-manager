@@ -48,9 +48,10 @@ export function EncryptionPassphraseDialog({
 
   // Cleanup timeout on unmount to prevent memory leaks
   useEffect(() => {
+    const timeoutRef = syncTimeoutRef;
     return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
   }, []);

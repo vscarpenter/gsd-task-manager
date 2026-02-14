@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSyncQueue } from '@/lib/sync/queue';
 import { isAuthError } from '@/lib/sync/error-categorizer';
 import { SYNC_CONFIG, SYNC_TOAST_DURATION } from '@/lib/constants/sync';
@@ -46,7 +46,7 @@ export function useSyncStatus({
 }: SyncStatusOptions): SyncStatusResult {
   const [pendingCount, setPendingCount] = useState(0);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
-  const [hasAuthError, setHasAuthError] = useState(false);
+  const previousAuthErrorRef = useRef(false);
 
   // Poll pending operation count
   useEffect(() => {
@@ -86,21 +86,15 @@ export function useSyncStatus({
 
   // Detect authentication errors - derive from error state
   const authErrorDetected = error ? isAuthError(new Error(error)) : false;
+  const hasAuthError = authErrorDetected;
 
-  // Update hasAuthError state and trigger callback when auth error is detected
+  // Trigger callback once when we transition into an auth error state
   useEffect(() => {
-    if (!error) {
-      if (hasAuthError) {
-        setHasAuthError(false);
-      }
-      return;
-    }
-
-    if (authErrorDetected && !hasAuthError) {
-      setHasAuthError(true);
+    if (authErrorDetected && !previousAuthErrorRef.current && error) {
       onAuthError(error, undefined, SYNC_TOAST_DURATION.LONG);
     }
-  }, [error, authErrorDetected, hasAuthError, onAuthError]);
+    previousAuthErrorRef.current = authErrorDetected;
+  }, [authErrorDetected, error, onAuthError]);
 
   const iconType = getIconType({
     isEnabled,

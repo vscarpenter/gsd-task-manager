@@ -151,14 +151,13 @@ export class SyncEngine {
       const pullResult = await pullRemoteChanges(updatedConfig, syncContext);
       return { pushResult, pullResult, updatedConfig };
     } catch (error: unknown) {
-      return this.handleAuthRetry(error, config, { crypto, api });
+      return this.handleAuthRetry(error, { crypto, api });
     }
   }
 
   /** Handle 401 errors with token refresh and retry */
   private async handleAuthRetry(
     error: unknown,
-    config: SyncConfig,
     syncContext: SyncContext
   ): Promise<SyncOperationResult> {
     const { crypto, api } = syncContext;

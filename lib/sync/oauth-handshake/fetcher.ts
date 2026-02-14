@@ -106,7 +106,6 @@ function createErrorResult(
  */
 export function initiateHandshakeFetch(
   state: string,
-  wasSuccessful: boolean,
   initialError?: string
 ): void {
   if (processedStates.has(state) || pendingFetches.has(state)) {

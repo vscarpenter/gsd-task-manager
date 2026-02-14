@@ -37,7 +37,6 @@ describe("useErrorHandler", () => {
 
   it("returns a stable function reference", () => {
     const { result, rerender } = renderHook(() => useErrorHandler());
-    const firstHandler = result.current;
 
     rerender();
 

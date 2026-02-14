@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { SyncApiClient, getApiClient, clearApiClient } from '@/lib/sync/api-client';
 import {
   SyncNetworkError,
@@ -56,8 +56,7 @@ describe('SyncApiClient', () => {
       it('should make POST request to /api/auth/logout with auth', async () => {
         const mockResponse = { success: true };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -88,8 +87,7 @@ describe('SyncApiClient', () => {
           expiresAt: Date.now() + 86400000,
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -123,8 +121,7 @@ describe('SyncApiClient', () => {
           conflicts: [],
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -157,8 +154,7 @@ describe('SyncApiClient', () => {
       });
 
       it('should throw SyncAuthError on 401 error', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: false,
           status: 401,
           statusText: 'Unauthorized',
@@ -189,8 +185,7 @@ describe('SyncApiClient', () => {
           syncTimestamp: Date.now(),
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -222,8 +217,7 @@ describe('SyncApiClient', () => {
           storageUsed: 1024,
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -266,8 +260,7 @@ describe('SyncApiClient', () => {
           ],
         };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -291,8 +284,7 @@ describe('SyncApiClient', () => {
       it('should make DELETE request to /api/devices/:deviceId with auth', async () => {
         const mockResponse = { success: true };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (global.fetch as any).mockResolvedValueOnce({
+        (global.fetch as unknown as Mock).mockResolvedValueOnce({
           ok: true,
           json: async () => mockResponse,
         });
@@ -315,94 +307,79 @@ describe('SyncApiClient', () => {
 
   describe('Error Handling', () => {
     it('should categorize 401 as SyncAuthError', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
         json: async () => ({ error: 'Authentication failed' }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncAuthError);
     });
 
     it('should categorize 403 as SyncAuthError', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 403,
         statusText: 'Forbidden',
         json: async () => ({ error: 'Access denied' }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncAuthError);
     });
 
     it('should categorize 500 as SyncNetworkError', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
         json: async () => ({ error: 'Server error' }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should categorize 503 as SyncNetworkError', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 503,
         statusText: 'Service Unavailable',
         json: async () => ({ error: 'Service unavailable' }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should categorize 400 as SyncValidationError', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 400,
         statusText: 'Bad Request',
         json: async () => ({ error: 'Invalid request' }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncValidationError);
     });
 
     it('should categorize 422 as SyncValidationError', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 422,
         statusText: 'Unprocessable Entity',
         json: async () => ({ error: 'Validation failed' }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncValidationError);
     });
 
     it('should handle network errors (fetch throws)', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+      (global.fetch as unknown as Mock).mockRejectedValueOnce(new Error('Network error'));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should handle invalid JSON response', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -411,14 +388,12 @@ describe('SyncApiClient', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(client.listDevices()).rejects.toThrow(SyncNetworkError);
     });
 
     it('should preserve error context', async () => {
       const errorMessage = 'Custom error message';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -426,7 +401,6 @@ describe('SyncApiClient', () => {
       });
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await client.listDevices();
         expect.fail('Should have thrown');
       } catch (error) {
@@ -466,13 +440,11 @@ describe('SyncApiClient', () => {
     });
 
     it('should include Content-Type header', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await client.push({
         operations: [
           {
@@ -499,8 +471,7 @@ describe('SyncApiClient', () => {
     });
 
     it('should include Authorization header when token is set and auth is required', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
@@ -518,19 +489,16 @@ describe('SyncApiClient', () => {
     });
 
     it('should omit Authorization header when token is missing', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as unknown as Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true }),
       });
 
       client.setToken(null);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await client.listDevices();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const callArgs = (global.fetch as any).mock.calls[0][1];
+      const callArgs = (global.fetch as unknown as Mock).mock.calls[0][1];
       expect(callArgs.headers.Authorization).toBeUndefined();
     });
   });

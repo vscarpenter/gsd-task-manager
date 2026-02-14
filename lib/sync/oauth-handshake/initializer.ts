@@ -136,7 +136,7 @@ export function handleBroadcastPayload(payload: BroadcastPayload | null): void {
     return;
   }
 
-  initiateHandshakeFetch(payload.state, payload.success, payload.error ?? undefined);
+  initiateHandshakeFetch(payload.state, payload.error ?? undefined);
 }
 
 /**

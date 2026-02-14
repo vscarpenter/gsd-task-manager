@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { calculateMetrics, getQuadrantPerformance } from '@/lib/analytics/metrics';
 import type { TaskRecord } from '@/lib/types';
 
@@ -8,9 +8,9 @@ vi.mock('date-fns', async () => {
   return {
     ...actual,
     // Use fixed date for testing: 2025-01-15 12:00:00
-    startOfDay: (date: Date) => new Date('2025-01-15T00:00:00Z'),
-    startOfWeek: (date: Date) => new Date('2025-01-12T00:00:00Z'),
-    startOfMonth: (date: Date) => new Date('2025-01-01T00:00:00Z'),
+    startOfDay: () => new Date('2025-01-15T00:00:00Z'),
+    startOfWeek: () => new Date('2025-01-12T00:00:00Z'),
+    startOfMonth: () => new Date('2025-01-01T00:00:00Z'),
   };
 });
 

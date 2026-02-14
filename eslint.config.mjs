@@ -3,6 +3,15 @@ import nextTypescript from "eslint-config-next/typescript";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 
 const config = [
+    {
+        ignores: [
+            ".next/**",
+            "out/**",
+            "worker/.wrangler/**",
+            "packages/mcp-server/dist/**",
+            "packages/native/ios.backup/build/**",
+        ],
+    },
     ...nextCoreWebVitals,
     ...nextTypescript,
     {

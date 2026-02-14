@@ -55,7 +55,13 @@ export function TaskFormTags({ tags, onChange, error }: TaskFormTagsProps) {
           onSelect={handleSelectTag}
           onEnterWithoutSelection={addTag}
         />
-        <Button type="button" variant="subtle" onClick={addTag} className="shrink-0">
+        <Button
+          type="button"
+          variant="subtle"
+          onClick={addTag}
+          className="shrink-0"
+          aria-label="Add tag"
+        >
           <PlusIcon className="h-4 w-4" />
         </Button>
       </div>

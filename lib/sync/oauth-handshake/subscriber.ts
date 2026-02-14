@@ -36,7 +36,7 @@ export async function retryOAuthHandshake(state: string): Promise<void> {
   if (processedStates.has(state)) {
     processedStates.delete(state);
   }
-  initiateHandshakeFetch(state, true);
+  initiateHandshakeFetch(state);
 }
 
 /**

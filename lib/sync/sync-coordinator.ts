@@ -5,7 +5,6 @@
 
 import { getSyncEngine } from './engine';
 import { getRetryManager } from './retry-manager';
-import { getSyncQueue } from './queue';
 import type { SyncResult, SyncConfig } from './types';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -30,7 +29,6 @@ interface QueuedSyncRequest {
 export class SyncCoordinator {
   private engine = getSyncEngine();
   private retryManager = getRetryManager();
-  private syncQueue = getSyncQueue();
   
   private isRunning = false;
   private pendingRequests: QueuedSyncRequest[] = [];

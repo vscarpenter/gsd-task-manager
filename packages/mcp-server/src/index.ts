@@ -35,7 +35,7 @@ async function main() {
   let config;
   try {
     config = loadConfig();
-  } catch (error) {
+  } catch {
     process.exit(1);
   }
 
