@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import type { GsdConfig } from '../tools.js';
+import { createMcpLogger } from '../utils/logger.js';
+
+const logger = createMcpLogger('CONFIG');
 
 /**
  * Configuration schema for GSD MCP Server
@@ -25,13 +28,9 @@ export function loadConfig(): GsdConfig {
       encryptionPassphrase: process.env.GSD_ENCRYPTION_PASSPHRASE,
     });
   } catch (error) {
-    console.error('❌ Configuration error:', error);
-    console.error('\nRequired environment variables:');
-    console.error('  GSD_API_URL - Base URL of your GSD Worker API (e.g., https://gsd.vinny.dev)');
-    console.error('  GSD_AUTH_TOKEN - JWT token from OAuth authentication');
-    console.error('\nOptional environment variables:');
-    console.error('  GSD_ENCRYPTION_PASSPHRASE - Your encryption passphrase (enables decrypted task access)');
-    console.error('\n💡 Tip: Run setup wizard with: npx gsd-mcp-server --setup');
+    logger.error('Configuration error', error instanceof Error ? error : new Error(String(error)));
+    logger.error('Required environment variables: GSD_API_URL, GSD_AUTH_TOKEN | Optional: GSD_ENCRYPTION_PASSPHRASE');
+    logger.error('Run setup wizard with: npx gsd-mcp-server --setup');
     throw error;
   }
 }
@@ -45,6 +44,7 @@ export function isConfigValid(): boolean {
     loadConfig();
     return true;
   } catch {
+    // loadConfig throws on invalid config - return false without propagating
     return false;
   }
 }

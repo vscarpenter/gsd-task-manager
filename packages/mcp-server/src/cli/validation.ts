@@ -3,7 +3,7 @@
  * Tests environment variables, API connectivity, auth, encryption, and device access
  */
 
-import type { GsdConfig } from '../tools.js';
+import type { GsdConfig, SyncStatus } from '../tools.js';
 import { getSyncStatus, listDevices, listTasks } from '../tools.js';
 
 /**
@@ -70,8 +70,7 @@ async function validateApiConnection(apiUrl: string): Promise<ValidationCheck> {
 /**
  * Create sync status check result
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createSyncStatusCheck(status: any): ValidationCheck {
+function createSyncStatusCheck(status: SyncStatus): ValidationCheck {
   const hasConflicts = status.conflictCount > 0;
   return {
     name: 'Sync Status',

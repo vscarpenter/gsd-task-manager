@@ -1,6 +1,9 @@
 import type { Env } from '../../types';
 import { jsonResponse } from '../../middleware/cors';
 import { TTL } from '../../config';
+import { createLogger } from '../../utils/logger';
+
+const logger = createLogger('OIDC:RESPONSE');
 
 /**
  * Build redirect response for successful OAuth callback
@@ -107,8 +110,12 @@ export async function getErrorContext(state: string, env: Env): Promise<ErrorCon
         sessionId: stateData.sessionId || null,
       };
     }
-  } catch {
-    // Ignore errors when trying to retrieve state
+  } catch (error) {
+    // KV lookup failed - proceed with null context (non-critical, best-effort)
+    logger.warn('Failed to retrieve OAuth state context', {
+      state: state.substring(0, 8) + '...',
+      error: String(error),
+    });
   }
 
   return { appOrigin: null, sessionId: null };

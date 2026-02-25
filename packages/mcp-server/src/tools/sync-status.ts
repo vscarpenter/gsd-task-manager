@@ -1,6 +1,9 @@
 import { apiRequest } from '../api/client.js';
 import { syncStatusSchema, statsResponseSchema } from '../types.js';
 import type { GsdConfig, SyncStatus, TaskStats } from '../types.js';
+import { createMcpLogger } from '../utils/logger.js';
+
+const logger = createMcpLogger('SYNC_STATUS');
 
 /**
  * Get sync status including storage, device count, and conflict information
@@ -39,7 +42,7 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
     }
   } catch {
     // Fall back to old approach if new endpoint not available
-    console.error('Failed to fetch from /api/stats, falling back to /api/sync/status');
+    logger.warn('Failed to fetch from /api/stats, falling back to /api/sync/status');
   }
 
   // Fallback: use the status endpoint and derive basic stats

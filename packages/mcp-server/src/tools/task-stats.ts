@@ -3,6 +3,9 @@ import { initializeEncryption } from '../encryption/manager.js';
 import { getCryptoManager } from '../crypto.js';
 import { statsResponseSchema } from '../types.js';
 import type { GsdConfig, StatsResponse, DecryptedTask } from '../types.js';
+import { createMcpLogger } from '../utils/logger.js';
+
+const logger = createMcpLogger('TASK_STATS');
 
 /**
  * Detailed task statistics derived from decrypted tasks
@@ -84,7 +87,7 @@ async function decryptTasks(
       const task = JSON.parse(decryptedJson) as DecryptedTask;
       decryptedTasks.push(task);
     } catch (error) {
-      console.error(`Failed to decrypt task ${encryptedTask.id}:`, error);
+      logger.error(`Failed to decrypt task ${encryptedTask.id}`, error instanceof Error ? error : new Error(String(error)));
       // Skip tasks that fail to decrypt
     }
   }

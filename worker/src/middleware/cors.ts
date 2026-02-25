@@ -24,6 +24,9 @@ export function getCorsHeaders(origin?: string | null, environment?: string): Re
 // Legacy export for backwards compatibility
 export const corsHeaders = getCorsHeaders();
 
+// Build CSP connect-src dynamically from ALLOWED_ORIGINS to avoid duplication
+const ALLOWED_CONNECT_ORIGINS = ALLOWED_ORIGINS.join(' ');
+
 export const securityHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
@@ -36,15 +39,14 @@ export const securityHeaders = {
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https:; " +
     "font-src 'self'; " +
-    "connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:3000 http://127.0.0.1:3000; " +
+    `connect-src 'self' ${ALLOWED_CONNECT_ORIGINS}; ` +
     "frame-ancestors 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self' https://accounts.google.com https://appleid.apple.com;",
 };
 
 // Helper to create JSON response with proper headers
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function jsonResponse(data: any, status = 200, origin?: string | null): Response {
+export function jsonResponse(data: unknown, status = 200, origin?: string | null): Response {
   const headers = new Headers();
   headers.set('Content-Type', 'application/json; charset=utf-8');
 

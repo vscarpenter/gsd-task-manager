@@ -13,6 +13,9 @@ import {
 } from '@/lib/sync/oauth-handshake';
 import { normalizeTokenExpiration } from '@/lib/sync/utils';
 import { getEnvironmentConfig } from '@/lib/env-config';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('AUTH');
 
 /**
  * OAuth callback handler - processes OAuth success data from sessionStorage
@@ -36,7 +39,7 @@ export function OAuthCallbackHandler() {
     processingStateRef.current = state;
 
     try {
-      console.log('[OAuthCallbackHandler] Processing OAuth handshake result:', {
+      logger.info('Processing OAuth handshake result', {
         state: state.substring(0, 8) + '...',
         email: authData.email,
         provider: authData.provider,
@@ -76,7 +79,7 @@ export function OAuthCallbackHandler() {
         nextRetryAt: null,
       });
 
-      console.log('[OAuthCallbackHandler] Stored sync config in IndexedDB:', {
+      logger.info('Stored sync config in IndexedDB', {
         userId: authData.userId,
         email: authData.email,
         serverUrl,
@@ -87,18 +90,18 @@ export function OAuthCallbackHandler() {
       const hasEncryption = await isEncryptionConfigured();
 
       if (authData.requiresEncryptionSetup || !hasEncryption) {
-        console.log('[OAuthCallbackHandler] Showing encryption setup dialog (new user)');
+        logger.info('Showing encryption setup dialog (new user)');
         setIsNewUser(true);
         setShowEncryptionDialog(true);
       } else {
-        console.log('[OAuthCallbackHandler] Showing encryption unlock dialog (existing user)');
+        logger.info('Showing encryption unlock dialog (existing user)');
         setIsNewUser(false);
         setShowEncryptionDialog(true);
       }
 
       toast.success('Sync enabled successfully! Finish encryption setup to start syncing.');
     } catch (err) {
-      console.error('[OAuthCallbackHandler] Error storing sync config:', err);
+      logger.error('Error storing sync config', err instanceof Error ? err : new Error(String(err)));
       toast.error(
         `Failed to process OAuth callback: ${
           err instanceof Error ? err.message : 'Unknown error'
@@ -113,7 +116,7 @@ export function OAuthCallbackHandler() {
     const oauthMessage = searchParams.get('oauth_message');
 
     if (oauthError === 'session_expired' && oauthMessage) {
-      console.error('[OAuthCallbackHandler] OAuth session expired:', oauthMessage);
+      logger.warn('OAuth session expired', { message: oauthMessage });
 
       // Check if we're in a popup window (OAuth flow that redirected to main app on error)
       const isPopup = window.opener !== null || window.name.includes('oauth');
@@ -130,14 +133,14 @@ export function OAuthCallbackHandler() {
           });
           channel.close();
         } catch (e) {
-          console.warn('[OAuthCallbackHandler] BroadcastChannel failed:', e);
+          logger.warn('BroadcastChannel failed', { error: String(e) });
         }
 
         // Try to close the popup - the main window will show the error
         try {
           window.close();
         } catch (e) {
-          console.warn('[OAuthCallbackHandler] window.close() failed:', e);
+          logger.warn('window.close() failed', { error: String(e) });
         }
 
         // If popup didn't close, show message to close manually
@@ -172,7 +175,7 @@ export function OAuthCallbackHandler() {
       if (event.status === 'success') {
         await processAuthData(event.authData, event.state);
       } else {
-        console.error('[OAuthCallbackHandler] OAuth handshake error:', {
+        logger.error('OAuth handshake error', undefined, {
           state: event.state.substring(0, 8) + '...',
           error: event.error,
         });
@@ -192,7 +195,7 @@ export function OAuthCallbackHandler() {
         isOpen={showEncryptionDialog}
         isNewUser={isNewUser}
         onComplete={() => {
-          console.log('[OAuthCallbackHandler] Encryption setup complete, closing dialog');
+          logger.info('Encryption setup complete, closing dialog');
           setShowEncryptionDialog(false);
           toast.success('Sync enabled successfully! The sync button should update shortly.');
           router.replace('/');

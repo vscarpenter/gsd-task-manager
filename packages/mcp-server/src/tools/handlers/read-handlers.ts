@@ -13,6 +13,10 @@ import {
   getTokenExpiration,
   parseJWT,
 } from '../../jwt.js';
+import { createMcpLogger } from '../../utils/logger.js';
+import type { McpToolResponse } from './types.js';
+
+const logger = createMcpLogger('READ_HANDLERS');
 
 /**
  * Read-only tool handlers for accessing task data and metadata
@@ -52,7 +56,7 @@ function getTokenStatus(token: string) {
   };
 }
 
-export async function handleGetSyncStatus(config: GsdConfig) {
+export async function handleGetSyncStatus(config: GsdConfig): Promise<McpToolResponse> {
   const status = await getSyncStatus(config);
   const tokenStatus = getTokenStatus(config.authToken);
 
@@ -81,13 +85,15 @@ export async function handleGetSyncStatus(config: GsdConfig) {
  * Handle get_token_status tool
  * Provides detailed token information and expiration warnings
  */
-export async function handleGetTokenStatus(config: GsdConfig) {
+export async function handleGetTokenStatus(config: GsdConfig): Promise<McpToolResponse> {
   const tokenStatus = getTokenStatus(config.authToken);
 
   let payload;
   try {
     payload = parseJWT(config.authToken);
-  } catch {
+  } catch (error) {
+    // JWT parse failed - token may be malformed; display with null details
+    logger.debug('Failed to parse JWT payload for display', { error: String(error) });
     payload = null;
   }
 
@@ -123,7 +129,7 @@ export async function handleGetTokenStatus(config: GsdConfig) {
   };
 }
 
-export async function handleListDevices(config: GsdConfig) {
+export async function handleListDevices(config: GsdConfig): Promise<McpToolResponse> {
   const devices = await listDevices(config);
   return {
     content: [
@@ -135,7 +141,7 @@ export async function handleListDevices(config: GsdConfig) {
   };
 }
 
-export async function handleGetTaskStats(config: GsdConfig) {
+export async function handleGetTaskStats(config: GsdConfig): Promise<McpToolResponse> {
   const stats = await getTaskStats(config);
   return {
     content: [
@@ -150,7 +156,7 @@ export async function handleGetTaskStats(config: GsdConfig) {
 export async function handleListTasks(
   config: GsdConfig,
   args: { quadrant?: string; completed?: boolean; tags?: string[] }
-) {
+): Promise<McpToolResponse> {
   const tasks = await listTasks(config, args);
   return {
     content: [
@@ -162,7 +168,7 @@ export async function handleListTasks(
   };
 }
 
-export async function handleGetTask(config: GsdConfig, args: { taskId: string }) {
+export async function handleGetTask(config: GsdConfig, args: { taskId: string }): Promise<McpToolResponse> {
   const task = await getTask(config, args.taskId);
   return {
     content: [
@@ -174,7 +180,7 @@ export async function handleGetTask(config: GsdConfig, args: { taskId: string })
   };
 }
 
-export async function handleSearchTasks(config: GsdConfig, args: { query: string }) {
+export async function handleSearchTasks(config: GsdConfig, args: { query: string }): Promise<McpToolResponse> {
   const tasks = await searchTasks(config, args.query);
   return {
     content: [

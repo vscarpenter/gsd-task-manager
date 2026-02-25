@@ -6,6 +6,9 @@ import { toast } from 'sonner';
 import type { OAuthHandshakeEvent } from './types';
 import { listeners, processedStates } from './state';
 import { ensureInitialized } from './initializer';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('OAUTH');
 import { initiateHandshakeFetch } from './fetcher';
 
 /**
@@ -44,7 +47,7 @@ export async function retryOAuthHandshake(state: string): Promise<void> {
  * Ensures user gets feedback even if app forgot to subscribe
  */
 subscribeToOAuthHandshake((event) => {
-  console.info('[OAuthHandshake] Event delivered to default listener', {
+  logger.info('Event delivered to default listener', {
     status: event.status,
     state: event.state.substring(0, 8) + '...',
   });

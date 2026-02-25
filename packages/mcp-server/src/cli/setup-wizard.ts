@@ -7,6 +7,9 @@ import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
 
+/** Default production GSD Worker URL used as prompt default value */
+const DEFAULT_GSD_API_URL = 'https://gsd.vinny.dev';
+
 /**
  * Test API connectivity
  */
@@ -163,7 +166,7 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
   try {
     // Step 1: API URL
     console.log('Step 1/5: API URL');
-    const apiUrl = await prompt('Enter your GSD Worker URL', 'https://gsd.vinny.dev');
+    const apiUrl = await prompt('Enter your GSD Worker URL', DEFAULT_GSD_API_URL);
     await validateConnectivity(apiUrl);
     console.log();
 

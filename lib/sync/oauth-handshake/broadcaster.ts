@@ -13,6 +13,9 @@ import {
   getBroadcastChannel,
 } from './state';
 import { fetchOAuthResult } from './fetcher';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('OAUTH');
 
 /**
  * Broadcast OAuth state to all channels (used by OAuth callback page)
@@ -50,7 +53,7 @@ export function announceOAuthState(state: string, success: boolean, error?: stri
 
     notifyListeners(result);
   })().catch((err) => {
-    console.error('[OAuthHandshake] Failed to broadcast handshake result:', err);
+    logger.error('Failed to broadcast handshake result', err instanceof Error ? err : new Error(String(err)));
     // Notify listeners so they can show error feedback to user
     notifyListeners({
       status: 'error',
@@ -67,7 +70,7 @@ function storeResult(result: unknown): void {
   try {
     storage?.setItem(RESULT_KEY, JSON.stringify(result));
   } catch (err) {
-    console.warn('[OAuthHandshake] Failed to write handshake result to storage:', err);
+    logger.warn('Failed to write handshake result to storage', { error: String(err) });
   }
 }
 
@@ -81,7 +84,7 @@ function broadcastViaChannel(payload: BroadcastPayload): void {
       channel.postMessage(payload);
     }
   } catch (err) {
-    console.warn('[OAuthHandshake] Failed to post via BroadcastChannel:', err);
+    logger.warn('Failed to post via BroadcastChannel', { error: String(err) });
   }
 }
 
@@ -93,7 +96,7 @@ function postToOpener(payload: BroadcastPayload): void {
     try {
       window.opener.postMessage(payload, window.location.origin);
     } catch (err) {
-      console.warn('[OAuthHandshake] Failed to postMessage to opener:', err);
+      logger.warn('Failed to postMessage to opener', { error: String(err) });
     }
   }
 }
@@ -105,6 +108,6 @@ function storePayload(payload: BroadcastPayload): void {
   try {
     storage?.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
-    console.warn('[OAuthHandshake] Failed to write localStorage payload:', err);
+    logger.warn('Failed to write localStorage payload', { error: String(err) });
   }
 }

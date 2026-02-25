@@ -1,6 +1,9 @@
 import { getDeviceIdFromToken } from '../jwt.js';
 import { initializeEncryption } from '../encryption/manager.js';
 import { getCryptoManager } from '../crypto.js';
+import { createMcpLogger } from '../utils/logger.js';
+
+const logger = createMcpLogger('LIST_TASKS');
 import { MAX_TASKS_PER_PULL } from '../constants.js';
 import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
 import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
@@ -119,7 +122,7 @@ async function decryptTaskBatch(
       const task = await decryptSingleTask(encryptedTask, config);
       decryptedTasks.push(task);
     } catch (error) {
-      console.error(`Failed to decrypt task ${encryptedTask.id}:`, error);
+      logger.error(`Failed to decrypt task ${encryptedTask.id}`, error instanceof Error ? error : new Error(String(error)));
       // Skip tasks that fail to decrypt
     }
   }

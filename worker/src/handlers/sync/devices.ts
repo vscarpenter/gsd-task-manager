@@ -25,8 +25,7 @@ export async function listDevices(
       .bind(userId)
       .all();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const deviceList: DeviceInfo[] = (devices.results || []).map((d: any) => ({
+    const deviceList: DeviceInfo[] = (devices.results || []).map((d: Record<string, unknown>) => ({
       id: d.id,
       name: d.device_name,
       lastSeenAt: d.last_seen_at,
@@ -71,9 +70,8 @@ export async function revokeDevice(
     // Revoke all sessions for this device
     const sessions = await env.KV.list({ prefix: `session:${userId}:` });
     for (const key of sessions.keys) {
-      const session = await env.KV.get(key.name, 'json');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (session && (session as any).deviceId === deviceId) {
+      const session = await env.KV.get(key.name, 'json') as { deviceId?: string } | null;
+      if (session && session.deviceId === deviceId) {
         const jti = key.name.split(':')[2];
         await env.KV.put(`revoked:${userId}:${jti}`, 'true', {
           expirationTtl: TTL.REVOCATION,

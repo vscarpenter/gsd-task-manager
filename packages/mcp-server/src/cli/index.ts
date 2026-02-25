@@ -127,8 +127,13 @@ export async function promptPassword(question: string): Promise<string> {
 
   return new Promise((resolve) => {
     // Disable echo for password input
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const stdin = process.stdin as any;
+    // Node.js typings don't expose all Readable methods consistently across versions;
+    // safe to cast since process.stdin is always a Readable TTY stream at runtime.
+    const stdin = process.stdin as unknown as {
+      setEncoding: (enc: string) => void;
+      isTTY: boolean;
+      setRawMode: (mode: boolean) => boolean;
+    };
     const originalMode = stdin.isTTY && stdin.setRawMode ? stdin.setRawMode(false) : null;
 
     rl.question(`${question}: `, (answer: string) => {

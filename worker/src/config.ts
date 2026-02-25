@@ -107,6 +107,7 @@ export function isOriginAllowed(
         const port = url.port || '80';
         return ALLOWED_DEV_PORTS.includes(port);
       } catch {
+        // URL constructor throws on invalid strings - treat as not allowed
         return false;
       }
     }

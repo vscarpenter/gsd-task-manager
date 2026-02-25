@@ -4,6 +4,9 @@
  */
 
 import type { OAuthHandshakeEvent } from './types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('OAUTH');
 
 /** Storage key for OAuth handshake state */
 export const STORAGE_KEY = 'oauth_handshake_state';
@@ -81,7 +84,7 @@ export function notifyListeners(event: OAuthHandshakeEvent): void {
     try {
       listener(event);
     } catch (error) {
-      console.error('[OAuthHandshake] Listener threw an error:', error);
+      logger.error('Listener threw an error', error instanceof Error ? error : new Error(String(error)));
     }
   }
 }

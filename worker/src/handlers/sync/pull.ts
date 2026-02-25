@@ -103,8 +103,7 @@ export async function pull(
       .all();
 
     response.deletedTaskIds = (deletedTasks.results || []).map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (t: any) => t.id as string
+      (t: Record<string, unknown>) => t.id as string
     );
 
     // Get server vector clock

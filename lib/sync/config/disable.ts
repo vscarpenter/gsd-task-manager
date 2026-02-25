@@ -7,6 +7,9 @@ import { getCryptoManager } from "../crypto";
 import { getApiClient } from "../api-client";
 import type { SyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger('SYNC_CONFIG');
 
 /**
  * Stop health monitoring
@@ -16,7 +19,7 @@ async function stopHealthMonitor(): Promise<void> {
   const healthMonitor = getHealthMonitor();
 
   if (healthMonitor.isActive()) {
-    console.log("[SYNC] Stopping health monitor (sync disabled)");
+    logger.info('Stopping health monitor (sync disabled)');
     healthMonitor.stop();
   }
 }

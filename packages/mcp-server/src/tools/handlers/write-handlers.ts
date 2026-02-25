@@ -9,13 +9,14 @@ import {
   type BulkOperation,
 } from '../../write-ops.js';
 import type { GsdConfig } from '../../tools.js';
+import type { McpToolResponse } from './types.js';
 
 /**
  * Write operation tool handlers for modifying task data
  * All handlers support dry-run mode for previewing changes
  */
 
-export async function handleCreateTask(config: GsdConfig, args: CreateTaskInput) {
+export async function handleCreateTask(config: GsdConfig, args: CreateTaskInput): Promise<McpToolResponse> {
   const result = await createTask(config, args);
 
   let message: string;
@@ -49,7 +50,7 @@ export async function handleCreateTask(config: GsdConfig, args: CreateTaskInput)
   };
 }
 
-export async function handleUpdateTask(config: GsdConfig, args: UpdateTaskInput) {
+export async function handleUpdateTask(config: GsdConfig, args: UpdateTaskInput): Promise<McpToolResponse> {
   const result = await updateTask(config, args);
 
   let message: string;
@@ -96,7 +97,7 @@ export async function handleUpdateTask(config: GsdConfig, args: UpdateTaskInput)
 export async function handleCompleteTask(
   config: GsdConfig,
   args: { id: string; completed: boolean; dryRun?: boolean }
-) {
+): Promise<McpToolResponse> {
   const result = await completeTask(config, args.id, args.completed, { dryRun: args.dryRun });
 
   let message: string;
@@ -118,7 +119,7 @@ export async function handleCompleteTask(
   };
 }
 
-export async function handleDeleteTask(config: GsdConfig, args: { id: string; dryRun?: boolean }) {
+export async function handleDeleteTask(config: GsdConfig, args: { id: string; dryRun?: boolean }): Promise<McpToolResponse> {
   const result = await deleteTask(config, args.id, { dryRun: args.dryRun });
 
   let message: string;
@@ -159,7 +160,7 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
 export async function handleBulkUpdateTasks(
   config: GsdConfig,
   args: { taskIds: string[]; operation: BulkOperation; maxTasks?: number }
-) {
+): Promise<McpToolResponse> {
   const result = await bulkUpdateTasks(config, args.taskIds, args.operation, { maxTasks: args.maxTasks });
 
   let message = `✅ Bulk operation completed!\n\n`;

@@ -7,6 +7,9 @@ import { ENV_CONFIG } from '@/lib/env-config';
 import { HTTP_STATUS } from '@/lib/constants/ui';
 import type { OAuthHandshakeEvent, OAuthAuthData } from './types';
 import { processedStates, pendingFetches, notifyListeners } from './state';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('OAUTH');
 
 /**
  * Fetch OAuth result from worker API
@@ -15,7 +18,7 @@ export async function fetchOAuthResult(state: string): Promise<OAuthHandshakeEve
   try {
     const workerUrl = ENV_CONFIG.apiBaseUrl;
 
-    console.info('[OAuthHandshake] Fetching result from worker', {
+    logger.info('Fetching result from worker', {
       state: state.substring(0, 8) + '...',
       workerUrl,
     });
@@ -35,7 +38,7 @@ export async function fetchOAuthResult(state: string): Promise<OAuthHandshakeEve
     }
 
     if (data.status === 'success' && data.authData) {
-      console.info('[OAuthHandshake] Result received', {
+      logger.info('Result received', {
         state: state.substring(0, 8) + '...',
       });
 
@@ -48,7 +51,7 @@ export async function fetchOAuthResult(state: string): Promise<OAuthHandshakeEve
 
     return createErrorResult(state, data);
   } catch (error) {
-    console.error('[OAuthHandshake] Fetch threw error', error);
+    logger.error('Fetch threw error', error instanceof Error ? error : new Error(String(error)));
     return {
       status: 'error',
       state,
@@ -65,7 +68,7 @@ function handleFetchError(
   status: number,
   data: Record<string, unknown>
 ): OAuthHandshakeEvent {
-  console.warn('[OAuthHandshake] Fetch failed', {
+  logger.warn('Fetch failed', {
     state: state.substring(0, 8) + '...',
     status,
     body: data,

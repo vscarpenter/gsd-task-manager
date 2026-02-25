@@ -3,8 +3,8 @@
  */
 
 import type { DecryptedTask } from '../tools.js';
-import { calculateMetrics } from './metrics.js';
-import { getQuadrantPerformance, getUpcomingDeadlines } from './metrics.js';
+import { calculateMetrics, getQuadrantPerformance, getUpcomingDeadlines } from './metrics.js';
+import type { ProductivityMetrics, QuadrantPerformance, UpcomingDeadlines } from './metrics.js';
 
 /**
  * Generate AI-friendly task insights summary
@@ -29,8 +29,7 @@ export function generateInsightsSummary(tasks: DecryptedTask[]): string {
 /**
  * Add overall task overview insights
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addOverviewInsights(insights: string[], metrics: any): void {
+function addOverviewInsights(insights: string[], metrics: ProductivityMetrics): void {
   insights.push(
     `Task Overview: ${metrics.totalTasks} total tasks (${metrics.activeTasks} active, ${metrics.completedTasks} completed)`
   );
@@ -40,8 +39,7 @@ function addOverviewInsights(insights: string[], metrics: any): void {
 /**
  * Add streak insights
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addStreakInsights(insights: string[], metrics: any): void {
+function addStreakInsights(insights: string[], metrics: ProductivityMetrics): void {
   if (metrics.activeStreak > 0) {
     const streakDays = metrics.activeStreak > 1 ? 's' : '';
     insights.push(
@@ -53,8 +51,7 @@ function addStreakInsights(insights: string[], metrics: any): void {
 /**
  * Add recent activity insights
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addActivityInsights(insights: string[], metrics: any): void {
+function addActivityInsights(insights: string[], metrics: ProductivityMetrics): void {
   if (metrics.completedToday > 0) {
     const taskPlural = metrics.completedToday > 1 ? 's' : '';
     insights.push(`Completed Today: ${metrics.completedToday} task${taskPlural}`);
@@ -64,8 +61,7 @@ function addActivityInsights(insights: string[], metrics: any): void {
 /**
  * Add deadline insights
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addDeadlineInsights(insights: string[], deadlines: any): void {
+function addDeadlineInsights(insights: string[], deadlines: UpcomingDeadlines): void {
   if (deadlines.overdue.length > 0) {
     const taskPlural = deadlines.overdue.length > 1 ? 's' : '';
     insights.push(`⚠️  ${deadlines.overdue.length} overdue task${taskPlural}`);
@@ -80,8 +76,7 @@ function addDeadlineInsights(insights: string[], deadlines: any): void {
 /**
  * Add quadrant distribution insights
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addQuadrantInsights(insights: string[], quadrants: any[]): void {
+function addQuadrantInsights(insights: string[], quadrants: QuadrantPerformance[]): void {
   const topQuadrant = quadrants[0];
   if (topQuadrant && topQuadrant.activeTasks > 0) {
     insights.push(
@@ -93,8 +88,7 @@ function addQuadrantInsights(insights: string[], quadrants: any[]): void {
 /**
  * Add tag usage insights
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function addTagInsights(insights: string[], metrics: any): void {
+function addTagInsights(insights: string[], metrics: ProductivityMetrics): void {
   if (metrics.tagStats.length > 0) {
     const topTag = metrics.tagStats[0];
     insights.push(

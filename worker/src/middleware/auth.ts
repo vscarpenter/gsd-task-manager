@@ -94,7 +94,7 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
     return;
 
   } catch (error) {
-    console.error('Auth error:', error);
+    logger.error('Auth error', error instanceof Error ? error : new Error(String(error)));
     return errorResponse('Invalid or expired token', 401);
   }
 };

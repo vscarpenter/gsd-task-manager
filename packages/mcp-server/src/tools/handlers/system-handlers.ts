@@ -1,11 +1,12 @@
 import { getSyncStatus, listTasks, type GsdConfig } from '../../tools.js';
 import { getTaskCache } from '../../cache.js';
+import type { McpToolResponse } from './types.js';
 
 /**
  * System tool handlers for configuration validation and help
  */
 
-export async function handleValidateConfig(config: GsdConfig) {
+export async function handleValidateConfig(config: GsdConfig): Promise<McpToolResponse> {
   const checks: Array<{
     name: string;
     status: 'success' | 'warning' | 'error';
@@ -86,12 +87,13 @@ export async function handleValidateConfig(config: GsdConfig) {
   };
 }
 
-export async function handleGetHelp(args: { topic?: string }) {
-  const { topic } = args;
-  let helpText = '';
+// ---------------------------------------------------------------------------
+// Help section builders — each returns a Markdown string for its topic.
+// Extracted to keep handleGetHelp() within the 30-line function guideline.
+// ---------------------------------------------------------------------------
 
-  if (!topic || topic === 'tools') {
-    helpText += `# GSD Task Manager MCP Server - Help
+function buildToolsHelpSection(): string {
+  return `# GSD Task Manager MCP Server - Help
 
 ## Available Tools (18 total)
 
@@ -124,10 +126,10 @@ export async function handleGetHelp(args: { topic?: string }) {
 - **get_help** - This help message (supports topic filtering)
 
 `;
-  }
+}
 
-  if (!topic || topic === 'analytics') {
-    helpText += `## Analytics Capabilities
+function buildAnalyticsHelpSection(): string {
+  return `## Analytics Capabilities
 
 The MCP server provides rich productivity analytics:
 
@@ -156,10 +158,10 @@ The MCP server provides rich productivity analytics:
 - Dependency tracking for blocked tasks
 
 `;
-  }
+}
 
-  if (!topic || topic === 'setup') {
-    helpText += `## Setup & Configuration
+function buildSetupHelpSection(): string {
+  return `## Setup & Configuration
 
 **First-time Setup:**
 \`\`\`bash
@@ -187,10 +189,10 @@ npx gsd-mcp-server --validate
 - Windows: %APPDATA%\\Claude\\claude_desktop_config.json
 
 `;
-  }
+}
 
-  if (!topic || topic === 'examples') {
-    helpText += `## Usage Examples
+function buildExamplesHelpSection(): string {
+  return `## Usage Examples
 
 **Daily Workflow:**
 - "What tasks are due today?"
@@ -230,10 +232,10 @@ npx gsd-mcp-server --validate
 - tag-analysis
 
 `;
-  }
+}
 
-  if (!topic || topic === 'troubleshooting') {
-    helpText += `## Troubleshooting
+function buildTroubleshootingHelpSection(): string {
+  return `## Troubleshooting
 
 **"Configuration error" on startup:**
 - Run: \`npx gsd-mcp-server --setup\`
@@ -265,10 +267,10 @@ npx gsd-mcp-server --validate
 - GitHub: https://github.com/vscarpenter/gsd-taskmanager/issues
 
 `;
-  }
+}
 
-  if (!topic) {
-    helpText += `## Additional Resources
+function buildAdditionalResourcesSection(): string {
+  return `## Additional Resources
 
 - **Full Documentation:** https://github.com/vscarpenter/gsd-taskmanager/tree/main/packages/mcp-server
 - **Setup Guide:** Run \`npx gsd-mcp-server --setup\`
@@ -280,23 +282,42 @@ npx gsd-mcp-server --validate
 **Privacy:** End-to-end encrypted, zero-knowledge server
 **Capabilities:** Full task management (create, read, update, delete)
 `;
+}
+
+/** Topic → section builder map for O(1) lookup */
+const HELP_SECTIONS: Record<string, () => string> = {
+  tools: buildToolsHelpSection,
+  analytics: buildAnalyticsHelpSection,
+  setup: buildSetupHelpSection,
+  examples: buildExamplesHelpSection,
+  troubleshooting: buildTroubleshootingHelpSection,
+};
+
+export async function handleGetHelp(args: { topic?: string }): Promise<McpToolResponse> {
+  const { topic } = args;
+
+  if (topic && HELP_SECTIONS[topic]) {
+    return { content: [{ type: 'text' as const, text: HELP_SECTIONS[topic]().trim() }] };
   }
 
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: helpText.trim(),
-      },
-    ],
-  };
+  // No topic (or unknown topic) — return all sections
+  const helpText = [
+    buildToolsHelpSection(),
+    buildAnalyticsHelpSection(),
+    buildSetupHelpSection(),
+    buildExamplesHelpSection(),
+    buildTroubleshootingHelpSection(),
+    buildAdditionalResourcesSection(),
+  ].join('\n');
+
+  return { content: [{ type: 'text' as const, text: helpText.trim() }] };
 }
 
 /**
  * Handle get_cache_stats tool
  * Returns task cache statistics for performance monitoring
  */
-export async function handleGetCacheStats(args: { reset?: boolean }) {
+export async function handleGetCacheStats(args: { reset?: boolean }): Promise<McpToolResponse> {
   const cache = getTaskCache();
   const stats = cache.getStats();
 

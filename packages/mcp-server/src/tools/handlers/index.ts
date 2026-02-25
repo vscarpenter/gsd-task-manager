@@ -38,6 +38,9 @@ export * from './read-handlers.js';
 export * from './analytics-handlers.js';
 export * from './write-handlers.js';
 export * from './system-handlers.js';
+export type { McpToolResponse } from './types.js';
+
+import type { McpToolResponse } from './types.js';
 
 /**
  * Handle a tool call request
@@ -50,11 +53,11 @@ export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,
   config: GsdConfig
-): Promise<{
-  content: Array<{ type: 'text'; text: string }>;
-  isError?: boolean;
-}> {
+): Promise<McpToolResponse> {
   try {
+    // Args are pre-validated by the MCP framework against each tool's JSON schema.
+    // Each handler also performs its own runtime validation. The dynamic dispatch
+    // pattern here intentionally widens the type — this is the appropriate boundary.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const typedArgs = args as any;
     switch (name) {

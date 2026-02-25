@@ -8,6 +8,9 @@ import { getApiClient } from "../api-client";
 import { getSyncQueue } from "../queue";
 import type { SyncConfig } from "../types";
 import { getSyncConfig, updateAutoSyncConfig } from "./get-set";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger('SYNC_CONFIG');
 
 /**
  * Initialize crypto manager with user password
@@ -27,7 +30,7 @@ async function queueExistingTasks(): Promise<void> {
   if (taskCount > 0) {
     const queue = getSyncQueue();
     const populatedCount = await queue.populateFromExistingTasks();
-    console.log(`[SYNC] Initial sync setup: queued ${populatedCount} existing tasks`);
+    logger.info('Initial sync setup', { populatedCount });
   }
 }
 
@@ -39,7 +42,7 @@ async function startHealthMonitor(): Promise<void> {
   const healthMonitor = getHealthMonitor();
 
   if (!healthMonitor.isActive()) {
-    console.log("[SYNC] Starting health monitor (sync enabled)");
+    logger.info('Starting health monitor (sync enabled)');
     healthMonitor.start();
   }
 }

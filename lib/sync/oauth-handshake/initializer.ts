@@ -18,6 +18,9 @@ import {
   setBroadcastChannel,
 } from './state';
 import { initiateHandshakeFetch } from './fetcher';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('OAUTH');
 
 /**
  * Ensure the OAuth handshake module is initialized
@@ -44,7 +47,7 @@ function initBroadcastChannel(): void {
       });
       setBroadcastChannel(channel);
     } catch (error) {
-      console.warn('[OAuthHandshake] Failed to initialize BroadcastChannel:', error);
+      logger.warn('Failed to initialize BroadcastChannel', { error: String(error) });
       setBroadcastChannel(null);
     }
   }
@@ -91,7 +94,7 @@ function handleStorageEvent(event: StorageEvent): void {
       }
     }
   } catch (error) {
-    console.warn('[OAuthHandshake] Failed to parse storage payload:', error);
+    logger.warn('Failed to parse storage payload', { error: String(error) });
   }
 }
 
@@ -104,7 +107,7 @@ export function handleBroadcastPayload(payload: BroadcastPayload | null): void {
   // Handle error-only messages (e.g., when popup redirects to main app on OAuth failure)
   // These messages have success=false and error but may not have a state
   if (!payload.state && payload.success === false && payload.error) {
-    console.info('[OAuthHandshake] Error-only broadcast received', {
+    logger.info('Error-only broadcast received', {
       error: payload.error,
     });
     // Notify listeners with a generic error event using a placeholder state
@@ -121,11 +124,11 @@ export function handleBroadcastPayload(payload: BroadcastPayload | null): void {
 
   // Ignore duplicate notifications
   if (processedStates.has(payload.state)) {
-    console.debug('[OAuthHandshake] Duplicate state ignored', payload.state.substring(0, 8) + '...');
+    logger.debug('Duplicate state ignored', { state: payload.state.substring(0, 8) + '...' });
     return;
   }
 
-  console.info('[OAuthHandshake] Broadcast received', {
+  logger.info('Broadcast received', {
     state: payload.state.substring(0, 8) + '...',
     success: payload.success,
   });
@@ -159,7 +162,7 @@ function recoverExistingResult(): void {
       processExistingResult(existingResult, storageSource);
     }
   } catch (error) {
-    console.warn('[OAuthHandshake] Failed to check for existing result:', error);
+    logger.warn('Failed to check for existing result', { error: String(error) });
   }
 }
 
@@ -167,12 +170,12 @@ function recoverExistingResult(): void {
  * Process an existing OAuth result from storage
  */
 function processExistingResult(existingResult: string, storageSource: string): void {
-  console.info(`[OAuthHandshake] Found existing result in ${storageSource} on init`);
+  logger.info(`Found existing result in ${storageSource} on init`);
   const result = JSON.parse(existingResult) as OAuthHandshakeEvent;
 
   // Only process if we haven't already processed this state
   if (!processedStates.has(result.state)) {
-    console.info('[OAuthHandshake] Processing existing result', {
+    logger.info('Processing existing result', {
       state: result.state.substring(0, 8) + '...',
       status: result.status,
       source: storageSource,
@@ -197,8 +200,8 @@ function clearStoredResults(): void {
     storage?.removeItem(STORAGE_KEY);
     safeLocalStorage?.removeItem(RESULT_KEY);
     safeLocalStorage?.removeItem(STORAGE_KEY);
-    console.info('[OAuthHandshake] Cleared result from both storage locations');
+    logger.info('Cleared result from both storage locations');
   } catch (e) {
-    console.warn('[OAuthHandshake] Failed to clear processed result from storage:', e);
+    logger.warn('Failed to clear processed result from storage', { error: String(e) });
   }
 }

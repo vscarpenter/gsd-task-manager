@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger('PWA');
 
 export function PwaUpdateToast() {
   const [showUpdate, setShowUpdate] = useState(false);
@@ -30,7 +33,7 @@ export function PwaUpdateToast() {
   const handleUpdate = () => {
     if (!waitingWorker) {
       // Fallback: just reload if we don't have a waiting worker reference
-      console.log("No waiting worker, forcing reload");
+      logger.warn('No waiting worker, forcing reload');
       window.location.reload();
       return;
     }
@@ -41,7 +44,7 @@ export function PwaUpdateToast() {
     const performReload = () => {
       if (!reloadTriggered) {
         reloadTriggered = true;
-        console.log("Reloading page with new service worker");
+        logger.info('Reloading page with new service worker');
         window.location.reload();
       }
     };
@@ -49,7 +52,7 @@ export function PwaUpdateToast() {
     // Listen for the service worker to actually take over
     // IMPORTANT: Attach listener BEFORE posting message to avoid race condition
     const controllerChangeHandler = () => {
-      console.log("Service worker controller changed");
+      logger.info('Service worker controller changed');
       performReload();
     };
 
@@ -58,16 +61,16 @@ export function PwaUpdateToast() {
     // Fallback: If controllerchange doesn't fire within 2 seconds (iOS/Safari issue),
     // reload anyway to ensure the user gets the update
     const fallbackTimeout = setTimeout(() => {
-      console.log("Fallback reload triggered (controllerchange not fired)");
+      logger.warn('Fallback reload triggered (controllerchange not fired)');
       performReload();
     }, 2000);
 
     try {
       // Tell the waiting service worker to take over
-      console.log("Posting SKIP_WAITING message to service worker");
+      logger.info('Posting SKIP_WAITING message to service worker');
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     } catch (error) {
-      console.error("Failed to post SKIP_WAITING message:", error);
+      logger.error('Failed to post SKIP_WAITING message', error instanceof Error ? error : new Error(String(error)));
       // If posting the message fails, clear timeout and just reload
       clearTimeout(fallbackTimeout);
       performReload();

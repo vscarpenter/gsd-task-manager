@@ -5,6 +5,9 @@
 import { getDb } from "@/lib/db";
 import type { SyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger('SYNC_CONFIG');
 
 /**
  * Clear sync queue and local tasks
@@ -13,11 +16,11 @@ async function clearLocalData(): Promise<number> {
   const db = getDb();
 
   await db.syncQueue.clear();
-  console.log("[SYNC RESET] Cleared sync queue");
+  logger.info('Cleared sync queue');
 
   const taskCount = await db.tasks.count();
   await db.tasks.clear();
-  console.log(`[SYNC RESET] Cleared ${taskCount} local tasks`);
+  logger.info('Cleared local tasks', { taskCount });
 
   return taskCount;
 }
@@ -34,7 +37,7 @@ async function resetSyncMetadata(config: SyncConfig): Promise<void> {
     vectorClock: {},
     key: "sync_config",
   });
-  console.log("[SYNC RESET] Reset sync metadata (lastSyncAt=0, vectorClock={})");
+  logger.info('Reset sync metadata', { lastSyncAt: 0, vectorClock: {} });
 }
 
 /**
@@ -50,10 +53,9 @@ export async function resetAndFullSync(): Promise<void> {
 
   const db = getDb();
 
-  console.log("[SYNC RESET] Starting full sync reset...");
-  console.log("[SYNC RESET] Current state:", {
+  logger.info('Starting full sync reset', {
     lastSyncAt: config.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
-    vectorClock: config.vectorClock,
+    vectorClock: config.vectorClock as Record<string, unknown>,
     pendingOps: await db.syncQueue.count(),
   });
 
@@ -63,5 +65,5 @@ export async function resetAndFullSync(): Promise<void> {
   // Reset sync metadata
   await resetSyncMetadata(config);
 
-  console.log("[SYNC RESET] Reset complete. Run sync() to pull all tasks from server.");
+  logger.info('Reset complete - run sync() to pull all tasks from server');
 }

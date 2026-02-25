@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import { NOTIFICATION_TIMING } from "@/lib/constants";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger('PWA');
 
 export function PwaRegister() {
 	useEffect(() => {
@@ -14,12 +17,12 @@ export function PwaRegister() {
 				const registration = await navigator.serviceWorker.register("/sw.js", {
 					scope: "/",
 				});
-				console.log("Service worker registered successfully");
+				logger.info('Service worker registered successfully');
 
 				// Check for updates when page becomes visible
 				const checkForUpdates = () => {
 					registration.update().catch((error) => {
-						console.error("Service worker update check failed:", error);
+						logger.error('Service worker update check failed', error instanceof Error ? error : new Error(String(error)));
 					});
 				};
 
@@ -41,7 +44,7 @@ export function PwaRegister() {
 							navigator.serviceWorker.controller
 						) {
 							// New service worker is ready
-							console.log("New service worker available");
+									logger.info('New service worker available');
 
 							// Dispatch custom event to notify PwaUpdateToast
 							window.dispatchEvent(
@@ -79,7 +82,7 @@ export function PwaRegister() {
 									NOTIFICATION_TIMING.BACKGROUND_SYNC_INTERVAL_MINUTES *
 									NOTIFICATION_TIMING.MS_PER_MINUTE,
 							});
-							console.log("Periodic background sync registered");
+							logger.info('Periodic background sync registered');
 						}
 					} catch (error) {
 						// Silently fail if periodic sync isn't supported or fails
@@ -92,13 +95,13 @@ export function PwaRegister() {
 							const suppressedErrors = ["NotAllowedError", "InvalidStateError"];
 
 							if (!suppressedErrors.includes(errorName)) {
-								console.warn("Periodic sync registration failed:", error.message);
+								logger.warn('Periodic sync registration failed', { message: error.message });
 							}
 						}
 					}
 				}
 			} catch (error) {
-				console.error("Service worker registration failed", error);
+				logger.error('Service worker registration failed', error instanceof Error ? error : new Error(String(error)));
 			}
 		};
 

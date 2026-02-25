@@ -35,14 +35,14 @@ export function getAppOriginFromRequest(request: Request, env: Env): string | nu
 
   // Priority 4: Derive from environment
   if (env.ENVIRONMENT === 'production') {
-    return 'https://gsd.vinny.dev';
+    return ALLOWED_ORIGINS[0]; // https://gsd.vinny.dev
   }
   if (env.ENVIRONMENT === 'staging' || env.ENVIRONMENT === 'development') {
-    return 'https://gsd-dev.vinny.dev';
+    return ALLOWED_ORIGINS[1]; // https://gsd-dev.vinny.dev
   }
 
   // Priority 5: Default to production
-  return 'https://gsd.vinny.dev';
+  return ALLOWED_ORIGINS[0]; // https://gsd.vinny.dev
 }
 
 /**
