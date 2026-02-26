@@ -46,12 +46,12 @@ export const securityHeaders = {
 };
 
 // Helper to create JSON response with proper headers
-export function jsonResponse(data: unknown, status = 200, origin?: string | null): Response {
+export function jsonResponse(data: unknown, status = 200, origin?: string | null, environment?: string): Response {
   const headers = new Headers();
   headers.set('Content-Type', 'application/json; charset=utf-8');
 
-  // Add CORS headers (dynamic based on origin)
-  const cors = getCorsHeaders(origin);
+  // Add CORS headers (dynamic based on origin and environment)
+  const cors = getCorsHeaders(origin, environment);
   for (const [key, value] of Object.entries(cors)) {
     headers.set(key, value);
   }
@@ -74,14 +74,14 @@ export function jsonResponse(data: unknown, status = 200, origin?: string | null
 }
 
 // Helper to create error response
-export function errorResponse(message: string, status = 400, origin?: string | null): Response {
-  return jsonResponse({ error: message }, status, origin);
+export function errorResponse(message: string, status = 400, origin?: string | null, environment?: string): Response {
+  return jsonResponse({ error: message }, status, origin, environment);
 }
 
 // Helper to create CORS headers
-export function createCorsHeaders(origin?: string | null): Headers {
+export function createCorsHeaders(origin?: string | null, environment?: string): Headers {
   const headers = new Headers();
-  const cors = getCorsHeaders(origin);
+  const cors = getCorsHeaders(origin, environment);
   for (const [key, value] of Object.entries(cors)) {
     headers.set(key, value);
   }

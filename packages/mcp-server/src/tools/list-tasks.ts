@@ -1,18 +1,18 @@
 import { getDeviceIdFromToken } from '../jwt.js';
 import { initializeEncryption } from '../encryption/manager.js';
 import { getCryptoManager } from '../crypto.js';
-import { createMcpLogger } from '../utils/logger.js';
-
-const logger = createMcpLogger('LIST_TASKS');
 import { MAX_TASKS_PER_PULL } from '../constants.js';
 import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
 import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
+import { createMcpLogger } from '../utils/logger.js';
 import type {
   GsdConfig,
   DecryptedTask,
   TaskFilters,
   PullTasksResponse,
 } from '../types.js';
+
+const logger = createMcpLogger('LIST_TASKS');
 
 /**
  * List all tasks (decrypted)
@@ -26,8 +26,13 @@ export async function listTasks(
   const cache = getTaskCache();
   const cacheKey = generateTaskListCacheKey(filters);
 
-  // Check cache first (only for unfiltered requests to ensure consistency)
-  if (!filters) {
+  // Check cache: for filtered requests, try the 'all' cache first and filter locally
+  if (filters) {
+    const cachedAll = cache.getTaskList('all');
+    if (cachedAll) {
+      return applyTaskFilters(cachedAll, filters);
+    }
+  } else {
     const cachedTasks = cache.getTaskList(cacheKey);
     if (cachedTasks) {
       return cachedTasks;
@@ -115,12 +120,19 @@ async function decryptTaskBatch(
   encryptedTasks: PullTasksResponse['tasks'],
   config: GsdConfig
 ): Promise<DecryptedTask[]> {
+  // Initialize encryption once before the loop, not per-task
+  await initializeEncryption(config);
+  const cryptoManager = getCryptoManager();
+
   const decryptedTasks: DecryptedTask[] = [];
 
   for (const encryptedTask of encryptedTasks) {
     try {
-      const task = await decryptSingleTask(encryptedTask, config);
-      decryptedTasks.push(task);
+      const decryptedJson = await cryptoManager.decrypt(
+        encryptedTask.encryptedBlob,
+        encryptedTask.nonce
+      );
+      decryptedTasks.push(JSON.parse(decryptedJson) as DecryptedTask);
     } catch (error) {
       logger.error(`Failed to decrypt task ${encryptedTask.id}`, error instanceof Error ? error : new Error(String(error)));
       // Skip tasks that fail to decrypt
@@ -128,24 +140,6 @@ async function decryptTaskBatch(
   }
 
   return decryptedTasks;
-}
-
-/**
- * Decrypt a single task blob
- */
-async function decryptSingleTask(
-  encryptedTask: PullTasksResponse['tasks'][number],
-  config: GsdConfig
-): Promise<DecryptedTask> {
-  await initializeEncryption(config);
-
-  const cryptoManager = getCryptoManager();
-  const decryptedJson = await cryptoManager.decrypt(
-    encryptedTask.encryptedBlob,
-    encryptedTask.nonce
-  );
-
-  return JSON.parse(decryptedJson) as DecryptedTask;
 }
 
 /**

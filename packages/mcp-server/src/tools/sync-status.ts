@@ -45,12 +45,13 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
     logger.warn('Failed to fetch from /api/stats, falling back to /api/sync/status');
   }
 
-  // Fallback: use the status endpoint and derive basic stats
+  // Fallback: use the status endpoint — only sync metadata is available,
+  // task counts cannot be derived from pending sync counts
   const status = await getSyncStatus(config);
   return {
-    totalTasks: status.pendingPushCount + status.pendingPullCount,
-    activeTasks: status.pendingPushCount + status.pendingPullCount,
-    deletedTasks: 0,
+    totalTasks: null,
+    activeTasks: null,
+    deletedTasks: null,
     lastUpdated: status.lastSyncAt,
     oldestTask: null,
     newestTask: null,
