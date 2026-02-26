@@ -95,7 +95,7 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
 function buildToolsHelpSection(): string {
   return `# GSD Task Manager MCP Server - Help
 
-## Available Tools (18 total)
+## Available Tools (20 total)
 
 ### Metadata & Status Tools
 - **get_sync_status** - Check sync health, device count, storage usage
@@ -121,9 +121,11 @@ function buildToolsHelpSection(): string {
 - **delete_task** - Permanently delete a task
 - **bulk_update_tasks** - Update multiple tasks at once (max 50)
 
-### Configuration Tools
+### Configuration & System Tools
 - **validate_config** - Diagnose configuration issues
 - **get_help** - This help message (supports topic filtering)
+- **get_cache_stats** - View cache performance statistics
+- **get_token_status** - Check auth token expiration status
 
 `;
 }
@@ -321,7 +323,13 @@ export async function handleGetCacheStats(args: { reset?: boolean }): Promise<Mc
   const cache = getTaskCache();
   const stats = cache.getStats();
 
-  const result = {
+  const result: {
+    performance: { hitRate: string; hits: number; misses: number };
+    taskListCache: { currentSize: number; maxEntries: number; ttlSeconds: number };
+    singleTaskCache: { currentSize: number; maxEntries: number; ttlSeconds: number };
+    notes: string[];
+    statsReset?: boolean;
+  } = {
     performance: {
       hitRate: `${(stats.hitRate * 100).toFixed(1)}%`,
       hits: stats.hits,
@@ -347,7 +355,7 @@ export async function handleGetCacheStats(args: { reset?: boolean }): Promise<Mc
   // Reset stats if requested
   if (args.reset) {
     cache.resetStats();
-    (result as { statsReset?: boolean }).statsReset = true;
+    result.statsReset = true;
   }
 
   return {

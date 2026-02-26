@@ -6,10 +6,10 @@ import { toast } from 'sonner';
 import type { OAuthHandshakeEvent } from './types';
 import { listeners, processedStates } from './state';
 import { ensureInitialized } from './initializer';
+import { initiateHandshakeFetch } from './fetcher';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('OAUTH');
-import { initiateHandshakeFetch } from './fetcher';
 
 /**
  * Subscribe to OAuth handshake events

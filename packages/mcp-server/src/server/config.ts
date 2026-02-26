@@ -29,8 +29,8 @@ export function loadConfig(): GsdConfig {
     });
   } catch (error) {
     logger.error('Configuration error', error instanceof Error ? error : new Error(String(error)));
-    logger.error('Required environment variables: GSD_API_URL, GSD_AUTH_TOKEN | Optional: GSD_ENCRYPTION_PASSPHRASE');
-    logger.error('Run setup wizard with: npx gsd-mcp-server --setup');
+    logger.info('Required environment variables: GSD_API_URL, GSD_AUTH_TOKEN | Optional: GSD_ENCRYPTION_PASSPHRASE');
+    logger.info('Run setup wizard with: npx gsd-mcp-server --setup');
     throw error;
   }
 }

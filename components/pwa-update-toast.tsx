@@ -52,6 +52,8 @@ export function PwaUpdateToast() {
     // Listen for the service worker to actually take over
     // IMPORTANT: Attach listener BEFORE posting message to avoid race condition
     const controllerChangeHandler = () => {
+      clearTimeout(fallbackTimeout);
+      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeHandler);
       logger.info('Service worker controller changed');
       performReload();
     };
@@ -61,6 +63,7 @@ export function PwaUpdateToast() {
     // Fallback: If controllerchange doesn't fire within 2 seconds (iOS/Safari issue),
     // reload anyway to ensure the user gets the update
     const fallbackTimeout = setTimeout(() => {
+      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeHandler);
       logger.warn('Fallback reload triggered (controllerchange not fired)');
       performReload();
     }, 2000);
@@ -71,8 +74,9 @@ export function PwaUpdateToast() {
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     } catch (error) {
       logger.error('Failed to post SKIP_WAITING message', error instanceof Error ? error : new Error(String(error)));
-      // If posting the message fails, clear timeout and just reload
+      // If posting the message fails, clean up and just reload
       clearTimeout(fallbackTimeout);
+      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeHandler);
       performReload();
     }
   };

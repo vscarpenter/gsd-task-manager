@@ -44,7 +44,7 @@ export function PwaRegister() {
 							navigator.serviceWorker.controller
 						) {
 							// New service worker is ready
-									logger.info('New service worker available');
+							logger.info('New service worker available');
 
 							// Dispatch custom event to notify PwaUpdateToast
 							window.dispatchEvent(

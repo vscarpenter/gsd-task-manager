@@ -175,9 +175,8 @@ export function OAuthCallbackHandler() {
       if (event.status === 'success') {
         await processAuthData(event.authData, event.state);
       } else {
-        logger.error('OAuth handshake error', undefined, {
+        logger.error('OAuth handshake error', new Error(event.error ?? 'Unknown OAuth error'), {
           state: event.state.substring(0, 8) + '...',
-          error: event.error,
         });
         toast.error(event.error || 'Sign in failed. Please try again.');
       }
