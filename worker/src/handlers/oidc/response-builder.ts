@@ -36,7 +36,7 @@ export function buildErrorRedirect(redirectTarget: string, state: string, messag
   const redirectUrl = new URL('/oauth-callback.html', redirectTarget);
   redirectUrl.searchParams.set('success', 'false');
   redirectUrl.searchParams.set('state', state);
-  redirectUrl.searchParams.set('error', encodeURIComponent(message));
+  redirectUrl.searchParams.set('error', message);
 
   return new Response(null, {
     status: 302,

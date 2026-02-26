@@ -159,12 +159,25 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
 
 export async function handleBulkUpdateTasks(
   config: GsdConfig,
-  args: { taskIds: string[]; operation: BulkOperation; maxTasks?: number }
+  args: { taskIds: string[]; operation: BulkOperation; maxTasks?: number; dryRun?: boolean }
 ): Promise<McpToolResponse> {
-  const result = await bulkUpdateTasks(config, args.taskIds, args.operation, { maxTasks: args.maxTasks });
+  const result = await bulkUpdateTasks(config, args.taskIds, args.operation, {
+    maxTasks: args.maxTasks,
+    dryRun: args.dryRun,
+  });
 
-  let message = `✅ Bulk operation completed!\n\n`;
-  message += `Updated: ${result.updated} task(s)\n`;
+  let message: string;
+  if (result.dryRun) {
+    message = `🔍 DRY RUN - Bulk operation would affect ${result.updated + result.deleted} task(s) (not saved):\n\n`;
+    if (result.updated > 0) message += `Would update: ${result.updated} task(s)\n`;
+    if (result.deleted > 0) message += `Would delete: ${result.deleted} task(s)\n`;
+    message += `\nTo apply changes, remove dryRun or set it to false.`;
+  } else {
+    message = `✅ Bulk operation completed!\n\n`;
+    if (result.updated > 0) message += `Updated: ${result.updated} task(s)\n`;
+    if (result.deleted > 0) message += `Deleted: ${result.deleted} task(s)\n`;
+  }
+
   if (result.errors.length > 0) {
     message += `\nErrors (${result.errors.length}):\n`;
     result.errors.forEach((err, idx) => {

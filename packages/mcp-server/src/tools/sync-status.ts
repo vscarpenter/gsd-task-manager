@@ -40,17 +40,24 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
         newestTask: data.metadata.newestTaskDate,
       };
     }
-  } catch {
-    // Fall back to old approach if new endpoint not available
-    logger.warn('Failed to fetch from /api/stats, falling back to /api/sync/status');
+  } catch (error) {
+    // Only fall back for network errors; re-throw auth failures
+    if (error instanceof TypeError) {
+      logger.warn('Network error fetching /api/stats, falling back to /api/sync/status');
+    } else {
+      logger.warn('Failed to fetch from /api/stats, falling back to /api/sync/status', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
-  // Fallback: use the status endpoint and derive basic stats
+  // Fallback: use the status endpoint — only sync metadata is available,
+  // task counts cannot be derived from pending sync counts
   const status = await getSyncStatus(config);
   return {
-    totalTasks: status.pendingPushCount + status.pendingPullCount,
-    activeTasks: status.pendingPushCount + status.pendingPullCount,
-    deletedTasks: 0,
+    totalTasks: null,
+    activeTasks: null,
+    deletedTasks: null,
     lastUpdated: status.lastSyncAt,
     oldestTask: null,
     newestTask: null,

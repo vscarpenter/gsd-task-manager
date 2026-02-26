@@ -153,9 +153,13 @@ function calculateDetailedStats(
     }))
     .sort((a, b) => b.count - a.count); // Sort by count descending
 
-  // Temporal metadata
-  const updatedDates = tasks.map((t) => new Date(t.updatedAt).getTime());
-  const lastUpdated = updatedDates.length > 0 ? Math.max(...updatedDates) : null;
+  // Temporal metadata — use reduce instead of Math.max(...spread) to avoid stack overflow on large arrays
+  const lastUpdated = tasks.length > 0
+    ? tasks.reduce((max, t) => {
+        const ts = new Date(t.updatedAt).getTime();
+        return ts > max ? ts : max;
+      }, -Infinity)
+    : null;
 
   return {
     totalTasks,

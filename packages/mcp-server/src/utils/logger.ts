@@ -49,6 +49,8 @@ function createEntry(
  * ```
  */
 export function createMcpLogger(module: string) {
+  const isDebugEnabled = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV === 'development';
+
   return {
     info: (message: string, context?: Record<string, unknown>) =>
       writeLog(createEntry('INFO', module, message, undefined, context)),
@@ -59,7 +61,10 @@ export function createMcpLogger(module: string) {
     error: (message: string, error?: Error, context?: Record<string, unknown>) =>
       writeLog(createEntry('ERROR', module, message, error, context)),
 
-    debug: (message: string, context?: Record<string, unknown>) =>
-      writeLog(createEntry('DEBUG', module, message, undefined, context)),
+    debug: (message: string, context?: Record<string, unknown>) => {
+      if (isDebugEnabled) {
+        writeLog(createEntry('DEBUG', module, message, undefined, context));
+      }
+    },
   };
 }

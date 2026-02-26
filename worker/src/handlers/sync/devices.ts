@@ -26,11 +26,11 @@ export async function listDevices(
       .all();
 
     const deviceList: DeviceInfo[] = (devices.results || []).map((d: Record<string, unknown>) => ({
-      id: d.id,
-      name: d.device_name,
-      lastSeenAt: d.last_seen_at,
+      id: String(d.id ?? ''),
+      name: d.device_name != null ? String(d.device_name) : null,
+      lastSeenAt: Number(d.last_seen_at ?? 0),
       isActive: d.is_active === 1,
-      isCurrent: d.id === currentDeviceId,
+      isCurrent: String(d.id ?? '') === currentDeviceId,
     }));
 
     return jsonResponse({ devices: deviceList }, 200, origin);

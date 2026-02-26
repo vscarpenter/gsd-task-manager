@@ -10,10 +10,11 @@ export interface AuthMiddleware {
 }
 
 export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
+  const origin = request.headers.get('Origin');
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return errorResponse('Missing or invalid Authorization header', 401);
+    return errorResponse('Missing or invalid Authorization header', 401, origin);
   }
 
   const token = authHeader.substring(7);
@@ -35,7 +36,7 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
     const isRevoked = await env.KV.get(revokedKey);
 
     if (isRevoked) {
-      return errorResponse('Token has been revoked', 401);
+      return errorResponse('Token has been revoked', 401, origin);
     }
 
     // Enforce account status on every request
@@ -45,7 +46,7 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
 
     if (!userStatus || userStatus.account_status !== 'active') {
       logger.warn('Blocked request for inactive account', { userId: ctx.userId });
-      return errorResponse('Account is suspended or deleted', 403);
+      return errorResponse('Account is suspended or deleted', 403, origin);
     }
 
     // Enforce device status on every request
@@ -57,7 +58,7 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
 
     if (!deviceStatus || deviceStatus.is_active !== 1) {
       logger.warn('Blocked request for inactive device', { userId: ctx.userId, deviceId: ctx.deviceId });
-      return errorResponse('Device revoked or inactive', 403);
+      return errorResponse('Device revoked or inactive', 403, origin);
     }
 
     // Update last activity timestamp in KV (non-blocking via waitUntil)
@@ -95,7 +96,7 @@ export const authMiddleware: AuthMiddleware = async (request, env, ctx) => {
 
   } catch (error) {
     logger.error('Auth error', error instanceof Error ? error : new Error(String(error)));
-    return errorResponse('Invalid or expired token', 401);
+    return errorResponse('Invalid or expired token', 401, origin);
   }
 };
 

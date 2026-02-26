@@ -16,11 +16,13 @@ export async function bulkUpdateTasks(
   config: GsdConfig,
   taskIds: string[],
   operation: BulkOperation,
-  options?: { maxTasks?: number }
-): Promise<{ updated: number; errors: string[] }> {
+  options?: { maxTasks?: number; dryRun?: boolean }
+): Promise<{ updated: number; deleted: number; errors: string[]; dryRun: boolean }> {
+  const isDryRun = options?.dryRun ?? false;
+
   await ensureEncryption(config);
 
-  const maxTasks = options?.maxTasks || 50;
+  const maxTasks = options?.maxTasks ?? 50;
 
   // Safety check: limit bulk operations
   if (taskIds.length > maxTasks) {
@@ -33,7 +35,7 @@ export async function bulkUpdateTasks(
   }
 
   if (taskIds.length === 0) {
-    return { updated: 0, errors: [] };
+    return { updated: 0, deleted: 0, errors: [], dryRun: isDryRun };
   }
 
   // Fetch current tasks
@@ -41,7 +43,7 @@ export async function bulkUpdateTasks(
   const tasksToUpdate = allTasks.filter((t) => taskIds.includes(t.id));
 
   if (tasksToUpdate.length === 0) {
-    return { updated: 0, errors: ['No matching tasks found'] };
+    return { updated: 0, deleted: 0, errors: ['No matching tasks found'], dryRun: isDryRun };
   }
 
   const errors: string[] = [];
@@ -131,6 +133,14 @@ export async function bulkUpdateTasks(
     }
   }
 
+  const deleteCount = operations.filter((op) => op.type === 'delete').length;
+  const updateCount = operations.length - deleteCount;
+
+  // In dry-run mode, skip the actual push
+  if (isDryRun) {
+    return { updated: updateCount, deleted: deleteCount, errors, dryRun: true };
+  }
+
   // Push all updates at once
   if (operations.length > 0) {
     try {
@@ -145,7 +155,9 @@ export async function bulkUpdateTasks(
   }
 
   return {
-    updated: operations.length,
+    updated: updateCount,
+    deleted: deleteCount,
     errors,
+    dryRun: false,
   };
 }

@@ -2,6 +2,10 @@ import type { Env } from '../../types';
 import { JWT_CONFIG } from '../../constants/security';
 import { ALLOWED_ORIGINS } from '../../config';
 
+/** Named origin constants to avoid fragile positional array access */
+const PRODUCTION_ORIGIN = ALLOWED_ORIGINS[0]; // https://gsd.vinny.dev
+const STAGING_ORIGIN = ALLOWED_ORIGINS[1]; // https://gsd-dev.vinny.dev
+
 /**
  * Determine the app origin from request context
  * Used when OAuth state is not available (expired/invalid)
@@ -35,14 +39,14 @@ export function getAppOriginFromRequest(request: Request, env: Env): string | nu
 
   // Priority 4: Derive from environment
   if (env.ENVIRONMENT === 'production') {
-    return ALLOWED_ORIGINS[0]; // https://gsd.vinny.dev
+    return PRODUCTION_ORIGIN;
   }
   if (env.ENVIRONMENT === 'staging' || env.ENVIRONMENT === 'development') {
-    return ALLOWED_ORIGINS[1]; // https://gsd-dev.vinny.dev
+    return STAGING_ORIGIN;
   }
 
   // Priority 5: Default to production
-  return ALLOWED_ORIGINS[0]; // https://gsd.vinny.dev
+  return PRODUCTION_ORIGIN;
 }
 
 /**

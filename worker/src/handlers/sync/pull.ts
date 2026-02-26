@@ -46,7 +46,7 @@ export async function pull(
     };
 
     // Fetch tasks updated since last sync
-    // FIX #4: Use >= instead of > to catch edge-case millisecond timing
+    // Use >= instead of > to catch edge-case millisecond timing
     const tasks = await env.DB.prepare(
       `SELECT * FROM encrypted_tasks
        WHERE user_id = ? AND updated_at >= ? AND deleted_at IS NULL
@@ -63,19 +63,16 @@ export async function pull(
       tasks.results = tasks.results.slice(0, limit);
     }
 
-    // FIX #6: Debug logging for pull processing
-    logger.info('Processing tasks for pull', {
+    logger.debug('Processing tasks for pull', {
       userId,
       deviceId,
       sinceTimestamp,
       sinceDate: sinceTimestamp > 0 ? new Date(sinceTimestamp).toISOString() : 'epoch',
       tasksFound: tasks.results?.length || 0,
-      clientVectorClock: validated.lastVectorClock,
     });
 
-    // BULLETPROOF FIX: Always send all tasks updated since lastSyncAt
-    // Vector clocks are only used for conflict detection, NOT for filtering
-    // This ensures new tasks from other devices always get pulled
+    // Always send all tasks updated since lastSyncAt
+    // Vector clocks are only used for conflict detection, not for filtering
     for (const task of tasks.results || []) {
       const taskClock = parseVectorClock(task.vector_clock as string);
 
@@ -91,8 +88,7 @@ export async function pull(
       });
     }
 
-    // Fetch deleted tasks
-    // FIX #4: Use >= for consistency with updated_at query
+    // Fetch deleted tasks (>= for consistency with updated_at query)
     const deletedTasks = await env.DB.prepare(
       `SELECT id FROM encrypted_tasks
        WHERE user_id = ? AND deleted_at >= ? AND deleted_at IS NOT NULL

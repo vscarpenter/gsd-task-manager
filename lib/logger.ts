@@ -100,7 +100,7 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
   }
 
   // Remove sensitive fields
-  const sensitiveKeys = ['token', 'password', 'secret', 'apiKey', 'authorization', 'passphrase'];
+  const sensitiveKeys = ['token', 'password', 'secret', 'apiKey', 'authorization', 'passphrase', 'email'];
   for (const key of sensitiveKeys) {
     if (key in sanitized) {
       sanitized[key] = '***';
@@ -130,16 +130,16 @@ function formatLog(
     ...(sanitized && Object.keys(sanitized).length > 0 ? { metadata: sanitized } : {}),
   };
 
-  // Use appropriate console method
+  // Use structured logObject for all levels for consistent output
   switch (level) {
     case 'debug':
-      console.debug(`[${context}]`, message, sanitized || '');
+      console.debug(`[${context}]`, logObject);
       break;
     case 'info':
-      console.log(`[${context}]`, message, sanitized || '');
+      console.log(`[${context}]`, logObject);
       break;
     case 'warn':
-      console.warn(`[${context}]`, message, sanitized || '');
+      console.warn(`[${context}]`, logObject);
       break;
     case 'error':
       console.error(`[${context}]`, logObject);

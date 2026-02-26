@@ -27,9 +27,9 @@ export const deviceSchema = z.object({
 });
 
 export const taskStatsSchema = z.object({
-  totalTasks: z.number(),
-  activeTasks: z.number(),
-  deletedTasks: z.number(),
+  totalTasks: z.number().nullable(),
+  activeTasks: z.number().nullable(),
+  deletedTasks: z.number().nullable(),
   lastUpdated: z.number().nullable(),
   oldestTask: z.number().nullable(),
   newestTask: z.number().nullable(),

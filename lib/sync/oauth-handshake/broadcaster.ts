@@ -108,6 +108,6 @@ function storePayload(payload: BroadcastPayload): void {
   try {
     storage?.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
-    logger.warn('Failed to write localStorage payload', { error: String(err) });
+    logger.warn('Failed to write sessionStorage payload', { error: String(err) });
   }
 }
