@@ -5,7 +5,7 @@ import { SettingsIcon, UploadIcon, DownloadIcon, CloudIcon, LogOutIcon, AlertTri
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { SyncAuthDialog } from "@/components/sync/sync-auth-dialog";
+import { SupabaseAuthDialog } from "@/components/sync/supabase-auth-dialog";
 import { getSyncStatus, disableSync } from "@/lib/sync/config";
 import { getDb } from "@/lib/db";
 import { toast } from "sonner";
@@ -194,7 +194,7 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
       )}
 
       {/* Sync Auth Dialog */}
-      <SyncAuthDialog
+      <SupabaseAuthDialog
         isOpen={syncDialogOpen}
         onClose={() => setSyncDialogOpen(false)}
         onSuccess={() => {

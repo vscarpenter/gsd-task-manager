@@ -13,43 +13,36 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     details: string;
   }> = [];
 
-  // Check API connectivity
+  // Check Supabase connectivity
   try {
-    const response = await fetch(`${config.apiBaseUrl}/health`);
-    if (response.ok) {
-      checks.push({
-        name: 'API Connectivity',
-        status: 'success',
-        details: `Connected to ${config.apiBaseUrl}`,
-      });
-    } else {
-      checks.push({
-        name: 'API Connectivity',
-        status: 'warning',
-        details: `Connected but got status ${response.status}`,
-      });
-    }
+    const status = await getSyncStatus(config);
+    checks.push({
+      name: 'Supabase Connectivity',
+      status: 'success',
+      details: `Connected to ${config.supabaseUrl} (${status.deviceCount} devices)`,
+    });
   } catch (error) {
     checks.push({
-      name: 'API Connectivity',
+      name: 'Supabase Connectivity',
       status: 'error',
       details: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`,
     });
   }
 
-  // Check authentication
+  // Check user resolution
   try {
-    const status = await getSyncStatus(config);
+    const { resolveUserId } = await import('../../api/client.js');
+    const userId = await resolveUserId(config);
     checks.push({
-      name: 'Authentication',
+      name: 'User Resolution',
       status: 'success',
-      details: `Token valid (${status.deviceCount} devices registered)`,
+      details: `User found: ${config.userEmail} (${userId.slice(0, 8)}...)`,
     });
   } catch (error) {
     checks.push({
-      name: 'Authentication',
+      name: 'User Resolution',
       status: 'error',
-      details: error instanceof Error ? error.message : 'Token validation failed',
+      details: error instanceof Error ? error.message : 'User lookup failed',
     });
   }
 
@@ -95,7 +88,7 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
 function buildToolsHelpSection(): string {
   return `# GSD Task Manager MCP Server - Help
 
-## Available Tools (20 total)
+## Available Tools (19 total)
 
 ### Metadata & Status Tools
 - **get_sync_status** - Check sync health, device count, storage usage
@@ -125,7 +118,6 @@ function buildToolsHelpSection(): string {
 - **validate_config** - Diagnose configuration issues
 - **get_help** - This help message (supports topic filtering)
 - **get_cache_stats** - View cache performance statistics
-- **get_token_status** - Check auth token expiration status
 
 `;
 }
@@ -182,8 +174,9 @@ npx gsd-mcp-server --validate
 \`\`\`
 
 **Configuration Requirements:**
-- GSD_API_URL - Worker API endpoint
-- GSD_AUTH_TOKEN - JWT from OAuth login (7-day expiration)
+- GSD_SUPABASE_URL - Supabase project URL
+- GSD_SUPABASE_SERVICE_KEY - Service role key
+- GSD_USER_EMAIL - Your GSD account email
 - GSD_ENCRYPTION_PASSPHRASE - (Optional) For decrypted task access
 
 **Claude Desktop Config Location:**
@@ -241,12 +234,11 @@ function buildTroubleshootingHelpSection(): string {
 
 **"Configuration error" on startup:**
 - Run: \`npx gsd-mcp-server --setup\`
-- Ensure GSD_API_URL and GSD_AUTH_TOKEN are set
+- Ensure GSD_SUPABASE_URL, GSD_SUPABASE_SERVICE_KEY, and GSD_USER_EMAIL are set
 
-**"Authentication failed (401)":**
-- Your token has expired (7-day lifetime)
-- Get new token: Visit GSD app → DevTools → Local Storage → gsd_auth_token
-- Update Claude Desktop config → Restart Claude
+**"User not found":**
+- Verify GSD_USER_EMAIL matches your GSD app login email
+- Ensure you've signed into the GSD app at least once
 
 **"Encryption passphrase not provided":**
 - Add GSD_ENCRYPTION_PASSPHRASE to Claude Desktop config
@@ -255,8 +247,8 @@ function buildTroubleshootingHelpSection(): string {
 
 **"Failed to connect":**
 - Check internet connection
-- Verify GSD_API_URL is correct
-- Ensure Worker is deployed and accessible
+- Verify GSD_SUPABASE_URL points to your Supabase project
+- Verify GSD_SUPABASE_SERVICE_KEY is the service role key (not anon key)
 
 **Decryption failures:**
 - Verify passphrase is correct (case-sensitive)

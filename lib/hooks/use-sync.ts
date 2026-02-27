@@ -3,10 +3,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getSyncEngine } from '@/lib/sync/engine';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
-import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
-import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { UI_TIMING } from '@/lib/constants/ui';
 import { createLogger } from '@/lib/logger';
 import type { SyncResult } from '@/lib/sync/types';
@@ -40,23 +38,12 @@ export function useSync(): UseSyncResult {
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [autoSyncInterval, setAutoSyncInterval] = useState(2);
 
-  // Check if sync is enabled on mount and periodically
-  // Start/stop health monitor and background sync manager based on sync enabled state
+  // Check if sync is enabled on mount and manage background sync lifecycle
   useEffect(() => {
     const checkEnabled = async () => {
       const engine = getSyncEngine();
       const enabled = await engine.isEnabled();
       setIsEnabled(enabled);
-
-      // Start or stop health monitor based on sync state
-      const healthMonitor = getHealthMonitor();
-      if (enabled && !healthMonitor.isActive()) {
-        logger.debug('Starting health monitor (sync enabled)');
-        healthMonitor.start();
-      } else if (!enabled && healthMonitor.isActive()) {
-        logger.debug('Stopping health monitor (sync disabled)');
-        healthMonitor.stop();
-      }
 
       // Start or stop background sync manager
       const bgSyncManager = getBackgroundSyncManager();
@@ -82,12 +69,6 @@ export function useSync(): UseSyncResult {
     const interval = setInterval(checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
     return () => {
       clearInterval(interval);
-
-      // Stop health monitor on unmount
-      const healthMonitor = getHealthMonitor();
-      if (healthMonitor.isActive()) {
-        healthMonitor.stop();
-      }
 
       // Stop background sync manager on unmount
       const bgSyncManager = getBackgroundSyncManager();
@@ -130,61 +111,6 @@ export function useSync(): UseSyncResult {
     const interval = setInterval(updateStatus, UI_TIMING.STATUS_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
-
-  // Listen for health check results and show notifications
-  // This effect runs periodically to check health status
-  useEffect(() => {
-    if (!isEnabled) {
-      return;
-    }
-
-    let lastHealthCheckTime = 0;
-
-    const checkHealth = async () => {
-      const now = Date.now();
-
-      // Only check once per interval to avoid spam
-      if (now - lastHealthCheckTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) {
-        return;
-      }
-
-      lastHealthCheckTime = now;
-
-      const healthMonitor = getHealthMonitor();
-      const report = await healthMonitor.check();
-
-      // Log health check results
-      logger.debug('Health check result', {
-        healthy: report.healthy,
-        issuesCount: report.issues.length,
-      });
-
-      // Note: Toast notifications would be shown here if we had access to the toast context
-      // For now, we just log the issues. The health monitor integration is complete,
-      // and toast notifications can be added by components that use this hook.
-      if (!report.healthy && report.issues.length > 0) {
-        for (const issue of report.issues) {
-          logger.warn('Health issue detected', {
-            type: issue.type,
-            severity: issue.severity,
-            message: issue.message,
-            suggestedAction: issue.suggestedAction,
-          });
-        }
-      }
-    };
-
-    // Run initial check after a short delay
-    const initialTimeout = setTimeout(checkHealth, UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
-
-    // Check periodically
-    const interval = setInterval(checkHealth, SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, [isEnabled]);
 
   const sync = useCallback(async () => {
     setStatus('syncing');

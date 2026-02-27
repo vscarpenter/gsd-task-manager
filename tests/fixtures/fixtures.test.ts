@@ -9,9 +9,7 @@ import {
   createMockSubtask,
   createMockTasks,
   createMockSyncConfig,
-  createMockVectorClock,
   createMockSyncQueueItem,
-  createMockHealthReport,
   createMockNotificationSettings,
   createMockSyncHistoryRecord,
   createMockFetchResponse,
@@ -87,54 +85,21 @@ describe('Task Fixtures', () => {
 describe('Sync Fixtures', () => {
   it('should create a mock sync config', () => {
     const config = createMockSyncConfig();
-    
+
     expect(config.key).toBe('sync_config');
     expect(config.enabled).toBe(true);
     expect(config.userId).toBe('user-123');
     expect(config.deviceId).toBe('device-456');
     expect(config.email).toBe('test@example.com');
-    expect(config.token).toBe('test-token-abc123');
-  });
-
-  it('should create a mock vector clock', () => {
-    const clock = createMockVectorClock();
-    
-    expect(clock['device-456']).toBe(1);
   });
 
   it('should create a mock sync queue item', () => {
     const item = createMockSyncQueueItem();
-    
+
     expect(item.id).toBe('queue-item-1');
     expect(item.taskId).toBe('test-task-1');
     expect(item.operation).toBe('create');
     expect(item.retryCount).toBe(0);
-  });
-});
-
-describe('Health Monitor Fixtures', () => {
-  it('should create a mock health report', () => {
-    const report = createMockHealthReport();
-    
-    expect(report.healthy).toBe(true);
-    expect(report.issues).toEqual([]);
-    expect(report.timestamp).toBeDefined();
-  });
-
-  it('should create a mock health report with issues', () => {
-    const report = createMockHealthReport({
-      healthy: false,
-      issues: [{
-        type: 'token_expired',
-        severity: 'error',
-        message: 'Token expired',
-        suggestedAction: 'Sign in again',
-      }],
-    });
-    
-    expect(report.healthy).toBe(false);
-    expect(report.issues).toHaveLength(1);
-    expect(report.issues[0].type).toBe('token_expired');
   });
 });
 

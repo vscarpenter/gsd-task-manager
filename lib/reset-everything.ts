@@ -13,7 +13,6 @@
 import { getDb } from "@/lib/db";
 import { disableSync, getSyncConfig } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
-import { ENV_CONFIG } from "@/lib/env-config";
 
 const logger = createLogger("DB");
 
@@ -87,12 +86,8 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 				deviceId, // Preserve for future sync
 				deviceName: "Device",
 				email: null,
-				token: null,
-				tokenExpiresAt: null,
 				lastSyncAt: null,
-				vectorClock: {},
 				conflictStrategy: "last_write_wins",
-				serverUrl: ENV_CONFIG.apiBaseUrl,
 				consecutiveFailures: 0,
 				lastFailureAt: null,
 				lastFailureReason: null,

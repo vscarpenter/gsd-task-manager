@@ -21,14 +21,6 @@ vi.mock('@/lib/sync/crypto', () => ({
   getCryptoManager: vi.fn(() => mockCrypto),
 }));
 
-const mockApiClient = {
-  setToken: vi.fn(),
-};
-
-vi.mock('@/lib/sync/api-client', () => ({
-  getApiClient: vi.fn(() => mockApiClient),
-}));
-
 const mockQueue = {
   populateFromExistingTasks: vi.fn().mockResolvedValue(5),
 };
@@ -37,14 +29,16 @@ vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(() => mockQueue),
 }));
 
-const mockMonitor = {
-  isActive: vi.fn().mockReturnValue(false),
-  start: vi.fn(),
-  stop: vi.fn(),
-};
+vi.mock('@/lib/sync/realtime-listener', () => ({
+  stopRealtimeListener: vi.fn(),
+}));
 
-vi.mock('@/lib/sync/health-monitor', () => ({
-  getHealthMonitor: vi.fn(() => mockMonitor),
+vi.mock('@/lib/supabase', () => ({
+  getSupabaseClient: vi.fn(() => ({
+    auth: {
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+    },
+  })),
 }));
 
 describe('Sync Config', () => {
@@ -56,12 +50,8 @@ describe('Sync Config', () => {
     deviceId: 'device-123',
     deviceName: 'Test Device',
     email: null,
-    token: null,
-    tokenExpiresAt: null,
     lastSyncAt: null,
-    vectorClock: {},
     conflictStrategy: 'last_write_wins',
-    serverUrl: 'https://test-api.example.com',
     consecutiveFailures: 0,
     lastFailureAt: null,
     lastFailureReason: null,
@@ -94,30 +84,12 @@ describe('Sync Config', () => {
       expect(config?.deviceName).toBe('Test Device');
     });
 
-    it('should auto-create config if it does not exist', async () => {
+    it('should return null if config does not exist', async () => {
       await db.syncMetadata.clear();
 
       const config = await getSyncConfig();
 
-      // Config should be auto-created by ensureSyncConfigInitialized()
-      expect(config).not.toBeNull();
-      expect(config?.enabled).toBe(false);
-      expect(config?.deviceId).toBeDefined();
-    });
-
-    it('should migrate legacy config', async () => {
-      // This test ensures backward compatibility with old config formats
-      const legacyConfig = {
-        ...mockSyncConfig,
-        // Add any legacy fields that might need migration
-      };
-
-      await db.syncMetadata.put(legacyConfig);
-
-      const config = await getSyncConfig();
-
-      expect(config).not.toBeNull();
-      expect(config?.key).toBe('sync_config');
+      expect(config).toBeNull();
     });
   });
 
@@ -137,26 +109,12 @@ describe('Sync Config', () => {
       expect(updated?.deviceId).toBe('device-123'); // Original value preserved
     });
 
-    it('should auto-create config and update it', async () => {
+    it('should throw when config does not exist', async () => {
       await db.syncMetadata.clear();
 
-      // updateSyncConfig calls getSyncConfig which auto-initializes
-      await updateSyncConfig({ enabled: true });
-
-      const config = await getSyncConfig();
-      expect(config?.enabled).toBe(true);
-    });
-
-    it('should update vector clock', async () => {
-      const newVectorClock = { 'device-123': 5, 'device-456': 3 };
-
-      await updateSyncConfig({
-        vectorClock: newVectorClock,
-      });
-
-      const updated = await getSyncConfig();
-
-      expect(updated?.vectorClock).toEqual(newVectorClock);
+      await expect(updateSyncConfig({ enabled: true })).rejects.toThrow(
+        'Sync config not initialized'
+      );
     });
 
     it('should update lastSyncAt timestamp', async () => {
@@ -176,20 +134,16 @@ describe('Sync Config', () => {
     it('should enable sync with auth credentials', async () => {
       const userId = 'user-789';
       const email = 'test@example.com';
-      const token = 'test-token-123';
-      const expiresAt = Date.now() + 86400000;
       const salt = 'test-salt';
       const password = 'password123';
 
-      await enableSync(userId, email, token, expiresAt, salt, password);
+      await enableSync(userId, email, salt, password);
 
       const config = await getSyncConfig();
 
       expect(config?.enabled).toBe(true);
       expect(config?.userId).toBe(userId);
       expect(config?.email).toBe(email);
-      expect(config?.token).toBe(token);
-      expect(config?.tokenExpiresAt).toBe(expiresAt);
     });
 
     it('should initialize crypto with password and salt', async () => {
@@ -200,28 +154,11 @@ describe('Sync Config', () => {
       await enableSync(
         'user-123',
         'test@example.com',
-        'token',
-        Date.now() + 86400000,
         'salt',
         'password'
       );
 
       expect(mockCrypto.deriveKey).toHaveBeenCalledWith('password', 'salt');
-    });
-
-    it('should set token in API client', async () => {
-      const token = 'test-token-456';
-
-      await enableSync(
-        'user-123',
-        'test@example.com',
-        token,
-        Date.now() + 86400000,
-        'salt',
-        'password'
-      );
-
-      expect(mockApiClient.setToken).toHaveBeenCalledWith(token);
     });
 
     it('should queue existing tasks when tasks exist', async () => {
@@ -266,8 +203,6 @@ describe('Sync Config', () => {
       await enableSync(
         'user-123',
         'test@example.com',
-        'token',
-        Date.now() + 86400000,
         'salt',
         'password'
       );
@@ -275,32 +210,10 @@ describe('Sync Config', () => {
       expect(mockQueue.populateFromExistingTasks).toHaveBeenCalled();
     });
 
-    it('should start health monitor', async () => {
-      const { getHealthMonitor } = await import('@/lib/sync/health-monitor');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockMonitor = (getHealthMonitor as any)();
-
+    it('should work with existing config', async () => {
       await enableSync(
         'user-123',
         'test@example.com',
-        'token',
-        Date.now() + 86400000,
-        'salt',
-        'password'
-      );
-
-      expect(mockMonitor.start).toHaveBeenCalled();
-    });
-
-    it('should work with auto-created config', async () => {
-      await db.syncMetadata.clear();
-
-      // enableSync calls getSyncConfig which auto-initializes
-      await enableSync(
-        'user-123',
-        'test@example.com',
-        'token',
-        Date.now() + 86400000,
         'salt',
         'password'
       );
@@ -308,6 +221,19 @@ describe('Sync Config', () => {
       const config = await getSyncConfig();
       expect(config?.enabled).toBe(true);
       expect(config?.userId).toBe('user-123');
+    });
+
+    it('should store provider when provided', async () => {
+      await enableSync(
+        'user-123',
+        'test@example.com',
+        'salt',
+        'password',
+        'google'
+      );
+
+      const config = await getSyncConfig();
+      expect(config?.provider).toBe('google');
     });
   });
 
@@ -318,8 +244,6 @@ describe('Sync Config', () => {
         enabled: true,
         userId: 'user-123',
         email: 'test@example.com',
-        token: 'test-token',
-        tokenExpiresAt: Date.now() + 86400000,
       });
 
       // Add some queue items
@@ -330,7 +254,6 @@ describe('Sync Config', () => {
         timestamp: Date.now(),
         retryCount: 0,
         payload: null,
-        vectorClock: {},
       });
     });
 
@@ -342,10 +265,7 @@ describe('Sync Config', () => {
       expect(config?.enabled).toBe(false);
       expect(config?.userId).toBeNull();
       expect(config?.email).toBeNull();
-      expect(config?.token).toBeNull();
-      expect(config?.tokenExpiresAt).toBeNull();
       expect(config?.lastSyncAt).toBeNull();
-      expect(config?.vectorClock).toEqual({});
     });
 
     it('should clear sync queue', async () => {
@@ -356,17 +276,6 @@ describe('Sync Config', () => {
 
       const queueCountAfter = await db.syncQueue.count();
       expect(queueCountAfter).toBe(0);
-    });
-
-    it('should stop health monitor', async () => {
-      const { getHealthMonitor } = await import('@/lib/sync/health-monitor');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockMonitor = (getHealthMonitor as any)();
-      mockMonitor.isActive.mockReturnValue(true);
-
-      await disableSync();
-
-      expect(mockMonitor.stop).toHaveBeenCalled();
     });
 
     it('should clear crypto manager', async () => {
@@ -426,7 +335,6 @@ describe('Sync Config', () => {
         timestamp: Date.now(),
         retryCount: 0,
         payload: null,
-        vectorClock: {},
       });
 
       const status = await getSyncStatus();
@@ -436,18 +344,15 @@ describe('Sync Config', () => {
       expect(status.lastSyncAt).toBe(1234567890);
       expect(status.pendingCount).toBe(1);
       expect(status.deviceId).toBe('device-123');
-      expect(status.serverUrl).toBe('https://test-api.example.com');
     });
 
     it('should return default values when sync not enabled', async () => {
-      // Don't clear syncMetadata - just use the default config from beforeEach
       const status = await getSyncStatus();
 
       expect(status.enabled).toBe(false);
       expect(status.email).toBeNull();
       expect(status.lastSyncAt).toBeNull();
-      expect(status.deviceId).toBeDefined(); // Auto-created by DB migration
-      expect(status.serverUrl).toBeDefined(); // Auto-created by DB migration
+      expect(status.deviceId).toBeDefined();
     });
 
     it('should include pending operation count', async () => {
@@ -460,7 +365,6 @@ describe('Sync Config', () => {
           timestamp: Date.now(),
           retryCount: 0,
           payload: null,
-          vectorClock: {},
         },
         {
           id: 'queue-2',
@@ -469,7 +373,6 @@ describe('Sync Config', () => {
           timestamp: Date.now(),
           retryCount: 0,
           payload: null,
-          vectorClock: {},
         },
         {
           id: 'queue-3',
@@ -478,7 +381,6 @@ describe('Sync Config', () => {
           timestamp: Date.now(),
           retryCount: 0,
           payload: null,
-          vectorClock: {},
         },
       ]);
 
@@ -495,9 +397,7 @@ describe('Sync Config', () => {
         enabled: true,
         userId: 'user-123',
         email: 'test@example.com',
-        token: 'test-token',
         lastSyncAt: Date.now() - 3600000,
-        vectorClock: { 'device-123': 10, 'device-456': 5 },
       });
 
       // Add tasks
@@ -527,7 +427,6 @@ describe('Sync Config', () => {
         timestamp: Date.now(),
         retryCount: 0,
         payload: null,
-        vectorClock: {},
       });
     });
 
@@ -536,8 +435,7 @@ describe('Sync Config', () => {
 
       const config = await getSyncConfig();
 
-      expect(config?.lastSyncAt).toBe(0);
-      expect(config?.vectorClock).toEqual({});
+      expect(config?.lastSyncAt).toBeNull();
 
       const taskCount = await db.tasks.count();
       expect(taskCount).toBe(0);
@@ -554,7 +452,6 @@ describe('Sync Config', () => {
       expect(config?.enabled).toBe(true);
       expect(config?.userId).toBe('user-123');
       expect(config?.email).toBe('test@example.com');
-      expect(config?.token).toBe('test-token');
     });
 
     it('should throw error when sync not enabled', async () => {

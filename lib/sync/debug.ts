@@ -47,7 +47,7 @@ export async function debugSyncQueue() {
     lastSyncAt: config?.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
     consecutiveFailures: config?.consecutiveFailures,
     nextRetryAt: config?.nextRetryAt ? new Date(config.nextRetryAt).toISOString() : null,
-    vectorClock: config?.vectorClock,
+    deviceId: config?.deviceId,
   });
   
   // Get all tasks

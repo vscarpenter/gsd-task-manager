@@ -54,7 +54,7 @@ export class SyncCryptoError extends SyncError {
 }
 
 /**
- * Conflict errors when vector clocks diverge (needs manual resolution)
+ * Conflict errors when concurrent edits diverge (needs resolution via LWW or manual)
  */
 export class SyncConflictError extends SyncError {
   constructor(message: string, public conflictingTasks?: unknown) {

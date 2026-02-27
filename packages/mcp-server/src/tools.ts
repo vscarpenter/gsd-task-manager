@@ -3,7 +3,7 @@
  *
  * This file maintains backward compatibility after modularization.
  * All functionality has been split into focused modules:
- * - api/client.ts - HTTP requests and error handling
+ * - api/client.ts - Supabase client and user resolution
  * - encryption/manager.ts - Encryption initialization
  * - tools/*.ts - Individual tool implementations
  * - types.ts - Shared type definitions
@@ -19,7 +19,6 @@ export type {
   EncryptedTaskBlob,
   DecryptedTask,
   TaskFilters,
-  PullTasksResponse,
 } from './types.js';
 
 export {
@@ -33,7 +32,7 @@ export {
 export { MAX_TASKS_PER_PULL } from './constants.js';
 
 // Re-export API client
-export { apiRequest } from './api/client.js';
+export { getSupabaseClient, resolveUserId } from './api/client.js';
 
 // Re-export encryption utilities
 export { initializeEncryption } from './encryption/manager.js';

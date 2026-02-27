@@ -3,20 +3,18 @@
  * Includes ID generation, quadrant logic, encryption setup, and sync push
  */
 
-import type { GsdConfig } from '../tools.js';
+import type { GsdConfig } from '../types.js';
 import type { SyncOperation } from './types.js';
 import { getCryptoManager } from '../crypto.js';
-import { getDeviceIdFromToken } from '../jwt.js';
-import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
+import { getSupabaseClient, resolveUserId } from '../api/client.js';
+import { initializeEncryption } from '../encryption/manager.js';
 import { getTaskCache } from '../cache.js';
 
 /**
  * Generate unique ID for new tasks
  */
 export function generateTaskId(): string {
-  // Use crypto.randomUUID() for secure random IDs
   const uuid = crypto.randomUUID();
-  // Remove hyphens to match frontend format
   return uuid.replace(/-/g, '');
 }
 
@@ -32,7 +30,6 @@ export function deriveQuadrant(urgent: boolean, important: boolean): string {
 
 /**
  * Initialize encryption for write operations
- * Includes retry logic for fetching encryption salt
  */
 export async function ensureEncryption(config: GsdConfig): Promise<void> {
   if (!config.encryptionPassphrase) {
@@ -44,99 +41,80 @@ export async function ensureEncryption(config: GsdConfig): Promise<void> {
     );
   }
 
-  const cryptoManager = getCryptoManager();
-  if (!cryptoManager.isInitialized()) {
-    // Fetch salt with retry logic
-    const response = await fetchWithRetry(
-      () =>
-        fetch(`${config.apiBaseUrl}/api/auth/encryption-salt`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${config.authToken}`,
-            'Content-Type': 'application/json',
-          },
-        }),
-      DEFAULT_RETRY_CONFIG
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch encryption salt: ${response.status}`);
-    }
-
-    const data = (await response.json()) as { encryptionSalt: string };
-    if (!data.encryptionSalt) {
-      throw new Error('Encryption not set up for this account');
-    }
-
-    await cryptoManager.deriveKey(config.encryptionPassphrase, data.encryptionSalt);
-  }
+  await initializeEncryption(config);
 }
 
 /**
- * Push encrypted task data to sync API
- * Includes retry logic for transient failures
+ * Push encrypted task data to Supabase
  */
 export async function pushToSync(
   config: GsdConfig,
   operations: SyncOperation[]
 ): Promise<void> {
-  const deviceId = getDeviceIdFromToken(config.authToken);
-  const payload = JSON.stringify({
-    deviceId,
-    operations,
-    clientVectorClock: {}, // Simplified: let server handle vector clock
-  });
+  const userId = await resolveUserId(config);
+  const supabase = getSupabaseClient(config);
+  const cryptoManager = getCryptoManager();
 
-  const response = await fetchWithRetry(
-    () =>
-      fetch(`${config.apiBaseUrl}/api/sync/push`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: payload,
-      }),
-    DEFAULT_RETRY_CONFIG
-  );
+  for (const op of operations) {
+    if (op.type === 'delete') {
+      // Soft-delete the task
+      const { error } = await supabase
+        .from('encrypted_tasks')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', op.taskId)
+        .eq('user_id', userId);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `❌ Failed to push task changes (${response.status})\n\n` +
-        `Error: ${errorText}\n\n` +
-        `Your changes were not saved to the server.\n` +
-        `Retried ${DEFAULT_RETRY_CONFIG.maxRetries} times before giving up.`
-    );
-  }
+      if (error) {
+        throw new Error(
+          `❌ Failed to delete task ${op.taskId}\n\n` +
+            `Error: ${error.message}`
+        );
+      }
+      continue;
+    }
 
-  // Check response for rejected operations and conflicts
-  const result = (await response.json()) as {
-    accepted?: string[];
-    rejected?: Array<{ taskId: string; reason: string; details: string }>;
-    conflicts?: Array<unknown>;
-    serverVectorClock?: Record<string, number>;
-  };
+    // Encrypt task data
+    const taskJson = JSON.stringify(op.data);
+    const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
+    const checksum = await computeChecksum(taskJson);
 
-  // Check for rejected operations
-  if (result.rejected && result.rejected.length > 0) {
-    const rejectionDetails = result.rejected
-      .map((r) => `  - Task ${r.taskId}: ${r.reason} - ${r.details}`)
-      .join('\n');
-    throw new Error(
-      `❌ Worker rejected ${result.rejected.length} operation(s)\n\n` +
-        `${rejectionDetails}\n\n` +
-        `Your changes were not saved to the server.`
-    );
-  }
+    // Upsert encrypted task
+    const { error } = await supabase
+      .from('encrypted_tasks')
+      .upsert({
+        id: op.taskId,
+        user_id: userId,
+        encrypted_blob: ciphertext,
+        nonce,
+        version: 1,
+        deleted_at: null,
+        updated_at: new Date().toISOString(),
+        last_modified_device: 'mcp-server',
+        checksum,
+      }, {
+        onConflict: 'id,user_id',
+      });
 
-  // Check for conflicts
-  if (result.conflicts && result.conflicts.length > 0) {
-    console.warn(`⚠️  Warning: ${result.conflicts.length} conflict(s) detected`);
-    console.warn('Last-write-wins strategy applied - your changes took precedence');
+    if (error) {
+      throw new Error(
+        `❌ Failed to push task ${op.taskId}\n\n` +
+          `Error: ${error.message}\n\n` +
+          `Your changes were not saved to the server.`
+      );
+    }
   }
 
   // Invalidate cache after successful write
   const cache = getTaskCache();
   cache.invalidate();
+}
+
+/**
+ * Compute simple checksum for integrity verification
+ */
+async function computeChecksum(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', encoder.encode(data));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }

@@ -16,10 +16,10 @@ export * from './analytics-tools.js';
 export * from './system-tools.js';
 
 /**
- * All MCP tool schemas (20 total)
+ * All MCP tool schemas (19 total)
  */
 export const allTools: Tool[] = [
-  ...readTools,      // 7 tools (includes get_token_status)
+  ...readTools,      // 6 tools
   ...analyticsTools, // 5 tools
   ...writeTools,     // 5 tools
   ...systemTools,    // 3 tools (includes get_cache_stats)

@@ -58,9 +58,10 @@ EXAMPLES:
 
 CONFIGURATION:
   Environment variables (set in Claude Desktop config):
-    GSD_API_URL                - Worker API URL (e.g., https://gsd.vinny.dev)
-    GSD_AUTH_TOKEN             - JWT token from OAuth authentication
-    GSD_ENCRYPTION_PASSPHRASE  - Optional: encryption passphrase for task decryption
+    GSD_SUPABASE_URL            - Supabase project URL
+    GSD_SUPABASE_SERVICE_KEY    - Supabase service role key
+    GSD_USER_EMAIL              - Your GSD account email
+    GSD_ENCRYPTION_PASSPHRASE   - Optional: encryption passphrase for task decryption
 
   Claude Desktop config location:
     macOS:   ~/Library/Application Support/Claude/claude_desktop_config.json
@@ -70,7 +71,7 @@ DOCUMENTATION:
   Full docs: https://github.com/vscarpenter/gsd-taskmanager/tree/main/packages/mcp-server
   Issues:    https://github.com/vscarpenter/gsd-taskmanager/issues
 
-VERSION: 0.6.0
+VERSION: 0.7.0
 `);
 }
 

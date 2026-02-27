@@ -59,7 +59,6 @@ describe('Task Dependency Operations', () => {
     dependencies: ['task-2', 'task-3'],
     createdAt: '2025-01-15T10:00:00Z',
     updatedAt: '2025-01-15T10:00:00Z',
-    vectorClock: { 'test-device': 1 },
     notifyBefore: 15,
     notificationEnabled: true,
     notificationSent: false,
@@ -109,16 +108,6 @@ describe('Task Dependency Operations', () => {
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
 
-    it('should increment vector clock for new dependency', async () => {
-      mockDb.tasks.get.mockResolvedValue(baseTask);
-      mockDb.tasks.put.mockResolvedValue(undefined);
-
-      const result = await addDependency('task-1', 'task-4');
-
-      expect(result.vectorClock).toHaveProperty('test-device');
-      expect(result.vectorClock['test-device']).toBeGreaterThan(baseTask.vectorClock['test-device']);
-    });
-
     it('should update updatedAt timestamp', async () => {
       mockDb.tasks.get.mockResolvedValue(baseTask);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -141,8 +130,7 @@ describe('Task Dependency Operations', () => {
       expect(getSyncQueue().enqueue).toHaveBeenCalledWith(
         'update',
         'task-1',
-        result,
-        result.vectorClock
+        result
       );
     });
 
@@ -193,16 +181,6 @@ describe('Task Dependency Operations', () => {
       expect(result.dependencies).not.toContain('task-2');
     });
 
-    it('should increment vector clock', async () => {
-      mockDb.tasks.get.mockResolvedValue(baseTask);
-      mockDb.tasks.put.mockResolvedValue(undefined);
-
-      const result = await removeDependency('task-1', 'task-2');
-
-      expect(result.vectorClock).toHaveProperty('test-device');
-      expect(result.vectorClock['test-device']).toBeGreaterThan(baseTask.vectorClock['test-device']);
-    });
-
     it('should update updatedAt timestamp', async () => {
       mockDb.tasks.get.mockResolvedValue(baseTask);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -225,8 +203,7 @@ describe('Task Dependency Operations', () => {
       expect(getSyncQueue().enqueue).toHaveBeenCalledWith(
         'update',
         'task-1',
-        result,
-        result.vectorClock
+        result
       );
     });
 

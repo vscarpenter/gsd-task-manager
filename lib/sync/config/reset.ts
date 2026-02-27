@@ -33,17 +33,16 @@ async function resetSyncMetadata(config: SyncConfig): Promise<void> {
 
   await db.syncMetadata.put({
     ...config,
-    lastSyncAt: 0,
-    vectorClock: {},
+    lastSyncAt: null,
     key: "sync_config",
   });
-  logger.info('Reset sync metadata', { lastSyncAt: 0, vectorClock: {} });
+  logger.info('Reset sync metadata for full pull');
 }
 
 /**
  * Reset sync state and perform full sync from server
- * This clears lastSyncAt and vector clocks to force a complete pull
- * Useful for debugging sync issues or recovering from inconsistent state
+ * Clears lastSyncAt to force a complete pull.
+ * Useful for debugging sync issues or recovering from inconsistent state.
  */
 export async function resetAndFullSync(): Promise<void> {
   const config = await getSyncConfig();
@@ -55,7 +54,6 @@ export async function resetAndFullSync(): Promise<void> {
 
   logger.info('Starting full sync reset', {
     lastSyncAt: config.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
-    vectorClock: config.vectorClock as Record<string, unknown>,
     pendingOps: await db.syncQueue.count(),
   });
 

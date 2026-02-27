@@ -35,10 +35,9 @@ describe('SyncQueue', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: { 'device-1': 1 },
       };
 
-      await queue.enqueue('create', 'task-1', task, task.vectorClock);
+      await queue.enqueue('create', 'task-1', task);
 
       const pending = await queue.getPending();
 
@@ -46,14 +45,13 @@ describe('SyncQueue', () => {
       expect(pending[0].taskId).toBe('task-1');
       expect(pending[0].operation).toBe('create');
       expect(pending[0].payload).toEqual(task);
-      expect(pending[0].vectorClock).toEqual({ 'device-1': 1 });
       expect(pending[0].retryCount).toBe(0);
     });
 
     it('should enqueue multiple operations', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
-      await queue.enqueue('delete', 'task-3', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
+      await queue.enqueue('delete', 'task-3', null);
 
       const pending = await queue.getPending();
 
@@ -65,7 +63,7 @@ describe('SyncQueue', () => {
     it('should set timestamp on enqueue', async () => {
       const beforeEnqueue = Date.now();
 
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
       const afterEnqueue = Date.now();
@@ -75,7 +73,7 @@ describe('SyncQueue', () => {
     });
 
     it('should initialize retry count to 0', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
 
@@ -92,11 +90,11 @@ describe('SyncQueue', () => {
 
     it('should return all pending operations ordered by timestamp', async () => {
       // Add operations with small delays to ensure different timestamps
-      await queue.enqueue('delete', 'task-3', null, {});
+      await queue.enqueue('delete', 'task-3', null);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', 'task-2', null, {});
+      await queue.enqueue('update', 'task-2', null);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
 
@@ -122,9 +120,9 @@ describe('SyncQueue', () => {
     });
 
     it('should return correct count of pending operations', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
-      await queue.enqueue('delete', 'task-3', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
+      await queue.enqueue('delete', 'task-3', null);
 
       const count = await queue.getPendingCount();
 
@@ -132,8 +130,8 @@ describe('SyncQueue', () => {
     });
 
     it('should update count after dequeue', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
 
       const pending = await queue.getPending();
       await queue.dequeue(pending[0].id);
@@ -146,7 +144,7 @@ describe('SyncQueue', () => {
 
   describe('dequeue', () => {
     it('should remove operation from queue', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
       expect(pending.length).toBe(1);
@@ -158,9 +156,9 @@ describe('SyncQueue', () => {
     });
 
     it('should only remove specified operation', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
-      await queue.enqueue('delete', 'task-3', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
+      await queue.enqueue('delete', 'task-3', null);
 
       const pending = await queue.getPending();
       const task2Operation = pending.find(p => p.taskId === 'task-2');
@@ -179,9 +177,9 @@ describe('SyncQueue', () => {
 
   describe('dequeueBulk', () => {
     it('should remove multiple operations at once', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
-      await queue.enqueue('delete', 'task-3', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
+      await queue.enqueue('delete', 'task-3', null);
 
       const pending = await queue.getPending();
       const task1Op = pending.find(p => p.taskId === 'task-1');
@@ -197,7 +195,7 @@ describe('SyncQueue', () => {
     });
 
     it('should handle empty bulk delete', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       await queue.dequeueBulk([]);
 
@@ -207,8 +205,8 @@ describe('SyncQueue', () => {
     });
 
     it('should handle deleting all operations in bulk', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
 
       const pending = await queue.getPending();
       await queue.dequeueBulk(pending.map(p => p.id));
@@ -221,7 +219,7 @@ describe('SyncQueue', () => {
 
   describe('incrementRetry', () => {
     it('should increment retry count', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
       const itemId = pending[0].id;
@@ -234,7 +232,7 @@ describe('SyncQueue', () => {
     });
 
     it('should increment multiple times', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
       const itemId = pending[0].id;
@@ -255,9 +253,9 @@ describe('SyncQueue', () => {
 
   describe('clear', () => {
     it('should remove all operations', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
-      await queue.enqueue('delete', 'task-3', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
+      await queue.enqueue('delete', 'task-3', null);
 
       await queue.clear();
 
@@ -277,9 +275,9 @@ describe('SyncQueue', () => {
 
   describe('getForTask', () => {
     it('should return operations for specific task', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-1', null, {});
-      await queue.enqueue('update', 'task-2', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-1', null);
+      await queue.enqueue('update', 'task-2', null);
 
       const operations = await queue.getForTask('task-1');
 
@@ -288,7 +286,7 @@ describe('SyncQueue', () => {
     });
 
     it('should return empty array when no operations for task', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
 
       const operations = await queue.getForTask('task-2');
 
@@ -296,9 +294,9 @@ describe('SyncQueue', () => {
     });
 
     it('should return all operation types for a task', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-      await queue.enqueue('update', 'task-1', null, {});
-      await queue.enqueue('delete', 'task-1', null, {});
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('update', 'task-1', null);
+      await queue.enqueue('delete', 'task-1', null);
 
       const operations = await queue.getForTask('task-1');
 
@@ -325,7 +323,6 @@ describe('SyncQueue', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
         },
         {
           id: 'task-2',
@@ -341,7 +338,6 @@ describe('SyncQueue', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {},
         },
       ];
 
@@ -383,13 +379,12 @@ describe('SyncQueue', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
       };
 
       await db.tasks.add(task);
 
       // Manually add task to queue first
-      await queue.enqueue('update', 'task-1', task, {});
+      await queue.enqueue('update', 'task-1', task);
 
       // Now try to populate
       const count = await queue.populateFromExistingTasks();
@@ -417,7 +412,6 @@ describe('SyncQueue', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {},
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -431,32 +425,6 @@ describe('SyncQueue', () => {
       expect(pending.length).toBe(100);
     });
 
-    it('should use task vector clock when adding to queue', async () => {
-      const task: TaskRecord = {
-        id: 'task-1',
-        title: 'Task 1',
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        vectorClock: { 'device-1': 5, 'device-2': 3 },
-      };
-
-      await db.tasks.add(task);
-
-      await queue.populateFromExistingTasks();
-
-      const pending = await queue.getPending();
-
-      expect(pending[0].vectorClock).toEqual({ 'device-1': 5, 'device-2': 3 });
-    });
   });
 
   describe('getSyncQueue singleton', () => {
@@ -470,41 +438,18 @@ describe('SyncQueue', () => {
 
   describe('Edge Cases', () => {
     it('should handle enqueueing null payload', async () => {
-      await queue.enqueue('delete', 'task-1', null, {});
+      await queue.enqueue('delete', 'task-1', null);
 
       const pending = await queue.getPending();
 
       expect(pending[0].payload).toBeNull();
     });
 
-    it('should handle empty vector clock', async () => {
-      await queue.enqueue('create', 'task-1', null, {});
-
-      const pending = await queue.getPending();
-
-      expect(pending[0].vectorClock).toEqual({});
-    });
-
-    it('should handle complex vector clock', async () => {
-      const complexClock = {
-        'device-1': 10,
-        'device-2': 5,
-        'device-3': 15,
-        'device-4': 2,
-      };
-
-      await queue.enqueue('update', 'task-1', null, complexClock);
-
-      const pending = await queue.getPending();
-
-      expect(pending[0].vectorClock).toEqual(complexClock);
-    });
-
     it('should handle rapid enqueue operations', async () => {
       const promises = [];
 
       for (let i = 0; i < 50; i++) {
-        promises.push(queue.enqueue('create', `task-${i}`, null, {}));
+        promises.push(queue.enqueue('create', `task-${i}`, null));
       }
 
       await Promise.all(promises);
@@ -517,7 +462,7 @@ describe('SyncQueue', () => {
     it('should handle concurrent dequeue operations', async () => {
       // Add 10 operations
       for (let i = 0; i < 10; i++) {
-        await queue.enqueue('create', `task-${i}`, null, {});
+        await queue.enqueue('create', `task-${i}`, null);
       }
 
       const pending = await queue.getPending();
@@ -540,7 +485,7 @@ describe('SyncQueue', () => {
       const timestamps: number[] = [];
 
       for (let i = 0; i < 5; i++) {
-        await queue.enqueue('create', `task-${i}`, null, {});
+        await queue.enqueue('create', `task-${i}`, null);
         const pending = await queue.getPending();
         timestamps.push(pending[pending.length - 1].timestamp);
       }

@@ -4,10 +4,8 @@ import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import {
-  createNewVectorClock,
   enqueueSyncOperation,
   getSyncContext,
-  updateVectorClock,
 } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -28,16 +26,15 @@ export async function toggleCompleted(
       throw new Error(`Task ${id} not found`);
     }
 
-    const { syncConfig, deviceId } = await getSyncContext();
+    const { syncConfig } = await getSyncContext();
 
     // Handle recurring task instance creation
     if (completed && existing.recurrence !== "none") {
-      await createAndQueueRecurringInstance(existing, deviceId, syncConfig?.enabled ?? false);
+      await createAndQueueRecurringInstance(existing, syncConfig?.enabled ?? false);
     }
 
     // Update the original task
-    const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
-    const nextRecord = buildCompletedRecord(existing, completed, newClock);
+    const nextRecord = buildCompletedRecord(existing, completed);
 
     await db.tasks.put(nextRecord);
 
@@ -51,7 +48,6 @@ export async function toggleCompleted(
       "update",
       id,
       nextRecord,
-      nextRecord.vectorClock || {},
       syncConfig?.enabled ?? false
     );
 
@@ -78,7 +74,6 @@ export async function toggleCompleted(
 function buildCompletedRecord(
   existing: TaskRecord,
   completed: boolean,
-  newClock: Record<string, number>
 ): TaskRecord {
   const now = isoNow();
   return {
@@ -86,7 +81,6 @@ function buildCompletedRecord(
     completed,
     completedAt: completed ? now : undefined,
     updatedAt: now,
-    vectorClock: newClock,
   };
 }
 
@@ -95,10 +89,9 @@ function buildCompletedRecord(
  */
 async function createAndQueueRecurringInstance(
   existing: TaskRecord,
-  deviceId: string,
   syncEnabled: boolean
 ): Promise<void> {
-  const newInstance = buildRecurringInstance(existing, deviceId);
+  const newInstance = buildRecurringInstance(existing);
   const db = getDb();
   await db.tasks.add(newInstance);
 
@@ -112,7 +105,6 @@ async function createAndQueueRecurringInstance(
     "create",
     newInstance.id,
     newInstance,
-    newInstance.vectorClock || {},
     syncEnabled
   );
 
@@ -126,10 +118,9 @@ async function createAndQueueRecurringInstance(
 /**
  * Build a new recurring task instance based on completed task
  */
-function buildRecurringInstance(existing: TaskRecord, deviceId: string): TaskRecord {
+function buildRecurringInstance(existing: TaskRecord): TaskRecord {
   const now = isoNow();
   const nextDueDate = calculateNextDueDate(existing.dueDate, existing.recurrence);
-  const vectorClock = createNewVectorClock(deviceId);
 
   return {
     ...existing,
@@ -139,7 +130,6 @@ function buildRecurringInstance(existing: TaskRecord, deviceId: string): TaskRec
     createdAt: now,
     updatedAt: now,
     parentTaskId: existing.parentTaskId ?? existing.id,
-    vectorClock,
     subtasks: existing.subtasks.map((subtask) => ({ ...subtask, completed: false })),
     notificationSent: false,
     lastNotificationAt: undefined,

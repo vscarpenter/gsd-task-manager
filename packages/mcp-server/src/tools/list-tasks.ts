@@ -1,15 +1,13 @@
-import { getDeviceIdFromToken } from '../jwt.js';
 import { initializeEncryption } from '../encryption/manager.js';
 import { getCryptoManager } from '../crypto.js';
+import { getSupabaseClient, resolveUserId } from '../api/client.js';
 import { MAX_TASKS_PER_PULL } from '../constants.js';
 import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
-import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
 import { createMcpLogger } from '../utils/logger.js';
 import type {
   GsdConfig,
   DecryptedTask,
   TaskFilters,
-  PullTasksResponse,
 } from '../types.js';
 
 const logger = createMcpLogger('LIST_TASKS');
@@ -40,8 +38,7 @@ export async function listTasks(
   }
 
   // Fetch and decrypt tasks
-  const deviceId = extractDeviceId(config);
-  const encryptedTasks = await fetchEncryptedTasks(config, deviceId);
+  const encryptedTasks = await fetchEncryptedTasks(config);
   const decryptedTasks = await decryptTaskBatch(encryptedTasks, config);
 
   // Cache unfiltered results
@@ -53,74 +50,45 @@ export async function listTasks(
 }
 
 /**
- * Extract device ID from JWT token
- */
-function extractDeviceId(config: GsdConfig): string {
-  try {
-    return getDeviceIdFromToken(config.authToken);
-  } catch (error) {
-    throw new Error(
-      `❌ Failed to parse device ID from auth token\n\n` +
-        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
-        `Your token may be invalid or corrupted.\n` +
-        `Run: npx gsd-mcp-server --setup`
-    );
-  }
-}
-
-/**
- * Fetch encrypted tasks from Worker API with retry support
+ * Fetch encrypted tasks from Supabase
  */
 async function fetchEncryptedTasks(
-  config: GsdConfig,
-  deviceId: string
-): Promise<PullTasksResponse['tasks']> {
-  const payload = JSON.stringify({
-    deviceId,
-    lastVectorClock: {}, // Empty clock to get all tasks
-    sinceTimestamp: 1, // Start from epoch + 1ms to get all tasks
-    limit: MAX_TASKS_PER_PULL,
-  });
+  config: GsdConfig
+): Promise<Array<{ id: string; encryptedBlob: string; nonce: string; updatedAt: string }>> {
+  const userId = await resolveUserId(config);
+  const supabase = getSupabaseClient(config);
 
-  let response: Response;
-  try {
-    response = await fetchWithRetry(
-      () =>
-        fetch(`${config.apiBaseUrl}/api/sync/pull`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${config.authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: payload,
-        }),
-      DEFAULT_RETRY_CONFIG
-    );
-  } catch (error) {
+  const { data, error } = await supabase
+    .from('encrypted_tasks')
+    .select('id, encrypted_blob, nonce, updated_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .order('updated_at', { ascending: false })
+    .limit(MAX_TASKS_PER_PULL);
+
+  if (error) {
     throw new Error(
       `❌ Failed to fetch tasks\n\n` +
-        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
-        `Retried ${DEFAULT_RETRY_CONFIG.maxRetries} times.\n` +
+        `Database error: ${error.message}\n\n` +
         `Run: npx gsd-mcp-server --validate`
     );
   }
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch tasks: ${response.status}`);
-  }
-
-  const data = (await response.json()) as PullTasksResponse;
-  return data.tasks;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    encryptedBlob: row.encrypted_blob,
+    nonce: row.nonce,
+    updatedAt: row.updated_at,
+  }));
 }
 
 /**
  * Decrypt multiple tasks in batch
  */
 async function decryptTaskBatch(
-  encryptedTasks: PullTasksResponse['tasks'],
+  encryptedTasks: Array<{ id: string; encryptedBlob: string; nonce: string }>,
   config: GsdConfig
 ): Promise<DecryptedTask[]> {
-  // Initialize encryption once before the loop, not per-task
   await initializeEncryption(config);
   const cryptoManager = getCryptoManager();
 
@@ -135,7 +103,6 @@ async function decryptTaskBatch(
       decryptedTasks.push(JSON.parse(decryptedJson) as DecryptedTask);
     } catch (error) {
       logger.error(`Failed to decrypt task ${encryptedTask.id}`, error instanceof Error ? error : new Error(String(error)));
-      // Skip tasks that fail to decrypt
     }
   }
 

@@ -56,10 +56,10 @@ When users enable cloud sync, the following security measures protect their data
    - Derived keys never leave user's device
 
 3. **Zero-Knowledge Architecture**
-   - Worker stores only encrypted blobs
+   - Supabase stores only encrypted blobs
    - Server cannot decrypt task content (no access to passphrase)
    - Encryption/decryption happens entirely in browser/MCP client
-   - Even Cloudflare employees cannot read your tasks
+   - Even database administrators cannot read your tasks
 
 4. **Salt Architecture (Threat Model)**
    - Salt is generated client-side (32 random bytes) and synced to server
@@ -69,29 +69,23 @@ When users enable cloud sync, the following security measures protect their data
    - **Brute-force mitigation**: 600K PBKDF2 iterations makes attacks expensive
    - **Design rationale**: Enables multi-device sync while maintaining zero-knowledge
 
-### OAuth Authentication
+### Authentication (Supabase Auth)
 
 1. **Providers**
    - Google (OIDC-compliant)
    - Apple (OIDC-compliant)
 
 2. **Security Features**
-   - PKCE (Proof Key for Code Exchange) prevents code interception
+   - PKCE (Proof Key for Code Exchange) handled by Supabase Auth
    - State parameter prevents CSRF attacks
-   - ID token signature verification (JWT)
-   - Short-lived session tokens (24 hours)
+   - Supabase manages JWT issuance, refresh, and validation
+   - Row Level Security (RLS) enforces per-user data isolation
 
-3. **Token Management**
-   - JWT tokens with 7-day expiration
-   - HS256 signature with 256-bit secret per environment
-   - Tokens stored in IndexedDB (browser-encrypted at rest)
-   - Refresh flow on token expiration
-
-### Rate Limiting
-
-- 100 requests/minute per IP via Cloudflare KV
-- Prevents brute-force attacks on authentication
-- Distributed rate limiting across edge locations
+3. **Session Management**
+   - Supabase Auth handles token lifecycle automatically
+   - Auto-refresh on token expiration
+   - Sessions persisted in browser storage
+   - No manual JWT management required
 
 ### Network Security
 
@@ -106,14 +100,14 @@ The MCP server allows Claude Desktop to access tasks via natural language querie
 
 ### Security Model
 
-1. **Read-Only Access**
-   - MCP tools can only read tasks, not modify/delete
-   - No write operations implemented
-   - Safe exploration without data modification risk
+1. **Read & Write Access**
+   - 6 read tools, 5 write tools (with dry-run support), 5 analytics, 3 system tools
+   - Write operations support `dryRun` mode to preview changes safely
+   - Service role key provides server-side access (bypasses RLS)
 
 2. **Local Decryption**
    - Encryption passphrase stored only in Claude Desktop config
-   - Passphrase never transmitted to Worker
+   - Passphrase never transmitted to Supabase
    - Decryption happens on user's local machine
 
 3. **Opt-In Feature**
@@ -129,7 +123,9 @@ The MCP server allows Claude Desktop to access tasks via natural language querie
   "mcpServers": {
     "gsd-taskmanager": {
       "env": {
-        "GSD_AUTH_TOKEN": "eyJ...",  // JWT from OAuth
+        "GSD_SUPABASE_URL": "https://your-project.supabase.co",
+        "GSD_SUPABASE_SERVICE_KEY": "...",  // Service role key
+        "GSD_USER_EMAIL": "your-email@example.com",
         "GSD_ENCRYPTION_PASSPHRASE": "..." // User's passphrase
       }
     }
@@ -154,7 +150,7 @@ script-src 'self' 'unsafe-inline' 'unsafe-eval';
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self' data:;
-connect-src 'self' https://gsd-dev.vinny.dev https://accounts.google.com https://appleid.apple.com;
+connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://appleid.apple.com;
 frame-ancestors 'none';
 base-uri 'self';
 form-action 'self' https://accounts.google.com https://appleid.apple.com;
@@ -167,7 +163,7 @@ script-src 'self';
 style-src 'self';
 img-src 'self' data: blob:;
 font-src 'self';
-connect-src 'self' https://gsd.vinny.dev https://accounts.google.com https://appleid.apple.com;
+connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://appleid.apple.com;
 frame-ancestors 'none';
 base-uri 'self';
 form-action 'self' https://accounts.google.com https://appleid.apple.com;
@@ -342,18 +338,16 @@ If you discover a security vulnerability, please:
 ### Last Audit: 2026-01-23
 
 - ✅ All critical vulnerabilities resolved
-- ✅ Dependency vulnerabilities patched (wrangler, hono, MCP SDK)
-- ✅ Token storage architecture reviewed and documented
+- ✅ Dependency vulnerabilities patched (MCP SDK)
+- ✅ Supabase Auth + RLS architecture reviewed and documented
 - ✅ End-to-end encryption implemented for cloud sync
 - ✅ OAuth PKCE flow implemented for authentication
 - ✅ MCP server read-only access enforced
 
 ### Resolved Issues (2026-01-23)
 
-1. **Hono JWT Algorithm Confusion (H1)** - Added override for hono ≥4.11.4 (fixes GHSA-3vhc-576x-3qv4, GHSA-f67f-6cw9-8mq4)
-2. **Wrangler OS Command Injection (H2)** - Upgraded wrangler to ^4.59.1 (fixes GHSA-36p8-mvp6-cv38)
-3. **Undici Decompression DoS (M3)** - Fixed transitively via wrangler update (fixes GHSA-g9mf-h72j-4rw9)
-4. **MCP SDK update** - Upgraded @modelcontextprotocol/sdk to ^1.25.3
+1. **MCP SDK update** - Upgraded @modelcontextprotocol/sdk to ^1.25.3
+2. **Removed Cloudflare Worker dependencies** - Eliminated wrangler, hono, and associated transitive vulnerabilities by migrating to Supabase
 
 ### Previously Resolved Issues
 
@@ -366,7 +360,7 @@ If you discover a security vulnerability, please:
 
 ### Known Trade-offs (Documented)
 
-1. **Token Storage in IndexedDB** - Required for offline-first PWA. Mitigated by React XSS protection, CSP headers, and E2E encryption of task data. See `worker/src/constants/security.ts:57-80` for full rationale.
+1. **Session Storage in Browser** - Required for offline-first PWA. Mitigated by React XSS protection, CSP headers, Supabase Auth auto-refresh, and E2E encryption of task data.
 
 ## References
 

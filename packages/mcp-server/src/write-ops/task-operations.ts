@@ -5,7 +5,6 @@
 
 import type { GsdConfig, DecryptedTask } from '../tools.js';
 import type { CreateTaskInput, UpdateTaskInput } from './types.js';
-import { getCryptoManager } from '../crypto.js';
 import { listTasks } from '../tools.js';
 import { generateTaskId, deriveQuadrant, ensureEncryption, pushToSync } from './helpers.js';
 import {
@@ -77,14 +76,13 @@ export async function createTask(
     important: input.important,
     quadrant,
     completed: false,
-    ...(input.dueDate && { dueDate: input.dueDate }), // Only include if set
+    ...(input.dueDate && { dueDate: input.dueDate }),
     tags: input.tags || [],
     subtasks: subtasksWithIds,
     recurrence: input.recurrence || 'none',
     dependencies: input.dependencies || [],
     createdAt: now,
     updatedAt: now,
-    vectorClock: {}, // Initialize with empty vector clock
   };
 
   // If dry-run, return without saving
@@ -96,22 +94,9 @@ export async function createTask(
     };
   }
 
-  // Encrypt task and calculate checksum
-  const cryptoManager = getCryptoManager();
-  const taskJson = JSON.stringify(newTask);
-  const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
-  const checksum = await cryptoManager.hash(taskJson);
-
-  // Push to sync
+  // Push to Supabase (pushToSync handles encryption)
   await pushToSync(config, [
-    {
-      type: 'create',
-      taskId,
-      encryptedBlob: ciphertext,
-      nonce,
-      vectorClock: {}, // Simplified: let server manage
-      checksum,
-    },
+    { type: 'create', taskId, data: newTask },
   ]);
 
   return {
@@ -149,7 +134,7 @@ export async function updateTask(
   const currentTask = tasks.find((t) => t.id === input.id);
 
   if (!currentTask) {
-    throw new Error(`❌ Task not found: ${input.id}\n\nThe task may have been deleted.`);
+    throw new Error(`Task not found: ${input.id}\n\nThe task may have been deleted.`);
   }
 
   // Validate dependencies if changing
@@ -214,7 +199,7 @@ export async function updateTask(
     if (input.dueDate) {
       updatedTask.dueDate = input.dueDate;
     } else {
-      delete updatedTask.dueDate; // Remove field if clearing
+      delete updatedTask.dueDate;
     }
   }
 
@@ -222,7 +207,7 @@ export async function updateTask(
   if (input.completed === true && !currentTask.completed) {
     updatedTask.completedAt = new Date().toISOString();
   } else if (input.completed === false) {
-    delete updatedTask.completedAt; // Clear when uncompleting
+    delete updatedTask.completedAt;
   }
 
   // Recalculate quadrant if urgent/important changed
@@ -243,22 +228,9 @@ export async function updateTask(
     };
   }
 
-  // Encrypt task and calculate checksum
-  const cryptoManager = getCryptoManager();
-  const taskJson = JSON.stringify(updatedTask);
-  const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
-  const checksum = await cryptoManager.hash(taskJson);
-
-  // Push to sync
+  // Push to Supabase (pushToSync handles encryption)
   await pushToSync(config, [
-    {
-      type: 'update',
-      taskId: updatedTask.id,
-      encryptedBlob: ciphertext,
-      nonce,
-      vectorClock: {}, // Simplified: let server manage
-      checksum,
-    },
+    { type: 'update', taskId: updatedTask.id, data: updatedTask },
   ]);
 
   return {
@@ -313,7 +285,7 @@ export async function deleteTask(
   const task = tasks.find((t) => t.id === taskId);
 
   if (!task) {
-    throw new Error(`❌ Task not found: ${taskId}\n\nThe task may have already been deleted.`);
+    throw new Error(`Task not found: ${taskId}\n\nThe task may have already been deleted.`);
   }
 
   // Check for tasks that depend on this one
@@ -330,13 +302,9 @@ export async function deleteTask(
     };
   }
 
-  // Push deletion
+  // Push deletion to Supabase
   await pushToSync(config, [
-    {
-      type: 'delete',
-      taskId,
-      vectorClock: {}, // Simplified: let server manage
-    },
+    { type: 'delete', taskId },
   ]);
 
   return {

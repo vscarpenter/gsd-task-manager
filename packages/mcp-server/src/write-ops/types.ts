@@ -2,6 +2,8 @@
  * Type definitions for write operations
  */
 
+import type { DecryptedTask } from '../types.js';
+
 /**
  * Common options for write operations
  */
@@ -55,13 +57,10 @@ export type BulkOperation =
   | { type: 'delete' };
 
 /**
- * Sync operation for push request
+ * Sync operation for pushing to Supabase
+ * For create/update: carries plaintext task data (pushToSync handles encryption)
+ * For delete: only needs taskId
  */
-export interface SyncOperation {
-  type: 'create' | 'update' | 'delete';
-  taskId: string;
-  encryptedBlob?: string;
-  nonce?: string;
-  vectorClock: Record<string, number>;
-  checksum?: string; // SHA-256 hash of plaintext JSON (required for create/update)
-}
+export type SyncOperation =
+  | { type: 'create' | 'update'; taskId: string; data: DecryptedTask }
+  | { type: 'delete'; taskId: string };

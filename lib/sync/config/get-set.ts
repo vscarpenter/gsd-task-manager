@@ -3,22 +3,20 @@
  */
 
 import { getDb } from "@/lib/db";
-import { ensureSyncConfigInitialized, migrateLegacyConfig } from "../config-migration";
 import type { SyncConfig, BackgroundSyncConfig } from "../types";
 
 /**
  * Get sync configuration
  */
 export async function getSyncConfig(): Promise<SyncConfig | null> {
-  await ensureSyncConfigInitialized();
   const db = getDb();
   const config = await db.syncMetadata.get("sync_config");
 
-  if (!config) {
+  if (!config || config.key !== "sync_config") {
     return null;
   }
 
-  return migrateLegacyConfig(config as SyncConfig);
+  return config as SyncConfig;
 }
 
 /**
@@ -93,6 +91,5 @@ export async function getSyncStatus() {
     lastSyncAt: config?.lastSyncAt || null,
     pendingCount,
     deviceId: config?.deviceId || null,
-    serverUrl: config?.serverUrl || null,
   };
 }

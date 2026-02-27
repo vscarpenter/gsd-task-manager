@@ -20,12 +20,12 @@ export interface DiagramSection {
 export const syncArchitectureDiagrams: DiagramSection = {
   id: "sync",
   title: "Sync Engine Architecture",
-  description: "End-to-end encrypted sync with vector clock-based conflict resolution",
+  description: "End-to-end encrypted sync with timestamp-based LWW conflict resolution",
   diagrams: [
     {
       id: "sync-state-machine",
       title: "Sync Engine State Machine",
-      description: "6-phase state flow from idle through push/pull to completion",
+      description: "State flow from idle through push/pull to completion",
       code: `stateDiagram-v2
     [*] --> Idle: Initial State
 
@@ -35,23 +35,16 @@ export const syncArchitectureDiagrams: DiagramSection = {
 
     Backoff --> Idle: Return error
 
-    Preparing --> Pushing: Prerequisites ready
-    Preparing --> AuthError: Token invalid
+    Preparing --> Pushing: Session valid
+    Preparing --> AuthError: Session expired
 
     AuthError --> Idle: Return error
 
     Pushing --> Pulling: Push complete
-    Pushing --> Retrying: Unauthorized (401)
-
-    Retrying --> Pushing: Token refreshed
-    Retrying --> AuthError: Refresh failed
 
     Pulling --> Resolving: Pull complete
 
-    Resolving --> Finalizing: Conflicts resolved
-    Resolving --> Manual: Strategy = manual
-
-    Manual --> Idle: Return conflicts
+    Resolving --> Finalizing: Conflicts resolved (LWW)
 
     Finalizing --> Idle: Return success`,
     },
@@ -64,51 +57,24 @@ export const syncArchitectureDiagrams: DiagramSection = {
         UA[User Action] --> TA[Task Modified]
         TA --> QA[Add to Queue]
         QA --> EA[Encrypt AES-256]
-        EA --> PA[Push to Worker]
+        EA --> PA[Push to Supabase]
     end
 
-    subgraph Worker[Cloudflare Worker]
-        PA --> AUTH[Auth Middleware]
-        AUTH --> PUSH[Push Handler]
-        PUSH --> D1[(D1 SQLite)]
-        PUSH --> R2[(R2 Storage)]
-        PULL[Pull Handler] --> D1
-        PULL --> R2
+    subgraph Supabase[Supabase Backend]
+        PA --> RLS[RLS Policy Check]
+        RLS --> PG[(Postgres)]
+        PG --> RT[Realtime Broadcast]
+        PULL[PostgREST Query] --> PG
     end
 
     subgraph DeviceB[Device B]
-        PLB[Pull] --> DB[Decrypt]
+        RT --> WS[WebSocket Event]
+        WS --> DB[Decrypt]
         DB --> MB[Merge Local]
         MB --> VB[Update View]
     end
 
-    PULL --> PLB`,
-    },
-    {
-      id: "vector-clock",
-      title: "Vector Clock Comparison",
-      description: "Distributed conflict detection algorithm",
-      code: `flowchart TD
-    START([Compare VC_A vs VC_B]) --> INIT[Initialize counters]
-    INIT --> UNION[Get all device IDs]
-    UNION --> LOOP[For each device ID]
-    LOOP --> GET[Get versions from A and B]
-    GET --> CMP{Compare}
-
-    CMP -->|A > B| INC_A[aGreater++]
-    CMP -->|B > A| INC_B[bGreater++]
-    CMP -->|Equal| NEXT
-
-    INC_A --> NEXT{More devices?}
-    INC_B --> NEXT
-
-    NEXT -->|Yes| LOOP
-    NEXT -->|No| EVAL{Evaluate}
-
-    EVAL -->|aGreater only| A_WINS[A is newer]
-    EVAL -->|bGreater only| B_WINS[B is newer]
-    EVAL -->|Both > 0| CONFLICT[CONFLICT]
-    EVAL -->|Both = 0| SAME[Identical]`,
+    PULL --> DB`,
     },
     {
       id: "encryption-flow",
@@ -140,10 +106,10 @@ export const syncArchitectureDiagrams: DiagramSection = {
   ],
 };
 
-export const workerArchitectureDiagrams: DiagramSection = {
-  id: "worker",
-  title: "Worker Backend Architecture",
-  description: "Cloudflare Workers with D1, R2, and KV storage",
+export const supabaseArchitectureDiagrams: DiagramSection = {
+  id: "supabase",
+  title: "Supabase Backend Architecture",
+  description: "Supabase with Postgres, Auth, Realtime, and RLS",
   diagrams: [
     {
       id: "system-overview",
@@ -155,119 +121,68 @@ export const workerArchitectureDiagrams: DiagramSection = {
         MCP[MCP Server]
     end
 
-    subgraph Edge[Cloudflare Edge]
-        WORKER[Worker - Hono Router]
+    subgraph Supabase[Supabase Platform]
+        AUTH[Auth - Google/Apple OAuth]
+        REST[PostgREST API]
+        REALTIME[Realtime WebSocket]
 
         subgraph Storage
-            D1[(D1 SQLite)]
-            R2[(R2 Bucket)]
-            KV[(Workers KV)]
+            PG[(Postgres 17)]
+            RLS[Row Level Security]
         end
 
-        WORKER --> D1
-        WORKER --> R2
-        WORKER --> KV
+        REST --> PG
+        REALTIME --> PG
+        PG --> RLS
     end
 
-    subgraph OAuth[OAuth Providers]
-        GOOGLE[Google OIDC]
-        APPLE[Apple Sign In]
-    end
-
-    PWA --> WORKER
-    MCP --> WORKER
-    WORKER <--> GOOGLE
-    WORKER <--> APPLE`,
+    PWA --> AUTH
+    PWA --> REST
+    PWA --> REALTIME
+    MCP --> REST`,
     },
     {
-      id: "api-routes",
-      title: "API Route Structure",
-      description: "All API endpoints organized by category",
-      code: `flowchart TD
-    ROOT[/] --> HEALTH[GET /health]
-    ROOT --> AUTH[/api/auth/*]
-    ROOT --> SYNC[/api/sync/*]
-    ROOT --> DEVICES[/api/devices/*]
-
-    subgraph OAuth[OAuth - No Auth]
-        AUTH --> START[GET /oauth/:provider/start]
-        AUTH --> CALLBACK[POST /oauth/callback]
-        AUTH --> RESULT[GET /oauth/result]
-    end
-
-    subgraph Protected[Auth Required]
-        AUTH --> SALT[GET/POST /encryption-salt]
-        AUTH --> LOGOUT[POST /logout]
-        AUTH --> REFRESH[POST /refresh]
-    end
-
-    subgraph SyncRoutes[Sync - JWT + Rate Limit]
-        SYNC --> PUSH[POST /push]
-        SYNC --> PULL[POST /pull]
-        SYNC --> STATUS[GET /status]
-    end
-
-    subgraph DeviceRoutes[Devices]
-        DEVICES --> LIST[GET /]
-        DEVICES --> REVOKE[DELETE /:id]
-    end`,
-    },
-    {
-      id: "oauth-flow",
-      title: "OAuth Desktop Flow",
-      description: "Popup-based authentication sequence",
+      id: "auth-flow",
+      title: "OAuth Authentication Flow",
+      description: "Supabase Auth handles Google/Apple OAuth automatically",
       code: `sequenceDiagram
     participant User
     participant App
-    participant Popup
-    participant Worker
-    participant KV
+    participant Supabase as Supabase Auth
     participant Google
 
     User->>App: Click Sign in
-    App->>Worker: GET /oauth/google/start
-    Worker->>KV: Store state + PKCE
-    Worker-->>App: authUrl + state
-
-    App->>Popup: window.open(authUrl)
-    Popup->>Google: Authorization Request
+    App->>Supabase: signInWithOAuth(google)
+    Supabase-->>App: Redirect URL
+    App->>Google: Authorization Request
     User->>Google: Consent
-    Google->>Popup: Redirect with code
-
-    Popup->>Worker: GET /callback?code&state
-    Worker->>KV: Validate state
-    Worker->>Google: Exchange code for tokens
-    Google-->>Worker: tokens
-    Worker->>KV: Store result
-    Worker-->>Popup: Redirect to callback.html
-
-    Popup->>App: postMessage
-    App->>Worker: GET /oauth/result
-    Worker-->>App: token + userId`,
+    Google->>Supabase: Callback with code
+    Supabase->>Supabase: Exchange code, create session
+    Supabase-->>App: onAuthStateChange(SIGNED_IN)
+    App->>App: Check encryption salt
+    App->>App: Show passphrase dialog`,
     },
     {
-      id: "middleware-pipeline",
-      title: "Middleware Pipeline",
-      description: "Request processing through CORS, Auth, and Rate Limiting",
-      code: `flowchart LR
-    REQ([Request]) --> CORS[CORS Handler]
+      id: "rls-policies",
+      title: "Row Level Security",
+      description: "User isolation via RLS policies on all tables",
+      code: `flowchart TD
+    REQ([API Request]) --> JWT[Extract JWT from header]
+    JWT --> UID[auth.uid from JWT]
+    UID --> RLS{RLS Policy Check}
 
-    CORS --> ROUTE{Route Type}
-    ROUTE -->|Public| RATE[Rate Limiter]
-    ROUTE -->|Protected| AUTH[Auth Middleware]
+    RLS -->|user_id = auth.uid| ALLOW[Allow Query]
+    RLS -->|user_id != auth.uid| DENY[Deny - Empty Result]
 
-    AUTH --> JWT{JWT Valid?}
-    JWT -->|No| REJECT[401]
-    JWT -->|Yes| REVOKE{Revoked?}
+    subgraph Tables[Protected Tables]
+        T1[encrypted_tasks]
+        T2[profiles]
+        T3[devices]
+        T4[sync_metadata]
+        T5[conflict_log]
+    end
 
-    REVOKE -->|Yes| REJECT
-    REVOKE -->|No| RATE
-
-    RATE --> LIMIT{Under Limit?}
-    LIMIT -->|No| TOO_MANY[429]
-    LIMIT -->|Yes| HANDLER[Route Handler]
-
-    HANDLER --> RESP([Response])`,
+    ALLOW --> Tables`,
     },
   ],
 };
@@ -280,7 +195,7 @@ export const mcpArchitectureDiagrams: DiagramSection = {
     {
       id: "mcp-system",
       title: "MCP System Architecture",
-      description: "Claude Desktop to GSD Worker data flow",
+      description: "Claude Desktop to Supabase data flow",
       code: `flowchart TB
     subgraph Claude[Claude Desktop]
         AI[Claude AI]
@@ -293,39 +208,38 @@ export const mcpArchitectureDiagrams: DiagramSection = {
         HANDLERS[Tool Handlers]
 
         subgraph Services
-            API[API Client]
+            SUPA[Supabase Client]
             CRYPTO[CryptoManager]
             CACHE[TTL Cache]
         end
 
         TRANSPORT --> ROUTER
         ROUTER --> HANDLERS
-        HANDLERS --> API
+        HANDLERS --> SUPA
         HANDLERS --> CRYPTO
         HANDLERS --> CACHE
     end
 
-    subgraph Backend[GSD Backend]
-        WORKER[Cloudflare Worker]
+    subgraph Backend[Supabase]
+        PG[(Postgres)]
     end
 
     AI <--> CLIENT
     CLIENT <--> TRANSPORT
-    API <--> WORKER`,
+    SUPA <--> PG`,
     },
     {
       id: "tool-organization",
       title: "Tool Organization",
-      description: "20 tools in 4 categories",
+      description: "19 tools in 4 categories",
       code: `flowchart TD
-    subgraph Read[Read Tools - 7]
+    subgraph Read[Read Tools - 6]
         R1[list_tasks]
         R2[get_task]
         R3[search_tasks]
         R4[get_sync_status]
         R5[list_devices]
         R6[get_task_stats]
-        R7[get_token_status]
     end
 
     subgraph Write[Write Tools - 5]
@@ -353,16 +267,15 @@ export const mcpArchitectureDiagrams: DiagramSection = {
     {
       id: "request-lifecycle",
       title: "Request Lifecycle",
-      description: "Tool call processing from Claude to API response",
+      description: "Tool call processing from Claude to Supabase response",
       code: `sequenceDiagram
     participant Claude
     participant Transport as stdio
     participant Router
     participant Handler
     participant Cache
-    participant API
+    participant Supabase
     participant Crypto
-    participant Worker
 
     Claude->>Transport: JSON-RPC Request
     Transport->>Router: Parse & route
@@ -375,14 +288,10 @@ export const mcpArchitectureDiagrams: DiagramSection = {
         Cache-->>Handler: Return cached
     end
 
-    Handler->>Crypto: encrypt(data)
-    Crypto-->>Handler: encrypted
-    Handler->>API: HTTPS + JWT
-    API->>Worker: Request
-    Worker-->>API: Response
-    API-->>Handler: Encrypted response
+    Handler->>Supabase: Query encrypted_tasks
+    Supabase-->>Handler: Encrypted blobs
     Handler->>Crypto: decrypt(blob)
-    Crypto-->>Handler: decrypted
+    Crypto-->>Handler: decrypted task
     Handler->>Cache: Store result
     Handler-->>Router: Tool result
     Router-->>Transport: JSON-RPC Response
@@ -409,14 +318,10 @@ export const mcpArchitectureDiagrams: DiagramSection = {
     CIRCULAR -->|No| ENCRYPT
 
     DEPS -->|No| ENCRYPT[Encrypt task data]
-    ENCRYPT --> API_CALL[Call Worker API]
+    ENCRYPT --> UPSERT[Upsert to Supabase]
 
-    API_CALL --> SUCCESS{Success?}
-    SUCCESS -->|No| RETRY{Retryable?}
-    RETRY -->|Yes| BACKOFF[Exponential backoff]
-    BACKOFF --> API_CALL
-    RETRY -->|No| ERROR
-
+    UPSERT --> SUCCESS{Success?}
+    SUCCESS -->|No| ERROR
     SUCCESS -->|Yes| INVALIDATE[Invalidate cache]
     INVALIDATE --> RESP[Return success]`,
     },
@@ -425,6 +330,6 @@ export const mcpArchitectureDiagrams: DiagramSection = {
 
 export const allDiagramSections: DiagramSection[] = [
   syncArchitectureDiagrams,
-  workerArchitectureDiagrams,
+  supabaseArchitectureDiagrams,
   mcpArchitectureDiagrams,
 ];

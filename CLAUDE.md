@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Next.js 16 App Router. All data is stored locally in IndexedDB via Dexie, with JSON export/import for backups. The app is a PWA that works completely offline.
 
 **Key Features:**
-- **Optional Cloud Sync** — End-to-end encrypted multi-device sync via Cloudflare Workers (OAuth with Google/Apple)
+- **Optional Cloud Sync** — End-to-end encrypted multi-device sync via Supabase (Auth + Postgres + Realtime)
 - **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
-- **Zero-Knowledge Architecture** — Worker stores only encrypted blobs; decryption happens locally
+- **Zero-Knowledge Architecture** — Server stores only encrypted blobs; decryption happens locally
+- **Realtime Sync** — Instant cross-device updates via Supabase Realtime (WebSocket)
 - **Smart Views** — Pin up to 5 smart views to header (keyboard shortcuts 1-9, 0 to clear)
 - **Command Palette** — Global ⌘K/Ctrl+K shortcut for quick actions and navigation
 - **iOS-style Settings** — Redesigned settings with grouped layout and modular sections
@@ -84,33 +85,41 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - `components/pwa-register.tsx` - SW registration
 
 ### Cloud Sync Architecture
-- **Backend**: Cloudflare Workers + D1 (SQLite) + KV + R2
-- **Authentication**: OAuth 2.0 with Google and Apple (OIDC-compliant)
+- **Backend**: Supabase (Postgres 17 + Auth + Realtime + PostgREST)
+- **Authentication**: Supabase Auth with Google and Apple OAuth providers
 - **Encryption**: AES-256-GCM with PBKDF2 key derivation (600k iterations)
-- **Sync Protocol**: Vector clock-based conflict resolution
-- **Zero-Knowledge**: Worker stores only encrypted blobs
+- **Sync Protocol**: Last-write-wins (LWW) based on server `updated_at` timestamps
+- **Realtime**: Supabase Realtime (WebSocket) for instant cross-device sync
+- **Zero-Knowledge**: Server stores only encrypted blobs; RLS policies enforce user isolation
 
 **Key Locations**:
-- `worker/src/` - Cloudflare Worker (Hono router, handlers, D1 queries)
+- `lib/supabase.ts` - Supabase client singleton
+- `lib/sync/supabase-sync-client.ts` - Sync CRUD via Supabase SDK
+- `lib/sync/realtime-listener.ts` - Realtime subscription manager
 - `lib/sync/engine/` - Frontend sync engine (push, pull, conflict resolution)
 - `lib/sync/crypto.ts` - Client-side encryption/decryption
+- `components/sync/supabase-auth-dialog.tsx` - Auth UI with Supabase Auth
 
-**API Endpoints**: `/api/auth/oauth/:provider/start`, `/api/auth/oauth/callback`, `/api/auth/oauth/result`, `/api/auth/refresh`, `/api/auth/logout`, `/api/auth/encryption-salt`, `/api/sync/push`, `/api/sync/pull`, `/api/sync/status`, `/api/devices`
+**Database Tables**: `profiles`, `encrypted_tasks`, `devices`, `sync_metadata`, `conflict_log`
+
+**Environment Variables**:
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
 
 ### MCP Server Architecture
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language
 - **Location**: `packages/mcp-server/` - Standalone npm package
 - **Runtime**: Node.js 18+ with TypeScript, stdio transport (JSON-RPC 2.0)
 
-**20 MCP Tools**:
-- *Read (7)*: list_tasks, get_task, search_tasks, get_sync_status, list_devices, get_task_stats, get_token_status
+**19 MCP Tools**:
+- *Read (6)*: list_tasks, get_task, search_tasks, get_sync_status, list_devices, get_task_stats
 - *Write (5)*: create_task, update_task, complete_task, delete_task, bulk_update_tasks (all support dryRun)
 - *Analytics (5)*: get_productivity_metrics, get_quadrant_analysis, get_tag_analytics, get_upcoming_deadlines, get_task_insights
 - *System (3)*: validate_config, get_help, get_cache_stats
 
-**Key Features**: Retry logic with exponential backoff, TTL cache, dry-run mode, circular dependency validation
+**Key Features**: TTL cache, dry-run mode, circular dependency validation, direct Supabase queries via service role key
 
-**Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_API_BASE_URL`, `GSD_AUTH_TOKEN`, `GSD_ENCRYPTION_PASSPHRASE`
+**Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_SUPABASE_URL`, `GSD_SUPABASE_SERVICE_KEY`, `GSD_USER_EMAIL`, `GSD_ENCRYPTION_PASSPHRASE`
 
 ## Testing Guidelines
 - UI tests in `tests/ui/`, data logic in `tests/data/`
@@ -141,22 +150,17 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - Smart view shortcuts (1-9, 0) use `useSmartViewShortcuts` with typing detection
 
 ### Cloud Sync
-- **Worker Deployment**: `npm run deploy:all` in `worker/`
-- **Environment Setup**: `./worker/scripts/setup-{env}.sh`
-- **Migrations**: `npm run migrations:{env}`
-- JWT tokens expire after 7 days; handle refresh flow (401 → re-auth)
+- **Auth**: Supabase Auth handles OAuth (Google/Apple) and session management automatically
+- **Realtime**: `lib/sync/realtime-listener.ts` subscribes to `encrypted_tasks` changes via WebSocket
+- **Conflict Resolution**: Last-write-wins (LWW) based on server `updated_at` timestamps
 - Never log encryption salts or passphrases
+- Supabase SDK auto-refreshes auth tokens; no manual token management needed
 
 ### MCP Server
 - Build with `npm run build` in `packages/mcp-server/`
 - Add tools: schemas in `tools/schemas/`, handlers in `tools/handlers/`
-- Use `fetchWithRetry()` for resilient API calls
+- Uses `@supabase/supabase-js` with service role key to query Postgres directly
 - Use `CryptoManager` singleton for encryption/decryption
-
-### OAuth Popup Handling
-- `public/oauth-callback.html` uses multiple heuristics for popup detection
-- OAuth results broadcast via BroadcastChannel, postMessage, and localStorage
-- `SyncAuthDialog` adds delay to avoid duplicate encryption dialogs
 
 ### Pre-commit
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
@@ -168,12 +172,11 @@ The codebase follows coding standards (<350 lines per file, <30 lines per functi
 
 - **lib/analytics/**: metrics, streaks, tags, trends
 - **lib/notifications/**: display, permissions, settings, badge
-- **lib/sync/engine/**: coordinator, push-handler, pull-handler, conflict-resolver, error-handler
-- **lib/sync/oauth-handshake/**: broadcaster, subscriber, fetcher (cross-tab OAuth communication)
+- **lib/sync/engine/**: sync engine, push-handler, pull-handler, conflict-resolver
+- **lib/sync/**: supabase-sync-client, realtime-listener, crypto, queue
 - **components/task-form/**: index, use-task-form hook, validation
 - **components/settings/**: appearance, notification, sync, archive, data-management sections
-- **worker/src/handlers/sync/**: push, pull, resolve, status, devices
-- **worker/src/handlers/oidc/**: initiate, callback, result, token-exchange
+- **components/sync/**: supabase-auth-dialog, supabase-oauth-buttons, sync-button, encryption-passphrase-dialog
 - **packages/mcp-server/src/tools/**: handlers/, schemas/, individual tool files
 - **packages/mcp-server/src/write-ops/**: task-operations, bulk-operations with dry-run support
 

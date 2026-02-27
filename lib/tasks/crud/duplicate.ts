@@ -4,7 +4,6 @@ import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import {
-  createNewVectorClock,
   enqueueSyncOperation,
   getSyncContext,
 } from "./helpers";
@@ -23,8 +22,8 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
       throw new Error(`Task with id ${id} not found`);
     }
 
-    const { syncConfig, deviceId } = await getSyncContext();
-    const duplicate = buildDuplicateRecord(original, deviceId);
+    const { syncConfig } = await getSyncContext();
+    const duplicate = buildDuplicateRecord(original);
 
     await db.tasks.add(duplicate);
 
@@ -32,7 +31,6 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
       "create",
       duplicate.id,
       duplicate,
-      duplicate.vectorClock || {},
       syncConfig?.enabled ?? true // Default to true for backward compatibility
     );
 
@@ -51,9 +49,8 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
 /**
  * Build a duplicate task record with fresh metadata
  */
-function buildDuplicateRecord(original: TaskRecord, deviceId: string): TaskRecord {
+function buildDuplicateRecord(original: TaskRecord): TaskRecord {
   const now = isoNow();
-  const vectorClock = createNewVectorClock(deviceId);
 
   return {
     ...original,
@@ -67,6 +64,5 @@ function buildDuplicateRecord(original: TaskRecord, deviceId: string): TaskRecor
     lastNotificationAt: undefined,
     snoozedUntil: undefined,
     archivedAt: undefined,
-    vectorClock,
   };
 }

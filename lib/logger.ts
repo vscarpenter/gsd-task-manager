@@ -34,6 +34,7 @@ export type LogContext =
   | 'SYNC_CRYPTO'
   | 'SYNC_RETRY'
   | 'SYNC_HEALTH'
+  | 'SYNC_REALTIME'
   | 'SYNC_TOKEN'
   | 'SYNC_ERROR'
   | 'SYNC_HISTORY'

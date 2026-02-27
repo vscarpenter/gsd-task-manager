@@ -22,8 +22,9 @@ The wizard will guide you through configuration and test your connection. Once c
       "command": "npx",
       "args": ["-y", "gsd-mcp-server"],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here",
+        "GSD_SUPABASE_URL": "https://your-project.supabase.co",
+        "GSD_SUPABASE_SERVICE_KEY": "your-service-role-key-here",
+        "GSD_USER_EMAIL": "your-email@example.com",
         "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
       }
     }
@@ -37,7 +38,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 
 **Reliability & Performance** (v0.6.0) 🆕 🔥
 - ✅ **Retry Logic** - Automatic exponential backoff for transient failures (500, 502, 503, 504, 429)
-- ✅ **Token Monitoring** - Proactive warnings for expiring tokens (healthy/warning/critical/expired)
+- ✅ **Connection Monitoring** - Proactive warnings for Supabase connectivity issues
 - ✅ **Caching** - In-memory TTL cache (30s) with automatic invalidation on writes
 - ✅ **Dry-Run Mode** - Preview all write operations before committing
 - ✅ **Dependency Validation** - Circular dependency detection using BFS algorithm
@@ -88,7 +89,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 ## Prerequisites
 
 1. **GSD Task Manager** with sync enabled
-2. **OAuth Authentication** completed (Google or Apple)
+2. **Supabase Authentication** completed (Google or Apple OAuth)
 3. **Node.js** 18+ installed
 4. **Claude Desktop** or another MCP-compatible client
 
@@ -111,15 +112,15 @@ npx gsd-mcp-server
 ```
 
 **Setup Wizard Features:**
-- ✅ Tests API connectivity before configuration
-- ✅ Validates authentication token
+- ✅ Tests Supabase connectivity before configuration
+- ✅ Validates Supabase service role key
 - ✅ Tests encryption passphrase (if provided)
 - ✅ Generates ready-to-use Claude Desktop config
 - ✅ Provides platform-specific config file paths
 
 **Validation Tool Features:**
 - ✅ Checks environment variables
-- ✅ Tests API connectivity and authentication
+- ✅ Tests Supabase connectivity and authentication
 - ✅ Verifies encryption setup
 - ✅ Validates device registration
 - ✅ Provides actionable error messages
@@ -143,20 +144,15 @@ For development or if you want to modify the code:
 
 ## Setup
 
-### 1. Get Your Auth Token
+### 1. Get Your Supabase Credentials
 
-You'll need a JWT token from your GSD sync setup. Two options:
+You'll need a Supabase service role key and project URL from your Supabase project:
 
-**Option A: From Browser DevTools**
-1. Open GSD Task Manager in your browser
-2. Complete OAuth sign-in
-3. Open DevTools → Application → Local Storage
-4. Find `gsd_auth_token` and copy the value
-
-**Option B: From OAuth Callback** (Advanced)
-1. Trigger OAuth flow
-2. Intercept the callback response
-3. Extract the `token` field from the JSON response
+1. Go to your Supabase project dashboard
+2. Navigate to **Settings → API**
+3. Copy the **Project URL** (use as `GSD_SUPABASE_URL`)
+4. Copy the **service_role** secret key (use as `GSD_SUPABASE_SERVICE_KEY`)
+5. Use the email address associated with your GSD account for `GSD_USER_EMAIL`
 
 ### 2. Configure Claude Desktop
 
@@ -174,8 +170,9 @@ Add the MCP server to your Claude Desktop config:
       "command": "npx",
       "args": ["-y", "gsd-mcp-server"],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here",
+        "GSD_SUPABASE_URL": "https://your-project.supabase.co",
+        "GSD_SUPABASE_SERVICE_KEY": "your-service-role-key-here",
+        "GSD_USER_EMAIL": "your-email@example.com",
         "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
       }
     }
@@ -194,8 +191,9 @@ Add the MCP server to your Claude Desktop config:
         "/absolute/path/to/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here",
+        "GSD_SUPABASE_URL": "https://your-project.supabase.co",
+        "GSD_SUPABASE_SERVICE_KEY": "your-service-role-key-here",
+        "GSD_USER_EMAIL": "your-email@example.com",
         "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
       }
     }
@@ -204,10 +202,10 @@ Add the MCP server to your Claude Desktop config:
 ```
 
 **Configuration Notes**:
-- Replace `your-jwt-token-here` with your actual token from Step 1
+- Replace `your-project.supabase.co` with your actual Supabase project URL from Step 1
+- Replace `your-service-role-key-here` with your Supabase service role key
+- Replace `your-email@example.com` with the email address for your GSD account
 - Replace `your-passphrase-here` with your sync encryption passphrase
-- `GSD_API_URL`: Use `https://gsd.vinny.dev` for production (or your custom Worker URL)
-- Token expires every 7 days - you'll need to update it periodically
 - **Optional**: Add `GSD_ENCRYPTION_PASSPHRASE` to enable decrypted task access (v0.2.0)
   - Without it: Only metadata tools work (sync status, devices, stats)
   - With it: Full task content access (list, search, read tasks)
@@ -288,7 +286,7 @@ Once configured, you can ask Claude questions like:
 - "Complete all tasks tagged #quick-wins"
 - "Change due date of task #def456 to next Monday"
 
-Claude will use the MCP tools to fetch real-time data from your Worker API and can now modify your tasks!
+Claude will use the MCP tools to fetch real-time data from your Supabase backend and can now modify your tasks!
 
 ## Available Tools
 
@@ -380,8 +378,7 @@ List all decrypted tasks with optional filtering. **Requires `GSD_ENCRYPTION_PAS
     "recurrence": "none",
     "dependencies": [],
     "createdAt": "2024-12-26T00:00:00.000Z",
-    "updatedAt": "2024-12-27T00:00:00.000Z",
-    "vectorClock": {}
+    "updatedAt": "2024-12-27T00:00:00.000Z"
   }
 ]
 ```
@@ -495,14 +492,14 @@ Validate MCP server configuration and diagnose issues.
 {
   "checks": [
     {
-      "name": "API Connectivity",
+      "name": "Supabase Connectivity",
       "status": "success",
-      "details": "Connected to https://gsd.vinny.dev"
+      "details": "Connected to https://your-project.supabase.co"
     },
     {
       "name": "Authentication",
       "status": "success",
-      "details": "Token valid (3 devices registered)"
+      "details": "Service key valid (3 devices registered)"
     },
     {
       "name": "Encryption",
@@ -530,31 +527,6 @@ Get comprehensive help documentation including available tools, usage examples, 
 - "Help me use the GSD MCP server"
 - "Show me analytics examples"
 - "How do I troubleshoot authentication issues?"
-
-### `get_token_status` (v0.6.0)
-Check authentication token status including expiration date, days remaining, and warnings.
-
-**Returns**:
-```json
-{
-  "status": "warning",
-  "expiresAt": "2025-01-15T12:00:00.000Z",
-  "daysRemaining": 5,
-  "message": "Token expires in 5 days. Consider re-authenticating soon.",
-  "needsReauth": false
-}
-```
-
-**Status Levels**:
-- `healthy` - More than 7 days until expiration
-- `warning` - 2-7 days until expiration
-- `critical` - Less than 2 days until expiration
-- `expired` - Token has expired
-
-**Example Usage:**
-- "Check my token status"
-- "Is my authentication about to expire?"
-- "Do I need to re-authenticate?"
 
 ### `get_cache_stats` (v0.6.0)
 Get task cache statistics including hit rate, cache size, and TTL configuration.
@@ -739,11 +711,11 @@ Delete all completed tasks from last year
 
 **Security Model**:
 - 🔒 **End-to-end encryption maintained**: Tasks encrypted in database, decrypted locally
-- 🔒 **Zero-knowledge server**: Worker cannot decrypt your tasks
+- 🔒 **Zero-knowledge server**: Supabase cannot decrypt your tasks
 - 🔒 **Passphrase stays local**: Never sent to server, stored only in Claude Desktop config
 - 🔒 **Opt-in decryption**: Decryption disabled by default, requires explicit passphrase
 - ✍️ **Write operations** (v0.4.0): Full task management with encryption
-- 🔐 **JWT authentication**: Uses existing OAuth tokens with 7-day expiry
+- 🔐 **Supabase Auth**: Uses Supabase authentication with OAuth (Google/Apple)
 - 🛡️ **Safety limits**: Bulk operations limited to 50 tasks, clear validation
 
 **See `DECRYPTION.md` for detailed security documentation.**
@@ -751,18 +723,18 @@ Delete all completed tasks from last year
 ## Troubleshooting
 
 ### "Configuration error: Required environment variables"
-- Check that `GSD_API_URL` and `GSD_AUTH_TOKEN` are set in your Claude Desktop config
+- Check that `GSD_SUPABASE_URL`, `GSD_SUPABASE_SERVICE_KEY`, and `GSD_USER_EMAIL` are set in your Claude Desktop config
 - Ensure there are no typos in the environment variable names
 
 ### "API request failed: 401 Unauthorized"
-- Your JWT token has expired - get a new token from the OAuth flow
-- Update the `GSD_AUTH_TOKEN` in your config
+- Your Supabase service role key may be incorrect — copy it again from **Supabase → Settings → API**
+- Update the `GSD_SUPABASE_SERVICE_KEY` in your config
 - Restart Claude Desktop
 
 ### "API request failed: 404 Not Found"
-- Check that `GSD_API_URL` is correct
-- Ensure your Worker is deployed and accessible
-- Try accessing the URL in your browser: `{GSD_API_URL}/health`
+- Check that `GSD_SUPABASE_URL` is correct (format: `https://your-project.supabase.co`)
+- Ensure your Supabase project is active and accessible
+- Verify the project URL in your Supabase dashboard under **Settings → API**
 
 ### "Cannot find module" error
 - **If using npx**: Ensure you have internet connection (npx needs to download the package)
@@ -777,9 +749,10 @@ Delete all completed tasks from last year
 - Restart Claude Desktop after adding the passphrase
 
 ### "Failed to fetch encryption salt" (v0.2.0)
-- The Worker endpoint for encryption salt is not accessible
-- Ensure Worker is deployed with v0.2.0+ (includes GET `/api/auth/encryption-salt`)
-- Check your JWT token is valid and not expired
+- The encryption salt could not be retrieved from the Supabase `profiles` table
+- Ensure your Supabase service role key has access to the `profiles` table
+- Verify the user identified by `GSD_USER_EMAIL` has a profile entry with a valid encryption salt
+- Check that your Supabase RLS policies allow service role access
 
 ### "Decryption failed - passphrase is incorrect" (v0.2.0)
 - The provided passphrase doesn't match the one used to encrypt tasks
@@ -802,8 +775,9 @@ npm run build
 
 **Testing Locally** (without Claude Desktop):
 ```bash
-export GSD_API_URL="https://gsd.vinny.dev"
-export GSD_AUTH_TOKEN="your-jwt-token"
+export GSD_SUPABASE_URL="https://your-project.supabase.co"
+export GSD_SUPABASE_SERVICE_KEY="your-service-role-key-here"
+export GSD_USER_EMAIL="your-email@example.com"
 export GSD_ENCRYPTION_PASSPHRASE="your-passphrase"
 npm start
 ```
@@ -851,9 +825,9 @@ packages/mcp-server/
 │   │   │   ├── write-handlers.ts
 │   │   │   ├── analytics-handlers.ts
 │   │   │   └── system-handlers.ts
-│   │   └── schemas/       # MCP tool schemas (20 tools)
+│   │   └── schemas/       # MCP tool schemas (19 tools)
 │   │       ├── index.ts
-│   │       ├── read-tools.ts     # 7 read tools
+│   │       ├── read-tools.ts     # 6 read tools
 │   │       ├── write-tools.ts    # 5 write tools
 │   │       ├── analytics-tools.ts # 5 analytics tools
 │   │       └── system-tools.ts   # 3 system tools
@@ -886,15 +860,15 @@ Claude Desktop
     ↓ MCP Protocol (stdio)
 GSD MCP Server
     ├─ Metadata queries (v0.1.0)
-    │   ↓ HTTPS + JWT
-    │  GSD Worker API
-    │   ↓ D1 Queries
+    │   ↓ HTTPS + Service Role Key
+    │  Supabase backend
+    │   ↓ Postgres Queries
     │  Metadata (counts, status)
     │
     └─ Decryption queries (v0.2.0)
-        ↓ HTTPS + JWT
-       GSD Worker API
-        ↓ D1 Queries
+        ↓ HTTPS + Service Role Key
+       Supabase backend
+        ↓ Postgres Queries
        Encrypted Task Blobs
         ↓ Local decryption (AES-256-GCM)
        Decrypted Tasks → Claude
@@ -922,18 +896,17 @@ MIT - Same as GSD Task Manager
 - 🚀 **Caching** - In-memory TTL cache (30s) with auto-invalidation on writes
 - 🔍 **Dry-Run Mode** - Preview all write operations before committing
 - 🔗 **Dependency Validation** - Circular dependency detection using BFS
-- 📊 **20 total MCP tools** (7 read + 5 write + 5 analytics + 3 system)
+- 📊 **19 total MCP tools** (6 read + 5 write + 5 analytics + 3 system)
 - ✅ **70 passing tests** - Comprehensive schema and integration coverage
 
 **New Tools (v0.6.0)**:
-- `get_token_status` - Check JWT token health and expiration
 - `get_cache_stats` - Monitor cache performance and hit rates
 
 **Bug Fixes (v0.4.1-v0.4.7)**:
-- v0.4.1: Fixed Worker API payload structure
-- v0.4.2: Fixed JWT token schema (sub, deviceId)
+- v0.4.1: Fixed Supabase API payload structure
+- v0.4.2: Fixed Supabase Auth user schema
 - v0.4.3: Added SHA-256 checksum calculation
-- v0.4.4: Added Worker rejection array checking
+- v0.4.4: Added Supabase rejection array checking
 - v0.4.5: Fixed field names (quadrant, timestamps)
 - v0.4.6: Fixed type mismatches (dueDate, subtasks.title)
 - v0.4.7: Fixed MCP tool input schemas

@@ -1,40 +1,27 @@
-import { apiRequest } from '../api/client.js';
-import { initializeEncryption } from '../encryption/manager.js';
-import { getCryptoManager } from '../crypto.js';
-import { statsResponseSchema } from '../types.js';
-import type { GsdConfig, StatsResponse, DecryptedTask } from '../types.js';
-import { createMcpLogger } from '../utils/logger.js';
-
-const logger = createMcpLogger('TASK_STATS');
-
+import { listTasks } from './list-tasks.js';
+import { getTaskStats } from './sync-status.js';
+import type { GsdConfig, DecryptedTask } from '../types.js';
 /**
  * Detailed task statistics derived from decrypted tasks
  */
 export interface DetailedTaskStats {
-  // Overall counts
   totalTasks: number;
   activeTasks: number;
   deletedTasks: number;
   completedTasks: number;
   incompleteTasks: number;
-
-  // Quadrant distribution
   quadrantCounts: {
     'urgent-important': number;
     'not-urgent-important': number;
     'urgent-not-important': number;
     'not-urgent-not-important': number;
   };
-
-  // Tag statistics
   tagStats: Array<{
     tag: string;
     count: number;
     completedCount: number;
     completionRate: number;
   }>;
-
-  // Temporal metadata
   oldestTaskDate: number | null;
   newestTaskDate: number | null;
   lastUpdated: number | null;
@@ -48,51 +35,13 @@ export interface DetailedTaskStats {
 export async function getDetailedTaskStats(
   config: GsdConfig
 ): Promise<DetailedTaskStats> {
-  // Fetch encrypted tasks and metadata from new /api/stats endpoint
-  const statsResponse = await apiRequest<StatsResponse>(
-    config,
-    '/api/stats',
-    statsResponseSchema
-  );
+  // Fetch metadata counts from Supabase (no decryption needed)
+  const metadata = await getTaskStats(config);
 
-  // Decrypt tasks
-  const decryptedTasks = await decryptTasks(statsResponse.tasks, config);
+  // Fetch and decrypt all active tasks for detailed stats
+  const decryptedTasks = await listTasks(config);
 
-  // Calculate detailed statistics
-  return calculateDetailedStats(decryptedTasks, statsResponse.metadata);
-}
-
-/**
- * Decrypt all encrypted task blobs
- */
-async function decryptTasks(
-  encryptedTasks: StatsResponse['tasks'],
-  config: GsdConfig
-): Promise<DecryptedTask[]> {
-  await initializeEncryption(config);
-  const cryptoManager = getCryptoManager();
-  const decryptedTasks: DecryptedTask[] = [];
-
-  for (const encryptedTask of encryptedTasks) {
-    try {
-      // Skip deleted tasks
-      if (encryptedTask.deletedAt) {
-        continue;
-      }
-
-      const decryptedJson = await cryptoManager.decrypt(
-        encryptedTask.encryptedBlob,
-        encryptedTask.nonce
-      );
-      const task = JSON.parse(decryptedJson) as DecryptedTask;
-      decryptedTasks.push(task);
-    } catch (error) {
-      logger.error(`Failed to decrypt task ${encryptedTask.id}`, error instanceof Error ? error : new Error(String(error)));
-      // Skip tasks that fail to decrypt
-    }
-  }
-
-  return decryptedTasks;
+  return calculateDetailedStats(decryptedTasks, metadata);
 }
 
 /**
@@ -100,16 +49,18 @@ async function decryptTasks(
  */
 function calculateDetailedStats(
   tasks: DecryptedTask[],
-  metadata: StatsResponse['metadata']
+  metadata: {
+    totalTasks: number | null;
+    activeTasks: number | null;
+    deletedTasks: number | null;
+    lastUpdated: number | null;
+    oldestTask: number | null;
+    newestTask: number | null;
+  }
 ): DetailedTaskStats {
-  // Overall counts
-  const totalTasks = metadata.totalCount;
-  const activeTasks = metadata.activeCount;
-  const deletedTasks = metadata.deletedCount;
   const completedTasks = tasks.filter((t) => t.completed).length;
   const incompleteTasks = tasks.filter((t) => !t.completed).length;
 
-  // Quadrant distribution
   const quadrantCounts = {
     'urgent-important': 0,
     'not-urgent-important': 0,
@@ -124,11 +75,38 @@ function calculateDetailedStats(
     }
   }
 
-  // Tag statistics
-  const tagMap = new Map<
-    string,
-    { count: number; completedCount: number }
-  >();
+  const tagStats = calculateTagStats(tasks);
+
+  // Use reduce instead of Math.max(...spread) to avoid stack overflow on large arrays
+  const lastUpdated = tasks.length > 0
+    ? tasks.reduce((max, t) => {
+        const ts = new Date(t.updatedAt).getTime();
+        return ts > max ? ts : max;
+      }, -Infinity)
+    : null;
+
+  return {
+    totalTasks: metadata.totalTasks ?? 0,
+    activeTasks: metadata.activeTasks ?? 0,
+    deletedTasks: metadata.deletedTasks ?? 0,
+    completedTasks,
+    incompleteTasks,
+    quadrantCounts,
+    tagStats,
+    oldestTaskDate: metadata.oldestTask,
+    newestTaskDate: metadata.newestTask,
+    lastUpdated,
+    storageUsed: metadata.activeTasks ?? 0,
+  };
+}
+
+/**
+ * Calculate per-tag statistics from decrypted tasks
+ */
+function calculateTagStats(
+  tasks: DecryptedTask[]
+): DetailedTaskStats['tagStats'] {
+  const tagMap = new Map<string, { count: number; completedCount: number }>();
 
   for (const task of tasks) {
     for (const tag of task.tags || []) {
@@ -141,7 +119,7 @@ function calculateDetailedStats(
     }
   }
 
-  const tagStats = Array.from(tagMap.entries())
+  return Array.from(tagMap.entries())
     .map(([tag, stats]) => ({
       tag,
       count: stats.count,
@@ -151,27 +129,5 @@ function calculateDetailedStats(
           ? Math.round((stats.completedCount / stats.count) * 100)
           : 0,
     }))
-    .sort((a, b) => b.count - a.count); // Sort by count descending
-
-  // Temporal metadata — use reduce instead of Math.max(...spread) to avoid stack overflow on large arrays
-  const lastUpdated = tasks.length > 0
-    ? tasks.reduce((max, t) => {
-        const ts = new Date(t.updatedAt).getTime();
-        return ts > max ? ts : max;
-      }, -Infinity)
-    : null;
-
-  return {
-    totalTasks,
-    activeTasks,
-    deletedTasks,
-    completedTasks,
-    incompleteTasks,
-    quadrantCounts,
-    tagStats,
-    oldestTaskDate: metadata.oldestTaskDate,
-    newestTaskDate: metadata.newestTaskDate,
-    lastUpdated,
-    storageUsed: metadata.storageUsed,
-  };
+    .sort((a, b) => b.count - a.count);
 }

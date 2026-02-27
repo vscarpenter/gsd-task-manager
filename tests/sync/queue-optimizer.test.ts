@@ -46,15 +46,14 @@ describe('QueueOptimizer', () => {
         updatedAt: new Date().toISOString(),
         notificationEnabled: true,
         notificationSent: false,
-        vectorClock: { device1: 1 },
       };
 
       // Add multiple update operations (with small delays to ensure different timestamps)
-      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 1' }, { device1: 1 });
+      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 1' });
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 2' }, { device1: 2 });
+      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 2' });
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 3' }, { device1: 3 });
+      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 3' });
 
       let pending = await queue.getPending();
       expect(pending.length).toBe(3);
@@ -65,7 +64,6 @@ describe('QueueOptimizer', () => {
       pending = await queue.getPending();
       expect(pending.length).toBe(1);
       expect(pending[0].payload?.title).toBe('Update 3'); // Latest payload
-      expect(pending[0].vectorClock).toEqual({ device1: 3 }); // Latest vector clock
     });
   });
 
@@ -88,17 +86,16 @@ describe('QueueOptimizer', () => {
         updatedAt: new Date().toISOString(),
         notificationEnabled: true,
         notificationSent: false,
-        vectorClock: { device1: 1 },
       };
 
       // Add create and update operations (with small delays to ensure different timestamps)
-      await queue.enqueue('create', taskId, basePayload, { device1: 1 });
+      await queue.enqueue('create', taskId, basePayload);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', taskId, { ...basePayload, title: 'Updated' }, { device1: 2 });
+      await queue.enqueue('update', taskId, { ...basePayload, title: 'Updated' });
       await new Promise(resolve => setTimeout(resolve, 10));
       
       // Add delete operation
-      await queue.enqueue('delete', taskId, null, { device1: 3 });
+      await queue.enqueue('delete', taskId, null);
 
       let pending = await queue.getPending();
       expect(pending.length).toBe(3);
@@ -131,17 +128,16 @@ describe('QueueOptimizer', () => {
         updatedAt: new Date().toISOString(),
         notificationEnabled: true,
         notificationSent: false,
-        vectorClock: { device1: 1 },
       };
 
       // Add create operation
-      await queue.enqueue('create', taskId, basePayload, { device1: 1 });
+      await queue.enqueue('create', taskId, basePayload);
       await new Promise(resolve => setTimeout(resolve, 10));
       
       // Add update operations (with small delays to ensure different timestamps)
-      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 1' }, { device1: 2 });
+      await queue.enqueue('update', taskId, { ...basePayload, title: 'Update 1' });
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', taskId, { ...basePayload, title: 'Final' }, { device1: 3 });
+      await queue.enqueue('update', taskId, { ...basePayload, title: 'Final' });
 
       let pending = await queue.getPending();
       expect(pending.length).toBe(3);
@@ -153,12 +149,11 @@ describe('QueueOptimizer', () => {
       expect(pending.length).toBe(1);
       expect(pending[0].operation).toBe('create');
       expect(pending[0].payload?.title).toBe('Final'); // Latest payload
-      expect(pending[0].vectorClock).toEqual({ device1: 3 }); // Merged vector clock
     });
   });
 
-  describe('preserving latest vector clock', () => {
-    it('should merge vector clocks from all consolidated operations', async () => {
+  describe('consolidating duplicate updates', () => {
+    it('should consolidate all operations into single operation', async () => {
       const taskId = 'task1';
       const basePayload: TaskRecord = {
         id: taskId,
@@ -176,23 +171,20 @@ describe('QueueOptimizer', () => {
         updatedAt: new Date().toISOString(),
         notificationEnabled: true,
         notificationSent: false,
-        vectorClock: { device1: 1 },
       };
 
-      // Add operations with different vector clocks (with small delays to ensure different timestamps)
-      await queue.enqueue('update', taskId, basePayload, { device1: 1, device2: 0 });
+      // Add operations with small delays to ensure different timestamps
+      await queue.enqueue('update', taskId, basePayload);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', taskId, basePayload, { device1: 1, device2: 1 });
+      await queue.enqueue('update', taskId, basePayload);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', taskId, basePayload, { device1: 2, device2: 1 });
+      await queue.enqueue('update', taskId, basePayload);
 
       // Consolidate
       await optimizer.consolidateTask(taskId);
 
       const pending = await queue.getPending();
       expect(pending.length).toBe(1);
-      // Should have the latest vector clock from the last operation
-      expect(pending[0].vectorClock).toEqual({ device1: 2, device2: 1 });
     });
   });
 
@@ -214,17 +206,16 @@ describe('QueueOptimizer', () => {
         updatedAt: new Date().toISOString(),
         notificationEnabled: true,
         notificationSent: false,
-        vectorClock: { device1: 1 },
       };
 
       // Add operations for multiple tasks (with small delays to ensure different timestamps)
-      await queue.enqueue('update', 'task1', { ...basePayload, id: 'task1' }, { device1: 1 });
+      await queue.enqueue('update', 'task1', { ...basePayload, id: 'task1' });
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', 'task1', { ...basePayload, id: 'task1' }, { device1: 2 });
+      await queue.enqueue('update', 'task1', { ...basePayload, id: 'task1' });
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', 'task2', { ...basePayload, id: 'task2' }, { device1: 1 });
+      await queue.enqueue('update', 'task2', { ...basePayload, id: 'task2' });
       await new Promise(resolve => setTimeout(resolve, 10));
-      await queue.enqueue('update', 'task2', { ...basePayload, id: 'task2' }, { device1: 2 });
+      await queue.enqueue('update', 'task2', { ...basePayload, id: 'task2' });
 
       let pending = await queue.getPending();
       expect(pending.length).toBe(4);

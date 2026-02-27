@@ -1,78 +1,41 @@
 /**
  * Interactive setup wizard for MCP server configuration
- * Guides users through API URL, auth token, and encryption setup
+ * Guides users through Supabase URL, service key, email, and encryption setup
  */
 
 import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
 
-/** Default production GSD Worker URL used as prompt default value */
-const DEFAULT_GSD_API_URL = 'https://gsd.vinny.dev';
-
 /**
- * Test API connectivity
+ * Test Supabase connectivity by querying sync status
  */
-async function validateConnectivity(apiUrl: string): Promise<boolean> {
-  process.stdout.write('Testing connectivity... ');
+async function validateConnectivity(
+  supabaseUrl: string,
+  serviceKey: string,
+  userEmail: string
+): Promise<boolean> {
+  process.stdout.write('Testing Supabase connectivity... ');
   try {
-    const response = await fetch(`${apiUrl}/health`);
-    if (response.ok) {
-      console.log('✓ Success!');
-      return true;
-    } else {
-      console.log(`⚠ Warning: Got status ${response.status}`);
-      return false;
-    }
-  } catch {
-    console.log('✗ Failed to connect');
-    console.log('Continuing anyway - you may need to check your URL later.\n');
-    return false;
-  }
-}
-
-/**
- * Configure and validate authentication token
- */
-async function configureAuthentication(apiUrl: string): Promise<string> {
-  console.log('Step 2/5: Authentication Token');
-  console.log('Visit', apiUrl, 'and complete OAuth login');
-  console.log('Copy the token from: DevTools → Application → Local Storage → gsd_auth_token');
-  const authToken = await promptPassword('Paste token');
-
-  if (!authToken) {
-    console.log('✗ Token is required. Exiting setup.');
-    process.exit(1);
-  }
-
-  // Validate token
-  process.stdout.write('Validating token... ');
-  try {
-    const config: GsdConfig = { apiBaseUrl: apiUrl, authToken };
+    const config: GsdConfig = { supabaseUrl, serviceKey, userEmail };
     const status = await getSyncStatus(config);
     console.log('✓ Success!');
-    console.log(`  Device count: ${status.deviceCount}`);
-    console.log();
-    return authToken;
+    console.log(`  Devices: ${status.deviceCount}`);
+    return true;
   } catch (error) {
-    console.log('✗ Token validation failed');
+    console.log('✗ Failed to connect');
     console.log('Error:', error instanceof Error ? error.message : 'Unknown error');
-    console.log('\nPlease check your token and try again.');
-    process.exit(1);
+    console.log('Please check your Supabase URL, service key, and user email.\n');
+    return false;
   }
 }
 
 /**
  * Test encryption passphrase by attempting to decrypt tasks
  */
-async function testDecryption(
-  apiUrl: string,
-  authToken: string,
-  passphrase: string
-): Promise<boolean> {
+async function testDecryption(config: GsdConfig): Promise<boolean> {
   process.stdout.write('Testing decryption... ');
   try {
-    const config: GsdConfig = { apiBaseUrl: apiUrl, authToken, encryptionPassphrase: passphrase };
     const tasks = await listTasks(config);
     console.log(`✓ Success! (Found ${tasks.length} tasks)`);
     return true;
@@ -87,11 +50,8 @@ async function testDecryption(
 /**
  * Configure and test encryption passphrase
  */
-async function configureEncryption(
-  apiUrl: string,
-  authToken: string
-): Promise<string | undefined> {
-  console.log('Step 3/5: Encryption (Optional)');
+async function configureEncryption(config: GsdConfig): Promise<string | undefined> {
+  console.log('Step 4/5: Encryption (Optional)');
   const enableEncryption = await prompt(
     'Enable task decryption? This allows Claude to read task content. [y/N]',
     'N'
@@ -106,19 +66,15 @@ async function configureEncryption(
     return undefined;
   }
 
-  const success = await testDecryption(apiUrl, authToken, encryptionPassphrase);
+  const success = await testDecryption({ ...config, encryptionPassphrase });
   return success ? encryptionPassphrase : undefined;
 }
 
 /**
  * Display generated configuration JSON
  */
-function displayConfiguration(
-  apiUrl: string,
-  authToken: string,
-  encryptionPassphrase?: string
-): void {
-  console.log('Step 4/5: Generated Configuration');
+function displayConfiguration(config: GsdConfig): void {
+  console.log('Step 5/5: Generated Configuration');
   console.log(`Add this to ${getClaudeConfigPath()}:\n`);
 
   const configJson = {
@@ -127,9 +83,12 @@ function displayConfiguration(
         command: 'npx',
         args: ['-y', 'gsd-mcp-server'],
         env: {
-          GSD_API_URL: apiUrl,
-          GSD_AUTH_TOKEN: authToken,
-          ...(encryptionPassphrase ? { GSD_ENCRYPTION_PASSPHRASE: encryptionPassphrase } : {}),
+          GSD_SUPABASE_URL: config.supabaseUrl,
+          GSD_SUPABASE_SERVICE_KEY: config.serviceKey,
+          GSD_USER_EMAIL: config.userEmail,
+          ...(config.encryptionPassphrase
+            ? { GSD_ENCRYPTION_PASSPHRASE: config.encryptionPassphrase }
+            : {}),
         },
       },
     },
@@ -143,8 +102,8 @@ function displayConfiguration(
  * Display next steps for user
  */
 function displayNextSteps(): void {
-  console.log('Step 5/5: Next Steps');
-  console.log('1. Copy the config above');
+  console.log('Next Steps:');
+  console.log(`1. Copy the config above`);
   console.log(`2. Open ${getClaudeConfigPath()}`);
   console.log('3. Add the configuration to the "mcpServers" section');
   console.log('4. Restart Claude Desktop');
@@ -164,23 +123,49 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
 `);
 
   try {
-    // Step 1: API URL
-    console.log('Step 1/5: API URL');
-    const apiUrl = await prompt('Enter your GSD Worker URL', DEFAULT_GSD_API_URL);
-    await validateConnectivity(apiUrl);
+    // Step 1: Supabase URL
+    console.log('Step 1/5: Supabase Project URL');
+    const supabaseUrl = await prompt('Enter your Supabase project URL');
+    if (!supabaseUrl) {
+      console.log('✗ Supabase URL is required. Exiting setup.');
+      process.exit(1);
+    }
     console.log();
 
-    // Step 2: Auth Token
-    const authToken = await configureAuthentication(apiUrl);
-
-    // Step 3: Encryption
-    const encryptionPassphrase = await configureEncryption(apiUrl, authToken);
+    // Step 2: Service Key
+    console.log('Step 2/5: Supabase Service Role Key');
+    console.log('Find this in: Supabase Dashboard → Settings → API → service_role key');
+    const serviceKey = await promptPassword('Paste service role key');
+    if (!serviceKey) {
+      console.log('✗ Service role key is required. Exiting setup.');
+      process.exit(1);
+    }
     console.log();
 
-    // Step 4: Display Config
-    displayConfiguration(apiUrl, authToken, encryptionPassphrase);
+    // Step 3: User Email
+    console.log('Step 3/5: User Email');
+    const userEmail = await prompt('Enter the email you use to sign into GSD');
+    if (!userEmail) {
+      console.log('✗ User email is required. Exiting setup.');
+      process.exit(1);
+    }
 
-    // Step 5: Next Steps
+    // Test connectivity
+    const connected = await validateConnectivity(supabaseUrl, serviceKey, userEmail);
+    if (!connected) {
+      process.exit(1);
+    }
+    console.log();
+
+    const config: GsdConfig = { supabaseUrl, serviceKey, userEmail };
+
+    // Step 4: Encryption
+    const encryptionPassphrase = await configureEncryption(config);
+    config.encryptionPassphrase = encryptionPassphrase;
+    console.log();
+
+    // Step 5: Display Config
+    displayConfiguration(config);
     displayNextSteps();
   } catch (error) {
     console.error('\n✗ Setup failed:', error instanceof Error ? error.message : 'Unknown error');

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getHealthMonitor, type HealthIssue } from '@/lib/sync/health-monitor';
 import { SYNC_CONFIG, SYNC_TOAST_DURATION } from '@/lib/constants/sync';
+import { getSyncQueue } from '@/lib/sync/queue';
+import { getConnectionState } from '@/lib/sync/realtime-listener';
 
 interface SyncHealthOptions {
   isEnabled: boolean;
@@ -10,79 +11,53 @@ interface SyncHealthOptions {
   onSync: () => void;
 }
 
+const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+
 /**
  * Hook for monitoring sync health and showing notifications
- * Checks health periodically and displays toasts for issues
+ * Checks for stale queue operations and connection issues
  */
 export function useSyncHealth({ isEnabled, onHealthIssue, onSync }: SyncHealthOptions) {
   const [lastNotificationTime, setLastNotificationTime] = useState(0);
 
   useEffect(() => {
-    if (!isEnabled) {
-      return;
-    }
+    if (!isEnabled) return;
 
-    const checkHealthAndNotify = async () => {
+    const checkHealth = async () => {
       const now = Date.now();
 
       // Avoid notification spam
-      if (now - lastNotificationTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) {
+      if (now - lastNotificationTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) return;
+
+      // Check for stale queue operations
+      const queue = getSyncQueue();
+      const pending = await queue.getPending();
+      const staleOps = pending.filter(op => now - op.timestamp > STALE_THRESHOLD_MS);
+
+      if (staleOps.length > 0) {
+        onHealthIssue(
+          `${staleOps.length} sync operation${staleOps.length > 1 ? 's' : ''} pending for over an hour`,
+          { label: 'Sync Now', onClick: onSync },
+          SYNC_TOAST_DURATION.LONG
+        );
+        setLastNotificationTime(now);
         return;
       }
 
-      const healthMonitor = getHealthMonitor();
-      const report = await healthMonitor.check();
-
-      // Show toast for health issues
-      if (!report.healthy && report.issues.length > 0) {
-        handleHealthIssues(report.issues, now);
+      // Check Realtime connection
+      const connectionState = getConnectionState();
+      if (connectionState === 'disconnected') {
+        onHealthIssue(
+          'Real-time sync is disconnected. Changes may not sync automatically.',
+          undefined,
+          SYNC_TOAST_DURATION.LONG
+        );
+        setLastNotificationTime(now);
       }
     };
 
-    const handleHealthIssues = (issues: HealthIssue[], now: number) => {
-      for (const issue of issues) {
-        if (shouldShowErrorIssue(issue)) {
-          showErrorIssue(issue);
-          setLastNotificationTime(now);
-        } else if (shouldShowStaleQueueWarning(issue)) {
-          showStaleQueueWarning(issue);
-          setLastNotificationTime(now);
-        }
-      }
-    };
-
-    const shouldShowErrorIssue = (issue: HealthIssue) => {
-      return issue.severity === 'error';
-    };
-
-    const shouldShowStaleQueueWarning = (issue: HealthIssue) => {
-      return issue.severity === 'warning' && issue.type === 'stale_queue';
-    };
-
-    const showErrorIssue = (issue: HealthIssue) => {
-      const message = `${issue.message}. ${issue.suggestedAction}`;
-      onHealthIssue(message, undefined, SYNC_TOAST_DURATION.LONG);
-    };
-
-    const showStaleQueueWarning = (issue: HealthIssue) => {
-      onHealthIssue(
-        issue.message,
-        {
-          label: 'Sync Now',
-          onClick: onSync,
-        },
-        SYNC_TOAST_DURATION.LONG
-      );
-    };
-
-    // Check health periodically
-    const interval = setInterval(checkHealthAndNotify, SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
-
-    // Run initial check after delay
-    const initialTimeout = setTimeout(
-      checkHealthAndNotify,
-      SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS
-    );
+    const interval = setInterval(checkHealth, SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+    const initialTimeout = setTimeout(checkHealth, SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
 
     return () => {
       clearInterval(interval);

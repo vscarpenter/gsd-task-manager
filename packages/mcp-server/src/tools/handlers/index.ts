@@ -11,7 +11,6 @@ import {
   handleListTasks,
   handleGetTask,
   handleSearchTasks,
-  handleGetTokenStatus,
 } from './read-handlers.js';
 import {
   handleGetProductivityMetrics,
@@ -79,9 +78,6 @@ export async function handleToolCall(
 
       case 'search_tasks':
         return await handleSearchTasks(config, typedArgs);
-
-      case 'get_token_status':
-        return await handleGetTokenStatus(config);
 
       // Analytics tools
       case 'get_productivity_metrics':

@@ -1,31 +1,12 @@
 /**
- * Sync-related constants
+ * Sync-related constants (Supabase backend)
  * Centralizes sync configuration values for consistency and maintenance
  */
-
-/**
- * Token management configuration
- */
-export const TOKEN_CONFIG = {
-  /** Refresh token when within 5 minutes of expiry */
-  REFRESH_THRESHOLD_MS: 5 * 60 * 1000,
-
-  /**
-   * Token expiration normalization threshold
-   * JWT tokens use Unix seconds (e.g., 1735689600) while JavaScript uses milliseconds
-   * Threshold of 10 billion distinguishes formats: seconds are < 10B, milliseconds are > 10B
-   * This normalization ensures consistent millisecond storage regardless of API format
-   */
-  EXPIRATION_NORMALIZATION_THRESHOLD: 10_000_000_000,
-} as const;
 
 /**
  * Sync operation configuration
  */
 export const SYNC_CONFIG = {
-  /** Maximum tasks to fetch in a single pull request */
-  MAX_TASKS_PER_PULL: 100,
-
   /** Polling interval for pending operation count (2 seconds) */
   PENDING_COUNT_POLL_INTERVAL_MS: 2000,
 
@@ -46,14 +27,6 @@ export const SYNC_CONFIG = {
 
   /** Default limit for sync history queries */
   DEFAULT_HISTORY_LIMIT: 50,
-} as const;
-
-/**
- * OAuth handshake configuration
- */
-export const OAUTH_CONFIG = {
-  /** Delay before processing OAuth result to allow subscribers to register (100ms) */
-  LISTENER_REGISTRATION_DELAY_MS: 100,
 } as const;
 
 /**

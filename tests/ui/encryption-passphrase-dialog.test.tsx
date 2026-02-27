@@ -10,18 +10,20 @@ import userEvent from '@testing-library/user-event';
 // Use vi.hoisted to ensure these are available to vi.mock
 const {
   mockQueueExistingTasks,
-  mockRequestSync,
+  mockSync,
   mockGenerateEncryptionSalt,
   mockStoreEncryptionConfig,
   mockInitializeEncryptionFromPassphrase,
+  mockSetEncryptionSalt,
   mockToastSuccess,
   mockToastError,
 } = vi.hoisted(() => ({
   mockQueueExistingTasks: vi.fn(),
-  mockRequestSync: vi.fn(),
+  mockSync: vi.fn(),
   mockGenerateEncryptionSalt: vi.fn(),
   mockStoreEncryptionConfig: vi.fn(),
   mockInitializeEncryptionFromPassphrase: vi.fn(),
+  mockSetEncryptionSalt: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
 }));
@@ -37,12 +39,7 @@ vi.mock('sonner', () => ({
 vi.mock('@/lib/sync/engine', () => ({
   getSyncEngine: () => ({
     queueExistingTasks: mockQueueExistingTasks,
-  }),
-}));
-
-vi.mock('@/lib/sync/sync-coordinator', () => ({
-  getSyncCoordinator: () => ({
-    requestSync: mockRequestSync,
+    sync: mockSync,
   }),
 }));
 
@@ -52,12 +49,16 @@ vi.mock('@/lib/sync/crypto', () => ({
   initializeEncryptionFromPassphrase: mockInitializeEncryptionFromPassphrase,
 }));
 
+vi.mock('@/lib/sync/supabase-sync-client', () => ({
+  setEncryptionSalt: mockSetEncryptionSalt,
+}));
+
 vi.mock('@/lib/db', () => ({
   getDb: () => ({
     syncMetadata: {
       get: vi.fn().mockResolvedValue({
         key: 'sync_config',
-        token: 'test-token',
+        userId: 'user-123',
       }),
     },
   }),
@@ -83,13 +84,8 @@ describe('EncryptionPassphraseDialog', () => {
     mockStoreEncryptionConfig.mockResolvedValue(undefined);
     mockInitializeEncryptionFromPassphrase.mockResolvedValue(true);
     mockQueueExistingTasks.mockResolvedValue(0);
-    mockRequestSync.mockResolvedValue(undefined);
-
-    // Mock fetch for encryption salt upload
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    });
+    mockSync.mockResolvedValue(undefined);
+    mockSetEncryptionSalt.mockResolvedValue(undefined);
   });
 
   describe('Core Functionality', () => {
@@ -253,7 +249,7 @@ describe('EncryptionPassphraseDialog', () => {
   });
 
   describe('Issue #5: Timeout Cleanup - Memory Leak Prevention', () => {
-    it('should trigger auto-sync after 1 second delay', async () => {
+    it('should trigger auto-sync after delay', async () => {
       const user = userEvent.setup({ delay: null });
       mockQueueExistingTasks.mockResolvedValue(3);
 
@@ -274,14 +270,14 @@ describe('EncryptionPassphraseDialog', () => {
       });
 
       // Auto-sync should not be called yet
-      expect(mockRequestSync).not.toHaveBeenCalled();
+      expect(mockSync).not.toHaveBeenCalled();
 
-      // Wait for the 1 second timeout to fire
+      // Wait for the timeout to fire
       await new Promise(resolve => setTimeout(resolve, 1100));
 
       // Now auto-sync should have been triggered
       await waitFor(() => {
-        expect(mockRequestSync).toHaveBeenCalledWith('auto');
+        expect(mockSync).toHaveBeenCalledWith('auto');
       });
     });
 
@@ -311,7 +307,7 @@ describe('EncryptionPassphraseDialog', () => {
       await new Promise(resolve => setTimeout(resolve, 1100));
 
       // Auto-sync should NOT be called because component was unmounted
-      expect(mockRequestSync).not.toHaveBeenCalled();
+      expect(mockSync).not.toHaveBeenCalled();
     });
 
     it('should catch and log auto-sync errors without showing user toast', async () => {
@@ -319,7 +315,7 @@ describe('EncryptionPassphraseDialog', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       mockQueueExistingTasks.mockResolvedValue(1);
-      mockRequestSync.mockRejectedValue(new Error('Sync failed'));
+      mockSync.mockRejectedValue(new Error('Sync failed'));
 
       render(<EncryptionPassphraseDialog {...defaultProps} />);
 
@@ -340,7 +336,7 @@ describe('EncryptionPassphraseDialog', () => {
       await new Promise(resolve => setTimeout(resolve, 1100));
 
       await waitFor(() => {
-        expect(mockRequestSync).toHaveBeenCalled();
+        expect(mockSync).toHaveBeenCalled();
       });
 
       // Error should be logged but no user toast

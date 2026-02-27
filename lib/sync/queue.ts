@@ -5,7 +5,7 @@
 
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
-import type { SyncQueueItem, VectorClock } from './types';
+import type { SyncQueueItem } from './types';
 import { generateId } from '@/lib/id-generator';
 
 export class SyncQueue {
@@ -16,7 +16,6 @@ export class SyncQueue {
     operation: 'create' | 'update' | 'delete',
     taskId: string,
     payload: TaskRecord | null,
-    vectorClock: VectorClock
   ): Promise<void> {
     const db = getDb();
 
@@ -27,7 +26,6 @@ export class SyncQueue {
       timestamp: Date.now(),
       retryCount: 0,
       payload,
-      vectorClock,
     };
 
     await db.syncQueue.add(item);
@@ -115,7 +113,7 @@ export class SyncQueue {
       // Check if this task is already in the queue
       const existing = await this.getForTask(task.id);
       if (existing.length === 0) {
-        await this.enqueue('create', task.id, task, task.vectorClock || {});
+        await this.enqueue('create', task.id, task);
         count++;
       }
     }

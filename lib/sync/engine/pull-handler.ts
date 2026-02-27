@@ -1,15 +1,13 @@
 /**
- * Pull handler - pulls remote changes from server
- * Handles decryption, conflict detection, and local database updates
+ * Pull handler - pulls remote changes from Supabase
+ * Handles decryption, LWW conflict resolution, and local database updates
  */
 
 import { getDb } from '@/lib/db';
 import { taskRecordSchema } from '@/lib/schema';
-import { mergeVectorClocks } from '../vector-clock';
+import { pullTasksSince, pullDeletedTaskIds } from '../supabase-sync-client';
 import { createLogger } from '@/lib/logger';
 import type { CryptoManager } from '../crypto';
-import type { SyncApiClient } from '../api-client';
-import type { SyncConfig, ConflictInfo } from '../types';
 
 const logger = createLogger('SYNC_PULL');
 
@@ -18,129 +16,80 @@ const logger = createLogger('SYNC_PULL');
  */
 export interface PullContext {
   crypto: CryptoManager;
-  api: SyncApiClient;
+  userId: string;
 }
 
 /**
- * Pull remote changes from server
+ * Pull remote changes from Supabase.
+ * Fetches updated and deleted tasks since lastSyncAt, decrypts each payload,
+ * applies LWW resolution against local state, and removes locally-deleted tasks.
  */
 export async function pullRemoteChanges(
-  config: SyncConfig,
+  lastSyncAt: string | null,
   context: PullContext
-) {
-  const { crypto, api } = context;
+): Promise<{
+  pulledCount: number;
+  deletedCount: number;
+  conflictCount: number;
+}> {
+  const { crypto, userId } = context;
   const db = getDb();
 
-  logger.debug('Starting pull phase', {
-    deviceId: config.deviceId,
-    sinceTimestamp: config.lastSyncAt,
+  logger.debug('Starting pull phase', { sinceTimestamp: lastSyncAt });
+
+  const [encryptedTasks, deletedIds] = await Promise.all([
+    pullTasksSince(userId, lastSyncAt),
+    pullDeletedTaskIds(userId, lastSyncAt),
+  ]);
+
+  logger.info('Pull response received', {
+    tasksCount: encryptedTasks.length,
+    deletedCount: deletedIds.length,
   });
 
-  let response;
-  try {
-    response = await api.pull({
-      deviceId: config.deviceId,
-      lastVectorClock: config.vectorClock,
-      sinceTimestamp: config.lastSyncAt || undefined,
-      limit: 50,
-    });
+  let pulledCount = 0;
+  let conflictCount = 0;
 
-    logger.info('Pull response received', {
-      tasksCount: response.tasks.length,
-      deletedCount: response.deletedTaskIds.length,
-      conflictsCount: response.conflicts.length,
-    });
-  } catch (error) {
-    const pullError = error instanceof Error ? error : new Error('Pull failed');
-    logger.error('Pull operation failed', pullError, {
-      url: config.serverUrl,
-    });
-    throw error;
-  }
-
-  const conflicts: ConflictInfo[] = [];
-
-  logger.debug('Processing tasks from server', { taskCount: response.tasks.length });
-
-  for (const encTask of response.tasks) {
+  for (const encTask of encryptedTasks) {
     try {
-      logger.debug('Processing task', {
-        taskId: encTask.id,
-        vectorClock: encTask.vectorClock,
-        updatedAt: new Date(encTask.updatedAt).toISOString(),
-      });
-
-      const decrypted = await crypto.decrypt(encTask.encryptedBlob, encTask.nonce);
+      const decrypted = await crypto.decrypt(encTask.encrypted_blob, encTask.nonce);
       const task = taskRecordSchema.parse(JSON.parse(decrypted));
 
-      logger.debug('Task decrypted', {
-        taskId: task.id,
-        title: task.title,
-        completed: task.completed,
-      });
-
-      // Check for local conflicts
       const localTask = await db.tasks.get(task.id);
 
       if (localTask) {
-        logger.debug('Found local version of task', {
-          taskId: task.id,
-          localUpdatedAt: localTask.updatedAt,
-          remoteUpdatedAt: task.updatedAt,
-        });
-
-        // BULLETPROOF: Use timestamp comparison for conflict detection
         const localTime = new Date(localTask.updatedAt).getTime();
-        const remoteTime = new Date(task.updatedAt).getTime();
+        const remoteTime = new Date(encTask.updated_at).getTime();
 
-        // If remote is newer OR same time (use remote as source of truth), apply it
         if (remoteTime >= localTime) {
           logger.debug('Applying remote version (newer or equal)', { taskId: task.id });
         } else {
           logger.debug('Keeping local version (newer)', { taskId: task.id });
-          continue; // Skip this task, keep local version
+          conflictCount++;
+          continue;
         }
-      } else {
-        logger.debug('Creating new task from remote', { taskId: task.id });
       }
 
-      // Apply the remote version
-      const existingClock = localTask?.vectorClock || {};
-      const mergedClock = mergeVectorClocks(existingClock, encTask.vectorClock);
-
-      await db.tasks.put({
-        ...task,
-        vectorClock: mergedClock,
-      });
-
-      logger.debug('Task saved successfully', { taskId: task.id });
+      await db.tasks.put(task);
+      pulledCount++;
+      logger.debug('Task saved', { taskId: task.id });
     } catch (error) {
       const processError = error instanceof Error ? error : new Error('Task processing failed');
-      logger.error('Failed to process task', processError, { taskId: encTask.id });
+      logger.error('Failed to process pulled task', processError, {
+        taskId: encTask.id,
+      });
     }
   }
 
-  logger.debug('Finished processing tasks', { processedCount: response.tasks.length });
-
   // Apply deletions
-  if (response.deletedTaskIds.length > 0) {
-    logger.debug('Deleting tasks', {
-      deleteCount: response.deletedTaskIds.length,
-      taskIds: response.deletedTaskIds,
-    });
-    await db.tasks.bulkDelete(response.deletedTaskIds);
+  let deletedCount = 0;
+  if (deletedIds.length > 0) {
+    logger.debug('Deleting locally-cached tasks', { deleteCount: deletedIds.length });
+    await db.tasks.bulkDelete(deletedIds);
+    deletedCount = deletedIds.length;
   }
 
-  logger.debug('Pull phase complete', {
-    tasksProcessed: response.tasks.length,
-    tasksDeleted: response.deletedTaskIds.length,
-    conflictsCount: conflicts.length,
-  });
+  logger.info('Pull phase complete', { pulledCount, deletedCount, conflictCount });
 
-  return {
-    tasks: response.tasks,
-    deletedTaskIds: response.deletedTaskIds,
-    serverVectorClock: response.serverVectorClock,
-    conflicts,
-  };
+  return { pulledCount, deletedCount, conflictCount };
 }

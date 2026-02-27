@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { enqueueSyncOperation, getSyncContext } from "./helpers";
 import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TASK_CRUD");
@@ -34,8 +34,7 @@ export async function snoozeTask(
       throw new Error(`Task ${id} not found`);
     }
 
-    const { syncConfig, deviceId } = await getSyncContext();
-    const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
+    const { syncConfig } = await getSyncContext();
 
     // Calculate snooze end time (or clear if minutes is 0)
     const snoozedUntil = minutes > 0
@@ -46,7 +45,6 @@ export async function snoozeTask(
       ...existing,
       snoozedUntil,
       updatedAt: isoNow(),
-      vectorClock: newClock,
     };
 
     await db.tasks.put(nextRecord);
@@ -61,7 +59,6 @@ export async function snoozeTask(
       "update",
       id,
       nextRecord,
-      nextRecord.vectorClock || {},
       syncConfig?.enabled ?? false
     );
 

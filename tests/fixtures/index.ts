@@ -13,15 +13,11 @@ import type {
 } from '@/lib/types';
 import type {
   SyncConfig,
-  VectorClock,
   SyncQueueItem,
-  EncryptedTaskBlob,
+  EncryptedTaskRow,
   ConflictInfo,
   SyncResult,
-  PushResponse,
-  PullResponse,
 } from '@/lib/sync/types';
-import type { HealthReport, HealthIssue } from '@/lib/sync/health-monitor';
 
 // ============================================================================
 // Task Fixtures
@@ -110,26 +106,12 @@ export function createMockSyncConfig(overrides?: Partial<SyncConfig>): SyncConfi
     deviceId: 'device-456',
     deviceName: 'Test Device',
     email: 'test@example.com',
-    token: 'test-token-abc123',
-    tokenExpiresAt: Date.now() + 60 * 60 * 1000, // 1 hour from now
     lastSyncAt: null,
-    vectorClock: {},
     conflictStrategy: 'last_write_wins',
-    serverUrl: 'http://localhost:8787',
     consecutiveFailures: 0,
     lastFailureAt: null,
     lastFailureReason: null,
     nextRetryAt: null,
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock vector clock
- */
-export function createMockVectorClock(overrides?: VectorClock): VectorClock {
-  return {
-    'device-456': 1,
     ...overrides,
   };
 }
@@ -145,24 +127,26 @@ export function createMockSyncQueueItem(overrides?: Partial<SyncQueueItem>): Syn
     timestamp: Date.now(),
     retryCount: 0,
     payload: createMockTask(),
-    vectorClock: createMockVectorClock(),
     ...overrides,
   };
 }
 
 /**
- * Create a mock encrypted task blob
+ * Create a mock encrypted task row (Supabase shape)
  */
-export function createMockEncryptedTaskBlob(
-  overrides?: Partial<EncryptedTaskBlob>
-): EncryptedTaskBlob {
+export function createMockEncryptedTaskRow(
+  overrides?: Partial<EncryptedTaskRow>
+): EncryptedTaskRow {
   return {
     id: 'test-task-1',
-    encryptedBlob: 'encrypted-data-base64',
+    user_id: 'user-123',
+    encrypted_blob: 'encrypted-data-base64',
     nonce: 'nonce-base64',
     version: 1,
-    vectorClock: createMockVectorClock(),
-    updatedAt: Date.now(),
+    deleted_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    last_modified_device: 'device-456',
     checksum: 'checksum-abc123',
     ...overrides,
   };
@@ -174,13 +158,13 @@ export function createMockEncryptedTaskBlob(
 export function createMockConflictInfo(overrides?: Partial<ConflictInfo>): ConflictInfo {
   const localTask = createMockTask({ id: 'conflict-task-1', title: 'Local Version' });
   const remoteTask = createMockTask({ id: 'conflict-task-1', title: 'Remote Version' });
-  
+
   return {
     taskId: 'conflict-task-1',
     local: localTask,
     remote: remoteTask,
-    localClock: createMockVectorClock({ 'device-456': 2 }),
-    remoteClock: createMockVectorClock({ 'device-789': 2 }),
+    localUpdatedAt: new Date().toISOString(),
+    remoteUpdatedAt: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -195,62 +179,6 @@ export function createMockSyncResult(overrides?: Partial<SyncResult>): SyncResul
     pulledCount: 0,
     conflictsResolved: 0,
     conflicts: [],
-    timestamp: Date.now(),
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock push response
- */
-export function createMockPushResponse(overrides?: Partial<PushResponse>): PushResponse {
-  return {
-    accepted: [],
-    rejected: [],
-    conflicts: [],
-    serverVectorClock: createMockVectorClock(),
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock pull response
- */
-export function createMockPullResponse(overrides?: Partial<PullResponse>): PullResponse {
-  return {
-    tasks: [],
-    deletedTaskIds: [],
-    serverVectorClock: createMockVectorClock(),
-    conflicts: [],
-    hasMore: false,
-    ...overrides,
-  };
-}
-
-// ============================================================================
-// Health Monitor Fixtures
-// ============================================================================
-
-/**
- * Create a mock health issue
- */
-export function createMockHealthIssue(overrides?: Partial<HealthIssue>): HealthIssue {
-  return {
-    type: 'stale_queue',
-    severity: 'warning',
-    message: 'Test health issue',
-    suggestedAction: 'Test action',
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock health report
- */
-export function createMockHealthReport(overrides?: Partial<HealthReport>): HealthReport {
-  return {
-    healthy: true,
-    issues: [],
     timestamp: Date.now(),
     ...overrides,
   };
@@ -355,7 +283,7 @@ export function createMockErrorResponse(
  */
 export function createMockDexieTable<T>() {
   const data: T[] = [];
-  
+
   return {
     toArray: vi.fn(async () => [...data]),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -481,7 +409,7 @@ export function mockConsole() {
 export function mockDateNow(timestamp: number) {
   const original = Date.now;
   Date.now = vi.fn(() => timestamp);
-  
+
   return {
     restore: () => {
       Date.now = original;

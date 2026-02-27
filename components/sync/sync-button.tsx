@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSync } from '@/lib/hooks/use-sync';
 import { useToast } from '@/components/ui/toast';
 import { useState } from 'react';
-import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
+import { SupabaseAuthDialog } from '@/components/sync/supabase-auth-dialog';
 import { getCryptoManager } from '@/lib/sync/crypto';
 import { SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 import { useSyncHealth } from '@/components/sync/use-sync-health';
@@ -184,7 +184,7 @@ export function SyncButton() {
         </Tooltip>
       </TooltipProvider>
 
-      <SyncAuthDialog
+      <SupabaseAuthDialog
         isOpen={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
         onSuccess={handleAuthSuccess}

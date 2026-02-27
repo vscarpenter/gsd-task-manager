@@ -26,13 +26,6 @@ vi.mock('@/lib/sync/config', () => ({
   })),
 }));
 
-vi.mock('@/lib/sync/vector-clock', () => ({
-  incrementVectorClock: vi.fn((clock) => ({
-    ...clock,
-    'test-device': (clock['test-device'] || 0) + 1,
-  })),
-}));
-
 describe('Task Dependency CRUD Operations', () => {
   beforeEach(async () => {
     const db = getDb();
@@ -92,16 +85,6 @@ describe('Task Dependency CRUD Operations', () => {
       await expect(addDependency('non-existent', 'some-id')).rejects.toThrow(
         'Task non-existent not found'
       );
-    });
-
-    it('should update vector clock when adding dependency', async () => {
-      const taskA = await createTask(createMockTaskDraft({ title: 'Task A' }));
-      const taskB = await createTask(createMockTaskDraft({ title: 'Task B' }));
-
-      const updated = await addDependency(taskA.id, taskB.id);
-
-      expect(updated.vectorClock).toBeDefined();
-      expect(updated.vectorClock?.['test-device']).toBeGreaterThan(0);
     });
 
     it('should preserve existing task properties when adding dependency', async () => {
@@ -171,17 +154,6 @@ describe('Task Dependency CRUD Operations', () => {
       await expect(removeDependency('non-existent', 'some-id')).rejects.toThrow(
         'Task non-existent not found'
       );
-    });
-
-    it('should update vector clock when removing dependency', async () => {
-      const taskA = await createTask(createMockTaskDraft({ title: 'Task A' }));
-      const taskB = await createTask(createMockTaskDraft({ title: 'Task B' }));
-
-      await addDependency(taskA.id, taskB.id);
-      const updated = await removeDependency(taskA.id, taskB.id);
-
-      expect(updated.vectorClock).toBeDefined();
-      expect(updated.vectorClock?.['test-device']).toBeGreaterThan(0);
     });
 
     it('should update updatedAt timestamp when removing dependency', async () => {

@@ -1,31 +1,27 @@
 /**
  * Metadata manager - handles sync configuration and metadata updates
- * Manages IndexedDB sync_config record and task queueing
+ * Manages IndexedDB sync_config record and task queueing.
+ * Vector clocks have been removed — timestamps drive conflict resolution.
  */
 
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '../queue';
-import { mergeVectorClocks } from '../vector-clock';
 import { createLogger } from '@/lib/logger';
-import type { SyncConfig, VectorClock } from '../types';
+import type { SyncConfig } from '../types';
 
 const logger = createLogger('SYNC_METADATA');
 
 /**
- * Update sync metadata after successful sync
+ * Update sync metadata after a successful sync cycle.
+ * Uses the sync START time as lastSyncAt to avoid a race condition:
+ * tasks modified after sync starts will be caught in the next cycle.
  */
 export async function updateSyncMetadata(
   config: SyncConfig,
-  serverClock: VectorClock,
   syncStartTime: number
 ): Promise<void> {
   const db = getDb();
 
-  const mergedClock = mergeVectorClocks(config.vectorClock, serverClock);
-
-  // Use sync START time to prevent race condition
-  // Tasks modified after sync starts will be caught in the next sync
-  // Server uses >= comparison, so no adjustment needed
   logger.debug('Updating sync metadata', {
     previousLastSyncAt: config.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
     newLastSyncAt: new Date(syncStartTime).toISOString(),
@@ -35,7 +31,6 @@ export async function updateSyncMetadata(
   await db.syncMetadata.put({
     ...config,
     lastSyncAt: syncStartTime,
-    vectorClock: mergedClock,
     key: 'sync_config',
   });
 }
@@ -50,7 +45,7 @@ export async function getSyncConfig(): Promise<SyncConfig | null> {
 }
 
 /**
- * Update sync configuration
+ * Update sync configuration with partial changes
  */
 export async function updateConfig(updates: Partial<SyncConfig>): Promise<void> {
   const db = getDb();
@@ -76,7 +71,7 @@ export async function isEnabled(): Promise<boolean> {
 }
 
 /**
- * Get current sync status
+ * Get current sync status (combines config, queue state, and running flag)
  */
 export async function getStatus(isRunning: boolean) {
   const config = await getSyncConfig();
@@ -92,8 +87,10 @@ export async function getStatus(isRunning: boolean) {
 }
 
 /**
- * Queue all existing tasks for initial sync
- * Called when sync is first enabled or re-enabled
+ * Queue all existing tasks for initial sync.
+ * Called when sync is first enabled or re-enabled.
+ * Skips tasks that are already queued to avoid duplicates.
+ *
  * @returns Number of tasks queued
  */
 export async function queueExistingTasks(): Promise<number> {
@@ -108,11 +105,9 @@ export async function queueExistingTasks(): Promise<number> {
 
   logger.info('Queueing existing tasks for initial sync');
 
-  // Get all tasks from IndexedDB
   const allTasks = await db.tasks.toArray();
   logger.debug('Found tasks in IndexedDB', { taskCount: allTasks.length });
 
-  // Get all pending operations to check for duplicates
   const pendingOps = await queue.getPending();
   const queuedTaskIds = new Set(pendingOps.map(op => op.taskId));
 
@@ -120,28 +115,17 @@ export async function queueExistingTasks(): Promise<number> {
   let skippedCount = 0;
 
   for (const task of allTasks) {
-    // Skip if already in queue
     if (queuedTaskIds.has(task.id)) {
-      logger.debug('Skipping task - already in queue', { taskId: task.id });
+      logger.debug('Skipping task — already in queue', { taskId: task.id });
       skippedCount++;
       continue;
     }
 
-    // Queue as 'create' operation with current vector clock
-    await queue.enqueue(
-      'create',
-      task.id,
-      task,
-      task.vectorClock || {}
-    );
-
+    await queue.enqueue('create', task.id, task);
     queuedCount++;
   }
 
-  logger.info('Initial task queueing complete', {
-    queuedCount,
-    skippedCount,
-  });
+  logger.info('Initial task queueing complete', { queuedCount, skippedCount });
 
   return queuedCount;
 }

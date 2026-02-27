@@ -111,11 +111,11 @@ export class CryptoManager {
       const plaintextBuffer = await webcrypto.subtle.decrypt(
         {
           name: ALGORITHM,
-          iv: nonceBuffer,
+          iv: nonceBuffer as Uint8Array<ArrayBuffer>,
           tagLength: TAG_LENGTH,
         },
         this.encryptionKey,
-        ciphertextBuffer
+        ciphertextBuffer as Uint8Array<ArrayBuffer>
       );
 
       const decoder = new TextDecoder();

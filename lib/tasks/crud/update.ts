@@ -4,7 +4,7 @@ import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -27,10 +27,9 @@ export async function updateTask(
     const nextDraft = mergeTaskUpdates(existing, updates);
     const validated = taskDraftSchema.parse(nextDraft);
 
-    const { syncConfig, deviceId } = await getSyncContext();
-    const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
+    const { syncConfig } = await getSyncContext();
 
-    const nextRecord = buildUpdatedRecord(existing, validated, updates, newClock);
+    const nextRecord = buildUpdatedRecord(existing, validated, updates);
 
     await db.tasks.put(nextRecord);
 
@@ -40,7 +39,6 @@ export async function updateTask(
       "update",
       id,
       nextRecord,
-      nextRecord.vectorClock || {},
       syncConfig?.enabled ?? false
     );
 
@@ -93,7 +91,6 @@ function buildUpdatedRecord(
   existing: TaskRecord,
   validated: TaskDraft,
   updates: Partial<TaskDraft>,
-  newClock: Record<string, number>
 ): TaskRecord {
   // Check if due date or notification settings changed
   const dueDateChanged =
@@ -115,7 +112,6 @@ function buildUpdatedRecord(
     ...validated,
     quadrant: resolveQuadrantId(validated.urgent, validated.important),
     updatedAt: isoNow(),
-    vectorClock: newClock,
     ...notificationReset,
   };
 }

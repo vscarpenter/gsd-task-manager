@@ -8,7 +8,6 @@ import {
   createMockTask,
   createMockTasks,
   createMockSyncConfig,
-  createMockHealthReport,
   createMockFetchResponse,
   mockDateNow,
   mockConsole,
@@ -77,21 +76,6 @@ describe('Example: Using Sync Fixtures', () => {
     expect(config.enabled).toBe(true);
   });
 
-  it('should create health report', () => {
-    const report = createMockHealthReport({
-      healthy: false,
-      issues: [{
-        type: 'token_expired',
-        severity: 'error',
-        message: 'Token has expired',
-        suggestedAction: 'Sign in again',
-      }],
-    });
-    
-    expect(report.healthy).toBe(false);
-    expect(report.issues).toHaveLength(1);
-    expect(report.issues[0].type).toBe('token_expired');
-  });
 });
 
 describe('Example: Mocking Time', () => {
@@ -211,20 +195,20 @@ describe('Example: Complex Test Scenario', () => {
   it('should handle a complete sync scenario', async () => {
     // Create test data
     const tasks = createMockTasks(3, { completed: false });
-    const config = createMockSyncConfig();
-    
+    createMockSyncConfig();
+
     // Mock API response
     const mockResponse = createMockFetchResponse({
       success: true,
       synced: tasks.length,
     });
     vi.mocked(global.fetch).mockResolvedValue(mockResponse);
-    
+
     // Simulate sync operation
     console.log('Starting sync...');
-    const response = await fetch(`${config.serverUrl}/sync`);
+    const response = await fetch('/api/sync');
     const result = await response.json();
-    
+
     // Verify
     expect(result.success).toBe(true);
     expect(result.synced).toBe(3);

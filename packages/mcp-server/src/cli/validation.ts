@@ -1,10 +1,11 @@
 /**
  * Configuration validation utilities
- * Tests environment variables, API connectivity, auth, encryption, and device access
+ * Tests environment variables, Supabase connectivity, user resolution, encryption, and device access
  */
 
 import type { GsdConfig, SyncStatus } from '../tools.js';
 import { getSyncStatus, listDevices, listTasks } from '../tools.js';
+import { resolveUserId } from '../api/client.js';
 
 /**
  * Validation check result
@@ -19,52 +20,27 @@ export interface ValidationCheck {
  * Check required environment variables
  */
 function validateEnvironmentVariables(): {
-  apiUrl: string;
-  authToken: string;
+  supabaseUrl: string;
+  serviceKey: string;
+  userEmail: string;
   encryptionPassphrase?: string;
 } {
-  const apiUrl = process.env.GSD_API_URL;
-  const authToken = process.env.GSD_AUTH_TOKEN;
+  const supabaseUrl = process.env.GSD_SUPABASE_URL;
+  const serviceKey = process.env.GSD_SUPABASE_SERVICE_KEY;
+  const userEmail = process.env.GSD_USER_EMAIL;
   const encryptionPassphrase = process.env.GSD_ENCRYPTION_PASSPHRASE;
 
-  if (!apiUrl || !authToken) {
+  if (!supabaseUrl || !serviceKey || !userEmail) {
     console.log('✗ Configuration Error\n');
     console.log('Missing required environment variables:');
-    if (!apiUrl) console.log('  - GSD_API_URL');
-    if (!authToken) console.log('  - GSD_AUTH_TOKEN');
+    if (!supabaseUrl) console.log('  - GSD_SUPABASE_URL');
+    if (!serviceKey) console.log('  - GSD_SUPABASE_SERVICE_KEY');
+    if (!userEmail) console.log('  - GSD_USER_EMAIL');
     console.log('\nRun setup wizard: npx gsd-mcp-server --setup');
     process.exit(1);
   }
 
-  return { apiUrl, authToken, encryptionPassphrase };
-}
-
-/**
- * Test API connectivity
- */
-async function validateApiConnection(apiUrl: string): Promise<ValidationCheck> {
-  try {
-    const response = await fetch(`${apiUrl}/health`);
-    if (response.ok) {
-      return {
-        name: 'API Connectivity',
-        status: '✓',
-        details: `Connected to ${apiUrl}`,
-      };
-    } else {
-      return {
-        name: 'API Connectivity',
-        status: '⚠',
-        details: `Connected but got status ${response.status}`,
-      };
-    }
-  } catch {
-    return {
-      name: 'API Connectivity',
-      status: '✗',
-      details: `Failed to connect to ${apiUrl}`,
-    };
-  }
+  return { supabaseUrl, serviceKey, userEmail, encryptionPassphrase };
 }
 
 /**
@@ -82,24 +58,41 @@ function createSyncStatusCheck(status: SyncStatus): ValidationCheck {
 }
 
 /**
- * Validate authentication token and check sync status
+ * Validate Supabase connectivity and user resolution
  */
-async function validateAuthentication(config: GsdConfig): Promise<ValidationCheck[]> {
+async function validateSupabaseConnection(config: GsdConfig): Promise<ValidationCheck[]> {
   const checks: ValidationCheck[] = [];
 
+  // Test connectivity via sync status query
   try {
     const status = await getSyncStatus(config);
     checks.push({
-      name: 'Authentication',
+      name: 'Supabase Connectivity',
       status: '✓',
-      details: `Token valid (${status.deviceCount} devices registered)`,
+      details: `Connected to ${config.supabaseUrl} (${status.deviceCount} devices)`,
     });
     checks.push(createSyncStatusCheck(status));
   } catch (error) {
     checks.push({
-      name: 'Authentication',
+      name: 'Supabase Connectivity',
       status: '✗',
-      details: error instanceof Error ? error.message : 'Token validation failed',
+      details: error instanceof Error ? error.message : 'Connection failed',
+    });
+  }
+
+  // Test user resolution
+  try {
+    const userId = await resolveUserId(config);
+    checks.push({
+      name: 'User Resolution',
+      status: '✓',
+      details: `User found: ${config.userEmail} (${userId.slice(0, 8)}...)`,
+    });
+  } catch (error) {
+    checks.push({
+      name: 'User Resolution',
+      status: '✗',
+      details: error instanceof Error ? error.message : 'User lookup failed',
     });
   }
 
@@ -201,29 +194,25 @@ export async function runValidation(): Promise<void> {
   const checks: ValidationCheck[] = [];
 
   // Step 1: Environment variables
-  const { apiUrl, authToken, encryptionPassphrase } = validateEnvironmentVariables();
+  const { supabaseUrl, serviceKey, userEmail, encryptionPassphrase } = validateEnvironmentVariables();
 
   checks.push({
     name: 'Environment Variables',
     status: '✓',
-    details: `GSD_API_URL and GSD_AUTH_TOKEN are set${encryptionPassphrase ? ' (with passphrase)' : ''}`,
+    details: `GSD_SUPABASE_URL, GSD_SUPABASE_SERVICE_KEY, and GSD_USER_EMAIL are set${encryptionPassphrase ? ' (with passphrase)' : ''}`,
   });
 
-  const config: GsdConfig = { apiBaseUrl: apiUrl, authToken, encryptionPassphrase };
+  const config: GsdConfig = { supabaseUrl, serviceKey, userEmail, encryptionPassphrase };
 
-  // Step 2: API connectivity
-  const connectivityCheck = await validateApiConnection(apiUrl);
-  checks.push(connectivityCheck);
+  // Step 2: Supabase connectivity & user resolution
+  const connectionChecks = await validateSupabaseConnection(config);
+  checks.push(...connectionChecks);
 
-  // Step 3: Authentication & sync status
-  const authChecks = await validateAuthentication(config);
-  checks.push(...authChecks);
-
-  // Step 4: Encryption
+  // Step 3: Encryption
   const encryptionCheck = await validateEncryption(config, !!encryptionPassphrase);
   checks.push(encryptionCheck);
 
-  // Step 5: Device access
+  // Step 4: Device access
   const deviceCheck = await validateDeviceAccess(config);
   checks.push(deviceCheck);
 

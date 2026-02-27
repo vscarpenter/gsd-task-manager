@@ -2,7 +2,6 @@ import Dexie, { Table } from "dexie";
 import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryRecord, AppPreferences } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, SyncConfig, DeviceInfo, EncryptionConfig } from "@/lib/sync/types";
-import { ENV_CONFIG } from "@/lib/env-config";
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
@@ -106,6 +105,8 @@ class GsdDatabase extends Dexie {
         // Initialize sync metadata with defaults
         const deviceId = crypto.randomUUID();
 
+        // Note: v7 created old-format config with token/vectorClock/serverUrl fields.
+        // The v13 migration cleans this up for the Supabase backend.
         trans.table("syncMetadata").add({
           key: "sync_config",
           enabled: false,
@@ -118,7 +119,7 @@ class GsdDatabase extends Dexie {
           lastSyncAt: null,
           vectorClock: {},
           conflictStrategy: "last_write_wins",
-          serverUrl: ENV_CONFIG.apiBaseUrl
+          serverUrl: ""
         });
 
         // Add deviceInfo
@@ -129,11 +130,10 @@ class GsdDatabase extends Dexie {
           createdAt: new Date().toISOString()
         });
 
-        // Migrate existing tasks to have empty vectorClock
-        return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
-          if (!task.vectorClock) {
-            task.vectorClock = {};
-          }
+        // Legacy migration: vectorClock was removed in the Supabase migration.
+        // This no-op upgrade keeps the Dexie version chain intact for existing databases.
+        return trans.table("tasks").toCollection().modify(() => {
+          // No-op: vectorClock field is no longer used
         });
       });
 
@@ -259,6 +259,50 @@ class GsdDatabase extends Dexie {
             task.timeSpent = 0;
           }
         });
+      });
+
+    // Version 13: Migrate sync config for Supabase backend
+    // Removes vector clock, token, and serverUrl fields; resets sync state for clean re-sync
+    this.version(13)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId",
+        appPreferences: "id"
+      })
+      .upgrade(async (trans) => {
+        // Migrate sync config: remove Cloudflare-specific fields
+        const syncMeta = trans.table("syncMetadata");
+        const existing = await syncMeta.get("sync_config");
+        if (existing) {
+          const config = existing as SyncConfig;
+          await syncMeta.put({
+            key: "sync_config",
+            enabled: false, // Disable sync — user must re-authenticate with Supabase
+            userId: null,
+            deviceId: config.deviceId,
+            deviceName: config.deviceName,
+            email: null,
+            lastSyncAt: null,
+            conflictStrategy: "last_write_wins",
+            provider: null,
+            consecutiveFailures: 0,
+            lastFailureAt: null,
+            lastFailureReason: null,
+            nextRetryAt: null,
+            autoSyncEnabled: true,
+            autoSyncIntervalMinutes: 2,
+          } satisfies SyncConfig);
+        }
+
+        // Clear the sync queue for a fresh start
+        await trans.table("syncQueue").clear();
       });
   }
 

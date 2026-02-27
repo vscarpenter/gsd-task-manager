@@ -59,29 +59,16 @@ export function getOrCreateSalt(serverEncryptionSalt?: string | null): Uint8Arra
   return generateEncryptionSalt();
 }
 
-/** Build API URL for encryption salt endpoint */
-export function buildSaltApiUrl(): string {
-  return window.location.hostname === 'localhost'
-    ? 'http://localhost:8787/api/auth/encryption-salt'
-    : `${window.location.origin}/api/auth/encryption-salt`;
-}
-
-/** Upload salt to server for new users */
+/** Upload salt to Supabase profile for multi-device support */
 export async function uploadSaltToServer(salt: Uint8Array): Promise<void> {
   const { getDb } = await import('@/lib/db');
   const db = getDb();
   const config = await db.syncMetadata.get('sync_config');
 
-  if (config && config.key === 'sync_config' && config.token) {
+  if (config && config.key === 'sync_config' && config.userId) {
+    const { setEncryptionSalt } = await import('@/lib/sync/supabase-sync-client');
     const saltString = Array.from(salt).join(',');
-    await fetch(buildSaltApiUrl(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.token}`,
-      },
-      body: JSON.stringify({ encryptionSalt: saltString }),
-    });
+    await setEncryptionSalt(config.userId, saltString);
   }
 }
 
@@ -113,9 +100,9 @@ export async function queueAndTriggerSync(
     // Trigger automatic sync after dialog close animation
     syncTimeoutRef.current = setTimeout(async () => {
       try {
-        const { getSyncCoordinator } = await import('@/lib/sync/sync-coordinator');
-        const coordinator = getSyncCoordinator();
-        await coordinator.requestSync('auto');
+        const { getSyncEngine } = await import('@/lib/sync/engine');
+        const engine = getSyncEngine();
+        await engine.sync('auto');
       } catch (err) {
         logger.error('Auto-sync after encryption setup failed', err instanceof Error ? err : undefined);
       }

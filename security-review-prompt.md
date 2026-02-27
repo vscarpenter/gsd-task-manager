@@ -1,6 +1,6 @@
 # Next.js 16 TypeScript Web Application Security & Standards Review
 
-You are conducting a comprehensive security audit and standards compliance review of this Next.js 16 TypeScript web application deployed on Cloudflare Workers, using React 19 and Dexie (IndexedDB).
+You are conducting a comprehensive security audit and standards compliance review of this Next.js 16 TypeScript web application with Supabase backend, using React 19 and Dexie (IndexedDB).
 
 ## Setup Instructions
 
@@ -8,10 +8,10 @@ You are conducting a comprehensive security audit and standards compliance revie
 2. Use the `view` tool to examine the project structure, focusing on:
    - `/app` directory (App Router structure)
    - `/pages/api` or `/app/api` (API routes)
-   - Cloudflare Workers files (`wrangler.toml`, worker scripts)
+   - Supabase configuration (`lib/supabase.ts`, `lib/sync/supabase-sync-client.ts`)
    - Database schema and Dexie configuration
    - Middleware files
-3. Review `package.json`, `package-lock.json`, and `wrangler.toml` for dependencies and configuration
+3. Review `package.json` and `bun.lock` for dependencies and configuration
 
 ## Part 1: Security Vulnerability Analysis
 
@@ -44,21 +44,19 @@ You are conducting a comprehensive security audit and standards compliance revie
 - XSS prevention in JSX (avoid dangerouslySetInnerHTML)
 - Form action security with proper validation
 
-### Cloudflare Workers Specific Security
+### Supabase Backend Security
 
-**Edge Runtime Constraints**
-- Proper handling of limited Node.js API availability
-- Secure use of Cloudflare bindings (KV, R2, D1, Durable Objects)
-- Environment variable security in `wrangler.toml` and deployment
-- Secrets management (use `wrangler secret` not hardcoded values)
-- Request size limits and validation
+**Row Level Security (RLS)**
+- All tables must have RLS policies enabled
+- Verify `auth.uid() = user_id` policies on all data tables
+- Service role key usage restricted to MCP server (never in client)
+- Anon key only used in client-side code
 
-**Worker Configuration**
-- `wrangler.toml` security settings review
-- Route patterns that might expose unintended endpoints
-- CORS configuration in Workers
-- CSP headers implementation in middleware
-- WAF and rate limiting through Cloudflare dashboard integration
+**Supabase Auth Configuration**
+- OAuth provider settings (Google/Apple) properly configured
+- Redirect URLs restricted to known domains
+- Session management and token refresh handled by SDK
+- No manual JWT handling in application code
 
 ### Dexie/IndexedDB Security
 
@@ -105,7 +103,7 @@ You are conducting a comprehensive security audit and standards compliance revie
   - Console.log statements
   - Error messages and stack traces
   - Network requests (DevTools inspection)
-- Environment variables properly segregated (`.env.local`, Cloudflare secrets)
+- Environment variables properly segregated (`.env.local`, Supabase dashboard secrets)
 - API keys and tokens never in client code
 - PII handling compliance
 - Data retention and cleanup policies
@@ -129,7 +127,7 @@ You are conducting a comprehensive security audit and standards compliance revie
 - Next.js version (using latest 16.x patches)
 - React 19 version (stable vs RC/beta)
 - Dexie version and known vulnerabilities
-- Cloudflare Workers runtime compatibility
+- Supabase SDK version and known vulnerabilities
 - Unnecessary packages that expand attack surface
 
 ### TypeScript Configuration Security
@@ -166,12 +164,12 @@ Review against `coding-standards.md` requirements:
 - Transaction usage
 - Error handling in database operations
 
-### Cloudflare Workers Patterns
-- Request/Response handling patterns
-- Binding usage (KV, R2, etc.)
-- Error handling and logging
-- Performance optimization
-- Cold start considerations
+### Supabase Patterns
+- RLS policy consistency across tables
+- Supabase client usage (anon key vs service role key)
+- Error handling for Supabase SDK calls
+- Realtime subscription security
+- Encryption/decryption patterns
 
 ### General Standards
 - File and folder naming conventions
@@ -186,7 +184,7 @@ Review against `coding-standards.md` requirements:
 ### Priority Order
 
 1. **Server Actions and API Routes** - Highest risk for data exposure
-2. **Cloudflare Worker configurations** - Infrastructure security
+2. **Supabase configuration and RLS policies** - Infrastructure security
 3. **Authentication/Authorization middleware** - Access control
 4. **Client-Server data boundaries** - Data leakage prevention
 5. **IndexedDB/Dexie usage** - Client-side data security
@@ -199,7 +197,7 @@ Review against `coding-standards.md` requirements:
 - `middleware.ts` or `middleware.js`
 - `app/api/**/*.ts` - API routes
 - Server Actions files (functions with `'use server'`)
-- `wrangler.toml` and Worker entry points
+- Supabase client configuration and RLS policies
 - `next.config.js`
 - Dexie database schema files
 - Authentication utilities
@@ -246,12 +244,12 @@ Section 3.2 of coding-standards.md (if applicable)
 - [ ] Image optimization properly configured
 - [ ] Metadata doesn't leak sensitive info
 
-### Cloudflare Workers Checklist
-- [ ] All secrets use `wrangler secret` not environment vars
-- [ ] CORS properly configured for your domains
-- [ ] Rate limiting implemented on sensitive endpoints
-- [ ] Worker bindings properly typed and secured
-- [ ] Request size validation implemented
+### Supabase Checklist
+- [ ] RLS policies enabled and tested on all tables
+- [ ] Service role key never exposed in client-side code
+- [ ] Anon key used only for client-side operations
+- [ ] Realtime subscriptions filter by user_id
+- [ ] OAuth redirect URLs restricted to known domains
 
 ### Dexie/IndexedDB Checklist
 - [ ] No sensitive data stored unencrypted
@@ -287,7 +285,7 @@ After review completion:
 - Generate `SECURITY_REVIEW.md` with all findings
 - Create separate `REMEDIATION_PLAN.md` with prioritized fix schedule
 - Suggest specific ESLint rules for Next.js/React/TypeScript security
-- Recommend Cloudflare security features to enable (WAF rules, rate limiting)
+- Recommend Supabase security features to enable (RLS policies, auth settings)
 
 ---
 

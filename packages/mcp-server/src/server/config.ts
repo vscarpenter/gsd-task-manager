@@ -1,17 +1,18 @@
 import { z } from 'zod';
-import type { GsdConfig } from '../tools.js';
+import type { GsdConfig } from '../types.js';
 import { createMcpLogger } from '../utils/logger.js';
 
 const logger = createMcpLogger('CONFIG');
 
 /**
- * Configuration schema for GSD MCP Server
+ * Configuration schema for GSD MCP Server (Supabase backend)
  * Validates environment variables and ensures required fields are present
  */
 export const configSchema = z.object({
-  apiBaseUrl: z.string().url(),
-  authToken: z.string().min(1),
-  encryptionPassphrase: z.string().optional(), // Optional: for decrypting tasks
+  supabaseUrl: z.string().url(),
+  serviceKey: z.string().min(1),
+  userEmail: z.string().email(),
+  encryptionPassphrase: z.string().optional(),
 });
 
 export type ConfigSchema = z.infer<typeof configSchema>;
@@ -23,13 +24,14 @@ export type ConfigSchema = z.infer<typeof configSchema>;
 export function loadConfig(): GsdConfig {
   try {
     return configSchema.parse({
-      apiBaseUrl: process.env.GSD_API_URL,
-      authToken: process.env.GSD_AUTH_TOKEN,
+      supabaseUrl: process.env.GSD_SUPABASE_URL,
+      serviceKey: process.env.GSD_SUPABASE_SERVICE_KEY,
+      userEmail: process.env.GSD_USER_EMAIL,
       encryptionPassphrase: process.env.GSD_ENCRYPTION_PASSPHRASE,
     });
   } catch (error) {
     logger.error('Configuration error', error instanceof Error ? error : new Error(String(error)));
-    logger.info('Required environment variables: GSD_API_URL, GSD_AUTH_TOKEN | Optional: GSD_ENCRYPTION_PASSPHRASE');
+    logger.info('Required environment variables: GSD_SUPABASE_URL, GSD_SUPABASE_SERVICE_KEY, GSD_USER_EMAIL | Optional: GSD_ENCRYPTION_PASSPHRASE');
     logger.info('Run setup wizard with: npx gsd-mcp-server --setup');
     throw error;
   }
@@ -37,14 +39,12 @@ export function loadConfig(): GsdConfig {
 
 /**
  * Check if configuration is valid without throwing
- * @returns {boolean} True if config is valid, false otherwise
  */
 export function isConfigValid(): boolean {
   try {
     loadConfig();
     return true;
   } catch {
-    // loadConfig throws on invalid config - return false without propagating
     return false;
   }
 }
@@ -53,14 +53,16 @@ export function isConfigValid(): boolean {
  * Get configuration status for diagnostics
  */
 export function getConfigStatus(): {
-  hasApiUrl: boolean;
-  hasAuthToken: boolean;
+  hasSupabaseUrl: boolean;
+  hasServiceKey: boolean;
+  hasUserEmail: boolean;
   hasEncryptionPassphrase: boolean;
   isValid: boolean;
 } {
   return {
-    hasApiUrl: !!process.env.GSD_API_URL,
-    hasAuthToken: !!process.env.GSD_AUTH_TOKEN,
+    hasSupabaseUrl: !!process.env.GSD_SUPABASE_URL,
+    hasServiceKey: !!process.env.GSD_SUPABASE_SERVICE_KEY,
+    hasUserEmail: !!process.env.GSD_USER_EMAIL,
     hasEncryptionPassphrase: !!process.env.GSD_ENCRYPTION_PASSPHRASE,
     isValid: isConfigValid(),
   };

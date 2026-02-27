@@ -3,17 +3,12 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSync } from '@/lib/hooks/use-sync';
 import { getSyncEngine } from '@/lib/sync/engine';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
-import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
-// Type import used for documentation
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { SyncResult } from '@/lib/sync/types';
 
 // Mock the sync modules
 vi.mock('@/lib/sync/engine');
 vi.mock('@/lib/sync/sync-coordinator');
-vi.mock('@/lib/sync/health-monitor');
 vi.mock('@/lib/sync/background-sync', () => ({
   getBackgroundSyncManager: vi.fn(),
 }));
@@ -26,8 +21,6 @@ describe('useSync', () => {
   let mockEngine: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockCoordinator: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockHealthMonitor: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockBackgroundSyncManager: any;
 
@@ -59,19 +52,6 @@ describe('useSync', () => {
       }),
     };
     vi.mocked(getSyncCoordinator).mockReturnValue(mockCoordinator);
-
-    // Setup mock health monitor
-    mockHealthMonitor = {
-      isActive: vi.fn().mockReturnValue(false),
-      start: vi.fn(),
-      stop: vi.fn(),
-      check: vi.fn().mockResolvedValue({
-        healthy: true,
-        issues: [],
-        timestamp: Date.now(),
-      }),
-    };
-    vi.mocked(getHealthMonitor).mockReturnValue(mockHealthMonitor);
 
     mockBackgroundSyncManager = {
       isRunning: vi.fn().mockReturnValue(false),
@@ -115,24 +95,24 @@ describe('useSync', () => {
       expect(mockEngine.isEnabled).toHaveBeenCalled();
     });
 
-    it('should start health monitor when sync is enabled', async () => {
+    it('should start background sync manager when sync is enabled', async () => {
       mockEngine.isEnabled.mockResolvedValue(true);
 
       renderHook(() => useSync());
 
       await flushAsync();
 
-      expect(mockHealthMonitor.start).toHaveBeenCalled();
+      expect(mockBackgroundSyncManager.start).toHaveBeenCalled();
     });
 
-    it('should not start health monitor when sync is disabled', async () => {
+    it('should not start background sync when sync is disabled', async () => {
       mockEngine.isEnabled.mockResolvedValue(false);
 
       renderHook(() => useSync());
 
       await flushAsync();
 
-      expect(mockHealthMonitor.start).not.toHaveBeenCalled();
+      expect(mockBackgroundSyncManager.start).not.toHaveBeenCalled();
     });
   });
 
@@ -328,32 +308,10 @@ describe('useSync', () => {
     });
   });
 
-  describe('health monitoring', () => {
-    it('should start health monitor when sync is enabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(true);
-
-      renderHook(() => useSync());
-
-      await flushAsync();
-
-      expect(mockHealthMonitor.start).toHaveBeenCalled();
-    });
-
-    it('should not start health monitor when sync is disabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(false);
-
-      renderHook(() => useSync());
-
-      await flushAsync();
-
-      expect(mockHealthMonitor.start).not.toHaveBeenCalled();
-    });
-  });
-
   describe('cleanup', () => {
-    it('should stop health monitor on unmount', async () => {
+    it('should stop background sync on unmount', async () => {
       mockEngine.isEnabled.mockResolvedValue(true);
-      mockHealthMonitor.isActive.mockReturnValue(true);
+      mockBackgroundSyncManager.isRunning.mockReturnValue(true);
 
       const { unmount } = renderHook(() => useSync());
 
@@ -361,7 +319,7 @@ describe('useSync', () => {
 
       unmount();
 
-      expect(mockHealthMonitor.stop).toHaveBeenCalled();
+      expect(mockBackgroundSyncManager.stop).toHaveBeenCalled();
     });
 
     it('should clear intervals on unmount', () => {

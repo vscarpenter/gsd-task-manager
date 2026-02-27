@@ -107,8 +107,8 @@ describe('Task CRUD Operations', () => {
   describe('listTasks', () => {
     it('should return all tasks ordered by creation date (newest first)', async () => {
       const tasks: TaskRecord[] = [
-        { ...baseDraft, id: '1', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-15T10:00:00Z', updatedAt: '2025-01-15T10:00:00Z', vectorClock: {}, notificationSent: false },
-        { ...baseDraft, id: '2', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-14T10:00:00Z', updatedAt: '2025-01-14T10:00:00Z', vectorClock: {}, notificationSent: false },
+        { ...baseDraft, id: '1', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-15T10:00:00Z', updatedAt: '2025-01-15T10:00:00Z', notificationSent: false },
+        { ...baseDraft, id: '2', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-14T10:00:00Z', updatedAt: '2025-01-14T10:00:00Z', notificationSent: false },
       ];
 
       mockDb.tasks.toArray.mockResolvedValue(tasks);
@@ -162,15 +162,6 @@ describe('Task CRUD Operations', () => {
       expect(task4.quadrant).toBe('not-urgent-not-important');
     });
 
-    it('should initialize vector clock', async () => {
-      mockDb.tasks.add.mockResolvedValue(undefined);
-
-      const result = await createTask(baseDraft);
-
-      expect(result.vectorClock).toBeDefined();
-      expect(result.vectorClock).toHaveProperty('test-device');
-    });
-
     it('should throw error for invalid task data', async () => {
       const invalid = { ...baseDraft, title: '' };
 
@@ -187,8 +178,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -209,8 +199,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -235,8 +224,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: true,
+                notificationSent: true,
         lastNotificationAt: '2025-01-15T10:00:00Z',
         snoozedUntil: '2025-01-15T12:00:00Z',
       };
@@ -261,8 +249,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -283,8 +270,7 @@ describe('Task CRUD Operations', () => {
         completedAt: '2025-01-15T10:00:00Z',
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -306,8 +292,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -334,8 +319,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -370,8 +354,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(existing);
@@ -395,8 +378,7 @@ describe('Task CRUD Operations', () => {
         completed: false,
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
-        vectorClock: {},
-        notificationSent: false,
+                notificationSent: false,
       };
 
       mockDb.tasks.get.mockResolvedValue(original);

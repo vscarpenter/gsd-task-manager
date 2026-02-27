@@ -1,13 +1,8 @@
 /**
- * Sync-specific types
+ * Sync-specific types (Supabase backend)
  */
 
 import type { TaskRecord } from '@/lib/types';
-
-// Vector Clock for causality tracking
-export interface VectorClock {
-  [deviceId: string]: number;
-}
 
 // Sync configuration stored in IndexedDB
 export interface SyncConfig {
@@ -17,12 +12,8 @@ export interface SyncConfig {
   deviceId: string;
   deviceName: string;
   email: string | null;
-  token: string | null;
-  tokenExpiresAt: number | null;
   lastSyncAt: number | null;
-  vectorClock: VectorClock;
   conflictStrategy: 'last_write_wins' | 'manual';
-  serverUrl: string;
   provider?: string | null;
   // Retry tracking fields
   consecutiveFailures: number;
@@ -51,7 +42,6 @@ export interface SyncQueueItem {
   timestamp: number;
   retryCount: number;
   payload: TaskRecord | null;
-  vectorClock: VectorClock;
   consolidatedFrom?: string[]; // IDs of operations merged into this one
   lastAttemptAt?: number; // Timestamp of last sync attempt
 }
@@ -72,14 +62,17 @@ export interface EncryptionConfig {
   };
 }
 
-// Encrypted task blob for transmission
-export interface EncryptedTaskBlob {
+// Encrypted task row as stored in Supabase
+export interface EncryptedTaskRow {
   id: string;
-  encryptedBlob: string;
+  user_id: string;
+  encrypted_blob: string;
   nonce: string;
   version: number;
-  vectorClock: VectorClock;
-  updatedAt: number;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  last_modified_device: string | null;
   checksum: string;
 }
 
@@ -88,8 +81,8 @@ export interface ConflictInfo {
   taskId: string;
   local: TaskRecord;
   remote: TaskRecord;
-  localClock: VectorClock;
-  remoteClock: VectorClock;
+  localUpdatedAt: number;
+  remoteUpdatedAt: number;
 }
 
 // Sync result
@@ -103,59 +96,18 @@ export interface SyncResult {
   error?: string;
 }
 
-// API request/response types
-
-export interface PushRequest {
-  deviceId: string;
-  operations: SyncOperation[];
-  clientVectorClock: VectorClock;
-}
-
-export interface SyncOperation {
-  type: 'create' | 'update' | 'delete';
-  taskId: string;
-  encryptedBlob?: string;
-  nonce?: string;
-  vectorClock: VectorClock;
-  checksum?: string;
-}
-
-export interface PushResponse {
-  accepted: string[];
-  rejected: RejectedOperation[];
-  conflicts: ConflictInfo[];
-  serverVectorClock: VectorClock;
-}
-
-export interface RejectedOperation {
-  taskId: string;
-  reason: 'version_mismatch' | 'conflict' | 'validation_error' | 'quota_exceeded';
-  details: string;
-}
-
-export interface PullRequest {
-  deviceId: string;
-  lastVectorClock: VectorClock;
-  sinceTimestamp?: number;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface PullResponse {
-  tasks: EncryptedTaskBlob[];
-  deletedTaskIds: string[];
-  serverVectorClock: VectorClock;
-  conflicts: ConflictInfo[];
-  hasMore: boolean;
-  nextCursor?: string;
-}
-
-export interface SyncStatusResponse {
+// Supabase sync status (replaces SyncStatusResponse)
+export interface SyncStatusInfo {
   lastSyncAt: number | null;
   pendingPushCount: number;
-  pendingPullCount: number;
-  conflictCount: number;
   deviceCount: number;
-  storageUsed: number;
-  storageQuota: number;
+}
+
+// Device row from Supabase
+export interface DeviceRow {
+  id: string;
+  user_id: string;
+  device_name: string;
+  last_seen_at: string;
+  created_at: string;
 }

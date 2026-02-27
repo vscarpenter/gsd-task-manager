@@ -6,7 +6,6 @@ import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import {
-  createNewVectorClock,
   enqueueSyncOperation,
   getSyncContext,
 } from "./helpers";
@@ -19,9 +18,9 @@ const logger = createLogger("TASK_CRUD");
 export async function createTask(input: TaskDraft): Promise<TaskRecord> {
   try {
     const validated = taskDraftSchema.parse(input);
-    const { syncConfig, deviceId } = await getSyncContext();
+    const { syncConfig } = await getSyncContext();
 
-    const record = buildTaskRecord(validated, deviceId);
+    const record = buildTaskRecord(validated);
 
     const db = getDb();
     await db.tasks.add(record);
@@ -32,7 +31,6 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
       "create",
       record.id,
       record,
-      record.vectorClock || {},
       syncConfig?.enabled ?? false
     );
 
@@ -57,9 +55,8 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
 /**
  * Build a complete TaskRecord from validated draft data
  */
-function buildTaskRecord(validated: TaskDraft, deviceId: string): TaskRecord {
+function buildTaskRecord(validated: TaskDraft): TaskRecord {
   const now = isoNow();
-  const vectorClock = createNewVectorClock(deviceId);
 
   return {
     ...validated,
@@ -74,6 +71,5 @@ function buildTaskRecord(validated: TaskDraft, deviceId: string): TaskRecord {
     dependencies: validated.dependencies ?? [],
     notificationEnabled: validated.notificationEnabled ?? true,
     notificationSent: false,
-    vectorClock,
   };
 }

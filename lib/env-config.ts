@@ -6,10 +6,10 @@
 export type Environment = 'development' | 'staging' | 'production';
 
 export interface EnvironmentConfig {
-  /** API base URL for sync worker */
-  apiBaseUrl: string;
-  /** OAuth callback URL for auth flow */
-  oauthCallbackUrl: string;
+  /** Supabase project URL */
+  supabaseUrl: string;
+  /** Supabase anon (publishable) key */
+  supabaseAnonKey: string;
   /** Whether running in development mode */
   isDevelopment: boolean;
   /** Whether running in production mode */
@@ -47,30 +47,10 @@ function detectEnvironment(): Environment {
  */
 export function getEnvironmentConfig(): EnvironmentConfig {
   const environment = detectEnvironment();
-  const apiBaseUrlOverride = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  // API Base URL configuration
-  const apiBaseUrl =
-    apiBaseUrlOverride ||
-    (environment === 'development'
-      ? 'http://localhost:8787'
-      : environment === 'staging'
-      ? 'https://api-dev.vinny.dev'
-      : typeof window !== 'undefined'
-      ? window.location.origin // Use same-origin (CloudFront proxies /api/* to worker)
-      : 'https://gsd.vinny.dev');
-
-  // OAuth Callback URL configuration
-  const oauthCallbackUrl =
-    environment === 'development'
-      ? 'http://localhost:3000/auth/callback'
-      : environment === 'staging'
-      ? 'https://gsd-dev.vinny.dev/auth/callback'
-      : 'https://gsd.vinny.dev/auth/callback';
 
   return {
-    apiBaseUrl,
-    oauthCallbackUrl,
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     isDevelopment: environment === 'development',
     isProduction: environment === 'production',
     isStaging: environment === 'staging',

@@ -2,12 +2,29 @@ import { z } from 'zod';
 
 // Configuration
 export interface GsdConfig {
-  apiBaseUrl: string;
-  authToken: string;
+  supabaseUrl: string;
+  serviceKey: string;
+  userEmail: string;
   encryptionPassphrase?: string; // Optional: for decrypting tasks
 }
 
-// Response schemas based on worker types
+// Supabase encrypted_tasks row schema
+export const encryptedTaskRowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  encrypted_blob: z.string(),
+  nonce: z.string(),
+  version: z.number(),
+  deleted_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  last_modified_device: z.string().nullable(),
+  checksum: z.string(),
+});
+
+export type EncryptedTaskRow = z.infer<typeof encryptedTaskRowSchema>;
+
+// Response schemas for tool output
 export const syncStatusSchema = z.object({
   lastSyncAt: z.number().nullable(),
   pendingPushCount: z.number(),
@@ -35,42 +52,13 @@ export const taskStatsSchema = z.object({
   newestTask: z.number().nullable(),
 });
 
-export const statsResponseSchema = z.object({
-  tasks: z.array(
-    z.object({
-      id: z.string(),
-      encryptedBlob: z.string(),
-      nonce: z.string(),
-      createdAt: z.number(),
-      updatedAt: z.number(),
-      deletedAt: z.number().nullable(),
-    })
-  ),
-  metadata: z.object({
-    totalCount: z.number(),
-    activeCount: z.number(),
-    deletedCount: z.number(),
-    oldestTaskDate: z.number().nullable(),
-    newestTaskDate: z.number().nullable(),
-    storageUsed: z.number(),
-  }),
-});
-
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 export type Device = z.infer<typeof deviceSchema>;
 export type TaskStats = z.infer<typeof taskStatsSchema>;
-export type StatsResponse = z.infer<typeof statsResponseSchema>;
 
-// Encrypted task blob from API
-export const encryptedTaskBlobSchema = z.object({
-  id: z.string(),
-  encrypted_blob: z.string(),
-  nonce: z.string(),
-  updated_at: z.number(),
-  created_at: z.number(),
-});
-
-export type EncryptedTaskBlob = z.infer<typeof encryptedTaskBlobSchema>;
+// Legacy alias for backward compatibility in re-exports
+export const encryptedTaskBlobSchema = encryptedTaskRowSchema;
+export type EncryptedTaskBlob = EncryptedTaskRow;
 
 // Decrypted task structure (matches GSD TaskRecord from frontend)
 export interface DecryptedTask {
@@ -79,31 +67,20 @@ export interface DecryptedTask {
   description: string;
   urgent: boolean;
   important: boolean;
-  quadrant: string; // Frontend uses 'quadrant', not 'quadrantId'
+  quadrant: string;
   completed: boolean;
-  completedAt?: string; // ISO datetime when task was completed
-  dueDate?: string; // ISO datetime string, optional (NOT null)
+  completedAt?: string;
+  dueDate?: string;
   tags: string[];
   subtasks: Array<{
     id: string;
-    title: string; // Frontend uses 'title', not 'text'
+    title: string;
     completed: boolean;
   }>;
   recurrence: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies: string[];
-  createdAt: string; // Frontend expects ISO datetime string
-  updatedAt: string; // Frontend expects ISO datetime string
-  vectorClock?: Record<string, number>; // For sync conflict resolution
-}
-
-// API response types
-export interface PullTasksResponse {
-  tasks: Array<{
-    id: string;
-    encryptedBlob: string;
-    nonce: string;
-    updatedAt: number;
-  }>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Task filters

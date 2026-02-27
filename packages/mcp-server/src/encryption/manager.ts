@@ -1,16 +1,17 @@
 import { getCryptoManager } from '../crypto.js';
+import { getSupabaseClient, resolveUserId } from '../api/client.js';
 import type { GsdConfig } from '../types.js';
 
 /**
  * Initialize encryption with user's passphrase
- * Fetches salt from server and derives encryption key
+ * Fetches salt from Supabase profiles table and derives encryption key
  */
 export async function initializeEncryption(config: GsdConfig): Promise<void> {
   validateEncryptionConfig(config);
 
   const cryptoManager = getCryptoManager();
   if (cryptoManager.isInitialized()) {
-    return; // Already initialized
+    return;
   }
 
   const encryptionSalt = await fetchEncryptionSalt(config);
@@ -35,74 +36,39 @@ function validateEncryptionConfig(config: GsdConfig): void {
 }
 
 /**
- * Fetch user's encryption salt from server
+ * Fetch user's encryption salt from Supabase profiles table
  */
 async function fetchEncryptionSalt(config: GsdConfig): Promise<string> {
-  const response = await fetchSaltEndpoint(config);
-  validateSaltResponse(response);
+  const userId = await resolveUserId(config);
+  const supabase = getSupabaseClient(config);
 
-  const data = (await response.json()) as { encryptionSalt: string };
-  validateSaltData(data, config);
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('encryption_salt')
+    .eq('id', userId)
+    .single();
 
-  return data.encryptionSalt;
-}
-
-/**
- * Make HTTP request to encryption salt endpoint
- */
-async function fetchSaltEndpoint(config: GsdConfig): Promise<Response> {
-  try {
-    return await fetch(`${config.apiBaseUrl}/api/auth/encryption-salt`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${config.authToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-  } catch (error) {
+  if (error) {
     throw new Error(
       `❌ Failed to fetch encryption salt\n\n` +
-        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
+        `Database error: ${error.message}\n\n` +
         `Run: npx gsd-mcp-server --validate`
     );
   }
-}
 
-/**
- * Validate salt endpoint HTTP response
- */
-function validateSaltResponse(response: Response): void {
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        `❌ Authentication failed while fetching encryption salt\n\n` +
-          `Your token has expired. Run: npx gsd-mcp-server --setup`
-      );
-    }
-    throw new Error(
-      `❌ Failed to fetch encryption salt (${response.status})\n\n` +
-        `The Worker API endpoint may not support encryption.\n` +
-        `Ensure you're using Worker v0.2.0+\n\n` +
-        `Run: npx gsd-mcp-server --validate`
-    );
-  }
-}
-
-/**
- * Validate salt data from response
- */
-function validateSaltData(data: { encryptionSalt: string }, config: GsdConfig): void {
-  if (!data.encryptionSalt) {
+  if (!data?.encryption_salt) {
     throw new Error(
       `❌ Encryption not set up for this account\n\n` +
         `Please set up encryption in the GSD app first:\n` +
-        `  1. Visit ${config.apiBaseUrl}\n` +
+        `  1. Open the GSD app\n` +
         `  2. Go to Settings → Sync\n` +
         `  3. Set an encryption passphrase\n` +
         `  4. Complete initial sync\n\n` +
         `Then run: npx gsd-mcp-server --setup`
     );
   }
+
+  return data.encryption_salt;
 }
 
 /**
