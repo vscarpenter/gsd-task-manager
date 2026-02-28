@@ -15,7 +15,8 @@ import { getDb } from '@/lib/db';
 const logger = createLogger('SYNC_ENGINE');
 
 export interface UseSyncResult {
-  sync: () => Promise<void>;
+  /** Trigger a manual sync. Returns the result directly (no stale closure). */
+  sync: () => Promise<PBSyncResult>;
   isSyncing: boolean;
   lastResult: PBSyncResult | null;
   status: 'idle' | 'syncing' | 'success' | 'error';
@@ -148,7 +149,7 @@ export function useSync(): UseSyncResult {
     };
   }, [isEnabled]);
 
-  const sync = useCallback(async () => {
+  const sync = useCallback(async (): Promise<PBSyncResult> => {
     setStatus('syncing');
     setError(null);
 
@@ -157,33 +158,47 @@ export function useSync(): UseSyncResult {
       await coordinator.requestSync('user');
 
       const coordStatus = await coordinator.getStatus();
+      let result: PBSyncResult;
 
       if (coordStatus.lastResult) {
-        setLastResult(coordStatus.lastResult);
+        result = coordStatus.lastResult;
+        setLastResult(result);
 
-        if (coordStatus.lastResult.status === 'success') {
+        if (result.status === 'success') {
           setStatus('success');
-        } else if (coordStatus.lastResult.status === 'error') {
+          setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_SUCCESS_MS);
+        } else if (result.status === 'already_running') {
+          // Dedup signal — not an error, just go back to idle
+          setStatus('idle');
+        } else {
+          // 'error' or 'partial' — both are error-like states
           setStatus('error');
-          setError(coordStatus.lastResult.error || 'Sync failed');
+          setError(result.error || 'Sync failed');
+          setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_ERROR_MS);
         }
       } else if (coordStatus.lastError) {
+        result = { status: 'error', error: coordStatus.lastError };
         setStatus('error');
         setError(coordStatus.lastError);
-        setLastResult({ status: 'error', error: coordStatus.lastError });
+        setLastResult(result);
+        setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_ERROR_MS);
       } else {
+        result = { status: 'success' };
         setStatus('success');
-        setLastResult({ status: 'success' });
+        setLastResult(result);
+        setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_SUCCESS_MS);
       }
 
-      setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_TIMEOUT_MS);
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed';
+      const result: PBSyncResult = { status: 'error', error: errorMessage };
       setStatus('error');
       setError(errorMessage);
-      setLastResult({ status: 'error', error: errorMessage });
+      setLastResult(result);
 
-      setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_TIMEOUT_MS);
+      setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_ERROR_MS);
+      return result;
     }
   }, []);
 

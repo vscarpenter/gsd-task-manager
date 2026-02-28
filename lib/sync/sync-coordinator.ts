@@ -66,7 +66,9 @@ export class SyncCoordinator {
       isRunning: this.isRunning,
       pendingRequests: this.pendingRequests.length,
       lastSyncAt: config?.lastSyncAt ?? null,
-      lastError: this.lastResult?.status === 'error' ? this.lastResult.error || null : null,
+      lastError: (this.lastResult?.status === 'error' || this.lastResult?.status === 'partial')
+        ? this.lastResult.error || null
+        : null,
       retryCount,
       nextRetryAt: config?.nextRetryAt ?? null,
       lastResult: this.lastResult,

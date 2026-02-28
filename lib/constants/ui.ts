@@ -15,8 +15,11 @@ export const UI_TIMING = {
   /** Interval to check for auth state changes (2 seconds) */
   AUTH_CHECK_INTERVAL_MS: 2000,
 
-  /** Auto-reset timeout after sync success/error (3 seconds) */
-  AUTO_RESET_TIMEOUT_MS: 3000,
+  /** Auto-reset timeout after sync success (3 seconds) */
+  AUTO_RESET_SUCCESS_MS: 3000,
+
+  /** Auto-reset timeout after sync error (10 seconds) — longer so users can read errors */
+  AUTO_RESET_ERROR_MS: 10000,
 
   /** Initial delay before first health check (1 second) */
   INITIAL_HEALTH_CHECK_DELAY_MS: 1000,

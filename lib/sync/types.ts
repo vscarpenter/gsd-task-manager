@@ -73,9 +73,10 @@ export interface DeviceInfo {
 // ============================================================================
 
 export interface PBSyncResult {
-  status: 'success' | 'error' | 'already_running';
+  status: 'success' | 'error' | 'partial' | 'already_running';
   pushedCount?: number;
   pulledCount?: number;
+  failedCount?: number;
   error?: string;
 }
 

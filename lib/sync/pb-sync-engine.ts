@@ -64,24 +64,32 @@ async function fetchRemoteTaskIndex(ownerId: string): Promise<Map<string, string
  * Pre-fetches remote task IDs to avoid per-item lookups, and throttles
  * requests to stay under PocketBase rate limits.
  */
-export async function pushLocalChanges(): Promise<number> {
+export interface PushResult {
+  pushedCount: number;
+  failedCount: number;
+  lastError: string | null;
+}
+
+export async function pushLocalChanges(): Promise<PushResult> {
   const pb = getPocketBase();
   const queue = getSyncQueue();
   const ownerId = getCurrentUserId();
 
   if (!ownerId) {
     logger.warn('Push skipped: not authenticated');
-    return 0;
+    return { pushedCount: 0, failedCount: 0, lastError: null };
   }
 
   const pending = await queue.getPending();
-  if (pending.length === 0) return 0;
+  if (pending.length === 0) return { pushedCount: 0, failedCount: 0, lastError: null };
 
   const deviceId = await getDeviceId();
 
   // Pre-fetch all remote records in one request to avoid N individual lookups
   const remoteIndex = await fetchRemoteTaskIndex(ownerId);
   let pushedCount = 0;
+  let failedCount = 0;
+  let lastError: string | null = null;
 
   for (const item of pending) {
     try {
@@ -119,6 +127,8 @@ export async function pushLocalChanges(): Promise<number> {
         await delay(THROTTLE_MS);
       }
     } catch (error) {
+      failedCount++;
+      lastError = error instanceof Error ? error.message : String(error);
       logger.error('Push failed for item', error instanceof Error ? error : new Error(String(error)), {
         taskId: item.taskId,
         operation: item.operation,
@@ -127,8 +137,8 @@ export async function pushLocalChanges(): Promise<number> {
     }
   }
 
-  logger.info('Push completed', { pushedCount, total: pending.length });
-  return pushedCount;
+  logger.info('Push completed', { pushedCount, failedCount, total: pending.length });
+  return { pushedCount, failedCount, lastError };
 }
 
 /**
@@ -260,7 +270,7 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     const lastSyncAt = config?.lastSyncAt ?? null;
 
     // Push first, then pull
-    const pushedCount = await pushLocalChanges();
+    const pushResult = await pushLocalChanges();
     const pulledCount = await pullRemoteChanges(lastSyncAt);
 
     // Update last sync timestamp
@@ -272,13 +282,26 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     await retryManager.recordSuccess();
     const duration = Date.now() - startTime;
 
-    await recordSyncSuccess(pushedCount, pulledCount, 0, deviceId, triggeredBy, duration);
+    await recordSyncSuccess(pushResult.pushedCount, pulledCount, 0, deviceId, triggeredBy, duration);
 
-    if (pushedCount > 0 || pulledCount > 0) {
-      notifySyncSuccess(pushedCount, pulledCount);
+    // Report partial failures when some items failed to push
+    if (pushResult.failedCount > 0) {
+      const errorMsg = `${pushResult.failedCount} item(s) failed to sync: ${pushResult.lastError}`;
+      notifySyncError(errorMsg, false);
+      return {
+        status: 'partial',
+        pushedCount: pushResult.pushedCount,
+        pulledCount,
+        failedCount: pushResult.failedCount,
+        error: errorMsg,
+      };
     }
 
-    return { status: 'success', pushedCount, pulledCount };
+    if (pushResult.pushedCount > 0 || pulledCount > 0) {
+      notifySyncSuccess(pushResult.pushedCount, pulledCount);
+    }
+
+    return { status: 'success', pushedCount: pushResult.pushedCount, pulledCount };
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
     await retryManager.recordFailure(errorObj);

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export function SyncButton() {
-  const { sync, isSyncing, status, error, isEnabled, lastResult, nextRetryAt } = useSync();
+  const { sync, isSyncing, status, error, isEnabled, nextRetryAt } = useSync();
   const { showToast } = useToast();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
@@ -65,26 +65,9 @@ export function SyncButton() {
       return;
     }
 
+    // sync() returns the result directly — no stale closure.
+    // Toasts are handled by fullSync() via notifications.ts; no duplicate toast here.
     await sync();
-    showSyncResultToast(lastResult);
-  }
-
-  function showSyncResultToast(result: typeof lastResult) {
-    if (!result) return;
-
-    if (result.status === 'success') {
-      showToast(
-        `Sync complete: Pushed ${result.pushedCount || 0} changes, pulled ${result.pulledCount || 0} changes.`,
-        undefined,
-        SYNC_TOAST_DURATION.SHORT
-      );
-    } else if (result.status === 'error') {
-      showToast(
-        `Sync failed: ${result.error || 'An error occurred during sync.'}`,
-        undefined,
-        SYNC_TOAST_DURATION.LONG
-      );
-    }
   }
 
   function handleAuthSuccess() {
