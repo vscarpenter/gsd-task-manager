@@ -67,19 +67,31 @@ export function useTaskForm({
     updateField("dueDate", nextIso);
   };
 
+  const FIELD_ERROR_KEYS: ReadonlySet<keyof FormErrors> = new Set([
+    "title", "description", "dueDate", "tags", "subtasks"
+  ]);
+
+  const FIELD_OVERRIDES: Partial<Record<keyof FormErrors, string>> = {
+    dueDate: "Please choose a valid date"
+  };
+
   const parseValidationErrors = (error: z.ZodError): FormErrors => {
     const fieldErrors: FormErrors = {};
+    const unmappedMessages: string[] = [];
+
     for (const issue of error.issues) {
-      if (issue.path[0] === "title") {
-        fieldErrors.title = issue.message;
-      }
-      if (issue.path[0] === "description") {
-        fieldErrors.description = issue.message;
-      }
-      if (issue.path[0] === "dueDate") {
-        fieldErrors.dueDate = "Please choose a valid date";
+      const field = issue.path[0] as keyof FormErrors;
+      if (FIELD_ERROR_KEYS.has(field)) {
+        fieldErrors[field] = FIELD_OVERRIDES[field] ?? issue.message;
+      } else {
+        unmappedMessages.push(issue.message);
       }
     }
+
+    if (unmappedMessages.length > 0) {
+      fieldErrors.general = unmappedMessages.join(". ");
+    }
+
     return fieldErrors;
   };
 
@@ -101,8 +113,10 @@ export function useTaskForm({
     } catch (error) {
       if (error instanceof z.ZodError) {
         setErrors(parseValidationErrors(error));
+      } else {
+        const message = error instanceof Error ? error.message : "An unexpected error occurred";
+        setErrors({ general: message });
       }
-      // Note: onSubmit handler in parent component will handle non-validation errors
       setSubmitting(false);
       return;
     }

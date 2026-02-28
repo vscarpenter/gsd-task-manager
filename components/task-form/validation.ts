@@ -8,6 +8,7 @@ export interface FormErrors {
   dueDate?: string;
   tags?: string;
   subtasks?: string;
+  general?: string;
 }
 
 // Generate time options in 15-minute increments with 12-hour AM/PM format

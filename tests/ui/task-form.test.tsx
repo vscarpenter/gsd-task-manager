@@ -375,6 +375,68 @@ describe("TaskForm", () => {
     }, { timeout: 3000 });
   });
 
+  it("submits form in edit mode with changed due date", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    const initialValues: TaskDraft = {
+      title: "Finalize AWS Multi-region deck",
+      description: "Create the new current state slide to help state the problem.",
+      urgent: false,
+      important: true,
+      dueDate: "2026-02-20T05:00:00.000Z",
+      recurrence: "none",
+      tags: ["work", "aws", "presentation"],
+      subtasks: [],
+      dependencies: [],
+      notifyBefore: 15,
+      notificationEnabled: true,
+    };
+
+    render(
+      <TaskForm
+        taskId="test-task-123"
+        initialValues={initialValues}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        onDelete={vi.fn()}
+        submitLabel="Update task"
+      />
+    );
+
+    // Change the due date
+    const dueDateInput = screen.getByLabelText(/due date/i);
+    await user.clear(dueDateInput);
+    await user.type(dueDateInput, "2026-03-28");
+
+    // Click "Update task"
+    await user.click(screen.getByRole("button", { name: /update task/i }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    const submittedData = onSubmit.mock.calls[0][0];
+    expect(submittedData.title).toBe("Finalize AWS Multi-region deck");
+    // Due date should be set (exact value varies by timezone due to UTC conversion)
+    expect(submittedData.dueDate).toBeDefined();
+    expect(submittedData.dueDate).toContain("2026-03");
+  });
+
+  it("shows general error when non-Zod error occurs during submit", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockRejectedValue(new Error("Database write failed"));
+
+    render(<TaskForm {...defaultHandlers} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText(/title/i), "Test task");
+    await user.click(screen.getByRole("button", { name: /save task/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Database write failed")).toBeInTheDocument();
+    });
+  });
+
   it("ignores empty tags and subtasks", async () => {
     const user = userEvent.setup();
     render(<TaskForm {...defaultHandlers} />);

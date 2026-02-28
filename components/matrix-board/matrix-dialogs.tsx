@@ -87,7 +87,7 @@ interface MatrixDialogsProps {
   closeDialog: () => void;
   taskBeingEdited?: TaskRecord;
   activeTaskDraft?: TaskDraft;
-  onSubmit: (draft: TaskDraft) => void;
+  onSubmit: (draft: TaskDraft) => Promise<void> | void;
   onDelete?: (task: TaskRecord) => void;
 }
 
