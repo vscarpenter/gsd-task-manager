@@ -20,7 +20,7 @@ aws cloudfront create-response-headers-policy \
   "Comment": "Security headers for GSD Task Manager",
   "SecurityHeadersConfig": {
     "ContentSecurityPolicy": {
-      "ContentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:8787; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+      "ContentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.vinny.io https://accounts.google.com https://oauth2.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
       "Override": true
     },
     "ContentTypeOptions": {
@@ -76,7 +76,7 @@ exports.handler = async (event) => {
 
   headers['content-security-policy'] = [{
     key: 'Content-Security-Policy',
-    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:8787; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.vinny.io https://accounts.google.com https://oauth2.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
   }];
 
   headers['x-content-type-options'] = [{
@@ -121,7 +121,7 @@ Create a `_headers` file in the `public/` directory:
 
 ```
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:8787; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.vinny.io https://accounts.google.com https://oauth2.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   X-XSS-Protection: 1; mode=block
@@ -142,7 +142,7 @@ Create a `vercel.json` file in the project root:
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:8787; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.vinny.io https://accounts.google.com https://oauth2.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
         },
         {
           "key": "X-Content-Type-Options",
@@ -193,11 +193,15 @@ Or use online tools:
 - **style-src 'self' 'unsafe-inline'**: Allow styles from same origin + inline styles (required for Tailwind)
 - **img-src 'self' data: https:**: Allow images from same origin, data URIs, and HTTPS sources
 - **font-src 'self' data:**: Allow fonts from same origin and data URIs
-- **connect-src 'self' https://gsd.vinny.dev https://gsd-dev.vinny.dev http://localhost:8787**: Allow API connections to Worker endpoints
+- **connect-src 'self' https://api.vinny.io https://accounts.google.com https://oauth2.googleapis.com**: Allow connections to PocketBase server and OAuth providers
 - **frame-ancestors 'none'**: Prevent clickjacking
 - **base-uri 'self'**: Prevent base tag injection
 - **form-action 'self'**: Restrict form submissions to same origin
 - **upgrade-insecure-requests**: Automatically upgrade HTTP to HTTPS
+
+## Cross-Origin-Opener-Policy (COOP)
+
+The `Cross-Origin-Opener-Policy: same-origin-allow-popups` header is required for the PocketBase OAuth2 popup flow. Google's OAuth pages set `COOP: same-origin`, which severs the popup-opener relationship. Setting `same-origin-allow-popups` on our site allows the OAuth popup to maintain its opener reference and call `window.close()` after authentication completes.
 
 ## Notes
 
