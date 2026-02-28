@@ -2,7 +2,6 @@ import { getDb } from "@/lib/db";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { getSyncQueue } from "@/lib/sync/queue";
-import { incrementVectorClock } from "@/lib/sync/vector-clock";
 import { getSyncConfig } from "@/lib/sync/config";
 
 /**
@@ -15,30 +14,22 @@ export async function addDependency(taskId: string, dependencyId: string): Promi
     throw new Error(`Task ${taskId} not found`);
   }
 
-  // Check if dependency already exists
   if (existing.dependencies.includes(dependencyId)) {
     return existing;
   }
-
-  // Increment vector clock for sync
-  const syncConfig = await getSyncConfig();
-  const deviceId = syncConfig?.deviceId || 'local';
-  const currentClock = existing.vectorClock || {};
-  const newClock = incrementVectorClock(currentClock, deviceId);
 
   const nextRecord: TaskRecord = {
     ...existing,
     dependencies: [...existing.dependencies, dependencyId],
     updatedAt: isoNow(),
-    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
 
-  // Enqueue sync operation if sync is enabled
+  const syncConfig = await getSyncConfig();
   if (syncConfig?.enabled) {
     const queue = getSyncQueue();
-    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+    await queue.enqueue('update', taskId, nextRecord);
   }
 
   return nextRecord;
@@ -54,25 +45,18 @@ export async function removeDependency(taskId: string, dependencyId: string): Pr
     throw new Error(`Task ${taskId} not found`);
   }
 
-  // Increment vector clock for sync
-  const syncConfig = await getSyncConfig();
-  const deviceId = syncConfig?.deviceId || 'local';
-  const currentClock = existing.vectorClock || {};
-  const newClock = incrementVectorClock(currentClock, deviceId);
-
   const nextRecord: TaskRecord = {
     ...existing,
     dependencies: existing.dependencies.filter(depId => depId !== dependencyId),
     updatedAt: isoNow(),
-    vectorClock: newClock
   };
 
   await db.tasks.put(nextRecord);
 
-  // Enqueue sync operation if sync is enabled
+  const syncConfig = await getSyncConfig();
   if (syncConfig?.enabled) {
     const queue = getSyncQueue();
-    await queue.enqueue('update', taskId, nextRecord, nextRecord.vectorClock || {});
+    await queue.enqueue('update', taskId, nextRecord);
   }
 
   return nextRecord;
@@ -86,12 +70,10 @@ export async function removeDependencyReferences(taskId: string): Promise<void> 
   const db = getDb();
   const allTasks = await db.tasks.toArray();
 
-  // Find all tasks that depend on this task
   const tasksToUpdate = allTasks.filter(task =>
     task.dependencies && task.dependencies.includes(taskId)
   );
 
-  // Remove this task from their dependencies
   await Promise.all(
     tasksToUpdate.map(task =>
       removeDependency(task.id, taskId)

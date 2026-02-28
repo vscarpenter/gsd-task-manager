@@ -175,6 +175,7 @@ export function MatrixBoard() {
 
   const handleImportComplete = () => {
     dialogs.setPendingImportContents(null);
+    dialogs.setSettingsOpen(false);
     showToast("Tasks imported successfully", undefined, TOAST_DURATION.SHORT);
   };
 

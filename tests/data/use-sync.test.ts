@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSync } from '@/lib/hooks/use-sync';
-import { getSyncEngine } from '@/lib/sync/engine';
+import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
+import { getDb } from '@/lib/db';
 // Type import used for documentation
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { SyncResult } from '@/lib/sync/types';
+import type { PBSyncResult } from '@/lib/sync/types';
 
 // Mock the sync modules
-vi.mock('@/lib/sync/engine');
+vi.mock('@/lib/sync/pocketbase-client');
 vi.mock('@/lib/sync/sync-coordinator');
 vi.mock('@/lib/sync/health-monitor');
 vi.mock('@/lib/sync/background-sync', () => ({
@@ -20,16 +21,17 @@ vi.mock('@/lib/sync/background-sync', () => ({
 vi.mock('@/lib/sync/config', () => ({
   getAutoSyncConfig: vi.fn(),
 }));
+vi.mock('@/lib/db');
 
 describe('useSync', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockEngine: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockCoordinator: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockHealthMonitor: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockBackgroundSyncManager: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockDb: any;
 
   const flushAsync = async () => {
     await act(async () => {
@@ -38,12 +40,16 @@ describe('useSync', () => {
   };
 
   beforeEach(() => {
-    // Setup mock engine
-    mockEngine = {
-      isEnabled: vi.fn().mockResolvedValue(false),
-      sync: vi.fn().mockResolvedValue({ status: 'success' }),
+    // Setup mock PocketBase auth (replaces old getSyncEngine)
+    vi.mocked(isAuthenticated).mockReturnValue(false);
+
+    // Setup mock DB
+    mockDb = {
+      syncMetadata: {
+        get: vi.fn().mockResolvedValue(null),
+      },
     };
-    vi.mocked(getSyncEngine).mockReturnValue(mockEngine);
+    vi.mocked(getDb).mockReturnValue(mockDb);
 
     // Setup mock coordinator
     mockCoordinator = {
@@ -112,11 +118,12 @@ describe('useSync', () => {
 
       await flushAsync();
 
-      expect(mockEngine.isEnabled).toHaveBeenCalled();
+      expect(isAuthenticated).toHaveBeenCalled();
     });
 
     it('should start health monitor when sync is enabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(true);
+      vi.mocked(isAuthenticated).mockReturnValue(true);
+      mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
 
       renderHook(() => useSync());
 
@@ -126,7 +133,7 @@ describe('useSync', () => {
     });
 
     it('should not start health monitor when sync is disabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(false);
+      vi.mocked(isAuthenticated).mockReturnValue(false);
 
       renderHook(() => useSync());
 
@@ -138,7 +145,7 @@ describe('useSync', () => {
 
   describe('sync state updates', () => {
     it('should update isEnabled when sync becomes enabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(false);
+      vi.mocked(isAuthenticated).mockReturnValue(false);
       const { result } = renderHook(() => useSync());
 
       await flushAsync();
@@ -275,7 +282,7 @@ describe('useSync', () => {
       expect(result.current.error).toBe('Connection failed');
     });
 
-    it('should handle conflict status', async () => {
+    it('should handle already_running status without error', async () => {
       mockCoordinator.getStatus.mockResolvedValue({
         isRunning: false,
         pendingRequests: 0,
@@ -283,7 +290,7 @@ describe('useSync', () => {
         lastError: null,
         retryCount: 0,
         nextRetryAt: null,
-        lastResult: { status: 'conflict', conflicts: [] },
+        lastResult: { status: 'already_running' },
       });
 
       const { result } = renderHook(() => useSync());
@@ -292,7 +299,9 @@ describe('useSync', () => {
         await result.current.sync();
       });
 
-      expect(result.current.status).toBe('conflict');
+      // already_running is not an error — no error is set
+      expect(result.current.error).toBe(null);
+      expect(result.current.lastResult?.status).toBe('already_running');
     });
 
     it('should recover from error state on successful sync', async () => {
@@ -330,7 +339,8 @@ describe('useSync', () => {
 
   describe('health monitoring', () => {
     it('should start health monitor when sync is enabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(true);
+      vi.mocked(isAuthenticated).mockReturnValue(true);
+      mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
 
       renderHook(() => useSync());
 
@@ -340,7 +350,7 @@ describe('useSync', () => {
     });
 
     it('should not start health monitor when sync is disabled', async () => {
-      mockEngine.isEnabled.mockResolvedValue(false);
+      vi.mocked(isAuthenticated).mockReturnValue(false);
 
       renderHook(() => useSync());
 
@@ -352,7 +362,8 @@ describe('useSync', () => {
 
   describe('cleanup', () => {
     it('should stop health monitor on unmount', async () => {
-      mockEngine.isEnabled.mockResolvedValue(true);
+      vi.mocked(isAuthenticated).mockReturnValue(true);
+      mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
       mockHealthMonitor.isActive.mockReturnValue(true);
 
       const { unmount } = renderHook(() => useSync());
@@ -419,7 +430,7 @@ describe('useSync', () => {
 
       await flushAsync();
 
-      expect(mockEngine.isEnabled).toHaveBeenCalled();
+      expect(isAuthenticated).toHaveBeenCalled();
     });
 
     it('should poll coordinator status on mount', async () => {

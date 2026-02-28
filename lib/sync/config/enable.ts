@@ -1,35 +1,22 @@
 /**
  * Sync enable functionality
+ *
+ * Simplified for PocketBase: no crypto init or API client token setup.
+ * PocketBase SDK manages auth tokens automatically via localStorage.
  */
 
-import { getDb } from "@/lib/db";
-import { getCryptoManager } from "../crypto";
-import { getApiClient } from "../api-client";
 import { getSyncQueue } from "../queue";
-import type { SyncConfig } from "../types";
-import { getSyncConfig, updateAutoSyncConfig } from "./get-set";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger('SYNC_CONFIG');
 
 /**
- * Initialize crypto manager with user password
- */
-async function initializeCrypto(password: string, salt: string): Promise<void> {
-  const crypto = getCryptoManager();
-  await crypto.deriveKey(password, salt);
-}
-
-/**
- * Queue existing tasks for initial sync
+ * Queue existing tasks for initial sync push
  */
 async function queueExistingTasks(): Promise<void> {
-  const db = getDb();
-  const taskCount = await db.tasks.count();
-
-  if (taskCount > 0) {
-    const queue = getSyncQueue();
-    const populatedCount = await queue.populateFromExistingTasks();
+  const queue = getSyncQueue();
+  const populatedCount = await queue.populateFromExistingTasks();
+  if (populatedCount > 0) {
     logger.info('Initial sync setup', { populatedCount });
   }
 }
@@ -48,63 +35,18 @@ async function startHealthMonitor(): Promise<void> {
 }
 
 /**
- * Update sync config with auth credentials
+ * Enable sync after successful PocketBase OAuth login
+ *
+ * Called from SyncAuthDialog after OAuth success.
+ * PocketBase SDK already has the auth token stored — we just
+ * need to queue existing tasks and start the health monitor.
  */
-async function updateAuthCredentials(
-  current: SyncConfig,
-  userId: string,
-  email: string,
-  token: string,
-  expiresAt: number
-): Promise<void> {
-  const db = getDb();
-
-  await db.syncMetadata.put({
-    ...current,
-    enabled: true,
-    userId,
-    email,
-    token,
-    tokenExpiresAt: expiresAt,
-    key: "sync_config",
-  });
-}
-
-/**
- * Enable sync (typically called after successful auth)
- */
-export async function enableSync(
-  userId: string,
-  email: string,
-  token: string,
-  expiresAt: number,
-  salt: string,
-  password: string
-): Promise<void> {
-  const current = await getSyncConfig();
-
-  if (!current) {
-    throw new Error("Sync config not initialized");
-  }
-
-  // Initialize crypto manager with password
-  await initializeCrypto(password, salt);
-
-  // Update config with auth credentials
-  await updateAuthCredentials(current, userId, email, token, expiresAt);
-
-  // Set default auto-sync config if not present
-  if (current.autoSyncEnabled === undefined) {
-    await updateAutoSyncConfig(true, 2); // Default: enabled, 2 min interval
-  }
-
-  // Set token in API client
-  const api = getApiClient(current.serverUrl);
-  api.setToken(token);
-
-  // Queue existing tasks for initial sync
+export async function enableSync(): Promise<void> {
+  // Queue existing local tasks for initial push
   await queueExistingTasks();
 
   // Start health monitor
   await startHealthMonitor();
+
+  logger.info('Sync enabled');
 }

@@ -1,21 +1,9 @@
 /**
- * Sync engine - main entry point (backward compatible re-export)
- * All sync logic is now modularized in lib/sync/engine/
+ * Sync engine - main entry point
+ *
+ * Re-exports the PocketBase sync engine functions.
+ * The old SyncEngine class and its getSyncEngine() singleton are replaced
+ * by standalone functions in pb-sync-engine.ts, coordinated via SyncCoordinator.
  */
 
-import { SyncEngine as SyncEngineClass } from './engine/coordinator';
-
-export { SyncEngineClass as SyncEngine };
-
-// Singleton instance
-let engineInstance: SyncEngineClass | null = null;
-
-/**
- * Get or create sync engine instance
- */
-export function getSyncEngine() {
-  if (!engineInstance) {
-    engineInstance = new SyncEngineClass();
-  }
-  return engineInstance;
-}
+export { fullSync, pushLocalChanges, pullRemoteChanges, applyRemoteChange } from './pb-sync-engine';

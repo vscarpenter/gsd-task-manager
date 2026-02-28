@@ -6,8 +6,8 @@ This document outlines the security measures implemented in GSD Task Manager and
 
 - [Overview](#overview)
 - [Client-Side Security](#client-side-security)
-- [Cloud Sync Security](#cloud-sync-security-optional-v500)
-- [MCP Server Security](#mcp-server-security-optional-v500)
+- [Cloud Sync Security](#cloud-sync-security-optional-v690)
+- [MCP Server Security](#mcp-server-security-optional-v690)
 - [CloudFront Security Headers](#cloudfront-security-headers)
 - [Deployment Instructions](#deployment-instructions)
 - [Security Best Practices](#security-best-practices)
@@ -15,7 +15,7 @@ This document outlines the security measures implemented in GSD Task Manager and
 
 ## Overview
 
-GSD Task Manager is a privacy-first application where all data is stored locally in the browser using IndexedDB by default. **Optional cloud sync** (v5.0.0+) enables multi-device access with end-to-end encryption—the server stores only encrypted blobs and cannot decrypt task content.
+GSD Task Manager is a privacy-first application where all data is stored locally in the browser using IndexedDB by default. **Optional cloud sync** (v6.9.0+) enables multi-device access via a self-hosted PocketBase instance — the user owns and controls the server and data.
 
 ## Client-Side Security
 
@@ -37,88 +37,66 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Automated security updates via Dependabot/Renovate
    - All packages kept at stable, non-canary versions
 
-## Cloud Sync Security (Optional, v5.0.0+)
+## Cloud Sync Security (Optional, v6.9.0+)
 
 When users enable cloud sync, the following security measures protect their data:
 
-### End-to-End Encryption
+### Self-Hosted PocketBase Architecture
 
-1. **Encryption Algorithm: AES-256-GCM**
-   - Authenticated encryption with associated data (AEAD)
-   - 256-bit key derived from user passphrase
-   - Unique 96-bit random nonce per encryption operation
-   - SHA-256 checksums for data integrity
+1. **User-Owned Server**
+   - PocketBase instance runs on user's own infrastructure (e.g., AWS EC2)
+   - Tasks stored as plaintext in PocketBase SQLite database
+   - User has full control over data retention and access
+   - No third-party cloud service has access to task data
 
-2. **Key Derivation: PBKDF2**
-   - 600,000 iterations (OWASP 2023 recommendation)
-   - User passphrase + randomly generated salt
-   - Salt synced to server for multi-device support (see Salt Architecture below)
-   - Derived keys never leave user's device
+2. **Data Model**
+   - Tasks stored with owner-scoped API rules: `@request.auth.id != "" && owner = @request.auth.id`
+   - Each user can only access their own tasks
+   - PocketBase enforces row-level security at the API layer
 
-3. **Zero-Knowledge Architecture**
-   - Worker stores only encrypted blobs
-   - Server cannot decrypt task content (no access to passphrase)
-   - Encryption/decryption happens entirely in browser/MCP client
-   - Even Cloudflare employees cannot read your tasks
-
-4. **Salt Architecture (Threat Model)**
-   - Salt is generated client-side (32 random bytes) and synced to server
-   - Server stores salt alongside encrypted task blobs
-   - **If server is compromised**: Attacker gains salts + encrypted data
-   - **Protection**: Passphrase is required to derive key (never transmitted)
-   - **Brute-force mitigation**: 600K PBKDF2 iterations makes attacks expensive
-   - **Design rationale**: Enables multi-device sync while maintaining zero-knowledge
+3. **Sync Protocol**
+   - Last-write-wins (LWW) conflict resolution using `client_updated_at` timestamps
+   - PocketBase SSE (Server-Sent Events) for realtime cross-device updates
+   - Echo filtering prevents processing own-device changes
+   - Offline queue replays when connectivity is restored
 
 ### OAuth Authentication
 
 1. **Providers**
-   - Google (OIDC-compliant)
-   - Apple (OIDC-compliant)
+   - Google (via PocketBase built-in OAuth2)
+   - GitHub (via PocketBase built-in OAuth2)
 
 2. **Security Features**
-   - PKCE (Proof Key for Code Exchange) prevents code interception
-   - State parameter prevents CSRF attacks
-   - ID token signature verification (JWT)
-   - Short-lived session tokens (24 hours)
-
-3. **Token Management**
-   - JWT tokens with 7-day expiration
-   - HS256 signature with 256-bit secret per environment
-   - Tokens stored in IndexedDB (browser-encrypted at rest)
-   - Refresh flow on token expiration
-
-### Rate Limiting
-
-- 100 requests/minute per IP via Cloudflare KV
-- Prevents brute-force attacks on authentication
-- Distributed rate limiting across edge locations
+   - PocketBase SDK handles OAuth popup flow and token management
+   - Auth tokens stored in PocketBase's built-in `authStore` (localStorage)
+   - Tokens auto-refresh via PocketBase SDK
 
 ### Network Security
 
-- HTTPS-only communication
-- CORS restricted to production domain (https://gsd.vinny.dev)
+- HTTPS-only communication with PocketBase server
+- CORS configured at PocketBase level
 - HSTS headers enforce secure connections
 - TLS 1.2+ required
 
-## MCP Server Security (Optional, v5.0.0+)
+## MCP Server Security (Optional, v6.9.0+)
 
-The MCP server allows Claude Desktop to access tasks via natural language queries.
+The MCP server allows Claude Desktop to access and manage tasks via natural language queries.
 
 ### Security Model
 
-1. **Read-Only Access**
-   - MCP tools can only read tasks, not modify/delete
-   - No write operations implemented
-   - Safe exploration without data modification risk
+1. **PocketBase API Access**
+   - MCP server communicates directly with PocketBase using auth token
+   - Auth token stored only in Claude Desktop config file
+   - No encryption layer — tasks are plaintext on user's own server
 
-2. **Local Decryption**
-   - Encryption passphrase stored only in Claude Desktop config
-   - Passphrase never transmitted to Worker
-   - Decryption happens on user's local machine
+2. **Read & Write Access**
+   - MCP tools support both read and write operations
+   - Write operations support dry-run mode for safe exploration
+   - All operations scoped to authenticated user's tasks only
 
 3. **Opt-In Feature**
    - Requires explicit configuration by user
-   - Must set passphrase in Claude Desktop config manually
+   - Must set PocketBase URL and auth token in Claude Desktop config
    - Not enabled by default
 
 ### Configuration Security
@@ -129,15 +107,15 @@ The MCP server allows Claude Desktop to access tasks via natural language querie
   "mcpServers": {
     "gsd-taskmanager": {
       "env": {
-        "GSD_AUTH_TOKEN": "eyJ...",  // JWT from OAuth
-        "GSD_ENCRYPTION_PASSPHRASE": "..." // User's passphrase
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "eyJ..."
       }
     }
   }
 }
 ```
 
-**Important**: The config file contains sensitive credentials. Ensure appropriate file permissions.
+**Important**: The config file contains the auth token. Ensure appropriate file permissions (`chmod 600`).
 
 ## CloudFront Security Headers
 
@@ -154,10 +132,10 @@ script-src 'self' 'unsafe-inline' 'unsafe-eval';
 style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self' data:;
-connect-src 'self' https://gsd-dev.vinny.dev https://accounts.google.com https://appleid.apple.com;
+connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
 frame-ancestors 'none';
 base-uri 'self';
-form-action 'self' https://accounts.google.com https://appleid.apple.com;
+form-action 'self' https://accounts.google.com https://github.com;
 ```
 
 **Production (Recommended):**
@@ -167,13 +145,13 @@ script-src 'self';
 style-src 'self';
 img-src 'self' data: blob:;
 font-src 'self';
-connect-src 'self' https://gsd.vinny.dev https://accounts.google.com https://appleid.apple.com;
+connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
 frame-ancestors 'none';
 base-uri 'self';
-form-action 'self' https://accounts.google.com https://appleid.apple.com;
+form-action 'self' https://accounts.google.com https://github.com;
 ```
 
-> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. The `connect-src` and `form-action` include OAuth providers for cloud sync authentication.
+> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. The `connect-src` includes the PocketBase server and OAuth provider domains.
 
 #### 2. X-Frame-Options
 ```
@@ -342,18 +320,11 @@ If you discover a security vulnerability, please:
 ### Last Audit: 2026-01-23
 
 - ✅ All critical vulnerabilities resolved
-- ✅ Dependency vulnerabilities patched (wrangler, hono, MCP SDK)
-- ✅ Token storage architecture reviewed and documented
-- ✅ End-to-end encryption implemented for cloud sync
-- ✅ OAuth PKCE flow implemented for authentication
-- ✅ MCP server read-only access enforced
-
-### Resolved Issues (2026-01-23)
-
-1. **Hono JWT Algorithm Confusion (H1)** - Added override for hono ≥4.11.4 (fixes GHSA-3vhc-576x-3qv4, GHSA-f67f-6cw9-8mq4)
-2. **Wrangler OS Command Injection (H2)** - Upgraded wrangler to ^4.59.1 (fixes GHSA-36p8-mvp6-cv38)
-3. **Undici Decompression DoS (M3)** - Fixed transitively via wrangler update (fixes GHSA-g9mf-h72j-4rw9)
-4. **MCP SDK update** - Upgraded @modelcontextprotocol/sdk to ^1.25.3
+- ✅ Dependency vulnerabilities patched
+- ✅ PocketBase migration completed — simplified security model
+- ✅ OAuth authentication via PocketBase built-in providers
+- ✅ MCP server updated to PocketBase SDK
+- ✅ Row-level security enforced via PocketBase API rules
 
 ### Previously Resolved Issues
 
@@ -361,12 +332,10 @@ If you discover a security vulnerability, please:
 2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 16.1.1
 3. **React RC versions** - Upgraded to stable 19.2.3
 4. **Missing error handling** - Added try-catch to importFromJson()
-5. **Cloud sync security** - AES-256-GCM with PBKDF2 key derivation (600k iterations)
-6. **OAuth security** - PKCE + state parameter + ID token verification
 
 ### Known Trade-offs (Documented)
 
-1. **Token Storage in IndexedDB** - Required for offline-first PWA. Mitigated by React XSS protection, CSP headers, and E2E encryption of task data. See `worker/src/constants/security.ts:57-80` for full rationale.
+1. **Auth Token in localStorage** — PocketBase SDK stores auth tokens in localStorage via its built-in `authStore`. Mitigated by React XSS protection, CSP headers, and HTTPS-only communication. Tasks are stored on user's own PocketBase server.
 
 ## References
 

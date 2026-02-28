@@ -17,11 +17,11 @@ import type { FilterCriteria } from "@/lib/filters";
 /**
  * Format timestamp to human-readable relative time
  */
-function formatRelativeTime(timestamp: number | null): string {
+function formatRelativeTime(timestamp: string | null): string {
   if (!timestamp) return 'Never';
-  
+
   const now = Date.now();
-  const diff = now - timestamp;
+  const diff = now - new Date(timestamp).getTime();
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -67,7 +67,7 @@ export function AppHeader({
   selectedCount = 0
 }: AppHeaderProps) {
   const { isEnabled, nextRetryAt, retryCount } = useSync();
-  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
   const [, setTick] = useState(0); // Force re-render for relative time updates

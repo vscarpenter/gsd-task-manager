@@ -1,9 +1,12 @@
 /**
  * Sync reset functionality
+ *
+ * Simplified for PocketBase: clears local data and resets lastSyncAt
+ * to force a complete pull from PocketBase on next sync.
  */
 
 import { getDb } from "@/lib/db";
-import type { SyncConfig } from "../types";
+import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
 import { createLogger } from "@/lib/logger";
 
@@ -28,21 +31,20 @@ async function clearLocalData(): Promise<number> {
 /**
  * Reset sync metadata for full pull
  */
-async function resetSyncMetadata(config: SyncConfig): Promise<void> {
+async function resetSyncMetadata(config: PBSyncConfig): Promise<void> {
   const db = getDb();
 
   await db.syncMetadata.put({
     ...config,
-    lastSyncAt: 0,
-    vectorClock: {},
+    lastSyncAt: null,
     key: "sync_config",
   });
-  logger.info('Reset sync metadata', { lastSyncAt: 0, vectorClock: {} });
+  logger.info('Reset sync metadata', { lastSyncAt: null });
 }
 
 /**
  * Reset sync state and perform full sync from server
- * This clears lastSyncAt and vector clocks to force a complete pull
+ * This clears lastSyncAt to force a complete pull from PocketBase
  * Useful for debugging sync issues or recovering from inconsistent state
  */
 export async function resetAndFullSync(): Promise<void> {
@@ -54,8 +56,7 @@ export async function resetAndFullSync(): Promise<void> {
   const db = getDb();
 
   logger.info('Starting full sync reset', {
-    lastSyncAt: config.lastSyncAt ? new Date(config.lastSyncAt).toISOString() : null,
-    vectorClock: config.vectorClock as Record<string, unknown>,
+    lastSyncAt: config.lastSyncAt || null,
     pendingOps: await db.syncQueue.count(),
   });
 

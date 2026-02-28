@@ -5,11 +5,11 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { XIcon, CloudIcon } from "lucide-react";
 import { OAuthButtons } from "@/components/sync/oauth-buttons";
-import { EncryptionPassphraseDialog } from "@/components/sync/encryption-passphrase-dialog";
-import { isEncryptionConfigured, getCryptoManager, clearCryptoManager } from "@/lib/sync/crypto";
+import { logout, type AuthState } from "@/lib/sync/pb-auth";
+import { getSyncQueue } from "@/lib/sync/queue";
 import { toast } from "sonner";
 import { getDb } from "@/lib/db";
-import { subscribeToOAuthHandshake, type OAuthHandshakeEvent } from "@/lib/sync/oauth-handshake";
+import type { PBSyncConfig } from "@/lib/sync/types";
 
 interface SyncAuthDialogProps {
   isOpen: boolean;
@@ -20,12 +20,12 @@ interface SyncAuthDialogProps {
 export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<{ enabled: boolean; email: string | null; provider?: string } | null>(null);
+  const [syncStatus, setSyncStatus] = useState<{
+    enabled: boolean;
+    email: string | null;
+    provider?: string | null;
+  } | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [showEncryptionDialog, setShowEncryptionDialog] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
-  const [serverEncryptionSalt, setServerEncryptionSalt] = useState<string | null>(null);
-  const [activeState, setActiveState] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -37,39 +37,16 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
 
     const loadStatus = async () => {
       const db = getDb();
-      const config = await db.syncMetadata.get("sync_config");
+      const config = await db.syncMetadata.get("sync_config") as PBSyncConfig | undefined;
 
       if (cancelled) return;
 
-      if (config && config.key === "sync_config") {
+      if (config) {
         setSyncStatus({
           enabled: !!config.enabled,
           email: config.email || null,
           provider: config.provider || undefined,
         });
-
-        if (config.enabled) {
-          const crypto = getCryptoManager();
-          const hasConfig = await isEncryptionConfigured();
-
-          if (hasConfig && !crypto.isInitialized()) {
-            // Add a small delay before showing encryption dialog
-            // This gives OAuthCallbackHandler time to handle OAuth flow
-            // and prevents duplicate encryption dialogs
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            if (cancelled) return;
-
-            // Re-check if crypto was initialized while we waited
-            // (OAuthCallbackHandler might have shown its own dialog)
-            if (!crypto.isInitialized() && !showEncryptionDialog) {
-              setIsNewUser(false);
-              setServerEncryptionSalt(null);
-              setShowEncryptionDialog(true);
-              toast.info("Please enter your encryption passphrase to unlock sync.");
-            }
-          }
-        }
       } else {
         setSyncStatus({ enabled: false, email: null });
       }
@@ -82,107 +59,78 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
     return () => {
       cancelled = true;
     };
-  }, [isOpen, showEncryptionDialog]);
+  }, [isOpen]);
 
-  // Listen for OAuth handshake results while dialog is open
-  useEffect(() => {
-    if (!mounted) return;
+  const handleOAuthSuccess = async (authState: AuthState) => {
+    setIsLoading(false);
+    setError(null);
 
-    const unsubscribe = subscribeToOAuthHandshake(async (event: OAuthHandshakeEvent) => {
-      if (!isOpen) {
-        return;
-      }
+    // Persist sync config to IndexedDB
+    const db = getDb();
+    const existingConfig = await db.syncMetadata.get("sync_config") as PBSyncConfig | undefined;
+    const deviceId = existingConfig?.deviceId ?? crypto.randomUUID();
 
-      if (event.status === "success") {
-        setActiveState(event.state);
-        setIsLoading(false);
-        setError(null);
+    const newConfig: PBSyncConfig = {
+      key: "sync_config",
+      enabled: true,
+      userId: authState.userId,
+      deviceId,
+      deviceName: navigator.userAgent.substring(0, 50),
+      email: authState.email,
+      provider: authState.provider,
+      lastSyncAt: null,
+      consecutiveFailures: 0,
+      lastFailureAt: null,
+      lastFailureReason: null,
+      nextRetryAt: null,
+      autoSyncEnabled: true,
+      autoSyncIntervalMinutes: 2,
+    };
 
-        setSyncStatus({
-          enabled: true,
-          email: event.authData.email,
-          provider: event.authData.provider,
-        });
+    await db.syncMetadata.put(newConfig);
 
-        toast.success(`Signed in as ${event.authData.email}. Finishing setup...`);
+    // Queue all existing tasks for initial push
+    const queue = getSyncQueue();
+    await queue.populateFromExistingTasks();
 
-        // Refresh status once global handler persists configuration
-        setTimeout(async () => {
-          const db = getDb();
-          const config = await db.syncMetadata.get("sync_config");
-          if (config && config.key === "sync_config") {
-            setSyncStatus({
-              enabled: !!config.enabled,
-              email: config.email || null,
-              provider: config.provider || undefined,
-            });
-          }
-        }, 600);
-
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
-        // Skip if this is for a different OAuth flow, but always process error-only events
-        const isErrorOnlyEvent = event.state === '__error_only__';
-        if (!isErrorOnlyEvent && activeState && activeState !== event.state) {
-          return;
-        }
-
-        setIsLoading(false);
-        setError(event.error);
-        toast.error(event.error);
-      }
+    setSyncStatus({
+      enabled: true,
+      email: authState.email,
+      provider: authState.provider,
     });
 
-    return () => {
-      unsubscribe();
-    };
-  }, [activeState, isOpen, mounted, onSuccess]);
+    toast.success(`Signed in as ${authState.email}`);
+    onSuccess?.();
+  };
 
   const handleLogout = async () => {
     setIsLoading(true);
     try {
+      logout();
+
       const db = getDb();
+      await db.syncQueue.clear();
 
-      await db.syncMetadata.delete("sync_config");
-      await db.syncMetadata.delete("encryption_salt");
-
-      clearCryptoManager();
+      const existingConfig = await db.syncMetadata.get("sync_config") as PBSyncConfig | undefined;
+      if (existingConfig) {
+        await db.syncMetadata.put({
+          ...existingConfig,
+          enabled: false,
+          userId: null,
+          email: null,
+          provider: null,
+          lastSyncAt: null,
+        });
+      }
 
       setSyncStatus({ enabled: false, email: null });
       setError(null);
-
       toast.success("Logged out successfully");
-
-      if (onSuccess) {
-        onSuccess();
-      }
+      onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Logout failed");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleEncryptionComplete = async () => {
-    setShowEncryptionDialog(false);
-
-    const db = getDb();
-    const config = await db.syncMetadata.get("sync_config");
-
-    if (config && config.key === "sync_config") {
-      setSyncStatus({
-        enabled: !!config.enabled,
-        email: config.email || null,
-        provider: config.provider || undefined,
-      });
-    }
-
-    toast.success("Encryption unlocked. You can close this dialog.");
-
-    if (onSuccess) {
-      onSuccess();
     }
   };
 
@@ -258,6 +206,12 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
                     setError(null);
                     setIsLoading(true);
                   }}
+                  onSuccess={handleOAuthSuccess}
+                  onError={(err) => {
+                    setIsLoading(false);
+                    setError(err.message);
+                    toast.error(err.message);
+                  }}
                 />
 
                 {error && (
@@ -268,26 +222,16 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
               </div>
 
               <div className="mt-6 rounded-lg bg-background-muted p-4 text-sm text-foreground-muted">
-                <p className="mb-2 font-medium text-foreground">🔐 End-to-end encrypted</p>
+                <p className="mb-2 font-medium text-foreground">Cloud sync</p>
                 <p>
-                  Your tasks are encrypted on your device before syncing. After signing in,
-                  you&apos;ll create a separate encryption passphrase for maximum security.
+                  Sign in to sync your tasks across devices. Your data is stored on
+                  your self-hosted PocketBase server.
                 </p>
               </div>
             </>
           )}
         </div>
       </div>
-
-      <EncryptionPassphraseDialog
-        isOpen={showEncryptionDialog}
-        isNewUser={isNewUser}
-        onComplete={handleEncryptionComplete}
-        onCancel={() => {
-          setShowEncryptionDialog(false);
-        }}
-        serverEncryptionSalt={serverEncryptionSalt}
-      />
 
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">

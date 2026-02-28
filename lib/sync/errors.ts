@@ -24,7 +24,7 @@ export class SyncNetworkError extends SyncError {
 }
 
 /**
- * Authentication/authorization errors (need token refresh)
+ * Authentication/authorization errors (need re-login)
  */
 export class SyncAuthError extends SyncError {
   constructor(message: string, public statusCode?: number) {
@@ -40,26 +40,6 @@ export class SyncValidationError extends SyncError {
   constructor(message: string, public validationErrors?: unknown) {
     super(message, validationErrors);
     this.name = 'SyncValidationError';
-  }
-}
-
-/**
- * Encryption/decryption errors (permanent - configuration issue)
- */
-export class SyncCryptoError extends SyncError {
-  constructor(message: string) {
-    super(message);
-    this.name = 'SyncCryptoError';
-  }
-}
-
-/**
- * Conflict errors when vector clocks diverge (needs manual resolution)
- */
-export class SyncConflictError extends SyncError {
-  constructor(message: string, public conflictingTasks?: unknown) {
-    super(message, conflictingTasks);
-    this.name = 'SyncConflictError';
   }
 }
 
@@ -89,18 +69,4 @@ export function isAuthError(error: unknown): error is SyncAuthError {
  */
 export function isValidationError(error: unknown): error is SyncValidationError {
   return error instanceof SyncValidationError;
-}
-
-/**
- * Type guard to check if error is crypto-related
- */
-export function isCryptoError(error: unknown): error is SyncCryptoError {
-  return error instanceof SyncCryptoError;
-}
-
-/**
- * Type guard to check if error is conflict-related
- */
-export function isConflictError(error: unknown): error is SyncConflictError {
-  return error instanceof SyncConflictError;
 }

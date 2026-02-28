@@ -1,6 +1,6 @@
 /**
  * Configuration validation utilities
- * Tests environment variables, API connectivity, auth, encryption, and device access
+ * Tests environment variables, PocketBase connectivity, auth, and task access
  */
 
 import type { GsdConfig, SyncStatus } from '../tools.js';
@@ -19,50 +19,48 @@ export interface ValidationCheck {
  * Check required environment variables
  */
 function validateEnvironmentVariables(): {
-  apiUrl: string;
+  pbUrl: string;
   authToken: string;
-  encryptionPassphrase?: string;
 } {
-  const apiUrl = process.env.GSD_API_URL;
+  const pbUrl = process.env.GSD_POCKETBASE_URL || process.env.GSD_API_URL;
   const authToken = process.env.GSD_AUTH_TOKEN;
-  const encryptionPassphrase = process.env.GSD_ENCRYPTION_PASSPHRASE;
 
-  if (!apiUrl || !authToken) {
+  if (!pbUrl || !authToken) {
     console.log('✗ Configuration Error\n');
     console.log('Missing required environment variables:');
-    if (!apiUrl) console.log('  - GSD_API_URL');
+    if (!pbUrl) console.log('  - GSD_POCKETBASE_URL');
     if (!authToken) console.log('  - GSD_AUTH_TOKEN');
     console.log('\nRun setup wizard: npx gsd-mcp-server --setup');
     process.exit(1);
   }
 
-  return { apiUrl, authToken, encryptionPassphrase };
+  return { pbUrl, authToken };
 }
 
 /**
- * Test API connectivity
+ * Test PocketBase connectivity via health endpoint
  */
-async function validateApiConnection(apiUrl: string): Promise<ValidationCheck> {
+async function validatePBConnection(pbUrl: string): Promise<ValidationCheck> {
   try {
-    const response = await fetch(`${apiUrl}/health`);
+    const response = await fetch(`${pbUrl}/api/health`);
     if (response.ok) {
       return {
-        name: 'API Connectivity',
+        name: 'PocketBase Connectivity',
         status: '✓',
-        details: `Connected to ${apiUrl}`,
+        details: `Connected to ${pbUrl}`,
       };
     } else {
       return {
-        name: 'API Connectivity',
+        name: 'PocketBase Connectivity',
         status: '⚠',
         details: `Connected but got status ${response.status}`,
       };
     }
   } catch {
     return {
-      name: 'API Connectivity',
+      name: 'PocketBase Connectivity',
       status: '✗',
-      details: `Failed to connect to ${apiUrl}`,
+      details: `Failed to connect to ${pbUrl}`,
     };
   }
 }
@@ -71,13 +69,12 @@ async function validateApiConnection(apiUrl: string): Promise<ValidationCheck> {
  * Create sync status check result
  */
 function createSyncStatusCheck(status: SyncStatus): ValidationCheck {
-  const hasConflicts = status.conflictCount > 0;
   return {
     name: 'Sync Status',
-    status: hasConflicts ? '⚠' : '✓',
-    details: hasConflicts
-      ? `${status.conflictCount} conflicts detected`
-      : `Healthy (last sync: ${status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString() : 'never'})`,
+    status: status.healthy ? '✓' : '⚠',
+    details: status.healthy
+      ? `Healthy (${status.taskCount} tasks synced)`
+      : 'PocketBase reports unhealthy status',
   };
 }
 
@@ -92,7 +89,7 @@ async function validateAuthentication(config: GsdConfig): Promise<ValidationChec
     checks.push({
       name: 'Authentication',
       status: '✓',
-      details: `Token valid (${status.deviceCount} devices registered)`,
+      details: `Token valid (${status.taskCount} tasks accessible)`,
     });
     checks.push(createSyncStatusCheck(status));
   } catch (error) {
@@ -107,32 +104,21 @@ async function validateAuthentication(config: GsdConfig): Promise<ValidationChec
 }
 
 /**
- * Test encryption passphrase
+ * Test task access by listing tasks
  */
-async function validateEncryption(
-  config: GsdConfig,
-  hasPassphrase: boolean
-): Promise<ValidationCheck> {
-  if (!hasPassphrase) {
-    return {
-      name: 'Encryption',
-      status: '⚠',
-      details: 'Passphrase not provided (task content not accessible)',
-    };
-  }
-
+async function validateTaskAccess(config: GsdConfig): Promise<ValidationCheck> {
   try {
     const tasks = await listTasks(config);
     return {
-      name: 'Encryption',
+      name: 'Task Access',
       status: '✓',
-      details: `Successfully decrypted ${tasks.length} tasks`,
+      details: `Successfully read ${tasks.length} tasks`,
     };
   } catch (error) {
     return {
-      name: 'Encryption',
+      name: 'Task Access',
       status: '✗',
-      details: error instanceof Error ? error.message : 'Decryption failed',
+      details: error instanceof Error ? error.message : 'Failed to read tasks',
     };
   }
 }
@@ -201,27 +187,27 @@ export async function runValidation(): Promise<void> {
   const checks: ValidationCheck[] = [];
 
   // Step 1: Environment variables
-  const { apiUrl, authToken, encryptionPassphrase } = validateEnvironmentVariables();
+  const { pbUrl, authToken } = validateEnvironmentVariables();
 
   checks.push({
     name: 'Environment Variables',
     status: '✓',
-    details: `GSD_API_URL and GSD_AUTH_TOKEN are set${encryptionPassphrase ? ' (with passphrase)' : ''}`,
+    details: 'GSD_POCKETBASE_URL and GSD_AUTH_TOKEN are set',
   });
 
-  const config: GsdConfig = { apiBaseUrl: apiUrl, authToken, encryptionPassphrase };
+  const config: GsdConfig = { pocketBaseUrl: pbUrl, authToken };
 
-  // Step 2: API connectivity
-  const connectivityCheck = await validateApiConnection(apiUrl);
+  // Step 2: PocketBase connectivity
+  const connectivityCheck = await validatePBConnection(pbUrl);
   checks.push(connectivityCheck);
 
   // Step 3: Authentication & sync status
   const authChecks = await validateAuthentication(config);
   checks.push(...authChecks);
 
-  // Step 4: Encryption
-  const encryptionCheck = await validateEncryption(config, !!encryptionPassphrase);
-  checks.push(encryptionCheck);
+  // Step 4: Task access
+  const taskCheck = await validateTaskAccess(config);
+  checks.push(taskCheck);
 
   // Step 5: Device access
   const deviceCheck = await validateDeviceAccess(config);

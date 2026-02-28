@@ -3,11 +3,7 @@ import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import {
-  createNewVectorClock,
-  enqueueSyncOperation,
-  getSyncContext,
-} from "./helpers";
+import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -23,8 +19,8 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
       throw new Error(`Task with id ${id} not found`);
     }
 
-    const { syncConfig, deviceId } = await getSyncContext();
-    const duplicate = buildDuplicateRecord(original, deviceId);
+    const { syncConfig } = await getSyncContext();
+    const duplicate = buildDuplicateRecord(original);
 
     await db.tasks.add(duplicate);
 
@@ -32,8 +28,7 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
       "create",
       duplicate.id,
       duplicate,
-      duplicate.vectorClock || {},
-      syncConfig?.enabled ?? true // Default to true for backward compatibility
+      syncConfig?.enabled ?? true
     );
 
     logger.info("Task duplicated", { originalId: id, newId: duplicate.id });
@@ -51,9 +46,8 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
 /**
  * Build a duplicate task record with fresh metadata
  */
-function buildDuplicateRecord(original: TaskRecord, deviceId: string): TaskRecord {
+function buildDuplicateRecord(original: TaskRecord): TaskRecord {
   const now = isoNow();
-  const vectorClock = createNewVectorClock(deviceId);
 
   return {
     ...original,
@@ -67,6 +61,5 @@ function buildDuplicateRecord(original: TaskRecord, deviceId: string): TaskRecor
     lastNotificationAt: undefined,
     snoozedUntil: undefined,
     archivedAt: undefined,
-    vectorClock,
   };
 }

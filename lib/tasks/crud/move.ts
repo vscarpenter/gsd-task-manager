@@ -3,7 +3,7 @@ import { createLogger } from "@/lib/logger";
 import { parseQuadrantFlags } from "@/lib/quadrants";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -25,8 +25,7 @@ export async function moveTaskToQuadrant(
     }
 
     const { urgent, important } = parseQuadrantFlags(targetQuadrant);
-    const { syncConfig, deviceId } = await getSyncContext();
-    const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
+    const { syncConfig } = await getSyncContext();
 
     const nextRecord: TaskRecord = {
       ...existing,
@@ -34,7 +33,6 @@ export async function moveTaskToQuadrant(
       important,
       quadrant: targetQuadrant,
       updatedAt: isoNow(),
-      vectorClock: newClock,
     };
 
     await db.tasks.put(nextRecord);
@@ -50,13 +48,8 @@ export async function moveTaskToQuadrant(
       "update",
       id,
       nextRecord,
-      nextRecord.vectorClock || {},
       syncConfig?.enabled ?? false
     );
-
-    if (syncConfig?.enabled) {
-      logger.debug("Task quadrant move queued for sync", { taskId: id });
-    }
 
     return nextRecord;
   } catch (error) {

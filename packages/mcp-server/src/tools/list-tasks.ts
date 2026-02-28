@@ -1,22 +1,18 @@
-import { getDeviceIdFromToken } from '../jwt.js';
-import { initializeEncryption } from '../encryption/manager.js';
-import { getCryptoManager } from '../crypto.js';
-import { MAX_TASKS_PER_PULL } from '../constants.js';
+import { getPocketBase } from '../pocketbase-client.js';
 import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
-import { fetchWithRetry, DEFAULT_RETRY_CONFIG } from '../api/retry.js';
 import { createMcpLogger } from '../utils/logger.js';
 import type {
   GsdConfig,
   DecryptedTask,
   TaskFilters,
-  PullTasksResponse,
+  PBTask,
 } from '../types.js';
+import { pbTaskToDecryptedTask } from '../types.js';
 
 const logger = createMcpLogger('LIST_TASKS');
 
 /**
- * List all tasks (decrypted)
- * Requires encryption passphrase to be set
+ * List all tasks from PocketBase
  * Uses in-memory cache to reduce API calls
  */
 export async function listTasks(
@@ -39,111 +35,54 @@ export async function listTasks(
     }
   }
 
-  // Fetch and decrypt tasks
-  const deviceId = extractDeviceId(config);
-  const encryptedTasks = await fetchEncryptedTasks(config, deviceId);
-  const decryptedTasks = await decryptTaskBatch(encryptedTasks, config);
+  // Fetch tasks from PocketBase
+  const tasks = await fetchTasks(config);
 
   // Cache unfiltered results
   if (!filters) {
-    cache.setTaskList(cacheKey, decryptedTasks);
+    cache.setTaskList(cacheKey, tasks);
   }
 
-  return applyTaskFilters(decryptedTasks, filters);
+  return applyTaskFilters(tasks, filters);
 }
 
 /**
- * Extract device ID from JWT token
+ * Fetch all tasks from PocketBase collection
  */
-function extractDeviceId(config: GsdConfig): string {
+async function fetchTasks(config: GsdConfig): Promise<DecryptedTask[]> {
+  const pb = getPocketBase(config);
+
   try {
-    return getDeviceIdFromToken(config.authToken);
+    const records = await pb.collection('tasks').getFullList<PBTask>({
+      sort: '-client_updated_at',
+    });
+
+    return records.map((record) => {
+      try {
+        return pbTaskToDecryptedTask(record);
+      } catch (error) {
+        logger.error(
+          `Failed to map task ${record.id}`,
+          error instanceof Error ? error : new Error(String(error))
+        );
+        return null;
+      }
+    }).filter((task): task is DecryptedTask => task !== null);
   } catch (error) {
     throw new Error(
-      `❌ Failed to parse device ID from auth token\n\n` +
+      `Failed to fetch tasks from PocketBase\n\n` +
         `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
-        `Your token may be invalid or corrupted.\n` +
-        `Run: npx gsd-mcp-server --setup`
-    );
-  }
-}
-
-/**
- * Fetch encrypted tasks from Worker API with retry support
- */
-async function fetchEncryptedTasks(
-  config: GsdConfig,
-  deviceId: string
-): Promise<PullTasksResponse['tasks']> {
-  const payload = JSON.stringify({
-    deviceId,
-    lastVectorClock: {}, // Empty clock to get all tasks
-    sinceTimestamp: 1, // Start from epoch + 1ms to get all tasks
-    limit: MAX_TASKS_PER_PULL,
-  });
-
-  let response: Response;
-  try {
-    response = await fetchWithRetry(
-      () =>
-        fetch(`${config.apiBaseUrl}/api/sync/pull`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${config.authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: payload,
-        }),
-      DEFAULT_RETRY_CONFIG
-    );
-  } catch (error) {
-    throw new Error(
-      `❌ Failed to fetch tasks\n\n` +
-        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
-        `Retried ${DEFAULT_RETRY_CONFIG.maxRetries} times.\n` +
+        `Please check:\n` +
+        `  1. Your internet connection\n` +
+        `  2. GSD_POCKETBASE_URL is correct\n` +
+        `  3. Your auth token is valid\n\n` +
         `Run: npx gsd-mcp-server --validate`
     );
   }
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch tasks: ${response.status}`);
-  }
-
-  const data = (await response.json()) as PullTasksResponse;
-  return data.tasks;
 }
 
 /**
- * Decrypt multiple tasks in batch
- */
-async function decryptTaskBatch(
-  encryptedTasks: PullTasksResponse['tasks'],
-  config: GsdConfig
-): Promise<DecryptedTask[]> {
-  // Initialize encryption once before the loop, not per-task
-  await initializeEncryption(config);
-  const cryptoManager = getCryptoManager();
-
-  const decryptedTasks: DecryptedTask[] = [];
-
-  for (const encryptedTask of encryptedTasks) {
-    try {
-      const decryptedJson = await cryptoManager.decrypt(
-        encryptedTask.encryptedBlob,
-        encryptedTask.nonce
-      );
-      decryptedTasks.push(JSON.parse(decryptedJson) as DecryptedTask);
-    } catch (error) {
-      logger.error(`Failed to decrypt task ${encryptedTask.id}`, error instanceof Error ? error : new Error(String(error)));
-      // Skip tasks that fail to decrypt
-    }
-  }
-
-  return decryptedTasks;
-}
-
-/**
- * Apply filters to decrypted tasks
+ * Apply filters to tasks
  */
 function applyTaskFilters(
   tasks: DecryptedTask[],

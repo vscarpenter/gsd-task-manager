@@ -1,201 +1,31 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { OAUTH_STATE_CONFIG, getOAuthEnvironment } from "@/lib/oauth-config";
-import { canUsePopups, getPlatformInfo } from "@/lib/pwa-detection";
-import { OAUTH_POPUP } from "@/lib/constants/ui";
-import { getEnvironmentConfig } from "@/lib/env-config";
-import {
-  subscribeToOAuthHandshake,
-  type OAuthHandshakeEvent,
-  type OAuthAuthData,
-} from "@/lib/sync/oauth-handshake";
+import { loginWithGoogle, loginWithGithub, type AuthState } from "@/lib/sync/pb-auth";
 
 interface OAuthButtonsProps {
-  onSuccess?: (authData: OAuthAuthData) => void;
+  onSuccess?: (authState: AuthState) => void;
   onError?: (error: Error) => void;
-  onStart?: (provider: "google" | "apple") => void;
-}
-
-interface PendingOAuthState {
-  timestamp: number;
-  provider: "google" | "apple";
-  popup: Window | null;
+  onStart?: (provider: "google" | "github") => void;
 }
 
 export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps) {
-  const [loading, setLoading] = useState<"google" | "apple" | null>(null);
-  const pendingStates = useRef<Map<string, PendingOAuthState>>(new Map());
+  const [loading, setLoading] = useState<"google" | "github" | null>(null);
 
-  useEffect(() => {
-    const cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      const expiredStates: string[] = [];
-
-      pendingStates.current.forEach((state, key) => {
-        if (now - state.timestamp > OAUTH_STATE_CONFIG.MAX_STATE_AGE_MS) {
-          expiredStates.push(key);
-        }
-      });
-
-      expiredStates.forEach((key) => {
-        console.warn("[OAuth] Expired state cleaned up:", {
-          state: key.substring(0, 8) + "...",
-          environment: getOAuthEnvironment(),
-        });
-        const pending = pendingStates.current.get(key);
-        pending?.popup?.close();
-        pendingStates.current.delete(key);
-      });
-    }, OAUTH_STATE_CONFIG.CLEANUP_INTERVAL_MS);
-
-    return () => clearInterval(cleanupInterval);
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToOAuthHandshake((event: OAuthHandshakeEvent) => {
-      const pending = pendingStates.current.get(event.state);
-      if (!pending) {
-        return;
-      }
-
-      pendingStates.current.delete(event.state);
-      pending.popup?.close();
-      setLoading(null);
-
-      if (event.status === "success") {
-        if (event.authData.provider !== pending.provider) {
-          console.warn("[OAuth] Provider mismatch; ignoring result", {
-            state: event.state.substring(0, 8) + "...",
-            expected: pending.provider,
-            received: event.authData.provider,
-          });
-          return;
-        }
-
-        console.info("[OAuth] Handshake completed successfully:", {
-          provider: event.authData.provider,
-          userId: event.authData.userId,
-        });
-
-        onSuccess?.(event.authData);
-      } else {
-        console.error("[OAuth] Handshake failed:", {
-          state: event.state.substring(0, 8) + "...",
-          error: event.error,
-        });
-        onError?.(new Error(event.error));
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [onSuccess, onError]);
-
-  const handleOAuth = async (provider: "google" | "apple") => {
+  const handleOAuth = async (provider: "google" | "github") => {
     setLoading(provider);
     onStart?.(provider);
 
     try {
-      const usePopup = canUsePopups();
-      const platformInfo = getPlatformInfo();
-      const { apiBaseUrl } = getEnvironmentConfig();
-
-      console.info("[OAuth] Initiating flow:", {
-        provider,
-        usePopup,
-        platform: platformInfo,
-        environment: getOAuthEnvironment(),
-        workerUrl: apiBaseUrl,
-      });
-
-      const workerEndpoint = `${apiBaseUrl}/api/auth/oauth/${provider}/start`;
-
-      let response;
-      try {
-        response = await fetch(workerEndpoint, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-          mode: "cors",
-          credentials: "include",
-        });
-      } catch (fetchError) {
-        setLoading(null);
-        const message =
-          fetchError instanceof Error ? fetchError.message : "Network request failed";
-        onError?.(new Error(message));
-        throw fetchError;
-      }
-
-      if (!response.ok) {
-        setLoading(null);
-        const errorText = await response.text();
-        const error = new Error(`Failed to initiate ${provider} OAuth: ${response.status} ${errorText}`);
-        onError?.(error);
-        throw error;
-      }
-
-      const { authUrl, state } = await response.json();
-
-      if (!state || state.length < OAUTH_STATE_CONFIG.MIN_STATE_LENGTH) {
-        setLoading(null);
-        throw new Error("Invalid state token received from server");
-      }
-
-      pendingStates.current.set(state, {
-        timestamp: Date.now(),
-        provider,
-        popup: null,
-      });
-
-      if (usePopup) {
-        const left = window.screen.width / 2 - OAUTH_POPUP.WIDTH / 2;
-        const top = window.screen.height / 2 - OAUTH_POPUP.HEIGHT / 2;
-
-        const popup = window.open(
-          authUrl,
-          `${provider}_oauth`,
-          `width=${OAUTH_POPUP.WIDTH},height=${OAUTH_POPUP.HEIGHT},left=${left},top=${top}`
-        );
-
-        if (!popup) {
-          pendingStates.current.delete(state);
-          setLoading(null);
-          throw new Error("Popup blocked. Please allow popups for this site.");
-        }
-
-        pendingStates.current.set(state, {
-          timestamp: Date.now(),
-          provider,
-          popup,
-        });
-
-        console.info("[OAuth] Popup flow initiated:", {
-          provider,
-          state: state.substring(0, 8) + "...",
-          environment: getOAuthEnvironment(),
-        });
-
-        popup.focus();
-      } else {
-        console.info("[OAuth] Redirect flow initiated:", {
-          provider,
-          state: state.substring(0, 8) + "...",
-          environment: getOAuthEnvironment(),
-        });
-
-        window.location.href = authUrl;
-      }
+      const loginFn = provider === "google" ? loginWithGoogle : loginWithGithub;
+      const authState = await loginFn();
+      onSuccess?.(authState);
     } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      onError?.(err);
+    } finally {
       setLoading(null);
-      console.error("[OAuth] Flow failed:", error);
-      if (error instanceof Error && error.message) {
-        onError?.(error);
-      }
     }
   };
 
@@ -214,9 +44,9 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
         variant="subtle"
         className="relative w-full justify-start"
         disabled={loading !== null}
-        onClick={() => handleOAuth("apple")}
+        onClick={() => handleOAuth("github")}
       >
-        {loading === "apple" ? "Connecting..." : "Continue with Apple"}
+        {loading === "github" ? "Connecting..." : "Continue with GitHub"}
       </Button>
     </div>
   );

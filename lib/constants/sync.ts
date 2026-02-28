@@ -1,23 +1,10 @@
 /**
  * Sync-related constants
  * Centralizes sync configuration values for consistency and maintenance
+ *
+ * Simplified for PocketBase: removed ENCRYPTION_CONFIG and TOKEN_CONFIG
+ * (PocketBase SDK handles token management internally)
  */
-
-/**
- * Token management configuration
- */
-export const TOKEN_CONFIG = {
-  /** Refresh token when within 5 minutes of expiry */
-  REFRESH_THRESHOLD_MS: 5 * 60 * 1000,
-
-  /**
-   * Token expiration normalization threshold
-   * JWT tokens use Unix seconds (e.g., 1735689600) while JavaScript uses milliseconds
-   * Threshold of 10 billion distinguishes formats: seconds are < 10B, milliseconds are > 10B
-   * This normalization ensures consistent millisecond storage regardless of API format
-   */
-  EXPIRATION_NORMALIZATION_THRESHOLD: 10_000_000_000,
-} as const;
 
 /**
  * Sync operation configuration
@@ -49,34 +36,17 @@ export const SYNC_CONFIG = {
 } as const;
 
 /**
- * OAuth handshake configuration
+ * PocketBase configuration
  */
-export const OAUTH_CONFIG = {
-  /** Delay before processing OAuth result to allow subscribers to register (100ms) */
-  LISTENER_REGISTRATION_DELAY_MS: 100,
-} as const;
+export const POCKETBASE_CONFIG = {
+  /** Collection name for synced tasks */
+  TASKS_COLLECTION: 'tasks',
 
-/**
- * Encryption configuration
- */
-export const ENCRYPTION_CONFIG = {
-  /** PBKDF2 iterations for key derivation (OWASP 2023 recommendation) */
-  PBKDF2_ITERATIONS: 600_000,
+  /** Collection name for device tracking */
+  DEVICES_COLLECTION: 'devices',
 
-  /** AES-GCM key length in bits */
-  KEY_LENGTH: 256,
-
-  /** AES-GCM nonce length in bytes (96 bits) */
-  NONCE_LENGTH: 12,
-
-  /** AES-GCM tag length in bits */
-  TAG_LENGTH: 128,
-
-  /** Minimum passphrase length for encryption */
-  PASSPHRASE_MIN_LENGTH: 12,
-
-  /** Delay after encryption setup before triggering auto-sync (1 second) */
-  AUTO_SYNC_DELAY_MS: 1000,
+  /** Delay after OAuth login before triggering initial sync (1 second) */
+  POST_LOGIN_SYNC_DELAY_MS: 1000,
 } as const;
 
 /**

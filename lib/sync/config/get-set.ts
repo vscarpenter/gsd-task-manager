@@ -1,16 +1,17 @@
 /**
  * Sync configuration getters and setters
+ *
+ * Simplified for PocketBase: no config migration needed.
+ * The v13 DB migration handles all legacy config cleanup.
  */
 
 import { getDb } from "@/lib/db";
-import { ensureSyncConfigInitialized, migrateLegacyConfig } from "../config-migration";
-import type { SyncConfig, BackgroundSyncConfig } from "../types";
+import type { PBSyncConfig, BackgroundSyncConfig } from "../types";
 
 /**
  * Get sync configuration
  */
-export async function getSyncConfig(): Promise<SyncConfig | null> {
-  await ensureSyncConfigInitialized();
+export async function getSyncConfig(): Promise<PBSyncConfig | null> {
   const db = getDb();
   const config = await db.syncMetadata.get("sync_config");
 
@@ -18,13 +19,13 @@ export async function getSyncConfig(): Promise<SyncConfig | null> {
     return null;
   }
 
-  return migrateLegacyConfig(config as SyncConfig);
+  return config as PBSyncConfig;
 }
 
 /**
  * Update sync configuration
  */
-export async function updateSyncConfig(updates: Partial<SyncConfig>): Promise<void> {
+export async function updateSyncConfig(updates: Partial<PBSyncConfig>): Promise<void> {
   const db = getDb();
   const current = await getSyncConfig();
 
@@ -93,6 +94,5 @@ export async function getSyncStatus() {
     lastSyncAt: config?.lastSyncAt || null,
     pendingCount,
     deviceId: config?.deviceId || null,
-    serverUrl: config?.serverUrl || null,
   };
 }

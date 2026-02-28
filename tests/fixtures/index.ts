@@ -12,14 +12,9 @@ import type {
   SyncHistoryRecord,
 } from '@/lib/types';
 import type {
-  SyncConfig,
-  VectorClock,
+  PBSyncConfig,
   SyncQueueItem,
-  EncryptedTaskBlob,
-  ConflictInfo,
-  SyncResult,
-  PushResponse,
-  PullResponse,
+  PBSyncResult,
 } from '@/lib/sync/types';
 import type { HealthReport, HealthIssue } from '@/lib/sync/health-monitor';
 
@@ -100,9 +95,9 @@ export function createMockTasks(count: number, baseOverrides?: Partial<TaskRecor
 // ============================================================================
 
 /**
- * Create a mock sync configuration
+ * Create a mock PocketBase sync configuration
  */
-export function createMockSyncConfig(overrides?: Partial<SyncConfig>): SyncConfig {
+export function createMockSyncConfig(overrides?: Partial<PBSyncConfig>): PBSyncConfig {
   return {
     key: 'sync_config',
     enabled: true,
@@ -110,26 +105,12 @@ export function createMockSyncConfig(overrides?: Partial<SyncConfig>): SyncConfi
     deviceId: 'device-456',
     deviceName: 'Test Device',
     email: 'test@example.com',
-    token: 'test-token-abc123',
-    tokenExpiresAt: Date.now() + 60 * 60 * 1000, // 1 hour from now
+    provider: 'google',
     lastSyncAt: null,
-    vectorClock: {},
-    conflictStrategy: 'last_write_wins',
-    serverUrl: 'http://localhost:8787',
     consecutiveFailures: 0,
     lastFailureAt: null,
     lastFailureReason: null,
     nextRetryAt: null,
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock vector clock
- */
-export function createMockVectorClock(overrides?: VectorClock): VectorClock {
-  return {
-    'device-456': 1,
     ...overrides,
   };
 }
@@ -145,42 +126,6 @@ export function createMockSyncQueueItem(overrides?: Partial<SyncQueueItem>): Syn
     timestamp: Date.now(),
     retryCount: 0,
     payload: createMockTask(),
-    vectorClock: createMockVectorClock(),
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock encrypted task blob
- */
-export function createMockEncryptedTaskBlob(
-  overrides?: Partial<EncryptedTaskBlob>
-): EncryptedTaskBlob {
-  return {
-    id: 'test-task-1',
-    encryptedBlob: 'encrypted-data-base64',
-    nonce: 'nonce-base64',
-    version: 1,
-    vectorClock: createMockVectorClock(),
-    updatedAt: Date.now(),
-    checksum: 'checksum-abc123',
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock conflict info
- */
-export function createMockConflictInfo(overrides?: Partial<ConflictInfo>): ConflictInfo {
-  const localTask = createMockTask({ id: 'conflict-task-1', title: 'Local Version' });
-  const remoteTask = createMockTask({ id: 'conflict-task-1', title: 'Remote Version' });
-  
-  return {
-    taskId: 'conflict-task-1',
-    local: localTask,
-    remote: remoteTask,
-    localClock: createMockVectorClock({ 'device-456': 2 }),
-    remoteClock: createMockVectorClock({ 'device-789': 2 }),
     ...overrides,
   };
 }
@@ -188,41 +133,11 @@ export function createMockConflictInfo(overrides?: Partial<ConflictInfo>): Confl
 /**
  * Create a mock sync result
  */
-export function createMockSyncResult(overrides?: Partial<SyncResult>): SyncResult {
+export function createMockSyncResult(overrides?: Partial<PBSyncResult>): PBSyncResult {
   return {
     status: 'success',
     pushedCount: 0,
     pulledCount: 0,
-    conflictsResolved: 0,
-    conflicts: [],
-    timestamp: Date.now(),
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock push response
- */
-export function createMockPushResponse(overrides?: Partial<PushResponse>): PushResponse {
-  return {
-    accepted: [],
-    rejected: [],
-    conflicts: [],
-    serverVectorClock: createMockVectorClock(),
-    ...overrides,
-  };
-}
-
-/**
- * Create a mock pull response
- */
-export function createMockPullResponse(overrides?: Partial<PullResponse>): PullResponse {
-  return {
-    tasks: [],
-    deletedTaskIds: [],
-    serverVectorClock: createMockVectorClock(),
-    conflicts: [],
-    hasMore: false,
     ...overrides,
   };
 }
@@ -355,7 +270,7 @@ export function createMockErrorResponse(
  */
 export function createMockDexieTable<T>() {
   const data: T[] = [];
-  
+
   return {
     toArray: vi.fn(async () => [...data]),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -481,7 +396,7 @@ export function mockConsole() {
 export function mockDateNow(timestamp: number) {
   const original = Date.now;
   Date.now = vi.fn(() => timestamp);
-  
+
   return {
     restore: () => {
       Date.now = original;

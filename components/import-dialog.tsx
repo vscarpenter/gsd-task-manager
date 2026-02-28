@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangleIcon, PlusCircleIcon, RefreshCwIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,8 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
   const [isImporting, setIsImporting] = useState(false);
   const [importTaskCount, setImportTaskCount] = useState<number | null>(null);
 
-  // Parse the file to get task count when dialog opens
-  useState(() => {
+  // Parse the file to get task count when fileContents changes
+  useEffect(() => {
     if (fileContents) {
       try {
         const parsed = JSON.parse(fileContents);
@@ -27,8 +27,10 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
       } catch {
         setImportTaskCount(null);
       }
+    } else {
+      setImportTaskCount(null);
     }
-  });
+  }, [fileContents]);
 
   const handleImport = async (mode: "replace" | "merge") => {
     if (!fileContents) return;

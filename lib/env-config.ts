@@ -6,8 +6,8 @@
 export type Environment = 'development' | 'staging' | 'production';
 
 export interface EnvironmentConfig {
-  /** API base URL for sync worker */
-  apiBaseUrl: string;
+  /** PocketBase server URL */
+  pocketBaseUrl: string;
   /** OAuth callback URL for auth flow */
   oauthCallbackUrl: string;
   /** Whether running in development mode */
@@ -47,18 +47,13 @@ function detectEnvironment(): Environment {
  */
 export function getEnvironmentConfig(): EnvironmentConfig {
   const environment = detectEnvironment();
-  const apiBaseUrlOverride = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // API Base URL configuration
-  const apiBaseUrl =
-    apiBaseUrlOverride ||
+  // PocketBase URL configuration
+  const pocketBaseUrl =
+    process.env.NEXT_PUBLIC_POCKETBASE_URL ||
     (environment === 'development'
-      ? 'http://localhost:8787'
-      : environment === 'staging'
-      ? 'https://api-dev.vinny.dev'
-      : typeof window !== 'undefined'
-      ? window.location.origin // Use same-origin (CloudFront proxies /api/* to worker)
-      : 'https://gsd.vinny.dev');
+      ? 'http://127.0.0.1:8090'
+      : 'https://api.vinny.io');
 
   // OAuth Callback URL configuration
   const oauthCallbackUrl =
@@ -69,7 +64,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
       : 'https://gsd.vinny.dev/auth/callback';
 
   return {
-    apiBaseUrl,
+    pocketBaseUrl,
     oauthCallbackUrl,
     isDevelopment: environment === 'development',
     isProduction: environment === 'production',

@@ -81,7 +81,6 @@ export function SyncDebugPanel() {
                   <div className="text-xs text-gray-500">
                     Queue ID: {item.id.substring(0, 8)}... | 
                     Retry: {item.retryCount} | 
-                    {item.consolidatedFrom && ` Consolidated: ${item.consolidatedFrom.length} |`}
                     {new Date(item.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
