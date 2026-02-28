@@ -48,7 +48,7 @@ Development server runs at `http://localhost:3000`.
 
 All task data is stored client-side using IndexedDB via Dexie.
 
-- **Database setup:** `lib/db.ts` — Single `GsdDatabase` instance (v12) with tables:
+- **Database setup:** `lib/db.ts` — Single `GsdDatabase` instance (v13) with tables:
   - `tasks` — Task records with quadrant, completion, due dates, tags, subtasks, dependencies, and time tracking
   - `archivedTasks` — Completed tasks moved to archive after retention period
   - `smartViews` — Custom saved filter configurations
@@ -72,12 +72,13 @@ All task data is stored client-side using IndexedDB via Dexie.
 - v4: Added smartViews table for custom filters
 - v5: Added notification fields and notificationSettings table
 - v6: Added dependencies field for task dependencies
-- v7: Added sync support (syncQueue, syncMetadata, deviceInfo, vectorClock)
+- v7: Added sync support (syncQueue, syncMetadata, deviceInfo)
 - v8: Added completedAt field for date-based filtering
 - v9: Added archivedTasks table and archiveSettings
 - v10: Added syncHistory table for sync audit logging
 - v11: Added appPreferences table for UI preferences (pinned views)
 - v12: Added time tracking fields (estimatedMinutes, timeSpent, timeEntries)
+- v13: PocketBase migration — cleared sync metadata, removed vectorClock from tasks
 
 ### v3.0 Features Architecture
 
@@ -204,8 +205,7 @@ Quadrant logic lives in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadr
 - **Sync Components** (`components/sync/`):
   - `sync-button.tsx` — Main sync button UI with status indicators
   - `sync-auth-dialog.tsx` — OAuth login/logout dialog
-  - `oauth-buttons.tsx` — Google/Apple OAuth sign-in buttons
-  - `encryption-passphrase-dialog.tsx` — Encryption passphrase setup/entry
+  - `oauth-buttons.tsx` — Google/GitHub OAuth sign-in buttons
   - `use-sync-health.ts` — Health monitoring hook
   - `use-sync-status.ts` — Status display logic hook
 - **Settings Components** (`components/settings/`):
@@ -446,7 +446,7 @@ Output is in the `out/` directory. Upload to your static hosting provider.
   - Selection state uses `Set<string>` for O(1) lookup
   - Clear selection state after operations complete
 - **Database Migrations:**
-  - Current version: v12
+  - Current version: v13
   - Always provide upgrade function with default values for new fields
   - Test migration by exporting old data and importing into latest version
 - **Import/Export:**

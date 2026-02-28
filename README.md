@@ -3,8 +3,8 @@
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
 **🚀 Live App:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**📦 Current Version:** 5.10.0
-**🔄 Latest:** Command Palette (⌘K), Quick Settings Panel, and Smart View Pinning for enhanced productivity workflows
+**📦 Current Version:** 6.9.0
+**🔄 Latest:** PocketBase cloud sync migration, Command Palette (⌘K), Smart View Pinning
 
 [![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
@@ -53,7 +53,7 @@ GSD Task Manager is a **completely private** task manager that runs entirely in 
 #### 🔐 **Privacy & Data**
 
 - ✅ **Privacy-first** — All data stored locally in IndexedDB (no server by default)
-- ✅ **End-to-End Encryption** — Optional cloud sync with client-side encryption (OAuth-based, fully implemented)
+- ✅ **Optional Cloud Sync** — Multi-device sync via self-hosted PocketBase with Google/GitHub OAuth
 - ✅ **Export/Import** — Back up tasks as JSON with merge or replace modes
 - ✅ **Works Offline** — Full functionality without internet connection
 
@@ -243,33 +243,17 @@ Visit the [Install page](https://gsd.vinny.dev/install.html) for detailed instru
 
 ## 🔧 Backend & Infrastructure (Optional)
 
-GSD Task Manager works completely offline by default, but includes an **optional cloud sync backend** powered by Cloudflare Workers.
+GSD Task Manager works completely offline by default, but includes an **optional cloud sync backend** powered by a self-hosted PocketBase instance.
 
-### Cloud Sync Features (Fully Implemented)
+### Cloud Sync Features
 
-The backend provides optional cloud sync with enterprise-grade security:
-- **End-to-End Encryption** — Zero-knowledge architecture: server never sees plaintext task data
-- **OAuth Authentication** — Secure login with Google or Apple (OIDC-compliant)
-- **Multi-Device Sync** — Keep tasks in sync across unlimited devices using vector clocks
-- **Conflict Resolution** — Automatic handling of concurrent edits with cascade sync
+The backend provides optional cloud sync via PocketBase at `https://api.vinny.io`:
+- **PocketBase Backend** — Self-hosted on AWS EC2, user owns the server and data
+- **OAuth Authentication** — Secure login with Google or GitHub via PocketBase built-in auth
+- **Multi-Device Sync** — Keep tasks in sync across devices with last-write-wins (LWW) resolution
+- **Realtime Updates** — PocketBase SSE (Server-Sent Events) for instant cross-device sync
 - **Device Management** — Manage and revoke access for specific devices
 - **MCP Server Integration** — AI-powered task management through Claude Desktop (see below)
-
-### Multi-Environment Deployment
-
-The worker backend supports three environments:
-
-| Environment | Purpose | URL |
-|------------|---------|-----|
-| **Development** | Local testing | `localhost:3000` |
-| **Staging** | Pre-production testing | `gsd-dev.vinny.dev` |
-| **Production** | Live app | `gsd.vinny.dev` |
-
-Each environment has isolated:
-- D1 databases for encrypted task storage
-- KV namespaces for sessions and rate limiting
-- R2 buckets for backup storage
-- Environment-specific secrets and OAuth configurations
 
 ### CloudFront Edge Routing
 
@@ -313,12 +297,12 @@ The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or
 - Provides secure, read-only access to your synced tasks
 
 **Features:**
-- ✅ **Decrypted Task Access** — Claude can read all your task content (titles, descriptions, tags, subtasks)
+- ✅ **Full Task Access** — Claude can read and write task content (titles, descriptions, tags, subtasks)
 - ✅ **Natural Language Queries** — Ask "What are my urgent tasks this week?" or "Show me all #work tasks"
 - ✅ **Smart Search & Filtering** — Search across all task content, filter by quadrant, status, or tags
-- ✅ **Privacy-First** — Encryption passphrase stored locally, decryption happens on your machine
-- ✅ **Read-Only** — Claude cannot modify, create, or delete tasks (safe exploration)
-- ✅ **Zero-Knowledge Server** — Your Worker still can't decrypt tasks; MCP server handles decryption locally
+- ✅ **Privacy-First** — Tasks stored on your self-hosted PocketBase server
+- ✅ **Read & Write** — Full CRUD operations with dry-run mode for safe exploration
+- ✅ **Self-Hosted** — Your PocketBase server stores data; MCP server communicates directly with it
 
 **Available Tools:**
 1. `list_tasks` — List all decrypted tasks with optional filtering (quadrant, status, tags)
@@ -335,17 +319,24 @@ The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or
 - **Smart Prioritization** — "Which tasks should I focus on today?"
 
 **Security:**
-- Encryption passphrase stored only in local Claude Desktop config (never in cloud)
-- End-to-end encryption maintained (Worker still can't decrypt tasks)
-- Read-only access prevents accidental modifications
-- Opt-in feature (requires explicit passphrase configuration)
+- Auth token stored only in local Claude Desktop config
+- Tasks stored on your self-hosted PocketBase server (you own the data)
+- Dry-run mode available for write operations
+- Opt-in feature (requires explicit configuration)
 
 **Setup:**
 See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detailed setup instructions.
 
 ### Recent Updates
 
-**v5.10.0** (Latest) 🎉
+**v6.9.0** (Latest) 🎉
+- ✅ **PocketBase Migration** — Replaced Cloudflare Workers backend with self-hosted PocketBase
+- ✅ **Simplified Sync** — Last-write-wins (LWW) replaces vector clocks; SSE for realtime updates
+- ✅ **Google + GitHub OAuth** — PocketBase built-in auth replaces custom OIDC (dropped Apple)
+- ✅ **MCP Server Updated** — Uses PocketBase SDK directly, no encryption layer needed
+- ✅ **~23,700 lines removed** — Deleted worker/, crypto, vector clocks, old sync engine
+
+**v5.10.0** 🎉
 - ✅ **Command Palette** — Universal ⌘K interface for quick actions, navigation, and task search
 - ✅ **Quick Settings Panel** — Slide-out panel for frequently-adjusted settings (theme, notifications, auto-sync)
 - ✅ **Smart View Pinning** — Pin up to 5 smart views to header with keyboard shortcuts (1-9, 0 to clear)
@@ -389,7 +380,6 @@ See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detaile
 For developers interested in contributing, self-hosting, or deploying the backend:
 
 - **[TECHNICAL.md](./TECHNICAL.md)** — Architecture, database schema, and development guide
-- **[worker/README.md](./worker/README.md)** — Multi-environment setup and deployment
 - **[CLAUDE.md](./CLAUDE.md)** — Project context for AI assistants
 
 ### Quick Start for Developers
@@ -407,8 +397,6 @@ bun run build
 # Deploy to staging
 cd scripts && ./deploy-dev.sh
 
-# Deploy worker to all environments (optional)
-cd worker && npm run deploy:all
 ```
 
 ### Tech Stack
@@ -416,8 +404,8 @@ cd worker && npm run deploy:all
 - **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
 - **Data Layer:** Dexie (IndexedDB), Zod validation
 - **Charts:** Recharts for analytics visualizations
-- **Backend (Optional):** Cloudflare Workers, D1, KV, R2
-- **Auth (Optional):** OAuth 2.0 with Google/Apple
+- **Backend (Optional):** Self-hosted PocketBase (SSE realtime, LWW sync)
+- **Auth (Optional):** OAuth 2.0 with Google/GitHub via PocketBase
 
 ---
 
