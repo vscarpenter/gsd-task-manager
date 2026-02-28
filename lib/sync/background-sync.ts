@@ -186,11 +186,6 @@ export class BackgroundSyncManager {
             const queue = getSyncQueue();
             const pendingCount = await queue.getPendingCount();
 
-            if (pendingCount === 0) {
-                logger.debug('Skipping sync: no pending changes', { trigger });
-                return;
-            }
-
             logger.info('Triggering background sync', { trigger, pendingCount });
             this.lastSyncTimestamp = now;
 

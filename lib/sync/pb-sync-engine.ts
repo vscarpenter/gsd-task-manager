@@ -26,6 +26,11 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/** Escape a string value for safe use in PocketBase filter expressions */
+function escapeFilterValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 /**
  * Get the current device ID from sync config in IndexedDB
  */
@@ -45,7 +50,7 @@ async function fetchRemoteTaskIndex(ownerId: string): Promise<Map<string, string
 
   try {
     const records = await pb.collection('tasks').getFullList({
-      filter: `owner = "${ownerId}"`,
+      filter: `owner = "${escapeFilterValue(ownerId)}"`,
       fields: 'id,task_id',
     });
     for (const r of records) {
@@ -157,9 +162,9 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<numb
   }
 
   // Build filter: tasks owned by this user, optionally updated since last sync
-  let filter = `owner = "${ownerId}"`;
+  let filter = `owner = "${escapeFilterValue(ownerId)}"`;
   if (lastSyncAt) {
-    filter += ` && client_updated_at > "${lastSyncAt}"`;
+    filter += ` && client_updated_at > "${escapeFilterValue(lastSyncAt)}"`;
   }
 
   const records = await pb.collection('tasks').getFullList({

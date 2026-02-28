@@ -44,7 +44,7 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
     const completedTasks = allTasks.filter(t => t.completed);
 
     const dates = allTasks
-      .map(t => t.client_created_at || t.created)
+      .map(t => t.client_updated_at || t.updated)
       .filter(Boolean)
       .sort();
 

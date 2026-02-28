@@ -9,6 +9,11 @@ import type { DecryptedTask } from '../types.js';
 import { getPocketBase } from '../pocketbase-client.js';
 import { getTaskCache } from '../cache.js';
 
+/** Escape a string value for safe use in PocketBase filter expressions */
+function escapeFilterValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 /**
  * Generate unique ID for new tasks
  */
@@ -88,7 +93,7 @@ async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string
 
   try {
     const record = await pb.collection('tasks').getFirstListItem<PBTask>(
-      `task_id = "${taskId}"`
+      `task_id = "${escapeFilterValue(taskId)}"`
     );
     return record.id;
   } catch {

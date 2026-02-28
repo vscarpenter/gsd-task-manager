@@ -54,6 +54,11 @@ export interface DecryptedTask {
   }>;
   recurrence: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies: string[];
+  notificationEnabled?: boolean;
+  notifyBefore?: number;
+  estimatedMinutes?: number;
+  timeSpent?: number;
+  timeEntries?: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -114,6 +119,11 @@ export function pbTaskToDecryptedTask(pb: PBTask): DecryptedTask {
     subtasks: pb.subtasks || [],
     recurrence: (pb.recurrence || 'none') as DecryptedTask['recurrence'],
     dependencies: pb.dependencies || [],
+    notificationEnabled: pb.notification_enabled ?? true,
+    notifyBefore: pb.notify_before || undefined,
+    estimatedMinutes: pb.estimated_minutes || undefined,
+    timeSpent: pb.time_spent ?? 0,
+    timeEntries: pb.time_entries ?? [],
     createdAt: pb.client_created_at || pb.created,
     updatedAt: pb.client_updated_at || pb.updated,
   };
@@ -142,11 +152,11 @@ export function decryptedTaskToPBFields(
     tags: task.tags || [],
     subtasks: task.subtasks || [],
     dependencies: task.dependencies || [],
-    notification_enabled: true,
-    notify_before: 0,
-    estimated_minutes: 0,
-    time_spent: 0,
-    time_entries: [],
+    notification_enabled: task.notificationEnabled ?? true,
+    notify_before: task.notifyBefore ?? 0,
+    estimated_minutes: task.estimatedMinutes ?? 0,
+    time_spent: task.timeSpent ?? 0,
+    time_entries: task.timeEntries ?? [],
     client_updated_at: task.updatedAt,
     client_created_at: task.createdAt,
     device_id: deviceId,

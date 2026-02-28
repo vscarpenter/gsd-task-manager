@@ -4,6 +4,9 @@
  */
 
 import { getSyncConfig, updateSyncConfig } from './config';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SYNC_RETRY');
 
 // Retry configuration
 const MAX_RETRIES = 5;
@@ -16,7 +19,7 @@ export class RetryManager {
   async recordFailure(error: Error): Promise<void> {
     const config = await getSyncConfig();
     if (!config) {
-      console.error('[RETRY] Cannot record failure: sync config not found');
+      logger.error('Cannot record failure: sync config not found');
       return;
     }
 
@@ -24,7 +27,7 @@ export class RetryManager {
     const nextRetryDelay = this.getNextRetryDelay(consecutiveFailures);
     const nextRetryAt = Date.now() + nextRetryDelay;
 
-    console.log('[RETRY] Recording sync failure:', {
+    logger.info('Recording sync failure', {
       consecutiveFailures,
       errorMessage: error.message,
       nextRetryDelay: `${nextRetryDelay / 1000}s`,
@@ -45,13 +48,13 @@ export class RetryManager {
   async recordSuccess(): Promise<void> {
     const config = await getSyncConfig();
     if (!config) {
-      console.error('[RETRY] Cannot record success: sync config not found');
+      logger.error('Cannot record success: sync config not found');
       return;
     }
 
     // Only update if there were previous failures
     if (config.consecutiveFailures > 0) {
-      console.log('[RETRY] Recording sync success, resetting failure counter');
+      logger.info('Recording sync success, resetting failure counter');
 
       await updateSyncConfig({
         consecutiveFailures: 0,
@@ -86,7 +89,7 @@ export class RetryManager {
 
     const shouldRetry = config.consecutiveFailures < MAX_RETRIES;
     
-    console.log('[RETRY] Should retry check:', {
+    logger.debug('Should retry check', {
       consecutiveFailures: config.consecutiveFailures,
       maxRetries: MAX_RETRIES,
       shouldRetry,
@@ -123,7 +126,7 @@ export class RetryManager {
 
     if (!canSync) {
       const waitTime = Math.ceil((config.nextRetryAt - now) / 1000);
-      console.log('[RETRY] Cannot sync yet, must wait:', {
+      logger.debug('Cannot sync yet, must wait', {
         waitTimeSeconds: waitTime,
         nextRetryAt: new Date(config.nextRetryAt).toISOString(),
       });
