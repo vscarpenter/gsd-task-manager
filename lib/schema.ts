@@ -61,8 +61,26 @@ export const taskRecordSchema = taskDraftSchema
 	})
 	.strict();
 
+/** Lenient task schema for importing legacy exports (strips unknown fields like vectorClock) */
+const taskRecordImportSchema = taskDraftSchema
+	.extend({
+		id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
+		quadrant: quadrantIdSchema,
+		completed: z.boolean(),
+		completedAt: z.string().datetime({ offset: true }).optional(),
+		createdAt: z.string().datetime({ offset: true }),
+		updatedAt: z.string().datetime({ offset: true }),
+		parentTaskId: z.string().min(4).optional(),
+		notificationSent: z.boolean().default(false),
+		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
+		snoozedUntil: z.string().datetime({ offset: true }).optional(),
+		timeSpent: z.number().int().min(0).optional(),
+		timeEntries: z.array(timeEntrySchema).default([]),
+	})
+	.strip();
+
 export const importPayloadSchema = z.object({
-	tasks: z.array(taskRecordSchema),
+	tasks: z.array(taskRecordImportSchema),
 	exportedAt: z.string().datetime({ offset: true }),
 	version: z.string(),
 });

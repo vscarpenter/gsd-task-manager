@@ -19,6 +19,13 @@ import type { RecordModel } from 'pocketbase';
 
 const logger = createLogger('SYNC_ENGINE');
 
+/** Delay between API requests to avoid PocketBase rate limiting (429) */
+const THROTTLE_MS = 100;
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
  * Get the current device ID from sync config in IndexedDB
  */
@@ -29,8 +36,33 @@ async function getDeviceId(): Promise<string> {
 }
 
 /**
+ * Fetch all existing remote task_ids for the current user in one request.
+ * Returns a Map of task_id → PocketBase record id for efficient lookups.
+ */
+async function fetchRemoteTaskIndex(ownerId: string): Promise<Map<string, string>> {
+  const pb = getPocketBase();
+  const index = new Map<string, string>();
+
+  try {
+    const records = await pb.collection('tasks').getFullList({
+      filter: `owner = "${ownerId}"`,
+      fields: 'id,task_id',
+    });
+    for (const r of records) {
+      index.set(r['task_id'] as string, r.id);
+    }
+  } catch {
+    // If the fetch fails (e.g. empty collection), return empty index
+    logger.warn('Could not fetch remote task index; will check individually');
+  }
+
+  return index;
+}
+
+/**
  * Push all pending local changes to PocketBase
- * Processes the offline queue: create/update/delete operations.
+ * Pre-fetches remote task IDs to avoid per-item lookups, and throttles
+ * requests to stay under PocketBase rate limits.
  */
 export async function pushLocalChanges(): Promise<number> {
   const pb = getPocketBase();
@@ -46,39 +78,46 @@ export async function pushLocalChanges(): Promise<number> {
   if (pending.length === 0) return 0;
 
   const deviceId = await getDeviceId();
+
+  // Pre-fetch all remote records in one request to avoid N individual lookups
+  const remoteIndex = await fetchRemoteTaskIndex(ownerId);
   let pushedCount = 0;
 
   for (const item of pending) {
     try {
+      const pbRecordId = remoteIndex.get(item.taskId);
+
       if (item.operation === 'create' && item.payload) {
         const data = taskRecordToPocketBase(item.payload, ownerId, deviceId);
-        // Check if record already exists (re-push after offline)
-        const existing = await findPBRecordByTaskId(item.taskId);
-        if (existing) {
-          await pb.collection('tasks').update(existing.id, data);
+        if (pbRecordId) {
+          await pb.collection('tasks').update(pbRecordId, data);
         } else {
-          await pb.collection('tasks').create(data);
+          const created = await pb.collection('tasks').create(data);
+          remoteIndex.set(item.taskId, created.id);
         }
       } else if (item.operation === 'update' && item.payload) {
-        const existing = await findPBRecordByTaskId(item.taskId);
-        if (existing) {
-          const data = taskRecordToPocketBase(item.payload, ownerId, deviceId);
-          await pb.collection('tasks').update(existing.id, data);
+        const data = taskRecordToPocketBase(item.payload, ownerId, deviceId);
+        if (pbRecordId) {
+          await pb.collection('tasks').update(pbRecordId, data);
         } else {
-          // Task doesn't exist remotely yet — create it
-          const data = taskRecordToPocketBase(item.payload, ownerId, deviceId);
-          await pb.collection('tasks').create(data);
+          const created = await pb.collection('tasks').create(data);
+          remoteIndex.set(item.taskId, created.id);
         }
       } else if (item.operation === 'delete') {
-        const existing = await findPBRecordByTaskId(item.taskId);
-        if (existing) {
-          await pb.collection('tasks').delete(existing.id);
+        if (pbRecordId) {
+          await pb.collection('tasks').delete(pbRecordId);
+          remoteIndex.delete(item.taskId);
         }
         // If not found remotely, nothing to delete — still dequeue
       }
 
       await queue.dequeue(item.id);
       pushedCount++;
+
+      // Throttle to avoid 429 rate limiting
+      if (pushedCount < pending.length) {
+        await delay(THROTTLE_MS);
+      }
     } catch (error) {
       logger.error('Push failed for item', error instanceof Error ? error : new Error(String(error)), {
         taskId: item.taskId,
@@ -110,12 +149,12 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<numb
   // Build filter: tasks owned by this user, optionally updated since last sync
   let filter = `owner = "${ownerId}"`;
   if (lastSyncAt) {
-    filter += ` && updated > "${lastSyncAt}"`;
+    filter += ` && client_updated_at > "${lastSyncAt}"`;
   }
 
   const records = await pb.collection('tasks').getFullList({
     filter,
-    sort: '-updated',
+    sort: '-client_updated_at',
   });
 
   let pulledCount = 0;
@@ -254,21 +293,3 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
   }
 }
 
-/**
- * Look up a PocketBase record by our client-side task_id
- */
-async function findPBRecordByTaskId(taskId: string): Promise<RecordModel | null> {
-  const pb = getPocketBase();
-  const ownerId = getCurrentUserId();
-  if (!ownerId) return null;
-
-  try {
-    const result = await pb.collection('tasks').getFirstListItem(
-      `task_id = "${taskId}" && owner = "${ownerId}"`
-    );
-    return result;
-  } catch {
-    // getFirstListItem throws on no match
-    return null;
-  }
-}

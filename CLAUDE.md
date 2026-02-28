@@ -131,6 +131,8 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
 - Database migrations in `lib/db.ts` - current version is 13
 - New task fields (recurrence, tags, subtasks, dependencies) are optional with sensible defaults
+- **Import schema** uses `.strip()` (not `.strict()`) to accept legacy exports with extra fields (e.g., `vectorClock` from the old Cloudflare sync system)
+- Export schema still uses `.strict()` to ensure clean outgoing data
 
 ### Dependencies System
 - Always validate circular dependencies before adding relationships
@@ -144,10 +146,19 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### Cloud Sync
 - **PocketBase Admin**: `https://api.vinny.io/_/` for collection management
-- PocketBase SDK auto-stores auth tokens in localStorage and auto-refreshes
+- **PocketBase Version**: v0.23+ (uses `_superusers` collection for admin auth, not legacy `/api/admins/`)
+- PocketBase SDK (v0.26.8) auto-stores auth tokens in localStorage and auto-refreshes
 - LWW conflict resolution uses `client_updated_at` field — remote wins if newer
 - SSE subscriptions auto-reconnect; periodic sync runs as safety net
 - Echo filtering skips own-device changes via `device_id` comparison
+- **Rate Limiting**: Push operations are throttled (100ms between requests) to avoid PocketBase 429 errors
+- **Batch Lookups**: `fetchRemoteTaskIndex()` pre-fetches all remote task IDs in one request instead of N individual lookups
+- **PocketBase v0.23+ Gotchas**:
+  - System fields (`created`, `updated`) **cannot** be used in `sort` or `filter` — use custom fields like `client_updated_at` instead
+  - Custom indexes cannot reference system columns (`updated`, `created`)
+  - The `_pb_users_auth_` placeholder doesn't work as a `collectionId` for relation fields — use `text` type for owner FK or look up the real collection ID
+  - Admin auth endpoint is `/api/collections/_superusers/auth-with-password` (not `/api/admins/auth-with-password`)
+- **Collection Setup**: Run `scripts/setup-pocketbase-collections.sh` to create the `tasks` collection with correct schema, indexes, and API rules
 
 ### MCP Server
 - Build with `npm run build` in `packages/mcp-server/`
@@ -157,8 +168,9 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### OAuth Authentication
 - PocketBase SDK handles OAuth popup flow automatically (`authWithOAuth2`)
-- Supports Google and GitHub providers
+- Supports Google and GitHub providers (currently only Google is configured on server)
 - Auth state persists in PocketBase's built-in `authStore` (localStorage)
+- **Local dev**: Set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PocketBase (local PocketBase at 127.0.0.1:8090 requires separate OAuth provider setup)
 
 ### Pre-commit
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
