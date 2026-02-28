@@ -1,109 +1,47 @@
 /**
  * Tests for OAuthButtons component
  * Tests OAuth provider button rendering, click handlers, loading states, and error handling
+ * using the PocketBase-based authentication flow.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { OAuthAuthData, OAuthHandshakeEvent } from '@/lib/sync/oauth-handshake';
+import type { AuthState } from '@/lib/sync/pb-auth';
 
 // Hoisted mocks
-const {
-  mockFetch,
-  mockSubscribeToOAuthHandshake,
-  mockCanUsePopups,
-  mockGetPlatformInfo,
-  mockWindowOpen,
-} = vi.hoisted(() => ({
-  mockFetch: vi.fn(),
-  mockSubscribeToOAuthHandshake: vi.fn(),
-  mockCanUsePopups: vi.fn(),
-  mockGetPlatformInfo: vi.fn(),
-  mockWindowOpen: vi.fn(),
+const { mockLoginWithGoogle, mockLoginWithGithub } = vi.hoisted(() => ({
+  mockLoginWithGoogle: vi.fn(),
+  mockLoginWithGithub: vi.fn(),
 }));
 
-// Mock modules
-vi.mock('@/lib/sync/oauth-handshake', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  subscribeToOAuthHandshake: (callback: any) => mockSubscribeToOAuthHandshake(callback),
-}));
-
-vi.mock('@/lib/pwa-detection', () => ({
-  canUsePopups: () => mockCanUsePopups(),
-  getPlatformInfo: () => mockGetPlatformInfo(),
-}));
-
-vi.mock('@/lib/oauth-config', () => ({
-  OAUTH_STATE_CONFIG: {
-    MAX_STATE_AGE_MS: 10 * 60 * 1000,
-    MIN_STATE_LENGTH: 32,
-    CLEANUP_INTERVAL_MS: 60 * 1000,
-  },
-  getOAuthEnvironment: () => 'local',
-}));
-
-vi.mock('@/lib/env-config', () => ({
-  getEnvironmentConfig: () => ({
-    apiBaseUrl: 'http://localhost:8787',
-    oauthCallbackUrl: 'http://localhost:3000/auth/callback',
-    isDevelopment: true,
-    isProduction: false,
-    isStaging: false,
-    environment: 'development',
-  }),
+// Mock PocketBase auth module
+vi.mock('@/lib/sync/pb-auth', () => ({
+  loginWithGoogle: (...args: unknown[]) => mockLoginWithGoogle(...args),
+  loginWithGithub: (...args: unknown[]) => mockLoginWithGithub(...args),
 }));
 
 // Import component after mocks
 import { OAuthButtons } from '@/components/sync/oauth-buttons';
 
-describe('OAuthButtons', () => {
-  let oauthCallback: ((event: OAuthHandshakeEvent) => void) | null = null;
-  let unsubscribeFn: ReturnType<typeof vi.fn>;
+/** Helper to create a valid AuthState for tests */
+function createAuthState(overrides: Partial<AuthState> = {}): AuthState {
+  return {
+    isLoggedIn: true,
+    userId: 'user_abc123',
+    email: 'test@example.com',
+    provider: 'google',
+    ...overrides,
+  };
+}
 
+describe('OAuthButtons', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    oauthCallback = null;
 
-    // Setup global fetch mock
-    global.fetch = mockFetch;
-
-    // Setup window.open mock
-    mockWindowOpen.mockReturnValue({
-      focus: vi.fn(),
-      close: vi.fn(),
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    global.window.open = mockWindowOpen as any;
-
-    // Setup default mock implementations
-    mockCanUsePopups.mockReturnValue(true);
-    mockGetPlatformInfo.mockReturnValue({
-      platform: 'desktop',
-      standalone: false,
-      mobile: false,
-      canUsePopups: true,
-    });
-
-    // Capture OAuth callback
-    unsubscribeFn = vi.fn();
-    mockSubscribeToOAuthHandshake.mockImplementation((callback) => {
-      oauthCallback = callback;
-      return unsubscribeFn;
-    });
-
-    // Default successful fetch response
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        authUrl: 'https://accounts.google.com/oauth',
-        state: 'test-state-token-12345678901234567890',
-      }),
-    });
-  });
-
-  afterEach(() => {
-    vi.clearAllTimers();
+    // Default: login functions resolve successfully
+    mockLoginWithGoogle.mockResolvedValue(createAuthState({ provider: 'google' }));
+    mockLoginWithGithub.mockResolvedValue(createAuthState({ provider: 'github' }));
   });
 
   describe('Button Rendering', () => {
@@ -114,26 +52,26 @@ describe('OAuthButtons', () => {
       expect(googleButton).toBeInTheDocument();
     });
 
-    it('should render Apple OAuth button', () => {
+    it('should render GitHub OAuth button', () => {
       render(<OAuthButtons />);
 
-      const appleButton = screen.getByRole('button', { name: /continue with apple/i });
-      expect(appleButton).toBeInTheDocument();
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      expect(githubButton).toBeInTheDocument();
     });
 
     it('should render both buttons enabled by default', () => {
       render(<OAuthButtons />);
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      const appleButton = screen.getByRole('button', { name: /continue with apple/i });
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
 
       expect(googleButton).not.toBeDisabled();
-      expect(appleButton).not.toBeDisabled();
+      expect(githubButton).not.toBeDisabled();
     });
   });
 
   describe('Click Handlers', () => {
-    it('should call onStart callback when Google button is clicked', async () => {
+    it('should call onStart with "google" when Google button is clicked', async () => {
       const user = userEvent.setup();
       const onStart = vi.fn();
 
@@ -145,19 +83,19 @@ describe('OAuthButtons', () => {
       expect(onStart).toHaveBeenCalledWith('google');
     });
 
-    it('should call onStart callback when Apple button is clicked', async () => {
+    it('should call onStart with "github" when GitHub button is clicked', async () => {
       const user = userEvent.setup();
       const onStart = vi.fn();
 
       render(<OAuthButtons onStart={onStart} />);
 
-      const appleButton = screen.getByRole('button', { name: /continue with apple/i });
-      await user.click(appleButton);
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      await user.click(githubButton);
 
-      expect(onStart).toHaveBeenCalledWith('apple');
+      expect(onStart).toHaveBeenCalledWith('github');
     });
 
-    it('should fetch OAuth start endpoint for Google', async () => {
+    it('should call loginWithGoogle when Google button is clicked', async () => {
       const user = userEvent.setup();
 
       render(<OAuthButtons />);
@@ -165,60 +103,26 @@ describe('OAuthButtons', () => {
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       await user.click(googleButton);
 
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/auth/oauth/google/start'),
-          expect.objectContaining({
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'include',
-          })
-        );
-      });
+      expect(mockLoginWithGoogle).toHaveBeenCalledOnce();
     });
 
-    it('should fetch OAuth start endpoint for Apple', async () => {
+    it('should call loginWithGithub when GitHub button is clicked', async () => {
       const user = userEvent.setup();
 
       render(<OAuthButtons />);
 
-      const appleButton = screen.getByRole('button', { name: /continue with apple/i });
-      await user.click(appleButton);
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      await user.click(githubButton);
 
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/auth/oauth/apple/start'),
-          expect.objectContaining({
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-            credentials: 'include',
-          })
-        );
-      });
-    });
-
-    it('should open popup window when popups are supported', async () => {
-      const user = userEvent.setup();
-      mockCanUsePopups.mockReturnValue(true);
-
-      render(<OAuthButtons />);
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      await waitFor(() => {
-        expect(mockWindowOpen).toHaveBeenCalledWith(
-          'https://accounts.google.com/oauth',
-          'google_oauth',
-          expect.stringContaining('width=500')
-        );
-      });
+      expect(mockLoginWithGithub).toHaveBeenCalledOnce();
     });
   });
 
   describe('Loading States', () => {
-    it('should show loading text when Google OAuth is in progress', async () => {
+    it('should show "Connecting..." when Google OAuth is in progress', async () => {
       const user = userEvent.setup();
+      // Never resolve so the loading state persists
+      mockLoginWithGoogle.mockReturnValue(new Promise(() => {}));
 
       render(<OAuthButtons />);
 
@@ -226,25 +130,27 @@ describe('OAuthButtons', () => {
       await user.click(googleButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/connecting\.\.\./i)).toBeInTheDocument();
+        expect(screen.getByText('Connecting...')).toBeInTheDocument();
       });
     });
 
-    it('should show loading text when Apple OAuth is in progress', async () => {
+    it('should show "Connecting..." when GitHub OAuth is in progress', async () => {
       const user = userEvent.setup();
+      mockLoginWithGithub.mockReturnValue(new Promise(() => {}));
 
       render(<OAuthButtons />);
 
-      const appleButton = screen.getByRole('button', { name: /continue with apple/i });
-      await user.click(appleButton);
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      await user.click(githubButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/connecting\.\.\./i)).toBeInTheDocument();
+        expect(screen.getByText('Connecting...')).toBeInTheDocument();
       });
     });
 
     it('should disable both buttons when one OAuth flow is in progress', async () => {
       const user = userEvent.setup();
+      mockLoginWithGoogle.mockReturnValue(new Promise(() => {}));
 
       render(<OAuthButtons />);
 
@@ -261,32 +167,29 @@ describe('OAuthButtons', () => {
 
     it('should re-enable buttons after successful OAuth', async () => {
       const user = userEvent.setup();
+      mockLoginWithGoogle.mockResolvedValue(createAuthState({ provider: 'google' }));
 
       render(<OAuthButtons />);
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       await user.click(googleButton);
 
-      // Wait for loading state
       await waitFor(() => {
-        expect(screen.getByText(/connecting\.\.\./i)).toBeInTheDocument();
+        const buttons = screen.getAllByRole('button');
+        buttons.forEach((button) => {
+          expect(button).not.toBeDisabled();
+        });
       });
+    });
 
-      // Simulate successful OAuth
-      const authData: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'google',
-      };
+    it('should re-enable buttons after failed OAuth', async () => {
+      const user = userEvent.setup();
+      mockLoginWithGoogle.mockRejectedValue(new Error('Auth failed'));
 
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state-token-12345678901234567890',
-      });
+      render(<OAuthButtons />);
+
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
+      await user.click(googleButton);
 
       await waitFor(() => {
         const buttons = screen.getAllByRole('button');
@@ -298,133 +201,44 @@ describe('OAuthButtons', () => {
   });
 
   describe('Success Handling', () => {
-    it('should call onSuccess callback with auth data', async () => {
+    it('should call onSuccess with AuthState after Google login', async () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
+      const expectedAuth = createAuthState({ provider: 'google' });
+      mockLoginWithGoogle.mockResolvedValue(expectedAuth);
 
       render(<OAuthButtons onSuccess={onSuccess} />);
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       await user.click(googleButton);
 
-      const authData: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'google',
-      };
-
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state-token-12345678901234567890',
-      });
-
       await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalledWith(authData);
+        expect(onSuccess).toHaveBeenCalledWith(expectedAuth);
       });
     });
 
-    it('should close popup on successful OAuth', async () => {
-      const user = userEvent.setup();
-      const mockPopup = {
-        focus: vi.fn(),
-        close: vi.fn(),
-      };
-      mockWindowOpen.mockReturnValue(mockPopup);
-
-      render(<OAuthButtons />);
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      const authData: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'google',
-      };
-
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state-token-12345678901234567890',
-      });
-
-      await waitFor(() => {
-        expect(mockPopup.close).toHaveBeenCalled();
-      });
-    });
-
-    it('should ignore OAuth result with mismatched provider', async () => {
+    it('should call onSuccess with AuthState after GitHub login', async () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const expectedAuth = createAuthState({ provider: 'github' });
+      mockLoginWithGithub.mockResolvedValue(expectedAuth);
 
       render(<OAuthButtons onSuccess={onSuccess} />);
 
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      // Return Apple auth data when Google was requested
-      const authData: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'apple', // Mismatch!
-      };
-
-      oauthCallback?.({
-        status: 'success',
-        authData,
-        state: 'test-state-token-12345678901234567890',
-      });
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      await user.click(githubButton);
 
       await waitFor(() => {
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Provider mismatch'),
-          expect.any(Object)
-        );
+        expect(onSuccess).toHaveBeenCalledWith(expectedAuth);
       });
-
-      expect(onSuccess).not.toHaveBeenCalled();
-      consoleWarnSpy.mockRestore();
     });
   });
 
   describe('Error Handling', () => {
-    it('should call onError callback on OAuth failure', async () => {
+    it('should call onError with Error when Google login fails', async () => {
       const user = userEvent.setup();
       const onError = vi.fn();
-
-      render(<OAuthButtons onError={onError} />);
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      oauthCallback?.({
-        status: 'error',
-        error: 'Authentication failed',
-        state: 'test-state-token-12345678901234567890',
-      });
-
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(expect.any(Error));
-        expect(onError.mock.calls[0][0].message).toBe('Authentication failed');
-      });
-    });
-
-    it('should handle network errors during fetch', async () => {
-      const user = userEvent.setup();
-      const onError = vi.fn();
-
-      mockFetch.mockRejectedValue(new Error('Network error'));
+      mockLoginWithGoogle.mockRejectedValue(new Error('Google auth failed'));
 
       render(<OAuthButtons onError={onError} />);
 
@@ -433,19 +247,30 @@ describe('OAuthButtons', () => {
 
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith(expect.any(Error));
-        expect(onError.mock.calls[0][0].message).toBe('Network error');
+        expect(onError.mock.calls[0][0].message).toBe('Google auth failed');
       });
     });
 
-    it('should handle HTTP error responses', async () => {
+    it('should call onError with Error when GitHub login fails', async () => {
       const user = userEvent.setup();
       const onError = vi.fn();
+      mockLoginWithGithub.mockRejectedValue(new Error('GitHub auth failed'));
 
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: async () => 'Internal Server Error',
+      render(<OAuthButtons onError={onError} />);
+
+      const githubButton = screen.getByRole('button', { name: /continue with github/i });
+      await user.click(githubButton);
+
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalledWith(expect.any(Error));
+        expect(onError.mock.calls[0][0].message).toBe('GitHub auth failed');
       });
+    });
+
+    it('should wrap non-Error throwables in an Error object', async () => {
+      const user = userEvent.setup();
+      const onError = vi.fn();
+      mockLoginWithGoogle.mockRejectedValue('string error');
 
       render(<OAuthButtons onError={onError} />);
 
@@ -454,138 +279,33 @@ describe('OAuthButtons', () => {
 
       await waitFor(() => {
         expect(onError).toHaveBeenCalledWith(expect.any(Error));
-        expect(onError.mock.calls[0][0].message).toContain('500');
+        expect(onError.mock.calls[0][0].message).toBe('string error');
       });
     });
 
-    it('should handle invalid state token from server', async () => {
+    it('should not throw when onError is not provided', async () => {
       const user = userEvent.setup();
-      const onError = vi.fn();
+      mockLoginWithGoogle.mockRejectedValue(new Error('Unhandled'));
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          authUrl: 'https://accounts.google.com/oauth',
-          state: 'short', // Too short
-        }),
-      });
-
-      render(<OAuthButtons onError={onError} />);
+      render(<OAuthButtons />);
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
 
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(expect.any(Error));
-        expect(onError.mock.calls[0][0].message).toContain('Invalid state token');
-      });
+      // Should not throw — error is caught internally
+      await expect(user.click(googleButton)).resolves.not.toThrow();
     });
+  });
 
-    it('should handle blocked popup', async () => {
+  describe('No Callbacks Provided', () => {
+    it('should work without any callbacks', async () => {
       const user = userEvent.setup();
-      const onError = vi.fn();
-
-      mockWindowOpen.mockReturnValue(null); // Popup blocked
-
-      render(<OAuthButtons onError={onError} />);
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(expect.any(Error));
-        expect(onError.mock.calls[0][0].message).toContain('Popup blocked');
-      });
-    });
-
-    it('should clear loading state on error', async () => {
-      const user = userEvent.setup();
-
-      mockFetch.mockRejectedValue(new Error('Network error'));
 
       render(<OAuthButtons />);
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       await user.click(googleButton);
 
-      await waitFor(() => {
-        const buttons = screen.getAllByRole('button');
-        buttons.forEach((button) => {
-          expect(button).not.toBeDisabled();
-        });
-      });
-    });
-  });
-
-  describe('Redirect Flow', () => {
-    it('should redirect to auth URL when popups are not supported', async () => {
-      const user = userEvent.setup();
-      mockCanUsePopups.mockReturnValue(false);
-
-      // Save original location and replace with mock
-      const originalLocation = window.location;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (window as any).location;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      window.location = { href: '', hostname: 'localhost' } as any;
-
-      render(<OAuthButtons />);
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      await waitFor(() => {
-        expect(window.location.href).toBe('https://accounts.google.com/oauth');
-      });
-
-      // Restore original location to prevent test contamination
-      window.location = originalLocation;
-    });
-  });
-
-  describe('Platform Detection', () => {
-    it('should log platform information when initiating OAuth', async () => {
-      const user = userEvent.setup();
-      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-
-      mockGetPlatformInfo.mockReturnValue({
-        platform: 'ios',
-        standalone: true,
-        mobile: true,
-        canUsePopups: false,
-      });
-
-      render(<OAuthButtons />);
-
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
-
-      await waitFor(() => {
-        expect(consoleInfoSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Initiating flow'),
-          expect.objectContaining({
-            provider: 'google',
-            platform: expect.objectContaining({
-              platform: 'ios',
-              standalone: true,
-            }),
-          })
-        );
-      });
-
-      consoleInfoSpy.mockRestore();
-    });
-  });
-
-  describe('Subscription Cleanup', () => {
-    it('should unsubscribe from OAuth handshake on unmount', () => {
-      const { unmount } = render(<OAuthButtons />);
-
-      expect(mockSubscribeToOAuthHandshake).toHaveBeenCalled();
-
-      unmount();
-
-      expect(unsubscribeFn).toHaveBeenCalled();
+      expect(mockLoginWithGoogle).toHaveBeenCalledOnce();
     });
   });
 });

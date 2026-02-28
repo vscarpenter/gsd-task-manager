@@ -1,13 +1,11 @@
 /**
  * Bulk update operations for multiple tasks
- * Handles batch operations for complete, move, tag management, and delete
  */
 
-import type { GsdConfig, DecryptedTask } from '../tools.js';
-import type { BulkOperation, SyncOperation } from './types.js';
-import { getCryptoManager } from '../crypto.js';
-import { listTasks } from '../tools.js';
-import { deriveQuadrant, ensureEncryption, pushToSync } from './helpers.js';
+import type { GsdConfig, DecryptedTask } from '../types.js';
+import type { BulkOperation } from './types.js';
+import { listTasks } from '../tools/list-tasks.js';
+import { deriveQuadrant, updateTaskInPB, deleteTaskInPB, getAuthInfo } from './helpers.js';
 
 /**
  * Bulk update multiple tasks
@@ -19,15 +17,11 @@ export async function bulkUpdateTasks(
   options?: { maxTasks?: number; dryRun?: boolean }
 ): Promise<{ updated: number; deleted: number; errors: string[]; dryRun: boolean }> {
   const isDryRun = options?.dryRun ?? false;
-
-  await ensureEncryption(config);
-
   const maxTasks = options?.maxTasks ?? 50;
 
-  // Safety check: limit bulk operations
   if (taskIds.length > maxTasks) {
     throw new Error(
-      `❌ Bulk operation limit exceeded\n\n` +
+      `Bulk operation limit exceeded\n\n` +
         `Requested: ${taskIds.length} tasks\n` +
         `Maximum: ${maxTasks} tasks\n\n` +
         `Please reduce the number of tasks or split into multiple operations.`
@@ -38,7 +32,6 @@ export async function bulkUpdateTasks(
     return { updated: 0, deleted: 0, errors: [], dryRun: isDryRun };
   }
 
-  // Fetch current tasks
   const allTasks = await listTasks(config);
   const tasksToUpdate = allTasks.filter((t) => taskIds.includes(t.id));
 
@@ -46,20 +39,27 @@ export async function bulkUpdateTasks(
     return { updated: 0, deleted: 0, errors: ['No matching tasks found'], dryRun: isDryRun };
   }
 
+  const { ownerId, deviceId } = getAuthInfo(config);
   const errors: string[] = [];
-  const operations: SyncOperation[] = [];
-
-  const cryptoManager = getCryptoManager();
+  let updateCount = 0;
+  let deleteCount = 0;
   const now = new Date().toISOString();
 
   for (const task of tasksToUpdate) {
     try {
+      if (operation.type === 'delete') {
+        if (!isDryRun) {
+          await deleteTaskInPB(config, task.id);
+        }
+        deleteCount++;
+        continue;
+      }
+
       let updatedTask: DecryptedTask;
 
       switch (operation.type) {
         case 'complete':
           updatedTask = { ...task, completed: operation.completed, updatedAt: now };
-          // Set/clear completedAt
           if (operation.completed && !task.completed) {
             updatedTask.completedAt = now;
           } else if (!operation.completed) {
@@ -92,7 +92,6 @@ export async function bulkUpdateTasks(
 
         case 'set_due_date':
           updatedTask = { ...task, updatedAt: now };
-          // Set or clear dueDate
           if (operation.dueDate) {
             updatedTask.dueDate = operation.dueDate;
           } else {
@@ -100,56 +99,17 @@ export async function bulkUpdateTasks(
           }
           break;
 
-        case 'delete':
-          // Delete operation
-          operations.push({
-            type: 'delete',
-            taskId: task.id,
-            vectorClock: {}, // Simplified: let server manage
-          });
-          continue;
-
         default:
           throw new Error(`Unknown operation type: ${(operation as { type: string }).type}`);
       }
 
-      // Encrypt updated task and calculate checksum
-      const taskJson = JSON.stringify(updatedTask);
-      const { ciphertext, nonce } = await cryptoManager.encrypt(taskJson);
-      const checksum = await cryptoManager.hash(taskJson);
-
-      operations.push({
-        type: 'update',
-        taskId: task.id,
-        encryptedBlob: ciphertext,
-        nonce,
-        vectorClock: {}, // Simplified: let server manage
-        checksum,
-      });
+      if (!isDryRun) {
+        await updateTaskInPB(config, updatedTask, ownerId, deviceId);
+      }
+      updateCount++;
     } catch (error) {
       errors.push(
         `Task ${task.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  const deleteCount = operations.filter((op) => op.type === 'delete').length;
-  const updateCount = operations.length - deleteCount;
-
-  // In dry-run mode, skip the actual push
-  if (isDryRun) {
-    return { updated: updateCount, deleted: deleteCount, errors, dryRun: true };
-  }
-
-  // Push all updates at once
-  if (operations.length > 0) {
-    try {
-      await pushToSync(config, operations);
-    } catch (error) {
-      throw new Error(
-        `❌ Bulk update failed\n\n` +
-          `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
-          `None of the ${operations.length} tasks were updated.`
       );
     }
   }
@@ -158,6 +118,6 @@ export async function bulkUpdateTasks(
     updated: updateCount,
     deleted: deleteCount,
     errors,
-    dryRun: false,
+    dryRun: isDryRun,
   };
 }

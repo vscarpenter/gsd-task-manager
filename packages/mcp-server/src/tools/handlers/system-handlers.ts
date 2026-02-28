@@ -1,5 +1,6 @@
 import { getSyncStatus, listTasks, type GsdConfig } from '../../tools.js';
 import { getTaskCache } from '../../cache.js';
+import { getPocketBase } from '../../pocketbase-client.js';
 import type { McpToolResponse } from './types.js';
 
 /**
@@ -13,25 +14,18 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     details: string;
   }> = [];
 
-  // Check API connectivity
+  // Check PocketBase connectivity
   try {
-    const response = await fetch(`${config.apiBaseUrl}/health`);
-    if (response.ok) {
-      checks.push({
-        name: 'API Connectivity',
-        status: 'success',
-        details: `Connected to ${config.apiBaseUrl}`,
-      });
-    } else {
-      checks.push({
-        name: 'API Connectivity',
-        status: 'warning',
-        details: `Connected but got status ${response.status}`,
-      });
-    }
+    const pb = getPocketBase(config);
+    await pb.health.check();
+    checks.push({
+      name: 'PocketBase Connectivity',
+      status: 'success',
+      details: `Connected to ${config.pocketBaseUrl}`,
+    });
   } catch (error) {
     checks.push({
-      name: 'API Connectivity',
+      name: 'PocketBase Connectivity',
       status: 'error',
       details: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`,
     });
@@ -43,7 +37,7 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     checks.push({
       name: 'Authentication',
       status: 'success',
-      details: `Token valid (${status.deviceCount} devices registered)`,
+      details: `Authenticated (${status.taskCount} tasks accessible)`,
     });
   } catch (error) {
     checks.push({
@@ -53,27 +47,19 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     });
   }
 
-  // Check encryption (if passphrase provided)
-  if (config.encryptionPassphrase) {
-    try {
-      const tasks = await listTasks(config);
-      checks.push({
-        name: 'Encryption',
-        status: 'success',
-        details: `Successfully decrypted ${tasks.length} tasks`,
-      });
-    } catch (error) {
-      checks.push({
-        name: 'Encryption',
-        status: 'error',
-        details: error instanceof Error ? error.message : 'Decryption failed',
-      });
-    }
-  } else {
+  // Check task access
+  try {
+    const tasks = await listTasks(config);
     checks.push({
-      name: 'Encryption',
-      status: 'warning',
-      details: 'Passphrase not provided (task content not accessible)',
+      name: 'Task Access',
+      status: 'success',
+      details: `Successfully fetched ${tasks.length} tasks`,
+    });
+  } catch (error) {
+    checks.push({
+      name: 'Task Access',
+      status: 'error',
+      details: error instanceof Error ? error.message : 'Failed to fetch tasks',
     });
   }
 
@@ -88,8 +74,7 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
 }
 
 // ---------------------------------------------------------------------------
-// Help section builders — each returns a Markdown string for its topic.
-// Extracted to keep handleGetHelp() within the 30-line function guideline.
+// Help section builders
 // ---------------------------------------------------------------------------
 
 function buildToolsHelpSection(): string {
@@ -98,23 +83,23 @@ function buildToolsHelpSection(): string {
 ## Available Tools (20 total)
 
 ### Metadata & Status Tools
-- **get_sync_status** - Check sync health, device count, storage usage
+- **get_sync_status** - Check PocketBase health and task count
 - **list_devices** - View all registered devices and their status
-- **get_task_stats** - Get high-level task statistics (metadata only)
+- **get_task_stats** - Get high-level task statistics
 
-### Task Access Tools (require encryption passphrase)
+### Task Access Tools
 - **list_tasks** - List all tasks with optional filtering (quadrant, status, tags)
 - **get_task** - Get a single task by ID
 - **search_tasks** - Search across titles, descriptions, tags, subtasks
 
-### Analytics Tools (require encryption passphrase)
+### Analytics Tools
 - **get_productivity_metrics** - Comprehensive metrics (completions, streaks, rates)
 - **get_quadrant_analysis** - Performance breakdown across all 4 quadrants
 - **get_tag_analytics** - Tag usage statistics and completion rates
 - **get_upcoming_deadlines** - Overdue, due today, and due this week tasks
 - **get_task_insights** - AI-friendly summary of key metrics
 
-### Write Tools (require encryption passphrase)
+### Write Tools
 - **create_task** - Create a new task with full properties
 - **update_task** - Update an existing task (partial updates supported)
 - **complete_task** - Quick toggle for task completion status
@@ -130,38 +115,6 @@ function buildToolsHelpSection(): string {
 `;
 }
 
-function buildAnalyticsHelpSection(): string {
-  return `## Analytics Capabilities
-
-The MCP server provides rich productivity analytics:
-
-**Productivity Metrics:**
-- Completion counts (today, this week, this month)
-- Active and longest completion streaks
-- Overall completion rate percentage
-- Quadrant distribution of active tasks
-- Tag-based statistics
-- Due date tracking (overdue, today, this week, no due date)
-
-**Quadrant Analysis:**
-- Completion rates per quadrant
-- Task counts (total, completed, active) per quadrant
-- Performance ranking to identify top quadrants
-
-**Tag Analytics:**
-- Usage counts per tag
-- Completion rates per tag
-- Identification of high/low performing tags
-
-**Deadline Management:**
-- Overdue tasks grouped and sorted
-- Tasks due today
-- Tasks due within the next week
-- Dependency tracking for blocked tasks
-
-`;
-}
-
 function buildSetupHelpSection(): string {
   return `## Setup & Configuration
 
@@ -170,21 +123,9 @@ function buildSetupHelpSection(): string {
 npx gsd-mcp-server --setup
 \`\`\`
 
-The interactive wizard will:
-1. Test API connectivity
-2. Validate your auth token
-3. Test encryption passphrase (optional)
-4. Generate Claude Desktop config
-
-**Validate Existing Config:**
-\`\`\`bash
-npx gsd-mcp-server --validate
-\`\`\`
-
 **Configuration Requirements:**
-- GSD_API_URL - Worker API endpoint
-- GSD_AUTH_TOKEN - JWT from OAuth login (7-day expiration)
-- GSD_ENCRYPTION_PASSPHRASE - (Optional) For decrypted task access
+- GSD_POCKETBASE_URL - PocketBase server URL (e.g., https://api.vinny.io)
+- GSD_AUTH_TOKEN - PocketBase auth token from browser session
 
 **Claude Desktop Config Location:**
 - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
@@ -202,36 +143,15 @@ function buildExamplesHelpSection(): string {
 - "What's my completion streak?"
 - "Give me a daily standup report"
 
-**Analytics:**
-- "What's my productivity this week?"
-- "Which quadrant has the most tasks?"
-- "Show me tag completion rates"
-- "Analyze my task distribution"
-
 **Task Management:**
 - "List all urgent and important tasks"
 - "Search for tasks about quarterly report"
 - "Show me tasks tagged #work"
-- "Find tasks with dependencies"
 
 **Write Operations:**
 - "Create a task: Review quarterly budget"
 - "Mark task abc123 as complete"
 - "Delete task xyz789"
-- "Update task abc123 to be urgent"
-
-**Configuration:**
-- "Validate my MCP configuration"
-- "Check if my setup is working"
-- "Diagnose any issues"
-
-**Pro Tip:** Use the built-in prompts for common workflows:
-- daily-standup
-- weekly-review
-- focus-mode
-- upcoming-deadlines
-- productivity-report
-- tag-analysis
 
 `;
 }
@@ -241,32 +161,37 @@ function buildTroubleshootingHelpSection(): string {
 
 **"Configuration error" on startup:**
 - Run: \`npx gsd-mcp-server --setup\`
-- Ensure GSD_API_URL and GSD_AUTH_TOKEN are set
+- Ensure GSD_POCKETBASE_URL and GSD_AUTH_TOKEN are set
 
-**"Authentication failed (401)":**
-- Your token has expired (7-day lifetime)
-- Get new token: Visit GSD app → DevTools → Local Storage → gsd_auth_token
+**"Authentication failed":**
+- Your token may have expired
+- Get a new token from the GSD app's sync settings
 - Update Claude Desktop config → Restart Claude
-
-**"Encryption passphrase not provided":**
-- Add GSD_ENCRYPTION_PASSPHRASE to Claude Desktop config
-- Must match passphrase set in GSD app
-- Restart Claude Desktop
 
 **"Failed to connect":**
 - Check internet connection
-- Verify GSD_API_URL is correct
-- Ensure Worker is deployed and accessible
-
-**Decryption failures:**
-- Verify passphrase is correct (case-sensitive)
-- Ensure encryption is set up in GSD app (Settings → Sync)
-- Try fetching new encryption salt
+- Verify GSD_POCKETBASE_URL is correct
+- Ensure PocketBase server is running
 
 **For more help:**
 - Run: \`npx gsd-mcp-server --validate\`
-- Check logs in Claude Desktop
 - GitHub: https://github.com/vscarpenter/gsd-taskmanager/issues
+
+`;
+}
+
+function buildAnalyticsHelpSection(): string {
+  return `## Analytics Capabilities
+
+**Productivity Metrics:**
+- Completion counts (today, this week, this month)
+- Active and longest completion streaks
+- Overall completion rate percentage
+- Quadrant distribution of active tasks
+
+**Tag Analytics:**
+- Usage counts per tag
+- Completion rates per tag
 
 `;
 }
@@ -276,17 +201,13 @@ function buildAdditionalResourcesSection(): string {
 
 - **Full Documentation:** https://github.com/vscarpenter/gsd-taskmanager/tree/main/packages/mcp-server
 - **Setup Guide:** Run \`npx gsd-mcp-server --setup\`
-- **Validation:** Run \`npx gsd-mcp-server --validate\`
 - **Issues/Support:** https://github.com/vscarpenter/gsd-taskmanager/issues
 
-**Version:** 0.6.0
-**Status:** Production-ready
-**Privacy:** End-to-end encrypted, zero-knowledge server
-**Capabilities:** Full task management (create, read, update, delete)
+**Version:** 1.0.0
+**Backend:** PocketBase (self-hosted)
 `;
 }
 
-/** Topic → section builder map for O(1) lookup */
 const HELP_SECTIONS: Record<string, () => string> = {
   tools: buildToolsHelpSection,
   analytics: buildAnalyticsHelpSection,
@@ -302,7 +223,6 @@ export async function handleGetHelp(args: { topic?: string }): Promise<McpToolRe
     return { content: [{ type: 'text' as const, text: HELP_SECTIONS[topic]().trim() }] };
   }
 
-  // No topic (or unknown topic) — return all sections
   const helpText = [
     buildToolsHelpSection(),
     buildAnalyticsHelpSection(),
@@ -317,7 +237,6 @@ export async function handleGetHelp(args: { topic?: string }): Promise<McpToolRe
 
 /**
  * Handle get_cache_stats tool
- * Returns task cache statistics for performance monitoring
  */
 export async function handleGetCacheStats(args: { reset?: boolean }): Promise<McpToolResponse> {
   const cache = getTaskCache();
@@ -348,11 +267,9 @@ export async function handleGetCacheStats(args: { reset?: boolean }): Promise<Mc
     notes: [
       'Cache is invalidated after every write operation',
       'TTL-based expiration ensures data freshness',
-      'Hit rate improves with repeated read operations',
     ],
   };
 
-  // Reset stats if requested
   if (args.reset) {
     cache.resetStats();
     result.statsReset = true;

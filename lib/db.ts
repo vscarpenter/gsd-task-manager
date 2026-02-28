@@ -1,8 +1,7 @@
 import Dexie, { Table } from "dexie";
 import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryRecord, AppPreferences } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
-import type { SyncQueueItem, SyncConfig, DeviceInfo, EncryptionConfig } from "@/lib/sync/types";
-import { ENV_CONFIG } from "@/lib/env-config";
+import type { SyncQueueItem, PBSyncConfig, DeviceInfo } from "@/lib/sync/types";
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
@@ -10,7 +9,7 @@ class GsdDatabase extends Dexie {
   smartViews!: Table<SmartView, string>;
   notificationSettings!: Table<NotificationSettings, string>;
   syncQueue!: Table<SyncQueueItem, string>;
-  syncMetadata!: Table<SyncConfig | DeviceInfo | EncryptionConfig, string>;
+  syncMetadata!: Table<PBSyncConfig | DeviceInfo, string>;
   deviceInfo!: Table<DeviceInfo, string>;
   archiveSettings!: Table<ArchiveSettings, string>;
   syncHistory!: Table<SyncHistoryRecord, string>;
@@ -104,6 +103,8 @@ class GsdDatabase extends Dexie {
       })
       .upgrade((trans) => {
         // Initialize sync metadata with defaults
+        // NOTE: This migration predates the PocketBase migration (v13).
+        // Uses `any` because the original SyncConfig type no longer exists.
         const deviceId = crypto.randomUUID();
 
         trans.table("syncMetadata").add({
@@ -118,7 +119,7 @@ class GsdDatabase extends Dexie {
           lastSyncAt: null,
           vectorClock: {},
           conflictStrategy: "last_write_wins",
-          serverUrl: ENV_CONFIG.apiBaseUrl
+          serverUrl: "",
         });
 
         // Add deviceInfo
@@ -130,7 +131,8 @@ class GsdDatabase extends Dexie {
         });
 
         // Migrate existing tasks to have empty vectorClock
-        return trans.table("tasks").toCollection().modify((task: TaskRecord) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return trans.table("tasks").toCollection().modify((task: any) => {
           if (!task.vectorClock) {
             task.vectorClock = {};
           }
@@ -259,6 +261,65 @@ class GsdDatabase extends Dexie {
             task.timeSpent = 0;
           }
         });
+      });
+
+    // Version 13: PocketBase migration — remove vectorClock, reset sync state
+    // Users must re-authenticate with PocketBase after this migration.
+    this.version(13)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId",
+        appPreferences: "id"
+      })
+      .upgrade(async (trans) => {
+        // 1. Clear sync queue (format changed — no vectorClock)
+        await trans.table("syncQueue").clear();
+
+        // 2. Reset sync metadata for PocketBase (user must re-authenticate)
+        const existingConfig = await trans.table("syncMetadata").get("sync_config");
+        const deviceId = existingConfig?.deviceId || crypto.randomUUID();
+
+        await trans.table("syncMetadata").put({
+          key: "sync_config",
+          enabled: false,
+          userId: null,
+          deviceId,
+          deviceName: navigator?.userAgent?.substring(0, 50) || "Desktop",
+          email: null,
+          provider: null,
+          lastSyncAt: null,
+          consecutiveFailures: 0,
+          lastFailureAt: null,
+          lastFailureReason: null,
+          nextRetryAt: null,
+          autoSyncEnabled: true,
+          autoSyncIntervalMinutes: 2,
+        });
+
+        // 3. Remove encryption_salt entry (no longer needed)
+        await trans.table("syncMetadata").delete("encryption_salt").catch(() => {
+          // May not exist — that's fine
+        });
+
+        // 4. Strip vectorClock from existing tasks
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await trans.table("tasks").toCollection().modify((task: any) => {
+          delete task.vectorClock;
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await trans.table("archivedTasks").toCollection().modify((task: any) => {
+          delete task.vectorClock;
+        });
+
+        console.info("[DB Migration v13] PocketBase migration complete. Please re-authenticate to enable sync.");
       });
   }
 

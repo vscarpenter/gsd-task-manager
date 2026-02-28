@@ -1,20 +1,11 @@
 "use client";
 
-import { Suspense } from 'react';
-import { OAuthCallbackHandler } from './oauth-callback-handler';
-
 /**
- * Client-side layout wrapper that provides global client components
- * This includes the OAuth callback handler that processes OAuth redirects
+ * Client-side layout wrapper
+ *
+ * Simplified for PocketBase: OAuth callback handling is done
+ * by the PocketBase SDK internally, so no OAuthCallbackHandler needed.
  */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {children}
-      {/* OAuth callback handler - processes OAuth success from sessionStorage */}
-      <Suspense fallback={null}>
-        <OAuthCallbackHandler />
-      </Suspense>
-    </>
-  );
+  return <>{children}</>;
 }

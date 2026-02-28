@@ -10,10 +10,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./crypto": {
-      "types": "./dist/crypto.d.ts",
-      "import": "./dist/crypto.js"
-    },
     "./types": {
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
@@ -57,9 +53,8 @@
     "todo",
     "gtd",
     "tasks",
-    "encryption",
-    "privacy",
-    "e2e-encryption"
+    "pocketbase",
+    "privacy"
   ],
   "publishConfig": {
     "access": "public",
@@ -78,6 +73,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "pocketbase": "^0.26.8",
     "zod": "^4.3.5"
   },
   "devDependencies": {

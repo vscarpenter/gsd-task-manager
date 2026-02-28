@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Next.js 16 App Router. All data is stored locally in IndexedDB via Dexie, with JSON export/import for backups. The app is a PWA that works completely offline.
 
 **Key Features:**
-- **Optional Cloud Sync** — End-to-end encrypted multi-device sync via Cloudflare Workers (OAuth with Google/Apple)
+- **Optional Cloud Sync** — Multi-device sync via self-hosted PocketBase at `https://api.vinny.io` (OAuth with Google/GitHub)
 - **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
-- **Zero-Knowledge Architecture** — Worker stores only encrypted blobs; decryption happens locally
+- **Realtime Sync** — PocketBase SSE (Server-Sent Events) for instant cross-device updates
 - **Smart Views** — Pin up to 5 smart views to header (keyboard shortcuts 1-9, 0 to clear)
 - **Command Palette** — Global ⌘K/Ctrl+K shortcut for quick actions and navigation
 - **iOS-style Settings** — Redesigned settings with grouped layout and modular sections
@@ -37,7 +37,7 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 ## Architecture
 
 ### Data Layer
-- **IndexedDB via Dexie** (`lib/db.ts`): `tasks`, `smartViews`, `notificationSettings`, `appPreferences` tables (v11)
+- **IndexedDB via Dexie** (`lib/db.ts`): `tasks`, `smartViews`, `notificationSettings`, `appPreferences` tables (v13)
 - **CRUD Operations** (`lib/tasks.ts`): Task mutations, subtask/dependency management
 - **Bulk Operations** (`lib/bulk-operations.ts`): Batch operations for multi-select
 - **Live Queries** (`lib/use-tasks.ts`): `useTasks()` hook with live updates
@@ -84,18 +84,20 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - `components/pwa-register.tsx` - SW registration
 
 ### Cloud Sync Architecture
-- **Backend**: Cloudflare Workers + D1 (SQLite) + KV + R2
-- **Authentication**: OAuth 2.0 with Google and Apple (OIDC-compliant)
-- **Encryption**: AES-256-GCM with PBKDF2 key derivation (600k iterations)
-- **Sync Protocol**: Vector clock-based conflict resolution
-- **Zero-Knowledge**: Worker stores only encrypted blobs
+- **Backend**: Self-hosted PocketBase at `https://api.vinny.io` (AWS EC2)
+- **Authentication**: PocketBase built-in OAuth2 with Google and GitHub providers
+- **Sync Protocol**: Last-write-wins (LWW) with `client_updated_at` timestamps
+- **Realtime**: PocketBase SSE subscriptions for instant cross-device updates
+- **Storage**: Tasks stored as plaintext in PocketBase (user owns the server)
 
 **Key Locations**:
-- `worker/src/` - Cloudflare Worker (Hono router, handlers, D1 queries)
-- `lib/sync/engine/` - Frontend sync engine (push, pull, conflict resolution)
-- `lib/sync/crypto.ts` - Client-side encryption/decryption
+- `lib/sync/pocketbase-client.ts` - PocketBase SDK singleton wrapper
+- `lib/sync/pb-sync-engine.ts` - Push/pull sync engine with LWW resolution
+- `lib/sync/pb-realtime.ts` - SSE subscription manager with echo filtering
+- `lib/sync/pb-auth.ts` - OAuth login/logout via PocketBase SDK
+- `lib/sync/task-mapper.ts` - camelCase ↔ snake_case field mapping
 
-**API Endpoints**: `/api/auth/oauth/:provider/start`, `/api/auth/oauth/callback`, `/api/auth/oauth/result`, `/api/auth/refresh`, `/api/auth/logout`, `/api/auth/encryption-salt`, `/api/sync/push`, `/api/sync/pull`, `/api/sync/status`, `/api/devices`
+**PocketBase Collections**: `tasks` (with API rules: `@request.auth.id != "" && owner = @request.auth.id`), `devices`
 
 ### MCP Server Architecture
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language
@@ -110,7 +112,7 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 **Key Features**: Retry logic with exponential backoff, TTL cache, dry-run mode, circular dependency validation
 
-**Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_API_BASE_URL`, `GSD_AUTH_TOKEN`, `GSD_ENCRYPTION_PASSPHRASE`
+**Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_POCKETBASE_URL`, `GSD_AUTH_TOKEN`
 
 ## Testing Guidelines
 - UI tests in `tests/ui/`, data logic in `tests/data/`
@@ -127,7 +129,7 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### Schema & Database
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
-- Database migrations in `lib/db.ts` - current version is 11
+- Database migrations in `lib/db.ts` - current version is 13
 - New task fields (recurrence, tags, subtasks, dependencies) are optional with sensible defaults
 
 ### Dependencies System
@@ -141,22 +143,22 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - Smart view shortcuts (1-9, 0) use `useSmartViewShortcuts` with typing detection
 
 ### Cloud Sync
-- **Worker Deployment**: `npm run deploy:all` in `worker/`
-- **Environment Setup**: `./worker/scripts/setup-{env}.sh`
-- **Migrations**: `npm run migrations:{env}`
-- JWT tokens expire after 7 days; handle refresh flow (401 → re-auth)
-- Never log encryption salts or passphrases
+- **PocketBase Admin**: `https://api.vinny.io/_/` for collection management
+- PocketBase SDK auto-stores auth tokens in localStorage and auto-refreshes
+- LWW conflict resolution uses `client_updated_at` field — remote wins if newer
+- SSE subscriptions auto-reconnect; periodic sync runs as safety net
+- Echo filtering skips own-device changes via `device_id` comparison
 
 ### MCP Server
 - Build with `npm run build` in `packages/mcp-server/`
 - Add tools: schemas in `tools/schemas/`, handlers in `tools/handlers/`
+- Uses PocketBase JS SDK to communicate with `GSD_POCKETBASE_URL`
 - Use `fetchWithRetry()` for resilient API calls
-- Use `CryptoManager` singleton for encryption/decryption
 
-### OAuth Popup Handling
-- `public/oauth-callback.html` uses multiple heuristics for popup detection
-- OAuth results broadcast via BroadcastChannel, postMessage, and localStorage
-- `SyncAuthDialog` adds delay to avoid duplicate encryption dialogs
+### OAuth Authentication
+- PocketBase SDK handles OAuth popup flow automatically (`authWithOAuth2`)
+- Supports Google and GitHub providers
+- Auth state persists in PocketBase's built-in `authStore` (localStorage)
 
 ### Pre-commit
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
@@ -168,12 +170,9 @@ The codebase follows coding standards (<350 lines per file, <30 lines per functi
 
 - **lib/analytics/**: metrics, streaks, tags, trends
 - **lib/notifications/**: display, permissions, settings, badge
-- **lib/sync/engine/**: coordinator, push-handler, pull-handler, conflict-resolver, error-handler
-- **lib/sync/oauth-handshake/**: broadcaster, subscriber, fetcher (cross-tab OAuth communication)
+- **lib/sync/**: pocketbase-client, pb-sync-engine, pb-realtime, pb-auth, task-mapper, sync-coordinator, health-monitor, queue, config
 - **components/task-form/**: index, use-task-form hook, validation
 - **components/settings/**: appearance, notification, sync, archive, data-management sections
-- **worker/src/handlers/sync/**: push, pull, resolve, status, devices
-- **worker/src/handlers/oidc/**: initiate, callback, result, token-exchange
 - **packages/mcp-server/src/tools/**: handlers/, schemas/, individual tool files
 - **packages/mcp-server/src/write-ops/**: task-operations, bulk-operations with dry-run support
 

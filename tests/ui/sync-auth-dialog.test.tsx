@@ -1,32 +1,26 @@
 /**
  * Tests for SyncAuthDialog component
- * Tests authentication flow steps, provider selection, passphrase entry, error display and recovery
+ * Tests dialog open/close behavior, OAuth login flow, user info display, and logout
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { OAuthHandshakeEvent, OAuthAuthData } from '@/lib/sync/oauth-handshake';
+import type { AuthState } from '@/lib/sync/pb-auth';
 
 // Hoisted mocks
 const {
   mockGetDb,
-  mockSubscribeToOAuthHandshake,
-  mockIsEncryptionConfigured,
-  mockGetCryptoManager,
-  mockClearCryptoManager,
+  mockLogout,
+  mockGetSyncQueue,
   mockToastSuccess,
   mockToastError,
-  mockToastInfo,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
-  mockSubscribeToOAuthHandshake: vi.fn(),
-  mockIsEncryptionConfigured: vi.fn(),
-  mockGetCryptoManager: vi.fn(),
-  mockClearCryptoManager: vi.fn(),
+  mockLogout: vi.fn(),
+  mockGetSyncQueue: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
-  mockToastInfo: vi.fn(),
 }));
 
 // Mock modules
@@ -34,97 +28,78 @@ vi.mock('@/lib/db', () => ({
   getDb: () => mockGetDb(),
 }));
 
-vi.mock('@/lib/sync/oauth-handshake', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  subscribeToOAuthHandshake: (callback: any) => mockSubscribeToOAuthHandshake(callback),
+vi.mock('@/lib/sync/pb-auth', () => ({
+  logout: () => mockLogout(),
 }));
 
-vi.mock('@/lib/sync/crypto', () => ({
-  isEncryptionConfigured: () => mockIsEncryptionConfigured(),
-  getCryptoManager: () => mockGetCryptoManager(),
-  clearCryptoManager: () => mockClearCryptoManager(),
+vi.mock('@/lib/sync/queue', () => ({
+  getSyncQueue: () => mockGetSyncQueue(),
 }));
 
 vi.mock('sonner', () => ({
   toast: {
     success: mockToastSuccess,
     error: mockToastError,
-    info: mockToastInfo,
   },
 }));
 
-// Mock OAuthButtons component
-vi.mock('@/components/sync/oauth-buttons', () => ({
-  OAuthButtons: ({ onStart }: { onStart?: () => void }) => (
-    <div data-testid="oauth-buttons">
-      <button onClick={() => onStart?.()}>Sign in with Google</button>
-    </div>
-  ),
-}));
+// Capture OAuthButtons callbacks so tests can invoke them directly
+let capturedOnSuccess: ((authState: AuthState) => void) | undefined;
+let capturedOnError: ((error: Error) => void) | undefined;
 
-// Mock EncryptionPassphraseDialog component
-vi.mock('@/components/sync/encryption-passphrase-dialog', () => ({
-  EncryptionPassphraseDialog: ({
-    isOpen,
-    onComplete,
-    onCancel,
+vi.mock('@/components/sync/oauth-buttons', () => ({
+  OAuthButtons: ({
+    onStart,
+    onSuccess,
+    onError,
   }: {
-    isOpen: boolean;
-    onComplete: () => void;
-    onCancel: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="encryption-dialog">
-        <button onClick={onComplete}>Complete Encryption</button>
-        <button onClick={onCancel}>Cancel Encryption</button>
+    onStart?: (provider: 'google' | 'github') => void;
+    onSuccess?: (authState: AuthState) => void;
+    onError?: (error: Error) => void;
+  }) => {
+    capturedOnSuccess = onSuccess;
+    capturedOnError = onError;
+
+    return (
+      <div data-testid="oauth-buttons">
+        <button onClick={() => onStart?.('google')}>Continue with Google</button>
+        <button onClick={() => onStart?.('github')}>Continue with GitHub</button>
       </div>
-    ) : null,
+    );
+  },
 }));
 
 // Import component after mocks
 import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
 
 describe('SyncAuthDialog', () => {
-  let oauthCallback: ((event: OAuthHandshakeEvent) => void) | null = null;
-  let unsubscribeFn: ReturnType<typeof vi.fn>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockCryptoManager: any;
+  let mockQueue: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    oauthCallback = null;
+    capturedOnSuccess = undefined;
+    capturedOnError = undefined;
 
     // Setup mock database
     mockDb = {
       syncMetadata: {
-        get: vi.fn(),
-        put: vi.fn(),
-        delete: vi.fn(),
+        get: vi.fn().mockResolvedValue(null),
+        put: vi.fn().mockResolvedValue(undefined),
+      },
+      syncQueue: {
+        clear: vi.fn().mockResolvedValue(undefined),
       },
     };
     mockGetDb.mockReturnValue(mockDb);
 
-    // Setup mock crypto manager
-    mockCryptoManager = {
-      isInitialized: vi.fn().mockReturnValue(false),
-      clear: vi.fn(),
+    // Setup mock sync queue
+    mockQueue = {
+      populateFromExistingTasks: vi.fn().mockResolvedValue(undefined),
     };
-    mockGetCryptoManager.mockReturnValue(mockCryptoManager);
-
-    // Setup OAuth subscription
-    unsubscribeFn = vi.fn();
-    mockSubscribeToOAuthHandshake.mockImplementation((callback) => {
-      oauthCallback = callback;
-      return unsubscribeFn;
-    });
-
-    // Default: no encryption configured
-    mockIsEncryptionConfigured.mockResolvedValue(false);
-
-    // Default: no sync config
-    mockDb.syncMetadata.get.mockResolvedValue(null);
+    mockGetSyncQueue.mockReturnValue(mockQueue);
   });
 
   afterEach(() => {
@@ -146,7 +121,7 @@ describe('SyncAuthDialog', () => {
       });
     });
 
-    it('should show enable sync message when not authenticated', async () => {
+    it('should show "Enable cloud sync" when not authenticated', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
@@ -154,7 +129,7 @@ describe('SyncAuthDialog', () => {
       });
     });
 
-    it('should show manage account message when authenticated', async () => {
+    it('should show "Manage your sync account" when authenticated', async () => {
       mockDb.syncMetadata.get.mockResolvedValue({
         key: 'sync_config',
         enabled: true,
@@ -179,8 +154,7 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByLabelText('Close')).toBeInTheDocument();
       });
 
-      const closeButton = screen.getByLabelText('Close');
-      await user.click(closeButton);
+      await user.click(screen.getByLabelText('Close'));
 
       expect(onClose).toHaveBeenCalled();
     });
@@ -195,7 +169,6 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByText('Sync Settings')).toBeInTheDocument();
       });
 
-      // Find the backdrop by its class
       const backdrop = document.querySelector('.fixed.inset-0.z-50.bg-black\\/50');
       if (backdrop) {
         await user.click(backdrop as Element);
@@ -204,7 +177,7 @@ describe('SyncAuthDialog', () => {
     });
   });
 
-  describe('Authentication Flow - Not Authenticated', () => {
+  describe('Not Authenticated State', () => {
     it('should render OAuth buttons when not authenticated', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
@@ -213,13 +186,13 @@ describe('SyncAuthDialog', () => {
       });
     });
 
-    it('should show encryption information message', async () => {
+    it('should show PocketBase sync information message', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByText('🔐 End-to-end encrypted')).toBeInTheDocument();
+        expect(screen.getByText('Cloud sync')).toBeInTheDocument();
         expect(
-          screen.getByText(/Your tasks are encrypted on your device before syncing/i)
+          screen.getByText(/Sign in to sync your tasks across devices/i)
         ).toBeInTheDocument();
       });
     });
@@ -233,8 +206,7 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
       });
 
-      const signInButton = screen.getByText('Sign in with Google');
-      await user.click(signInButton);
+      await user.click(screen.getByText('Continue with Google'));
 
       // Loading spinner should appear
       await waitFor(() => {
@@ -244,7 +216,6 @@ describe('SyncAuthDialog', () => {
     });
 
     it('should handle successful OAuth authentication', async () => {
-      const user = userEvent.setup();
       const onSuccess = vi.fn();
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} onSuccess={onSuccess} />);
@@ -253,55 +224,85 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
       });
 
-      const signInButton = screen.getByText('Sign in with Google');
-      await user.click(signInButton);
-
-      // Simulate successful OAuth
-      const authData: OAuthAuthData = {
+      // Simulate the OAuthButtons calling onSuccess with an AuthState
+      const authState: AuthState = {
+        isLoggedIn: true,
         userId: 'user123',
-        deviceId: 'device123',
         email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
         provider: 'google',
       };
 
-      await act(async () => {
-        oauthCallback?.({
-          status: 'success',
-          authData,
-          state: 'test-state-token',
-        });
+      // Invoke the captured onSuccess callback from OAuthButtons
+      await waitFor(() => {
+        expect(capturedOnSuccess).toBeDefined();
       });
+      await capturedOnSuccess!(authState);
 
       await waitFor(() => {
-        expect(mockToastSuccess).toHaveBeenCalledWith(
-          expect.stringContaining('Signed in as test@example.com')
-        );
+        expect(mockToastSuccess).toHaveBeenCalledWith('Signed in as test@example.com');
         expect(onSuccess).toHaveBeenCalled();
       });
     });
 
-    it('should display error message on OAuth failure', async () => {
-      const user = userEvent.setup();
-
+    it('should persist sync config on successful OAuth', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
+        expect(capturedOnSuccess).toBeDefined();
       });
 
-      const signInButton = screen.getByText('Sign in with Google');
-      await user.click(signInButton);
+      const authState: AuthState = {
+        isLoggedIn: true,
+        userId: 'user123',
+        email: 'test@example.com',
+        provider: 'google',
+      };
 
-      // Simulate OAuth error
-      await act(async () => {
-        oauthCallback?.({
-          status: 'error',
-          error: 'Authentication failed',
-          state: 'test-state-token',
-        });
+      await capturedOnSuccess!(authState);
+
+      await waitFor(() => {
+        expect(mockDb.syncMetadata.put).toHaveBeenCalledWith(
+          expect.objectContaining({
+            key: 'sync_config',
+            enabled: true,
+            userId: 'user123',
+            email: 'test@example.com',
+            provider: 'google',
+          })
+        );
       });
+    });
+
+    it('should populate sync queue from existing tasks on OAuth success', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnSuccess).toBeDefined();
+      });
+
+      const authState: AuthState = {
+        isLoggedIn: true,
+        userId: 'user123',
+        email: 'test@example.com',
+        provider: 'google',
+      };
+
+      await capturedOnSuccess!(authState);
+
+      await waitFor(() => {
+        expect(mockQueue.populateFromExistingTasks).toHaveBeenCalled();
+      });
+    });
+
+    it('should display error on OAuth failure', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnError).toBeDefined();
+      });
+
+      // Invoke the captured onError callback
+      capturedOnError!(new Error('Authentication failed'));
 
       await waitFor(() => {
         expect(screen.getByText('Authentication failed')).toBeInTheDocument();
@@ -315,27 +316,18 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
+        expect(capturedOnError).toBeDefined();
       });
 
-      const signInButton = screen.getByText('Sign in with Google');
-
-      // First attempt - error
-      await user.click(signInButton);
-      await act(async () => {
-        oauthCallback?.({
-          status: 'error',
-          error: 'First error',
-          state: 'state1',
-        });
-      });
+      // Trigger an error first
+      capturedOnError!(new Error('First error'));
 
       await waitFor(() => {
         expect(screen.getByText('First error')).toBeInTheDocument();
       });
 
-      // Second attempt - should clear error
-      await user.click(signInButton);
+      // Start a new OAuth flow by clicking a provider button
+      await user.click(screen.getByText('Continue with Google'));
 
       await waitFor(() => {
         expect(screen.queryByText('First error')).not.toBeInTheDocument();
@@ -343,7 +335,7 @@ describe('SyncAuthDialog', () => {
     });
   });
 
-  describe('Authentication Flow - Authenticated', () => {
+  describe('Authenticated State', () => {
     beforeEach(() => {
       mockDb.syncMetadata.get.mockResolvedValue({
         key: 'sync_config',
@@ -353,7 +345,7 @@ describe('SyncAuthDialog', () => {
       });
     });
 
-    it('should display signed in user email', async () => {
+    it('should display signed-in user email', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
@@ -370,7 +362,24 @@ describe('SyncAuthDialog', () => {
       });
     });
 
-    it('should render logout button when authenticated', async () => {
+    it('should not show provider text when provider is null', async () => {
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: true,
+        email: 'test@example.com',
+        provider: null,
+      });
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/^via /)).not.toBeInTheDocument();
+    });
+
+    it('should render logout button', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
@@ -388,24 +397,65 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
       });
 
-      const logoutButton = screen.getByRole('button', { name: /logout/i });
-      await user.click(logoutButton);
+      await user.click(screen.getByRole('button', { name: /logout/i }));
 
       await waitFor(() => {
-        expect(mockDb.syncMetadata.delete).toHaveBeenCalledWith('sync_config');
-        expect(mockDb.syncMetadata.delete).toHaveBeenCalledWith('encryption_salt');
-        expect(mockClearCryptoManager).toHaveBeenCalled();
+        expect(mockLogout).toHaveBeenCalled();
+        expect(mockDb.syncQueue.clear).toHaveBeenCalled();
         expect(mockToastSuccess).toHaveBeenCalledWith('Logged out successfully');
         expect(onSuccess).toHaveBeenCalled();
       });
     });
 
+    it('should update sync config on logout', async () => {
+      const user = userEvent.setup();
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: /logout/i }));
+
+      await waitFor(() => {
+        expect(mockDb.syncMetadata.put).toHaveBeenCalledWith(
+          expect.objectContaining({
+            enabled: false,
+            userId: null,
+            email: null,
+            provider: null,
+            lastSyncAt: null,
+          })
+        );
+      });
+    });
+
     it('should show loading state during logout', async () => {
       const user = userEvent.setup();
-      
-      // Make delete operation slow to catch loading state
-      mockDb.syncMetadata.delete.mockImplementation(() => 
-        new Promise(resolve => setTimeout(resolve, 100))
+
+      // Make the syncQueue.clear slow so we can catch loading state
+      mockDb.syncQueue.clear.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100))
+      );
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: /logout/i }));
+
+      expect(screen.getByText('Logging out...')).toBeInTheDocument();
+    });
+
+    it('should disable logout button while logging out', async () => {
+      const user = userEvent.setup();
+
+      // Make the syncQueue.clear slow
+      mockDb.syncQueue.clear.mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 100))
       );
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
@@ -417,13 +467,16 @@ describe('SyncAuthDialog', () => {
       const logoutButton = screen.getByRole('button', { name: /logout/i });
       await user.click(logoutButton);
 
-      // Check for loading text immediately
-      expect(screen.getByText('Logging out...')).toBeInTheDocument();
+      expect(logoutButton).toBeDisabled();
     });
 
     it('should handle logout error', async () => {
       const user = userEvent.setup();
-      mockDb.syncMetadata.delete.mockRejectedValue(new Error('Delete failed'));
+
+      // Make logout throw an error
+      mockLogout.mockImplementation(() => {
+        throw new Error('Logout failed');
+      });
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
@@ -431,303 +484,40 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
       });
 
-      const logoutButton = screen.getByRole('button', { name: /logout/i });
-      await user.click(logoutButton);
+      await user.click(screen.getByRole('button', { name: /logout/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Delete failed')).toBeInTheDocument();
-      });
-    });
-
-    it('should disable logout button while logging out', async () => {
-      const user = userEvent.setup();
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
-      });
-
-      const logoutButton = screen.getByRole('button', { name: /logout/i });
-      await user.click(logoutButton);
-
-      await waitFor(() => {
-        expect(logoutButton).toBeDisabled();
-      });
-    });
-  });
-
-  describe('Encryption Passphrase Flow', () => {
-    beforeEach(() => {
-      mockDb.syncMetadata.get.mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        email: 'test@example.com',
-        provider: 'google',
-      });
-      mockIsEncryptionConfigured.mockResolvedValue(true);
-      mockCryptoManager.isInitialized.mockReturnValue(false);
-    });
-
-    it('should show encryption dialog when encryption is configured but not initialized', async () => {
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encryption-dialog')).toBeInTheDocument();
-        expect(mockToastInfo).toHaveBeenCalledWith(
-          'Please enter your encryption passphrase to unlock sync.'
-        );
-      });
-    });
-
-    it('should not show encryption dialog when crypto manager is initialized', async () => {
-      mockCryptoManager.isInitialized.mockReturnValue(true);
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('test@example.com')).toBeInTheDocument();
-      });
-
-      expect(screen.queryByTestId('encryption-dialog')).not.toBeInTheDocument();
-    });
-
-    it('should handle encryption dialog completion', async () => {
-      const user = userEvent.setup();
-      const onSuccess = vi.fn();
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} onSuccess={onSuccess} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encryption-dialog')).toBeInTheDocument();
-      });
-
-      const completeButton = screen.getByText('Complete Encryption');
-      await user.click(completeButton);
-
-      await waitFor(() => {
-        expect(mockToastSuccess).toHaveBeenCalledWith(
-          'Encryption unlocked. You can close this dialog.'
-        );
-        expect(onSuccess).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle encryption dialog cancellation', async () => {
-      const user = userEvent.setup();
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encryption-dialog')).toBeInTheDocument();
-      });
-
-      const cancelButton = screen.getByText('Cancel Encryption');
-      await user.click(cancelButton);
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('encryption-dialog')).not.toBeInTheDocument();
-      });
-    });
-
-    it('should refresh sync status after encryption completion', async () => {
-      const user = userEvent.setup();
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encryption-dialog')).toBeInTheDocument();
-      });
-
-      const completeButton = screen.getByText('Complete Encryption');
-      await user.click(completeButton);
-
-      await waitFor(() => {
-        expect(mockDb.syncMetadata.get).toHaveBeenCalledWith('sync_config');
-      });
-    });
-  });
-
-  describe('OAuth State Management', () => {
-    it('should ignore OAuth events with mismatched state', async () => {
-      const user = userEvent.setup();
-      const onSuccess = vi.fn();
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} onSuccess={onSuccess} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
-      });
-
-      const signInButton = screen.getByText('Sign in with Google');
-      await user.click(signInButton);
-
-      // First OAuth success sets active state
-      const authData1: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'google',
-      };
-
-      await act(async () => {
-        oauthCallback?.({
-          status: 'success',
-          authData: authData1,
-          state: 'state1',
-        });
-      });
-
-      await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalledTimes(1);
-      });
-
-      // Second OAuth event with different state should be ignored
-      await act(async () => {
-        oauthCallback?.({
-          status: 'error',
-          error: 'Should be ignored',
-          state: 'state2',
-        });
-      });
-
-      // onSuccess should not be called again
-      expect(onSuccess).toHaveBeenCalledTimes(1);
-      expect(screen.queryByText('Should be ignored')).not.toBeInTheDocument();
-    });
-
-    it('should only process OAuth events when dialog is open', async () => {
-      const { rerender } = render(<SyncAuthDialog isOpen={false} onClose={vi.fn()} />);
-
-      // Trigger OAuth event while dialog is closed
-      const authData: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'google',
-      };
-
-      await act(async () => {
-        oauthCallback?.({
-          status: 'success',
-          authData,
-          state: 'test-state',
-        });
-      });
-
-      // Should not show success toast
-      expect(mockToastSuccess).not.toHaveBeenCalled();
-
-      // Open dialog
-      rerender(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      // Still should not process the old event
-      await waitFor(() => {
-        expect(screen.getByText('Sync Settings')).toBeInTheDocument();
-      });
-
-      expect(mockToastSuccess).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Subscription Cleanup', () => {
-    it('should unsubscribe from OAuth handshake on unmount', () => {
-      const { unmount } = render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      expect(mockSubscribeToOAuthHandshake).toHaveBeenCalled();
-
-      unmount();
-
-      expect(unsubscribeFn).toHaveBeenCalled();
-    });
-
-    it('should not subscribe when not mounted', () => {
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      // Should wait for mounted state before subscribing
-      expect(mockSubscribeToOAuthHandshake).toHaveBeenCalled();
-    });
-  });
-
-  describe('Status Refresh', () => {
-    it('should refresh status after successful OAuth', async () => {
-      const user = userEvent.setup();
-
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
-      });
-
-      const signInButton = screen.getByText('Sign in with Google');
-      await user.click(signInButton);
-
-      // Simulate successful OAuth
-      const authData: OAuthAuthData = {
-        userId: 'user123',
-        deviceId: 'device123',
-        email: 'test@example.com',
-        token: 'oauth-token',
-        expiresAt: Date.now() + 3600000,
-        provider: 'google',
-      };
-
-      // Update mock to return sync config after OAuth
-      mockDb.syncMetadata.get.mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        email: 'test@example.com',
-        provider: 'google',
-      });
-
-      await act(async () => {
-        oauthCallback?.({
-          status: 'success',
-          authData,
-          state: 'test-state',
-        });
-      });
-
-      // Wait for the status refresh (happens after 600ms timeout)
-      await waitFor(() => {
-        expect(mockDb.syncMetadata.get).toHaveBeenCalledWith('sync_config');
-      }, { timeout: 2000 });
-    });
-  });
-
-  describe('Error Display', () => {
-    beforeEach(() => {
-      mockDb.syncMetadata.get.mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        email: 'test@example.com',
-        provider: 'google',
-      });
-    });
-
-    it('should display error in authenticated state', async () => {
-      mockDb.syncMetadata.delete.mockRejectedValue(new Error('Network error'));
-      
-      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByText('test@example.com')).toBeInTheDocument();
-      });
-
-      const logoutButton = screen.getByRole('button', { name: /logout/i });
-
-      const user = userEvent.setup();
-      await user.click(logoutButton);
-
-      await waitFor(() => {
-        const errorElement = screen.getByText('Network error');
+        const errorElement = screen.getByText('Logout failed');
         expect(errorElement).toBeInTheDocument();
         expect(errorElement.closest('div')).toHaveClass('bg-red-50');
-      }, { timeout: 2000 });
+      });
+    });
+  });
+
+  describe('Status Loading', () => {
+    it('should load sync status from IndexedDB when dialog opens', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(mockDb.syncMetadata.get).toHaveBeenCalledWith('sync_config');
+      });
+    });
+
+    it('should reload sync status when dialog re-opens', async () => {
+      const { rerender } = render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(mockDb.syncMetadata.get).toHaveBeenCalledWith('sync_config');
+      });
+
+      // Close and re-open
+      rerender(<SyncAuthDialog isOpen={false} onClose={vi.fn()} />);
+      rerender(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        // Should have been called again on re-open
+        expect(mockDb.syncMetadata.get).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

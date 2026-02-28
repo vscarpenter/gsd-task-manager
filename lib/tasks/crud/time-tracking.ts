@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord, TimeEntry } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { enqueueSyncOperation, getSyncContext } from "./helpers";
 import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TIME_TRACKING");
@@ -13,7 +13,7 @@ const logger = createLogger("TIME_TRACKING");
  */
 function calculateTimeSpent(entries: TimeEntry[]): number {
   return entries.reduce((total, entry) => {
-    if (!entry.endedAt) return total; // Don't count running entries
+    if (!entry.endedAt) return total;
     const start = new Date(entry.startedAt).getTime();
     const end = new Date(entry.endedAt).getTime();
     const minutes = Math.round((end - start) / TIME_TRACKING.MS_PER_MINUTE);
@@ -32,15 +32,13 @@ export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
     throw new Error(`Task ${taskId} not found`);
   }
 
-  // Check if there's already a running timer
   const runningEntry = existing.timeEntries?.find((e) => !e.endedAt);
   if (runningEntry) {
     logger.warn("Task already has running timer", { taskId });
     throw new Error("Task already has a running timer");
   }
 
-  const { syncConfig, deviceId } = await getSyncContext();
-  const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
+  const { syncConfig } = await getSyncContext();
 
   const newEntry: TimeEntry = {
     id: nanoid(8),
@@ -53,7 +51,6 @@ export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
     ...existing,
     timeEntries: updatedEntries,
     updatedAt: isoNow(),
-    vectorClock: newClock,
   };
 
   await db.tasks.put(nextRecord);
@@ -64,7 +61,6 @@ export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
     "update",
     taskId,
     nextRecord,
-    nextRecord.vectorClock || {},
     syncConfig?.enabled ?? false
   );
 
@@ -91,8 +87,7 @@ export async function stopTimeTracking(
     throw new Error("No running timer found for this task");
   }
 
-  const { syncConfig, deviceId } = await getSyncContext();
-  const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
+  const { syncConfig } = await getSyncContext();
 
   const updatedEntries = [...(existing.timeEntries || [])];
   updatedEntries[runningEntryIndex] = {
@@ -108,7 +103,6 @@ export async function stopTimeTracking(
     timeEntries: updatedEntries,
     timeSpent,
     updatedAt: isoNow(),
-    vectorClock: newClock,
   };
 
   await db.tasks.put(nextRecord);
@@ -123,7 +117,6 @@ export async function stopTimeTracking(
     "update",
     taskId,
     nextRecord,
-    nextRecord.vectorClock || {},
     syncConfig?.enabled ?? false
   );
 
@@ -152,9 +145,7 @@ export async function deleteTimeEntry(
     throw new Error(`Time entry ${entryId} not found`);
   }
 
-  const { syncConfig, deviceId } = await getSyncContext();
-  const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
-
+  const { syncConfig } = await getSyncContext();
   const timeSpent = calculateTimeSpent(updatedEntries);
 
   const nextRecord: TaskRecord = {
@@ -162,7 +153,6 @@ export async function deleteTimeEntry(
     timeEntries: updatedEntries,
     timeSpent,
     updatedAt: isoNow(),
-    vectorClock: newClock,
   };
 
   await db.tasks.put(nextRecord);
@@ -173,7 +163,6 @@ export async function deleteTimeEntry(
     "update",
     taskId,
     nextRecord,
-    nextRecord.vectorClock || {},
     syncConfig?.enabled ?? false
   );
 

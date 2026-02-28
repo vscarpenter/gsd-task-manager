@@ -1,14 +1,7 @@
 /**
  * Write operations module - main entry point
  *
- * This file re-exports all write operation functions from modular submodules
- * for backward compatibility with existing imports.
- *
- * Modular structure:
- * - write-ops/types.ts - Type definitions and interfaces
- * - write-ops/helpers.ts - Helper functions (ID generation, encryption, sync push)
- * - write-ops/task-operations.ts - Individual task CRUD operations
- * - write-ops/bulk-operations.ts - Bulk update operations
+ * Re-exports all write operation functions from modular submodules.
  */
 
 // Export type definitions
@@ -16,7 +9,6 @@ export type {
   CreateTaskInput,
   UpdateTaskInput,
   BulkOperation,
-  SyncOperation,
   WriteOptions,
 } from './write-ops/types.js';
 
@@ -24,8 +16,10 @@ export type {
 export {
   generateTaskId,
   deriveQuadrant,
-  ensureEncryption,
-  pushToSync,
+  createTaskInPB,
+  updateTaskInPB,
+  deleteTaskInPB,
+  getAuthInfo,
 } from './write-ops/helpers.js';
 
 // Export task operations and result types

@@ -61,7 +61,6 @@ describe('Task Subtask Operations', () => {
     dependencies: [],
     createdAt: '2025-01-15T10:00:00Z',
     updatedAt: '2025-01-15T10:00:00Z',
-    vectorClock: { 'test-device': 1 },
     notifyBefore: 15,
     notificationEnabled: true,
     notificationSent: false,
@@ -112,16 +111,6 @@ describe('Task Subtask Operations', () => {
       expect(result.subtasks[2].completed).toBe(false); // Unchanged
     });
 
-    it('should increment vector clock', async () => {
-      mockDb.tasks.get.mockResolvedValue(baseTask);
-      mockDb.tasks.put.mockResolvedValue(undefined);
-
-      const result = await toggleSubtask('task-1', 'sub-1', true);
-
-      expect(result.vectorClock).toHaveProperty('test-device');
-      expect(result.vectorClock['test-device']).toBeGreaterThan(baseTask.vectorClock['test-device']);
-    });
-
     it('should update updatedAt timestamp', async () => {
       mockDb.tasks.get.mockResolvedValue(baseTask);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -144,8 +133,7 @@ describe('Task Subtask Operations', () => {
       expect(getSyncQueue().enqueue).toHaveBeenCalledWith(
         'update',
         'task-1',
-        result,
-        result.vectorClock
+        result
       );
     });
 
@@ -218,16 +206,6 @@ describe('Task Subtask Operations', () => {
       expect(result.subtasks[3].completed).toBe(false);
     });
 
-    it('should increment vector clock', async () => {
-      mockDb.tasks.get.mockResolvedValue(baseTask);
-      mockDb.tasks.put.mockResolvedValue(undefined);
-
-      const result = await addSubtask('task-1', 'New Subtask');
-
-      expect(result.vectorClock).toHaveProperty('test-device');
-      expect(result.vectorClock['test-device']).toBeGreaterThan(baseTask.vectorClock['test-device']);
-    });
-
     it('should update updatedAt timestamp', async () => {
       mockDb.tasks.get.mockResolvedValue(baseTask);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -250,8 +228,7 @@ describe('Task Subtask Operations', () => {
       expect(getSyncQueue().enqueue).toHaveBeenCalledWith(
         'update',
         'task-1',
-        result,
-        result.vectorClock
+        result
       );
     });
 
@@ -303,16 +280,6 @@ describe('Task Subtask Operations', () => {
       expect(result.subtasks[1]).toEqual(baseTask.subtasks[2]);
     });
 
-    it('should increment vector clock', async () => {
-      mockDb.tasks.get.mockResolvedValue(baseTask);
-      mockDb.tasks.put.mockResolvedValue(undefined);
-
-      const result = await deleteSubtask('task-1', 'sub-2');
-
-      expect(result.vectorClock).toHaveProperty('test-device');
-      expect(result.vectorClock['test-device']).toBeGreaterThan(baseTask.vectorClock['test-device']);
-    });
-
     it('should update updatedAt timestamp', async () => {
       mockDb.tasks.get.mockResolvedValue(baseTask);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -335,8 +302,7 @@ describe('Task Subtask Operations', () => {
       expect(getSyncQueue().enqueue).toHaveBeenCalledWith(
         'update',
         'task-1',
-        result,
-        result.vectorClock
+        result
       );
     });
 

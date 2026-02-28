@@ -2,108 +2,60 @@ import { z } from 'zod';
 
 // Configuration
 export interface GsdConfig {
-  apiBaseUrl: string;
-  authToken: string;
-  encryptionPassphrase?: string; // Optional: for decrypting tasks
+  pocketBaseUrl: string;
+  authToken: string; // PocketBase auth token
 }
 
-// Response schemas based on worker types
-export const syncStatusSchema = z.object({
-  lastSyncAt: z.number().nullable(),
-  pendingPushCount: z.number(),
-  pendingPullCount: z.number(),
-  conflictCount: z.number(),
-  deviceCount: z.number(),
-  storageUsed: z.number(),
-  storageQuota: z.number(),
-});
+// PocketBase task record (snake_case, as stored in PB)
+export interface PBTask {
+  id: string; // PocketBase record ID
+  task_id: string; // Client-generated UUID
+  owner: string; // PocketBase user ID
+  title: string;
+  description: string;
+  urgent: boolean;
+  important: boolean;
+  quadrant: string;
+  due_date: string;
+  completed: boolean;
+  completed_at: string;
+  recurrence: string;
+  tags: string[];
+  subtasks: Array<{ id: string; title: string; completed: boolean }>;
+  dependencies: string[];
+  notification_enabled: boolean;
+  notify_before: number;
+  estimated_minutes: number;
+  time_spent: number;
+  time_entries: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
+  client_updated_at: string;
+  client_created_at: string;
+  device_id: string;
+  created: string; // PocketBase auto-field
+  updated: string; // PocketBase auto-field
+}
 
-export const deviceSchema = z.object({
-  id: z.string(),
-  name: z.string().nullable(),
-  lastSeenAt: z.number(),
-  isActive: z.boolean(),
-  isCurrent: z.boolean(),
-});
-
-export const taskStatsSchema = z.object({
-  totalTasks: z.number().nullable(),
-  activeTasks: z.number().nullable(),
-  deletedTasks: z.number().nullable(),
-  lastUpdated: z.number().nullable(),
-  oldestTask: z.number().nullable(),
-  newestTask: z.number().nullable(),
-});
-
-export const statsResponseSchema = z.object({
-  tasks: z.array(
-    z.object({
-      id: z.string(),
-      encryptedBlob: z.string(),
-      nonce: z.string(),
-      createdAt: z.number(),
-      updatedAt: z.number(),
-      deletedAt: z.number().nullable(),
-    })
-  ),
-  metadata: z.object({
-    totalCount: z.number(),
-    activeCount: z.number(),
-    deletedCount: z.number(),
-    oldestTaskDate: z.number().nullable(),
-    newestTaskDate: z.number().nullable(),
-    storageUsed: z.number(),
-  }),
-});
-
-export type SyncStatus = z.infer<typeof syncStatusSchema>;
-export type Device = z.infer<typeof deviceSchema>;
-export type TaskStats = z.infer<typeof taskStatsSchema>;
-export type StatsResponse = z.infer<typeof statsResponseSchema>;
-
-// Encrypted task blob from API
-export const encryptedTaskBlobSchema = z.object({
-  id: z.string(),
-  encrypted_blob: z.string(),
-  nonce: z.string(),
-  updated_at: z.number(),
-  created_at: z.number(),
-});
-
-export type EncryptedTaskBlob = z.infer<typeof encryptedTaskBlobSchema>;
-
-// Decrypted task structure (matches GSD TaskRecord from frontend)
+// Decrypted task structure (matches GSD TaskRecord from frontend, camelCase)
 export interface DecryptedTask {
   id: string;
   title: string;
   description: string;
   urgent: boolean;
   important: boolean;
-  quadrant: string; // Frontend uses 'quadrant', not 'quadrantId'
+  quadrant: string;
   completed: boolean;
-  completedAt?: string; // ISO datetime when task was completed
-  dueDate?: string; // ISO datetime string, optional (NOT null)
+  completedAt?: string;
+  dueDate?: string;
   tags: string[];
   subtasks: Array<{
     id: string;
-    title: string; // Frontend uses 'title', not 'text'
+    title: string;
     completed: boolean;
   }>;
   recurrence: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies: string[];
-  createdAt: string; // Frontend expects ISO datetime string
-  updatedAt: string; // Frontend expects ISO datetime string
-  vectorClock?: Record<string, number>; // For sync conflict resolution
-}
-
-// API response types
-export interface PullTasksResponse {
-  tasks: Array<{
-    id: string;
-    encryptedBlob: string;
-    nonce: string;
-    updatedAt: number;
-  }>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Task filters
@@ -111,4 +63,92 @@ export interface TaskFilters {
   quadrant?: string;
   completed?: boolean;
   tags?: string[];
+}
+
+// Sync status from PocketBase health
+export const syncStatusSchema = z.object({
+  code: z.number(),
+  message: z.string(),
+});
+
+export type SyncStatus = {
+  healthy: boolean;
+  taskCount: number;
+  lastSyncAt: string | null;
+};
+
+// Device info
+export interface Device {
+  id: string;
+  name: string | null;
+  lastSeenAt: string;
+  isActive: boolean;
+  isCurrent: boolean;
+}
+
+// Task stats
+export interface TaskStats {
+  totalTasks: number | null;
+  activeTasks: number | null;
+  completedTasks: number | null;
+  lastUpdated: string | null;
+  oldestTask: string | null;
+  newestTask: string | null;
+}
+
+/**
+ * Convert a PocketBase task record to frontend DecryptedTask format
+ */
+export function pbTaskToDecryptedTask(pb: PBTask): DecryptedTask {
+  return {
+    id: pb.task_id,
+    title: pb.title,
+    description: pb.description || '',
+    urgent: pb.urgent,
+    important: pb.important,
+    quadrant: pb.quadrant,
+    completed: pb.completed,
+    ...(pb.completed_at ? { completedAt: pb.completed_at } : {}),
+    ...(pb.due_date ? { dueDate: pb.due_date } : {}),
+    tags: pb.tags || [],
+    subtasks: pb.subtasks || [],
+    recurrence: (pb.recurrence || 'none') as DecryptedTask['recurrence'],
+    dependencies: pb.dependencies || [],
+    createdAt: pb.client_created_at || pb.created,
+    updatedAt: pb.client_updated_at || pb.updated,
+  };
+}
+
+/**
+ * Convert a DecryptedTask to PocketBase record fields for create/update
+ */
+export function decryptedTaskToPBFields(
+  task: DecryptedTask,
+  ownerId: string,
+  deviceId: string
+): Partial<PBTask> {
+  return {
+    task_id: task.id,
+    owner: ownerId,
+    title: task.title,
+    description: task.description || '',
+    urgent: task.urgent,
+    important: task.important,
+    quadrant: task.quadrant,
+    due_date: task.dueDate || '',
+    completed: task.completed,
+    completed_at: task.completedAt || '',
+    recurrence: task.recurrence || 'none',
+    tags: task.tags || [],
+    subtasks: task.subtasks || [],
+    dependencies: task.dependencies || [],
+    notification_enabled: true,
+    notify_before: 0,
+    estimated_minutes: 0,
+    time_spent: 0,
+    time_entries: [],
+    client_updated_at: task.updatedAt,
+    client_created_at: task.createdAt,
+    device_id: deviceId,
+  };
 }

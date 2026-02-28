@@ -3,8 +3,8 @@
  *
  * Provides functions to clear all application data including:
  * - IndexedDB (tasks, settings, sync data)
- * - localStorage (OAuth state, PWA prompts)
- * - Session data (sync tokens, crypto keys)
+ * - localStorage (PocketBase auth, PWA prompts)
+ * - Session data (sync config)
  *
  * SECURITY: Preserves deviceId for potential future re-sync
  * WARNING: All data loss is permanent and cannot be undone
@@ -13,7 +13,6 @@
 import { getDb } from "@/lib/db";
 import { disableSync, getSyncConfig } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
-import { ENV_CONFIG } from "@/lib/env-config";
 
 const logger = createLogger("DB");
 
@@ -87,16 +86,14 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 				deviceId, // Preserve for future sync
 				deviceName: "Device",
 				email: null,
-				token: null,
-				tokenExpiresAt: null,
+				provider: null,
 				lastSyncAt: null,
-				vectorClock: {},
-				conflictStrategy: "last_write_wins",
-				serverUrl: ENV_CONFIG.apiBaseUrl,
 				consecutiveFailures: 0,
 				lastFailureAt: null,
 				lastFailureReason: null,
 				nextRetryAt: null,
+				autoSyncEnabled: true,
+				autoSyncIntervalMinutes: 2,
 			});
 		}
 		cleared.push("syncMetadata");
@@ -125,12 +122,9 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 	try {
 		const theme = preserveTheme ? localStorage.getItem("theme") : null;
 
-		// Clear OAuth handshake data
-		localStorage.removeItem("oauth_handshake_result");
-		cleared.push("oauth_handshake_result");
-
-		localStorage.removeItem("oauth_handshake_state");
-		cleared.push("oauth_handshake_state");
+		// Clear PocketBase auth data (stored by PB SDK)
+		localStorage.removeItem("pocketbase_auth");
+		cleared.push("pocketbase_auth");
 
 		// Clear PWA prompt dismissal
 		localStorage.removeItem("gsd-pwa-dismissed");
@@ -188,7 +182,7 @@ async function clearSessionData(): Promise<{ success: boolean; errors: string[] 
  * - All settings (notifications, archive)
  * - Custom smart views (built-in views preserved)
  * - Sync data (queue, history, metadata)
- * - OAuth state
+ * - PocketBase auth state
  * - PWA prompts
  *
  * Preserves:

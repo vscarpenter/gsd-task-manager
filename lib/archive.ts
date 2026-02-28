@@ -3,13 +3,13 @@
  *
  * Provides functions for archiving old completed tasks,
  * viewing archived tasks, and restoring tasks from archive.
+ *
+ * Simplified for PocketBase: no vector clock management.
  */
 
 import { getDb } from "@/lib/db";
 import type { TaskRecord, ArchiveSettings } from "@/lib/types";
 import { getSyncQueue } from "@/lib/sync/queue";
-import { incrementVectorClock } from "@/lib/sync/vector-clock";
-import { getSyncConfig } from "@/lib/sync/config";
 
 /**
  * Get archive settings from database
@@ -69,7 +69,7 @@ export async function archiveOldTasks(
   // Enqueue delete operations for sync before archiving
   const queue = getSyncQueue();
   for (const task of tasksToArchive) {
-    await queue.enqueue('delete', task.id, task, task.vectorClock || {});
+    await queue.enqueue('delete', task.id, task);
   }
 
   // Move tasks to archive table
@@ -106,24 +106,16 @@ export async function restoreTask(taskId: string): Promise<void> {
     throw new Error("Task not found in archive");
   }
 
-  // Get device ID and increment vector clock for sync
-  const syncConfig = await getSyncConfig();
-  const deviceId = syncConfig?.deviceId || 'local';
-  const vectorClock = incrementVectorClock(archivedTask.vectorClock || {}, deviceId);
-
-  // Remove archivedAt timestamp and update vector clock
+  // Remove archivedAt timestamp
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { archivedAt: _archivedAt, ...taskWithoutArchive } = {
-    ...archivedTask,
-    vectorClock
-  };
+  const { archivedAt: _archivedAt, ...taskWithoutArchive } = archivedTask;
 
   // Move back to main tasks table
   await db.tasks.add(taskWithoutArchive);
 
   // Enqueue update operation for sync
   const queue = getSyncQueue();
-  await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive, vectorClock);
+  await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive);
 
   // Remove from archive
   await db.archivedTasks.delete(taskId);

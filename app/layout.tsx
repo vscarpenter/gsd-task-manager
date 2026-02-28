@@ -11,7 +11,6 @@ import { PwaRegister } from "@/components/pwa-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { ClientLayout } from "@/components/client-layout";
-import { SyncDebugInstaller } from "@/components/sync-debug-installer";
 
 // Local fonts for better offline PWA support and reliability
 const inter = localFont({
@@ -89,7 +88,6 @@ export default function RootLayout({
                 <PwaRegister />
                 <InstallPwaPrompt />
                 <PwaUpdateToast />
-                <SyncDebugInstaller />
                 <Toaster richColors position="top-center" />
               </TooltipProvider>
             </ToastProvider>

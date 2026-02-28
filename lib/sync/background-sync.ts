@@ -1,10 +1,14 @@
 /**
  * Background Sync Manager
- * Handles automatic background synchronization with smart triggers
+ *
+ * Handles automatic background synchronization with smart triggers.
+ * Also manages PocketBase realtime subscriptions alongside periodic sync.
+ * Realtime SSE gives instant updates; periodic sync acts as a safety net.
  */
 
 import { getSyncCoordinator } from './sync-coordinator';
 import { getSyncQueue } from './queue';
+import { subscribe as subscribeRealtime, unsubscribe as unsubscribeRealtime } from './pb-realtime';
 import type { BackgroundSyncConfig } from './types';
 import { createLogger } from '@/lib/logger';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
@@ -12,29 +16,20 @@ import { SYNC_CONFIG } from '@/lib/constants/sync';
 const logger = createLogger('SYNC_ENGINE');
 
 export class BackgroundSyncManager {
-    // Interval-based periodic sync
     private syncInterval: NodeJS.Timeout | null = null;
     private isActive = false;
-
-    // Debounced sync after changes
     private debounceTimeout: NodeJS.Timeout | null = null;
-
-    // Prevents excessive syncing
     private lastSyncTimestamp = 0;
-    private readonly MIN_SYNC_INTERVAL_MS = 15000; // 15 seconds minimum between syncs
+    private readonly MIN_SYNC_INTERVAL_MS = 15000;
 
-    // Event listeners for cleanup
     private visibilityChangeHandler: (() => void) | null = null;
     private onlineHandler: (() => void) | null = null;
-
-    // Current configuration
     private config: BackgroundSyncConfig | null = null;
 
     /**
-     * Start background sync with configurable settings
-     * Sets up periodic sync, visibility change listener, and online event listener
+     * Start background sync and realtime subscription
      */
-    async start(config: BackgroundSyncConfig): Promise<void> {
+    async start(config: BackgroundSyncConfig, deviceId?: string): Promise<void> {
         if (this.isActive) {
             logger.warn('Background sync already running, stopping previous instance');
             this.stop();
@@ -46,8 +41,6 @@ export class BackgroundSyncManager {
         logger.info('Starting background sync', {
             enabled: config.enabled,
             intervalMinutes: config.intervalMinutes,
-            syncOnFocus: config.syncOnFocus,
-            syncOnOnline: config.syncOnOnline,
         });
 
         if (!config.enabled) {
@@ -55,15 +48,23 @@ export class BackgroundSyncManager {
             return;
         }
 
-        // Start periodic sync
+        // Start PocketBase realtime subscription for instant updates
+        if (deviceId) {
+            try {
+                await subscribeRealtime(deviceId);
+            } catch (error) {
+                logger.warn('Failed to start realtime subscription, falling back to polling', {
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
+        }
+
         this.startPeriodicSync(config.intervalMinutes);
 
-        // Set up visibility change listener (sync when tab becomes visible)
         if (config.syncOnFocus) {
             this.setupVisibilityListener();
         }
 
-        // Set up online event listener (sync when network reconnects)
         if (config.syncOnOnline) {
             this.setupOnlineListener();
         }
@@ -77,32 +78,29 @@ export class BackgroundSyncManager {
     }
 
     /**
-     * Stop all background sync activities
-     * Cleans up intervals and event listeners
+     * Stop all background sync activities and realtime subscription
      */
     stop(): void {
-        if (!this.isActive) {
-            return;
-        }
+        if (!this.isActive) return;
 
         logger.debug('Stopping background sync');
 
         this.isActive = false;
         this.config = null;
 
-        // Clear periodic sync interval
+        // Stop realtime subscription
+        unsubscribeRealtime();
+
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
             this.syncInterval = null;
         }
 
-        // Clear debounce timeout
         if (this.debounceTimeout) {
             clearTimeout(this.debounceTimeout);
             this.debounceTimeout = null;
         }
 
-        // Remove event listeners
         if (this.visibilityChangeHandler) {
             document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
             this.visibilityChangeHandler = null;
@@ -116,29 +114,21 @@ export class BackgroundSyncManager {
         logger.debug('Background sync stopped and cleaned up');
     }
 
-    /**
-     * Check if background sync is currently running
-     */
     isRunning(): boolean {
         return this.isActive;
     }
 
     /**
      * Schedule debounced sync after task changes
-     * Cancels previous timeout and sets new one
      */
     scheduleDebouncedSync(): void {
-        if (!this.isActive || !this.config) {
-            return;
-        }
+        if (!this.isActive || !this.config) return;
 
-        // Cancel existing timeout
         if (this.debounceTimeout) {
             clearTimeout(this.debounceTimeout);
         }
 
         const delayMs = this.config.debounceAfterChangeMs;
-
         logger.debug('Scheduling debounced sync', { delayMs });
 
         this.debounceTimeout = setTimeout(() => {
@@ -149,14 +139,8 @@ export class BackgroundSyncManager {
         }, delayMs);
     }
 
-    /**
-     * Start periodic sync interval
-     */
     private startPeriodicSync(intervalMinutes: number): void {
         const intervalMs = intervalMinutes * 60 * 1000;
-
-        logger.debug('Setting up periodic sync', { intervalMinutes, intervalMs });
-
         this.syncInterval = setInterval(() => {
             if (this.isActive) {
                 this.performSyncIfNeeded('periodic');
@@ -164,10 +148,6 @@ export class BackgroundSyncManager {
         }, intervalMs);
     }
 
-    /**
-     * Set up visibility change listener
-     * Syncs when tab becomes visible after being hidden
-     */
     private setupVisibilityListener(): void {
         this.visibilityChangeHandler = () => {
             if (document.visibilityState === 'visible' && this.isActive) {
@@ -175,15 +155,9 @@ export class BackgroundSyncManager {
                 this.performSyncIfNeeded('visibility');
             }
         };
-
         document.addEventListener('visibilitychange', this.visibilityChangeHandler);
-        logger.debug('Visibility change listener registered');
     }
 
-    /**
-     * Set up online event listener
-     * Syncs when network reconnects
-     */
     private setupOnlineListener(): void {
         this.onlineHandler = () => {
             if (this.isActive) {
@@ -191,35 +165,23 @@ export class BackgroundSyncManager {
                 this.performSyncIfNeeded('online');
             }
         };
-
         window.addEventListener('online', this.onlineHandler);
-        logger.debug('Online event listener registered');
     }
 
-    /**
-     * Perform sync if conditions are met
-     * Checks: online status, pending changes, minimum interval
-     */
-    private async performSyncIfNeeded(trigger: 'initial' | 'periodic' | 'debounced' | 'visibility' | 'online'): Promise<void> {
-        // Check if online
+    private async performSyncIfNeeded(
+        trigger: 'initial' | 'periodic' | 'debounced' | 'visibility' | 'online'
+    ): Promise<void> {
         if (!navigator.onLine) {
             logger.debug('Skipping sync: offline', { trigger });
             return;
         }
 
-        // Check if enough time has passed since last sync
         const now = Date.now();
-        const timeSinceLastSync = now - this.lastSyncTimestamp;
-
-        if (timeSinceLastSync < this.MIN_SYNC_INTERVAL_MS) {
-            logger.debug('Skipping sync: too soon since last sync', {
-                trigger,
-                timeSinceLastSyncSec: Math.round(timeSinceLastSync / 1000)
-            });
+        if (now - this.lastSyncTimestamp < this.MIN_SYNC_INTERVAL_MS) {
+            logger.debug('Skipping sync: too soon since last sync', { trigger });
             return;
         }
 
-        // Check if there are pending changes
         try {
             const queue = getSyncQueue();
             const pendingCount = await queue.getPendingCount();
@@ -229,15 +191,11 @@ export class BackgroundSyncManager {
                 return;
             }
 
-            // All conditions met, perform sync
             logger.info('Triggering background sync', { trigger, pendingCount });
-
             this.lastSyncTimestamp = now;
 
             const coordinator = getSyncCoordinator();
             await coordinator.requestSync('auto');
-
-            logger.debug('Background sync completed', { trigger });
         } catch (error) {
             logger.error('Error during background sync', error instanceof Error ? error : undefined, { trigger });
         }
@@ -247,9 +205,6 @@ export class BackgroundSyncManager {
 // Singleton instance
 let managerInstance: BackgroundSyncManager | null = null;
 
-/**
- * Get or create background sync manager instance
- */
 export function getBackgroundSyncManager(): BackgroundSyncManager {
     if (!managerInstance) {
         managerInstance = new BackgroundSyncManager();

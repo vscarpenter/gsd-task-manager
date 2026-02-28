@@ -294,28 +294,6 @@ describe('error-categorizer', () => {
     });
   });
 
-  describe('isPermanentError - encryption errors', () => {
-    it('should detect encryption error', () => {
-      const error = new Error('Encryption failed');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect decryption error', () => {
-      const error = new Error('Decryption failed');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect decrypt error', () => {
-      const error = new Error('Failed to decrypt');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect cipher error', () => {
-      const error = new Error('Cipher error');
-      expect(isPermanentError(error)).toBe(true);
-    });
-  });
-
   describe('isPermanentError - non-permanent errors', () => {
     it('should not classify 401 as permanent', () => {
       const error = new Error('401 Unauthorized');
@@ -389,7 +367,6 @@ describe('error-categorizer', () => {
         new Error('404 Not Found'),
         new Error('409 Conflict'),
         new Error('Validation failed'),
-        new Error('Decryption failed'),
       ];
 
       permanentErrors.forEach(error => {

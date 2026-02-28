@@ -1,11 +1,13 @@
 /**
  * Sync disable functionality
+ *
+ * Simplified for PocketBase: clears PB auth store, sync queue,
+ * and resets IndexedDB sync metadata.
  */
 
 import { getDb } from "@/lib/db";
-import { getCryptoManager } from "../crypto";
-import { getApiClient } from "../api-client";
-import type { SyncConfig } from "../types";
+import { clearPocketBase } from "../pocketbase-client";
+import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
 import { createLogger } from "@/lib/logger";
 
@@ -25,20 +27,9 @@ async function stopHealthMonitor(): Promise<void> {
 }
 
 /**
- * Clear crypto and API credentials
- */
-function clearCredentials(serverUrl: string): void {
-  const crypto = getCryptoManager();
-  crypto.clear();
-
-  const api = getApiClient(serverUrl);
-  api.setToken(null);
-}
-
-/**
  * Reset sync config to disabled state
  */
-async function resetSyncConfigState(current: SyncConfig): Promise<void> {
+async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
   const db = getDb();
 
   await db.syncMetadata.put({
@@ -46,10 +37,12 @@ async function resetSyncConfigState(current: SyncConfig): Promise<void> {
     enabled: false,
     userId: null,
     email: null,
-    token: null,
-    tokenExpiresAt: null,
+    provider: null,
     lastSyncAt: null,
-    vectorClock: {},
+    consecutiveFailures: 0,
+    lastFailureAt: null,
+    lastFailureReason: null,
+    nextRetryAt: null,
     key: "sync_config",
   });
 
@@ -70,9 +63,11 @@ export async function disableSync(): Promise<void> {
   // Stop health monitor
   await stopHealthMonitor();
 
-  // Clear credentials
-  clearCredentials(current.serverUrl);
+  // Clear PocketBase auth state (token + localStorage)
+  clearPocketBase();
 
-  // Reset config
+  // Reset config in IndexedDB
   await resetSyncConfigState(current);
+
+  logger.info('Sync disabled');
 }

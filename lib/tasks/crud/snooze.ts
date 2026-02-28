@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext, updateVectorClock } from "./helpers";
+import { enqueueSyncOperation, getSyncContext } from "./helpers";
 import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TASK_CRUD");
@@ -17,7 +17,6 @@ export async function snoozeTask(
   id: string,
   minutes: number
 ): Promise<TaskRecord> {
-  // Validate snooze duration (Issue #10: missing validation)
   if (minutes < 0) {
     throw new Error("Snooze duration cannot be negative");
   }
@@ -34,10 +33,8 @@ export async function snoozeTask(
       throw new Error(`Task ${id} not found`);
     }
 
-    const { syncConfig, deviceId } = await getSyncContext();
-    const newClock = updateVectorClock(existing.vectorClock || {}, deviceId);
+    const { syncConfig } = await getSyncContext();
 
-    // Calculate snooze end time (or clear if minutes is 0)
     const snoozedUntil = minutes > 0
       ? new Date(Date.now() + minutes * TIME_TRACKING.MS_PER_MINUTE).toISOString()
       : undefined;
@@ -46,7 +43,6 @@ export async function snoozeTask(
       ...existing,
       snoozedUntil,
       updatedAt: isoNow(),
-      vectorClock: newClock,
     };
 
     await db.tasks.put(nextRecord);
@@ -61,7 +57,6 @@ export async function snoozeTask(
       "update",
       id,
       nextRecord,
-      nextRecord.vectorClock || {},
       syncConfig?.enabled ?? false
     );
 
@@ -79,7 +74,6 @@ export async function snoozeTask(
 
 /**
  * Clear the snooze for a task
- * @param id - The task ID to clear snooze for
  */
 export async function clearSnooze(id: string): Promise<TaskRecord> {
   return snoozeTask(id, 0);
@@ -87,7 +81,6 @@ export async function clearSnooze(id: string): Promise<TaskRecord> {
 
 /**
  * Check if a task is currently snoozed
- * @param task - The task to check
  */
 export function isTaskSnoozed(task: TaskRecord): boolean {
   if (!task.snoozedUntil) return false;
@@ -96,8 +89,6 @@ export function isTaskSnoozed(task: TaskRecord): boolean {
 
 /**
  * Get remaining snooze time in minutes
- * @param task - The task to check
- * @returns Remaining minutes, or 0 if not snoozed
  */
 export function getRemainingSnoozeMinutes(task: TaskRecord): number {
   if (!task.snoozedUntil) return 0;

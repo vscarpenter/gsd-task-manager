@@ -1,5 +1,8 @@
 /**
  * Tests for HealthMonitor - periodic health checks and issue detection
+ *
+ * Updated for PocketBase migration: token-manager and api-client mocks
+ * replaced with pocketbase-client mocks (getPocketBase, isAuthenticated).
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -12,34 +15,32 @@ import {
   mockConsole,
 } from '../fixtures';
 
+// Mock PocketBase health check
+const mockHealthCheck = vi.fn(async () => ({}));
+const mockPocketBase = {
+  health: { check: mockHealthCheck },
+};
+
 // Mock dependencies
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(() => mockQueue),
 }));
 
-vi.mock('@/lib/sync/token-manager', () => ({
-  getTokenManager: vi.fn(() => mockTokenManager),
+vi.mock('@/lib/sync/pocketbase-client', () => ({
+  getPocketBase: vi.fn(() => mockPocketBase),
+  isAuthenticated: vi.fn(() => mockIsAuthenticated),
 }));
 
-vi.mock('@/lib/sync/api-client', () => ({
-  getApiClient: vi.fn(() => mockApiClient),
-}));
+// Import the mocked function so we can change its return value per-test
+import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 
 // Create mock instances
 const mockQueue = {
   getPending: vi.fn(async () => []),
 };
 
-const mockTokenManager = {
-  getTimeUntilExpiry: vi.fn(async () => 60 * 60 * 1000), // 1 hour
-  needsRefresh: vi.fn(async () => false),
-  ensureValidToken: vi.fn(async () => true),
-};
-
-const mockApiClient = {
-  setToken: vi.fn(),
-  getStatus: vi.fn(async () => ({ status: 'ok' })),
-};
+// Default: user is authenticated
+let mockIsAuthenticated = true;
 
 describe('HealthMonitor', () => {
   let monitor: HealthMonitor;
@@ -60,31 +61,30 @@ describe('HealthMonitor', () => {
     // Reset all mocks
     vi.clearAllMocks();
     mockQueue.getPending.mockResolvedValue([]);
-    mockTokenManager.getTimeUntilExpiry.mockResolvedValue(60 * 60 * 1000);
-    mockTokenManager.needsRefresh.mockResolvedValue(false);
-    mockTokenManager.ensureValidToken.mockResolvedValue(true);
-    mockApiClient.getStatus.mockResolvedValue({ status: 'ok' });
+    mockHealthCheck.mockResolvedValue({});
+    mockIsAuthenticated = true;
+    // Re-set the mock return value after clearAllMocks
+    vi.mocked(isAuthenticated).mockImplementation(() => mockIsAuthenticated);
   });
 
   afterEach(async () => {
     // Stop monitor if running
     monitor.stop();
-    
+
     // Restore console
     consoleMock.restore();
-    
+
     // Restore date mock if used
     if (dateMock) {
       dateMock.restore();
       dateMock = null;
     }
-    
+
     await db.delete();
   });
 
   describe('start and stop', () => {
     it('should start health monitor and run initial check', async () => {
-      // Setup sync config
       await db.syncMetadata.add(createMockSyncConfig());
 
       monitor.start();
@@ -103,7 +103,7 @@ describe('HealthMonitor', () => {
 
       monitor.start();
       const firstActive = monitor.isActive();
-      
+
       monitor.start(); // Try to start again
       const secondActive = monitor.isActive();
 
@@ -123,9 +123,9 @@ describe('HealthMonitor', () => {
 
     it('should not error when stopping if not running', () => {
       expect(monitor.isActive()).toBe(false);
-      
+
       expect(() => monitor.stop()).not.toThrow();
-      
+
       expect(monitor.isActive()).toBe(false);
     });
   });
@@ -144,8 +144,9 @@ describe('HealthMonitor', () => {
     it('should return unhealthy status when issues found', async () => {
       await db.syncMetadata.add(createMockSyncConfig());
 
-      // Mock expired token
-      mockTokenManager.getTimeUntilExpiry.mockResolvedValue(-1000);
+      // Mock unauthenticated user
+      mockIsAuthenticated = false;
+      vi.mocked(isAuthenticated).mockReturnValue(false);
 
       const report = await monitor.check();
 
@@ -160,7 +161,7 @@ describe('HealthMonitor', () => {
 
       expect(report.healthy).toBe(true);
       expect(report.issues).toHaveLength(0);
-      
+
       // Verify checks were not performed
       expect(mockQueue.getPending).not.toHaveBeenCalled();
     });
@@ -264,58 +265,28 @@ describe('HealthMonitor', () => {
     });
   });
 
-  describe('token expiration detection', () => {
-    it('should detect expired token', async () => {
+  describe('authentication check', () => {
+    it('should detect expired/invalid auth', async () => {
       await db.syncMetadata.add(createMockSyncConfig());
 
-      // Mock expired token (negative time until expiry)
-      mockTokenManager.getTimeUntilExpiry.mockResolvedValue(-1000);
+      // Mock unauthenticated (PocketBase authStore is invalid)
+      mockIsAuthenticated = false;
+      vi.mocked(isAuthenticated).mockReturnValue(false);
 
       const report = await monitor.check();
 
       expect(report.healthy).toBe(false);
-      expect(report.issues).toHaveLength(1);
-      expect(report.issues[0].type).toBe('token_expired');
-      expect(report.issues[0].severity).toBe('error');
-      expect(report.issues[0].message).toContain('expired');
+      const authIssue = report.issues.find(i => i.type === 'token_expired');
+      expect(authIssue).toBeDefined();
+      expect(authIssue!.severity).toBe('error');
+      expect(authIssue!.message).toContain('expired');
+      expect(authIssue!.suggestedAction).toContain('Sign in');
     });
 
-    it('should attempt automatic token refresh when needed', async () => {
+    it('should not report issue when authenticated', async () => {
       await db.syncMetadata.add(createMockSyncConfig());
 
-      // Mock token needs refresh
-      mockTokenManager.needsRefresh.mockResolvedValue(true);
-      mockTokenManager.ensureValidToken.mockResolvedValue(true);
-
-      const report = await monitor.check();
-
-      expect(mockTokenManager.ensureValidToken).toHaveBeenCalled();
-      expect(report.healthy).toBe(true);
-    });
-
-    it('should report warning when token refresh fails', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      // Mock token needs refresh but refresh fails
-      mockTokenManager.needsRefresh.mockResolvedValue(true);
-      mockTokenManager.ensureValidToken.mockResolvedValue(false);
-
-      const report = await monitor.check();
-
-      expect(report.healthy).toBe(false);
-      expect(report.issues).toHaveLength(1);
-      expect(report.issues[0].type).toBe('token_expired');
-      expect(report.issues[0].severity).toBe('warning');
-      expect(report.issues[0].message).toContain('expiring soon');
-    });
-
-    it('should not report issue when token is valid', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      // Mock valid token (1 hour until expiry)
-      mockTokenManager.getTimeUntilExpiry.mockResolvedValue(60 * 60 * 1000);
-      mockTokenManager.needsRefresh.mockResolvedValue(false);
-
+      // Default: mockIsAuthenticated = true
       const report = await monitor.check();
 
       expect(report.healthy).toBe(true);
@@ -327,37 +298,28 @@ describe('HealthMonitor', () => {
     it('should detect server unreachable', async () => {
       await db.syncMetadata.add(createMockSyncConfig());
 
-      // Mock API error
-      mockApiClient.getStatus.mockRejectedValue(new Error('Network error'));
+      // Mock PocketBase health check failure
+      mockHealthCheck.mockRejectedValue(new Error('Network error'));
 
       const report = await monitor.check();
 
       expect(report.healthy).toBe(false);
-      expect(report.issues).toHaveLength(1);
-      expect(report.issues[0].type).toBe('server_unreachable');
-      expect(report.issues[0].severity).toBe('error');
-      expect(report.issues[0].message).toContain('Network error');
+      const connectivityIssue = report.issues.find(i => i.type === 'server_unreachable');
+      expect(connectivityIssue).toBeDefined();
+      expect(connectivityIssue!.severity).toBe('error');
+      expect(connectivityIssue!.message).toContain('Cannot reach PocketBase server');
     });
 
     it('should pass when server is reachable', async () => {
       await db.syncMetadata.add(createMockSyncConfig());
 
-      mockApiClient.getStatus.mockResolvedValue({ status: 'ok' });
+      mockHealthCheck.mockResolvedValue({});
 
       const report = await monitor.check();
 
-      expect(mockApiClient.setToken).toHaveBeenCalled();
-      expect(mockApiClient.getStatus).toHaveBeenCalled();
+      // Verify health check was called via PocketBase SDK
+      expect(mockHealthCheck).toHaveBeenCalled();
       expect(report.healthy).toBe(true);
-    });
-
-    it('should set token before checking connectivity', async () => {
-      const config = createMockSyncConfig({ token: 'test-token-123' });
-      await db.syncMetadata.add(config);
-
-      await monitor.check();
-
-      expect(mockApiClient.setToken).toHaveBeenCalledWith('test-token-123');
     });
   });
 
@@ -368,19 +330,20 @@ describe('HealthMonitor', () => {
 
       await db.syncMetadata.add(createMockSyncConfig());
 
-      // Setup multiple issues
+      // Setup multiple issues: stale queue + expired auth + unreachable server
       const staleOp = createMockSyncQueueItem({
         timestamp: now - 2 * 60 * 60 * 1000,
       });
       mockQueue.getPending.mockResolvedValue([staleOp]);
-      mockTokenManager.getTimeUntilExpiry.mockResolvedValue(-1000);
-      mockApiClient.getStatus.mockRejectedValue(new Error('Network error'));
+      mockIsAuthenticated = false;
+      vi.mocked(isAuthenticated).mockReturnValue(false);
+      mockHealthCheck.mockRejectedValue(new Error('Network error'));
 
       const report = await monitor.check();
 
       expect(report.healthy).toBe(false);
       expect(report.issues.length).toBeGreaterThanOrEqual(2);
-      
+
       const issueTypes = report.issues.map(i => i.type);
       expect(issueTypes).toContain('stale_queue');
       expect(issueTypes).toContain('token_expired');
@@ -410,7 +373,7 @@ describe('HealthMonitor', () => {
       expect(monitor.isActive()).toBe(true);
 
       const callsBeforeStop = mockQueue.getPending.mock.calls.length;
-      
+
       monitor.stop();
       expect(monitor.isActive()).toBe(false);
 
