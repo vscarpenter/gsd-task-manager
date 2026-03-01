@@ -5,17 +5,17 @@
 - **Live App**: [gsd.vinny.dev](https://gsd.vinny.dev)
 - **Version**: 6.5.0
 - **License**: MIT
-- **Tech Stack**: Next.js 16, React 19, TypeScript, IndexedDB, Cloudflare Workers
+- **Tech Stack**: Next.js 16, React 19, TypeScript, IndexedDB, PocketBase
 
 ---
 
 ## Executive Summary
 
-GSD Task Manager is a modern web application that helps users prioritize tasks using the time-tested Eisenhower Matrix framework—distinguishing between what's urgent and what's truly important. Unlike commercial task managers that lock your data in proprietary clouds, GSD takes a **privacy-first, local-first approach**: your tasks live in your browser's IndexedDB by default, with optional end-to-end encrypted sync when you need it.
+GSD Task Manager is a modern web application that helps users prioritize tasks using the time-tested Eisenhower Matrix framework—distinguishing between what's urgent and what's truly important. Unlike commercial task managers that lock your data in proprietary clouds, GSD takes a **privacy-first, local-first approach**: your tasks live in your browser's IndexedDB by default, with optional cloud sync via self-hosted PocketBase when you need multi-device access.
 
 **What makes GSD different:**
 
-- **Zero tracking, zero analytics, zero data collection** — Your task data never leaves your device unless you explicitly enable encrypted sync
+- **Zero tracking, zero analytics, zero data collection** — Your task data never leaves your device unless you explicitly enable cloud sync
 - **Framework-driven productivity** — The Eisenhower Matrix forces intentional prioritization, helping you focus on what matters rather than what's merely urgent
 - **Power-user features without complexity** — Dependencies, recurring tasks, subtasks, batch operations, and advanced analytics—all with a clean, intuitive interface
 - **Command-driven workflow** — Universal ⌘K command palette for instant access to any action, task, or setting
@@ -29,7 +29,7 @@ GSD Task Manager is a modern web application that helps users prioritize tasks u
 - Anyone overwhelmed by commercial task managers' bloat and subscription fees
 
 **The Value Proposition:**
-_"Get Stuff Done while keeping your data yours."_ Work smarter with proven productivity science, own your data completely, and choose your own adventure: local-only for maximum privacy, or encrypted sync for multi-device workflows.
+_"Get Stuff Done while keeping your data yours."_ Work smarter with proven productivity science, own your data completely, and choose your own adventure: local-only for maximum privacy, or self-hosted cloud sync for multi-device workflows.
 
 ---
 
@@ -163,58 +163,65 @@ When running in **local-only mode** (default), the following data stays on your 
 - ❌ None (in local-only mode)
 
 **If you enable sync (optional):**
-- Encrypted task blobs (AES-256-GCM, zero-knowledge server)
+- Task data synced to your self-hosted PocketBase server (you own the server and data)
 - Device metadata (device ID, last seen timestamp)
-- Sync metadata (vector clocks for conflict resolution)
+- Sync metadata (client_updated_at timestamps for conflict resolution)
 
-See "Cloud Sync" section below for details on the encrypted sync architecture.
+See "Cloud Sync" section below for details on the PocketBase sync architecture.
 
 ### How Sync Works Without Compromising Privacy
 
-**Optional Cloud Sync** is available for users who need multi-device access. The design maintains **end-to-end encryption** with a **zero-knowledge server**:
+**Optional Cloud Sync** is available for users who need multi-device access. The design uses a **self-hosted PocketBase** backend where the user owns both the server and the data:
 
-**The Challenge:**
-- Traditional cloud sync sends plaintext data to servers (Todoist, Asana, Notion, etc.)
-- Server operators can read, analyze, monetize, or leak your data
-- Requires blind trust in privacy policies that can change overnight
+**The Approach:**
+- Instead of trusting a third-party cloud, you self-host PocketBase on your own infrastructure
+- Tasks are stored as plaintext on a server you control (no need for E2E encryption when you own the server)
+- Authentication via PocketBase built-in OAuth2 (Google, GitHub providers)
+- Realtime sync via SSE (Server-Sent Events) for instant cross-device updates
 
-**GSD's Solution:**
+**GSD's Sync Architecture:**
 
-1. **Client-Side Encryption** (`lib/sync/crypto.ts`)
-   - User chooses a passphrase (never sent to server)
-   - Passphrase + salt → PBKDF2 (600k iterations) → 256-bit encryption key
-   - Each task → JSON → AES-256-GCM (96-bit random nonce per operation)
-   - Result: `{encryptedBlob, nonce, checksum}` sent to Worker
+1. **Self-Hosted PocketBase Backend** (`lib/sync/pocketbase-client.ts`)
+   - PocketBase server at `https://api.vinny.io` (AWS EC2)
+   - `tasks` collection with API rules: `@request.auth.id != "" && owner = @request.auth.id`
+   - Each user can only access their own tasks (enforced server-side)
+   - PocketBase admin panel at `https://api.vinny.io/_/`
 
-2. **Zero-Knowledge Server** (`worker/src/`)
-   - Cloudflare Worker stores only encrypted blobs in D1 (SQLite)
-   - Worker has zero ability to decrypt task content
-   - Encryption salt is stored encrypted (useless without user's passphrase)
-   - Server only sees: blob size, upload timestamp, device ID
+2. **OAuth Authentication** (`lib/sync/pb-auth.ts`)
+   - PocketBase SDK handles OAuth popup flow automatically via `authWithOAuth2`
+   - Supports Google and GitHub providers
+   - Auth state persists in PocketBase's built-in `authStore` (localStorage)
+   - Auto-refreshes tokens transparently
 
-3. **Local Decryption Only**
-   - When syncing down, encrypted blobs fetched from Worker
-   - Client decrypts locally using passphrase → original task data
-   - If passphrase is wrong, decryption fails (no password recovery!)
+3. **Last-Write-Wins Conflict Resolution** (`lib/sync/pb-sync-engine.ts`)
+   - Push/pull sync engine with LWW resolution using `client_updated_at` timestamps
+   - Remote wins if its `client_updated_at` is newer than local
+   - Simple, automatic, no user intervention required
 
-**What the server knows:**
-- You have an account (email from OAuth provider)
-- You have N devices registered
-- You have M tasks (count only, not content)
-- Last sync timestamp per device
+4. **Realtime SSE Subscriptions** (`lib/sync/pb-realtime.ts`)
+   - PocketBase SSE subscriptions for instant cross-device updates
+   - Auto-reconnect on connection loss
+   - Echo filtering skips own-device changes via `device_id` comparison
+   - Periodic sync runs as safety net alongside realtime
 
-**What the server cannot know:**
-- Task titles, descriptions, tags, subtasks, due dates
-- Which quadrants your tasks are in
-- Anything about your productivity or workflow
+**What the server stores:**
+- Your account (email from OAuth provider)
+- Your task data in plaintext (on a server you own and control)
+- Device metadata (device ID, last seen timestamp)
+- Sync timestamps for conflict resolution
+
+**Privacy guarantee:**
+- You own and operate the PocketBase server
+- No third party has access to your task data
+- PocketBase API rules ensure user isolation (each user sees only their own tasks)
+- You can inspect, back up, or delete server data at any time
 
 **Security Implementation:**
-- AES-256-GCM (authenticated encryption with associated data)
-- PBKDF2 with 600,000 iterations (OWASP 2023 recommendation)
-- Unique 96-bit nonce per encryption operation (no nonce reuse)
-- SHA-256 checksums for integrity verification
-- JWT authentication with 7-day expiry (signed with 256-bit secret)
-- Rate limiting: 100 requests/minute per IP via Cloudflare KV
+- PocketBase built-in OAuth2 with auto-refreshing auth tokens
+- API rules enforce row-level security (owner-based access control)
+- HTTPS transport encryption for data in transit
+- Rate limiting: push operations throttled (100ms between requests) to avoid 429 errors
+- Batch lookups: `fetchRemoteTaskIndex()` pre-fetches all remote task IDs in one request
 
 ### Data Ownership and Export Capabilities
 
@@ -611,47 +618,40 @@ Comprehensive productivity analytics with interactive visualizations. Toggle bet
 #### OAuth Authentication
 
 **Providers Supported:**
-- **Google** (OIDC-compliant)
-- **Apple** (OIDC-compliant)
+- **Google** (OAuth2, currently configured on server)
+- **GitHub** (OAuth2)
 
-**Flow** (`worker/src/handlers/oidc/`):
+**Flow** (`lib/sync/pb-auth.ts`):
 
-1. **Initiate** (`initiate.ts`)
- 
-   - User clicks "Sign in with Google/Apple" button
-   - Frontend generates PKCE code verifier + challenge (SHA-256)
-   - Redirect to OAuth provider with state parameter
-   - State stored in KV for 10 minutes (prevents CSRF)
+PocketBase SDK handles the entire OAuth popup flow automatically via `authWithOAuth2`:
 
-2. **Callback** (`callback.ts`)
+1. **Initiate**
+   - User clicks "Sign in with Google" or "Sign in with GitHub" button
+   - PocketBase SDK opens OAuth popup window automatically
+   - Redirects to OAuth provider for authentication
 
-   - OAuth provider redirects back with authorization code
-   - Worker validates state parameter (CSRF protection)
-   - Exchanges code for tokens (PKCE verification)
-   - Fetches user profile (email, name)
-   - Stores session in KV (24 hours)
-   - Redirects to frontend with result token
+2. **Callback**
+   - OAuth provider redirects back to PocketBase
+   - PocketBase exchanges code for tokens and creates/updates user record
+   - Auth token stored in PocketBase's built-in `authStore` (localStorage)
 
-3. **Result** (`result.ts`)
-
-   - Frontend polls /api/auth/oidc/result/:resultId
-   - Worker returns JWT token + device ID
-   - Frontend stores in localStorage
-   - User now authenticated
+3. **Authenticated**
+   - PocketBase SDK auto-stores and auto-refreshes auth tokens
+   - User is now authenticated and sync can begin
+   - No manual token management required
 
 **Security Features:**
 
-- PKCE (Proof Key for Code Exchange) prevents authorization code interception
-- State parameter prevents CSRF attacks
-- ID token verification (JWT signature validation)
-- Short-lived session tokens (24 hours)
-- JWT tokens with 7-day expiry (refresh flow required)
+- PocketBase handles OAuth2 flow securely (PKCE, state parameter)
+- Auth tokens auto-refresh transparently via PocketBase SDK
+- Row-level security via API rules (owner-based access control)
+- HTTPS transport encryption for all API calls
 
 **Device Registration:**
 
 - Each device gets unique ID (UUID)
 - Device name stored (e.g., "MacBook Pro", "iPhone 15")
-- Tracked in D1 database (devices table)
+- Tracked in PocketBase (devices collection)
 - Last seen timestamp updated on each sync
 
 #### Sync Frequency and Controls
@@ -691,7 +691,7 @@ Comprehensive productivity analytics with interactive visualizations. Toggle bet
 - Manual sync button (always available)
 - View sync history
 - Device list with last seen
-- Sign out button (clears JWT, stops sync)
+- Sign out button (clears auth, stops sync)
 
 **Sync Status Indicators:**
 - **Green checkmark**: Last sync successful, no conflicts
@@ -709,7 +709,7 @@ Two devices edit the same task offline, then both sync. Which version wins?
 **Resolution Strategies:**
 
 1. **Last-Write-Wins** (default)
-   - Compare `updatedAt` timestamps
+   - Compare `client_updated_at` timestamps
    - Most recent edit wins, other discarded
    - Simple, automatic, no user intervention
    - Risk: may lose edits if clocks skewed
@@ -720,27 +720,25 @@ Two devices edit the same task offline, then both sync. Which version wins?
    - Preserves all data, no silent loss
    - UX burden on user
 
-**Cascade Sync** (`lib/sync/engine/coordinator.ts`):
+**Sync Coordination** (`lib/sync/sync-coordinator.ts`):
 - After resolving conflicts, immediately push resolution
-- Ensures all devices converge to same state
-- Prevents ping-pong conflicts (A → B → A → B...)
+- Ensures all devices converge to same state via SSE realtime subscriptions
+- Echo filtering prevents ping-pong updates (skip own-device changes)
 
 **Example Scenario:**
 ```
 Device A (MacBook):
   - Edit task title: "Finish report" → "Finish quarterly report"
-  - Vector clock: {A: 5}
-  - updatedAt: 2025-01-08T10:00:00Z
+  - client_updated_at: 2025-01-08T10:00:00Z
 
 Device B (iPhone):
   - Edit same task description: "Draft" → "Final version"
-  - Vector clock: {B: 3}
-  - updatedAt: 2025-01-08T10:05:00Z
+  - client_updated_at: 2025-01-08T10:05:00Z
 
-Sync conflict detected (neither clock dominates):
-  - Last-write-wins: Device B wins (newer timestamp)
+Sync conflict detected:
+  - Last-write-wins: Device B wins (newer client_updated_at)
   - Result: Title reverts to "Finish report", description becomes "Final version"
-  - Cascade sync: Device B pushes winning version → Device A pulls and updates
+  - SSE realtime: Device A receives update instantly and applies it
 ```
 
 #### Manual Backup and Restore
@@ -1598,15 +1596,14 @@ describe('Task CRUD', () => {
     expect(stored?.title).toBe('Test task');
   });
 
-  it('updates task and increments vector clock', async () => {
+  it('updates task and sets updatedAt timestamp', async () => {
     const task = await createTask({ title: 'Original' });
-    const deviceId = await getDeviceId();
 
     await updateTask(task.id, { title: 'Updated' });
 
     const updated = await db.tasks.get(task.id);
     expect(updated?.title).toBe('Updated');
-    expect(updated?.vectorClock[deviceId]).toBeGreaterThan(0);
+    expect(updated?.updatedAt).toBeDefined();
   });
 });
 ```
@@ -1726,47 +1723,27 @@ function handler(event) {
 - Lightweight JavaScript runtime (no Node.js overhead)
 - Cost: ~$0.10 per million invocations
 
-**Multi-Environment Deployment:**
+**Deployment Architecture:**
 
-| Environment | Frontend URL | Worker URL | Purpose |
-|------------|--------------|------------|---------|
-| **Dev** | localhost:3000 | localhost:8787 | Local development |
-| **Staging** | gsd-dev.vinny.dev | gsd-dev-worker.vinny.dev | Pre-production testing |
-| **Prod** | gsd.vinny.dev | gsd.vinny.dev/api | Live application |
+| Component | URL | Purpose |
+|-----------|-----|---------|
+| **Frontend** | gsd.vinny.dev | Static Next.js app (S3 + CloudFront) |
+| **PocketBase API** | api.vinny.io | Self-hosted sync backend (AWS EC2) |
+| **PocketBase Admin** | api.vinny.io/_/ | Collection management and admin panel |
+| **Local Dev** | localhost:3000 | Next.js dev server |
 
-**Worker Deployment:**
+**PocketBase Setup:**
 ```bash
-cd worker/
+# Create tasks collection with correct schema, indexes, and API rules
+./scripts/setup-pocketbase-collections.sh
 
-# Deploy to all environments
-npm run deploy:all
-
-# Or individually:
-npm run deploy:dev     # Uses wrangler.dev.toml
-npm run deploy:staging # Uses wrangler.staging.toml
-npm run deploy:prod    # Uses wrangler.toml
-
-# Migrations (run after schema changes):
-npm run migrations:dev
-npm run migrations:staging
-npm run migrations:prod
+# PocketBase admin panel for collection management
+open https://api.vinny.io/_/
 ```
 
-**Environment Variables** (per environment):
-- `DATABASE` (D1): Encrypted task storage
-- `KV_NAMESPACE` (KV): Sessions, rate limiting
-- `R2_BUCKET` (R2): Backup storage (future)
-- `JWT_SECRET`: 256-bit signing key
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: OAuth
-- `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`: OAuth
-
-**Security:**
-```bash
-# Set secrets (not checked into git)
-wrangler secret put JWT_SECRET --env prod
-wrangler secret put GOOGLE_CLIENT_SECRET --env prod
-wrangler secret put APPLE_PRIVATE_KEY --env prod
-```
+**Environment Variables:**
+- `NEXT_PUBLIC_POCKETBASE_URL`: PocketBase server URL (e.g., `https://api.vinny.io`)
+- OAuth providers configured in PocketBase admin panel (Google, GitHub)
 
 ### Browser Compatibility
 
@@ -2002,43 +1979,29 @@ const urgentTasks = await db.tasks
   .toArray();
 ```
 
-**2. Sync API** (if sync enabled, `worker/src/`):
+**2. PocketBase Sync API** (if sync enabled, `lib/sync/`):
 
-**Authentication:**
-```
-POST /api/auth/oidc/initiate/:provider
-  → Redirect to OAuth provider
+**Authentication** (`lib/sync/pb-auth.ts`):
+- `authWithOAuth2('google')` — PocketBase SDK handles OAuth popup flow
+- `authWithOAuth2('github')` — Same flow for GitHub provider
+- Auth tokens auto-stored in `authStore` (localStorage) and auto-refreshed
 
-GET /api/auth/oidc/callback/:provider?code=...&state=...
-  → Exchange code for tokens, return JWT
+**Sync Operations** (`lib/sync/pb-sync-engine.ts`):
+- **Push**: Create/update/delete tasks in PocketBase `tasks` collection
+- **Pull**: Fetch remote tasks, apply LWW resolution using `client_updated_at`
+- **Batch lookups**: `fetchRemoteTaskIndex()` pre-fetches all remote task IDs in one request
 
-GET /api/auth/oidc/result/:resultId
-  ← { token, userId, deviceId, expiresAt }
-```
+**Realtime** (`lib/sync/pb-realtime.ts`):
+- SSE subscriptions on the `tasks` collection for instant cross-device updates
+- Echo filtering via `device_id` comparison (skip own-device changes)
+- Auto-reconnect on connection loss
 
-**Sync Operations:**
-```
-POST /api/sync/push
-  Headers: Authorization: Bearer <JWT>
-  Body: { deviceId, operations: [...], clientVectorClock }
-  ← { accepted, rejected, conflicts, serverVectorClock }
-
-GET /api/sync/pull
-  Headers: Authorization: Bearer <JWT>
-  Query: deviceId, lastVectorClock, sinceTimestamp
-  ← { tasks: [...], deletedTaskIds, serverVectorClock, hasMore }
-
-GET /api/sync/status
-  Headers: Authorization: Bearer <JWT>
-  ← { lastSyncAt, pendingPushCount, conflictCount, deviceCount, storageUsed }
-```
+**Field Mapping** (`lib/sync/task-mapper.ts`):
+- camelCase (client) ↔ snake_case (PocketBase) field mapping
 
 **Device Management:**
-```
-GET /api/devices
-  Headers: Authorization: Bearer <JWT>
-  ← [{ id, name, lastSeenAt, isActive, isCurrent }]
-```
+- Devices tracked in PocketBase `devices` collection
+- Each device gets unique ID, name, last seen timestamp
 
 **3. MCP API** (Claude Desktop integration, `packages/mcp-server/src/`):
 
@@ -2098,12 +2061,6 @@ bun lint          # Run ESLint
 bun run test      # Run Vitest tests (CI mode)
 bun run test:watch # Run tests in watch mode
 
-# Worker (optional, for sync development)
-cd worker/
-npm install
-npm run dev       # Start Wrangler dev server (local D1)
-npm run deploy:dev # Deploy to Cloudflare (dev environment)
-
 # MCP Server (optional, for AI integration development)
 cd packages/mcp-server/
 npm install
@@ -2116,7 +2073,7 @@ npm run dev       # Watch mode (auto-rebuild)
 Create `.env.local` (optional):
 ```bash
 # Only needed if developing sync features
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
+NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io
 ```
 
 **Database Setup:**
@@ -2147,12 +2104,6 @@ bun run test:watch
 2. Sources tab → set breakpoints in TypeScript files
 3. Network tab → inspect API calls (if sync enabled)
 4. Application tab → IndexedDB → GsdTaskManager → tasks
-
-**Worker:**
-1. `cd worker/ && npm run dev`
-2. Open http://localhost:8787 (Wrangler dev server)
-3. Use `console.log()` in worker code (appears in terminal)
-4. Test endpoints with curl or Postman
 
 **MCP Server:**
 1. `cd packages/mcp-server/ && npm run build`
@@ -2222,43 +2173,45 @@ bun run test:watch
 
 ---
 
-**4. End-to-End Encryption (AES-256-GCM) over Transport Encryption Only**
+**4. Self-Hosted PocketBase over Third-Party Cloud or E2E Encryption**
 
 **Rationale:**
-- Zero-knowledge architecture: server cannot read task content
-- Compliance with privacy regulations (GDPR, CCPA)
-- User trust (no data mining, no breaches expose task data)
-- Future-proof (even if server compromised, data encrypted)
+- User owns and operates the server (full data sovereignty)
+- No need for E2E encryption when you control the infrastructure
+- Simpler architecture: no key derivation, nonce management, or encryption/decryption overhead
+- PocketBase provides built-in OAuth2, realtime SSE, and row-level security out of the box
+- Single binary deployment (easy to self-host on any VPS or cloud instance)
 
 **Trade-offs:**
-- ✅ Maximum privacy (server can't decrypt)
-- ✅ Regulatory compliance
-- ✅ No liability for data breaches (encrypted at rest)
-- ❌ No password recovery (lost passphrase = data loss)
-- ❌ Increased complexity (key derivation, nonce management)
-- ❌ Cannot search server-side (all search client-side)
+- ✅ Full data ownership (user controls the server)
+- ✅ Simpler sync architecture (plaintext, no encryption complexity)
+- ✅ Built-in OAuth, realtime, and admin panel from PocketBase
+- ✅ Easy to inspect, back up, or migrate data
+- ❌ Requires self-hosting (user must maintain PocketBase server)
+- ❌ Data is plaintext on server (acceptable when you own the server)
 
-**Alternative Considered:** Server-side encryption (encrypted at rest, server has keys)
-**Why Rejected:** Server could decrypt data (privacy violation)
+**Alternative Considered:** E2E encryption with Cloudflare Workers (zero-knowledge server)
+**Why Rejected:** Unnecessary complexity when user owns the server; simpler architecture preferred
 
 ---
 
-**5. Vector Clocks over Last-Write-Wins**
+**5. Last-Write-Wins (LWW) with client_updated_at**
 
 **Rationale:**
-- Detect true conflicts (concurrent edits from different devices)
-- Causality tracking (know which edit happened-before which)
-- Enables cascade sync (automatic conflict resolution propagation)
-- Standard in distributed systems (Cassandra, Riak, CRDTs)
+- Simple and automatic conflict resolution (no user intervention needed)
+- `client_updated_at` timestamps provide sufficient accuracy for task management
+- PocketBase handles storage; client handles resolution logic
+- Realtime SSE subscriptions minimize conflict windows
 
 **Trade-offs:**
-- ✅ Accurate conflict detection
-- ✅ Preserves causality (no lost edits)
-- ❌ More complex than simple timestamps
-- ❌ Vector clock size grows with device count (mitigated: prune old devices)
+- ✅ Simple to implement and reason about
+- ✅ No user intervention for conflicts
+- ✅ Works well with PocketBase's data model
+- ❌ May lose edits if two devices edit simultaneously (rare for personal task manager)
+- ❌ Relies on reasonably synchronized clocks
 
-**Alternative Considered:** Operational Transforms (like Google Docs)
-**Why Rejected:** Overkill for task management (not real-time collaborative editing)
+**Alternative Considered:** Vector clocks, Operational Transforms
+**Why Rejected:** Overkill for a personal task manager; LWW is sufficient and much simpler
 
 ---
 
@@ -2478,8 +2431,7 @@ See [`coding-standards.md`](./coding-standards.md) for full details. Key points:
                'dependencies': [],
                'recurrence': 'none',
                'createdAt': datetime.now().isoformat(),
-               'updatedAt': datetime.now().isoformat(),
-               'vectorClock': {}
+               'updatedAt': datetime.now().isoformat()
            })
 
    with open('gsd-import.json', 'w') as f:
@@ -2634,11 +2586,11 @@ location.reload();
 
 ## Conclusion
 
-GSD Task Manager proves that **privacy and productivity are not mutually exclusive**. By combining the battle-tested Eisenhower Matrix framework with modern web technologies and end-to-end encryption, GSD delivers a powerful task management experience that respects user privacy.
+GSD Task Manager proves that **privacy and productivity are not mutually exclusive**. By combining the battle-tested Eisenhower Matrix framework with modern web technologies and self-hosted PocketBase sync, GSD delivers a powerful task management experience that respects user privacy and data ownership.
 
 **Why Choose GSD:**
 
-- **Privacy-First**: Your data stays on your device, or encrypted in transit if you choose sync
+- **Privacy-First**: Your data stays on your device, or syncs to a PocketBase server you own and control
 - **Framework-Driven**: The Eisenhower Matrix enforces intentional prioritization
 - **Open Source**: Verify the code, contribute features, run your own instance
 - **No Lock-In**: Export anytime, use standard JSON format, own your data
@@ -2651,7 +2603,7 @@ GSD Task Manager proves that **privacy and productivity are not mutually exclusi
 1. Visit [gsd.vinny.dev](https://gsd.vinny.dev)
 2. Create your first task
 3. Install as PWA for offline access
-4. (Optional) Enable encrypted sync for multi-device
+4. (Optional) Enable cloud sync via self-hosted PocketBase for multi-device
 5. (Optional) Set up MCP server for AI-powered workflows
 
 **Contribute:**

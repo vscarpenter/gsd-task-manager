@@ -128,12 +128,6 @@ describe('Tool Schemas', () => {
   });
 
   describe('Analytics Tools', () => {
-    it('all analytics tools should mention encryption requirement', () => {
-      analyticsTools.forEach((tool) => {
-        expect(tool.description).toMatch(/GSD_ENCRYPTION_PASSPHRASE/i);
-      });
-    });
-
     it('get_productivity_metrics should have no required parameters', () => {
       expect(getProductivityMetricsTool.name).toBe('get_productivity_metrics');
       expect(getProductivityMetricsTool.inputSchema.required).toHaveLength(0);
@@ -147,12 +141,6 @@ describe('Tool Schemas', () => {
   });
 
   describe('Write Tools', () => {
-    it('all write tools should mention encryption requirement', () => {
-      writeTools.forEach((tool) => {
-        expect(tool.description).toMatch(/GSD_ENCRYPTION_PASSPHRASE/i);
-      });
-    });
-
     it('all write tools should have optional dryRun parameter', () => {
       writeTools.forEach((tool) => {
         expect(tool.inputSchema.properties).toHaveProperty('dryRun');

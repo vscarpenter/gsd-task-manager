@@ -2,9 +2,9 @@
 
 ## Overview
 
-GSD Task Manager uses **IndexedDB** via **Dexie.js** for client-side data persistence. The database follows a **zero-knowledge architecture** with optional end-to-end encrypted cloud sync. All data is stored locally in the browser, with JSON export/import for backups.
+GSD Task Manager uses **IndexedDB** via **Dexie.js** for client-side data persistence. The database follows a **privacy-first architecture** with optional cloud sync via PocketBase. All data is stored locally in the browser, with JSON export/import for backups.
 
-**Current Schema Version:** 12
+**Current Schema Version:** 13
 
 ---
 
@@ -41,7 +41,6 @@ erDiagram
         boolean notificationSent "indexed"
         string lastNotificationAt "ISO timestamp"
         string snoozedUntil "ISO timestamp"
-        object vectorClock "device_id to version_num"
         string archivedAt "ISO timestamp (when archived)"
         number estimatedMinutes "Planned time to complete"
         number timeSpent "Total minutes worked"
@@ -87,7 +86,6 @@ erDiagram
         number timestamp "Unix timestamp, indexed"
         number retryCount "indexed"
         object payload "TaskRecord or null"
-        object vectorClock "device_id to version_num"
         array consolidatedFrom "IDs of merged operations"
         number lastAttemptAt "Unix timestamp"
     }
@@ -99,13 +97,8 @@ erDiagram
         string deviceId "UUID"
         string deviceName "User-friendly name"
         string email "OAuth email, nullable"
-        string token "JWT, nullable"
-        number tokenExpiresAt "Unix timestamp, nullable"
         number lastSyncAt "Unix timestamp, nullable"
-        object vectorClock "device_id to version_num"
-        string conflictStrategy "last_write_wins|manual"
-        string serverUrl "API base URL"
-        string provider "google|apple, nullable"
+        string provider "google|github, nullable"
         number consecutiveFailures "Retry tracking"
         number lastFailureAt "Unix timestamp"
         string lastFailureReason "Error message"
@@ -159,7 +152,6 @@ erDiagram
 - **Subtasks:** Embedded checklist items (not normalized for simplicity)
 - **Tags:** Multi-entry index for fast filtering
 - **Notifications:** Tracks sent state and snooze timing
-- **Sync:** Vector clock for distributed conflict detection
 - **Time Tracking:** `estimatedMinutes` for planning, `timeEntries` array for actual work sessions, `timeSpent` for totals
 
 **Indexes:**
@@ -255,7 +247,6 @@ id (primary, fixed to "settings")
 - **Operation Types:** create, update, delete
 - **Retry Logic:** Exponential backoff with `retryCount`
 - **Consolidation:** Multiple updates merged into single operation
-- **Vector Clock:** Ensures causal consistency
 
 **Indexes:**
 ```
@@ -270,7 +261,7 @@ retryCount
 1. User modifies task → Add to `syncQueue`
 2. Sync engine uploads → Mark as synced, remove from queue
 3. Offline → Queue persists until reconnected
-4. Conflict → Merge with vector clock, re-queue if needed
+4. Conflict → Resolve via last-write-wins, re-queue if needed
 
 ---
 
@@ -279,8 +270,7 @@ retryCount
 
 **Key Features:**
 - Singleton table (always `key="sync_config"`)
-- JWT token lifecycle management (7-day expiration)
-- Vector clock for this device
+- PocketBase auth state (token auto-managed by SDK)
 - Retry backoff state tracking
 
 **Indexes:**
@@ -289,9 +279,8 @@ key (primary, fixed to "sync_config")
 ```
 
 **Security Notes:**
-- **Token Storage:** JWT stored in IndexedDB (encrypted DB on disk)
-- **Salt Storage:** Encryption salt stored encrypted in Cloudflare D1 (useless without passphrase)
-- **Zero-Knowledge:** Worker cannot decrypt task content
+- **Token Storage:** PocketBase auth token stored in localStorage (auto-managed by SDK)
+- **Access Control:** PocketBase API rules enforce per-user data isolation
 
 ---
 
@@ -301,7 +290,7 @@ key (primary, fixed to "sync_config")
 **Key Features:**
 - Singleton table (always `key="device_info"`)
 - Generated on first install
-- Used in vector clock and sync history
+- Used in sync history and device attribution
 
 **Indexes:**
 ```
@@ -565,7 +554,7 @@ syncHistory: id, timestamp, status, deviceId
 
 ### Version 6 → 7 (Cloud Sync)
 - Created `syncQueue`, `syncMetadata`, `deviceInfo` tables
-- Added `vectorClock` to tasks
+- Added `vectorClock` to tasks (later removed in v13)
 - Initialized sync config with device UUID
 
 ### Version 7 → 8 (Completion Tracking)
@@ -591,6 +580,11 @@ syncHistory: id, timestamp, status, deviceId
 - Added `estimatedMinutes`, `timeSpent`, `timeEntries` fields to tasks
 - Migration validates and repairs corrupt data
 - Backfilled defaults: `timeEntries=[]`, `timeSpent=0`
+
+### Version 12 → 13 (PocketBase Sync Migration)
+- Removed `vectorClock` from tasks, syncQueue, and syncMetadata
+- Removed `conflictStrategy`, `serverUrl`, `token`, `tokenExpiresAt` from syncMetadata
+- Migrated cloud sync from Cloudflare Workers to PocketBase
 
 ---
 
@@ -623,10 +617,6 @@ syncHistory: id, timestamp, status, deviceId
    - Multiple updates to same task merged into single operation
    - Tracked via `consolidatedFrom` array
 
-7. **Vector Clock Monotonicity**
-   - Each device increments own counter on every update
-   - Never decremented (ensures causality)
-
 ---
 
 ## Security Considerations
@@ -637,11 +627,10 @@ syncHistory: id, timestamp, status, deviceId
 - **XSS Protection:** Strict CSP prevents script injection
 
 ### Cloud Sync (Optional)
-- **End-to-End Encryption:** AES-256-GCM with PBKDF2 key derivation (600k iterations)
-- **Zero-Knowledge:** Worker stores only encrypted blobs, cannot decrypt
-- **Transport Security:** HTTPS only, CORS restricted to production domain
-- **Token Security:** JWT tokens (HS256) with 7-day expiration, stored in IndexedDB
-- **Salt Storage:** Encryption salt stored encrypted in Cloudflare D1 (useless without passphrase)
+- **PocketBase Backend:** Self-hosted PocketBase server (tasks stored as plaintext, user owns the server)
+- **Access Control:** API rules enforce `owner = @request.auth.id` on all operations
+- **Transport Security:** HTTPS required for production deployments
+- **Token Security:** PocketBase auth tokens auto-managed by SDK in localStorage
 
 ### Data Sanitization
 - **Input Validation:** All fields validated with Zod schemas
@@ -700,15 +689,15 @@ syncHistory: id, timestamp, status, deviceId
 2. **Replace:** Delete all existing, import only
 
 ### Sync Backup
-- Cloud sync maintains encrypted copy in Cloudflare R2
-- Versioned by vector clock (conflict resolution)
-- Retention: Indefinite (user deletes account to purge)
+- Cloud sync maintains a copy in PocketBase SQLite database
+- Conflict resolution via last-write-wins using `client_updated_at` timestamps
+- Retention: Indefinite (user controls server lifecycle)
 
 ---
 
 ## Future Schema Changes (Planned)
 
-### Version 13+ (Potential)
+### Version 14+ (Potential)
 - **Attachments:** Add `attachments[]` field (file references, not blobs)
 - **Subtask Dependencies:** Nested dependencies within subtasks
 - **Custom Fields:** User-defined metadata (JSON object)
@@ -717,6 +706,7 @@ syncHistory: id, timestamp, status, deviceId
 ### Recently Implemented
 - **v11:** App preferences (pinned smart views)
 - **v12:** Time tracking (`estimatedMinutes`, `timeSpent`, `timeEntries`)
+- **v13:** Removed `vectorClock` from tasks/syncQueue/syncMetadata (migrated from Cloudflare Workers to PocketBase sync)
 
 ### Backward Compatibility
 - All migrations include `.upgrade()` hooks
@@ -745,63 +735,26 @@ flowchart TD
         HOOK --> UI
 
         SYNC[Sync Engine] -->|Push/Pull| DB
-        SYNC <-->|Encrypt/Decrypt| CRYPTO[AES-256-GCM]
     end
 
     subgraph "Cloud (Optional)"
-        WORKER[Cloudflare Worker]
-        D1[(D1 Database<br/>SQLite)]
-        R2[R2 Blob Storage<br/>Encrypted Tasks]
+        PB[PocketBase Server]
+        SQLITE[(SQLite Database)]
 
-        WORKER --> D1
-        WORKER --> R2
+        PB --> SQLITE
     end
 
-    SYNC <-->|HTTPS + JWT| WORKER
+    SYNC <-->|HTTPS + OAuth| PB
+    PB -->|SSE Realtime| SYNC
 
     subgraph "MCP Server (Claude Desktop)"
         MCP[MCP Tools]
-        MCP_CRYPTO[Crypto Manager]
-
-        MCP <-->|Decrypt| MCP_CRYPTO
-        MCP <-->|API Calls| WORKER
+        MCP <-->|PocketBase SDK| PB
     end
 
     style DB fill:#4CAF50
-    style D1 fill:#2196F3
-    style R2 fill:#FF9800
-    style CRYPTO fill:#F44336
-    style MCP_CRYPTO fill:#F44336
-```
-
----
-
-## Diagram: Sync Vector Clock Flow
-
-```mermaid
-sequenceDiagram
-    participant D1 as Device 1
-    participant W as Worker
-    participant D2 as Device 2
-
-    Note over D1: Edit task A<br/>VC: {d1:1}
-    D1->>W: Push (encrypted blob + VC)
-    W->>W: Store in R2
-
-    Note over D2: Edit task A<br/>VC: {d2:1}
-    D2->>W: Push (encrypted blob + VC)
-    W->>W: Detect conflict<br/>(VC: {d1:1} vs {d2:1})
-
-    W->>D1: Pull (both versions)
-    W->>D2: Pull (both versions)
-
-    Note over D1: Auto-resolve<br/>(last-write-wins)<br/>VC: {d1:2, d2:1}
-    D1->>W: Push resolved (encrypted)
-
-    Note over D2: Auto-resolve<br/>(last-write-wins)<br/>VC: {d1:2, d2:1}
-    D2->>W: Push resolved (encrypted)
-
-    W->>W: Identical VCs → Sync complete
+    style SQLITE fill:#2196F3
+    style PB fill:#FF9800
 ```
 
 ---
@@ -814,7 +767,7 @@ sequenceDiagram
   - CRUD: `lib/tasks.ts`
   - Filters: `lib/filters.ts`
   - Dependencies: `lib/dependencies.ts`
-  - Sync: `lib/sync/engine/coordinator.ts`
+  - Sync: `lib/sync/sync-coordinator.ts`
 
 - **Testing:**
   - Data layer tests: `tests/data/`
@@ -822,5 +775,4 @@ sequenceDiagram
 
 - **Documentation:**
   - Project README: `README.md`
-  - Feature guide: `GSD_FEATURES_GUIDE.md`
   - Claude instructions: `CLAUDE.md`

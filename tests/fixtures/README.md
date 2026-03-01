@@ -65,12 +65,6 @@ const config = createMockSyncConfig({
   token: 'my-token',
 });
 
-// Create vector clock
-const clock = createMockVectorClock({
-  'device-1': 5,
-  'device-2': 3,
-});
-
 // Create sync queue item
 const queueItem = createMockSyncQueueItem({
   operation: 'update',
@@ -82,17 +76,6 @@ const result = createMockSyncResult({
   status: 'success',
   pushedCount: 5,
   pulledCount: 3,
-});
-
-// Create encrypted task blob
-const blob = createMockEncryptedTaskBlob({
-  id: 'task-1',
-  encryptedBlob: 'base64-data',
-});
-
-// Create conflict info
-const conflict = createMockConflictInfo({
-  taskId: 'conflict-task',
 });
 ```
 

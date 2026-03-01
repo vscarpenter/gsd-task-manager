@@ -159,7 +159,7 @@ describe('MatrixBoard Integration Tests', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       });
 
       await renderWithProviders(<MatrixBoard />);
@@ -202,7 +202,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: ['work'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -218,7 +218,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: ['personal'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -259,7 +259,7 @@ describe('MatrixBoard Integration Tests', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       });
 
       await renderWithProviders(<MatrixBoard />);
@@ -287,7 +287,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: ['coding', 'javascript'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -303,7 +303,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: ['coding', 'python'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-3',
@@ -319,7 +319,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: ['meetings'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -473,7 +473,7 @@ describe('MatrixBoard Integration Tests', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       });
     });
 
@@ -530,7 +530,7 @@ describe('MatrixBoard Integration Tests', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       });
     });
 
@@ -574,7 +574,7 @@ describe('MatrixBoard Integration Tests', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       });
     });
 
@@ -617,7 +617,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'bulk-2',
@@ -633,7 +633,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'bulk-3',
@@ -649,7 +649,7 @@ describe('MatrixBoard Integration Tests', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -800,7 +800,7 @@ describe('MatrixBoard Integration Tests', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       });
 
       await renderWithProviders(<MatrixBoard />);

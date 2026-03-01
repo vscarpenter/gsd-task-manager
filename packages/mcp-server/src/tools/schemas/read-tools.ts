@@ -30,7 +30,7 @@ export const listDevicesTool: Tool = {
 export const getTaskStatsTool: Tool = {
   name: 'get_task_stats',
   description:
-    'Get statistics about tasks including total count, active count, deleted count, and last update timestamp. Provides high-level overview without accessing encrypted task content.',
+    'Get statistics about tasks including total count, active count, deleted count, and last update timestamp.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -41,7 +41,7 @@ export const getTaskStatsTool: Tool = {
 export const listTasksTool: Tool = {
   name: 'list_tasks',
   description:
-    'List all decrypted tasks. Requires GSD_ENCRYPTION_PASSPHRASE to be set. Returns full task details including titles, descriptions, quadrants, tags, subtasks, and dependencies. Optionally filter by quadrant, completion status, or tags.',
+    'List all tasks. Returns full task details including titles, descriptions, quadrants, tags, subtasks, and dependencies. Optionally filter by quadrant, completion status, or tags.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -73,7 +73,7 @@ export const listTasksTool: Tool = {
 export const getTaskTool: Tool = {
   name: 'get_task',
   description:
-    'Get a single decrypted task by ID. Requires GSD_ENCRYPTION_PASSPHRASE to be set. Returns full task details.',
+    'Get a single task by ID. Returns full task details.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -89,7 +89,7 @@ export const getTaskTool: Tool = {
 export const searchTasksTool: Tool = {
   name: 'search_tasks',
   description:
-    'Search decrypted tasks by text query. Requires GSD_ENCRYPTION_PASSPHRASE to be set. Searches across task titles, descriptions, tags, and subtask text. Returns matching tasks.',
+    'Search tasks by text query. Searches across task titles, descriptions, tags, and subtask text. Returns matching tasks.',
   inputSchema: {
     type: 'object',
     properties: {

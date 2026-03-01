@@ -18,7 +18,6 @@ describe('Analytics Trends', () => {
     dependencies: [],
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
-    vectorClock: { device1: 1 },
     notifyBefore: 15,
     notificationEnabled: true,
   };

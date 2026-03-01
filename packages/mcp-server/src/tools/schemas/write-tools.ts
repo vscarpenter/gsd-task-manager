@@ -2,13 +2,12 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Write operation tool schemas for modifying task data
- * All require GSD_ENCRYPTION_PASSPHRASE for encryption
  */
 
 export const createTaskTool: Tool = {
   name: 'create_task',
   description:
-    'Create a new task with natural language input. Supports all task properties including title, description, urgency, importance, due dates, tags, subtasks, recurrence, and dependencies. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview without saving.',
+    'Create a new task with natural language input. Supports all task properties including title, description, urgency, importance, due dates, tags, subtasks, recurrence, and dependencies. Use dryRun=true to preview without saving.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -71,7 +70,7 @@ export const createTaskTool: Tool = {
 export const updateTaskTool: Tool = {
   name: 'update_task',
   description:
-    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview changes.',
+    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -143,7 +142,7 @@ export const updateTaskTool: Tool = {
 export const completeTaskTool: Tool = {
   name: 'complete_task',
   description:
-    'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview changes.',
+    'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -167,7 +166,7 @@ export const completeTaskTool: Tool = {
 export const deleteTaskTool: Tool = {
   name: 'delete_task',
   description:
-    'Permanently delete a task. This action cannot be undone. Use with caution. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview what would be deleted.',
+    'Permanently delete a task. This action cannot be undone. Use with caution. Use dryRun=true to preview what would be deleted.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -187,7 +186,7 @@ export const deleteTaskTool: Tool = {
 export const bulkUpdateTasksTool: Tool = {
   name: 'bulk_update_tasks',
   description:
-    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation for safety. Requires GSD_ENCRYPTION_PASSPHRASE. Use dryRun=true to preview changes.',
+    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation for safety. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {

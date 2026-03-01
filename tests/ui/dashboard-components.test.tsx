@@ -262,7 +262,7 @@ describe('Dashboard Components', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       },
       {
         id: 'today-1',
@@ -279,7 +279,7 @@ describe('Dashboard Components', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       },
       {
         id: 'week-1',
@@ -296,7 +296,7 @@ describe('Dashboard Components', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       },
     ];
 
@@ -367,7 +367,7 @@ describe('Dashboard Components', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
