@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { DiagramSection } from "@/components/docs/diagram-section";
 import { allDiagramSections } from "@/lib/docs/architecture-diagrams";
 
-type TabId = "all" | "sync" | "worker" | "mcp";
+type TabId = "all" | "sync" | "backend" | "mcp";
 
 interface Tab {
   id: TabId;
@@ -33,13 +33,13 @@ const tabs: Tab[] = [
     id: "sync",
     label: "Sync Engine",
     icon: GitBranchIcon,
-    description: "End-to-end encrypted sync",
+    description: "PocketBase-powered sync with LWW",
   },
   {
-    id: "worker",
-    label: "Worker Backend",
+    id: "backend",
+    label: "PocketBase Backend",
     icon: ServerIcon,
-    description: "Cloudflare Workers API",
+    description: "Self-hosted PocketBase API",
   },
   {
     id: "mcp",
@@ -151,20 +151,11 @@ export default function DocsPage() {
                 Manager architecture.
               </p>
               <p className="mt-2 text-sm text-foreground-muted">
-                For detailed documentation, see the markdown files in the
-                repository:{" "}
+                For detailed documentation, see the{" "}
                 <code className="rounded bg-card px-1.5 py-0.5 text-xs">
-                  SYNC_ARCHITECTURE.md
-                </code>
-                ,{" "}
-                <code className="rounded bg-card px-1.5 py-0.5 text-xs">
-                  WORKER_ARCHITECTURE.md
-                </code>
-                , and{" "}
-                <code className="rounded bg-card px-1.5 py-0.5 text-xs">
-                  MCP_ARCHITECTURE.md
-                </code>
-                .
+                  CLAUDE.md
+                </code>{" "}
+                file in the repository root.
               </p>
             </div>
           </div>

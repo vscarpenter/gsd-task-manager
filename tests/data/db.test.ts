@@ -75,7 +75,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);
@@ -103,7 +103,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -119,7 +119,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -152,7 +152,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -168,7 +168,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -200,7 +200,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -217,7 +217,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -247,7 +247,7 @@ describe('Database', () => {
           tags: ['work', 'urgent'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -263,7 +263,7 @@ describe('Database', () => {
           tags: ['personal'],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -295,7 +295,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: ['task-0'],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -311,7 +311,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -338,7 +338,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);
@@ -365,7 +365,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);
@@ -393,7 +393,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'task-2',
@@ -409,7 +409,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -436,7 +436,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -467,7 +467,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       };
 
       await db.archivedTasks.add(archivedTask);
@@ -501,7 +501,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'archived-2',
@@ -519,7 +519,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ];
 
@@ -595,7 +595,7 @@ describe('Database', () => {
         timestamp: Date.now(),
         retryCount: 0,
         payload: null,
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       };
 
       await db.syncQueue.add(queueItem);
@@ -618,7 +618,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-2',
@@ -627,7 +627,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-3',
@@ -636,7 +636,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -660,7 +660,7 @@ describe('Database', () => {
           timestamp: now + 2000,
           retryCount: 0,
           payload: null,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-1',
@@ -669,7 +669,7 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-2',
@@ -678,7 +678,7 @@ describe('Database', () => {
           timestamp: now + 1000,
           retryCount: 0,
           payload: null,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -702,7 +702,7 @@ describe('Database', () => {
         token: 'token-123',
         tokenExpiresAt: Date.now() + 86400000,
         lastSyncAt: Date.now(),
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
         conflictStrategy: 'last_write_wins' as const,
         serverUrl: 'https://api.example.com',
         consecutiveFailures: 0,
@@ -846,7 +846,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -871,7 +871,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -899,7 +899,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       }));
 
       await db.tasks.bulkAdd(tasks);
@@ -934,7 +934,7 @@ describe('Database', () => {
           tags: [],
           subtasks: [],
           dependencies: [],
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         };
 
         await db.tasks.add(task);
@@ -946,7 +946,7 @@ describe('Database', () => {
           timestamp: Date.now(),
           retryCount: 0,
           payload: task,
-          vectorClock: {}, notificationEnabled: true, notificationSent: false,
+          notificationEnabled: true, notificationSent: false,
         });
       });
 
@@ -975,7 +975,7 @@ describe('Database', () => {
             tags: [],
             subtasks: [],
             dependencies: [],
-            vectorClock: {}, notificationEnabled: true, notificationSent: false,
+            notificationEnabled: true, notificationSent: false,
           });
 
           throw new Error('Simulated error');
@@ -1006,7 +1006,7 @@ describe('Database', () => {
         tags: [],
         subtasks: [],
         dependencies: [],
-        vectorClock: {}, notificationEnabled: true, notificationSent: false,
+        notificationEnabled: true, notificationSent: false,
       };
 
       await db.tasks.add(task);

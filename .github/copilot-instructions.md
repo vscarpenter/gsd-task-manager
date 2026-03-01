@@ -7,19 +7,19 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 ### Core Stack
 - **Next.js 16 App Router**: All routes in `app/`. Matrix view: `app/(matrix)/page.tsx`. Dashboard: `app/(dashboard)/dashboard/page.tsx`. PWA install: `app/(pwa)/install/page.tsx`.
 - **Client-side only**: No server rendering. All components use `"use client"`.
-- **Data Layer**: IndexedDB via Dexie v4 (`lib/db.ts`, current schema v12). CRUD in `lib/tasks.ts`. Live queries via `useTasks()` hook (`lib/use-tasks.ts`).
+- **Data Layer**: IndexedDB via Dexie v4 (`lib/db.ts`, current schema v13). CRUD in `lib/tasks.ts`. Live queries via `useTasks()` hook (`lib/use-tasks.ts`).
 - **Quadrant System**: Tasks classified by `urgent`/`important` booleans → 4 quadrants. Logic in `lib/quadrants.ts`.
 - **Schema Validation**: Zod schemas in `lib/schema.ts` for all data types.
 
-### Database Schema (v12)
+### Database Schema (v13)
 - **Tables**: `tasks`, `archivedTasks`, `smartViews`, `notificationSettings`, `syncQueue`, `syncMetadata`, `deviceInfo`, `archiveSettings`, `syncHistory`, `appPreferences`
-- **Task Fields**: Core (id, title, description, urgent, important, quadrant, completed, completedAt, dueDate, createdAt, updatedAt) + Advanced (recurrence, tags, subtasks, dependencies, notifyBefore, snoozedUntil, vectorClock, estimatedMinutes, timeSpent, timeEntries)
+- **Task Fields**: Core (id, title, description, urgent, important, quadrant, completed, completedAt, dueDate, createdAt, updatedAt) + Advanced (recurrence, tags, subtasks, dependencies, notifyBefore, snoozedUntil, estimatedMinutes, timeSpent, timeEntries)
 - **Indexes**: Performance-critical indexes on `quadrant`, `completed`, `dueDate`, `completedAt`, `createdAt`, `updatedAt`, `*tags`, `*dependencies`, `notificationSent`
 - **Migrations**: Schema changes always require migration in `lib/db.ts`. See `DATABASE_ARCHITECTURE.md` for full ERD.
 
 ### Key Architectural Decisions
-1. **Zero-knowledge sync**: Optional cloud sync encrypts locally with AES-256-GCM before upload. Worker stores only encrypted blobs. Encryption passphrase never leaves client.
-2. **Vector clocks**: Conflict detection via per-device version numbers. BFS algorithm prevents circular dependencies in task graph.
+1. **PocketBase cloud sync**: Optional cloud sync via self-hosted PocketBase server. Tasks stored as plaintext (user owns the server). OAuth authentication with Google/GitHub.
+2. **Last-write-wins conflict resolution**: Conflicts resolved using `client_updated_at` timestamps. BFS algorithm prevents circular dependencies in task graph.
 3. **Modular components**: Large files split into <300 line modules. Example: `lib/sync/` has 20+ focused modules vs monolithic sync engine.
 4. **Pure analytics functions**: All metric calculations in `lib/analytics/` are side-effect-free for testability and composability.
 5. **Transaction-based batch operations**: `lib/bulk-operations.ts` ensures atomicity (all-or-nothing) for multi-task updates.
@@ -38,16 +38,15 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Quick Settings**: Slide-out panel (`quick-settings-panel.tsx`) for frequently-adjusted preferences (theme, notifications, sync interval).
 
 ### Sync Architecture
-- **Frontend**: `lib/sync/` with 20+ modules: `sync-coordinator.ts` (orchestrator), `engine.ts` (push/pull/resolve), `crypto.ts` (AES-256-GCM), `token-manager.ts` (OAuth + refresh), `queue-optimizer.ts` (batch operations).
-- **Backend**: Cloudflare Worker (`worker/src/`) with Hono router, D1 (SQLite), KV (OAuth state), R2 (encrypted blobs). OAuth with Google/Apple (OIDC-compliant).
-- **Endpoints**: `/api/auth/oauth/:provider/start`, `/api/auth/oauth/callback`, `/api/sync/push`, `/api/sync/pull`, `/api/sync/status`, `/api/devices`.
-- **State Machine**: Sync engine has 6 phases: Validating → Preparing → Pushing → Pulling → Resolving → Finalizing. See `SYNC_ARCHITECTURE.md` for Mermaid diagrams.
+- **Frontend**: `lib/sync/` with modular architecture: `pb-sync-engine.ts` (push/pull), `pb-realtime.ts` (SSE subscriptions), `pb-auth.ts` (OAuth), `pocketbase-client.ts` (SDK singleton), `task-mapper.ts` (field mapping), `sync-coordinator.ts` (orchestrator).
+- **Backend**: Self-hosted PocketBase server at `https://api.vinny.io` (AWS EC2). OAuth with Google/GitHub. API rules enforce per-user data isolation.
+- **Realtime**: PocketBase SSE (Server-Sent Events) for instant cross-device updates with echo filtering via `device_id`.
 
 ### MCP Server Integration
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language.
 - **Location**: `packages/mcp-server/` (standalone npm package, Node.js 18+).
 - **20 Tools**: Read (7), Write (5), Analytics (5), System (3). All write operations support `dryRun` mode.
-- **Config**: `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_API_BASE_URL`, `GSD_AUTH_TOKEN`, `GSD_ENCRYPTION_PASSPHRASE`.
+- **Config**: `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_POCKETBASE_URL`, `GSD_AUTH_TOKEN`.
 
 ## Developer Workflows
 
@@ -66,11 +65,6 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Why**: S3 doesn't auto-serve `index.html` for directory paths. Need CloudFront Function for SPA routing.
 - **Deploy**: `./scripts/deploy-cloudfront-function.sh` after adding new App Router routes.
 - **Full Deploy**: `bun run deploy` (builds, syncs to S3, invalidates CloudFront)
-
-### Worker Development
-- **Deploy**: `npm run deploy:all` in `worker/`
-- **Migrations**: `npm run migrations:dev` or `npm run migrations:prod`
-- **Setup**: `./worker/scripts/setup-{env}.sh` for environment config
 
 ### MCP Server Development
 - **Build**: `npm run build` in `packages/mcp-server/`
@@ -135,7 +129,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 
 - **Client-side only**: No server rendering or network dependencies (except optional sync).
 - **Manifest & Icons**: Update `public/manifest.json`, icons, and `public/sw.js` together. Test with `bun run export`.
-- **Data**: All user data stays local by default. Export/import via JSON. Sync is opt-in with end-to-end encryption.
+- **Data**: All user data stays local by default. Export/import via JSON. Sync is opt-in via self-hosted PocketBase.
 
 ## References
 
@@ -143,9 +137,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Technical Details**: `TECHNICAL.md` (stack, data layer, component structure, key patterns)
 - **Contribution Standards**: `coding-standards.md` (agentic behavior, solution quality, reflection)
 - **Database**: `DATABASE_ARCHITECTURE.md` (ERD, schema migrations, indexing strategy)
-- **Sync**: `SYNC_ARCHITECTURE.md` (state machine, conflict resolution, encryption)
 - **Features**: `GSD_FEATURES_GUIDE.md` (user-facing feature guide)
-- **OAuth/OIDC**: `OAUTH_OIDC_GUIDE.md` (OAuth flow, token lifecycle, security)
 
 ---
 

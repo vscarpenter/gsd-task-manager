@@ -22,7 +22,7 @@ function validateEnvironmentVariables(): {
   pbUrl: string;
   authToken: string;
 } {
-  const pbUrl = process.env.GSD_POCKETBASE_URL || process.env.GSD_API_URL;
+  const pbUrl = process.env.GSD_POCKETBASE_URL;
   const authToken = process.env.GSD_AUTH_TOKEN;
 
   if (!pbUrl || !authToken) {

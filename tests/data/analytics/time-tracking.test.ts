@@ -24,7 +24,6 @@ const createTask = (overrides: Partial<TaskRecord> = {}): TaskRecord => ({
   notifyBefore: 15,
   notificationEnabled: true,
   notificationSent: false,
-  vectorClock: {},
   ...overrides,
 });
 

@@ -64,7 +64,6 @@ describe('Snooze Functionality', () => {
     notifyBefore: 15,
     notificationEnabled: true,
     notificationSent: false,
-    vectorClock: {},
   };
 
   beforeEach(() => {

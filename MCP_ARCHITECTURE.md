@@ -6,7 +6,7 @@ This document provides comprehensive diagrams of the Model Context Protocol (MCP
 
 ## Overview
 
-The MCP server (`packages/mcp-server/`) is a standalone Node.js package that exposes **20 tools** for task management through the MCP protocol. It communicates with the GSD Worker API, handling encryption/decryption locally.
+The MCP server (`packages/mcp-server/`) is a standalone Node.js package that exposes **20 tools** for task management through the MCP protocol. It communicates with the PocketBase server for direct task access.
 
 ---
 
@@ -26,35 +26,28 @@ flowchart TB
 
         subgraph "Core Services"
             API[API Client<br/>Retry Logic]
-            CRYPTO[Crypto Manager<br/>AES-256-GCM]
             CACHE[TTL Cache]
         end
 
         TRANSPORT --> ROUTER
         ROUTER --> HANDLERS
         HANDLERS --> API
-        HANDLERS --> CRYPTO
         HANDLERS --> CACHE
     end
 
     subgraph "GSD Backend"
-        WORKER[Cloudflare Worker]
-        D1[(D1 Database)]
-        R2[(R2 Storage)]
+        PB[PocketBase Server]
+        DB[(SQLite Database)]
     end
 
     CLAUDE <-->|Natural Language| MCP_CLIENT
     MCP_CLIENT <-->|JSON-RPC| TRANSPORT
 
-    API <-->|HTTPS + JWT| WORKER
-    WORKER --> D1
-    WORKER --> R2
-
-    CRYPTO -.->|Encrypt/Decrypt| API
+    API <-->|HTTPS + Auth Token| PB
+    PB --> DB
 
     style CLAUDE fill:#9C27B0,color:white
-    style CRYPTO fill:#F44336,color:white
-    style WORKER fill:#FF9800,color:white
+    style PB fill:#FF9800,color:white
 ```
 
 ---
@@ -118,8 +111,7 @@ sequenceDiagram
     participant Handler as Tool Handler
     participant Cache as TTL Cache
     participant API as API Client
-    participant Crypto as CryptoManager
-    participant Worker as GSD Worker
+    participant PB as PocketBase
 
     Claude->>Transport: JSON-RPC Request<br/>{method: "tools/call", params: {name, arguments}}
 
@@ -137,24 +129,13 @@ sequenceDiagram
 
     Handler->>API: Build API request
 
-    alt Requires encryption
-        Handler->>Crypto: encrypt(taskData)
-        Crypto-->>Handler: encryptedBlob
-    end
-
-    API->>Worker: HTTPS request + JWT
+    API->>PB: HTTPS request + Auth Token
 
     alt 401 Unauthorized
-        Worker-->>API: 401 response
+        PB-->>API: 401 response
         API->>API: Token expired, return error
     else Success
-        Worker-->>API: Response data
-    end
-
-    alt Requires decryption
-        API-->>Handler: Encrypted response
-        Handler->>Crypto: decrypt(blob)
-        Crypto-->>Handler: decryptedData
+        PB-->>API: Response data
     end
 
     Handler->>Cache: Store in cache (if cacheable)
@@ -223,11 +204,9 @@ flowchart TD
     CHECK_CIRCULAR --> CIRCULAR{Would create cycle?}
 
     CIRCULAR -->|Yes| ERROR[Return validation error]
-    CIRCULAR -->|No| ENCRYPT
+    CIRCULAR -->|No| API_CALL
 
-    DEPS -->|No| ENCRYPT[Encrypt task data]
-
-    ENCRYPT --> API_CALL[Call Worker API]
+    DEPS -->|No| API_CALL[Call PocketBase API]
 
     API_CALL --> SUCCESS{Success?}
 
@@ -244,7 +223,6 @@ flowchart TD
     ERROR --> DONE
 
     style DRY fill:#FF9800,color:white
-    style ENCRYPT fill:#F44336,color:white
 ```
 
 ---
@@ -340,39 +318,6 @@ stateDiagram-v2
 
 ---
 
-## Encryption/Decryption Flow
-
-```mermaid
-sequenceDiagram
-    participant Tool as Tool Handler
-    participant CM as CryptoManager
-    participant Config as Config
-    participant API as API Client
-
-    Note over Tool,API: Initialization (once at startup)
-    Tool->>Config: Get GSD_ENCRYPTION_PASSPHRASE
-    Tool->>CM: initialize(passphrase, salt)
-    CM->>CM: PBKDF2 key derivation<br/>600,000 iterations
-    CM-->>Tool: Ready
-
-    Note over Tool,API: Write Operation
-    Tool->>Tool: Build task object
-    Tool->>CM: encrypt(taskData)
-    CM->>CM: Generate random IV
-    CM->>CM: AES-256-GCM encrypt
-    CM-->>Tool: base64(iv + ciphertext)
-    Tool->>API: POST with encrypted blob
-
-    Note over Tool,API: Read Operation
-    API-->>Tool: Encrypted blob from server
-    Tool->>CM: decrypt(encryptedBlob)
-    CM->>CM: Extract IV + ciphertext
-    CM->>CM: AES-256-GCM decrypt
-    CM-->>Tool: taskData object
-```
-
----
-
 ## Configuration Flow
 
 ```mermaid
@@ -383,9 +328,8 @@ flowchart TD
     end
 
     subgraph "Required Config"
-        BASE_URL[GSD_API_BASE_URL<br/>Worker API endpoint]
-        TOKEN[GSD_AUTH_TOKEN<br/>JWT from OAuth]
-        PASSPHRASE[GSD_ENCRYPTION_PASSPHRASE<br/>User's encryption key]
+        PB_URL[GSD_POCKETBASE_URL<br/>PocketBase server endpoint]
+        TOKEN[GSD_AUTH_TOKEN<br/>Auth token from OAuth]
     end
 
     subgraph "Optional Config"
@@ -393,9 +337,8 @@ flowchart TD
         TIMEOUT[GSD_TIMEOUT<br/>API timeout (ms)]
     end
 
-    ENV --> BASE_URL
+    ENV --> PB_URL
     ENV --> TOKEN
-    ENV --> PASSPHRASE
     ENV --> DEBUG
     ENV --> TIMEOUT
 
@@ -405,21 +348,17 @@ flowchart TD
         V1[Check URL format]
         V2[Verify token structure]
         V3[Test API connectivity]
-        V4[Verify encryption works]
     end
 
-    BASE_URL --> V1
+    PB_URL --> V1
     TOKEN --> V2
     V1 --> V3
-    PASSPHRASE --> V4
 
     V3 --> READY{All valid?}
-    V4 --> READY
 
     READY -->|Yes| SUCCESS[Config valid]
     READY -->|No| ERRORS[Return validation errors]
 
-    style PASSPHRASE fill:#F44336,color:white
     style TOKEN fill:#FF9800,color:white
 ```
 
@@ -514,7 +453,6 @@ flowchart TD
     TYPE -->|Network| NET[Network/timeout error]
     TYPE -->|Auth| AUTH[401/403 error]
     TYPE -->|Server| SRV[5xx server error]
-    TYPE -->|Crypto| CRY[Decryption failed]
     TYPE -->|Unknown| UNK[Unexpected error]
 
     VAL --> FORMAT_VAL[Format field errors]
@@ -527,20 +465,16 @@ flowchart TD
 
     SRV --> RETRY_CHECK
 
-    CRY --> FORMAT_CRY[Passphrase may be wrong]
-
     UNK --> FORMAT_UNK[Generic error message]
 
     FORMAT_VAL --> RESPONSE
     FORMAT_NET --> RESPONSE
     FORMAT_AUTH --> RESPONSE
-    FORMAT_CRY --> RESPONSE
     FORMAT_UNK --> RESPONSE
 
     RESPONSE[JSON-RPC Error Response<br/>{isError: true, content: [...]}]
 
     style AUTH fill:#FF9800,color:white
-    style CRY fill:#F44336,color:white
 ```
 
 ---
@@ -595,7 +529,6 @@ flowchart TD
 
             subgraph "utils/"
                 API_CLIENT[api-client.ts]
-                CRYPTO[crypto.ts]
                 CACHE[cache.ts]
                 RETRY[retry.ts]
             end
@@ -612,7 +545,6 @@ flowchart TD
     HANDLERS_DIR --> SCHEMAS_DIR
 
     INDEX --> API_CLIENT
-    INDEX --> CRYPTO
 
     style INDEX fill:#FF9800,color:white
 ```
@@ -630,9 +562,8 @@ flowchart TD
       "command": "node",
       "args": ["/path/to/packages/mcp-server/dist/index.js"],
       "env": {
-        "GSD_API_BASE_URL": "https://gsd-worker.example.com",
-        "GSD_AUTH_TOKEN": "eyJhbG...",
-        "GSD_ENCRYPTION_PASSPHRASE": "your-secret-passphrase"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "eyJhbG..."
       }
     }
   }
@@ -676,8 +607,6 @@ flowchart TD
 
 ## Related Documentation
 
-- **Sync Architecture:** `SYNC_ARCHITECTURE.md`
-- **Worker Architecture:** `WORKER_ARCHITECTURE.md`
 - **Database Architecture:** `DATABASE_ARCHITECTURE.md`
 - **Project README:** `README.md`
 
@@ -688,4 +617,3 @@ flowchart TD
 - **Handlers:** `packages/mcp-server/src/tools/handlers/`
 - **Schemas:** `packages/mcp-server/src/tools/schemas/`
 - **API Client:** `packages/mcp-server/src/utils/api-client.ts`
-- **Crypto Manager:** `packages/mcp-server/src/utils/crypto.ts`

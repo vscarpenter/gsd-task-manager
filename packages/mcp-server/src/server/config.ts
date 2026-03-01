@@ -23,12 +23,12 @@ export type ConfigSchema = z.infer<typeof configSchema>;
 export function loadConfig(): GsdConfig {
   try {
     return configSchema.parse({
-      pocketBaseUrl: process.env.GSD_POCKETBASE_URL || process.env.GSD_API_URL,
+      pocketBaseUrl: process.env.GSD_POCKETBASE_URL,
       authToken: process.env.GSD_AUTH_TOKEN,
     });
   } catch (error) {
     logger.error('Configuration error', error instanceof Error ? error : new Error(String(error)));
-    logger.info('Required environment variables: GSD_POCKETBASE_URL (or GSD_API_URL), GSD_AUTH_TOKEN');
+    logger.info('Required environment variables: GSD_POCKETBASE_URL, GSD_AUTH_TOKEN');
     logger.info('Run setup wizard with: npx gsd-mcp-server --setup');
     throw error;
   }
@@ -55,7 +55,7 @@ export function getConfigStatus(): {
   isValid: boolean;
 } {
   return {
-    hasPocketBaseUrl: !!(process.env.GSD_POCKETBASE_URL || process.env.GSD_API_URL),
+    hasPocketBaseUrl: !!process.env.GSD_POCKETBASE_URL,
     hasAuthToken: !!process.env.GSD_AUTH_TOKEN,
     isValid: isConfigValid(),
   };

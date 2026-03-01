@@ -20,12 +20,12 @@ export interface DiagramSection {
 export const syncArchitectureDiagrams: DiagramSection = {
   id: "sync",
   title: "Sync Engine Architecture",
-  description: "End-to-end encrypted sync with vector clock-based conflict resolution",
+  description: "PocketBase-powered sync with last-write-wins conflict resolution",
   diagrams: [
     {
       id: "sync-state-machine",
       title: "Sync Engine State Machine",
-      description: "6-phase state flow from idle through push/pull to completion",
+      description: "State flow from idle through push/pull to completion",
       code: `stateDiagram-v2
     [*] --> Idle: Initial State
 
@@ -48,102 +48,79 @@ export const syncArchitectureDiagrams: DiagramSection = {
 
     Pulling --> Resolving: Pull complete
 
-    Resolving --> Finalizing: Conflicts resolved
-    Resolving --> Manual: Strategy = manual
-
-    Manual --> Idle: Return conflicts
+    Resolving --> Finalizing: Conflicts resolved (LWW)
 
     Finalizing --> Idle: Return success`,
     },
     {
       id: "sync-data-flow",
       title: "Complete Sync Data Flow",
-      description: "End-to-end view of sync across multiple devices",
+      description: "End-to-end view of sync across multiple devices via PocketBase",
       code: `flowchart TB
     subgraph DeviceA[Device A]
         UA[User Action] --> TA[Task Modified]
-        TA --> QA[Add to Queue]
-        QA --> EA[Encrypt AES-256]
-        EA --> PA[Push to Worker]
+        TA --> QA[Add to Sync Queue]
+        QA --> PA[Push to PocketBase]
     end
 
-    subgraph Worker[Cloudflare Worker]
-        PA --> AUTH[Auth Middleware]
-        AUTH --> PUSH[Push Handler]
-        PUSH --> D1[(D1 SQLite)]
-        PUSH --> R2[(R2 Storage)]
-        PULL[Pull Handler] --> D1
-        PULL --> R2
+    subgraph PB[PocketBase Server]
+        PA --> AUTH[Auth Check]
+        AUTH --> STORE[Store Task Record]
+        STORE --> DB[(SQLite Database)]
+        SSE[SSE Realtime Events] --> DB
     end
 
     subgraph DeviceB[Device B]
-        PLB[Pull] --> DB[Decrypt]
-        DB --> MB[Merge Local]
+        SSE --> RB[Receive SSE Event]
+        RB --> ECHO{Echo filter}
+        ECHO -->|Own device| SKIP[Skip]
+        ECHO -->|Other device| MB[Merge via LWW]
         MB --> VB[Update View]
-    end
-
-    PULL --> PLB`,
+    end`,
     },
     {
-      id: "vector-clock",
-      title: "Vector Clock Comparison",
-      description: "Distributed conflict detection algorithm",
+      id: "lww-resolution",
+      title: "Last-Write-Wins Conflict Resolution",
+      description: "Conflict resolution using client_updated_at timestamps",
       code: `flowchart TD
-    START([Compare VC_A vs VC_B]) --> INIT[Initialize counters]
-    INIT --> UNION[Get all device IDs]
-    UNION --> LOOP[For each device ID]
-    LOOP --> GET[Get versions from A and B]
-    GET --> CMP{Compare}
+    START([Compare Local vs Remote]) --> GET[Get client_updated_at from both]
+    GET --> CMP{Compare timestamps}
 
-    CMP -->|A > B| INC_A[aGreater++]
-    CMP -->|B > A| INC_B[bGreater++]
-    CMP -->|Equal| NEXT
+    CMP -->|Local newer| LOCAL[Keep local version]
+    CMP -->|Remote newer| REMOTE[Accept remote version]
+    CMP -->|Equal| REMOTE_SAFE[Accept remote - safe default]
 
-    INC_A --> NEXT{More devices?}
-    INC_B --> NEXT
-
-    NEXT -->|Yes| LOOP
-    NEXT -->|No| EVAL{Evaluate}
-
-    EVAL -->|aGreater only| A_WINS[A is newer]
-    EVAL -->|bGreater only| B_WINS[B is newer]
-    EVAL -->|Both > 0| CONFLICT[CONFLICT]
-    EVAL -->|Both = 0| SAME[Identical]`,
+    LOCAL --> PUSH[Push local to PocketBase]
+    REMOTE --> APPLY[Apply remote to IndexedDB]
+    REMOTE_SAFE --> APPLY`,
     },
     {
-      id: "encryption-flow",
-      title: "Encryption Flow",
-      description: "AES-256-GCM encryption with PBKDF2 key derivation",
+      id: "realtime-sse",
+      title: "Realtime SSE Subscription",
+      description: "PocketBase Server-Sent Events for instant cross-device updates",
       code: `sequenceDiagram
-    participant App
-    participant CM as CryptoManager
-    participant PBKDF2
-    participant AES as AES-256-GCM
+    participant DevA as Device A
+    participant PB as PocketBase
+    participant DevB as Device B
 
-    App->>CM: initialize(passphrase, salt)
-    CM->>PBKDF2: deriveKey(600k iterations)
-    PBKDF2-->>CM: 256-bit key
-    CM-->>App: Ready
+    DevA->>PB: Subscribe to tasks collection
+    DevB->>PB: Subscribe to tasks collection
 
-    App->>CM: encrypt(taskData)
-    CM->>CM: Generate random IV
-    CM->>AES: encrypt(json, key, iv)
-    AES-->>CM: ciphertext
-    CM-->>App: base64(iv + ciphertext)
+    DevA->>PB: Update task (push)
+    PB->>DevA: SSE event (filtered by device_id)
+    PB->>DevB: SSE event
+    DevB->>DevB: Apply remote change via LWW
 
-    App->>CM: decrypt(blob)
-    CM->>CM: Extract IV + ciphertext
-    CM->>AES: decrypt(ciphertext, key, iv)
-    AES-->>CM: JSON
-    CM-->>App: taskData`,
+    Note over DevA: Echo filtered - own changes skipped
+    Note over DevB: Auto-reconnect on disconnect`,
     },
   ],
 };
 
-export const workerArchitectureDiagrams: DiagramSection = {
-  id: "worker",
-  title: "Worker Backend Architecture",
-  description: "Cloudflare Workers with D1, R2, and KV storage",
+export const backendArchitectureDiagrams: DiagramSection = {
+  id: "backend",
+  title: "PocketBase Backend Architecture",
+  description: "Self-hosted PocketBase with OAuth, API rules, and realtime",
   diagrams: [
     {
       id: "system-overview",
@@ -155,119 +132,72 @@ export const workerArchitectureDiagrams: DiagramSection = {
         MCP[MCP Server]
     end
 
-    subgraph Edge[Cloudflare Edge]
-        WORKER[Worker - Hono Router]
+    subgraph Server[PocketBase Server]
+        API[REST API]
+        RT[Realtime SSE]
+        OAUTH[OAuth2 Providers]
 
-        subgraph Storage
-            D1[(D1 SQLite)]
-            R2[(R2 Bucket)]
-            KV[(Workers KV)]
+        subgraph Data
+            DB[(SQLite Database)]
         end
 
-        WORKER --> D1
-        WORKER --> R2
-        WORKER --> KV
+        API --> DB
+        RT --> DB
     end
 
     subgraph OAuth[OAuth Providers]
-        GOOGLE[Google OIDC]
-        APPLE[Apple Sign In]
+        GOOGLE[Google OAuth]
+        GITHUB[GitHub OAuth]
     end
 
-    PWA --> WORKER
-    MCP --> WORKER
-    WORKER <--> GOOGLE
-    WORKER <--> APPLE`,
+    PWA --> API
+    PWA --> RT
+    MCP --> API
+    OAUTH --> GOOGLE
+    OAUTH --> GITHUB`,
     },
     {
-      id: "api-routes",
-      title: "API Route Structure",
-      description: "All API endpoints organized by category",
+      id: "api-rules",
+      title: "API Rules & Access Control",
+      description: "PocketBase collection-level security rules",
       code: `flowchart TD
-    ROOT[/] --> HEALTH[GET /health]
-    ROOT --> AUTH[/api/auth/*]
-    ROOT --> SYNC[/api/sync/*]
-    ROOT --> DEVICES[/api/devices/*]
+    REQ([API Request]) --> AUTH{Authenticated?}
+    AUTH -->|No| REJECT[401 Unauthorized]
+    AUTH -->|Yes| RULE{API Rule Check}
 
-    subgraph OAuth[OAuth - No Auth]
-        AUTH --> START[GET /oauth/:provider/start]
-        AUTH --> CALLBACK[POST /oauth/callback]
-        AUTH --> RESULT[GET /oauth/result]
-    end
+    RULE --> TASKS[Tasks Collection]
+    TASKS --> OWNER{"owner = auth.id?"}
+    OWNER -->|No| FORBIDDEN[403 Forbidden]
+    OWNER -->|Yes| ALLOW[Allow Access]
 
-    subgraph Protected[Auth Required]
-        AUTH --> SALT[GET/POST /encryption-salt]
-        AUTH --> LOGOUT[POST /logout]
-        AUTH --> REFRESH[POST /refresh]
-    end
-
-    subgraph SyncRoutes[Sync - JWT + Rate Limit]
-        SYNC --> PUSH[POST /push]
-        SYNC --> PULL[POST /pull]
-        SYNC --> STATUS[GET /status]
-    end
-
-    subgraph DeviceRoutes[Devices]
-        DEVICES --> LIST[GET /]
-        DEVICES --> REVOKE[DELETE /:id]
-    end`,
+    RULE --> DEVICES[Devices Collection]
+    DEVICES --> DEV_OWNER{"owner = auth.id?"}
+    DEV_OWNER -->|No| FORBIDDEN
+    DEV_OWNER -->|Yes| ALLOW`,
     },
     {
       id: "oauth-flow",
-      title: "OAuth Desktop Flow",
-      description: "Popup-based authentication sequence",
+      title: "OAuth Authentication Flow",
+      description: "PocketBase SDK-managed OAuth popup flow",
       code: `sequenceDiagram
     participant User
     participant App
-    participant Popup
-    participant Worker
-    participant KV
+    participant SDK as PocketBase SDK
+    participant PB as PocketBase
     participant Google
 
-    User->>App: Click Sign in
-    App->>Worker: GET /oauth/google/start
-    Worker->>KV: Store state + PKCE
-    Worker-->>App: authUrl + state
-
-    App->>Popup: window.open(authUrl)
-    Popup->>Google: Authorization Request
+    User->>App: Click Sign In
+    App->>SDK: authWithOAuth2('google')
+    SDK->>PB: Initiate OAuth flow
+    PB-->>SDK: Auth URL
+    SDK->>SDK: Open popup window
+    SDK->>Google: Authorization Request
     User->>Google: Consent
-    Google->>Popup: Redirect with code
-
-    Popup->>Worker: GET /callback?code&state
-    Worker->>KV: Validate state
-    Worker->>Google: Exchange code for tokens
-    Google-->>Worker: tokens
-    Worker->>KV: Store result
-    Worker-->>Popup: Redirect to callback.html
-
-    Popup->>App: postMessage
-    App->>Worker: GET /oauth/result
-    Worker-->>App: token + userId`,
-    },
-    {
-      id: "middleware-pipeline",
-      title: "Middleware Pipeline",
-      description: "Request processing through CORS, Auth, and Rate Limiting",
-      code: `flowchart LR
-    REQ([Request]) --> CORS[CORS Handler]
-
-    CORS --> ROUTE{Route Type}
-    ROUTE -->|Public| RATE[Rate Limiter]
-    ROUTE -->|Protected| AUTH[Auth Middleware]
-
-    AUTH --> JWT{JWT Valid?}
-    JWT -->|No| REJECT[401]
-    JWT -->|Yes| REVOKE{Revoked?}
-
-    REVOKE -->|Yes| REJECT
-    REVOKE -->|No| RATE
-
-    RATE --> LIMIT{Under Limit?}
-    LIMIT -->|No| TOO_MANY[429]
-    LIMIT -->|Yes| HANDLER[Route Handler]
-
-    HANDLER --> RESP([Response])`,
+    Google->>SDK: Redirect with code
+    SDK->>PB: Exchange code for tokens
+    PB-->>SDK: Auth record + token
+    SDK->>SDK: Store in authStore (localStorage)
+    SDK-->>App: Authenticated user`,
     },
   ],
 };
@@ -280,7 +210,7 @@ export const mcpArchitectureDiagrams: DiagramSection = {
     {
       id: "mcp-system",
       title: "MCP System Architecture",
-      description: "Claude Desktop to GSD Worker data flow",
+      description: "Claude Desktop to PocketBase data flow",
       code: `flowchart TB
     subgraph Claude[Claude Desktop]
         AI[Claude AI]
@@ -293,25 +223,23 @@ export const mcpArchitectureDiagrams: DiagramSection = {
         HANDLERS[Tool Handlers]
 
         subgraph Services
-            API[API Client]
-            CRYPTO[CryptoManager]
+            API[PocketBase Client]
             CACHE[TTL Cache]
         end
 
         TRANSPORT --> ROUTER
         ROUTER --> HANDLERS
         HANDLERS --> API
-        HANDLERS --> CRYPTO
         HANDLERS --> CACHE
     end
 
     subgraph Backend[GSD Backend]
-        WORKER[Cloudflare Worker]
+        PB[PocketBase Server]
     end
 
     AI <--> CLIENT
     CLIENT <--> TRANSPORT
-    API <--> WORKER`,
+    API <--> PB`,
     },
     {
       id: "tool-organization",
@@ -353,16 +281,14 @@ export const mcpArchitectureDiagrams: DiagramSection = {
     {
       id: "request-lifecycle",
       title: "Request Lifecycle",
-      description: "Tool call processing from Claude to API response",
+      description: "Tool call processing from Claude to PocketBase response",
       code: `sequenceDiagram
     participant Claude
     participant Transport as stdio
     participant Router
     participant Handler
     participant Cache
-    participant API
-    participant Crypto
-    participant Worker
+    participant PB as PocketBase
 
     Claude->>Transport: JSON-RPC Request
     Transport->>Router: Parse & route
@@ -375,14 +301,8 @@ export const mcpArchitectureDiagrams: DiagramSection = {
         Cache-->>Handler: Return cached
     end
 
-    Handler->>Crypto: encrypt(data)
-    Crypto-->>Handler: encrypted
-    Handler->>API: HTTPS + JWT
-    API->>Worker: Request
-    Worker-->>API: Response
-    API-->>Handler: Encrypted response
-    Handler->>Crypto: decrypt(blob)
-    Crypto-->>Handler: decrypted
+    Handler->>PB: HTTPS + Auth Token
+    PB-->>Handler: JSON Response
     Handler->>Cache: Store result
     Handler-->>Router: Tool result
     Router-->>Transport: JSON-RPC Response
@@ -406,10 +326,9 @@ export const mcpArchitectureDiagrams: DiagramSection = {
     CHECK --> CIRCULAR{Would create cycle?}
 
     CIRCULAR -->|Yes| ERROR[Validation error]
-    CIRCULAR -->|No| ENCRYPT
+    CIRCULAR -->|No| API_CALL
 
-    DEPS -->|No| ENCRYPT[Encrypt task data]
-    ENCRYPT --> API_CALL[Call Worker API]
+    DEPS -->|No| API_CALL[Call PocketBase API]
 
     API_CALL --> SUCCESS{Success?}
     SUCCESS -->|No| RETRY{Retryable?}
@@ -425,6 +344,6 @@ export const mcpArchitectureDiagrams: DiagramSection = {
 
 export const allDiagramSections: DiagramSection[] = [
   syncArchitectureDiagrams,
-  workerArchitectureDiagrams,
+  backendArchitectureDiagrams,
   mcpArchitectureDiagrams,
 ];
