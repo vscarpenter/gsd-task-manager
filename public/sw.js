@@ -51,6 +51,12 @@ self.addEventListener("fetch", (event) => {
 		return;
 	}
 
+	// Don't intercept cross-origin requests (PocketBase API, OAuth, etc.)
+	const requestUrl = new URL(request.url);
+	if (requestUrl.hostname !== self.location.hostname) {
+		return;
+	}
+
 	if (request.method !== "GET") {
 		return;
 	}
