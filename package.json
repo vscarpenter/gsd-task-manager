@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "7.0.3",
+	"version": "7.0.4",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -49,6 +49,7 @@
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
+		"@tailwindcss/postcss": "^4.2.1",
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
