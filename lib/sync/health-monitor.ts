@@ -125,6 +125,18 @@ export class HealthMonitor {
   }
 
   private async checkServerConnectivity(): Promise<HealthIssue | null> {
+    // Skip the network call entirely when the browser reports no connectivity.
+    // This avoids CORS preflight errors when the device is offline or transitioning
+    // between networks (e.g. after a laptop sleep/wake cycle).
+    if (!navigator.onLine) {
+      return {
+        type: 'server_unreachable',
+        severity: 'error',
+        message: 'Device is offline',
+        suggestedAction: 'Check your internet connection and try again',
+      };
+    }
+
     try {
       const pb = getPocketBase();
       await pb.health.check();

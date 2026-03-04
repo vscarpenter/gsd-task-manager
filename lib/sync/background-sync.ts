@@ -176,6 +176,14 @@ export class BackgroundSyncManager {
             return;
         }
 
+        // Skip periodic/debounced syncs while the page is hidden (e.g. laptop lid closed).
+        // The visibility-change handler will trigger a fresh sync when the page becomes
+        // visible again, which is the right moment to reconnect after a sleep/wake cycle.
+        if (document.hidden && (trigger === 'periodic' || trigger === 'debounced')) {
+            logger.debug('Skipping sync: page hidden', { trigger });
+            return;
+        }
+
         const now = Date.now();
         if (now - this.lastSyncTimestamp < this.MIN_SYNC_INTERVAL_MS) {
             logger.debug('Skipping sync: too soon since last sync', { trigger });
