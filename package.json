@@ -78,6 +78,7 @@
 		"packages/*"
 	],
 	"overrides": {
+		"@hono/node-server": ">=1.19.10",
 		"js-yaml": ">=4.1.1",
 		"baseline-browser-mapping": "^2.9.11",
 		"vite": "^7.3.0",
@@ -87,7 +88,7 @@
 		"minimatch": ">=3.1.3",
 		"rollup": ">=4.59.0",
 		"ajv": ">=8.18.0",
-		"hono": ">=4.11.10"
+		"hono": ">=4.12.4"
 	},
 	"license": "MIT"
 }
