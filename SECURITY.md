@@ -6,8 +6,8 @@ This document outlines the security measures implemented in GSD Task Manager and
 
 - [Overview](#overview)
 - [Client-Side Security](#client-side-security)
-- [Cloud Sync Security](#cloud-sync-security-optional-v690)
-- [MCP Server Security](#mcp-server-security-optional-v690)
+- [Cloud Sync Security](#cloud-sync-security-optional)
+- [MCP Server Security](#mcp-server-security-optional)
 - [CloudFront Security Headers](#cloudfront-security-headers)
 - [Deployment Instructions](#deployment-instructions)
 - [Security Best Practices](#security-best-practices)
@@ -37,7 +37,7 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Automated security updates via Dependabot/Renovate
    - All packages kept at stable, non-canary versions
 
-## Cloud Sync Security (Optional, v6.9.0+)
+## Cloud Sync Security (Optional)
 
 When users enable cloud sync, the following security measures protect their data:
 
@@ -78,7 +78,7 @@ When users enable cloud sync, the following security measures protect their data
 - HSTS headers enforce secure connections
 - TLS 1.2+ required
 
-## MCP Server Security (Optional, v6.9.0+)
+## MCP Server Security (Optional)
 
 The MCP server allows Claude Desktop to access and manage tasks via natural language queries.
 
@@ -257,11 +257,9 @@ Disables unnecessary browser features.
      --distribution-config file://dist-config.json
    ```
 
-See `cloudfront-security-headers-reference.md` for detailed instructions and troubleshooting.
-
 ### Option 3: Terraform/CloudFormation
 
-See `cloudfront-security-headers.json` for the configuration structure that can be adapted to IaC tools.
+Adapt the header values from Option 1 above into your IaC tool's response headers policy resource.
 
 ## Security Best Practices
 
@@ -317,7 +315,7 @@ If you discover a security vulnerability, please:
 
 ## Security Audit Results
 
-### Last Audit: 2026-01-23
+### Last Audit: 2026-03-08
 
 - ✅ All critical vulnerabilities resolved
 - ✅ Dependency vulnerabilities patched
@@ -329,8 +327,8 @@ If you discover a security vulnerability, please:
 ### Previously Resolved Issues
 
 1. **nanoid vulnerability** - Upgraded from 4.0.2 to 5.1.6
-2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 16.1.1
-3. **React RC versions** - Upgraded to stable 19.2.3
+2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 16.1.6
+3. **React RC versions** - Upgraded to stable 19.2.4
 4. **Missing error handling** - Added try-catch to importFromJson()
 
 ### Known Trade-offs (Documented)
