@@ -88,7 +88,11 @@ describe('Notification Badge', () => {
 
       await setAppBadge(5);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error setting app badge:', expect.any(Error));
+      // Logger routes error through console.error with structured format
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[NOTIFICATIONS]',
+        expect.objectContaining({ message: 'Error setting app badge' })
+      );
       consoleErrorSpy.mockRestore();
     });
   });
@@ -126,7 +130,11 @@ describe('Notification Badge', () => {
 
       await clearAppBadge();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error clearing app badge:', expect.any(Error));
+      // Logger routes error through console.error with structured format
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[NOTIFICATIONS]',
+        expect.objectContaining({ message: 'Error clearing app badge' })
+      );
       consoleErrorSpy.mockRestore();
     });
   });

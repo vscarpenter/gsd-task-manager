@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { X, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("PWA");
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -91,7 +94,7 @@ export function InstallPwaPrompt() {
         setDeferredPrompt(null);
       }
     } catch (error) {
-      console.error("Install prompt error:", error);
+      logger.error("Install prompt error", error instanceof Error ? error : new Error(String(error)));
     }
   };
 

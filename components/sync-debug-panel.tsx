@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { SyncQueueItem } from '@/lib/sync/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SYNC_QUEUE');
 
 export function SyncDebugPanel() {
   const [queueItems, setQueueItems] = useState<SyncQueueItem[]>([]);
@@ -16,7 +19,7 @@ export function SyncDebugPanel() {
       const items = await queue.getPending();
       setQueueItems(items);
     } catch (error) {
-      console.error('Failed to load queue:', error);
+      logger.error('Failed to load queue', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }

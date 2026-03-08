@@ -16,8 +16,8 @@ console.log('GSD_ENCRYPTION_PASSPHRASE:', vars.GSD_ENCRYPTION_PASSPHRASE ? '✅ 
 
 console.log('\nValues:');
 console.log('GSD_API_URL:', vars.GSD_API_URL || '(not set)');
-console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? `${vars.GSD_AUTH_TOKEN.substring(0, 20)}...` : '(not set)');
-console.log('GSD_ENCRYPTION_PASSPHRASE:', vars.GSD_ENCRYPTION_PASSPHRASE || '(not set)');
+console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? '***' : '(not set)');
+console.log('GSD_ENCRYPTION_PASSPHRASE:', vars.GSD_ENCRYPTION_PASSPHRASE ? '***' : '(not set)');
 
 if (!vars.GSD_ENCRYPTION_PASSPHRASE) {
   console.log('\n❌ GSD_ENCRYPTION_PASSPHRASE is not set!');

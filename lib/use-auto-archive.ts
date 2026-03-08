@@ -8,6 +8,7 @@
 import { useEffect } from 'react';
 import { getArchiveSettings, archiveOldTasks } from './archive';
 import { createLogger } from './logger';
+import { TIME_MS } from './constants';
 
 const logger = createLogger('AUTO_ARCHIVE');
 
@@ -39,7 +40,7 @@ export function useAutoArchive() {
     checkAndArchive();
 
     // Run every hour
-    const interval = setInterval(checkAndArchive, 60 * 60 * 1000);
+    const interval = setInterval(checkAndArchive, TIME_MS.HOUR);
 
     return () => clearInterval(interval);
   }, []);

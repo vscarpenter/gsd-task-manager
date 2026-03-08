@@ -1,5 +1,9 @@
 "use client";
 
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("NOTIFICATIONS");
+
 /**
  * Check if the Badge API is supported
  * Supported on: Chrome/Edge (desktop/mobile), Safari/iOS 16.4+
@@ -24,7 +28,7 @@ export async function setAppBadge(count: number): Promise<void> {
       await navigator.clearAppBadge();
     }
   } catch (error) {
-    console.error("Error setting app badge:", error);
+    logger.error("Error setting app badge", error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -39,6 +43,6 @@ export async function clearAppBadge(): Promise<void> {
   try {
     await navigator.clearAppBadge();
   } catch (error) {
-    console.error("Error clearing app badge:", error);
+    logger.error("Error clearing app badge", error instanceof Error ? error : new Error(String(error)));
   }
 }

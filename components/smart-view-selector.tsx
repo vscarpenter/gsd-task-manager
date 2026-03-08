@@ -12,6 +12,9 @@ import {
 } from "@/lib/smart-views";
 import type { SmartView, FilterCriteria } from "@/lib/filters";
 import { cn } from "@/lib/utils";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("SMART_VIEWS");
 
 interface SmartViewSelectorProps {
   onSelectView: (criteria: FilterCriteria) => void;
@@ -87,7 +90,7 @@ export function SmartViewSelector({
         setSelectedView(null);
       }
     } catch (error) {
-      console.error("Failed to delete Smart View:", error);
+      logger.error("Failed to delete Smart View", error instanceof Error ? error : new Error(String(error)));
       alert("Failed to delete Smart View. It might be a built-in view.");
     }
   };
@@ -118,7 +121,7 @@ export function SmartViewSelector({
       // Dispatch event for SmartViewPills to listen to
       window.dispatchEvent(new CustomEvent('pinnedViewsChanged'));
     } catch (error) {
-      console.error("Failed to toggle pin:", error);
+      logger.error("Failed to toggle pin", error instanceof Error ? error : new Error(String(error)));
       if (error instanceof Error) {
         alert(error.message);
       }

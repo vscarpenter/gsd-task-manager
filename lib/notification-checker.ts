@@ -12,6 +12,9 @@ import {
 } from "@/lib/notifications";
 import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("NOTIFICATIONS");
 
 /**
  * NotificationChecker class
@@ -78,7 +81,7 @@ class NotificationChecker {
 			// Update app badge with count of due soon tasks
 			await this.updateBadge();
 		} catch (error) {
-			console.error("Error in notification checker:", error);
+			logger.error("Error in notification checker", error instanceof Error ? error : new Error(String(error)));
 		} finally {
 			this.isChecking = false;
 		}
@@ -92,7 +95,7 @@ class NotificationChecker {
 			const count = await getDueSoonCount();
 			await setAppBadge(count);
 		} catch (error) {
-			console.error("Error updating app badge:", error);
+			logger.error("Error updating app badge", error instanceof Error ? error : new Error(String(error)));
 		}
 	}
 

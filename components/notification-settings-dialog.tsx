@@ -14,6 +14,9 @@ import {
   showTestNotification
 } from "@/lib/notifications";
 import type { NotificationSettings } from "@/lib/types";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("NOTIFICATIONS");
 
 interface NotificationSettingsDialogProps {
   open: boolean;
@@ -59,7 +62,7 @@ export function NotificationSettingsDialog({ open, onOpenChange }: NotificationS
       await updateNotificationSettings(updates);
       await loadSettings(); // Reload to get updated values
     } catch (error) {
-      console.error("Error saving settings:", error);
+      logger.error("Error saving settings", error instanceof Error ? error : new Error(String(error)));
       window.alert("Failed to save settings. Please try again.");
     } finally {
       setIsSaving(false);
@@ -84,7 +87,7 @@ export function NotificationSettingsDialog({ open, onOpenChange }: NotificationS
         window.alert("Failed to show test notification. Please check your notification permissions.");
       }
     } catch (error) {
-      console.error("Error showing test notification:", error);
+      logger.error("Error showing test notification", error instanceof Error ? error : new Error(String(error)));
     } finally {
       setIsTesting(false);
     }

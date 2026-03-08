@@ -5,6 +5,9 @@ import { AlertTriangleIcon, PlusCircleIcon, RefreshCwIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { importFromJson } from "@/lib/tasks";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("IMPORT");
 
 interface ImportDialogProps {
   open: boolean;
@@ -41,7 +44,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
       onImportComplete();
       onOpenChange(false);
     } catch (error) {
-      console.error(error);
+      logger.error("Import failed", error instanceof Error ? error : new Error(String(error)));
       window.alert("Import failed. Ensure you selected a valid export file.");
     } finally {
       setIsImporting(false);
