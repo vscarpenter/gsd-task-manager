@@ -1,4 +1,4 @@
-# 🚀 Quick Test Reference - MCP Server v0.5.0
+# Quick Test Reference - MCP Server
 
 ## Setup (Do Once)
 ```bash
@@ -15,9 +15,8 @@ npm run build
       "command": "node",
       "args": ["/Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server/dist/index.js"],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "YOUR_TOKEN",
-        "GSD_ENCRYPTION_PASSPHRASE": "YOUR_PASSPHRASE"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "YOUR_TOKEN"
       }
     }
   }
@@ -34,36 +33,36 @@ npm run build
 ```
 "Validate my GSD MCP configuration"
 ```
-✅ All 3 checks pass (API, Auth, Encryption)
+All checks pass (PocketBase connectivity, Auth)
 
 ### 2. Read Test
 ```
 "List all my tasks"
 ```
-✅ Returns tasks with full details
+Returns tasks with full details
 
 ### 3. Analytics Test
 ```
 "Show my productivity metrics"
 ```
-✅ Returns completions, streaks, rates
+Returns completions, streaks, rates
 
 ### 4. Write Test (Creates & Deletes)
 ```
-"Create a test task: 'MCP v0.5.0 Test', urgent=true, important=false"
+"Create a test task: 'MCP Test', urgent=true, important=false"
 ```
-✅ Task created, note the ID
+Task created, note the ID
 
 ```
 "Delete the task we just created"
 ```
-✅ Task deleted
+Task deleted
 
 ### 5. Prompt Test
 ```
 "Run the daily-standup prompt"
 ```
-✅ Multi-tool report generated
+Multi-tool report generated
 
 ---
 
@@ -86,7 +85,7 @@ npm run build
 - "Show tag completion rates"
 - "What deadlines are coming up?"
 
-### Write Operations (⚠️ Modifies data)
+### Write Operations (Modifies data)
 - "Create task: 'Test', urgent=true, important=true"
 - "Update task abc123 to make it not urgent"
 - "Mark task abc123 complete"

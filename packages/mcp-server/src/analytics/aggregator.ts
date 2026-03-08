@@ -2,14 +2,14 @@
  * Data aggregation utilities for analytics insights
  */
 
-import type { DecryptedTask } from '../tools.js';
+import type { Task } from '../tools.js';
 import { calculateMetrics, getQuadrantPerformance, getUpcomingDeadlines } from './metrics.js';
 import type { ProductivityMetrics, QuadrantPerformance, UpcomingDeadlines } from './metrics.js';
 
 /**
  * Generate AI-friendly task insights summary
  */
-export function generateInsightsSummary(tasks: DecryptedTask[]): string {
+export function generateInsightsSummary(tasks: Task[]): string {
   const metrics = calculateMetrics(tasks);
   const quadrants = getQuadrantPerformance(tasks);
   const deadlines = getUpcomingDeadlines(tasks);

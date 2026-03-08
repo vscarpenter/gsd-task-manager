@@ -1,8 +1,5 @@
 /**
  * Sync configuration getters and setters
- *
- * Simplified for PocketBase: no config migration needed.
- * The v13 DB migration handles all legacy config cleanup.
  */
 
 import { getDb } from "@/lib/db";

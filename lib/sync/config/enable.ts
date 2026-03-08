@@ -1,7 +1,6 @@
 /**
  * Sync enable functionality
  *
- * Simplified for PocketBase: no crypto init or API client token setup.
  * PocketBase SDK manages auth tokens automatically via localStorage.
  */
 

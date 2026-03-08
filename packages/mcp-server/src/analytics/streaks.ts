@@ -2,7 +2,7 @@
  * Streak calculation logic for task completion tracking
  */
 
-import type { DecryptedTask } from '../tools.js';
+import type { Task } from '../tools.js';
 import { subDays } from './date-utils.js';
 
 /**
@@ -17,7 +17,7 @@ export interface StreakData {
 /**
  * Calculate current and longest streak
  */
-export function getStreakData(tasks: DecryptedTask[]): StreakData {
+export function getStreakData(tasks: Task[]): StreakData {
   const completedTasks = getCompletedTasksSorted(tasks);
 
   if (completedTasks.length === 0) {
@@ -38,7 +38,7 @@ export function getStreakData(tasks: DecryptedTask[]): StreakData {
 /**
  * Get completed tasks sorted by date (newest first)
  */
-function getCompletedTasksSorted(tasks: DecryptedTask[]): DecryptedTask[] {
+function getCompletedTasksSorted(tasks: Task[]): Task[] {
   return tasks
     .filter((t) => t.completed)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -47,7 +47,7 @@ function getCompletedTasksSorted(tasks: DecryptedTask[]): DecryptedTask[] {
 /**
  * Get unique completion dates sorted (newest first)
  */
-function getUniqueCompletionDates(completedTasks: DecryptedTask[]): string[] {
+function getUniqueCompletionDates(completedTasks: Task[]): string[] {
   const completionDates = new Set<string>();
 
   completedTasks.forEach((task) => {

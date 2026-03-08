@@ -85,7 +85,7 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### Cloud Sync Architecture
 - **Backend**: Self-hosted PocketBase at `https://api.vinny.io` (AWS EC2)
-- **Authentication**: PocketBase built-in OAuth2 with Google and GitHub providers
+- **Authentication**: PocketBase built-in OAuth2 with Google and GitHub providers (both fully implemented client-side; GitHub requires server-side provider setup in PocketBase admin)
 - **Sync Protocol**: Last-write-wins (LWW) with `client_updated_at` timestamps
 - **Realtime**: PocketBase SSE subscriptions for instant cross-device updates
 - **Storage**: Tasks stored as plaintext in PocketBase (user owns the server)
@@ -168,7 +168,7 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### OAuth Authentication
 - PocketBase SDK handles OAuth popup flow automatically (`authWithOAuth2`)
-- Supports Google and GitHub providers (currently only Google is configured on server)
+- Supports Google and GitHub providers (both implemented client-side; Google configured on server, GitHub needs PocketBase admin setup at `https://api.vinny.io/_/` → Settings → Auth providers)
 - Auth state persists in PocketBase's built-in `authStore` (localStorage)
 - **Local dev**: Set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PocketBase (local PocketBase at 127.0.0.1:8090 requires separate OAuth provider setup)
 

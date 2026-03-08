@@ -1,8 +1,8 @@
 /**
  * Sync reset functionality
  *
- * Simplified for PocketBase: clears local data and resets lastSyncAt
- * to force a complete pull from PocketBase on next sync.
+ * Clears local data and resets lastSyncAt to force a complete
+ * pull from PocketBase on next sync.
  */
 
 import { getDb } from "@/lib/db";

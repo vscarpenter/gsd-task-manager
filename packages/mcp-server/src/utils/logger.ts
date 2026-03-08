@@ -45,7 +45,7 @@ function createEntry(
  * @example
  * ```typescript
  * const logger = createMcpLogger('LIST_TASKS');
- * logger.error('Failed to decrypt task', error, { taskId });
+ * logger.error('Failed to map task', error, { taskId });
  * ```
  */
 export function createMcpLogger(module: string) {

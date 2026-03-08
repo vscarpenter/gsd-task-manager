@@ -1,5 +1,5 @@
 import { listTasks } from './list-tasks.js';
-import type { GsdConfig, DecryptedTask } from '../types.js';
+import type { GsdConfig, Task } from '../types.js';
 
 /**
  * Detailed task statistics derived from PocketBase tasks
@@ -39,7 +39,7 @@ export async function getDetailedTaskStats(
 /**
  * Calculate detailed statistics from tasks
  */
-function calculateDetailedStats(tasks: DecryptedTask[]): DetailedTaskStats {
+function calculateDetailedStats(tasks: Task[]): DetailedTaskStats {
   const completedTasks = tasks.filter((t) => t.completed).length;
   const incompleteTasks = tasks.filter((t) => !t.completed).length;
 

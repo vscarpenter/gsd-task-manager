@@ -2,7 +2,7 @@
  * Bulk update operations for multiple tasks
  */
 
-import type { GsdConfig, DecryptedTask } from '../types.js';
+import type { GsdConfig, Task } from '../types.js';
 import type { BulkOperation } from './types.js';
 import { listTasks } from '../tools/list-tasks.js';
 import { deriveQuadrant, updateTaskInPB, deleteTaskInPB, getAuthInfo } from './helpers.js';
@@ -55,7 +55,7 @@ export async function bulkUpdateTasks(
         continue;
       }
 
-      let updatedTask: DecryptedTask;
+      let updatedTask: Task;
 
       switch (operation.type) {
         case 'complete':

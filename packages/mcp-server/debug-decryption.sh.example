@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Example debug script for testing decryption
-# Copy to debug-decryption.sh and replace with your actual credentials
+# Example debug script for testing PocketBase connectivity
+# Copy to debug-pocketbase.sh and replace with your actual credentials
 
-# IMPORTANT: Never commit the actual debug-decryption.sh file!
+# IMPORTANT: Never commit the actual debug script!
 # This file is listed in .gitignore
 
-API_URL="https://gsd.vinny.dev"
-AUTH_TOKEN="YOUR_JWT_TOKEN_HERE"
-PASSPHRASE="YOUR_PASSPHRASE_HERE"
+PB_URL="https://api.vinny.io"
+AUTH_TOKEN="YOUR_AUTH_TOKEN_HERE"
 
-echo "Testing decryption with MCP server..."
-echo "API URL: $API_URL"
+echo "Testing PocketBase connectivity..."
+echo "PocketBase URL: $PB_URL"
 
-# Add your decryption test logic here
+# Test health endpoint
+curl -s "$PB_URL/api/health" | jq .

@@ -14,15 +14,15 @@ export type {
   SyncStatus,
   Device,
   TaskStats,
-  DecryptedTask,
+  Task,
   TaskFilters,
   PBTask,
 } from './types.js';
 
 export {
   syncStatusSchema,
-  pbTaskToDecryptedTask,
-  decryptedTaskToPBFields,
+  pbTaskToTask,
+  taskToPBFields,
 } from './types.js';
 
 // Re-export constants

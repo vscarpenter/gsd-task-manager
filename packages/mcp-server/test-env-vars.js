@@ -5,23 +5,20 @@ console.log('Environment Variable Test');
 console.log('=========================\n');
 
 const vars = {
-  GSD_API_URL: process.env.GSD_API_URL,
+  GSD_POCKETBASE_URL: process.env.GSD_POCKETBASE_URL,
   GSD_AUTH_TOKEN: process.env.GSD_AUTH_TOKEN,
-  GSD_ENCRYPTION_PASSPHRASE: process.env.GSD_ENCRYPTION_PASSPHRASE,
 };
 
-console.log('GSD_API_URL:', vars.GSD_API_URL ? '✅ Set' : '❌ Missing');
+console.log('GSD_POCKETBASE_URL:', vars.GSD_POCKETBASE_URL ? '✅ Set' : '❌ Missing');
 console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? '✅ Set' : '❌ Missing');
-console.log('GSD_ENCRYPTION_PASSPHRASE:', vars.GSD_ENCRYPTION_PASSPHRASE ? '✅ Set' : '❌ Missing');
 
 console.log('\nValues:');
-console.log('GSD_API_URL:', vars.GSD_API_URL || '(not set)');
+console.log('GSD_POCKETBASE_URL:', vars.GSD_POCKETBASE_URL || '(not set)');
 console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? '***' : '(not set)');
-console.log('GSD_ENCRYPTION_PASSPHRASE:', vars.GSD_ENCRYPTION_PASSPHRASE ? '***' : '(not set)');
 
-if (!vars.GSD_ENCRYPTION_PASSPHRASE) {
-  console.log('\n❌ GSD_ENCRYPTION_PASSPHRASE is not set!');
-  console.log('\nThis means Claude Desktop is not passing the environment variable.');
+const missing = Object.entries(vars).filter(([, v]) => !v).map(([k]) => k);
+if (missing.length > 0) {
+  console.log(`\n❌ Missing: ${missing.join(', ')}`);
   console.log('\nPossible fixes:');
   console.log('1. Verify claude_desktop_config.json has correct syntax');
   console.log('2. Completely quit Claude Desktop (Cmd+Q)');

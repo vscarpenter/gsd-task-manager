@@ -1,8 +1,7 @@
 /**
  * Sync disable functionality
  *
- * Simplified for PocketBase: clears PB auth store, sync queue,
- * and resets IndexedDB sync metadata.
+ * Clears PB auth store, sync queue, and resets IndexedDB sync metadata.
  */
 
 import { getDb } from "@/lib/db";

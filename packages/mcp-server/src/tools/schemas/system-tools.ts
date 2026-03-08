@@ -7,7 +7,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 export const validateConfigTool: Tool = {
   name: 'validate_config',
   description:
-    'Validate MCP server configuration and diagnose issues. Checks environment variables, API connectivity, authentication, encryption, and sync status. Returns detailed diagnostics.',
+    'Validate MCP server configuration and diagnose issues. Checks environment variables, PocketBase connectivity, authentication, and sync status. Returns detailed diagnostics.',
   inputSchema: {
     type: 'object',
     properties: {},

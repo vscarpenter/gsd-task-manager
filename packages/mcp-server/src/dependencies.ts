@@ -3,7 +3,7 @@
  * Ports circular dependency detection from frontend lib/dependencies.ts
  */
 
-import type { DecryptedTask } from './types.js';
+import type { Task } from './types.js';
 
 /**
  * Check if adding a dependency would create a circular dependency
@@ -21,7 +21,7 @@ import type { DecryptedTask } from './types.js';
 export function wouldCreateCircularDependency(
   taskId: string,
   dependencyId: string,
-  allTasks: DecryptedTask[]
+  allTasks: Task[]
 ): boolean {
   // Can't depend on itself (trivial cycle)
   if (taskId === dependencyId) {
@@ -71,7 +71,7 @@ export function wouldCreateCircularDependency(
 export function validateDependencies(
   taskId: string | null,
   dependencies: string[],
-  allTasks: DecryptedTask[]
+  allTasks: Task[]
 ): { valid: boolean; error?: string } {
   // Check for self-reference (only for existing tasks)
   if (taskId && dependencies.includes(taskId)) {
@@ -129,8 +129,8 @@ export function validateDependencies(
  */
 export function getAffectedByDeletion(
   taskId: string,
-  allTasks: DecryptedTask[]
-): DecryptedTask[] {
+  allTasks: Task[]
+): Task[] {
   return allTasks.filter(
     (task) => task.dependencies && task.dependencies.includes(taskId)
   );

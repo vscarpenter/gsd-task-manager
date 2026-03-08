@@ -6,8 +6,8 @@
         "/REPLACE/WITH/ABSOLUTE/PATH/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
-        "GSD_API_URL": "https://sync.gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "your-auth-token-here"
       }
     }
   }

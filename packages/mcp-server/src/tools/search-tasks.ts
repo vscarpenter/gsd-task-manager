@@ -1,5 +1,5 @@
 import { listTasks } from './list-tasks.js';
-import type { GsdConfig, DecryptedTask } from '../types.js';
+import type { GsdConfig, Task } from '../types.js';
 
 /**
  * Search tasks by title, description, tags, or subtasks
@@ -8,7 +8,7 @@ import type { GsdConfig, DecryptedTask } from '../types.js';
 export async function searchTasks(
   config: GsdConfig,
   query: string
-): Promise<DecryptedTask[]> {
+): Promise<Task[]> {
   const tasks = await listTasks(config);
   const queryLower = query.toLowerCase();
 
@@ -18,7 +18,7 @@ export async function searchTasks(
 /**
  * Check if a task matches the search query
  */
-function matchesSearchQuery(task: DecryptedTask, queryLower: string): boolean {
+function matchesSearchQuery(task: Task, queryLower: string): boolean {
   return (
     task.title.toLowerCase().includes(queryLower) ||
     task.description.toLowerCase().includes(queryLower) ||
