@@ -113,7 +113,8 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "system": false,
       "options": {
         "min": null,
-        "max": 50
+        "max": 50,
+        "pattern": "^(urgent-important|not-urgent-important|urgent-not-important|not-urgent-not-important)$"
       }
     },
     {
@@ -150,7 +151,8 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "system": false,
       "options": {
         "min": null,
-        "max": 50
+        "max": 50,
+        "pattern": "^(none|daily|weekly|monthly)$"
       }
     },
     {
@@ -195,7 +197,7 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "options": {
         "min": null,
         "max": null,
-        "noDecimal": false
+        "noDecimal": true
       }
     },
     {
@@ -206,7 +208,7 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "options": {
         "min": null,
         "max": null,
-        "noDecimal": false
+        "noDecimal": true
       }
     },
     {
@@ -217,7 +219,7 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "options": {
         "min": 0,
         "max": null,
-        "noDecimal": false
+        "noDecimal": true
       }
     },
     {

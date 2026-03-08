@@ -71,6 +71,9 @@ describe('Task Import/Export Operations', () => {
         clear: vi.fn(),
         bulkAdd: vi.fn(),
       },
+      syncMetadata: {
+        get: vi.fn().mockResolvedValue(null),
+      },
       transaction: vi.fn((mode, table, callback) => callback()),
     };
 

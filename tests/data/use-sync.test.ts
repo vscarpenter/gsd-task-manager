@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
 import { useSync } from '@/lib/hooks/use-sync';
+import { SyncProvider } from '@/lib/sync/sync-provider';
 import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
@@ -22,6 +24,11 @@ vi.mock('@/lib/sync/config', () => ({
   getAutoSyncConfig: vi.fn(),
 }));
 vi.mock('@/lib/db');
+
+/** Wrapper that provides SyncProvider context for the hook under test. */
+function wrapper({ children }: { children: ReactNode }) {
+  return createElement(SyncProvider, null, children);
+}
 
 describe('useSync', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,7 +108,7 @@ describe('useSync', () => {
 
   describe('initialization', () => {
     it('should initialize with default state', () => {
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       expect(result.current.isSyncing).toBe(false);
       expect(result.current.status).toBe('idle');
@@ -114,7 +121,7 @@ describe('useSync', () => {
     });
 
     it('should check if sync is enabled on mount', async () => {
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -125,7 +132,7 @@ describe('useSync', () => {
       vi.mocked(isAuthenticated).mockReturnValue(true);
       mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
 
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -135,7 +142,7 @@ describe('useSync', () => {
     it('should not start health monitor when sync is disabled', async () => {
       vi.mocked(isAuthenticated).mockReturnValue(false);
 
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -146,14 +153,14 @@ describe('useSync', () => {
   describe('sync state updates', () => {
     it('should update isEnabled when sync becomes enabled', async () => {
       vi.mocked(isAuthenticated).mockReturnValue(false);
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
       expect(result.current.isEnabled).toBe(false);
     });
 
     it('should poll coordinator status', async () => {
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -171,7 +178,7 @@ describe('useSync', () => {
         lastResult: { status: 'success' },
       });
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isSyncing).toBe(true);
@@ -185,7 +192,7 @@ describe('useSync', () => {
 
   describe('manual sync trigger', () => {
     it('should trigger sync when sync() is called', async () => {
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await act(async () => {
         await result.current.sync();
@@ -205,7 +212,7 @@ describe('useSync', () => {
         lastResult: { status: 'success' },
       });
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await act(async () => {
         await result.current.sync();
@@ -216,7 +223,7 @@ describe('useSync', () => {
     });
 
     it('should clear error after successful sync', async () => {
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       // Set error state
       mockCoordinator.requestSync.mockRejectedValueOnce(new Error('Failed'));
@@ -258,7 +265,7 @@ describe('useSync', () => {
         lastResult: { status: 'error', error: 'Network error' },
       });
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await act(async () => {
         await result.current.sync();
@@ -272,7 +279,7 @@ describe('useSync', () => {
     it('should handle sync exceptions', async () => {
       mockCoordinator.requestSync.mockRejectedValue(new Error('Connection failed'));
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await act(async () => {
         await result.current.sync();
@@ -293,19 +300,19 @@ describe('useSync', () => {
         lastResult: { status: 'already_running' },
       });
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       await act(async () => {
         await result.current.sync();
       });
 
-      // already_running is not an error — no error is set
+      // already_running is not an error -- no error is set
       expect(result.current.error).toBe(null);
       expect(result.current.lastResult?.status).toBe('already_running');
     });
 
     it('should recover from error state on successful sync', async () => {
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       // First sync fails
       mockCoordinator.requestSync.mockRejectedValueOnce(new Error('Network error'));
@@ -342,7 +349,7 @@ describe('useSync', () => {
       vi.mocked(isAuthenticated).mockReturnValue(true);
       mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
 
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -352,7 +359,7 @@ describe('useSync', () => {
     it('should not start health monitor when sync is disabled', async () => {
       vi.mocked(isAuthenticated).mockReturnValue(false);
 
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -366,7 +373,7 @@ describe('useSync', () => {
       mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
       mockHealthMonitor.isActive.mockReturnValue(true);
 
-      const { unmount } = renderHook(() => useSync());
+      const { unmount } = renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -378,7 +385,7 @@ describe('useSync', () => {
     it('should clear intervals on unmount', () => {
       const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
 
-      const { unmount } = renderHook(() => useSync());
+      const { unmount } = renderHook(() => useSync(), { wrapper });
 
       unmount();
 
@@ -398,7 +405,7 @@ describe('useSync', () => {
         lastResult: { status: 'success' },
       });
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       expect(result.current.status).toBe('idle');
 
@@ -412,7 +419,7 @@ describe('useSync', () => {
     it('should transition from idle to error', async () => {
       mockCoordinator.requestSync.mockRejectedValue(new Error('Failed'));
 
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       expect(result.current.status).toBe('idle');
 
@@ -426,7 +433,7 @@ describe('useSync', () => {
 
   describe('polling behavior', () => {
     it('should check sync enabled status on mount', async () => {
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -434,7 +441,7 @@ describe('useSync', () => {
     });
 
     it('should poll coordinator status on mount', async () => {
-      renderHook(() => useSync());
+      renderHook(() => useSync(), { wrapper });
 
       await flushAsync();
 
@@ -444,13 +451,13 @@ describe('useSync', () => {
 
   describe('sync function behavior', () => {
     it('should provide a sync function', () => {
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       expect(typeof result.current.sync).toBe('function');
     });
 
     it('should expose all expected properties', () => {
-      const { result } = renderHook(() => useSync());
+      const { result } = renderHook(() => useSync(), { wrapper });
 
       expect(result.current).toHaveProperty('sync');
       expect(result.current).toHaveProperty('isSyncing');

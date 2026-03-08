@@ -159,7 +159,6 @@ class NotificationChecker {
 			...task,
 			notificationSent: true,
 			lastNotificationAt: isoNow(),
-			updatedAt: isoNow(),
 		};
 
 		await db.tasks.put(updated);
@@ -242,7 +241,6 @@ export async function resetTaskNotification(taskId: string): Promise<void> {
 		notificationSent: false,
 		lastNotificationAt: undefined,
 		snoozedUntil: undefined,
-		updatedAt: isoNow(),
 	};
 
 	await db.tasks.put(updated);
@@ -270,8 +268,7 @@ export async function snoozeTaskNotification(
 	const updated: TaskRecord = {
 		...task,
 		snoozedUntil: snoozeUntil.toISOString(),
-		notificationSent: false, // Reset so it can notify again after snooze
-		updatedAt: isoNow(),
+		notificationSent: false,
 	};
 
 	await db.tasks.put(updated);

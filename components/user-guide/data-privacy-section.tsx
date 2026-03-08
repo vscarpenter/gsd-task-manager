@@ -28,7 +28,7 @@ export function DataPrivacySection({
 					<p className="text-foreground-muted">
 						Your data is stored locally on YOUR device using IndexedDB (browser
 						storage). GSD works completely offline with no network required.
-						Cloud sync is optional and fully encrypted.
+						Cloud sync is optional.
 					</p>
 				</div>
 
@@ -47,13 +47,13 @@ export function DataPrivacySection({
 						<div>
 							<h5 className="font-medium text-foreground flex items-center gap-1.5 mb-1">
 								<ShieldCheckIcon className="h-3 w-3 text-green-600" />
-								Zero-Knowledge Architecture
+								Self-Hosted Architecture
 							</h5>
 							<ul className="space-y-1 list-disc list-inside ml-1">
-								<li>End-to-end AES-256 encryption (military-grade)</li>
-								<li>Your passphrase never leaves your device</li>
-								<li>Server stores only encrypted blobs — we cannot read your tasks</li>
-								<li>PBKDF2 key derivation with 600k iterations</li>
+								<li>Data syncs to your own PocketBase server</li>
+								<li>You control the server and the data</li>
+								<li>Owner-based access rules protect your tasks</li>
+								<li>No third-party analytics or tracking</li>
 							</ul>
 						</div>
 
@@ -63,9 +63,9 @@ export function DataPrivacySection({
 								Authentication Options
 							</h5>
 							<ul className="space-y-1 list-disc list-inside ml-1">
-								<li>Sign in with Google or Apple</li>
-								<li>Create an encryption passphrase (required for sync)</li>
-								<li>Use the same passphrase on all devices to decrypt</li>
+								<li>Sign in with Google or GitHub</li>
+								<li>OAuth2 authentication via PocketBase</li>
+								<li>Auth tokens stored locally in your browser</li>
 							</ul>
 						</div>
 
@@ -131,8 +131,7 @@ export function DataPrivacySection({
 						<li>"How many tasks do I have in each quadrant?"</li>
 					</ul>
 					<p className="text-xs text-foreground-muted mt-2">
-						<strong>Security:</strong> Your encryption passphrase stays local.
-						Claude can only read tasks — never modify or delete.
+						<strong>Security:</strong> The MCP server connects to your PocketBase instance using an auth token.
 						See the GitHub README for setup instructions.
 					</p>
 				</div>
@@ -142,9 +141,9 @@ export function DataPrivacySection({
 						Privacy Guarantee
 					</h5>
 					<p className="text-green-600 dark:text-green-400">
-						GSD Task Manager is open source and auditable. Even with cloud sync
-						enabled, your data is encrypted with your personal passphrase before
-						leaving your device. Zero tracking, zero analytics.
+						GSD Task Manager is open source and auditable. Cloud sync stores
+						data on your self-hosted PocketBase server with owner-based access
+						rules. Zero tracking, zero analytics.
 					</p>
 				</div>
 			</div>

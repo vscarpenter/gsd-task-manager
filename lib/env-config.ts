@@ -8,8 +8,6 @@ export type Environment = 'development' | 'staging' | 'production';
 export interface EnvironmentConfig {
   /** PocketBase server URL */
   pocketBaseUrl: string;
-  /** OAuth callback URL for auth flow */
-  oauthCallbackUrl: string;
   /** Whether running in development mode */
   isDevelopment: boolean;
   /** Whether running in production mode */
@@ -39,6 +37,11 @@ function detectEnvironment(): Environment {
     return 'staging';
   }
 
+  if (hostname === 'gsd.vinny.dev') {
+    return 'production';
+  }
+
+  // Unknown hostname — treat as production but require explicit PocketBase URL
   return 'production';
 }
 
@@ -55,17 +58,8 @@ export function getEnvironmentConfig(): EnvironmentConfig {
       ? 'http://127.0.0.1:8090'
       : 'https://api.vinny.io');
 
-  // OAuth Callback URL configuration
-  const oauthCallbackUrl =
-    environment === 'development'
-      ? 'http://localhost:3000/auth/callback'
-      : environment === 'staging'
-      ? 'https://gsd-dev.vinny.dev/auth/callback'
-      : 'https://gsd.vinny.dev/auth/callback';
-
   return {
     pocketBaseUrl,
-    oauthCallbackUrl,
     isDevelopment: environment === 'development',
     isProduction: environment === 'production',
     isStaging: environment === 'staging',

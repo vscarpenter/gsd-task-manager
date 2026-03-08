@@ -7,9 +7,6 @@
  * Sync operation configuration
  */
 export const SYNC_CONFIG = {
-  /** Maximum tasks to fetch in a single pull request */
-  MAX_TASKS_PER_PULL: 100,
-
   /** Polling interval for pending operation count (2 seconds) */
   PENDING_COUNT_POLL_INTERVAL_MS: 2000,
 

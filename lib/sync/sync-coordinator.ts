@@ -50,6 +50,27 @@ export class SyncCoordinator {
       return;
     }
 
+    // Set running flag early to prevent concurrent entry during async checks
+    this.isRunning = true;
+
+    // Enforce retry backoff for auto syncs (user-triggered syncs bypass backoff)
+    if (priority === 'auto') {
+      const canSync = await this.retryManager.canSyncNow();
+      if (!canSync) {
+        logger.debug('Auto sync blocked by retry backoff');
+        this.isRunning = false;
+        return;
+      }
+
+      const shouldRetry = await this.retryManager.shouldRetry();
+      if (!shouldRetry) {
+        logger.warn('Auto sync blocked: max retries exceeded');
+        this.isRunning = false;
+        return;
+      }
+    }
+
+    // isRunning is already true; executeSync will reset it in finally
     await this.executeSync(priority);
     await this.processQueue();
   }
@@ -122,6 +143,15 @@ export class SyncCoordinator {
 
     const nextRequest = this.pendingRequests.shift();
     if (!nextRequest) return;
+
+    // Enforce retry backoff for queued auto syncs
+    if (nextRequest.priority === 'auto') {
+      const canSync = await this.retryManager.canSyncNow();
+      if (!canSync) {
+        logger.debug('Queued auto sync blocked by retry backoff');
+        return;
+      }
+    }
 
     logger.debug('Processing queued sync request', { priority: nextRequest.priority });
     await this.executeSync(nextRequest.priority);
