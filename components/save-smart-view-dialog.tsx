@@ -14,6 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createSmartView } from "@/lib/smart-views";
 import type { FilterCriteria } from "@/lib/filters";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("SMART_VIEWS");
 
 interface SaveSmartViewDialogProps {
 	open: boolean;
@@ -61,7 +64,7 @@ export function SaveSmartViewDialog({
 				onSaved();
 			}
 		} catch (err) {
-			console.error("Failed to save Smart View:", err);
+			logger.error("Failed to save Smart View", err instanceof Error ? err : new Error(String(err)));
 			setError("Failed to save Smart View. Please try again.");
 		} finally {
 			setIsSaving(false);

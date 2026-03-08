@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 FUNCTION_NAME="gsd-url-rewrite"
-DISTRIBUTION_ID="E1T6GDX0TQEP94"
+DISTRIBUTION_ID="${CLOUDFRONT_DISTRIBUTION_ID:?Error: CLOUDFRONT_DISTRIBUTION_ID environment variable is required}"
 FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-url-rewrite.js"
 
 echo "🚀 Deploying CloudFront Function: $FUNCTION_NAME"

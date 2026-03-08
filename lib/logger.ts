@@ -43,7 +43,11 @@ export type LogContext =
   | 'AUTH'
   | 'UI'
   | 'DB'
-  | 'PWA';
+  | 'PWA'
+  | 'NOTIFICATIONS'
+  | 'IMPORT'
+  | 'SMART_VIEWS'
+  | 'ERROR_BOUNDARY';
 
 export interface LogMetadata {
   [key: string]: unknown;
@@ -97,10 +101,14 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
       .replace(/api[_-]?key=[^&]+/gi, 'apikey=***');
   }
 
-  // Remove sensitive fields
-  const sensitiveKeys = ['token', 'password', 'secret', 'apiKey', 'authorization', 'passphrase', 'email'];
-  for (const key of sensitiveKeys) {
-    if (key in sanitized) {
+  // Remove sensitive fields (case-insensitive match on key substrings)
+  const sensitivePatterns = [
+    'token', 'password', 'secret', 'apikey', 'authorization',
+    'passphrase', 'email', 'credential', 'cookie', 'session',
+  ];
+  for (const key of Object.keys(sanitized)) {
+    const lower = key.toLowerCase();
+    if (sensitivePatterns.some(pattern => lower.includes(pattern))) {
       sanitized[key] = '***';
     }
   }

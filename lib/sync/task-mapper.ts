@@ -9,6 +9,11 @@
 import type { TaskRecord, Subtask, TimeEntry } from '@/lib/types';
 import type { QuadrantId, RecurrenceType } from '@/lib/types';
 import type { RecordModel } from 'pocketbase';
+import { z } from 'zod';
+import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SYNC_PULL');
 
 /** Shape of a task as stored in the PocketBase `tasks` collection */
 export interface PBTaskRecord {
@@ -71,9 +76,81 @@ export function taskRecordToPocketBase(
 }
 
 /**
- * Convert a PocketBase record to local TaskRecord format
+ * Zod schema for validating PocketBase task records at the sync boundary.
+ * Uses .strip() to discard unknown fields from the remote response.
+ */
+const pbTaskRecordSchema = z.object({
+  task_id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  urgent: z.boolean(),
+  important: z.boolean(),
+  quadrant: quadrantIdSchema,
+  due_date: z.string().default(''),
+  completed: z.boolean(),
+  completed_at: z.string().default(''),
+  client_created_at: z.string(),
+  client_updated_at: z.string(),
+  recurrence: recurrenceTypeSchema.default('none'),
+  tags: z.array(z.string()).default([]),
+  subtasks: z.array(subtaskSchema).default([]),
+  dependencies: z.array(z.string()).default([]),
+  notification_enabled: z.boolean().default(true),
+  notify_before: z.number().int().min(0).nullable().default(null),
+  estimated_minutes: z.number().int().min(0).nullable().default(null),
+  time_spent: z.number().int().min(0).default(0),
+  time_entries: z.array(timeEntrySchema).default([]),
+}).strip();
+
+/**
+ * Convert a PocketBase record to local TaskRecord format.
+ * Validates the remote data with Zod before mapping to catch
+ * malformed or unexpected payloads at the sync boundary.
  */
 export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord {
+  const parsed = pbTaskRecordSchema.safeParse(record);
+
+  if (!parsed.success) {
+    logger.warn('PocketBase record failed validation, falling back to raw mapping', {
+      taskId: record['task_id'] as string,
+      errors: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '),
+    });
+
+    // Fall back to raw mapping for resilience (don't break sync over validation)
+    return rawPocketBaseToTaskRecord(record);
+  }
+
+  const r = parsed.data;
+  return {
+    id: r.task_id,
+    title: r.title,
+    description: r.description,
+    urgent: r.urgent,
+    important: r.important,
+    quadrant: r.quadrant,
+    dueDate: r.due_date || undefined,
+    completed: r.completed,
+    completedAt: r.completed_at || undefined,
+    createdAt: r.client_created_at,
+    updatedAt: r.client_updated_at,
+    recurrence: r.recurrence,
+    tags: r.tags,
+    subtasks: r.subtasks,
+    dependencies: r.dependencies,
+    notificationEnabled: r.notification_enabled,
+    notifyBefore: r.notify_before ?? undefined,
+    notificationSent: false,
+    estimatedMinutes: r.estimated_minutes ?? undefined,
+    timeSpent: r.time_spent,
+    timeEntries: r.time_entries,
+  };
+}
+
+/**
+ * Raw mapping fallback when Zod validation fails.
+ * Preserves existing behavior for resilience.
+ */
+function rawPocketBaseToTaskRecord(record: RecordModel): TaskRecord {
   return {
     id: record['task_id'] as string,
     title: record['title'] as string,

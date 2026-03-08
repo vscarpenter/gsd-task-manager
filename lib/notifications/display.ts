@@ -8,6 +8,9 @@ import {
   checkNotificationPermission,
   requestNotificationPermission
 } from "./permissions";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("NOTIFICATIONS");
 
 /**
  * Get active service worker registration
@@ -20,7 +23,7 @@ async function getActiveServiceWorker(): Promise<ServiceWorkerRegistration | und
   try {
     return await navigator.serviceWorker.ready;
   } catch (error) {
-    console.error("Error resolving service worker registration:", error);
+    logger.error("Error resolving service worker registration", error instanceof Error ? error : new Error(String(error)));
     return undefined;
   }
 }
@@ -146,7 +149,7 @@ export async function showTaskNotification(
     const options = createNotificationOptions(task, settings);
     await displayNotification(title, options);
   } catch (error) {
-    console.error("Error showing notification:", error);
+    logger.error("Error showing notification", error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -182,7 +185,7 @@ export async function showNotification(
     const notificationOptions = createDefaultOptions(body, options);
     await displayNotification(title, notificationOptions);
   } catch (error) {
-    console.error("Error showing notification:", error);
+    logger.error("Error showing notification", error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -214,7 +217,7 @@ export async function showTestNotification(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error("Error showing test notification:", error);
+    logger.error("Error showing test notification", error instanceof Error ? error : new Error(String(error)));
     return false;
   }
 }

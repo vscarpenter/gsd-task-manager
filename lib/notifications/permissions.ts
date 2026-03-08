@@ -1,6 +1,9 @@
 "use client";
 
 import { getNotificationSettings, updateNotificationSettings } from "./settings";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("NOTIFICATIONS");
 
 /**
  * Check if the browser supports notifications
@@ -43,7 +46,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
     await updateNotificationSettings({ ...settings, permissionAsked: true });
     return permission === "granted";
   } catch (error) {
-    console.error("Error requesting notification permission:", error);
+    logger.error("Error requesting notification permission", error instanceof Error ? error : new Error(String(error)));
     return false;
   }
 }

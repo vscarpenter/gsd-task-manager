@@ -15,6 +15,9 @@ import { useToast } from "@/components/ui/toast";
 import type { TaskRecord } from "@/lib/types";
 import { formatDueDate } from "@/lib/utils";
 import { TOAST_DURATION } from "@/lib/constants";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("UI");
 
 interface ShareTaskDialogProps {
 	task: TaskRecord | null;
@@ -157,7 +160,7 @@ export function ShareTaskDialog({
 		} catch (error) {
 			// AbortError means user cancelled the share - don't show error
 			if ((error as Error).name !== "AbortError") {
-				console.error("Failed to share task:", error);
+				logger.error("Failed to share task", error instanceof Error ? error : new Error(String(error)));
 				showToast("Failed to share task", undefined, TOAST_DURATION.SHORT);
 			}
 		}

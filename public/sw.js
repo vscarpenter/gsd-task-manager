@@ -167,14 +167,27 @@ self.addEventListener("push", (event) => {
 		return;
 	}
 
-	const data = event.data.json();
-	const title = data.title || "GSD Task Manager";
+	let data;
+	try {
+		data = event.data.json();
+	} catch {
+		// Invalid JSON payload — ignore
+		return;
+	}
+
+	// Validate payload shape
+	if (typeof data !== "object" || data === null) {
+		return;
+	}
+
+	const title =
+		typeof data.title === "string" ? data.title : "GSD Task Manager";
 	const options = {
-		body: data.body || "You have a task reminder",
+		body: typeof data.body === "string" ? data.body : "You have a task reminder",
 		icon: "/icons/icon-192.png",
 		badge: "/icons/icon-192.png",
-		tag: data.tag || "task-reminder",
-		data: data.data || {},
+		tag: typeof data.tag === "string" ? data.tag : "task-reminder",
+		data: typeof data.data === "object" && data.data !== null ? data.data : {},
 	};
 
 	event.waitUntil(self.registration.showNotification(title, options));

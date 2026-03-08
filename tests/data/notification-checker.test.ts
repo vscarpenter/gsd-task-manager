@@ -367,9 +367,10 @@ describe("NotificationChecker", () => {
 
 			await notificationChecker.checkAndNotify();
 
+			// Logger routes error through console.error with structured format
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"Error in notification checker:",
-				expect.any(Error),
+				"[NOTIFICATIONS]",
+				expect.objectContaining({ message: "Error in notification checker" }),
 			);
 
 			consoleErrorSpy.mockRestore();
