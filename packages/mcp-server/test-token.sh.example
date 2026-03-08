@@ -6,10 +6,8 @@
 # IMPORTANT: Never commit the actual test-token.sh file!
 # This file is listed in .gitignore
 
-export GSD_AUTH_TOKEN="YOUR_JWT_TOKEN_HERE"
-export GSD_API_URL="https://gsd.vinny.dev"
-export GSD_ENCRYPTION_PASSPHRASE="YOUR_PASSPHRASE_HERE"
+export GSD_AUTH_TOKEN="YOUR_AUTH_TOKEN_HERE"
+export GSD_POCKETBASE_URL="https://api.vinny.io"
 
-# Test the token
-curl -s "$GSD_API_URL/api/sync/status" \
-  -H "Authorization: Bearer $GSD_AUTH_TOKEN" | jq .
+# Test the connection
+curl -s "$GSD_POCKETBASE_URL/api/health" | jq .

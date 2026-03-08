@@ -3,7 +3,7 @@
  * Handles create, update, complete, and delete for single tasks
  */
 
-import type { GsdConfig, DecryptedTask } from '../types.js';
+import type { GsdConfig, Task } from '../types.js';
 import type { CreateTaskInput, UpdateTaskInput } from './types.js';
 import { listTasks } from '../tools/list-tasks.js';
 import {
@@ -24,7 +24,7 @@ import {
  * Create task result with dry-run information
  */
 export interface CreateTaskResult {
-  task: DecryptedTask;
+  task: Task;
   dryRun: boolean;
   validation: { valid: boolean; warnings: string[] };
 }
@@ -70,7 +70,7 @@ export async function createTask(
       }))
     : [];
 
-  const newTask: DecryptedTask = {
+  const newTask: Task = {
     id: taskId,
     title: input.title,
     description: input.description || '',
@@ -109,7 +109,7 @@ export async function createTask(
  * Update task result with dry-run information
  */
 export interface UpdateTaskResult {
-  task: DecryptedTask;
+  task: Task;
   dryRun: boolean;
   changes: string[];
   validation: { valid: boolean; warnings: string[] };
@@ -169,7 +169,7 @@ export async function updateTask(
     }
   }
 
-  const updatedTask: DecryptedTask = {
+  const updatedTask: Task = {
     ...currentTask,
     title: input.title ?? currentTask.title,
     description: input.description ?? currentTask.description,

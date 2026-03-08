@@ -4,8 +4,8 @@
  */
 
 import type { GsdConfig, PBTask } from '../types.js';
-import { decryptedTaskToPBFields } from '../types.js';
-import type { DecryptedTask } from '../types.js';
+import { taskToPBFields } from '../types.js';
+import type { Task } from '../types.js';
 import { getPocketBase } from '../pocketbase-client.js';
 import { getTaskCache } from '../cache.js';
 
@@ -37,12 +37,12 @@ export function deriveQuadrant(urgent: boolean, important: boolean): string {
  */
 export async function createTaskInPB(
   config: GsdConfig,
-  task: DecryptedTask,
+  task: Task,
   ownerId: string,
   deviceId: string
 ): Promise<void> {
   const pb = getPocketBase(config);
-  const fields = decryptedTaskToPBFields(task, ownerId, deviceId);
+  const fields = taskToPBFields(task, ownerId, deviceId);
 
   await pb.collection('tasks').create(fields);
 
@@ -55,14 +55,14 @@ export async function createTaskInPB(
  */
 export async function updateTaskInPB(
   config: GsdConfig,
-  task: DecryptedTask,
+  task: Task,
   ownerId: string,
   deviceId: string
 ): Promise<void> {
   const pb = getPocketBase(config);
   const pbRecordId = await findPBRecordId(config, task.id);
 
-  const fields = decryptedTaskToPBFields(task, ownerId, deviceId);
+  const fields = taskToPBFields(task, ownerId, deviceId);
   await pb.collection('tasks').update(pbRecordId, fields);
 
   // Invalidate cache after successful write

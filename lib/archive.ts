@@ -3,8 +3,6 @@
  *
  * Provides functions for archiving old completed tasks,
  * viewing archived tasks, and restoring tasks from archive.
- *
- * Simplified for PocketBase: no vector clock management.
  */
 
 import { getDb } from "@/lib/db";

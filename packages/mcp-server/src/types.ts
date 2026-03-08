@@ -35,8 +35,8 @@ export interface PBTask {
   updated: string; // PocketBase auto-field
 }
 
-// Decrypted task structure (matches GSD TaskRecord from frontend, camelCase)
-export interface DecryptedTask {
+// Task structure (matches GSD TaskRecord from frontend, camelCase)
+export interface Task {
   id: string;
   title: string;
   description: string;
@@ -101,10 +101,16 @@ export interface TaskStats {
   newestTask: string | null;
 }
 
+const VALID_RECURRENCES = new Set<Task['recurrence']>(['none', 'daily', 'weekly', 'monthly']);
+
+function isValidRecurrence(value: string): value is Task['recurrence'] {
+  return VALID_RECURRENCES.has(value as Task['recurrence']);
+}
+
 /**
- * Convert a PocketBase task record to frontend DecryptedTask format
+ * Convert a PocketBase task record to frontend Task format
  */
-export function pbTaskToDecryptedTask(pb: PBTask): DecryptedTask {
+export function pbTaskToTask(pb: PBTask): Task {
   return {
     id: pb.task_id,
     title: pb.title,
@@ -117,11 +123,11 @@ export function pbTaskToDecryptedTask(pb: PBTask): DecryptedTask {
     ...(pb.due_date ? { dueDate: pb.due_date } : {}),
     tags: pb.tags || [],
     subtasks: pb.subtasks || [],
-    recurrence: (pb.recurrence || 'none') as DecryptedTask['recurrence'],
+    recurrence: isValidRecurrence(pb.recurrence) ? pb.recurrence : 'none',
     dependencies: pb.dependencies || [],
     notificationEnabled: pb.notification_enabled ?? true,
-    notifyBefore: pb.notify_before || undefined,
-    estimatedMinutes: pb.estimated_minutes || undefined,
+    notifyBefore: pb.notify_before ?? undefined,
+    estimatedMinutes: pb.estimated_minutes ?? undefined,
     timeSpent: pb.time_spent ?? 0,
     timeEntries: pb.time_entries ?? [],
     createdAt: pb.client_created_at || pb.created,
@@ -130,10 +136,10 @@ export function pbTaskToDecryptedTask(pb: PBTask): DecryptedTask {
 }
 
 /**
- * Convert a DecryptedTask to PocketBase record fields for create/update
+ * Convert a Task to PocketBase record fields for create/update
  */
-export function decryptedTaskToPBFields(
-  task: DecryptedTask,
+export function taskToPBFields(
+  task: Task,
   ownerId: string,
   deviceId: string
 ): Partial<PBTask> {

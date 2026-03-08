@@ -4,10 +4,10 @@
 
 The following files contain sensitive credentials and should **NEVER** be committed to git:
 
-- `claude-config.json` - Contains real JWT tokens and passphrases
+- `claude-config.json` - Contains real JWT tokens
 - `test-*.sh` - Test scripts with hardcoded credentials
 - `debug-*.sh` - Debug scripts with hardcoded credentials
-- Any file with real tokens, passphrases, or secrets
+- Any file with real tokens or secrets
 
 These files are listed in `.gitignore` to prevent accidental commits.
 
@@ -16,12 +16,10 @@ These files are listed in `.gitignore` to prevent accidental commits.
 1. Copy the `.example` file:
    ```bash
    cp test-token.sh.example test-token.sh
-   cp debug-decryption.sh.example debug-decryption.sh
    ```
 
 2. Edit the copied file and replace placeholders:
    - `YOUR_JWT_TOKEN_HERE` → Your actual JWT token
-   - `YOUR_PASSPHRASE_HERE` → Your actual encryption passphrase
 
 3. **NEVER** commit the file without `.example` extension
 
@@ -38,7 +36,6 @@ Use `claude-config.example.json` as a template, but keep your real credentials i
 
 1. **Immediately revoke the exposed credentials**:
    - For JWT tokens: Log out and log back in to get a new token
-   - For passphrases: Change your encryption passphrase in GSD app settings
 
 2. **Remove from git history**:
    ```bash
@@ -62,4 +59,4 @@ Use `claude-config.example.json` as a template, but keep your real credentials i
 - ✅ Use different credentials for dev/staging/prod
 - ❌ Never hardcode credentials in committed code
 - ❌ Never share credentials in chat/email/Slack
-- ❌ Never commit files with real tokens/passphrases
+- ❌ Never commit files with real tokens

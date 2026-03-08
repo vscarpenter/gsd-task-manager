@@ -8,7 +8,7 @@
 cd /Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server
 
 # Set environment variables
-export GSD_API_URL="https://sync.gsd.vinny.dev"
+export GSD_POCKETBASE_URL="https://api.vinny.io"
 export GSD_AUTH_TOKEN="your-token-here"
 
 # Start server (will wait for MCP protocol input)
@@ -37,12 +37,12 @@ Create a test file `test-list-tools.json`:
 Then run:
 
 ```bash
-export GSD_API_URL="https://sync.gsd.vinny.dev"
+export GSD_POCKETBASE_URL="https://api.vinny.io"
 export GSD_AUTH_TOKEN="your-token"
 cat test-list-tools.json | node dist/index.js
 ```
 
-Expected: JSON response with 3 tools (get_sync_status, list_devices, get_task_stats)
+Expected: JSON response with available tools
 
 ### 3. Test Sync Status Tool
 
@@ -89,7 +89,6 @@ Ask Claude these questions to test each tool:
 What's my GSD sync status?
 When was my last sync?
 Do I have any conflicts?
-How much storage am I using?
 ```
 
 **Device List**:
@@ -113,8 +112,8 @@ What's my total task count?
 2. Ask for sync status
 3. Should get 401 error message
 
-**Wrong API URL**:
-1. Set GSD_API_URL to invalid URL
+**Wrong PocketBase URL**:
+1. Set GSD_POCKETBASE_URL to invalid URL
 2. Ask for device list
 3. Should get connection error
 
@@ -155,16 +154,15 @@ console.error('Response:', JSON.stringify(result));
 
 Rebuild and test.
 
-### Test API Directly
+### Test PocketBase API Directly
 
-Test Worker API without MCP:
+Test PocketBase API without MCP:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://sync.gsd.vinny.dev/api/sync/status
+curl https://api.vinny.io/api/health
 ```
 
-Should return sync status JSON.
+Should return health status JSON.
 
 ## Common Issues
 
@@ -175,13 +173,13 @@ Should return sync status JSON.
 - Check logs for startup errors
 
 ### Issue: 401 Unauthorized
-- Token expired - get fresh token
-- Token format incorrect - should start with `eyJ`
-- API URL wrong - check environment matches
+- Token expired - re-authenticate via OAuth
+- Token format incorrect
+- PocketBase URL wrong - check environment matches
 
 ### Issue: Tools return empty/null data
 - User might not have any synced tasks yet
-- Check Worker API is deployed and accessible
+- Check PocketBase is running and accessible
 - Verify database has data
 
 ### Issue: Module import errors
@@ -191,31 +189,8 @@ Should return sync status JSON.
 
 ## Success Criteria
 
-✅ Server starts without errors
-✅ Lists 3 tools when queried
-✅ get_sync_status returns valid data
-✅ list_devices returns array of devices
-✅ get_task_stats returns counts
-✅ Claude Desktop shows tools available
-✅ Claude can call tools and get responses
-✅ Error handling works (401, connection errors, etc.)
-
-## Next Steps
-
-After successful testing:
-
-1. Document your findings
-2. Try advanced queries with Claude
-3. Monitor performance and errors
-4. Suggest improvements
-5. Consider implementing decryption support
-
-## Known Limitations (v0.1.0)
-
-- No task content access (encrypted blobs)
-- Limited stats (derived from sync status)
-- Token must be manually refreshed
-- No write operations
-- Metadata only
-
-These are intentional for the PoC!
+- Server starts without errors
+- All tools return valid data when queried
+- Claude Desktop shows tools available
+- Claude can call tools and get responses
+- Error handling works (401, connection errors, etc.)

@@ -1,9 +1,9 @@
 /**
  * In-memory task caching layer
- * Reduces redundant API calls and decryption operations
+ * Reduces redundant API calls
  */
 
-import type { DecryptedTask } from './types.js';
+import type { Task } from './types.js';
 
 export interface CacheConfig {
   /** Time-to-live in milliseconds (default: 30 seconds) */
@@ -96,20 +96,20 @@ class TTLCache<T> {
  * Handles task list caching with automatic invalidation
  */
 class TaskCacheManager {
-  private taskListCache: TTLCache<DecryptedTask[]>;
-  private singleTaskCache: TTLCache<DecryptedTask>;
+  private taskListCache: TTLCache<Task[]>;
+  private singleTaskCache: TTLCache<Task>;
   private hitCount = 0;
   private missCount = 0;
 
   constructor(config: CacheConfig = DEFAULT_CACHE_CONFIG) {
-    this.taskListCache = new TTLCache<DecryptedTask[]>(config);
-    this.singleTaskCache = new TTLCache<DecryptedTask>(config);
+    this.taskListCache = new TTLCache<Task[]>(config);
+    this.singleTaskCache = new TTLCache<Task>(config);
   }
 
   /**
    * Get cached task list
    */
-  getTaskList(cacheKey: string): DecryptedTask[] | null {
+  getTaskList(cacheKey: string): Task[] | null {
     const result = this.taskListCache.get(cacheKey);
     if (result) {
       this.hitCount++;
@@ -122,7 +122,7 @@ class TaskCacheManager {
   /**
    * Cache task list
    */
-  setTaskList(cacheKey: string, tasks: DecryptedTask[]): void {
+  setTaskList(cacheKey: string, tasks: Task[]): void {
     this.taskListCache.set(cacheKey, tasks);
 
     // Also cache individual tasks for single-task lookups
@@ -134,7 +134,7 @@ class TaskCacheManager {
   /**
    * Get cached single task
    */
-  getTask(taskId: string): DecryptedTask | null {
+  getTask(taskId: string): Task | null {
     const result = this.singleTaskCache.get(taskId);
     if (result) {
       this.hitCount++;
@@ -147,7 +147,7 @@ class TaskCacheManager {
   /**
    * Cache single task
    */
-  setTask(task: DecryptedTask): void {
+  setTask(task: Task): void {
     this.singleTaskCache.set(task.id, task);
   }
 

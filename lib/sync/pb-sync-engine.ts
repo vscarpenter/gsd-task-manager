@@ -3,7 +3,6 @@
  *
  * Handles push (local → PocketBase) and pull (PocketBase → local) operations.
  * Uses last-write-wins (LWW) conflict resolution based on client_updated_at.
- * Replaces the old encrypted push/pull engine and vector clock system.
  */
 
 import { getPocketBase, getCurrentUserId } from './pocketbase-client';

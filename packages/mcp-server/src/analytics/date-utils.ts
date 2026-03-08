@@ -2,7 +2,7 @@
  * Date utility functions (no external dependencies)
  */
 
-import type { DecryptedTask } from '../tools.js';
+import type { Task } from '../tools.js';
 
 /**
  * Get start of day (00:00:00.000)
@@ -61,7 +61,7 @@ export function subDays(date: Date, days: number): Date {
 /**
  * Check if task is due today
  */
-export function isDueToday(task: DecryptedTask, today: Date): boolean {
+export function isDueToday(task: Task, today: Date): boolean {
   if (!task.dueDate) return false;
   const dueDate = startOfDay(new Date(task.dueDate));
   return dueDate.getTime() === today.getTime();
@@ -70,7 +70,7 @@ export function isDueToday(task: DecryptedTask, today: Date): boolean {
 /**
  * Check if task is due this week
  */
-export function isDueThisWeek(task: DecryptedTask, today: Date): boolean {
+export function isDueThisWeek(task: Task, today: Date): boolean {
   if (!task.dueDate) return false;
   const dueDate = new Date(task.dueDate);
   const weekEnd = new Date(today);

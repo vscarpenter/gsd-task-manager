@@ -1,7 +1,6 @@
 /**
  * Sync queue manager for offline operations
  * Tracks pending sync operations when offline.
- * Simplified for PocketBase — no vector clocks.
  */
 
 import { getDb } from '@/lib/db';

@@ -3,11 +3,11 @@ import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
 import { createMcpLogger } from '../utils/logger.js';
 import type {
   GsdConfig,
-  DecryptedTask,
+  Task,
   TaskFilters,
   PBTask,
 } from '../types.js';
-import { pbTaskToDecryptedTask } from '../types.js';
+import { pbTaskToTask } from '../types.js';
 
 const logger = createMcpLogger('LIST_TASKS');
 
@@ -18,7 +18,7 @@ const logger = createMcpLogger('LIST_TASKS');
 export async function listTasks(
   config: GsdConfig,
   filters?: TaskFilters
-): Promise<DecryptedTask[]> {
+): Promise<Task[]> {
   const cache = getTaskCache();
   const cacheKey = generateTaskListCacheKey(filters);
 
@@ -49,7 +49,7 @@ export async function listTasks(
 /**
  * Fetch all tasks from PocketBase collection
  */
-async function fetchTasks(config: GsdConfig): Promise<DecryptedTask[]> {
+async function fetchTasks(config: GsdConfig): Promise<Task[]> {
   const pb = getPocketBase(config);
 
   try {
@@ -59,7 +59,7 @@ async function fetchTasks(config: GsdConfig): Promise<DecryptedTask[]> {
 
     return records.map((record) => {
       try {
-        return pbTaskToDecryptedTask(record);
+        return pbTaskToTask(record);
       } catch (error) {
         logger.error(
           `Failed to map task ${record.id}`,
@@ -67,7 +67,7 @@ async function fetchTasks(config: GsdConfig): Promise<DecryptedTask[]> {
         );
         return null;
       }
-    }).filter((task): task is DecryptedTask => task !== null);
+    }).filter((task): task is Task => task !== null);
   } catch (error) {
     throw new Error(
       `Failed to fetch tasks from PocketBase\n\n` +
@@ -85,9 +85,9 @@ async function fetchTasks(config: GsdConfig): Promise<DecryptedTask[]> {
  * Apply filters to tasks
  */
 function applyTaskFilters(
-  tasks: DecryptedTask[],
+  tasks: Task[],
   filters?: TaskFilters
-): DecryptedTask[] {
+): Task[] {
   if (!filters) return tasks;
 
   return tasks.filter((task) => {

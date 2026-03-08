@@ -1,9 +1,6 @@
 /**
  * Sync notification handler
  * Provides user-friendly notifications for sync events and failures
- *
- * Simplified for PocketBase: removed conflict-specific notifications
- * since PocketBase uses last-write-wins (no manual conflict resolution).
  */
 
 import { toast } from 'sonner';

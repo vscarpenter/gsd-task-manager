@@ -1,8 +1,7 @@
 /**
  * Health Monitor - periodically checks sync health
  *
- * Simplified for PocketBase: checks stale queue operations and
- * PB server connectivity. Token management is handled by the SDK.
+ * Checks stale queue operations and PB server connectivity.
  */
 
 import { getSyncQueue } from './queue';

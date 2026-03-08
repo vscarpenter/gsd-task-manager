@@ -1,9 +1,8 @@
 /**
  * Sync-specific types for PocketBase backend
  *
- * Replaces the old Cloudflare Worker types (vector clocks, encrypted blobs,
- * push/pull request/response). PocketBase handles auth tokens and realtime
- * subscriptions internally via its SDK.
+ * PocketBase handles auth tokens and realtime subscriptions internally
+ * via its SDK.
  */
 
 import type { TaskRecord } from '@/lib/types';

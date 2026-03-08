@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task management** capabilities including create, read, update, and delete operations through Claude Desktop and other MCP-compatible AI assistants. All operations maintain end-to-end encryption.
+Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task management** capabilities including create, read, update, and delete operations through Claude Desktop and other MCP-compatible AI assistants. Communicates with a self-hosted PocketBase backend.
 
 ## Quick Start
 
@@ -22,9 +22,8 @@ The wizard will guide you through configuration and test your connection. Once c
       "command": "npx",
       "args": ["-y", "gsd-mcp-server"],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here",
-        "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "your-auth-token-here"
       }
     }
   }
@@ -50,8 +49,6 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ **Delete Tasks** - Permanently remove tasks (supports dryRun)
 - ✅ **Bulk Operations** - Update up to 50 tasks at once (supports dryRun)
 - 🔒 **Safety Features** - Bulk limits (50 tasks max), validation, dry-run preview
-- 🔐 **Encrypted Sync** - All changes encrypted before sending to server
-
 **Quick Start Helpers** (v0.3.2)
 - ✅ **6 Built-in Prompts** - One-click workflows (daily standup, weekly review, focus mode, etc.)
 - ✅ **Comprehensive Help Tool** - In-Claude documentation with topic filtering
@@ -77,18 +74,17 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Device management overview
 - ✅ Task statistics (metadata only)
 
-**Decrypted Task Access** (v0.2.0)
-- ✅ List all tasks with full content (opt-in, cached)
+**Task Access** (v0.2.0+)
+- ✅ List all tasks with full content (cached)
 - ✅ Search tasks by title, description, tags, subtasks
 - ✅ Filter by quadrant, completion status, tags
 - ✅ Get individual task details
-- 🔒 Privacy-first: Requires user-provided encryption passphrase
 - ✅ Full CRUD operations: Create, read, update, delete tasks (v0.4.0+)
 
 ## Prerequisites
 
 1. **GSD Task Manager** with sync enabled
-2. **OAuth Authentication** completed (Google or Apple)
+2. **OAuth Authentication** completed (Google or GitHub)
 3. **Node.js** 18+ installed
 4. **Claude Desktop** or another MCP-compatible client
 
@@ -111,16 +107,14 @@ npx gsd-mcp-server
 ```
 
 **Setup Wizard Features:**
-- ✅ Tests API connectivity before configuration
+- ✅ Tests PocketBase connectivity before configuration
 - ✅ Validates authentication token
-- ✅ Tests encryption passphrase (if provided)
 - ✅ Generates ready-to-use Claude Desktop config
 - ✅ Provides platform-specific config file paths
 
 **Validation Tool Features:**
 - ✅ Checks environment variables
-- ✅ Tests API connectivity and authentication
-- ✅ Verifies encryption setup
+- ✅ Tests PocketBase connectivity and authentication
 - ✅ Validates device registration
 - ✅ Provides actionable error messages
 
@@ -145,18 +139,12 @@ For development or if you want to modify the code:
 
 ### 1. Get Your Auth Token
 
-You'll need a JWT token from your GSD sync setup. Two options:
+You'll need an auth token from your PocketBase sync setup:
 
-**Option A: From Browser DevTools**
 1. Open GSD Task Manager in your browser
-2. Complete OAuth sign-in
+2. Complete OAuth sign-in (Google or GitHub)
 3. Open DevTools → Application → Local Storage
-4. Find `gsd_auth_token` and copy the value
-
-**Option B: From OAuth Callback** (Advanced)
-1. Trigger OAuth flow
-2. Intercept the callback response
-3. Extract the `token` field from the JSON response
+4. Find the PocketBase auth token and copy the value
 
 ### 2. Configure Claude Desktop
 
@@ -174,9 +162,8 @@ Add the MCP server to your Claude Desktop config:
       "command": "npx",
       "args": ["-y", "gsd-mcp-server"],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here",
-        "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "your-auth-token-here"
       }
     }
   }
@@ -194,9 +181,8 @@ Add the MCP server to your Claude Desktop config:
         "/absolute/path/to/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
-        "GSD_API_URL": "https://gsd.vinny.dev",
-        "GSD_AUTH_TOKEN": "your-jwt-token-here",
-        "GSD_ENCRYPTION_PASSPHRASE": "your-passphrase-here"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "your-auth-token-here"
       }
     }
   }
@@ -204,13 +190,8 @@ Add the MCP server to your Claude Desktop config:
 ```
 
 **Configuration Notes**:
-- Replace `your-jwt-token-here` with your actual token from Step 1
-- Replace `your-passphrase-here` with your sync encryption passphrase
-- `GSD_API_URL`: Use `https://gsd.vinny.dev` for production (or your custom Worker URL)
-- Token expires every 7 days - you'll need to update it periodically
-- **Optional**: Add `GSD_ENCRYPTION_PASSPHRASE` to enable decrypted task access (v0.2.0)
-  - Without it: Only metadata tools work (sync status, devices, stats)
-  - With it: Full task content access (list, search, read tasks)
+- Replace `your-auth-token-here` with your actual token from Step 1
+- `GSD_POCKETBASE_URL`: Your self-hosted PocketBase instance URL
 
 ### 3. Restart Claude Desktop
 
@@ -250,7 +231,7 @@ Once configured, you can ask Claude questions like:
 - "Give me task statistics"
 - "What's my storage usage?"
 
-**Decrypted Task Access** (v0.2.0 - requires passphrase)
+**Task Access** (v0.2.0+)
 - "List all my tasks"
 - "Show me tasks in the Do First quadrant"
 - "What tasks are due this week?"
@@ -259,7 +240,7 @@ Once configured, you can ask Claude questions like:
 - "What are my urgent tasks?"
 - "Find tasks mentioning [name or topic]"
 
-**Analytics & Insights** (v0.3.0 - requires passphrase)
+**Analytics & Insights** (v0.3.0)
 - "What's my productivity this week?"
 - "Show me my completion streak"
 - "Analyze my task distribution across quadrants"
@@ -288,7 +269,7 @@ Once configured, you can ask Claude questions like:
 - "Complete all tasks tagged #quick-wins"
 - "Change due date of task #def456 to next Monday"
 
-Claude will use the MCP tools to fetch real-time data from your Worker API and can now modify your tasks!
+Claude will use the MCP tools to fetch real-time data from your PocketBase backend and can now modify your tasks!
 
 ## Available Tools
 
@@ -349,7 +330,7 @@ Get task statistics (metadata only).
 ---
 
 ### `list_tasks` (v0.2.0)
-List all decrypted tasks with optional filtering. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+List all tasks with optional filtering. **Requires authentication**.
 
 **Parameters**:
 - `quadrant` (optional): Filter by quadrant ID
@@ -381,13 +362,12 @@ List all decrypted tasks with optional filtering. **Requires `GSD_ENCRYPTION_PAS
     "dependencies": [],
     "createdAt": "2024-12-26T00:00:00.000Z",
     "updatedAt": "2024-12-27T00:00:00.000Z",
-    "vectorClock": {}
   }
 ]
 ```
 
 ### `get_task` (v0.2.0)
-Get a single task by ID. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Get a single task by ID. **Requires authentication**.
 
 **Parameters**:
 - `taskId` (required): The unique ID of the task
@@ -395,7 +375,7 @@ Get a single task by ID. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
 **Returns**: Single task object (same structure as `list_tasks`)
 
 ### `search_tasks` (v0.2.0)
-Search tasks by text query across titles, descriptions, tags, and subtasks. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Search tasks by text query across titles, descriptions, tags, and subtasks. **Requires authentication**.
 
 **Parameters**:
 - `query` (required): Search text to match
@@ -405,7 +385,7 @@ Search tasks by text query across titles, descriptions, tags, and subtasks. **Re
 ---
 
 ### `get_productivity_metrics` (v0.3.0)
-Get comprehensive productivity metrics. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Get comprehensive productivity metrics. **Requires authentication**.
 
 **Returns**:
 ```json
@@ -434,7 +414,7 @@ Get comprehensive productivity metrics. **Requires `GSD_ENCRYPTION_PASSPHRASE`**
 ```
 
 ### `get_quadrant_analysis` (v0.3.0)
-Analyze task distribution and performance across quadrants. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Analyze task distribution and performance across quadrants. **Requires authentication**.
 
 **Returns**:
 ```json
@@ -452,7 +432,7 @@ Analyze task distribution and performance across quadrants. **Requires `GSD_ENCR
 ```
 
 ### `get_tag_analytics` (v0.3.0)
-Get statistics for all tags with usage and completion rates. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Get statistics for all tags with usage and completion rates. **Requires authentication**.
 
 **Parameters**:
 - `limit` (optional): Maximum number of tags to return
@@ -471,7 +451,7 @@ Get statistics for all tags with usage and completion rates. **Requires `GSD_ENC
 ```
 
 ### `get_upcoming_deadlines` (v0.3.0)
-Get tasks grouped by deadline urgency. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Get tasks grouped by deadline urgency. **Requires authentication**.
 
 **Returns**:
 ```json
@@ -483,7 +463,7 @@ Get tasks grouped by deadline urgency. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
 ```
 
 ### `get_task_insights` (v0.3.0)
-Generate AI-friendly summary of task insights. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Generate AI-friendly summary of task insights. **Requires authentication**.
 
 **Returns**: Plain text summary with key metrics, streaks, deadlines, and recommendations.
 
@@ -495,19 +475,14 @@ Validate MCP server configuration and diagnose issues.
 {
   "checks": [
     {
-      "name": "API Connectivity",
+      "name": "PocketBase Connectivity",
       "status": "success",
-      "details": "Connected to https://gsd.vinny.dev"
+      "details": "Connected to https://api.vinny.io"
     },
     {
       "name": "Authentication",
       "status": "success",
-      "details": "Token valid (3 devices registered)"
-    },
-    {
-      "name": "Encryption",
-      "status": "success",
-      "details": "Successfully decrypted 42 tasks"
+      "details": "Authenticated (3 devices registered)"
     }
   ]
 }
@@ -585,7 +560,7 @@ Get task cache statistics including hit rate, cache size, and TTL configuration.
 ## Write Operation Tools (v0.4.0, enhanced v0.6.0)
 
 ### `create_task`
-Create a new task with natural language input. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Create a new task with natural language input. **Requires authentication**.
 
 **Parameters**:
 - `title` (required): Task title
@@ -612,7 +587,7 @@ Create a task:
 ```
 
 ### `update_task`
-Update an existing task. All fields except ID are optional. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Update an existing task. All fields except ID are optional. **Requires authentication**.
 
 **Parameters**:
 - `id` (required): Task ID to update
@@ -638,7 +613,7 @@ Update task abc123:
 ```
 
 ### `complete_task`
-Mark a task as complete or incomplete. Quick shortcut for updating completion status. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Mark a task as complete or incomplete. Quick shortcut for updating completion status. **Requires authentication**.
 
 **Parameters**:
 - `id` (required): Task ID
@@ -653,7 +628,7 @@ Mark task xyz789 as complete
 ```
 
 ### `delete_task`
-Permanently delete a task. **This action cannot be undone.** **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Permanently delete a task. **This action cannot be undone.** **Requires authentication**.
 
 **Parameters**:
 - `id` (required): Task ID to delete
@@ -679,7 +654,7 @@ Delete task def456
 ```
 
 ### `bulk_update_tasks`
-Update multiple tasks at once. Limited to 50 tasks per operation for safety. **Requires `GSD_ENCRYPTION_PASSPHRASE`**.
+Update multiple tasks at once. Limited to 50 tasks per operation for safety. **Requires authentication**.
 
 **Parameters**:
 - `taskIds` (required): Array of task IDs to update (max 50)
@@ -719,50 +694,35 @@ Delete all completed tasks from last year
 
 ## Privacy & Security
 
-**What This Server Can Access** (varies by configuration):
-
-**Without `GSD_ENCRYPTION_PASSPHRASE` (v0.1.0 metadata-only)**:
+**What This Server Can Access** (when authenticated):
 - ✅ Sync metadata (timestamps, counts, status)
 - ✅ Device information (names, last seen)
-- ✅ Storage statistics
-- ❌ Task content (titles, descriptions, etc.)
-- ❌ Task details (quadrants, tags, due dates)
-
-**With `GSD_ENCRYPTION_PASSPHRASE` (v0.2.0+ full access)**:
-- ✅ All metadata (same as above)
-- ✅ Task titles and descriptions
-- ✅ Quadrant classifications, tags, due dates
-- ✅ Subtasks and checklists
-- ✅ Task dependencies
-- ✅ All decrypted task content
-- ✅ **Can create, update, and delete tasks** (v0.4.0+)
+- ✅ Task titles, descriptions, quadrants, tags, due dates
+- ✅ Subtasks, checklists, and task dependencies
+- ✅ **Can create, update, and delete tasks**
 
 **Security Model**:
-- 🔒 **End-to-end encryption maintained**: Tasks encrypted in database, decrypted locally
-- 🔒 **Zero-knowledge server**: Worker cannot decrypt your tasks
-- 🔒 **Passphrase stays local**: Never sent to server, stored only in Claude Desktop config
-- 🔒 **Opt-in decryption**: Decryption disabled by default, requires explicit passphrase
-- ✍️ **Write operations** (v0.4.0): Full task management with encryption
-- 🔐 **JWT authentication**: Uses existing OAuth tokens with 7-day expiry
+- 🔒 **Self-hosted backend**: Tasks stored on your own PocketBase instance
+- 🔒 **OAuth authentication**: PocketBase OAuth2 with Google and GitHub providers
+- 🔒 **API rules**: PocketBase enforces owner-based access (`owner = @request.auth.id`)
 - 🛡️ **Safety limits**: Bulk operations limited to 50 tasks, clear validation
-
-**See `DECRYPTION.md` for detailed security documentation.**
+- 🔍 **Dry-run mode**: Preview write operations before committing
 
 ## Troubleshooting
 
 ### "Configuration error: Required environment variables"
-- Check that `GSD_API_URL` and `GSD_AUTH_TOKEN` are set in your Claude Desktop config
+- Check that `GSD_POCKETBASE_URL` and `GSD_AUTH_TOKEN` are set in your Claude Desktop config
 - Ensure there are no typos in the environment variable names
 
 ### "API request failed: 401 Unauthorized"
-- Your JWT token has expired - get a new token from the OAuth flow
+- Your auth token has expired — re-authenticate via OAuth in the GSD app
 - Update the `GSD_AUTH_TOKEN` in your config
 - Restart Claude Desktop
 
 ### "API request failed: 404 Not Found"
-- Check that `GSD_API_URL` is correct
-- Ensure your Worker is deployed and accessible
-- Try accessing the URL in your browser: `{GSD_API_URL}/health`
+- Check that `GSD_POCKETBASE_URL` is correct
+- Ensure your PocketBase instance is running and accessible
+- Try accessing the URL in your browser: `{GSD_POCKETBASE_URL}/api/health`
 
 ### "Cannot find module" error
 - **If using npx**: Ensure you have internet connection (npx needs to download the package)
@@ -770,23 +730,6 @@ Delete all completed tasks from last year
   - Run `npm run build` to compile TypeScript
   - Check that the path in Claude config is absolute and correct
   - Verify that `dist/index.js` exists after building
-
-### "Encryption passphrase not provided" (v0.2.0)
-- This error appears when using decryption tools without the passphrase
-- Add `GSD_ENCRYPTION_PASSPHRASE` to your Claude Desktop config
-- Restart Claude Desktop after adding the passphrase
-
-### "Failed to fetch encryption salt" (v0.2.0)
-- The Worker endpoint for encryption salt is not accessible
-- Ensure Worker is deployed with v0.2.0+ (includes GET `/api/auth/encryption-salt`)
-- Check your JWT token is valid and not expired
-
-### "Decryption failed - passphrase is incorrect" (v0.2.0)
-- The provided passphrase doesn't match the one used to encrypt tasks
-- Double-check your passphrase (case-sensitive!)
-- You can view/reset your passphrase in GSD app Settings → Sync
-
-**See `TESTING_V0.2.md` for comprehensive testing and troubleshooting guide.**
 
 ## Development
 
@@ -802,9 +745,8 @@ npm run build
 
 **Testing Locally** (without Claude Desktop):
 ```bash
-export GSD_API_URL="https://gsd.vinny.dev"
-export GSD_AUTH_TOKEN="your-jwt-token"
-export GSD_ENCRYPTION_PASSPHRASE="your-passphrase"
+export GSD_POCKETBASE_URL="https://api.vinny.io"
+export GSD_AUTH_TOKEN="your-auth-token"
 npm start
 ```
 
@@ -813,10 +755,11 @@ Then send MCP protocol JSON over stdin (advanced).
 **Publishing to npm**:
 ```bash
 # Update version (patch/minor/major)
-npm version patch
+bun run version:patch   # or version:minor / version:major
 
-# Publish (requires 2FA code)
-npm publish --access public --otp=YOUR_CODE
+# Build and publish
+npm run build
+npm publish
 ```
 
 ## Future Enhancements
@@ -838,7 +781,6 @@ packages/mcp-server/
 ├── src/
 │   ├── index.ts           # MCP server setup, tool registration
 │   ├── tools.ts           # Backward-compatible re-exports
-│   ├── crypto.ts          # Encryption/decryption (v0.2.0)
 │   ├── cache.ts           # TTL-based in-memory cache (v0.6.0)
 │   ├── dependencies.ts    # Circular dependency validation (v0.6.0)
 │   ├── api/
@@ -859,7 +801,7 @@ packages/mcp-server/
 │   │       └── system-tools.ts   # 3 system tools
 │   ├── write-ops/         # Write operations (v0.6.0)
 │   │   ├── types.ts       # Input/output types
-│   │   ├── helpers.ts     # ID gen, encryption, sync push
+│   │   ├── helpers.ts     # ID gen, sync push
 │   │   ├── task-operations.ts  # CRUD with dry-run
 │   │   └── bulk-operations.ts  # Bulk updates
 │   ├── analytics/         # Analytics calculations
@@ -869,7 +811,6 @@ packages/mcp-server/
 ├── tsconfig.json
 ├── README.md              # This file
 ├── QUICKSTART.md          # Quick setup guide
-├── DECRYPTION.md          # Security documentation (v0.2.0)
 └── TESTING.md             # Testing procedures
 ```
 
@@ -877,7 +818,7 @@ packages/mcp-server/
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
 - `zod` - Runtime schema validation
 - `typescript` - Type safety
-- `node:crypto` (webcrypto) - AES-256-GCM encryption (v0.2.0)
+- `pocketbase` - PocketBase JS SDK
 - `vitest` - Testing framework (v0.6.0)
 
 **Communication Flow**:
@@ -885,19 +826,10 @@ packages/mcp-server/
 Claude Desktop
     ↓ MCP Protocol (stdio)
 GSD MCP Server
-    ├─ Metadata queries (v0.1.0)
-    │   ↓ HTTPS + JWT
-    │  GSD Worker API
-    │   ↓ D1 Queries
-    │  Metadata (counts, status)
-    │
-    └─ Decryption queries (v0.2.0)
-        ↓ HTTPS + JWT
-       GSD Worker API
-        ↓ D1 Queries
-       Encrypted Task Blobs
-        ↓ Local decryption (AES-256-GCM)
-       Decrypted Tasks → Claude
+    ↓ PocketBase JS SDK (HTTPS)
+PocketBase (self-hosted)
+    ↓ SQLite
+Tasks (plaintext, owner-scoped)
 ```
 
 ## Contributing
@@ -942,11 +874,11 @@ MIT - Same as GSD Task Manager
 - v0.4.0 - Write operations (create, update, delete)
 - v0.3.2 - Built-in prompts, help tool
 - v0.3.0 - Interactive setup, analytics, validation
-- v0.2.0 - Decrypted task access
+- v0.2.0 - Full task access
 - v0.1.0 - Metadata-only access
 
-**Privacy**: Opt-in decryption with local passphrase
-**Security**: E2E encryption maintained, zero-knowledge server
+**Privacy**: Self-hosted PocketBase backend, owner-scoped API rules
+**Security**: OAuth authentication, owner-based access control
 **Capabilities**: Full CRUD task management with natural language interface
 **Reliability**: Automatic retry, caching, dry-run preview (v0.6.0)
 **Deployment**: Published to npm ✅ | Production ready ✅ | All tests passed ✅

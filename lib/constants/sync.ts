@@ -1,9 +1,6 @@
 /**
  * Sync-related constants
  * Centralizes sync configuration values for consistency and maintenance
- *
- * Simplified for PocketBase: removed ENCRYPTION_CONFIG and TOKEN_CONFIG
- * (PocketBase SDK handles token management internally)
  */
 
 /**
