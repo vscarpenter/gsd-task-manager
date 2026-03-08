@@ -77,8 +77,8 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
               <FeatureBox
                 icon={<CloudIcon className="h-4 w-4" />}
                 title="Cloud Sync (Optional)"
-                description="Sync your tasks across all your devices with end-to-end encryption. Sign in with Google or Apple, create a separate encryption passphrase, and your tasks will sync bidirectionally between all devices. Your passphrase never leaves your device - only you can decrypt your data."
-                tip="Same email + same passphrase = all your tasks everywhere!"
+                description="Sync your tasks across all your devices. Sign in with Google or GitHub, and your tasks will sync bidirectionally between all devices via your self-hosted PocketBase server."
+                tip="Same account = all your tasks everywhere!"
               />
             </div>
           </section>
@@ -131,7 +131,7 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
               <Tip text="Break large Q2 projects into smaller subtasks for momentum" />
               <Tip text="Export your tasks regularly as a backup" />
               <Tip text="Data is stored locally by default - enable cloud sync to access tasks on all devices" />
-              <Tip text="Cloud sync uses end-to-end encryption - only you can decrypt your tasks" />
+              <Tip text="Cloud sync stores data on your self-hosted PocketBase server" />
             </div>
           </section>
 

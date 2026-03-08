@@ -1,11 +1,18 @@
 "use client";
 
+import { SyncProvider } from "@/lib/sync/sync-provider";
+
 /**
  * Client-side layout wrapper
  *
- * Simplified for PocketBase: OAuth callback handling is done
- * by the PocketBase SDK internally, so no OAuthCallbackHandler needed.
+ * Mounts the SyncProvider so sync lifecycle (health monitor,
+ * background sync, status polling) is managed once at the app
+ * level instead of per-component.
  */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <SyncProvider>
+      {children}
+    </SyncProvider>
+  );
 }

@@ -38,8 +38,8 @@ export function StepFinal() {
           <div className="flex items-center gap-2">
             <CloudIcon className="h-4 w-4 text-blue-500" />
             <p>
-              <strong>Optional Cloud Sync:</strong> End-to-end encrypted (AES-256).
-              We can't read your tasks.
+              <strong>Optional Cloud Sync:</strong> Syncs to your self-hosted
+              PocketBase server with owner-based access rules.
             </p>
           </div>
         </div>

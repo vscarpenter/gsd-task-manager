@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { XIcon, CloudIcon } from "lucide-react";
 import { OAuthButtons } from "@/components/sync/oauth-buttons";
-import { logout, type AuthState } from "@/lib/sync/pb-auth";
+import { type AuthState } from "@/lib/sync/pb-auth";
+import { getSyncStatus, disableSync } from "@/lib/sync/config";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { toast } from "sonner";
 import { getDb } from "@/lib/db";
@@ -26,6 +27,8 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
     provider?: string | null;
   } | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -104,27 +107,25 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
   };
 
   const handleLogout = async () => {
+    // Check for pending sync operations before logging out
+    const status = await getSyncStatus();
+    if (status.pendingCount > 0) {
+      setPendingChanges(status.pendingCount);
+      setShowLogoutConfirm(true);
+      return;
+    }
+
+    await performLogout();
+  };
+
+  const performLogout = async () => {
     setIsLoading(true);
     try {
-      logout();
-
-      const db = getDb();
-      await db.syncQueue.clear();
-
-      const existingConfig = await db.syncMetadata.get("sync_config") as PBSyncConfig | undefined;
-      if (existingConfig) {
-        await db.syncMetadata.put({
-          ...existingConfig,
-          enabled: false,
-          userId: null,
-          email: null,
-          provider: null,
-          lastSyncAt: null,
-        });
-      }
+      await disableSync();
 
       setSyncStatus({ enabled: false, email: null });
       setError(null);
+      setShowLogoutConfirm(false);
       toast.success("Logged out successfully");
       onSuccess?.();
     } catch (err) {
@@ -197,6 +198,33 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
               >
                 {isLoading ? "Logging out..." : "Logout"}
               </Button>
+
+              {showLogoutConfirm && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                  <p className="mb-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                    You have {pendingChanges} unsynchronized {pendingChanges === 1 ? 'change' : 'changes'}.
+                    Logging out will discard them.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="subtle"
+                      onClick={() => setShowLogoutConfirm(false)}
+                      disabled={isLoading}
+                      className="flex-1 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={performLogout}
+                      disabled={isLoading}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-xs"
+                    >
+                      Logout Anyway
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <>

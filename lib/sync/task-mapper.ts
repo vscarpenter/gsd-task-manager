@@ -7,7 +7,6 @@
  */
 
 import type { TaskRecord, Subtask, TimeEntry } from '@/lib/types';
-import type { QuadrantId, RecurrenceType } from '@/lib/types';
 import type { RecordModel } from 'pocketbase';
 import { z } from 'zod';
 import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
@@ -107,17 +106,16 @@ const pbTaskRecordSchema = z.object({
  * Validates the remote data with Zod before mapping to catch
  * malformed or unexpected payloads at the sync boundary.
  */
-export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord {
+export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord | null {
   const parsed = pbTaskRecordSchema.safeParse(record);
 
   if (!parsed.success) {
-    logger.warn('PocketBase record failed validation, falling back to raw mapping', {
+    logger.error('PocketBase record failed validation, skipping', undefined, {
       taskId: record['task_id'] as string,
       errors: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '),
     });
 
-    // Fall back to raw mapping for resilience (don't break sync over validation)
-    return rawPocketBaseToTaskRecord(record);
+    return null;
   }
 
   const r = parsed.data;
@@ -146,32 +144,3 @@ export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord {
   };
 }
 
-/**
- * Raw mapping fallback when Zod validation fails.
- * Preserves existing behavior for resilience.
- */
-function rawPocketBaseToTaskRecord(record: RecordModel): TaskRecord {
-  return {
-    id: record['task_id'] as string,
-    title: record['title'] as string,
-    description: (record['description'] as string) || '',
-    urgent: record['urgent'] as boolean,
-    important: record['important'] as boolean,
-    quadrant: record['quadrant'] as QuadrantId,
-    dueDate: (record['due_date'] as string) || undefined,
-    completed: record['completed'] as boolean,
-    completedAt: (record['completed_at'] as string) || undefined,
-    createdAt: record['client_created_at'] as string,
-    updatedAt: record['client_updated_at'] as string,
-    recurrence: (record['recurrence'] as RecurrenceType) || 'none',
-    tags: (record['tags'] as string[]) ?? [],
-    subtasks: (record['subtasks'] as Subtask[]) ?? [],
-    dependencies: (record['dependencies'] as string[]) ?? [],
-    notificationEnabled: (record['notification_enabled'] as boolean) ?? true,
-    notifyBefore: (record['notify_before'] as number) ?? undefined,
-    notificationSent: false,
-    estimatedMinutes: (record['estimated_minutes'] as number) ?? undefined,
-    timeSpent: (record['time_spent'] as number) ?? 0,
-    timeEntries: (record['time_entries'] as TimeEntry[]) ?? [],
-  };
-}

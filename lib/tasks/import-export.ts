@@ -106,6 +106,20 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       await db.tasks.bulkAdd(tasksToImport);
     }
   });
+
+  // Enqueue imported tasks for sync (if sync is enabled)
+  const { getSyncConfig } = await import("@/lib/sync/config");
+  const { getSyncQueue } = await import("@/lib/sync/queue");
+  const { scheduleSyncAfterChange } = await import("@/lib/tasks/crud/helpers");
+  const syncConfig = await getSyncConfig();
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    const importedTasks = await db.tasks.toArray();
+    for (const task of (mode === "replace" ? importedTasks : parsed.tasks)) {
+      await queue.enqueue('create', task.id, task);
+    }
+    scheduleSyncAfterChange();
+  }
 }
 
 /**

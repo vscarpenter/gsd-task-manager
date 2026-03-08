@@ -64,10 +64,14 @@ export async function archiveOldTasks(
 
   const now = new Date().toISOString();
 
-  // Enqueue delete operations for sync before archiving
-  const queue = getSyncQueue();
-  for (const task of tasksToArchive) {
-    await queue.enqueue('delete', task.id, task);
+  // Enqueue delete operations for sync (only if sync is enabled)
+  const { getSyncConfig } = await import("@/lib/sync/config");
+  const syncConfig = await getSyncConfig();
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    for (const task of tasksToArchive) {
+      await queue.enqueue('delete', task.id, task);
+    }
   }
 
   // Move tasks to archive table
@@ -111,9 +115,13 @@ export async function restoreTask(taskId: string): Promise<void> {
   // Move back to main tasks table
   await db.tasks.add(taskWithoutArchive);
 
-  // Enqueue update operation for sync
-  const queue = getSyncQueue();
-  await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive);
+  // Enqueue update operation for sync (only if sync is enabled)
+  const { getSyncConfig } = await import("@/lib/sync/config");
+  const syncConfig = await getSyncConfig();
+  if (syncConfig?.enabled) {
+    const queue = getSyncQueue();
+    await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive);
+  }
 
   // Remove from archive
   await db.archivedTasks.delete(taskId);

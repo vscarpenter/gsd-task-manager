@@ -43,7 +43,7 @@ async function getDeviceId(): Promise<string> {
  * Fetch all existing remote task_ids for the current user in one request.
  * Returns a Map of task_id → PocketBase record id for efficient lookups.
  */
-async function fetchRemoteTaskIndex(ownerId: string): Promise<Map<string, string>> {
+async function fetchRemoteTaskIndex(ownerId: string): Promise<{ index: Map<string, string>; fetchSucceeded: boolean }> {
   const pb = getPocketBase();
   const index = new Map<string, string>();
 
@@ -55,12 +55,11 @@ async function fetchRemoteTaskIndex(ownerId: string): Promise<Map<string, string
     for (const r of records) {
       index.set(r['task_id'] as string, r.id);
     }
+    return { index, fetchSucceeded: true };
   } catch {
-    // If the fetch fails (e.g. empty collection), return empty index
     logger.warn('Could not fetch remote task index; will check individually');
+    return { index, fetchSucceeded: false };
   }
-
-  return index;
 }
 
 /**
@@ -72,6 +71,7 @@ export interface PushResult {
   pushedCount: number;
   failedCount: number;
   lastError: string | null;
+  authenticated: boolean;
 }
 
 export async function pushLocalChanges(): Promise<PushResult> {
@@ -81,16 +81,16 @@ export async function pushLocalChanges(): Promise<PushResult> {
 
   if (!ownerId) {
     logger.warn('Push skipped: not authenticated');
-    return { pushedCount: 0, failedCount: 0, lastError: null };
+    return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: false };
   }
 
   const pending = await queue.getPending();
-  if (pending.length === 0) return { pushedCount: 0, failedCount: 0, lastError: null };
+  if (pending.length === 0) return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
 
   const deviceId = await getDeviceId();
 
   // Pre-fetch all remote records in one request to avoid N individual lookups
-  const remoteIndex = await fetchRemoteTaskIndex(ownerId);
+  const { index: remoteIndex, fetchSucceeded: indexFetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
   let pushedCount = 0;
   let failedCount = 0;
   let lastError: string | null = null;
@@ -119,8 +119,16 @@ export async function pushLocalChanges(): Promise<PushResult> {
         if (pbRecordId) {
           await pb.collection('tasks').delete(pbRecordId);
           remoteIndex.delete(item.taskId);
+        } else if (!indexFetchSucceeded) {
+          // Index fetch failed — cannot confirm task doesn't exist remotely
+          // Skip dequeue so the delete retries on next sync
+          logger.warn('Skipping delete dequeue: remote index unavailable', { taskId: item.taskId });
+          failedCount++;
+          lastError = 'Remote index unavailable for delete verification';
+          await queue.incrementRetry(item.id);
+          continue;
         }
-        // If not found remotely, nothing to delete — still dequeue
+        // If index fetched successfully and task not found, safe to dequeue
       }
 
       await queue.dequeue(item.id);
@@ -142,7 +150,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
   }
 
   logger.info('Push completed', { pushedCount, failedCount, total: pending.length });
-  return { pushedCount, failedCount, lastError };
+  return { pushedCount, failedCount, lastError, authenticated: true };
 }
 
 /**
@@ -150,14 +158,14 @@ export async function pushLocalChanges(): Promise<PushResult> {
  * Fetches tasks updated after the last sync timestamp.
  * LWW: remote wins if remote client_updated_at >= local updatedAt.
  */
-export async function pullRemoteChanges(lastSyncAt: string | null): Promise<number> {
+export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const pb = getPocketBase();
   const db = getDb();
   const ownerId = getCurrentUserId();
 
   if (!ownerId) {
     logger.warn('Pull skipped: not authenticated');
-    return 0;
+    return { pulledCount: 0, authenticated: false, maxObservedTimestamp: null };
   }
 
   // Build filter: tasks owned by this user, optionally updated since last sync
@@ -172,17 +180,20 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<numb
   });
 
   let pulledCount = 0;
-
+  let skippedCount = 0;
   for (const record of records) {
     const remoteTask = pocketBaseToTaskRecord(record);
+    if (!remoteTask) {
+      skippedCount++;
+      continue;
+    }
+
     const localTask = await db.tasks.get(remoteTask.id);
 
     if (!localTask) {
-      // New task from another device — insert locally
       await db.tasks.add(remoteTask);
       pulledCount++;
     } else {
-      // LWW: remote wins if its client_updated_at is newer or equal
       const remoteTime = new Date(remoteTask.updatedAt).getTime();
       const localTime = new Date(localTask.updatedAt).getTime();
 
@@ -193,30 +204,50 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<numb
     }
   }
 
-  // Handle remote deletions: tasks in local DB but not in PocketBase
-  if (!lastSyncAt) {
-    await reconcileDeletedTasks(records);
+  if (skippedCount > 0) {
+    logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }
 
+  // Track the maximum observed client_updated_at for cursor advancement
+  let maxObservedTimestamp: string | null = null;
+  for (const record of records) {
+    const clientUpdatedAt = record['client_updated_at'] as string;
+    if (clientUpdatedAt && (!maxObservedTimestamp || clientUpdatedAt > maxObservedTimestamp)) {
+      maxObservedTimestamp = clientUpdatedAt;
+    }
+  }
+
+  // Handle remote deletions on every sync by comparing full remote index
+  // For incremental syncs, `records` only contains recently changed tasks,
+  // so we need to fetch the complete remote task ID set for deletion detection
+  await reconcileDeletedTasks(ownerId);
+
   logger.info('Pull completed', { pulledCount, fetched: records.length });
-  return pulledCount;
+  return { pulledCount, authenticated: true, maxObservedTimestamp };
 }
 
 /**
- * During full sync, remove local tasks that no longer exist remotely
+ * Remove local tasks that no longer exist remotely.
+ * Fetches the complete remote task ID index and compares against local tasks.
+ * Tasks with pending sync operations are preserved (they may not be on the server yet).
  */
-async function reconcileDeletedTasks(remoteRecords: RecordModel[]): Promise<void> {
+async function reconcileDeletedTasks(ownerId: string): Promise<void> {
+  const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
+
+  // If we couldn't fetch the remote index, skip deletion to avoid data loss
+  if (!fetchSucceeded) {
+    logger.warn('Skipping deletion reconciliation: remote index unavailable');
+    return;
+  }
+
   const db = getDb();
   const localTasks = await db.tasks.toArray();
-  const remoteTaskIds = new Set(remoteRecords.map(r => r['task_id'] as string));
-
-  // Only delete tasks that have been synced before (have no pending queue items)
+  const remoteTaskIds = new Set(remoteIndex.keys());
   const queue = getSyncQueue();
 
   for (const local of localTasks) {
     if (!remoteTaskIds.has(local.id)) {
       const pendingOps = await queue.getForTask(local.id);
-      // If no pending ops, the task was deleted remotely
       if (pendingOps.length === 0) {
         await db.tasks.delete(local.id);
         logger.debug('Deleted locally: task removed from server', { taskId: local.id });
@@ -242,6 +273,10 @@ export async function applyRemoteChange(
   }
 
   const remoteTask = pocketBaseToTaskRecord(record);
+  if (!remoteTask) {
+    logger.warn('Realtime change skipped: invalid record', { action });
+    return;
+  }
 
   if (action === 'create') {
     const existing = await db.tasks.get(remoteTask.id);
@@ -275,37 +310,50 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
 
     // Push first, then pull
     const pushResult = await pushLocalChanges();
-    const pulledCount = await pullRemoteChanges(lastSyncAt);
+    const pullResult = await pullRemoteChanges(lastSyncAt);
 
-    // Update last sync timestamp
-    const now = new Date().toISOString();
-    if (config) {
-      await db.syncMetadata.put({ ...config, lastSyncAt: now });
+    // If neither push nor pull was authenticated, treat as auth error
+    if (!pushResult.authenticated && !pullResult.authenticated) {
+      const authError = new Error('Sync skipped: not authenticated');
+      await retryManager.recordFailure(authError);
+      const duration = Date.now() - startTime;
+      await recordSyncError(authError.message, deviceId, triggeredBy, duration);
+      notifySyncError('Please sign in to sync your tasks', false);
+      return { status: 'error', error: authError.message };
     }
 
-    await retryManager.recordSuccess();
-    const duration = Date.now() - startTime;
+    // Update last sync cursor using server-observed timestamps (not client clock)
+    if (config) {
+      const newCursor = pullResult.maxObservedTimestamp ?? config.lastSyncAt ?? null;
+      await db.syncMetadata.put({ ...config, lastSyncAt: newCursor });
+    }
 
-    await recordSyncSuccess(pushResult.pushedCount, pulledCount, 0, deviceId, triggeredBy, duration);
+    const duration = Date.now() - startTime;
 
     // Report partial failures when some items failed to push
     if (pushResult.failedCount > 0) {
       const errorMsg = `${pushResult.failedCount} item(s) failed to sync: ${pushResult.lastError}`;
+      // Do NOT record success on partial failure
+      await retryManager.recordFailure(new Error(errorMsg));
+      await recordSyncSuccess(pushResult.pushedCount, pullResult.pulledCount, 0, deviceId, triggeredBy, duration);
       notifySyncError(errorMsg, false);
       return {
         status: 'partial',
         pushedCount: pushResult.pushedCount,
-        pulledCount,
+        pulledCount: pullResult.pulledCount,
         failedCount: pushResult.failedCount,
         error: errorMsg,
       };
     }
 
-    if (pushResult.pushedCount > 0 || pulledCount > 0) {
-      notifySyncSuccess(pushResult.pushedCount, pulledCount);
+    await retryManager.recordSuccess();
+    await recordSyncSuccess(pushResult.pushedCount, pullResult.pulledCount, 0, deviceId, triggeredBy, duration);
+
+    if (pushResult.pushedCount > 0 || pullResult.pulledCount > 0) {
+      notifySyncSuccess(pushResult.pushedCount, pullResult.pulledCount);
     }
 
-    return { status: 'success', pushedCount: pushResult.pushedCount, pulledCount };
+    return { status: 'success', pushedCount: pushResult.pushedCount, pulledCount: pullResult.pulledCount };
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
     await retryManager.recordFailure(errorObj);

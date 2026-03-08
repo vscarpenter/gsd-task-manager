@@ -11,14 +11,16 @@ import type { AuthState } from '@/lib/sync/pb-auth';
 // Hoisted mocks
 const {
   mockGetDb,
-  mockLogout,
   mockGetSyncQueue,
+  mockDisableSync,
+  mockGetSyncStatus,
   mockToastSuccess,
   mockToastError,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
-  mockLogout: vi.fn(),
   mockGetSyncQueue: vi.fn(),
+  mockDisableSync: vi.fn().mockResolvedValue(undefined),
+  mockGetSyncStatus: vi.fn().mockResolvedValue({ enabled: false, pendingCount: 0 }),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
 }));
@@ -29,7 +31,12 @@ vi.mock('@/lib/db', () => ({
 }));
 
 vi.mock('@/lib/sync/pb-auth', () => ({
-  logout: () => mockLogout(),
+  logout: vi.fn(),
+}));
+
+vi.mock('@/lib/sync/config', () => ({
+  getSyncStatus: (...args: unknown[]) => mockGetSyncStatus(...args),
+  disableSync: (...args: unknown[]) => mockDisableSync(...args),
 }));
 
 vi.mock('@/lib/sync/queue', () => ({
@@ -91,6 +98,7 @@ describe('SyncAuthDialog', () => {
       },
       syncQueue: {
         clear: vi.fn().mockResolvedValue(undefined),
+        count: vi.fn().mockResolvedValue(0),
       },
     };
     mockGetDb.mockReturnValue(mockDb);
@@ -400,14 +408,13 @@ describe('SyncAuthDialog', () => {
       await user.click(screen.getByRole('button', { name: /logout/i }));
 
       await waitFor(() => {
-        expect(mockLogout).toHaveBeenCalled();
-        expect(mockDb.syncQueue.clear).toHaveBeenCalled();
+        expect(mockDisableSync).toHaveBeenCalled();
         expect(mockToastSuccess).toHaveBeenCalledWith('Logged out successfully');
         expect(onSuccess).toHaveBeenCalled();
       });
     });
 
-    it('should update sync config on logout', async () => {
+    it('should call disableSync on logout (unified flow)', async () => {
       const user = userEvent.setup();
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
@@ -419,23 +426,15 @@ describe('SyncAuthDialog', () => {
       await user.click(screen.getByRole('button', { name: /logout/i }));
 
       await waitFor(() => {
-        expect(mockDb.syncMetadata.put).toHaveBeenCalledWith(
-          expect.objectContaining({
-            enabled: false,
-            userId: null,
-            email: null,
-            provider: null,
-            lastSyncAt: null,
-          })
-        );
+        expect(mockDisableSync).toHaveBeenCalled();
       });
     });
 
     it('should show loading state during logout', async () => {
       const user = userEvent.setup();
 
-      // Make the syncQueue.clear slow so we can catch loading state
-      mockDb.syncQueue.clear.mockImplementation(
+      // Make disableSync slow so we can catch loading state
+      mockDisableSync.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
 
@@ -453,8 +452,8 @@ describe('SyncAuthDialog', () => {
     it('should disable logout button while logging out', async () => {
       const user = userEvent.setup();
 
-      // Make the syncQueue.clear slow
-      mockDb.syncQueue.clear.mockImplementation(
+      // Make disableSync slow
+      mockDisableSync.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
 
@@ -473,10 +472,8 @@ describe('SyncAuthDialog', () => {
     it('should handle logout error', async () => {
       const user = userEvent.setup();
 
-      // Make logout throw an error
-      mockLogout.mockImplementation(() => {
-        throw new Error('Logout failed');
-      });
+      // Make disableSync throw an error
+      mockDisableSync.mockRejectedValueOnce(new Error('Logout failed'));
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
@@ -490,6 +487,26 @@ describe('SyncAuthDialog', () => {
         const errorElement = screen.getByText('Logout failed');
         expect(errorElement).toBeInTheDocument();
         expect(errorElement.closest('div')).toHaveClass('bg-red-50');
+      });
+    });
+
+    it('should show pending changes warning when there are unsynced changes', async () => {
+      const user = userEvent.setup();
+
+      // Simulate pending changes
+      mockGetSyncStatus.mockResolvedValueOnce({ enabled: true, pendingCount: 3, email: 'test@example.com' });
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: /logout/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/3 unsynchronized changes/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Logout Anyway/i })).toBeInTheDocument();
       });
     });
   });
