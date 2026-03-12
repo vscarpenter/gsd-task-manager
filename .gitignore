@@ -68,3 +68,10 @@ worker/secrets.txt
 worker/secrets-dev.txt
 *SETUP_GUIDE.md
 gitleaks-report.json
+
+# Test coverage
+coverage/
+
+# IDE settings
+.vscode/
+
