@@ -16,6 +16,8 @@ const {
   mockGetSyncStatus,
   mockToastSuccess,
   mockToastError,
+  mockIsAuthenticated,
+  mockRefreshAuth,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockGetSyncQueue: vi.fn(),
@@ -23,6 +25,8 @@ const {
   mockGetSyncStatus: vi.fn().mockResolvedValue({ enabled: false, pendingCount: 0 }),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockIsAuthenticated: vi.fn().mockReturnValue(true),
+  mockRefreshAuth: vi.fn().mockResolvedValue(true),
 }));
 
 // Mock modules
@@ -32,6 +36,11 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/sync/pb-auth', () => ({
   logout: vi.fn(),
+  refreshAuth: (...args: unknown[]) => mockRefreshAuth(...args),
+}));
+
+vi.mock('@/lib/sync/pocketbase-client', () => ({
+  isAuthenticated: () => mockIsAuthenticated(),
 }));
 
 vi.mock('@/lib/sync/config', () => ({
@@ -89,6 +98,10 @@ describe('SyncAuthDialog', () => {
     vi.clearAllMocks();
     capturedOnSuccess = undefined;
     capturedOnError = undefined;
+
+    // Default: token is valid
+    mockIsAuthenticated.mockReturnValue(true);
+    mockRefreshAuth.mockResolvedValue(true);
 
     // Setup mock database
     mockDb = {
@@ -507,6 +520,83 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         expect(screen.getByText(/3 unsynchronized changes/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Logout Anyway/i })).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Expired Session State', () => {
+    beforeEach(() => {
+      // Config exists in IndexedDB but PB token is expired
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: true,
+        email: 'test@example.com',
+        provider: 'google',
+      });
+      mockIsAuthenticated.mockReturnValue(false);
+    });
+
+    it('should attempt token refresh when token is expired', async () => {
+      mockRefreshAuth.mockResolvedValue(false);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(mockRefreshAuth).toHaveBeenCalled();
+      });
+    });
+
+    it('should show session expired UI when refresh fails', async () => {
+      mockRefreshAuth.mockResolvedValue(false);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Session expired')).toBeInTheDocument();
+        expect(screen.getByText(/Your session for test@example.com has expired/)).toBeInTheDocument();
+      });
+    });
+
+    it('should show OAuth buttons for re-login when session expired', async () => {
+      mockRefreshAuth.mockResolvedValue(false);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('oauth-buttons')).toBeInTheDocument();
+      });
+    });
+
+    it('should show disconnect option when session expired', async () => {
+      mockRefreshAuth.mockResolvedValue(false);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /disconnect account instead/i })).toBeInTheDocument();
+      });
+    });
+
+    it('should show normal signed-in view when refresh succeeds', async () => {
+      mockRefreshAuth.mockResolvedValue(true);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Signed in as')).toBeInTheDocument();
+        expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      });
+    });
+
+    it('should show subtitle as "Session expired" when token is invalid', async () => {
+      mockRefreshAuth.mockResolvedValue(false);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      // The subtitle under "Sync Settings" should read "Session expired"
+      await waitFor(() => {
+        const subtitles = screen.getAllByText('Session expired');
+        expect(subtitles.length).toBeGreaterThanOrEqual(1);
       });
     });
   });
