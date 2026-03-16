@@ -18,6 +18,7 @@ export interface SyncStatus {
   isRunning: boolean;
   pendingRequests: number;
   lastSyncAt: string | null;
+  lastSuccessfulSyncAt: string | null;
   lastError: string | null;
   retryCount: number;
   nextRetryAt: number | null;
@@ -87,6 +88,7 @@ export class SyncCoordinator {
       isRunning: this.isRunning,
       pendingRequests: this.pendingRequests.length,
       lastSyncAt: config?.lastSyncAt ?? null,
+      lastSuccessfulSyncAt: config?.lastSuccessfulSyncAt ?? null,
       lastError: (this.lastResult?.status === 'error' || this.lastResult?.status === 'partial')
         ? this.lastResult.error || null
         : null,

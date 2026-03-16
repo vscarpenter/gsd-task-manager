@@ -108,6 +108,7 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
       email: authState.email,
       provider: authState.provider,
       lastSyncAt: null,
+      lastSuccessfulSyncAt: null,
       consecutiveFailures: 0,
       lastFailureAt: null,
       lastFailureReason: null,

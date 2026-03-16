@@ -88,6 +88,7 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 				email: null,
 				provider: null,
 				lastSyncAt: null,
+				lastSuccessfulSyncAt: null,
 				consecutiveFailures: 0,
 				lastFailureAt: null,
 				lastFailureReason: null,

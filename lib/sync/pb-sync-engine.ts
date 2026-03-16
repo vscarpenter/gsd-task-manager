@@ -325,7 +325,11 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     // Update last sync cursor using server-observed timestamps (not client clock)
     if (config) {
       const newCursor = pullResult.maxObservedTimestamp ?? config.lastSyncAt ?? null;
-      await db.syncMetadata.put({ ...config, lastSyncAt: newCursor });
+      await db.syncMetadata.put({
+        ...config,
+        lastSyncAt: newCursor,
+        lastSuccessfulSyncAt: new Date().toISOString(),
+      });
     }
 
     const duration = Date.now() - startTime;
