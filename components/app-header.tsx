@@ -83,7 +83,7 @@ export function AppHeader({
       const { getSyncCoordinator } = await import('@/lib/sync/sync-coordinator');
       const coordinator = getSyncCoordinator();
       const status = await coordinator.getStatus();
-      setLastSyncTime(status.lastSyncAt);
+      setLastSyncTime(status.lastSuccessfulSyncAt);
     };
 
     updateLastSync();

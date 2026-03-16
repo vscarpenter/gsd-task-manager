@@ -20,6 +20,8 @@ export interface PBSyncConfig {
   email: string | null;
   provider: string | null;
   lastSyncAt: string | null;
+  /** ISO timestamp of the last successful sync operation (for UI display) */
+  lastSuccessfulSyncAt: string | null;
   // Retry tracking fields
   consecutiveFailures: number;
   lastFailureAt: number | null;

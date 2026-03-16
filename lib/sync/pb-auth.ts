@@ -80,6 +80,31 @@ export function isLoggedIn(): boolean {
 }
 
 /**
+ * Attempt to refresh the auth token.
+ *
+ * PocketBase JWTs expire client-side, but the server session may still be
+ * valid. This calls the server to exchange the current (possibly expired)
+ * token for a fresh one. Returns true if the refresh succeeded.
+ */
+export async function refreshAuth(): Promise<boolean> {
+  const pb = getPocketBase();
+
+  // Nothing to refresh if there's no token at all
+  if (!pb.authStore.token) return false;
+
+  try {
+    await pb.collection('users').authRefresh();
+    logger.info('Auth token refreshed successfully');
+    return true;
+  } catch (error) {
+    logger.warn('Auth token refresh failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/**
  * Get current auth state snapshot
  */
 export function getAuthState(): AuthState {
