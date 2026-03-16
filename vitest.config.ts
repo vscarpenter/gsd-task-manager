@@ -9,6 +9,12 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./vitest.setup.ts",
     css: true,
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.claude/worktrees/**",
+      "**/packages/mcp-server/**"
+    ],
     coverage: {
       enabled: false, // Only enable when --coverage flag is passed
       reporter: ["text", "lcov", "html", "json-summary"],

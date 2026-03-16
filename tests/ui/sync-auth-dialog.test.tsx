@@ -552,7 +552,8 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Session expired')).toBeInTheDocument();
+        const sessionExpiredElements = screen.getAllByText('Session expired');
+        expect(sessionExpiredElements.length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText(/Your session for test@example.com has expired/)).toBeInTheDocument();
       });
     });
