@@ -41,7 +41,7 @@ sync.md
 # Build info
 .build-info.json
 .build-env.sh
-.claude/settings.local.json
+.claude/
 
 *.tsbuildinfo
 
