@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { XIcon, CloudIcon } from "lucide-react";
 import { OAuthButtons } from "@/components/sync/oauth-buttons";
-import { type AuthState } from "@/lib/sync/pb-auth";
+import { type AuthState, refreshAuth } from "@/lib/sync/pb-auth";
+import { isAuthenticated } from "@/lib/sync/pocketbase-client";
 import { getSyncStatus, disableSync } from "@/lib/sync/config";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { toast } from "sonner";
@@ -29,12 +30,14 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
   const [mounted, setMounted] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(0);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Load sync status when dialog opens
+  // Load sync status when dialog opens — cross-check PocketBase token validity
   useEffect(() => {
     let cancelled = false;
 
@@ -44,18 +47,41 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
 
       if (cancelled) return;
 
-      if (config) {
+      if (config?.enabled) {
+        const tokenValid = isAuthenticated();
+
+        if (!tokenValid) {
+          // Token expired — attempt a silent refresh before showing expired UI
+          setIsRefreshing(true);
+          const refreshed = await refreshAuth();
+          if (cancelled) return;
+          setIsRefreshing(false);
+
+          if (refreshed) {
+            // Refresh succeeded — session is still valid
+            setSessionExpired(false);
+          } else {
+            // Refresh failed — session is truly expired
+            setSessionExpired(true);
+          }
+        } else {
+          setSessionExpired(false);
+        }
+
         setSyncStatus({
-          enabled: !!config.enabled,
+          enabled: true,
           email: config.email || null,
           provider: config.provider || undefined,
         });
       } else {
         setSyncStatus({ enabled: false, email: null });
+        setSessionExpired(false);
       }
     };
 
     if (isOpen) {
+      setShowLogoutConfirm(false);
+      setSessionExpired(false);
       loadStatus();
     }
 
@@ -159,7 +185,11 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
               <div>
                 <h2 className="text-xl font-semibold text-foreground">Sync Settings</h2>
                 <p className="text-sm text-foreground-muted">
-                  {syncStatus?.enabled ? "Manage your sync account" : "Enable cloud sync"}
+                  {syncStatus?.enabled && sessionExpired
+                    ? "Session expired"
+                    : syncStatus?.enabled
+                      ? "Manage your sync account"
+                      : "Enable cloud sync"}
                 </p>
               </div>
             </div>
@@ -172,7 +202,54 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
             </button>
           </div>
 
-          {syncStatus?.enabled ? (
+          {isRefreshing ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+              <span className="ml-3 text-sm text-foreground-muted">Checking session...</span>
+            </div>
+          ) : syncStatus?.enabled && sessionExpired ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+                <p className="mb-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+                  Session expired
+                </p>
+                <p className="text-sm text-amber-600 dark:text-amber-300">
+                  Your session for {syncStatus.email} has expired.
+                  Sign in again to continue syncing.
+                </p>
+              </div>
+
+              {error && (
+                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <OAuthButtons
+                onStart={() => {
+                  setError(null);
+                  setIsLoading(true);
+                }}
+                onSuccess={handleOAuthSuccess}
+                onError={(err) => {
+                  setIsLoading(false);
+                  setError(err.message);
+                  toast.error(err.message);
+                }}
+              />
+
+              <div className="border-t border-card-border pt-3">
+                <Button
+                  onClick={handleLogout}
+                  disabled={isLoading}
+                  variant="ghost"
+                  className="w-full text-sm text-foreground-muted"
+                >
+                  {isLoading ? "Logging out..." : "Disconnect account instead"}
+                </Button>
+              </div>
+            </div>
+          ) : syncStatus?.enabled ? (
             <div className="space-y-4">
               <div className="rounded-lg bg-background-muted p-4">
                 <p className="mb-1 text-sm text-foreground-muted">Signed in as</p>
