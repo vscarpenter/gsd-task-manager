@@ -7,12 +7,7 @@ const nextConfig: NextConfig = {
     unoptimized: true
   },
   typedRoutes: true,
-  reactCompiler: true,
-  experimental: {
-    turbopackUseSystemTlsCerts: true
-  }
-  // Note: Turbopack in Next.js 16 has built-in caching enabled by default
-  // No additional configuration needed for file system caching
+  reactCompiler: true
 
   // IMPORTANT: Security headers cannot be set here for static exports
   // They must be configured at the CDN/hosting level (CloudFront, Netlify, Vercel, etc.)

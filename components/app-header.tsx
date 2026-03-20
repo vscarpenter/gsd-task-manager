@@ -142,7 +142,7 @@ export function AppHeader({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
+      <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border/60 bg-background/70 px-6 py-4 backdrop-blur-xl backdrop-saturate-150">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <GsdLogo className="shrink-0" />

@@ -31,9 +31,21 @@
   /* Card colors */
   --card-background: 255 255 255;      /* #ffffff */
   --card-border: 226 232 240;          /* #e2e8f0 */
-  
+
   /* Overlay colors */
   --overlay: 0 0 0;                    /* #000000 with opacity */
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-column: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-fab: 0 8px 30px rgba(99, 102, 241, 0.4);
+
+  /* Quadrant gradients */
+  --gradient-focus: linear-gradient(135deg, #3b82f6, #6366f1);
+  --gradient-schedule: linear-gradient(135deg, #f59e0b, #ef4444);
+  --gradient-delegate: linear-gradient(135deg, #10b981, #06b6d4);
+  --gradient-eliminate: linear-gradient(135deg, #8b5cf6, #ec4899);
 }
 
 .dark {
@@ -66,9 +78,21 @@
   /* Card colors */
   --card-background: 30 41 59;         /* #1e293b */
   --card-border: 51 65 85;             /* #334155 */
-  
+
   /* Overlay colors */
   --overlay: 0 0 0;                    /* #000000 with opacity */
+
+  /* Shadows - darker for dark mode */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
+  --shadow-column: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
+  --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
+
+  /* Quadrant gradients - slightly muted for dark mode */
+  --gradient-focus: linear-gradient(135deg, #2563eb, #4f46e5);
+  --gradient-schedule: linear-gradient(135deg, #d97706, #dc2626);
+  --gradient-delegate: linear-gradient(135deg, #059669, #0891b2);
+  --gradient-eliminate: linear-gradient(135deg, #7c3aed, #db2777);
 }
 
 body {
@@ -123,7 +147,43 @@ main {
   }
 
   .matrix-card {
-    @apply rounded-2xl border border-card-border bg-card p-6 shadow-sm;
+    @apply relative rounded-2xl border border-card-border bg-card p-6 overflow-hidden;
+    box-shadow: var(--shadow-column);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .matrix-card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Gradient accent bar at top of each quadrant */
+  .matrix-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 1rem 1rem 0 0;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+  }
+
+  .matrix-card:hover::before {
+    opacity: 1;
+  }
+
+  .matrix-card.bg-quadrant-focus::before {
+    background: var(--gradient-focus);
+  }
+  .matrix-card.bg-quadrant-schedule::before {
+    background: var(--gradient-schedule);
+  }
+  .matrix-card.bg-quadrant-delegate::before {
+    background: var(--gradient-delegate);
+  }
+  .matrix-card.bg-quadrant-eliminate::before {
+    background: var(--gradient-eliminate);
   }
 
   .matrix-card__header {

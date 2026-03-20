@@ -7,6 +7,7 @@ export interface QuadrantMeta {
   accentClass: string;
   bgClass: string;
   colorClass: string;
+  iconColor: string;
 }
 
 export const quadrants: QuadrantMeta[] = [
@@ -14,33 +15,37 @@ export const quadrants: QuadrantMeta[] = [
     id: "urgent-important",
     title: "Do First",
     subtitle: "High urgency, high impact tasks",
-    accentClass: "bg-blue-100 text-blue-700",
+    accentClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     bgClass: "bg-quadrant-focus",
-    colorClass: "bg-blue-500"
+    colorClass: "bg-blue-500",
+    iconColor: "text-blue-500 dark:text-blue-400"
   },
   {
     id: "not-urgent-important",
     title: "Schedule",
     subtitle: "Plan meaningful progress",
-    accentClass: "bg-yellow-100 text-yellow-700",
+    accentClass: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     bgClass: "bg-quadrant-schedule",
-    colorClass: "bg-amber-500"
+    colorClass: "bg-amber-500",
+    iconColor: "text-amber-500 dark:text-amber-400"
   },
   {
     id: "urgent-not-important",
     title: "Delegate",
     subtitle: "Hand off quick wins",
-    accentClass: "bg-green-100 text-green-700",
+    accentClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     bgClass: "bg-quadrant-delegate",
-    colorClass: "bg-emerald-500"
+    colorClass: "bg-emerald-500",
+    iconColor: "text-emerald-500 dark:text-emerald-400"
   },
   {
     id: "not-urgent-not-important",
     title: "Eliminate",
     subtitle: "Reduce noise and distractors",
-    accentClass: "bg-purple-100 text-purple-700",
+    accentClass: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
     bgClass: "bg-quadrant-eliminate",
-    colorClass: "bg-purple-500"
+    colorClass: "bg-purple-500",
+    iconColor: "text-purple-500 dark:text-purple-400"
   }
 ];
 

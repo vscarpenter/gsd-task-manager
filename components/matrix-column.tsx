@@ -3,10 +3,18 @@
 import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { FlameIcon, CalendarIcon, UsersIcon, TrashIcon } from "lucide-react";
 import type { QuadrantMeta } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
 import { cn } from "@/lib/utils";
+
+const quadrantIcons: Record<string, typeof FlameIcon> = {
+  "urgent-important": FlameIcon,
+  "not-urgent-important": CalendarIcon,
+  "urgent-not-important": UsersIcon,
+  "not-urgent-not-important": TrashIcon
+};
 
 interface MatrixColumnProps {
   quadrant: QuadrantMeta;
@@ -62,20 +70,26 @@ function MatrixColumnComponent({
       )}
     >
       <header className="matrix-card__header">
-        <div>
-          <h2 className="matrix-card__title">{quadrant.title}</h2>
-          <p className="matrix-card__subtitle">{quadrant.subtitle}</p>
+        <div className="flex items-center gap-3">
+          {(() => {
+            const Icon = quadrantIcons[quadrant.id];
+            return Icon ? <Icon className={cn("h-5 w-5 shrink-0", quadrant.iconColor)} /> : null;
+          })()}
+          <div>
+            <h2 className="matrix-card__title">{quadrant.title}</h2>
+            <p className="matrix-card__subtitle">{quadrant.subtitle}</p>
+          </div>
         </div>
-        <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", quadrant.accentClass)}>
-          {tasks.length} task{tasks.length === 1 ? "" : "s"}
+        <span className={cn("rounded-full px-3 py-1 text-xs font-semibold tabular-nums", quadrant.accentClass)}>
+          {tasks.length}
         </span>
       </header>
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {tasks.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border bg-background/50 p-4 text-sm text-foreground-muted">
-              Nothing here yet - drop something that matches this quadrant.
+            <p className="rounded-xl border border-dashed border-border/60 bg-background/30 p-4 text-center text-sm text-foreground-muted/70 italic">
+              Drop tasks here to get started
             </p>
           ) : (
             tasks.map((task) => (

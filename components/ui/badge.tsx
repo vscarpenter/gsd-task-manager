@@ -1,12 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type BadgeVariant = "default" | "outline" | "ghost";
+type BadgeVariant = "default" | "outline" | "ghost" | "accent";
 
 const variantClasses: Record<BadgeVariant, string> = {
   default: "bg-white/10 text-white",
   outline: "border border-white/20 text-white",
-  ghost: "bg-transparent text-white"
+  ghost: "bg-transparent text-white",
+  accent: "bg-accent/10 text-accent border border-accent/20"
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
