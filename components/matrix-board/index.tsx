@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { DndContext } from "@dnd-kit/core";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SearchIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
@@ -238,8 +238,9 @@ export function MatrixBoard() {
         {/* Floating Action Button - Mobile Only */}
         <button
           onClick={() => dialogs.setDialogState({ mode: "create" })}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-all hover:bg-accent-hover active:scale-95 md:hidden touch-manipulation"
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white transition-all duration-200 hover:bg-accent-hover hover:scale-105 active:scale-95 md:hidden touch-manipulation"
           style={{
+            boxShadow: 'var(--shadow-fab)',
             paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))"
           }}
           aria-label="Create new task"
@@ -253,10 +254,13 @@ export function MatrixBoard() {
           {!hasTasks ? (
             <MatrixEmptyState onCreateTask={() => dialogs.setDialogState({ mode: "create" })} />
           ) : visibleCount === 0 ? (
-            <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
-              <h2 className="text-lg font-semibold text-foreground">No tasks match &ldquo;{searchQuery}&rdquo;.</h2>
+            <div className="mx-auto max-w-xl rounded-3xl border border-border/60 bg-background-muted/50 p-10 text-center backdrop-blur-sm" style={{ boxShadow: 'var(--shadow-column)' }}>
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+                <SearchIcon className="h-6 w-6 text-accent" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">No tasks match &ldquo;{searchQuery}&rdquo;</h2>
               <p className="mt-2 text-sm text-foreground-muted">Try a different search term or clear the filter.</p>
-              <Button className="mt-4" variant="subtle" onClick={() => setSearchQuery("")}>
+              <Button className="mt-5" variant="subtle" onClick={() => setSearchQuery("")}>
                 Clear search
               </Button>
             </div>

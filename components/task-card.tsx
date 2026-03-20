@@ -31,7 +31,8 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : undefined
+    opacity: isDragging ? 0.5 : undefined,
+    boxShadow: isDragging ? 'var(--shadow-card-hover)' : 'var(--shadow-card)'
   };
 
   return (
@@ -44,10 +45,10 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
       }}
       style={style}
       className={cn(
-        "group flex flex-col gap-2 rounded-lg border bg-card p-3 shadow-sm transition",
-        task.completed ? "opacity-60" : "opacity-100",
+        "group flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200",
+        task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5",
         isDragging && "cursor-grabbing",
-        taskIsOverdue ? "border-red-300 bg-red-50/50" : "border-card-border",
+        taskIsOverdue ? "border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30" : "border-card-border",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}
@@ -89,12 +90,12 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           type="button"
           onClick={() => onToggleComplete(task, !task.completed)}
           className={cn(
-            "button-reset flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase transition",
+            "button-reset flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase transition-all duration-200",
             "h-7 w-7 md:h-7 md:w-7",
             "sm:h-9 sm:w-9",
             task.completed
-              ? "border-accent bg-accent/10 text-accent"
-              : "border-border text-foreground-muted hover:border-accent hover:text-accent"
+              ? "border-emerald-400 bg-emerald-500/15 text-emerald-600 dark:border-emerald-500 dark:text-emerald-400 scale-100"
+              : "border-border text-foreground-muted hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-110"
           )}
           aria-pressed={task.completed}
           aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
@@ -109,7 +110,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           {task.tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
+              className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
             >
               <TagIcon className="h-2.5 w-2.5" />
               {tag}
@@ -121,13 +122,19 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
       {/* Subtasks progress */}
       {totalSubtasks > 0 ? (
         <div className="flex items-center gap-2 text-xs">
-          <div className="flex-1 h-1.5 rounded-full bg-background-muted overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full bg-background-muted/80 overflow-hidden">
             <div
-              className="h-full bg-accent transition-all"
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                completedSubtasks === totalSubtasks ? "bg-emerald-500" : "bg-accent"
+              )}
               style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
             />
           </div>
-          <span className="shrink-0 text-foreground-muted">
+          <span className={cn(
+            "shrink-0 tabular-nums",
+            completedSubtasks === totalSubtasks ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-foreground-muted"
+          )}>
             {completedSubtasks}/{totalSubtasks}
           </span>
         </div>
@@ -170,12 +177,12 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
       <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
         <div className="flex items-center gap-2">
           {taskIsOverdue ? (
-            <span className="flex items-center gap-1 text-red-600 font-medium">
+            <span className="flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-950/40 px-2 py-0.5 text-red-600 dark:text-red-400 font-medium">
               <AlertCircleIcon className="h-3 w-3" />
               Overdue
             </span>
           ) : taskIsDueToday ? (
-            <span className="flex items-center gap-1 text-amber-600 font-medium">
+            <span className="flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-amber-600 dark:text-amber-400 font-medium">
               <AlertCircleIcon className="h-3 w-3" />
               Due today
             </span>
@@ -193,7 +200,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
             <button
               type="button"
               onClick={() => onShare(task)}
-              className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation"
+              className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
               aria-label="Share task"
             >
               <Share2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
@@ -203,7 +210,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
             <button
               type="button"
               onClick={() => onDuplicate(task)}
-              className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation"
+              className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
               aria-label="Duplicate task"
             >
               <CopyIcon className="h-4 w-4 sm:h-3 sm:w-3" />
@@ -215,7 +222,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           <button
             type="button"
             onClick={() => onEdit(task)}
-            className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation"
+            className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
             aria-label="Edit task"
           >
             <PencilIcon className="h-4 w-4 sm:h-3 sm:w-3" />
@@ -223,7 +230,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           <button
             type="button"
             onClick={() => onDelete(task)}
-            className="rounded p-2 sm:px-1.5 sm:py-0.5 text-red-600 hover:bg-red-50 hover:text-red-700 touch-manipulation"
+            className="rounded p-2 sm:px-1.5 sm:py-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 touch-manipulation transition-colors"
             aria-label="Delete task"
           >
             <Trash2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
