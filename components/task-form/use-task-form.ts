@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
+import { useStore } from "@tanstack/react-store";
 import { z } from "zod";
 import type { TaskDraft } from "@/lib/types";
 import {
@@ -19,7 +21,7 @@ export const defaultValues: TaskDraft = {
   tags: [],
   subtasks: [],
   dependencies: [],
-  notifyBefore: 15, // Default to 15 minutes before
+  notifyBefore: 15,
   notificationEnabled: true
 };
 
@@ -34,38 +36,21 @@ export function useTaskForm({
   onSubmit,
   onCancel
 }: UseTaskFormProps) {
-  const [values, setValues] = useState<TaskDraft>({
-    ...defaultValues,
-    ...initialValues
-  });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>(
     isoToTimeInput(initialValues.dueDate)
   );
 
-  const updateField = <Key extends keyof TaskDraft>(
-    key: Key,
-    value: TaskDraft[Key]
-  ) => {
-    setValues((current) => ({ ...current, [key]: value }));
-  };
+  const form = useForm({
+    defaultValues: {
+      ...defaultValues,
+      ...initialValues
+    } as TaskDraft,
+  });
 
-  const updateTime = (newTime: string) => {
-    setSelectedTime(newTime);
-    if (values.dueDate) {
-      const nextIso = dateTimeInputToIso(
-        isoToDateInput(values.dueDate),
-        newTime
-      );
-      updateField("dueDate", nextIso);
-    }
-  };
-
-  const updateDate = (newDate: string) => {
-    const nextIso = dateTimeInputToIso(newDate, selectedTime);
-    updateField("dueDate", nextIso);
-  };
+  // Subscribe to store changes to trigger re-renders when field values change
+  const formState = useStore(form.store, (s) => s.values);
 
   const FIELD_ERROR_KEYS: ReadonlySet<keyof FormErrors> = new Set([
     "title", "description", "dueDate", "tags", "subtasks"
@@ -95,15 +80,44 @@ export function useTaskForm({
     return fieldErrors;
   };
 
+  const values = formState;
+
+  const updateField = <Key extends keyof TaskDraft>(
+    key: Key,
+    value: TaskDraft[Key]
+  ) => {
+    form.setFieldValue(
+      key as Parameters<typeof form.setFieldValue>[0],
+      value as never
+    );
+  };
+
+  const updateTime = (newTime: string) => {
+    setSelectedTime(newTime);
+    if (values.dueDate) {
+      const nextIso = dateTimeInputToIso(
+        isoToDateInput(values.dueDate),
+        newTime
+      );
+      updateField("dueDate", nextIso);
+    }
+  };
+
+  const updateDate = (newDate: string) => {
+    const nextIso = dateTimeInputToIso(newDate, selectedTime);
+    updateField("dueDate", nextIso);
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
     setErrors({});
 
     try {
+      const currentValues = form.state.values;
       const normalized: TaskDraft = {
-        ...values,
-        dueDate: dateTimeInputToIso(isoToDateInput(values.dueDate), selectedTime)
+        ...currentValues,
+        dueDate: dateTimeInputToIso(isoToDateInput(currentValues.dueDate), selectedTime)
       };
       const validated = taskDraftSchema.parse({
         ...normalized,
@@ -133,6 +147,7 @@ export function useTaskForm({
     updateField,
     updateTime,
     updateDate,
-    handleSubmit
+    handleSubmit,
+    form,
   };
 }
