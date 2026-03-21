@@ -11,6 +11,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { ClientLayout } from "@/components/client-layout";
+import { QueryProvider } from "@/components/query-provider";
 
 // Local fonts for better offline PWA support and reliability
 const inter = localFont({
@@ -81,15 +82,17 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>
-              <TooltipProvider>
-                <ClientLayout>
-                  {children}
-                </ClientLayout>
-                <PwaRegister />
-                <InstallPwaPrompt />
-                <PwaUpdateToast />
-                <Toaster richColors position="top-center" />
-              </TooltipProvider>
+              <QueryProvider>
+                <TooltipProvider>
+                  <ClientLayout>
+                    {children}
+                  </ClientLayout>
+                  <PwaRegister />
+                  <InstallPwaPrompt />
+                  <PwaUpdateToast />
+                  <Toaster richColors position="top-center" />
+                </TooltipProvider>
+              </QueryProvider>
             </ToastProvider>
           </ThemeProvider>
         </ErrorBoundary>
