@@ -4,6 +4,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js';
 import { loadConfig } from './server/config.js';
 import { createServer, registerHandlers } from './server/setup.js';
+import { createMcpLogger } from './utils/logger.js';
+
+const logger = createMcpLogger('SERVER');
 
 /**
  * GSD Task Manager MCP Server
@@ -49,7 +52,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('GSD MCP Server running on stdio');
+  logger.info('GSD MCP Server running on stdio');
 }
 
 main().catch((error) => {

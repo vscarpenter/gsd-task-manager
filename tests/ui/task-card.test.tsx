@@ -25,6 +25,10 @@ vi.mock("@dnd-kit/utilities", () => ({
 }));
 
 describe("TaskCard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const mockTask: TaskRecord = {
     id: "task-1",
     title: "Test Task",

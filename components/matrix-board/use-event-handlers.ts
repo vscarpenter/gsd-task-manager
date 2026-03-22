@@ -5,10 +5,39 @@
 import { useCallback, useEffect, type RefObject } from "react";
 import { getPinnedSmartViews } from "@/lib/smart-views";
 import { notificationChecker } from "@/lib/notification-checker";
+import { UI_TIMING } from "@/lib/constants/ui";
 import type { FilterCriteria, SmartView } from "@/lib/filters";
 
 interface TaskHighlightRefs {
   taskRefs: RefObject<Map<string, HTMLElement>>;
+}
+
+/**
+ * Scroll to a task element and temporarily highlight it.
+ * Consolidates the repeated scroll+highlight pattern used by
+ * both command palette highlighting and URL highlight params.
+ */
+function scrollToAndHighlightTask(
+  taskId: string,
+  setHighlightedTaskId: (id: string | null) => void,
+  taskRefs: RefObject<Map<string, HTMLElement>>,
+  onClearExtras?: () => void,
+): void {
+  setHighlightedTaskId(taskId);
+
+  // Scroll to task after render
+  setTimeout(() => {
+    const taskElement = taskRefs.current?.get(taskId);
+    if (taskElement) {
+      taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, UI_TIMING.SCROLL_TO_TASK_DELAY_MS);
+
+  // Clear highlight after animation completes
+  setTimeout(() => {
+    setHighlightedTaskId(null);
+    onClearExtras?.();
+  }, UI_TIMING.TASK_HIGHLIGHT_DURATION_MS);
 }
 
 /**
@@ -60,21 +89,7 @@ export function useTaskHighlighting(
 ): void {
   useEffect(() => {
     const handleHighlightTask = (event: CustomEvent<{ taskId: string }>) => {
-      const taskId = event.detail.taskId;
-      setHighlightedTaskId(taskId);
-
-      // Scroll to task after render
-      setTimeout(() => {
-        const taskElement = refs.taskRefs.current?.get(taskId);
-        if (taskElement) {
-          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 100);
-
-      // Clear highlight after animation completes
-      setTimeout(() => {
-        setHighlightedTaskId(null);
-      }, 3000);
+      scrollToAndHighlightTask(event.detail.taskId, setHighlightedTaskId, refs.taskRefs);
     };
 
     window.addEventListener("highlightTask", handleHighlightTask as EventListener);
@@ -123,21 +138,12 @@ export function useUrlHighlightParam(
     const highlightId = params.get("highlight");
 
     if (highlightId) {
-      setHighlightedTaskId(highlightId);
-
-      // Wait for tasks to render, then scroll to highlighted task
-      setTimeout(() => {
-        const taskElement = refs.taskRefs.current?.get(highlightId);
-        if (taskElement) {
-          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 100);
-
-      // Clear highlight after animation completes
-      setTimeout(() => {
-        setHighlightedTaskId(null);
-        window.history.replaceState({}, "", window.location.pathname);
-      }, 3000);
+      scrollToAndHighlightTask(
+        highlightId,
+        setHighlightedTaskId,
+        refs.taskRefs,
+        () => window.history.replaceState({}, "", window.location.pathname),
+      );
     }
   }, [allTasksLength, setHighlightedTaskId, refs.taskRefs]);
 }

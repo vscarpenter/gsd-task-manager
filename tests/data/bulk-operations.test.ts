@@ -29,7 +29,7 @@ describe('Bulk Operations', () => {
     urgent: false,
     important: false,
     completed,
-    createdAt: Date.now(),
+    createdAt: new Date().toISOString(),
     tags,
     subtasks: [],
     dependencies: [],

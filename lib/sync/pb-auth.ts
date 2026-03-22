@@ -36,7 +36,6 @@ export async function loginWithProvider(provider: OAuthProvider): Promise<AuthSt
     logger.info('OAuth login successful', {
       provider,
       userId: authData.record.id,
-      email: authData.record.email,
     });
 
     return {

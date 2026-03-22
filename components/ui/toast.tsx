@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { TOAST_DURATION } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
 
@@ -42,7 +43,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const showToast = (message: string, action?: Toast["action"], duration = 5000) => {
+  const showToast = (message: string, action?: Toast["action"], duration: number = TOAST_DURATION.LONG) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     const toast: Toast = { id, message, action, duration };
     setToasts((prev) => [...prev, toast]);

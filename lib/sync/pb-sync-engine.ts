@@ -181,14 +181,27 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pu
 
   let pulledCount = 0;
   let skippedCount = 0;
-  for (const record of records) {
-    const remoteTask = pocketBaseToTaskRecord(record);
+
+  // Pre-fetch all local tasks that might match remote records to avoid N individual lookups
+  const remoteTasks = records.map(pocketBaseToTaskRecord);
+  const validRemoteIds = remoteTasks
+    .filter((t): t is NonNullable<typeof t> => t !== null)
+    .map(t => t.id);
+  const localTasksForPull = await db.tasks.bulkGet(validRemoteIds);
+  const localTaskMap = new Map(
+    localTasksForPull
+      .filter((t): t is NonNullable<typeof t> => t !== undefined)
+      .map(t => [t.id, t])
+  );
+
+  for (let i = 0; i < records.length; i++) {
+    const remoteTask = remoteTasks[i];
     if (!remoteTask) {
       skippedCount++;
       continue;
     }
 
-    const localTask = await db.tasks.get(remoteTask.id);
+    const localTask = localTaskMap.get(remoteTask.id);
 
     if (!localTask) {
       await db.tasks.add(remoteTask);
@@ -245,10 +258,16 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   const remoteTaskIds = new Set(remoteIndex.keys());
   const queue = getSyncQueue();
 
+  // Pre-fetch all pending sync operations grouped by taskId to avoid N individual lookups
+  const allPendingOps = await db.syncQueue.toArray();
+  const pendingOpsByTaskId = new Set<string>();
+  for (const op of allPendingOps) {
+    pendingOpsByTaskId.add(op.taskId);
+  }
+
   for (const local of localTasks) {
     if (!remoteTaskIds.has(local.id)) {
-      const pendingOps = await queue.getForTask(local.id);
-      if (pendingOps.length === 0) {
+      if (!pendingOpsByTaskId.has(local.id)) {
         await db.tasks.delete(local.id);
         logger.debug('Deleted locally: task removed from server', { taskId: local.id });
       }

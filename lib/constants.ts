@@ -116,6 +116,14 @@ export const TIME_UTILS = {
 } as const;
 
 /**
+ * Archive configuration
+ */
+export const ARCHIVE_CONFIG = {
+  /** Default number of days after completion before auto-archiving */
+  DEFAULT_ARCHIVE_AFTER_DAYS: 30,
+} as const;
+
+/**
  * Time tracking constants
  * References TIME_UNITS for base conversions to avoid duplication
  */

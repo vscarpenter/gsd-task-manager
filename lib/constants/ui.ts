@@ -26,6 +26,30 @@ export const UI_TIMING = {
 
   /** Delay before refreshing sync status display (600ms) */
   STATUS_REFRESH_DELAY_MS: 600,
+
+  /** Interval to force re-render for relative time display updates (30 seconds) */
+  RELATIVE_TIME_REFRESH_MS: 30000,
+
+  /** Delay before hiding dropdown to allow click on suggestion (200ms) */
+  BLUR_DELAY_MS: 200,
+
+  /** Delay for scrolling to a task after render (100ms) */
+  SCROLL_TO_TASK_DELAY_MS: 100,
+
+  /** Duration to show task highlight animation (3 seconds) */
+  TASK_HIGHLIGHT_DURATION_MS: 3000,
+
+  /** Delay before page reload after reset (1 second) */
+  RESET_RELOAD_DELAY_MS: 1000,
+
+  /** Auto-dismiss duration for returning users launch screen (1.5 seconds) */
+  LAUNCH_AUTO_DISMISS_MS: 1500,
+
+  /** Fade-out animation duration for launch screen (600ms) */
+  LAUNCH_FADE_OUT_MS: 600,
+
+  /** Auto-refresh interval for sync debug panel (2 seconds) */
+  DEBUG_PANEL_REFRESH_MS: 2000,
 } as const;
 
 /**

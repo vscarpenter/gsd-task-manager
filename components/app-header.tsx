@@ -12,6 +12,8 @@ import { SyncButton } from "@/components/sync/sync-button";
 import { QuickSettingsPanel } from "@/components/quick-settings-panel";
 import { useSync } from "@/lib/hooks/use-sync";
 import { getSyncQueue } from "@/lib/sync/queue";
+import { SYNC_CONFIG } from "@/lib/constants/sync";
+import { UI_TIMING } from "@/lib/constants/ui";
 import type { FilterCriteria } from "@/lib/filters";
 
 /**
@@ -88,8 +90,7 @@ export function AppHeader({
 
     updateLastSync();
 
-    // Poll every 5 seconds
-    const interval = setInterval(updateLastSync, 5000);
+    const interval = setInterval(updateLastSync, SYNC_CONFIG.SYNC_STATUS_POLL_MS);
     return () => clearInterval(interval);
   }, [isEnabled]);
 
@@ -97,7 +98,7 @@ export function AppHeader({
   useEffect(() => {
     const interval = setInterval(() => {
       setTick(t => t + 1);
-    }, 30000); // Update every 30 seconds
+    }, UI_TIMING.RELATIVE_TIME_REFRESH_MS);
     
     return () => clearInterval(interval);
   }, []);
@@ -117,8 +118,7 @@ export function AppHeader({
 
     updatePendingCount();
 
-    // Poll every 2 seconds
-    const interval = setInterval(updatePendingCount, 2000);
+    const interval = setInterval(updatePendingCount, SYNC_CONFIG.PENDING_COUNT_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [isEnabled]);
 
@@ -135,8 +135,7 @@ export function AppHeader({
 
     updateCountdown();
 
-    // Update every second
-    const interval = setInterval(updateCountdown, 1000);
+    const interval = setInterval(updateCountdown, SYNC_CONFIG.COUNTDOWN_UPDATE_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [nextRetryAt]);
 

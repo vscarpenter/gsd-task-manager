@@ -36,6 +36,7 @@ vi.mock('@/lib/sync/task-mapper', () => ({
 vi.mock('@/lib/db', () => {
   const mockTasks = {
     get: vi.fn(),
+    bulkGet: vi.fn().mockResolvedValue([]),
     add: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
@@ -45,10 +46,14 @@ vi.mock('@/lib/db', () => {
     get: vi.fn(),
     put: vi.fn(),
   };
+  const mockSyncQueue = {
+    toArray: vi.fn().mockResolvedValue([]),
+  };
   return {
     getDb: vi.fn(() => ({
       tasks: mockTasks,
       syncMetadata: mockSyncMetadata,
+      syncQueue: mockSyncQueue,
     })),
   };
 });
@@ -241,7 +246,7 @@ describe('pb-sync-engine', () => {
       mockPB.collection.mockReturnValue(mockCollection);
 
       const db = getDb();
-      (db.tasks.get as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
       (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const result = await pullRemoteChanges(null);
@@ -294,7 +299,7 @@ describe('pb-sync-engine', () => {
       mockPB.collection.mockReturnValue(mockCollection);
 
       const db = getDb();
-      (db.tasks.get as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
       (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const result = await pullRemoteChanges(null);
@@ -369,7 +374,7 @@ describe('pb-sync-engine', () => {
         lastSyncAt: '2024-01-01T00:00:00.000Z',
       };
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
-      (db.tasks.get as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
       (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const result = await fullSync('auto');

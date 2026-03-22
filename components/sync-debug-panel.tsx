@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { SyncQueueItem } from '@/lib/sync/types';
 import { createLogger } from '@/lib/logger';
+import { UI_TIMING } from '@/lib/constants/ui';
 
 const logger = createLogger('SYNC_QUEUE');
 
@@ -44,8 +45,7 @@ export function SyncDebugPanel() {
   useEffect(() => {
     refreshQueue();
     
-    // Auto-refresh every 2 seconds
-    const interval = setInterval(refreshQueue, 2000);
+    const interval = setInterval(refreshQueue, UI_TIMING.DEBUG_PANEL_REFRESH_MS);
     return () => clearInterval(interval);
   }, []);
 

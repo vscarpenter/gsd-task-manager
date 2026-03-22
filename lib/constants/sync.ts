@@ -7,6 +7,9 @@
  * Sync operation configuration
  */
 export const SYNC_CONFIG = {
+  /** Polling interval for sync status updates in header (5 seconds) */
+  SYNC_STATUS_POLL_MS: 5000,
+
   /** Polling interval for pending operation count (2 seconds) */
   PENDING_COUNT_POLL_INTERVAL_MS: 2000,
 

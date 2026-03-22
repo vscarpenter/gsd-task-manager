@@ -138,6 +138,7 @@ export function SmartViewSelector({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className="appearance-none bg-transparent border-none p-0 m-0 cursor-pointer"
+          aria-label="Select smart view"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >
