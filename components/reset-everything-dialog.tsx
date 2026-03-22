@@ -14,6 +14,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { resetEverything, reloadAfterReset } from "@/lib/reset-everything";
+import { UI_TIMING } from "@/lib/constants/ui";
 import type { ResetOptions } from "@/lib/reset-everything";
 import { toast } from "sonner";
 
@@ -85,7 +86,7 @@ export function ResetEverythingDialog({
 				// Wait for toast to show before reload
 				setTimeout(() => {
 					reloadAfterReset();
-				}, 1000);
+				}, UI_TIMING.RESET_RELOAD_DELAY_MS);
 			} else {
 				// Partial failure
 				toast.error(`Reset completed with errors: ${result.errors.join(", ")}`);

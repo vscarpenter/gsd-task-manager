@@ -31,7 +31,7 @@ describe('Matrix Filters', () => {
     urgent: quadrant.includes('urgent'),
     important: quadrant.includes('important'),
     completed,
-    createdAt: Date.now(),
+    createdAt: new Date().toISOString(),
     tags,
     subtasks: [],
     dependencies: [],

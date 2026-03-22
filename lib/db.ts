@@ -2,6 +2,9 @@ import Dexie, { Table } from "dexie";
 import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryRecord, AppPreferences } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, PBSyncConfig, DeviceInfo } from "@/lib/sync/types";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("DB");
 
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
@@ -239,14 +242,14 @@ class GsdDatabase extends Dexie {
             task.timeEntries = [];
           } else if (!Array.isArray(task.timeEntries)) {
             // Reset corrupt data to empty array
-            console.warn(`[DB Migration] Task ${task.id} had corrupt timeEntries, resetting to []`);
+            logger.warn(`Task ${task.id} had corrupt timeEntries, resetting to []`);
             task.timeEntries = [];
           } else {
             // Validate existing entries structure
             task.timeEntries = task.timeEntries.filter(entry => {
               const isValid = entry && typeof entry.id === 'string' && typeof entry.startedAt === 'string';
               if (!isValid) {
-                console.warn(`[DB Migration] Task ${task.id} had invalid time entry, removing`);
+                logger.warn(`Task ${task.id} had invalid time entry, removing`);
               }
               return isValid;
             });
@@ -257,7 +260,7 @@ class GsdDatabase extends Dexie {
             task.timeSpent = 0;
           } else if (typeof task.timeSpent !== 'number' || task.timeSpent < 0 || !Number.isFinite(task.timeSpent)) {
             // Reset corrupt data to 0
-            console.warn(`[DB Migration] Task ${task.id} had corrupt timeSpent (${task.timeSpent}), resetting to 0`);
+            logger.warn(`Task ${task.id} had corrupt timeSpent (${task.timeSpent}), resetting to 0`);
             task.timeSpent = 0;
           }
         });
@@ -319,7 +322,7 @@ class GsdDatabase extends Dexie {
           delete task.vectorClock;
         });
 
-        console.info("[DB Migration v13] PocketBase migration complete. Please re-authenticate to enable sync.");
+        logger.info("PocketBase migration complete. Please re-authenticate to enable sync.");
       });
   }
 

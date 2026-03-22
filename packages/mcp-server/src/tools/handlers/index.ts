@@ -55,9 +55,8 @@ export async function handleToolCall(
   config: GsdConfig
 ): Promise<McpToolResponse> {
   try {
-    // Args are pre-validated by the MCP framework against each tool's JSON schema.
-    // Each handler also performs its own runtime validation. The dynamic dispatch
-    // pattern here intentionally widens the type — this is the appropriate boundary.
+    // MCP SDK provides untyped args object; each handler validates with its own Zod
+    // schema, so the `any` cast here bridges the generic dispatch boundary safely.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const typedArgs = args as any;
     switch (name) {

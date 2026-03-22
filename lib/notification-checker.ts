@@ -186,7 +186,7 @@ class NotificationChecker {
 
 		// Only log in development
 		if (process.env.NODE_ENV === "development") {
-			console.log(
+			logger.debug(
 				`Notification checker started (checking every ${intervalMinutes} minute(s))`,
 			);
 		}
@@ -202,7 +202,7 @@ class NotificationChecker {
 
 			// Only log in development
 			if (process.env.NODE_ENV === "development") {
-				console.log("Notification checker stopped");
+				logger.debug("Notification checker stopped");
 			}
 		}
 	}

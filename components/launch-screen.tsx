@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Zap, CalendarClock, Users, Sparkles, ArrowRight } from "lucide-react";
 import { quadrants } from "@/lib/quadrants";
+import { UI_TIMING } from "@/lib/constants/ui";
 
 const STORAGE_KEY = "gsd-has-launched";
 
@@ -35,7 +36,7 @@ export function LaunchScreen() {
     const animTimer = requestAnimationFrame(() => setAnimateIn(true));
 
     if (!isFirstTime) {
-      const timer = setTimeout(() => dismiss(), 1500);
+      const timer = setTimeout(() => dismiss(), UI_TIMING.LAUNCH_AUTO_DISMISS_MS);
       return () => {
         cancelAnimationFrame(animTimer);
         clearTimeout(timer);
@@ -54,7 +55,7 @@ export function LaunchScreen() {
     dismissedRef.current = true;
     setFadeOut(true);
     localStorage.setItem(STORAGE_KEY, "true");
-    fadeTimerRef.current = setTimeout(() => setVisible(false), 600);
+    fadeTimerRef.current = setTimeout(() => setVisible(false), UI_TIMING.LAUNCH_FADE_OUT_MS);
   }
 
   if (!visible) return null;

@@ -115,6 +115,7 @@ export function TaskForm({
             onChange={(event) => updateDate(event.target.value)}
           />
           <div className="space-y-1">
+            <label htmlFor="due-time" className="sr-only">Time</label>
             <select
               id="due-time"
               value={selectedTime}

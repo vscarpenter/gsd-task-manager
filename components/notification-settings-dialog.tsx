@@ -149,6 +149,7 @@ export function NotificationSettingsDialog({ open, onOpenChange }: NotificationS
               type="button"
               role="switch"
               aria-checked={settings.enabled}
+              aria-label="Enable notifications"
               disabled={!isPermissionGranted || isSaving}
               onClick={() => handleSave({ enabled: !settings.enabled })}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -203,6 +204,7 @@ export function NotificationSettingsDialog({ open, onOpenChange }: NotificationS
               type="button"
               role="switch"
               aria-checked={settings.soundEnabled}
+              aria-label="Enable notification sound"
               disabled={!settings.enabled || !isPermissionGranted || isSaving}
               onClick={() => handleSave({ soundEnabled: !settings.soundEnabled })}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${

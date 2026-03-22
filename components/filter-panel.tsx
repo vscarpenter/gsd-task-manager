@@ -61,6 +61,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
       <div className="flex items-center justify-between">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
           className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-accent"
         >
           <FilterIcon className="h-4 w-4" />

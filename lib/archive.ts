@@ -8,6 +8,7 @@
 import { getDb } from "@/lib/db";
 import type { TaskRecord, ArchiveSettings } from "@/lib/types";
 import { getSyncQueue } from "@/lib/sync/queue";
+import { ARCHIVE_CONFIG } from "@/lib/constants";
 
 /**
  * Get archive settings from database
@@ -20,7 +21,7 @@ export async function getArchiveSettings(): Promise<ArchiveSettings> {
     const defaults: ArchiveSettings = {
       id: "settings",
       enabled: false,
-      archiveAfterDays: 30
+      archiveAfterDays: ARCHIVE_CONFIG.DEFAULT_ARCHIVE_AFTER_DAYS
     };
     await db.archiveSettings.add(defaults);
     return defaults;

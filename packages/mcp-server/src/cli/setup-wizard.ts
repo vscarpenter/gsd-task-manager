@@ -8,7 +8,7 @@ import { getSyncStatus, listTasks } from '../tools.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
 
 /** Default production PocketBase URL used as prompt default value */
-const DEFAULT_POCKETBASE_URL = 'https://api.vinny.io';
+const DEFAULT_POCKETBASE_URL = process.env.GSD_POCKETBASE_URL || 'https://api.vinny.io';
 
 /**
  * Test PocketBase connectivity via health endpoint

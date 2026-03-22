@@ -7,7 +7,10 @@
 import { getSyncQueue } from './queue';
 import { getPocketBase, isAuthenticated } from './pocketbase-client';
 import { getDb } from '@/lib/db';
+import { createLogger } from '@/lib/logger';
 import type { PBSyncConfig } from './types';
+
+const logger = createLogger('SYNC_HEALTH');
 
 const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const STALE_OPERATION_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
@@ -34,13 +37,13 @@ export class HealthMonitor {
 
     this.isRunning = true;
 
-    this.check().catch(() => {
-      // Initial check failure is non-fatal
+    this.check().catch((error) => {
+      logger.warn('Initial health check failed', { error });
     });
 
     this.intervalId = setInterval(() => {
-      this.check().catch(() => {
-        // Periodic check failure is non-fatal
+      this.check().catch((error) => {
+        logger.warn('Periodic health check failed', { error });
       });
     }, HEALTH_CHECK_INTERVAL_MS);
   }
