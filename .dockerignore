@@ -22,6 +22,18 @@ test_output.txt
 .env.*.local
 .build-env.sh
 .build-info.json
+.npmrc
+bunfig.toml
+
+# Certificates & keys (never copy into build context)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cert
+certs/
+docker/certs/
 
 # Editor & OS files
 .vscode/
@@ -29,5 +41,10 @@ test_output.txt
 *.swp
 .DS_Store
 
-# Docker (avoid recursive copies)
-docker/certs/
+# Other sensitive / unnecessary files
+*.secret
+*.secrets
+credentials*
+.terraform/
+*.tfstate*
+sonar-project.properties
