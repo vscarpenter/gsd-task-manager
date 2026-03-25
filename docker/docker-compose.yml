@@ -1,0 +1,32 @@
+services:
+  gsd:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      # Uncomment for corporate npm registries that require auth (see README.md):
+      # secrets:
+      #   - npmrc
+    ports:
+      - "443:443"    # HTTPS — app + PocketBase API
+      - "80:80"      # HTTP  — redirects to HTTPS
+    volumes:
+      - pb_data:/pb_data          # PocketBase database persistence
+      # Uncomment to use your own SSL certificates (see README.md):
+      # - ~/certs:/certs:ro
+    environment:
+      - SITE_ADDRESS=localhost
+      # For custom SSL certificates, uncomment and set paths:
+      # - TLS_CERT=/certs/localhost-cert.pem
+      # - TLS_KEY=/certs/localhost-key.pem
+      #
+      # For a real domain with automatic Let's Encrypt:
+      # - SITE_ADDRESS=gsd.example.com
+    restart: unless-stopped
+
+volumes:
+  pb_data:
+
+# Build secret for corporate npm registries (see README.md):
+# secrets:
+#   npmrc:
+#     file: ~/.npmrc

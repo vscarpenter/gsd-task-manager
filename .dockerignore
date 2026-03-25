@@ -1,0 +1,33 @@
+# Build artifacts
+.next/
+out/
+
+# Dependencies (reinstalled inside Docker)
+node_modules/
+packages/*/node_modules/
+
+# Version control
+.git/
+.gitignore
+
+# Tests & docs (not needed for production build)
+tests/
+docs/
+coverage/
+test_output.txt
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+.build-env.sh
+.build-info.json
+
+# Editor & OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Docker (avoid recursive copies)
+docker/certs/

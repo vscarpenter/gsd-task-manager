@@ -1,0 +1,57 @@
+# =============================================================================
+# GSD Task Manager — Caddy Configuration
+#
+# Single-origin setup: static site + PocketBase API on the same HTTPS host.
+# Eliminates CORS, mixed-content, and multi-port complexity.
+#
+# Environment variables (set in docker-compose.yml or .env):
+#   SITE_ADDRESS  — Hostname (default: localhost)
+#   TLS_CERT      — Path to cert file, or "internal" for self-signed (default)
+#   TLS_KEY       — Path to key file (omit when using "internal")
+# =============================================================================
+
+{
+	# Caddy admin API disabled for security in self-hosted mode
+	admin off
+}
+
+{$SITE_ADDRESS:localhost} {
+	tls {$TLS_CERT:internal} {$TLS_KEY:}
+
+	encode gzip
+
+	# Security headers
+	header {
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		X-XSS-Protection          "1; mode=block"
+		-Server
+	}
+
+	# ---- PocketBase reverse proxy ----
+	# API endpoints
+	handle /api/* {
+		reverse_proxy localhost:8090
+	}
+
+	# Admin dashboard
+	handle /_/* {
+		reverse_proxy localhost:8090
+	}
+
+	# ---- Static site (SPA fallback) ----
+	handle {
+		root * /srv
+		try_files {path} {path}/ /index.html
+		file_server
+
+		# Long-lived cache for hashed assets
+		@immutable path /_next/static/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		# No-cache for HTML so the PWA always gets fresh content
+		@html path *.html /
+		header @html Cache-Control "no-cache, no-store, must-revalidate"
+	}
+}
