@@ -46,17 +46,33 @@ function detectEnvironment(): Environment {
 }
 
 /**
+ * Resolve PocketBase URL based on environment and protocol.
+ * Self-hosted (Docker): HTTPS on localhost means PocketBase is behind a reverse proxy at the same origin.
+ * Development (bun dev): HTTP on localhost uses the default local PocketBase port.
+ */
+function resolvePocketBaseUrl(environment: Environment): string {
+  if (
+    environment === 'development' &&
+    typeof window !== 'undefined' &&
+    window.location.protocol === 'https:'
+  ) {
+    return window.location.origin;
+  }
+
+  return environment === 'development'
+    ? 'http://127.0.0.1:8090'
+    : 'https://api.vinny.io';
+}
+
+/**
  * Get environment configuration based on current hostname
  */
 export function getEnvironmentConfig(): EnvironmentConfig {
   const environment = detectEnvironment();
 
-  // PocketBase URL configuration
   const pocketBaseUrl =
     process.env.NEXT_PUBLIC_POCKETBASE_URL ||
-    (environment === 'development'
-      ? 'http://127.0.0.1:8090'
-      : 'https://api.vinny.io');
+    resolvePocketBaseUrl(environment);
 
   return {
     pocketBaseUrl,
