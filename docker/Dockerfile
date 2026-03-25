@@ -41,6 +41,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-c
 # ---------------------------------------------------------------------------
 FROM caddy:2-alpine
 
+# Run as non-root user for security
+RUN addgroup -S gsd && adduser -S gsd -G gsd
+
 # Copy PocketBase binary from builder
 COPY --from=builder /tmp/pb/pocketbase /usr/local/bin/pocketbase
 
@@ -52,13 +55,21 @@ COPY docker/Caddyfile /etc/caddy/Caddyfile
 COPY docker/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create persistent data directories
-RUN mkdir -p /pb_data /certs
+# Allow non-root to bind privileged ports (80, 443)
+RUN apk add --no-cache libcap \
+    && setcap cap_net_bind_service=+ep /usr/bin/caddy \
+    && setcap cap_net_bind_service=+ep /usr/local/bin/pocketbase
+
+# Create persistent data directories and grant ownership to non-root user
+RUN mkdir -p /pb_data /certs /data/caddy /config/caddy \
+    && chown -R gsd:gsd /pb_data /certs /srv /data/caddy /config/caddy
 
 # 80  — HTTP (redirects to HTTPS)
 # 443 — HTTPS (static site + PocketBase API via reverse proxy)
 EXPOSE 80 443
 
 VOLUME ["/pb_data"]
+
+USER gsd
 
 ENTRYPOINT ["/entrypoint.sh"]
