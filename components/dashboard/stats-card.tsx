@@ -9,13 +9,26 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
+  accentColor?: "blue" | "emerald" | "amber" | "red";
   className?: string;
+}
+
+function getAccentClasses(color?: string): { bg: string; text: string } {
+  const map: Record<string, { bg: string; text: string }> = {
+    blue: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-600 dark:text-blue-400" },
+    emerald: { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-600 dark:text-emerald-400" },
+    amber: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-600 dark:text-amber-400" },
+    red: { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-600 dark:text-red-400" },
+  };
+  if (color && map[color]) return map[color];
+  return { bg: "bg-accent/10", text: "text-accent" };
 }
 
 /**
  * Reusable card for displaying a single metric
  */
-export function StatsCard({ title, value, subtitle, icon: Icon, trend, className = "" }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon: Icon, trend, accentColor, className = "" }: StatsCardProps) {
+  const { bg: iconBg, text: iconText } = getAccentClasses(accentColor);
   return (
     <div className={`rounded-xl border border-border bg-card p-6 shadow-sm ${className}`}>
       <div className="flex items-start justify-between">
@@ -35,8 +48,8 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, className
           )}
         </div>
         {Icon && (
-          <div className="rounded-lg bg-accent/10 p-3">
-            <Icon className="h-6 w-6 text-accent" />
+          <div className={`rounded-lg p-3 ${iconBg}`}>
+            <Icon className={`h-6 w-6 ${iconText}`} />
           </div>
         )}
       </div>

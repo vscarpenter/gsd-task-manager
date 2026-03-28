@@ -53,6 +53,12 @@ describe('Streak Calculation', () => {
       expect(streak.lastCompletionDate).toBeNull();
     });
 
+    it('should return all-false last7Days for empty task list', () => {
+      const streak = getStreakData([]);
+      expect(streak.last7Days).toEqual([false, false, false, false, false, false, false]);
+      expect(streak.last7Days).toHaveLength(7);
+    });
+
     it('should calculate current streak of 1 for task completed today', () => {
       const tasks: TaskRecord[] = [
         { ...baseTask, id: '1', completed: true, updatedAt: '2025-01-15T10:00:00Z' },
@@ -63,6 +69,29 @@ describe('Streak Calculation', () => {
       expect(streak.current).toBe(1);
       expect(streak.longest).toBe(1);
       expect(streak.lastCompletionDate).toBe('2025-01-15');
+    });
+
+    it('should show today as active in last7Days when task completed today', () => {
+      const tasks: TaskRecord[] = [
+        { ...baseTask, id: '1', completed: true, updatedAt: '2025-01-15T10:00:00Z' },
+      ];
+      const streak = getStreakData(tasks);
+      expect(streak.last7Days).toHaveLength(7);
+      // Last element (index 6) should be true (today)
+      expect(streak.last7Days[6]).toBe(true);
+      // Other days should be false
+      expect(streak.last7Days.slice(0, 6)).toEqual([false, false, false, false, false, false]);
+    });
+
+    it('should reflect consecutive completions in last7Days', () => {
+      const tasks: TaskRecord[] = [
+        { ...baseTask, id: '1', completed: true, updatedAt: '2025-01-15T10:00:00Z' }, // Today
+        { ...baseTask, id: '2', completed: true, updatedAt: '2025-01-14T10:00:00Z' }, // Yesterday
+        { ...baseTask, id: '3', completed: true, updatedAt: '2025-01-13T10:00:00Z' }, // 2 days ago
+      ];
+      const streak = getStreakData(tasks);
+      // last7Days: [Jan 9, Jan 10, Jan 11, Jan 12, Jan 13, Jan 14, Jan 15]
+      expect(streak.last7Days).toEqual([false, false, false, false, true, true, true]);
     });
 
     it('should calculate consecutive day streak', () => {

@@ -181,9 +181,18 @@ describe("TaskCard", () => {
     expect(screen.queryByText("Test description")).not.toBeInTheDocument();
   });
 
-  it("displays 'No due date' when dueDate is undefined", () => {
+  it("hides due date section when dueDate is undefined", () => {
     render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
+    expect(screen.queryByText(/due no due date/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no due date/i)).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByText(/due no due date/i)).toBeInTheDocument();
+  it("displays relative date when due date is set", () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 3);
+    const taskWithDueDate = { ...mockTask, dueDate: futureDate.toISOString() };
+    render(<TaskCard task={taskWithDueDate} allTasks={[taskWithDueDate]} {...mockHandlers} />);
+    // Should show relative date text (e.g., "in 3 days"), not "Due No due date"
+    expect(screen.queryByText(/no due date/i)).not.toBeInTheDocument();
   });
 });

@@ -90,7 +90,6 @@ Plans break. When they do, stop immediately:
 - If execution goes sideways at any point, STOP and re-plan before continuing.
 - Do not push through ambiguity or compounding errors by guessing forward.
 - Use plan mode for verification steps, not just initial building.
-- Write detailed specs upfront to reduce ambiguity and limit mid-execution surprises.
 
 > **Rule:** A bad plan executed confidently causes more damage than pausing to re-plan. Stop early, re-plan explicitly, then proceed.
 
@@ -103,7 +102,24 @@ After any correction from the user, YOU MUST:
 3. Iterate ruthlessly on these lessons until the mistake rate drops.
 4. At the start of each session for a relevant project, review `tasks/lessons.md` before writing any code.
 
-> **Rule:** Corrections are learning contracts. Every mistake that recurs after being corrected once is a process failure, not a knowledge gap.
+**Two-layer learning — project lessons and persistent rules:**
+- `tasks/lessons.md` captures project-specific learnings: patterns, gotchas, and context that matter for this codebase.
+- `CLAUDE.md` captures persistent behavioral rules that apply across sessions and across projects. After every correction, end with: "Update CLAUDE.md so this mistake does not recur." Claude is effective at writing rules for itself when prompted.
+
+**Compounding Engineering — learn during code review:**
+When reviewing PRs (or receiving review feedback), tag `@.claude` in PR comments to add learnings directly to `CLAUDE.md` as part of the PR itself. This turns review feedback into permanent, machine-readable rules without a separate manual step.
+
+Example PR comment:
+```
+nit: use a string literal union, not a TS enum
+
+@claude add to CLAUDE.md to never use enums, always prefer literal unions
+```
+
+**Auto-Memory as a safety net:**
+Enable Claude Code's auto-memory (`/memory`) to capture preferences and corrections that you forget to write down manually. Use `/dream` periodically to consolidate and clean accumulated memory, removing outdated assumptions and merging overlapping notes.
+
+> **Rule:** Corrections are learning contracts. Every mistake that recurs after being corrected once is a process failure, not a knowledge gap. `tasks/lessons.md` is the project memory. `CLAUDE.md` is the behavioral memory. Both must stay current.
 
 ### Reflection After Tool Results
 
@@ -115,6 +131,22 @@ After each tool result, pause to evaluate before proceeding:
 - What is the root cause if results are unexpected?
 
 Use extended thinking to analyze results and plan your next action. If results are unexpected, diagnose the root cause before attempting fixes. Avoid repeated trial-and-error changes without understanding the underlying issue.
+
+### Verification-First Development
+
+Verification is not an afterthought; it is the single most important factor in output quality. Before writing any implementation, define how Claude will verify that the work is correct. A feedback loop that Claude can run autonomously will 2-3x the quality of the final result.
+
+1. **Define the verification method before coding.** For every non-trivial task, state upfront how correctness will be proven: a test suite, a bash command, a simulator, a browser check, or a diff against expected output.
+2. **Match verification to the domain.** Different work requires different proof:
+   - **Backend logic:** Unit and integration tests, run automatically after each change.
+   - **API changes:** curl/httpie commands or integration tests that exercise the endpoint.
+   - **Frontend/UI:** Browser testing (e.g., Claude Chrome extension), screenshot comparison, or accessibility audit.
+   - **Data pipelines:** Row-count checks, sample-output diffs, schema validation.
+   - **Infrastructure:** `terraform plan`, dry-run deploys, or smoke tests against a staging environment.
+3. **Close the loop autonomously.** Claude should run verification without being prompted. If the verification fails, diagnose and fix before presenting results.
+4. **Invest in reusable verification.** If a project lacks a fast feedback loop, building one is a higher priority than the feature itself. A 30-second test suite pays for itself within the first session.
+
+> **Rule:** Code without a verification method is a guess. If Claude cannot prove the work is correct, the task is not done.
 
 ### Solution Quality Requirements
 
@@ -164,14 +196,6 @@ Build incrementally to ensure quality:
 - Do not assume code is correct without execution.
 - If tests fail, analyze the failure and diagnose root cause before making changes.
 
-### Progress Updates
-
-After completing each milestone or significant tool operation, provide a brief summary of what was done, what changed, and what comes next. Do not skip status updates after tool calls.
-
-### Error Learning
-
-After encountering a mistake or suboptimal solution, analyze what went wrong and propose a specific CLAUDE.md update to prevent recurrence. Actively improve the development process.
-
 ---
 
 ## Part 2: Code Quality Standards
@@ -191,6 +215,7 @@ After encountering a mistake or suboptimal solution, analyze what went wrong and
 - Functions should be 30 lines or fewer with single responsibility.
 - Maximum 3 levels of nesting; use early returns.
 - Comments explain WHY, not WHAT.
+- Document public APIs with usage examples.
 - Limit code files to approximately 350-400 lines; split by responsibility.
 
 ### Type Safety & Static Analysis
@@ -274,12 +299,6 @@ All user-facing frontend work must meet these minimum standards:
 - Never log secrets, tokens, passwords, or PII.
 - Include enough context to diagnose issues without reproducing them: what operation, what input (sanitized), what outcome.
 
-### Guardrails
-
-- Validate inputs, sanitize outputs.
-- No hard-coded environment values.
-- Document public APIs with usage examples.
-
 ### Subagents
 
 - Use subagents liberally to keep main context window clean and focused.
@@ -289,13 +308,90 @@ All user-facing frontend work must meet these minimum standards:
 - One well-defined task per subagent for focused execution.
 - Subagents MUST return concise summaries, not raw output, to preserve main context.
 - Use read-only tools (Read, Grep, Glob) for research subagents; grant write access only to implementation subagents.
-- Prefer Haiku-model subagents for simple research, scanning, and exploration tasks to control costs.
-- Reserve Sonnet or Opus for subagents that reason about architecture or write complex implementations.
 - Do not use subagents for tasks that take fewer than 3 tool calls; the overhead is not worth it.
 - During implementation, delegate tasks to available subagents based on their expertise:
   - Use Explore subagent for codebase scanning, pattern discovery, and reading files.
   - Use general-purpose subagent for multi-step implementation tasks requiring file modifications.
   - Use dedicated review subagents for code quality, security, and test coverage checks.
+
+**Custom Agents Directory:**
+For subagent patterns your team uses repeatedly, define them as reusable agent files in `.claude/agents/`. Each agent gets a name, model, tool permissions, and a focused system prompt. This eliminates ad-hoc subagent prompts and ensures consistent behavior across sessions and team members.
+
+```
+.claude/
+  agents/
+    build-validator.md    # Runs build + tests, reports failures
+    code-simplifier.md    # Reviews code for unnecessary complexity
+    security-reviewer.md  # Scans for common vulnerability patterns
+    verify-app.md         # End-to-end verification instructions
+```
+
+Example agent definition (`.claude/agents/code-simplifier.md`):
+```yaml
+---
+name: code-simplifier
+model: sonnet
+isolation: worktree
+---
+Review all changed files for unnecessary complexity, duplicated logic,
+and opportunities to reuse existing utilities. Do not rewrite code;
+return a structured list of findings with file, line, and recommendation.
+```
+
+**Key practices:**
+- Check agent definitions into git so the entire team benefits.
+- Set `isolation: worktree` on agents that modify files to prevent interference with the main session.
+- Use `model: haiku` for read-only analysis agents and `model: sonnet` or `model: opus` for agents that reason about architecture.
+- Set a default agent for your project via `"agent"` in `settings.json` when your team has a standard workflow.
+
+### Hooks for Automated Quality Gates
+
+Use Claude Code hooks to enforce standards deterministically rather than relying on discipline alone. Hooks fire at specific points in Claude's lifecycle and run your commands automatically.
+
+**PostToolUse — Auto-Format on Every Write:**
+Claude generates well-formatted code most of the time, but a PostToolUse hook catches edge cases before they reach CI. Configure it to run your project's formatter after every file write or edit:
+
+```json
+"hooks": {
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "npx biome format --write $CLAUDE_FILE_PATH || true"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Replace the format command with your project's tool (`prettier`, `black`, `gofmt`, etc.). The `|| true` ensures a formatter warning does not block Claude's workflow.
+
+**PostCompact — Re-Inject Critical Context After Compaction:**
+When Claude compresses its conversation context, critical instructions can be lost. Use a PostCompact hook to re-inject essentials automatically. This is the enforcement mechanism for the Compaction Directive above:
+
+```json
+"hooks": {
+  "PostCompact": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "cat tasks/todo.md tasks/lessons.md 2>/dev/null || echo 'No task files found.'"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Stop Hook — Verification Gate for Long-Running Tasks:**
+For autonomous, long-running work, use a Stop hook to run deterministic checks (test suite, linter, type checker) before Claude declares a task complete. This ensures Claude cannot mark work as done without passing the verification gate.
+
+> **Rule:** If a standard can be enforced by a hook, it should be. Human discipline is a backup, not the primary mechanism.
 
 ---
 
@@ -308,7 +404,6 @@ All user-facing frontend work must meet these minimum standards:
 - Use clear behavior-based test names (e.g., `should_return_404_when_user_not_found`).
 - Follow Arrange-Act-Assert pattern.
 - Include positive and negative cases.
-- Run the full test suite after every modification; do not proceed with failing tests.
 
 ### Test Isolation & Strategy
 
@@ -454,16 +549,30 @@ Every non-trivial task follows this workflow. Deviating from it is a process fai
 
 A task is not done when the code works. It is done when ALL of the following are true:
 
+**Correctness & Quality:**
 - [ ] The implementation matches the spec or ticket acceptance criteria.
-- [ ] All new and existing tests pass.
+- [ ] Verification method was defined before coding and passes autonomously.
+- [ ] All new and existing tests pass; test suite runs after every modification.
 - [ ] Linting, formatting, and type checking pass with no suppressions.
+- [ ] Type annotations present on all function signatures.
+- [ ] Elegance check performed for non-trivial changes ("Is there a more elegant way?").
+
+**Self-Review:**
 - [ ] Code has been self-reviewed (no debug statements, dead code, or unresolved TODOs).
+- [ ] Self-explanatory names; understandable in 5 minutes without a walkthrough.
+- [ ] Comprehensive error handling with typed errors; not just the happy path.
+- [ ] "Would a staff engineer approve this?" answered with confidence.
+
+**Documentation & Process:**
 - [ ] PR description is complete and reviewable without a verbal walkthrough.
 - [ ] `tasks/todo.md` reflects the completed state.
 - [ ] Any new environment variables or config are documented.
-- [ ] Observability is adequate: logging covers the new path, errors surface correctly.
+- [ ] Observability is adequate: structured logging covers the new path, errors surface correctly.
 - [ ] If an ADR was warranted, it has been written.
-- [ ] If a lesson was learned, `tasks/lessons.md` has been updated.
+- [ ] If a lesson was learned, `tasks/lessons.md` and/or `CLAUDE.md` have been updated.
+- [ ] If new dependencies were added, they have been audited.
+- [ ] If feature flags were introduced, they are named, owned, and have a removal date.
+- [ ] If frontend work, accessibility baseline is met.
 
 > **Rule:** "It works on my machine" is not done. This checklist is done.
 
@@ -531,7 +640,31 @@ Avoid these patterns; they produce lower-quality outputs:
 
 ---
 
-## Part 9: Quick Reference
+## Part 9: Reusable Skills & Slash Commands
+
+### Formalize Repeated Workflows
+
+If you do something more than once a day, it should be a skill or a slash command — not a prompt you retype or copy-paste.
+
+**Slash commands** live in `.claude/commands/` and are checked into git. They are shared with the entire team and executable with a single `/command-name` invocation. Slash commands can include inline Bash to pre-compute context (like `git status` or `git diff --stat`) so Claude has the information it needs without extra model calls.
+
+**Skills** live in `.claude/skills/` and provide deeper, multi-step workflow guidance. Use skills for domain-specific patterns that require detailed instructions (e.g., how to run a specific test harness, how to deploy to staging, how to generate a particular report format).
+
+**When to create which:**
+- **Slash command:** Short, repeatable action (commit-push-PR, run tests, format code, generate a changelog).
+- **Skill:** Complex workflow with multiple steps, domain knowledge, or conditional logic (analytics queries, incident response, migration playbooks).
+
+**Team practice:**
+- Check all commands and skills into the repo under `.claude/`.
+- Review them in PRs like any other code; stale commands accumulate confusion.
+- Use the `/simplify` pattern after implementation: append a quality-review command to any prompt to run parallel agents that check for reuse, quality, and efficiency in one pass.
+
+**Companion slash commands:**
+This skill ships with `/qspec` (generate a spec) and `/qcheck` (skeptical code review) in `.claude/commands/`. These are the formalized, version-controlled replacements for inline prompt shortcuts.
+
+---
+
+## Part 10: Quick Reference
 
 ### Prompt Template
 
@@ -546,74 +679,6 @@ Build [feature] that:
   - Avoids premature abstraction
   - Keeps functions <30 lines
 ```
-
-### Verification Shortcuts
-
-When I type **"qcheck"**, perform this analysis:
-
-```
-You are a SKEPTICAL senior software engineer. For every MAJOR code change:
-1. Does this follow our coding standards?
-2. Are there comprehensive tests?
-3. Is error handling adequate?
-4. Does this maintain existing patterns?
-5. Are there any security concerns?
-6. Is the code maintainable and readable?
-7. Are types properly annotated?
-8. Is logging/observability adequate for production?
-9. Would a staff engineer approve this without changes?
-10. Does this meet the Definition of Done?
-```
-
-When I type **"qcode"**, do this:
-
-```
-Implement your plan and ensure:
-- All new tests pass
-- Run existing tests to ensure nothing breaks
-- Run linting/formatting tools
-- Verify type checking passes
-- Code follows established patterns
-- Self-review completed (no dead code, debug statements, or TODOs)
-- tasks/todo.md is updated and complete
-- Definition of Done checklist confirmed
-```
-
-When I type **"qspec"**, do this:
-
-```
-Write a spec for the described feature including:
-- Goal (one sentence)
-- Inputs / Outputs
-- Constraints
-- Edge Cases
-- Out of Scope
-- Acceptance Criteria (checkable)
-Do not write any code. Wait for spec approval.
-```
-
-### Quality Checklist
-
-- [ ] Understandable in 5 minutes
-- [ ] Self-explanatory names
-- [ ] Comprehensive error handling with typed errors
-- [ ] Simplicity favored over abstraction
-- [ ] Tests and security checks included
-- [ ] No hardcoded values or magic numbers
-- [ ] All work committed before context exhaustion
-- [ ] Test suite passes after every modification
-- [ ] Type annotations on all function signatures
-- [ ] Structured logging for significant operations
-- [ ] Environment config externalized, not inline
-- [ ] "Would a staff engineer approve this?" answered with confidence
-- [ ] Elegance check performed for non-trivial changes
-- [ ] `tasks/todo.md` updated and reflects current state
-- [ ] `tasks/lessons.md` updated if any corrections were made
-- [ ] Definition of Done checklist confirmed
-- [ ] ADR written if architectural decision was made
-- [ ] Feature flags named, owned, and have a removal date
-- [ ] Dependencies audited if new ones were added
-- [ ] Accessibility baseline met for any frontend changes
 
 ### Red Flags
 
@@ -641,6 +706,9 @@ Do not write any code. Wait for spec approval.
 - Floating dependency versions in production lockfiles
 - PR that exceeds 400 lines across unrelated concerns
 - Frontend interactive elements that are not keyboard-accessible
+- No verification method defined before starting implementation
+- Ad-hoc subagent prompts instead of reusable agent definitions for repeated patterns
+- Standards enforced by discipline alone when a hook could automate them
 
 ### Guiding Principle
 
@@ -648,4 +716,4 @@ Do not write any code. Wait for spec approval.
 
 ---
 
-*Document Version 8.0 | Vinny Carpenter*
+*Document Version 10.0 | Vinny Carpenter*

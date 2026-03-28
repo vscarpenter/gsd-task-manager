@@ -2,6 +2,7 @@
 
 import { RefObject, useState, useEffect } from "react";
 import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon, CheckSquareIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -50,6 +51,7 @@ interface AppHeaderProps {
   selectionMode?: boolean;
   onToggleSelectionMode?: () => void;
   selectedCount?: number;
+  isDoFirstEmpty?: boolean;
 }
 
 export function AppHeader({
@@ -66,12 +68,14 @@ export function AppHeader({
   onActiveViewChange,
   selectionMode = false,
   onToggleSelectionMode,
-  selectedCount = 0
+  selectedCount = 0,
+  isDoFirstEmpty = false
 }: AppHeaderProps) {
   const { isEnabled, nextRetryAt, retryCount } = useSync();
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const [, setTick] = useState(0); // Force re-render for relative time updates
 
   // Poll last sync time from coordinator
@@ -193,11 +197,12 @@ export function AppHeader({
                   <TooltipTrigger asChild>
                     <Button
                       variant={selectionMode ? "primary" : "ghost"}
-                      className="h-12 w-12 p-0 hidden sm:flex"
+                      className="h-12 w-12 p-0 hidden sm:flex xl:w-auto xl:px-3 xl:gap-2"
                       onClick={onToggleSelectionMode}
                       aria-label={selectionMode ? "Exit selection mode" : "Select tasks"}
                     >
-                      <CheckSquareIcon className="h-7 w-7" />
+                      <CheckSquareIcon className="h-7 w-7 xl:h-5 xl:w-5" />
+                      <span className="hidden xl:inline text-sm font-medium">Select</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -208,26 +213,28 @@ export function AppHeader({
               <QuickSettingsPanel onOpenFullSettings={onOpenSettings}>
                 <Button
                   variant="ghost"
-                  className="h-12 w-12 p-0"
+                  className="h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2"
                   aria-label="Quick Settings"
                 >
-                  <SettingsIcon className="h-7 w-7" />
+                  <SettingsIcon className="h-7 w-7 xl:h-5 xl:w-5" />
+                  <span className="hidden xl:inline text-sm font-medium">Settings</span>
                 </Button>
               </QuickSettingsPanel>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button className="h-12 w-12 p-0" onClick={onHelp} aria-label="User Guide">
-                    <HelpCircleIcon className="h-7 w-7" />
+                  <Button className="h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2" onClick={onHelp} aria-label="User Guide">
+                    <HelpCircleIcon className="h-7 w-7 xl:h-5 xl:w-5" />
+                    <span className="hidden xl:inline text-sm font-medium">Help</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>User Guide (Press ?)</p>
                 </TooltipContent>
               </Tooltip>
-              <Button onClick={onNewTask} className="hidden sm:inline-flex">
+              <Button onClick={onNewTask} className={cn("hidden sm:inline-flex", isDoFirstEmpty && "animate-new-task-glow")}>
                 <PlusIcon className="mr-2 h-4 w-4" /> New Task
               </Button>
-              <Button onClick={onNewTask} className="sm:hidden" aria-label="Create task">
+              <Button onClick={onNewTask} className={cn("sm:hidden", isDoFirstEmpty && "animate-new-task-glow")} aria-label="Create task">
                 <PlusIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -235,7 +242,7 @@ export function AppHeader({
         </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1">
+        <div className={`relative ${searchExpanded ? 'flex-1' : 'w-0 overflow-hidden opacity-0 pointer-events-none'} transition-all duration-200`}>
           <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <Input
             ref={searchInputRef}
@@ -243,9 +250,30 @@ export function AppHeader({
             className="pl-9"
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
+            onBlur={() => {
+              if (!searchQuery) setSearchExpanded(false);
+            }}
+            onFocus={() => setSearchExpanded(true)}
             aria-label="Search tasks"
           />
         </div>
+        {!searchExpanded && (
+          <Button
+            variant="subtle"
+            onClick={() => {
+              setSearchExpanded(true);
+              setTimeout(() => searchInputRef.current?.focus(), 50);
+            }}
+            className="gap-2"
+            aria-label="Search tasks"
+          >
+            <SearchIcon className="h-4 w-4" />
+            <span className="text-foreground-muted text-sm">Search...</span>
+            <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
+              /
+            </kbd>
+          </Button>
+        )}
         <SmartViewPills
           onSelectView={onSelectSmartView}
           currentCriteria={currentFilterCriteria}

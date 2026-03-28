@@ -143,7 +143,7 @@ main {
 
 @layer components {
   .matrix-grid {
-    @apply grid grid-cols-1 gap-6 md:grid-cols-2;
+    @apply grid grid-cols-1 items-start gap-6 md:grid-cols-2;
   }
 
   .matrix-card {
@@ -254,12 +254,68 @@ main {
   .animate-pulse-highlight {
     animation: pulse-highlight 1.5s ease-in-out 2;
   }
+
+  @keyframes slide-in-card {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in-card {
+    animation: slide-in-card 0.3s ease-out both;
+  }
+
+  @keyframes complete-flash {
+    0% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+  }
+
+  .animate-complete-flash {
+    animation: complete-flash 0.6s ease-out;
+  }
+
+  @keyframes new-task-glow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(var(--accent), 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(var(--accent), 0);
+    }
+  }
+
+  .animate-new-task-glow {
+    animation: new-task-glow 1.5s ease-in-out 3;
+  }
 }
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
   ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .animate-slide-in-card {
+    animation: none !important;
+  }
+
+  .animate-complete-flash {
+    animation: none !important;
+  }
+
+  .animate-new-task-glow {
     animation: none !important;
   }
 }
