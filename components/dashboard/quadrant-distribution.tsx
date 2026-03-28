@@ -9,10 +9,10 @@ interface QuadrantDistributionProps {
 }
 
 const COLORS: Record<QuadrantId, string> = {
-  "urgent-important": "#ef4444",
-  "not-urgent-important": "#f59e0b",
-  "urgent-not-important": "#10b981",
-  "not-urgent-not-important": "#8b5cf6"
+  "urgent-important": "#3b82f6",       // blue-500 (Do First)
+  "not-urgent-important": "#f59e0b",   // amber-500 (Schedule)
+  "urgent-not-important": "#10b981",   // emerald-500 (Delegate)
+  "not-urgent-not-important": "#8b5cf6" // violet-500 (Eliminate)
 };
 
 /**
@@ -59,10 +59,11 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
+              backgroundColor: 'rgb(var(--card-background))',
+              border: '1px solid rgb(var(--border))',
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              color: 'rgb(var(--foreground))'
             }}
           />
           <Legend />

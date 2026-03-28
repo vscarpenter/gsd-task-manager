@@ -8,6 +8,7 @@ export interface StreakData {
   current: number;
   longest: number;
   lastCompletionDate: string | null;
+  last7Days: boolean[];
 }
 
 /**
@@ -20,7 +21,7 @@ export function getStreakData(tasks: TaskRecord[]): StreakData {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   if (completedTasks.length === 0) {
-    return { current: 0, longest: 0, lastCompletionDate: null };
+    return { current: 0, longest: 0, lastCompletionDate: null, last7Days: Array(7).fill(false) as boolean[] };
   }
 
   const uniqueDates = getUniqueCompletionDates(completedTasks);
@@ -30,7 +31,8 @@ export function getStreakData(tasks: TaskRecord[]): StreakData {
   return {
     current: currentStreak,
     longest: longestStreak,
-    lastCompletionDate: uniqueDates[0] || null
+    lastCompletionDate: uniqueDates[0] || null,
+    last7Days: getLast7Days(completedTasks)
   };
 }
 
@@ -88,6 +90,28 @@ function calculateLongestStreak(uniqueDates: string[], currentStreak: number): n
   }
 
   return Math.max(longestStreak, tempStreak, currentStreak);
+}
+
+/**
+ * Build an array of 7 booleans representing task completion for the last 7 days.
+ * Index 0 = 6 days ago, index 6 = today (left-to-right chronological).
+ */
+function getLast7Days(completedTasks: TaskRecord[]): boolean[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const completionDates = new Set<string>();
+  completedTasks.forEach(task => {
+    completionDates.add(new Date(task.updatedAt).toISOString().split('T')[0]);
+  });
+
+  const result: boolean[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = subDays(today, i);
+    const dateStr = date.toISOString().split('T')[0];
+    result.push(completionDates.has(dateStr));
+  }
+  return result;
 }
 
 /**

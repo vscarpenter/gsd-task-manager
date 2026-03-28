@@ -1,4 +1,5 @@
-import { useSensors, useSensor, PointerSensor, TouchSensor, DragEndEvent } from "@dnd-kit/core";
+import { useState } from "react";
+import { useSensors, useSensor, PointerSensor, TouchSensor, DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import type { QuadrantId } from "@/lib/types";
 import { moveTaskToQuadrant } from "@/lib/tasks";
 import { DND_CONFIG } from "@/lib/constants";
@@ -23,6 +24,8 @@ export type DragErrorHandler = (
  * Configures sensors and provides drag handler with error handling
  */
 export function useDragAndDrop(onError: DragErrorHandler) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
   // Configure sensors for drag-and-drop (mouse + touch)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -39,9 +42,17 @@ export function useDragAndDrop(onError: DragErrorHandler) {
   );
 
   /**
+   * Track which task is being dragged for DragOverlay
+   */
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  /**
    * Handle drag end event - moves task to new quadrant
    */
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -66,6 +77,8 @@ export function useDragAndDrop(onError: DragErrorHandler) {
 
   return {
     sensors,
+    activeId,
+    handleDragStart,
     handleDragEnd,
   };
 }

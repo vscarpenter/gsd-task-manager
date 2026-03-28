@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { DndContext } from "@dnd-kit/core";
+import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
@@ -55,7 +55,7 @@ export function MatrixBoard() {
   const dialogs = useMatrixDialogs();
   const { showToast } = useToast();
   const { handleError } = useErrorHandlerWithUndo();
-  const { sensors, handleDragEnd } = useDragAndDrop(handleError);
+  const { sensors, activeId, handleDragStart, handleDragEnd } = useDragAndDrop(handleError);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const taskRefs = useRef<Map<string, HTMLElement>>(new Map());
   const { theme, setTheme } = useTheme();
@@ -102,6 +102,7 @@ export function MatrixBoard() {
 
   // Calculate total visible task count
   const visibleCount = getVisibleTaskCount(filteredQuadrants);
+  const isDoFirstEmpty = (filteredQuadrants["urgent-important"] ?? []).length === 0;
 
   const handleSaveSmartView = () => {
     dialogs.setSaveSmartViewOpen(true);
@@ -192,9 +193,10 @@ export function MatrixBoard() {
   const taskBeingEdited = dialogs.dialogState?.mode === "edit" ? dialogs.dialogState.task : undefined;
   const activeTaskDraft = taskBeingEdited ? toDraft(taskBeingEdited) : undefined;
   const hasTasks = all.length > 0;
+  const activeDragTask = activeId ? all.find(t => t.id === activeId) : undefined;
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       {/* Command Palette - Global ⌘K shortcut */}
       <CommandPalette
         handlers={commandHandlers}
@@ -223,6 +225,7 @@ export function MatrixBoard() {
           selectionMode={bulkSelection.selectionMode}
           onToggleSelectionMode={bulkSelection.handleToggleSelectionMode}
           selectedCount={bulkSelection.selectedTaskIds.size}
+          isDoFirstEmpty={hasTasks && isDoFirstEmpty}
         />
 
         {/* Active Filter Chips */}
@@ -238,7 +241,7 @@ export function MatrixBoard() {
         {/* Floating Action Button - Mobile Only */}
         <button
           onClick={() => dialogs.setDialogState({ mode: "create" })}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white transition-all duration-200 hover:bg-accent-hover hover:scale-105 active:scale-95 md:hidden touch-manipulation"
+          className={`fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white transition-all duration-200 hover:bg-accent-hover hover:scale-105 active:scale-95 md:hidden touch-manipulation ${hasTasks && isDoFirstEmpty ? "animate-new-task-glow" : ""}`}
           style={{
             boxShadow: 'var(--shadow-fab)',
             paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))"
@@ -347,6 +350,20 @@ export function MatrixBoard() {
           onDelete={taskOps.handleDelete}
         />
       </div>
+      <DragOverlay dropAnimation={null}>
+        {activeDragTask ? (
+          <div className="rounded-xl border border-accent bg-card p-3 opacity-90 shadow-lg">
+            <p className="text-sm font-medium text-foreground truncate">{activeDragTask.title}</p>
+            {activeDragTask.tags.length > 0 && (
+              <div className="mt-1.5 flex gap-1 overflow-hidden">
+                {activeDragTask.tags.slice(0, 3).map(tag => (
+                  <span key={tag} className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] text-accent">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

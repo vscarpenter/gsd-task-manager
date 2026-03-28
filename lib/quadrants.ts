@@ -8,6 +8,7 @@ export interface QuadrantMeta {
   bgClass: string;
   colorClass: string;
   iconColor: string;
+  emptyMessage: string;
 }
 
 export const quadrants: QuadrantMeta[] = [
@@ -18,7 +19,8 @@ export const quadrants: QuadrantMeta[] = [
     accentClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     bgClass: "bg-quadrant-focus",
     colorClass: "bg-blue-500",
-    iconColor: "text-blue-500 dark:text-blue-400"
+    iconColor: "text-blue-500 dark:text-blue-400",
+    emptyMessage: "What needs your attention right now?"
   },
   {
     id: "not-urgent-important",
@@ -27,7 +29,8 @@ export const quadrants: QuadrantMeta[] = [
     accentClass: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     bgClass: "bg-quadrant-schedule",
     colorClass: "bg-amber-500",
-    iconColor: "text-amber-500 dark:text-amber-400"
+    iconColor: "text-amber-500 dark:text-amber-400",
+    emptyMessage: "What's important but not urgent?"
   },
   {
     id: "urgent-not-important",
@@ -36,7 +39,8 @@ export const quadrants: QuadrantMeta[] = [
     accentClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     bgClass: "bg-quadrant-delegate",
     colorClass: "bg-emerald-500",
-    iconColor: "text-emerald-500 dark:text-emerald-400"
+    iconColor: "text-emerald-500 dark:text-emerald-400",
+    emptyMessage: "What can someone else handle?"
   },
   {
     id: "not-urgent-not-important",
@@ -45,7 +49,8 @@ export const quadrants: QuadrantMeta[] = [
     accentClass: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
     bgClass: "bg-quadrant-eliminate",
     colorClass: "bg-purple-500",
-    iconColor: "text-purple-500 dark:text-purple-400"
+    iconColor: "text-purple-500 dark:text-purple-400",
+    emptyMessage: "Anything you can let go of?"
   }
 ];
 

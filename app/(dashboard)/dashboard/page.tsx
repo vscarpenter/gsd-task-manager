@@ -70,24 +70,28 @@ export default function DashboardPage() {
                 value={metrics.completedToday}
                 subtitle={`${metrics.completedThisWeek} this week`}
                 icon={CheckCircle2Icon}
+                accentColor="emerald"
               />
               <StatsCard
                 title="Active Tasks"
                 value={metrics.activeTasks}
                 subtitle={`${metrics.totalTasks} total tasks`}
                 icon={ListTodoIcon}
+                accentColor="blue"
               />
               <StatsCard
                 title="Completion Rate"
                 value={`${metrics.completionRate}%`}
                 subtitle={`${metrics.completedTasks} completed`}
                 icon={TrendingUpIcon}
+                accentColor="amber"
               />
               <StatsCard
                 title="Overdue Tasks"
                 value={metrics.overdueCount}
                 subtitle={`${metrics.dueTodayCount} due today`}
                 icon={TargetIcon}
+                accentColor="red"
               />
             </div>
 

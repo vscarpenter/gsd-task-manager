@@ -68,31 +68,45 @@ describe('Dashboard Components', () => {
 
   describe('StreakIndicator', () => {
     it('should render current streak', () => {
-      render(<StreakIndicator streakData={{ current: 7, longest: 10, lastCompletionDate: null }} />);
+      render(<StreakIndicator streakData={{ current: 7, longest: 10, lastCompletionDate: null, last7Days: [true, true, true, true, true, true, true] }} />);
 
-      expect(screen.getByText(/7/)).toBeInTheDocument();
+      // "7 days" appears in both streak count and milestone badge
+      const sevenDaysElements = screen.getAllByText(/7\s*days/);
+      expect(sevenDaysElements.length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/current streak/i)).toBeInTheDocument();
     });
 
     it('should render longest streak', () => {
-      render(<StreakIndicator streakData={{ current: 3, longest: 15, lastCompletionDate: null }} />);
+      render(<StreakIndicator streakData={{ current: 3, longest: 15, lastCompletionDate: null, last7Days: [false, false, false, false, true, true, true] }} />);
 
       expect(screen.getByText(/15/)).toBeInTheDocument();
       expect(screen.getByText(/longest streak/i)).toBeInTheDocument();
     });
 
     it('should handle zero streak', () => {
-      render(<StreakIndicator streakData={{ current: 0, longest: 0, lastCompletionDate: null }} />);
+      render(<StreakIndicator streakData={{ current: 0, longest: 0, lastCompletionDate: null, last7Days: [false, false, false, false, false, false, false] }} />);
 
       expect(screen.getByText(/0/)).toBeInTheDocument();
-      expect(screen.getByText(/start your streak/i)).toBeInTheDocument();
+      expect(screen.getByText(/start fresh today/i)).toBeInTheDocument();
     });
 
     it('should render streak icon', () => {
-      render(<StreakIndicator streakData={{ current: 5, longest: 10, lastCompletionDate: null }} />);
+      render(<StreakIndicator streakData={{ current: 5, longest: 10, lastCompletionDate: null, last7Days: [false, false, true, true, true, true, true] }} />);
 
       // Should have flame icon
       expect(screen.getByText(/current streak/i)).toBeInTheDocument();
+    });
+
+    it('should render 7-day activity dots', () => {
+      render(<StreakIndicator streakData={{ current: 3, longest: 5, lastCompletionDate: null, last7Days: [false, false, false, false, true, true, true] }} />);
+      expect(screen.getByText(/last 7 days/i)).toBeInTheDocument();
+    });
+
+    it('should show milestone badge for 7+ day streak', () => {
+      render(<StreakIndicator streakData={{ current: 7, longest: 10, lastCompletionDate: null, last7Days: [true, true, true, true, true, true, true] }} />);
+      // Milestone badge shows exactly "7 days" as a standalone text node
+      const badges = screen.getAllByText(/7 days/);
+      expect(badges.length).toBeGreaterThanOrEqual(2); // streak count + milestone badge
     });
   });
 

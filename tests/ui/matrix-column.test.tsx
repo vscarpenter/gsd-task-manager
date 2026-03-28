@@ -35,7 +35,9 @@ describe("MatrixColumn", () => {
     subtitle: "Urgent & Important",
     bgClass: "bg-blue-50",
     accentClass: "bg-blue-500 text-white",
-    colorClass: "bg-blue-500"
+    colorClass: "bg-blue-500",
+    iconColor: "text-blue-500 dark:text-blue-400",
+    emptyMessage: "What needs your attention right now?"
   };
 
   const mockTasks: TaskRecord[] = [
@@ -120,6 +122,11 @@ describe("MatrixColumn", () => {
 
     expect(screen.getByText("Do First")).toBeInTheDocument();
     expect(container.querySelectorAll('[data-testid^="task-"]')).toHaveLength(0);
+  });
+
+  it("renders quadrant-specific empty state message", () => {
+    render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} allTasks={[]} {...mockHandlers} />);
+    expect(screen.getByText("What needs your attention right now?")).toBeInTheDocument();
   });
 
   it("applies correct styling based on quadrant", () => {

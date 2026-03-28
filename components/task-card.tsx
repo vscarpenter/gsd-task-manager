@@ -1,10 +1,10 @@
 "use client";
 
 import { memo } from "react";
-import { CheckIcon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon, CopyIcon } from "lucide-react";
+import { CircleIcon, CheckCircle2Icon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon, CopyIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatDueDate, cn, isOverdue, isDueToday } from "@/lib/utils";
+import { formatRelative, cn, isOverdue, isDueToday } from "@/lib/utils";
 import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
 import { SnoozeDropdown } from "@/components/snooze-dropdown";
 import { TaskTimer } from "@/components/task-timer";
@@ -12,7 +12,6 @@ import { areTaskCardPropsEqual, type TaskCardProps } from "@/lib/task-card-memo"
 
 function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, onDuplicate, onSnooze, onStartTimer, onStopTimer, selectionMode, isSelected, onToggleSelect, taskRef, isHighlighted }: TaskCardProps) {
   // React Compiler handles optimization automatically
-  const dueLabel = formatDueDate(task.dueDate);
   const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
   const taskIsDueToday = !task.completed && isDueToday(task.dueDate);
   const completedSubtasks = task.subtasks.filter(st => st.completed).length;
@@ -45,8 +44,9 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
       }}
       style={style}
       className={cn(
-        "group flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200",
+        "group flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200 animate-slide-in-card",
         task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5",
+        task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
         taskIsOverdue ? "border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30" : "border-card-border",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
@@ -100,7 +100,11 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           aria-pressed={task.completed}
           aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
         >
-          <CheckIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+          {task.completed ? (
+            <CheckCircle2Icon className="h-4 w-4 sm:h-4 sm:w-4" />
+          ) : (
+            <CircleIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+          )}
         </button>
       </div>
 
@@ -186,9 +190,9 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
               <AlertCircleIcon className="h-3 w-3" />
               Due today
             </span>
-          ) : (
-            <span className="truncate">Due {dueLabel}</span>
-          )}
+          ) : task.dueDate ? (
+            <span className="truncate">{formatRelative(task.dueDate)}</span>
+          ) : null}
           {task.recurrence !== "none" ? (
             <span className="flex items-center gap-1 text-accent" title={`Recurs ${task.recurrence}`}>
               <RepeatIcon className="h-3 w-3" />

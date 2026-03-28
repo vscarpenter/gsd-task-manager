@@ -1,9 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { FlameIcon, CalendarIcon, UsersIcon, TrashIcon } from "lucide-react";
+import { FlameIcon, CalendarIcon, UsersIcon, TrashIcon, ChevronDownIcon } from "lucide-react";
 import type { QuadrantMeta } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
@@ -57,6 +57,8 @@ function MatrixColumnComponent({
     id: quadrant.id
   });
 
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   // React Compiler handles optimization automatically
   const taskIds = tasks.map((task) => task.id);
 
@@ -80,16 +82,30 @@ function MatrixColumnComponent({
             <p className="matrix-card__subtitle">{quadrant.subtitle}</p>
           </div>
         </div>
-        <span className={cn("rounded-full px-3 py-1 text-xs font-semibold tabular-nums", quadrant.accentClass)}>
-          {tasks.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={cn("rounded-full px-3 py-1 text-xs font-semibold tabular-nums", quadrant.accentClass)}>
+            {tasks.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="md:hidden rounded-lg p-1.5 text-foreground-muted hover:bg-background-muted/50 transition-colors"
+            aria-label={isCollapsed ? `Expand ${quadrant.title}` : `Collapse ${quadrant.title}`}
+            aria-expanded={!isCollapsed}
+          >
+            <ChevronDownIcon className={cn("h-4 w-4 transition-transform duration-200", isCollapsed && "-rotate-90")} />
+          </button>
+        </div>
       </header>
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3">
+        <div className={cn(
+          "space-y-3 transition-all duration-200 overflow-hidden",
+          isCollapsed && "max-h-0 opacity-0 md:max-h-none md:opacity-100"
+        )}>
           {tasks.length === 0 ? (
             <p className="rounded-xl border border-dashed border-border/60 bg-background/30 p-4 text-center text-sm text-foreground-muted/70 italic">
-              Drop tasks here to get started
+              {quadrant.emptyMessage}
             </p>
           ) : (
             tasks.map((task) => (
