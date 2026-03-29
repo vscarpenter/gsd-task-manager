@@ -4,6 +4,7 @@ import { AlertCircleIcon, CalendarIcon, ClockIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants } from "@/lib/quadrants";
 import { isOverdue, isDueToday } from "@/lib/utils";
+import { TIME_MS } from "@/lib/constants";
 
 interface UpcomingDeadlinesProps {
   tasks: TaskRecord[];
@@ -142,7 +143,7 @@ function formatDueDate(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
   const diffTime = date.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil(diffTime / TIME_MS.DAY);
 
   if (diffDays === 0) return "Today";
   if (diffDays === -1) return "Yesterday";

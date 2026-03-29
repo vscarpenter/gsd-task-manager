@@ -99,6 +99,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
                 <button
                   key={quadrant.id}
                   onClick={() => toggleQuadrant(quadrant.id)}
+                  aria-pressed={criteria.quadrants?.includes(quadrant.id) ?? false}
                   className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition ${
                     criteria.quadrants?.includes(quadrant.id)
                       ? "border-accent bg-accent/10 font-medium"
@@ -120,6 +121,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
                 <button
                   key={status}
                   onClick={() => updateCriteria({ status })}
+                  aria-pressed={(criteria.status || 'all') === status}
                   className={`flex-1 rounded-lg border px-3 py-2 text-sm capitalize transition ${
                     (criteria.status || 'all') === status
                       ? "border-accent bg-accent/10 font-medium"
@@ -141,6 +143,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
                   <button
                     key={tag}
                     onClick={() => toggleTag(tag)}
+                    aria-pressed={criteria.tags?.includes(tag) ?? false}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                       criteria.tags?.includes(tag)
                         ? "bg-accent text-white"
@@ -161,6 +164,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
               <div className="flex gap-2">
                 <button
                   onClick={() => updateCriteria({ overdue: !criteria.overdue, dueToday: undefined, dueThisWeek: undefined })}
+                  aria-pressed={criteria.overdue ?? false}
                   className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
                     criteria.overdue
                       ? "border-red-500 bg-red-50 font-medium text-red-700"
@@ -171,6 +175,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
                 </button>
                 <button
                   onClick={() => updateCriteria({ dueToday: !criteria.dueToday, overdue: undefined, dueThisWeek: undefined })}
+                  aria-pressed={criteria.dueToday ?? false}
                   className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
                     criteria.dueToday
                       ? "border-amber-500 bg-amber-50 font-medium text-amber-700"
@@ -181,6 +186,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
                 </button>
                 <button
                   onClick={() => updateCriteria({ dueThisWeek: !criteria.dueThisWeek, overdue: undefined, dueToday: undefined })}
+                  aria-pressed={criteria.dueThisWeek ?? false}
                   className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
                     criteria.dueThisWeek
                       ? "border-accent bg-accent/10 font-medium"
@@ -245,6 +251,7 @@ function FilterPanelComponent({ criteria, onChange, onSaveAsSmartView, available
                 <button
                   key={recurrence}
                   onClick={() => toggleRecurrence(recurrence)}
+                  aria-pressed={criteria.recurrence?.includes(recurrence) ?? false}
                   className={`rounded-lg border px-3 py-1 text-sm capitalize transition ${
                     criteria.recurrence?.includes(recurrence)
                       ? "border-accent bg-accent/10 font-medium"

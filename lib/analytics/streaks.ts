@@ -1,5 +1,6 @@
 import type { TaskRecord } from "@/lib/types";
 import { subDays } from "date-fns";
+import { TIME_MS } from "@/lib/constants";
 
 /**
  * Streak data
@@ -120,5 +121,5 @@ function getLast7Days(completedTasks: TaskRecord[]): boolean[] {
 function calculateDaysDifference(date1: string, date2: string): number {
   const prevDate = new Date(date1);
   const currDate = new Date(date2);
-  return Math.round((prevDate.getTime() - currDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.round((prevDate.getTime() - currDate.getTime()) / TIME_MS.DAY);
 }

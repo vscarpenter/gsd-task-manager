@@ -8,12 +8,12 @@ import { getSyncQueue } from './queue';
 import { getPocketBase, isAuthenticated } from './pocketbase-client';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { PBSyncConfig } from './types';
 
 const logger = createLogger('SYNC_HEALTH');
 
-const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const STALE_OPERATION_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+const { HEALTH_CHECK_INTERVAL_MS, STALE_OPERATION_THRESHOLD_MS } = SYNC_CONFIG;
 
 export interface HealthIssue {
   type: 'stale_queue' | 'token_expired' | 'server_unreachable';
