@@ -2,100 +2,59 @@ import { describe, expect, it } from "vitest";
 import { applyFilters, isEmptyFilter, getFilterDescription, BUILT_IN_SMART_VIEWS } from "@/lib/filters";
 import type { FilterCriteria } from "@/lib/filters";
 import type { TaskRecord } from "@/lib/types";
+import { createMockTask } from "@/tests/fixtures";
+import { TIME_MS } from "@/lib/constants";
 
 describe("Filter utilities", () => {
   const sampleTasks: TaskRecord[] = [
-    {
+    createMockTask({
       id: "1",
       title: "Urgent task",
       description: "Fix bug",
-      urgent: true,
-      important: true,
-      quadrant: "urgent-important",
-      completed: false,
       dueDate: new Date().toISOString(), // Due today
-      recurrence: "none",
       tags: ["work", "bug"],
-      subtasks: [],
-      dependencies: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationEnabled: true,
-      notificationSent: false
-    },
-    {
+    }),
+    createMockTask({
       id: "2",
       title: "Planning task",
       description: "Review strategy",
       urgent: false,
-      important: true,
       quadrant: "not-urgent-important",
-      completed: false,
-      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // Due in 5 days
+      dueDate: new Date(Date.now() + 5 * TIME_MS.DAY).toISOString(), // Due in 5 days
       recurrence: "weekly",
       tags: ["planning"],
-      subtasks: [],
-      dependencies: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationEnabled: true,
-      notificationSent: false
-    },
-    {
+    }),
+    createMockTask({
       id: "3",
       title: "Completed task",
       description: "Done",
-      urgent: true,
       important: false,
       quadrant: "urgent-not-important",
       completed: true,
-      completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Completed 2 days ago
-      dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-      recurrence: "none",
+      completedAt: new Date(Date.now() - 2 * TIME_MS.DAY).toISOString(), // Completed 2 days ago
+      dueDate: new Date(Date.now() - 2 * TIME_MS.DAY).toISOString(),
+      createdAt: new Date(Date.now() - 10 * TIME_MS.DAY).toISOString(), // Created 10 days ago
       tags: ["work"],
-      subtasks: [],
-      dependencies: [],
-      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // Created 10 days ago
-      updatedAt: new Date().toISOString(),
-      notificationEnabled: true,
-      notificationSent: false
-    },
-    {
+    }),
+    createMockTask({
       id: "4",
       title: "Overdue task",
       description: "Should have done this",
       urgent: false,
       important: false,
       quadrant: "not-urgent-not-important",
-      completed: false,
-      dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago (overdue)
+      dueDate: new Date(Date.now() - 3 * TIME_MS.DAY).toISOString(), // 3 days ago (overdue)
       recurrence: "daily",
       tags: ["personal"],
-      subtasks: [],
-      dependencies: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationEnabled: true,
-      notificationSent: false
-    },
-    {
+    }),
+    createMockTask({
       id: "5",
       title: "No deadline task",
       description: "Someday maybe",
       urgent: false,
-      important: true,
       quadrant: "not-urgent-important",
-      completed: false,
-      dueDate: undefined,
-      recurrence: "none",
-      tags: [],
       subtasks: [{ id: "sub1", title: "Subtask 1", completed: false }],
-      dependencies: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      notificationEnabled: true,
-      notificationSent: false
-    }
+    }),
   ];
 
   describe("applyFilters", () => {
@@ -250,8 +209,8 @@ describe("Filter utilities", () => {
 
     it("should handle date range filtering", () => {
       const today = new Date();
-      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const tomorrow = new Date(today.getTime() + TIME_MS.DAY);
+      const nextWeek = new Date(today.getTime() + 7 * TIME_MS.DAY);
 
       const criteria: FilterCriteria = {
         dueDateRange: {

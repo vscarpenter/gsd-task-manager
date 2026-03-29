@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
+import { TIME_MS } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("PWA");
@@ -44,7 +45,7 @@ export function InstallPwaPrompt() {
     const dismissed = localStorage.getItem("gsd-pwa-dismissed");
     if (dismissed) {
       const dismissedTime = Number.parseInt(dismissed, 10);
-      const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+      const daysSinceDismissed = (Date.now() - dismissedTime) / TIME_MS.DAY;
 
       // Show again after 7 days
       if (daysSinceDismissed < 7) {

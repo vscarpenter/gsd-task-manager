@@ -112,7 +112,7 @@ export async function clearCustomSmartViews(): Promise<void> {
 /**
  * Get app preferences (including pinned smart view IDs)
  */
-export async function getAppPreferences() {
+export async function getAppPreferences(): Promise<AppPreferences> {
   const db = getDb();
   const prefs = await db.appPreferences.get("preferences");
 
@@ -131,7 +131,7 @@ export async function getAppPreferences() {
 /**
  * Update app preferences
  */
-export async function updateAppPreferences(updates: Partial<Omit<AppPreferences, 'id'>>) {
+export async function updateAppPreferences(updates: Partial<Omit<AppPreferences, 'id'>>): Promise<AppPreferences> {
   const db = getDb();
   const existing = await getAppPreferences();
 

@@ -5,12 +5,11 @@
 
 import { getSyncConfig, updateSyncConfig } from './config';
 import { createLogger } from '@/lib/logger';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 
 const logger = createLogger('SYNC_RETRY');
 
-// Retry configuration
-const MAX_RETRIES = 5;
-const RETRY_DELAYS = [5000, 10000, 30000, 60000, 300000]; // 5s, 10s, 30s, 60s, 300s in milliseconds
+const { MAX_RETRIES, RETRY_DELAYS } = SYNC_CONFIG;
 
 export class RetryManager {
   /**

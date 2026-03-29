@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MatrixColumn } from "@/components/matrix-column";
 import type { TaskRecord } from "@/lib/types";
+import { createMockTask } from "@/tests/fixtures";
 
 // Mock dnd-kit
 vi.mock("@dnd-kit/core", () => ({
@@ -41,42 +42,8 @@ describe("MatrixColumn", () => {
   };
 
   const mockTasks: TaskRecord[] = [
-    {
-      id: "task-1",
-      title: "Task 1",
-      description: "",
-      urgent: true,
-      important: true,
-      quadrant: "urgent-important",
-      completed: false,
-      dueDate: undefined,
-      recurrence: "none",
-      tags: [],
-      subtasks: [],
-      dependencies: [],
-      createdAt: "2024-01-01T00:00:00.000Z",
-      updatedAt: "2024-01-01T00:00:00.000Z",
-    notificationEnabled: true,
-    notificationSent: false
-    },
-    {
-      id: "task-2",
-      title: "Task 2",
-      description: "",
-      urgent: true,
-      important: true,
-      quadrant: "urgent-important",
-      completed: true,
-      dueDate: undefined,
-      recurrence: "none",
-      tags: [],
-      subtasks: [],
-      dependencies: [],
-      createdAt: "2024-01-02T00:00:00.000Z",
-      updatedAt: "2024-01-02T00:00:00.000Z",
-    notificationEnabled: true,
-    notificationSent: false
-    }
+    createMockTask({ id: "task-1", title: "Task 1" }),
+    createMockTask({ id: "task-2", title: "Task 2", completed: true }),
   ];
 
   const mockHandlers = {

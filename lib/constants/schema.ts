@@ -37,13 +37,3 @@ export const PAGINATION_LIMITS = {
   MAX_BULK_TASKS: 50,
 } as const;
 
-/**
- * Time-based filter constants
- */
-export const FILTER_CONSTANTS = {
-  /** Days for "recently added/completed" filters */
-  RECENT_ACTIVITY_DAYS: 7,
-
-  /** Milliseconds in one day */
-  MS_PER_DAY: 24 * 60 * 60 * 1000,
-} as const;

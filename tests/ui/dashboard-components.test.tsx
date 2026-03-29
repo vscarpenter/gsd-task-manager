@@ -8,6 +8,7 @@ import { TagAnalytics } from '@/components/dashboard/tag-analytics';
 import { UpcomingDeadlines } from '@/components/dashboard/upcoming-deadlines';
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 describe('Dashboard Components', () => {
   let db: ReturnType<typeof getDb>;
@@ -261,57 +262,23 @@ describe('Dashboard Components', () => {
     const oneDayMs = 86400000;
 
     const testTasks: TaskRecord[] = [
-      {
+      createMockTask({
         id: 'overdue-1',
         title: 'Late Task',
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
         dueDate: new Date(now - oneDayMs).toISOString(),
-        createdAt: new Date(now).toISOString(),
-        updatedAt: new Date(now).toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        notificationEnabled: true, notificationSent: false,
-      },
-      {
+      }),
+      createMockTask({
         id: 'today-1',
         title: 'Due Today',
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
         dueDate: new Date(now).toISOString(),
-        createdAt: new Date(now).toISOString(),
-        updatedAt: new Date(now).toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        notificationEnabled: true, notificationSent: false,
-      },
-      {
+      }),
+      createMockTask({
         id: 'week-1',
         title: 'Due This Week',
-        description: '',
         urgent: false,
-        important: true,
         quadrant: 'not-urgent-important',
-        completed: false,
         dueDate: new Date(now + 3 * oneDayMs).toISOString(),
-        createdAt: new Date(now).toISOString(),
-        updatedAt: new Date(now).toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        notificationEnabled: true, notificationSent: false,
-      },
+      }),
     ];
 
     it('should render empty state when no upcoming deadlines', () => {
@@ -365,24 +332,13 @@ describe('Dashboard Components', () => {
     it('should not show completed tasks', () => {
       const tasksWithCompleted: TaskRecord[] = [
         ...testTasks,
-        {
+        createMockTask({
           id: 'completed-overdue',
           title: 'Completed Overdue',
-          description: '',
-          urgent: true,
-          important: true,
-          quadrant: 'urgent-important',
           completed: true,
           completedAt: new Date().toISOString(),
           dueDate: new Date(Date.now() - oneDayMs).toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          recurrence: 'none',
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-          notificationEnabled: true, notificationSent: false,
-        },
+        }),
       ];
 
       render(<UpcomingDeadlines tasks={tasksWithCompleted} />);

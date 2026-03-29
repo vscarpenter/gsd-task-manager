@@ -30,6 +30,14 @@ export const SYNC_CONFIG = {
 
   /** Default limit for sync history queries */
   DEFAULT_HISTORY_LIMIT: 50,
+  /** Threshold for considering a queued operation stale (1 hour) */
+  STALE_OPERATION_THRESHOLD_MS: 60 * 60 * 1000,
+
+  /** Maximum number of consecutive sync retries before giving up */
+  MAX_RETRIES: 5,
+
+  /** Exponential backoff delays for sync retries: 5s, 10s, 30s, 60s, 300s */
+  RETRY_DELAYS: [5000, 10000, 30000, 60000, 300000] as readonly number[],
 } as const;
 
 /**

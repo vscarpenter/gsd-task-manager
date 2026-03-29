@@ -80,7 +80,15 @@ export async function isSyncEnabled(): Promise<boolean> {
 /**
  * Get sync status summary
  */
-export async function getSyncStatus() {
+interface SyncStatus {
+  enabled: boolean;
+  email: string | null;
+  lastSyncAt: string | null;
+  pendingCount: number;
+  deviceId: string | null;
+}
+
+export async function getSyncStatus(): Promise<SyncStatus> {
   const config = await getSyncConfig();
   const db = getDb();
   const pendingCount = await db.syncQueue.count();
