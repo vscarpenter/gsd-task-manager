@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "7.6.1",
+	"version": "7.6.2",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
