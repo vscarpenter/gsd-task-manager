@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "7.6.0",
+	"version": "7.6.1",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -96,7 +96,9 @@
 		"hono": ">=4.12.7",
 		"undici": ">=7.24.0",
 		"flatted": ">=3.4.2",
-		"express-rate-limit": ">=8.2.2"
+		"express-rate-limit": ">=8.2.2",
+		"path-to-regexp": ">=8.4.0",
+		"picomatch": ">=4.0.4"
 	},
 	"license": "MIT"
 }
