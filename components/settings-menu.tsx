@@ -221,10 +221,9 @@ export function SettingsMenu({ onExport, onImport, isLoading }: SettingsMenuProp
                 Cancel
               </Button>
               <Button
-                variant="primary"
+                variant="destructive"
                 onClick={performLogout}
                 disabled={isLoggingOut}
-                className="bg-red-600 hover:bg-red-700"
               >
                 {isLoggingOut ? "Logging out..." : "Logout Anyway"}
               </Button>

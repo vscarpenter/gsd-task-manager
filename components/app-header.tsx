@@ -231,9 +231,16 @@ export function AppHeader({
                   <p>User Guide (Press ?)</p>
                 </TooltipContent>
               </Tooltip>
-              <Button onClick={onNewTask} className={cn("hidden sm:inline-flex", isDoFirstEmpty && "animate-new-task-glow")}>
-                <PlusIcon className="mr-2 h-4 w-4" /> New Task
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={onNewTask} className={cn("hidden sm:inline-flex", isDoFirstEmpty && "animate-new-task-glow")}>
+                    <PlusIcon className="mr-2 h-4 w-4" /> New Task
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Create task (n)</p>
+                </TooltipContent>
+              </Tooltip>
               <Button onClick={onNewTask} className={cn("sm:hidden", isDoFirstEmpty && "animate-new-task-glow")} aria-label="Create task">
                 <PlusIcon className="h-4 w-4" />
               </Button>
@@ -258,21 +265,28 @@ export function AppHeader({
           />
         </div>
         {!searchExpanded && (
-          <Button
-            variant="subtle"
-            onClick={() => {
-              setSearchExpanded(true);
-              setTimeout(() => searchInputRef.current?.focus(), 50);
-            }}
-            className="gap-2"
-            aria-label="Search tasks"
-          >
-            <SearchIcon className="h-4 w-4" />
-            <span className="text-foreground-muted text-sm">Search...</span>
-            <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
-              /
-            </kbd>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="subtle"
+                onClick={() => {
+                  setSearchExpanded(true);
+                  setTimeout(() => searchInputRef.current?.focus(), 50);
+                }}
+                className="gap-2"
+                aria-label="Search tasks"
+              >
+                <SearchIcon className="h-4 w-4" />
+                <span className="text-foreground-muted text-sm">Search</span>
+                <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
+                  /
+                </kbd>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Search tasks (/) or open palette (&#8984;K)</p>
+            </TooltipContent>
+          </Tooltip>
         )}
         <SmartViewPills
           onSelectView={onSelectSmartView}
@@ -280,9 +294,16 @@ export function AppHeader({
           activeViewId={activeSmartViewId}
           onActiveViewChange={onActiveViewChange}
         />
-        <Button variant="subtle" onClick={onOpenFilters}>
-          <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="subtle" onClick={onOpenFilters}>
+              <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Filter tasks by status, quadrant, tags, or due date</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
       </header>
     </TooltipProvider>

@@ -57,7 +57,7 @@ export function SyncDebugPanel() {
           <Button onClick={refreshQueue} disabled={loading}>
             Refresh
           </Button>
-          <Button onClick={clearQueue} className="bg-red-600 hover:bg-red-700">
+          <Button variant="destructive" onClick={clearQueue}>
             Clear All
           </Button>
         </div>

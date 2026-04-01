@@ -192,10 +192,10 @@ function LogoutConfirmation({
           Cancel
         </Button>
         <Button
-          variant="primary"
+          variant="destructive"
           onClick={onConfirm}
           disabled={isLoading}
-          className="flex-1 bg-red-600 hover:bg-red-700 text-xs"
+          className="flex-1 text-xs"
         >
           Logout Anyway
         </Button>

@@ -233,10 +233,9 @@ export function ResetEverythingDialog({
 							Cancel
 						</Button>
 						<Button
-							variant="primary"
+							variant="destructive"
 							onClick={handleReset}
 							disabled={!canReset || isResetting}
-							className="bg-red-600 hover:bg-red-700 disabled:bg-red-400"
 						>
 							{isResetting ? "Resetting..." : "Reset Everything"}
 						</Button>
