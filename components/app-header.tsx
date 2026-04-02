@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject, useState, useEffect } from "react";
-import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon, CheckSquareIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon, CheckSquareIcon, ShieldCheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ function formatRelativeTime(timestamp: string | null): string {
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (seconds < 60) return 'Just now';
   if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
   if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
@@ -103,7 +103,7 @@ export function AppHeader({
     const interval = setInterval(() => {
       setTick(t => t + 1);
     }, UI_TIMING.RELATIVE_TIME_REFRESH_MS);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -114,7 +114,7 @@ export function AppHeader({
         setPendingCount(0);
         return;
       }
-      
+
       const queue = getSyncQueue();
       const count = await queue.getPendingCount();
       setPendingCount(count);
@@ -145,52 +145,70 @@ export function AppHeader({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <header className="sticky top-0 z-30 flex flex-col gap-4 border-b border-border/60 bg-background/70 px-6 py-4 backdrop-blur-xl backdrop-saturate-150">
+      <header className="sticky top-0 z-30 flex flex-col gap-3 border-b border-border/60 bg-background/70 px-6 py-4 backdrop-blur-xl backdrop-saturate-150">
+        {/* Row 1: Branding + Views | Status | Actions */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <GsdLogo className="shrink-0" />
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                Prioritize what matters
-              </h1>
+          {/* Left: Branding + View tabs */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <GsdLogo className="shrink-0" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                  Prioritize what matters
+                </h1>
+              </div>
+            </div>
+            <div className="hidden sm:block h-8 w-px bg-border" />
+            <div className="hidden sm:block">
+              <ViewToggle />
             </div>
           </div>
+
+          {/* Right: Status + Action buttons */}
           <div className="flex items-center gap-3">
-            <ViewToggle />
-            <div className="h-6 w-px bg-border" />
-            
-            {/* Sync status info */}
+            {/* Sync / Save status */}
             <div className="flex items-center gap-2">
-              <SyncButton />
-              
-              {/* Sync status text - only show when sync is enabled */}
-              {isEnabled && (
-                <div className="hidden lg:flex flex-col text-xs">
-                  {/* Last sync time */}
-                  <span className="text-foreground-muted">
-                    Last sync: {formatRelativeTime(lastSyncTime)}
-                  </span>
-                  
-                  {/* Pending operations or retry countdown */}
-                  {retryCountdown !== null && retryCountdown > 0 ? (
-                    <span className="text-orange-500 font-medium">
-                      Retry in {retryCountdown}s (attempt {retryCount + 1})
+              {isEnabled ? (
+                <>
+                  <SyncButton />
+                  <div className="hidden lg:flex flex-col text-xs">
+                    <span className="text-foreground-muted">
+                      Last sync: {formatRelativeTime(lastSyncTime)}
                     </span>
-                  ) : pendingCount > 0 ? (
-                    <span className="text-blue-500 font-medium">
-                      {pendingCount} pending operation{pendingCount !== 1 ? 's' : ''}
-                    </span>
-                  ) : (
-                    <span className="text-green-500">
-                      All synced
-                    </span>
-                  )}
-                </div>
+                    {retryCountdown !== null && retryCountdown > 0 ? (
+                      <span className="text-orange-500 font-medium">
+                        Retry in {retryCountdown}s (attempt {retryCount + 1})
+                      </span>
+                    ) : pendingCount > 0 ? (
+                      <span className="text-blue-500 font-medium">
+                        {pendingCount} pending operation{pendingCount !== 1 ? 's' : ''}
+                      </span>
+                    ) : (
+                      <span className="text-green-500">
+                        All synced
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-foreground-muted">
+                      <ShieldCheckIcon className="h-3.5 w-3.5" />
+                      <span>Saved locally</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>All data stored privately in your browser</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
-            
+
             <div className="h-6 w-px bg-border" />
+
+            {/* Action buttons — secondary actions as ghost/subtle */}
             <div className="flex items-center gap-2">
               {onToggleSelectionMode && (
                 <Tooltip>
@@ -222,15 +240,17 @@ export function AppHeader({
               </QuickSettingsPanel>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button className="h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2" onClick={onHelp} aria-label="User Guide">
+                  <Button variant="ghost" className="h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2" onClick={onHelp} aria-label="User Guide">
                     <HelpCircleIcon className="h-7 w-7 xl:h-5 xl:w-5" />
                     <span className="hidden xl:inline text-sm font-medium">Help</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>User Guide (Press ?)</p>
+                  <p>User Guide (?)</p>
                 </TooltipContent>
               </Tooltip>
+
+              {/* Primary CTA — filled style, visually distinct */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={onNewTask} className={cn("hidden sm:inline-flex", isDoFirstEmpty && "animate-new-task-glow")}>
@@ -248,63 +268,69 @@ export function AppHeader({
           </div>
         </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className={`relative ${searchExpanded ? 'flex-1' : 'w-0 overflow-hidden opacity-0 pointer-events-none'} transition-all duration-200`}>
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
-          <Input
-            ref={searchInputRef}
-            placeholder="Search tasks by title, description, tags, or subtasks"
-            className="pl-9"
-            value={searchQuery}
-            onChange={(event) => onSearchChange(event.target.value)}
-            onBlur={() => {
-              if (!searchQuery) setSearchExpanded(false);
-            }}
-            onFocus={() => setSearchExpanded(true)}
-            aria-label="Search tasks"
-          />
+        {/* Mobile view toggle — only shown on small screens */}
+        <div className="sm:hidden flex justify-center">
+          <ViewToggle />
         </div>
-        {!searchExpanded && (
+
+        {/* Row 2: Search + Smart Views + Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className={`relative ${searchExpanded ? 'flex-1' : 'w-0 overflow-hidden opacity-0 pointer-events-none'} transition-all duration-200`}>
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Search tasks by title, description, tags, or subtasks"
+              className="pl-9"
+              value={searchQuery}
+              onChange={(event) => onSearchChange(event.target.value)}
+              onBlur={() => {
+                if (!searchQuery) setSearchExpanded(false);
+              }}
+              onFocus={() => setSearchExpanded(true)}
+              aria-label="Search tasks"
+            />
+          </div>
+          {!searchExpanded && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="subtle"
+                  onClick={() => {
+                    setSearchExpanded(true);
+                    setTimeout(() => searchInputRef.current?.focus(), 50);
+                  }}
+                  className="gap-2"
+                  aria-label="Search tasks"
+                >
+                  <SearchIcon className="h-4 w-4" />
+                  <span className="text-foreground-muted text-sm">Search</span>
+                  <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
+                    /
+                  </kbd>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Search tasks (/) or open palette (&#8984;K)</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <SmartViewPills
+            onSelectView={onSelectSmartView}
+            currentCriteria={currentFilterCriteria}
+            activeViewId={activeSmartViewId}
+            onActiveViewChange={onActiveViewChange}
+          />
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="subtle"
-                onClick={() => {
-                  setSearchExpanded(true);
-                  setTimeout(() => searchInputRef.current?.focus(), 50);
-                }}
-                className="gap-2"
-                aria-label="Search tasks"
-              >
-                <SearchIcon className="h-4 w-4" />
-                <span className="text-foreground-muted text-sm">Search</span>
-                <kbd className="ml-2 hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
-                  /
-                </kbd>
+              <Button variant="subtle" onClick={onOpenFilters}>
+                <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Search tasks (/) or open palette (&#8984;K)</p>
+              <p>Filter tasks by status, quadrant, tags, or due date</p>
             </TooltipContent>
           </Tooltip>
-        )}
-        <SmartViewPills
-          onSelectView={onSelectSmartView}
-          currentCriteria={currentFilterCriteria}
-          activeViewId={activeSmartViewId}
-          onActiveViewChange={onActiveViewChange}
-        />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="subtle" onClick={onOpenFilters}>
-              <PlusIcon className="mr-2 h-4 w-4" /> Add Filter
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Filter tasks by status, quadrant, tags, or due date</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
+        </div>
       </header>
     </TooltipProvider>
   );

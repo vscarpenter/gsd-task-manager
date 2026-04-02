@@ -61,13 +61,13 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
               type="checkbox"
               checked={isSelected}
               onChange={() => onToggleSelect?.(task)}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2 cursor-pointer"
               aria-label={`Select ${task.title}`}
             />
           ) : (
             <button
               type="button"
-              className="cursor-grab touch-none shrink-0 rounded p-0.5 opacity-0 transition group-hover:opacity-100 hover:bg-background-muted"
+              className="cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 hover:bg-background-muted"
               aria-label="Drag to move task"
               {...attributes}
               {...listeners}
@@ -201,14 +201,14 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
             </span>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 transition sm:group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 transition sm:group-hover:opacity-100">
           {onShare && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   onClick={() => onShare(task)}
-                  className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
+                  className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
                   aria-label="Share task"
                 >
                   <Share2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
@@ -223,7 +223,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
                 <button
                   type="button"
                   onClick={() => onDuplicate(task)}
-                  className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
+                  className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
                   aria-label="Duplicate task"
                 >
                   <CopyIcon className="h-4 w-4 sm:h-3 sm:w-3" />
@@ -240,7 +240,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
               <button
                 type="button"
                 onClick={() => onEdit(task)}
-                className="rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
+                className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
                 aria-label="Edit task"
               >
                 <PencilIcon className="h-4 w-4 sm:h-3 sm:w-3" />
@@ -253,7 +253,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
               <button
                 type="button"
                 onClick={() => onDelete(task)}
-                className="rounded p-2 sm:px-1.5 sm:py-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 touch-manipulation transition-colors"
+                className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 touch-manipulation transition-colors"
                 aria-label="Delete task"
               >
                 <Trash2Icon className="h-4 w-4 sm:h-3 sm:w-3" />

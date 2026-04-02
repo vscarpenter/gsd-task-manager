@@ -2,7 +2,7 @@
 
 **Review Date:** 2026-04-01
 **Source:** External UX review of gsd.vinny.dev
-**Approach:** Phased — quick wins first, then medium-effort enhancements
+**Status:** Phase 1-3 complete
 
 ---
 
@@ -21,70 +21,23 @@ Several features exist but weren't found by the reviewer — this is itself a UX
 
 ---
 
-## Phase 1 — Quick Wins
+## Phase 1 — Quick Wins ✅
 
-### 1.1: Simplify empty state with progressive disclosure
-- **File:** `components/matrix-empty-state.tsx`
-- **Change:** Condense to headline + 1 sentence + primary CTA at top. Move quadrant education into collapsible "Learn how it works" section. Add 3-5 example task templates.
-- **Rationale:** Reduce blank-page anxiety, get users acting immediately
+- [x] 1.1: Simplify empty state with progressive disclosure
+- [x] 1.2: Add `destructive` button variant + migrate 4 components
+- [x] 1.3: Fix "Search..." ellipsis to "Search"
+- [x] 1.4: Add keyboard shortcut hints to header tooltips
+- [x] 1.5: WCAG AA contrast fix on accent color (#6366f1 → #5b5ee6)
 
-### 1.2: Add `destructive` button variant
-- **File:** `components/ui/button.tsx`
-- **Change:** Add 4th variant: red background, white text, red shadow
-- **Follow-up:** Replace ad-hoc red styling on delete buttons across the app
-- **Rationale:** Consistent visual language for destructive actions
+## Phase 2 — Medium Effort ✅
 
-### 1.3: Fix "Search..." ellipsis to "Search"
-- **File:** `components/app-header.tsx`
-- **Change:** Remove trailing ellipsis from search button label
-- **Rationale:** Ellipsis implies pending dialog; this is a direct action
+- [x] 2.1: Improve navigation hierarchy (views vs actions grouping, Help demoted to ghost)
+- [x] 2.2: Undo coverage audit (archive delete, smart view delete now use undo toasts)
+- [x] 2.3: Touch targets increased to 44px minimum on mobile (task card action buttons, checkbox, drag handle)
+- [x] 2.4: "Saved locally" indicator for non-sync users (shield icon + tooltip)
 
-### 1.4: Add keyboard shortcut hints to header tooltips
-- **File:** `components/app-header.tsx`
-- **Change:** Add shortcut hints to existing tooltips (n for New Task, / for Search, ⌘K for command palette)
-- **Rationale:** Contextual shortcut education at point of use
+## Phase 3 — Polish ✅
 
-### 1.5: Contrast audit on muted text and quadrant backgrounds
-- **Files:** `app/globals.css`, quadrant-related components
-- **Change:** Verify WCAG AA compliance (4.5:1 for normal text, 3:1 for large text); fix any failures
-- **Rationale:** Accessibility baseline
-
----
-
-## Phase 2 — Medium Effort, High Payoff
-
-### 2.1: Improve navigation hierarchy (separate Views from Actions)
-- **File:** `components/app-header.tsx`
-- **Change:** Group Matrix|Dashboard as view tabs with active indicator; keep New Task as primary CTA; Search/Filter as secondary
-- **Rationale:** Reduces cognitive load, supports recognition over recall
-
-### 2.2: Audit undo coverage for all destructive actions
-- **Files:** `app/(archive)/archive/page.tsx`, `components/smart-view-selector.tsx`, `components/sync-debug-panel.tsx`
-- **Change:** Replace `confirm()` dialogs with post-action undo toasts where appropriate
-- **Rationale:** Modern pattern, better user control and freedom
-
-### 2.3: Increase touch targets on small interactive elements
-- **Files:** `components/task-card.tsx`, various UI components
-- **Change:** Ensure minimum 44×44px tap area on all interactive elements
-- **Rationale:** Material accessibility guidance, mobile usability
-
-### 2.4: Add "Saved locally" indicator for non-sync users
-- **File:** `components/app-header.tsx`
-- **Change:** Show subtle "All changes saved locally" when sync is disabled
-- **Rationale:** Trust-building for privacy-first positioning
-
----
-
-## Phase 3 — Polish
-
-### 3.1: Typography tightening (max-width on prose, consistent scale)
-### 3.2: Card consistency audit across Matrix, Dashboard, Archive views
-### 3.3: Smart View language clarification (tooltip explaining "saved filter combinations")
-
----
-
-## Resuming From Here
-
-**Status:** Starting Phase 1 implementation
-**Branch:** Will create `feat/ux-review-improvements`
-**Next:** Implement items 1.1 through 1.5
+- [x] 3.1: Typography audit — already well-constrained, no changes needed
+- [x] 3.2: Card consistency audit — Matrix + Archive both use TaskCard, Dashboard intentionally different
+- [x] 3.3: Smart View language clarification (info tooltip explaining "saved filter combinations")

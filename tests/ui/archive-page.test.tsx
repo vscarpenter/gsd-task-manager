@@ -206,14 +206,12 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     });
   });
 
-  it("does not delete when confirmation is cancelled", async () => {
+  it("deletes immediately without confirmation dialog (undo via toast)", async () => {
     const user = userEvent.setup();
     const tasks = [
       createMockArchivedTask({ id: "task-1", title: "Keep Task" }),
     ];
     mockListArchivedTasks.mockResolvedValue(tasks);
-
-    vi.spyOn(window, "confirm").mockReturnValue(false);
 
     render(<ArchivePage />, { wrapper: createQueryWrapper() });
 
@@ -224,7 +222,10 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     const deleteButton = screen.getByRole("button", { name: /delete/i });
     await user.click(deleteButton);
 
-    expect(mockDeleteArchivedTask).not.toHaveBeenCalled();
+    // Should delete immediately (no confirm dialog), with undo available via toast
+    await waitFor(() => {
+      expect(mockDeleteArchivedTask).toHaveBeenCalledWith("task-1");
+    });
   });
 
   it("fetches data only once via TanStack Query caching", async () => {
