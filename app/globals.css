@@ -18,7 +18,7 @@
   --border-muted: 241 245 249;         /* #f1f5f9 */
   
   /* Accent colors */
-  --accent: 99 102 241;                /* #6366f1 */
+  --accent: 91 94 230;                  /* #5b5ee6 — WCAG AA 5.01:1 on white */
   --accent-hover: 79 70 229;           /* #4f46e5 */
   --accent-muted: 165 180 252;         /* #a5b4fc */
   

@@ -139,7 +139,7 @@ describe('MatrixBoard Integration Tests', () => {
       await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/welcome to gsd task manager/i)).toBeInTheDocument();
+        expect(screen.getByText(/get stuff done/i)).toBeInTheDocument();
       });
     });
 
@@ -780,7 +780,7 @@ describe('MatrixBoard Integration Tests', () => {
       await renderWithProviders(<MatrixBoard />);
 
       await waitFor(() => {
-        expect(screen.getByText(/welcome to gsd task manager/i)).toBeInTheDocument();
+        expect(screen.getByText(/get stuff done/i)).toBeInTheDocument();
         expect(screen.getByText(/create your first task/i)).toBeInTheDocument();
       });
     });

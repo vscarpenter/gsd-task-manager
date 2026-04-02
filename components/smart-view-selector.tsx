@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDownIcon, StarIcon, Trash2Icon, PinIcon } from "lucide-react";
+import { ChevronDownIcon, StarIcon, Trash2Icon, PinIcon, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import {
   getSmartViews,
   deleteSmartView,
@@ -77,9 +79,9 @@ export function SmartViewSelector({
   const handleDeleteView = async (viewId: string, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    if (!confirm("Are you sure you want to delete this Smart View?")) {
-      return;
-    }
+    // Capture view data for undo before deleting
+    const viewToDelete = views.find(v => v.id === viewId);
+    if (!viewToDelete) return;
 
     try {
       await deleteSmartView(viewId);
@@ -89,9 +91,28 @@ export function SmartViewSelector({
       if (selectedView?.id === viewId) {
         setSelectedView(null);
       }
+
+      toast.success(`Deleted "${viewToDelete.name}"`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              const db = await import("@/lib/db").then(m => m.getDb());
+              await db.smartViews.put(viewToDelete);
+              await loadViews();
+              onPinnedViewsChange?.();
+              window.dispatchEvent(new CustomEvent('pinnedViewsChanged'));
+              toast.success("Delete undone");
+            } catch (undoError) {
+              logger.error("Failed to undo delete", undoError instanceof Error ? undoError : new Error(String(undoError)));
+              toast.error("Failed to undo delete");
+            }
+          },
+        },
+      });
     } catch (error) {
       logger.error("Failed to delete Smart View", error instanceof Error ? error : new Error(String(error)));
-      alert("Failed to delete Smart View. It might be a built-in view.");
+      toast.error("Failed to delete Smart View. It might be a built-in view.");
     }
   };
 
@@ -166,10 +187,24 @@ export function SmartViewSelector({
 
           {/* Dropdown */}
           <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-card-border bg-card shadow-lg">
+            {/* Header with explanation */}
+            <div className="px-5 pt-3 pb-1 flex items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">Smart Views</span>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="h-3.5 w-3.5 text-foreground-muted cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <p>Smart Views are saved filter combinations. Pin your favorites to the header for quick access.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             {/* Built-in Views */}
             <div className="p-2">
               <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
-                Built-in Views
+                Built-in
               </div>
               {builtInViews.map((view) => {
                 const isPinned = pinnedViewIds.includes(view.id);

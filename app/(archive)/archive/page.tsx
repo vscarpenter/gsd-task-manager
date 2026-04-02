@@ -10,6 +10,7 @@ import { TaskCard } from "@/components/task-card";
 import { listArchivedTasks, restoreTask, deleteArchivedTask } from "@/lib/archive";
 import type { TaskRecord } from "@/lib/types";
 import { toast } from "sonner";
+import { getDb } from "@/lib/db";
 
 const ARCHIVED_TASKS_KEY = ["archivedTasks"] as const;
 const ESTIMATED_CARD_HEIGHT = 180;
@@ -49,7 +50,22 @@ export default function ArchivePage() {
     mutationFn: (task: TaskRecord) => restoreTask(task.id),
     onSuccess: (_data, task) => {
       queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
-      toast.success(`Restored "${task.title}"`);
+      toast.success(`Restored "${task.title}"`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            // Re-archive by moving back: delete from main tasks, add to archive
+            const db = getDb();
+            const restored = await db.tasks.get(task.id);
+            if (restored) {
+              await db.archivedTasks.add({ ...restored, archivedAt: new Date().toISOString() });
+              await db.tasks.delete(task.id);
+              queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
+              toast.success("Restore undone");
+            }
+          },
+        },
+      });
     },
     onError: (err, task) => {
       const errorMsg = err instanceof Error ? err.message : `Failed to restore "${task.title}"`;
@@ -58,10 +74,23 @@ export default function ArchivePage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (task: TaskRecord) => deleteArchivedTask(task.id),
+    mutationFn: async (task: TaskRecord) => {
+      await deleteArchivedTask(task.id);
+      return task; // Return full task data for undo
+    },
     onSuccess: (_data, task) => {
       queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
-      toast.success(`Deleted "${task.title}"`);
+      toast.success(`Deleted "${task.title}"`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const db = getDb();
+            await db.archivedTasks.add(task);
+            queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
+            toast.success("Delete undone");
+          },
+        },
+      });
     },
     onError: (err, task) => {
       const errorMsg = err instanceof Error ? err.message : `Failed to delete "${task.title}"`;
@@ -74,9 +103,6 @@ export default function ArchivePage() {
   };
 
   const handleDelete = (task: TaskRecord) => {
-    if (!confirm(`Permanently delete "${task.title}"? This cannot be undone.`)) {
-      return;
-    }
     deleteMutation.mutate(task);
   };
 
@@ -190,9 +216,9 @@ export default function ArchivePage() {
                                 Restore
                               </Button>
                               <Button
-                                variant="subtle"
+                                variant="destructive"
                                 onClick={() => handleDelete(task)}
-                                className="gap-2 text-sm h-auto py-1 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="gap-2 text-sm h-auto py-1 px-2"
                               >
                                 <Trash2Icon className="h-3 w-3" />
                                 Delete
