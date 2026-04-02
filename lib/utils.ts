@@ -5,6 +5,14 @@ export function cn(...classNames: Array<string | undefined | false | null>): str
   return clsx(classNames);
 }
 
+/**
+ * Extract a human-readable message from an unknown caught error.
+ * Use in catch blocks to safely access the error message.
+ */
+export function formatErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 export function isoNow(): string {
   return new Date().toISOString();
 }

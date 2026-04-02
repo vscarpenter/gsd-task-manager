@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
-import { isoNow } from "@/lib/utils";
+import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -37,9 +37,7 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
     logger.error("Failed to duplicate task", error instanceof Error ? error : undefined, {
       taskId: id,
     });
-    throw new Error(
-      `Failed to duplicate task: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new Error(`Failed to duplicate task: ${formatErrorMessage(error)}`);
   }
 }
 

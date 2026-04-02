@@ -4,6 +4,7 @@ import {
   isoNow,
   formatDueDate,
   formatRelative,
+  formatErrorMessage,
   isOverdue,
   isDueToday,
   isDueThisWeek,
@@ -175,6 +176,24 @@ describe("utils", () => {
       const future = new Date();
       future.setDate(future.getDate() + 10);
       expect(isDueThisWeek(future.toISOString())).toBe(false);
+    });
+  });
+
+  describe("formatErrorMessage", () => {
+    it("returns message from Error instance", () => {
+      expect(formatErrorMessage(new Error("something broke"))).toBe("something broke");
+    });
+
+    it("returns 'Unknown error' for non-Error values", () => {
+      expect(formatErrorMessage("string error")).toBe("Unknown error");
+      expect(formatErrorMessage(42)).toBe("Unknown error");
+      expect(formatErrorMessage(null)).toBe("Unknown error");
+      expect(formatErrorMessage(undefined)).toBe("Unknown error");
+    });
+
+    it("returns message from Error subclass", () => {
+      expect(formatErrorMessage(new TypeError("type mismatch"))).toBe("type mismatch");
+      expect(formatErrorMessage(new RangeError("out of range"))).toBe("out of range");
     });
   });
 });

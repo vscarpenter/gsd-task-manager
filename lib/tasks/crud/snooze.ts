@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
-import { isoNow } from "@/lib/utils";
+import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
 import { TIME_TRACKING } from "@/lib/constants";
 
@@ -66,9 +66,7 @@ export async function snoozeTask(
       taskId: id,
       minutes,
     });
-    throw new Error(
-      `Failed to snooze task: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new Error(`Failed to snooze task: ${formatErrorMessage(error)}`);
   }
 }
 

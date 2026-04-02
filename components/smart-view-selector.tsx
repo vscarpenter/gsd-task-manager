@@ -152,6 +152,57 @@ export function SmartViewSelector({
   const builtInViews = views.filter(v => v.isBuiltIn);
   const customViews = views.filter(v => !v.isBuiltIn);
 
+  const renderViewItem = (
+    view: SmartView,
+    options?: { showDelete?: boolean }
+  ) => {
+    const isPinned = pinnedViewIds.includes(view.id);
+    return (
+      <div
+        key={view.id}
+        className={cn(
+          "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-background-muted",
+          selectedView?.id === view.id && "bg-accent/10"
+        )}
+      >
+        <button
+          onClick={() => handleSelectView(view)}
+          className="flex flex-1 items-center gap-3 text-left min-w-0"
+        >
+          <span className="text-lg">{view.icon || "📌"}</span>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-foreground">{view.name}</div>
+            {view.description && (
+              <div className="text-xs text-foreground-muted truncate">{view.description}</div>
+            )}
+          </div>
+        </button>
+        <button
+          onClick={(e) => handleTogglePin(view.id, e)}
+          className={cn(
+            "shrink-0 rounded p-1 transition",
+            isPinned
+              ? "text-accent hover:text-accent-hover"
+              : "text-foreground-muted opacity-0 hover:bg-accent/10 hover:text-accent group-hover:opacity-100"
+          )}
+          aria-label={isPinned ? "Unpin from header" : "Pin to header"}
+          title={isPinned ? "Unpin from header" : "Pin to header"}
+        >
+          <PinIcon className={cn("h-4 w-4", isPinned && "fill-current")} />
+        </button>
+        {options?.showDelete && (
+          <button
+            onClick={(e) => handleDeleteView(view.id, e)}
+            className="shrink-0 rounded p-1 text-foreground-muted opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+            aria-label="Delete view"
+          >
+            <Trash2Icon className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="relative">
       {trigger ? (
@@ -206,44 +257,7 @@ export function SmartViewSelector({
               <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
                 Built-in
               </div>
-              {builtInViews.map((view) => {
-                const isPinned = pinnedViewIds.includes(view.id);
-                return (
-                  <div
-                    key={view.id}
-                    className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-background-muted",
-                      selectedView?.id === view.id && "bg-accent/10"
-                    )}
-                  >
-                    <button
-                      onClick={() => handleSelectView(view)}
-                      className="flex flex-1 items-center gap-3 text-left min-w-0"
-                    >
-                      <span className="text-lg">{view.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground">{view.name}</div>
-                        {view.description && (
-                          <div className="text-xs text-foreground-muted truncate">{view.description}</div>
-                        )}
-                      </div>
-                    </button>
-                    <button
-                      onClick={(e) => handleTogglePin(view.id, e)}
-                      className={cn(
-                        "shrink-0 rounded p-1 transition",
-                        isPinned
-                          ? "text-accent hover:text-accent-hover"
-                          : "text-foreground-muted opacity-0 hover:bg-accent/10 hover:text-accent group-hover:opacity-100"
-                      )}
-                      aria-label={isPinned ? "Unpin from header" : "Pin to header"}
-                      title={isPinned ? "Unpin from header" : "Pin to header"}
-                    >
-                      <PinIcon className={cn("h-4 w-4", isPinned && "fill-current")} />
-                    </button>
-                  </div>
-                );
-              })}
+              {builtInViews.map((view) => renderViewItem(view))}
             </div>
 
             {/* Custom Views */}
@@ -254,51 +268,7 @@ export function SmartViewSelector({
                   <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">
                     Custom Views
                   </div>
-                  {customViews.map((view) => {
-                    const isPinned = pinnedViewIds.includes(view.id);
-                    return (
-                      <div
-                        key={view.id}
-                        className={cn(
-                          "group flex items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-background-muted",
-                          selectedView?.id === view.id && "bg-accent/10"
-                        )}
-                      >
-                        <button
-                          onClick={() => handleSelectView(view)}
-                          className="flex flex-1 items-center gap-3 text-left min-w-0"
-                        >
-                          <span className="text-lg">{view.icon || "📌"}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-foreground">{view.name}</div>
-                            {view.description && (
-                              <div className="text-xs text-foreground-muted truncate">{view.description}</div>
-                            )}
-                          </div>
-                        </button>
-                        <button
-                          onClick={(e) => handleTogglePin(view.id, e)}
-                          className={cn(
-                            "shrink-0 rounded p-1 transition",
-                            isPinned
-                              ? "text-accent hover:text-accent-hover"
-                              : "text-foreground-muted opacity-0 hover:bg-accent/10 hover:text-accent group-hover:opacity-100"
-                          )}
-                          aria-label={isPinned ? "Unpin from header" : "Pin to header"}
-                          title={isPinned ? "Unpin from header" : "Pin to header"}
-                        >
-                          <PinIcon className={cn("h-4 w-4", isPinned && "fill-current")} />
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteView(view.id, e)}
-                          className="shrink-0 rounded p-1 text-foreground-muted opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-                          aria-label="Delete view"
-                        >
-                          <Trash2Icon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {customViews.map((view) => renderViewItem(view, { showDelete: true }))}
                 </div>
               </>
             )}
