@@ -3,8 +3,8 @@
 **Get Stuff Done** (or Get Shit Done, if you're feeling snarky) — A privacy-first task manager based on the Eisenhower Matrix.
 
 **🚀 Live App:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**📦 Current Version:** 6.9.0
-**🔄 Latest:** PocketBase cloud sync migration, Command Palette (⌘K), Smart View Pinning
+**📦 Current Version:** 7.8.1
+**🔄 Latest:** Docker self-hosting, TanStack integration, Eisenhower launch screen, UX polish
 
 [![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
@@ -229,7 +229,7 @@ Visit the [Install page](https://gsd.vinny.dev/install.html) for detailed instru
 4. **Eliminate ruthlessly** — If a task stays in Q4 for weeks, delete it
 5. **Export regularly** — Keep backups of your task data
 
-### Making the Most of v3.0 Features
+### Power User Tips
 
 6. **Check the dashboard weekly** — Review your completion rate and quadrant distribution to identify patterns
 7. **Use dependencies for projects** — Break down large initiatives into sequential tasks with clear prerequisites
@@ -284,103 +284,128 @@ This creates the function, publishes it, attaches it to the CloudFront distribut
 - Processes 100% of viewer requests before reaching origin (S3)
 - Cost-effective at scale (charged per million requests)
 
-### MCP Server for AI-Powered Task Management (v5.0.0) 🆕
+### Docker Self-Hosted Deployment
+
+Run the entire GSD stack (static site + PocketBase backend) in a single Docker container using Caddy as the HTTPS reverse proxy:
+
+```bash
+# Clone and build
+cd docker
+docker compose up -d
+
+# Access at https://localhost
+```
+
+**What's included:**
+- **Multi-stage build** — Bun builds the static Next.js export, then Caddy + PocketBase serve it
+- **Automatic HTTPS** — Caddy handles TLS certificates (self-signed for localhost, Let's Encrypt for custom domains)
+- **PocketBase bundled** — No separate database server needed; data persists in a Docker volume
+- **Non-root container** — Runs as unprivileged user for security
+
+**Custom domain with Let's Encrypt:**
+```yaml
+environment:
+  - SITE_ADDRESS=gsd.example.com
+```
+
+See `docker/` directory for `Dockerfile`, `docker-compose.yml`, `Caddyfile`, and entrypoint script.
+
+### MCP Server for AI-Powered Task Management
 
 **📦 npm Package:** [gsd-mcp-server](https://www.npmjs.com/package/gsd-mcp-server)
 [![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server) [![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 
-The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or ChatGPG to access and analyze your tasks through natural language.
+The **Model Context Protocol (MCP) Server** enables AI assistants like Claude or ChatGPT to manage your tasks through natural language.
 
 **What is MCP?**
 - MCP is Anthropic's protocol for connecting AI assistants to external data sources
-- The GSD MCP Server runs locally on your machine and communicates with Claude, ChatGPT or any other AI tool
-- Provides secure, read-only access to your synced tasks
+- The GSD MCP Server runs locally on your machine and communicates with Claude, ChatGPT, or any MCP-compatible AI tool
+- Provides full CRUD access to your synced tasks with dry-run safety mode
 
 **Features:**
-- ✅ **Full Task Access** — Claude can read and write task content (titles, descriptions, tags, subtasks)
-- ✅ **Natural Language Queries** — Ask "What are my urgent tasks this week?" or "Show me all #work tasks"
+- ✅ **Full CRUD Operations** — Create, read, update, complete, and delete tasks with natural language
+- ✅ **Bulk Operations** — Update up to 50 tasks at once with dry-run preview
+- ✅ **Productivity Analytics** — Metrics, quadrant analysis, tag analytics, streak tracking
 - ✅ **Smart Search & Filtering** — Search across all task content, filter by quadrant, status, or tags
-- ✅ **Privacy-First** — Tasks stored on your self-hosted PocketBase server
-- ✅ **Read & Write** — Full CRUD operations with dry-run mode for safe exploration
+- ✅ **Retry & Caching** — Exponential backoff for transient failures, in-memory TTL cache
+- ✅ **Dry-Run Mode** — Preview all write operations before committing
 - ✅ **Self-Hosted** — Your PocketBase server stores data; MCP server communicates directly with it
 
-**Available Tools:**
-1. `list_tasks` — List all decrypted tasks with optional filtering (quadrant, status, tags)
-2. `get_task` — Get detailed information about a specific task by ID
-3. `search_tasks` — Search across titles, descriptions, tags, and subtasks
-4. `get_sync_status` — Check sync health (last sync time, conflicts, storage)
-5. `list_devices` — View all registered devices
-6. `get_task_stats` — Get task statistics and metadata
+**Available Tools (20):**
+
+| Category | Tools |
+|----------|-------|
+| **Read** (7) | `list_tasks`, `get_task`, `search_tasks`, `get_sync_status`, `list_devices`, `get_task_stats`, `get_token_status` |
+| **Write** (5) | `create_task`, `update_task`, `complete_task`, `delete_task`, `bulk_update_tasks` |
+| **Analytics** (5) | `get_productivity_metrics`, `get_quadrant_analysis`, `get_tag_analytics`, `get_upcoming_deadlines`, `get_task_insights` |
+| **System** (3) | `validate_config`, `get_help`, `get_cache_stats` |
 
 **Use Cases:**
 - **Weekly Planning** — "What are my urgent tasks this week?"
-- **Task Discovery** — "Find all tasks mentioning the quarterly report"
-- **Productivity Analysis** — "How many tasks do I have in each quadrant?"
+- **Task Creation** — "Add a task to schedule my dentist appointment, tag it #personal"
+- **Productivity Analysis** — "Show my quadrant distribution and completion streaks"
 - **Smart Prioritization** — "Which tasks should I focus on today?"
+- **Bulk Updates** — "Move all overdue #work tasks to Do First quadrant"
 
 **Security:**
 - Auth token stored only in local Claude Desktop config
 - Tasks stored on your self-hosted PocketBase server (you own the data)
-- Dry-run mode available for write operations
+- Dry-run mode available for all write operations
 - Opt-in feature (requires explicit configuration)
 
-**Setup:**
+**Quick Start:**
+```bash
+npx gsd-mcp-server --setup
+```
+
 See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detailed setup instructions.
 
 ### Recent Updates
 
-**v6.9.0** (Latest) 🎉
+**v7.x** (Latest) 🎉
+- ✅ **Docker Self-Hosting** — Single-container deployment with Caddy + PocketBase (#171)
+- ✅ **TanStack Integration** — TanStack Virtual, Query, and Form for improved performance (#168)
+- ✅ **Eisenhower Matrix Launch Screen** — Visual onboarding experience (#169)
+- ✅ **UX Polish** — Shadows, gradients, micro-interactions, progressive disclosure, button variants (#167, #173, #179)
+- ✅ **Tooltip Portals** — Tooltips render via portal to prevent overflow clipping (#178)
+- ✅ **Security Hardening** — Patched flatted, undici, path-to-regexp, picomatch vulnerabilities
+- ✅ **Non-root Docker** — Container runs as unprivileged user (#172)
+- ✅ **Coding Standards** — DRY error handling, reduced nesting, split oversized components (#170, #174, #180)
+
+**v6.9.0**
 - ✅ **PocketBase Migration** — Replaced Cloudflare Workers backend with self-hosted PocketBase
 - ✅ **Simplified Sync** — Last-write-wins (LWW) replaces vector clocks; SSE for realtime updates
-- ✅ **Google + GitHub OAuth** — PocketBase built-in auth replaces custom OIDC (dropped Apple)
-- ✅ **MCP Server Updated** — Uses PocketBase SDK directly, no encryption layer needed
+- ✅ **Google + GitHub OAuth** — PocketBase built-in auth replaces custom OIDC
+- ✅ **MCP Server Updated** — Uses PocketBase SDK directly, removed encryption layer
 - ✅ **~23,700 lines removed** — Deleted worker/, crypto, vector clocks, old sync engine
 
-**v5.10.0** 🎉
+**v5.10.0**
 - ✅ **Command Palette** — Universal ⌘K interface for quick actions, navigation, and task search
-- ✅ **Quick Settings Panel** — Slide-out panel for frequently-adjusted settings (theme, notifications, auto-sync)
+- ✅ **Quick Settings Panel** — Slide-out panel for frequently-adjusted settings
 - ✅ **Smart View Pinning** — Pin up to 5 smart views to header with keyboard shortcuts (1-9, 0 to clear)
-- ✅ **Enhanced Keyboard Navigation** — Comprehensive shortcuts for power users (⌘M, ⌘D, ⌘T, etc.)
-- ✅ **Improved UX** — Streamlined workflows for theme switching, notification toggles, and sync interval adjustments
 
 **v5.0.0**
-- ✅ **MCP Server for Claude Desktop** — AI-powered task management with natural language queries
-- ✅ **Decrypted Task Access** — 6 MCP tools for reading and analyzing tasks
-- ✅ **OAuth Cloud Sync** — Full end-to-end encrypted sync with Google/Apple login
+- ✅ **MCP Server** — AI-powered task management with 20 tools (read, write, analytics, system)
+- ✅ **OAuth Cloud Sync** — Multi-device sync with Google/GitHub login
 - ✅ **Security Hardening** — Comprehensive security audit and fixes
-- ✅ **Cascade Sync** — Reliable multi-device synchronization with conflict resolution
 
-**v3.7.1**
+**v3.x**
 - ✅ Next.js 16 with Turbopack and React Compiler
-- ✅ View Transitions API for smooth page animations
-- ✅ CloudFront edge routing for static export SPA navigation
-- ✅ Fixed React Compiler warnings and removed manual memoization
-
-**v3.5.0**
-- ✅ Multi-environment worker deployment (dev, staging, prod)
-- ✅ Fixed critical vector clock causality bug
-- ✅ Resolved 18 TypeScript errors for improved type safety
-- ✅ Bash 3.2 compatibility for macOS deployment scripts
-- ✅ Enhanced PWA error handling for periodic sync
-- ✅ Automated setup and deployment scripts
-
-**v3.0.0**
 - ✅ Dashboard and analytics system
 - ✅ Batch operations and task dependencies
-- ✅ Enhanced PWA with update notifications
+- ✅ CloudFront edge routing for static export SPA navigation
 
 **v2.0.0**
-- ✅ Recurring tasks and smart views
-- ✅ Tags, subtasks, and advanced filtering
+- ✅ Recurring tasks, smart views, tags, subtasks, and advanced filtering
 
 ---
 
 ## 📚 Developer Documentation
 
-For developers interested in contributing, self-hosting, or deploying the backend:
+For developers interested in contributing, self-hosting, or deploying:
 
-- **[TECHNICAL.md](./TECHNICAL.md)** — Architecture, database schema, and development guide
-- **[CLAUDE.md](./CLAUDE.md)** — Project context for AI assistants
+- **[CLAUDE.md](./CLAUDE.md)** — Architecture, database schema, and project context
+- **[packages/mcp-server/README.md](./packages/mcp-server/README.md)** — MCP server setup and API reference
 
 ### Quick Start for Developers
 
@@ -391,21 +416,24 @@ bun install
 # Run development server
 bun dev
 
+# Run tests
+bun run test
+
+# Type checking
+bun typecheck
+
 # Build for production
 bun run build
-
-# Deploy to staging
-cd scripts && ./deploy-dev.sh
-
 ```
 
 ### Tech Stack
 
-- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
-- **Data Layer:** Dexie (IndexedDB), Zod validation
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS v4
+- **Data Layer:** Dexie (IndexedDB), TanStack Query/Virtual/Form, Zod validation
 - **Charts:** Recharts for analytics visualizations
 - **Backend (Optional):** Self-hosted PocketBase (SSE realtime, LWW sync)
 - **Auth (Optional):** OAuth 2.0 with Google/GitHub via PocketBase
+- **Deployment:** S3/CloudFront static hosting or Docker (Caddy + PocketBase)
 
 ---
 
