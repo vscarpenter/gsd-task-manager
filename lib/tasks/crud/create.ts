@@ -4,7 +4,7 @@ import { createLogger } from "@/lib/logger";
 import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
-import { isoNow } from "@/lib/utils";
+import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -39,9 +39,7 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     if (error instanceof Error && error.name === "ZodError") {
       throw new Error(`Task validation failed: ${error.message}`);
     }
-    throw new Error(
-      `Failed to create task: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new Error(`Failed to create task: ${formatErrorMessage(error)}`);
   }
 }
 

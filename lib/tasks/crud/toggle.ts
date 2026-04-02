@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
-import { isoNow } from "@/lib/utils";
+import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -55,9 +55,7 @@ export async function toggleCompleted(
       error instanceof Error ? error : undefined,
       { taskId: id, completed }
     );
-    throw new Error(
-      `Failed to toggle task completion: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new Error(`Failed to toggle task completion: ${formatErrorMessage(error)}`);
   }
 }
 

@@ -225,8 +225,7 @@ export function createMockSyncHistoryRecord(
  * Create a mock fetch Response object
  */
 export function createMockFetchResponse(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any,
+  data: unknown,
   options?: { ok?: boolean; status?: number; statusText?: string }
 ): Response {
   return {
@@ -266,45 +265,38 @@ export function createMockErrorResponse(
 // ============================================================================
 
 /**
- * Create a mock Dexie table with common methods
+ * Create a mock Dexie table with common methods.
+ * Constrained to types with a string `id` field for type-safe lookups.
  */
-export function createMockDexieTable<T>() {
+export function createMockDexieTable<T extends { id: string }>() {
   const data: T[] = [];
 
   return {
     toArray: vi.fn(async () => [...data]),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    get: vi.fn(async (id: any) => data.find((item: any) => item.id === id)),
+    get: vi.fn(async (id: string) => data.find((item) => item.id === id)),
     add: vi.fn(async (item: T) => {
       data.push(item);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (item as any).id;
+      return item.id;
     }),
     put: vi.fn(async (item: T) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const index = data.findIndex((d: any) => d.id === (item as any).id);
+      const index = data.findIndex((d) => d.id === item.id);
       if (index >= 0) {
         data[index] = item;
       } else {
         data.push(item);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (item as any).id;
+      return item.id;
     }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    update: vi.fn(async (id: any, changes: Partial<T>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const index = data.findIndex((item: any) => item.id === id);
+    update: vi.fn(async (id: string, changes: Partial<T>) => {
+      const index = data.findIndex((item) => item.id === id);
       if (index >= 0) {
         data[index] = { ...data[index], ...changes };
         return 1;
       }
       return 0;
     }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete: vi.fn(async (id: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const index = data.findIndex((item: any) => item.id === id);
+    delete: vi.fn(async (id: string) => {
+      const index = data.findIndex((item) => item.id === id);
       if (index >= 0) {
         data.splice(index, 1);
       }
@@ -429,8 +421,7 @@ export function mockFetch(response: Response | ((url: string, init?: RequestInit
  * Assert that a promise rejects with a specific error message
  */
 export async function expectToReject(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  promise: Promise<any>,
+  promise: Promise<unknown>,
   expectedMessage?: string
 ): Promise<void> {
   try {

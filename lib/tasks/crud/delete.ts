@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { removeDependencyReferences } from "@/lib/tasks/dependencies";
+import { formatErrorMessage } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -36,8 +37,6 @@ export async function deleteTask(id: string): Promise<void> {
     logger.error("Failed to delete task", error instanceof Error ? error : undefined, {
       taskId: id,
     });
-    throw new Error(
-      `Failed to delete task: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new Error(`Failed to delete task: ${formatErrorMessage(error)}`);
   }
 }

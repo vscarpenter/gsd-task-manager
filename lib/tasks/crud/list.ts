@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
+import { formatErrorMessage } from "@/lib/utils";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -16,7 +17,7 @@ export async function listTasks(): Promise<TaskRecord[]> {
   } catch (error) {
     logger.error("Failed to list tasks", error instanceof Error ? error : undefined);
     throw new Error(
-      `Failed to list tasks: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to list tasks: ${formatErrorMessage(error)}`
     );
   }
 }
@@ -33,7 +34,7 @@ export async function clearTasks(): Promise<void> {
   } catch (error) {
     logger.error("Failed to clear tasks", error instanceof Error ? error : undefined);
     throw new Error(
-      `Failed to clear tasks: ${error instanceof Error ? error.message : "Unknown error"}`
+      `Failed to clear tasks: ${formatErrorMessage(error)}`
     );
   }
 }

@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { parseQuadrantFlags } from "@/lib/quadrants";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
-import { isoNow } from "@/lib/utils";
+import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -58,8 +58,6 @@ export async function moveTaskToQuadrant(
       error instanceof Error ? error : undefined,
       { taskId: id, targetQuadrant }
     );
-    throw new Error(
-      `Failed to move task to quadrant: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new Error(`Failed to move task to quadrant: ${formatErrorMessage(error)}`);
   }
 }
