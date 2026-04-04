@@ -42,12 +42,6 @@ export const UI_TIMING = {
   /** Delay before page reload after reset (1 second) */
   RESET_RELOAD_DELAY_MS: 1000,
 
-  /** Auto-dismiss duration for returning users launch screen (1.5 seconds) */
-  LAUNCH_AUTO_DISMISS_MS: 1500,
-
-  /** Fade-out animation duration for launch screen (600ms) */
-  LAUNCH_FADE_OUT_MS: 600,
-
   /** Auto-refresh interval for sync debug panel (2 seconds) */
   DEBUG_PANEL_REFRESH_MS: 2000,
 } as const;

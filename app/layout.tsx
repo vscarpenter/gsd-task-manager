@@ -12,7 +12,7 @@ import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
-import { LaunchScreen } from "@/components/launch-screen";
+import { FirstTimeRedirect } from "@/components/first-time-redirect";
 
 // Local fonts for better offline PWA support and reliability
 const inter = localFont({
@@ -88,7 +88,7 @@ export default function RootLayout({
                   <ClientLayout>
                     {children}
                   </ClientLayout>
-                  <LaunchScreen />
+                  <FirstTimeRedirect />
                   <PwaRegister />
                   <InstallPwaPrompt />
                   <PwaUpdateToast />
