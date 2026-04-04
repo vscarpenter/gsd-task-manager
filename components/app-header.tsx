@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject, useState, useEffect } from "react";
-import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon, CheckSquareIcon, ShieldCheckIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, HelpCircleIcon, SettingsIcon, CheckSquareIcon, ShieldCheckIcon, InfoIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -245,6 +245,18 @@ export function AppHeader({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>User Guide (?)</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a href="/about" className="inline-flex items-center justify-center h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2 rounded-full text-foreground bg-transparent hover:bg-background-muted transition-all duration-200 active:scale-[0.97]" aria-label="About GSD">
+                    <InfoIcon className="h-7 w-7 xl:h-5 xl:w-5" />
+                    <span className="hidden xl:inline text-sm font-medium">About</span>
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>About GSD</p>
                 </TooltipContent>
               </Tooltip>
 

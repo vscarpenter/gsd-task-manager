@@ -51,6 +51,33 @@ When requirements are unclear or incomplete:
 
 > **Never:** Silently interpret ambiguous requirements and build an entire solution on an assumption that could be wrong.
 
+### Parallel Tool Execution
+
+Claude Code fires tool calls in parallel only when the prompt signals that tasks are independent. Ambiguous prompts default to sequential execution, which wastes significant time on large codebases.
+
+**Pattern: Signal independence explicitly.**
+
+Instead of:
+> "Read the auth module, then read the payment module, then compare them."
+
+Use:
+> "Read the auth module and the payment module simultaneously, then compare their error handling patterns."
+
+Apply this pattern when scanning multiple files, running tests alongside linting, or fetching multiple log sources at once. The wall-clock difference on large codebases is significant.
+
+> **Rule:** If two tool calls do not depend on each other's output, say so in the prompt. Claude Code will batch them.
+
+### Bash-First for Multi-Step Operations
+
+The bash tool is the most capable in Claude Code's toolbox. For tasks involving multiple files, prefer bash operations over chaining individual read/write tool calls. A single `grep`, `find`, or `sed` across a directory is faster and cleaner than reading files one at a time.
+
+- Use `grep` or `ripgrep` to search across files instead of reading them individually.
+- Use `git log`, `git diff`, and `git status` directly rather than asking Claude to summarize manually.
+- For bulk refactors, instruct Claude to use `sed` or `awk` on multiple files in one pass.
+- For long-running bash operations, set explicit timeouts and expected durations upfront. Claude defaults to blocking-avoidance behavior; if a command is expected to run for 30 seconds, say so.
+
+> **Rule:** Prefer one bash command over three chained tool calls. It is faster, cleaner, and produces a more focused context trail.
+
 ### Context Management & Sustained Work
 
 For lengthy tasks, YOU MUST follow these requirements:
@@ -62,6 +89,18 @@ For lengthy tasks, YOU MUST follow these requirements:
 5. Never leave significant work uncommitted.
 
 > **Critical:** If you find yourself 80% through context with major uncommitted work, stop adding features and commit immediately.
+
+**Define tasks by outcome, not process.**
+
+Claude Code's agentic loop exits on three signals: an explicit completion signal, an unrecoverable error, or hitting the turn limit. Without a clear outcome definition, it loops.
+
+Instead of:
+> "Keep checking the logs until you find the error."
+
+Use:
+> "Check the last 100 lines of logs. If you find an error, explain the root cause and propose one fix. If no errors are found, say so and stop."
+
+Every multi-step task must have a stated "done" condition Claude can recognize autonomously.
 
 **Compaction Directive:** When compacting, always preserve the full list of modified files, current task status, test commands, and next steps. Do not discard working state during summarization.
 
@@ -172,6 +211,8 @@ Before presenting code or marking a task as complete, perform a quick self-revie
 4. Check that error paths are handled, not just the happy path.
 5. Ensure the code compiles/runs and tests pass.
 6. Ask yourself: "Would a staff engineer approve this?" If the answer is uncertain, keep improving.
+
+**File edit failures:** Claude Code edits files via exact string matching, not full rewrites. If an edit fails or produces unexpected results, read the full file first, then apply the targeted change. For complex multi-part edits, break changes into smaller, targeted replacements rather than one large substitution.
 
 > **Rule:** Never present code you have not re-read. A 30-second review catches the majority of avoidable mistakes.
 
@@ -433,6 +474,18 @@ For autonomous, long-running work, use a Stop hook to run deterministic checks (
 - Never commit secrets; rotate regularly.
 - Keep dependencies patched and scanned.
 
+### Supply-Chain Vigilance for AI-Assisted Development
+
+AI coding tools introduce supply-chain risk vectors that did not exist in manual workflows. When Claude Code installs, updates, or suggests new dependencies, treat those changes with the same scrutiny as any other code change.
+
+- Audit every new dependency immediately: check maintenance status, download trends, and known CVEs before accepting it.
+- Lock versions in the lockfile. Floating ranges are especially dangerous when Claude is auto-installing packages during agentic sessions.
+- After any Claude Code version update, scan lockfiles for unexpected new transitive dependencies.
+- If Claude Code is operating in an agentic mode with npm/pip access, scope its file-system and network permissions to the project directory and review its dependency changes before accepting them.
+- Run `npm audit` or `pip-audit` as part of the PostToolUse hook lifecycle, not just in CI. Catch supply-chain issues before they reach the pipeline.
+
+> **Rule:** Claude Code can install packages autonomously. Every package it adds is your team's responsibility. Review first, accept second.
+
 ---
 
 ## Part 5: Git Workflow
@@ -562,6 +615,7 @@ A task is not done when the code works. It is done when ALL of the following are
 - [ ] Self-explanatory names; understandable in 5 minutes without a walkthrough.
 - [ ] Comprehensive error handling with typed errors; not just the happy path.
 - [ ] "Would a staff engineer approve this?" answered with confidence.
+- [ ] Complex file edits were preceded by a full file read to ensure accurate string matching.
 
 **Documentation & Process:**
 - [ ] PR description is complete and reviewable without a verbal walkthrough.
@@ -570,7 +624,7 @@ A task is not done when the code works. It is done when ALL of the following are
 - [ ] Observability is adequate: structured logging covers the new path, errors surface correctly.
 - [ ] If an ADR was warranted, it has been written.
 - [ ] If a lesson was learned, `tasks/lessons.md` and/or `CLAUDE.md` have been updated.
-- [ ] If new dependencies were added, they have been audited.
+- [ ] If new dependencies were added, they have been audited and are locked in the lockfile.
 - [ ] If feature flags were introduced, they are named, owned, and have a removal date.
 - [ ] If frontend work, accessibility baseline is met.
 
@@ -626,6 +680,17 @@ Here is the relevant implementation: [paste code]
 Diagnose the root cause. Do not guess. Propose one fix with an explanation.
 ```
 
+**Architecture/tradeoff prompt:** Use when deeper reasoning is needed before code is written.
+```
+Before writing any code, analyze [problem area] and identify:
+  1. Three implementation approaches with their tradeoffs.
+  2. Risks and edge cases for each.
+  3. Your recommended approach and why.
+Confirm before proceeding with implementation.
+```
+
+Framing tasks as analysis or tradeoff evaluation engages extended reasoning. Operational prompts ("add error handling to this function, follow the existing pattern") should stay tight and direct. Match prompt style to task complexity.
+
 ### Prompt Anti-Patterns
 
 Avoid these patterns; they produce lower-quality outputs:
@@ -635,6 +700,8 @@ Avoid these patterns; they produce lower-quality outputs:
 - **No anti-goals:** Without them, the model expands scope by default.
 - **Stacked goals:** One prompt asking for spec, implementation, tests, and documentation simultaneously.
 - **Implicit context:** Assuming the model knows your project structure, conventions, or prior decisions without stating them.
+- **Conversational framing on operational tasks:** "Could you please help me understand..." invites verbose responses. For operational asks, write direct commands: "Explain what this function does. List any issues." Claude mirrors the register of its prompts.
+- **Process-defined tasks without exit conditions:** "Keep checking until you find the issue" loops indefinitely. Define outcomes: "Check X. If Y, do Z. If not, report and stop."
 
 > **Rule:** A prompt is a spec for the model. Apply the same rigor you would to a spec for code.
 
@@ -709,6 +776,11 @@ Build [feature] that:
 - No verification method defined before starting implementation
 - Ad-hoc subagent prompts instead of reusable agent definitions for repeated patterns
 - Standards enforced by discipline alone when a hook could automate them
+- Sequential tool calls for tasks that are clearly independent
+- Multi-step file operations handled by chained reads instead of a single bash command
+- Complex file edits attempted without reading current file state first
+- Agentic tasks defined as a process without a stated outcome condition
+- New dependencies added by Claude in agentic mode without review and lockfile verification
 
 ### Guiding Principle
 
@@ -716,4 +788,4 @@ Build [feature] that:
 
 ---
 
-*Document Version 10.0 | Vinny Carpenter*
+*Document Version 11.0 | Vinny Carpenter*
