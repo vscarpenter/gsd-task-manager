@@ -15,13 +15,13 @@ export function FirstTimeRedirect() {
 
   useEffect(() => {
     const hasLaunched = localStorage.getItem(STORAGE_KEY);
+    if (hasLaunched) return;
 
-    if (!hasLaunched && pathname !== "/about") {
+    // Set the flag first so subsequent navigations never re-trigger
+    localStorage.setItem(STORAGE_KEY, "true");
+
+    if (pathname !== "/about") {
       router.replace("/about");
-    }
-
-    if (!hasLaunched && pathname === "/about") {
-      localStorage.setItem(STORAGE_KEY, "true");
     }
   }, [pathname, router]);
 
