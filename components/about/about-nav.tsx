@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,14 @@ export function AboutNav() {
       )}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
-        <span className="text-lg font-bold tracking-tight text-foreground">
+        <span className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
+          <Image
+            src="/icons/about-logo.png"
+            alt="GSD logo"
+            width={42}
+            height={42}
+            className="rounded-lg"
+          />
           <span className="text-accent">GSD</span>
         </span>
 
