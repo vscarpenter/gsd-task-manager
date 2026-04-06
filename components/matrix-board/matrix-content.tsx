@@ -4,12 +4,15 @@ import { type RefObject } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { MatrixColumn } from "@/components/matrix-column";
 import { MatrixEmptyState } from "@/components/matrix-empty-state";
+import { MatrixSkeleton } from "@/components/matrix-skeleton";
+import { KeyboardHintsToast } from "@/components/keyboard-hints-toast";
 import { Button } from "@/components/ui/button";
 import { quadrants } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantId } from "@/lib/types";
 
 interface MatrixContentProps {
+  isLoading: boolean;
   hasTasks: boolean;
   isDoFirstEmpty: boolean;
   visibleCount: number;
@@ -45,7 +48,9 @@ export function MatrixContent(props: MatrixContentProps) {
       <main className="px-6 pb-10 md:pb-10" style={{
         paddingBottom: "max(2.5rem, calc(5rem + env(safe-area-inset-bottom)))"
       }}>
-        {!props.hasTasks ? (
+        {props.isLoading ? (
+          <MatrixSkeleton />
+        ) : !props.hasTasks ? (
           <MatrixEmptyState onCreateTask={props.onCreateTask} />
         ) : props.visibleCount === 0 ? (
           <NoResultsState searchQuery={props.searchQuery} onClearSearch={props.onClearSearch} />
@@ -53,6 +58,7 @@ export function MatrixContent(props: MatrixContentProps) {
           <MatrixGrid {...props} />
         )}
       </main>
+      <KeyboardHintsToast />
     </>
   );
 }

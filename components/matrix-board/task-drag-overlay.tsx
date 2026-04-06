@@ -11,7 +11,7 @@ export function TaskDragOverlay({ activeTask }: TaskDragOverlayProps) {
   return (
     <DragOverlay dropAnimation={null}>
       {activeTask ? (
-        <div className="rounded-xl border border-accent bg-card p-3 opacity-90 shadow-lg">
+        <div className="animate-drag-lift rounded-xl border border-accent bg-card p-3 opacity-90 shadow-lg">
           <p className="text-sm font-medium text-foreground truncate">{activeTask.title}</p>
           {activeTask.tags.length > 0 && (
             <div className="mt-1.5 flex gap-1 overflow-hidden">

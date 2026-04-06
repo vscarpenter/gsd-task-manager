@@ -58,7 +58,7 @@
   
   /* Foreground colors */
   --foreground: 248 250 252;           /* #f8fafc */
-  --foreground-muted: 148 163 184;     /* #94a3b8 */
+  --foreground-muted: 161 177 201;     /* #a1b1c9 — bumped for ~5.5:1 contrast on #0f172a */
   
   /* Border colors */
   --border: 51 65 85;                  /* #334155 */
@@ -110,15 +110,26 @@ body {
 
 main {
   min-height: calc(100vh - 3.5rem);
+  scrollbar-gutter: stable;
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
   background-color: rgb(var(--foreground-muted) / 0.3);
   border-radius: 9999px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--foreground-muted) / 0.3) transparent;
 }
 
 /* Hide scrollbar utility for horizontal scroll containers */
@@ -129,10 +140,6 @@ main {
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
-}
-
-::-webkit-scrollbar-track {
-  background-color: rgb(var(--background-muted) / 0.5);
 }
 
 .button-reset {
@@ -186,12 +193,26 @@ main {
     background: var(--gradient-eliminate);
   }
 
+  /* Subtle quadrant gradient glow — adds depth without overwhelming content */
+  .matrix-card.bg-quadrant-focus {
+    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-focus) / 0.15), transparent 60%);
+  }
+  .matrix-card.bg-quadrant-schedule {
+    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-schedule) / 0.15), transparent 60%);
+  }
+  .matrix-card.bg-quadrant-delegate {
+    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-delegate) / 0.15), transparent 60%);
+  }
+  .matrix-card.bg-quadrant-eliminate {
+    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-eliminate) / 0.15), transparent 60%);
+  }
+
   .matrix-card__header {
     @apply mb-4 flex items-center justify-between gap-4;
   }
 
   .matrix-card__title {
-    @apply text-lg font-semibold tracking-wide text-foreground;
+    @apply text-lg font-semibold tracking-tight text-foreground;
   }
 
   .matrix-card__subtitle {
@@ -298,6 +319,41 @@ main {
   .animate-new-task-glow {
     animation: new-task-glow 1.5s ease-in-out 3;
   }
+
+  /* Staggered card entrance — each card delays by its index via inline style */
+  .animate-stagger-in {
+    animation: slide-in-card 0.3s ease-out both;
+  }
+
+  /* Enhanced drag lift — used on actively dragged task card */
+  @keyframes drag-lift {
+    from {
+      transform: scale(1);
+      box-shadow: var(--shadow-card);
+    }
+    to {
+      transform: scale(1.03);
+      box-shadow: var(--shadow-card-hover);
+    }
+  }
+
+  .animate-drag-lift {
+    animation: drag-lift 0.15s ease-out forwards;
+  }
+
+  /* Drop zone pulse when drag is over */
+  @keyframes drop-zone-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(var(--accent), 0.2);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(var(--accent), 0);
+    }
+  }
+
+  .animate-drop-zone-pulse {
+    animation: drop-zone-pulse 1s ease-in-out infinite;
+  }
 }
 
 /* Respect reduced motion preference */
@@ -316,6 +372,18 @@ main {
   }
 
   .animate-new-task-glow {
+    animation: none !important;
+  }
+
+  .animate-stagger-in {
+    animation: none !important;
+  }
+
+  .animate-drag-lift {
+    animation: none !important;
+  }
+
+  .animate-drop-zone-pulse {
     animation: none !important;
   }
 }

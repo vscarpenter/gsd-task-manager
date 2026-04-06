@@ -484,7 +484,8 @@ describe('MatrixBoard Integration Tests', () => {
       const taskCard = await screen.findByText('Task to Edit');
       const card = taskCard.closest('article');
       expect(card).toBeTruthy();
-      const editButton = within(card as HTMLElement).getByLabelText(/edit task/i);
+      const editButtons = within(card as HTMLElement).getAllByLabelText(/edit task/i);
+      const editButton = editButtons[0];
 
       await user.click(editButton);
 

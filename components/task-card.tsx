@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { CheckCircle2Icon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon, CopyIcon } from "lucide-react";
+import { CheckCircle2Icon, GripVerticalIcon, PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, TagIcon, LockIcon, LinkIcon, Share2Icon, CopyIcon, MoreHorizontalIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatRelative, cn, isOverdue, isDueToday } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { SnoozeDropdown } from "@/components/snooze-dropdown";
 import { TaskTimer } from "@/components/task-timer";
 import { areTaskCardPropsEqual, type TaskCardProps } from "@/lib/task-card-memo";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete, onShare, onDuplicate, onSnooze, onStartTimer, onStopTimer, selectionMode, isSelected, onToggleSelect, taskRef, isHighlighted }: TaskCardProps) {
   // React Compiler handles optimization automatically
@@ -77,7 +78,7 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
           )}
           <div className="min-w-0 flex-1">
             <h3 className={cn(
-              "text-sm font-semibold leading-snug text-foreground truncate",
+              "text-[15px] font-semibold leading-snug tracking-tight text-foreground truncate",
               task.completed && "line-through"
             )}>
               {task.title}
@@ -201,66 +202,110 @@ function TaskCardComponent({ task, allTasks, onEdit, onDelete, onToggleComplete,
             </span>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 transition sm:group-hover:opacity-100">
-          {onShare && (
+        <div className="flex shrink-0 items-center gap-0.5">
+          {/* Desktop: all buttons on hover */}
+          <div className="hidden sm:flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+            {onShare && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onShare(task)}
+                    className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground transition-colors"
+                    aria-label="Share task"
+                  >
+                    <Share2Icon className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Share task</TooltipContent>
+              </Tooltip>
+            )}
+            {onDuplicate && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onDuplicate(task)}
+                    className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground transition-colors"
+                    aria-label="Duplicate task"
+                  >
+                    <CopyIcon className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Duplicate task</TooltipContent>
+              </Tooltip>
+            )}
+            {onSnooze && task.dueDate && !task.completed && (
+              <SnoozeDropdown task={task} onSnooze={onSnooze} />
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => onShare(task)}
-                  className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
-                  aria-label="Share task"
+                  onClick={() => onEdit(task)}
+                  className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground transition-colors"
+                  aria-label="Edit task"
                 >
-                  <Share2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
+                  <PencilIcon className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Share task</TooltipContent>
+              <TooltipContent>Edit task</TooltipContent>
             </Tooltip>
-          )}
-          {onDuplicate && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => onDuplicate(task)}
-                  className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
-                  aria-label="Duplicate task"
+                  onClick={() => onDelete(task)}
+                  className="rounded px-1.5 py-0.5 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  aria-label="Delete task"
                 >
-                  <CopyIcon className="h-4 w-4 sm:h-3 sm:w-3" />
+                  <Trash2Icon className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Duplicate task</TooltipContent>
+              <TooltipContent>Delete task</TooltipContent>
             </Tooltip>
-          )}
-          {onSnooze && task.dueDate && !task.completed && (
-            <SnoozeDropdown task={task} onSnooze={onSnooze} />
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => onEdit(task)}
-                className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
-                aria-label="Edit task"
-              >
-                <PencilIcon className="h-4 w-4 sm:h-3 sm:w-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Edit task</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => onDelete(task)}
-                className="rounded p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 touch-manipulation transition-colors"
-                aria-label="Delete task"
-              >
-                <Trash2Icon className="h-4 w-4 sm:h-3 sm:w-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Delete task</TooltipContent>
-          </Tooltip>
+          </div>
+
+          {/* Mobile: edit + overflow menu */}
+          <div className="flex sm:hidden items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onEdit(task)}
+              className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
+              aria-label="Edit task"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
+                  aria-label="More actions"
+                >
+                  <MoreHorizontalIcon className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onShare && (
+                  <DropdownMenuItem onClick={() => onShare(task)}>
+                    <Share2Icon className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                )}
+                {onDuplicate && (
+                  <DropdownMenuItem onClick={() => onDuplicate(task)}>
+                    <CopyIcon className="mr-2 h-4 w-4" />
+                    Duplicate
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => onDelete(task)} className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
+                  <Trash2Icon className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </article>

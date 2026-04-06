@@ -145,7 +145,7 @@ export function AppHeader({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <header className="sticky top-0 z-30 flex flex-col gap-3 border-b border-border/60 bg-background/70 px-6 py-4 backdrop-blur-xl backdrop-saturate-150">
+      <header className="sticky top-0 z-30 flex flex-col gap-2 border-b border-border/60 bg-background/70 px-4 py-3 sm:px-6 backdrop-blur-xl backdrop-saturate-150">
         {/* Row 1: Branding + Views | Status | Actions */}
         <div className="flex items-center justify-between gap-3">
           {/* Left: Branding + View tabs */}
@@ -153,10 +153,8 @@ export function AppHeader({
             <div className="flex items-center gap-3">
               <GsdLogo className="shrink-0" />
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-accent">GSD Task Manager</p>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                  Prioritize what matters
-                </h1>
+                <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">GSD Task Manager</h1>
+                <p className="hidden sm:block text-xs text-foreground-muted">Prioritize what matters</p>
               </div>
             </div>
             <div className="hidden sm:block h-8 w-px bg-border" />
@@ -285,7 +283,7 @@ export function AppHeader({
 
         {/* Row 2: Search + Smart Views + Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className={`relative ${searchExpanded ? 'flex-1' : 'w-0 overflow-hidden opacity-0 pointer-events-none'} transition-all duration-200`}>
+          <div className={`relative ${searchExpanded ? 'flex-1 opacity-100' : 'max-w-0 overflow-hidden opacity-0 pointer-events-none'} transition-all duration-300 ease-out`}>
             <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
             <Input
               ref={searchInputRef}

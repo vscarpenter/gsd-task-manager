@@ -34,7 +34,7 @@ export const DialogContent = React.forwardRef<
       className={cn(
         "fixed z-50 w-full bg-card shadow-xl focus:outline-none",
         // Desktop: centered modal
-        "md:left-1/2 md:top-1/2 md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:border md:border-card-border md:p-6",
+        "md:left-1/2 md:top-1/2 md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-card-border md:p-6",
         // Mobile: full-screen with safe areas, scrollable
         "inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-3xl border-t border-card-border p-6 pb-8",
         "sm:max-h-[85vh]",
