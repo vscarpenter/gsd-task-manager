@@ -75,8 +75,8 @@ describe("TaskCard", () => {
     const user = userEvent.setup();
     render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
 
-    const editButton = screen.getByRole("button", { name: /edit task/i });
-    await user.click(editButton);
+    const editButtons = screen.getAllByRole("button", { name: /edit task/i });
+    await user.click(editButtons[0]);
 
     expect(mockHandlers.onEdit).toHaveBeenCalledWith(mockTask);
   });

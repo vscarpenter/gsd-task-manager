@@ -1,4 +1,5 @@
 import { LucideIcon } from "lucide-react";
+import { useCountUp } from "@/lib/use-count-up";
 
 interface StatsCardProps {
   title: string;
@@ -28,13 +29,14 @@ function getAccentClasses(color?: string): { bg: string; text: string } {
  * Reusable card for displaying a single metric
  */
 export function StatsCard({ title, value, subtitle, icon: Icon, trend, accentColor, className = "" }: StatsCardProps) {
+  const animatedValue = useCountUp(value);
   const { bg: iconBg, text: iconText } = getAccentClasses(accentColor);
   return (
     <div className={`rounded-xl border border-border bg-card p-6 shadow-sm ${className}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-foreground-muted">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-foreground">{value}</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">{animatedValue}</p>
           {subtitle && (
             <p className="mt-1 text-sm text-foreground-muted">{subtitle}</p>
           )}

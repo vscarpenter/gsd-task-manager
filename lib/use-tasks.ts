@@ -6,18 +6,21 @@ import { quadrantOrder } from "@/lib/quadrants";
 export interface TaskBuckets {
   all: TaskRecord[];
   byQuadrant: Record<string, TaskRecord[]>;
+  isLoading: boolean;
 }
 
 export function useTasks(): TaskBuckets {
-  const tasks =
-    useLiveQuery(async () => {
-      if (typeof window === "undefined") {
-        return [] as TaskRecord[];
-      }
-      const db = getDb();
-      const rows = await db.tasks.toArray();
-      return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    }, [], []) ?? [];
+  const result = useLiveQuery(async () => {
+    if (typeof window === "undefined") {
+      return [] as TaskRecord[];
+    }
+    const db = getDb();
+    const rows = await db.tasks.toArray();
+    return rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }, [], []);
+
+  const isLoading = result === undefined;
+  const tasks = result ?? [];
 
   const byQuadrant: Record<string, TaskRecord[]> = Object.fromEntries(
     quadrantOrder.map((id) => [id, []])
@@ -30,5 +33,5 @@ export function useTasks(): TaskBuckets {
     byQuadrant[task.quadrant].push(task);
   }
 
-  return { all: tasks, byQuadrant };
+  return { all: tasks, byQuadrant, isLoading };
 }

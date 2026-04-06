@@ -15,12 +15,14 @@ import { useTasks } from "@/lib/use-tasks";
 import { calculateMetrics, getCompletionTrend, getStreakData, calculateTimeTrackingSummary, getTimeByQuadrant } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 
 /**
  * Dashboard page showing productivity metrics and analytics
  */
 export default function DashboardPage() {
-  const { all: tasks } = useTasks();
+  const { all: tasks, isLoading } = useTasks();
   const [chartType, setChartType] = useState<"line" | "bar">("line");
   const [trendPeriod, setTrendPeriod] = useState<7 | 30 | 90>(30);
 
@@ -44,7 +46,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="border-b border-border bg-background-muted px-6 py-8">
         <div className="mx-auto max-w-7xl">
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="mt-2 text-foreground-muted">
             Track your productivity and task completion metrics
           </p>
@@ -53,7 +55,9 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 py-8">
-        {tasks.length === 0 ? (
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : tasks.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-12 text-center shadow-sm">
             <ListTodoIcon className="mx-auto h-12 w-12 text-foreground-muted" />
             <h2 className="mt-4 text-xl font-semibold text-foreground">No tasks yet</h2>
@@ -100,46 +104,24 @@ export default function DashboardPage() {
 
             {/* Completion Trend Chart */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <Button
-                    variant={trendPeriod === 7 ? "primary" : "subtle"}
-                    onClick={() => setTrendPeriod(7)}
-                    className="text-sm"
-                  >
-                    7 Days
-                  </Button>
-                  <Button
-                    variant={trendPeriod === 30 ? "primary" : "subtle"}
-                    onClick={() => setTrendPeriod(30)}
-                    className="text-sm"
-                  >
-                    30 Days
-                  </Button>
-                  <Button
-                    variant={trendPeriod === 90 ? "primary" : "subtle"}
-                    onClick={() => setTrendPeriod(90)}
-                    className="text-sm"
-                  >
-                    90 Days
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={chartType === "line" ? "primary" : "subtle"}
-                    onClick={() => setChartType("line")}
-                    className="text-sm"
-                  >
-                    Line
-                  </Button>
-                  <Button
-                    variant={chartType === "bar" ? "primary" : "subtle"}
-                    onClick={() => setChartType("bar")}
-                    className="text-sm"
-                  >
-                    Bar
-                  </Button>
-                </div>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <SegmentedControl
+                  options={[
+                    { value: "7", label: "7 Days" },
+                    { value: "30", label: "30 Days" },
+                    { value: "90", label: "90 Days" },
+                  ]}
+                  value={String(trendPeriod) as "7" | "30" | "90"}
+                  onChange={(v) => setTrendPeriod(Number(v) as 7 | 30 | 90)}
+                />
+                <SegmentedControl
+                  options={[
+                    { value: "line", label: "Line" },
+                    { value: "bar", label: "Bar" },
+                  ]}
+                  value={chartType}
+                  onChange={setChartType}
+                />
               </div>
               <CompletionChart data={trendData} chartType={chartType} />
             </div>

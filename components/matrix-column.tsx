@@ -68,7 +68,7 @@ function MatrixColumnComponent({
       className={cn(
         "matrix-card transition-all",
         quadrant.bgClass,
-        isOver && "ring-2 ring-accent ring-offset-2"
+        isOver && "ring-2 ring-accent ring-offset-2 animate-drop-zone-pulse"
       )}
     >
       <header className="matrix-card__header">
@@ -104,9 +104,17 @@ function MatrixColumnComponent({
           isCollapsed && "max-h-0 opacity-0 md:max-h-none md:opacity-100"
         )}>
           {tasks.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/60 bg-background/30 p-4 text-center text-sm text-foreground-muted/70 italic">
-              {quadrant.emptyMessage}
-            </p>
+            <div className="rounded-xl border border-dashed border-border/60 bg-background/30 p-6 text-center">
+              {(() => {
+                const Icon = quadrantIcons[quadrant.id];
+                return Icon ? (
+                  <div className={cn("mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full", quadrant.accentClass)}>
+                    <Icon className={cn("h-5 w-5", quadrant.iconColor)} />
+                  </div>
+                ) : null;
+              })()}
+              <p className="text-sm text-foreground-muted">{quadrant.emptyMessage}</p>
+            </div>
           ) : (
             tasks.map((task) => (
               <TaskCard

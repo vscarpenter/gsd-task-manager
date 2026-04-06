@@ -37,7 +37,7 @@ import {
 } from "./use-event-handlers";
 
 export function MatrixBoard() {
-  const { all } = useTasks();
+  const { all, isLoading } = useTasks();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
   const [showCompleted, setShowCompleted] = useState(false);
@@ -161,6 +161,7 @@ export function MatrixBoard() {
         )}
 
         <MatrixContent
+          isLoading={isLoading}
           hasTasks={hasTasks}
           isDoFirstEmpty={isDoFirstEmpty}
           visibleCount={visibleCount}
