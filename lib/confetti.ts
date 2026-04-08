@@ -1,10 +1,18 @@
 /**
  * Celebration confetti for task completions.
  *
- * Lazy-loads canvas-confetti to keep it out of the initial bundle, and
- * respects `prefers-reduced-motion` so users who opt out of motion get
- * only the toast — no animation.
+ * Uses canvas-confetti's `useWorker: false` mode so the animation runs on
+ * the main thread instead of a Web Worker. The worker approach creates a
+ * blob: URL worker which is blocked by our CSP (`script-src 'self'` has
+ * no blob: fallback, and `worker-src` is not set).
+ *
+ * Respects `prefers-reduced-motion` so users who opt out of motion get
+ * only the toast — no animation. Feature-detects canvas so jsdom-based
+ * tests don't crash on its stubbed getContext().
  */
+import confetti, { type CreateTypes } from "canvas-confetti";
+
+let fireConfetti: CreateTypes | null = null;
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
@@ -25,27 +33,51 @@ function canRenderCanvas(): boolean {
   }
 }
 
-export async function celebrateCompletion(): Promise<void> {
+/**
+ * Lazily create a fullscreen confetti canvas attached to document.body
+ * with the worker disabled (CSP-safe). Reused across calls.
+ */
+function getConfettiInstance(): CreateTypes | null {
+  if (fireConfetti) return fireConfetti;
+  if (typeof document === "undefined") return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.style.position = "fixed";
+  canvas.style.inset = "0";
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "9999";
+  document.body.appendChild(canvas);
+
+  fireConfetti = confetti.create(canvas, { resize: true, useWorker: false });
+  return fireConfetti;
+}
+
+export function celebrateCompletion(): void {
   if (typeof window === "undefined") return;
   if (prefersReducedMotion()) return;
   if (!canRenderCanvas()) return;
 
+  const fire = getConfettiInstance();
+  if (!fire) return;
+
   try {
-    const { default: confetti } = await import("canvas-confetti");
+    // Big center burst.
+    fire({
+      particleCount: 120,
+      spread: 90,
+      startVelocity: 45,
+      origin: { x: 0.5, y: 0.6 },
+      scalar: 1.1
+    });
 
-    // Two quick bursts from bottom-left and bottom-right for a fuller effect.
-    const defaults = {
-      startVelocity: 35,
-      spread: 70,
-      ticks: 200,
-      zIndex: 9999,
-      particleCount: 60,
-      scalar: 0.9
-    };
-
-    confetti({ ...defaults, origin: { x: 0.2, y: 0.9 }, angle: 60 });
-    confetti({ ...defaults, origin: { x: 0.8, y: 0.9 }, angle: 120 });
+    // Follow-up side bursts for a fuller effect.
+    setTimeout(() => {
+      fire({ particleCount: 60, angle: 60, spread: 70, origin: { x: 0, y: 0.7 } });
+      fire({ particleCount: 60, angle: 120, spread: 70, origin: { x: 1, y: 0.7 } });
+    }, 150);
   } catch {
-    // Confetti is a nice-to-have — never surface load failures to the user.
+    // Confetti is a nice-to-have — never surface rendering failures.
   }
 }

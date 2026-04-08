@@ -1,12 +1,13 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "7.12.0",
+	"version": "7.12.2",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "next dev",
 		"clean": "rimraf .next out",
 		"prebuild": "rimraf .next out",
-		"build": "node scripts/generate-build-info.js && bash -c 'source .build-env.sh && next build 2>&1 | grep -v baseline-browser-mapping'",
+		"build": "node scripts/generate-build-info.cjs && bash -c 'source .build-env.sh && next build 2>&1 | grep -v baseline-browser-mapping'",
 		"start": "next start",
 		"lint": "eslint .",
 		"test": "vitest run",
