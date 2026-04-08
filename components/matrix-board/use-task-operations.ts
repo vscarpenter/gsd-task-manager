@@ -120,7 +120,7 @@ export function useTaskOperations(
       await toggleCompleted(task.id, completed);
 
       if (completed) {
-        void celebrateCompletion();
+        celebrateCompletion();
       }
 
       if (completed && !showCompleted) {
