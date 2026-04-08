@@ -16,6 +16,7 @@ import {
   stopTimeTracking
 } from "@/lib/tasks";
 import * as bulkOps from "@/lib/bulk-operations";
+import { celebrateCompletion } from "@/lib/confetti";
 import type { TimeEntry } from "@/lib/types";
 
 /**
@@ -117,6 +118,10 @@ export function useTaskOperations(
   const handleComplete = useCallback(async (task: TaskRecord, completed: boolean) => {
     try {
       await toggleCompleted(task.id, completed);
+
+      if (completed) {
+        void celebrateCompletion();
+      }
 
       if (completed && !showCompleted) {
         showToast(
