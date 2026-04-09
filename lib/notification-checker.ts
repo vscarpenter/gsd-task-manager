@@ -29,62 +29,47 @@ class NotificationChecker {
 	 * Check all tasks and send notifications for those that are due
 	 */
 	async checkAndNotify(): Promise<void> {
-		// Prevent concurrent checks
-		if (this.isChecking) {
-			return;
-		}
-
+		if (this.isChecking) return;
 		this.isChecking = true;
 
 		try {
-			if (!isNotificationSupported()) {
-				return;
-			}
-
-			const permission = checkNotificationPermission();
-			if (permission !== "granted") {
-				return;
-			}
-
-			const settings = await getNotificationSettings();
-
-			// If notifications disabled globally, skip
-			if (!settings.enabled) {
-				return;
-			}
-
-			// Check quiet hours
-			if (isInQuietHours(settings)) {
-				return;
-			}
-
-			const now = new Date();
-			this.lastCheck = now;
-
-			// Get all uncompleted tasks with due dates
-			const db = getDb();
-			const tasks = await db.tasks
-				.where("completed")
-				.equals(0) // 0 = false in IndexedDB
-				.toArray();
-
-			// Filter to tasks with due dates that are enabled for notifications
-			const tasksWithDueDates = tasks.filter(
-				(task) => task.dueDate && task.notificationEnabled !== false,
-			);
-
-			// Check each task
-			for (const task of tasksWithDueDates) {
-				await this.checkTask(task, now, settings.defaultReminder);
-			}
-
-			// Update app badge with count of due soon tasks
-			await this.updateBadge();
+			await this.processNotifications();
 		} catch (error) {
 			logger.error("Error in notification checker", error instanceof Error ? error : new Error(String(error)));
 		} finally {
 			this.isChecking = false;
 		}
+	}
+
+	/**
+	 * Core notification logic — check permissions, query tasks, and notify
+	 */
+	private async processNotifications(): Promise<void> {
+		if (!isNotificationSupported()) return;
+		if (checkNotificationPermission() !== "granted") return;
+
+		const settings = await getNotificationSettings();
+		if (!settings.enabled) return;
+		if (isInQuietHours(settings)) return;
+
+		const now = new Date();
+		this.lastCheck = now;
+
+		const db = getDb();
+		const tasks = await db.tasks
+			.where("completed")
+			.equals(0)
+			.toArray();
+
+		const tasksWithDueDates = tasks.filter(
+			(task) => task.dueDate && task.notificationEnabled !== false,
+		);
+
+		for (const task of tasksWithDueDates) {
+			await this.checkTask(task, now, settings.defaultReminder);
+		}
+
+		await this.updateBadge();
 	}
 
 	/**

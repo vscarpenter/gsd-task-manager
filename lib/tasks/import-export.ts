@@ -90,7 +90,11 @@ function remapTaskReferences(
  */
 export async function importTasks(payload: ImportPayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
-  const parsed = importPayloadSchema.parse(payload);
+  const result = importPayloadSchema.safeParse(payload);
+  if (!result.success) {
+    throw new Error(`Invalid import data: ${result.error.issues.map(i => i.message).join(", ")}`);
+  }
+  const parsed = result.data;
 
   await db.transaction("rw", db.tasks, async () => {
     if (mode === "replace") {
