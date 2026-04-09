@@ -62,21 +62,7 @@ export function loginWithGithub(): Promise<AuthState> {
   return loginWithProvider('github');
 }
 
-/**
- * Log out the current user
- * Clears the PocketBase auth store and destroys the client singleton.
- */
-export function logout(): void {
-  logger.info('User logging out');
-  clearPocketBase();
-}
 
-/**
- * Check if a user is currently logged in with a valid token
- */
-export function isLoggedIn(): boolean {
-  return isAuthenticated();
-}
 
 /**
  * Attempt to refresh the auth token.
@@ -103,34 +89,4 @@ export async function refreshAuth(): Promise<boolean> {
   }
 }
 
-/**
- * Get current auth state snapshot
- */
-export function getAuthState(): AuthState {
-  const pb = getPocketBase();
 
-  if (!pb.authStore.isValid || !pb.authStore.record) {
-    return { isLoggedIn: false, userId: null, email: null, provider: null };
-  }
-
-  return {
-    isLoggedIn: true,
-    userId: pb.authStore.record.id,
-    email: pb.authStore.record.email,
-    provider: null, // PocketBase doesn't expose provider on the auth store
-  };
-}
-
-/**
- * Subscribe to auth state changes (login / logout / token refresh)
- * Returns an unsubscribe function.
- */
-export function onAuthChange(callback: (state: AuthState) => void): () => void {
-  const pb = getPocketBase();
-
-  const unsubscribe = pb.authStore.onChange(() => {
-    callback(getAuthState());
-  });
-
-  return unsubscribe;
-}

@@ -41,20 +41,6 @@ export const SYNC_CONFIG = {
 } as const;
 
 /**
- * PocketBase configuration
- */
-export const POCKETBASE_CONFIG = {
-  /** Collection name for synced tasks */
-  TASKS_COLLECTION: 'tasks',
-
-  /** Collection name for device tracking */
-  DEVICES_COLLECTION: 'devices',
-
-  /** Delay after OAuth login before triggering initial sync (1 second) */
-  POST_LOGIN_SYNC_DELAY_MS: 1000,
-} as const;
-
-/**
  * Toast notification durations for sync operations
  */
 export const SYNC_TOAST_DURATION = {

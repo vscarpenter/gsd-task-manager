@@ -23,17 +23,3 @@ export const SCHEMA_LIMITS = {
   TAG_MAX_LENGTH: 30,
 } as const;
 
-/**
- * Pagination and list limits
- */
-export const PAGINATION_LIMITS = {
-  /** Default limit for history queries */
-  DEFAULT_HISTORY_LIMIT: 50,
-
-  /** Maximum tags to show in analytics */
-  MAX_TAGS_DISPLAY: 10,
-
-  /** Maximum tasks to process in bulk operations */
-  MAX_BULK_TASKS: 50,
-} as const;
-

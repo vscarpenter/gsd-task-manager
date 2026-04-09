@@ -22,10 +22,7 @@ export {
   getRemainingSnoozeMinutes,
   startTimeTracking,
   stopTimeTracking,
-  deleteTimeEntry,
   hasRunningTimer,
   getRunningEntry,
-  getRunningElapsedMinutes,
   formatTimeSpent,
-  formatEstimate,
 } from "./crud/index";

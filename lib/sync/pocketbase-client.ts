@@ -51,11 +51,3 @@ export function getCurrentUserId(): string | null {
   return pb.authStore.record?.id ?? null;
 }
 
-/**
- * Get the authenticated user's email
- */
-export function getCurrentUserEmail(): string | null {
-  const pb = getPocketBase();
-  if (!pb.authStore.isValid) return null;
-  return pb.authStore.record?.email ?? null;
-}

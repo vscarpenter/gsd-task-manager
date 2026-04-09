@@ -191,28 +191,3 @@ export async function unpinSmartView(viewId: string): Promise<void> {
   });
 }
 
-/**
- * Check if a smart view is pinned
- */
-export async function isSmartViewPinned(viewId: string): Promise<boolean> {
-  const prefs = await getAppPreferences();
-  return prefs.pinnedSmartViewIds.includes(viewId);
-}
-
-/**
- * Reorder pinned smart views
- */
-export async function reorderPinnedViews(viewIds: string[]): Promise<void> {
-  const prefs = await getAppPreferences();
-
-  // Validate that all provided IDs are currently pinned
-  const invalidIds = viewIds.filter(id => !prefs.pinnedSmartViewIds.includes(id));
-  if (invalidIds.length > 0) {
-    throw new Error(`Invalid view IDs in reorder: ${invalidIds.join(', ')}`);
-  }
-
-  // Update the order
-  await updateAppPreferences({
-    pinnedSmartViewIds: viewIds
-  });
-}
