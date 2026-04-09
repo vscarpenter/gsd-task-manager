@@ -23,7 +23,6 @@ export type { StreakData } from "./streaks";
 export type {
   TimeTrackingSummary,
   QuadrantTimeDistribution,
-  TaskTimeComparison
 } from "./time-tracking";
 
 // Re-export all functions
@@ -44,6 +43,5 @@ export {
 export {
   calculateTimeTrackingSummary,
   getTimeByQuadrant,
-  getTimeComparisonData,
   formatDuration
 } from "./time-tracking";

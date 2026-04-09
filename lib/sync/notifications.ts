@@ -9,32 +9,6 @@ export interface SyncNotificationOptions {
     enabled: boolean;
 }
 
-/**
- * Show notification for rejected sync operations
- */
-export function notifyRejectedOperations(
-    rejectedOps: Array<{ taskId: string; operation?: string; reason: string; details: string }>,
-    options: SyncNotificationOptions = { enabled: true }
-): void {
-    if (!options.enabled || rejectedOps.length === 0) return;
-
-    for (const rejected of rejectedOps) {
-        const operationType = rejected.operation || 'operation';
-        const action = getActionLabel(operationType);
-
-        if (rejected.reason === 'validation_error') {
-            toast.error(`Failed to ${action} task`, {
-                description: rejected.details || 'The task data could not be validated.',
-                duration: 5000,
-            });
-        } else {
-            toast.error(`Failed to ${action} task`, {
-                description: rejected.details || `The ${operationType} operation was rejected by the server.`,
-                duration: 5000,
-            });
-        }
-    }
-}
 
 /**
  * Show notification for successful sync operations

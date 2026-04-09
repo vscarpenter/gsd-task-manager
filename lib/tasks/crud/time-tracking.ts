@@ -123,51 +123,6 @@ export async function stopTimeTracking(
   return nextRecord;
 }
 
-/**
- * Delete a time entry from a task
- */
-export async function deleteTimeEntry(
-  taskId: string,
-  entryId: string
-): Promise<TaskRecord> {
-  const db = getDb();
-  const existing = await db.tasks.get(taskId);
-
-  if (!existing) {
-    throw new Error(`Task ${taskId} not found`);
-  }
-
-  const updatedEntries = (existing.timeEntries || []).filter(
-    (e) => e.id !== entryId
-  );
-
-  if (updatedEntries.length === existing.timeEntries?.length) {
-    throw new Error(`Time entry ${entryId} not found`);
-  }
-
-  const { syncConfig } = await getSyncContext();
-  const timeSpent = calculateTimeSpent(updatedEntries);
-
-  const nextRecord: TaskRecord = {
-    ...existing,
-    timeEntries: updatedEntries,
-    timeSpent,
-    updatedAt: isoNow(),
-  };
-
-  await db.tasks.put(nextRecord);
-
-  logger.info("Time entry deleted", { taskId, entryId });
-
-  await enqueueSyncOperation(
-    "update",
-    taskId,
-    nextRecord,
-    syncConfig?.enabled ?? false
-  );
-
-  return nextRecord;
-}
 
 /**
  * Check if a task has a running timer
@@ -184,18 +139,6 @@ export function getRunningEntry(task: TaskRecord): TimeEntry | undefined {
 }
 
 /**
- * Get elapsed time in minutes for the current running entry
- */
-export function getRunningElapsedMinutes(task: TaskRecord): number {
-  const runningEntry = getRunningEntry(task);
-  if (!runningEntry) return 0;
-
-  const start = new Date(runningEntry.startedAt).getTime();
-  const now = Date.now();
-  return Math.floor((now - start) / TIME_TRACKING.MS_PER_MINUTE);
-}
-
-/**
  * Format time in minutes to human-readable string
  */
 export function formatTimeSpent(minutes: number): string {
@@ -209,10 +152,3 @@ export function formatTimeSpent(minutes: number): string {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-/**
- * Format time estimation for display
- */
-export function formatEstimate(minutes: number | undefined): string {
-  if (!minutes) return "No estimate";
-  return formatTimeSpent(minutes);
-}

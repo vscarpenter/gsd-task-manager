@@ -69,10 +69,6 @@ export function resolveQuadrantId(urgent: boolean, important: boolean): Quadrant
   return "not-urgent-not-important";
 }
 
-export function quadrantLabel(id: QuadrantId): string {
-  return quadrants.find((quadrant) => quadrant.id === id)?.title ?? "Unknown";
-}
-
 /**
  * Parse quadrant ID back into urgent/important flags.
  * Inverse of resolveQuadrantId.

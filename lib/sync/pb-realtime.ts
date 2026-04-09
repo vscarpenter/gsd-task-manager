@@ -55,12 +55,6 @@ export function unsubscribe(): void {
   }
 }
 
-/**
- * Check if realtime subscription is active
- */
-export function isSubscribed(): boolean {
-  return unsubscribeFn !== null;
-}
 
 /**
  * Handle a single realtime event from PocketBase SSE

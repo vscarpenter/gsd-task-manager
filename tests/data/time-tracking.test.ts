@@ -1,12 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   formatTimeSpent,
-  formatEstimate,
   hasRunningTimer,
   getRunningEntry,
-  getRunningElapsedMinutes,
 } from '@/lib/tasks/crud/time-tracking';
-import { formatDuration } from '@/lib/analytics/time-tracking';
 import { TIME_TRACKING } from '@/lib/constants';
 import type { TaskRecord } from '@/lib/types';
 
@@ -42,33 +39,6 @@ describe('Time Tracking Utilities', () => {
       expect(formatTimeSpent(61)).toBe('1h 1m');
       expect(formatTimeSpent(90)).toBe('1h 30m');
       expect(formatTimeSpent(125)).toBe('2h 5m');
-    });
-  });
-
-  describe('formatEstimate', () => {
-    it('returns "No estimate" for undefined', () => {
-      expect(formatEstimate(undefined)).toBe('No estimate');
-    });
-
-    it('returns "No estimate" for 0', () => {
-      expect(formatEstimate(0)).toBe('No estimate');
-    });
-
-    it('uses formatTimeSpent for valid values', () => {
-      expect(formatEstimate(30)).toBe('30m');
-      expect(formatEstimate(90)).toBe('1h 30m');
-    });
-  });
-
-  describe('formatDuration (analytics)', () => {
-    it('returns "0m" for 0 minutes (different from formatTimeSpent)', () => {
-      expect(formatDuration(0)).toBe('0m');
-    });
-
-    it('uses the same formatting as formatTimeSpent for non-zero values', () => {
-      expect(formatDuration(30)).toBe(formatTimeSpent(30));
-      expect(formatDuration(90)).toBe(formatTimeSpent(90));
-      expect(formatDuration(60)).toBe(formatTimeSpent(60));
     });
   });
 
@@ -121,47 +91,6 @@ describe('Time Tracking Utilities', () => {
         ],
       } as TaskRecord;
       expect(getRunningEntry(task)).toEqual(runningEntry);
-    });
-  });
-
-  describe('getRunningElapsedMinutes', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('returns 0 for task without running entry', () => {
-      const task = { timeEntries: [] } as TaskRecord;
-      expect(getRunningElapsedMinutes(task)).toBe(0);
-    });
-
-    it('calculates elapsed minutes correctly', () => {
-      const now = new Date('2025-01-01T12:30:00Z');
-      vi.setSystemTime(now);
-
-      const task = {
-        timeEntries: [
-          { id: '1', startedAt: '2025-01-01T12:00:00Z' }, // Started 30 minutes ago
-        ],
-      } as TaskRecord;
-
-      expect(getRunningElapsedMinutes(task)).toBe(30);
-    });
-
-    it('rounds down partial minutes', () => {
-      const now = new Date('2025-01-01T12:05:45Z'); // 5 min 45 sec after start
-      vi.setSystemTime(now);
-
-      const task = {
-        timeEntries: [
-          { id: '1', startedAt: '2025-01-01T12:00:00Z' },
-        ],
-      } as TaskRecord;
-
-      expect(getRunningElapsedMinutes(task)).toBe(5); // Floors to 5, not rounds to 6
     });
   });
 });

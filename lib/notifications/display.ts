@@ -170,26 +170,6 @@ function createDefaultOptions(
 }
 
 /**
- * Show a generic notification with custom title and body
- */
-export async function showNotification(
-  title: string,
-  body: string,
-  options?: Partial<NotificationOptions>
-): Promise<void> {
-  if (!isNotificationSupported() || checkNotificationPermission() !== "granted") {
-    return;
-  }
-
-  try {
-    const notificationOptions = createDefaultOptions(body, options);
-    await displayNotification(title, notificationOptions);
-  } catch (error) {
-    logger.error("Error showing notification", error instanceof Error ? error : new Error(String(error)));
-  }
-}
-
-/**
  * Test notification - shows a sample notification
  */
 export async function showTestNotification(): Promise<boolean> {

@@ -35,10 +35,7 @@ export { snoozeTask, clearSnooze, isTaskSnoozed, getRemainingSnoozeMinutes } fro
 export {
   startTimeTracking,
   stopTimeTracking,
-  deleteTimeEntry,
   hasRunningTimer,
   getRunningEntry,
-  getRunningElapsedMinutes,
   formatTimeSpent,
-  formatEstimate,
 } from "./time-tracking";
