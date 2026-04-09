@@ -7,107 +7,115 @@ import {
   isTaskBlocked,
   isTaskBlocking,
   getReadyTasks,
-  validateDependencies
+  validateDependencies,
 } from "@/lib/dependencies";
-import type { TaskRecord } from "@/lib/types";
+import { createMockTask } from "@/tests/fixtures";
 
-describe("Dependencies utility", () => {
-  const createTask = (id: string, dependencies: string[] = [], completed = false): TaskRecord => ({
+/**
+ * Helper to create a task with specific id, dependencies, and completion status.
+ * Uses createMockTask from fixtures for consistency.
+ */
+function taskWith(
+  id: string,
+  dependencies: string[] = [],
+  completed = false
+) {
+  return createMockTask({
     id,
     title: `Task ${id}`,
-    description: "",
-    urgent: true,
-    important: true,
-    quadrant: "urgent-important",
-    completed,
-    dueDate: undefined,
-    recurrence: "none",
-    tags: [],
-    subtasks: [],
     dependencies,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    notificationEnabled: true,
-    notificationSent: false
+    completed,
+    completedAt: completed ? new Date().toISOString() : undefined,
   });
+}
 
+describe("Dependencies utility", () => {
   describe("wouldCreateCircularDependency", () => {
-    it("should detect self-reference", () => {
-      const tasks = [createTask("A")];
+    it("should_detect_self_reference", () => {
+      const tasks = [taskWith("A")];
       expect(wouldCreateCircularDependency("A", "A", tasks)).toBe(true);
     });
 
-    it("should detect direct circular dependency (A→B, B→A)", () => {
-      const tasks = [
-        createTask("A", ["B"]),
-        createTask("B")
-      ];
+    it("should_detect_direct_cycle_A_depends_on_B_and_B_depends_on_A", () => {
+      const tasks = [taskWith("A", ["B"]), taskWith("B")];
       expect(wouldCreateCircularDependency("B", "A", tasks)).toBe(true);
     });
 
-    it("should detect indirect circular dependency (A→B→C, C→A)", () => {
+    it("should_detect_transitive_cycle_A_to_B_to_C_to_A", () => {
       const tasks = [
-        createTask("A", ["B"]),
-        createTask("B", ["C"]),
-        createTask("C")
+        taskWith("A", ["B"]),
+        taskWith("B", ["C"]),
+        taskWith("C"),
       ];
       expect(wouldCreateCircularDependency("C", "A", tasks)).toBe(true);
     });
 
-    it("should allow linear dependencies (A→B→C)", () => {
+    it("should_allow_linear_chain_without_cycle", () => {
       const tasks = [
-        createTask("A", ["B"]),
-        createTask("B", ["C"]),
-        createTask("C")
+        taskWith("A", ["B"]),
+        taskWith("B", ["C"]),
+        taskWith("C"),
       ];
+      // Adding A -> C is fine (already transitive)
       expect(wouldCreateCircularDependency("A", "C", tasks)).toBe(false);
     });
 
-    it("should allow independent branches", () => {
+    it("should_allow_independent_branches", () => {
       const tasks = [
-        createTask("A", ["B"]),
-        createTask("B"),
-        createTask("C", ["D"]),
-        createTask("D")
+        taskWith("A", ["B"]),
+        taskWith("B"),
+        taskWith("C", ["D"]),
+        taskWith("D"),
       ];
       expect(wouldCreateCircularDependency("C", "A", tasks)).toBe(false);
     });
 
-    it("should handle complex dependency graph", () => {
+    it("should_handle_missing_tasks_gracefully", () => {
+      // dependencyId references a task not in the array
+      const tasks = [taskWith("A")];
+      expect(
+        wouldCreateCircularDependency("A", "nonexistent", tasks)
+      ).toBe(false);
+    });
+
+    it("should_handle_tasks_with_missing_dependency_references", () => {
+      // Task B references a dependency "ghost" that doesn't exist in allTasks
+      const tasks = [taskWith("A"), taskWith("B", ["ghost"])];
+      expect(wouldCreateCircularDependency("A", "B", tasks)).toBe(false);
+    });
+
+    it("should_detect_cycle_in_diamond_shaped_graph", () => {
       const tasks = [
-        createTask("A", ["B", "C"]),
-        createTask("B", ["D"]),
-        createTask("C", ["D"]),
-        createTask("D")
+        taskWith("A", ["B", "C"]),
+        taskWith("B", ["D"]),
+        taskWith("C", ["D"]),
+        taskWith("D"),
       ];
-      // D can't depend on A because A→B→D and A→C→D paths exist
+      // D -> A would create D -> A -> B -> D and D -> A -> C -> D
       expect(wouldCreateCircularDependency("D", "A", tasks)).toBe(true);
     });
   });
 
   describe("getBlockingTasks", () => {
-    it("should return tasks that must be completed first", () => {
-      const taskA = createTask("A", ["B", "C"]);
-      const taskB = createTask("B");
-      const taskC = createTask("C");
+    it("should_return_tasks_that_must_be_completed_first", () => {
+      const taskA = taskWith("A", ["B", "C"]);
+      const taskB = taskWith("B");
+      const taskC = taskWith("C");
       const tasks = [taskA, taskB, taskC];
 
       const blocking = getBlockingTasks(taskA, tasks);
       expect(blocking).toHaveLength(2);
-      expect(blocking.map(t => t.id).sort()).toEqual(["B", "C"]);
+      expect(blocking.map((t) => t.id).sort()).toEqual(["B", "C"]);
     });
 
-    it("should return empty array for task with no dependencies", () => {
-      const taskA = createTask("A");
-      const tasks = [taskA];
-
-      const blocking = getBlockingTasks(taskA, tasks);
-      expect(blocking).toHaveLength(0);
+    it("should_return_empty_array_when_no_dependencies", () => {
+      const taskA = taskWith("A");
+      expect(getBlockingTasks(taskA, [taskA])).toHaveLength(0);
     });
 
-    it("should handle missing dependency tasks gracefully", () => {
-      const taskA = createTask("A", ["B", "missing"]);
-      const taskB = createTask("B");
+    it("should_filter_out_missing_dependency_tasks", () => {
+      const taskA = taskWith("A", ["B", "missing"]);
+      const taskB = taskWith("B");
       const tasks = [taskA, taskB];
 
       const blocking = getBlockingTasks(taskA, tasks);
@@ -117,32 +125,29 @@ describe("Dependencies utility", () => {
   });
 
   describe("getBlockedTasks", () => {
-    it("should return tasks waiting on this one", () => {
-      const taskA = createTask("A");
-      const taskB = createTask("B", ["A"]);
-      const taskC = createTask("C", ["A"]);
-      const taskD = createTask("D", ["B"]); // Not blocked by A directly
+    it("should_return_tasks_that_depend_on_given_task", () => {
+      const taskA = taskWith("A");
+      const taskB = taskWith("B", ["A"]);
+      const taskC = taskWith("C", ["A"]);
+      const taskD = taskWith("D", ["B"]); // Not directly blocked by A
       const tasks = [taskA, taskB, taskC, taskD];
 
       const blocked = getBlockedTasks("A", tasks);
       expect(blocked).toHaveLength(2);
-      expect(blocked.map(t => t.id).sort()).toEqual(["B", "C"]);
+      expect(blocked.map((t) => t.id).sort()).toEqual(["B", "C"]);
     });
 
-    it("should return empty array if no tasks depend on this one", () => {
-      const taskA = createTask("A");
-      const tasks = [taskA];
-
-      const blocked = getBlockedTasks("A", tasks);
-      expect(blocked).toHaveLength(0);
+    it("should_return_empty_array_when_no_tasks_depend_on_it", () => {
+      const taskA = taskWith("A");
+      expect(getBlockedTasks("A", [taskA])).toHaveLength(0);
     });
   });
 
   describe("getUncompletedBlockingTasks", () => {
-    it("should filter out completed blocking tasks", () => {
-      const taskA = createTask("A", ["B", "C"]);
-      const taskB = createTask("B", [], true); // Completed
-      const taskC = createTask("C", [], false); // Not completed
+    it("should_filter_out_completed_blockers", () => {
+      const taskA = taskWith("A", ["B", "C"]);
+      const taskB = taskWith("B", [], true); // completed
+      const taskC = taskWith("C", [], false); // not completed
       const tasks = [taskA, taskB, taskC];
 
       const uncompleted = getUncompletedBlockingTasks(taskA, tasks);
@@ -150,126 +155,129 @@ describe("Dependencies utility", () => {
       expect(uncompleted[0].id).toBe("C");
     });
 
-    it("should return empty array if all blockers are completed", () => {
-      const taskA = createTask("A", ["B"]);
-      const taskB = createTask("B", [], true);
+    it("should_return_empty_when_all_blockers_completed", () => {
+      const taskA = taskWith("A", ["B"]);
+      const taskB = taskWith("B", [], true);
       const tasks = [taskA, taskB];
 
-      const uncompleted = getUncompletedBlockingTasks(taskA, tasks);
-      expect(uncompleted).toHaveLength(0);
+      expect(getUncompletedBlockingTasks(taskA, tasks)).toHaveLength(0);
+    });
+
+    it("should_return_empty_when_task_has_no_dependencies", () => {
+      const taskA = taskWith("A");
+      expect(getUncompletedBlockingTasks(taskA, [taskA])).toHaveLength(0);
     });
   });
 
   describe("isTaskBlocked", () => {
-    it("should return true if task has uncompleted dependencies", () => {
-      const taskA = createTask("A", ["B"]);
-      const taskB = createTask("B", [], false);
-      const tasks = [taskA, taskB];
-
-      expect(isTaskBlocked(taskA, tasks)).toBe(true);
+    it("should_return_true_when_uncompleted_dependencies_exist", () => {
+      const taskA = taskWith("A", ["B"]);
+      const taskB = taskWith("B", [], false);
+      expect(isTaskBlocked(taskA, [taskA, taskB])).toBe(true);
     });
 
-    it("should return false if all dependencies are completed", () => {
-      const taskA = createTask("A", ["B"]);
-      const taskB = createTask("B", [], true);
-      const tasks = [taskA, taskB];
-
-      expect(isTaskBlocked(taskA, tasks)).toBe(false);
+    it("should_return_false_when_all_dependencies_completed", () => {
+      const taskA = taskWith("A", ["B"]);
+      const taskB = taskWith("B", [], true);
+      expect(isTaskBlocked(taskA, [taskA, taskB])).toBe(false);
     });
 
-    it("should return false if task has no dependencies", () => {
-      const taskA = createTask("A");
-      const tasks = [taskA];
-
-      expect(isTaskBlocked(taskA, tasks)).toBe(false);
+    it("should_return_false_when_no_dependencies", () => {
+      const taskA = taskWith("A");
+      expect(isTaskBlocked(taskA, [taskA])).toBe(false);
     });
   });
 
   describe("isTaskBlocking", () => {
-    it("should return true if other tasks depend on it", () => {
-      const taskA = createTask("A");
-      const taskB = createTask("B", ["A"]);
-      const tasks = [taskA, taskB];
-
-      expect(isTaskBlocking("A", tasks)).toBe(true);
+    it("should_return_true_when_other_tasks_depend_on_it", () => {
+      const taskA = taskWith("A");
+      const taskB = taskWith("B", ["A"]);
+      expect(isTaskBlocking("A", [taskA, taskB])).toBe(true);
     });
 
-    it("should return false if no tasks depend on it", () => {
-      const taskA = createTask("A");
-      const tasks = [taskA];
-
-      expect(isTaskBlocking("A", tasks)).toBe(false);
+    it("should_return_false_when_no_tasks_depend_on_it", () => {
+      const taskA = taskWith("A");
+      expect(isTaskBlocking("A", [taskA])).toBe(false);
     });
   });
 
   describe("getReadyTasks", () => {
-    it("should return only tasks with no uncompleted dependencies", () => {
-      const taskA = createTask("A"); // Ready
-      const taskB = createTask("B", ["A"], false); // Blocked by A
-      const taskC = createTask("C", [], true); // Completed
-      const taskD = createTask("D", ["C"]); // Ready (C is completed)
+    it("should_return_tasks_with_no_uncompleted_dependencies", () => {
+      const taskA = taskWith("A"); // ready
+      const taskB = taskWith("B", ["A"], false); // blocked by A
+      const taskC = taskWith("C", [], true); // completed
+      const taskD = taskWith("D", ["C"]); // ready (C is completed)
       const tasks = [taskA, taskB, taskC, taskD];
 
       const ready = getReadyTasks(tasks, tasks);
       expect(ready).toHaveLength(2);
-      expect(ready.map(t => t.id).sort()).toEqual(["A", "D"]);
+      expect(ready.map((t) => t.id).sort()).toEqual(["A", "D"]);
     });
 
-    it("should exclude completed tasks", () => {
-      const taskA = createTask("A", [], true);
-      const tasks = [taskA];
+    it("should_exclude_completed_tasks", () => {
+      const taskA = taskWith("A", [], true);
+      expect(getReadyTasks([taskA], [taskA])).toHaveLength(0);
+    });
+
+    it("should_return_all_when_no_dependencies_exist", () => {
+      const taskA = taskWith("A");
+      const taskB = taskWith("B");
+      const tasks = [taskA, taskB];
 
       const ready = getReadyTasks(tasks, tasks);
-      expect(ready).toHaveLength(0);
+      expect(ready).toHaveLength(2);
     });
   });
 
   describe("validateDependencies", () => {
-    it("should reject self-reference", () => {
-      const tasks = [createTask("A")];
+    it("should_reject_self_reference", () => {
+      const tasks = [taskWith("A")];
       const result = validateDependencies("A", ["A"], tasks);
 
       expect(result.valid).toBe(false);
       expect(result.error).toContain("cannot depend on itself");
     });
 
-    it("should reject missing tasks", () => {
-      const tasks = [createTask("A")];
+    it("should_reject_missing_tasks", () => {
+      const tasks = [taskWith("A")];
       const result = validateDependencies("A", ["missing"], tasks);
 
       expect(result.valid).toBe(false);
       expect(result.error).toContain("not found");
+      expect(result.error).toContain("missing");
     });
 
-    it("should reject circular dependencies", () => {
-      const tasks = [
-        createTask("A", ["B"]),
-        createTask("B")
-      ];
+    it("should_reject_circular_dependencies", () => {
+      const tasks = [taskWith("A", ["B"]), taskWith("B")];
       const result = validateDependencies("B", ["A"], tasks);
 
       expect(result.valid).toBe(false);
       expect(result.error).toContain("Circular dependency");
     });
 
-    it("should accept valid dependencies", () => {
-      const tasks = [
-        createTask("A"),
-        createTask("B"),
-        createTask("C")
-      ];
+    it("should_accept_valid_dependencies", () => {
+      const tasks = [taskWith("A"), taskWith("B"), taskWith("C")];
       const result = validateDependencies("A", ["B", "C"], tasks);
 
       expect(result.valid).toBe(true);
       expect(result.error).toBeUndefined();
     });
 
-    it("should accept empty dependencies array", () => {
-      const tasks = [createTask("A")];
+    it("should_accept_empty_dependencies", () => {
+      const tasks = [taskWith("A")];
       const result = validateDependencies("A", [], tasks);
 
       expect(result.valid).toBe(true);
       expect(result.error).toBeUndefined();
+    });
+
+    it("should_report_multiple_missing_tasks", () => {
+      const tasks = [taskWith("A")];
+      const result = validateDependencies("A", ["x", "y"], tasks);
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain("x");
+      expect(result.error).toContain("y");
     });
   });
 });
