@@ -43,64 +43,32 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 	const errors: string[] = [];
 
 	try {
-		// Save deviceId before clearing
 		const config = await getSyncConfig();
 		const deviceId = config?.deviceId;
 
-		// Clear all task data
-		await db.tasks.clear();
-		cleared.push("tasks");
+		// Clear standard tables in bulk
+		const tablesToClear = [
+			db.tasks, db.archivedTasks, db.notificationSettings,
+			db.archiveSettings, db.syncQueue, db.syncHistory,
+		] as const;
+		for (const table of tablesToClear) {
+			await table.clear();
+			cleared.push(table.name);
+		}
 
-		await db.archivedTasks.clear();
-		cleared.push("archivedTasks");
-
-		// Clear settings tables
-		await db.notificationSettings.clear();
-		cleared.push("notificationSettings");
-
-		await db.archiveSettings.clear();
-		cleared.push("archiveSettings");
-
-		// Clear smart views (only custom ones)
-		const allViews = await db.smartViews.toArray();
-		const customViews = allViews.filter((v) => !v.isBuiltIn);
-		const customViewIds = customViews.map((v) => v.id);
-		await db.smartViews.bulkDelete(customViewIds);
+		// Clear only custom smart views (preserve built-in)
+		const customViews = (await db.smartViews.toArray()).filter((v) => !v.isBuiltIn);
+		await db.smartViews.bulkDelete(customViews.map((v) => v.id));
 		cleared.push(`smartViews (${customViews.length} custom)`);
-
-		// Clear sync-related tables
-		await db.syncQueue.clear();
-		cleared.push("syncQueue");
-
-		await db.syncHistory.clear();
-		cleared.push("syncHistory");
 
 		// Clear sync metadata but preserve deviceId
 		await db.syncMetadata.clear();
 		if (deviceId) {
-			await db.syncMetadata.add({
-				key: "sync_config",
-				enabled: false,
-				userId: null,
-				deviceId, // Preserve for future sync
-				deviceName: "Device",
-				email: null,
-				provider: null,
-				lastSyncAt: null,
-				lastSuccessfulSyncAt: null,
-				consecutiveFailures: 0,
-				lastFailureAt: null,
-				lastFailureReason: null,
-				nextRetryAt: null,
-				autoSyncEnabled: true,
-				autoSyncIntervalMinutes: 2,
-			});
+			await db.syncMetadata.add(buildPreservedSyncMetadata(deviceId));
 		}
 		cleared.push("syncMetadata");
 
-		logger.info("IndexedDB cleared successfully", {
-			clearedTables: cleared,
-		});
+		logger.info("IndexedDB cleared successfully", { clearedTables: cleared });
 	} catch (err) {
 		const errorMsg = err instanceof Error ? err.message : "Unknown error";
 		errors.push(`IndexedDB: ${errorMsg}`);
@@ -110,6 +78,27 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 	}
 
 	return { tables: cleared, errors };
+}
+
+/** Build a minimal sync metadata record that preserves deviceId */
+function buildPreservedSyncMetadata(deviceId: string) {
+	return {
+		key: "sync_config" as const,
+		enabled: false,
+		userId: null,
+		deviceId,
+		deviceName: "Device",
+		email: null,
+		provider: null,
+		lastSyncAt: null,
+		lastSuccessfulSyncAt: null,
+		consecutiveFailures: 0,
+		lastFailureAt: null,
+		lastFailureReason: null,
+		nextRetryAt: null,
+		autoSyncEnabled: true,
+		autoSyncIntervalMinutes: 2,
+	};
 }
 
 /**

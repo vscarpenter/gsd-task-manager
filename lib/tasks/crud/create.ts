@@ -13,11 +13,16 @@ const logger = createLogger("TASK_CRUD");
  * Create a new task with validation and sync support
  */
 export async function createTask(input: TaskDraft): Promise<TaskRecord> {
-  try {
-    const validated = taskDraftSchema.parse(input);
-    const { syncConfig } = await getSyncContext();
+  const result = taskDraftSchema.safeParse(input);
+  if (!result.success) {
+    const msg = result.error.issues.map(i => i.message).join(", ");
+    logger.error("Task validation failed", undefined, { input, validationErrors: msg });
+    throw new Error(`Task validation failed: ${msg}`);
+  }
 
-    const record = buildTaskRecord(validated);
+  try {
+    const { syncConfig } = await getSyncContext();
+    const record = buildTaskRecord(result.data);
 
     const db = getDb();
     await db.tasks.add(record);
@@ -36,9 +41,6 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     logger.error("Failed to create task", error instanceof Error ? error : undefined, {
       input,
     });
-    if (error instanceof Error && error.name === "ZodError") {
-      throw new Error(`Task validation failed: ${error.message}`);
-    }
     throw new Error(`Failed to create task: ${formatErrorMessage(error)}`);
   }
 }
