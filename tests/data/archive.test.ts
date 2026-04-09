@@ -9,7 +9,7 @@ import {
   getArchivedCount,
 } from "@/lib/archive";
 import { getDb } from "@/lib/db";
-import type { TaskRecord } from "@/lib/types";
+import { createMockTask } from "@/tests/fixtures";
 
 vi.mock("@/lib/sync/queue", () => ({
   getSyncQueue: () => ({
@@ -18,7 +18,7 @@ vi.mock("@/lib/sync/queue", () => ({
 }));
 
 vi.mock("@/lib/sync/config", () => ({
-  getSyncConfig: vi.fn(() => Promise.resolve({ deviceId: "test-device" })),
+  getSyncConfig: vi.fn(() => Promise.resolve({ enabled: false })),
 }));
 
 describe("archive", () => {
@@ -30,7 +30,7 @@ describe("archive", () => {
   });
 
   describe("getArchiveSettings", () => {
-    it("returns default settings when none exist", async () => {
+    it("should_return_defaults_when_no_settings_exist", async () => {
       const settings = await getArchiveSettings();
 
       expect(settings).toEqual({
@@ -40,7 +40,7 @@ describe("archive", () => {
       });
     });
 
-    it("returns existing settings", async () => {
+    it("should_return_stored_settings_when_they_exist", async () => {
       const db = getDb();
       await db.archiveSettings.add({
         id: "settings",
@@ -53,80 +53,99 @@ describe("archive", () => {
       expect(settings.enabled).toBe(true);
       expect(settings.archiveAfterDays).toBe(60);
     });
+
+    it("should_persist_defaults_to_database_on_first_call", async () => {
+      await getArchiveSettings();
+
+      const db = getDb();
+      const stored = await db.archiveSettings.get("settings");
+      expect(stored).toBeDefined();
+      expect(stored!.enabled).toBe(false);
+      expect(stored!.archiveAfterDays).toBe(30);
+    });
   });
 
   describe("updateArchiveSettings", () => {
-    it("updates archive settings", async () => {
-      await getArchiveSettings(); // Initialize
+    it("should_update_settings_correctly", async () => {
+      // Initialize defaults first
+      await getArchiveSettings();
+
       await updateArchiveSettings({ enabled: true, archiveAfterDays: 90 });
 
       const settings = await getArchiveSettings();
       expect(settings.enabled).toBe(true);
       expect(settings.archiveAfterDays).toBe(90);
     });
+
+    it("should_allow_partial_updates", async () => {
+      await getArchiveSettings();
+
+      await updateArchiveSettings({ enabled: true });
+
+      const settings = await getArchiveSettings();
+      expect(settings.enabled).toBe(true);
+      expect(settings.archiveAfterDays).toBe(30); // unchanged
+    });
   });
 
   describe("archiveOldTasks", () => {
-    it("archives completed tasks older than specified days", async () => {
+    it("should_archive_completed_tasks_older_than_cutoff", async () => {
       const db = getDb();
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 60);
 
-      const oldTask: TaskRecord = {
+      const oldTask = createMockTask({
         id: "old-task",
         title: "Old Task",
-        urgent: false,
-        important: false,
-        quadrant: "not-urgent-not-important",
         completed: true,
         completedAt: oldDate.toISOString(),
-        dueDate: undefined,
-        recurrence: "none",
-        tags: [],
-        subtasks: [],
-        dependencies: [],
         createdAt: oldDate.toISOString(),
         updatedAt: oldDate.toISOString(),
-        notificationEnabled: false,
-        notificationSent: false,
-      };
+      });
 
       await db.tasks.add(oldTask);
 
       const archivedCount = await archiveOldTasks(30);
 
       expect(archivedCount).toBe(1);
-
-      const remainingTasks = await db.tasks.count();
-      expect(remainingTasks).toBe(0);
-
-      const archived = await db.archivedTasks.count();
-      expect(archived).toBe(1);
+      expect(await db.tasks.count()).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(1);
     });
 
-    it("does not archive recent completed tasks", async () => {
+    it("should_skip_incomplete_tasks", async () => {
+      const db = getDb();
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+
+      const incompleteTask = createMockTask({
+        id: "incomplete-task",
+        title: "Incomplete Task",
+        completed: false,
+        createdAt: oldDate.toISOString(),
+        updatedAt: oldDate.toISOString(),
+      });
+
+      await db.tasks.add(incompleteTask);
+
+      const archivedCount = await archiveOldTasks(30);
+
+      expect(archivedCount).toBe(0);
+      expect(await db.tasks.count()).toBe(1);
+    });
+
+    it("should_skip_recently_completed_tasks", async () => {
       const db = getDb();
       const recentDate = new Date();
       recentDate.setDate(recentDate.getDate() - 10);
 
-      const recentTask: TaskRecord = {
+      const recentTask = createMockTask({
         id: "recent-task",
         title: "Recent Task",
-        urgent: false,
-        important: false,
-        quadrant: "not-urgent-not-important",
         completed: true,
         completedAt: recentDate.toISOString(),
-        dueDate: undefined,
-        recurrence: "none",
-        tags: [],
-        subtasks: [],
-        dependencies: [],
         createdAt: recentDate.toISOString(),
         updatedAt: recentDate.toISOString(),
-        notificationEnabled: false,
-        notificationSent: false,
-      };
+      });
 
       await db.tasks.add(recentTask);
 
@@ -136,98 +155,133 @@ describe("archive", () => {
       expect(await db.tasks.count()).toBe(1);
     });
 
-    it("does not archive incomplete tasks", async () => {
+    it("should_return_correct_count_with_mixed_tasks", async () => {
+      const db = getDb();
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+      const recentDate = new Date();
+      recentDate.setDate(recentDate.getDate() - 5);
+
+      // Should be archived (completed + old)
+      await db.tasks.add(
+        createMockTask({
+          id: "old-done-1",
+          completed: true,
+          completedAt: oldDate.toISOString(),
+        })
+      );
+      await db.tasks.add(
+        createMockTask({
+          id: "old-done-2",
+          completed: true,
+          completedAt: oldDate.toISOString(),
+        })
+      );
+
+      // Should NOT be archived (not completed)
+      await db.tasks.add(
+        createMockTask({
+          id: "old-incomplete",
+          completed: false,
+          createdAt: oldDate.toISOString(),
+        })
+      );
+
+      // Should NOT be archived (completed but recent)
+      await db.tasks.add(
+        createMockTask({
+          id: "recent-done",
+          completed: true,
+          completedAt: recentDate.toISOString(),
+        })
+      );
+
+      const archivedCount = await archiveOldTasks(30);
+
+      expect(archivedCount).toBe(2);
+      expect(await db.tasks.count()).toBe(2); // incomplete + recent
+      expect(await db.archivedTasks.count()).toBe(2);
+    });
+
+    it("should_return_zero_when_no_tasks_match", async () => {
+      const archivedCount = await archiveOldTasks(30);
+      expect(archivedCount).toBe(0);
+    });
+
+    it("should_set_archivedAt_on_archived_tasks", async () => {
       const db = getDb();
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 60);
 
-      const incompleteTask: TaskRecord = {
-        id: "incomplete-task",
-        title: "Incomplete Task",
-        urgent: false,
-        important: false,
-        quadrant: "not-urgent-not-important",
-        completed: false,
-        dueDate: undefined,
-        recurrence: "none",
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        createdAt: oldDate.toISOString(),
-        updatedAt: oldDate.toISOString(),
-        notificationEnabled: false,
-        notificationSent: false,
-      };
+      await db.tasks.add(
+        createMockTask({
+          id: "archive-me",
+          completed: true,
+          completedAt: oldDate.toISOString(),
+        })
+      );
 
-      await db.tasks.add(incompleteTask);
+      await archiveOldTasks(30);
 
-      const archivedCount = await archiveOldTasks(30);
-
-      expect(archivedCount).toBe(0);
-      expect(await db.tasks.count()).toBe(1);
+      const archived = await db.archivedTasks.get("archive-me");
+      expect(archived).toBeDefined();
+      expect(archived!.archivedAt).toBeDefined();
     });
   });
 
   describe("listArchivedTasks", () => {
-    it("returns all archived tasks", async () => {
+    it("should_return_all_archived_tasks", async () => {
       const db = getDb();
       const now = new Date().toISOString();
 
-      const archivedTask: TaskRecord = {
-        id: "archived-1",
-        title: "Archived Task",
-        urgent: false,
-        important: false,
-        quadrant: "not-urgent-not-important",
-        completed: true,
-        completedAt: now,
-        archivedAt: now,
-        dueDate: undefined,
-        recurrence: "none",
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        createdAt: now,
-        updatedAt: now,
-        notificationEnabled: false,
-        notificationSent: false,
-      };
-
-      await db.archivedTasks.add(archivedTask);
+      await db.archivedTasks.add(
+        createMockTask({
+          id: "archived-1",
+          title: "Archived Task 1",
+          completed: true,
+          completedAt: now,
+          archivedAt: now,
+        })
+      );
+      await db.archivedTasks.add(
+        createMockTask({
+          id: "archived-2",
+          title: "Archived Task 2",
+          completed: true,
+          completedAt: now,
+          archivedAt: now,
+        })
+      );
 
       const archived = await listArchivedTasks();
 
-      expect(archived).toHaveLength(1);
-      expect(archived[0].id).toBe("archived-1");
+      expect(archived).toHaveLength(2);
+      expect(archived.map((t) => t.id).sort()).toEqual([
+        "archived-1",
+        "archived-2",
+      ]);
+    });
+
+    it("should_return_empty_array_when_no_archived_tasks", async () => {
+      const archived = await listArchivedTasks();
+      expect(archived).toHaveLength(0);
     });
   });
 
   describe("restoreTask", () => {
-    it("restores archived task to main tasks", async () => {
+    it("should_move_task_from_archive_to_main", async () => {
       const db = getDb();
       const now = new Date().toISOString();
 
-      const archivedTask: TaskRecord = {
-        id: "restore-task",
-        title: "Restore Task",
-        urgent: false,
-        important: false,
-        quadrant: "not-urgent-not-important",
-        completed: true,
-        completedAt: now,
-        archivedAt: now,
-        dueDate: undefined,
-        recurrence: "none",
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        createdAt: now,
-        updatedAt: now,
-        notificationEnabled: false,
-        notificationSent: false,
-      };
-
-      await db.archivedTasks.add(archivedTask);
+      await db.archivedTasks.add(
+        createMockTask({
+          id: "restore-task",
+          title: "Restore Task",
+          completed: true,
+          completedAt: now,
+          archivedAt: now,
+        })
+      );
 
       await restoreTask("restore-task");
 
@@ -236,11 +290,10 @@ describe("archive", () => {
       expect(mainTasks[0].id).toBe("restore-task");
       expect(mainTasks[0].archivedAt).toBeUndefined();
 
-      const archived = await db.archivedTasks.count();
-      expect(archived).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(0);
     });
 
-    it("throws error if task not found in archive", async () => {
+    it("should_throw_for_missing_task", async () => {
       await expect(restoreTask("nonexistent")).rejects.toThrow(
         "Task not found in archive"
       );
@@ -248,67 +301,48 @@ describe("archive", () => {
   });
 
   describe("deleteArchivedTask", () => {
-    it("permanently deletes archived task", async () => {
+    it("should_remove_task_from_archive", async () => {
       const db = getDb();
       const now = new Date().toISOString();
 
-      const archivedTask: TaskRecord = {
-        id: "delete-task",
-        title: "Delete Task",
-        urgent: false,
-        important: false,
-        quadrant: "not-urgent-not-important",
-        completed: true,
-        completedAt: now,
-        archivedAt: now,
-        dueDate: undefined,
-        recurrence: "none",
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-        createdAt: now,
-        updatedAt: now,
-        notificationEnabled: false,
-        notificationSent: false,
-      };
+      await db.archivedTasks.add(
+        createMockTask({
+          id: "delete-task",
+          completed: true,
+          completedAt: now,
+          archivedAt: now,
+        })
+      );
 
-      await db.archivedTasks.add(archivedTask);
       await deleteArchivedTask("delete-task");
 
-      const archived = await db.archivedTasks.count();
-      expect(archived).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(0);
     });
   });
 
   describe("getArchivedCount", () => {
-    it("returns count of archived tasks", async () => {
+    it("should_return_correct_count", async () => {
       const db = getDb();
       const now = new Date().toISOString();
 
       for (let i = 0; i < 3; i++) {
-        await db.archivedTasks.add({
-          id: `task-${i}`,
-          title: `Task ${i}`,
-          urgent: false,
-          important: false,
-          quadrant: "not-urgent-not-important",
-          completed: true,
-          completedAt: now,
-          archivedAt: now,
-          dueDate: undefined,
-          recurrence: "none",
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-          createdAt: now,
-          updatedAt: now,
-          notificationEnabled: false,
-          notificationSent: false,
-        });
+        await db.archivedTasks.add(
+          createMockTask({
+            id: `task-${i}`,
+            completed: true,
+            completedAt: now,
+            archivedAt: now,
+          })
+        );
       }
 
       const count = await getArchivedCount();
       expect(count).toBe(3);
+    });
+
+    it("should_return_zero_when_archive_is_empty", async () => {
+      const count = await getArchivedCount();
+      expect(count).toBe(0);
     });
   });
 });
