@@ -172,6 +172,26 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - Auth state persists in PocketBase's built-in `authStore` (localStorage)
 - **Local dev**: Set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PocketBase (local PocketBase at 127.0.0.1:8090 requires separate OAuth provider setup)
 
+### Test-Driven Development (TDD)
+
+**TDD is the default workflow for this project.** For any change that adds or modifies behavior:
+
+1. **Red** — Write a failing test first that describes the expected behavior
+2. **Green** — Write the minimum implementation to make the test pass
+3. **Refactor** — Clean up while keeping tests green
+
+**When to apply TDD:**
+- New components or functions → write render/unit tests first
+- Bug fixes → write a test that reproduces the bug first
+- Refactors that change behavior → write tests for the new behavior before changing code
+
+**When TDD is optional:**
+- Pure CSS/styling changes with no behavioral difference
+- Renaming/moving files with no logic changes
+- Documentation-only changes
+
+**Verification:** Run `bun run test -- --coverage` after implementation. Coverage for changed files must be ≥80% across statements, lines, and functions.
+
 ### Pre-commit
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
 - Static export mode means no API routes or SSR

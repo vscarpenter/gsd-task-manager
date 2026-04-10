@@ -7,59 +7,78 @@ interface TagAnalyticsProps {
   maxTags?: number;
 }
 
+const BAR_COLORS = [
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-amber-500",
+  "bg-purple-500",
+  "bg-rose-500",
+  "bg-cyan-500",
+  "bg-orange-500",
+  "bg-indigo-500",
+  "bg-teal-500",
+  "bg-pink-500",
+];
+
 /**
- * Table showing tag usage and completion rates
+ * Horizontal bar visualization showing tag usage and completion rates.
+ * Replaces the previous table layout with a more visual, dashboard-friendly design.
  */
 export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
   const displayTags = tagStats.slice(0, maxTags);
+  const maxCount = Math.max(...displayTags.map((t) => t.count), 1);
 
   if (displayTags.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h3 className="mb-4 text-lg font-semibold text-foreground">Tag Analytics</h3>
-        <p className="text-sm text-foreground-muted">No tags to display. Add tags to your tasks to see analytics here.</p>
+        <h3 className="mb-4 text-lg font-semibold text-foreground">Top Tags</h3>
+        <p className="text-sm text-foreground-muted">
+          No tags to display. Add tags to your tasks to see analytics here.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">Tag Analytics</h3>
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full">
-          <thead className="bg-background-muted">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase text-foreground-muted">Tag</th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase text-foreground-muted">Tasks</th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase text-foreground-muted">Completed</th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase text-foreground-muted">Rate</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {displayTags.map((stat) => (
-              <tr key={stat.tag} className="hover:bg-background-muted/50 transition-colors">
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-                    {stat.tag}
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Top Tags</h3>
+      <div className="space-y-3">
+        {displayTags.map((stat, index) => {
+          const barWidth = Math.max((stat.count / maxCount) * 100, 4);
+          const barColor = BAR_COLORS[index % BAR_COLORS.length];
+
+          return (
+            <div key={stat.tag} className="group">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">
+                  {stat.tag}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs tabular-nums text-foreground-muted">
+                    {stat.completedCount}/{stat.count} done
                   </span>
-                </td>
-                <td className="px-4 py-3 text-right text-sm text-foreground">{stat.count}</td>
-                <td className="px-4 py-3 text-right text-sm text-foreground">{stat.completedCount}</td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <div className="h-2 w-16 overflow-hidden rounded-full bg-background-muted">
-                      <div
-                        className="h-full rounded-full bg-accent transition-all"
-                        style={{ width: `${stat.completionRate}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{stat.completionRate}%</span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <span className="min-w-[3ch] text-right text-xs font-semibold tabular-nums text-foreground">
+                    {stat.completionRate}%
+                  </span>
+                </div>
+              </div>
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-background-muted">
+                {/* Total tasks bar (full width relative to max) */}
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full opacity-25 transition-all ${barColor}`}
+                  style={{ width: `${barWidth}%` }}
+                />
+                {/* Completed portion (filled) */}
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all ${barColor}`}
+                  style={{
+                    width: `${barWidth * (stat.completionRate / 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

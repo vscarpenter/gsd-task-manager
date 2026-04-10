@@ -12,14 +12,19 @@ interface UpcomingDeadlinesProps {
 }
 
 /**
- * Widget showing tasks due soon, grouped by urgency
+ * Widget showing tasks due soon, grouped by urgency.
+ * Uses theme-aware colors for proper dark mode support.
  */
 export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps) {
   const now = new Date();
 
-  const overdueTasks = tasks.filter(t => !t.completed && t.dueDate && isOverdue(t.dueDate));
-  const dueTodayTasks = tasks.filter(t => !t.completed && t.dueDate && isDueToday(t.dueDate));
-  const dueThisWeekTasks = tasks.filter(t => {
+  const overdueTasks = tasks.filter(
+    (t) => !t.completed && t.dueDate && isOverdue(t.dueDate),
+  );
+  const dueTodayTasks = tasks.filter(
+    (t) => !t.completed && t.dueDate && isDueToday(t.dueDate),
+  );
+  const dueThisWeekTasks = tasks.filter((t) => {
     if (!t.dueDate || t.completed) return false;
     const dueDate = new Date(t.dueDate);
     const weekFromNow = new Date(now);
@@ -27,20 +32,29 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
     return dueDate > now && dueDate <= weekFromNow && !isDueToday(t.dueDate);
   });
 
-  const hasDeadlines = overdueTasks.length > 0 || dueTodayTasks.length > 0 || dueThisWeekTasks.length > 0;
+  const hasDeadlines =
+    overdueTasks.length > 0 ||
+    dueTodayTasks.length > 0 ||
+    dueThisWeekTasks.length > 0;
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">Upcoming Deadlines</h3>
+      <h3 className="mb-4 text-lg font-semibold text-foreground">
+        Upcoming Deadlines
+      </h3>
 
       {!hasDeadlines ? (
-        <p className="text-sm text-foreground-muted">No upcoming deadlines. You&apos;re all caught up! 🎉</p>
+        <div className="flex h-[240px] items-center justify-center">
+          <p className="text-sm text-foreground-muted">
+            No upcoming deadlines. You&apos;re all caught up!
+          </p>
+        </div>
       ) : (
         <div className="space-y-4">
           {overdueTasks.length > 0 && (
             <DeadlineSection
               title="Overdue"
-              icon={<AlertCircleIcon className="h-4 w-4 text-red-600" />}
+              icon={<AlertCircleIcon className="h-4 w-4 text-red-500" />}
               tasks={overdueTasks}
               onTaskClick={onTaskClick}
               color="red"
@@ -50,7 +64,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
           {dueTodayTasks.length > 0 && (
             <DeadlineSection
               title="Due Today"
-              icon={<CalendarIcon className="h-4 w-4 text-amber-600" />}
+              icon={<CalendarIcon className="h-4 w-4 text-amber-500" />}
               tasks={dueTodayTasks}
               onTaskClick={onTaskClick}
               color="amber"
@@ -60,7 +74,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
           {dueThisWeekTasks.length > 0 && (
             <DeadlineSection
               title="Due This Week"
-              icon={<ClockIcon className="h-4 w-4 text-blue-600" />}
+              icon={<ClockIcon className="h-4 w-4 text-blue-500" />}
               tasks={dueThisWeekTasks}
               onTaskClick={onTaskClick}
               color="blue"
@@ -80,17 +94,23 @@ interface DeadlineSectionProps {
   color: "red" | "amber" | "blue";
 }
 
-function DeadlineSection({ title, icon, tasks, onTaskClick, color }: DeadlineSectionProps) {
+function DeadlineSection({
+  title,
+  icon,
+  tasks,
+  onTaskClick,
+  color,
+}: DeadlineSectionProps) {
   const borderColor = {
     red: "border-l-red-500",
     amber: "border-l-amber-500",
-    blue: "border-l-blue-500"
+    blue: "border-l-blue-500",
   }[color];
 
   const bgColor = {
-    red: "bg-red-50",
-    amber: "bg-amber-50",
-    blue: "bg-blue-50"
+    red: "bg-red-500/5 dark:bg-red-500/10",
+    amber: "bg-amber-500/5 dark:bg-amber-500/10",
+    blue: "bg-blue-500/5 dark:bg-blue-500/10",
   }[color];
 
   return (
@@ -101,26 +121,28 @@ function DeadlineSection({ title, icon, tasks, onTaskClick, color }: DeadlineSec
           {title} ({tasks.length})
         </h4>
       </div>
-      <ul className="space-y-2">
-        {tasks.slice(0, 5).map(task => {
-          const quadrant = quadrants.find(q => q.id === task.quadrant);
+      <ul className="space-y-1.5">
+        {tasks.slice(0, 5).map((task) => {
+          const quadrant = quadrants.find((q) => q.id === task.quadrant);
           return (
             <li key={task.id}>
               <button
                 onClick={() => onTaskClick?.(task)}
-                className={`w-full rounded-lg border-l-4 ${borderColor} ${bgColor} p-3 text-left transition-all hover:shadow-sm`}
+                className={`w-full cursor-pointer rounded-lg border-l-4 ${borderColor} ${bgColor} p-3 text-left transition-all hover:shadow-sm`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {task.title}
+                    </p>
                     {task.dueDate && (
-                      <p className="mt-1 text-xs text-foreground-muted">
+                      <p className="mt-0.5 text-xs text-foreground-muted">
                         {formatDueDate(task.dueDate)}
                       </p>
                     )}
                   </div>
                   {quadrant && (
-                    <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-medium text-foreground-muted">
+                    <span className="shrink-0 rounded-full bg-background-muted px-2 py-0.5 text-[10px] font-medium text-foreground-muted">
                       {quadrant.title}
                     </span>
                   )}
@@ -130,7 +152,7 @@ function DeadlineSection({ title, icon, tasks, onTaskClick, color }: DeadlineSec
           );
         })}
         {tasks.length > 5 && (
-          <li className="text-xs text-foreground-muted">
+          <li className="pl-3 text-xs text-foreground-muted">
             +{tasks.length - 5} more
           </li>
         )}

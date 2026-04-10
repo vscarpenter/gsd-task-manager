@@ -27,7 +27,17 @@ export default defineConfig({
         "scripts/**/*.ts",
         "scripts/**/*.js"
       ],
-      exclude: ["**/*.test.ts", "**/*.test.tsx", "**/*.config.ts", "**/types.ts"],
+      exclude: [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.config.ts",
+        "**/types.ts",
+        "**/index.ts",          // re-export barrels (no logic)
+        "lib/sync/engine.ts",   // re-export barrel
+        "lib/sync/config.ts",   // re-export barrel
+        "lib/tasks/crud.ts",    // re-export barrel
+        "components/ui/**",     // shadcn/ui wrappers (third-party abstractions)
+      ],
       reportOnFailure: true, // Generate coverage report even if tests fail
       thresholds: {
         statements: 80,

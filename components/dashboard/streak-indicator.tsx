@@ -9,9 +9,6 @@ interface StreakIndicatorProps {
 
 const DAY_LABELS = ["6d", "5d", "4d", "3d", "2d", "1d", "Today"];
 
-/**
- * Get encouraging message based on streak length
- */
 function getStreakMessage(current: number): string {
   if (current === 0) return "Start fresh today!";
   if (current <= 3) return "Building momentum...";
@@ -19,9 +16,6 @@ function getStreakMessage(current: number): string {
   return "On fire! Keep going!";
 }
 
-/**
- * Get milestone info for the current streak
- */
 function getMilestone(current: number): { label: string; reached: boolean } | null {
   if (current >= 100) return { label: "100 days", reached: true };
   if (current >= 30) return { label: "30 days", reached: true };
@@ -30,68 +24,73 @@ function getMilestone(current: number): { label: string; reached: boolean } | nu
 }
 
 /**
- * Visual indicator for current and longest completion streak
+ * Compact streak indicator designed for the dashboard top row.
+ * Shows current streak, 7-day activity dots, and milestone badges.
  */
 export function StreakIndicator({ streakData }: StreakIndicatorProps) {
   const { current, longest, last7Days } = streakData;
   const milestone = getMilestone(current);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div
+      className="flex h-full flex-col justify-between rounded-2xl border-2 border-border/80 bg-card p-6"
+      style={{ boxShadow: "var(--shadow-column)" }}
+    >
+      {/* Top: icon + streak count */}
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-orange-100 dark:bg-orange-900/40 p-3">
-          <FlameIcon className="h-8 w-8 text-orange-500" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/40">
+          <FlameIcon className="h-6 w-6 text-orange-500" />
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-foreground-muted">Current Streak</p>
-          <div className="mt-1 flex items-center gap-3">
-            <p className="text-3xl font-bold text-foreground">
-              {current} {current === 1 ? 'day' : 'days'}
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+            Streak
+          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-4xl font-bold tabular-nums tracking-tight text-foreground">
+              {current}
             </p>
-            {milestone && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                <TrophyIcon className="h-3 w-3" />
-                {milestone.label}
-              </span>
-            )}
+            <span className="text-sm text-foreground-muted">
+              {current === 1 ? "day" : "days"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* 7-day activity dots */}
+      {/* Middle: 7-day activity dots */}
       <div className="mt-4">
-        <p className="mb-2 text-xs font-medium text-foreground-muted">Last 7 days</p>
         <div className="flex items-center gap-1.5">
           {last7Days.map((active, index) => (
             <div key={index} className="flex flex-col items-center gap-1">
               <div
-                className={`h-3.5 w-3.5 rounded-full transition-colors ${
+                className={`h-3 w-3 rounded-full transition-colors ${
                   active
                     ? "bg-orange-500 shadow-sm shadow-orange-500/30"
                     : "bg-background-muted"
                 }`}
                 title={`${DAY_LABELS[index]}: ${active ? "Completed" : "No completions"}`}
               />
-              <span className="text-[10px] text-foreground-muted/60">{DAY_LABELS[index]}</span>
+              <span className="text-[9px] text-foreground-muted/60">
+                {DAY_LABELS[index]}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      {longest > 0 && (
-        <div className="mt-4 rounded-lg bg-background-muted p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground-muted">Longest Streak</span>
-            <span className="text-lg font-semibold text-foreground">
-              {longest} {longest === 1 ? 'day' : 'days'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <p className="mt-4 text-sm text-foreground-muted">
-        {getStreakMessage(current)}
-      </p>
+      {/* Bottom: milestone or longest streak or message */}
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-xs text-foreground-muted">{getStreakMessage(current)}</p>
+        {milestone ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+            <TrophyIcon className="h-2.5 w-2.5" />
+            {milestone.label}
+          </span>
+        ) : longest > 0 ? (
+          <span className="text-[10px] text-foreground-muted">
+            Best: {longest}d
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
