@@ -7,7 +7,12 @@ import {
 import { TIME_TRACKING } from '@/lib/constants';
 import type { TaskRecord } from '@/lib/types';
 
-// Mock the logger
+// Hoisted mocks for async function tests
+const mockGet = vi.hoisted(() => vi.fn());
+const mockPut = vi.hoisted(() => vi.fn());
+const mockEnqueue = vi.hoisted(() => vi.fn());
+const mockIsoNow = vi.hoisted(() => vi.fn(() => '2025-06-01T12:00:00.000Z'));
+
 vi.mock('@/lib/logger', () => ({
   createLogger: vi.fn(() => ({
     error: vi.fn(),
@@ -16,6 +21,51 @@ vi.mock('@/lib/logger', () => ({
     debug: vi.fn(),
   })),
 }));
+
+vi.mock('@/lib/db', () => ({
+  getDb: vi.fn(() => ({
+    tasks: { get: mockGet, put: mockPut },
+  })),
+}));
+
+vi.mock('@/lib/tasks/crud/helpers', () => ({
+  getSyncContext: vi.fn(async () => ({
+    syncConfig: { enabled: false, deviceId: 'test-device' },
+    deviceId: 'test-device',
+  })),
+  enqueueSyncOperation: (...args: unknown[]) => mockEnqueue(...args),
+}));
+
+vi.mock('nanoid', () => ({
+  nanoid: vi.fn(() => 'abc12345'),
+}));
+
+vi.mock('@/lib/utils', () => ({
+  isoNow: mockIsoNow,
+}));
+
+/** Reusable base task for async tests */
+function createBaseTask(overrides?: Partial<TaskRecord>): TaskRecord {
+  return {
+    id: 'task-1',
+    title: 'Test',
+    description: '',
+    urgent: true,
+    important: true,
+    quadrant: 'urgent-important',
+    completed: false,
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
+    recurrence: 'none',
+    tags: [],
+    subtasks: [],
+    dependencies: [],
+    notificationEnabled: false,
+    notificationSent: false,
+    timeEntries: [],
+    ...overrides,
+  };
+}
 
 describe('Time Tracking Utilities', () => {
   describe('formatTimeSpent', () => {
@@ -92,6 +142,99 @@ describe('Time Tracking Utilities', () => {
       } as TaskRecord;
       expect(getRunningEntry(task)).toEqual(runningEntry);
     });
+  });
+});
+
+describe('startTimeTracking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsoNow.mockReturnValue('2025-06-01T12:00:00.000Z');
+  });
+
+  it('creates a new time entry on a task', async () => {
+    const { startTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    const task = createBaseTask();
+    mockGet.mockResolvedValue(task);
+    mockPut.mockResolvedValue(undefined);
+
+    const result = await startTimeTracking('task-1');
+
+    expect(mockPut).toHaveBeenCalledOnce();
+    expect(result.timeEntries).toHaveLength(1);
+    expect(result.timeEntries![0]).toMatchObject({
+      id: 'abc12345',
+      startedAt: '2025-06-01T12:00:00.000Z',
+    });
+    expect(result.timeEntries![0].endedAt).toBeUndefined();
+  });
+
+  it('throws when task not found', async () => {
+    const { startTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    mockGet.mockResolvedValue(undefined);
+
+    await expect(startTimeTracking('nonexistent')).rejects.toThrow(
+      'Task nonexistent not found'
+    );
+  });
+
+  it('throws when timer already running', async () => {
+    const { startTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    const task = createBaseTask({
+      timeEntries: [{ id: 'entry-1', startedAt: '2025-06-01T10:00:00.000Z' }],
+    });
+    mockGet.mockResolvedValue(task);
+
+    await expect(startTimeTracking('task-1')).rejects.toThrow(
+      'Task already has a running timer'
+    );
+  });
+});
+
+describe('stopTimeTracking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsoNow.mockReturnValue('2025-06-01T13:00:00.000Z');
+  });
+
+  it('stops running timer and calculates timeSpent', async () => {
+    const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    const task = createBaseTask({
+      timeEntries: [{ id: 'entry-1', startedAt: '2025-06-01T12:00:00.000Z' }],
+    });
+    mockGet.mockResolvedValue(task);
+    mockPut.mockResolvedValue(undefined);
+
+    const result = await stopTimeTracking('task-1', 'test notes');
+
+    expect(mockPut).toHaveBeenCalledOnce();
+    expect(result.timeEntries).toHaveLength(1);
+    expect(result.timeEntries![0].endedAt).toBe('2025-06-01T13:00:00.000Z');
+    expect(result.timeEntries![0].notes).toBe('test notes');
+    // 1 hour = 60 minutes
+    expect(result.timeSpent).toBe(60);
+  });
+
+  it('throws when no running timer', async () => {
+    const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    const task = createBaseTask({
+      timeEntries: [
+        {
+          id: 'entry-1',
+          startedAt: '2025-06-01T10:00:00.000Z',
+          endedAt: '2025-06-01T11:00:00.000Z',
+        },
+      ],
+    });
+    mockGet.mockResolvedValue(task);
+
+    await expect(stopTimeTracking('task-1')).rejects.toThrow(
+      'No running timer found for this task'
+    );
   });
 });
 

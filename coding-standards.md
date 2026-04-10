@@ -438,9 +438,29 @@ For autonomous, long-running work, use a Stop hook to run deterministic checks (
 
 ## Part 3: Testing & Error Handling
 
+### Test-Driven Development (TDD)
+
+TDD is the default workflow, not a suggestion. Use the `/tdd` command to start a red/green/refactor cycle.
+
+1. **Red.** Write a failing test that describes the expected behavior. Run it. Confirm it fails for the right reason — not a syntax error or missing import.
+2. **Green.** Write the minimum implementation to make the test pass. No extra features, no speculative abstractions.
+3. **Refactor.** Clean up while keeping tests green. Extract duplication, improve naming, simplify logic.
+4. **Repeat.** If the behavior requires multiple cycles, start the next failing test.
+
+**When to apply TDD:**
+- New components or functions — write render/unit tests first
+- Bug fixes — write a test that reproduces the bug first
+- Refactors that change behavior — write tests for the new behavior before changing code
+
+**When TDD is optional:**
+- Pure CSS/styling changes with no behavioral difference
+- Renaming/moving files with no logic changes
+- Documentation-only changes
+
+> **Rule:** Tests written after implementation are rationalizations, not verifications. Write them first. If you cannot write a failing test, the requirement is unclear — stop and clarify before coding.
+
 ### Testing Standards
 
-- Write tests BEFORE implementation when feasible (TDD approach).
 - Test all public APIs and critical paths (target approximately 80% coverage).
 - Use clear behavior-based test names (e.g., `should_return_404_when_user_not_found`).
 - Follow Arrange-Act-Assert pattern.
@@ -604,6 +624,7 @@ A task is not done when the code works. It is done when ALL of the following are
 
 **Correctness & Quality:**
 - [ ] The implementation matches the spec or ticket acceptance criteria.
+- [ ] Tests were written before implementation (TDD red/green/refactor cycle followed).
 - [ ] Verification method was defined before coding and passes autonomously.
 - [ ] All new and existing tests pass; test suite runs after every modification.
 - [ ] Linting, formatting, and type checking pass with no suppressions.
@@ -773,6 +794,7 @@ Build [feature] that:
 - Floating dependency versions in production lockfiles
 - PR that exceeds 400 lines across unrelated concerns
 - Frontend interactive elements that are not keyboard-accessible
+- Implementation code written before a failing test exists (TDD violation)
 - No verification method defined before starting implementation
 - Ad-hoc subagent prompts instead of reusable agent definitions for repeated patterns
 - Standards enforced by discipline alone when a hook could automate them
