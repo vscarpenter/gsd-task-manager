@@ -34,11 +34,15 @@ describe("MatrixColumn", () => {
     id: "urgent-important" as const,
     title: "Do First",
     subtitle: "Urgent & Important",
-    bgClass: "bg-blue-50",
-    accentClass: "bg-blue-500 text-white",
-    colorClass: "bg-blue-500",
-    iconColor: "text-blue-500 dark:text-blue-400",
-    emptyMessage: "What needs your attention right now?"
+    bgClass: "bg-red-50",
+    accentClass: "bg-red-500 text-white",
+    colorClass: "bg-red-500",
+    iconColor: "text-red-500 dark:text-red-400",
+    emptyMessage: "What needs your attention right now?",
+    emptyEmoji: "🎯",
+    emptyHeadline: "No urgent tasks right now",
+    emptyDescription: "Great! You're on top of your critical work. Tasks that need immediate attention will appear here.",
+    emptyCta: "Add urgent task"
   };
 
   const mockTasks: TaskRecord[] = [
@@ -93,7 +97,8 @@ describe("MatrixColumn", () => {
 
   it("renders quadrant-specific empty state message", () => {
     render(<MatrixColumn quadrant={mockQuadrant} tasks={[]} allTasks={[]} {...mockHandlers} />);
-    expect(screen.getByText("What needs your attention right now?")).toBeInTheDocument();
+    expect(screen.getByText("No urgent tasks right now")).toBeInTheDocument();
+    expect(screen.getByText(/You're on top of your critical work/)).toBeInTheDocument();
   });
 
   it("applies correct styling based on quadrant", () => {

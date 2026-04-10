@@ -14,13 +14,13 @@
   <!-- Large GSD Matrix Logo (centered-left) -->
   <g transform="translate(120, 165)">
     <!-- 2x2 Matrix Grid (scaled up) -->
-    <rect x="0" y="0" width="130" height="130" rx="12" fill="#dbeafe"/>
-    <rect x="150" y="0" width="130" height="130" rx="12" fill="#fef9c3"/>
-    <rect x="0" y="150" width="130" height="130" rx="12" fill="#d1fae5"/>
-    <rect x="150" y="150" width="130" height="130" rx="12" fill="#f3e8ff"/>
+    <rect x="0" y="0" width="130" height="130" rx="12" fill="#fee2e2"/>
+    <rect x="150" y="0" width="130" height="130" rx="12" fill="#dbeafe"/>
+    <rect x="0" y="150" width="130" height="130" rx="12" fill="#fef3c7"/>
+    <rect x="150" y="150" width="130" height="130" rx="12" fill="#f1f5f9"/>
 
     <!-- Checkmark in top-left quadrant -->
-    <path d="M40 65L55 80L90 45" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 65L55 80L90 45" stroke="#ef4444" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
 
     <!-- Border outline -->
     <rect x="0" y="0" width="280" height="280" rx="20" stroke="#64748b" stroke-width="4" fill="none"/>

@@ -34,6 +34,8 @@ interface MatrixContentProps {
   onToggleSelect: (task: TaskRecord) => void;
   taskRefs: RefObject<Map<string, HTMLElement>>;
   highlightedTaskId: string | null;
+  onQuickCreate?: (quadrantId: QuadrantId, title: string, description: string, tags: string[]) => void;
+  availableTags?: string[];
 }
 
 export function MatrixContent(props: MatrixContentProps) {
@@ -123,6 +125,8 @@ function MatrixGrid(props: MatrixContentProps) {
           onToggleSelect={props.onToggleSelect}
           taskRefs={props.taskRefs}
           highlightedTaskId={props.highlightedTaskId}
+          onQuickCreate={props.onQuickCreate ? (title, desc, tags) => props.onQuickCreate!(quadrant.id, title, desc, tags) : undefined}
+          availableTags={props.availableTags}
         />
       ))}
     </div>

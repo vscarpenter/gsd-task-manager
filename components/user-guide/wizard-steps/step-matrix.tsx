@@ -25,49 +25,49 @@ export function StepMatrix() {
       {/* 4 Quadrants Grid */}
       <div className="grid grid-cols-2 gap-3">
         {/* Q1 - Do First */}
-        <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-4">
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-3 w-3 rounded-full bg-blue-500" />
-            <h3 className="font-semibold text-blue-900 dark:text-blue-300 text-sm">Q1: Do First</h3>
+            <div className="h-3 w-3 rounded-full bg-red-500" />
+            <h3 className="font-semibold text-red-900 dark:text-red-300 text-sm">Q1: Do First</h3>
           </div>
-          <p className="text-xs text-blue-700 dark:text-blue-400 mb-2">Urgent + Important</p>
-          <p className="text-xs text-blue-600 dark:text-blue-400">
+          <p className="text-xs text-red-700 dark:text-red-400 mb-2">Urgent + Important</p>
+          <p className="text-xs text-red-600 dark:text-red-400">
             Crises, deadlines, emergencies. Target: 15-20%
           </p>
         </div>
 
         {/* Q2 - Schedule */}
-        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-4">
+        <div className="rounded-xl border-2 border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-700 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-3 w-3 rounded-full bg-amber-500" />
-            <h3 className="font-semibold text-amber-900 dark:text-amber-300 text-sm">Q2: Schedule</h3>
+            <div className="h-3 w-3 rounded-full bg-blue-500" />
+            <h3 className="font-semibold text-blue-900 dark:text-blue-300 text-sm">Q2: Schedule</h3>
           </div>
-          <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">Not Urgent + Important</p>
-          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+          <p className="text-xs text-blue-700 dark:text-blue-400 mb-2">Not Urgent + Important</p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
             YOUR GOAL! Strategic work, growth. Target: 60-70%
           </p>
         </div>
 
         {/* Q3 - Delegate */}
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-4">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-3 w-3 rounded-full bg-emerald-500" />
-            <h3 className="font-semibold text-emerald-900 dark:text-emerald-300 text-sm">Q3: Delegate</h3>
+            <div className="h-3 w-3 rounded-full bg-amber-500" />
+            <h3 className="font-semibold text-amber-900 dark:text-amber-300 text-sm">Q3: Delegate</h3>
           </div>
-          <p className="text-xs text-emerald-700 dark:text-emerald-400 mb-2">Urgent + Not Important</p>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+          <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">Urgent + Not Important</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400">
             Interruptions, busywork. Target: 15-20%
           </p>
         </div>
 
         {/* Q4 - Eliminate */}
-        <div className="rounded-xl border border-purple-200 bg-purple-50 dark:bg-purple-950/30 dark:border-purple-800 p-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-900/30 dark:border-gray-700 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-3 w-3 rounded-full bg-purple-500" />
-            <h3 className="font-semibold text-purple-900 dark:text-purple-300 text-sm">Q4: Eliminate</h3>
+            <div className="h-3 w-3 rounded-full bg-gray-500" />
+            <h3 className="font-semibold text-gray-900 dark:text-gray-300 text-sm">Q4: Eliminate</h3>
           </div>
-          <p className="text-xs text-purple-700 dark:text-purple-400 mb-2">Not Urgent + Not Important</p>
-          <p className="text-xs text-purple-600 dark:text-purple-400">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Not Urgent + Not Important</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Time-wasters, distractions. Target: 0-5%
           </p>
         </div>

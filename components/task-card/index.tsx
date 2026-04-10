@@ -59,10 +59,10 @@ function TaskCardComponent({
       style={style}
       className={cn(
         "group flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200 animate-slide-in-card",
-        task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5",
+        task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
-        taskIsOverdue ? "border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30" : "border-card-border",
+        taskIsOverdue ? "border-l-4 border-l-red-500 border-red-200 bg-red-50/40 dark:border-l-red-400 dark:border-red-800/60 dark:bg-red-950/20" : "border-card-border",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}

@@ -9,15 +9,15 @@ export function GsdLogo({ className }: { className?: string }) {
       className={className}
     >
       {/* 2x2 Matrix Grid */}
-      <rect x="2" y="2" width="17" height="17" rx="3" fill="#dbeafe" />
-      <rect x="21" y="2" width="17" height="17" rx="3" fill="#fef9c3" />
-      <rect x="2" y="21" width="17" height="17" rx="3" fill="#d1fae5" />
-      <rect x="21" y="21" width="17" height="17" rx="3" fill="#f3e8ff" />
+      <rect x="2" y="2" width="17" height="17" rx="3" fill="#fee2e2" />
+      <rect x="21" y="2" width="17" height="17" rx="3" fill="#dbeafe" />
+      <rect x="2" y="21" width="17" height="17" rx="3" fill="#fef3c7" />
+      <rect x="21" y="21" width="17" height="17" rx="3" fill="#f1f5f9" />
 
       {/* Checkmark in top-left quadrant (urgent + important) */}
       <path
         d="M7 10.5L9.5 13L14 8.5"
-        stroke="#2563eb"
+        stroke="#ef4444"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"

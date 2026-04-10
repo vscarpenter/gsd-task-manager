@@ -5,25 +5,25 @@ const quadrants = [
     label: "Q1",
     name: "Do First",
     description: "Crises, deadlines. Handle now.",
-    className: "border-amber-500/40 bg-amber-500/5",
+    className: "border-red-500/40 bg-red-500/5",
   },
   {
     label: "Q2",
     name: "Schedule",
     description: "Strategy, growth. Protect this time.",
-    className: "border-emerald-500/40 bg-emerald-500/5",
+    className: "border-blue-500/40 bg-blue-500/5",
   },
   {
     label: "Q3",
     name: "Delegate",
     description: "Interruptions. Hand these off.",
-    className: "border-blue-500/40 bg-blue-500/5",
+    className: "border-amber-500/40 bg-amber-500/5",
   },
   {
     label: "Q4",
     name: "Eliminate",
     description: "Noise. Stop doing these.",
-    className: "border-border bg-background-muted/50",
+    className: "border-gray-500/40 bg-gray-500/5",
   },
 ] as const;
 

@@ -3,10 +3,11 @@
 import { memo, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { FlameIcon, CalendarIcon, UsersIcon, TrashIcon, ChevronDownIcon } from "lucide-react";
+import { FlameIcon, CalendarIcon, UsersIcon, TrashIcon, ChevronDownIcon, PlusIcon } from "lucide-react";
 import type { QuadrantMeta } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
+import { InlineTaskForm } from "@/components/inline-task-form";
 import { cn } from "@/lib/utils";
 
 const quadrantIcons: Record<string, typeof FlameIcon> = {
@@ -33,6 +34,8 @@ interface MatrixColumnProps {
   onToggleSelect?: (task: TaskRecord) => void;
   taskRefs?: React.MutableRefObject<Map<string, HTMLElement>>;
   highlightedTaskId?: string | null;
+  onQuickCreate?: (title: string, description: string, tags: string[]) => void;
+  availableTags?: string[];
 }
 
 function MatrixColumnComponent({
@@ -51,13 +54,16 @@ function MatrixColumnComponent({
   selectedTaskIds,
   onToggleSelect,
   taskRefs,
-  highlightedTaskId
+  highlightedTaskId,
+  onQuickCreate,
+  availableTags
 }: MatrixColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: quadrant.id
   });
 
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [inlineFormOpen, setInlineFormOpen] = useState(false);
 
   // React Compiler handles optimization automatically
   const taskIds = tasks.map((task) => task.id);
@@ -104,16 +110,20 @@ function MatrixColumnComponent({
           isCollapsed && "max-h-0 opacity-0 md:max-h-none md:opacity-100"
         )}>
           {tasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/60 bg-background/30 p-6 text-center">
-              {(() => {
-                const Icon = quadrantIcons[quadrant.id];
-                return Icon ? (
-                  <div className={cn("mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full", quadrant.accentClass)}>
-                    <Icon className={cn("h-5 w-5", quadrant.iconColor)} />
-                  </div>
-                ) : null;
-              })()}
-              <p className="text-sm text-foreground-muted">{quadrant.emptyMessage}</p>
+            <div className="rounded-xl border border-dashed border-border/60 bg-background/30 p-8 text-center">
+              <span className="mb-3 block text-4xl" role="img" aria-hidden="true">{quadrant.emptyEmoji}</span>
+              <p className="text-sm font-semibold text-foreground">{quadrant.emptyHeadline}</p>
+              <p className="mx-auto mt-1.5 max-w-[280px] text-xs text-foreground-muted leading-relaxed">{quadrant.emptyDescription}</p>
+              {onQuickCreate && (
+                <button
+                  type="button"
+                  onClick={() => setInlineFormOpen(true)}
+                  className="mx-auto mt-4 flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-background-muted"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  {quadrant.emptyCta}
+                </button>
+              )}
             </div>
           ) : (
             tasks.map((task) => (
@@ -143,6 +153,18 @@ function MatrixColumnComponent({
           )}
         </div>
       </SortableContext>
+
+      {onQuickCreate && (
+        <div className="mt-3">
+          <InlineTaskForm
+            onSubmit={onQuickCreate}
+            iconColor={quadrant.iconColor}
+            availableTags={availableTags}
+            isOpen={inlineFormOpen}
+            onOpenChange={setInlineFormOpen}
+          />
+        </div>
+      )}
     </section>
   );
 }

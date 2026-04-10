@@ -32,17 +32,17 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, accentCol
   const animatedValue = useCountUp(value);
   const { bg: iconBg, text: iconText } = getAccentClasses(accentColor);
   return (
-    <div className={`rounded-xl border border-border bg-card p-6 shadow-sm ${className}`}>
+    <div className={`rounded-2xl border-2 border-border/80 bg-card p-6 ${className}`} style={{ boxShadow: 'var(--shadow-column)' }}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground-muted">{title}</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">{animatedValue}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{title}</p>
+          <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-foreground">{animatedValue}</p>
           {subtitle && (
-            <p className="mt-1 text-sm text-foreground-muted">{subtitle}</p>
+            <p className="mt-1.5 text-sm text-foreground-muted">{subtitle}</p>
           )}
           {trend && (
             <div className="mt-2 flex items-center gap-1">
-              <span className={`text-xs font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`text-xs font-medium ${trend.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
               </span>
               <span className="text-xs text-foreground-muted">from last week</span>
@@ -50,7 +50,7 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, accentCol
           )}
         </div>
         {Icon && (
-          <div className={`rounded-lg p-3 ${iconBg}`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-full ${iconBg}`}>
             <Icon className={`h-6 w-6 ${iconText}`} />
           </div>
         )}

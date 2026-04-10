@@ -1,24 +1,25 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { DndContext } from "@dnd-kit/core";
 import { AppHeader } from "@/components/app-header";
 import { AppFooter } from "@/components/app-footer";
 import { FilterBar } from "@/components/filter-bar";
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
 import { CommandPalette } from "@/components/command-palette";
-import { quadrants } from "@/lib/quadrants";
 import { useTasks } from "@/lib/use-tasks";
 import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { useSmartViewShortcuts } from "@/lib/use-smart-view-shortcuts";
 import type { FilterCriteria, SmartView } from "@/lib/filters";
-import { toDraft } from "@/lib/types";
+import { toDraft, type QuadrantId } from "@/lib/types";
+import { parseQuadrantFlags } from "@/lib/quadrants";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { extractAvailableTags, getFilteredQuadrants, getVisibleTaskCount } from "@/lib/matrix-filters";
 import { useMatrixDialogs } from "@/lib/use-matrix-dialogs";
 import { TOAST_DURATION } from "@/lib/constants";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
+import { createTask } from "@/lib/tasks";
 import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useBulkSelection } from "./use-bulk-selection";
 import { useTaskOperations } from "./use-task-operations";
@@ -109,6 +110,16 @@ export function MatrixBoard() {
     searchInputRef
   );
 
+  const handleQuickCreate = useCallback(async (quadrantId: QuadrantId, title: string, description: string, tags: string[]) => {
+    const { urgent, important } = parseQuadrantFlags(quadrantId);
+    try {
+      await createTask({ title, description, urgent, important, tags: tags.length > 0 ? tags : undefined });
+      showToast("Task created", undefined, TOAST_DURATION.SHORT);
+    } catch {
+      showToast("Failed to create task", undefined, TOAST_DURATION.LONG);
+    }
+  }, [showToast]);
+
   // Derived state
   const availableTags = useMemo(() => extractAvailableTags(all), [all]);
   const filteredQuadrants = useMemo(
@@ -183,6 +194,8 @@ export function MatrixBoard() {
           onToggleSelect={bulkSelection.handleToggleSelect}
           taskRefs={taskRefs}
           highlightedTaskId={highlightedTaskId}
+          onQuickCreate={handleQuickCreate}
+          availableTags={availableTags}
         />
 
         <AppFooter />
