@@ -43,6 +43,7 @@
     "node_modules",
     "worker",
     "packages",
+    "design-suggestions",
     "tests",
     "figma-gsd",
     "vitest.config.ts",

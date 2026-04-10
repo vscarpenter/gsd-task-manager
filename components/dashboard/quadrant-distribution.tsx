@@ -40,10 +40,13 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h3 className="mb-4 text-lg font-semibold text-foreground">
+      <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+        <h3 className="text-lg font-semibold text-foreground">
           Quadrant Distribution
         </h3>
+        <p className="mt-1 text-sm text-foreground-muted">
+          Active work split across the matrix.
+        </p>
         <div className="flex h-[280px] items-center justify-center">
           <p className="text-sm text-foreground-muted">No active tasks to display</p>
         </div>
@@ -52,10 +55,13 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">
+    <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+      <h3 className="text-lg font-semibold text-foreground">
         Quadrant Distribution
       </h3>
+      <p className="mt-1 text-sm text-foreground-muted">
+        Active work split across the matrix.
+      </p>
       <div className="relative">
         <ResponsiveContainer width="100%" height={240}>
           <PieChart>
@@ -73,7 +79,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
                 <Cell
                   key={`cell-${entry.id}`}
                   fill={COLORS[entry.id as QuadrantId]}
-                  className="transition-opacity hover:opacity-80"
+                  className="transition-opacity hover:opacity-85"
                 />
               ))}
             </Pie>
@@ -104,15 +110,12 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
       {/* Legend */}
       <div className="mt-2 grid grid-cols-2 gap-2">
         {data.map((entry) => (
-          <div key={entry.id} className="flex items-center gap-2">
-            <div
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: COLORS[entry.id as QuadrantId] }}
-            />
-            <span className="truncate text-xs text-foreground-muted">
+          <div key={entry.id} className="flex items-center gap-2 rounded-2xl border border-border/60 bg-background-muted/40 px-3 py-2">
+            <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[entry.id as QuadrantId] }} />
+            <span className="truncate text-xs font-medium text-foreground-muted">
               {entry.shortName}
             </span>
-            <span className="ml-auto text-xs font-medium tabular-nums text-foreground">
+            <span className="ml-auto text-xs font-semibold tabular-nums text-foreground">
               {entry.value}
             </span>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2Icon, GripVerticalIcon } from "lucide-react";
+import { CheckCircle2Icon, CircleIcon, GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { TaskRecord } from "@/lib/types";
@@ -25,6 +25,8 @@ export function TaskCardHeader({
   sortableAttributes,
   sortableListeners,
 }: TaskCardHeaderProps) {
+  const completionLabel = task.completed ? "Mark as incomplete" : "Mark as complete";
+
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -65,20 +67,28 @@ export function TaskCardHeader({
             type="button"
             onClick={() => onToggleComplete(task, !task.completed)}
             className={cn(
-              "button-reset flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase transition-all duration-200",
-              "h-7 w-7 md:h-7 md:w-7",
-              "sm:h-9 sm:w-9",
+              "button-reset relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 sm:h-9 sm:w-9",
               task.completed
-                ? "border-emerald-400 bg-emerald-500/15 text-emerald-600 dark:border-emerald-500 dark:text-emerald-400 scale-100"
-                : "border-border text-foreground-muted hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-110"
+                ? "border-emerald-400 bg-emerald-500/15 text-emerald-600 shadow-sm shadow-emerald-500/10 dark:border-emerald-500 dark:text-emerald-400"
+                : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"
             )}
             aria-pressed={task.completed}
-            aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
+            aria-label={completionLabel}
           >
-            <CheckCircle2Icon className={cn("h-4 w-4 sm:h-4 sm:w-4", !task.completed && "opacity-30")} />
+            {task.completed ? (
+              <CheckCircle2Icon className="h-4 w-4 shrink-0" />
+            ) : (
+              <>
+                <CircleIcon className="h-4 w-4 shrink-0" />
+                <span
+                  aria-hidden="true"
+                  className="absolute h-1.5 w-1.5 rounded-full bg-current opacity-0 transition-opacity duration-200 group-hover:opacity-40"
+                />
+              </>
+            )}
           </button>
         </TooltipTrigger>
-        <TooltipContent>{task.completed ? "Mark as incomplete" : "Mark as complete"}</TooltipContent>
+        <TooltipContent>{completionLabel}</TooltipContent>
       </Tooltip>
     </div>
   );
