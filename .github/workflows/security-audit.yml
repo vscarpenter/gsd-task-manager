@@ -25,6 +25,9 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Prefer IPv4 for npm registry
+        run: echo 'precedence ::ffff:0:0/96 100' | sudo tee -a /etc/gai.conf
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
