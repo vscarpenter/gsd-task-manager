@@ -14,6 +14,17 @@ const quadrantInfo = [
     title: "Do First",
     desc: "Urgent + Important",
     detail: "Crises and deadlines requiring immediate attention",
+    borderClass: "border-red-200 dark:border-red-800",
+    bgClass: "bg-red-50 dark:bg-red-950/30",
+    iconClass: "text-red-500 dark:text-red-400",
+    titleClass: "text-red-900 dark:text-red-200",
+    textClass: "text-red-700 dark:text-red-300"
+  },
+  {
+    icon: CalendarIcon,
+    title: "Schedule",
+    desc: "Not Urgent + Important",
+    detail: "Long-term goals and strategic planning",
     borderClass: "border-blue-200 dark:border-blue-800",
     bgClass: "bg-blue-50 dark:bg-blue-950/30",
     iconClass: "text-blue-500 dark:text-blue-400",
@@ -21,10 +32,10 @@ const quadrantInfo = [
     textClass: "text-blue-700 dark:text-blue-300"
   },
   {
-    icon: CalendarIcon,
-    title: "Schedule",
-    desc: "Not Urgent + Important",
-    detail: "Long-term goals and strategic planning",
+    icon: UsersIcon,
+    title: "Delegate",
+    desc: "Urgent + Not Important",
+    detail: "Tasks that can be delegated to others",
     borderClass: "border-amber-200 dark:border-amber-800",
     bgClass: "bg-amber-50 dark:bg-amber-950/30",
     iconClass: "text-amber-500 dark:text-amber-400",
@@ -32,26 +43,15 @@ const quadrantInfo = [
     textClass: "text-amber-700 dark:text-amber-300"
   },
   {
-    icon: UsersIcon,
-    title: "Delegate",
-    desc: "Urgent + Not Important",
-    detail: "Tasks that can be delegated to others",
-    borderClass: "border-emerald-200 dark:border-emerald-800",
-    bgClass: "bg-emerald-50 dark:bg-emerald-950/30",
-    iconClass: "text-emerald-500 dark:text-emerald-400",
-    titleClass: "text-emerald-900 dark:text-emerald-200",
-    textClass: "text-emerald-700 dark:text-emerald-300"
-  },
-  {
     icon: TrashIcon,
     title: "Eliminate",
     desc: "Not Urgent + Not Important",
     detail: "Time-wasters to minimize or eliminate",
-    borderClass: "border-purple-200 dark:border-purple-800",
-    bgClass: "bg-purple-50 dark:bg-purple-950/30",
-    iconClass: "text-purple-500 dark:text-purple-400",
-    titleClass: "text-purple-900 dark:text-purple-200",
-    textClass: "text-purple-700 dark:text-purple-300"
+    borderClass: "border-gray-200 dark:border-gray-700",
+    bgClass: "bg-gray-50 dark:bg-gray-900/30",
+    iconClass: "text-gray-500 dark:text-gray-400",
+    titleClass: "text-gray-900 dark:text-gray-200",
+    textClass: "text-gray-600 dark:text-gray-400"
   }
 ];
 

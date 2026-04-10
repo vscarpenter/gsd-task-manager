@@ -34,7 +34,7 @@ export function MatrixSection({ expanded, onToggle }: MatrixSectionProps) {
 				<div className="space-y-3">
 					<QuadrantBlock
 						title="Q1: Do First (Urgent + Important)"
-						color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+						color="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
 						description="Crises, deadlines, emergencies—tasks that must be done NOW."
 						examples={[
 							"Client presentation due today",
@@ -48,7 +48,7 @@ export function MatrixSection({ expanded, onToggle }: MatrixSectionProps) {
 
 					<QuadrantBlock
 						title="Q2: Schedule (Not Urgent + Important)"
-						color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+						color="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
 						description="Strategic work, planning, growth—this is where success lives."
 						examples={[
 							"Long-term project planning",
@@ -63,7 +63,7 @@ export function MatrixSection({ expanded, onToggle }: MatrixSectionProps) {
 
 					<QuadrantBlock
 						title="Q3: Delegate (Urgent + Not Important)"
-						color="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+						color="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
 						description="Interruptions and busywork that feel urgent but don't align with your goals."
 						examples={[
 							"Some meetings (ask: do I need to be there?)",
@@ -77,7 +77,7 @@ export function MatrixSection({ expanded, onToggle }: MatrixSectionProps) {
 
 					<QuadrantBlock
 						title="Q4: Eliminate (Not Urgent + Not Important)"
-						color="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+						color="bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-400"
 						description="Time-wasters, distractions, and trivial tasks."
 						examples={[
 							"Mindless social media scrolling",

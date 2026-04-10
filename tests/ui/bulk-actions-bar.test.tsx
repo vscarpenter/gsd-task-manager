@@ -24,7 +24,8 @@ describe("BulkActionsBar", () => {
   it("renders when tasks are selected", () => {
     render(<BulkActionsBar selectedCount={3} {...mockHandlers} />);
 
-    expect(screen.getByText("3 selected")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("selected")).toBeInTheDocument();
   });
 
   it("calls onClearSelection when clear button clicked", async () => {

@@ -166,9 +166,9 @@ describe('MatrixBoard Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/do first/i)).toBeInTheDocument();
-        expect(screen.getByText(/schedule/i)).toBeInTheDocument();
-        expect(screen.getByText(/delegate/i)).toBeInTheDocument();
-        expect(screen.getByText(/eliminate/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /schedule/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /delegate/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /eliminate/i })).toBeInTheDocument();
       });
     });
 

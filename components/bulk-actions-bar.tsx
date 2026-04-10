@@ -52,32 +52,32 @@ export function BulkActionsBar({
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-4">
-      <div className="rounded-full border border-border bg-card px-6 py-3 shadow-xl">
-        <div className="flex items-center gap-4">
+    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-bulk-bar-in" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div className="rounded-2xl border-2 border-border/80 bg-card px-5 py-3 shadow-2xl backdrop-blur-sm">
+        <div className="flex items-center gap-3">
           {/* Selection count */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">
-              {selectedCount} selected
+            <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-sm font-semibold tabular-nums text-accent">
+              {selectedCount}
             </span>
+            <span className="text-sm text-foreground-muted hidden sm:inline">selected</span>
             <button
               onClick={onClearSelection}
               className="rounded-full p-1 hover:bg-background-muted transition-colors"
               aria-label="Clear selection"
             >
-              <XIcon className="h-4 w-4 text-foreground-muted" />
+              <XIcon className="h-3.5 w-3.5 text-foreground-muted" />
             </button>
           </div>
 
-          <div className="h-6 w-px bg-border" />
+          <div className="h-6 w-px bg-border/60" aria-hidden="true" />
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            {/* Complete/Uncomplete */}
+          {/* Complete/Uncomplete */}
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               onClick={onBulkComplete}
-              className="gap-2 px-3 py-1.5 text-xs"
+              className="gap-1.5 px-2.5 py-1.5 text-xs"
               title="Mark selected as complete"
             >
               <CheckCheckIcon className="h-4 w-4" />
@@ -87,18 +87,23 @@ export function BulkActionsBar({
             <Button
               variant="ghost"
               onClick={onBulkUncomplete}
-              className="gap-2 px-3 py-1.5 text-xs"
+              className="gap-1.5 px-2.5 py-1.5 text-xs"
               title="Mark selected as incomplete"
             >
               <CheckCheckIcon className="h-4 w-4 opacity-50" />
-              <span className="hidden sm:inline">Uncomplete</span>
+              <span className="hidden sm:inline">Undo</span>
             </Button>
+          </div>
 
+          <div className="h-6 w-px bg-border/60" aria-hidden="true" />
+
+          {/* Move + Tag */}
+          <div className="flex items-center gap-1">
             {/* Move to quadrant dropdown */}
             <div className="relative" ref={moveDropdownRef}>
               <Button
                 variant="ghost"
-                className="gap-2 px-3 py-1.5 text-xs"
+                className="gap-1.5 px-2.5 py-1.5 text-xs"
                 title="Move to quadrant"
                 onClick={() => setMoveDropdownOpen(!moveDropdownOpen)}
               >
@@ -106,52 +111,51 @@ export function BulkActionsBar({
                 <span className="hidden sm:inline">Move</span>
               </Button>
 
-              {/* Dropdown menu */}
               {moveDropdownOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-border bg-card shadow-lg">
-                  <div className="p-2">
-                    <p className="px-2 py-1 text-xs font-semibold text-foreground-muted">
-                      Move to quadrant
-                    </p>
-                    {quadrants.map(quadrant => (
-                      <button
-                        key={quadrant.id}
-                        onClick={() => {
-                          onBulkMoveToQuadrant(quadrant.id);
-                          setMoveDropdownOpen(false);
-                        }}
-                        className="w-full rounded px-2 py-1.5 text-left text-sm text-foreground hover:bg-background-muted transition-colors"
-                      >
-                        {quadrant.title}
-                      </button>
-                    ))}
-                  </div>
+                <div className="absolute bottom-full left-0 mb-2 w-48 rounded-xl border border-border bg-card p-1.5 shadow-lg">
+                  <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
+                    Move to quadrant
+                  </p>
+                  {quadrants.map(quadrant => (
+                    <button
+                      key={quadrant.id}
+                      onClick={() => {
+                        onBulkMoveToQuadrant(quadrant.id);
+                        setMoveDropdownOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground hover:bg-background-muted transition-colors"
+                    >
+                      <span className={`h-2 w-2 rounded-full ${quadrant.colorClass}`} />
+                      {quadrant.title}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Add tags */}
             <Button
               variant="ghost"
               onClick={onBulkAddTags}
-              className="gap-2 px-3 py-1.5 text-xs"
+              className="gap-1.5 px-2.5 py-1.5 text-xs"
               title="Add tags to selected"
             >
               <TagIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Tag</span>
             </Button>
-
-            {/* Delete */}
-            <Button
-              variant="ghost"
-              onClick={onBulkDelete}
-              className="gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
-              title="Delete selected tasks"
-            >
-              <Trash2Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">Delete</span>
-            </Button>
           </div>
+
+          <div className="h-6 w-px bg-border/60" aria-hidden="true" />
+
+          {/* Delete */}
+          <Button
+            variant="ghost"
+            onClick={onBulkDelete}
+            className="gap-1.5 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-300"
+            title="Delete selected tasks"
+          >
+            <Trash2Icon className="h-4 w-4" />
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
         </div>
       </div>
     </div>

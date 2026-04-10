@@ -156,7 +156,7 @@ describe("TaskCard", () => {
     const { container } = render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    expect(article).toHaveClass("border-red-300");
+    expect(article).toHaveClass("border-l-4", "border-l-red-500", "border-red-200");
   });
 
   it("does not show overdue warning for completed tasks", () => {

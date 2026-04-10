@@ -23,10 +23,10 @@
   --accent-muted: 165 180 252;         /* #a5b4fc */
   
   /* Quadrant colors */
-  --quadrant-focus: 219 234 254;       /* #dbeafe - blue */
-  --quadrant-schedule: 254 249 195;    /* #fef9c3 - yellow */
-  --quadrant-delegate: 209 250 229;    /* #d1fae5 - green */
-  --quadrant-eliminate: 243 232 255;   /* #f3e8ff - purple */
+  --quadrant-focus: 254 226 226;       /* #fee2e2 - red */
+  --quadrant-schedule: 219 234 254;    /* #dbeafe - blue */
+  --quadrant-delegate: 254 243 199;    /* #fef3c7 - amber */
+  --quadrant-eliminate: 241 245 249;   /* #f1f5f9 - slate */
   
   /* Card colors */
   --card-background: 255 255 255;      /* #ffffff */
@@ -42,10 +42,10 @@
   --shadow-fab: 0 8px 30px rgba(99, 102, 241, 0.4);
 
   /* Quadrant gradients */
-  --gradient-focus: linear-gradient(135deg, #3b82f6, #6366f1);
-  --gradient-schedule: linear-gradient(135deg, #f59e0b, #ef4444);
-  --gradient-delegate: linear-gradient(135deg, #10b981, #06b6d4);
-  --gradient-eliminate: linear-gradient(135deg, #8b5cf6, #ec4899);
+  --gradient-focus: linear-gradient(135deg, #ef4444, #f97316);
+  --gradient-schedule: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --gradient-delegate: linear-gradient(135deg, #f59e0b, #eab308);
+  --gradient-eliminate: linear-gradient(135deg, #6b7280, #94a3b8);
 }
 
 .dark {
@@ -70,10 +70,10 @@
   --accent-muted: 99 102 241;          /* #6366f1 */
   
   /* Quadrant colors - darker versions */
-  --quadrant-focus: 30 58 138;         /* #1e3a8a - dark blue */
-  --quadrant-schedule: 113 63 18;      /* #713f12 - dark yellow */
-  --quadrant-delegate: 20 83 45;       /* #14532d - dark green */
-  --quadrant-eliminate: 88 28 135;     /* #581c87 - dark purple */
+  --quadrant-focus: 127 29 29;         /* #7f1d1d - dark red */
+  --quadrant-schedule: 30 58 138;      /* #1e3a8a - dark blue */
+  --quadrant-delegate: 113 63 18;      /* #713f12 - dark amber */
+  --quadrant-eliminate: 51 65 85;      /* #334155 - dark slate */
   
   /* Card colors */
   --card-background: 30 41 59;         /* #1e293b */
@@ -89,10 +89,10 @@
   --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
 
   /* Quadrant gradients - slightly muted for dark mode */
-  --gradient-focus: linear-gradient(135deg, #2563eb, #4f46e5);
-  --gradient-schedule: linear-gradient(135deg, #d97706, #dc2626);
-  --gradient-delegate: linear-gradient(135deg, #059669, #0891b2);
-  --gradient-eliminate: linear-gradient(135deg, #7c3aed, #db2777);
+  --gradient-focus: linear-gradient(135deg, #dc2626, #ea580c);
+  --gradient-schedule: linear-gradient(135deg, #2563eb, #7c3aed);
+  --gradient-delegate: linear-gradient(135deg, #d97706, #ca8a04);
+  --gradient-eliminate: linear-gradient(135deg, #64748b, #94a3b8);
 }
 
 body {
@@ -354,6 +354,21 @@ main {
   .animate-drop-zone-pulse {
     animation: drop-zone-pulse 1s ease-in-out infinite;
   }
+
+  @keyframes bulk-bar-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-bulk-bar-in {
+    animation: bulk-bar-in 0.2s ease-out both;
+  }
 }
 
 /* Respect reduced motion preference */
@@ -384,6 +399,10 @@ main {
   }
 
   .animate-drop-zone-pulse {
+    animation: none !important;
+  }
+
+  .animate-bulk-bar-in {
     animation: none !important;
   }
 }

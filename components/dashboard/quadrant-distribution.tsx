@@ -9,10 +9,10 @@ interface QuadrantDistributionProps {
 }
 
 const COLORS: Record<QuadrantId, string> = {
-  "urgent-important": "#3b82f6",       // blue-500 (Do First)
-  "not-urgent-important": "#f59e0b",   // amber-500 (Schedule)
-  "urgent-not-important": "#10b981",   // emerald-500 (Delegate)
-  "not-urgent-not-important": "#8b5cf6" // violet-500 (Eliminate)
+  "urgent-important": "#ef4444",       // red-500 (Do First)
+  "not-urgent-important": "#3b82f6",   // blue-500 (Schedule)
+  "urgent-not-important": "#f59e0b",   // amber-500 (Delegate)
+  "not-urgent-not-important": "#6b7280" // gray-500 (Eliminate)
 };
 
 /**
