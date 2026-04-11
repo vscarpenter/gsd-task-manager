@@ -30,20 +30,33 @@ export function CompletionChart({ data }: CompletionChartProps) {
   }, [data]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">
-        Completion Trend
-      </h3>
+    <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">
+            Completion Trend
+          </h3>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Recent throughput across completed and newly created tasks.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background-muted/70 px-3 py-1.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--accent))]" />
+          <span className="text-xs font-medium text-foreground-muted">Completed</span>
+          <div className="ml-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
+          <span className="text-xs font-medium text-foreground-muted">Created</span>
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={280}>
         <AreaChart data={chartData}>
           <defs>
             <linearGradient id="gradientCompleted" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="rgb(var(--accent))" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="rgb(var(--accent))" stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="gradientCreated" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity={0.2} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.22} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -82,39 +95,31 @@ export function CompletionChart({ data }: CompletionChartProps) {
           <Area
             type="monotone"
             dataKey="Completed"
-            stroke="#3b82f6"
+            stroke="rgb(var(--accent))"
             strokeWidth={2}
             fill="url(#gradientCompleted)"
             dot={false}
-            activeDot={{ r: 5, fill: "#3b82f6", stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "rgb(var(--accent))", stroke: "#fff", strokeWidth: 2 }}
           />
           <Area
             type="monotone"
             dataKey="Created"
-            stroke="#10b981"
+            stroke="#3b82f6"
             strokeWidth={2}
             fill="url(#gradientCreated)"
             dot={false}
-            activeDot={{ r: 5, fill: "#10b981", stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "#3b82f6", stroke: "#fff", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>
-      {/* Legend */}
-      <div className="mt-3 flex items-center justify-center gap-6">
-        <div className="flex items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-          <span className="text-xs text-foreground-muted">Completed</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-          <span className="text-xs text-foreground-muted">Created</span>
-        </div>
-      </div>
     </div>
   );
 }
 
 function formatDate(isoDate: string): string {
   const date = new Date(isoDate);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "numeric",
+    day: "numeric",
+  }).format(date);
 }

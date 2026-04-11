@@ -40,6 +40,9 @@ export function TaskForm({
     handleSubmit
   } = useTaskForm({ initialValues, onSubmit, onCancel });
 
+  const selectClassName =
+    "flex h-11 w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/[0.02] ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-1">
@@ -69,8 +72,11 @@ export function TaskForm({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2 rounded-2xl border border-card-border bg-background-muted p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground">Urgency</p>
+        <div className="space-y-3 rounded-3xl border border-border/70 bg-background-muted/60 p-4 shadow-sm shadow-black/[0.02]">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">Urgency</p>
+            <p className="text-sm font-medium text-foreground">Decide whether this needs attention now.</p>
+          </div>
           <div className="flex gap-2">
             <TogglePill
               label="Urgent"
@@ -86,8 +92,11 @@ export function TaskForm({
             />
           </div>
         </div>
-        <div className="space-y-2 rounded-2xl border border-card-border bg-background-muted p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground">Importance</p>
+        <div className="space-y-3 rounded-3xl border border-border/70 bg-background-muted/60 p-4 shadow-sm shadow-black/[0.02]">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">Importance</p>
+            <p className="text-sm font-medium text-foreground">Keep the long-term value of the task explicit.</p>
+          </div>
           <div className="flex gap-2">
             <TogglePill
               label="Important"
@@ -120,7 +129,7 @@ export function TaskForm({
               id="due-time"
               value={selectedTime}
               onChange={(event) => updateTime(event.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className={selectClassName}
             >
               <option value="">No specific time</option>
               {TIME_OPTIONS.map((timeOption) => (
@@ -141,7 +150,7 @@ export function TaskForm({
             id="recurrence"
             value={values.recurrence}
             onChange={(event) => updateField("recurrence", event.target.value as RecurrenceType)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={selectClassName}
           >
             <option value="none">None</option>
             <option value="daily">Daily</option>
@@ -157,7 +166,7 @@ export function TaskForm({
             id="estimatedMinutes"
             value={values.estimatedMinutes ?? ""}
             onChange={(event) => updateField("estimatedMinutes", event.target.value === "" ? undefined : Number(event.target.value))}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={selectClassName}
           >
             <option value="">No estimate</option>
             <option value="15">15 minutes</option>
@@ -184,7 +193,7 @@ export function TaskForm({
             value={values.notifyBefore ?? 15}
             onChange={(event) => updateField("notifyBefore", event.target.value === "" ? undefined : Number(event.target.value))}
             disabled={values.notificationEnabled === false}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={selectClassName}
           >
             <option value="0">At due time</option>
             <option value="5">5 minutes before</option>

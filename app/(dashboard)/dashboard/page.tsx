@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [trendPeriod, setTrendPeriod] = useState<7 | 30 | 90>(30);
 
   const metrics = useMemo(() => calculateMetrics(tasks), [tasks]);
+  const last7TrendData = useMemo(() => getCompletionTrend(tasks, 7), [tasks]);
   const trendData = useMemo(
     () => getCompletionTrend(tasks, trendPeriod),
     [tasks, trendPeriod],
@@ -51,6 +52,35 @@ export default function DashboardPage() {
     [tasks],
   );
   const timeByQuadrant = useMemo(() => getTimeByQuadrant(tasks), [tasks]);
+  const todayTrend = last7TrendData.at(-1)?.completed ?? 0;
+  const previousSixDays = last7TrendData.slice(0, -1);
+  const previousSixAverage = previousSixDays.length > 0
+    ? previousSixDays.reduce((sum, point) => sum + point.completed, 0) / previousSixDays.length
+    : 0;
+  const completedTrend = previousSixAverage > 0
+    ? Math.round(((todayTrend - previousSixAverage) / previousSixAverage) * 100)
+    : todayTrend > 0 ? 100 : 0;
+  const completionPeak = Math.max(1, ...last7TrendData.map((point) => point.completed));
+  const completedInsight = metrics.completedToday === 0
+    ? "Ready to start today"
+    : completedTrend > 10
+      ? "Above your recent pace"
+      : completedTrend < -10
+        ? "Below your recent pace"
+        : "Holding steady";
+  const plannedActiveShare = metrics.activeTasks > 0
+    ? Math.round(((metrics.activeTasks - metrics.noDueDateCount) / metrics.activeTasks) * 100)
+    : 0;
+  const activeInsight = metrics.overdueCount > 0
+    ? `${metrics.overdueCount} overdue`
+    : metrics.noDueDateCount > 0
+      ? `${metrics.noDueDateCount} unscheduled`
+      : "Well scoped";
+  const completionInsight = metrics.completionRate >= 80
+    ? "Strong follow-through"
+    : metrics.completionRate >= 60
+      ? "Healthy momentum"
+      : "Room to tighten execution";
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -98,6 +128,10 @@ export default function DashboardPage() {
                   value={metrics.completedToday}
                   subtitle={`${metrics.completedThisWeek} this week`}
                   icon={CheckCircle2Icon}
+                  trend={previousSixAverage > 0 ? { value: completedTrend, isPositive: completedTrend >= 0 } : undefined}
+                  insight={completedInsight}
+                  progressValue={Math.round((metrics.completedToday / completionPeak) * 100)}
+                  progressLabel="Vs. recent best day"
                   accentColor="emerald"
                 />
                 <StatsCard
@@ -105,6 +139,9 @@ export default function DashboardPage() {
                   value={metrics.activeTasks}
                   subtitle={`${metrics.totalTasks} total tasks`}
                   icon={ListTodoIcon}
+                  insight={activeInsight}
+                  progressValue={plannedActiveShare}
+                  progressLabel="Have a due date"
                   accentColor="blue"
                 />
                 <StatsCard
@@ -112,6 +149,9 @@ export default function DashboardPage() {
                   value={`${metrics.completionRate}%`}
                   subtitle={`${metrics.completedTasks} completed`}
                   icon={TrendingUpIcon}
+                  insight={completionInsight}
+                  progressValue={metrics.completionRate}
+                  progressLabel="Done overall"
                   accentColor="amber"
                 />
                 <StreakIndicator streakData={streakData} />
