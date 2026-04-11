@@ -91,12 +91,6 @@ vi.mock('@/components/settings-dialog', () => ({
   SettingsDialog: () => null,
 }));
 
-vi.mock('@/components/quick-settings-panel', () => ({
-  QuickSettingsPanel: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="quick-settings-panel">{children}</div>
-  ),
-}));
-
 vi.mock('@/lib/use-auto-archive', () => ({
   useAutoArchive: () => undefined,
 }));
