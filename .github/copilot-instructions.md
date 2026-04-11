@@ -35,7 +35,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 ### Smart Views & Command Palette
 - **Smart Views**: Saved filter configurations (`smartViews` table). Pin up to 5 in header with keyboard shortcuts (1-9, 0=clear).
 - **Command Palette**: Global ⌘K/Ctrl+K shortcut (`command-palette.tsx`). Includes quick actions, navigation, and search.
-- **Quick Settings**: Slide-out panel (`quick-settings-panel.tsx`) for frequently-adjusted preferences (theme, notifications, sync interval).
+- **Settings**: Single consolidated dialog (`components/settings/settings-dialog.tsx`) with iOS-style grouped sections (Appearance, Notifications, Cloud Sync, Archive, Data & Storage, About). Opened directly from the header gear icon — no intermediate "quick" panel.
 
 ### Sync Architecture
 - **Frontend**: `lib/sync/` with modular architecture: `pb-sync-engine.ts` (push/pull), `pb-realtime.ts` (SSE subscriptions), `pb-auth.ts` (OAuth), `pocketbase-client.ts` (SDK singleton), `task-mapper.ts` (field mapping), `sync-coordinator.ts` (orchestrator).

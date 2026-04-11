@@ -461,35 +461,3 @@ describe("useDragAndDrop", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// 7. useQuickSettings — 8 uncovered functions
-// ---------------------------------------------------------------------------
-
-describe("useQuickSettings", () => {
-  it("returns initial state and handlers", async () => {
-    const { useQuickSettings } = await import("@/lib/use-quick-settings");
-    const { result } = renderHook(() => useQuickSettings());
-
-    expect(result.current.showCompleted).toBe(false);
-    expect(typeof result.current.toggleShowCompleted).toBe("function");
-    expect(typeof result.current.toggleNotifications).toBe("function");
-    expect(typeof result.current.setSyncInterval).toBe("function");
-  });
-
-  it("toggleShowCompleted dispatches event", async () => {
-    const { useQuickSettings } = await import("@/lib/use-quick-settings");
-    const { result } = renderHook(() => useQuickSettings());
-
-    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
-
-    await act(async () => {
-      result.current.toggleShowCompleted();
-    });
-
-    expect(dispatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "toggle-completed" })
-    );
-
-    dispatchSpy.mockRestore();
-  });
-});

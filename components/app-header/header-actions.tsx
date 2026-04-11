@@ -14,7 +14,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { QuickSettingsPanel } from "@/components/quick-settings-panel";
 
 interface HeaderActionsProps {
   onNewTask: () => void;
@@ -63,18 +62,24 @@ export function HeaderActions({
           </TooltipContent>
         </Tooltip>
       )}
-      <QuickSettingsPanel onOpenFullSettings={onOpenSettings}>
-        <Button
-          variant="ghost"
-          className="h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2"
-          aria-label="Quick Settings"
-        >
-          <SettingsIcon className="h-7 w-7 xl:h-5 xl:w-5" />
-          <span className="hidden xl:inline text-sm font-medium">
-            Settings
-          </span>
-        </Button>
-      </QuickSettingsPanel>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className="h-12 w-12 p-0 xl:w-auto xl:px-3 xl:gap-2"
+            onClick={onOpenSettings}
+            aria-label="Settings"
+          >
+            <SettingsIcon className="h-7 w-7 xl:h-5 xl:w-5" />
+            <span className="hidden xl:inline text-sm font-medium">
+              Settings
+            </span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Settings</p>
+        </TooltipContent>
+      </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

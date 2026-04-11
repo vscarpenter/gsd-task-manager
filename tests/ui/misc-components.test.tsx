@@ -27,19 +27,6 @@ vi.mock('@/lib/use-view-transition', () => ({
   }),
 }));
 
-vi.mock('@/lib/use-quick-settings', () => ({
-  useQuickSettings: () => ({
-    showCompleted: false,
-    toggleShowCompleted: vi.fn(),
-    notificationsEnabled: false,
-    toggleNotifications: vi.fn(),
-    isSyncEnabled: false,
-    autoSyncEnabled: false,
-    syncInterval: 5,
-    setSyncInterval: vi.fn(),
-  }),
-}));
-
 vi.mock('@/lib/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -49,13 +36,20 @@ vi.mock('@/lib/logger', () => ({
   }),
 }));
 
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 // --- Imports ---
 
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ViewToggle } from '@/components/view-toggle';
 import { KeyboardHintsToast } from '@/components/keyboard-hints-toast';
 import { PwaRegister } from '@/components/pwa-register';
-import { QuickSettingsPanel } from '@/components/quick-settings-panel';
+import { HeaderActions } from '@/components/app-header/header-actions';
 import { useTheme } from 'next-themes';
 
 // --- ThemeToggle ---
@@ -165,17 +159,49 @@ describe('PwaRegister', () => {
   });
 });
 
-// --- QuickSettingsPanel ---
+// --- HeaderActions ---
 
-describe('QuickSettingsPanel', () => {
-  const mockOnOpenFullSettings = vi.fn();
+describe('HeaderActions', () => {
+  const defaultProps = {
+    onNewTask: vi.fn(),
+    onHelp: vi.fn(),
+    onOpenSettings: vi.fn(),
+    selectionMode: false,
+    selectedCount: 0,
+    isDoFirstEmpty: false,
+  };
 
-  it('renders the trigger button', () => {
-    render(
-      <QuickSettingsPanel onOpenFullSettings={mockOnOpenFullSettings}>
-        <button>Open Settings</button>
-      </QuickSettingsPanel>
-    );
-    expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls onOpenSettings directly when the Settings button is clicked', () => {
+    const onOpenSettings = vi.fn();
+    render(<HeaderActions {...defaultProps} onOpenSettings={onOpenSettings} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onNewTask when the New Task button is clicked', () => {
+    const onNewTask = vi.fn();
+    render(<HeaderActions {...defaultProps} onNewTask={onNewTask} />);
+
+    // Both mobile (icon-only) and desktop (labeled) "New Task" buttons are rendered;
+    // getAllByRole avoids ambiguity and either click should wire to onNewTask.
+    const [firstNewTaskButton] = screen.getAllByRole('button', { name: /new task|create task/i });
+    fireEvent.click(firstNewTaskButton);
+
+    expect(onNewTask).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onHelp when the Help button is clicked', () => {
+    const onHelp = vi.fn();
+    render(<HeaderActions {...defaultProps} onHelp={onHelp} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /user guide/i }));
+
+    expect(onHelp).toHaveBeenCalledTimes(1);
   });
 });
