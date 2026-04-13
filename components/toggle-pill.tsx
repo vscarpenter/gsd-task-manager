@@ -23,8 +23,8 @@ export function TogglePill({ active, label, onSelect, variant }: TogglePillProps
       className={`flex-1 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.14em] transition-all duration-200 ${className}`}
       aria-pressed={active}
     >
-      <span className="flex items-center justify-between gap-3">
-        <span>{label}</span>
+      <span className="flex items-center justify-between gap-2">
+        <span className="min-w-0 leading-tight">{label}</span>
         <span
           className={`h-2.5 w-2.5 shrink-0 rounded-full transition-all ${
             active
