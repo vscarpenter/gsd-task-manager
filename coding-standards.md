@@ -177,7 +177,7 @@ Each increment is one red/green/refactor cycle (see Part 3). Do not write a seco
 ### Naming & Clarity
 
 - Use descriptive names; avoid generic terms like 'data', 'temp', or single letters.
-- Functions should be 30 lines or fewer with single responsibility.
+- Functions should be 40 lines or fewer with single responsibility.
 - Maximum 3 levels of nesting; use early returns.
 - Comments explain WHY, not WHAT.
 - Document public APIs with usage examples.
@@ -193,7 +193,7 @@ Each increment is one red/green/refactor cycle (see Part 3). Do not write a seco
 
 ### Structure & Abstraction
 
-- Apply DRY only after 3+ repetitions.
+- Apply DRY only after 2+ repetitions.
 - Follow YAGNI: do not build for hypothetical futures.
 - Prefer composition over inheritance.
 - Duplicate if it is clearer than abstracting.
@@ -712,7 +712,7 @@ Enforces the red/green/refactor cycle (Part 3) for a named behavior: writes a fa
 
 ### Red Flags
 
-- Functions exceeding 30 lines
+- Functions exceeding 40 lines
 - More than 3 nesting levels
 - Unused abstractions or commented-out code
 - TODOs without ticket links

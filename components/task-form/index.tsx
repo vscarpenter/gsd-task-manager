@@ -71,7 +71,7 @@ export function TaskForm({
         ) : null}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3">
         <div className="space-y-3 rounded-3xl border border-border/70 bg-background-muted/60 p-4 shadow-sm shadow-black/[0.02]">
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">Urgency</p>
