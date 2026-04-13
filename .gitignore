@@ -1,6 +1,7 @@
 # Dependencies
 node_modules
 .bun/
+.npmrc
 
 # Next.js build output
 .next
