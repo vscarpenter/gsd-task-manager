@@ -7,6 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# IMPORTANT: Before this workflow will succeed, you must disable SonarCloud's
+# "Automatic Analysis" for this project. Go to:
+# https://sonarcloud.io/project/admin/analysis_method?id=vscarpenter_gsd-task-manager
+# and toggle "Automatic Analysis" OFF. This is a one-time manual step.
+
 jobs:
   sonarcloud:
     name: SonarCloud
@@ -35,19 +40,9 @@ jobs:
         env:
           CI: true
 
-      - name: Disable SonarCloud Automatic Analysis via API
-        run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-            -u "${{ secrets.SONAR_TOKEN }}:" \
-            "https://sonarcloud.io/api/settings/set?key=sonar.autoscan&value=false&component=vscarpenter_gsd-task-manager")
-          echo "Settings API response: $response"
-        continue-on-error: true
-
       - name: SonarCloud Scan
-        uses: sonarsource/sonarcloud-github-action@v3
+        uses: sonarsource/sonarqube-scan-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.scanner.automaticAnalysis=false
+          SONAR_HOST_URL: https://sonarcloud.io
