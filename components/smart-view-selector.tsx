@@ -143,9 +143,7 @@ export function SmartViewSelector({
       window.dispatchEvent(new CustomEvent('pinnedViewsChanged'));
     } catch (error) {
       logger.error("Failed to toggle pin", error instanceof Error ? error : new Error(String(error)));
-      if (error instanceof Error) {
-        alert(error.message);
-      }
+      toast.error(error instanceof Error ? error.message : "Failed to update pinned views");
     }
   };
 

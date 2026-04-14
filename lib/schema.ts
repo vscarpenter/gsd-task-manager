@@ -25,7 +25,7 @@ export const timeEntrySchema = z.object({
 	id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
 	startedAt: z.string().datetime({ offset: true }),
 	endedAt: z.string().datetime({ offset: true }).optional(),
-	notes: z.string().max(200).optional(),
+	notes: z.string().max(SCHEMA_LIMITS.TIME_ENTRY_NOTES_MAX_LENGTH).optional(),
 });
 
 export const taskDraftSchema = z.object({
@@ -51,7 +51,7 @@ export const taskRecordSchema = taskDraftSchema
 		completedAt: z.string().datetime({ offset: true }).optional(),
 		createdAt: z.string().datetime({ offset: true }),
 		updatedAt: z.string().datetime({ offset: true }),
-		parentTaskId: z.string().min(4).optional(),
+		parentTaskId: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH).optional(),
 		notificationSent: z.boolean().default(false),
 		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
 		snoozedUntil: z.string().datetime({ offset: true }).optional(),
@@ -70,7 +70,7 @@ const taskRecordImportSchema = taskDraftSchema
 		completedAt: z.string().datetime({ offset: true }).optional(),
 		createdAt: z.string().datetime({ offset: true }),
 		updatedAt: z.string().datetime({ offset: true }),
-		parentTaskId: z.string().min(4).optional(),
+		parentTaskId: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH).optional(),
 		notificationSent: z.boolean().default(false),
 		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
 		snoozedUntil: z.string().datetime({ offset: true }).optional(),
@@ -88,7 +88,7 @@ export const importPayloadSchema = z.object({
 export const notificationSettingsSchema = z.object({
 	id: z.literal("settings").default("settings"),
 	enabled: z.boolean().default(true),
-	defaultReminder: z.number().int().min(0).default(15), // minutes before due date
+	defaultReminder: z.number().int().min(0).default(SCHEMA_LIMITS.DEFAULT_NOTIFY_MINUTES), // minutes before due date
 	soundEnabled: z.boolean().default(true),
 	quietHoursStart: z.string().optional(), // HH:mm format
 	quietHoursEnd: z.string().optional(), // HH:mm format

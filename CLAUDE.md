@@ -127,6 +127,19 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ## Development Notes
 
+### Non-Obvious Dependencies
+
+These packages are not self-explanatory from their names alone:
+
+- **`@tanstack/react-form`** — Type-safe, headless form state management. Chosen over `react-hook-form` for superior TypeScript inference and better integration with Zod schemas.
+- **`@tanstack/react-virtual`** — Virtual scrolling for large task lists; only renders visible DOM rows, preventing performance degradation when lists grow into hundreds of tasks.
+- **`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`** — Accessible, headless drag-and-drop primitives. Supports screen readers and full keyboard navigation, unlike most DnD libraries.
+- **`recharts`** — Lightweight, composable chart library used for dashboard analytics (completion trends, quadrant distribution). Chosen for small bundle size and React-native API.
+- **`sonner`** — Accessible toast notifications. Replaced `react-hot-toast` for better a11y (ARIA live regions, focus management).
+- **`babel-plugin-react-compiler`** — Enables the React compiler for automatic memoization optimization, reducing manual `useMemo`/`useCallback` boilerplate.
+- **`canvas-confetti`** — Task completion celebration animation. Pinned to exact version `1.9.4` for reproducible builds (the API changed in v2).
+- **`nanoid`** — Cryptographically-secure unique ID generation for tasks and smart views. Produces URL-safe IDs smaller than UUIDs.
+
 ### Schema & Database
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
 - Database migrations in `lib/db.ts` - current version is 13
@@ -195,6 +208,19 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 ### Pre-commit
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
 - Static export mode means no API routes or SSR
+
+### Testing
+- Use `bun run test` (not `bun test`) — the latter invokes bun's built-in runner, not Vitest
+- Mock IndexedDB with `fake-indexeddb` (already auto-imported in vitest.setup.ts)
+- `localStorage` is polyfilled in vitest.setup.ts with a full in-memory implementation — use `localStorage.removeItem(key)` (not `localStorage.clear()`) in test beforeEach for targeted cleanup
+- The sync module (`lib/sync/`) has partial test coverage — use `vi.mock('pocketbase')` pattern from existing sync tests
+
+### April 2026 Coding Standards Audit — Lessons
+- Removed unused `dompurify` / `@types/dompurify` — React handles XSS natively
+- Pinned `canvas-confetti` from `^1.9.4` to exact `1.9.4`
+- Migrated `.parse()` to `.safeParse()` in user-input paths (import, create)
+- `window.alert()` is not accessible — always use `toast.error()` from sonner instead
+- `localStorage.clear()` is not available in jsdom under Bun's test runner — use targeted `removeItem()` calls in tests
 
 ## Modular Architecture
 

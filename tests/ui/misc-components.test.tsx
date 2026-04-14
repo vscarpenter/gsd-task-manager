@@ -104,7 +104,7 @@ describe('ViewToggle', () => {
 
 describe('KeyboardHintsToast', () => {
   beforeEach(() => {
-    localStorage.clear();
+    localStorage.removeItem('gsd-keyboard-hints-dismissed');
   });
 
   it('renders keyboard shortcuts text when not dismissed', () => {
@@ -119,10 +119,15 @@ describe('KeyboardHintsToast', () => {
     expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument();
   });
 
-  it('hides after dismiss and sets localStorage', () => {
+  it('hides content after dismiss', () => {
     render(<KeyboardHintsToast />);
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
     expect(screen.queryByText(/new task/i)).not.toBeInTheDocument();
+  });
+
+  it('sets localStorage dismissed flag after dismiss', () => {
+    render(<KeyboardHintsToast />);
+    fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
     expect(localStorage.getItem('gsd-keyboard-hints-dismissed')).toBe('1');
   });
 });

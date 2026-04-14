@@ -131,6 +131,68 @@ describe('reset-everything', () => {
       expect(result.errors.length).toBeGreaterThan(0);
       expect(result.errors[0]).toContain('sync error');
     });
+
+    it('should set success=false and report error when IndexedDB clear fails', async () => {
+      mockClear.mockRejectedValueOnce(new Error('DB clear failed'));
+
+      const result = await resetEverything();
+
+      expect(result.success).toBe(false);
+      expect(result.errors.some((e) => e.includes('DB clear failed'))).toBe(true);
+    });
+
+    it('should report "Unknown error" when a non-Error is thrown by disableSync', async () => {
+      mockDisableSync.mockImplementationOnce(() => Promise.reject('plain string error'));
+
+      const result = await resetEverything();
+
+      expect(result.success).toBe(false);
+      expect(result.errors.some((e) => e.includes('Unknown error'))).toBe(true);
+    });
+
+    it('should handle preserveTheme=true when no theme is in localStorage', async () => {
+      // No theme set — localStorage.getItem('theme') returns null
+      const result = await resetEverything({ preserveTheme: true });
+
+      expect(result.success).toBe(true);
+      expect(result.clearedLocalStorage).not.toContain('theme');
+      // Theme should remain absent (not created)
+      expect(localStorage.getItem('theme')).toBeNull();
+    });
+
+    it('should return correct buildPreservedSyncMetadata structure for a given deviceId', async () => {
+      mockGetSyncConfig.mockResolvedValue({ deviceId: 'device-xyz-999' });
+
+      await resetEverything();
+
+      expect(mockAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'sync_config',
+          enabled: false,
+          userId: null,
+          deviceId: 'device-xyz-999',
+          deviceName: 'Device',
+          email: null,
+          provider: null,
+          lastSyncAt: null,
+          lastSuccessfulSyncAt: null,
+          consecutiveFailures: 0,
+          lastFailureAt: null,
+          lastFailureReason: null,
+          nextRetryAt: null,
+          autoSyncEnabled: true,
+          autoSyncIntervalMinutes: 2,
+        })
+      );
+    });
+
+    it('should skip adding syncMetadata when no deviceId is available', async () => {
+      mockGetSyncConfig.mockResolvedValue({ deviceId: undefined });
+
+      await resetEverything();
+
+      expect(mockAdd).not.toHaveBeenCalled();
+    });
   });
 
   describe('reloadAfterReset', () => {

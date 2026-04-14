@@ -45,7 +45,11 @@ export function TaskCardActions({
           <span className="truncate">{formatRelative(task.dueDate)}</span>
         ) : null}
         {task.recurrence !== "none" ? (
-          <span className="flex items-center gap-1 text-accent" title={`Recurs ${task.recurrence}`}>
+          <span
+            className="flex items-center gap-1 text-accent"
+            title={`Recurs ${task.recurrence}`}
+            aria-label={`Recurs ${task.recurrence}`}
+          >
             <RepeatIcon className="h-3 w-3" />
           </span>
         ) : null}

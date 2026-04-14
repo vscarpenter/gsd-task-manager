@@ -245,7 +245,7 @@ describe('AppHeader', () => {
 describe('FirstTimeRedirect', () => {
   beforeEach(() => {
     mockReplace.mockClear();
-    localStorage.clear();
+    localStorage.removeItem('gsd-has-launched');
     mockPathname = '/';
   });
 

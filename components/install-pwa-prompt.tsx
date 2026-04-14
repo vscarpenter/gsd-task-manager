@@ -34,6 +34,8 @@ export function InstallPwaPrompt() {
     // Check if already installed
     const isInstalled =
       window.matchMedia("(display-mode: standalone)").matches ||
+      // navigator.standalone is a non-standard Safari/WebKit property not in
+      // the TypeScript DOM types; `any` cast is the only way to access it.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window.navigator as any).standalone === true;
 
