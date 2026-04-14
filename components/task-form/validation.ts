@@ -2,6 +2,9 @@ import { taskDraftSchema } from "@/lib/schema";
 
 export { taskDraftSchema };
 
+export const SELECT_CLASS =
+  "flex h-11 w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/[0.02] ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
 export interface FormErrors {
   title?: string;
   description?: string;

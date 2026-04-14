@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { TIME_MS } from "@/lib/constants";
+import { TIME_MS, DATE_CONFIG } from "@/lib/constants";
 
 export function cn(...classNames: Array<string | undefined | false | null>): string {
   return clsx(classNames);
@@ -43,7 +43,7 @@ export function formatRelative(value?: string): string {
   const diff = date.getTime() - now.getTime();
   const dayDelta = Math.round(diff / TIME_MS.DAY);
 
-  if (Math.abs(dayDelta) > 6) {
+  if (Math.abs(dayDelta) > DATE_CONFIG.RELATIVE_DATE_THRESHOLD_DAYS) {
     return formatDueDate(value);
   }
 

@@ -244,4 +244,117 @@ describe('useCommandPalette', () => {
 
     dispatchSpy.mockRestore();
   });
+
+  it('should open palette directly with setOpen(true)', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    expect(result.current.open).toBe(false);
+
+    act(() => {
+      result.current.setOpen(true);
+    });
+
+    expect(result.current.open).toBe(true);
+  });
+
+  it('should close palette directly with setOpen(false)', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    act(() => {
+      result.current.setOpen(true);
+    });
+
+    act(() => {
+      result.current.setOpen(false);
+    });
+
+    expect(result.current.open).toBe(false);
+  });
+
+  it('should toggle open state with Ctrl+K', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
+      );
+    });
+
+    expect(result.current.open).toBe(true);
+
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
+      );
+    });
+
+    expect(result.current.open).toBe(false);
+  });
+
+  it('should close with Escape when palette is open', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    act(() => {
+      result.current.setOpen(true);
+    });
+
+    expect(result.current.open).toBe(true);
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+
+    expect(result.current.open).toBe(false);
+  });
+
+  it('should not close with Escape when palette is already closed', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+
+    expect(result.current.open).toBe(false);
+  });
+
+  it('should update selectedActionId via setSelectedActionId', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    expect(result.current.selectedActionId).toBeNull();
+
+    act(() => {
+      result.current.setSelectedActionId('a1');
+    });
+
+    expect(result.current.selectedActionId).toBe('a1');
+  });
+
+  it('should reset selectedActionId when closing the palette', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    act(() => {
+      result.current.setOpen(true);
+      result.current.setSelectedActionId('a2');
+    });
+
+    act(() => {
+      result.current.setOpen(false);
+    });
+
+    expect(result.current.selectedActionId).toBeNull();
+  });
 });

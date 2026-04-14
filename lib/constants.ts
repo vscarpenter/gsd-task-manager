@@ -116,6 +116,24 @@ export const TIME_UTILS = {
 } as const;
 
 /**
+ * Date display configuration
+ */
+export const DATE_CONFIG = {
+  /** Days threshold beyond which relative dates switch to absolute format */
+  RELATIVE_DATE_THRESHOLD_DAYS: 6,
+} as const;
+
+/**
+ * Smart Views configuration
+ */
+export const SMART_VIEWS_CONFIG = {
+  /** Length of generated nanoid for Smart View IDs */
+  ID_LENGTH: 12,
+  /** Maximum number of pinned Smart Views in the header */
+  MAX_PINNED: 5,
+} as const;
+
+/**
  * Archive configuration
  */
 export const ARCHIVE_CONFIG = {

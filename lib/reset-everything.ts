@@ -13,6 +13,7 @@
 import { getDb } from "@/lib/db";
 import { disableSync, getSyncConfig } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
+import { SYNC_CONFIG } from "@/lib/constants/sync";
 
 const logger = createLogger("DB");
 
@@ -97,7 +98,7 @@ function buildPreservedSyncMetadata(deviceId: string) {
 		lastFailureReason: null,
 		nextRetryAt: null,
 		autoSyncEnabled: true,
-		autoSyncIntervalMinutes: 2,
+		autoSyncIntervalMinutes: SYNC_CONFIG.DEFAULT_AUTO_SYNC_INTERVAL_MINUTES,
 	};
 }
 

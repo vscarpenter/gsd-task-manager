@@ -236,6 +236,72 @@ describe('stopTimeTracking', () => {
       'No running timer found for this task'
     );
   });
+
+  it('throws when task not found', async () => {
+    const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    mockGet.mockResolvedValue(undefined);
+
+    await expect(stopTimeTracking('missing-task')).rejects.toThrow(
+      'Task missing-task not found'
+    );
+  });
+
+  it('accumulates timeSpent correctly across multiple completed entries', async () => {
+    const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    // Two completed entries totalling 90 min, plus one running entry of 30 min
+    const task = createBaseTask({
+      timeSpent: 90,
+      timeEntries: [
+        {
+          id: 'entry-1',
+          startedAt: '2025-06-01T08:00:00.000Z',
+          endedAt: '2025-06-01T09:00:00.000Z', // 60 min
+        },
+        {
+          id: 'entry-2',
+          startedAt: '2025-06-01T10:00:00.000Z',
+          endedAt: '2025-06-01T10:30:00.000Z', // 30 min
+        },
+        {
+          id: 'entry-3',
+          startedAt: '2025-06-01T12:00:00.000Z', // running
+        },
+      ],
+    });
+    mockGet.mockResolvedValue(task);
+    mockIsoNow.mockReturnValue('2025-06-01T12:15:00.000Z'); // 15 min later
+    mockPut.mockResolvedValue(undefined);
+
+    const result = await stopTimeTracking('task-1');
+
+    // 60 + 30 + 15 = 105 minutes total
+    expect(result.timeSpent).toBe(105);
+    expect(result.timeEntries).toHaveLength(3);
+    expect(result.timeEntries![2].endedAt).toBe('2025-06-01T12:15:00.000Z');
+  });
+
+  it('preserves existing entry notes when stop called without notes argument', async () => {
+    const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+
+    const existingNotes = 'pre-existing session notes';
+    const task = createBaseTask({
+      timeEntries: [
+        {
+          id: 'entry-1',
+          startedAt: '2025-06-01T12:00:00.000Z',
+          notes: existingNotes,
+        },
+      ],
+    });
+    mockGet.mockResolvedValue(task);
+    mockPut.mockResolvedValue(undefined);
+
+    const result = await stopTimeTracking('task-1'); // no notes arg
+
+    expect(result.timeEntries![0].notes).toBe(existingNotes);
+  });
 });
 
 describe('TIME_TRACKING Constants', () => {

@@ -5,6 +5,21 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 expect.extend(matchers);
 import "fake-indexeddb/auto";
 
+// Bun passes --localstorage-file without a valid path to jsdom, producing a broken
+// localStorage stub that lacks clear(), removeItem(), and other standard methods.
+// Override it with a full in-memory implementation so all tests behave consistently.
+class InMemoryStorage implements Storage {
+  private store: Record<string, string> = {};
+  get length(): number { return Object.keys(this.store).length; }
+  clear(): void { this.store = {}; }
+  getItem(key: string): string | null { return Object.prototype.hasOwnProperty.call(this.store, key) ? this.store[key] : null; }
+  setItem(key: string, value: string): void { this.store[key] = String(value); }
+  removeItem(key: string): void { delete this.store[key]; }
+  key(index: number): string | null { return Object.keys(this.store)[index] ?? null; }
+}
+Object.defineProperty(window, 'localStorage', { value: new InMemoryStorage(), writable: true, configurable: true });
+Object.defineProperty(window, 'sessionStorage', { value: new InMemoryStorage(), writable: true, configurable: true });
+
 // Provide a mock implementation for matchMedia used by Radix components
 if (!window.matchMedia) {
   window.matchMedia = () => ({
@@ -73,6 +88,9 @@ console.error = (...args: unknown[]) => {
     if (firstArg.includes("Missing `Description`") && firstArg.includes("DialogContent")) {
       return;
     }
+    if (firstArg.includes("requires a") && firstArg.includes("DialogTitle")) {
+      return;
+    }
   }
   originalConsoleError(...args);
 };
@@ -84,6 +102,9 @@ console.warn = (...args: unknown[]) => {
       return;
     }
     if (firstArg.includes("Missing `Description`") && firstArg.includes("DialogContent")) {
+      return;
+    }
+    if (firstArg.includes("DialogTitle")) {
       return;
     }
   }

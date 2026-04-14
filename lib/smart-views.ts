@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
 import type { AppPreferences } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
+import { SMART_VIEWS_CONFIG } from "@/lib/constants";
 
 /**
  * Get all Smart Views (built-in + custom)
@@ -49,7 +50,7 @@ export async function createSmartView(
 
   const newView: SmartView = {
     ...view,
-    id: nanoid(12),
+    id: nanoid(SMART_VIEWS_CONFIG.ID_LENGTH),
     isBuiltIn: false,
     createdAt: now,
     updatedAt: now
@@ -121,7 +122,7 @@ export async function getAppPreferences(): Promise<AppPreferences> {
     return {
       id: "preferences" as const,
       pinnedSmartViewIds: [],
-      maxPinnedViews: 5
+      maxPinnedViews: SMART_VIEWS_CONFIG.MAX_PINNED
     };
   }
 

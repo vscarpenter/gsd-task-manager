@@ -134,6 +134,9 @@ class GsdDatabase extends Dexie {
         });
 
         // Migrate existing tasks to have empty vectorClock
+        // Dexie's .modify() callback receives a mutable plain object; the typed
+        // schema doesn't include vectorClock (it was removed in v13), so `any` is
+        // required to access this legacy field during migration.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return trans.table("tasks").toCollection().modify((task: any) => {
           if (!task.vectorClock) {
@@ -312,11 +315,15 @@ class GsdDatabase extends Dexie {
         });
 
         // 4. Strip vectorClock from existing tasks
+        // Dexie's .modify() callback receives a mutable plain object; `any` is
+        // required to delete the legacy `vectorClock` field not present in the
+        // current TypeScript schema.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await trans.table("tasks").toCollection().modify((task: any) => {
           delete task.vectorClock;
         });
 
+        // Same reason as above: Dexie's .modify() callback is typed any internally.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await trans.table("archivedTasks").toCollection().modify((task: any) => {
           delete task.vectorClock;

@@ -28,6 +28,9 @@ export const SYNC_CONFIG = {
   /** Initial sync delay after starting background sync (10 seconds) */
   INITIAL_SYNC_DELAY_MS: 10000,
 
+  /** Default auto-sync interval in minutes for new sync configurations */
+  DEFAULT_AUTO_SYNC_INTERVAL_MINUTES: 2,
+
   /** Default limit for sync history queries */
   DEFAULT_HISTORY_LIMIT: 50,
   /** Threshold for considering a queued operation stale (1 hour) */

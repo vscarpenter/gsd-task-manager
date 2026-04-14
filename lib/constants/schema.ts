@@ -21,5 +21,11 @@ export const SCHEMA_LIMITS = {
 
   /** Maximum length for individual tags */
   TAG_MAX_LENGTH: 30,
+
+  /** Maximum length for time entry notes */
+  TIME_ENTRY_NOTES_MAX_LENGTH: 200,
+
+  /** Default minutes before due date to send notifications */
+  DEFAULT_NOTIFY_MINUTES: 15,
 } as const;
 
