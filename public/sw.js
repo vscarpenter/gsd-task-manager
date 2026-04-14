@@ -2,7 +2,11 @@
 const CACHE_NAME = `gsd-cache-${Date.now()}`;
 const OFFLINE_ASSETS = [
 	"/",
+	"/about/",
+	"/archive/",
 	"/dashboard/",
+	"/install/",
+	"/sync-history/",
 	"/manifest.json",
 	"/icons/icon-192.png",
 	"/icons/icon-512.png",
