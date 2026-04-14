@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { SortableAttributes } from "@/components/task-card/types";
 
 // ---------------------------------------------------------------------------
 // Common mocks
@@ -311,7 +312,7 @@ describe("TaskCardHeader", () => {
         selectionMode={false}
         isSelected={false}
         onToggleComplete={vi.fn()}
-        sortableAttributes={{} as any}
+        sortableAttributes={{} as SortableAttributes}
         sortableListeners={undefined}
       />
     );
@@ -347,7 +348,7 @@ describe("TaskCardHeader", () => {
         selectionMode={false}
         isSelected={false}
         onToggleComplete={vi.fn()}
-        sortableAttributes={{} as any}
+        sortableAttributes={{} as SortableAttributes}
         sortableListeners={undefined}
       />
     );

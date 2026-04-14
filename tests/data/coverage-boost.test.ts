@@ -307,7 +307,7 @@ describe("notification permissions", () => {
 
   it("checkNotificationPermission returns 'denied' when not supported", async () => {
     const originalNotification = globalThis.Notification;
-    // @ts-expect-error
+    // @ts-expect-error — deleting a non-optional global for test isolation
     delete globalThis.Notification;
 
     vi.resetModules();

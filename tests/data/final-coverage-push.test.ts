@@ -313,7 +313,7 @@ describe("filters — additional branches", () => {
 describe("notification display — internal function branches", () => {
   it("showTestNotification returns false when not supported", async () => {
     const originalNotification = globalThis.Notification;
-    // @ts-expect-error
+    // @ts-expect-error — deleting a non-optional global for test isolation
     delete globalThis.Notification;
 
     vi.resetModules();
