@@ -55,9 +55,19 @@ export function InstallPwaPrompt() {
       }
     }
 
-    // Listen for the beforeinstallprompt event
+    // Listen for the beforeinstallprompt event.
+    // Chrome fires this on every SPA navigation, so we must re-check the
+    // dismissal state each time the event fires — not just on mount.
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      const currentDismissed = localStorage.getItem("gsd-pwa-dismissed");
+      if (currentDismissed) {
+        const dismissedTime = Number.parseInt(currentDismissed, 10);
+        const daysSinceDismissed = (Date.now() - dismissedTime) / TIME_MS.DAY;
+        if (daysSinceDismissed < 7) {
+          return;
+        }
+      }
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowPrompt(true);
     };

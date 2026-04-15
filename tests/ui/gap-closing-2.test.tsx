@@ -184,7 +184,7 @@ describe('BulkTagDialog', () => {
 describe('InstallPwaPrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    localStorage.removeItem('gsd-pwa-dismissed');
 
     // Mock matchMedia to return not standalone
     Object.defineProperty(window, 'matchMedia', {
@@ -313,6 +313,42 @@ describe('InstallPwaPrompt', () => {
     expect(
       screen.queryByText('Install GSD Task Manager')
     ).not.toBeInTheDocument();
+  });
+
+  it('should not re-show after dismissal when beforeinstallprompt fires again', async () => {
+    const user = userEvent.setup();
+    render(<InstallPwaPrompt />);
+
+    // Fire the event the first time
+    act(() => {
+      const event = new Event('beforeinstallprompt', { cancelable: true });
+      Object.defineProperty(event, 'prompt', { value: vi.fn() });
+      Object.defineProperty(event, 'userChoice', {
+        value: Promise.resolve({ outcome: 'dismissed' }),
+      });
+      window.dispatchEvent(event);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Install GSD Task Manager')).toBeInTheDocument();
+    });
+
+    // Dismiss the prompt
+    await user.click(screen.getByText('Not Now'));
+    expect(screen.queryByText('Install GSD Task Manager')).not.toBeInTheDocument();
+
+    // Browser fires beforeinstallprompt again (e.g., on SPA navigation)
+    act(() => {
+      const event = new Event('beforeinstallprompt', { cancelable: true });
+      Object.defineProperty(event, 'prompt', { value: vi.fn() });
+      Object.defineProperty(event, 'userChoice', {
+        value: Promise.resolve({ outcome: 'dismissed' }),
+      });
+      window.dispatchEvent(event);
+    });
+
+    // Prompt should NOT reappear within the 7-day cooldown window
+    expect(screen.queryByText('Install GSD Task Manager')).not.toBeInTheDocument();
   });
 
   it('should have role="dialog" with proper aria attributes', async () => {
