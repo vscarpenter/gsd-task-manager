@@ -63,19 +63,3 @@ export function notifySyncError(
         });
     }
 }
-
-/**
- * Get user-friendly action label for operation type
- */
-function getActionLabel(operation: string): string {
-    switch (operation) {
-        case 'create':
-            return 'create';
-        case 'update':
-            return 'update';
-        case 'delete':
-            return 'delete';
-        default:
-            return 'sync';
-    }
-}

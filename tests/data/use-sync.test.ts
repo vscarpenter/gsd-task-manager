@@ -9,8 +9,6 @@ import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
 import { getDb } from '@/lib/db';
-// Type import used for documentation
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { PBSyncResult } from '@/lib/sync/types';
 
 // Mock the sync modules

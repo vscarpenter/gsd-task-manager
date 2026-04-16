@@ -76,36 +76,38 @@ export function SmartViewPills({
   }
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-      {/* Pinned view pills */}
-      {pinnedViews.map((view, index) => (
-        <Button
-          key={view.id}
-          variant={activeViewId === view.id ? "primary" : "subtle"}
-          className="shrink-0 gap-2 h-8 px-3 text-sm"
-          onClick={() => handleSelectView(view)}
-        >
-          <span className="text-base leading-none">{view.icon}</span>
-          <span className="text-sm">{view.name}</span>
-          <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border bg-background px-1.5 text-[10px] font-medium opacity-50">
-            {index + 1}
-          </kbd>
-        </Button>
-      ))}
+    <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto hide-scrollbar">
+        {/* Pinned view pills */}
+        {pinnedViews.map((view, index) => (
+          <Button
+            key={view.id}
+            variant={activeViewId === view.id ? "primary" : "subtle"}
+            className="shrink-0 gap-2 h-8 px-3 text-sm"
+            onClick={() => handleSelectView(view)}
+          >
+            <span className="text-base leading-none">{view.icon}</span>
+            <span className="text-sm">{view.name}</span>
+            <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border bg-background px-1.5 text-[10px] font-medium opacity-50">
+              {index + 1}
+            </kbd>
+          </Button>
+        ))}
 
-      {/* Clear button if a view is active */}
-      {activeViewId && (
-        <Button
-          variant="ghost"
-          className="shrink-0 h-8 px-2 text-xs text-foreground-muted hover:text-foreground"
-          onClick={handleClearView}
-        >
-          Clear
-          <kbd className="hidden sm:inline-flex ml-1.5 h-5 items-center rounded border border-border bg-background px-1.5 text-[10px] font-medium opacity-50">
-            0
-          </kbd>
-        </Button>
-      )}
+        {/* Clear button if a view is active */}
+        {activeViewId && (
+          <Button
+            variant="ghost"
+            className="shrink-0 h-8 px-2 text-xs text-foreground-muted hover:text-foreground"
+            onClick={handleClearView}
+          >
+            Clear
+            <kbd className="hidden sm:inline-flex ml-1.5 h-5 items-center rounded border border-border bg-background px-1.5 text-[10px] font-medium opacity-50">
+              0
+            </kbd>
+          </Button>
+        )}
+      </div>
 
       {/* More button - opens full selector */}
       <SmartViewSelector

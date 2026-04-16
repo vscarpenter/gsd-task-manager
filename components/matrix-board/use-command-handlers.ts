@@ -6,12 +6,12 @@ import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { TOAST_DURATION } from "@/lib/constants";
 import { exportTasks } from "@/lib/tasks";
 import { useSync } from "@/lib/hooks/use-sync";
+import { ROUTES } from "@/lib/routes";
 import type { CommandActionHandlers } from "@/lib/command-actions";
 import type { FilterCriteria } from "@/lib/filters";
 
 interface UseCommandHandlersOptions {
   openCreateDialog: () => void;
-  openSettingsDialog: () => void;
   openHelpDialog: () => void;
   openImportDialog: (contents: string) => void;
   selectionMode: boolean;
@@ -28,6 +28,15 @@ export function useCommandHandlers(options: UseCommandHandlersOptions): {
   handleImport: (file: File) => Promise<void>;
   handleImportComplete: () => void;
 } {
+  const {
+    openCreateDialog,
+    openHelpDialog,
+    openImportDialog,
+    onSelectSmartView,
+    onSetActiveSmartViewId,
+    onToggleSelectionMode,
+    onClearSelection,
+  } = options;
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const { showToast } = useToast();
@@ -38,7 +47,7 @@ export function useCommandHandlers(options: UseCommandHandlersOptions): {
     try {
       const contents = await file.text();
       JSON.parse(contents);
-      options.openImportDialog(contents);
+      openImportDialog(contents);
     } catch (error) {
       handleError(error, {
         action: "PARSE_JSON",
@@ -47,15 +56,14 @@ export function useCommandHandlers(options: UseCommandHandlersOptions): {
         metadata: { fileName: file.name }
       });
     }
-  }, [options.openImportDialog, handleError]);
+  }, [openImportDialog, handleError]);
 
   const handleImportComplete = useCallback(() => {
-    options.openSettingsDialog(); // closes settings
     showToast("Tasks imported successfully", undefined, TOAST_DURATION.SHORT);
-  }, [options.openSettingsDialog, showToast]);
+  }, [showToast]);
 
   const commandHandlers: CommandActionHandlers = useMemo(() => ({
-    onNewTask: options.openCreateDialog,
+    onNewTask: openCreateDialog,
     onToggleTheme: () => setTheme(theme === "dark" ? "light" : "dark"),
     onExportTasks: async () => {
       await exportTasks();
@@ -71,15 +79,15 @@ export function useCommandHandlers(options: UseCommandHandlersOptions): {
       };
       input.click();
     },
-    onOpenSettings: options.openSettingsDialog,
-    onOpenHelp: options.openHelpDialog,
+    onOpenSettings: () => router.push(ROUTES.SETTINGS),
+    onOpenHelp: openHelpDialog,
     onViewDashboard: () => router.push("/dashboard"),
     onViewMatrix: () => router.push("/"),
     onViewArchive: () => router.push("/archive"),
     onViewSyncHistory: isSyncEnabled ? () => router.push("/sync-history") : undefined,
     onApplySmartView: (criteria, viewId) => {
-      options.onSelectSmartView(criteria);
-      options.onSetActiveSmartViewId(viewId);
+      onSelectSmartView(criteria);
+      onSetActiveSmartViewId(viewId);
     },
     onTriggerSync: isSyncEnabled ? async () => {
       const { getSyncCoordinator } = await import("@/lib/sync/sync-coordinator");
@@ -87,12 +95,12 @@ export function useCommandHandlers(options: UseCommandHandlersOptions): {
       await coordinator.requestSync("user");
       showToast("Sync triggered", undefined, TOAST_DURATION.SHORT);
     } : undefined,
-    onToggleSelectionMode: options.onToggleSelectionMode,
-    onClearSelection: options.onClearSelection
+    onToggleSelectionMode,
+    onClearSelection
   }), [
-    options.openCreateDialog, options.openSettingsDialog, options.openHelpDialog,
-    options.onSelectSmartView, options.onSetActiveSmartViewId,
-    options.onToggleSelectionMode, options.onClearSelection,
+    openCreateDialog, openHelpDialog,
+    onSelectSmartView, onSetActiveSmartViewId,
+    onToggleSelectionMode, onClearSelection,
     setTheme, theme, showToast, handleImport, router, isSyncEnabled
   ]);
 

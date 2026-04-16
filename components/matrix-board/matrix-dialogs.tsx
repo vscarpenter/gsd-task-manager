@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Spinner } from "@/components/ui/spinner";
 import { UserGuideDialog } from "@/components/user-guide-dialog";
 import { FilterPopover } from "@/components/filter-popover";
-import { SettingsDialog } from "@/components/settings-dialog";
 import { BulkActionsBar } from "@/components/bulk-actions-bar";
 import { BulkTagDialog } from "@/components/bulk-tag-dialog";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
@@ -72,15 +71,6 @@ interface MatrixDialogsProps {
   onFilterChange: (criteria: FilterCriteria) => void;
   onSaveAsSmartView: () => void;
   availableTags: string[];
-
-  // Settings dialog
-  settingsOpen: boolean;
-  setSettingsOpen: (open: boolean) => void;
-  showCompleted: boolean;
-  onToggleCompleted: () => void;
-  onExport: () => Promise<void>;
-  onImport: (file: File) => Promise<void>;
-  isLoading: boolean;
 
   // Task form dialog
   dialogState: DialogState | null;
@@ -156,17 +146,6 @@ export function MatrixDialogs(props: MatrixDialogsProps) {
         onChange={props.onFilterChange}
         onSaveAsSmartView={props.onSaveAsSmartView}
         availableTags={props.availableTags}
-      />
-
-      {/* Settings Dialog */}
-      <SettingsDialog
-        open={props.settingsOpen}
-        onOpenChange={props.setSettingsOpen}
-        showCompleted={props.showCompleted}
-        onToggleCompleted={props.onToggleCompleted}
-        onExport={props.onExport}
-        onImport={props.onImport}
-        isLoading={props.isLoading}
       />
 
       {/* Task Form Dialog */}

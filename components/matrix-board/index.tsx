@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DndContext } from "@dnd-kit/core";
+import { ROUTES } from "@/lib/routes";
 import { AppHeader } from "@/components/app-header";
+import { AppRail } from "@/components/app-header/app-rail";
 import { AppFooter } from "@/components/app-footer";
 import { FilterBar } from "@/components/filter-bar";
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
@@ -32,19 +35,32 @@ import {
   useToggleCompletedListener,
   useTaskHighlighting,
   useNotificationChecker,
-  usePwaNewTaskShortcut,
+  useUrlActionHandlers,
+  useUrlSearchQueryParam,
   useUrlHighlightParam,
   useSmartViewHandlers,
 } from "./use-event-handlers";
 
+const SHOW_COMPLETED_KEY = "gsd:show-completed";
+
 export function MatrixBoard() {
+  const router = useRouter();
   const { all, isLoading } = useTasks();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(SHOW_COMPLETED_KEY) === "true";
+  });
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [activeSmartViewId, setActiveSmartViewId] = useState<string | null>(null);
   const [pinnedSmartViews, setPinnedSmartViews] = useState<SmartView[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(SHOW_COMPLETED_KEY, String(showCompleted));
+    }
+  }, [showCompleted]);
   const dialogs = useMatrixDialogs();
   const { showToast } = useToast();
   const { handleError } = useErrorHandlerWithUndo();
@@ -62,9 +78,8 @@ export function MatrixBoard() {
     bulkSelection.handleClearSelection
   );
 
-  const { commandHandlers, isSyncEnabled, handleImport, handleImportComplete } = useCommandHandlers({
+  const { commandHandlers, isSyncEnabled, handleImportComplete } = useCommandHandlers({
     openCreateDialog: () => dialogs.setDialogState({ mode: "create" }),
-    openSettingsDialog: () => dialogs.setSettingsOpen(false),
     openHelpDialog: () => dialogs.setHelpOpen(true),
     openImportDialog: (contents) => {
       dialogs.setPendingImportContents(contents);
@@ -87,8 +102,12 @@ export function MatrixBoard() {
   useToggleCompletedListener(setShowCompleted);
   useTaskHighlighting(setHighlightedTaskId, { taskRefs });
   useNotificationChecker();
-  usePwaNewTaskShortcut((state) => dialogs.setDialogState(state));
+  useUrlActionHandlers(
+    (state) => dialogs.setDialogState(state),
+    () => dialogs.setHelpOpen(true)
+  );
   useUrlHighlightParam(all.length, setHighlightedTaskId, { taskRefs });
+  useUrlSearchQueryParam(setSearchQuery);
 
   const { handleSelectSmartView, handleClearSmartView } = useSmartViewHandlers(
     setFilterCriteria, setSearchQuery, setActiveSmartViewId
@@ -144,61 +163,70 @@ export function MatrixBoard() {
         }}
       />
 
-      <div className="space-y-8">
-        <NotificationPermissionPrompt />
-
-        <AppHeader
-          onNewTask={() => dialogs.setDialogState({ mode: "create" })}
-          onSearchChange={setSearchQuery}
-          searchQuery={searchQuery}
-          searchInputRef={searchInputRef}
+      <div className="min-h-screen bg-background md:flex">
+        <AppRail
           onHelp={() => dialogs.setHelpOpen(true)}
-          onOpenSettings={() => dialogs.setSettingsOpen(true)}
-          onSelectSmartView={handleSelectSmartView}
-          onOpenFilters={() => dialogs.setFilterPopoverOpen(true)}
-          currentFilterCriteria={filterCriteria}
-          activeSmartViewId={activeSmartViewId}
-          onActiveViewChange={setActiveSmartViewId}
-          selectionMode={bulkSelection.selectionMode}
-          onToggleSelectionMode={bulkSelection.handleToggleSelectionMode}
-          selectedCount={bulkSelection.selectedTaskIds.size}
-          isDoFirstEmpty={hasTasks && isDoFirstEmpty}
+          onOpenSettings={() => router.push(ROUTES.SETTINGS)}
         />
 
-        {hasTasks && (
-          <div className="px-6">
-            <FilterBar criteria={filterCriteria} onChange={setFilterCriteria} />
+        <div className="min-w-0 flex-1">
+          <NotificationPermissionPrompt />
+
+          <AppHeader
+            onNewTask={() => dialogs.setDialogState({ mode: "create" })}
+            onSearchChange={setSearchQuery}
+            searchQuery={searchQuery}
+            searchInputRef={searchInputRef}
+            onHelp={() => dialogs.setHelpOpen(true)}
+            onOpenSettings={() => router.push(ROUTES.SETTINGS)}
+            onSelectSmartView={handleSelectSmartView}
+            onOpenFilters={() => dialogs.setFilterPopoverOpen(true)}
+            currentFilterCriteria={filterCriteria}
+            activeSmartViewId={activeSmartViewId}
+            onActiveViewChange={setActiveSmartViewId}
+            selectionMode={bulkSelection.selectionMode}
+            onToggleSelectionMode={bulkSelection.handleToggleSelectionMode}
+            selectedCount={bulkSelection.selectedTaskIds.size}
+            isDoFirstEmpty={hasTasks && isDoFirstEmpty}
+          />
+
+          <div className="space-y-6 pb-8">
+            {hasTasks && (
+              <div className="px-4 pt-6 sm:px-6">
+                <FilterBar criteria={filterCriteria} onChange={setFilterCriteria} />
+              </div>
+            )}
+
+            <MatrixContent
+              isLoading={isLoading}
+              hasTasks={hasTasks}
+              isDoFirstEmpty={isDoFirstEmpty}
+              visibleCount={visibleCount}
+              searchQuery={searchQuery}
+              onClearSearch={() => setSearchQuery("")}
+              onCreateTask={() => dialogs.setDialogState({ mode: "create" })}
+              filteredQuadrants={filteredQuadrants}
+              allTasks={all}
+              onEdit={(task) => dialogs.setDialogState({ mode: "edit", task })}
+              onDelete={taskOps.handleDelete}
+              onToggleComplete={taskOps.handleComplete}
+              onShare={dialogs.openShareDialog}
+              onDuplicate={taskOps.handleDuplicate}
+              onSnooze={taskOps.handleSnooze}
+              onStartTimer={taskOps.handleStartTimer}
+              onStopTimer={taskOps.handleStopTimer}
+              selectionMode={bulkSelection.selectionMode}
+              selectedTaskIds={bulkSelection.selectedTaskIds}
+              onToggleSelect={bulkSelection.handleToggleSelect}
+              taskRefs={taskRefs}
+              highlightedTaskId={highlightedTaskId}
+              onQuickCreate={handleQuickCreate}
+              availableTags={availableTags}
+            />
+
+            <AppFooter />
           </div>
-        )}
-
-        <MatrixContent
-          isLoading={isLoading}
-          hasTasks={hasTasks}
-          isDoFirstEmpty={isDoFirstEmpty}
-          visibleCount={visibleCount}
-          searchQuery={searchQuery}
-          onClearSearch={() => setSearchQuery("")}
-          onCreateTask={() => dialogs.setDialogState({ mode: "create" })}
-          filteredQuadrants={filteredQuadrants}
-          allTasks={all}
-          onEdit={(task) => dialogs.setDialogState({ mode: "edit", task })}
-          onDelete={taskOps.handleDelete}
-          onToggleComplete={taskOps.handleComplete}
-          onShare={dialogs.openShareDialog}
-          onDuplicate={taskOps.handleDuplicate}
-          onSnooze={taskOps.handleSnooze}
-          onStartTimer={taskOps.handleStartTimer}
-          onStopTimer={taskOps.handleStopTimer}
-          selectionMode={bulkSelection.selectionMode}
-          selectedTaskIds={bulkSelection.selectedTaskIds}
-          onToggleSelect={bulkSelection.handleToggleSelect}
-          taskRefs={taskRefs}
-          highlightedTaskId={highlightedTaskId}
-          onQuickCreate={handleQuickCreate}
-          availableTags={availableTags}
-        />
-
-        <AppFooter />
+        </div>
 
         <MatrixDialogs
           bulkTagDialogOpen={dialogs.bulkTagDialogOpen}
@@ -230,13 +258,6 @@ export function MatrixBoard() {
           onFilterChange={setFilterCriteria}
           onSaveAsSmartView={() => dialogs.setSaveSmartViewOpen(true)}
           availableTags={availableTags}
-          settingsOpen={dialogs.settingsOpen}
-          setSettingsOpen={dialogs.setSettingsOpen}
-          showCompleted={showCompleted}
-          onToggleCompleted={() => setShowCompleted(!showCompleted)}
-          onExport={taskOps.handleExport}
-          onImport={handleImport}
-          isLoading={taskOps.isLoading}
           dialogState={dialogs.dialogState}
           closeDialog={dialogs.closeDialog}
           taskBeingEdited={taskBeingEdited}

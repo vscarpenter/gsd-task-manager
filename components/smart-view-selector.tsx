@@ -1,6 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { ChevronDownIcon, StarIcon, Trash2Icon, PinIcon, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +30,7 @@ const logger = createLogger("SMART_VIEWS");
 interface SmartViewSelectorProps {
   onSelectView: (criteria: FilterCriteria) => void;
   currentCriteria?: FilterCriteria;
-  trigger?: React.ReactNode; // Optional custom trigger button
+  trigger?: ReactNode; // Optional custom trigger element
   onPinnedViewsChange?: () => void; // Callback when pinned views change
 }
 
@@ -201,23 +210,56 @@ export function SmartViewSelector({
     );
   };
 
+  const toggleOpen = () => {
+    setIsOpen((current) => !current);
+  };
+
+  const customTrigger = trigger && isValidElement(trigger)
+    ? (trigger as ReactElement<Record<string, unknown> & {
+        onClick?: (event: ReactMouseEvent) => void;
+      }>)
+    : null;
+
+  const triggerElement = customTrigger
+    ? cloneElement(customTrigger, {
+          onClick: (event: ReactMouseEvent) => {
+            customTrigger.props.onClick?.(event);
+            if (!event.defaultPrevented) {
+              toggleOpen();
+            }
+          },
+          "aria-expanded": isOpen,
+          "aria-haspopup": "listbox",
+        }
+      )
+    : null;
+
   return (
     <div className="relative">
       {trigger ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="appearance-none bg-transparent border-none p-0 m-0 cursor-pointer"
-          aria-label="Select smart view"
-          aria-expanded={isOpen}
-          aria-haspopup="listbox"
-        >
-          {trigger}
-        </button>
+        triggerElement ?? (
+          <span
+            className="inline-flex cursor-pointer"
+            onClick={toggleOpen}
+            onKeyDown={(event: ReactKeyboardEvent) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleOpen();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Select smart view"
+            aria-expanded={isOpen}
+            aria-haspopup="listbox"
+          >
+            {trigger}
+          </span>
+        )
       ) : (
         <Button
           variant="subtle"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleOpen}
           className="gap-2 text-sm px-3 py-1.5"
         >
           <StarIcon className="h-4 w-4" />

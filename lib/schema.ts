@@ -40,7 +40,10 @@ export const taskDraftSchema = z.object({
 	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
-	estimatedMinutes: z.number().int().min(1).max(10080).optional(), // Max 7 days = 10080 minutes
+	estimatedMinutes: z.preprocess(
+		(value) => value === 0 ? undefined : value,
+		z.number().int().min(1).max(10080).optional()
+	), // Max 7 days = 10080 minutes
 });
 
 export const taskRecordSchema = taskDraftSchema

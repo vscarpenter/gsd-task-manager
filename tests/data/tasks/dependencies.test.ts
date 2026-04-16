@@ -41,7 +41,7 @@ vi.mock('@/lib/logger', () => ({
 describe('Task Dependency Operations', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockQueue: any;
 
   const baseTask: TaskRecord = {

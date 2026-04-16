@@ -36,17 +36,22 @@ export function useTaskForm({
   onSubmit,
   onCancel
 }: UseTaskFormProps) {
+  const normalizedInitialValues: TaskDraft = {
+    ...defaultValues,
+    ...initialValues,
+    estimatedMinutes:
+      initialValues.estimatedMinutes && initialValues.estimatedMinutes > 0
+        ? initialValues.estimatedMinutes
+        : undefined,
+  };
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>(
-    isoToTimeInput(initialValues.dueDate)
+    isoToTimeInput(normalizedInitialValues.dueDate)
   );
 
   const form = useForm({
-    defaultValues: {
-      ...defaultValues,
-      ...initialValues
-    } as TaskDraft,
+    defaultValues: normalizedInitialValues,
   });
 
   // Subscribe to store changes to trigger re-renders when field values change
@@ -117,7 +122,11 @@ export function useTaskForm({
       const currentValues = form.state.values;
       const normalized: TaskDraft = {
         ...currentValues,
-        dueDate: dateTimeInputToIso(isoToDateInput(currentValues.dueDate), selectedTime)
+        dueDate: dateTimeInputToIso(isoToDateInput(currentValues.dueDate), selectedTime),
+        estimatedMinutes:
+          currentValues.estimatedMinutes && currentValues.estimatedMinutes > 0
+            ? currentValues.estimatedMinutes
+            : undefined,
       };
       const validated = taskDraftSchema.parse({
         ...normalized,

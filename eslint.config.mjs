@@ -7,6 +7,7 @@ const config = [
         ignores: [
             ".next/**",
             "out/**",
+            "coverage/**",
             "worker/.wrangler/**",
             "packages/mcp-server/dist/**",
             "packages/native/ios.backup/build/**",
@@ -28,6 +29,21 @@ const config = [
             "react-hooks/refs": "warn",
             // Allow variable access before declaration in effects (common callback pattern)
             "react-hooks/immutability": "warn",
+        },
+    },
+    {
+        files: [
+            "app/(archive)/archive/page.tsx",
+            "app/(sync)/sync-history/page.tsx",
+        ],
+        rules: {
+            "react-hooks/incompatible-library": "off",
+        },
+    },
+    {
+        files: ["tests/**/*.{ts,tsx,js,jsx}"],
+        rules: {
+            "@typescript-eslint/no-unused-vars": "off",
         },
     },
 ];
