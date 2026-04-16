@@ -1,6 +1,5 @@
-/* eslint-disable react/no-unescaped-entities */
 import { render, screen, fireEvent } from "@testing-library/react";
-import { RocketIcon, ZapIcon, GridIcon } from "lucide-react";
+import { RocketIcon, ZapIcon } from "lucide-react";
 
 // --- Shared components ---
 import {

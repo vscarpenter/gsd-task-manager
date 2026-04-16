@@ -19,6 +19,12 @@ export const ROUTES = {
   /** Analytics dashboard */
   DASHBOARD: '/dashboard' as Route,
 
+  /** Application settings */
+  SETTINGS: '/settings' as Route,
+
+  /** Product about page */
+  ABOUT: '/about' as Route,
+
   /** PWA installation instructions */
   INSTALL: '/install' as Route,
 
@@ -36,6 +42,8 @@ export const ROUTES = {
 export const ROUTE_VARIANTS = {
   HOME: ['/', '/index.html'] as const,
   DASHBOARD: ['/dashboard', '/dashboard/', '/dashboard.html'] as const,
+  SETTINGS: ['/settings', '/settings/', '/settings.html'] as const,
+  ABOUT: ['/about', '/about/', '/about.html'] as const,
   INSTALL: ['/install', '/install/', '/install.html'] as const,
 } as const;
 

@@ -6,7 +6,7 @@
  * This module adds device registration and a clean API for the UI layer.
  */
 
-import { getPocketBase, clearPocketBase, isAuthenticated } from './pocketbase-client';
+import { getPocketBase } from './pocketbase-client';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('SYNC_AUTH');
@@ -88,5 +88,4 @@ export async function refreshAuth(): Promise<boolean> {
     return false;
   }
 }
-
 

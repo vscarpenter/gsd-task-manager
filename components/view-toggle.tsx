@@ -1,54 +1,74 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LayoutGridIcon, BarChart3Icon } from "lucide-react";
+import {
+  LayoutGridIcon,
+  BarChart3Icon,
+  type LucideIcon,
+} from "lucide-react";
 import { useViewTransition } from "@/lib/use-view-transition";
-import { ROUTES, isRouteActive } from "@/lib/routes";
+import { ROUTES, isRouteActive, type RouteKey } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
+interface ViewTab {
+  routeKey: RouteKey;
+  label: string;
+  icon: LucideIcon;
+  ariaLabel: string;
+}
+
+const TABS: ViewTab[] = [
+  { routeKey: "HOME", label: "Matrix", icon: LayoutGridIcon, ariaLabel: "Switch to Matrix view" },
+  { routeKey: "DASHBOARD", label: "Dashboard", icon: BarChart3Icon, ariaLabel: "Switch to Dashboard view" },
+];
+
 /**
- * Toggle between Matrix and Dashboard views with smooth transitions
+ * Top-level view switcher for the primary workspace screens.
+ * Uses View Transitions API for smooth route animations.
  */
-export function ViewToggle() {
+interface ViewToggleProps {
+  className?: string;
+  showLabelsOnMobile?: boolean;
+}
+
+export function ViewToggle({ className, showLabelsOnMobile = false }: ViewToggleProps) {
   const pathname = usePathname();
   const { navigateWithTransition, isPending } = useViewTransition();
 
-  const isMatrix = isRouteActive(pathname, 'HOME');
-  const isDashboard = isRouteActive(pathname, 'DASHBOARD');
   return (
-    <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
-      <button
-        onClick={() => navigateWithTransition(ROUTES.HOME)}
-        disabled={isPending}
-        className={cn(
-          "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-          isMatrix && "bg-background text-foreground shadow-sm",
-          !isMatrix && "text-foreground-muted hover:text-foreground",
-          isPending && "opacity-50 cursor-wait"
-        )}
-        aria-label="Switch to Matrix view"
-        aria-current={isMatrix ? "page" : undefined}
-      >
-        <LayoutGridIcon className="h-4 w-4" />
-        <span className="hidden sm:inline">Matrix</span>
-      </button>
-      <button
-        onClick={() => navigateWithTransition(ROUTES.DASHBOARD)}
-        disabled={isPending}
-        className={cn(
-          "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-          isDashboard && "bg-background text-foreground shadow-sm",
-          !isDashboard && "text-foreground-muted hover:text-foreground",
-          isPending && "opacity-50 cursor-wait"
-        )}
-        aria-label="Switch to Dashboard view"
-        aria-current={isDashboard ? "page" : undefined}
-      >
-        <BarChart3Icon className="h-4 w-4" />
-        <span className="hidden sm:inline">Dashboard</span>
-      </button>
+    <div
+      className={cn(
+        "inline-flex rounded-xl border border-border bg-background-muted p-1",
+        className
+      )}
+    >
+      {TABS.map((tab) => {
+        const isActive = isRouteActive(pathname, tab.routeKey);
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.routeKey}
+            type="button"
+            onClick={() => navigateWithTransition(ROUTES[tab.routeKey])}
+            disabled={isPending}
+            className={cn(
+              "inline-flex min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+              isActive
+                ? "bg-background text-foreground shadow-sm"
+                : "text-foreground-muted hover:bg-background/60 hover:text-foreground",
+              isPending && "opacity-50 cursor-wait"
+            )}
+            aria-label={tab.ariaLabel}
+            aria-current={isActive ? "page" : undefined}
+          >
+            <Icon className="h-4 w-4" />
+            <span className={cn(!showLabelsOnMobile && "hidden sm:inline")}>
+              {tab.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

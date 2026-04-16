@@ -1,22 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { XIcon } from "lucide-react";
 
 const STORAGE_KEY = "gsd-keyboard-hints-dismissed";
 
 export function KeyboardHintsToast() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
+  const [visible, setVisible] = useState(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) {
-        setVisible(true);
-      }
+      return !localStorage.getItem(STORAGE_KEY);
     } catch {
-      // localStorage not available
+      return false;
     }
-  }, []);
+  });
 
   if (!visible) return null;
 

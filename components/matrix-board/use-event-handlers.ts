@@ -116,13 +116,48 @@ export function useNotificationChecker(): void {
 export function usePwaNewTaskShortcut(
   setDialogState: (state: { mode: "create" }) => void
 ): void {
+  useUrlActionHandlers(setDialogState);
+}
+
+/**
+ * Hook to handle URL-driven actions like opening the create dialog or help.
+ */
+export function useUrlActionHandlers(
+  setDialogState: (state: { mode: "create" }) => void,
+  openHelpDialog?: () => void
+): void {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("action") === "new-task") {
+    const action = params.get("action");
+
+    if (action === "new-task") {
       setDialogState({ mode: "create" });
+      params.delete("action");
+      const nextQuery = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`,
+      );
+      return;
+    }
+
+    if (action === "help" && openHelpDialog) {
+      openHelpDialog();
+      params.delete("action");
+      const nextQuery = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`,
+      );
+      return;
+    }
+
+    if (action) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [setDialogState]);
+  }, [openHelpDialog, setDialogState]);
 }
 
 /**
@@ -146,6 +181,22 @@ export function useUrlHighlightParam(
       );
     }
   }, [allTasksLength, setHighlightedTaskId, refs.taskRefs]);
+}
+
+/**
+ * Hook to hydrate matrix search from a URL query parameter.
+ */
+export function useUrlSearchQueryParam(
+  setSearchQuery: (query: string) => void
+): void {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlQuery = params.get("q");
+
+    if (urlQuery) {
+      setSearchQuery(urlQuery);
+    }
+  }, [setSearchQuery]);
 }
 
 /**

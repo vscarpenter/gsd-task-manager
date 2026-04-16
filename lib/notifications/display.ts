@@ -154,22 +154,6 @@ export async function showTaskNotification(
 }
 
 /**
- * Create default notification options
- */
-function createDefaultOptions(
-  body: string,
-  customOptions?: Partial<NotificationOptions>
-): NotificationOptions {
-  return {
-    body,
-    icon: NOTIFICATION_ASSETS.ICON_192,
-    badge: NOTIFICATION_ASSETS.BADGE,
-    requireInteraction: false,
-    ...customOptions
-  };
-}
-
-/**
  * Test notification - shows a sample notification
  */
 export async function showTestNotification(): Promise<boolean> {
