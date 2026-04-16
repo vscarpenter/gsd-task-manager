@@ -6,6 +6,7 @@ const OFFLINE_ASSETS = [
 	"/archive/",
 	"/dashboard/",
 	"/install/",
+	"/settings/",
 	"/sync-history/",
 	"/manifest.json",
 	"/icons/icon-192.png",
@@ -65,13 +66,17 @@ self.addEventListener("fetch", (event) => {
 		return;
 	}
 
-	// Network-first strategy for HTML to ensure fresh content on iOS
-	const isHTMLRequest =
+	// Network-first for HTML pages and Next.js RSC flight data.
+	// RSC data (__next.*.txt) contains build-specific module IDs that
+	// must stay in sync with the JS chunks. Serving stale RSC data from
+	// a previous build causes React error #130 (undefined component).
+	const isNetworkFirst =
 		request.headers.get("accept")?.includes("text/html") ||
 		request.url.endsWith("/") ||
-		request.url.endsWith(".html");
+		request.url.endsWith(".html") ||
+		request.url.includes("/__next.");
 
-	if (isHTMLRequest) {
+	if (isNetworkFirst) {
 		event.respondWith(
 			fetch(request)
 				.then((response) => {
@@ -102,7 +107,7 @@ self.addEventListener("fetch", (event) => {
 				}),
 		);
 	} else {
-		// Cache-first for static assets
+		// Cache-first for static assets (JS chunks, CSS, fonts, images)
 		event.respondWith(
 			caches.match(request).then((cachedResponse) => {
 				if (cachedResponse) {
@@ -126,7 +131,11 @@ self.addEventListener("fetch", (event) => {
 						}
 						return response;
 					})
-					.catch(() => caches.match("/"));
+					.catch(() => {
+						// Only fall back to cached root for navigation-like requests.
+						// Returning HTML for a JS/CSS/font request would cause errors.
+						return caches.match(request);
+					});
 			}),
 		);
 	}
