@@ -1,5 +1,5 @@
-import { MatrixBoard } from "@/components/matrix-board";
+import { RedesignMatrix } from "@/components/redesign/redesign-matrix";
 
 export default function MatrixPage() {
-  return <MatrixBoard />;
+  return <RedesignMatrix />;
 }

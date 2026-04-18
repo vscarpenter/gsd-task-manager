@@ -76,3 +76,6 @@ coverage/
 # IDE settings
 .vscode/
 
+
+# Design reference bundle — not for deploy
+design_handoff_gsd_redesign/

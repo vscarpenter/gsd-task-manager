@@ -11,6 +11,7 @@ const config = [
             "worker/.wrangler/**",
             "packages/mcp-server/dist/**",
             "packages/native/ios.backup/build/**",
+            "design_handoff_gsd_redesign/**",
         ],
     },
     ...nextCoreWebVitals,

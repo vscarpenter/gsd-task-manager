@@ -14,6 +14,12 @@ vi.mock('next/font/local', () => ({
   default: () => ({ className: 'mock-font', variable: '--font-mock' }),
 }));
 
+vi.mock('next/font/google', () => ({
+  Geist: () => ({ className: 'mock-geist', variable: '--font-geist' }),
+  Geist_Mono: () => ({ className: 'mock-geist-mono', variable: '--font-geist-mono' }),
+  Instrument_Serif: () => ({ className: 'mock-instrument', variable: '--font-instrument-serif' }),
+}));
+
 vi.mock('@/components/theme-provider', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
