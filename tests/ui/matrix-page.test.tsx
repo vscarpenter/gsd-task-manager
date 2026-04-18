@@ -9,6 +9,10 @@ vi.mock("@/components/matrix-board", () => ({
   MatrixBoard: () => <div data-testid="matrix-board">MatrixBoard</div>,
 }));
 
+vi.mock("@/components/redesign/redesign-matrix", () => ({
+  RedesignMatrix: () => <div data-testid="matrix-board">RedesignMatrix</div>,
+}));
+
 const mockUseTasks = vi.fn().mockReturnValue({ all: [], isLoading: false });
 vi.mock("@/lib/use-tasks", () => ({
   useTasks: (...args: unknown[]) => mockUseTasks(...args),

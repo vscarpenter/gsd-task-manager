@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
@@ -27,6 +28,26 @@ const jetbrainsMono = localFont({
   variable: "--font-mono",
   display: "swap",
   weight: "100 800",
+});
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -79,7 +100,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.variable, jetbrainsMono.variable, "font-sans bg-canvas text-foreground antialiased")}>
+      <body className={cn(inter.variable, jetbrainsMono.variable, geist.variable, geistMono.variable, instrumentSerif.variable, "font-sans bg-canvas text-foreground antialiased")}>
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>
