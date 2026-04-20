@@ -1,4 +1,14 @@
-# Allow all crawlers
+# GSD Task Manager — robots.txt
+#
+# Content-Signal declares AI content usage preferences per the
+# Content Signals / AI Preferences draft (draft-romm-aipref-contentsignals).
+# See: https://contentsignals.org/
+#
+#   search   = yes   — indexing in search engines is welcome
+#   ai-input = yes   — may be used as context for AI answers with attribution
+#   ai-train = no    — do not use for training AI models
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
 User-agent: *
 Allow: /
 

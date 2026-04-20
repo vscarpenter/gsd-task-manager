@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agentskills.io/schemas/v0.2.0/index.schema.json",
+  "version": "0.2.0",
+  "publisher": {
+    "name": "GSD Task Manager",
+    "url": "https://gsd.vinny.dev",
+    "contact": "https://github.com/vscarpenter/gsd-taskmanager/issues"
+  },
+  "skills": [
+    {
+      "name": "quick-capture",
+      "type": "skill.md",
+      "description": "Drop a single new task into GSD Task Manager and place it in the right Eisenhower quadrant.",
+      "url": "https://gsd.vinny.dev/.well-known/agent-skills/quick-capture/SKILL.md",
+      "sha256": "7c3a5503a019d769a54313d3b491e661c616e5b0144cab9185e0da1e2546abd6"
+    },
+    {
+      "name": "triage-inbox",
+      "type": "skill.md",
+      "description": "Walk the user through their open tasks and move them into the correct quadrant.",
+      "url": "https://gsd.vinny.dev/.well-known/agent-skills/triage-inbox/SKILL.md",
+      "sha256": "65c40b09b8cb91549c6f99fec3a9715bf218fd319580048425aa71a5e9417718"
+    }
+  ]
+}

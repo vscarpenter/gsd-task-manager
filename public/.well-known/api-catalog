@@ -1,0 +1,65 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://api.vinny.io/api/",
+      "service-doc": [
+        {
+          "href": "https://pocketbase.io/docs/api-records/",
+          "type": "text/html",
+          "title": "PocketBase Records API documentation"
+        }
+      ],
+      "service-desc": [
+        {
+          "href": "https://gsd.vinny.dev/.well-known/openapi/pocketbase.json",
+          "type": "application/openapi+json",
+          "title": "GSD PocketBase REST API (OpenAPI 3.1)"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://api.vinny.io/api/health",
+          "type": "application/json",
+          "title": "PocketBase health endpoint"
+        }
+      ],
+      "oauth-authorization-server": [
+        {
+          "href": "https://api.vinny.io",
+          "title": "PocketBase OAuth2 issuer"
+        }
+      ],
+      "related": [
+        {
+          "href": "https://github.com/vscarpenter/gsd-taskmanager",
+          "type": "text/html",
+          "title": "GSD Task Manager source repository"
+        }
+      ]
+    },
+    {
+      "anchor": "https://www.npmjs.com/package/gsd-mcp-server",
+      "service-doc": [
+        {
+          "href": "https://github.com/vscarpenter/gsd-taskmanager/blob/main/packages/mcp-server/README.md",
+          "type": "text/markdown",
+          "title": "GSD MCP Server documentation"
+        }
+      ],
+      "service-desc": [
+        {
+          "href": "https://gsd.vinny.dev/.well-known/mcp/server-card.json",
+          "type": "application/json",
+          "title": "GSD MCP Server Card"
+        }
+      ],
+      "related": [
+        {
+          "href": "https://modelcontextprotocol.io/",
+          "type": "text/html",
+          "title": "Model Context Protocol specification"
+        }
+      ]
+    }
+  ]
+}

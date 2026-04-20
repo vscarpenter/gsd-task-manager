@@ -1,13 +1,18 @@
 /**
  * CloudFront Function: URL Rewrite for Static Export with Trailing Slashes
  *
- * This function rewrites directory paths to include index.html for Next.js static exports.
- * It handles paths like /dashboard/ → /dashboard/index.html before the request reaches S3.
+ * Two responsibilities:
+ *  1. Rewrite directory paths to include `index.html` for Next.js static
+ *     export (e.g. `/dashboard/` → `/dashboard/index.html`).
+ *  2. Markdown for Agents (RFC-style content negotiation): when the request
+ *     includes `Accept: text/markdown`, rewrite the URI to the `.md` sibling
+ *     so agents receive the markdown rendition while browsers continue to
+ *     receive HTML by default. The companion viewer-response function adds
+ *     `Vary: Accept` so caches do not collapse the two representations.
  *
- * CloudFront Functions run at CloudFront edge locations with sub-millisecond latency.
- *
- * Note: Security headers are handled by a CloudFront Response Headers Policy
- * (gsd-security-headers) which is the AWS-recommended approach.
+ * CloudFront Functions run at CloudFront edge locations with sub-millisecond
+ * latency. Security headers and Link headers are emitted by the
+ * `gsd-response-headers` viewer-response function, not here.
  *
  * @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions.html
  */
@@ -15,14 +20,21 @@
 function handler(event) {
   var request = event.request;
   var uri = request.uri;
+  var headers = request.headers;
 
-  // If URI ends with /, append index.html
+  // 1. Resolve trailing-slash and extensionless paths to their `index.html`.
   if (uri.endsWith('/')) {
     request.uri = uri + 'index.html';
-  }
-  // If URI has no file extension and doesn't end with /, append /index.html
-  else if (!uri.includes('.') && uri !== '/') {
+  } else if (!uri.includes('.') && uri !== '/') {
     request.uri = uri + '/index.html';
+  }
+
+  // 2. Markdown for Agents — content negotiation on `Accept`.
+  //    Only rewrite paths that resolve to an `index.html` (i.e. routes), and
+  //    only when the client *prefers* markdown.
+  var accept = headers['accept'] && headers['accept'].value;
+  if (accept && /text\/markdown/i.test(accept) && request.uri.endsWith('/index.html')) {
+    request.uri = request.uri.replace(/index\.html$/, 'index.md');
   }
 
   return request;
