@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/server-card.schema.json",
+  "schemaVersion": "0.1.0",
+  "serverInfo": {
+    "name": "gsd-mcp-server",
+    "version": "0.9.0",
+    "title": "GSD Task Manager MCP Server",
+    "description": "Read, create, update, and analyze tasks in GSD Task Manager from any MCP-aware assistant.",
+    "vendor": "Vinny Carpenter",
+    "homepage": "https://gsd.vinny.dev",
+    "documentation": "https://github.com/vscarpenter/gsd-taskmanager/blob/main/packages/mcp-server/README.md",
+    "license": "MIT",
+    "repository": "https://github.com/vscarpenter/gsd-taskmanager"
+  },
+  "transports": [
+    {
+      "type": "stdio",
+      "package": {
+        "registry": "npm",
+        "name": "gsd-mcp-server",
+        "binary": "gsd-mcp-server"
+      },
+      "install": {
+        "command": "npx",
+        "args": ["-y", "gsd-mcp-server"]
+      },
+      "env": {
+        "GSD_POCKETBASE_URL": {
+          "description": "Base URL of the PocketBase deployment that holds the user's tasks.",
+          "default": "https://api.vinny.io",
+          "required": true
+        },
+        "GSD_AUTH_TOKEN": {
+          "description": "PocketBase auth token for the user (obtain via GSD Task Manager Settings → Sync).",
+          "required": true,
+          "secret": true
+        }
+      }
+    }
+  ],
+  "capabilities": {
+    "tools": { "listChanged": false },
+    "resources": false,
+    "prompts": false,
+    "logging": true
+  },
+  "tools": [
+    { "name": "list_tasks", "category": "read" },
+    { "name": "get_task", "category": "read" },
+    { "name": "search_tasks", "category": "read" },
+    { "name": "get_sync_status", "category": "read" },
+    { "name": "list_devices", "category": "read" },
+    { "name": "get_task_stats", "category": "read" },
+    { "name": "get_token_status", "category": "read" },
+    { "name": "create_task", "category": "write" },
+    { "name": "update_task", "category": "write" },
+    { "name": "complete_task", "category": "write" },
+    { "name": "delete_task", "category": "write" },
+    { "name": "bulk_update_tasks", "category": "write" },
+    { "name": "get_productivity_metrics", "category": "analytics" },
+    { "name": "get_quadrant_analysis", "category": "analytics" },
+    { "name": "get_tag_analytics", "category": "analytics" },
+    { "name": "get_upcoming_deadlines", "category": "analytics" },
+    { "name": "get_task_insights", "category": "analytics" },
+    { "name": "validate_config", "category": "system" },
+    { "name": "get_help", "category": "system" },
+    { "name": "get_cache_stats", "category": "system" }
+  ],
+  "authentication": {
+    "type": "oauth2",
+    "discovery": "https://gsd.vinny.dev/.well-known/oauth-protected-resource"
+  }
+}

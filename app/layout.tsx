@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { PwaRegister } from "@/components/pwa-register";
+import { WebMcpRegister } from "@/components/webmcp-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { ClientLayout } from "@/components/client-layout";
@@ -111,6 +112,7 @@ export default function RootLayout({
                   </ClientLayout>
                   <FirstTimeRedirect />
                   <PwaRegister />
+                  <WebMcpRegister />
                   <InstallPwaPrompt />
                   <PwaUpdateToast />
                   <Toaster richColors position="top-center" />

@@ -62,6 +62,11 @@ aws s3 cp "$S3_BUCKET/index.html" "$S3_BUCKET/index.html" \
   --cache-control "no-cache,no-store,must-revalidate" \
   --content-type "text/html"
 
+# Fix Content-Type on /.well-known/* and markdown renditions used for
+# agent discovery (RFC 8288 / 9727 / 9728 + Markdown for Agents).
+echo "  → Fixing Content-Type on agent-discovery files..."
+"$(dirname "$0")/fix-discovery-content-types.sh" "$S3_BUCKET"
+
 echo -e "${GREEN}✓${NC} Synced to S3"
 echo ""
 

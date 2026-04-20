@@ -47,7 +47,8 @@ export type LogContext =
   | 'NOTIFICATIONS'
   | 'IMPORT'
   | 'SMART_VIEWS'
-  | 'ERROR_BOUNDARY';
+  | 'ERROR_BOUNDARY'
+  | 'WEBMCP';
 
 export interface LogMetadata {
   [key: string]: unknown;

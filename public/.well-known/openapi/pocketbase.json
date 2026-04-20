@@ -1,0 +1,187 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GSD Task Manager — PocketBase API",
+    "version": "1.0.0",
+    "summary": "Optional cloud sync backend for the GSD Task Manager.",
+    "description": "Subset of the self-hosted PocketBase REST API used by GSD Task Manager for multi-device sync. All endpoints require an authenticated user and operate only on records owned by that user. PocketBase exposes its own auto-generated OpenAPI documentation in the admin UI; this document only covers the GSD-specific collections (tasks, devices) and their semantics.",
+    "contact": {
+      "name": "Vinny Carpenter",
+      "url": "https://github.com/vscarpenter/gsd-taskmanager"
+    },
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.vinny.io",
+      "description": "Production PocketBase deployment"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "PocketBase health check",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/tasks/records": {
+      "get": {
+        "operationId": "listTasks",
+        "summary": "List tasks owned by the authenticated user",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "perPage", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 500 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string" }, "example": "-client_updated_at" },
+          { "name": "filter", "in": "query", "schema": { "type": "string" }, "example": "status = 'open'" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of tasks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TaskList" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createTask",
+        "summary": "Create a new task",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Task" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created task",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Task" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/tasks/records/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "get": {
+        "operationId": "getTask",
+        "summary": "Get a single task by id",
+        "responses": {
+          "200": {
+            "description": "Task record",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Task" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateTask",
+        "summary": "Update a task (last-write-wins by client_updated_at)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Task" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated task",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Task" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteTask",
+        "summary": "Delete a task",
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "PocketBase auth token"
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "message": { "type": "string" }
+        }
+      },
+      "TaskList": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "perPage": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Task" }
+          }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "required": ["id", "owner", "title"],
+        "properties": {
+          "id": { "type": "string", "description": "Task identifier (nanoid)" },
+          "owner": { "type": "string", "description": "Owning user id" },
+          "device_id": { "type": "string", "description": "Originating device for echo filtering" },
+          "title": { "type": "string" },
+          "notes": { "type": "string" },
+          "urgent": { "type": "boolean" },
+          "important": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["open", "completed", "archived"] },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "due_at": { "type": "string", "format": "date-time", "nullable": true },
+          "client_updated_at": { "type": "string", "format": "date-time" },
+          "created": { "type": "string", "format": "date-time" },
+          "updated": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
