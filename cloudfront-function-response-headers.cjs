@@ -19,7 +19,6 @@
  * `gsd-security-headers` Response Headers Policy attached to the same
  * distribution; this function only adds discovery-related headers.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handler(event) {
   var request = event.request;
   var response = event.response;
@@ -59,4 +58,11 @@ function handler(event) {
   }
 
   return response;
+}
+
+// Test-only export. CloudFront's JS runtime executes this file as a script
+// where `module` is undefined, so the guarded assignment is dead code at the
+// edge. Node test runners pick it up via `require()`.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { handler: handler };
 }

@@ -56,6 +56,12 @@ Expose the following surface, all of it cacheable, all of it static:
   `Vary: Accept`, and forces `Content-Type: text/markdown; charset=utf-8` on
   `.md` documents (S3 sometimes serves them as `binary/octet-stream`).
 
+Both source files use the `.cjs` extension and end with a guarded
+`module.exports = { handler }` so the Node test runner can `require()` them
+without dynamic code evaluation. The guard is dead code at the edge —
+CloudFront's JS runtime executes the file as a script with no `module`
+global. Extension does not affect the AWS upload (`fileb://` reads bytes).
+
 ### In-browser tooling
 
 - `components/webmcp-register.tsx` calls
