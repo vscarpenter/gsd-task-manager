@@ -7,7 +7,10 @@ import { useToast } from "@/components/ui/toast";
 import { SyncAuthDialog } from "@/components/sync/sync-auth-dialog";
 import { useSyncHealth } from "@/components/sync/use-sync-health";
 import { useSyncStatus, type IconType } from "@/components/sync/use-sync-status";
+import type { SyncState } from "@/lib/sync/sync-provider";
 import { SYNC_TOAST_DURATION } from "@/lib/constants/sync";
+
+type ProviderSyncStatus = SyncState["status"];
 
 /**
  * Compact, editorial-styled sync button for the redesign topbar.
@@ -16,7 +19,7 @@ import { SYNC_TOAST_DURATION } from "@/lib/constants/sync";
  * retry logic, and auth flow are unchanged.
  */
 export function RedesignSyncButton() {
-  const { sync, isSyncing, status, error, isEnabled, nextRetryAt } = useSync();
+  const { sync, isSyncing, status, error, isEnabled, nextRetryAt, lastSuccessfulSyncAt } = useSync();
   const { showToast } = useToast();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
@@ -31,6 +34,7 @@ export function RedesignSyncButton() {
     status,
     error,
     nextRetryAt,
+    lastSuccessfulSyncAt,
     onAuthError: (message, _action, duration) => {
       showToast(
         message,
@@ -57,7 +61,7 @@ export function RedesignSyncButton() {
   }
 
   const icon = getIcon(iconType);
-  const dotColor = getDotColor(iconType, hasAuthError);
+  const dotColor = getDotColor(iconType, hasAuthError, isEnabled, status, lastSuccessfulSyncAt);
   const badgeText = hasAuthError ? "!" : pendingCount > 0 ? String(pendingCount) : null;
 
   return (
@@ -183,7 +187,13 @@ function getIcon(type: IconType) {
   }
 }
 
-function getDotColor(type: IconType, hasAuthError: boolean): string | null {
+function getDotColor(
+  type: IconType,
+  hasAuthError: boolean,
+  isEnabled: boolean,
+  status: ProviderSyncStatus,
+  lastSuccessfulSyncAt: string | null
+): string | null {
   if (hasAuthError) return null; // badge shows "!" instead
   switch (type) {
     case "cloud-off":
@@ -196,6 +206,11 @@ function getDotColor(type: IconType, hasAuthError: boolean): string | null {
       return "var(--q4)";
     case "clock":
       return "var(--q4)";
+    case "cloud-idle":
+      // Healthy steady-state: enabled, idle, and we've synced at least once.
+      // The lastSuccessfulSyncAt gate prevents showing green before the first
+      // successful sync after enabling (e.g. right after OAuth sign-in).
+      return isEnabled && status === "idle" && lastSuccessfulSyncAt ? "var(--q3)" : null;
     default:
       return null;
   }

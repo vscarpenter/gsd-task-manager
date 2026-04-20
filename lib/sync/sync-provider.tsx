@@ -34,6 +34,8 @@ export interface SyncState {
   retryCount: number;
   autoSyncEnabled: boolean;
   autoSyncInterval: number;
+  /** Timestamp of the most recent successful sync, or null if never synced. */
+  lastSuccessfulSyncAt: string | null;
 }
 
 const SyncContext = createContext<SyncState | null>(null);
@@ -57,6 +59,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [retryCount, setRetryCount] = useState(0);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [autoSyncInterval, setAutoSyncInterval] = useState(2);
+  const [lastSuccessfulSyncAt, setLastSuccessfulSyncAt] = useState<string | null>(null);
 
   // Single lifecycle owner for health monitor and background sync
   useEffect(() => {
@@ -112,6 +115,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       setPendingRequests(coordStatus.pendingRequests);
       setNextRetryAt(coordStatus.nextRetryAt);
       setRetryCount(coordStatus.retryCount);
+      setLastSuccessfulSyncAt(coordStatus.lastSuccessfulSyncAt);
 
       const autoConfig = await getAutoSyncConfig();
       setAutoSyncEnabled(autoConfig.enabled);
@@ -230,6 +234,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     retryCount,
     autoSyncEnabled,
     autoSyncInterval,
+    lastSuccessfulSyncAt,
   };
 
   return (

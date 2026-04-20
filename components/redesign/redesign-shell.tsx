@@ -154,10 +154,7 @@ function SidebarFooter() {
         lineHeight: 1.5,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-        <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--q3)" }} />
-        <span style={{ fontWeight: 600, color: "var(--ink-2)" }}>Saved locally</span>
-      </div>
+      <div style={{ fontWeight: 600, color: "var(--ink-2)", marginBottom: 2 }}>Saved locally</div>
       <div>No account needed · Works offline</div>
       <div
         style={{

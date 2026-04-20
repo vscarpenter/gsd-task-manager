@@ -23,6 +23,12 @@ interface SyncStatusOptions {
   error: string | null;
   nextRetryAt: number | null;
   onAuthError: (message: string, action?: { label: string; onClick: () => void }, duration?: number) => void;
+  /**
+   * Timestamp of the most recent successful sync. When provided alongside
+   * `isEnabled` and idle status, the tooltip communicates the healthy
+   * steady-state so the visual green dot has matching copy.
+   */
+  lastSuccessfulSyncAt?: string | null;
 }
 
 interface SyncStatusResult {
@@ -43,6 +49,7 @@ export function useSyncStatus({
   error,
   nextRetryAt,
   onAuthError,
+  lastSuccessfulSyncAt = null,
 }: SyncStatusOptions): SyncStatusResult {
   const [pendingCount, setPendingCount] = useState(0);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
@@ -110,6 +117,7 @@ export function useSyncStatus({
     status,
     error,
     pendingCount,
+    lastSuccessfulSyncAt,
   });
 
   return {
@@ -158,6 +166,7 @@ interface TooltipOptions {
   status: SyncStatus;
   error: string | null;
   pendingCount: number;
+  lastSuccessfulSyncAt: string | null;
 }
 
 function getTooltip({
@@ -167,10 +176,16 @@ function getTooltip({
   status,
   error,
   pendingCount,
+  lastSuccessfulSyncAt,
 }: TooltipOptions): string {
   if (!isEnabled) return 'Sync not enabled';
   if (hasAuthError) return 'Authentication expired - Click to re-login';
   if (retryCountdown !== null && retryCountdown > 0) return `Retrying in ${retryCountdown}s...`;
+
+  // Healthy steady-state: mirror the green-dot affordance with matching copy.
+  if (status === 'idle' && pendingCount === 0 && lastSuccessfulSyncAt) {
+    return 'Synced · Click to sync now';
+  }
 
   return getStatusTooltip(status, error, pendingCount);
 }
