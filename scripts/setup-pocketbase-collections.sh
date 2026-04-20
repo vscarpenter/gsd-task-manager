@@ -190,6 +190,13 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "options": {}
     },
     {
+      "name": "notification_sent",
+      "type": "bool",
+      "required": false,
+      "system": false,
+      "options": {}
+    },
+    {
       "name": "notify_before",
       "type": "number",
       "required": false,
@@ -198,6 +205,16 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
         "min": null,
         "max": null,
         "noDecimal": true
+      }
+    },
+    {
+      "name": "last_notification_at",
+      "type": "text",
+      "required": false,
+      "system": false,
+      "options": {
+        "min": null,
+        "max": 50
       }
     },
     {
@@ -229,6 +246,16 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
       "system": false,
       "options": {
         "maxSize": 100000
+      }
+    },
+    {
+      "name": "snoozed_until",
+      "type": "text",
+      "required": false,
+      "system": false,
+      "options": {
+        "min": null,
+        "max": 50
       }
     },
     {
@@ -282,7 +309,7 @@ if echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); asser
   echo "==> Success! 'tasks' collection created (ID: $COLLECTION_ID)"
   echo ""
   echo "Collection has:"
-  echo "  - 22 fields matching PBTaskRecord schema"
+  echo "  - 25 fields matching PBTaskRecord schema"
   echo "  - API rules: authenticated users can only access their own tasks"
   echo "  - Indexes: owner, task_id+owner (unique), updated"
   echo ""

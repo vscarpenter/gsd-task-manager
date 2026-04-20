@@ -14,8 +14,6 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/mcp-server/package.json packages/mcp-server/
 
-# If behind a corporate proxy, mount host .npmrc via BuildKit secret (see README.md)
-ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 RUN --mount=type=secret,id=npmrc,target=/app/.npmrc,required=false \
     bun install --frozen-lockfile
 
@@ -23,7 +21,7 @@ RUN --mount=type=secret,id=npmrc,target=/app/.npmrc,required=false \
 COPY . .
 
 # Build static export (produces out/ directory)
-RUN node scripts/generate-build-info.js \
+RUN node scripts/generate-build-info.cjs \
     && bash -c 'source .build-env.sh && bunx --bun next build'
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export interface HelpDrawerProps {
   open: boolean;
@@ -11,52 +10,28 @@ export interface HelpDrawerProps {
 }
 
 export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [open, onClose]);
-
   if (!open) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Help"
-      className="redesign-scope"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 60,
-        background: "rgba(24,24,27,0.38)",
-        display: "flex",
-        justifyContent: "flex-end",
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="rd-fade-in"
-        style={{
-          width: "min(520px, 100vw)",
-          height: "100vh",
-          background: "var(--paper)",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "var(--rd-shadow-lg)",
-        }}
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent
+        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:p-0"
       >
+        <div
+          style={{
+            background: "var(--paper)",
+            display: "flex",
+            minHeight: "inherit",
+            flexDirection: "column",
+            boxShadow: "var(--rd-shadow-lg)",
+          }}
+        >
         <header
           style={{
-            padding: "20px 24px 16px",
+            padding: "20px 52px 16px 24px",
             borderBottom: "1px solid var(--line)",
             display: "flex",
             alignItems: "flex-start",
-            justifyContent: "space-between",
             gap: 12,
           }}
         >
@@ -72,27 +47,15 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             >
               Field guide
             </div>
-            <h2 className="rd-serif" style={{ margin: "4px 0 0", fontSize: 28, lineHeight: 1.1 }}>
-              How to use <em style={{ fontStyle: "italic", color: "var(--q2)" }}>GSD</em>
-            </h2>
+            <DialogTitle asChild>
+              <h2 className="rd-serif" style={{ margin: "4px 0 0", fontSize: 28, lineHeight: 1.1 }}>
+                How to use <em style={{ fontStyle: "italic", color: "var(--q2)" }}>GSD</em>
+              </h2>
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Overview of the focus, matrix, and canvas views plus shortcuts and sync guidance.
+            </DialogDescription>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="inline-flex items-center justify-center"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 10,
-              border: 0,
-              background: "transparent",
-              color: "var(--ink-3)",
-              cursor: "pointer",
-            }}
-          >
-            <X size={16} />
-          </button>
         </header>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
@@ -196,8 +159,9 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             </p>
           </Section>
         </div>
-      </div>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

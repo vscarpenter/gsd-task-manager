@@ -76,6 +76,7 @@ export function QuickAdd({ onSubmit, onOpenFull, presetQuadrant }: QuickAddProps
   return (
     <form
       onSubmit={handleSubmit}
+      className="rd-quick-add"
       style={{
         position: "relative",
         background: "var(--paper)",
@@ -100,11 +101,13 @@ export function QuickAdd({ onSubmit, onOpenFull, presetQuadrant }: QuickAddProps
         }}
       />
       <input
+        className="rd-quick-add-input"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder="Tell me what needs doing…   use ! urgent  * important  #tag"
+        aria-label="Quick add a task"
         style={{
           flex: 1,
           border: 0,
@@ -120,7 +123,7 @@ export function QuickAdd({ onSubmit, onOpenFull, presetQuadrant }: QuickAddProps
           <kbd>⏎</kbd>
         </span>
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+      <div className="rd-quick-add-actions" style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
         <TogglePill
           active={parsed.urgent}
           onClick={() => setUrgent((u) => !u)}
@@ -155,9 +158,9 @@ export function QuickAdd({ onSubmit, onOpenFull, presetQuadrant }: QuickAddProps
         </button>
         <button
           type="submit"
-          className="inline-flex items-center gap-1.5"
+          className="rd-quick-add-submit inline-flex items-center gap-1.5"
           style={{
-            height: 30,
+            minHeight: 30,
             padding: "0 12px",
             borderRadius: 10,
             border: "1px solid var(--ink)",
@@ -172,6 +175,9 @@ export function QuickAdd({ onSubmit, onOpenFull, presetQuadrant }: QuickAddProps
           <ArrowRight size={13} strokeWidth={2.2} />
         </button>
       </div>
+      <span className="rd-quick-add-hint">
+        Use <strong>!</strong> for urgent, <strong>*</strong> for important, and <strong>#tag</strong> for tags.
+      </span>
     </form>
   );
 }
@@ -195,8 +201,9 @@ function TogglePill({
       onClick={onClick}
       title={label}
       className="inline-flex items-center gap-1.5"
+      aria-pressed={active}
       style={{
-        height: 30,
+        minHeight: 30,
         padding: "0 10px",
         borderRadius: 8,
         border: "1px solid var(--line)",
@@ -204,7 +211,7 @@ function TogglePill({
         color: active ? "#fff" : "var(--ink-2)",
         fontSize: 12,
         fontWeight: 600,
-        transition: "all .15s",
+        transition: "background-color .15s ease, color .15s ease, border-color .15s ease",
         cursor: "pointer",
       }}
     >

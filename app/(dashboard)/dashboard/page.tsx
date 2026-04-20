@@ -121,7 +121,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background md:flex">
+    <div className="min-h-screen bg-background-muted/30 md:flex">
       <AppRail
         onHelp={() => {
           const params = new URLSearchParams();
@@ -150,19 +150,25 @@ export default function DashboardPage() {
           onOpenSettings={() => router.push(ROUTES.SETTINGS)}
         />
 
-        <div className="space-y-8 pb-8">
-          <div className="border-b border-border bg-background-muted/60 px-4 py-8 sm:px-6">
+        <div className="space-y-8 pb-10">
+          <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
             <div className="mx-auto max-w-7xl">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+                Workspace Insights
+              </p>
+              <h1
+                className="mt-2 text-3xl tracking-tight text-foreground sm:text-4xl"
+                style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
+              >
                 Dashboard
               </h1>
-              <p className="mt-2 text-foreground-muted">
-                Track your productivity and task completion metrics
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted sm:text-base">
+                Track follow-through, spot overdue drag, and keep the matrix balanced before work starts to sprawl.
               </p>
             </div>
           </div>
 
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
             {isLoading ? (
               <DashboardSkeleton />
             ) : tasks.length === 0 ? (

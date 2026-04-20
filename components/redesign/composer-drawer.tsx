@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, Flame, Sparkles, X } from "lucide-react";
 import { quadrantByRdKey, quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { isSamePresetDue, presetDueDate, presetLabel } from "@/lib/redesign/due";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import type { TaskRecord } from "@/lib/types";
 
@@ -64,6 +70,10 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
     editingTask ? draftFromTask(editingTask) : emptyDraft(presetQuadrant)
   );
   const [tagInput, setTagInput] = useState("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleId = useId();
+  const notesId = useId();
+  const tagsId = useId();
 
   useEffect(() => {
     if (open) {
@@ -74,12 +84,12 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
 
   useEffect(() => {
     if (!open) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [open, onClose]);
+    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    const frame = window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
 
   if (!open) return null;
 
@@ -112,41 +122,26 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="New task"
-      className="redesign-scope"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 60,
-        background: "rgba(24,24,27,0.38)",
-        display: "flex",
-        justifyContent: "flex-end",
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="rd-fade-in"
-        style={{
-          width: "min(460px, 100vw)",
-          height: "100vh",
-          background: "var(--paper)",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "var(--rd-shadow-lg)",
-        }}
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent
+        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:w-[460px] md:max-w-[460px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:p-0"
       >
         <div
           style={{
-            padding: "18px 22px 16px",
+            background: "var(--paper)",
+            display: "flex",
+            minHeight: "inherit",
+            flexDirection: "column",
+            boxShadow: "var(--rd-shadow-lg)",
+          }}
+        >
+        <div
+          style={{
+            padding: "18px 52px 16px 22px",
             background: `var(--${activeKey}-soft)`,
             borderBottom: "1px solid var(--line)",
             display: "flex",
             alignItems: "flex-start",
-            justifyContent: "space-between",
             gap: 10,
           }}
         >
@@ -163,28 +158,15 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
               {editingTask ? "Editing · " : "Goes in · "}
               {q.rdTag}
             </div>
-            <h2 className="rd-serif" style={{ margin: "4px 0 0", fontSize: 26, lineHeight: 1 }}>
-              {q.title}
-            </h2>
-            <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 4 }}>{q.rdHint}</div>
+            <DialogTitle asChild>
+              <h2 className="rd-serif" style={{ margin: "4px 0 0", fontSize: 26, lineHeight: 1 }}>
+                {q.title}
+              </h2>
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 4 }}>{q.rdHint}</div>
+            </DialogDescription>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="inline-flex items-center justify-center"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 10,
-              border: 0,
-              background: "transparent",
-              color: "var(--ink-3)",
-              cursor: "pointer",
-            }}
-          >
-            <X size={16} />
-          </button>
         </div>
 
         <div
@@ -197,9 +179,10 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
             gap: 20,
           }}
         >
-          <Field label="Task">
+          <Field label="Task" htmlFor={titleId}>
             <input
-              autoFocus
+              id={titleId}
+              ref={titleInputRef}
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               onKeyDown={(e) => {
@@ -210,8 +193,9 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
             />
           </Field>
 
-          <Field label="Notes">
+          <Field label="Notes" htmlFor={notesId}>
             <textarea
+              id={notesId}
               rows={3}
               value={draft.description}
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
@@ -261,17 +245,17 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
                   return (
                     <div
                       key={id}
-                      style={{
-                        background: active ? `var(--${id})` : "var(--paper)",
-                        color: active ? "#fff" : "var(--ink-3)",
-                        borderRadius: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        transition: "all .15s",
-                      }}
+                    style={{
+                      background: active ? `var(--${id})` : "var(--paper)",
+                      color: active ? "#fff" : "var(--ink-3)",
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      transition: "background-color .15s ease, color .15s ease",
+                    }}
                     >
                       {quadrant.title}
                     </div>
@@ -299,6 +283,7 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
                       color: active ? "var(--paper)" : "var(--ink-2)",
                       fontSize: 12.5,
                       fontWeight: 500,
+                      transition: "background-color .15s ease, color .15s ease, border-color .15s ease",
                       cursor: "pointer",
                     }}
                   >
@@ -309,7 +294,7 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
             </div>
           </Field>
 
-          <Field label="Tags">
+          <Field label="Tags" htmlFor={tagsId}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               {draft.tags.map((t) => (
                 <span
@@ -345,6 +330,7 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
                 </span>
               ))}
               <input
+                id={tagsId}
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -409,14 +395,24 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
           </button>
         </div>
       </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label
+        htmlFor={htmlFor}
         style={{
           display: "block",
           fontSize: 11,
@@ -460,9 +456,10 @@ function ToggleTile({
         borderRadius: 10,
         padding: "10px 12px",
         textAlign: "left",
-        transition: "all .15s",
+        transition: "background-color .15s ease, color .15s ease, transform .15s ease",
         cursor: "pointer",
       }}
+      aria-pressed={active}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}>
         {icon}

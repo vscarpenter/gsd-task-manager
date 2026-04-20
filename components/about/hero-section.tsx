@@ -9,20 +9,23 @@ import { ScrollReveal } from "@/components/about/scroll-reveal";
  */
 export function HeroSection() {
   return (
-    <section className="py-24 sm:py-32">
+    <section className="bg-gradient-to-b from-background to-background-muted/30 py-24 sm:py-32">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
-          <p className="text-xs uppercase tracking-widest text-foreground-muted mb-4">
+          <p className="mb-4 text-xs uppercase tracking-[0.24em] text-foreground-muted">
             Productivity Framework
           </p>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
+          <h1
+            className="mb-6 text-4xl tracking-tight text-foreground sm:text-6xl lg:text-7xl"
+            style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
+          >
             Stop juggling.
             <br />
             Start finishing.
           </h1>
 
-          <p className="text-lg text-foreground-muted max-w-[60ch] mx-auto mb-10">
+          <p className="mx-auto mb-10 max-w-[56ch] text-lg leading-relaxed text-foreground-muted">
             GSD Task Manager uses the Eisenhower Matrix to help you sort what&apos;s
             urgent from what&apos;s important — so you can focus on what actually
             moves the needle.
@@ -35,7 +38,7 @@ export function HeroSection() {
               className={cn(
                 "inline-flex items-center justify-center gap-2",
                 "rounded-full px-6 py-3 text-sm font-medium",
-                "transition-all duration-200",
+                "transition-colors duration-200",
                 "bg-accent hover:bg-accent-hover text-white",
                 "shadow-md shadow-accent/20"
               )}
@@ -47,10 +50,9 @@ export function HeroSection() {
               href="#how-it-works"
               className={cn(
                 "inline-flex items-center justify-center gap-2",
-                "rounded-full px-6 py-3 text-sm font-medium",
-                "transition-all duration-200",
-                "text-foreground-muted hover:text-foreground",
-                "hover:bg-background-muted"
+                "rounded-full border border-border px-6 py-3 text-sm font-medium",
+                "transition-colors duration-200",
+                "bg-card text-foreground-muted hover:bg-background-muted hover:text-foreground"
               )}
             >
               Learn how it works

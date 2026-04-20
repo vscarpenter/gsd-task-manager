@@ -7,18 +7,24 @@ interface FooterCtaProps {
 
 export function FooterCta({ version }: FooterCtaProps) {
   return (
-    <section className="py-20 sm:py-28 bg-background-muted/30">
+    <section className="bg-gradient-to-b from-background-muted/20 to-background py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-4">
+          <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
+            Ready When You Are
+          </p>
+          <h2
+            className="mb-4 text-3xl tracking-tight text-foreground sm:text-4xl"
+            style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
+          >
             Ready to get stuff done?
           </h2>
-          <p className="text-foreground-muted mb-8">
+          <p className="mb-8 text-foreground-muted">
             Free. Private. No sign-up required. Open in your browser right now.
           </p>
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-full px-8 py-3 text-base font-medium transition-all duration-200 bg-accent hover:bg-accent-hover text-white shadow-md shadow-accent/20 hover:shadow-lg hover:shadow-accent/30"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-medium text-white shadow-md shadow-accent/20 transition-colors duration-200 hover:bg-accent-hover"
           >
             Open GSD Task Manager &rarr;
           </Link>

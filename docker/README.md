@@ -42,6 +42,8 @@ Browser (https://localhost)
 ```
 
 Everything runs behind a single HTTPS origin, so there are no CORS or mixed-content issues.
+For custom domains, the app now defaults sync to the same origin unless
+`NEXT_PUBLIC_POCKETBASE_URL` is explicitly set.
 
 ## Configuration
 
@@ -54,6 +56,10 @@ Set these in `docker-compose.yml` or pass via `docker compose`:
 | `SITE_ADDRESS` | `localhost` | Hostname Caddy listens on |
 | `TLS_CERT` | `internal` | Path to TLS cert **or** `internal` for self-signed |
 | `TLS_KEY` | *(empty)* | Path to TLS private key (omit for self-signed) |
+
+If you proxy PocketBase on a different origin instead of the same host, set
+`NEXT_PUBLIC_POCKETBASE_URL` at build time so the static app can target the
+correct backend.
 
 ### Custom SSL Certificates
 
@@ -126,12 +132,13 @@ If setting up PocketBase manually via the admin UI, create a collection named **
 | `tags` | JSON | | Array of strings |
 | `subtasks` | JSON | | Array of subtask objects |
 | `dependencies` | JSON | | Array of task IDs |
+| `notification_sent` | Bool | | Default: false |
 | `notify_before` | Number | | Minutes |
+| `last_notification_at` | Text | | ISO timestamp |
 | `snoozed_until` | Text | | ISO timestamp |
 | `estimated_minutes` | Number | | |
 | `time_spent` | Number | | Minutes |
 | `time_entries` | JSON | | Array of time entry objects |
-| `notification_sent` | Bool | | Default: false |
 | `client_updated_at` | Text | | ISO timestamp (for LWW sync) |
 | `device_id` | Text | | Originating device |
 | `owner` | Text | ✓ | User ID |

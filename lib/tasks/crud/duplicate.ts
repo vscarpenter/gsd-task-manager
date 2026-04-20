@@ -28,7 +28,7 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
       "create",
       duplicate.id,
       duplicate,
-      syncConfig?.enabled ?? true
+      syncConfig?.enabled ?? false
     );
 
     logger.info("Task duplicated", { originalId: id, newId: duplicate.id });

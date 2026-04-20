@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, quadrantForTask, type RedesignQuadrantKey } from "@/lib/quadrants";
@@ -59,8 +59,124 @@ function layoutTasks(tasks: TaskRecord[]): { task: TaskRecord; x: number; y: num
 
 export function ViewCanvas({ tasks, onOpen }: ViewCanvasProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
   const active = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
   const positioned = useMemo(() => layoutTasks(active), [active]);
+  const groupedTasks = useMemo(() => {
+    const grouped: Record<RedesignQuadrantKey, TaskRecord[]> = { q1: [], q2: [], q3: [], q4: [] };
+    active.forEach((task) => {
+      const quadrantKey: RedesignQuadrantKey =
+        task.urgent && task.important ? "q1" : !task.urgent && task.important ? "q2" : task.urgent ? "q3" : "q4";
+      grouped[quadrantKey].push(task);
+    });
+    return grouped;
+  }, [active]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const handleChange = () => setIsCompactViewport(mediaQuery.matches);
+    handleChange();
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  if (isCompactViewport) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            border: "1px solid var(--line)",
+            borderRadius: "var(--rd-radius-lg)",
+            background: "var(--paper)",
+            padding: 18,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: 0.12,
+              textTransform: "uppercase",
+              color: "var(--ink-3)",
+              fontWeight: 600,
+              marginBottom: 8,
+            }}
+          >
+            Decision canvas
+          </div>
+          <h1 className="rd-serif" style={{ margin: 0, fontSize: 28, lineHeight: 1.12 }}>
+            Canvas condenses into a quadrant list on smaller screens.
+          </h1>
+          <p style={{ margin: "10px 0 0", fontSize: 13.5, color: "var(--ink-3)", lineHeight: 1.5 }}>
+            Open the app on a wider screen to see the full urgency × importance map. Tasks stay grouped here so you can still scan and edit them quickly.
+          </p>
+        </div>
+
+        {quadrants.map((quadrant) => (
+          <section
+            key={quadrant.rdKey}
+            style={{
+              border: "1px solid var(--line)",
+              borderRadius: "var(--rd-radius-lg)",
+              background: `var(--${quadrant.rdKey}-soft)`,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.12, color: `var(--${quadrant.rdKey})`, fontWeight: 600 }}>
+                  {quadrant.rdTag}
+                </div>
+                <h2 className="rd-serif" style={{ margin: "4px 0 0", fontSize: 22 }}>
+                  {quadrant.title}
+                </h2>
+              </div>
+              <span className="rd-mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                {groupedTasks[quadrant.rdKey].length}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {groupedTasks[quadrant.rdKey].length === 0 ? (
+                <div style={{ fontSize: 13, color: "var(--ink-3)" }}>{quadrant.rdEmpty}</div>
+              ) : (
+                groupedTasks[quadrant.rdKey].map((task) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => onOpen(task)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      border: "1px solid var(--line)",
+                      borderRadius: 12,
+                      background: "var(--paper)",
+                      color: "var(--ink)",
+                      padding: "12px 14px",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        background: `var(--${quadrant.rdKey})`,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 500 }}>{task.title}</span>
+                    {isOverdue(task) ? (
+                      <AlertCircle size={14} strokeWidth={2.2} style={{ color: "var(--q1)", flexShrink: 0 }} />
+                    ) : null}
+                  </button>
+                ))
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -195,7 +311,7 @@ export function ViewCanvas({ tasks, onOpen }: ViewCanvasProps) {
                     borderRadius: 999,
                     boxShadow: isHovered ? "var(--rd-shadow)" : "var(--rd-shadow-sm)",
                     transform: isHovered ? "scale(1.04)" : "none",
-                    transition: "all .15s",
+                    transition: "transform .15s ease, box-shadow .15s ease, padding .15s ease, max-width .15s ease",
                     maxWidth: isHovered ? 320 : 180,
                   }}
                 >

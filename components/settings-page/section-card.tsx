@@ -20,19 +20,20 @@ export function SectionCard({ eyebrow, title, description, icon: Icon, children 
   return (
     <section
       aria-labelledby={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
-      className="overflow-hidden rounded-3xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      className="overflow-hidden rounded-[28px] border border-border/70 bg-card/95 shadow-[0_8px_30px_rgba(15,23,42,0.06)]"
     >
-      <header className="flex items-start gap-4 border-b border-border/60 bg-gradient-to-b from-background-muted/40 to-transparent px-6 py-6 sm:px-8 sm:py-7">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/20">
+      <header className="flex items-start gap-4 border-b border-border/60 bg-gradient-to-b from-background to-background-muted/30 px-6 py-6 sm:px-8 sm:py-7">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/15">
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
             {eyebrow}
           </p>
           <h2
             id={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
-            className="mt-1 text-2xl font-semibold tracking-tight text-foreground"
+            className="mt-2 text-[2rem] tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
           >
             {title}
           </h2>
