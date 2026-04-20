@@ -43,6 +43,21 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+  }: {
+    children: React.ReactNode;
+    onSelect?: () => void;
+  }) => <button onClick={onSelect}>{children}</button>,
+  DropdownMenuSeparator: () => <hr />,
+  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}));
+
 // --- Imports ---
 
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -168,45 +183,41 @@ describe('PwaRegister', () => {
 
 describe('HeaderActions', () => {
   const defaultProps = {
-    onNewTask: vi.fn(),
     onHelp: vi.fn(),
     onOpenSettings: vi.fn(),
+    onOpenAbout: vi.fn(),
     selectionMode: false,
     selectedCount: 0,
-    isDoFirstEmpty: false,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('calls onOpenSettings directly when the Settings button is clicked', () => {
+  it('calls onOpenSettings when the Settings menu item is selected', () => {
     const onOpenSettings = vi.fn();
     render(<HeaderActions {...defaultProps} onOpenSettings={onOpenSettings} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^settings$/i }));
 
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onNewTask when the New Task button is clicked', () => {
-    const onNewTask = vi.fn();
-    render(<HeaderActions {...defaultProps} onNewTask={onNewTask} />);
-
-    // Both mobile (icon-only) and desktop (labeled) "New Task" buttons are rendered;
-    // getAllByRole avoids ambiguity and either click should wire to onNewTask.
-    const [firstNewTaskButton] = screen.getAllByRole('button', { name: /new task|create task/i });
-    fireEvent.click(firstNewTaskButton);
-
-    expect(onNewTask).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onHelp when the Help button is clicked', () => {
+  it('calls onHelp when the Help menu item is selected', () => {
     const onHelp = vi.fn();
     render(<HeaderActions {...defaultProps} onHelp={onHelp} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /user guide/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^help$/i }));
 
     expect(onHelp).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onOpenAbout when the About menu item is selected', () => {
+    const onOpenAbout = vi.fn();
+    render(<HeaderActions {...defaultProps} onOpenAbout={onOpenAbout} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^about$/i }));
+
+    expect(onOpenAbout).toHaveBeenCalledTimes(1);
   });
 });

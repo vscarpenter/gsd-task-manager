@@ -5,8 +5,30 @@ import { render, screen } from "@testing-library/react";
 // Mocks
 // ---------------------------------------------------------------------------
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("@/components/matrix-board", () => ({
   MatrixBoard: () => <div data-testid="matrix-board">MatrixBoard</div>,
+}));
+
+vi.mock("@/components/dashboard/dashboard-shell-header", () => ({
+  DashboardShellHeader: () => <div data-testid="dashboard-shell-header" />,
+}));
+
+vi.mock("@/components/app-header/app-rail", () => ({
+  AppRail: () => <div data-testid="app-rail" />,
+}));
+
+vi.mock("@/components/app-footer", () => ({
+  AppFooter: () => <div data-testid="app-footer" />,
+}));
+
+vi.mock("@/lib/use-keyboard-shortcuts", () => ({
+  useKeyboardShortcuts: () => undefined,
 }));
 
 vi.mock("@/components/redesign/redesign-matrix", () => ({
@@ -118,19 +140,16 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(
-      screen.getByText("Track your productivity and task completion metrics")
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Track follow-through/i)).toBeInTheDocument();
   });
 
-  it("renders ViewToggle and ThemeToggle in the nav bar", async () => {
+  it("renders the dashboard shell header", async () => {
     const { default: DashboardPage } = await import(
       "@/app/(dashboard)/dashboard/page"
     );
     render(<DashboardPage />);
 
-    expect(screen.getByTestId("view-toggle")).toBeInTheDocument();
-    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-shell-header")).toBeInTheDocument();
   });
 
   it("shows empty state when there are no tasks", async () => {

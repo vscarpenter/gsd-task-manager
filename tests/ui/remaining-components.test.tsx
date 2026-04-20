@@ -204,7 +204,6 @@ describe('AppHeader', () => {
     render(<AppHeader {...defaultProps} />);
 
     expect(screen.getByText('GSD Task Manager')).toBeInTheDocument();
-    expect(screen.getByTestId('gsd-logo')).toBeInTheDocument();
   });
 
   it('renders view toggle and smart view pills', () => {
@@ -217,19 +216,19 @@ describe('AppHeader', () => {
   it('renders search button when search is collapsed', () => {
     render(<AppHeader {...defaultProps} />);
 
-    expect(screen.getByText('Search')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /search tasks/i })).toBeInTheDocument();
   });
 
-  it('renders Add Filter button', () => {
+  it('renders Filters button', () => {
     render(<AppHeader {...defaultProps} />);
 
-    expect(screen.getByText('Add Filter')).toBeInTheDocument();
+    expect(screen.getByText('Filters')).toBeInTheDocument();
   });
 
-  it('calls onOpenFilters when Add Filter is clicked', () => {
+  it('calls onOpenFilters when Filters is clicked', () => {
     render(<AppHeader {...defaultProps} />);
 
-    fireEvent.click(screen.getByText('Add Filter'));
+    fireEvent.click(screen.getByText('Filters'));
     expect(defaultProps.onOpenFilters).toHaveBeenCalledOnce();
   });
 

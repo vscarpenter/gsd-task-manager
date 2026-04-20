@@ -654,7 +654,7 @@ describe('MatrixBoard Integration Tests', () => {
     it('should enter selection mode when task is selected', async () => {
       await renderWithProviders(<MatrixBoard />);
 
-      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      const selectionToggle = await screen.findByRole('button', { name: /^select$/i });
       await user.click(selectionToggle);
 
       const taskCheckbox = await screen.findByRole('checkbox', { name: /select bulk task 1/i });
@@ -669,7 +669,7 @@ describe('MatrixBoard Integration Tests', () => {
     it('should select multiple tasks', async () => {
       await renderWithProviders(<MatrixBoard />);
 
-      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      const selectionToggle = await screen.findByRole('button', { name: /^select$/i });
       await user.click(selectionToggle);
 
       // Select first task
@@ -689,7 +689,7 @@ describe('MatrixBoard Integration Tests', () => {
     it('should bulk delete selected tasks', async () => {
       await renderWithProviders(<MatrixBoard />);
 
-      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      const selectionToggle = await screen.findByRole('button', { name: /^select$/i });
       await user.click(selectionToggle);
 
       // Select tasks
@@ -718,7 +718,7 @@ describe('MatrixBoard Integration Tests', () => {
     it('should bulk complete selected tasks', async () => {
       await renderWithProviders(<MatrixBoard />);
 
-      const selectionToggle = await screen.findByRole('button', { name: /select tasks/i });
+      const selectionToggle = await screen.findByRole('button', { name: /^select$/i });
       await user.click(selectionToggle);
 
       // Select tasks
