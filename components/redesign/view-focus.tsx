@@ -3,10 +3,11 @@
 import { useMemo } from "react";
 import { Plus } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
-import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
+import type { RedesignQuadrantKey } from "@/lib/quadrants";
 import { dueBucket } from "@/lib/redesign/due";
 import { TaskCard } from "./task-card";
-import { Divider, RdButton } from "./primitives";
+import { RdButton } from "./primitives";
+import { MatrixCompass } from "./matrix-compass";
 
 export interface ViewFocusProps {
   tasks: TaskRecord[];
@@ -23,7 +24,7 @@ function formatDateCaption(now: Date): string {
 }
 
 export function ViewFocus({ tasks, onToggle, onOpen, onAdd }: ViewFocusProps) {
-  const { now, today, next, later, byQuadrant, total } = useMemo(() => {
+  const { now, today, next, later } = useMemo(() => {
     const active = tasks.filter((t) => !t.completed);
     const now = active.filter((t) => t.urgent && t.important);
     const today = active.filter(
@@ -35,13 +36,7 @@ export function ViewFocus({ tasks, onToggle, onOpen, onAdd }: ViewFocusProps) {
     const later = active.filter(
       (t) => !(t.urgent && t.important) && dueBucket(t.dueDate) !== "today" && !t.important
     );
-    const byQuadrant: Record<RedesignQuadrantKey, number> = { q1: 0, q2: 0, q3: 0, q4: 0 };
-    active.forEach((t) => {
-      const key: RedesignQuadrantKey =
-        t.urgent && t.important ? "q1" : !t.urgent && t.important ? "q2" : t.urgent ? "q3" : "q4";
-      byQuadrant[key]++;
-    });
-    return { now, today, next, later, byQuadrant, total: active.length };
+    return { now, today, next, later };
   }, [tasks]);
 
   const caption = formatDateCaption(new Date());
@@ -91,86 +86,7 @@ export function ViewFocus({ tasks, onToggle, onOpen, onAdd }: ViewFocusProps) {
         </div>
       </div>
 
-      <aside className="rd-compass" style={{ position: "sticky", top: 20 }}>
-        <div
-          style={{
-            fontSize: 11,
-            letterSpacing: 0.12,
-            textTransform: "uppercase",
-            color: "var(--ink-3)",
-            fontWeight: 600,
-            marginBottom: 10,
-          }}
-        >
-          Matrix compass
-        </div>
-        <div
-          style={{
-            background: "var(--paper)",
-            border: "1px solid var(--line)",
-            borderRadius: "var(--rd-radius-lg)",
-            padding: 14,
-          }}
-        >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            {quadrants.map((q) => {
-              const count = byQuadrant[q.rdKey];
-              return (
-                <button
-                  key={q.rdKey}
-                  type="button"
-                  onClick={() => onAdd(q.rdKey)}
-                  style={{
-                    background: `var(--${q.rdKey}-tint)`,
-                    borderRadius: 10,
-                    padding: "10px 10px 12px",
-                    minHeight: 78,
-                    position: "relative",
-                    border: 0,
-                    textAlign: "left",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10.5,
-                      fontWeight: 600,
-                      color: `var(--${q.rdKey})`,
-                      letterSpacing: 0.04,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {q.rdShort}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginTop: 2 }}>{q.title}</div>
-                  <div
-                    className="rd-serif"
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      bottom: 6,
-                      fontSize: 26,
-                      color: `var(--${q.rdKey})`,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {count}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <Divider style={{ margin: "12px 0" }} />
-          <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
-            <strong style={{ color: "var(--ink)" }}>{total}</strong> active ·{" "}
-            {Math.round((byQuadrant.q2 / Math.max(total, 1)) * 100)}% in the{" "}
-            <em className="rd-serif" style={{ fontStyle: "italic" }}>
-              growth
-            </em>{" "}
-            quadrant
-          </div>
-        </div>
-      </aside>
+      <MatrixCompass tasks={tasks} variant="grid" label="Matrix compass" onAdd={onAdd} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, type QuadrantMeta, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { DraggableTaskCard } from "./draggable-task-card";
+import { MatrixCompass } from "./matrix-compass";
 import { RdButton, RdIconButton, RdQuadrantIcon } from "./primitives";
 
 export interface ViewEditorialProps {
@@ -29,10 +30,23 @@ function groupByQuadrant(tasks: TaskRecord[]): Record<RedesignQuadrantKey, TaskR
 export function ViewEditorial({ tasks, onToggle, onOpen, onAdd }: ViewEditorialProps) {
   const by = groupByQuadrant(tasks);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }} className="rd-editorial-grid">
-      {quadrants.map((q) => (
-        <EditorialColumn key={q.id} quadrant={q} tasks={by[q.rdKey]} onToggle={onToggle} onOpen={onOpen} onAdd={onAdd} />
-      ))}
+    <div className="rd-focus-grid">
+      <div
+        style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}
+        className="rd-editorial-grid"
+      >
+        {quadrants.map((q) => (
+          <EditorialColumn
+            key={q.id}
+            quadrant={q}
+            tasks={by[q.rdKey]}
+            onToggle={onToggle}
+            onOpen={onOpen}
+            onAdd={onAdd}
+          />
+        ))}
+      </div>
+      <MatrixCompass tasks={tasks} variant="list" label="Balance" onAdd={onAdd} />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { AlertCircle } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, quadrantForTask, type RedesignQuadrantKey } from "@/lib/quadrants";
@@ -246,7 +248,7 @@ export function ViewCanvas({ tasks, onOpen }: ViewCanvasProps) {
             `,
           }}
         >
-          {/* Quadrant tints behind the gridlines */}
+          {/* Quadrant tints behind the gridlines (also drop targets) */}
           <div
             style={{
               position: "absolute",
@@ -258,10 +260,10 @@ export function ViewCanvas({ tasks, onOpen }: ViewCanvasProps) {
               zIndex: 0,
             }}
           >
-            <div style={{ background: "var(--q2-soft)", margin: "0 2px 2px 0" }} />
-            <div style={{ background: "var(--q1-soft)", margin: "0 0 2px 2px" }} />
-            <div style={{ background: "var(--q4-soft)", margin: "2px 2px 0 0" }} />
-            <div style={{ background: "var(--q3-soft)", margin: "2px 0 0 2px" }} />
+            <CanvasDropZone rdKey="q2" margin="0 2px 2px 0" />
+            <CanvasDropZone rdKey="q1" margin="0 0 2px 2px" />
+            <CanvasDropZone rdKey="q4" margin="2px 2px 0 0" />
+            <CanvasDropZone rdKey="q3" margin="2px 0 0 2px" />
           </div>
 
           <QLabel pos={{ top: 12, left: 14 }} rdKey="q2" />
@@ -283,85 +285,17 @@ export function ViewCanvas({ tasks, onOpen }: ViewCanvasProps) {
             ← Not important · <strong>Importance</strong> · Important →
           </AxisLabel>
 
-          {positioned.map(({ task, x, y }) => {
-            const q = quadrantForTask(task.urgent, task.important);
-            const isHovered = hoveredId === task.id;
-            const overdue = isOverdue(task);
-            return (
-              <div
-                key={task.id}
-                onMouseEnter={() => setHoveredId(task.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={() => onOpen(task)}
-                style={{
-                  position: "absolute",
-                  left: `${x * 100}%`,
-                  top: `${y * 100}%`,
-                  transform: "translate(-50%, -50%)",
-                  zIndex: isHovered ? 10 : 1,
-                  cursor: "pointer",
-                }}
-              >
-                <div
-                  className="inline-flex items-center gap-1.5"
-                  style={{
-                    padding: isHovered ? "6px 12px 6px 8px" : "5px 10px 5px 8px",
-                    background: "var(--paper)",
-                    border: `1px solid var(--${q.rdKey})`,
-                    borderRadius: 999,
-                    boxShadow: isHovered ? "var(--rd-shadow)" : "var(--rd-shadow-sm)",
-                    transform: isHovered ? "scale(1.04)" : "none",
-                    transition: "transform .15s ease, box-shadow .15s ease, padding .15s ease, max-width .15s ease",
-                    maxWidth: isHovered ? 320 : 180,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: 999,
-                      background: `var(--${q.rdKey})`,
-                      flexShrink: 0,
-                      display: "inline-block",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 12.5,
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      color: "var(--ink)",
-                    }}
-                  >
-                    {task.title}
-                  </span>
-                  {overdue && (
-                    <AlertCircle size={11} strokeWidth={2.4} style={{ color: "var(--q1)", flexShrink: 0 }} />
-                  )}
-                </div>
-                {isHovered && task.description && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 4px)",
-                      left: 0,
-                      padding: "8px 10px",
-                      background: "var(--ink)",
-                      color: "var(--paper)",
-                      borderRadius: 8,
-                      fontSize: 11.5,
-                      maxWidth: 280,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {task.description}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {positioned.map(({ task, x, y }) => (
+            <CanvasPill
+              key={task.id}
+              task={task}
+              x={x}
+              y={y}
+              hovered={hoveredId === task.id}
+              onHover={setHoveredId}
+              onOpen={onOpen}
+            />
+          ))}
         </div>
 
         <div
@@ -372,9 +306,174 @@ export function ViewCanvas({ tasks, onOpen }: ViewCanvasProps) {
             textAlign: "center",
           }}
         >
-          Tasks near the axes are borderline. Click a pill to open it.
+          Drag a pill to re-quadrant. Click to open.
         </div>
       </div>
+    </div>
+  );
+}
+
+function CanvasDropZone({ rdKey, margin }: { rdKey: RedesignQuadrantKey; margin: string }) {
+  const quadrant = quadrants.find((q) => q.rdKey === rdKey)!;
+  const { setNodeRef, isOver } = useDroppable({ id: quadrant.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        background: `var(--${rdKey}-soft)`,
+        margin,
+        transition: "box-shadow .15s ease, background-color .15s ease",
+        boxShadow: isOver ? `inset 0 0 0 2px var(--${rdKey})` : "none",
+      }}
+    />
+  );
+}
+
+function CanvasPill({
+  task,
+  x,
+  y,
+  hovered,
+  onHover,
+  onOpen,
+}: {
+  task: TaskRecord;
+  x: number;
+  y: number;
+  hovered: boolean;
+  onHover: (id: string | null) => void;
+  onOpen: (task: TaskRecord) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
+  const q = quadrantForTask(task.urgent, task.important);
+  const overdue = isOverdue(task);
+  const pillTransform = transform
+    ? `translate(-50%, -50%) ${CSS.Translate.toString(transform)}`
+    : "translate(-50%, -50%)";
+
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      {...attributes}
+      {...listeners}
+      onMouseEnter={() => onHover(task.id)}
+      onMouseLeave={() => onHover(null)}
+      onClick={() => onOpen(task)}
+      aria-label={`Open task: ${task.title}`}
+      style={{
+        position: "absolute",
+        left: `${x * 100}%`,
+        top: `${y * 100}%`,
+        transform: pillTransform,
+        zIndex: isDragging ? 20 : hovered ? 10 : 1,
+        cursor: isDragging ? "grabbing" : "grab",
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: "manipulation",
+        background: "transparent",
+        border: 0,
+        padding: 0,
+      }}
+    >
+      <div
+        className="inline-flex items-center gap-1.5"
+        style={{
+          padding: hovered ? "6px 12px 6px 8px" : "5px 10px 5px 8px",
+          background: "var(--paper)",
+          border: `1px solid var(--${q.rdKey})`,
+          borderRadius: 999,
+          boxShadow: hovered ? "var(--rd-shadow)" : "var(--rd-shadow-sm)",
+          transform: hovered && !isDragging ? "scale(1.04)" : "none",
+          transition: "transform .15s ease, box-shadow .15s ease, padding .15s ease, max-width .15s ease",
+          maxWidth: hovered ? 320 : 180,
+        }}
+      >
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: 999,
+            background: `var(--${q.rdKey})`,
+            flexShrink: 0,
+            display: "inline-block",
+          }}
+        />
+        <span
+          style={{
+            fontSize: 12.5,
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            color: "var(--ink)",
+          }}
+        >
+          {task.title}
+        </span>
+        {overdue && <AlertCircle size={11} strokeWidth={2.4} style={{ color: "var(--q1)", flexShrink: 0 }} />}
+      </div>
+      {hovered && !isDragging && task.description && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            padding: "8px 10px",
+            background: "var(--ink)",
+            color: "var(--paper)",
+            borderRadius: 8,
+            fontSize: 11.5,
+            maxWidth: 280,
+            lineHeight: 1.4,
+            pointerEvents: "none",
+            textAlign: "left",
+          }}
+        >
+          {task.description}
+        </div>
+      )}
+    </button>
+  );
+}
+
+export function CanvasPillPreview({ task }: { task: TaskRecord }) {
+  const q = quadrantForTask(task.urgent, task.important);
+  const overdue = isOverdue(task);
+  return (
+    <div
+      className="inline-flex items-center gap-1.5"
+      style={{
+        padding: "6px 12px 6px 8px",
+        background: "var(--paper)",
+        border: `1px solid var(--${q.rdKey})`,
+        borderRadius: 999,
+        boxShadow: "var(--rd-shadow)",
+        maxWidth: 260,
+      }}
+    >
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          background: `var(--${q.rdKey})`,
+          flexShrink: 0,
+          display: "inline-block",
+        }}
+      />
+      <span
+        style={{
+          fontSize: 12.5,
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          color: "var(--ink)",
+        }}
+      >
+        {task.title}
+      </span>
+      {overdue && <AlertCircle size={11} strokeWidth={2.4} style={{ color: "var(--q1)", flexShrink: 0 }} />}
     </div>
   );
 }

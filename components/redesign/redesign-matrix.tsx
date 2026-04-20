@@ -16,7 +16,7 @@ import { TOAST_DURATION } from "@/lib/constants";
 import { RedesignShell, type RedesignView } from "./redesign-shell";
 import { ViewFocus } from "./view-focus";
 import { ViewEditorial } from "./view-editorial";
-import { ViewCanvas } from "./view-canvas";
+import { CanvasPillPreview, ViewCanvas } from "./view-canvas";
 import { QuickAdd } from "./quick-add";
 import { ComposerDrawer } from "./composer-drawer";
 import { HelpDrawer } from "./help-drawer";
@@ -245,7 +245,11 @@ export function RedesignMatrix() {
           // DragOverlay portals to document.body, so re-apply .redesign-scope
           // to keep tokens (--paper, --ink, etc.) resolving.
           <div className="redesign-scope" style={{ cursor: "grabbing" }}>
-            <TaskCard task={activeDragTask} />
+            {view === "canvas" ? (
+              <CanvasPillPreview task={activeDragTask} />
+            ) : (
+              <TaskCard task={activeDragTask} />
+            )}
           </div>
         ) : null}
       </DragOverlay>
