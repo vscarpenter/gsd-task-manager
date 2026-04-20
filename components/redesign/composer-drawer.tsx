@@ -124,7 +124,7 @@ export function ComposerDrawer({ open, onClose, onSubmit, presetQuadrant, editin
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent
-        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:w-[460px] md:max-w-[460px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:p-0"
+        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:bottom-auto md:h-[100dvh] md:max-h-none md:w-[460px] md:max-w-[460px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:p-0"
       >
         <div
           style={{

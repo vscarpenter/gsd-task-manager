@@ -1,8 +1,9 @@
 import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { TIME_MS, DATE_CONFIG } from "@/lib/constants";
 
 export function cn(...classNames: Array<string | undefined | false | null>): string {
-  return clsx(classNames);
+  return twMerge(clsx(classNames));
 }
 
 /**
