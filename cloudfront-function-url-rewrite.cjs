@@ -16,7 +16,6 @@
  *
  * @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-functions.html
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handler(event) {
   var request = event.request;
   var uri = request.uri;
@@ -38,4 +37,11 @@ function handler(event) {
   }
 
   return request;
+}
+
+// Test-only export. CloudFront's JS runtime executes this file as a script
+// where `module` is undefined, so the guarded assignment is dead code at the
+// edge. Node test runners pick it up via `require()`.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { handler: handler };
 }

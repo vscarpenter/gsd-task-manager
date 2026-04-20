@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -8,18 +8,13 @@ type CFResponse = { headers: Record<string, CFHeader> };
 type CFEvent = { request: CFRequest; response?: CFResponse };
 type Handler = (event: CFEvent) => CFRequest | CFResponse;
 
-const root = resolve(__dirname, '../..');
-
-const loadHandler = (file: string): Handler => {
-	const source = readFileSync(resolve(root, file), 'utf-8');
-	// CloudFront Functions are bare scripts that declare `function handler(event)`.
-	// Wrap them so the `Function` constructor returns the handler reference.
-	const factory = new Function(`${source}; return handler;`);
-	return factory() as Handler;
-};
-
-const urlRewrite = loadHandler('cloudfront-function-url-rewrite.js');
-const responseHeaders = loadHandler('cloudfront-function-response-headers.js');
+// Both CloudFront source files end with a `typeof module !== 'undefined'`
+// guard that exposes the handler as a CommonJS export. The guard is dead
+// code at the edge (CloudFront's JS runtime has no `module` global) so this
+// import path is test-only and adds no edge runtime cost.
+const requireCjs = createRequire(resolve(__dirname, '../../package.json'));
+const { handler: urlRewrite } = requireCjs('./cloudfront-function-url-rewrite.cjs') as { handler: Handler };
+const { handler: responseHeaders } = requireCjs('./cloudfront-function-response-headers.cjs') as { handler: Handler };
 
 const makeRequest = (uri: string, headers: Record<string, string> = {}): CFRequest => ({
 	uri,

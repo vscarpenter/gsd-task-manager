@@ -14,11 +14,11 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 DISTRIBUTION_ID="${CLOUDFRONT_DISTRIBUTION_ID:?Error: CLOUDFRONT_DISTRIBUTION_ID environment variable is required}"
 
 REQUEST_FUNCTION_NAME="gsd-url-rewrite"
-REQUEST_FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-url-rewrite.js"
+REQUEST_FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-url-rewrite.cjs"
 REQUEST_FUNCTION_COMMENT="URL rewrite + Accept: text/markdown negotiation for Next.js static export"
 
 RESPONSE_FUNCTION_NAME="gsd-response-headers"
-RESPONSE_FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-response-headers.js"
+RESPONSE_FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-response-headers.cjs"
 RESPONSE_FUNCTION_COMMENT="Agent discovery: Link headers + Vary: Accept + markdown content-type"
 
 publish_function() {
