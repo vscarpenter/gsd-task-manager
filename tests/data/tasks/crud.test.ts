@@ -391,6 +391,30 @@ describe('Task CRUD Operations', () => {
       expect(result.completed).toBe(false);
     });
 
+    it('should not enqueue sync when sync is disabled', async () => {
+      const original: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        title: 'Original Task',
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(original);
+      mockDb.tasks.add.mockResolvedValue(undefined);
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: false,
+        deviceId: 'test-device',
+      });
+
+      await duplicateTask('task-1');
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
     it('should throw error when original task not found', async () => {
       mockDb.tasks.get.mockResolvedValue(null);
 

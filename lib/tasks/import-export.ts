@@ -95,12 +95,14 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
     throw new Error(`Invalid import data: ${result.error.issues.map(i => i.message).join(", ")}`);
   }
   const parsed = result.data;
+  let tasksEnqueuedForSync: TaskRecord[] = [];
 
   await db.transaction("rw", db.tasks, async () => {
     if (mode === "replace") {
       // Replace mode: clear existing and add imported tasks
       await db.tasks.clear();
       await db.tasks.bulkAdd(parsed.tasks);
+      tasksEnqueuedForSync = parsed.tasks;
     } else {
       // Merge mode: keep existing, add imported with regenerated IDs if needed
       const existingTasks = await db.tasks.toArray();
@@ -108,6 +110,7 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       const { tasks: regeneratedTasks, idMap } = regenerateConflictingIds(parsed.tasks, existingIds);
       const tasksToImport = remapTaskReferences(regeneratedTasks, idMap);
       await db.tasks.bulkAdd(tasksToImport);
+      tasksEnqueuedForSync = tasksToImport;
     }
   });
 
@@ -118,8 +121,7 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
   const syncConfig = await getSyncConfig();
   if (syncConfig?.enabled) {
     const queue = getSyncQueue();
-    const importedTasks = await db.tasks.toArray();
-    for (const task of (mode === "replace" ? importedTasks : parsed.tasks)) {
+    for (const task of tasksEnqueuedForSync) {
       await queue.enqueue('create', task.id, task);
     }
     scheduleSyncAfterChange();

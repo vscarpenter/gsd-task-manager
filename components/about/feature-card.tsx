@@ -11,12 +11,17 @@ interface FeatureCardProps {
 export function FeatureCard({ icon: Icon, title, description, className }: FeatureCardProps) {
   return (
     <div className={cn(
-      "rounded-2xl border border-card-border bg-card p-6 transition-all duration-200",
-      "hover:border-border hover:bg-background-muted/40",
+      "rounded-[24px] border border-border/70 bg-card/95 p-6 transition-colors duration-200",
+      "hover:border-foreground/10 hover:bg-background-muted/35",
       className
     )}>
-      <Icon className="h-5 w-5 text-accent mb-3" aria-hidden="true" />
-      <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
+      <Icon className="mb-4 h-5 w-5 text-accent" aria-hidden="true" />
+      <h3
+        className="mb-2 text-xl tracking-tight text-foreground"
+        style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
+      >
+        {title}
+      </h3>
       <p className="text-sm text-foreground-muted leading-relaxed">{description}</p>
     </div>
   );

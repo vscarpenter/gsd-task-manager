@@ -519,14 +519,14 @@ main {
 
 .redesign-scope .rd-checkbox {
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
   border: 1.5px solid var(--line);
   background: var(--paper);
   display: inline-grid;
   place-items: center;
-  transition: all 0.15s;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -539,12 +539,22 @@ main {
 }
 .redesign-scope .rd-checkbox:checked::after {
   content: "";
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'><path d='M2.5 6.5L5 9L9.5 3.5' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;
 }
 .dark .redesign-scope .rd-checkbox:checked::after {
   background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'><path d='M2.5 6.5L5 9L9.5 3.5' stroke='%2318181b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;
+}
+
+.redesign-scope :where(button, [role="tab"], a, input, textarea):focus-visible {
+  outline: 2px solid var(--rd-accent);
+  outline-offset: 2px;
+}
+
+.redesign-scope :where(button, a, input, textarea) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .redesign-scope .rd-fade-in {
@@ -581,6 +591,20 @@ main {
   align-items: flex-start;
 }
 
+.redesign-scope .rd-topbar__search {
+  min-width: 0;
+}
+
+.redesign-scope .rd-topbar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.redesign-scope .rd-quick-add-hint {
+  display: none;
+}
+
 /* Responsive — collapse to single column / stack sidebar at narrower widths */
 @media (max-width: 900px) {
   .redesign-scope .rd-focus-grid {
@@ -592,19 +616,75 @@ main {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1024px) {
   .redesign-scope {
     grid-template-columns: minmax(0, 1fr) !important;
   }
   .redesign-scope .rd-sidebar {
     display: none !important;
   }
+}
+
+@media (max-width: 720px) {
   .redesign-scope .rd-topbar {
     padding: 12px 16px !important;
     flex-wrap: wrap;
   }
+  .redesign-scope .rd-topbar__search {
+    order: 3;
+    width: 100%;
+    max-width: none !important;
+  }
+  .redesign-scope .rd-topbar__search kbd {
+    display: none;
+  }
+  .redesign-scope .rd-topbar__actions {
+    margin-left: auto;
+  }
   .redesign-scope main {
     padding: 18px 16px 40px !important;
   }
+  .redesign-scope .rd-compass {
+    position: static !important;
+  }
+  .redesign-scope .rd-task-card-main {
+    min-height: 76px;
+  }
+  .redesign-scope .rd-quick-add {
+    padding: 12px !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+    flex-wrap: wrap;
+  }
+  .redesign-scope .rd-quick-add-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .redesign-scope .rd-quick-add-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  .redesign-scope .rd-quick-add-actions > * {
+    min-height: 40px;
+  }
+  .redesign-scope .rd-quick-add-submit {
+    margin-left: auto;
+    min-width: 108px;
+    justify-content: center;
+  }
+  .redesign-scope .rd-quick-add-hint {
+    display: block;
+    order: 4;
+    width: 100%;
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.45;
+  }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .redesign-scope .rd-fade-in {
+    animation: none !important;
+  }
+}

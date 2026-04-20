@@ -212,8 +212,8 @@ export function SettingsPage() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen bg-background">
-        <div className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl backdrop-saturate-150">
+      <div className="min-h-screen bg-background-muted/30">
+        <div className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-xl backdrop-saturate-150">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <Link
               href={ROUTES.HOME}
@@ -242,11 +242,17 @@ export function SettingsPage() {
               <ArrowLeftIcon className="h-3.5 w-3.5" />
               Back to matrix
             </Link>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+            <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+              Preferences & Data
+            </p>
+            <h1
+              className="mt-2 text-4xl tracking-tight text-foreground sm:text-5xl"
+              style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
+            >
               Settings
             </h1>
-            <p className="mt-3 max-w-xl text-base text-foreground-muted">
-              Personalize the matrix, tune notifications, and manage your data — all local by default.
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground-muted">
+              Personalize the workspace, tune reminders, and manage local data without losing the calm, editorial tone of the main app.
             </p>
           </div>
 

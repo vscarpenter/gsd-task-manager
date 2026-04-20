@@ -9,8 +9,23 @@ import { getDb } from '@/lib/db';
 import type { TaskRecord, ImportPayload } from '@/lib/types';
 
 // Mock dependencies
+const mockGetSyncConfig = vi.hoisted(() => vi.fn());
+const mockQueueEnqueue = vi.hoisted(() => vi.fn());
+const mockScheduleSyncAfterChange = vi.hoisted(() => vi.fn());
+
 vi.mock('@/lib/db');
 vi.mock('@/lib/logger');
+vi.mock('@/lib/sync/config', () => ({
+  getSyncConfig: mockGetSyncConfig,
+}));
+vi.mock('@/lib/sync/queue', () => ({
+  getSyncQueue: () => ({
+    enqueue: mockQueueEnqueue,
+  }),
+}));
+vi.mock('@/lib/tasks/crud/helpers', () => ({
+  scheduleSyncAfterChange: mockScheduleSyncAfterChange,
+}));
 
 describe('Task Import/Export Operations', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +78,7 @@ describe('Task Import/Export Operations', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetSyncConfig.mockResolvedValue(null);
 
     // Create mock database with transaction support
     mockDb = {
@@ -244,6 +260,24 @@ describe('Task Import/Export Operations', () => {
       expect(importedChild!.dependencies).toContain(parentId);
       expect(importedChild!.dependencies).not.toContain('task-2');
       expect(importedDependent!.dependencies).toContain(parentId);
+    });
+
+    it('should enqueue remapped tasks for sync in merge mode', async () => {
+      const existingTask = { ...sampleTask1, title: 'Existing Task' };
+      mockDb.tasks.toArray.mockResolvedValue([existingTask]);
+      mockDb.tasks.bulkAdd.mockResolvedValue(undefined);
+      mockGetSyncConfig.mockResolvedValue({ enabled: true });
+
+      await importTasks(validPayload, 'merge');
+
+      expect(mockQueueEnqueue).toHaveBeenCalledTimes(2);
+
+      const firstEnqueuedTaskId = mockQueueEnqueue.mock.calls[0][1];
+      const firstEnqueuedPayload = mockQueueEnqueue.mock.calls[0][2];
+
+      expect(firstEnqueuedTaskId).not.toBe('task-1');
+      expect(firstEnqueuedPayload.id).toBe(firstEnqueuedTaskId);
+      expect(mockScheduleSyncAfterChange).toHaveBeenCalled();
     });
 
     it('should validate payload with schema', async () => {

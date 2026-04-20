@@ -18,6 +18,11 @@ export interface EnvironmentConfig {
   environment: Environment;
 }
 
+const KNOWN_REMOTE_POCKETBASE_HOSTS = new Map<string, string>([
+  ['gsd.vinny.dev', 'https://api.vinny.io'],
+  ['gsd-dev.vinny.dev', 'https://api.vinny.io'],
+]);
+
 /**
  * Detect current environment from hostname
  */
@@ -47,21 +52,34 @@ function detectEnvironment(): Environment {
 
 /**
  * Resolve PocketBase URL based on environment and protocol.
- * Self-hosted (Docker): HTTPS on localhost means PocketBase is behind a reverse proxy at the same origin.
- * Development (bun dev): HTTP on localhost uses the default local PocketBase port.
+ * Development keeps the existing localhost behavior.
+ * Known hosted domains may map to a dedicated PocketBase host.
+ * Unknown HTTPS deployments fall back to same-origin, which is safe for the
+ * documented self-hosted reverse-proxy setup and avoids sending data to an
+ * unrelated default backend.
  */
 function resolvePocketBaseUrl(environment: Environment): string {
+  if (typeof window === 'undefined') {
+    return environment === 'development'
+      ? 'http://127.0.0.1:8090'
+      : 'https://api.vinny.io';
+  }
+
   if (
     environment === 'development' &&
-    typeof window !== 'undefined' &&
     window.location.protocol === 'https:'
   ) {
     return window.location.origin;
   }
 
+  const mappedPocketBaseUrl = KNOWN_REMOTE_POCKETBASE_HOSTS.get(window.location.hostname);
+  if (mappedPocketBaseUrl) {
+    return mappedPocketBaseUrl;
+  }
+
   return environment === 'development'
     ? 'http://127.0.0.1:8090'
-    : 'https://api.vinny.io';
+    : window.location.origin;
 }
 
 /**

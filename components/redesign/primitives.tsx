@@ -121,6 +121,23 @@ export function Segmented<V extends string>({
             aria-selected={active}
             type="button"
             onClick={() => onChange(opt.value)}
+            onKeyDown={(event) => {
+              const currentIndex = options.findIndex((candidate) => candidate.value === value);
+              if (currentIndex === -1) return;
+              if (event.key === "ArrowRight") {
+                event.preventDefault();
+                onChange(options[(currentIndex + 1) % options.length].value);
+              } else if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                onChange(options[(currentIndex - 1 + options.length) % options.length].value);
+              } else if (event.key === "Home") {
+                event.preventDefault();
+                onChange(options[0].value);
+              } else if (event.key === "End") {
+                event.preventDefault();
+                onChange(options[options.length - 1].value);
+              }
+            }}
             className="inline-flex items-center gap-1.5 rounded-lg"
             style={{
               border: 0,
@@ -228,7 +245,7 @@ export function RdButton({
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    height: 36,
+    minHeight: 36,
     padding: "0 14px",
     borderRadius: 10,
     fontWeight: 500,

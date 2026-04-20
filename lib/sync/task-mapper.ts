@@ -31,10 +31,13 @@ export interface PBTaskRecord {
   subtasks: Subtask[];
   dependencies: string[];
   notification_enabled: boolean;
+  notification_sent: boolean;
   notify_before: number | null;
+  last_notification_at: string;
   estimated_minutes: number | null;
   time_spent: number;
   time_entries: TimeEntry[];
+  snoozed_until: string;
   client_updated_at: string;
   client_created_at: string;
   device_id: string;
@@ -64,10 +67,13 @@ export function taskRecordToPocketBase(
     subtasks: task.subtasks ?? [],
     dependencies: task.dependencies ?? [],
     notification_enabled: task.notificationEnabled ?? true,
+    notification_sent: task.notificationSent ?? false,
     notify_before: task.notifyBefore ?? null,
+    last_notification_at: task.lastNotificationAt ?? '',
     estimated_minutes: task.estimatedMinutes ?? null,
     time_spent: task.timeSpent ?? 0,
     time_entries: task.timeEntries ?? [],
+    snoozed_until: task.snoozedUntil ?? '',
     client_updated_at: task.updatedAt,
     client_created_at: task.createdAt,
     device_id: deviceId,
@@ -95,10 +101,13 @@ const pbTaskRecordSchema = z.object({
   subtasks: z.array(subtaskSchema).default([]),
   dependencies: z.array(z.string()).default([]),
   notification_enabled: z.boolean().default(true),
+  notification_sent: z.boolean().default(false),
   notify_before: z.number().int().min(0).nullable().default(null),
+  last_notification_at: z.string().default(''),
   estimated_minutes: z.number().int().min(0).nullable().default(null),
   time_spent: z.number().int().min(0).default(0),
   time_entries: z.array(timeEntrySchema).default([]),
+  snoozed_until: z.string().default(''),
 }).strip();
 
 /**
@@ -136,11 +145,12 @@ export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord | null {
     subtasks: r.subtasks,
     dependencies: r.dependencies,
     notificationEnabled: r.notification_enabled,
+    notificationSent: r.notification_sent,
     notifyBefore: r.notify_before ?? undefined,
-    notificationSent: false,
+    lastNotificationAt: r.last_notification_at || undefined,
     estimatedMinutes: r.estimated_minutes ?? undefined,
     timeSpent: r.time_spent,
     timeEntries: r.time_entries,
+    snoozedUntil: r.snoozed_until || undefined,
   };
 }
-

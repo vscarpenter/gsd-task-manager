@@ -39,7 +39,7 @@ export function RedesignShell({
   children,
 }: RedesignShellProps) {
   return (
-    <div className="redesign-scope" style={{ display: "grid", gridTemplateColumns: "232px minmax(0, 1fr)", minHeight: "100vh" }}>
+    <div className="redesign-scope" style={{ display: "grid", gridTemplateColumns: "232px minmax(0, 1fr)", minHeight: "100dvh" }}>
       <Sidebar view={view} onViewChange={onViewChange} onOpenHelp={onOpenHelp} />
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
         <TopBar
@@ -82,7 +82,7 @@ function Sidebar({
         flexDirection: "column",
         position: "sticky",
         top: 0,
-        height: "100vh",
+        height: "100dvh",
       }}
       className="rd-sidebar"
     >
@@ -208,6 +208,7 @@ function SidebarLink({ href, label, icon }: { href: Route; label: string; icon?:
   return (
     <Link
       href={href}
+      className="rd-nav-link"
       style={{
         display: "flex",
         alignItems: "center",
@@ -301,19 +302,22 @@ function TopBar({
         gap: 14,
       }}
     >
-      <Segmented<RedesignView>
-        size="sm"
-        value={view}
-        onChange={onViewChange}
-        ariaLabel="View"
-        options={[
-          { value: "focus", label: "Focus", icon: <Focus size={13} /> },
-          { value: "editorial", label: "Matrix", icon: <Grid2x2 size={13} /> },
-          { value: "canvas", label: "Canvas", icon: <LineChart size={13} /> },
-        ]}
-      />
+      <div style={{ flexShrink: 0 }}>
+        <Segmented<RedesignView>
+          size="sm"
+          value={view}
+          onChange={onViewChange}
+          ariaLabel="View"
+          options={[
+            { value: "focus", label: "Focus", icon: <Focus size={13} /> },
+            { value: "editorial", label: "Matrix", icon: <Grid2x2 size={13} /> },
+            { value: "canvas", label: "Canvas", icon: <LineChart size={13} /> },
+          ]}
+        />
+      </div>
 
       <div
+        className="rd-topbar__search"
         style={{
           flex: 1,
           maxWidth: 440,
@@ -333,6 +337,7 @@ function TopBar({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={`Search ${VIEW_LABELS[view]}…`}
+          aria-label={`Search ${VIEW_LABELS[view]}`}
           style={{
             border: 0,
             background: "transparent",
@@ -345,38 +350,39 @@ function TopBar({
         <kbd>/</kbd>
       </div>
 
-      <div style={{ flex: 1 }} />
+      <div className="rd-topbar__actions">
+        <RedesignSyncButton />
 
-      <RedesignSyncButton />
-
-      <button
-        type="button"
-        onClick={onOpenComposer}
-        className="inline-flex items-center gap-2"
-        style={{
-          height: 36,
-          padding: "0 14px",
-          borderRadius: 10,
-          border: "1px solid var(--ink)",
-          background: "var(--ink)",
-          color: "var(--paper)",
-          fontSize: 13.5,
-          fontWeight: 500,
-          cursor: "pointer",
-        }}
-      >
-        <Plus size={14} /> New task
-        <kbd
+        <button
+          type="button"
+          onClick={onOpenComposer}
+          className="inline-flex items-center gap-2"
           style={{
-            marginLeft: 2,
-            background: "rgba(255,255,255,.12)",
-            color: "#fff",
-            borderColor: "rgba(255,255,255,.2)",
+            minHeight: 36,
+            padding: "0 14px",
+            borderRadius: 10,
+            border: "1px solid var(--ink)",
+            background: "var(--ink)",
+            color: "var(--paper)",
+            fontSize: 13.5,
+            fontWeight: 500,
+            cursor: "pointer",
           }}
         >
-          N
-        </kbd>
-      </button>
+          <Plus size={14} /> New task
+          <kbd
+            className="hidden sm:inline-flex"
+            style={{
+              marginLeft: 2,
+              background: "rgba(255,255,255,.12)",
+              color: "#fff",
+              borderColor: "rgba(255,255,255,.2)",
+            }}
+          >
+            N
+          </kbd>
+        </button>
+      </div>
     </header>
   );
 }

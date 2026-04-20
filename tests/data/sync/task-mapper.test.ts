@@ -30,10 +30,12 @@ function buildLocalTask(overrides?: Partial<TaskRecord>): TaskRecord {
     dependencies: ['task-456'],
     notificationEnabled: true,
     notificationSent: false,
+    lastNotificationAt: '2026-04-08T09:45:00.000Z',
     notifyBefore: 15,
     estimatedMinutes: 30,
     timeSpent: 10,
     timeEntries: [],
+    snoozedUntil: '2026-04-10T11:30:00.000Z',
     ...overrides,
   };
 }
@@ -60,10 +62,13 @@ function buildPBRecord(overrides?: Record<string, unknown>) {
     subtasks: [{ id: 'sub-1', title: 'Subtask 1', completed: false }],
     dependencies: ['task-456'],
     notification_enabled: true,
+    notification_sent: false,
     notify_before: 15,
+    last_notification_at: '2026-04-08T09:45:00.000Z',
     estimated_minutes: 30,
     time_spent: 10,
     time_entries: [],
+    snoozed_until: '2026-04-10T11:30:00.000Z',
     client_created_at: '2026-04-01T00:00:00.000Z',
     client_updated_at: '2026-04-08T10:00:00.000Z',
     device_id: 'device-1',
@@ -86,19 +91,24 @@ describe('task-mapper', () => {
       expect(result.client_updated_at).toBe('2026-04-08T10:00:00.000Z');
       expect(result.client_created_at).toBe('2026-04-01T00:00:00.000Z');
       expect(result.notification_enabled).toBe(true);
+      expect(result.notification_sent).toBe(false);
       expect(result.notify_before).toBe(15);
+      expect(result.last_notification_at).toBe('2026-04-08T09:45:00.000Z');
       expect(result.estimated_minutes).toBe(30);
       expect(result.time_spent).toBe(10);
+      expect(result.snoozed_until).toBe('2026-04-10T11:30:00.000Z');
     });
 
     it('should handle optional fields with defaults', () => {
       const local = buildLocalTask({
         dueDate: undefined,
         completedAt: undefined,
+        lastNotificationAt: undefined,
         notifyBefore: undefined,
         estimatedMinutes: undefined,
         timeSpent: undefined,
         timeEntries: undefined,
+        snoozedUntil: undefined,
         tags: undefined,
       });
       const result = taskRecordToPocketBase(local, 'user-1', 'device-1');
@@ -106,9 +116,11 @@ describe('task-mapper', () => {
       expect(result.due_date).toBe('');
       expect(result.completed_at).toBe('');
       expect(result.notify_before).toBeNull();
+      expect(result.last_notification_at).toBe('');
       expect(result.estimated_minutes).toBeNull();
       expect(result.time_spent).toBe(0);
       expect(result.time_entries).toEqual([]);
+      expect(result.snoozed_until).toBe('');
       expect(result.tags).toEqual([]);
     });
 
@@ -141,9 +153,12 @@ describe('task-mapper', () => {
       expect(result!.createdAt).toBe('2026-04-01T00:00:00.000Z');
       expect(result!.updatedAt).toBe('2026-04-08T10:00:00.000Z');
       expect(result!.notificationEnabled).toBe(true);
+      expect(result!.notificationSent).toBe(false);
       expect(result!.notifyBefore).toBe(15);
+      expect(result!.lastNotificationAt).toBe('2026-04-08T09:45:00.000Z');
       expect(result!.estimatedMinutes).toBe(30);
       expect(result!.timeSpent).toBe(10);
+      expect(result!.snoozedUntil).toBe('2026-04-10T11:30:00.000Z');
     });
 
     it('should convert empty strings to undefined for optional date fields', () => {
@@ -164,9 +179,27 @@ describe('task-mapper', () => {
       expect(result!.estimatedMinutes).toBeUndefined();
     });
 
-    it('should set notificationSent to false on imported records', () => {
-      const result = pocketBaseToTaskRecord(buildPBRecord());
+    it('should preserve notification state from PocketBase records', () => {
+      const result = pocketBaseToTaskRecord(buildPBRecord({
+        notification_sent: true,
+        last_notification_at: '2026-04-08T10:30:00.000Z',
+        snoozed_until: '2026-04-10T12:00:00.000Z',
+      }));
+      expect(result!.notificationSent).toBe(true);
+      expect(result!.lastNotificationAt).toBe('2026-04-08T10:30:00.000Z');
+      expect(result!.snoozedUntil).toBe('2026-04-10T12:00:00.000Z');
+    });
+
+    it('should default missing notification state safely', () => {
+      const pb = buildPBRecord();
+      delete (pb as Record<string, unknown>).notification_sent;
+      delete (pb as Record<string, unknown>).last_notification_at;
+      delete (pb as Record<string, unknown>).snoozed_until;
+
+      const result = pocketBaseToTaskRecord(pb);
       expect(result!.notificationSent).toBe(false);
+      expect(result!.lastNotificationAt).toBeUndefined();
+      expect(result!.snoozedUntil).toBeUndefined();
     });
 
     it('should return null for records missing required fields', () => {
