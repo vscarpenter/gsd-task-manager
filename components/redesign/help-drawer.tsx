@@ -270,7 +270,7 @@ const bodyStyle: React.CSSProperties = {
 };
 
 const codeStyle: React.CSSProperties = {
-  fontFamily: "var(--font-geist-mono, ui-monospace, monospace)",
+  fontFamily: "var(--font-mono, ui-monospace, monospace)",
   fontSize: 12,
   padding: "2px 8px",
   borderRadius: 6,

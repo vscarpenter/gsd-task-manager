@@ -48,7 +48,7 @@ export function DashboardShellHeader({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-xl backdrop-saturate-150">
+      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur-xl backdrop-saturate-150">
         <div className="flex flex-col">
           <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <div className="flex min-w-0 flex-1 items-center gap-3">

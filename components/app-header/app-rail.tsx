@@ -77,7 +77,7 @@ export function AppRail({ onHelp, onOpenSettings }: AppRailProps) {
   };
 
   return (
-    <aside className="hidden md:flex md:w-72 md:shrink-0 md:flex-col md:border-r md:border-border/70 md:bg-background/75 md:backdrop-blur-xl">
+    <aside className="hidden md:flex md:w-72 md:shrink-0 md:flex-col md:border-r md:border-border/70 md:bg-background/85 md:backdrop-blur-xl">
       <div className="sticky top-0 flex h-screen flex-col px-4 py-5">
         <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background-muted/50 px-3 py-3">
           <GsdLogo className="h-11 w-11 shrink-0" />
