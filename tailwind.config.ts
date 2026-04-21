@@ -56,8 +56,9 @@ const config = {
         }
       },
       fontFamily: {
-        sans: ["'Inter'", "system-ui", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "sans-serif"],
-        mono: ["'JetBrains Mono'", "'SFMono-Regular'", "monospace"]
+        sans: ["var(--font-sans)", "system-ui", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        serif: ["var(--font-instrument-serif)", "ui-serif", "Georgia", "serif"]
       },
       boxShadow: {
         card: "0 10px 30px -12px rgba(15, 33, 50, 0.45)"

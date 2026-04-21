@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -16,30 +15,15 @@ import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 
-// Local fonts for better offline PWA support and reliability
-const inter = localFont({
-  src: "../fonts/Inter-Variable.woff2",
-  variable: "--font-sans",
-  display: "swap",
-  weight: "100 900",
-});
-
-const jetbrainsMono = localFont({
-  src: "../fonts/JetBrainsMono-Variable.woff2",
-  variable: "--font-mono",
-  display: "swap",
-  weight: "100 800",
-});
-
 const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-sans",
   display: "swap",
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -101,7 +85,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.variable, jetbrainsMono.variable, geist.variable, geistMono.variable, instrumentSerif.variable, "font-sans bg-canvas text-foreground antialiased")}>
+      <body className={cn(geist.variable, geistMono.variable, instrumentSerif.variable, "font-sans bg-background text-foreground antialiased")}>
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>

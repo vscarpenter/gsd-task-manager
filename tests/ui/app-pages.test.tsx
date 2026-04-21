@@ -10,13 +10,9 @@ import { render, screen } from '@testing-library/react';
 
 // --- Mocks (must be before component imports) ---
 
-vi.mock('next/font/local', () => ({
-  default: () => ({ className: 'mock-font', variable: '--font-mock' }),
-}));
-
 vi.mock('next/font/google', () => ({
-  Geist: () => ({ className: 'mock-geist', variable: '--font-geist' }),
-  Geist_Mono: () => ({ className: 'mock-geist-mono', variable: '--font-geist-mono' }),
+  Geist: () => ({ className: 'mock-geist', variable: '--font-sans' }),
+  Geist_Mono: () => ({ className: 'mock-geist-mono', variable: '--font-mono' }),
   Instrument_Serif: () => ({ className: 'mock-instrument', variable: '--font-instrument-serif' }),
 }));
 

@@ -115,8 +115,8 @@ export function StatsCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-3xl border border-border/70 bg-card/95 p-6 ${className}`}
-      style={{ boxShadow: "var(--shadow-column)" }}
+      className={`relative overflow-hidden rounded-[20px] border border-border bg-card p-6 ${className}`}
+      style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${glow}`} />
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent dark:via-white/10" />
