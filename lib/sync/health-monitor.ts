@@ -81,7 +81,8 @@ export class HealthMonitor {
       if (connectivityIssue) issues.push(connectivityIssue);
 
       return { healthy: issues.length === 0, issues, timestamp };
-    } catch {
+    } catch (error) {
+      logger.warn('Health check failed', { error });
       return {
         healthy: false,
         issues: [{
@@ -143,7 +144,8 @@ export class HealthMonitor {
       const pb = getPocketBase();
       await pb.health.check();
       return null;
-    } catch {
+    } catch (error) {
+      logger.debug('PocketBase health check failed', { error });
       return {
         type: 'server_unreachable',
         severity: 'error',

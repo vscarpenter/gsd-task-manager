@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangleIcon, PlusCircleIcon, RefreshCwIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { importFromJson } from "@/lib/tasks";
@@ -45,7 +46,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
       onOpenChange(false);
     } catch (error) {
       logger.error("Import failed", error instanceof Error ? error : new Error(String(error)));
-      window.alert("Import failed. Ensure you selected a valid export file.");
+      toast.error("Import failed. Ensure you selected a valid export file.");
     } finally {
       setIsImporting(false);
     }
