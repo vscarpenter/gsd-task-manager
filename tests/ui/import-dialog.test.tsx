@@ -10,6 +10,14 @@ vi.mock("@/lib/tasks", () => ({
   importFromJson: (raw: string, mode: "replace" | "merge") => mockImportFromJson(raw, mode)
 }));
 
+const mockToastError = vi.fn();
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
+}));
+
 describe("ImportDialog", () => {
   const mockOnOpenChange = vi.fn();
   const mockOnImportComplete = vi.fn();
@@ -181,9 +189,8 @@ describe("ImportDialog", () => {
     });
   });
 
-  it("shows alert on import error", async () => {
+  it("shows toast error on import error", async () => {
     const user = userEvent.setup();
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     mockImportFromJson.mockRejectedValue(new Error("Import failed"));
 
     render(<ImportDialog {...defaultProps} />);
@@ -191,15 +198,12 @@ describe("ImportDialog", () => {
     await user.click(screen.getByText("Merge Tasks"));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith("Import failed. Ensure you selected a valid export file.");
+      expect(mockToastError).toHaveBeenCalledWith("Import failed. Ensure you selected a valid export file.");
     });
-
-    alertSpy.mockRestore();
   });
 
   it("does not close dialog on import error", async () => {
     const user = userEvent.setup();
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     mockImportFromJson.mockRejectedValue(new Error("Import failed"));
 
     render(<ImportDialog {...defaultProps} />);
@@ -207,17 +211,14 @@ describe("ImportDialog", () => {
     await user.click(screen.getByText("Merge Tasks"));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalled();
     });
 
     expect(mockOnOpenChange).not.toHaveBeenCalled();
-
-    alertSpy.mockRestore();
   });
 
   it("re-enables buttons after import error", async () => {
     const user = userEvent.setup();
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     mockImportFromJson.mockRejectedValue(new Error("Import failed"));
 
     render(<ImportDialog {...defaultProps} />);
@@ -227,13 +228,11 @@ describe("ImportDialog", () => {
     await user.click(mergeButton!);
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalled();
     });
 
     // Buttons should be re-enabled after error
     expect(mergeButton).not.toBeDisabled();
-
-    alertSpy.mockRestore();
   });
 
   it("handles invalid JSON in fileContents gracefully", () => {
