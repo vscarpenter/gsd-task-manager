@@ -156,10 +156,7 @@ export default function DashboardPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
                 Workspace Insights
               </p>
-              <h1
-                className="mt-2 text-3xl tracking-tight text-foreground sm:text-4xl"
-                style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
-              >
+              <h1 className="rd-serif mt-2 text-3xl tracking-tight text-foreground sm:text-4xl">
                 Dashboard
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted sm:text-base">

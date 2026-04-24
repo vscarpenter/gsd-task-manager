@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { Focus, Grid2x2, HelpCircle, Info, LineChart, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { ROUTES } from "@/lib/routes";
+import { Z } from "@/lib/z-index";
 import { Segmented } from "./primitives";
 import { RedesignSyncButton } from "./sync-button";
 import { RedesignLogo } from "./redesign-logo";
@@ -286,7 +287,7 @@ function TopBar({
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 30,
+        zIndex: Z.sticky,
         // Fallback to opaque --bg for browsers without relative color syntax support.
         background: "var(--bg)",
         backgroundColor: "color-mix(in srgb, var(--bg) 85%, transparent)",

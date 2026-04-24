@@ -250,22 +250,17 @@ export function RdButton({
     borderRadius: 10,
     fontWeight: 500,
     fontSize: 13.5,
-    transition: "background .15s, border-color .15s, transform .05s",
+    transition: "background .15s, border-color .15s, color .15s, transform .05s",
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1,
-  };
-  const variants: Record<string, React.CSSProperties> = {
-    default: { border: "1px solid var(--line)", background: "var(--paper)", color: "var(--ink)" },
-    primary: { border: "1px solid var(--ink)", background: "var(--ink)", color: "var(--paper)" },
-    ghost: { border: "1px solid transparent", background: "transparent", color: "var(--ink-2)" },
   };
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="rd-button"
-      style={{ ...base, ...variants[variant], ...style }}
+      className={`rd-button rd-button-${variant}`}
+      style={{ ...base, ...style }}
     >
       {children}
     </button>

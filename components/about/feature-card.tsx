@@ -16,10 +16,7 @@ export function FeatureCard({ icon: Icon, title, description, className }: Featu
       className
     )}>
       <Icon className="mb-4 h-5 w-5 text-accent" aria-hidden="true" />
-      <h3
-        className="mb-2 text-xl tracking-tight text-foreground"
-        style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
-      >
+      <h3 className="rd-serif mb-2 text-xl tracking-tight text-foreground">
         {title}
       </h3>
       <p className="text-sm text-foreground-muted leading-relaxed">{description}</p>
