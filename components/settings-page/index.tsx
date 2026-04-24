@@ -245,10 +245,7 @@ export function SettingsPage() {
             <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
               Preferences & Data
             </p>
-            <h1
-              className="mt-2 text-4xl tracking-tight text-foreground sm:text-5xl"
-              style={{ fontFamily: "var(--font-instrument-serif, ui-serif, Georgia, serif)" }}
-            >
+            <h1 className="rd-serif mt-2 text-4xl tracking-tight text-foreground sm:text-5xl">
               Settings
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground-muted">

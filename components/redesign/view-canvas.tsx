@@ -7,6 +7,7 @@ import { AlertCircle } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, quadrantForTask, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { isOverdue } from "@/lib/redesign/due";
+import { Z } from "@/lib/z-index";
 
 export interface ViewCanvasProps {
   tasks: TaskRecord[];
@@ -366,7 +367,7 @@ function CanvasPill({
         left: `${x * 100}%`,
         top: `${y * 100}%`,
         transform: pillTransform,
-        zIndex: isDragging ? 20 : hovered ? 10 : 1,
+        zIndex: isDragging ? Z.dragging : hovered ? Z.hover : Z.base,
         cursor: isDragging ? "grabbing" : "grab",
         opacity: isDragging ? 0.4 : 1,
         touchAction: "manipulation",
@@ -495,7 +496,7 @@ function QLabel({
         ...pos,
         textAlign: align ?? "left",
         pointerEvents: "none",
-        zIndex: 2,
+        zIndex: Z.canvasLabel,
       }}
     >
       <div
@@ -527,7 +528,7 @@ function AxisLabel({ pos, children }: { pos: React.CSSProperties; children: Reac
         letterSpacing: 0.04,
         whiteSpace: "nowrap",
         pointerEvents: "none",
-        zIndex: 2,
+        zIndex: Z.canvasLabel,
       }}
     >
       {children}

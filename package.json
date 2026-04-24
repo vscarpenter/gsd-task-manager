@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "8.6.4",
+	"version": "8.6.5",
 	"private": true,
 	"type": "module",
 	"scripts": {
