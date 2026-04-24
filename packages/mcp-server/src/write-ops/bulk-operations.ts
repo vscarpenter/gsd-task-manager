@@ -39,7 +39,7 @@ export async function bulkUpdateTasks(
     return { updated: 0, deleted: 0, errors: ['No matching tasks found'], dryRun: isDryRun };
   }
 
-  const { ownerId, deviceId } = getAuthInfo(config);
+  const { ownerId, deviceId } = await getAuthInfo(config);
   const errors: string[] = [];
   let updateCount = 0;
   let deleteCount = 0;

@@ -95,7 +95,7 @@ export async function createTask(
     };
   }
 
-  const { ownerId, deviceId } = getAuthInfo(config);
+  const { ownerId, deviceId } = await getAuthInfo(config);
   await createTaskInPB(config, newTask, ownerId, deviceId);
 
   return {
@@ -213,7 +213,7 @@ export async function updateTask(
     };
   }
 
-  const { ownerId, deviceId } = getAuthInfo(config);
+  const { ownerId, deviceId } = await getAuthInfo(config);
   await updateTaskInPB(config, updatedTask, ownerId, deviceId);
 
   return {

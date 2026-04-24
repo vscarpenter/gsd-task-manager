@@ -102,12 +102,30 @@ async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string
 }
 
 /**
- * Get the current user's ID and device ID from PocketBase auth
+ * Get the current user's ID and device ID from PocketBase auth.
+ *
+ * When the MCP server is configured via GSD_AUTH_TOKEN, `getPocketBase` only
+ * seeds `authStore.token`; the user record is null until we hydrate it. Reads
+ * work header-only, but writes need `ownerId` for the `owner` field.
  */
-export function getAuthInfo(config: GsdConfig): { ownerId: string; deviceId: string } {
+export async function getAuthInfo(
+  config: GsdConfig
+): Promise<{ ownerId: string; deviceId: string }> {
   const pb = getPocketBase(config);
-  const model = pb.authStore.record;
 
+  if (!pb.authStore.record?.id && pb.authStore.token) {
+    try {
+      await pb.collection('users').authRefresh();
+    } catch {
+      throw new Error(
+        `Not authenticated\n\n` +
+          `Your auth token may be invalid or expired.\n` +
+          `Run: npx gsd-mcp-server --setup`
+      );
+    }
+  }
+
+  const model = pb.authStore.record;
   if (!model?.id) {
     throw new Error(
       `Not authenticated\n\n` +
