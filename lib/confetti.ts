@@ -36,6 +36,9 @@ function canRenderCanvas(): boolean {
 /**
  * Lazily create a fullscreen confetti canvas attached to document.body
  * with the worker disabled (CSP-safe). Reused across calls.
+ *
+ * z-index 1000000 keeps confetti above Sonner's default z-index (999999)
+ * and all other UI layers.
  */
 function getConfettiInstance(): CreateTypes | null {
   if (fireConfetti) return fireConfetti;
@@ -47,7 +50,7 @@ function getConfettiInstance(): CreateTypes | null {
   canvas.style.width = "100%";
   canvas.style.height = "100%";
   canvas.style.pointerEvents = "none";
-  canvas.style.zIndex = "9999";
+  canvas.style.zIndex = "1000000";
   document.body.appendChild(canvas);
 
   fireConfetti = confetti.create(canvas, { resize: true, useWorker: false });
@@ -59,10 +62,10 @@ export function celebrateCompletion(): void {
   if (prefersReducedMotion()) return;
   if (!canRenderCanvas()) return;
 
-  const fire = getConfettiInstance();
-  if (!fire) return;
-
   try {
+    const fire = getConfettiInstance();
+    if (!fire) return;
+
     // Big center burst.
     fire({
       particleCount: 120,

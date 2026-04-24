@@ -279,9 +279,42 @@ describe("smart-views", () => {
 
 describe("confetti", () => {
   it("celebrateCompletion does not throw in jsdom (no canvas support)", async () => {
+    vi.resetModules();
     const { celebrateCompletion } = await import("@/lib/confetti");
     // jsdom canvas getContext returns null, so canRenderCanvas = false => early return
     expect(() => celebrateCompletion()).not.toThrow();
+  });
+
+  it("celebrateCompletion does not throw when prefersReducedMotion is true", async () => {
+    vi.resetModules();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() } as unknown as MediaQueryList);
+    const { celebrateCompletion } = await import("@/lib/confetti");
+    expect(() => celebrateCompletion()).not.toThrow();
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it("celebrateCompletion swallows errors from confetti initialization", async () => {
+    vi.resetModules();
+    // Mock confetti module to make .create throw, simulating a CSP block
+    vi.doMock("canvas-confetti", () => ({
+      default: Object.assign(vi.fn(), {
+        create: vi.fn().mockImplementation(() => { throw new Error("CSP blocked"); })
+      })
+    }));
+    // Make canRenderCanvas() return true by having all canvas elements return a context.
+    // Double-cast is needed because jsdom's getContext return type is a broad union.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      {} as unknown as CanvasRenderingContext2D
+    );
+
+    const { celebrateCompletion } = await import("@/lib/confetti");
+    // Should not throw even when getConfettiInstance() fails internally
+    expect(() => celebrateCompletion()).not.toThrow();
+
+    vi.restoreAllMocks();
+    vi.doUnmock("canvas-confetti");
   });
 });
 
