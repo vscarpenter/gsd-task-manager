@@ -141,7 +141,7 @@ export function StatsCard({
           )}
           {trend && (
             <div className="mt-3 flex items-center gap-1">
-              <span className={`text-xs font-medium ${trend.isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+              <span className={`text-xs font-medium ${trend.isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                 {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%
               </span>
               <span className="text-xs text-foreground-muted">from last week</span>

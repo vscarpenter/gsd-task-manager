@@ -378,14 +378,14 @@ function CanvasPill({
       <div
         className="inline-flex items-center gap-1.5"
         style={{
-          padding: hovered ? "6px 12px 6px 8px" : "5px 10px 5px 8px",
+          padding: "5px 10px 5px 8px",
           background: "var(--paper)",
           border: `1px solid var(--${q.rdKey})`,
           borderRadius: 999,
           boxShadow: hovered ? "var(--rd-shadow)" : "var(--rd-shadow-sm)",
           transform: hovered && !isDragging ? "scale(1.04)" : "none",
-          transition: "transform .15s ease, box-shadow .15s ease, padding .15s ease, max-width .15s ease",
-          maxWidth: hovered ? 320 : 180,
+          transition: "transform .15s ease, box-shadow .15s ease",
+          maxWidth: 180,
         }}
       >
         <span
