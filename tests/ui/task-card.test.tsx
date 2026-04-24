@@ -61,6 +61,32 @@ describe("TaskCard", () => {
     expect(screen.getByText("Test description")).toBeInTheDocument();
   });
 
+  it("renders safe http and https URLs in descriptions as external links", () => {
+    const taskWithUrl = {
+      ...mockTask,
+      description: "Review https://example.com/spec before launch",
+    };
+
+    render(<TaskCard task={taskWithUrl} allTasks={[taskWithUrl]} {...mockHandlers} />);
+
+    const link = screen.getByRole("link", { name: "https://example.com/spec" });
+    expect(link).toHaveAttribute("href", "https://example.com/spec");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("does not link blocked URL protocols in descriptions", () => {
+    const taskWithBlockedUrls = {
+      ...mockTask,
+      description: "Do not run javascript:alert(1) or data:text/html,<svg>",
+    };
+
+    render(<TaskCard task={taskWithBlockedUrls} allTasks={[taskWithBlockedUrls]} {...mockHandlers} />);
+
+    expect(screen.getByText("Do not run javascript:alert(1) or data:text/html,<svg>")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("calls onToggleComplete when checkbox is clicked", async () => {
     const user = userEvent.setup();
     render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);

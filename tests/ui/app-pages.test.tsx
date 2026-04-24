@@ -126,6 +126,19 @@ describe('RootLayout', () => {
 
     expect(screen.getByTestId('toaster')).toBeInTheDocument();
   });
+
+  it('renders a CSP that restricts form submissions', () => {
+    render(
+      <RootLayout>
+        <p>content</p>
+      </RootLayout>
+    );
+
+    const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    expect(csp).toHaveAttribute('content', expect.stringContaining("form-action 'self'"));
+    expect(csp).toHaveAttribute('content', expect.stringContaining("object-src 'none'"));
+    expect(csp).toHaveAttribute('content', expect.stringContaining("base-uri 'self'"));
+  });
 });
 
 describe('AboutPage', () => {
