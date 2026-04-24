@@ -309,7 +309,6 @@ export async function deleteTask(
         dependenciesCleaned++;
       } catch (error) {
         // Log but don't throw — the primary delete already succeeded.
-        // eslint-disable-next-line no-console
         console.error(
           `Failed to clean dependency reference on task ${affected.id}: ${
             error instanceof Error ? error.message : 'Unknown error'

@@ -168,6 +168,16 @@ describe('Tool Schemas', () => {
       expect(properties).toHaveProperty('subtasks');
       expect(properties).toHaveProperty('recurrence');
       expect(properties).toHaveProperty('dependencies');
+      expect(properties).toHaveProperty('notifyBefore');
+      expect(properties).toHaveProperty('notificationEnabled');
+      expect(properties).toHaveProperty('estimatedMinutes');
+    });
+
+    it('update_task should expose notification and time fields', () => {
+      const properties = updateTaskTool.inputSchema.properties;
+      expect(properties).toHaveProperty('notifyBefore');
+      expect(properties).toHaveProperty('notificationEnabled');
+      expect(properties).toHaveProperty('estimatedMinutes');
     });
 
     it('update_task should only require id', () => {
