@@ -25,6 +25,9 @@ export interface PBTask {
   dependencies: string[];
   notification_enabled: boolean;
   notify_before: number;
+  notification_sent: boolean;
+  last_notification_at: string;
+  snoozed_until: string;
   estimated_minutes: number;
   time_spent: number;
   time_entries: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
@@ -56,6 +59,9 @@ export interface Task {
   dependencies: string[];
   notificationEnabled?: boolean;
   notifyBefore?: number;
+  notificationSent?: boolean;
+  lastNotificationAt?: string;
+  snoozedUntil?: string;
   estimatedMinutes?: number;
   timeSpent?: number;
   timeEntries?: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
@@ -127,6 +133,9 @@ export function pbTaskToTask(pb: PBTask): Task {
     dependencies: pb.dependencies || [],
     notificationEnabled: pb.notification_enabled ?? true,
     notifyBefore: pb.notify_before ?? undefined,
+    notificationSent: pb.notification_sent ?? false,
+    ...(pb.last_notification_at ? { lastNotificationAt: pb.last_notification_at } : {}),
+    ...(pb.snoozed_until ? { snoozedUntil: pb.snoozed_until } : {}),
     estimatedMinutes: pb.estimated_minutes ?? undefined,
     timeSpent: pb.time_spent ?? 0,
     timeEntries: pb.time_entries ?? [],
@@ -160,6 +169,9 @@ export function taskToPBFields(
     dependencies: task.dependencies || [],
     notification_enabled: task.notificationEnabled ?? true,
     notify_before: task.notifyBefore ?? 0,
+    notification_sent: task.notificationSent ?? false,
+    last_notification_at: task.lastNotificationAt ?? '',
+    snoozed_until: task.snoozedUntil ?? '',
     estimated_minutes: task.estimatedMinutes ?? 0,
     time_spent: task.timeSpent ?? 0,
     time_entries: task.timeEntries ?? [],

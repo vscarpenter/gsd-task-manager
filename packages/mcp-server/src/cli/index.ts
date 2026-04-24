@@ -5,6 +5,7 @@
 
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
+import { VERSION } from '../version.js';
 
 export interface CLIOptions {
   mode: 'mcp' | 'setup' | 'validate' | 'help';
@@ -69,7 +70,7 @@ DOCUMENTATION:
   Full docs: https://github.com/vscarpenter/gsd-taskmanager/tree/main/packages/mcp-server
   Issues:    https://github.com/vscarpenter/gsd-taskmanager/issues
 
-VERSION: 0.7.0
+VERSION: ${VERSION}
 `);
 }
 

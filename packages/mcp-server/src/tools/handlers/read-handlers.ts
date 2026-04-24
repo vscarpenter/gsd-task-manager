@@ -8,6 +8,7 @@ import {
   type GsdConfig,
 } from '../../tools.js';
 import { getPocketBase } from '../../pocketbase-client.js';
+import { getTokenStatus } from '../../auth/token-status.js';
 import type { McpToolResponse } from './types.js';
 
 /**
@@ -35,28 +36,14 @@ export async function handleGetSyncStatus(config: GsdConfig): Promise<McpToolRes
 }
 
 /**
- * Handle get_token_status tool
- * Checks PocketBase auth store validity
+ * Handle get_token_status tool.
+ *
+ * Decodes the PocketBase JWT (no signature check — the server is the source of
+ * truth) to surface the real `exp` claim, days remaining, and a graduated
+ * healthy/warning/critical/expired status.
  */
 export async function handleGetTokenStatus(config: GsdConfig): Promise<McpToolResponse> {
-  const pb = getPocketBase(config);
-  const isValid = pb.authStore.isValid;
-
-  const result = {
-    status: isValid ? 'healthy' : 'expired',
-    expired: !isValid,
-    message: isValid
-      ? 'PocketBase auth token is valid.'
-      : 'Auth token is invalid or expired. Please re-authenticate.',
-    instructions: !isValid
-      ? [
-          '1. Visit https://gsd.vinny.dev and log in',
-          '2. Copy the PocketBase auth token from browser',
-          '3. Update GSD_AUTH_TOKEN in Claude Desktop config',
-          '4. Restart Claude Desktop',
-        ]
-      : null,
-  };
+  const result = getTokenStatus(config.authToken);
 
   return {
     content: [

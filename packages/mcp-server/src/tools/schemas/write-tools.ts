@@ -58,6 +58,22 @@ export const createTaskTool: Tool = {
         items: { type: 'string' },
         description: 'Task IDs that must be completed before this task',
       },
+      notifyBefore: {
+        type: 'number',
+        description:
+          'Minutes before due date to send a reminder notification (0 disables the reminder)',
+        minimum: 0,
+      },
+      notificationEnabled: {
+        type: 'boolean',
+        description: 'Whether notifications are enabled for this task (default: true)',
+      },
+      estimatedMinutes: {
+        type: 'number',
+        description: 'Estimated time to complete in minutes (1-10080, i.e. up to 7 days)',
+        minimum: 1,
+        maximum: 10080,
+      },
       dryRun: {
         type: 'boolean',
         description: 'If true, validate and show what would be created without actually saving',
@@ -129,6 +145,21 @@ export const updateTaskTool: Tool = {
       completed: {
         type: 'boolean',
         description: 'Mark as complete/incomplete',
+      },
+      notifyBefore: {
+        type: 'number',
+        description: 'Minutes before due date to send a reminder (0 disables the reminder)',
+        minimum: 0,
+      },
+      notificationEnabled: {
+        type: 'boolean',
+        description: 'Whether notifications are enabled for this task',
+      },
+      estimatedMinutes: {
+        type: 'number',
+        description: 'Estimated time to complete in minutes (1-10080)',
+        minimum: 1,
+        maximum: 10080,
       },
       dryRun: {
         type: 'boolean',

@@ -32,6 +32,7 @@ import {
   handleGetHelp,
   handleGetCacheStats,
 } from './system-handlers.js';
+import { validateToolArgs } from './input-schemas.js';
 
 // Re-export all handlers
 export * from './read-handlers.js';
@@ -55,10 +56,11 @@ export async function handleToolCall(
   config: GsdConfig
 ): Promise<McpToolResponse> {
   try {
-    // MCP SDK provides untyped args object; each handler validates with its own Zod
-    // schema, so the `any` cast here bridges the generic dispatch boundary safely.
+    // Validate tool arguments against the Zod schema registered for this tool.
+    // Rejects malformed input here with a clear error instead of letting a bad
+    // shape surface deep in the write pipeline.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const typedArgs = args as any;
+    const typedArgs = validateToolArgs(name, args) as any;
     switch (name) {
       // Read tools
       case 'get_sync_status':

@@ -1,6 +1,7 @@
 import { getSyncStatus, listTasks, type GsdConfig } from '../../tools.js';
 import { getTaskCache } from '../../cache.js';
 import { getPocketBase } from '../../pocketbase-client.js';
+import { VERSION } from '../../version.js';
 import type { McpToolResponse } from './types.js';
 
 /**
@@ -203,7 +204,7 @@ function buildAdditionalResourcesSection(): string {
 - **Setup Guide:** Run \`npx gsd-mcp-server --setup\`
 - **Issues/Support:** https://github.com/vscarpenter/gsd-taskmanager/issues
 
-**Version:** 1.0.0
+**Version:** ${VERSION}
 **Backend:** PocketBase (self-hosted)
 `;
 }

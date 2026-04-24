@@ -102,12 +102,95 @@ async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string
 }
 
 /**
- * Get the current user's ID and device ID from PocketBase auth
+ * Pre-fetch PocketBase record ids for a batch of client task ids in a single
+ * request. Avoids the N+1 lookup pattern when bulk-updating many tasks.
  */
-export function getAuthInfo(config: GsdConfig): { ownerId: string; deviceId: string } {
-  const pb = getPocketBase(config);
-  const model = pb.authStore.record;
+export async function fetchPBRecordIdsForTasks(
+  config: GsdConfig,
+  taskIds: string[]
+): Promise<Map<string, string>> {
+  if (taskIds.length === 0) return new Map();
 
+  const pb = getPocketBase(config);
+  const filter = taskIds
+    .map((id) => `task_id = "${escapeFilterValue(id)}"`)
+    .join(' || ');
+
+  const records = await pb.collection('tasks').getFullList<PBTask>({
+    filter,
+    fields: 'id,task_id',
+  });
+
+  const map = new Map<string, string>();
+  for (const record of records) {
+    map.set(record.task_id, record.id);
+  }
+  return map;
+}
+
+/**
+ * Update a task by known PocketBase record id (skips the per-task lookup that
+ * updateTaskInPB performs). Used by bulk-operations which pre-fetches ids.
+ */
+export async function updateTaskInPBById(
+  config: GsdConfig,
+  pbRecordId: string,
+  task: Task,
+  ownerId: string,
+  deviceId: string
+): Promise<void> {
+  const pb = getPocketBase(config);
+  const fields = taskToPBFields(task, ownerId, deviceId);
+  await pb.collection('tasks').update(pbRecordId, fields);
+}
+
+/**
+ * Delete a task by known PocketBase record id (skips the per-task lookup).
+ */
+export async function deleteTaskInPBById(
+  config: GsdConfig,
+  pbRecordId: string
+): Promise<void> {
+  const pb = getPocketBase(config);
+  await pb.collection('tasks').delete(pbRecordId);
+}
+
+/**
+ * Sleep helper for throttling sequential PocketBase writes. PB returns 429 if
+ * we spam; a short delay between bulk calls keeps us under the limiter.
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Delay between PocketBase writes during bulk operations, in milliseconds. */
+export const PB_BULK_WRITE_DELAY_MS = 100;
+
+/**
+ * Get the current user's ID and device ID from PocketBase auth.
+ *
+ * When the MCP server is configured via GSD_AUTH_TOKEN, `getPocketBase` only
+ * seeds `authStore.token`; the user record is null until we hydrate it. Reads
+ * work header-only, but writes need `ownerId` for the `owner` field.
+ */
+export async function getAuthInfo(
+  config: GsdConfig
+): Promise<{ ownerId: string; deviceId: string }> {
+  const pb = getPocketBase(config);
+
+  if (!pb.authStore.record?.id && pb.authStore.token) {
+    try {
+      await pb.collection('users').authRefresh();
+    } catch {
+      throw new Error(
+        `Not authenticated\n\n` +
+          `Your auth token may be invalid or expired.\n` +
+          `Run: npx gsd-mcp-server --setup`
+      );
+    }
+  }
+
+  const model = pb.authStore.record;
   if (!model?.id) {
     throw new Error(
       `Not authenticated\n\n` +

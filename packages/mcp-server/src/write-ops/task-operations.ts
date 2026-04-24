@@ -83,6 +83,11 @@ export async function createTask(
     subtasks: subtasksWithIds,
     recurrence: input.recurrence || 'none',
     dependencies: input.dependencies || [],
+    ...(input.notifyBefore !== undefined && { notifyBefore: input.notifyBefore }),
+    ...(input.notificationEnabled !== undefined && {
+      notificationEnabled: input.notificationEnabled,
+    }),
+    ...(input.estimatedMinutes !== undefined && { estimatedMinutes: input.estimatedMinutes }),
     createdAt: now,
     updatedAt: now,
   };
@@ -95,7 +100,7 @@ export async function createTask(
     };
   }
 
-  const { ownerId, deviceId } = getAuthInfo(config);
+  const { ownerId, deviceId } = await getAuthInfo(config);
   await createTaskInPB(config, newTask, ownerId, deviceId);
 
   return {
@@ -180,6 +185,9 @@ export async function updateTask(
     recurrence: input.recurrence ?? currentTask.recurrence,
     dependencies: input.dependencies ?? currentTask.dependencies,
     completed: input.completed ?? currentTask.completed,
+    notifyBefore: input.notifyBefore ?? currentTask.notifyBefore,
+    notificationEnabled: input.notificationEnabled ?? currentTask.notificationEnabled,
+    estimatedMinutes: input.estimatedMinutes ?? currentTask.estimatedMinutes,
     updatedAt: new Date().toISOString(),
   };
 
@@ -213,7 +221,7 @@ export async function updateTask(
     };
   }
 
-  const { ownerId, deviceId } = getAuthInfo(config);
+  const { ownerId, deviceId } = await getAuthInfo(config);
   await updateTaskInPB(config, updatedTask, ownerId, deviceId);
 
   return {
@@ -248,10 +256,16 @@ export interface DeleteTaskResult {
   taskTitle: string;
   dryRun: boolean;
   affectedTasks: string[];
+  dependenciesCleaned: number;
 }
 
 /**
- * Delete a task
+ * Delete a task and strip its id from any other task's dependencies array.
+ *
+ * Without this cleanup, deleting a blocker leaves dangling references in the
+ * tasks that depended on it — mirrors the behaviour of the webapp's
+ * removeDependencyReferences(). Cleanup failures are logged as warnings but do
+ * not roll back the primary delete (the task is gone either way).
  */
 export async function deleteTask(
   config: GsdConfig,
@@ -274,15 +288,41 @@ export async function deleteTask(
       taskTitle: task.title,
       dryRun: true,
       affectedTasks: affectedTitles,
+      dependenciesCleaned: affectedTasks.length,
     };
   }
 
   await deleteTaskInPB(config, taskId);
+
+  let dependenciesCleaned = 0;
+  if (affectedTasks.length > 0) {
+    const { ownerId, deviceId } = await getAuthInfo(config);
+    const now = new Date().toISOString();
+    for (const affected of affectedTasks) {
+      try {
+        const cleaned: Task = {
+          ...affected,
+          dependencies: affected.dependencies.filter((dep) => dep !== taskId),
+          updatedAt: now,
+        };
+        await updateTaskInPB(config, cleaned, ownerId, deviceId);
+        dependenciesCleaned++;
+      } catch (error) {
+        // Log but don't throw — the primary delete already succeeded.
+        console.error(
+          `Failed to clean dependency reference on task ${affected.id}: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        );
+      }
+    }
+  }
 
   return {
     taskId,
     taskTitle: task.title,
     dryRun: false,
     affectedTasks: affectedTitles,
+    dependenciesCleaned,
   };
 }
