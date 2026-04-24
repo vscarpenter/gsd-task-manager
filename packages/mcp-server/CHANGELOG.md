@@ -5,6 +5,72 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-04-24 🎉
+
+First stable release. Graduates the server from its pre-1.0 iteration phase and
+audits every tool for schema fidelity, input validation, and side-effect safety.
+
+### Added
+- **Accurate `get_token_status`**: decodes the PocketBase JWT `exp` claim and
+  reports `healthy` / `warning` (<= 14 days) / `critical` (<= 3 days) /
+  `expired` / `invalid`, plus `expiresAt`, `daysRemaining`, and re-auth
+  instructions. Previously the handler returned only a boolean despite its
+  description promising expiration details.
+- **Zod validation at the tool dispatcher boundary** (`tools/handlers/input-schemas.ts`).
+  Malformed arguments now fail with a clear `path: message` list instead of
+  crashing deep in the write pipeline.
+- **Dependency cleanup on `delete_task`**: when a task is removed, its id is
+  stripped from every other task's `dependencies` array — mirroring the
+  webapp's `removeDependencyReferences()`. The response now reports
+  `dependenciesCleaned`.
+- **Notification + snooze state on reads**: `PBTask`, `Task`, and
+  `pbTaskToTask` now surface `notification_sent`, `last_notification_at`, and
+  `snoozed_until`, so Claude can see when a reminder fired or a task is
+  snoozed. Writes round-trip the same values.
+- **Writable `notifyBefore`, `notificationEnabled`, `estimatedMinutes`** on
+  `create_task` and `update_task` schemas, types, and task operations.
+- **`src/version.ts`**: single source of truth that reads the version from
+  `package.json` at runtime. Replaces hardcoded strings in `setup.ts`,
+  `cli/index.ts`, and the `get_help` output that had drifted to four
+  different values (0.5.0, 0.7.0, 1.0.0, 0.9.0).
+- **26 new tests** covering JWT decoding, token status bands, Zod input
+  validation (create/update/bulk/list), and the new schema fields. Overall
+  test count grows from 33 → 59.
+
+### Changed
+- **`bulk_update_tasks` performance**: pre-fetches every PocketBase record id
+  in a single filter query (was N+1), throttles writes 100ms apart to stay
+  under PocketBase rate limits, and invalidates the task cache once at the
+  end of the batch instead of once per record.
+- **`getAuthInfo` is now async** and calls `authRefresh()` when the SDK has a
+  token but no user record. Fixes write failures when the server starts with
+  only `GSD_AUTH_TOKEN` seeded.
+
+### Fixed
+- Version strings no longer drift across `setup.ts`, `cli/index.ts`,
+  `handleGetHelp`, and `package.json`.
+
+## [0.9.0] - 2026-03-08
+
+### Changed
+- Remove legacy encryption references across the MCP server codebase; rename
+  `DecryptedTask` to `Task` now that PocketBase stores tasks as plaintext.
+- Comprehensive coding-standards audit: every module now under the 350-line
+  limit with single-responsibility functions.
+
+## [0.7.0] - 2026-01-09
+
+### Added
+- Retry logic with exponential backoff on PocketBase reads (`api/retry.ts`),
+  TTL-based task cache (`cache.ts`), `get_cache_stats` tool.
+- npm publish improvements (exports map, types entry, `.npmignore`).
+
+## [0.6.0] - 2025-11-30
+
+### Changed
+- Migrated cloud sync backend from Cloudflare Workers to PocketBase. MCP now
+  talks directly to PocketBase via the official SDK.
+
 ## [0.5.1] - 2025-11-09 🔧
 
 ### Changed
