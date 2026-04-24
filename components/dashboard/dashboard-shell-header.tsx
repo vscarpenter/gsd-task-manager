@@ -57,7 +57,7 @@ export function DashboardShellHeader({
                   <TooltipTrigger asChild>
                     <Button
                       variant={searchExpanded ? "subtle" : "ghost"}
-                      className="h-10 w-10 p-0"
+                      className="h-11 w-11 p-0"
                       onClick={() => {
                         if (searchExpanded) {
                           setSearchExpanded(false);
@@ -122,7 +122,7 @@ export function DashboardShellHeader({
 
               <Button
                 onClick={onNewTask}
-                className="h-10 w-10 p-0 md:hidden"
+                className="h-11 w-11 p-0 md:hidden"
                 aria-label="Create task"
               >
                 <PlusIcon className="h-4 w-4" />

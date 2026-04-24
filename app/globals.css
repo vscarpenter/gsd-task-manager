@@ -356,38 +356,21 @@ main {
   }
 }
 
-/* Respect reduced motion preference */
+/* Respect reduced motion preference.
+ * Universal reset covers both class-based animations and inline `transition:`
+ * declarations on components (stylesheet !important beats non-!important inline styles). */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   ::view-transition-old(root),
   ::view-transition-new(root) {
-    animation: none !important;
-  }
-
-  .animate-slide-in-card {
-    animation: none !important;
-  }
-
-  .animate-complete-flash {
-    animation: none !important;
-  }
-
-  .animate-new-task-glow {
-    animation: none !important;
-  }
-
-  .animate-stagger-in {
-    animation: none !important;
-  }
-
-  .animate-drag-lift {
-    animation: none !important;
-  }
-
-  .animate-drop-zone-pulse {
-    animation: none !important;
-  }
-
-  .animate-bulk-bar-in {
     animation: none !important;
   }
 }
@@ -647,6 +630,36 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .redesign-scope .rd-fade-in {
     animation: none !important;
+  }
+}
+
+/* Touch target minimums (WCAG 2.5.5) — enforced only on coarse pointers so
+ * desktop/mouse UIs keep their compact density. !important is needed because
+ * the redesign primitives set explicit inline width/height. */
+@media (pointer: coarse) {
+  .redesign-scope .rd-icon-button,
+  .redesign-scope [role="tab"] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 8px !important;
+  }
+
+  .redesign-scope .rd-button,
+  .redesign-scope .rd-toggle-pill,
+  .redesign-scope .rd-quick-add-submit,
+  .redesign-scope .rd-primary-action {
+    min-height: 44px !important;
+  }
+
+  .redesign-scope [role="tablist"] {
+    height: auto !important;
+  }
+
+  .redesign-scope .rd-checkbox {
+    width: 26px;
+    height: 26px;
   }
 }
 

@@ -39,7 +39,7 @@ export function HeaderActions({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-10 w-10 p-0 md:h-11 md:w-11"
+          className="h-11 w-11 p-0"
           aria-label="More options"
         >
           <EllipsisIcon className="h-5 w-5" />

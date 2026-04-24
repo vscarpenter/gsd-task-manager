@@ -201,7 +201,7 @@ export function RdIconButton({
       onClick={onClick}
       title={title}
       aria-label={ariaLabel ?? title}
-      className="inline-flex items-center justify-center transition-colors"
+      className="rd-icon-button inline-flex items-center justify-center transition-colors"
       style={{
         width: 32,
         height: 32,
@@ -260,7 +260,13 @@ export function RdButton({
     ghost: { border: "1px solid transparent", background: "transparent", color: "var(--ink-2)" },
   };
   return (
-    <button type={type} onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className="rd-button"
+      style={{ ...base, ...variants[variant], ...style }}
+    >
       {children}
     </button>
   );
