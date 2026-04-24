@@ -83,6 +83,11 @@ export async function createTask(
     subtasks: subtasksWithIds,
     recurrence: input.recurrence || 'none',
     dependencies: input.dependencies || [],
+    ...(input.notifyBefore !== undefined && { notifyBefore: input.notifyBefore }),
+    ...(input.notificationEnabled !== undefined && {
+      notificationEnabled: input.notificationEnabled,
+    }),
+    ...(input.estimatedMinutes !== undefined && { estimatedMinutes: input.estimatedMinutes }),
     createdAt: now,
     updatedAt: now,
   };
@@ -180,6 +185,9 @@ export async function updateTask(
     recurrence: input.recurrence ?? currentTask.recurrence,
     dependencies: input.dependencies ?? currentTask.dependencies,
     completed: input.completed ?? currentTask.completed,
+    notifyBefore: input.notifyBefore ?? currentTask.notifyBefore,
+    notificationEnabled: input.notificationEnabled ?? currentTask.notificationEnabled,
+    estimatedMinutes: input.estimatedMinutes ?? currentTask.estimatedMinutes,
     updatedAt: new Date().toISOString(),
   };
 

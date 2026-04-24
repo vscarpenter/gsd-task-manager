@@ -22,6 +22,9 @@ export interface CreateTaskInput {
   subtasks?: Array<{ title: string; completed: boolean }>;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
+  notifyBefore?: number;
+  notificationEnabled?: boolean;
+  estimatedMinutes?: number;
   dryRun?: boolean;
 }
 
@@ -40,6 +43,9 @@ export interface UpdateTaskInput {
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   dependencies?: string[];
   completed?: boolean;
+  notifyBefore?: number;
+  notificationEnabled?: boolean;
+  estimatedMinutes?: number;
   dryRun?: boolean;
 }
 

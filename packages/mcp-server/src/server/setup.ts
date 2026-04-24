@@ -8,6 +8,7 @@ import {
 import { allTools } from '../tools/schemas/index.js';
 import { allPrompts, getPromptMessage } from '../tools/prompts.js';
 import { handleToolCall } from '../tools/handlers/index.js';
+import { VERSION } from '../version.js';
 import type { GsdConfig } from '../tools.js';
 
 /**
@@ -17,7 +18,7 @@ export function createServer(): Server {
   return new Server(
     {
       name: 'gsd-task-manager',
-      version: '0.5.0',
+      version: VERSION,
     },
     {
       capabilities: {
