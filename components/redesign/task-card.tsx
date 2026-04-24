@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrantForTask } from "@/lib/quadrants";
 import { isOverdue } from "@/lib/redesign/due";
+import { TaskDescription } from "@/components/task-description";
 import { DuePill, QuadrantBadge, SubtaskChip, TagChip } from "./primitives";
 
 export interface TaskCardProps {
@@ -69,24 +70,52 @@ export function TaskCard({ task, onToggle, onOpen, compact, showQuadrant }: Task
           />
         </label>
 
-        {onOpen ? (
-          <button
-            type="button"
-            className="rd-task-card-main"
-            onClick={() => onOpen(task)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              border: 0,
-              background: "transparent",
-              padding: 0,
-              textAlign: "left",
-              color: "inherit",
-              cursor: "pointer",
-            }}
-          >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {onOpen ? (
+            <>
+              <button
+                type="button"
+                className="rd-task-card-main"
+                onClick={() => onOpen(task)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                style={{
+                  width: "100%",
+                  border: 0,
+                  background: "transparent",
+                  padding: 0,
+                  textAlign: "left",
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 14.5,
+                        fontWeight: 550,
+                        lineHeight: 1.35,
+                        color: "var(--ink)",
+                        textDecoration: task.completed ? "line-through" : "none",
+                      }}
+                    >
+                      {task.title}
+                    </div>
+                  </div>
+                  {showQuadrant && <QuadrantBadge quadrant={quadrant} size="sm" />}
+                </div>
+              </button>
+              {task.description && !compact && (
+                <div
+                  className="rd-task-desc"
+                  style={{ marginTop: 4, fontSize: 13, color: "var(--ink-3)", lineHeight: 1.4 }}
+                >
+                  <TaskDescription description={task.description} />
+                </div>
+              )}
+            </>
+          ) : (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
@@ -105,67 +134,27 @@ export function TaskCard({ task, onToggle, onOpen, compact, showQuadrant }: Task
                     className="rd-task-desc"
                     style={{ marginTop: 4, fontSize: 13, color: "var(--ink-3)", lineHeight: 1.4 }}
                   >
-                    {task.description}
+                    <TaskDescription description={task.description} />
                   </div>
                 )}
               </div>
               {showQuadrant && <QuadrantBadge quadrant={quadrant} size="sm" />}
             </div>
+          )}
 
-            {hasMeta && (
-              <div
-                className="rd-task-meta"
-                style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}
-              >
-                {task.dueDate && <DuePill dueDate={task.dueDate} />}
-                <SubtaskChip done={doneSubtasks} total={task.subtasks.length} />
-                {task.tags.slice(0, 4).map((t) => (
-                  <TagChip key={t}>{t}</TagChip>
-                ))}
-              </div>
-            )}
-          </button>
-        ) : (
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 14.5,
-                    fontWeight: 550,
-                    lineHeight: 1.35,
-                    color: "var(--ink)",
-                    textDecoration: task.completed ? "line-through" : "none",
-                  }}
-                >
-                  {task.title}
-                </div>
-                {task.description && !compact && (
-                  <div
-                    className="rd-task-desc"
-                    style={{ marginTop: 4, fontSize: 13, color: "var(--ink-3)", lineHeight: 1.4 }}
-                  >
-                    {task.description}
-                  </div>
-                )}
-              </div>
-              {showQuadrant && <QuadrantBadge quadrant={quadrant} size="sm" />}
+          {hasMeta && (
+            <div
+              className="rd-task-meta"
+              style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}
+            >
+              {task.dueDate && <DuePill dueDate={task.dueDate} />}
+              <SubtaskChip done={doneSubtasks} total={task.subtasks.length} />
+              {task.tags.slice(0, 4).map((t) => (
+                <TagChip key={t}>{t}</TagChip>
+              ))}
             </div>
-
-            {hasMeta && (
-              <div
-                className="rd-task-meta"
-                style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}
-              >
-                {task.dueDate && <DuePill dueDate={task.dueDate} />}
-                <SubtaskChip done={doneSubtasks} total={task.subtasks.length} />
-                {task.tags.slice(0, 4).map((t) => (
-                  <TagChip key={t}>{t}</TagChip>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

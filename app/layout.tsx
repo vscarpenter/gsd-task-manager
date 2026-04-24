@@ -35,6 +35,21 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 });
 
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "connect-src 'self' https: wss:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+].join("; ");
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -85,6 +100,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
+      </head>
       <body className={cn(geist.variable, geistMono.variable, instrumentSerif.variable, "font-sans bg-background text-foreground antialiased")}>
         <ErrorBoundary>
           <ThemeProvider>

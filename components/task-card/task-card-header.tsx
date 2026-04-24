@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { TaskRecord } from "@/lib/types";
 import type { SortableAttributes, SortableListeners } from "./types";
+import { TaskDescription } from "@/components/task-description";
 
 export interface TaskCardHeaderProps {
   task: TaskRecord;
@@ -57,7 +58,9 @@ export function TaskCardHeader({
             {task.title}
           </h3>
           {task.description ? (
-            <p className="mt-0.5 text-xs text-foreground-muted line-clamp-2">{task.description}</p>
+            <p className="mt-0.5 text-xs text-foreground-muted line-clamp-2">
+              <TaskDescription description={task.description} />
+            </p>
           ) : null}
         </div>
       </div>
