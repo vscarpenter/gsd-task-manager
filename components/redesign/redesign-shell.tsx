@@ -120,7 +120,7 @@ function Sidebar({
             >
               <span style={{ color: active ? "var(--ink)" : "var(--ink-3)" }}>{it.icon}</span>
               <span>{it.label}</span>
-              <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--ink-4)" }}>{it.hint}</span>
+              <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--ink-3)" }}>{it.hint}</span>
             </button>
           );
         })}
@@ -165,7 +165,7 @@ function SidebarFooter() {
           alignItems: "baseline",
           gap: 6,
           fontSize: 10.5,
-          color: "var(--ink-4)",
+          color: "var(--ink-3)",
         }}
       >
         <span className="rd-mono" style={{ color: "var(--ink-3)", fontWeight: 500 }}>
@@ -189,7 +189,7 @@ function SectionLabel({ children, style }: { children: ReactNode; style?: React.
         fontSize: 10,
         letterSpacing: 0.14,
         textTransform: "uppercase",
-        color: "var(--ink-4)",
+        color: "var(--ink-3)",
         fontWeight: 600,
         padding: "0 10px",
         marginBottom: 6,
@@ -260,7 +260,7 @@ function SidebarAction({
     >
       <span style={{ color: "var(--ink-3)", display: "inline-flex", width: 14, justifyContent: "center" }}>{icon}</span>
       <span>{label}</span>
-      {hint && <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--ink-4)" }}>{hint}</span>}
+      {hint && <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--ink-3)" }}>{hint}</span>}
     </button>
   );
 }

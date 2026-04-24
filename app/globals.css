@@ -45,6 +45,9 @@
   --gradient-schedule: linear-gradient(135deg, #1d4ed8, #3b82f6);
   --gradient-delegate: linear-gradient(135deg, #15803d, #22c55e);
   --gradient-eliminate: linear-gradient(135deg, #854d0e, #ca8a04);
+
+  /* Chart palette — series 1 uses --accent; series 2+ are tokenized here. */
+  --chart-series-2: 59 130 246;        /* blue-500 */
 }
 
 .dark {
@@ -78,6 +81,8 @@
   --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   --shadow-column: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
   --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
+
+  --chart-series-2: 96 165 250;        /* blue-400 — slightly lighter for dark mode */
 }
 
 body {
