@@ -143,7 +143,7 @@ export function QuickAdd({ onSubmit, onOpenFull, presetQuadrant }: QuickAddProps
           onClick={onOpenFull}
           title="Open full composer"
           aria-label="Open full composer"
-          className="inline-flex items-center justify-center"
+          className="rd-icon-button inline-flex items-center justify-center"
           style={{
             width: 32,
             height: 32,
@@ -200,7 +200,7 @@ function TogglePill({
       type="button"
       onClick={onClick}
       title={label}
-      className="inline-flex items-center gap-1.5"
+      className="rd-toggle-pill inline-flex items-center gap-1.5"
       aria-pressed={active}
       style={{
         minHeight: 30,

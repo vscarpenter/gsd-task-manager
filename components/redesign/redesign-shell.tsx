@@ -353,7 +353,7 @@ function TopBar({
         <button
           type="button"
           onClick={onOpenComposer}
-          className="inline-flex items-center gap-2"
+          className="rd-primary-action inline-flex items-center gap-2"
           style={{
             minHeight: 36,
             padding: "0 14px",

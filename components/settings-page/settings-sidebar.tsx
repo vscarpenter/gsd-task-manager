@@ -72,6 +72,7 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
               onClick={() => onSelect(section.id)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                "min-h-11",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
                 isActive
                   ? "border-accent/40 bg-accent/10 text-accent"

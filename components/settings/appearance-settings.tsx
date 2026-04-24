@@ -82,6 +82,7 @@ function ThemeOption({
 			className={`
 				relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
 				transition-all duration-200
+				pointer-coarse:min-h-11 pointer-coarse:px-4
 				${isActive
 					? "bg-card text-foreground shadow-sm"
 					: "text-foreground-muted hover:text-foreground"
