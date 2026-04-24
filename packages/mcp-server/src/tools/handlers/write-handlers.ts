@@ -139,11 +139,10 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
     message += `Deleted: "${result.taskTitle}" (${result.taskId})`;
 
     if (result.affectedTasks.length > 0) {
-      message += `\n\n⚠️ Note: The following tasks had this task as a dependency:\n`;
+      message += `\n\nCleaned dangling dependency references on ${result.dependenciesCleaned} of ${result.affectedTasks.length} dependent task(s):\n`;
       result.affectedTasks.forEach((title) => {
         message += `  - ${title}\n`;
       });
-      message += `\nThese tasks may need their dependencies updated.`;
     }
   }
 
