@@ -22,7 +22,7 @@ export function SettingsRow({ label, description, children }: SettingsRowProps) 
 			<div className="flex-1 min-w-0">
 				<p className="text-sm font-medium text-foreground">{label}</p>
 				{description && (
-					<p className="text-xs text-foreground-muted mt-0.5 truncate">
+					<p className="text-xs text-foreground-muted mt-0.5">
 						{description}
 					</p>
 				)}
@@ -66,7 +66,7 @@ export function SettingsSelectRow({
 							</option>
 						))}
 					</select>
-					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50 absolute right-4" />
+					<ChevronRightIcon className="w-4 h-4 text-foreground-muted/70 absolute right-4" />
 				</div>
 			</label>
 		</div>

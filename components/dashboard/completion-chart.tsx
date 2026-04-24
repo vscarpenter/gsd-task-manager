@@ -43,7 +43,7 @@ export function CompletionChart({ data }: CompletionChartProps) {
         <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background-muted/70 px-3 py-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--accent))]" />
           <span className="text-xs font-medium text-foreground-muted">Completed</span>
-          <div className="ml-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
+          <div className="ml-2 h-2.5 w-2.5 rounded-full bg-[rgb(var(--chart-series-2))]" />
           <span className="text-xs font-medium text-foreground-muted">Created</span>
         </div>
       </div>
@@ -55,8 +55,8 @@ export function CompletionChart({ data }: CompletionChartProps) {
               <stop offset="95%" stopColor="rgb(var(--accent))" stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="gradientCreated" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.22} />
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="rgb(var(--chart-series-2))" stopOpacity={0.22} />
+              <stop offset="95%" stopColor="rgb(var(--chart-series-2))" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -104,11 +104,11 @@ export function CompletionChart({ data }: CompletionChartProps) {
           <Area
             type="monotone"
             dataKey="Created"
-            stroke="#3b82f6"
+            stroke="rgb(var(--chart-series-2))"
             strokeWidth={2}
             fill="url(#gradientCreated)"
             dot={false}
-            activeDot={{ r: 5, fill: "#3b82f6", stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "rgb(var(--chart-series-2))", stroke: "#fff", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>

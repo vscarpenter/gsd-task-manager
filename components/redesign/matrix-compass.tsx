@@ -181,7 +181,7 @@ function CompassList({
             <span className="rd-mono" style={{ color: "var(--ink-3)", fontSize: 11.5 }}>
               {count}
             </span>
-            <span style={{ width: 40, textAlign: "right", color: "var(--ink-4)", fontSize: 11 }}>
+            <span style={{ width: 40, textAlign: "right", color: "var(--ink-3)", fontSize: 11 }}>
               {pct}%
             </span>
           </div>
