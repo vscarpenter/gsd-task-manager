@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun typecheck:*)",
+      "Bash(bun lint:*)",
+      "Bash(bun audit:*)",
+      "Bash(bun outdated:*)",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__claude-in-chrome__read_page"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/vinnycarpenter/Projects/gsd-taskmanager/.claude/hooks/block-sensitive-files.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/vinnycarpenter/Projects/gsd-taskmanager/.claude/hooks/lint-on-edit.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/vinnycarpenter/Projects/gsd-taskmanager && bun typecheck 2>&1 | tail -10",
+            "timeout": 60,
+            "statusMessage": "Type-check verification gate..."
+          }
+        ]
+      }
+    ]
+  }
+}
