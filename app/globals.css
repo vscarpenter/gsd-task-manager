@@ -28,6 +28,12 @@
   --quadrant-delegate: 232 242 236;    /* #e8f2ec */
   --quadrant-eliminate: 245 239 223;   /* #f5efdf */
 
+  /* Quadrant washes — ~5% accent for pane backgrounds (v9 simplified) */
+  --q1-wash: 194 65 12;        /* #c2410c */
+  --q2-wash: 29 78 216;        /* #1d4ed8 */
+  --q3-wash: 21 128 61;        /* #15803d */
+  --q4-wash: 133 77 14;        /* #854d0e */
+
   /* Card */
   --card-background: 251 250 246;      /* #fbfaf6 — paper */
   --card-border: 230 227 219;          /* matches --border */
@@ -71,6 +77,12 @@
   --quadrant-schedule: 15 26 58;       /* #0f1a3a */
   --quadrant-delegate: 11 36 26;       /* #0b241a */
   --quadrant-eliminate: 44 32 9;       /* #2c2009 */
+
+  /* Wash channels reused; opacity bumped at use-site for dark legibility */
+  --q1-wash: 194 65 12;
+  --q2-wash: 29 78 216;
+  --q3-wash: 21 128 61;
+  --q4-wash: 133 77 14;
 
   --card-background: 20 20 22;         /* #141416 */
   --card-border: 39 39 42;
@@ -208,6 +220,16 @@ main {
   .matrix-card__subtitle {
     @apply text-sm text-foreground-muted;
   }
+
+  .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.045); }
+  .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.045); }
+  .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.05); }
+  .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.055); }
+
+  .dark .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.10); }
+  .dark .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.10); }
+  .dark .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.11); }
+  .dark .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.12); }
 }
 
 /* View Transitions */
