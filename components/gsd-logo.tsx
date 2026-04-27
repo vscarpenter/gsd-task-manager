@@ -1,39 +1,37 @@
-export function GsdLogo({ className }: { className?: string }) {
+interface GsdLogoProps {
+  className?: string;
+  size?: number;
+}
+
+export function GsdLogo({ className, size = 28 }: GsdLogoProps) {
   return (
     <svg
-      width="40"
-      height="40"
-      viewBox="0 0 40 40"
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      aria-hidden="true"
     >
-      {/* 2x2 Matrix Grid */}
-      <rect x="2" y="2" width="17" height="17" rx="3" fill="#fee2e2" />
-      <rect x="21" y="2" width="17" height="17" rx="3" fill="#dbeafe" />
-      <rect x="2" y="21" width="17" height="17" rx="3" fill="#fef3c7" />
-      <rect x="21" y="21" width="17" height="17" rx="3" fill="#f1f5f9" />
-
-      {/* Checkmark in top-left quadrant (urgent + important) */}
-      <path
-        d="M7 10.5L9.5 13L14 8.5"
-        stroke="#ef4444"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Border outline */}
-      <rect
-        x="2"
-        y="2"
-        width="36"
-        height="36"
-        rx="6"
-        stroke="#64748b"
-        strokeWidth="1.5"
-        fill="none"
-      />
+      <rect x="2" y="2" width="7" height="7" rx="1.6" fill="#1d4ed8" opacity="0.32" />
+      <rect x="11" y="2" width="7" height="7" rx="1.6" fill="#c2410c" />
+      <rect x="2" y="11" width="7" height="7" rx="1.6" fill="#15803d" opacity="0.32" />
+      <rect x="11" y="11" width="7" height="7" rx="1.6" fill="#854d0e" opacity="0.32" />
     </svg>
+  );
+}
+
+export function GsdLogoLockup({ className }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>
+      <GsdLogo size={28} />
+      <span
+        className="font-semibold text-foreground"
+        style={{ letterSpacing: "-0.02em" }}
+      >
+        GSD
+      </span>
+    </span>
   );
 }
