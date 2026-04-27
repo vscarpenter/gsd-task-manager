@@ -36,15 +36,34 @@ export function IconRail({ onHelp }: IconRailProps) {
   const { navigateWithTransition, isPending } = useViewTransition();
 
   return (
-    <aside
-      className="hidden md:flex md:w-[60px] md:shrink-0 md:flex-col md:items-center md:border-r md:border-border/70 md:bg-background"
-      aria-label="Primary navigation"
-    >
-      <div className="sticky top-0 flex h-screen flex-col items-center gap-1 py-3.5">
-        <div className="mb-2.5 flex h-8 w-8 items-center justify-center" title="GSD">
-          <GsdLogo size={28} />
+    <>
+      <aside
+        className="hidden md:flex md:w-[60px] md:shrink-0 md:flex-col md:items-center md:border-r md:border-border/70 md:bg-background"
+        aria-label="Primary navigation"
+      >
+        <div className="sticky top-0 flex h-screen flex-col items-center gap-1 py-3.5">
+          <div className="mb-2.5 flex h-8 w-8 items-center justify-center" title="GSD">
+            <GsdLogo size={28} />
+          </div>
+          <div className="my-1 h-px w-6 bg-border/70" aria-hidden />
+          {PRIMARY.map((item) => (
+            <RailButton
+              key={item.routeKey}
+              label={item.label}
+              icon={item.icon}
+              active={isRouteActive(pathname, item.routeKey)}
+              disabled={isPending}
+              onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
+            />
+          ))}
+          <div className="flex-1" />
+          <RailButton label="Help · Keyboard shortcuts" icon={CircleHelpIcon} onClick={onHelp} />
         </div>
-        <div className="my-1 h-px w-6 bg-border/70" aria-hidden />
+      </aside>
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-border/70 bg-background/95 px-2 py-1.5 backdrop-blur md:hidden"
+        aria-label="Primary navigation (mobile)"
+      >
         {PRIMARY.map((item) => (
           <RailButton
             key={item.routeKey}
@@ -55,10 +74,9 @@ export function IconRail({ onHelp }: IconRailProps) {
             onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
           />
         ))}
-        <div className="flex-1" />
-        <RailButton label="Help · Keyboard shortcuts" icon={CircleHelpIcon} onClick={onHelp} />
-      </div>
-    </aside>
+        <RailButton label="Help" icon={CircleHelpIcon} onClick={onHelp} />
+      </nav>
+    </>
   );
 }
 

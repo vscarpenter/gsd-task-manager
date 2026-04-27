@@ -38,7 +38,7 @@ export function AppShell({
           searchInputRef={searchInputRef}
           rightSlot={topbarRightSlot}
         />
-        <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 sm:px-9 sm:py-6">
+        <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6">
           {children}
         </main>
       </div>
