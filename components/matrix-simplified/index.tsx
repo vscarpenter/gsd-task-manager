@@ -10,6 +10,11 @@ import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useNotificationChecker } from "@/lib/use-notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
+import {
+  SHOW_COMPLETED_EVENT,
+  type ShowCompletedEventDetail,
+  readShowCompleted,
+} from "@/lib/preferences/show-completed";
 import type { RedesignQuadrantKey } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
@@ -54,6 +59,16 @@ export function MatrixSimplified() {
   const captureInputRef = useRef<HTMLInputElement | null>(null);
 
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
+  const [showCompleted, setShowCompleted] = useState<boolean>(readShowCompleted);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<ShowCompletedEventDetail>).detail;
+      setShowCompleted(Boolean(detail?.show));
+    };
+    window.addEventListener(SHOW_COMPLETED_EVENT, handler);
+    return () => window.removeEventListener(SHOW_COMPLETED_EVENT, handler);
+  }, []);
 
   // PWA shortcut: ?action=new-task → focus capture bar (not drawer)
   useEffect(() => {
@@ -82,7 +97,10 @@ export function MatrixSimplified() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const visibleTasks = useMemo(() => filterTasks(all, searchQuery), [all, searchQuery]);
+  const visibleTasks = useMemo(() => {
+    const base = showCompleted ? all : all.filter((t) => !t.completed);
+    return filterTasks(base, searchQuery);
+  }, [all, searchQuery, showCompleted]);
   const total = all.length;
   const completed = all.filter((t) => t.completed).length;
   const overdue = all.filter((t) => {
