@@ -66,13 +66,16 @@ export function MatrixSimplified() {
     }
   }, []);
 
-  // Global "/" focuses search; "n" handled by CaptureBar; "?" handled later in Task 19
+  // Global "/" focuses search; "n" handled by CaptureBar; "?" opens help
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isEditable(document.activeElement) || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "/") {
         e.preventDefault();
         searchInputRef.current?.focus();
+      } else if (e.key === "?") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("gsd:open-help"));
       }
     };
     window.addEventListener("keydown", onKey);

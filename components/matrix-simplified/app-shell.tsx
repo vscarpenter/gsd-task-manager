@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { IconRail } from "./icon-rail";
 import { SimplifiedTopbar } from "./topbar";
 import { HelpDrawer } from "@/components/matrix-simplified/help-drawer";
@@ -25,6 +25,12 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const [helpOpen, setHelpOpen] = useState(false);
+
+  useEffect(() => {
+    const open = () => setHelpOpen(true);
+    window.addEventListener("gsd:open-help", open);
+    return () => window.removeEventListener("gsd:open-help", open);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-background">
