@@ -18,6 +18,25 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
+// Mock AppShell — render caption and children so page-level assertions still work
+vi.mock("@/components/matrix-simplified/app-shell", () => ({
+  AppShell: ({
+    children,
+    caption,
+    topbarRightSlot,
+  }: {
+    children: React.ReactNode;
+    caption?: React.ReactNode;
+    topbarRightSlot?: React.ReactNode;
+  }) => (
+    <>
+      {caption && <div data-testid="shell-caption">{caption}</div>}
+      {topbarRightSlot}
+      {children}
+    </>
+  ),
+}));
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
