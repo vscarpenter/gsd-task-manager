@@ -16,6 +16,10 @@ import type { NotificationSettings } from "@/lib/types";
 import { getSyncStatus } from "@/lib/sync/config";
 import { exportToJson } from "@/lib/tasks";
 import { createLogger } from "@/lib/logger";
+import {
+  SHOW_COMPLETED_EVENT,
+  SHOW_COMPLETED_KEY,
+} from "@/lib/preferences/show-completed";
 
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
 import { NotificationSettingsSection } from "@/components/settings/notification-settings";
@@ -36,7 +40,6 @@ const ImportDialog = lazy(() =>
   import("@/components/import-dialog").then((m) => ({ default: m.ImportDialog }))
 );
 
-const SHOW_COMPLETED_KEY = "gsd:show-completed";
 const DEFAULT_SECTION: SettingsSectionId = "appearance";
 const logger = createLogger("UI");
 
@@ -110,7 +113,7 @@ export function SettingsPage() {
       if (typeof window !== "undefined") {
         localStorage.setItem(SHOW_COMPLETED_KEY, String(next));
         window.dispatchEvent(
-          new CustomEvent("toggle-completed", { detail: { show: next } }),
+          new CustomEvent(SHOW_COMPLETED_EVENT, { detail: { show: next } }),
         );
       }
       return next;

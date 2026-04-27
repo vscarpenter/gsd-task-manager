@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { TaskRecord } from "@/lib/types";
+
+const tasksFixture = vi.hoisted(() => ({ current: [] as TaskRecord[] }));
 
 vi.mock("@/lib/use-tasks", () => ({
   useTasks: () => ({
-    all: [],
+    all: tasksFixture.current,
     byQuadrant: {
       "urgent-important": [],
       "not-urgent-important": [],
@@ -14,6 +17,27 @@ vi.mock("@/lib/use-tasks", () => ({
     isLoading: false,
   }),
 }));
+
+function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
+  return {
+    id: overrides.id ?? `task-${Math.random().toString(36).slice(2)}`,
+    title: "Test task",
+    description: "",
+    urgent: false,
+    important: false,
+    quadrant: "not-urgent-not-important",
+    completed: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    recurrence: "none",
+    tags: [],
+    subtasks: [],
+    dependencies: [],
+    notificationEnabled: false,
+    notificationSent: false,
+    ...overrides,
+  };
+}
 
 vi.mock("@/lib/tasks", () => ({
   createTask: vi.fn().mockResolvedValue(undefined),
@@ -74,6 +98,11 @@ import { MatrixSimplified } from "@/components/matrix-simplified";
 import { createTask } from "@/lib/tasks";
 
 describe("<MatrixSimplified>", () => {
+  beforeEach(() => {
+    tasksFixture.current = [];
+    localStorage.removeItem("gsd:show-completed");
+  });
+
   it("submitting capture bar calls createTask with parsed payload", async () => {
     render(<MatrixSimplified />);
     await userEvent.type(
@@ -103,5 +132,48 @@ describe("<MatrixSimplified>", () => {
     expect(screen.getByRole("region", { name: /schedule quadrant/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /delegate quadrant/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /eliminate quadrant/i })).toBeInTheDocument();
+  });
+
+  describe("show-completed preference", () => {
+    it("hides completed tasks when 'gsd:show-completed' is unset", () => {
+      tasksFixture.current = [
+        makeTask({ id: "a", title: "Active alpha", completed: false }),
+        makeTask({ id: "b", title: "Done bravo", completed: true }),
+      ];
+      render(<MatrixSimplified />);
+      expect(screen.getByText("Active alpha")).toBeInTheDocument();
+      expect(screen.queryByText("Done bravo")).not.toBeInTheDocument();
+    });
+
+    it("shows completed tasks when 'gsd:show-completed' is true", () => {
+      localStorage.setItem("gsd:show-completed", "true");
+      tasksFixture.current = [
+        makeTask({ id: "a", title: "Active alpha", completed: false }),
+        makeTask({ id: "b", title: "Done bravo", completed: true }),
+      ];
+      render(<MatrixSimplified />);
+      expect(screen.getByText("Active alpha")).toBeInTheDocument();
+      expect(screen.getByText("Done bravo")).toBeInTheDocument();
+    });
+
+    it("re-renders when 'toggle-completed' event fires", async () => {
+      tasksFixture.current = [
+        makeTask({ id: "a", title: "Active alpha", completed: false }),
+        makeTask({ id: "b", title: "Done bravo", completed: true }),
+      ];
+      render(<MatrixSimplified />);
+      expect(screen.queryByText("Done bravo")).not.toBeInTheDocument();
+
+      act(() => {
+        localStorage.setItem("gsd:show-completed", "true");
+        window.dispatchEvent(
+          new CustomEvent("toggle-completed", { detail: { show: true } }),
+        );
+      });
+
+      await waitFor(() =>
+        expect(screen.getByText("Done bravo")).toBeInTheDocument(),
+      );
+    });
   });
 });
