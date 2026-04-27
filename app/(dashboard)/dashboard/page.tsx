@@ -102,9 +102,7 @@ export default function DashboardPage() {
       },
       onSearch: () => searchInputRef.current?.focus(),
       onHelp: () => {
-        const params = new URLSearchParams();
-        params.set("action", "help");
-        openMatrixAction(params);
+        window.dispatchEvent(new CustomEvent("gsd:open-help"));
       },
     },
     searchInputRef
