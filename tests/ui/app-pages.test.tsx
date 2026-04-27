@@ -62,6 +62,25 @@ vi.mock('@/components/first-time-redirect', () => ({
   FirstTimeRedirect: () => null,
 }));
 
+// Mock AppShell — render caption and topbarRightSlot so page-level assertions still work
+vi.mock('@/components/matrix-simplified/app-shell', () => ({
+  AppShell: ({
+    children,
+    caption,
+    topbarRightSlot,
+  }: {
+    children: React.ReactNode;
+    caption?: React.ReactNode;
+    topbarRightSlot?: React.ReactNode;
+  }) => (
+    <>
+      {caption && <div data-testid="shell-caption">{caption}</div>}
+      {topbarRightSlot}
+      {children}
+    </>
+  ),
+}));
+
 // About page mocks
 vi.mock('@/components/about/about-nav', () => ({
   AboutNav: () => <nav data-testid="about-nav">Nav</nav>,
@@ -145,7 +164,8 @@ describe('AboutPage', () => {
   it('renders all about page sections', () => {
     render(<AboutPage />);
 
-    expect(screen.getByTestId('about-nav')).toBeInTheDocument();
+    // Note: AboutNav was removed when AppShell wrapping was added in Task 14;
+    // navigation is now handled by AppShell (mocked in tests).
     expect(screen.getByTestId('hero-section')).toBeInTheDocument();
     expect(screen.getByTestId('matrix-section')).toBeInTheDocument();
     expect(screen.getByTestId('features-section')).toBeInTheDocument();

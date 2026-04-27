@@ -42,7 +42,16 @@ sync.md
 # Build info
 .build-info.json
 .build-env.sh
-.claude/
+# Claude Code: ignore personal config but allow team-shared automations
+.claude/*
+!.claude/README.md
+!.claude/settings.json
+!.claude/agents/
+!.claude/commands/
+!.claude/hooks/
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/pb-collection/
 
 *.tsbuildinfo
 

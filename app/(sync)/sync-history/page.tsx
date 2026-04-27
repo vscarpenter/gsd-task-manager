@@ -4,7 +4,8 @@ import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowLeftIcon, CheckCircle2Icon, XCircleIcon, AlertTriangleIcon, ClockIcon, CloudIcon, UserIcon } from "lucide-react";
+import { CheckCircle2Icon, XCircleIcon, AlertTriangleIcon, ClockIcon, CloudIcon, UserIcon } from "lucide-react";
+import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { Button } from "@/components/ui/button";
 import { getRecentHistory, getHistoryStats, clearHistory } from "@/lib/sync-history";
 import type { SyncHistoryRecord } from "@/lib/types";
@@ -81,40 +82,22 @@ export default function SyncHistoryPage() {
 	});
 
 	return (
-		<div className="min-h-screen bg-background">
-			<header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur px-6 py-4">
-				<div className="flex items-center justify-between gap-3">
-					<div className="flex items-center gap-3">
-						<Button
-							variant="ghost"
-							onClick={() => router.push("/")}
-							className="gap-2"
-						>
-							<ArrowLeftIcon className="h-4 w-4" />
-							Back
-						</Button>
-						<div>
-							<h1 className="text-2xl font-semibold tracking-tight text-foreground">
-								Sync History
-							</h1>
-							<p className="text-sm text-foreground-muted">
-								{history.length} sync operation{history.length !== 1 ? "s" : ""}
-							</p>
-						</div>
-					</div>
-					{history.length > 0 && (
-						<Button
-							variant="subtle"
-							onClick={handleClearHistory}
-							className="text-sm"
-						>
-							Clear History
-						</Button>
-					)}
-				</div>
-			</header>
-
-			<main className="px-6 py-8">
+		<AppShell
+			title="Sync history"
+			caption={`${history.length} sync operation${history.length !== 1 ? "s" : ""}`}
+			topbarRightSlot={
+				history.length > 0 ? (
+					<Button
+						variant="subtle"
+						onClick={handleClearHistory}
+						className="text-sm"
+					>
+						Clear History
+					</Button>
+				) : undefined
+			}
+		>
+			<div className="pb-8">
 				{stats && history.length > 0 && (
 					<div className="mb-8 grid gap-4 md:grid-cols-4">
 						<div className="rounded-lg border border-border bg-background-muted p-4">
@@ -160,7 +143,7 @@ export default function SyncHistoryPage() {
 					<div
 						ref={scrollContainerRef}
 						className="overflow-auto"
-						style={{ height: "calc(100vh - 280px)" }}
+						style={{ height: "70vh" }}
 					>
 						<div
 							style={{
@@ -250,7 +233,7 @@ export default function SyncHistoryPage() {
 						</div>
 					</div>
 				)}
-			</main>
-		</div>
+			</div>
+		</AppShell>
 	);
 }

@@ -9,8 +9,7 @@ import {
   TrendingUpIcon,
   AlertTriangleIcon,
 } from "lucide-react";
-import { AppRail } from "@/components/app-header/app-rail";
-import { AppFooter } from "@/components/app-footer";
+import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { CompletionChart } from "@/components/dashboard/completion-chart";
 import { QuadrantDistribution } from "@/components/dashboard/quadrant-distribution";
@@ -18,7 +17,6 @@ import { StreakIndicator } from "@/components/dashboard/streak-indicator";
 import { TagAnalytics } from "@/components/dashboard/tag-analytics";
 import { UpcomingDeadlines } from "@/components/dashboard/upcoming-deadlines";
 import { TimeAnalytics } from "@/components/dashboard/time-analytics";
-import { DashboardShellHeader } from "@/components/dashboard/dashboard-shell-header";
 import { useTasks } from "@/lib/use-tasks";
 import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { ROUTES } from "@/lib/routes";
@@ -95,14 +93,6 @@ export default function DashboardPage() {
     router.push(href);
   };
 
-  const handleDashboardSearch = () => {
-    const params = new URLSearchParams();
-    if (searchQuery.trim()) {
-      params.set("q", searchQuery.trim());
-    }
-    openMatrixAction(params);
-  };
-
   useKeyboardShortcuts(
     {
       onNewTask: () => {
@@ -112,45 +102,20 @@ export default function DashboardPage() {
       },
       onSearch: () => searchInputRef.current?.focus(),
       onHelp: () => {
-        const params = new URLSearchParams();
-        params.set("action", "help");
-        openMatrixAction(params);
+        window.dispatchEvent(new CustomEvent("gsd:open-help"));
       },
     },
     searchInputRef
   );
 
   return (
-    <div className="min-h-screen bg-background-muted/30 md:flex">
-      <AppRail
-        onHelp={() => {
-          const params = new URLSearchParams();
-          params.set("action", "help");
-          openMatrixAction(params);
-        }}
-        onOpenSettings={() => router.push(ROUTES.SETTINGS)}
-      />
-
-      <div className="min-w-0 flex-1">
-        <DashboardShellHeader
-          searchQuery={searchQuery}
-          searchInputRef={searchInputRef}
-          onSearchQueryChange={setSearchQuery}
-          onSearchSubmit={handleDashboardSearch}
-          onNewTask={() => {
-            const params = new URLSearchParams();
-            params.set("action", "new-task");
-            openMatrixAction(params);
-          }}
-          onHelp={() => {
-            const params = new URLSearchParams();
-            params.set("action", "help");
-            openMatrixAction(params);
-          }}
-          onOpenSettings={() => router.push(ROUTES.SETTINGS)}
-        />
-
-        <div className="space-y-8 pb-10">
+    <AppShell
+      title="Dashboard"
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      searchInputRef={searchInputRef}
+    >
+      <div className="space-y-8 pb-10">
           <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
             <div className="mx-auto max-w-7xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
@@ -288,9 +253,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <AppFooter />
-        </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

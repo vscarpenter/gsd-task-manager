@@ -1,5 +1,5 @@
-import { RedesignMatrix } from "@/components/redesign/redesign-matrix";
+import { MatrixSimplified } from "@/components/matrix-simplified";
 
 export default function MatrixPage() {
-  return <RedesignMatrix />;
+  return <MatrixSimplified />;
 }

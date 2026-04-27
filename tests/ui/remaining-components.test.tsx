@@ -1,6 +1,5 @@
 /**
  * Coverage gap-closing tests for uncovered components:
- * - AppHeader (0%)
  * - FirstTimeRedirect (0%)
  * - ClientLayout (0%)
  * - MatrixSkeleton (0%)
@@ -40,41 +39,6 @@ vi.mock('@/lib/hooks/use-sync-status', () => ({
   }),
 }));
 
-vi.mock('@/components/gsd-logo', () => ({
-  GsdLogo: ({ className }: { className?: string }) => (
-    <div data-testid="gsd-logo" className={className} />
-  ),
-}));
-
-vi.mock('@/components/smart-view-pills', () => ({
-  SmartViewPills: () => <div data-testid="smart-view-pills" />,
-}));
-
-vi.mock('@/components/view-toggle', () => ({
-  ViewToggle: () => <div data-testid="view-toggle" />,
-}));
-
-vi.mock('@/components/app-header/sync-status-display', () => ({
-  SyncStatusDisplay: () => <div data-testid="sync-status" />,
-}));
-
-vi.mock('@/components/app-header/header-actions', () => ({
-  HeaderActions: ({ onNewTask, onHelp, onOpenSettings }: {
-    onNewTask: () => void;
-    onHelp: () => void;
-    onOpenSettings: () => void;
-    selectionMode?: boolean;
-    onToggleSelectionMode?: () => void;
-    selectedCount?: number;
-    isDoFirstEmpty?: boolean;
-  }) => (
-    <div data-testid="header-actions">
-      <button onClick={onNewTask} data-testid="new-task-btn">New</button>
-      <button onClick={onHelp} data-testid="help-btn">Help</button>
-      <button onClick={onOpenSettings} data-testid="settings-btn">Settings</button>
-    </div>
-  ),
-}));
 
 vi.mock('@/components/ui/skeleton', () => ({
   Skeleton: ({ className }: { className?: string }) => (
@@ -178,66 +142,12 @@ vi.mock('lucide-react', () => ({
 
 // --- Component Imports (after mocks) ---
 
-import { AppHeader } from '@/components/app-header/index';
 import { FirstTimeRedirect } from '@/components/first-time-redirect';
 import { ClientLayout } from '@/components/client-layout';
 import { MatrixSkeleton } from '@/components/matrix-skeleton';
 import { FilterPopover } from '@/components/filter-popover';
 import { useTaskForm, defaultValues } from '@/components/task-form/use-task-form';
 import type { FilterCriteria } from '@/lib/filters';
-
-// --- AppHeader Tests ---
-
-describe('AppHeader', () => {
-  const defaultProps = {
-    onNewTask: vi.fn(),
-    onSearchChange: vi.fn(),
-    searchQuery: '',
-    searchInputRef: { current: null } as React.RefObject<HTMLInputElement | null>,
-    onHelp: vi.fn(),
-    onOpenSettings: vi.fn(),
-    onSelectSmartView: vi.fn(),
-    onOpenFilters: vi.fn(),
-  };
-
-  it('renders the header with GSD branding', () => {
-    render(<AppHeader {...defaultProps} />);
-
-    expect(screen.getByText('GSD Task Manager')).toBeInTheDocument();
-  });
-
-  it('renders view toggle and smart view pills', () => {
-    render(<AppHeader {...defaultProps} />);
-
-    expect(screen.getAllByTestId('view-toggle').length).toBeGreaterThan(0);
-    expect(screen.getByTestId('smart-view-pills')).toBeInTheDocument();
-  });
-
-  it('renders search button when search is collapsed', () => {
-    render(<AppHeader {...defaultProps} />);
-
-    expect(screen.getByRole('button', { name: /search tasks/i })).toBeInTheDocument();
-  });
-
-  it('renders Filters button', () => {
-    render(<AppHeader {...defaultProps} />);
-
-    expect(screen.getByText('Filters')).toBeInTheDocument();
-  });
-
-  it('calls onOpenFilters when Filters is clicked', () => {
-    render(<AppHeader {...defaultProps} />);
-
-    fireEvent.click(screen.getByText('Filters'));
-    expect(defaultProps.onOpenFilters).toHaveBeenCalledOnce();
-  });
-
-  it('renders header actions', () => {
-    render(<AppHeader {...defaultProps} />);
-
-    expect(screen.getByTestId('header-actions')).toBeInTheDocument();
-  });
-});
 
 // --- FirstTimeRedirect Tests ---
 
