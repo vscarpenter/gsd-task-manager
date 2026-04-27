@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AboutNav } from "@/components/about/about-nav";
+import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { HeroSection } from "@/components/about/hero-section";
 import { MatrixSection } from "@/components/about/matrix-section";
 import { FeaturesSection } from "@/components/about/features-section";
@@ -29,16 +29,13 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <>
-      <AboutNav />
-      <main>
-        <HeroSection />
-        <MatrixSection />
-        <FeaturesSection />
-        <PrivacySection />
-        <McpSection />
-        <FooterCta version={packageJson.version} />
-      </main>
-    </>
+    <AppShell title="About">
+      <HeroSection />
+      <MatrixSection />
+      <FeaturesSection />
+      <PrivacySection />
+      <McpSection />
+      <FooterCta version={packageJson.version} />
+    </AppShell>
   );
 }

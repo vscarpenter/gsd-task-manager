@@ -4,7 +4,8 @@ import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowLeftIcon, RefreshCcwIcon, Trash2Icon } from "lucide-react";
+import { RefreshCcwIcon, Trash2Icon } from "lucide-react";
+import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/task-card";
 import { listArchivedTasks, restoreTask, deleteArchivedTask } from "@/lib/archive";
@@ -116,31 +117,11 @@ export default function ArchivePage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur px-6 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/")}
-              className="gap-2"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                Archived Tasks
-              </h1>
-              <p className="text-sm text-foreground-muted">
-                {archivedTasks.length} archived task{archivedTasks.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="px-6 py-8">
+    <AppShell
+      title="Archive"
+      caption={`${archivedTasks.length} archived task${archivedTasks.length !== 1 ? "s" : ""}`}
+    >
+      <div className="pb-8">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <p className="text-foreground-muted">Loading archived tasks...</p>
@@ -166,7 +147,7 @@ export default function ArchivePage() {
           <div
             ref={scrollContainerRef}
             className="overflow-auto"
-            style={{ height: "calc(100vh - 160px)" }}
+            style={{ height: "70vh" }}
           >
             <div
               style={{
@@ -234,7 +215,7 @@ export default function ArchivePage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
