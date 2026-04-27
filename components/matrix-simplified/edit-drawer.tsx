@@ -33,8 +33,10 @@ const ACCENT: Record<RedesignQuadrantKey, string> = {
 function classifyExistingDate(iso: string | undefined): DuePreset {
   if (!iso) return "none";
   const todayIso = new Date().toISOString().slice(0, 10);
-  if (iso === todayIso) return "today";
-  const target = new Date(`${iso}T00:00:00`);
+  // Support both date-only ("2026-04-27") and full datetime ("2026-04-27T14:00:00Z")
+  const dateOnly = iso.slice(0, 10);
+  if (dateOnly === todayIso) return "today";
+  const target = new Date(`${dateOnly}T00:00:00`);
   const today = new Date(`${todayIso}T00:00:00`);
   const diff = (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
   if (diff > 0 && diff <= 7) return "this-week";
@@ -81,13 +83,16 @@ export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
     if (!title.trim()) return;
+    const rawDate = resolveDuePreset(duePreset);
+    // Convert date-only "YYYY-MM-DD" to full ISO datetime required by taskDraftSchema
+    const dueDate = rawDate ? new Date(`${rawDate}T00:00:00`).toISOString() : undefined;
     void onSubmit(
       {
         title: title.trim(),
         description: description.trim(),
         urgent,
         important,
-        dueDate: resolveDuePreset(duePreset),
+        dueDate,
         tags,
       },
       task.id

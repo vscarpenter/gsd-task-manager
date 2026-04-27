@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -23,6 +23,14 @@ const mockTask: TaskRecord = {
 } as TaskRecord;
 
 describe("<EditDrawer>", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("submits updated title and disables save when title is empty", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
@@ -58,5 +66,28 @@ describe("<EditDrawer>", () => {
       expect.objectContaining({ urgent: false, important: true }),
       "t1"
     );
+  });
+
+  it("submits dueDate as a full ISO datetime string, not a date-only string", async () => {
+    const onSubmit = vi.fn();
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await userEvent.click(screen.getByRole("button", { name: /^today$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const [draft] = onSubmit.mock.calls[0] as [{ dueDate?: string }];
+    expect(draft.dueDate).toBeDefined();
+    // Must be a full ISO datetime (contains 'T'), not a date-only string
+    expect(draft.dueDate).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("pre-selects 'today' preset when task has a full ISO dueDate for today", () => {
+    const taskDueToday: TaskRecord = {
+      ...mockTask,
+      dueDate: "2026-04-27T14:00:00.000Z",
+    };
+    render(<EditDrawer open task={taskDueToday} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    const todayBtn = screen.getByRole("button", { name: /^today$/i });
+    expect(todayBtn.getAttribute("aria-pressed")).toBe("true");
   });
 });
