@@ -61,10 +61,8 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
 // --- Imports ---
 
 import { ThemeToggle } from '@/components/theme-toggle';
-import { ViewToggle } from '@/components/view-toggle';
 import { KeyboardHintsToast } from '@/components/keyboard-hints-toast';
 import { PwaRegister } from '@/components/pwa-register';
-import { HeaderActions } from '@/components/app-header/header-actions';
 import { useTheme } from 'next-themes';
 
 // --- ThemeToggle ---
@@ -96,22 +94,6 @@ describe('ThemeToggle', () => {
     render(<ThemeToggle />);
     fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
     expect(mockSetTheme).toHaveBeenCalledWith('dark');
-  });
-});
-
-// --- ViewToggle ---
-
-describe('ViewToggle', () => {
-  it('renders Matrix and Dashboard buttons', () => {
-    render(<ViewToggle />);
-    expect(screen.getByRole('button', { name: /matrix/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /dashboard/i })).toBeInTheDocument();
-  });
-
-  it('marks Matrix as current page on home route', () => {
-    render(<ViewToggle />);
-    expect(screen.getByRole('button', { name: /matrix/i })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: /dashboard/i })).not.toHaveAttribute('aria-current');
   });
 });
 
@@ -179,45 +161,3 @@ describe('PwaRegister', () => {
   });
 });
 
-// --- HeaderActions ---
-
-describe('HeaderActions', () => {
-  const defaultProps = {
-    onHelp: vi.fn(),
-    onOpenSettings: vi.fn(),
-    onOpenAbout: vi.fn(),
-    selectionMode: false,
-    selectedCount: 0,
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('calls onOpenSettings when the Settings menu item is selected', () => {
-    const onOpenSettings = vi.fn();
-    render(<HeaderActions {...defaultProps} onOpenSettings={onOpenSettings} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /^settings$/i }));
-
-    expect(onOpenSettings).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onHelp when the Help menu item is selected', () => {
-    const onHelp = vi.fn();
-    render(<HeaderActions {...defaultProps} onHelp={onHelp} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /^help$/i }));
-
-    expect(onHelp).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onOpenAbout when the About menu item is selected', () => {
-    const onOpenAbout = vi.fn();
-    render(<HeaderActions {...defaultProps} onOpenAbout={onOpenAbout} />);
-
-    fireEvent.click(screen.getByRole('button', { name: /^about$/i }));
-
-    expect(onOpenAbout).toHaveBeenCalledTimes(1);
-  });
-});

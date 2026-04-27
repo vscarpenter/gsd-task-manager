@@ -3,7 +3,7 @@
 import { useState, type ReactNode, type RefObject } from "react";
 import { IconRail } from "./icon-rail";
 import { SimplifiedTopbar } from "./topbar";
-import { HelpDrawer } from "@/components/redesign/help-drawer";
+import { HelpDrawer } from "@/components/matrix-simplified/help-drawer";
 
 interface AppShellProps {
   title: string;

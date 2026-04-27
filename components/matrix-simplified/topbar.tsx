@@ -4,7 +4,7 @@ import type { RefObject } from "react";
 import { SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSyncStatus } from "@/lib/hooks/use-sync-status";
-import { SyncStatusDisplay } from "@/components/app-header/sync-status-display";
+import { SyncStatusDisplay } from "@/components/matrix-simplified/sync-status-display";
 import { cn } from "@/lib/utils";
 
 interface TopbarProps {

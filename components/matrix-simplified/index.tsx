@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { useAutoArchive } from "@/lib/use-auto-archive";
-import { useNotificationChecker } from "@/components/matrix-board/use-event-handlers";
+import { useNotificationChecker } from "@/lib/use-notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
 import type { RedesignQuadrantKey } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";

@@ -12,35 +12,6 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// TaskDragOverlay
-// ---------------------------------------------------------------------------
-
-vi.mock("@dnd-kit/core", () => ({
-  DragOverlay: ({ children }: { children: React.ReactNode }) => <div data-testid="drag-overlay">{children}</div>,
-  useSensors: vi.fn(() => []),
-  useSensor: vi.fn(() => ({})),
-  PointerSensor: {},
-  TouchSensor: {},
-}));
-
-describe("TaskDragOverlay", () => {
-  it("renders nothing when no active task", async () => {
-    const { TaskDragOverlay } = await import("@/components/matrix-board/task-drag-overlay");
-    render(<TaskDragOverlay activeTask={undefined} />);
-    expect(screen.getByTestId("drag-overlay")).toBeInTheDocument();
-    expect(screen.queryByText("Test Task")).not.toBeInTheDocument();
-  });
-
-  it("renders task title when active", async () => {
-    const { TaskDragOverlay } = await import("@/components/matrix-board/task-drag-overlay");
-    const task = createMockTask({ title: "Dragged Task", tags: ["tag1", "tag2"] });
-    render(<TaskDragOverlay activeTask={task} />);
-    expect(screen.getByText("Dragged Task")).toBeInTheDocument();
-    expect(screen.getByText("tag1")).toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // About section components (75% func)
 // ---------------------------------------------------------------------------
 

@@ -233,54 +233,6 @@ describe("AccordionView", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: ViewToggle
-// ---------------------------------------------------------------------------
-
-describe("ViewToggle", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPathname.mockReturnValue("/");
-  });
-
-  it("renders Matrix and Dashboard buttons", async () => {
-    const { ViewToggle } = await import("@/components/view-toggle");
-    render(<ViewToggle />);
-
-    expect(
-      screen.getByRole("button", { name: /switch to matrix/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /switch to dashboard/i })
-    ).toBeInTheDocument();
-  });
-
-  it("navigates to dashboard when dashboard button clicked", async () => {
-    const { ViewToggle } = await import("@/components/view-toggle");
-    const user = userEvent.setup();
-
-    render(<ViewToggle />);
-    await user.click(
-      screen.getByRole("button", { name: /switch to dashboard/i })
-    );
-
-    expect(mockNavigateWithTransition).toHaveBeenCalledWith("/dashboard");
-  });
-
-  it("navigates to home when matrix button clicked", async () => {
-    const { ViewToggle } = await import("@/components/view-toggle");
-    const user = userEvent.setup();
-    mockPathname.mockReturnValue("/dashboard");
-
-    render(<ViewToggle />);
-    await user.click(
-      screen.getByRole("button", { name: /switch to matrix/i })
-    );
-
-    expect(mockNavigateWithTransition).toHaveBeenCalledWith("/");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Tests: TaskCardHeader sub-component
 // ---------------------------------------------------------------------------
 
