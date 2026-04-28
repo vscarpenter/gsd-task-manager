@@ -5,7 +5,10 @@ export function AppFooter() {
   const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE || "unknown";
 
   return (
-    <footer className="mt-10 border-t border-border px-6 py-6 text-xs text-foreground-muted">
+    <footer
+      className="border-t border-border/70 bg-background px-4 py-3 text-xs text-foreground-muted sm:px-9"
+      role="contentinfo"
+    >
       <p className="text-center">
         Created by{" "}
         <a
@@ -16,9 +19,9 @@ export function AppFooter() {
         >
           Vinny Carpenter
         </a>
-        {" · "}
+        <span aria-hidden="true">{" · "}</span>
         <span className="text-foreground-muted/70">
-          Build {buildNumber} · {buildDate}
+          v{buildNumber} · {buildDate}
         </span>
       </p>
     </footer>

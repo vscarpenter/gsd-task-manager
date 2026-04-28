@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { IconRail } from "./icon-rail";
 import { SimplifiedTopbar } from "./topbar";
 import { HelpDrawer } from "@/components/matrix-simplified/help-drawer";
+import { AppFooter } from "@/components/app-footer";
 
 interface AppShellProps {
   title: string;
@@ -47,6 +48,7 @@ export function AppShell({
         <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6">
           {children}
         </main>
+        <AppFooter />
       </div>
       <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
