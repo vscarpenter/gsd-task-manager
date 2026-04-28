@@ -53,4 +53,38 @@ describe("<CaptureBar>", () => {
     fireEvent.keyDown(window, { key: "n" });
     expect(document.activeElement).toBe(input);
   });
+
+  it("Details button appears when text is entered and onMoreOptions is provided", async () => {
+    render(<CaptureBar onSubmit={vi.fn()} onMoreOptions={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /open full task form/i })).toBeNull();
+    const input = screen.getByLabelText("Capture a task");
+    await userEvent.type(input, "my task");
+    expect(screen.getByRole("button", { name: /open full task form/i })).toBeInTheDocument();
+  });
+
+  it("Details button is not rendered when onMoreOptions is not provided", async () => {
+    render(<CaptureBar onSubmit={vi.fn()} />);
+    const input = screen.getByLabelText("Capture a task");
+    await userEvent.type(input, "my task");
+    expect(screen.queryByRole("button", { name: /open full task form/i })).toBeNull();
+  });
+
+  it("Details button calls onMoreOptions with parsed payload and clears the input", async () => {
+    const onMoreOptions = vi.fn();
+    render(<CaptureBar onSubmit={vi.fn()} onMoreOptions={onMoreOptions} />);
+    const input = screen.getByLabelText("Capture a task") as HTMLInputElement;
+    await userEvent.type(input, "ship release ! #launch");
+    await userEvent.click(screen.getByRole("button", { name: /open full task form/i }));
+    expect(onMoreOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "ship release", urgent: true, tags: ["launch"] })
+    );
+    expect(input.value).toBe("");
+  });
+
+  it("global Shift+N calls onMoreOptions (empty payload) when capture bar has no text", () => {
+    const onMoreOptions = vi.fn();
+    render(<CaptureBar onSubmit={vi.fn()} onMoreOptions={onMoreOptions} />);
+    fireEvent.keyDown(window, { key: "N", shiftKey: true });
+    expect(onMoreOptions).toHaveBeenCalledWith({ title: "", urgent: false, important: false, tags: [] });
+  });
 });

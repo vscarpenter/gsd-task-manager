@@ -59,6 +59,8 @@ export function MatrixSimplified() {
   const captureInputRef = useRef<HTMLInputElement | null>(null);
 
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [createInitial, setCreateInitial] = useState<Partial<EditDraft> | undefined>(undefined);
   const [showCompleted, setShowCompleted] = useState<boolean>(readShowCompleted);
 
   useEffect(() => {
@@ -155,14 +157,42 @@ export function MatrixSimplified() {
   const handleEditOpen = useCallback((task: TaskRecord) => setEditingTask(task), []);
   const handleEditClose = useCallback(() => setEditingTask(null), []);
 
+  const handleOpenCreateDrawer = useCallback((payload?: CapturePayload) => {
+    setCreateInitial(
+      payload
+        ? { title: payload.title, urgent: payload.urgent, important: payload.important, tags: payload.tags }
+        : undefined
+    );
+    setCreateDrawerOpen(true);
+  }, []);
+
+  const handleCreateClose = useCallback(() => {
+    setCreateDrawerOpen(false);
+    setCreateInitial(undefined);
+  }, []);
+
   const handleEditSubmit = useCallback(
-    async (draft: EditDraft, taskId: string) => {
+    async (draft: EditDraft, taskId?: string) => {
       try {
-        await updateTask(taskId, draft);
-        showToast("Task updated", undefined, TOAST_DURATION.SHORT);
-        setEditingTask(null);
+        if (taskId) {
+          await updateTask(taskId, draft);
+          showToast("Task updated", undefined, TOAST_DURATION.SHORT);
+          setEditingTask(null);
+        } else {
+          await createTask({
+            title: draft.title,
+            description: draft.description,
+            urgent: draft.urgent,
+            important: draft.important,
+            dueDate: draft.dueDate,
+            tags: draft.tags.length > 0 ? draft.tags : undefined,
+          });
+          showToast("Task added", undefined, TOAST_DURATION.SHORT);
+          setCreateDrawerOpen(false);
+          setCreateInitial(undefined);
+        }
       } catch {
-        showToast("Failed to update task", undefined, TOAST_DURATION.LONG);
+        showToast("Failed to save task", undefined, TOAST_DURATION.LONG);
       }
     },
     [showToast]
@@ -198,7 +228,7 @@ export function MatrixSimplified() {
         searchInputRef={searchInputRef}
       >
         <div className="sticky top-[60px] z-10 mb-4 -mx-4 bg-background px-4 py-2 sm:static sm:m-0 sm:bg-transparent sm:p-0 sm:pb-4">
-          <CaptureBar onSubmit={handleCapture} inputRef={captureInputRef} />
+          <CaptureBar onSubmit={handleCapture} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>
         <MatrixGrid
           tasks={visibleTasks}
@@ -213,6 +243,13 @@ export function MatrixSimplified() {
         open={Boolean(editingTask)}
         task={editingTask}
         onClose={handleEditClose}
+        onSubmit={handleEditSubmit}
+      />
+      <EditDrawer
+        open={createDrawerOpen}
+        task={null}
+        initialDraft={createInitial}
+        onClose={handleCreateClose}
         onSubmit={handleEditSubmit}
       />
 
