@@ -15,12 +15,14 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent
-        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:p-0"
+        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:max-h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:overflow-hidden md:p-0"
+        style={{ paddingBottom: 0 }}
       >
         <div
           style={{
             background: "var(--paper)",
             display: "flex",
+            height: "100%",
             minHeight: "inherit",
             flexDirection: "column",
             boxShadow: "var(--rd-shadow-lg)",
