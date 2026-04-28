@@ -90,4 +90,43 @@ describe("<EditDrawer>", () => {
     const todayBtn = screen.getByRole("button", { name: /^today$/i });
     expect(todayBtn.getAttribute("aria-pressed")).toBe("true");
   });
+
+  describe("create mode (task is null)", () => {
+    it("shows 'New task' header and 'Create task' button", () => {
+      render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      expect(screen.getByRole("heading", { name: /new task/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /create task/i })).toBeInTheDocument();
+    });
+
+    it("pre-fills title from initialDraft", () => {
+      render(
+        <EditDrawer
+          open
+          task={null}
+          initialDraft={{ title: "Pre-filled title", urgent: true }}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+        />
+      );
+      const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
+      expect(titleInput.value).toBe("Pre-filled title");
+    });
+
+    it("calls onSubmit without a taskId in create mode", async () => {
+      const onSubmit = vi.fn();
+      render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={onSubmit} />);
+      const titleInput = screen.getByLabelText(/title/i);
+      await userEvent.type(titleInput, "Brand new task");
+      await userEvent.click(screen.getByRole("button", { name: /create task/i }));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Brand new task" }),
+        undefined
+      );
+    });
+
+    it("disables Create task button when title is empty", () => {
+      render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /create task/i })).toBeDisabled();
+    });
+  });
 });

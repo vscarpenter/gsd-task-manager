@@ -15,6 +15,8 @@ export interface CapturePayload {
 
 interface CaptureBarProps {
   onSubmit: (payload: CapturePayload) => void | Promise<void>;
+  /** Called when the user wants to open the full new-task drawer (Shift+N or "Details" button). */
+  onMoreOptions?: (payload: CapturePayload) => void;
   inputRef?: React.MutableRefObject<HTMLInputElement | null>;
 }
 
@@ -41,10 +43,18 @@ function isEditable(el: Element | null): boolean {
   return t === "INPUT" || t === "TEXTAREA" || el.isContentEditable;
 }
 
-export function CaptureBar({ onSubmit, inputRef: externalRef }: CaptureBarProps) {
+export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: CaptureBarProps) {
   const [text, setText] = useState("");
   const [override, setOverride] = useState<RedesignQuadrantKey | null>(null);
   const internalRef = useRef<HTMLInputElement | null>(null);
+
+  // Stable refs so the keydown handler never needs to re-register on every keystroke.
+  const textRef = useRef(text);
+  textRef.current = text;
+  const overrideRef = useRef(override);
+  overrideRef.current = override;
+  const onMoreOptionsRef = useRef(onMoreOptions);
+  onMoreOptionsRef.current = onMoreOptions;
 
   useEffect(() => {
     if (externalRef) externalRef.current = internalRef.current;
@@ -56,6 +66,23 @@ export function CaptureBar({ onSubmit, inputRef: externalRef }: CaptureBarProps)
       if (e.key === "n") {
         e.preventDefault();
         internalRef.current?.focus();
+      } else if (e.key === "N" && e.shiftKey) {
+        e.preventDefault();
+        const currentParsed = parseCapture(textRef.current);
+        const ov = overrideRef.current;
+        const flags = ov
+          ? { urgent: quadrantByRdKey(ov).urgent, important: quadrantByRdKey(ov).important }
+          : { urgent: currentParsed.urgent, important: currentParsed.important };
+        onMoreOptionsRef.current?.({
+          title: currentParsed.title || "",
+          urgent: flags.urgent,
+          important: flags.important,
+          tags: currentParsed.tags,
+        });
+        if (textRef.current.trim()) {
+          setText("");
+          setOverride(null);
+        }
       }
     };
     window.addEventListener("keydown", handler);
@@ -125,17 +152,37 @@ export function CaptureBar({ onSubmit, inputRef: externalRef }: CaptureBarProps)
         className="min-w-0 flex-1 border-0 bg-transparent text-[14.5px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
       />
       {text.trim() ? (
-        <button
-          type="button"
-          onClick={cycleQuadrant}
-          title="Tab to cycle quadrant"
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
-          style={{ backgroundColor: `${accent}1a`, color: accent }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
-          {meta.rdShort}
-          {override ? <span className="ml-1 font-normal normal-case opacity-60">·fixed</span> : null}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={cycleQuadrant}
+            title="Tab to cycle quadrant"
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
+            style={{ backgroundColor: `${accent}1a`, color: accent }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+            {meta.rdShort}
+            {override ? <span className="ml-1 font-normal normal-case opacity-60">·fixed</span> : null}
+          </button>
+          {onMoreOptions ? (
+            <button
+              type="button"
+              onClick={() => {
+                const flags = override
+                  ? { urgent: quadrantByRdKey(override).urgent, important: quadrantByRdKey(override).important }
+                  : { urgent: parsed.urgent, important: parsed.important };
+                onMoreOptions({ title: parsed.title || "", urgent: flags.urgent, important: flags.important, tags: parsed.tags });
+                setText("");
+                setOverride(null);
+              }}
+              title="Open full form (Shift+N)"
+              aria-label="Open full task form"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-foreground-muted hover:bg-background-muted hover:text-foreground"
+            >
+              Details ↗
+            </button>
+          ) : null}
+        </>
       ) : (
         <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-foreground-muted">
           n

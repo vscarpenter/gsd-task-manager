@@ -18,9 +18,11 @@ export interface EditDraft {
 
 interface EditDrawerProps {
   open: boolean;
-  task: TaskRecord | null;
+  task?: TaskRecord | null;
+  /** Pre-fill fields when opening in create mode (task is null/absent). */
+  initialDraft?: Partial<EditDraft>;
   onClose: () => void;
-  onSubmit: (draft: EditDraft, taskId: string) => void | Promise<void>;
+  onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
 }
 
 const ACCENT: Record<RedesignQuadrantKey, string> = {
@@ -44,7 +46,7 @@ function classifyExistingDate(iso: string | undefined): DuePreset {
   return "none";
 }
 
-export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
+export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: EditDrawerProps) {
   const titleRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -55,16 +57,25 @@ export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
   const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
-    if (!open || !task) return;
-    setTitle(task.title);
-    setDescription(task.description ?? "");
-    setUrgent(task.urgent);
-    setImportant(task.important);
-    setDuePreset(classifyExistingDate(task.dueDate));
-    setTags(task.tags ?? []);
+    if (!open) return;
+    if (task) {
+      setTitle(task.title);
+      setDescription(task.description ?? "");
+      setUrgent(task.urgent);
+      setImportant(task.important);
+      setDuePreset(classifyExistingDate(task.dueDate));
+      setTags(task.tags ?? []);
+    } else {
+      setTitle(initialDraft?.title ?? "");
+      setDescription(initialDraft?.description ?? "");
+      setUrgent(initialDraft?.urgent ?? false);
+      setImportant(initialDraft?.important ?? false);
+      setDuePreset("none");
+      setTags(initialDraft?.tags ?? []);
+    }
     setTagInput("");
     setTimeout(() => titleRef.current?.focus(), 50);
-  }, [open, task]);
+  }, [open, task, initialDraft]);
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +86,8 @@ export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open || !task) return null;
+  if (!open) return null;
+  const isCreateMode = !task;
 
   const activeQuadrant = quadrants.find((q) => q.urgent === urgent && q.important === important);
   const accent = activeQuadrant ? ACCENT[activeQuadrant.rdKey] : "#c2410c";
@@ -95,7 +107,7 @@ export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
         dueDate,
         tags,
       },
-      task.id
+      task?.id
     );
   };
 
@@ -115,11 +127,11 @@ export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
         className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl"
-        aria-label="Edit task"
+        aria-label={isCreateMode ? "New task" : "Edit task"}
       >
         <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-          <h2 className="rd-serif text-[22px] text-foreground">Edit task</h2>
+          <h2 className="rd-serif text-[22px] text-foreground">{isCreateMode ? "New task" : "Edit task"}</h2>
           {activeQuadrant ? (
             <span
               className="ml-1 text-[11px] font-semibold uppercase tracking-wider"
@@ -269,7 +281,7 @@ export function EditDrawer({ open, task, onClose, onSubmit }: EditDrawerProps) {
             )}
           >
             <CheckIcon className="h-3.5 w-3.5" />
-            Save changes
+            {isCreateMode ? "Create task" : "Save changes"}
           </button>
         </footer>
       </form>
