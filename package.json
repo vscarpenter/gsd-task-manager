@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "8.7.24",
+	"version": "8.8.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -32,7 +32,6 @@
 		"@tanstack/react-form": "1.28.6",
 		"@tanstack/react-query": "5.95.2",
 		"@tanstack/react-virtual": "3.13.23",
-		"canvas-confetti": "1.9.4",
 		"clsx": "2.1.1",
 		"cmdk": "1.1.1",
 		"date-fns": "4.1.0",
@@ -56,7 +55,6 @@
 		"@testing-library/jest-dom": "6.9.1",
 		"@testing-library/react": "16.3.2",
 		"@testing-library/user-event": "14.6.1",
-		"@types/canvas-confetti": "1.9.0",
 		"@types/node": "25.5.0",
 		"@types/react": "19.2.14",
 		"@types/react-dom": "19.2.3",

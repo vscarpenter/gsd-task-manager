@@ -4,35 +4,31 @@
 
 ## Resuming From Here (2026-04-28)
 
-### Just Completed — Phase 1 + Phase 3 of v9 cleanup
-Single commit on `claude/infallible-neumann-68a882`:
-- Deleted 6 unambiguously dead files (zero importers anywhere): `components/ui/sheet.tsx`, `components/ui/slider.tsx`, `components/inline-task-form.tsx`, `components/notification-permission-prompt.tsx`, `components/smart-view-pills.tsx`, `lib/z-index.ts`
-- Removed `@radix-ui/react-slider` dep (only consumer was deleted slider.tsx)
-- Bumped `postcss` 8.5.8 → 8.5.10 + added override (CVE GHSA-qx2v-qp2m-jg93 cleared; `bun audit` now clean)
-- Bumped version 8.7.23 → 8.7.24
+### Just Completed — v9 cleanup (Phases 1, 2, 3) on `claude/infallible-neumann-68a882`
+Two commits, one PR:
 
-Verification:
+**Commit 1 (Phases 1+3):** 6 unambiguously dead files removed; `@radix-ui/react-slider` dep dropped; `postcss` 8.5.8 → 8.5.10 + override (CVE GHSA-qx2v-qp2m-jg93 cleared); version 8.7.23 → 8.7.24.
+
+**Commit 2 (Phase 2):** ~30 v8 surface files removed per user's per-cluster decisions. Cluster outcomes:
+- Command palette: kept (resurrect later)
+- Smart-view 1-9 shortcuts, smart-view UI, bulk multi-select, filter panel, settings modal, user-guide modal + wizard, modular task-form, tag inputs, share-task-dialog, matrix empty/skeleton states: deleted
+- Cluster 11 split: `task-timer` and `import-dialog` kept (still wired); `snooze-dropdown`, `task-description`, `reset-everything-dialog` initially flagged dead but **restored after re-verification** — they're imported by `task-card-*.tsx` / `data-management.tsx`. Audit had a transitive-import gap (lazy/nested usage). `keyboard-hints-toast` deleted (truly dead).
+- ADR 0011 written; CLAUDE.md updated.
+- Version bumped 8.7.24 → 8.8.0 (substantial cleanup).
+
+Verification on Phase 2 commit:
 - `bun audit` — 0 vulnerabilities
 - `bun typecheck` — clean
-- `bun lint` — 6 warnings (unchanged from baseline)
-- `bun run test` — 2088 passed (5 pre-existing edit-drawer failures unrelated)
+- `bun lint` — 5 warnings (1 fewer than baseline; unused-eslint-disable in deleted block)
+- `bun run test` — 1773 passed (5 pre-existing edit-drawer failures unrelated; 315 fewer total because dead-code tests removed)
 - `bun run build` — static export OK
 
-### Active — Code review 2026-04-28 follow-ups
-Full review at `tasks/code-review-2026-04-28.md`.
-
-**Phase 2 (BLOCKED on user decision):** ~30 v8 components orphaned by v9 single-matrix refactor. CLAUDE.md still describes some as features (command palette, bulk multi-select, smart-view 1-9 shortcuts). Need per-cluster decisions: delete vs resurrect. See section 1A and Phase 2 decision table in the review doc.
-
-**Phase 3 deferred items:**
-- [ ] Add `: React.ReactElement` return type to ~45 live exported components — defer until AFTER Phase 2 to avoid touching files that may be deleted
-- [ ] Bump `lucide-react` 1.7.0 → 1.12.x (5 minor versions) — separate PR with visual smoke test for icon renames
-- [ ] Write ADR `docs/adr/0011-v9-single-matrix-refactor.md`
-
-**Phase 4 (carryover from April 22 audit):** unit tests for sync engine + tasks/crud + MCP write handlers.
-
-**Phase 3 items NOT applicable (false positives in agent reports):**
-- 4 `any` casts already have justification comments + eslint-disable directives
-- `lib/db.ts` 353 lines is within "approximately 350-400" tolerance; splitting Dexie migrations is risky for marginal gain
+### Open follow-ups
+- [ ] Wire `components/command-palette/` back into `matrix-simplified/app-shell.tsx` (resurrection of cluster 1) — needs a small spec
+- [ ] Add `: React.ReactElement` return types to live exported components (~45)
+- [ ] Bump `lucide-react` 1.7.0 → 1.12.x — separate PR with visual smoke test
+- [ ] Phase 4 (April 22 carryover): unit tests for `lib/sync/pb-{push,pull}.ts`, `lib/tasks/crud/*`, MCP write-handlers
+- [ ] Investigate the 5 pre-existing `tests/ui/edit-drawer.test.tsx` timeouts
 
 ---
 

@@ -7,12 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Next.js 16 App Router. All data is stored locally in IndexedDB via Dexie, with JSON export/import for backups. The app is a PWA that works completely offline.
 
 **Key Features:**
+- **Single-Matrix UI (v9)** — Simplified single-matrix layout with capture-bar; see `docs/adr/0011-v9-single-matrix-refactor.md`
 - **Optional Cloud Sync** — Multi-device sync via self-hosted PocketBase at `https://api.vinny.io` (OAuth with Google/GitHub)
 - **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
 - **Realtime Sync** — PocketBase SSE (Server-Sent Events) for instant cross-device updates
-- **Smart Views** — Pin up to 5 smart views to header (keyboard shortcuts 1-9, 0 to clear)
-- **Command Palette** — Global ⌘K/Ctrl+K shortcut for quick actions and navigation
-- **iOS-style Settings** — Redesigned settings with grouped layout and modular sections
+- **iOS-style Settings** — Full-page settings with grouped layout and modular sections (`components/settings-page/`)
+- **Command Palette (planned)** — Global ⌘K/Ctrl+K palette source exists at `components/command-palette/` but is **not wired into the v9 app shell**; resurrection tracked in `tasks/todo.md`
 
 ## Core Commands
 
@@ -60,21 +60,20 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - **App Router** (`app/`): Matrix view, dashboard, archive, sync-history, install pages
 - **UI Components** (`components/ui/`): shadcn-style primitives
 - **Domain Components**:
-  - `matrix-board.tsx`, `matrix-column.tsx`, `task-card.tsx` - Matrix view
-  - `task-form/` - Modular task form with validation
+  - `components/matrix-simplified/` - v9 single-matrix shell (app-shell, capture-bar, edit-drawer, help-drawer, matrix-grid, topbar, icon-rail)
+  - `components/task-card/` - Task card with header/metadata/actions sub-components
   - `components/sync/` - Sync button, auth dialog, OAuth buttons
-  - `components/settings/` - iOS-style settings with modular sections
+  - `components/settings/` - Settings sections (appearance, notifications, sync, archive, data-management, about)
+  - `components/settings-page/` - Full-page settings shell (used by `app/settings/`)
   - `components/dashboard/` - Analytics charts and metrics
-  - `components/user-guide/` - Modular user guide sections
-  - `bulk-actions-bar.tsx`, `bulk-tag-dialog.tsx` - Batch operations
-  - `command-palette.tsx` - Global command palette (⌘K/Ctrl+K)
-  - `smart-view-pills.tsx`, `smart-view-selector.tsx` - Smart view UI
+  - `components/about/` - About page sections
+  - `components/command-palette/` - ⌘K palette implementation (currently not wired into v9 shell — resurrection planned)
 
 ### Key Patterns
 - **Client-side only**: All components use `"use client"` - no server rendering
 - **Live reactivity**: `useTasks()` returns live data via `useLiveQuery`
 - **Validation**: All task operations validate with Zod schemas before persisting
-- **Keyboard shortcuts**: n=new, /=search, ?=help, ⌘K=command palette, 1-9=smart views
+- **Keyboard shortcuts (v9)**: n=new task, /=search; help-drawer documents others
 - **Recurring tasks**: Completed recurring tasks auto-create next instance
 - **Enhanced search**: Includes tags and subtasks
 
@@ -229,8 +228,9 @@ The codebase follows coding standards (<350 lines per file, <30 lines per functi
 - **lib/analytics/**: metrics, streaks, tags, trends
 - **lib/notifications/**: display, permissions, settings, badge
 - **lib/sync/**: pocketbase-client, pb-sync-engine, pb-realtime, pb-auth, task-mapper, sync-coordinator, health-monitor, queue, config
-- **components/task-form/**: index, use-task-form hook, validation
+- **components/matrix-simplified/**: v9 single-matrix shell, capture-bar, edit-drawer, help-drawer
 - **components/settings/**: appearance, notification, sync, archive, data-management sections
+- **components/settings-page/**: full-page settings shell + sidebar
 - **packages/mcp-server/src/tools/**: handlers/, schemas/, individual tool files
 - **packages/mcp-server/src/write-ops/**: task-operations, bulk-operations with dry-run support
 
