@@ -55,25 +55,22 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               </h2>
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Overview of the focus, matrix, and canvas views plus shortcuts and sync guidance.
+              Overview of the Eisenhower matrix, capture bar syntax, keyboard shortcuts, and sync guidance.
             </DialogDescription>
           </div>
         </header>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
-          <Section label="Three lenses on one list">
-            <Concept title="Focus" accent="var(--q2)">
-              Default view. An editorial feed grouped{" "}
-              <em className="rd-serif" style={{ fontStyle: "italic" }}>Now → Today → Next → Later</em>. Answers{" "}
-              <strong>&ldquo;what should I do next?&rdquo;</strong> A small compass shows how many tasks live in each quadrant.
+          <Section label="One board, one capture bar">
+            <Concept title="The matrix" accent="var(--q1)">
+              The classic 2×2 Eisenhower board is your home view. Drag a task between quadrants to reclassify it; hover a
+              quadrant while dragging to see the drop target highlight.
             </Concept>
-            <Concept title="Matrix" accent="var(--q1)">
-              The classic 2×2 Eisenhower board. Drag a task between quadrants to reclassify it. Hover a quadrant while dragging to
-              see the drop target highlight.
-            </Concept>
-            <Concept title="Canvas" accent="var(--q3)">
-              Tasks plotted on a real urgency × importance plane. Useful when you want to see distribution at a glance. Click any
-              pill to open its editor.
+            <Concept title="The capture bar" accent="var(--q2)">
+              Every task starts in the bar at the top. Type your task, hit{" "}
+              <kbd>Enter</kbd>, and the parser routes it to the right quadrant based on{" "}
+              <code style={codeStyle}>!</code> / <code style={codeStyle}>*</code> markers — or press{" "}
+              <kbd>Tab</kbd> to cycle the destination manually.
             </Concept>
           </Section>
 
@@ -100,15 +97,16 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           </Section>
 
           <Section label="Keyboard shortcuts">
-            <ShortcutRow keys={["N"]} action="Open the full composer" />
+            <ShortcutRow keys={["n"]} action="Jump to the capture bar" />
+            <ShortcutRow keys={["Shift", "N"]} action="Open the full composer" />
             <ShortcutRow keys={["/"]} action="Focus the search field" />
-            <ShortcutRow keys={["1"]} action="Switch to Focus view" />
-            <ShortcutRow keys={["2"]} action="Switch to Matrix view" />
-            <ShortcutRow keys={["3"]} action="Switch to Canvas view" />
+            <ShortcutRow keys={["Tab"]} action="Cycle quadrant override (in the capture bar)" />
+            <ShortcutRow keys={["Enter"]} action="Submit the task (in the capture bar)" />
             <ShortcutRow keys={["?"]} action="Open this help drawer" />
             <ShortcutRow keys={["Esc"]} action="Close any open drawer" />
             <p style={{ ...bodyStyle, color: "var(--ink-3)", fontSize: 12 }}>
-              Shortcuts are suppressed while a text field is focused.
+              Global shortcuts are suppressed while a text field is focused, so typing in the capture bar or composer
+              won&rsquo;t hijack keys.
             </p>
           </Section>
 
@@ -121,8 +119,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               task&rsquo;s details. Save to update, close without saving to cancel.
             </p>
             <p style={bodyStyle}>
-              <strong>Drag to reclassify</strong> — in the Matrix view, drag a task onto any other quadrant. An 8-pixel activation
-              distance means plain clicks still open the editor.
+              <strong>Drag to reclassify</strong> — drag a task onto any other quadrant. An 8-pixel activation distance
+              means plain clicks still open the editor.
             </p>
           </Section>
 
