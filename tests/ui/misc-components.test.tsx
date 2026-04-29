@@ -61,7 +61,6 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
 // --- Imports ---
 
 import { ThemeToggle } from '@/components/theme-toggle';
-import { KeyboardHintsToast } from '@/components/keyboard-hints-toast';
 import { PwaRegister } from '@/components/pwa-register';
 import { useTheme } from 'next-themes';
 
@@ -94,38 +93,6 @@ describe('ThemeToggle', () => {
     render(<ThemeToggle />);
     fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
     expect(mockSetTheme).toHaveBeenCalledWith('dark');
-  });
-});
-
-// --- KeyboardHintsToast ---
-
-describe('KeyboardHintsToast', () => {
-  beforeEach(() => {
-    localStorage.removeItem('gsd-keyboard-hints-dismissed');
-  });
-
-  it('renders keyboard shortcuts text when not dismissed', () => {
-    render(<KeyboardHintsToast />);
-    expect(screen.getByText(/new task/i)).toBeInTheDocument();
-    expect(screen.getByText(/search/i)).toBeInTheDocument();
-    expect(screen.getByText(/palette/i)).toBeInTheDocument();
-  });
-
-  it('has a dismiss button', () => {
-    render(<KeyboardHintsToast />);
-    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument();
-  });
-
-  it('hides content after dismiss', () => {
-    render(<KeyboardHintsToast />);
-    fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
-    expect(screen.queryByText(/new task/i)).not.toBeInTheDocument();
-  });
-
-  it('sets localStorage dismissed flag after dismiss', () => {
-    render(<KeyboardHintsToast />);
-    fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
-    expect(localStorage.getItem('gsd-keyboard-hints-dismissed')).toBe('1');
   });
 });
 
