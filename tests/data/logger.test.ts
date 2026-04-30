@@ -602,7 +602,7 @@ describe("Logger module", () => {
 	describe("generateCorrelationId", () => {
 		it("should return a string with timestamp and counter", () => {
 			const correlationId = generateCorrelationId();
-			expect(correlationId).toMatch(/^\d+-\d+$/);
+			expect(correlationId).toMatch(/^\d+-\d+-[a-z0-9]+$/);
 		});
 
 		it("should generate unique IDs on successive calls", () => {

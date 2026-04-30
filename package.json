@@ -7,7 +7,7 @@
 		"dev": "next dev",
 		"clean": "rimraf .next out",
 		"prebuild": "rimraf .next out",
-		"build": "node scripts/generate-build-info.cjs && bash -c 'source .build-env.sh && next build 2>&1 | grep -v baseline-browser-mapping'",
+		"build": "node scripts/generate-build-info.cjs && node scripts/update-sw-version.cjs && bash -c 'source .build-env.sh && next build 2>&1 | grep -v baseline-browser-mapping'",
 		"start": "next start",
 		"lint": "eslint .",
 		"test": "vitest run",

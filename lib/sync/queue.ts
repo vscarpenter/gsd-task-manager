@@ -7,6 +7,10 @@ import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
 import type { SyncQueueItem } from './types';
 import { generateId } from '@/lib/id-generator';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('SYNC_QUEUE');
 
 export class SyncQueue {
   /**
@@ -113,6 +117,31 @@ export class SyncQueue {
     }
 
     return count;
+  }
+
+  /**
+   * Remove items that have exceeded the maximum retry count.
+   * Prevents the queue from growing unboundedly when push operations
+   * repeatedly fail for a specific task (e.g., validation errors).
+   *
+   * @returns Number of pruned items
+   */
+  async pruneExhaustedRetries(): Promise<number> {
+    const db = getDb();
+    const all = await db.syncQueue.toArray();
+    const exhausted = all.filter(item => item.retryCount >= SYNC_CONFIG.MAX_RETRIES);
+
+    if (exhausted.length === 0) return 0;
+
+    const ids = exhausted.map(item => item.id);
+    await db.syncQueue.bulkDelete(ids);
+
+    logger.warn('Pruned exhausted sync queue items', {
+      prunedCount: exhausted.length,
+      taskIds: exhausted.map(item => item.taskId).join(', '),
+    });
+
+    return exhausted.length;
   }
 }
 

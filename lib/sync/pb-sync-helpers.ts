@@ -16,9 +16,30 @@ export function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/** Maximum allowed length for filter values to prevent query parser issues */
+const MAX_FILTER_VALUE_LENGTH = 500;
+
 /** Escape a string value for safe use in PocketBase filter expressions */
 export function escapeFilterValue(value: string): string {
+  if (value.length > MAX_FILTER_VALUE_LENGTH) {
+    throw new Error(`Filter value exceeds maximum length of ${MAX_FILTER_VALUE_LENGTH}`);
+  }
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/**
+ * Validate that a value matches a safe ID format for use in PocketBase filters.
+ * Accepts PocketBase record IDs (15-char alphanumeric) and common test ID formats.
+ * Rejects values containing filter syntax characters (", ', &&, ||, etc.)
+ */
+export function assertSafeRecordId(value: string, label = 'id'): void {
+  if (value.length === 0 || value.length > 50) {
+    throw new Error(`Invalid ${label} format: unexpected length`);
+  }
+  // Allow alphanumeric, hyphens, and underscores only
+  if (!/^[a-z0-9_-]+$/i.test(value)) {
+    throw new Error(`Invalid ${label} format: contains unsafe characters`);
+  }
 }
 
 /** Get the current device ID from sync config in IndexedDB */
@@ -36,6 +57,7 @@ export { getCurrentUserId };
  * Returns a Map of task_id -> PocketBase record id for efficient lookups.
  */
 export async function fetchRemoteTaskIndex(ownerId: string): Promise<{ index: Map<string, string>; fetchSucceeded: boolean }> {
+  assertSafeRecordId(ownerId, 'ownerId');
   const pb = getPocketBase();
   const index = new Map<string, string>();
 

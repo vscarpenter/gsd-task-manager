@@ -69,6 +69,10 @@ export class HealthMonitor {
         return { healthy: true, issues: [], timestamp };
       }
 
+      // Prune items that have exceeded max retries to prevent unbounded queue growth
+      const queue = getSyncQueue();
+      await queue.pruneExhaustedRetries();
+
       const issues: HealthIssue[] = [];
 
       const staleIssue = await this.checkStaleOperations();
