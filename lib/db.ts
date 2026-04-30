@@ -335,6 +335,34 @@ class GsdDatabase extends Dexie {
 
         logger.info("PocketBase migration complete. Please re-authenticate to enable sync.");
       });
+
+    // Version 14: Add status field to syncQueue so exhausted retries are
+    // marked failed instead of silently deleted. Backfill existing rows.
+    this.version(14)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount, status",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId",
+        appPreferences: "id"
+      })
+      .upgrade(async (trans) => {
+        const MAX_RETRIES_AT_MIGRATION = 5;
+        await trans.table("syncQueue").toCollection().modify((item: SyncQueueItem) => {
+          if (item.status) return;
+          // Items already at/over the historical limit get marked failed so
+          // they show up in the recovery surface instead of silently retrying.
+          item.status = (item.retryCount ?? 0) >= MAX_RETRIES_AT_MIGRATION ? 'failed' : 'pending';
+          if (item.status === 'failed' && !item.failedAt) {
+            item.failedAt = Date.now();
+          }
+        });
+      });
   }
 
 }

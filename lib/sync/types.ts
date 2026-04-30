@@ -48,6 +48,8 @@ export interface BackgroundSyncConfig {
 // Sync queue (offline operations pending push)
 // ============================================================================
 
+export type SyncQueueItemStatus = 'pending' | 'failed';
+
 export interface SyncQueueItem {
   id: string;
   taskId: string;
@@ -55,7 +57,15 @@ export interface SyncQueueItem {
   timestamp: number;
   retryCount: number;
   payload: TaskRecord | null;
+  /** Lifecycle status. Items hitting MAX_RETRIES transition to 'failed' instead
+   *  of being deleted, so unsynced edits are preserved for diagnosis/recovery. */
+  status?: SyncQueueItemStatus;
+  /** Last error message captured during a failed push attempt (truncated). */
+  lastError?: string;
+  /** ms since epoch of the most recent attempt. */
   lastAttemptAt?: number;
+  /** ms since epoch when the item transitioned to 'failed'. */
+  failedAt?: number;
 }
 
 // ============================================================================

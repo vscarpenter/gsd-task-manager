@@ -12,6 +12,19 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('SYNC_QUEUE');
 
+const MAX_LAST_ERROR_LENGTH = 500;
+
+function truncateError(message: string): string {
+  return message.length <= MAX_LAST_ERROR_LENGTH
+    ? message
+    : message.slice(0, MAX_LAST_ERROR_LENGTH);
+}
+
+function isPending(item: SyncQueueItem): boolean {
+  // Items predating v14 may have undefined status — treat as pending.
+  return (item.status ?? 'pending') === 'pending';
+}
+
 export class SyncQueue {
   /**
    * Add operation to sync queue
@@ -30,25 +43,38 @@ export class SyncQueue {
       timestamp: Date.now(),
       retryCount: 0,
       payload,
+      status: 'pending',
     };
 
     await db.syncQueue.add(item);
   }
 
   /**
-   * Get all pending operations
+   * Get all pending operations (excludes items in 'failed' status).
    */
   async getPending(): Promise<SyncQueueItem[]> {
     const db = getDb();
-    return db.syncQueue.orderBy('timestamp').toArray();
+    const all = await db.syncQueue.orderBy('timestamp').toArray();
+    return all.filter(isPending);
   }
 
   /**
-   * Get count of pending operations
+   * Get count of pending operations (excludes items in 'failed' status).
    */
   async getPendingCount(): Promise<number> {
     const db = getDb();
-    return db.syncQueue.count();
+    const all = await db.syncQueue.toArray();
+    return all.filter(isPending).length;
+  }
+
+  /**
+   * Get all items currently in 'failed' status. These have exhausted their
+   * retry budget and need user attention (manual retry or dismissal).
+   */
+  async getFailed(): Promise<SyncQueueItem[]> {
+    const db = getDb();
+    const all = await db.syncQueue.toArray();
+    return all.filter(item => item.status === 'failed');
   }
 
   /**
@@ -68,17 +94,40 @@ export class SyncQueue {
   }
 
   /**
-   * Increment retry count for failed operation
+   * Record a failed push attempt. Increments retryCount, stamps lastError and
+   * lastAttemptAt, and — when retries are exhausted — atomically transitions
+   * the item to 'failed' status (instead of deleting it). Failed items are
+   * preserved for diagnosis / manual recovery.
    */
-  async incrementRetry(id: string): Promise<void> {
+  async recordAttemptFailure(id: string, errorMessage: string): Promise<void> {
     const db = getDb();
     const item = await db.syncQueue.get(id);
 
-    if (item) {
-      await db.syncQueue.update(id, {
-        retryCount: item.retryCount + 1,
+    if (!item) return;
+
+    const nextRetryCount = item.retryCount + 1;
+    const exhausted = nextRetryCount >= SYNC_CONFIG.MAX_RETRIES;
+    const now = Date.now();
+
+    const update: Partial<SyncQueueItem> = {
+      retryCount: nextRetryCount,
+      lastError: truncateError(errorMessage),
+      lastAttemptAt: now,
+    };
+
+    if (exhausted) {
+      update.status = 'failed';
+      update.failedAt = now;
+      logger.warn('Sync queue item marked failed after exhausting retries', {
+        id,
+        taskId: item.taskId,
+        operation: item.operation,
+        retryCount: nextRetryCount,
+        lastError: update.lastError,
       });
     }
+
+    await db.syncQueue.update(id, update);
   }
 
   /**
@@ -119,30 +168,6 @@ export class SyncQueue {
     return count;
   }
 
-  /**
-   * Remove items that have exceeded the maximum retry count.
-   * Prevents the queue from growing unboundedly when push operations
-   * repeatedly fail for a specific task (e.g., validation errors).
-   *
-   * @returns Number of pruned items
-   */
-  async pruneExhaustedRetries(): Promise<number> {
-    const db = getDb();
-    const all = await db.syncQueue.toArray();
-    const exhausted = all.filter(item => item.retryCount >= SYNC_CONFIG.MAX_RETRIES);
-
-    if (exhausted.length === 0) return 0;
-
-    const ids = exhausted.map(item => item.id);
-    await db.syncQueue.bulkDelete(ids);
-
-    logger.warn('Pruned exhausted sync queue items', {
-      prunedCount: exhausted.length,
-      taskIds: exhausted.map(item => item.taskId).join(', '),
-    });
-
-    return exhausted.length;
-  }
 }
 
 // Singleton instance
