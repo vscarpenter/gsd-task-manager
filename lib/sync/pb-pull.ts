@@ -9,7 +9,7 @@ import { getPocketBase } from './pocketbase-client';
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -77,6 +77,8 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pu
     logger.warn('Pull skipped: not authenticated');
     return { pulledCount: 0, authenticated: false, maxObservedTimestamp: null };
   }
+
+  assertSafeRecordId(ownerId, 'ownerId');
 
   let filter = `owner = "${escapeFilterValue(ownerId)}"`;
   if (lastSyncAt) {

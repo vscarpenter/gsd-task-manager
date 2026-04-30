@@ -6,6 +6,15 @@ import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("DB");
 
+/**
+ * Legacy task shape used during migrations that reference fields removed
+ * from the current TypeScript schema (e.g. vectorClock from old Cloudflare sync).
+ */
+interface LegacyTaskMigrationRecord {
+  vectorClock?: Record<string, number>;
+  [key: string]: unknown;
+}
+
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
   archivedTasks!: Table<TaskRecord, string>;
@@ -135,10 +144,9 @@ class GsdDatabase extends Dexie {
 
         // Migrate existing tasks to have empty vectorClock
         // Dexie's .modify() callback receives a mutable plain object; the typed
-        // schema doesn't include vectorClock (it was removed in v13), so `any` is
-        // required to access this legacy field during migration.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return trans.table("tasks").toCollection().modify((task: any) => {
+        // schema doesn't include vectorClock (it was removed in v13), so a legacy
+        // migration interface is used instead of `any`.
+        return trans.table("tasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
           if (!task.vectorClock) {
             task.vectorClock = {};
           }
@@ -315,17 +323,13 @@ class GsdDatabase extends Dexie {
         });
 
         // 4. Strip vectorClock from existing tasks
-        // Dexie's .modify() callback receives a mutable plain object; `any` is
-        // required to delete the legacy `vectorClock` field not present in the
-        // current TypeScript schema.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await trans.table("tasks").toCollection().modify((task: any) => {
+        // Uses legacy migration interface for fields not in current TypeScript schema.
+        await trans.table("tasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
           delete task.vectorClock;
         });
 
-        // Same reason as above: Dexie's .modify() callback is typed any internally.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await trans.table("archivedTasks").toCollection().modify((task: any) => {
+        // Same migration interface for archived tasks.
+        await trans.table("archivedTasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
           delete task.vectorClock;
         });
 

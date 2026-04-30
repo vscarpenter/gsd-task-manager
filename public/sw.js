@@ -1,5 +1,7 @@
-// Use timestamp for cache versioning to ensure iOS devices get updates
-const CACHE_NAME = `gsd-cache-${Date.now()}`;
+// Cache version — updated at build time by scripts/update-sw-version.cjs
+// Using a deterministic version prevents unbounded cache growth from Date.now()
+const CACHE_VERSION = '8.8.0';
+const CACHE_NAME = `gsd-cache-v${CACHE_VERSION}`;
 const OFFLINE_ASSETS = [
 	"/",
 	"/about/",

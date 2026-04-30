@@ -37,6 +37,7 @@ import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 // Create mock instances
 const mockQueue = {
   getPending: vi.fn(async () => []),
+  pruneExhaustedRetries: vi.fn(async () => 0),
 };
 
 // Default: user is authenticated

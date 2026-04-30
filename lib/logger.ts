@@ -239,12 +239,14 @@ export function createLogger(context: LogContext, minLevel?: LogLevel): Logger {
 }
 
 /**
- * Correlation ID generator for tracking related operations
+ * Correlation ID generator for tracking related operations.
+ * Includes a random suffix to prevent collisions after page reload.
  */
 let correlationCounter = 0;
 
 export function generateCorrelationId(): string {
   const timestamp = Date.now();
   const counter = ++correlationCounter;
-  return `${timestamp}-${counter}`;
+  const random = Math.random().toString(36).slice(2, 6);
+  return `${timestamp}-${counter}-${random}`;
 }

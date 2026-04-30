@@ -14,6 +14,7 @@ vi.mock('@/lib/logger', () => ({
 // Mock queue
 const mockQueue = {
   getPending: vi.fn().mockResolvedValue([]),
+  pruneExhaustedRetries: vi.fn().mockResolvedValue(0),
 };
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: () => mockQueue,

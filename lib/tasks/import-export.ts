@@ -4,6 +4,12 @@ import { importPayloadSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 
+/** Maximum number of tasks allowed in a single import to prevent storage DoS */
+const MAX_IMPORT_TASKS = 10_000;
+
+/** Maximum raw JSON string size (10 MB) to prevent memory exhaustion */
+const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
+
 /**
  * Export all tasks as a structured payload
  */
@@ -95,6 +101,10 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
     throw new Error(`Invalid import data: ${result.error.issues.map(i => i.message).join(", ")}`);
   }
   const parsed = result.data;
+
+  if (parsed.tasks.length > MAX_IMPORT_TASKS) {
+    throw new Error(`Import exceeds maximum of ${MAX_IMPORT_TASKS.toLocaleString()} tasks. Please split into smaller files.`);
+  }
   let tasksEnqueuedForSync: TaskRecord[] = [];
 
   await db.transaction("rw", db.tasks, async () => {
@@ -132,6 +142,10 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
  * Import tasks from JSON string with merge or replace mode
  */
 export async function importFromJson(raw: string, mode: "replace" | "merge" = "replace"): Promise<void> {
+  if (raw.length > MAX_IMPORT_SIZE_BYTES) {
+    throw new Error(`Import file is too large (${(raw.length / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_IMPORT_SIZE_BYTES / 1024 / 1024} MB.`);
+  }
+
   try {
     const payload = JSON.parse(raw);
     await importTasks(payload, mode);
