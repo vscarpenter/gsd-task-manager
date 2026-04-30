@@ -14,7 +14,7 @@ vi.mock('@/lib/logger', () => ({
 // Mock queue
 const mockQueue = {
   getPending: vi.fn().mockResolvedValue([]),
-  pruneExhaustedRetries: vi.fn().mockResolvedValue(0),
+  getFailed: vi.fn().mockResolvedValue([]),
 };
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: () => mockQueue,
@@ -49,6 +49,7 @@ describe('HealthMonitor', () => {
     mockDb.syncMetadata.get.mockResolvedValue({ enabled: true });
     mockIsAuthenticated.mockReturnValue(true);
     mockQueue.getPending.mockResolvedValue([]);
+    mockQueue.getFailed.mockResolvedValue([]);
     mockPb.health.check.mockResolvedValue({ code: 200 });
   });
 
@@ -147,6 +148,25 @@ describe('HealthMonitor', () => {
       const before = Date.now();
       const report = await monitor.check();
       expect(report.timestamp).toBeGreaterThanOrEqual(before);
+    });
+
+    it('should surface failed_items issue when queue has failed items', async () => {
+      mockQueue.getFailed.mockResolvedValue([
+        { id: 'q1', taskId: 'task-1', operation: 'update', status: 'failed', retryCount: 5, lastError: 'boom', failedAt: Date.now(), timestamp: Date.now() },
+      ]);
+
+      const report = await monitor.check();
+      expect(report.healthy).toBe(false);
+      const failedIssue = report.issues.find(i => i.type === 'failed_items');
+      expect(failedIssue).toBeDefined();
+      expect(failedIssue!.severity).toBe('error');
+    });
+
+    it('should not surface failed_items issue when queue has no failed items', async () => {
+      mockQueue.getFailed.mockResolvedValue([]);
+      const report = await monitor.check();
+      const failedIssue = report.issues.find(i => i.type === 'failed_items');
+      expect(failedIssue).toBeUndefined();
     });
 
     it('should handle check errors gracefully', async () => {

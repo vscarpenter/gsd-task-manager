@@ -217,37 +217,100 @@ describe('SyncQueue', () => {
     });
   });
 
-  describe('incrementRetry', () => {
-    it('should increment retry count', async () => {
+  describe('recordAttemptFailure', () => {
+    it('should increment retry count and stamp last error', async () => {
       await queue.enqueue('create', 'task-1', null);
 
       const pending = await queue.getPending();
       const itemId = pending[0].id;
 
-      await queue.incrementRetry(itemId);
+      await queue.recordAttemptFailure(itemId, 'Network timeout');
 
       const updated = await queue.getPending();
 
       expect(updated[0].retryCount).toBe(1);
+      expect(updated[0].lastError).toBe('Network timeout');
+      expect(updated[0].lastAttemptAt).toBeGreaterThan(0);
+      expect(updated[0].status ?? 'pending').toBe('pending');
     });
 
-    it('should increment multiple times', async () => {
-      await queue.enqueue('create', 'task-1', null);
+    it('should mark item as failed when retries are exhausted, not delete it', async () => {
+      await queue.enqueue('update', 'task-1', null);
+      const [item] = await queue.getPending();
+
+      // MAX_RETRIES = 5. After 5 failures, the item must be in 'failed' status,
+      // NOT deleted from the queue.
+      for (let i = 0; i < 5; i++) {
+        await queue.recordAttemptFailure(item.id, `Attempt ${i + 1} failed`);
+      }
 
       const pending = await queue.getPending();
-      const itemId = pending[0].id;
+      const failed = await queue.getFailed();
 
-      await queue.incrementRetry(itemId);
-      await queue.incrementRetry(itemId);
-      await queue.incrementRetry(itemId);
-
-      const updated = await queue.getPending();
-
-      expect(updated[0].retryCount).toBe(3);
+      expect(pending).toHaveLength(0);
+      expect(failed).toHaveLength(1);
+      expect(failed[0].id).toBe(item.id);
+      expect(failed[0].status).toBe('failed');
+      expect(failed[0].lastError).toBe('Attempt 5 failed');
+      expect(failed[0].failedAt).toBeGreaterThan(0);
+      expect(failed[0].retryCount).toBe(5);
     });
 
-    it('should handle incrementing non-existent operation', async () => {
-      await expect(queue.incrementRetry('non-existent')).resolves.not.toThrow();
+    it('should truncate very long error messages', async () => {
+      await queue.enqueue('create', 'task-1', null);
+      const [item] = await queue.getPending();
+
+      const hugeError = 'X'.repeat(5000);
+      await queue.recordAttemptFailure(item.id, hugeError);
+
+      const [updated] = await queue.getPending();
+      expect(updated.lastError).toBeDefined();
+      expect(updated.lastError!.length).toBeLessThanOrEqual(500);
+    });
+
+    it('should handle non-existent operation', async () => {
+      await expect(queue.recordAttemptFailure('non-existent', 'err')).resolves.not.toThrow();
+    });
+  });
+
+  describe('getPending excludes failed items', () => {
+    it('should not include failed items in getPending', async () => {
+      await queue.enqueue('create', 'task-good', null);
+      await queue.enqueue('create', 'task-bad', null);
+      const items = await queue.getPending();
+      const badItem = items.find(i => i.taskId === 'task-bad')!;
+
+      // Drive task-bad to failure
+      for (let i = 0; i < 5; i++) {
+        await queue.recordAttemptFailure(badItem.id, 'persistent failure');
+      }
+
+      const stillPending = await queue.getPending();
+      expect(stillPending.map(i => i.taskId)).toEqual(['task-good']);
+      expect(await queue.getPendingCount()).toBe(1);
+    });
+  });
+
+  describe('getFailed', () => {
+    it('should return only failed items', async () => {
+      await queue.enqueue('create', 'task-1', null);
+      await queue.enqueue('create', 'task-2', null);
+      const items = await queue.getPending();
+
+      // Fail item 0
+      for (let i = 0; i < 5; i++) {
+        await queue.recordAttemptFailure(items[0].id, 'boom');
+      }
+
+      const failed = await queue.getFailed();
+      expect(failed).toHaveLength(1);
+      expect(failed[0].taskId).toBe(items[0].taskId);
+    });
+
+    it('should return empty array when no failed items', async () => {
+      await queue.enqueue('create', 'task-1', null);
+      const failed = await queue.getFailed();
+      expect(failed).toEqual([]);
     });
   });
 

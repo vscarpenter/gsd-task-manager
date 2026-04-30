@@ -66,7 +66,7 @@ async function pushSingleItem(
       remoteIndex.delete(item.taskId);
     } else if (!indexFetchSucceeded) {
       logger.warn('Skipping delete dequeue: remote index unavailable', { taskId: item.taskId });
-      await queue.incrementRetry(item.id);
+      await queue.recordAttemptFailure(item.id, 'Remote task index unavailable for delete verification');
       return false;
     }
   }
@@ -117,7 +117,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
         taskId: item.taskId,
         operation: item.operation,
       });
-      await queue.incrementRetry(item.id);
+      await queue.recordAttemptFailure(item.id, lastError);
     }
   }
 

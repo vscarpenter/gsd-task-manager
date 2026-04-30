@@ -116,7 +116,7 @@ function createMockQueue() {
   return {
     getPending: vi.fn().mockResolvedValue([]),
     dequeue: vi.fn(),
-    incrementRetry: vi.fn(),
+    recordAttemptFailure: vi.fn(),
     getForTask: vi.fn().mockResolvedValue([]),
     populateFromExistingTasks: vi.fn(),
   };
@@ -181,8 +181,8 @@ describe('pb-sync-engine', () => {
       expect(mockQueue.dequeue).not.toHaveBeenCalled();
       // Should be counted as failed
       expect(result.failedCount).toBe(1);
-      // Retry should be incremented
-      expect(mockQueue.incrementRetry).toHaveBeenCalledWith('q1');
+      // Retry should be recorded with an error message
+      expect(mockQueue.recordAttemptFailure).toHaveBeenCalledWith('q1', expect.any(String));
     });
 
     it('should dequeue delete operations when index fetch succeeds and task not found remotely', async () => {

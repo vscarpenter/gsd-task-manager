@@ -37,7 +37,7 @@ import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 // Create mock instances
 const mockQueue = {
   getPending: vi.fn(async () => []),
-  pruneExhaustedRetries: vi.fn(async () => 0),
+  getFailed: vi.fn(async () => []),
 };
 
 // Default: user is authenticated
@@ -62,6 +62,7 @@ describe('HealthMonitor', () => {
     // Reset all mocks
     vi.clearAllMocks();
     mockQueue.getPending.mockResolvedValue([]);
+    mockQueue.getFailed.mockResolvedValue([]);
     mockHealthCheck.mockResolvedValue({});
     mockIsAuthenticated = true;
     // Re-set the mock return value after clearAllMocks

@@ -16,7 +16,7 @@ const logger = createLogger('SYNC_HEALTH');
 const { HEALTH_CHECK_INTERVAL_MS, STALE_OPERATION_THRESHOLD_MS } = SYNC_CONFIG;
 
 export interface HealthIssue {
-  type: 'stale_queue' | 'token_expired' | 'server_unreachable';
+  type: 'stale_queue' | 'token_expired' | 'server_unreachable' | 'failed_items';
   severity: 'warning' | 'error';
   message: string;
   suggestedAction: string;
@@ -69,14 +69,13 @@ export class HealthMonitor {
         return { healthy: true, issues: [], timestamp };
       }
 
-      // Prune items that have exceeded max retries to prevent unbounded queue growth
-      const queue = getSyncQueue();
-      await queue.pruneExhaustedRetries();
-
       const issues: HealthIssue[] = [];
 
       const staleIssue = await this.checkStaleOperations();
       if (staleIssue) issues.push(staleIssue);
+
+      const failedIssue = await this.checkFailedItems();
+      if (failedIssue) issues.push(failedIssue);
 
       const authIssue = this.checkAuth();
       if (authIssue) issues.push(authIssue);
@@ -116,6 +115,19 @@ export class HealthMonitor {
       severity: 'warning',
       message: `${staleOps.length} pending operations are older than 1 hour`,
       suggestedAction: 'Try syncing manually to clear pending operations',
+    };
+  }
+
+  private async checkFailedItems(): Promise<HealthIssue | null> {
+    const queue = getSyncQueue();
+    const failed = await queue.getFailed();
+    if (failed.length === 0) return null;
+
+    return {
+      type: 'failed_items',
+      severity: 'error',
+      message: `${failed.length} sync ${failed.length === 1 ? 'operation has' : 'operations have'} failed and need attention`,
+      suggestedAction: 'Review failed items in sync history. They will not retry automatically until cleared.',
     };
   }
 
