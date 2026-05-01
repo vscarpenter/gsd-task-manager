@@ -3,20 +3,21 @@
 import { Command } from "cmdk";
 import { CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TaskRecord } from "@/lib/types";
+import type { QuadrantId, TaskRecord } from "@/lib/types";
+import type { RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrantAccent } from "@/lib/quadrant-accent";
 
 interface TaskItemProps {
   task: TaskRecord;
   onSelect: () => void;
 }
 
-// Quadrant badge styles
-const quadrantStyles = {
-  "urgent-important": "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-  "not-urgent-important": "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  "urgent-not-important": "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  "not-urgent-not-important": "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-} as const;
+const RD_KEY_BY_ID: Record<QuadrantId, RedesignQuadrantKey> = {
+  "urgent-important": "q1",
+  "not-urgent-important": "q2",
+  "urgent-not-important": "q3",
+  "not-urgent-not-important": "q4",
+};
 
 /**
  * Renders a single task item in the command palette
@@ -50,10 +51,11 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
         )}
         <div className="flex items-center gap-2 text-xs">
           <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-              quadrantStyles[task.quadrant]
-            )}
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+            style={{
+              backgroundColor: quadrantAccent(RD_KEY_BY_ID[task.quadrant], 0.15),
+              color: quadrantAccent(RD_KEY_BY_ID[task.quadrant]),
+            }}
           >
             {quadrantLabel}
           </span>

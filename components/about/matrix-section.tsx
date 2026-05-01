@@ -1,31 +1,18 @@
 import { ScrollReveal } from "@/components/about/scroll-reveal";
+import type { RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrantAccent } from "@/lib/quadrant-accent";
 
-const quadrants = [
-  {
-    label: "Q1",
-    name: "Do First",
-    description: "Crises, deadlines. Handle now.",
-    className: "border-red-500/40 bg-red-500/5",
-  },
-  {
-    label: "Q2",
-    name: "Schedule",
-    description: "Strategy, growth. Protect this time.",
-    className: "border-blue-500/40 bg-blue-500/5",
-  },
-  {
-    label: "Q3",
-    name: "Delegate",
-    description: "Interruptions. Hand these off.",
-    className: "border-amber-500/40 bg-amber-500/5",
-  },
-  {
-    label: "Q4",
-    name: "Eliminate",
-    description: "Noise. Stop doing these.",
-    className: "border-gray-500/40 bg-gray-500/5",
-  },
-] as const;
+const quadrants: ReadonlyArray<{
+  label: string;
+  name: string;
+  description: string;
+  rdKey: RedesignQuadrantKey;
+}> = [
+  { label: "Q1", name: "Do First",  description: "Crises, deadlines. Handle now.",        rdKey: "q1" },
+  { label: "Q2", name: "Schedule",  description: "Strategy, growth. Protect this time.",  rdKey: "q2" },
+  { label: "Q3", name: "Delegate",  description: "Interruptions. Hand these off.",        rdKey: "q3" },
+  { label: "Q4", name: "Eliminate", description: "Noise. Stop doing these.",              rdKey: "q4" },
+];
 
 export function MatrixSection() {
   return (
@@ -65,7 +52,11 @@ export function MatrixSection() {
                 {quadrants.map((q) => (
                   <div
                     key={q.label}
-                    className={`rounded-xl border p-4 sm:p-5 ${q.className}`}
+                    className="rounded-xl border p-4 sm:p-5"
+                    style={{
+                      borderColor: quadrantAccent(q.rdKey, 0.4),
+                      backgroundColor: quadrantAccent(q.rdKey, 0.05),
+                    }}
                   >
                     <span className="text-[10px] uppercase tracking-widest text-foreground-muted font-medium">
                       {q.label}

@@ -3,6 +3,8 @@
 import { ClockIcon, TimerIcon, TargetIcon, TrendingUpIcon } from "lucide-react";
 import type { TimeTrackingSummary, QuadrantTimeDistribution } from "@/lib/analytics";
 import { formatDuration } from "@/lib/analytics";
+import type { RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrantAccent } from "@/lib/quadrant-accent";
 import { cn } from "@/lib/utils";
 
 interface TimeAnalyticsProps {
@@ -11,11 +13,11 @@ interface TimeAnalyticsProps {
   className?: string;
 }
 
-const QUADRANT_LABELS: Record<string, { name: string; color: string }> = {
-  "urgent-important": { name: "Do First (Q1)", color: "bg-red-500" },
-  "not-urgent-important": { name: "Schedule (Q2)", color: "bg-blue-500" },
-  "urgent-not-important": { name: "Delegate (Q3)", color: "bg-amber-500" },
-  "not-urgent-not-important": { name: "Eliminate (Q4)", color: "bg-gray-400" },
+const QUADRANT_LABELS: Record<string, { name: string; rdKey: RedesignQuadrantKey }> = {
+  "urgent-important": { name: "Do First (Q1)", rdKey: "q1" },
+  "not-urgent-important": { name: "Schedule (Q2)", rdKey: "q2" },
+  "urgent-not-important": { name: "Delegate (Q3)", rdKey: "q3" },
+  "not-urgent-not-important": { name: "Eliminate (Q4)", rdKey: "q4" },
 };
 
 /** Empty state when no time tracking data exists */
@@ -48,8 +50,8 @@ function QuadrantBar({ dist, totalMinutes }: { dist: QuadrantTimeDistribution; t
       </div>
       <div className="h-2 w-full rounded-full bg-background-muted overflow-hidden">
         <div
-          className={cn("h-full rounded-full transition-all", config.color)}
-          style={{ width: `${percentage}%` }}
+          className="h-full rounded-full transition-all"
+          style={{ width: `${percentage}%`, backgroundColor: quadrantAccent(config.rdKey) }}
         />
       </div>
     </div>

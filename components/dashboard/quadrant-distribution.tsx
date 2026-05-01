@@ -2,17 +2,18 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import type { QuadrantId } from "@/lib/types";
-import { quadrants } from "@/lib/quadrants";
+import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrantAccent } from "@/lib/quadrant-accent";
 
 interface QuadrantDistributionProps {
   distribution: Record<QuadrantId, number>;
 }
 
-const COLORS: Record<QuadrantId, string> = {
-  "urgent-important": "#ef4444",
-  "not-urgent-important": "#3b82f6",
-  "urgent-not-important": "#f59e0b",
-  "not-urgent-not-important": "#6b7280",
+const RD_KEY_BY_ID: Record<QuadrantId, RedesignQuadrantKey> = {
+  "urgent-important": "q1",
+  "not-urgent-important": "q2",
+  "urgent-not-important": "q3",
+  "not-urgent-not-important": "q4",
 };
 
 const SHORT_LABELS: Record<QuadrantId, string> = {
@@ -78,7 +79,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
               {data.map((entry) => (
                 <Cell
                   key={`cell-${entry.id}`}
-                  fill={COLORS[entry.id as QuadrantId]}
+                  fill={quadrantAccent(RD_KEY_BY_ID[entry.id as QuadrantId])}
                   className="transition-opacity hover:opacity-85"
                 />
               ))}
@@ -111,7 +112,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
       <div className="mt-2 grid grid-cols-2 gap-2">
         {data.map((entry) => (
           <div key={entry.id} className="flex items-center gap-2 rounded-2xl border border-border/60 bg-background-muted/40 px-3 py-2">
-            <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[entry.id as QuadrantId] }} />
+            <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: quadrantAccent(RD_KEY_BY_ID[entry.id as QuadrantId]) }} />
             <span className="truncate text-xs font-medium text-foreground-muted">
               {entry.shortName}
             </span>
