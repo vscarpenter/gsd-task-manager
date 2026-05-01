@@ -1,165 +1,144 @@
-# Code Standards & Agentic Guidance
+# Code Standards & Agentic Guidance v14.0
 
-*Comprehensive guidance for AI-assisted development*
+
+**Purpose.** Directives governing how LLMs approach complex, multi-step development tasks. Optimized for Claude Opus 4.7 and the Claude Code harness. Every directive applies to every coding session.
+
+**How to use this file.** This is the full reference. For runtime use, load only what's needed: a short global `~/.claude/CLAUDE.md` for universal rules, a per-project `CLAUDE.md` for stack and patterns, and this document as a skill at `.claude/skills/coding-standards/SKILL.md` for on-demand reference. Enforce mechanical rules with hooks, not prose.
 
 ---
 
-## Part 1: Agentic Behavior Guidelines
+## Part 1: Agentic Behavior
 
-These directives govern how LLMs approach complex, multi-step tasks requiring sustained autonomous work. Every directive in this section is actionable and applies to every coding session.
+### Codebase Orientation (REQUIRED before first write)
 
-### Codebase Orientation (Read Before Write)
+1. Read README, CLAUDE.md, and CONTRIBUTING docs first.
+2. Explore the directory structure. Understand the project layout.
+3. Identify existing patterns: naming, module organization, error handling, test structure.
+4. Check for existing utilities and helpers before creating new ones.
+5. Match existing code style exactly, even if it differs from these standards.
 
-Before writing any code in an existing project, YOU MUST understand the landscape:
+**Resumed sessions:** Read CLAUDE.md → `tasks/lessons.md` → `tasks/todo.md` → check git log (last 3-5 commits). Do not ask the user to re-explain context captured in these files.
 
-1. Read the project's README, CLAUDE.md, and any CONTRIBUTING docs first.
-2. Explore the directory structure to understand the project layout.
-3. Identify existing patterns: naming conventions, module organization, error handling style, test structure.
-4. Check for existing utilities, helpers, or shared modules before creating new ones.
-5. Match the existing code style exactly, even if it differs from these standards.
+**Rule:** The existing codebase is the primary style guide. These standards apply to greenfield code or explicit refactoring.
 
-**For resumed sessions:** Read CLAUDE.md and `tasks/lessons.md` first, then `tasks/todo.md` to orient on current state. Check git log for the last 3-5 commits. Do not ask the user to re-explain context that is captured in these files.
+### Spec-Driven Development (REQUIRED for non-trivial tasks)
 
-> **Rule:** The existing codebase is the primary style guide. These standards apply to greenfield code or when explicitly refactoring.
+1. Write the spec first. Create `tasks/spec.md` before any implementation begins.
+2. Define the contract: inputs, outputs, constraints, edge cases, and what success looks like.
+3. State anti-goals explicitly. What this does NOT do. Prevents scope creep.
+4. Get approval. Do not start coding until the spec is reviewed and confirmed.
+5. Treat drift as a failure. Update the spec first and get re-confirmation before continuing.
 
-### Spec-Driven Development
+**Spec template fields:**
 
-For any non-trivial task, write a spec before writing code. The spec is the acceptance contract.
+| Field | Content |
+|---|---|
+| Goal | One sentence: what this does and why. |
+| Inputs / Outputs | What goes in, what comes out, what format. |
+| Constraints | Performance, security, compatibility, size requirements. |
+| Edge Cases | Empty inputs, nulls, concurrent calls, failure modes. |
+| Out of Scope | Explicit list of what this version does not handle. |
+| Acceptance Criteria | Checkable statements that prove the implementation is correct. |
+| Test Stubs | Draft test function names (empty bodies) mapping to each criterion. Shipped with the spec. |
 
-1. **Write the spec first.** Create `tasks/spec.md` before any implementation begins.
-2. **Define the contract.** Include: inputs, outputs, constraints, edge cases, and what success looks like.
-3. **State the anti-goals.** Explicitly list what this implementation does NOT do. This prevents scope creep.
-4. **Get approval.** Do not start coding until the spec is reviewed and confirmed.
-5. **Treat drift as a failure.** If implementation deviates from the spec, update the spec first and get re-confirmation.
-
-A minimal spec includes:
-- **Goal:** One sentence describing what this does and why.
-- **Inputs / Outputs:** What goes in, what comes out, what format.
-- **Constraints:** Performance, security, compatibility, or size requirements.
-- **Edge Cases:** Empty inputs, nulls, concurrent calls, failure modes.
-- **Out of Scope:** Explicit list of what this version does not handle.
-- **Acceptance Criteria:** Checkable statements that prove the implementation is correct.
-- **Test Stubs:** Draft test function names (empty bodies) that map to each acceptance criterion. These ship with the spec, before any implementation begins. Spec approval and test skeleton approval are the same step.
-
-> **Rule:** Code written without a spec is a guess. A spec written after the code is a rationalization. Write it first.
+**Rule:** Code without a spec is a guess. A spec written after the code is a rationalization. Write it first.
 
 ### Handling Ambiguity
 
-When requirements are unclear or incomplete:
+- **Ask before assuming.** If a requirement has multiple valid interpretations, ask which is intended.
+- **State your assumptions.** If proceeding without clarification, list every assumption explicitly.
+- **Prefer reversible choices.** When guessing, choose the option easiest to change later.
+- **Flag scope questions early.** Confirm scope before modifying shared code, external APIs, or infrastructure.
+- **Stop and re-plan when a plan breaks.** Do not push through ambiguity by guessing forward.
 
-1. **Ask before assuming.** If a requirement has multiple valid interpretations, ask which one is intended rather than guessing.
-2. **State your assumptions.** If you must proceed without clarification, explicitly list every assumption you are making.
-3. **Prefer reversible choices.** When guessing, choose the option that is easiest to change later.
-4. **Flag scope questions early.** If a task might touch shared code, external APIs, or infrastructure, confirm scope before modifying anything.
-5. **Stop and re-plan when a plan breaks.** Do not push through ambiguity or compounding errors by guessing forward. Stop early, re-plan explicitly, then proceed.
-
-> **Never:** Silently interpret ambiguous requirements and build an entire solution on an assumption that could be wrong.
+**Never:** Silently interpret ambiguous requirements and build an entire solution on an assumption that could be wrong.
 
 ### Tool Efficiency
 
-**Signal parallel execution explicitly.** Claude Code fires tool calls in parallel only when the prompt indicates tasks are independent. Ambiguous prompts default to sequential execution.
-
-Instead of: `"Read the auth module, then read the payment module, then compare them."`
-Use: `"Read the auth module and the payment module simultaneously, then compare their error handling patterns."`
-
-Apply this pattern when scanning multiple files, running tests alongside linting, or fetching multiple log sources at once.
-
-**Prefer bash for multi-file operations.** A single `grep`, `find`, or `sed` across a directory is faster and cleaner than chaining individual read/write tool calls.
+Claude executes tool calls in parallel by default. Reserve sequential execution for true dependencies (output of A feeds input of B). For everything else, fire concurrently.
 
 - Use `grep` or `ripgrep` to search across files instead of reading them individually.
 - Use `git log`, `git diff`, and `git status` directly rather than asking Claude to summarize manually.
 - For bulk refactors, use `sed` or `awk` on multiple files in one pass.
-- For long-running bash operations, set explicit timeouts upfront. If a command is expected to run for 30 seconds, say so.
-
-> **Rule:** If two tool calls do not depend on each other's output, say so. If multiple files need searching, use one bash command, not three reads.
+- Set explicit timeouts upfront for long-running bash operations.
 
 ### Context Management & Sustained Work
 
-For lengthy tasks, YOU MUST follow these requirements:
-
-1. Before writing code, outline your implementation plan with clear milestones and acceptance criteria for each.
-2. Work systematically through each milestone, committing functional changes frequently.
+1. Outline the implementation plan with milestones and acceptance criteria for each.
+2. Work systematically through each milestone. Commit functional changes frequently.
 3. Commit at least every significant component or logical unit of work.
-4. Monitor your context usage and prioritize committing working code before context exhaustion.
+4. Monitor context usage. Prioritize committing working code before context exhaustion.
 5. Never leave significant work uncommitted.
 
-> **Critical:** If you find yourself 80% through context with major uncommitted work, stop adding features and commit immediately.
+**Critical:** If you find yourself 80% through context with major uncommitted work, stop adding features and commit immediately.
 
-**Define tasks by outcome, not process.** Claude Code's agentic loop exits on three signals: an explicit completion signal, an unrecoverable error, or hitting the turn limit. Every multi-step task must have a stated "done" condition Claude can recognize autonomously.
+**Prefer fresh context over compaction.** State lives in `tasks/`. Resume by reading those files (CLAUDE.md, `tasks/todo.md`, `tasks/lessons.md`, recent git log), not by summarizing chat history. Opus 4.7 is effective at discovering state from the local filesystem; lean on that.
 
-Instead of: `"Keep checking the logs until you find the error."`
-Use: `"Check the last 100 lines of logs. If you find an error, explain the root cause and propose one fix. If no errors are found, say so and stop."`
+Every multi-step task must have a stated "done" condition the model can recognize autonomously. Define outcomes, not process.
 
-**Compaction Directive:** When compacting, always preserve the full list of modified files, current task status, test commands, and next steps. Do not discard working state during summarization.
+- ❌ Process-defined: "Keep checking the logs until you find the error."
+- ✓ Outcome-defined: "Check the last 100 lines of logs. If you find an error, explain root cause and propose one fix. If none found, say so and stop."
 
-### Session Handoff Protocol
+### Session Handoff Protocol (REQUIRED before ending)
 
-Every session must end in a state another session can resume from without asking questions.
-
-**Before ending a session:**
 1. Commit all working code. Do not leave meaningful work uncommitted.
-2. Update `tasks/todo.md` with a clear "Resuming From Here" section: what was completed, what is next, and any blockers.
-3. Note any assumptions made during the session that future work depends on.
+2. Update `tasks/todo.md` with "Resuming From Here": completed, next steps, blockers, assumptions made.
+3. Note assumptions made during the session that future work depends on.
 4. Run the test suite. Do not end with failing tests.
 
-> **Rule:** A clean handoff is as important as clean code. If another session cannot resume without a briefing, the handoff failed.
+**Rule:** A clean handoff is as important as clean code. If another session cannot resume without a briefing, the handoff failed.
 
 ### Self-Improvement Loop
 
-After any correction from the user, YOU MUST capture the pattern in `tasks/lessons.md` immediately and write an explicit rule that prevents the same mistake from recurring.
+After any correction from the user, capture the pattern in `tasks/lessons.md` immediately. End every correction session with: *"Update CLAUDE.md so this mistake does not recur."*
 
-**Two-layer memory:**
-- `tasks/lessons.md` captures project-specific learnings: patterns, gotchas, and context that matter for this codebase.
-- `CLAUDE.md` captures persistent behavioral rules that apply across sessions and projects. After every correction, end with: "Update CLAUDE.md so this mistake does not recur."
+| File | Purpose |
+|---|---|
+| `tasks/lessons.md` | Project-specific learnings: patterns, gotchas, context that matters for this codebase. |
+| `CLAUDE.md` | Persistent behavioral rules that apply across sessions and projects. |
 
-When reviewing PRs or receiving review feedback, tag `@claude` in PR comments to add learnings directly to `CLAUDE.md` as part of the PR itself. Enable Claude Code's auto-memory (`/memory`) to capture corrections you forget to write down manually; use `/dream` periodically to consolidate and remove outdated notes.
-
-> **Rule:** Corrections are learning contracts. Every mistake that recurs after being corrected once is a process failure, not a knowledge gap.
+**Rule:** Corrections are learning contracts. Every mistake that recurs after being corrected once is a process failure, not a knowledge gap.
 
 ### Verification Checkpoints
 
-**After each tool result,** pause before proceeding: Did the operation succeed? Does the output match expectations? If results are unexpected, diagnose the root cause before attempting fixes. Avoid repeated trial-and-error changes without understanding the underlying issue.
+**After each tool result:** Did the operation succeed? Does the output match expectations? Diagnose root cause before attempting fixes.
 
-**Before presenting code or marking a task complete,** perform a self-review:
-1. Re-read every changed file. Look for typos, leftover debug statements, and TODO comments.
+**Before presenting code or marking complete:**
+
+1. Re-read every changed file. Check for typos, leftover debug statements, TODO comments.
 2. Verify all imports are used and no dead code remains.
 3. Confirm naming is consistent across the changeset.
 4. Check that error paths are handled, not just the happy path.
 5. Ensure the code compiles/runs and tests pass.
-6. For non-trivial changes touching architecture, shared modules, or multiple files: ask "Is there a more elegant way?" If the solution feels hacky or over-fitted, implement the cleaner version.
-7. Ask yourself: "Would a staff engineer approve this?" If the answer is uncertain, keep improving.
+6. Run an elegance check (defined below).
+7. Ask: "Would a staff engineer approve this?" If uncertain, keep improving.
 
-**File edit failures:** Claude Code edits files via exact string matching, not full rewrites. If an edit fails, read the full file first, then apply the targeted change. For complex multi-part edits, break changes into smaller, targeted replacements.
+**Elegance check (required for non-trivial changes).** Verify all four:
+- Fewer branches than the previous implementation, or branches justified by edge cases.
+- No new dependencies unless removing two or more lines of code per dependency added.
+- Diff is the smallest set of changes that implements the spec.
+- A junior engineer can read it without flipping to another file.
 
-> **Rule:** Never present code you have not re-read. A 30-second review catches the majority of avoidable mistakes.
+**Rule:** Never present code you have not re-read. A 30-second review catches the majority of avoidable mistakes.
 
 ### Verification-First Development
 
-Verification is not an afterthought; it is the single most important factor in output quality. Before writing any implementation, define how Claude will verify that the work is correct.
+1. Define the verification method before writing any implementation.
+2. Match verification to domain. Backend: test suite. API: curl/integration tests. Frontend: browser/screenshot/a11y. Data: row-count diffs. Infra: terraform plan/smoke tests.
+3. Close the loop autonomously. Run verification without being prompted.
+4. Invest in reusable verification. Building a fast feedback loop is higher priority than the feature.
 
-1. **Define the verification method before coding.** State upfront how correctness will be proven: a test suite, a bash command, a simulator, a browser check, or a diff against expected output.
-2. **Match verification to the domain:**
-   - **Backend logic:** The verification method IS the test suite, written first via red/green/refactor (see Part 3). Defining "how you will verify" and "writing the failing test" are the same step.
-   - **API changes:** curl/httpie commands or integration tests that exercise the endpoint.
-   - **Frontend/UI:** Browser testing, screenshot comparison, or accessibility audit.
-   - **Data pipelines:** Row-count checks, sample-output diffs, schema validation.
-   - **Infrastructure:** `terraform plan`, dry-run deploys, or smoke tests against a staging environment.
-3. **Close the loop autonomously.** Run verification without being prompted. If verification fails, diagnose and fix before presenting results.
-4. **Invest in reusable verification.** If a project lacks a fast feedback loop, building one is a higher priority than the feature itself.
+**Verification surfaces in this environment:** Playwright MCP for UI, GitHub MCP for repo state, aws-core MCP for cloud verification, Biome for format/lint, project test runner for behavior. Use them.
 
-> **Rule:** Code without a verification method is a guess. If Claude cannot prove the work is correct, the task is not done.
+**Rule:** Code without a verification method is a guess. If you cannot prove the work is correct, the task is not done.
 
 ### Incremental Progress
 
-Build incrementally to ensure quality:
-
 - Get a minimal working version first, then extend.
 - Avoid writing large amounts of code before testing any of it.
-- Run the full test suite after every file modification and fix failures before proceeding.
+- Run the full test suite after every file modification.
 - Do not assume code is correct without execution.
-- If tests fail, analyze the failure and diagnose root cause before making changes.
-
-Each increment is one red/green/refactor cycle (see Part 3). Do not write a second function before the first one has a passing test.
+- Each increment = one red/green/refactor cycle. No second function before the first has a passing test.
 
 ---
 
@@ -169,283 +148,90 @@ Each increment is one red/green/refactor cycle (see Part 3). Do not write a seco
 
 1. **Simplicity over cleverness.** Prefer clarity to novelty.
 2. **Build small, iterate fast.** Deliver working code before optimizing.
-3. **Code for humans.** Code must be readable by a junior engineer without needing to scroll to other files.
+3. **Code for humans.** Readable by a junior engineer without scrolling to other files.
 4. **Prefer boring tech.** Stability over hype.
-5. **Automate consistency.** Enforce linting, tests, and formatting in CI.
-6. **Standard Lib > External:** Always choose the language's standard library over an external dependency unless the standard library requires >2x the code to achieve the same result.
+5. **Automate consistency.** Enforce linting, tests, and formatting in CI and hooks, not prose.
+6. **Standard lib > external.** Use stdlib unless it requires more than 2x the code.
+7. **Solve the problem generally.** Implement the actual logic. Do not hard-code values or write code that only passes the test cases. Tests verify correctness; they do not define the solution.
 
 ### Naming & Clarity
 
-- Use descriptive names; avoid generic terms like 'data', 'temp', or single letters.
-- Functions should be 40 lines or fewer with single responsibility.
-- Maximum 3 levels of nesting; use early returns.
+- Descriptive names. Avoid `data`, `temp`, single letters.
+- Functions ≤ 40 lines with single responsibility.
+- Maximum 3 levels of nesting. Use early returns.
 - Comments explain WHY, not WHAT.
 - Document public APIs with usage examples.
-- Limit code files to approximately 350-400 lines; split by responsibility.
+- Limit code files to ~350-400 lines. Split by responsibility.
 
 ### Type Safety & Static Analysis
 
-- Add type annotations to all function signatures (parameters and return types).
-- Use strict/strict-mode compiler settings where available (TypeScript strict, Python mypy strict).
-- Prefer typed data structures (interfaces, typed dicts, structs) over untyped maps or generic objects.
+- Type annotations on ALL function signatures (parameters and return types).
+- Strict compiler settings (TypeScript `strict`, Python `mypy strict`).
+- Typed data structures (interfaces, typed dicts) over untyped maps.
 - Run static analysis and type checking as part of the verification workflow.
-- Never use `any`, `object`, or equivalent escape hatches without a comment explaining why.
+- Never use `any`, `object`, or escape hatches without a justification comment.
 
 ### Structure & Abstraction
 
 - Apply DRY only after 2+ repetitions.
-- Follow YAGNI: do not build for hypothetical futures.
-- Prefer composition over inheritance.
+- YAGNI: do not build for hypothetical futures.
+- Composition over inheritance.
 - Duplicate if it is clearer than abstracting.
-- No magic numbers; use named constants.
+- No magic numbers. Use named constants.
 - Inject dependencies (I/O, time, randomness).
-
-### Performance Awareness
-
-Do not prematurely optimize, but do not write obviously inefficient code either:
-
-- Choose appropriate data structures (use a Set for lookups, not an Array scan).
-- Be aware of algorithmic complexity; avoid O(n^2) when O(n) or O(n log n) is straightforward.
-- Watch for N+1 query patterns in database access.
-- Avoid unnecessary allocations in hot paths (loops, event handlers).
-- Profile before optimizing; measure, do not guess.
-- Document any intentional performance tradeoffs.
-
-### File Boundaries
-
-- Do not modify files outside the current working directory without explicit permission.
-- Do not edit configuration files, CI/CD pipelines, or infrastructure code unless the task specifically requires it.
-- When uncertain about scope, ask before modifying files in shared or upstream directories.
-
-### Configuration Management
-
-- Use environment variables for deployment-specific values (URLs, ports, feature flags).
-- Provide sensible defaults for local development; never require manual setup to run locally.
-- Separate config from code: no inline connection strings, API keys, or endpoint URLs.
-- Use a single config module/file per service as the source of truth.
-- Document every environment variable with its purpose, type, and default value.
 
 ### Dependency Management
 
-- Pin dependency versions in lockfiles; never rely on floating ranges in production.
-- Run `npm audit`, `pip-audit`, or equivalent on every CI build; fail on high-severity findings.
-- Add new dependencies deliberately: evaluate maintenance status, license, and bundle size before adding.
-- Remove unused dependencies promptly; dead packages accumulate security debt.
-- Document why non-obvious dependencies exist (a comment in package.json or requirements.txt is enough).
-- Schedule a recurring dependency audit; do not let major versions drift more than one cycle behind.
+- Pin versions in lockfiles. No floating ranges in production.
+- Run `npm audit` / `pip-audit` every CI build. Fail on high-severity findings.
+- Add new dependencies deliberately. Evaluate maintenance, license, bundle size.
+- Remove unused dependencies promptly.
+- Document why non-obvious dependencies exist.
 
-**AI-specific supply-chain risk:** When Claude Code installs or suggests new dependencies during agentic sessions, treat those changes with the same scrutiny as any other code change. Floating ranges are especially dangerous when Claude auto-installs packages. If Claude Code is operating in agentic mode with npm/pip access, review its dependency changes before accepting them. Run `npm audit` or `pip-audit` as part of the PostToolUse hook lifecycle, not just in CI.
+**AI supply-chain risk:** When Claude Code installs dependencies during agentic sessions, treat those changes with the same scrutiny as any other code change. Run `npm audit` or `pip-audit` as part of the PostToolUse hook, not just in CI.
 
-> **Rule:** Claude Code can install packages autonomously. Every package it adds is your team's responsibility. Review first, accept second.
-
-### Feature Flags
-
-- Use feature flags to decouple deployment from release.
-- Name flags descriptively: `enable_new_payment_flow`, not `flag_v2`.
-- Every flag must have an owner, a creation date, and a planned removal date documented in code or config.
-- Remove flags promptly after full rollout or rollback. Stale flags are tech debt.
-- Never gate security fixes or critical bug fixes behind a feature flag.
-- Default new flags to `false` (opt-in), not `true` (opt-out), unless the use case requires otherwise.
-
-### Accessibility Baseline
-
-All user-facing frontend work must meet these minimum standards:
-
-- Use semantic HTML elements (`button`, `nav`, `main`, `label`) instead of generic `div` and `span` where appropriate.
-- Every interactive element must be keyboard-accessible and focusable.
-- All images require descriptive `alt` text; decorative images use `alt=""`.
-- Color alone must not convey meaning; pair color with text or iconography.
-- Maintain a minimum contrast ratio of 4.5:1 for normal text (WCAG AA).
-- Form inputs must have associated `label` elements; do not rely on placeholder text alone.
-
-> **Rule:** Accessibility is not a post-launch audit item. It is a build-time requirement.
-
-### Logging & Observability
-
-- Use structured logging (JSON format preferred) with consistent field names.
-- Include correlation/request IDs for tracing across service boundaries.
-- Log at appropriate levels: ERROR for failures requiring attention, WARN for degraded states, INFO for significant business events, DEBUG for development.
-- Never log secrets, tokens, passwords, or PII.
-- Include enough context to diagnose issues without reproducing them: what operation, what input (sanitized), what outcome.
-
-### Subagents
-
-- Use subagents liberally to keep main context window clean and focused.
-- Offload research, exploration, file analysis, and codebase scanning to subagents.
-- For complex problems, use parallel subagents for independent analysis tasks.
-- Chain subagents sequentially when tasks have dependencies (plan > implement > test).
-- One well-defined task per subagent for focused execution.
-- Subagents MUST return concise summaries, not raw output, to preserve main context.
-- Use read-only tools (Read, Grep, Glob) for research subagents; grant write access only to implementation subagents.
-- Do not use subagents for tasks that take fewer than 3 tool calls; the overhead is not worth it.
-- During implementation, delegate tasks to available subagents based on their expertise:
-  - Use Explore subagent for codebase scanning, pattern discovery, and reading files.
-  - Use general-purpose subagent for multi-step implementation tasks requiring file modifications.
-  - Use dedicated review subagents for code quality, security, and test coverage checks.
-
-**Custom Agents Directory:**
-For subagent patterns your team uses repeatedly, define them as reusable agent files in `.claude/agents/`. Each agent gets a name, model, tool permissions, and a focused system prompt. This eliminates ad-hoc subagent prompts and ensures consistent behavior across sessions and team members.
-
-```
-.claude/
-  agents/
-    build-validator.md    # Runs build + tests, reports failures
-    code-simplifier.md    # Reviews code for unnecessary complexity
-    security-reviewer.md  # Scans for common vulnerability patterns
-    tdd-enforcer.md       # Verifies red/green cycle was followed
-    verify-app.md         # End-to-end verification instructions
-```
-
-Example agent definition (`.claude/agents/code-simplifier.md`):
-```yaml
----
-name: code-simplifier
-model: sonnet
-isolation: worktree
----
-Review all changed files for unnecessary complexity, duplicated logic,
-and opportunities to reuse existing utilities. Do not rewrite code;
-return a structured list of findings with file, line, and recommendation.
-```
-
-Example agent definition (`.claude/agents/tdd-enforcer.md`):
-```yaml
----
-name: tdd-enforcer
-model: sonnet
----
-You are a strict TDD reviewer. Given a PR diff or a set of changed files:
-1. Verify that every new function or method has a corresponding test.
-2. Verify that tests appear to have been written before implementation
-   (check git history if available).
-3. Flag any logic with no test coverage.
-4. Return a structured report: covered behaviors, uncovered behaviors,
-   and suspected test-after patterns.
-Do not suggest fixes; report findings only.
-```
-
-**Key practices:**
-- Check agent definitions into git so the entire team benefits.
-- Set `isolation: worktree` on agents that modify files to prevent interference with the main session.
-- Use `model: haiku` for read-only analysis agents and `model: sonnet` or `model: opus` for agents that reason about architecture.
-- Set a default agent for your project via `"agent"` in `settings.json` when your team has a standard workflow.
-
-### Hooks for Automated Quality Gates
-
-Use Claude Code hooks to enforce standards deterministically rather than relying on discipline alone. Hooks fire at specific points in Claude's lifecycle and run your commands automatically.
-
-**PostToolUse — Auto-Format on Every Write:**
-```json
-"hooks": {
-  "PostToolUse": [
-    {
-      "matcher": "Write|Edit",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "npx biome format --write $CLAUDE_FILE_PATH || true"
-        }
-      ]
-    }
-  ]
-}
-```
-Replace with your project's formatter (`prettier`, `black`, `gofmt`, etc.). The `|| true` ensures a formatter warning does not block Claude's workflow.
-
-**PostCompact — Re-Inject Critical Context After Compaction:**
-```json
-"hooks": {
-  "PostCompact": [
-    {
-      "matcher": "",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "cat tasks/todo.md tasks/lessons.md 2>/dev/null || echo 'No task files found.'"
-        }
-      ]
-    }
-  ]
-}
-```
-
-**Stop Hook — Verification Gate for Long-Running Tasks:**
-```json
-"hooks": {
-  "Stop": [
-    {
-      "matcher": "",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "npm test -- --passWithNoTests && npx tsc --noEmit || exit 1"
-        }
-      ]
-    }
-  ]
-}
-```
-Replace with your project's test runner and type checker. The `exit 1` blocks Claude from completing until checks pass.
-
-> **Rule:** If a standard can be enforced by a hook, it should be. Human discipline is a backup, not the primary mechanism.
+**Rule:** Claude Code can install packages autonomously. Every package it adds is your team's responsibility. Review first, accept second.
 
 ---
 
 ## Part 3: Testing & Error Handling
 
-### Testing Standards
+### Red/Green/Refactor (NOT OPTIONAL)
 
-**Red/Green/Refactor is the default workflow. It is not optional.**
+| Step | Action |
+|---|---|
+| 1. RED | Write a test that describes the desired behavior. Run it. Confirm it fails for the right reason — not a syntax error or missing import. |
+| 2. GREEN | Write the minimal implementation that makes the test pass. No more, no less. |
+| 3. REFACTOR | Extract duplication, improve naming, simplify logic without breaking the test. |
+| 4. REPEAT | Each new behavior gets its own red/green/refactor cycle before moving on. |
 
-The TDD cycle applies to every non-trivial piece of logic:
+**Rule:** If you cannot write a failing test first, you do not yet understand the requirement well enough to implement it. Stop and clarify.
 
-1. **Red:** Write a failing test that describes the desired behavior. Run it. Confirm it fails for the right reason, not due to a syntax error or missing import.
-2. **Green:** Write the minimal implementation that makes the test pass. No more, no less.
-3. **Refactor:** Clean up the implementation without breaking the test. Extract duplication, improve naming, simplify logic.
-4. **Repeat:** Each new behavior gets its own red/green/refactor cycle before moving on.
-
-> **Rule:** If you cannot write a failing test first, you do not yet understand the requirement well enough to implement it. Stop and clarify.
-
-**Acceptance criteria from the spec ARE the first test cases.** When writing `tasks/spec.md`, each acceptance criterion maps directly to one or more test cases. Claude should draft the test signatures (empty test stubs with behavior-based names) as part of spec finalization, before any implementation begins.
-
-**Coverage targets:**
-- Target approximately 80% line coverage, but coverage is a floor, not a goal.
-- 100% coverage of all acceptance criteria from the spec is required.
-- All edge cases defined in the spec must have explicit tests.
-
-**Test naming:** Use behavior-based names that read like sentences: `should_return_404_when_user_not_found`, not `test_get_user`.
-
-**Arrange-Act-Assert:** Follow this pattern in every test. One assertion concept per test.
-
-**Include both positive and negative cases.**
-
-### Test Isolation & Strategy
-
-- Each test must be independent; no shared mutable state between tests.
-- Mock external dependencies (network, filesystem, databases) at the boundary, not deep in the call stack.
-- Prefer fakes and in-memory implementations over mocks when feasible.
-- Keep unit tests fast (< 100ms each); move slow tests to integration suites.
-- Use factory functions or builders for test data; never copy-paste fixture objects.
-- Test behavior, not implementation; tests should survive internal refactors.
+- Coverage target: ~80% line coverage (floor, not goal). **100% coverage of all acceptance criteria from the spec.**
+- Test naming: behavior-based. `should_return_404_when_user_not_found`, not `test_get_user`.
+- Arrange-Act-Assert. One assertion concept per test. Include positive AND negative cases.
+- Independent tests. No shared mutable state. Mock external deps at the boundary.
+- Unit tests < 100ms each. Move slow tests to integration suites.
+- Test behavior, not implementation. Tests should survive internal refactors.
 
 ### Error Handling
 
 - Fail fast with clear messages.
 - Never swallow exceptions.
-- Use typed/custom errors for domain-specific failures (distinguish "not found" from "unauthorized" from "validation failed").
-- Log with context (no secrets).
-- Retry transient failures with exponential backoff; use circuit breakers for dependencies.
-- Return meaningful error responses to callers: status code, error type, human-readable message.
+- Typed/custom errors for domain-specific failures (not-found ≠ unauthorized ≠ validation-failed).
+- Log with context, no secrets.
+- Retry transient failures with exponential backoff. Circuit breakers for dependencies.
+- Return meaningful error responses: status code + error type + human-readable message.
 
 ---
 
 ## Part 4: Security
 
 - Validate and sanitize all user inputs.
-- Use parameterized queries (no SQL concatenation).
+- Use parameterized queries. No SQL concatenation.
 - Apply least-privilege principles.
-- Never commit secrets; rotate regularly.
-- Keep dependencies patched and scanned (see Dependency Management in Part 2 for AI-specific supply-chain rules).
+- Never commit secrets. Rotate regularly.
+- Keep dependencies patched and scanned (see AI supply-chain rules in Part 2).
 
 ---
 
@@ -453,63 +239,29 @@ The TDD cycle applies to every non-trivial piece of logic:
 
 ### Commit Standards
 
-For git operations: when asked to commit and push, write a descriptive conventional commit message, bump the version if appropriate, and create a PR unless told otherwise.
-
-**Standard workflow:** commit, push, create PR.
-
-**Conventional commit format:**
 ```
 <type>(<scope>): <description>
 
-[optional body]
+[optional body — what and why, not how]
 
-[optional footer]
+[optional footer — BREAKING CHANGE: / Closes #42]
 ```
 
 **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`
 
-**Examples:**
-```
-feat(auth): add OAuth2 login flow
-fix(api): handle null response from payment provider
-refactor(utils): extract date formatting into shared module
-docs(readme): add local development setup instructions
-```
+Subject line: imperative mood, lowercase, no period, max 72 characters. Standard workflow: **commit → push → create PR.**
 
-**Rules:**
-- Subject line: imperative mood, lowercase, no period, max 72 characters.
-- Body: explain what and why, not how.
-- Breaking changes: add `BREAKING CHANGE:` in footer or `!` after type.
-- Reference issues when applicable: `Closes #42`.
-
-### Branch Naming
-
-Use the format: `<type>/<short-description>` (e.g., `feat/oauth-login`, `fix/null-payment-response`).
+Branch naming: `<type>/<short-description>` → `feat/oauth-login`, `fix/null-payment-response`
 
 ### Code Review Standards
 
-**PR size:** Keep PRs focused. A PR that touches more than 400 lines of non-generated code or crosses more than one logical concern should be split.
+**PR size:** ≤ 400 lines of non-generated code, single logical concern. Split larger PRs.
 
-**PR description must include:**
-- What this changes and why (not just what the commit messages say).
-- How to test it locally.
-- Screenshots or output samples for UI or behavioral changes.
-- Any follow-up work this defers, linked to a ticket.
+**PR description must include:** what/why, how to test locally, screenshots for UI changes, deferred follow-up linked to ticket.
 
-**As a reviewer, check for:**
-1. Does this match the spec or ticket intent? Reject scope creep.
-2. Are edge cases and error paths handled?
-3. Does this introduce security, performance, or observability regressions?
-4. Is the code readable without the author explaining it?
-5. Are tests present, meaningful, and not testing implementation details?
-6. Were tests written before the implementation? (Check commit order if in doubt.)
-7. Are new dependencies justified?
+**Reviewer checks:** spec match | edge cases and error paths | security/perf/observability regressions | readability | meaningful tests | tests written before implementation (check commit order) | dependencies justified.
 
-**Review norms:**
-- Respond to review requests within one business day.
-- Distinguish blocking concerns from suggestions: prefix non-blocking comments with `nit:` or `suggestion:`.
-- Approve only when you would be comfortable owning this code if the author left tomorrow.
-- Do not merge your own PR without at least one approval, except for hotfixes with immediate rollback coverage.
+Respond to review requests within one business day. Use `nit:` or `suggestion:` prefix for non-blocking comments. Approve only when you would be comfortable owning this code if the author left tomorrow.
 
 ---
 
@@ -517,140 +269,116 @@ Use the format: `<type>/<short-description>` (e.g., `feat/oauth-login`, `fix/nul
 
 ### Architecture Decision Records (ADRs)
 
-Capture significant architectural decisions in `docs/adr/` using the format below. An ADR is required whenever a decision is hard to reverse, affects multiple teams or services, or future engineers will wonder why it was made.
+Required when a decision is hard to reverse, affects multiple teams/services, or future engineers will wonder why it was made.
 
-**File naming:** `docs/adr/NNNN-short-title.md` (e.g., `0012-use-postgres-for-session-storage.md`)
+**Location:** `docs/adr/NNNN-short-title.md`
 
-**Required fields:**
+| Field | Content |
+|---|---|
+| Date | YYYY-MM-DD |
+| Status | Proposed \| Accepted \| Deprecated \| Superseded by [NNNN] |
+| Deciders | Names or team |
+| Context | What situation or problem prompted this decision? |
+| Decision | What was decided? State it directly. |
+| Consequences | What becomes easier? Harder? Out of scope? |
+| Alternatives | What else was evaluated and why was it rejected? |
 
-```markdown
-# NNNN: [Title]
-
-**Date:** YYYY-MM-DD
-**Status:** Proposed | Accepted | Deprecated | Superseded by [NNNN]
-**Deciders:** [Names or team]
-
-## Context
-What situation or problem prompted this decision?
-
-## Decision
-What was decided? State it directly.
-
-## Consequences
-What becomes easier? What becomes harder? What is now out of scope?
-
-## Alternatives Considered
-What else was evaluated and why was it rejected?
-```
-
-> **Rule:** If you are explaining an architectural choice in a Slack thread or PR comment, that explanation belongs in an ADR instead. Write it once where everyone can find it.
+**Rule:** If you are explaining an architectural choice in a Slack thread or PR comment, that explanation belongs in an ADR instead.
 
 ---
 
 ## Part 7: Task Management
 
-Every non-trivial task follows this workflow. Deviating from it is a process failure.
+### Workflow
 
-1. **Plan First:** Write your plan to `tasks/todo.md` with checkable items before touching any code.
-2. **Verify Plan:** Check in with the user before starting implementation.
-3. **Track Progress:** Mark items complete as you go; never batch-mark at the end.
-4. **Explain Changes:** Provide a high-level summary at each significant step.
-5. **Document Results:** Add a review section to `tasks/todo.md` when the task is complete.
-6. **Capture Lessons:** Update `tasks/lessons.md` after any correction or unexpected outcome.
+1. **Plan First.** Write your plan to `tasks/todo.md` with checkable items before touching any code.
+2. **Verify Plan.** Check in with the user before starting implementation.
+3. **Track Progress.** Mark items complete as you go. Never batch-mark at the end.
+4. **Explain Changes.** High-level summary at each significant step.
+5. **Document Results.** Add a review section to `tasks/todo.md` when the task is complete.
+6. **Capture Lessons.** Update `tasks/lessons.md` after any correction or unexpected outcome.
 
-> **Rule:** `tasks/todo.md` is the live record of intent and progress. `tasks/lessons.md` is the accumulated process memory. Both files must stay current.
+### Definition of Done (ALL must be true)
 
-### Definition of Done
-
-A task is not done when the code works. It is done when ALL of the following are true:
-
-**Correctness & Quality:**
-- [ ] The implementation matches the spec or ticket acceptance criteria.
+**Correctness & Quality**
+- [ ] Implementation matches the spec or ticket acceptance criteria.
 - [ ] Verification method was defined before coding and passes autonomously.
 - [ ] Tests were written BEFORE implementation (red confirmed before green).
-- [ ] Each acceptance criterion from the spec has at least one corresponding passing test.
+- [ ] Each acceptance criterion has at least one corresponding passing test.
 - [ ] Refactor step was completed after green (no dead code, no over-fit logic).
-- [ ] All new and existing tests pass; test suite runs after every modification.
+- [ ] All new and existing tests pass. Suite runs after every modification.
 - [ ] Linting, formatting, and type checking pass with no suppressions.
-- [ ] Type annotations present on all function signatures.
-- [ ] Elegance check performed for non-trivial changes ("Is there a more elegant way?").
 
-**Self-Review:**
-- [ ] Code has been self-reviewed (no debug statements, dead code, or unresolved TODOs).
-- [ ] Self-explanatory names; understandable in 5 minutes without a walkthrough.
-- [ ] Comprehensive error handling with typed errors; not just the happy path.
-- [ ] "Would a staff engineer approve this?" answered with confidence.
-- [ ] Complex file edits were preceded by a full file read to ensure accurate string matching.
-
-**Documentation & Process:**
+**Documentation & Process**
 - [ ] PR description is complete and reviewable without a verbal walkthrough.
-- [ ] `tasks/todo.md` reflects the completed state.
-- [ ] Any new environment variables or config are documented.
-- [ ] Observability is adequate: structured logging covers the new path, errors surface correctly.
-- [ ] If an ADR was warranted, it has been written.
-- [ ] If a lesson was learned, `tasks/lessons.md` and/or `CLAUDE.md` have been updated.
-- [ ] If new dependencies were added, they have been audited and are locked in the lockfile.
-- [ ] If feature flags were introduced, they are named, owned, and have a removal date.
-- [ ] If frontend work, accessibility baseline is met.
+- [ ] New environment variables or config are documented.
+- [ ] ADR written if an architectural decision was made.
+- [ ] New dependencies audited and locked in the lockfile.
+- [ ] Feature flags named, owned, and have a removal date.
+- [ ] Accessibility baseline met (if frontend work).
 
-> **Rule:** "It works on my machine" is not done. This checklist is done.
+**Rule:** "It works on my machine" is not done. This checklist is done.
+
+> Self-review items (debug statements, dead code, naming, error handling, staff engineer approval) are enforced in Part 1's Verification Checkpoints. They are not duplicated here.
 
 ---
 
 ## Part 8: Prompt Engineering Standards
 
-Writing good prompts is a skill with the same rigor as writing good code. These standards apply when crafting prompts for AI-assisted development tasks.
-
 ### Prompt Structure
 
-Every substantive prompt should include:
-
-1. **Role or context:** Tell the model who it is and what it knows. ("You are a senior TypeScript engineer working on a Next.js API route...")
-2. **Task:** State the goal clearly and specifically. One prompt, one goal.
-3. **Constraints:** What must be true about the output? ("Do not modify the existing auth middleware. Stay under 50 lines.")
-4. **Anti-goals:** What should the output NOT do or include? This prevents unwanted scope.
-5. **Output format:** Specify the expected shape. ("Return only the updated function, no explanation.")
+| Element | Purpose |
+|---|---|
+| Role / Context | Tell the model who it is and what it knows. |
+| Task | State the goal clearly and specifically. One prompt, one goal. |
+| Constraints | What must be true about the output? |
+| Anti-goals | What should the output NOT do or include? |
+| Output Format | Specify the expected shape of the response. |
 
 ### Prompt Patterns
 
-**Spec prompt:** Use when starting a feature.
+**Spec Prompt — use when starting a feature**
 ```
 You are a [role]. I need a spec for [feature].
 Context: [relevant background]
 Constraints: [non-negotiables]
 Anti-goals: [what this should not do]
-Output: A spec in markdown with Goal, Inputs/Outputs, Constraints, Edge Cases,
-        Acceptance Criteria, and Test Stubs (empty test function signatures
-        mapping to each acceptance criterion).
+Output: spec.md with Goal, Inputs/Outputs, Constraints,
+Edge Cases, Acceptance Criteria, Test Stubs.
 ```
 
-**Implementation prompt:** Use after spec approval.
+**Implementation Prompt — use after spec approval**
 ```
 Implement [feature] per this spec: [paste spec]
-Use [language/framework]. Follow the existing patterns in [file or module].
+Use [language/framework]. Follow existing patterns in [file].
 Do not modify [out-of-scope files].
-Follow red/green/refactor: write the failing test first, confirm it fails,
-then write the minimal implementation to pass.
-Return only the implementation with inline comments explaining non-obvious decisions.
+Follow red/green/refactor: write the failing test first,
+confirm it fails, then write minimal implementation to pass.
+Solve the problem generally. Do not hard-code to the test cases.
+Return only the implementation with inline comments on
+non-obvious decisions.
 ```
 
-**Review prompt:** Use for quality checks.
+**Review Prompt — use for quality checks**
 ```
 Review this code as a skeptical staff engineer.
-Flag: security issues, missing error handling, test gaps, readability problems.
-Also flag: any logic that appears to have been implemented before its tests were written.
-Distinguish blocking issues from suggestions.
-Do not rewrite the code; return a structured list of findings.
+Report ALL findings. Tag each as BLOCKING, IMPORTANT, or NIT.
+Do not filter or self-censor based on perceived severity.
+Categories to cover: security, missing error handling,
+test gaps, readability, logic implemented before tests,
+hard-coded values that should be parameterized.
+Do not rewrite the code. Return a structured list of findings.
 ```
 
-**Debug prompt:** Use when diagnosing a failure.
+**Debug Prompt — use when diagnosing a failure**
 ```
 This test is failing: [paste test and output]
 Here is the relevant implementation: [paste code]
-Diagnose the root cause. Do not guess. Propose one fix with an explanation.
+Diagnose the root cause. Do not guess.
+Propose one fix with an explanation.
 ```
 
-**Architecture/tradeoff prompt:** Use when deeper reasoning is needed before code is written.
+**Architecture Prompt — use before writing any code**
 ```
 Before writing any code, analyze [problem area] and identify:
   1. Three implementation approaches with their tradeoffs.
@@ -659,95 +387,123 @@ Before writing any code, analyze [problem area] and identify:
 Confirm before proceeding with implementation.
 ```
 
-Framing tasks as analysis or tradeoff evaluation engages extended reasoning. Operational prompts ("add error handling to this function, follow the existing pattern") should stay tight and direct. Match prompt style to task complexity.
-
 ### Prompt Anti-Patterns
-
-Avoid these patterns; they produce lower-quality outputs:
 
 - **Vague goals:** "Make this better" without specifying what better means.
 - **Missing constraints:** Prompts with no constraints invite over-engineering.
 - **No anti-goals:** Without them, the model expands scope by default.
-- **Stacked goals:** One prompt asking for spec, implementation, tests, and documentation simultaneously.
-- **Implicit context:** Assuming the model knows your project structure, conventions, or prior decisions without stating them.
-- **Conversational framing on operational tasks:** "Could you please help me understand..." invites verbose responses. For operational asks, write direct commands: "Explain what this function does. List any issues." Claude mirrors the register of its prompts.
-- **Process-defined tasks without exit conditions:** "Keep checking until you find the issue" loops indefinitely. Define outcomes: "Check X. If Y, do Z. If not, report and stop."
-- **Skipping TDD in the prompt:** Not specifying red/green/refactor on implementation prompts invites Claude to write code first and tests after. State it explicitly.
+- **Stacked goals:** One prompt asking for spec, implementation, tests, and docs simultaneously.
+- **Implicit context:** Assuming the model knows your project structure or prior decisions.
+- **Conversational framing on operational tasks:** "Could you please help me understand..." Write direct commands instead.
+- **No exit conditions:** "Keep checking until you find the issue" loops indefinitely. Define outcomes.
+- **Implicit "above and beyond":** Opus 4.7 is more literal than older models. If you want a fully-featured implementation, say so explicitly. Default behavior is to do exactly what was asked.
+- **Severity self-censorship in reviews:** Telling the model to "be conservative" or "only flag high-severity" causes it to investigate fully but report less. Ask for all findings, tagged by severity.
+- **Skipping TDD in the prompt:** Not specifying red/green/refactor invites code-first, tests-after.
 
-> **Rule:** A prompt is a spec for the model. Apply the same rigor you would to a spec for code.
-
----
-
-## Part 9: Reusable Skills & Slash Commands
-
-### Formalize Repeated Workflows
-
-If you do something more than once a day, it should be a skill or a slash command, not a prompt you retype or copy-paste.
-
-**Slash commands** live in `.claude/commands/` and are checked into git. They are shared with the entire team and executable with a single `/command-name` invocation. Slash commands can include inline Bash to pre-compute context (like `git status` or `git diff --stat`) so Claude has the information it needs without extra model calls.
-
-**Skills** live in `.claude/skills/` and provide deeper, multi-step workflow guidance. Use skills for domain-specific patterns that require detailed instructions (e.g., how to run a specific test harness, how to deploy to staging, how to generate a particular report format).
-
-**When to create which:**
-- **Slash command:** Short, repeatable action (commit-push-PR, run tests, format code, generate a changelog).
-- **Skill:** Complex workflow with multiple steps, domain knowledge, or conditional logic (analytics queries, incident response, migration playbooks).
-
-**Team practice:**
-- Check all commands and skills into the repo under `.claude/`.
-- Review them in PRs like any other code; stale commands accumulate confusion.
-- Use the `/simplify` pattern after implementation: append a quality-review command to any prompt to run parallel agents that check for reuse, quality, and efficiency in one pass.
-
-**Companion slash commands:**
-This skill ships with `/qspec` (generate a spec), `/qcheck` (skeptical code review), and `/tdd` (start a red/green/refactor cycle) in `.claude/commands/`.
-
-### `/tdd` Slash Command
-
-**Usage:** `/tdd <behavior description>`
-
-Enforces the red/green/refactor cycle (Part 3) for a named behavior: writes a failing test stub, confirms it fails for the right reason, pauses for approval, implements the minimum code to go green, and proposes a refactor pass before committing. Use it at the start of any non-trivial behavior to prevent skipping straight to implementation.
+**Rule:** A prompt is a spec for the model. Apply the same rigor you would to a spec for code.
 
 ---
 
-## Part 10: Quick Reference
+## Part 9: Claude Code Primitives
 
-### Red Flags
+Reusable building blocks: slash commands, skills, subagents, and hooks. If you do something more than once a day, it should be one of these — not a prompt you retype.
 
+### Slash Commands (`.claude/commands/`)
+
+Short, repeatable actions checked into git. Executable with a single invocation. Can inline Bash for pre-computed context.
+
+*Examples:* commit-push-PR, run tests, format code, generate changelog.
+
+This document ships with: `/qspec` (generate a spec), `/qcheck` (skeptical code review), `/tdd` (start a red/green/refactor cycle).
+
+### Skills (`.claude/skills/`)
+
+Complex multi-step workflows with domain knowledge or conditional logic. SKILL.md describes when to fire and what to do. Progressive disclosure: skills are folders with `references/`, `scripts/`, `examples/` subdirectories.
+
+*Examples:* analytics queries, incident response, migration playbooks.
+
+**Skill design rules:**
+- Skill description is a trigger, not a summary. Write it for the model: "when should I fire?"
+- Don't state the obvious. Focus on what pushes Claude out of default behavior.
+- Don't railroad with prescriptive step-by-step instructions. Give goals and constraints.
+- Include scripts and libraries so Claude composes rather than reconstructs boilerplate.
+- Build a Gotchas section in every skill. Add Claude's failure points over time.
+
+### Subagents (`.claude/agents/`)
+
+Opus 4.7 has strong native subagent orchestration. It will delegate appropriately without explicit instruction. Provide well-defined subagent tools and let the model choose.
+
+When you do want to constrain behavior:
+- Subagents return concise summaries, not raw output.
+- Read-only tools for research subagents. Write access only for implementation subagents.
+- Skip subagents for tasks under 3 tool calls. Overhead not worth it.
+- Set `isolation: worktree` on agents that modify files.
+- Use `model: haiku` for read-only analysis. `sonnet/opus` for architecture reasoning.
+
+**Standard agent files:** `build-validator`, `code-simplifier`, `security-reviewer`, `tdd-enforcer`, `verify-app`.
+
+### Hooks
+
+Hooks enforce mechanically what prose enforces by hope. Every rule moved to a hook is one fewer instruction competing for attention in the context window.
+
+```
+PostToolUse (auto-format):    npx biome format --write $CLAUDE_FILE_PATH || true
+PostToolUse (audit deps):     npm audit --audit-level=high || exit 1
+PostCompact (re-inject):      cat tasks/todo.md tasks/lessons.md
+Stop (verification gate):     npm test && npx tsc --noEmit || exit 1
+```
+
+**Rule:** If a standard can be enforced by a hook, it should be. Human discipline is a backup, not the primary mechanism.
+
+---
+
+## Part 10: Quick Reference — Red Flags
+
+**Code shape**
 - Functions exceeding 40 lines
 - More than 3 nesting levels
+- Files exceeding 400 lines
 - Unused abstractions or commented-out code
-- TODOs without ticket links
 - Copy-pasted logic (3+ times requires refactor)
-- Hardcoded test values or magic numbers
-- Trial-and-error fixes without root cause analysis
-- Large uncommitted changes late in context
-- Modifying files outside the task's scope
-- Missing type annotations on public interfaces
-- Untyped `any` or `object` without justification comment
-- console.log / print statements left in production code
-- Catching and ignoring exceptions silently
-- Writing code before reading existing patterns in the codebase
-- Pushing through a broken plan instead of stopping to re-plan
+- Hard-coded test values, magic numbers, or solutions that only pass the given tests
+
+**Process**
+- Writing code before reading existing patterns
 - Implementing without a spec for non-trivial work
+- No verification method defined before implementation
+- Trial-and-error fixes without root cause analysis
+- Pushing through a broken plan instead of re-planning
+- Modifying files outside the task's scope
 - Ending a session with failing tests or uncommitted changes
+- Large uncommitted changes late in context
+
+**Testing & TDD**
+- Implementation written before tests for non-trivial logic (covers "skipping red/green confirmation")
+- Refactor step skipped after reaching green
+- Failing test committed without corresponding implementation
+- Acceptance criteria not reflected in any test case
+
+**Quality & types**
+- TODOs without ticket links
+- Missing type annotations on public interfaces
+- Untyped `any` / `object` without justification
+- `console.log` / `print` statements in production
+- Catching and ignoring exceptions silently
+
+**Process & infra**
 - Architectural decisions explained in Slack instead of an ADR
-- Feature flags with no owner, no date, and no removal plan
+- Feature flags with no owner, date, or removal plan
 - Floating dependency versions in production lockfiles
-- PR that exceeds 400 lines across unrelated concerns
-- Frontend interactive elements that are not keyboard-accessible
-- No verification method defined before starting implementation
-- Ad-hoc subagent prompts instead of reusable agent definitions for repeated patterns
-- Standards enforced by discipline alone when a hook could automate them
-- New dependencies added by Claude in agentic mode without review and lockfile verification
-- Implementation written before any tests existed for non-trivial logic
-- Refactor step skipped after reaching green (technical debt deposited immediately)
-- Failing test committed without a corresponding implementation in the same session
-- Acceptance criteria defined in spec but not reflected in any test case
-- Skipping red/green confirmation ("the test would have failed, trust me")
+- New dependencies added without review and lockfile verification
+- PR exceeding 400 lines across unrelated concerns
+- Frontend interactive elements not keyboard-accessible
 
-### Guiding Principle
-
-> *Code should be safe to modify, easy to reason about, and boring to maintain. When in doubt, simplify.*
+**Workflow & discipline**
+- Ad-hoc subagent prompts for repeated patterns (use `.claude/agents/`)
+- Standards enforced by discipline when a hook could automate
 
 ---
 
-*Document Version 13.0 | Vinny Carpenter*
+> "Code should be safe to modify, easy to reason about, and boring to maintain. When in doubt, simplify."
+>
+> Vinny Carpenter — Document Version 14.0
