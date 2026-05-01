@@ -32,12 +32,6 @@
   --quadrant-delegate: 232 242 236;    /* #e8f2ec */
   --quadrant-eliminate: 245 239 223;   /* #f5efdf */
 
-  /* Quadrant washes — ~5% accent for pane backgrounds (v9 simplified) */
-  --q1-wash: 122 139 126;      /* #7A8B7E sage */
-  --q2-wash: 123 143 163;      /* #7B8FA3 dusty blue */
-  --q3-wash: 157 139 122;      /* #9D8B7A warm taupe */
-  --q4-wash: 138 140 142;      /* #8A8C8E slate gray */
-
   /* Quadrant accent identity — muted earth tones (redesign Phase 2).
    * Single source of truth consumed via lib/quadrant-accent.ts. */
   --quadrant-accent-q1: 122 139 126;   /* #7A8B7E sage — Do First */
@@ -86,12 +80,6 @@
   --quadrant-schedule: 15 26 58;       /* #0f1a3a */
   --quadrant-delegate: 11 36 26;       /* #0b241a */
   --quadrant-eliminate: 44 32 9;       /* #2c2009 */
-
-  /* Wash channels — match new accent identity */
-  --q1-wash: 122 139 126;
-  --q2-wash: 123 143 163;
-  --q3-wash: 157 139 122;
-  --q4-wash: 138 140 142;
 
   /* Quadrant accent identity — first-cut: same triples as light, lifted via
    * --accent-style only if axe surfaces failures. Per redesign-plan.md D1=B. */
@@ -163,18 +151,6 @@ main {
   @apply appearance-none border-0 bg-transparent p-0;
   font: inherit;
   color: inherit;
-}
-
-@layer components {
-  .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.045); }
-  .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.045); }
-  .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.05); }
-  .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.055); }
-
-  .dark .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.10); }
-  .dark .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.10); }
-  .dark .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.11); }
-  .dark .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.12); }
 }
 
 /* View Transitions */

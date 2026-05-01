@@ -9,13 +9,6 @@ import type { QuadrantMeta, RedesignQuadrantKey } from "@/lib/quadrants";
 import { quadrantAccent } from "@/lib/quadrant-accent";
 import { cn } from "@/lib/utils";
 
-const WASH_CLASS: Record<RedesignQuadrantKey, string> = {
-  q1: "quadrant-wash-q1",
-  q2: "quadrant-wash-q2",
-  q3: "quadrant-wash-q3",
-  q4: "quadrant-wash-q4",
-};
-
 interface QuadrantPaneProps {
   meta: QuadrantMeta;
   tasks: TaskRecord[];
@@ -43,8 +36,7 @@ export function QuadrantPane({
     <section
       ref={setNodeRef}
       className={cn(
-        "relative flex min-h-[280px] flex-col rounded-2xl border p-4 transition-all",
-        WASH_CLASS[meta.rdKey],
+        "relative flex min-h-[280px] flex-col rounded-xl border bg-card p-4 transition-all",
         isOver ? "border-2 shadow-md" : "border-border"
       )}
       style={isOver ? { borderColor: accent } : undefined}

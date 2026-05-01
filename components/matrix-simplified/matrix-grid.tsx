@@ -41,19 +41,37 @@ export function MatrixGrid({
   }, [tasks]);
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2">
-      {quadrants.map((meta) => (
-        <QuadrantPane
-          key={meta.id}
-          meta={meta}
-          tasks={grouped[meta.rdKey]}
-          allTasks={tasks}
-          onEdit={onEdit}
-          onToggleComplete={onToggleComplete}
-          onDelete={onDelete}
-          onAddInQuadrant={onAddInQuadrant}
+    <div className="rounded-2xl border border-border-strong bg-background/40 p-3 backdrop-blur-sm sm:p-6">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:grid-rows-[auto_1px_auto]">
+        {quadrants.slice(0, 2).map((meta) => (
+          <QuadrantPane
+            key={meta.id}
+            meta={meta}
+            tasks={grouped[meta.rdKey]}
+            allTasks={tasks}
+            onEdit={onEdit}
+            onToggleComplete={onToggleComplete}
+            onDelete={onDelete}
+            onAddInQuadrant={onAddInQuadrant}
+          />
+        ))}
+        <div
+          aria-hidden
+          className="hidden bg-border-strong/60 md:col-span-2 md:block"
         />
-      ))}
+        {quadrants.slice(2, 4).map((meta) => (
+          <QuadrantPane
+            key={meta.id}
+            meta={meta}
+            tasks={grouped[meta.rdKey]}
+            allTasks={tasks}
+            onEdit={onEdit}
+            onToggleComplete={onToggleComplete}
+            onDelete={onDelete}
+            onAddInQuadrant={onAddInQuadrant}
+          />
+        ))}
+      </div>
     </div>
   );
 }
