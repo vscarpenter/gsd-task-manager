@@ -175,14 +175,17 @@ describe("TaskCard", () => {
     expect(repeatIcon).toBeInTheDocument();
   });
 
-  it("applies red border styling for overdue tasks", () => {
+  it("applies terracotta border styling for overdue tasks", () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const overdueTask = { ...mockTask, dueDate: yesterday.toISOString() };
     const { container } = render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    expect(article).toHaveClass("overdue-task", "border-l-4", "border-red-200");
+    // Phase 6 redesign: red → terracotta. Border-left color comes from the
+    // .overdue-task CSS rule in globals.css (rgb(var(--terracotta))); the
+    // utility classes here paint the surrounding 4-px border + soft bg tint.
+    expect(article).toHaveClass("overdue-task", "border-l-4", "border-terracotta/40", "bg-terracotta/5");
   });
 
   it("does not show overdue warning for completed tasks", () => {

@@ -62,7 +62,7 @@ function TaskCardComponent({
         task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
-        taskIsOverdue ? "overdue-task border-l-4 border-red-200 bg-red-50/40 dark:border-red-800/60 dark:bg-red-950/20" : "border-card-border",
+        taskIsOverdue ? "overdue-task border-l-4 border-terracotta/40 bg-terracotta/5 dark:border-terracotta/50 dark:bg-terracotta/10" : "border-card-border",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}
