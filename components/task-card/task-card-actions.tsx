@@ -32,7 +32,7 @@ export function TaskCardActions({
     <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
       <div className="flex items-center gap-2">
         {taskIsOverdue ? (
-          <span className="flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-950/40 px-2 py-0.5 text-red-600 dark:text-red-400 font-medium">
+          <span className="flex items-center gap-1 rounded-full bg-terracotta/10 dark:bg-terracotta/15 px-2 py-0.5 text-terracotta font-medium">
             <AlertCircleIcon className="h-3 w-3" />
             Overdue
           </span>
