@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Date | 2026-05-01 |
-| Status | Proposed (Phase 2 of redesign-plan.md) |
+| Status | Accepted (Phases 2–7 of redesign-plan.md) |
 | Deciders | Vinny Carpenter |
 | Supersedes | n/a (modifies the v9 palette established by 0011) |
 
@@ -115,12 +115,40 @@ Measured against running dev server at `localhost:3000` on 2026-05-01, light + d
 3. **Use deep-charcoal text + colored dot for quadrant labels in this PR.** Rejected — the user-authored spec example (§5) explicitly shows accent-colored label text. Surfacing the contrast tradeoff to the user with measured ratios is more honest than silently changing the spec.
 4. **Pre-derive lifted dark variants for all quadrant accents.** Rejected — measurement-driven approach revealed dark already passes AA cleanly with same RGB triples, saving four arbitrary derivations.
 
-## Open question for the user (resolve before Phase 5)
+## Open question for the user (resolved 2026-05-01: γ)
 
-Quadrant labels in light mode at 11px bold fail WCAG 2.1 AA normal (3.00–3.31:1 vs. required 4.5:1). Three options for Phase 5:
+Quadrant labels in light mode at 11px bold fail WCAG 2.1 AA normal (3.00–3.31:1 vs. required 4.5:1). Three options were:
 
-- **(α) Honor the spec.** Keep accent-colored labels at 11px bold; accept AA fail. Reason given: editorial calm aesthetic; quadrant title is also exposed via `aria-label` on the section so screen readers aren't affected.
-- **(β) Bump to AA Large.** Switch labels to 14pt bold (≥18.6px) — qualifies as AA Large. Trades visual hierarchy (labels become more prominent than intended).
-- **(γ) Two-color treatment.** Deep charcoal text + accent-colored dot prefix (e.g., a 6px sage dot before "Do First"). Restores AA normal contrast, keeps quadrant identity visible, doesn't bulk up the typography.
+- **(α) Honor the spec.** Keep accent-colored labels at 11px bold; accept AA fail.
+- **(β) Bump to AA Large.** Switch labels to 14pt bold (≥18.6px) — qualifies as AA Large. Trades visual hierarchy.
+- **(γ) Two-color treatment.** Deep charcoal text + accent-colored dot prefix.
 
-Default proposal: **γ**. Decide before Phase 5.
+**Decision: γ**, implemented in Phase 5. Header now renders as:
+
+- Header strip background: 5% tint of the quadrant accent (sage / dusty-blue / warm-taupe / slate), extending edge-to-edge inside the rounded pane.
+- Title text: deep-charcoal `text-foreground` at `text-sm font-bold tracking-wide` (Title Case — "Do First", not uppercase).
+- Identity dot: 8 × 8 px circle rendered in `quadrantAccent(rdKey)` as a non-text indicator before the title.
+- Hint text moved out of the header strip into a dedicated paragraph below it.
+
+Resulting contrast (light mode, on the new tinted header bg ≈ canvas + 5% accent):
+
+| Quadrant | Header bg (effective) | Title fg | Ratio |
+|---|---|---|---|
+| Q1 sage | `~#f0f0eb` | `#18181b` deep charcoal | **~17.0:1** ✓ AAA (was 3.31:1) |
+| Q2 dusty blue | `~#f0f1ee` | `#18181b` | **~17.0:1** ✓ AAA (was 3.06:1) |
+| Q3 warm taupe | `~#f1f0ed` | `#18181b` | **~17.0:1** ✓ AAA (was 3.00:1) |
+| Q4 slate gray | `~#f0f0ec` | `#18181b` | **~17.0:1** ✓ AAA (was 3.09:1) |
+
+Identity dots are non-text per WCAG and don't carry a contrast requirement. Phase 5 closes the only known WCAG regression introduced by this ADR.
+
+## Implementation history
+
+| Phase | PR | Status | Description |
+|---|---|---|---|
+| 1 | [#243](https://github.com/vscarpenter/gsd-task-manager/pull/243) | Merged | Centralize quadrant accent; drop orphan v8 styles |
+| 2 | [#244](https://github.com/vscarpenter/gsd-task-manager/pull/244) | Merged | Apply muted earth-tone palette + cascade |
+| 3 | [#245](https://github.com/vscarpenter/gsd-task-manager/pull/245) | Merged (via Phase 4 PR) | Elevate capture bar |
+| 4 | (this PR) | Pending | Unified matrix container |
+| 5 | (this PR) | Pending | γ quadrant header |
+| 6 | (this PR) | Pending | Task card + terracotta overdue |
+| 7 | (this PR) | Pending | Icon stroke weights + final spacing + this ADR update |

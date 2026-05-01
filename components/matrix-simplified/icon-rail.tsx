@@ -110,7 +110,11 @@ function RailButton({
         disabled && "cursor-wait opacity-60"
       )}
     >
-      <Icon className="h-5 w-5" aria-hidden />
+      <Icon
+        className="h-5 w-5"
+        strokeWidth={active ? 2.5 : 2}
+        aria-hidden
+      />
     </button>
   );
 }

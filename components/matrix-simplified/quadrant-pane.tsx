@@ -43,7 +43,7 @@ export function QuadrantPane({
       aria-label={`${meta.title} quadrant`}
     >
       <header
-        className="flex items-center justify-between border-b border-border px-4 pb-3 pt-4"
+        className="flex items-center justify-between border-b border-border px-4 pb-3 pt-4 sm:px-6 sm:pt-5"
         style={{ backgroundColor: quadrantAccent(meta.rdKey, 0.05) }}
       >
         <div className="flex items-center gap-2">
@@ -71,10 +71,10 @@ export function QuadrantPane({
         </div>
       </header>
 
-      <p className="px-4 pt-3 text-xs text-foreground-muted">{meta.rdHint}</p>
+      <p className="px-4 pt-3 text-xs text-foreground-muted sm:px-6 sm:pt-4">{meta.rdHint}</p>
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-3">
+        <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-3 sm:px-6 sm:pb-6">
           {tasks.length === 0 ? (
             <p className="my-auto text-center text-sm italic text-foreground-muted">
               {meta.rdEmpty}
