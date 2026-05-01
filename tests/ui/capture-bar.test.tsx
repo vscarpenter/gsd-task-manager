@@ -87,4 +87,24 @@ describe("<CaptureBar>", () => {
     fireEvent.keyDown(window, { key: "N", shiftKey: true });
     expect(onMoreOptions).toHaveBeenCalledWith({ title: "", urgent: false, important: false, tags: [] });
   });
+
+  it("renders the lifted Phase-3 surface — Zap icon, lifted bg, strong border, accent Add button", () => {
+    const { container } = render(<CaptureBar onSubmit={vi.fn()} />);
+
+    // Zap icon is rendered as the persistent prefix mark (regression guard for the elevated capture bar).
+    const zap = container.querySelector('svg.lucide-zap');
+    expect(zap, "expected ZapIcon to render in the capture bar").not.toBeNull();
+
+    // Form wrapper carries the lifted-surface classes introduced in Phase 3.
+    const form = container.querySelector('form');
+    expect(form?.className).toContain('bg-background-muted');
+    expect(form?.className).toContain('border-border-strong');
+    expect(form?.className).toContain('px-5');
+    expect(form?.className).toContain('py-4');
+
+    // Add button uses the new solid muted-indigo treatment, not the old foreground/background swap.
+    const addBtn = screen.getByRole('button', { name: /^Add$/i });
+    expect(addBtn.className).toContain('bg-accent');
+    expect(addBtn.className).toContain('text-white');
+  });
 });

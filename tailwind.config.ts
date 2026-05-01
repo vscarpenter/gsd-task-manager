@@ -27,8 +27,10 @@ const config = {
         },
         border: {
           DEFAULT: "rgb(var(--border) / <alpha-value>)",
-          muted: "rgb(var(--border-muted) / <alpha-value>)"
+          muted: "rgb(var(--border-muted) / <alpha-value>)",
+          strong: "rgb(var(--border-strong) / <alpha-value>)"
         },
+        terracotta: "rgb(var(--terracotta) / <alpha-value>)",
         accent: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           hover: "rgb(var(--accent-hover) / <alpha-value>)",
