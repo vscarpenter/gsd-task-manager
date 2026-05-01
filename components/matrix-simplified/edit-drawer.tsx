@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
-import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrants } from "@/lib/quadrants";
+import { quadrantAccent } from "@/lib/quadrant-accent";
 import { resolveDuePreset, DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import { cn } from "@/lib/utils";
 
@@ -24,13 +25,6 @@ interface EditDrawerProps {
   onClose: () => void;
   onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
 }
-
-const ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
-};
 
 function classifyExistingDate(iso: string | undefined): DuePreset {
   if (!iso) return "none";
@@ -90,7 +84,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const isCreateMode = !task;
 
   const activeQuadrant = quadrants.find((q) => q.urgent === urgent && q.important === important);
-  const accent = activeQuadrant ? ACCENT[activeQuadrant.rdKey] : "#c2410c";
+  const accent = quadrantAccent(activeQuadrant?.rdKey ?? "q1");
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
@@ -176,7 +170,8 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
             <div className="grid grid-cols-2 gap-2">
               {quadrants.map((q) => {
                 const active = q.urgent === urgent && q.important === important;
-                const a = ACCENT[q.rdKey];
+                const a = quadrantAccent(q.rdKey);
+                const aSoft = quadrantAccent(q.rdKey, 0.08);
                 return (
                   <button
                     key={q.id}
@@ -190,7 +185,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
                       "rounded-lg border px-3 py-2.5 text-left transition-colors",
                       active ? "border-2" : "border-border hover:bg-background-muted/50"
                     )}
-                    style={active ? { borderColor: a, backgroundColor: `${a}14`, color: a } : undefined}
+                    style={active ? { borderColor: a, backgroundColor: aSoft, color: a } : undefined}
                     aria-pressed={active}
                   >
                     <div className="text-[12px] font-bold uppercase tracking-wider">{q.title}</div>

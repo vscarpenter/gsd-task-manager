@@ -6,6 +6,7 @@ import { PlusIcon } from "lucide-react";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrantAccent } from "@/lib/quadrant-accent";
 import { cn } from "@/lib/utils";
 
 const WASH_CLASS: Record<RedesignQuadrantKey, string> = {
@@ -13,13 +14,6 @@ const WASH_CLASS: Record<RedesignQuadrantKey, string> = {
   q2: "quadrant-wash-q2",
   q3: "quadrant-wash-q3",
   q4: "quadrant-wash-q4",
-};
-
-const ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
 };
 
 interface QuadrantPaneProps {
@@ -42,7 +36,7 @@ export function QuadrantPane({
   onAddInQuadrant,
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
-  const accent = ACCENT[meta.rdKey];
+  const accent = quadrantAccent(meta.rdKey);
   const taskIds = tasks.map((t) => t.id);
 
   return (

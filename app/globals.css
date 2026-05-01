@@ -34,6 +34,12 @@
   --q3-wash: 21 128 61;        /* #15803d */
   --q4-wash: 133 77 14;        /* #854d0e */
 
+  /* Quadrant accent identity — single source of truth consumed via lib/quadrant-accent.ts. */
+  --quadrant-accent-q1: 194 65 12;   /* #c2410c */
+  --quadrant-accent-q2: 29 78 216;   /* #1d4ed8 */
+  --quadrant-accent-q3: 21 128 61;   /* #15803d */
+  --quadrant-accent-q4: 133 77 14;   /* #854d0e */
+
   /* Card */
   --card-background: 251 250 246;      /* #fbfaf6 — paper */
   --card-border: 230 227 219;          /* matches --border */
@@ -44,13 +50,6 @@
   --shadow-card: 0 1px 0 rgba(24, 24, 27, 0.04), 0 1px 2px rgba(24, 24, 27, 0.04);
   --shadow-card-hover: 0 1px 0 rgba(24, 24, 27, 0.04), 0 6px 18px -8px rgba(24, 24, 27, 0.12);
   --shadow-column: 0 1px 2px rgba(24, 24, 27, 0.05), 0 1px 0 rgba(24, 24, 27, 0.04);
-  --shadow-fab: 0 8px 30px rgba(67, 56, 202, 0.35);
-
-  /* Quadrant solid gradients — used by dashboard donut, etc. */
-  --gradient-focus: linear-gradient(135deg, #c2410c, #ea580c);
-  --gradient-schedule: linear-gradient(135deg, #1d4ed8, #3b82f6);
-  --gradient-delegate: linear-gradient(135deg, #15803d, #22c55e);
-  --gradient-eliminate: linear-gradient(135deg, #854d0e, #ca8a04);
 
   /* Chart palette — series 1 uses --accent; series 2+ are tokenized here. */
   --chart-series-2: 59 130 246;        /* blue-500 */
@@ -84,6 +83,13 @@
   --q3-wash: 21 128 61;
   --q4-wash: 133 77 14;
 
+  /* Quadrant accent identity — same RGB triples in dark today; phase-2 redesign
+   * may derive lighter dark variants. */
+  --quadrant-accent-q1: 194 65 12;
+  --quadrant-accent-q2: 29 78 216;
+  --quadrant-accent-q3: 21 128 61;
+  --quadrant-accent-q4: 133 77 14;
+
   --card-background: 20 20 22;         /* #141416 */
   --card-border: 39 39 42;
 
@@ -92,7 +98,6 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   --shadow-column: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
 
   --chart-series-2: 96 165 250;        /* blue-400 — slightly lighter for dark mode */
 }
@@ -151,76 +156,6 @@ main {
 }
 
 @layer components {
-  .matrix-grid {
-    @apply grid grid-cols-1 items-start gap-6 md:grid-cols-2;
-  }
-
-  .matrix-card {
-    @apply relative rounded-2xl border border-card-border bg-card p-6 overflow-hidden;
-    box-shadow: var(--shadow-column);
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
-  }
-
-  .matrix-card:hover {
-    box-shadow: var(--shadow-card-hover);
-  }
-
-  /* Gradient accent bar at top of each quadrant */
-  .matrix-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    border-radius: 1rem 1rem 0 0;
-    opacity: 0.85;
-    transition: opacity 0.3s ease;
-  }
-
-  .matrix-card:hover::before {
-    opacity: 1;
-  }
-
-  .matrix-card.bg-quadrant-focus::before {
-    background: var(--gradient-focus);
-  }
-  .matrix-card.bg-quadrant-schedule::before {
-    background: var(--gradient-schedule);
-  }
-  .matrix-card.bg-quadrant-delegate::before {
-    background: var(--gradient-delegate);
-  }
-  .matrix-card.bg-quadrant-eliminate::before {
-    background: var(--gradient-eliminate);
-  }
-
-  /* Subtle quadrant gradient glow — adds depth without overwhelming content */
-  .matrix-card.bg-quadrant-focus {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-focus) / 0.15), transparent 60%);
-  }
-  .matrix-card.bg-quadrant-schedule {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-schedule) / 0.15), transparent 60%);
-  }
-  .matrix-card.bg-quadrant-delegate {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-delegate) / 0.15), transparent 60%);
-  }
-  .matrix-card.bg-quadrant-eliminate {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-eliminate) / 0.15), transparent 60%);
-  }
-
-  .matrix-card__header {
-    @apply mb-4 flex items-center justify-between gap-4;
-  }
-
-  .matrix-card__title {
-    @apply text-lg font-semibold tracking-tight text-foreground;
-  }
-
-  .matrix-card__subtitle {
-    @apply text-sm text-foreground-muted;
-  }
-
   .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.045); }
   .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.045); }
   .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.05); }
