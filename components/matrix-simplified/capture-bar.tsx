@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { quadrantAccent } from "@/lib/quadrant-accent";
@@ -127,15 +127,14 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     <form
       onSubmit={submit}
       className={cn(
-        "flex items-center gap-2.5 rounded-2xl border border-border bg-card px-3.5 py-2.5",
+        "flex items-center gap-3 rounded-2xl border border-border-strong bg-background-muted px-5 py-4",
         "shadow-sm transition-shadow focus-within:border-foreground-muted focus-within:shadow-md"
       )}
     >
-      <span
+      <ZapIcon
         aria-hidden
-        className="h-2.5 w-2.5 shrink-0 rounded-full transition-colors"
-        style={{ backgroundColor: text.trim() ? accent : "rgb(var(--foreground-muted) / 0.5)" }}
-        title={meta.title}
+        className="h-5 w-5 shrink-0 text-accent"
+        strokeWidth={2.5}
       />
       <input
         ref={internalRef}
@@ -144,7 +143,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         onKeyDown={onInputKey}
         placeholder="Capture a task… use ! urgent  * important  #tag"
         aria-label="Capture a task"
-        className="min-w-0 flex-1 border-0 bg-transparent text-[14.5px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
+        className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-medium leading-snug text-foreground outline-none placeholder:font-normal placeholder:text-foreground-muted"
       />
       {text.trim() ? (
         <>
@@ -187,8 +186,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         type="submit"
         disabled={!parsed.title}
         className={cn(
-          "inline-flex h-8 items-center gap-1 rounded-lg px-3 text-[13px] font-medium",
-          "bg-foreground text-background hover:bg-foreground/90",
+          "inline-flex h-9 items-center gap-1 rounded-lg px-4 text-sm font-semibold",
+          "bg-accent text-white hover:bg-accent-hover",
           "disabled:cursor-not-allowed disabled:opacity-40"
         )}
       >
