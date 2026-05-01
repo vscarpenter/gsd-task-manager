@@ -6,21 +6,25 @@
 
   /* Surfaces — warm paper */
   --background: 246 245 241;           /* #f6f5f1 */
-  --background-muted: 239 237 231;     /* #efede7 */
+  --background-muted: 239 237 231;     /* #efede7 — also serves as capture-bar bg */
   --background-accent: 235 232 224;    /* #ebe8e0 */
 
   /* Text */
   --foreground: 24 24 27;              /* #18181b */
-  --foreground-muted: 113 113 122;     /* #71717a — AA on paper 4.8:1 */
+  --foreground-muted: 107 104 101;     /* #6B6865 — warm gray (redesign Phase 2) */
 
   /* Borders — warm */
   --border: 230 227 219;               /* #e6e3db */
   --border-muted: 239 237 231;         /* #efede7 */
+  --border-strong: 213 210 204;        /* #D5D2CC — for elevated surfaces (redesign Phase 2) */
 
-  /* Accent */
-  --accent: 67 56 202;                  /* #4338ca — indigo-700, AA on paper 7.1:1 */
-  --accent-hover: 79 70 229;           /* #4f46e5 */
-  --accent-muted: 199 210 254;         /* #c7d2fe */
+  /* Accent — muted indigo (redesign Phase 2) */
+  --accent: 91 107 143;                 /* #5B6B8F */
+  --accent-hover: 74 90 127;           /* #4A5A7F */
+  --accent-muted: 217 222 234;         /* #D9DEEA — pale muted-indigo */
+
+  /* Terracotta — warning / overdue (redesign Phase 2). Use sparingly. */
+  --terracotta: 168 111 95;            /* #A86F5F */
 
   /* Quadrant tint pairs (match redesign scope) */
   --quadrant-focus: 253 241 231;       /* #fdf1e7 */
@@ -29,19 +33,20 @@
   --quadrant-eliminate: 245 239 223;   /* #f5efdf */
 
   /* Quadrant washes — ~5% accent for pane backgrounds (v9 simplified) */
-  --q1-wash: 194 65 12;        /* #c2410c */
-  --q2-wash: 29 78 216;        /* #1d4ed8 */
-  --q3-wash: 21 128 61;        /* #15803d */
-  --q4-wash: 133 77 14;        /* #854d0e */
+  --q1-wash: 122 139 126;      /* #7A8B7E sage */
+  --q2-wash: 123 143 163;      /* #7B8FA3 dusty blue */
+  --q3-wash: 157 139 122;      /* #9D8B7A warm taupe */
+  --q4-wash: 138 140 142;      /* #8A8C8E slate gray */
 
-  /* Quadrant accent identity — single source of truth consumed via lib/quadrant-accent.ts. */
-  --quadrant-accent-q1: 194 65 12;   /* #c2410c */
-  --quadrant-accent-q2: 29 78 216;   /* #1d4ed8 */
-  --quadrant-accent-q3: 21 128 61;   /* #15803d */
-  --quadrant-accent-q4: 133 77 14;   /* #854d0e */
+  /* Quadrant accent identity — muted earth tones (redesign Phase 2).
+   * Single source of truth consumed via lib/quadrant-accent.ts. */
+  --quadrant-accent-q1: 122 139 126;   /* #7A8B7E sage — Do First */
+  --quadrant-accent-q2: 123 143 163;   /* #7B8FA3 dusty blue — Schedule */
+  --quadrant-accent-q3: 157 139 122;   /* #9D8B7A warm taupe — Delegate */
+  --quadrant-accent-q4: 138 140 142;   /* #8A8C8E slate gray — Eliminate */
 
   /* Card */
-  --card-background: 251 250 246;      /* #fbfaf6 — paper */
+  --card-background: 254 253 251;      /* #FEFDFB — paper, slight lift (redesign Phase 2) */
   --card-border: 230 227 219;          /* matches --border */
 
   --overlay: 0 0 0;
@@ -67,28 +72,33 @@
 
   --border: 39 39 42;                  /* #27272a */
   --border-muted: 31 31 34;            /* #1f1f22 */
+  --border-strong: 64 64 70;           /* #404046 — derived for dark surfaces */
 
-  --accent: 129 140 248;               /* #818cf8 */
-  --accent-hover: 165 180 252;         /* #a5b4fc */
-  --accent-muted: 99 102 241;          /* #6366f1 */
+  /* Accent — muted indigo, lifted for dark legibility */
+  --accent: 142 156 188;                /* #8E9CBC — lifted muted indigo */
+  --accent-hover: 168 180 207;         /* #A8B4CF */
+  --accent-muted: 64 78 110;           /* #404E6E — for low-opacity surfaces */
+
+  /* Terracotta — same hue; lift handled at consumer alpha if needed */
+  --terracotta: 196 138 122;           /* #C48A7A — lifted for dark */
 
   --quadrant-focus: 42 22 9;           /* #2a1609 */
   --quadrant-schedule: 15 26 58;       /* #0f1a3a */
   --quadrant-delegate: 11 36 26;       /* #0b241a */
   --quadrant-eliminate: 44 32 9;       /* #2c2009 */
 
-  /* Wash channels reused; opacity bumped at use-site for dark legibility */
-  --q1-wash: 194 65 12;
-  --q2-wash: 29 78 216;
-  --q3-wash: 21 128 61;
-  --q4-wash: 133 77 14;
+  /* Wash channels — match new accent identity */
+  --q1-wash: 122 139 126;
+  --q2-wash: 123 143 163;
+  --q3-wash: 157 139 122;
+  --q4-wash: 138 140 142;
 
-  /* Quadrant accent identity — same RGB triples in dark today; phase-2 redesign
-   * may derive lighter dark variants. */
-  --quadrant-accent-q1: 194 65 12;
-  --quadrant-accent-q2: 29 78 216;
-  --quadrant-accent-q3: 21 128 61;
-  --quadrant-accent-q4: 133 77 14;
+  /* Quadrant accent identity — first-cut: same triples as light, lifted via
+   * --accent-style only if axe surfaces failures. Per redesign-plan.md D1=B. */
+  --quadrant-accent-q1: 122 139 126;
+  --quadrant-accent-q2: 123 143 163;
+  --quadrant-accent-q3: 157 139 122;
+  --quadrant-accent-q4: 138 140 142;
 
   --card-background: 20 20 22;         /* #141416 */
   --card-border: 39 39 42;

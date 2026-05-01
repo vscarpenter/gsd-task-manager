@@ -212,7 +212,7 @@ export function MatrixSimplified() {
       {overdue > 0 ? (
         <>
           <span className="text-foreground-muted/60">·</span>
-          <span style={{ color: "#c2410c" }}>{overdue} overdue</span>
+          <span style={{ color: "rgb(var(--terracotta))" }}>{overdue} overdue</span>
         </>
       ) : null}
     </>
