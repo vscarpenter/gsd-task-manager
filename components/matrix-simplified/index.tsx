@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { createTask, toggleCompleted, updateTask, deleteTask } from "@/lib/tasks";
+import { extractUrlsFromTitle } from "@/lib/capture-parser";
 import { useTasks } from "@/lib/use-tasks";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
@@ -42,6 +43,13 @@ function filterTasks(tasks: TaskRecord[], query: string): TaskRecord[] {
       .toLowerCase();
     return hay.includes(q);
   });
+}
+
+/** Merges extracted URLs into an existing description, separated by newlines. */
+function buildDescription(existing: string, urls: string[]): string {
+  if (urls.length === 0) return existing;
+  const urlBlock = urls.join("\n");
+  return existing.trim() ? `${existing.trim()}\n${urlBlock}` : urlBlock;
 }
 
 export function MatrixSimplified() {
@@ -112,9 +120,10 @@ export function MatrixSimplified() {
   const handleCapture = useCallback(
     async ({ title, urgent, important, tags }: CapturePayload) => {
       try {
+        const { cleanTitle, urls } = extractUrlsFromTitle(title);
         await createTask({
-          title,
-          description: "",
+          title: cleanTitle,
+          description: buildDescription("", urls),
           urgent,
           important,
           tags: tags.length > 0 ? tags : undefined,
@@ -157,11 +166,18 @@ export function MatrixSimplified() {
   const handleEditClose = useCallback(() => setEditingTask(null), []);
 
   const handleOpenCreateDrawer = useCallback((payload?: CapturePayload) => {
-    setCreateInitial(
-      payload
-        ? { title: payload.title, urgent: payload.urgent, important: payload.important, tags: payload.tags }
-        : undefined
-    );
+    if (payload) {
+      const { cleanTitle, urls } = extractUrlsFromTitle(payload.title);
+      setCreateInitial({
+        title: cleanTitle,
+        description: buildDescription("", urls),
+        urgent: payload.urgent,
+        important: payload.important,
+        tags: payload.tags,
+      });
+    } else {
+      setCreateInitial(undefined);
+    }
     setCreateDrawerOpen(true);
   }, []);
 
@@ -178,9 +194,10 @@ export function MatrixSimplified() {
           showToast("Task updated", undefined, TOAST_DURATION.SHORT);
           setEditingTask(null);
         } else {
+          const { cleanTitle, urls } = extractUrlsFromTitle(draft.title);
           await createTask({
-            title: draft.title,
-            description: draft.description,
+            title: cleanTitle,
+            description: buildDescription(draft.description, urls),
             urgent: draft.urgent,
             important: draft.important,
             dueDate: draft.dueDate,
