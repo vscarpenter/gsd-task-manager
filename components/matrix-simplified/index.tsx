@@ -227,7 +227,7 @@ export function MatrixSimplified() {
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
       >
-        <div className="sticky top-[60px] z-10 mb-4 -mx-4 bg-background px-4 py-2 sm:static sm:m-0 sm:bg-transparent sm:p-0 sm:pb-4">
+        <div className="sticky top-[60px] z-10 -mx-4 mb-10 bg-background/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-9 sm:mb-12 sm:px-9 sm:py-4">
           <CaptureBar onSubmit={handleCapture} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>
         <MatrixGrid

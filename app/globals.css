@@ -230,6 +230,16 @@ main {
   .dark .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.10); }
   .dark .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.11); }
   .dark .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.12); }
+
+  .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.07); }
+  .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.07); }
+  .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.075); }
+  .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.08); }
+
+  .dark .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.16); }
+  .dark .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.16); }
+  .dark .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.17); }
+  .dark .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.18); }
 }
 
 /* View Transitions */

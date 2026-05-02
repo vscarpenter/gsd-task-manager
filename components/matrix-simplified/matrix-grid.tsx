@@ -41,11 +41,12 @@ export function MatrixGrid({
   }, [tasks]);
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2">
-      {quadrants.map((meta) => (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2 md:gap-0 md:overflow-hidden md:rounded-2xl md:border md:border-border md:bg-card md:shadow-sm">
+      {quadrants.map((meta, index) => (
         <QuadrantPane
           key={meta.id}
           meta={meta}
+          position={POSITIONS[index]}
           tasks={grouped[meta.rdKey]}
           allTasks={tasks}
           onEdit={onEdit}
@@ -57,3 +58,5 @@ export function MatrixGrid({
     </div>
   );
 }
+
+const POSITIONS = ["tl", "tr", "bl", "br"] as const;
