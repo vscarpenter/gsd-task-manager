@@ -81,7 +81,7 @@ function ThemeOption({
 			onClick={onClick}
 			className={`
 				relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-				transition-all duration-200
+				transition-all duration-200 ease-out
 				pointer-coarse:min-h-11 pointer-coarse:px-4
 				${isActive
 					? "bg-card text-foreground shadow-sm"

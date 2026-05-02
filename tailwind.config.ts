@@ -45,6 +45,16 @@ const config = {
           border: "rgb(var(--card-border) / <alpha-value>)"
         },
         overlay: "rgb(var(--overlay) / <alpha-value>)",
+        status: {
+          overdue: "rgb(var(--status-overdue) / <alpha-value>)",
+          "overdue-muted": "rgb(var(--status-overdue-muted) / <alpha-value>)",
+          blocked: "rgb(var(--status-blocked) / <alpha-value>)",
+          "blocked-muted": "rgb(var(--status-blocked-muted) / <alpha-value>)",
+          blocking: "rgb(var(--status-blocking) / <alpha-value>)",
+          "blocking-muted": "rgb(var(--status-blocking-muted) / <alpha-value>)",
+          success: "rgb(var(--status-success) / <alpha-value>)",
+          "success-muted": "rgb(var(--status-success-muted) / <alpha-value>)"
+        },
         // Legacy aliases for backward compatibility
         canvas: {
           DEFAULT: "rgb(var(--background) / <alpha-value>)",
@@ -54,6 +64,14 @@ const config = {
           DEFAULT: "rgb(var(--foreground-muted) / <alpha-value>)",
           foreground: "rgb(var(--foreground-muted) / <alpha-value>)"
         }
+      },
+      fontSize: {
+        "display": ["36px", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
+        "heading": ["22px", { lineHeight: "1.25", letterSpacing: "-0.01em" }],
+        "title": ["18px", { lineHeight: "1.35", letterSpacing: "-0.01em" }],
+        "body": ["15px", { lineHeight: "1.5" }],
+        "caption": ["13px", { lineHeight: "1.5" }],
+        "label": ["11px", { lineHeight: "1.45", letterSpacing: "0.04em" }]
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "sans-serif"],

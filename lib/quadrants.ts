@@ -1,6 +1,22 @@
 import type { QuadrantId } from "@/lib/types";
 
 export type RedesignQuadrantKey = "q1" | "q2" | "q3" | "q4";
+
+/** Canonical accent hex per quadrant — single source of truth for charts, panes, and inline styles. */
+export const QUADRANT_ACCENT: Record<RedesignQuadrantKey, string> = {
+  q1: "#c2410c",
+  q2: "#1d4ed8",
+  q3: "#15803d",
+  q4: "#854d0e",
+};
+
+/** Same palette keyed by QuadrantId for components that reference the long-form id. */
+export const QUADRANT_ACCENT_BY_ID: Record<QuadrantId, string> = {
+  "urgent-important": "#c2410c",
+  "not-urgent-important": "#1d4ed8",
+  "urgent-not-important": "#15803d",
+  "not-urgent-not-important": "#854d0e",
+};
 export type RedesignIconKey = "flame" | "calendar" | "users" | "trash";
 
 export interface QuadrantMeta {

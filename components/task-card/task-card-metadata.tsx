@@ -71,7 +71,7 @@ export function TaskCardMetadata({
         <div className="flex flex-wrap gap-2 text-xs">
           {isBlocked ? (
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-2 py-0.5 text-amber-700 dark:text-amber-300 font-medium"
+              className="inline-flex items-center gap-1 rounded-full bg-status-blocked-muted border border-status-blocked/20 px-2 py-0.5 text-status-blocked font-medium"
               title={`Blocked by: ${blockingTasks.map(t => t.title).join(", ")}`}
             >
               <LockIcon className="h-3 w-3" />
@@ -80,7 +80,7 @@ export function TaskCardMetadata({
           ) : null}
           {isBlocking ? (
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 px-2 py-0.5 text-blue-700 dark:text-blue-300 font-medium"
+              className="inline-flex items-center gap-1 rounded-full bg-status-blocking-muted border border-status-blocking/20 px-2 py-0.5 text-status-blocking font-medium"
               title={`Blocking: ${blockedTasks.map(t => t.title).join(", ")}`}
             >
               <LinkIcon className="h-3 w-3" />

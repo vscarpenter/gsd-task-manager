@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
-import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
 import { resolveDuePreset, DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import { cn } from "@/lib/utils";
 
@@ -24,13 +24,6 @@ interface EditDrawerProps {
   onClose: () => void;
   onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
 }
-
-const ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
-};
 
 function classifyExistingDate(iso: string | undefined): DuePreset {
   if (!iso) return "none";
@@ -90,7 +83,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const isCreateMode = !task;
 
   const activeQuadrant = quadrants.find((q) => q.urgent === urgent && q.important === important);
-  const accent = activeQuadrant ? ACCENT[activeQuadrant.rdKey] : "#c2410c";
+  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "#c2410c";
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
@@ -122,11 +115,11 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-[60] flex justify-end bg-black/30">
+    <div onClick={onClose} className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay">
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl"
+        className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl animate-drawer-slide-in"
         aria-label={isCreateMode ? "New task" : "Edit task"}
       >
         <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
@@ -176,7 +169,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
             <div className="grid grid-cols-2 gap-2">
               {quadrants.map((q) => {
                 const active = q.urgent === urgent && q.important === important;
-                const a = ACCENT[q.rdKey];
+                const a = QUADRANT_ACCENT[q.rdKey];
                 return (
                   <button
                     key={q.id}
@@ -209,7 +202,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
                   type="button"
                   onClick={() => setDuePreset(p.value)}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                    "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all duration-200",
                     duePreset === p.value
                       ? "bg-background text-foreground shadow-sm"
                       : "text-foreground-muted hover:text-foreground"
