@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCapture } from "@/lib/capture-parser";
+import { parseCapture, extractUrlsFromTitle } from "@/lib/capture-parser";
 
 describe("parseCapture", () => {
   it("returns plain title with no flags when input has no markers", () => {
@@ -81,5 +81,80 @@ describe("parseCapture", () => {
       important: false,
       tags: [],
     });
+  });
+});
+
+describe("extractUrlsFromTitle", () => {
+  it("returns unchanged title and empty urls when no URL present", () => {
+    expect(extractUrlsFromTitle("buy milk")).toEqual({
+      cleanTitle: "buy milk",
+      urls: [],
+    });
+  });
+
+  it("extracts a single URL from the end of a title", () => {
+    expect(extractUrlsFromTitle("Review this https://example.com")).toEqual({
+      cleanTitle: "Review this",
+      urls: ["https://example.com/"],
+    });
+  });
+
+  it("extracts a single URL from the middle of a title", () => {
+    expect(extractUrlsFromTitle("Check https://example.com for details")).toEqual({
+      cleanTitle: "Check for details",
+      urls: ["https://example.com/"],
+    });
+  });
+
+  it("extracts all URLs when multiple are present", () => {
+    const result = extractUrlsFromTitle("Compare https://foo.com and https://bar.com");
+    expect(result.cleanTitle).toBe("Compare and");
+    expect(result.urls).toEqual(["https://foo.com/", "https://bar.com/"]);
+  });
+
+  it("returns 'Review link below' as cleanTitle when title is only a URL", () => {
+    expect(extractUrlsFromTitle("https://example.com")).toEqual({
+      cleanTitle: "Review link below",
+      urls: ["https://example.com/"],
+    });
+  });
+
+  it("returns 'Review link below' when title is only whitespace + URL", () => {
+    expect(extractUrlsFromTitle("  https://example.com  ")).toEqual({
+      cleanTitle: "Review link below",
+      urls: ["https://example.com/"],
+    });
+  });
+
+  it("blocks javascript: protocol URLs", () => {
+    expect(extractUrlsFromTitle("Do task javascript:alert(1)")).toEqual({
+      cleanTitle: "Do task javascript:alert(1)",
+      urls: [],
+    });
+  });
+
+  it("blocks URLs with credentials", () => {
+    expect(extractUrlsFromTitle("Visit https://user:pass@evil.com")).toEqual({
+      cleanTitle: "Visit https://user:pass@evil.com",
+      urls: [],
+    });
+  });
+
+  it("trims trailing punctuation from URLs before validating", () => {
+    const result = extractUrlsFromTitle("See https://example.com/path.");
+    expect(result.urls).toEqual(["https://example.com/path"]);
+    expect(result.cleanTitle).toBe("See");
+  });
+
+  it("collapses extra whitespace in cleanTitle after URL removal", () => {
+    const result = extractUrlsFromTitle("foo   https://example.com   bar");
+    expect(result.cleanTitle).toBe("foo bar");
+    expect(result.urls).toEqual(["https://example.com/"]);
+  });
+
+  it("preserves capture markers (! * #tag) alongside URL extraction", () => {
+    const result = extractUrlsFromTitle("Review https://example.com ! #work");
+    expect(result.cleanTitle).toBe("Review ! #work");
+    expect(result.urls).toEqual(["https://example.com/"]);
   });
 });
