@@ -3,6 +3,7 @@
 import { ClockIcon, TimerIcon, TargetIcon, TrendingUpIcon } from "lucide-react";
 import type { TimeTrackingSummary, QuadrantTimeDistribution } from "@/lib/analytics";
 import { formatDuration } from "@/lib/analytics";
+import { QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 
 interface TimeAnalyticsProps {
@@ -11,18 +12,18 @@ interface TimeAnalyticsProps {
   className?: string;
 }
 
-const QUADRANT_LABELS: Record<string, { name: string; color: string }> = {
-  "urgent-important": { name: "Do First (Q1)", color: "bg-red-500" },
-  "not-urgent-important": { name: "Schedule (Q2)", color: "bg-blue-500" },
-  "urgent-not-important": { name: "Delegate (Q3)", color: "bg-amber-500" },
-  "not-urgent-not-important": { name: "Eliminate (Q4)", color: "bg-gray-400" },
+const QUADRANT_LABELS: Record<string, { name: string }> = {
+  "urgent-important": { name: "Do First (Q1)" },
+  "not-urgent-important": { name: "Schedule (Q2)" },
+  "urgent-not-important": { name: "Delegate (Q3)" },
+  "not-urgent-not-important": { name: "Eliminate (Q4)" },
 };
 
 /** Empty state when no time tracking data exists */
 function EmptyState({ className }: { className?: string }) {
   return (
     <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
-      <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+      <h3 className="flex items-center gap-2 rd-serif text-title text-foreground">
         <ClockIcon className="h-5 w-5 text-accent" />
         Time Tracking
       </h3>
@@ -37,6 +38,7 @@ function EmptyState({ className }: { className?: string }) {
 function QuadrantBar({ dist, totalMinutes }: { dist: QuadrantTimeDistribution; totalMinutes: number }) {
   const config = QUADRANT_LABELS[dist.quadrantId];
   const percentage = totalMinutes > 0 ? Math.round((dist.totalMinutes / totalMinutes) * 100) : 0;
+  const accent = QUADRANT_ACCENT_BY_ID[dist.quadrantId as keyof typeof QUADRANT_ACCENT_BY_ID];
 
   return (
     <div className="space-y-1">
@@ -48,8 +50,8 @@ function QuadrantBar({ dist, totalMinutes }: { dist: QuadrantTimeDistribution; t
       </div>
       <div className="h-2 w-full rounded-full bg-background-muted overflow-hidden">
         <div
-          className={cn("h-full rounded-full transition-all", config.color)}
-          style={{ width: `${percentage}%` }}
+          className="h-full rounded-full transition-all"
+          style={{ width: `${percentage}%`, backgroundColor: accent }}
         />
       </div>
     </div>
@@ -89,7 +91,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
 
   return (
     <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
-      <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+      <h3 className="flex items-center gap-2 rd-serif text-title text-foreground">
         <ClockIcon className="h-5 w-5 text-accent" />
         Time Tracking
       </h3>

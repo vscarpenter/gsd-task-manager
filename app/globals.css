@@ -54,6 +54,20 @@
 
   /* Chart palette — series 1 uses --accent; series 2+ are tokenized here. */
   --chart-series-2: 59 130 246;        /* blue-500 */
+
+  /* Semantic status colors */
+  --status-overdue: 220 38 38;          /* red-600 */
+  --status-overdue-muted: 254 226 226;  /* red-100 */
+  --status-blocked: 217 119 6;          /* amber-600 */
+  --status-blocked-muted: 254 243 199;  /* amber-100 */
+  --status-blocking: 37 99 235;         /* blue-600 */
+  --status-blocking-muted: 219 234 254; /* blue-100 */
+  --status-success: 22 163 74;          /* green-600 */
+  --status-success-muted: 220 252 231;  /* green-100 */
+
+  /* Motion tokens */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
 }
 
 .dark {
@@ -71,7 +85,7 @@
 
   --accent: 129 140 248;               /* #818cf8 */
   --accent-hover: 165 180 252;         /* #a5b4fc */
-  --accent-muted: 99 102 241;          /* #6366f1 */
+  --accent-muted: 165 180 252;         /* #a5b4fc — lighter for dark mode readability */
 
   --quadrant-focus: 42 22 9;           /* #2a1609 */
   --quadrant-schedule: 15 26 58;       /* #0f1a3a */
@@ -84,7 +98,7 @@
   --q3-wash: 21 128 61;
   --q4-wash: 133 77 14;
 
-  --card-background: 20 20 22;         /* #141416 */
+  --card-background: 26 26 29;         /* #1a1a1d */
   --card-border: 39 39 42;
 
   --overlay: 0 0 0;
@@ -95,6 +109,16 @@
   --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
 
   --chart-series-2: 96 165 250;        /* blue-400 — slightly lighter for dark mode */
+
+  /* Semantic status colors — dark */
+  --status-overdue: 248 113 113;        /* red-400 */
+  --status-overdue-muted: 69 10 10;     /* red-950/50 */
+  --status-blocked: 251 191 36;         /* amber-400 */
+  --status-blocked-muted: 69 26 3;      /* amber-950/50 */
+  --status-blocking: 96 165 250;        /* blue-400 */
+  --status-blocking-muted: 23 37 84;    /* blue-950/50 */
+  --status-success: 74 222 128;         /* green-400 */
+  --status-success-muted: 5 46 22;      /* green-950/50 */
 }
 
 body {
@@ -226,20 +250,20 @@ main {
   .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.05); }
   .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.055); }
 
-  .dark .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.10); }
-  .dark .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.10); }
-  .dark .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.11); }
-  .dark .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.12); }
+  .dark .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.14); }
+  .dark .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.14); }
+  .dark .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.15); }
+  .dark .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.16); }
 
   .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.07); }
   .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.07); }
   .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.075); }
   .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.08); }
 
-  .dark .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.16); }
-  .dark .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.16); }
-  .dark .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.17); }
-  .dark .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.18); }
+  .dark .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.20); }
+  .dark .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.20); }
+  .dark .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.21); }
+  .dark .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.22); }
 }
 
 /* View Transitions */
@@ -390,6 +414,33 @@ main {
 
   .animate-bulk-bar-in {
     animation: bulk-bar-in 0.2s ease-out both;
+  }
+
+  /* Edit drawer slide-in from right */
+  @keyframes drawer-slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes drawer-overlay-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-drawer-overlay {
+    animation: drawer-overlay-in var(--duration-fast, 150ms) ease-out both;
+  }
+
+  .animate-drawer-slide-in {
+    animation: drawer-slide-in var(--duration-normal, 250ms) cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 }
 

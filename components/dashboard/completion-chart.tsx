@@ -33,7 +33,7 @@ export function CompletionChart({ data }: CompletionChartProps) {
     <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="rd-serif text-title text-foreground">
             Completion Trend
           </h3>
           <p className="mt-1 text-sm text-foreground-muted">

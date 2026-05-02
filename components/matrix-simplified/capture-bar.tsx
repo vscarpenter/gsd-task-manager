@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowRightIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
-import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
+import { quadrantByRdKey, QUADRANT_ACCENT, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 
 export interface CapturePayload {
@@ -22,13 +22,6 @@ interface CaptureBarProps {
 
 // Cycle order: null → q1 → q2 → q3 → q4 → null
 const CYCLE: (RedesignQuadrantKey | null)[] = ["q1", "q2", "q3", "q4", null];
-
-const ACCENT_BY_KEY: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
-};
 
 function deriveAutoKey(urgent: boolean, important: boolean): RedesignQuadrantKey {
   if (urgent && important) return "q1";
@@ -93,7 +86,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   const autoKey = deriveAutoKey(parsed.urgent, parsed.important);
   const effectiveKey = override ?? autoKey;
   const meta = quadrantByRdKey(effectiveKey);
-  const accent = ACCENT_BY_KEY[effectiveKey];
+  const accent = QUADRANT_ACCENT[effectiveKey];
 
   const cycleQuadrant = () => {
     const idx = CYCLE.indexOf(override);

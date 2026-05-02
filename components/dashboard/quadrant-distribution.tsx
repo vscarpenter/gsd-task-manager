@@ -2,18 +2,11 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import type { QuadrantId } from "@/lib/types";
-import { quadrants } from "@/lib/quadrants";
+import { quadrants, QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
 
 interface QuadrantDistributionProps {
   distribution: Record<QuadrantId, number>;
 }
-
-const COLORS: Record<QuadrantId, string> = {
-  "urgent-important": "#ef4444",
-  "not-urgent-important": "#3b82f6",
-  "urgent-not-important": "#f59e0b",
-  "not-urgent-not-important": "#6b7280",
-};
 
 const SHORT_LABELS: Record<QuadrantId, string> = {
   "urgent-important": "Do First",
@@ -41,7 +34,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
   if (data.length === 0) {
     return (
       <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
-        <h3 className="text-lg font-semibold text-foreground">
+        <h3 className="rd-serif text-title text-foreground">
           Quadrant Distribution
         </h3>
         <p className="mt-1 text-sm text-foreground-muted">
@@ -56,7 +49,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
 
   return (
     <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
-      <h3 className="text-lg font-semibold text-foreground">
+      <h3 className="rd-serif text-title text-foreground">
         Quadrant Distribution
       </h3>
       <p className="mt-1 text-sm text-foreground-muted">
@@ -78,7 +71,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
               {data.map((entry) => (
                 <Cell
                   key={`cell-${entry.id}`}
-                  fill={COLORS[entry.id as QuadrantId]}
+                  fill={QUADRANT_ACCENT_BY_ID[entry.id as QuadrantId]}
                   className="transition-opacity hover:opacity-85"
                 />
               ))}
@@ -111,7 +104,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
       <div className="mt-2 grid grid-cols-2 gap-2">
         {data.map((entry) => (
           <div key={entry.id} className="flex items-center gap-2 rounded-2xl border border-border/60 bg-background-muted/40 px-3 py-2">
-            <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[entry.id as QuadrantId] }} />
+            <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: QUADRANT_ACCENT_BY_ID[entry.id as QuadrantId] }} />
             <span className="truncate text-xs font-medium text-foreground-muted">
               {entry.shortName}
             </span>

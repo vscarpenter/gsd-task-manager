@@ -2,10 +2,11 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, TrashIcon, type LucideIcon } from "lucide-react";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey } from "@/lib/quadrants";
+import { QUADRANT_ACCENT } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 
 const WASH_CLASS: Record<RedesignQuadrantKey, string> = {
@@ -22,11 +23,11 @@ const HEADER_CLASS: Record<RedesignQuadrantKey, string> = {
   q4: "quadrant-header-q4",
 };
 
-const ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
+const EMPTY_ICON: Record<RedesignQuadrantKey, LucideIcon> = {
+  q1: FlameIcon,
+  q2: CalendarIcon,
+  q3: UsersIcon,
+  q4: TrashIcon,
 };
 
 export type QuadrantPosition = "tl" | "tr" | "bl" | "br";
@@ -63,7 +64,7 @@ export function QuadrantPane({
   onAddInQuadrant,
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
-  const accent = ACCENT[meta.rdKey];
+  const accent = QUADRANT_ACCENT[meta.rdKey];
   const taskIds = tasks.map((t) => t.id);
 
   return (
@@ -108,9 +109,12 @@ export function QuadrantPane({
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
           {tasks.length === 0 ? (
-            <p className="my-auto text-center text-sm italic text-foreground-muted">
-              {meta.rdEmpty}
-            </p>
+            <div className="my-auto flex flex-col items-center gap-2 py-4">
+              {(() => { const Icon = EMPTY_ICON[meta.rdKey]; return <Icon className="h-5 w-5 text-foreground-muted/30" aria-hidden />; })()}
+              <p className="rd-serif text-center text-sm text-foreground-muted">
+                {meta.rdEmpty}
+              </p>
+            </div>
           ) : (
             tasks.map((task) => (
               <TaskCard
