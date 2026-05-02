@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { createTask, toggleCompleted, updateTask, deleteTask } from "@/lib/tasks";
-import { extractUrlsFromTitle } from "@/lib/capture-parser";
+import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { useTasks } from "@/lib/use-tasks";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
@@ -43,13 +43,6 @@ function filterTasks(tasks: TaskRecord[], query: string): TaskRecord[] {
       .toLowerCase();
     return hay.includes(q);
   });
-}
-
-/** Merges extracted URLs into an existing description, separated by newlines. */
-function buildDescription(existing: string, urls: string[]): string {
-  if (urls.length === 0) return existing;
-  const urlBlock = urls.join("\n");
-  return existing.trim() ? `${existing.trim()}\n${urlBlock}` : urlBlock;
 }
 
 export function MatrixSimplified() {
