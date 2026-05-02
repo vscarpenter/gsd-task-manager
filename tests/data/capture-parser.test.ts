@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCapture, extractUrlsFromTitle } from "@/lib/capture-parser";
+import { parseCapture, extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 
 describe("parseCapture", () => {
   it("returns plain title with no flags when input has no markers", () => {
@@ -156,5 +156,33 @@ describe("extractUrlsFromTitle", () => {
     const result = extractUrlsFromTitle("Review https://example.com ! #work");
     expect(result.cleanTitle).toBe("Review ! #work");
     expect(result.urls).toEqual(["https://example.com/"]);
+  });
+});
+
+describe("buildDescription", () => {
+  it("returns existing unchanged when there are no urls", () => {
+    expect(buildDescription("Notes here", [])).toBe("Notes here");
+  });
+
+  it("returns urls joined by newline when existing is empty", () => {
+    expect(buildDescription("", ["https://a.test/", "https://b.test/"])).toBe(
+      "https://a.test/\nhttps://b.test/"
+    );
+  });
+
+  it("returns urls joined by newline when existing is whitespace only", () => {
+    expect(buildDescription("   \n  ", ["https://a.test/"])).toBe("https://a.test/");
+  });
+
+  it("appends urls below trimmed existing text separated by a single newline", () => {
+    expect(buildDescription("  Plan trip  ", ["https://a.test/"])).toBe(
+      "Plan trip\nhttps://a.test/"
+    );
+  });
+
+  it("preserves multi-line existing text and appends urls below", () => {
+    expect(
+      buildDescription("Line one\nLine two", ["https://a.test/", "https://b.test/"])
+    ).toBe("Line one\nLine two\nhttps://a.test/\nhttps://b.test/");
   });
 });

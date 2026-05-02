@@ -64,6 +64,18 @@ export function extractUrlsFromTitle(title: string): ExtractedUrls {
   return { cleanTitle, urls };
 }
 
+/**
+ * Merges extracted URLs into an existing description, separated by newlines.
+ * - If `urls` is empty, returns `existing` unchanged.
+ * - If `existing` is empty/whitespace, returns the URL block alone.
+ * - Otherwise returns `existing.trim() + "\n" + urls.join("\n")`.
+ */
+export function buildDescription(existing: string, urls: string[]): string {
+  if (urls.length === 0) return existing;
+  const urlBlock = urls.join("\n");
+  return existing.trim() ? `${existing.trim()}\n${urlBlock}` : urlBlock;
+}
+
 const TAG_PATTERN = /(^|\s)#([a-z0-9_-]+)/gi;
 const DOUBLE_BANG = /(^|\s)!!(\s|$)/g;
 const SINGLE_BANG = /(^|\s)!(\s|$)/g;
