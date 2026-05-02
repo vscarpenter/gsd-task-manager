@@ -167,6 +167,44 @@ describe('Task CRUD Operations', () => {
 
       await expect(createTask(invalid)).rejects.toThrow();
     });
+
+    it.each([
+      {
+        scenario: 'extracts URLs from title into description',
+        title: 'Read https://example.com/article later',
+        description: '',
+        expectedTitle: 'Read later',
+        expectedDescription: 'https://example.com/article',
+      },
+      {
+        scenario: 'appends extracted URLs to existing description',
+        title: 'Watch https://example.com/video',
+        description: 'Existing notes',
+        expectedTitle: 'Watch',
+        expectedDescription: 'Existing notes\nhttps://example.com/video',
+      },
+      {
+        scenario: 'falls back to placeholder title when title is URL-only',
+        title: 'https://example.com',
+        description: '',
+        expectedTitle: 'Review link below',
+        expectedDescription: 'https://example.com/',
+      },
+      {
+        scenario: 'leaves title unchanged when no URLs are present',
+        title: 'Plain task title',
+        description: 'Plain description',
+        expectedTitle: 'Plain task title',
+        expectedDescription: 'Plain description',
+      },
+    ])('$scenario', async ({ title, description, expectedTitle, expectedDescription }) => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      const result = await createTask({ ...baseDraft, title, description });
+
+      expect(result.title).toBe(expectedTitle);
+      expect(result.description).toBe(expectedDescription);
+    });
   });
 
   describe('updateTask', () => {
