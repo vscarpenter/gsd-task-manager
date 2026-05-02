@@ -115,9 +115,9 @@ describe('Database - Additional Coverage', () => {
       expect(db2).toBe(db3);
     });
 
-    it('returns a Dexie instance with version 13', () => {
+    it('returns a Dexie instance with version 14', () => {
       const instance = getDb();
-      expect(instance.verno).toBe(13);
+      expect(instance.verno).toBe(14);
     });
   });
 
