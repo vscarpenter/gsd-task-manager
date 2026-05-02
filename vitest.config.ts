@@ -33,7 +33,6 @@ export default defineConfig({
         "**/*.config.ts",
         "**/types.ts",
         "**/index.ts",          // re-export barrels (no logic)
-        "lib/sync/engine.ts",   // re-export barrel
         "lib/sync/config.ts",   // re-export barrel
         "lib/tasks/crud.ts",    // re-export barrel
         "components/ui/**",     // shadcn/ui wrappers (third-party abstractions)

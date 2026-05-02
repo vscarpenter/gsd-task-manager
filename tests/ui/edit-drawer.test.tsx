@@ -23,6 +23,21 @@ const mockTask: TaskRecord = {
 } as TaskRecord;
 
 describe("<EditDrawer>", () => {
+<<<<<<< Updated upstream
+||||||| Stash base
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
+  });
+=======
+  let user: ReturnType<typeof userEvent.setup>;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
+    user = userEvent.setup();
+  });
+>>>>>>> Stashed changes
   afterEach(() => {
     // Defensive: ensure any per-test fake timers are cleared so they don't bleed
     // into userEvent-based tests, which hang under fake timers.
@@ -36,11 +51,11 @@ describe("<EditDrawer>", () => {
     const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
     expect(titleInput.value).toBe("Original title");
 
-    await userEvent.clear(titleInput);
+    await user.clear(titleInput);
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
 
-    await userEvent.type(titleInput, "Updated title");
-    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await user.type(titleInput, "Updated title");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Updated title" }),
@@ -51,15 +66,15 @@ describe("<EditDrawer>", () => {
   it("Esc closes the drawer", async () => {
     const onClose = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={onClose} onSubmit={vi.fn()} />);
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
   });
 
   it("quadrant picker switches urgent/important flags", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
-    await userEvent.click(screen.getByRole("button", { name: /^schedule$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await user.click(screen.getByRole("button", { name: /^schedule$/i }));
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ urgent: false, important: true }),
       "t1"
@@ -69,8 +84,8 @@ describe("<EditDrawer>", () => {
   it("submits dueDate as a full ISO datetime string, not a date-only string", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
-    await userEvent.click(screen.getByRole("button", { name: /^today$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await user.click(screen.getByRole("button", { name: /^today$/i }));
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const [draft] = onSubmit.mock.calls[0] as [{ dueDate?: string }];
@@ -119,8 +134,8 @@ describe("<EditDrawer>", () => {
       const onSubmit = vi.fn();
       render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={onSubmit} />);
       const titleInput = screen.getByLabelText(/title/i);
-      await userEvent.type(titleInput, "Brand new task");
-      await userEvent.click(screen.getByRole("button", { name: /create task/i }));
+      await user.type(titleInput, "Brand new task");
+      await user.click(screen.getByRole("button", { name: /create task/i }));
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ title: "Brand new task" }),
         undefined

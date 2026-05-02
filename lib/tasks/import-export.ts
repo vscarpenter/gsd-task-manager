@@ -10,6 +10,10 @@ const MAX_IMPORT_TASKS = 10_000;
 /** Maximum raw JSON string size (10 MB) to prevent memory exhaustion */
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
 
+function getUtf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}
+
 /**
  * Export all tasks as a structured payload
  */
@@ -142,8 +146,9 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
  * Import tasks from JSON string with merge or replace mode
  */
 export async function importFromJson(raw: string, mode: "replace" | "merge" = "replace"): Promise<void> {
-  if (raw.length > MAX_IMPORT_SIZE_BYTES) {
-    throw new Error(`Import file is too large (${(raw.length / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_IMPORT_SIZE_BYTES / 1024 / 1024} MB.`);
+  const importSizeBytes = getUtf8ByteLength(raw);
+  if (importSizeBytes > MAX_IMPORT_SIZE_BYTES) {
+    throw new Error(`Import file is too large (${(importSizeBytes / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_IMPORT_SIZE_BYTES / 1024 / 1024} MB.`);
   }
 
   try {

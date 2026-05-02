@@ -41,13 +41,16 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   const [override, setOverride] = useState<RedesignQuadrantKey | null>(null);
   const internalRef = useRef<HTMLInputElement | null>(null);
 
-  // Stable refs so the keydown handler never needs to re-register on every keystroke.
+  // Stable refs so the global keydown handler does not re-register on every keystroke.
   const textRef = useRef(text);
-  textRef.current = text;
   const overrideRef = useRef(override);
-  overrideRef.current = override;
   const onMoreOptionsRef = useRef(onMoreOptions);
-  onMoreOptionsRef.current = onMoreOptions;
+
+  useEffect(() => {
+    textRef.current = text;
+    overrideRef.current = override;
+    onMoreOptionsRef.current = onMoreOptions;
+  }, [text, override, onMoreOptions]);
 
   useEffect(() => {
     if (externalRef) externalRef.current = internalRef.current;

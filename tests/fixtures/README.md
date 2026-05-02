@@ -214,7 +214,7 @@ await expectToReject(
 ```typescript
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createMockTask, createMockSyncConfig, mockDateNow } from '@/tests/fixtures';
-import { syncTask } from '@/lib/sync/engine';
+import { fullSync } from '@/lib/sync/pb-sync-engine';
 
 describe('syncTask', () => {
   let dateMock: ReturnType<typeof mockDateNow>;

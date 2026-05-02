@@ -62,6 +62,39 @@ export interface LogMetadata {
   operation?: string;
 }
 
+const SENSITIVE_QUERY_PARAMS_PATTERN = /token=[^&\s]+|authorization=[^&\s]+|api[_-]?key=[^&\s]+/gi;
+const BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi;
+
+function maskSensitiveString(value: string): string {
+  return value
+    .replace(SENSITIVE_QUERY_PARAMS_PATTERN, (match) => {
+      if (match.toLowerCase().startsWith('authorization=')) {
+        return 'authorization=***';
+      }
+      if (match.toLowerCase().startsWith('token=')) {
+        return 'token=***';
+      }
+      return 'apikey=***';
+    })
+    .replace(BEARER_TOKEN_PATTERN, 'Bearer ***');
+}
+
+function sanitizeValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return maskSensitiveString(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(sanitizeValue);
+  }
+
+  if (value && Object.prototype.toString.call(value) === '[object Object]') {
+    return sanitizeMetadata(value as LogMetadata);
+  }
+
+  return value;
+}
+
 /**
  * Get minimum log level based on environment
  */
@@ -96,10 +129,7 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
 
   // Sanitize URLs with tokens
   if (sanitized.url && typeof sanitized.url === 'string') {
-    sanitized.url = sanitized.url
-      .replace(/token=[^&]+/gi, 'token=***')
-      .replace(/authorization=[^&]+/gi, 'authorization=***')
-      .replace(/api[_-]?key=[^&]+/gi, 'apikey=***');
+    sanitized.url = maskSensitiveString(sanitized.url);
   }
 
   // Remove sensitive fields (case-insensitive match on key substrings)
@@ -111,6 +141,8 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
     const lower = key.toLowerCase();
     if (sensitivePatterns.some(pattern => lower.includes(pattern))) {
       sanitized[key] = '***';
+    } else {
+      sanitized[key] = sanitizeValue(sanitized[key]);
     }
   }
 

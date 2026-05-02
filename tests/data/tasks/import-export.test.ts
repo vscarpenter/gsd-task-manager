@@ -339,6 +339,14 @@ describe('Task Import/Export Operations', () => {
       );
     });
 
+    it('should enforce the import size limit using UTF-8 bytes', async () => {
+      const multibyteJson = '€'.repeat(3_500_000);
+
+      await expect(importFromJson(multibyteJson, 'replace')).rejects.toThrow(
+        'Import file is too large'
+      );
+    });
+
     it('should re-throw validation errors from schema', async () => {
       const invalidPayload = JSON.stringify({
         tasks: [{ id: '1' }], // Missing required fields

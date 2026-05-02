@@ -490,6 +490,23 @@ describe("Logger module", () => {
 				"https://api.example.com/tasks?page=1&limit=50",
 			);
 		});
+
+		it("should mask sensitive values in arbitrary string metadata", () => {
+			const logger = createLogger("SYNC_ENGINE", "debug");
+			logger.info("request failed", {
+				detail:
+					"GET https://api.example.com/tasks?token=abc123 with Authorization: Bearer secret-token",
+			});
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			const metadata = logObject.metadata as Record<string, unknown>;
+			expect(metadata.detail).toBe(
+				"GET https://api.example.com/tasks?token=*** with Authorization: Bearer ***",
+			);
+		});
 	});
 
 	describe("error logging", () => {
@@ -542,6 +559,26 @@ describe("Logger module", () => {
 					}),
 				}),
 			);
+		});
+
+		it("should mask secrets embedded in error messages and stacks", () => {
+			const logger = createLogger("SYNC_ENGINE", "debug");
+			const testError = new Error(
+				"Request failed for https://api.example.com?api_key=secret with Bearer abc123",
+			);
+
+			logger.error("sync failed", testError);
+
+			const logObject = consoleErrorSpy.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			const metadata = logObject.metadata as Record<string, unknown>;
+			expect(metadata.errorMessage).toBe(
+				"Request failed for https://api.example.com?apikey=*** with Bearer ***",
+			);
+			expect(metadata.stack).not.toContain("secret");
+			expect(metadata.stack).not.toContain("abc123");
 		});
 
 		it("should preserve custom error type names", () => {

@@ -130,7 +130,6 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 These packages are not self-explanatory from their names alone:
 
-- **`@tanstack/react-form`** — Type-safe, headless form state management. Chosen over `react-hook-form` for superior TypeScript inference and better integration with Zod schemas.
 - **`@tanstack/react-virtual`** — Virtual scrolling for large task lists; only renders visible DOM rows, preventing performance degradation when lists grow into hundreds of tasks.
 - **`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`** — Accessible, headless drag-and-drop primitives. Supports screen readers and full keyboard navigation, unlike most DnD libraries.
 - **`recharts`** — Lightweight, composable chart library used for dashboard analytics (completion trends, quadrant distribution). Chosen for small bundle size and React-native API.

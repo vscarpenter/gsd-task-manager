@@ -49,6 +49,8 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
+  // The drawer owns draft state while open, then rehydrates from the selected task.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
     if (task) {
@@ -69,6 +71,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
     setTagInput("");
     setTimeout(() => titleRef.current?.focus(), 50);
   }, [open, task, initialDraft]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!open) return;

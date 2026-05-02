@@ -15,7 +15,6 @@ import {
   type ShowCompletedEventDetail,
   readShowCompleted,
 } from "@/lib/preferences/show-completed";
-import type { RedesignQuadrantKey } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
 import { AppShell } from "./app-shell";
@@ -128,7 +127,7 @@ export function MatrixSimplified() {
     [showToast]
   );
 
-  const handleAddInQuadrant = useCallback((_key: RedesignQuadrantKey) => {
+  const handleAddInQuadrant = useCallback(() => {
     captureInputRef.current?.focus();
   }, []);
 
