@@ -23,13 +23,6 @@ const mockTask: TaskRecord = {
 } as TaskRecord;
 
 describe("<EditDrawer>", () => {
-<<<<<<< Updated upstream
-||||||| Stash base
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
-  });
-=======
   let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
@@ -37,7 +30,6 @@ describe("<EditDrawer>", () => {
     vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
     user = userEvent.setup();
   });
->>>>>>> Stashed changes
   afterEach(() => {
     // Defensive: ensure any per-test fake timers are cleared so they don't bleed
     // into userEvent-based tests, which hang under fake timers.
