@@ -167,6 +167,58 @@ describe('Task CRUD Operations', () => {
 
       await expect(createTask(invalid)).rejects.toThrow();
     });
+
+    it('should extract URLs from title into description', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      const result = await createTask({
+        ...baseDraft,
+        title: 'Read https://example.com/article later',
+        description: '',
+      });
+
+      expect(result.title).toBe('Read later');
+      expect(result.description).toBe('https://example.com/article');
+    });
+
+    it('should append extracted URLs to existing description', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      const result = await createTask({
+        ...baseDraft,
+        title: 'Watch https://example.com/video',
+        description: 'Existing notes',
+      });
+
+      expect(result.title).toBe('Watch');
+      expect(result.description).toBe('Existing notes\nhttps://example.com/video');
+    });
+
+    it('should fall back to placeholder title when title is URL-only', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      const result = await createTask({
+        ...baseDraft,
+        title: 'https://example.com',
+        description: '',
+      });
+
+      expect(result.title).toBe('Review link below');
+      expect(result.description).toBe('https://example.com/');
+    });
+
+    it('should leave title unchanged when no URLs are present', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      const result = await createTask({
+        ...baseDraft,
+        title: 'Plain task title',
+        description: 'Plain description',
+      });
+
+      expect(result.title).toBe('Plain task title');
+      expect(result.description).toBe('Plain description');
+    });
   });
 
   describe('updateTask', () => {

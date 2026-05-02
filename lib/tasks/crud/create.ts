@@ -1,3 +1,4 @@
+import { buildDescription, extractUrlsFromTitle } from "@/lib/capture-parser";
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
@@ -10,10 +11,22 @@ import { enqueueSyncOperation, getSyncContext } from "./helpers";
 const logger = createLogger("TASK_CRUD");
 
 /**
- * Create a new task with validation and sync support
+ * Create a new task with validation and sync support.
+ *
+ * URL extraction runs unconditionally so every task-creation path (capture-bar,
+ * edit-drawer, WebMCP, future callers) gets the same XSS-safe link handling.
+ * Idempotent: callers that already extracted URLs pass a clean title and the
+ * second pass is a no-op.
  */
 export async function createTask(input: TaskDraft): Promise<TaskRecord> {
-  const result = taskDraftSchema.safeParse(input);
+  const { cleanTitle, urls } = extractUrlsFromTitle(input.title);
+  const normalized: TaskDraft = {
+    ...input,
+    title: cleanTitle,
+    description: buildDescription(input.description ?? "", urls),
+  };
+
+  const result = taskDraftSchema.safeParse(normalized);
   if (!result.success) {
     const msg = result.error.issues.map(i => i.message).join(", ");
     logger.error("Task validation failed", undefined, { input, validationErrors: msg });
