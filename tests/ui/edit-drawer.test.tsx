@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -23,11 +23,9 @@ const mockTask: TaskRecord = {
 } as TaskRecord;
 
 describe("<EditDrawer>", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
-  });
   afterEach(() => {
+    // Defensive: ensure any per-test fake timers are cleared so they don't bleed
+    // into userEvent-based tests, which hang under fake timers.
     vi.useRealTimers();
   });
 
@@ -82,6 +80,11 @@ describe("<EditDrawer>", () => {
   });
 
   it("pre-selects 'today' preset when task has a full ISO dueDate for today", () => {
+    // Pin the system date so the "today" classification matches the task's dueDate.
+    // Scoped to this test only because fake timers break userEvent in the others.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-27T12:00:00Z"));
+
     const taskDueToday: TaskRecord = {
       ...mockTask,
       dueDate: "2026-04-27T14:00:00.000Z",
