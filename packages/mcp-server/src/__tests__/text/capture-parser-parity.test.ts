@@ -99,8 +99,19 @@ describe('capture-parser parity: behavior', () => {
 
 /**
  * Extracts the body of a top-level named function declaration from TS source.
- * Handles single-line and multi-line bodies. Whitespace inside the body is
- * collapsed to single spaces for comparison.
+ * Whitespace inside the body is collapsed to single spaces for comparison.
+ *
+ * Assumptions (violating either silently produces wrong output):
+ *  1. Return type is a named alias (e.g. `: ExtractedUrls`), not an inline object
+ *     literal (`: { foo: string }`). Inline literals contain `{` which the signature
+ *     regex would match instead of the function body's opening brace.
+ *  2. The function body contains no string/regex literal with unbalanced `{` or `}`
+ *     (e.g. `/\d{1,3}/`). The brace counter is naive and would miscount.
+ *
+ * Today's three protected functions (sanitizeTitleUrl, extractUrlsFromTitle,
+ * buildDescription) satisfy both. The constants block — which contains
+ * `TITLE_URL_PATTERN`'s `[ ... {} ... ]` characters — lives at module scope
+ * and is never scanned by this helper.
  */
 function extractFunctionBody(source: string, name: string): string {
   // Match `export function name(...)` or `function name(...)` followed by an opening brace.
@@ -125,9 +136,34 @@ function extractFunctionBody(source: string, name: string): string {
   return source.slice(start, i - 1).replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Extracts the module-level constants block from TS source — from the line
+ * containing `const FALLBACK_TITLE_FOR_URL_ONLY` through the end of the line
+ * containing `const ALLOWED_PROTOCOLS`. Whitespace is collapsed for comparison.
+ *
+ * Throws if either anchor is not found, so drift in constant names surfaces
+ * immediately rather than silently passing an empty comparison.
+ */
+function extractConstantsBlock(source: string): string {
+  const startAnchor = 'const FALLBACK_TITLE_FOR_URL_ONLY';
+  const endAnchor = 'const ALLOWED_PROTOCOLS';
+  const start = source.indexOf(startAnchor);
+  if (start === -1) throw new Error(`Anchor not found: ${startAnchor}`);
+  const endLineStart = source.indexOf(endAnchor, start);
+  if (endLineStart === -1) throw new Error(`Anchor not found: ${endAnchor}`);
+  // include the rest of that line up to the next newline
+  const endLineEnd = source.indexOf('\n', endLineStart);
+  const block = source.slice(start, endLineEnd === -1 ? source.length : endLineEnd);
+  return block.replace(/\s+/g, ' ').trim();
+}
+
 describe('capture-parser parity: source text', () => {
   const canonical = readFileSync(CANONICAL_PATH, 'utf8');
   const mirror = readFileSync(MIRROR_PATH, 'utf8');
+
+  it('constants block matches canonical', () => {
+    expect(extractConstantsBlock(mirror)).toBe(extractConstantsBlock(canonical));
+  });
 
   it('extractUrlsFromTitle body matches canonical', () => {
     expect(extractFunctionBody(mirror, 'extractUrlsFromTitle')).toBe(
