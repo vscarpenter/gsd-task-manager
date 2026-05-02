@@ -19,6 +19,7 @@ import {
   getAffectedByDeletion,
   formatDependencyError,
 } from '../dependencies.js';
+import { extractUrlsFromTitle, buildDescription } from '../text/capture-parser.js';
 
 /**
  * Create task result with dry-run information
@@ -38,6 +39,12 @@ export async function createTask(
 ): Promise<CreateTaskResult> {
   const warnings: string[] = [];
   const allTasks = input.dependencies?.length ? await listTasks(config) : [];
+
+  // Mirror the webapp capture flow: pull http(s) URLs out of the title and
+  // append them to the description. See lib/capture-parser.ts (canonical) and
+  // packages/mcp-server/src/text/capture-parser.ts (vendored mirror).
+  const { cleanTitle, urls } = extractUrlsFromTitle(input.title);
+  const mergedDescription = buildDescription(input.description ?? '', urls);
 
   // Validate dependencies if provided
   if (input.dependencies && input.dependencies.length > 0) {
@@ -72,8 +79,8 @@ export async function createTask(
 
   const newTask: Task = {
     id: taskId,
-    title: input.title,
-    description: input.description || '',
+    title: cleanTitle,
+    description: mergedDescription,
     urgent: input.urgent,
     important: input.important,
     quadrant,
