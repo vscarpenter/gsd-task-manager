@@ -1,6 +1,6 @@
 "use client";
 
-import { TagIcon, LockIcon, LinkIcon } from "lucide-react";
+import { LockIcon, LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskTimer } from "@/components/task-timer";
 import type { TaskRecord } from "@/lib/types";
@@ -30,15 +30,15 @@ export function TaskCardMetadata({
 }: TaskCardMetadataProps) {
   return (
     <>
-      {/* Tags */}
+      {/* Tags — neutral chips, leading dot, no hashtag glyph (implied) */}
       {task.tags.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {task.tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+              className="inline-flex items-center gap-1 rounded-full border border-border-muted bg-background-muted px-2 py-0.5 text-xs font-medium text-foreground-muted"
             >
-              <TagIcon className="h-2.5 w-2.5" />
+              <span className="h-[5px] w-[5px] rounded-full bg-current" aria-hidden />
               {tag}
             </span>
           ))}

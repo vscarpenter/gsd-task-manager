@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   PaletteIcon,
   BellIcon,
@@ -52,8 +53,12 @@ interface SettingsSidebarProps {
  * vertical bar and tinted pill. Collapses into a horizontal scroller on mobile.
  */
 export function SettingsSidebar({ activeId, onSelect, visibleSections }: SettingsSidebarProps) {
-  const sections = SETTINGS_SECTIONS.filter((s) => visibleSections.includes(s.id));
-  const groups = groupByGroup(sections);
+  const visibleSectionSet = useMemo(() => new Set(visibleSections), [visibleSections]);
+  const sections = useMemo(
+    () => SETTINGS_SECTIONS.filter((s) => visibleSectionSet.has(s.id)),
+    [visibleSectionSet]
+  );
+  const groups = useMemo(() => groupByGroup(sections), [sections]);
 
   return (
     <>

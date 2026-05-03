@@ -149,14 +149,18 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       {text.trim() ? (
         <>
           <button
+            key={effectiveKey}
             type="button"
             onClick={cycleQuadrant}
             title="Tab to cycle quadrant"
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"
-            style={{ backgroundColor: `${accent}1a`, color: accent }}
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in"
+            style={{ backgroundColor: `${accent}33`, color: accent }}
           >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
-            {meta.rdShort}
+            <span
+              className="h-[5px] w-[5px] rounded-full bg-current"
+              aria-hidden
+            />
+            {meta.title}
             {override ? <span className="ml-1 font-normal normal-case opacity-60">·fixed</span> : null}
           </button>
           {onMoreOptions ? (
@@ -185,11 +189,12 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       )}
       <button
         type="submit"
-        disabled={!parsed.title}
+        aria-disabled={!parsed.title}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold",
-          "bg-foreground text-background hover:bg-foreground/90",
-          "disabled:cursor-not-allowed disabled:opacity-40"
+          "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-colors duration-[120ms]",
+          parsed.title
+            ? "bg-accent text-white hover:bg-accent-hover"
+            : "bg-accent/15 text-accent hover:bg-accent/20"
         )}
       >
         Add

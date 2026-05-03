@@ -92,7 +92,11 @@ export function ArchiveSettings({
 	return (
 		<>
 			{/* Auto-Archive Toggle */}
-			<SettingsRow label="Auto-archive" description="Archive old completed tasks">
+			<SettingsRow
+				label="Auto-archive"
+				description="Archive old completed tasks"
+				state={settings.enabled}
+			>
 				<Switch
 					checked={settings.enabled}
 					onCheckedChange={handleToggleEnabled}

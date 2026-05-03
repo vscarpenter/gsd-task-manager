@@ -175,5 +175,24 @@ describe("<MatrixSimplified>", () => {
         expect(screen.getByText("Done bravo")).toBeInTheDocument(),
       );
     });
+
+    it("opens the create drawer pre-set to a quadrant when its empty-state pill is clicked (polish v0.9.2 — item 3)", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [];
+      render(<MatrixSimplified />);
+
+      // The drawer header is "New task" — only present once it opens.
+      expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument();
+
+      // Target the visible-text empty-state pill (not the icon-only header "+").
+      await user.click(screen.getByText("Add to Do First"));
+
+      const heading = await screen.findByRole("heading", { name: /new task/i });
+      expect(heading).toBeInTheDocument();
+
+      // Pre-selected quadrant button should be Do First (urgent + important).
+      const doFirstQuadrant = screen.getByRole("button", { name: /^do first$/i, pressed: true });
+      expect(doFirstQuadrant).toBeInTheDocument();
+    });
   });
 });

@@ -19,6 +19,7 @@ import { createLogger } from "@/lib/logger";
 import {
   SHOW_COMPLETED_EVENT,
   SHOW_COMPLETED_KEY,
+  readShowCompleted,
 } from "@/lib/preferences/show-completed";
 
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
@@ -83,10 +84,7 @@ export function SettingsPage() {
         setNotificationSettings(notif);
         setSyncEnabled(sync.enabled);
         setPendingSync(sync.pendingCount);
-        setShowCompleted(
-          typeof window !== "undefined" &&
-            localStorage.getItem(SHOW_COMPLETED_KEY) === "true",
-        );
+        setShowCompleted(readShowCompleted());
         setDataLoaded(true);
       } catch (error) {
         logger.error(
@@ -201,11 +199,25 @@ export function SettingsPage() {
     }
   }, [activeSection, visibleSectionIds]);
 
-  const activeMeta =
-    SETTINGS_SECTIONS.find((s) => s.id === activeSection) ?? SETTINGS_SECTIONS[0];
-  const activeTaskCount = tasks.filter((t) => !t.completed).length;
-  const completedTaskCount = tasks.filter((t) => t.completed).length;
-  const estimatedKb = (JSON.stringify(tasks).length / 1024).toFixed(1);
+  const activeMeta = useMemo(
+    () => SETTINGS_SECTIONS.find((s) => s.id === activeSection) ?? SETTINGS_SECTIONS[0],
+    [activeSection]
+  );
+  const { activeTaskCount, completedTaskCount, estimatedKb } = useMemo(() => {
+    let activeCount = 0;
+    let completedCount = 0;
+
+    for (const task of tasks) {
+      if (task.completed) completedCount += 1;
+      else activeCount += 1;
+    }
+
+    return {
+      activeTaskCount: activeCount,
+      completedTaskCount: completedCount,
+      estimatedKb: (JSON.stringify(tasks).length / 1024).toFixed(1),
+    };
+  }, [tasks]);
 
   return (
     <TooltipProvider delayDuration={300}>

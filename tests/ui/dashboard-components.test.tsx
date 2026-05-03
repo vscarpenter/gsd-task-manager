@@ -76,28 +76,25 @@ describe('Dashboard Components', () => {
       expect(screen.getByText('No Icon')).toBeInTheDocument();
     });
 
-    it('should render with subtitle', () => {
-      render(<StatsCard value={5} title="Active" subtitle="23 total" />);
+    it('should render footer meta string when provided', () => {
+      render(<StatsCard value={5} title="Active" footerMeta="20 / 7d" />);
 
-      expect(screen.getByText('23 total')).toBeInTheDocument();
+      expect(screen.getByText('20 / 7d')).toBeInTheDocument();
     });
 
-    it('should apply fallback accent when no accentColor provided', () => {
-      const { container } = render(<StatsCard value={5} title="Default Accent" />);
+    it('should render insight pill when provided', () => {
+      render(<StatsCard value={5} title="Completed" insight="Holding steady" />);
 
-      // Should render without errors (fallback accent classes applied)
-      expect(container.querySelector('div')).toBeInTheDocument();
+      expect(screen.getByText('Holding steady')).toBeInTheDocument();
     });
 
-    it('should apply each accent color variant', () => {
-      const colors = ['blue', 'emerald', 'amber', 'red'] as const;
-      for (const color of colors) {
-        const { unmount } = render(
-          <StatsCard value={1} title={`Color ${color}`} accentColor={color} />
-        );
-        expect(screen.getByText(`Color ${color}`)).toBeInTheDocument();
-        unmount();
-      }
+    it('should render an inline sparkline when series has 2+ points', () => {
+      const { container } = render(
+        <StatsCard value={5} title="Trend" series={[1, 2, 3, 4, 5]} />
+      );
+
+      // Sparkline is an SVG polyline; presence is enough to verify the wiring.
+      expect(container.querySelector('svg polyline')).toBeInTheDocument();
     });
   });
 

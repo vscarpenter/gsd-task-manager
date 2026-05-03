@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { TagStatistic } from "@/lib/analytics";
 
 interface TagAnalyticsProps {
@@ -25,8 +26,14 @@ const BAR_COLORS = [
  * Replaces the previous table layout with a more visual, dashboard-friendly design.
  */
 export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
-  const displayTags = tagStats.slice(0, maxTags);
-  const maxCount = Math.max(...displayTags.map((t) => t.count), 1);
+  const { displayTags, maxCount } = useMemo(() => {
+    const nextDisplayTags = tagStats.slice(0, maxTags);
+    let nextMaxCount = 1;
+    for (const tag of nextDisplayTags) {
+      if (tag.count > nextMaxCount) nextMaxCount = tag.count;
+    }
+    return { displayTags: nextDisplayTags, maxCount: nextMaxCount };
+  }, [maxTags, tagStats]);
 
   if (displayTags.length === 0) {
     return (

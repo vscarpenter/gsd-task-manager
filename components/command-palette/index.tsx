@@ -5,7 +5,7 @@ import { useCommandPalette } from "@/lib/use-command-palette";
 import { buildCommandActions, type CommandActionHandlers } from "@/lib/command-actions";
 import { getSmartViews } from "@/lib/smart-views";
 import { useTasks } from "@/lib/use-tasks";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { SmartView } from "@/lib/filters";
 import { CommandGroup } from "./command-group";
 import { TaskItem } from "./task-item";
@@ -38,8 +38,10 @@ export function CommandPalette({ handlers, conditions }: CommandPaletteProps) {
     loadViews();
   }, []);
 
-  // Build command actions
-  const actions = buildCommandActions(handlers, smartViews, conditions);
+  const actions = useMemo(
+    () => buildCommandActions(handlers, smartViews, conditions),
+    [conditions, handlers, smartViews]
+  );
 
   const {
     open,
@@ -53,15 +55,19 @@ export function CommandPalette({ handlers, conditions }: CommandPaletteProps) {
   } = useCommandPalette({ actions, tasks });
 
   // Group actions by section
-  const actionsBySection = filteredActions.reduce(
-    (acc, action) => {
-      if (!acc[action.section]) {
-        acc[action.section] = [];
-      }
-      acc[action.section].push(action);
-      return acc;
-    },
-    {} as Record<string, typeof filteredActions>
+  const actionsBySection = useMemo(
+    () =>
+      filteredActions.reduce(
+        (acc, action) => {
+          if (!acc[action.section]) {
+            acc[action.section] = [];
+          }
+          acc[action.section].push(action);
+          return acc;
+        },
+        {} as Record<string, typeof filteredActions>
+      ),
+    [filteredActions]
   );
 
   return (

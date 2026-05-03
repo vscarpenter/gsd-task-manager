@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, TrashIcon, type LucideIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey } from "@/lib/quadrants";
@@ -21,13 +22,6 @@ const HEADER_CLASS: Record<RedesignQuadrantKey, string> = {
   q2: "quadrant-header-q2",
   q3: "quadrant-header-q3",
   q4: "quadrant-header-q4",
-};
-
-const EMPTY_ICON: Record<RedesignQuadrantKey, LucideIcon> = {
-  q1: FlameIcon,
-  q2: CalendarIcon,
-  q3: UsersIcon,
-  q4: TrashIcon,
 };
 
 export type QuadrantPosition = "tl" | "tr" | "bl" | "br";
@@ -65,8 +59,11 @@ export function QuadrantPane({
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
-  const taskIds = tasks.map((t) => t.id);
-
+  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+  const activeTaskCount = useMemo(
+    () => tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0),
+    [tasks]
+  );
   return (
     <section
       ref={setNodeRef}
@@ -94,7 +91,7 @@ export function QuadrantPane({
         </span>
         <span className="text-[12.5px] text-foreground-muted">{meta.rdHint}</span>
         <span className="ml-auto rounded bg-background-muted px-1.5 text-[11px] font-medium tabular-nums text-foreground-muted">
-          {tasks.filter((t) => !t.completed).length}
+          {activeTaskCount}
         </span>
         <button
           type="button"
@@ -109,11 +106,25 @@ export function QuadrantPane({
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
           {tasks.length === 0 ? (
-            <div className="my-auto flex flex-col items-center gap-2 py-4">
-              {(() => { const Icon = EMPTY_ICON[meta.rdKey]; return <Icon className="h-5 w-5 text-foreground-muted/30" aria-hidden />; })()}
-              <p className="rd-serif text-center text-sm text-foreground-muted">
-                {meta.rdEmpty}
+            <div className="my-auto flex flex-col items-center gap-1.5 py-4 text-center">
+              <p
+                className="rd-serif text-[18px] leading-tight text-foreground"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                {meta.rdEmptyHeadline}
               </p>
+              <p className="max-w-[26ch] text-caption text-foreground-muted">
+                {meta.rdEmptySupporting}
+              </p>
+              <button
+                type="button"
+                onClick={() => onAddInQuadrant(meta.rdKey)}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40"
+                style={{ borderColor: accent, color: accent }}
+              >
+                <PlusIcon className="h-3 w-3" aria-hidden />
+                Add to {meta.title}
+              </button>
             </div>
           ) : (
             tasks.map((task) => (

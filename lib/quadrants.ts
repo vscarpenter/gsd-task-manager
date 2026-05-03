@@ -39,6 +39,10 @@ export interface QuadrantMeta {
   rdHint: string; // "Crises, deadlines. Handle now."
   rdIcon: RedesignIconKey;
   rdEmpty: string;
+  /** Editorial serif headline shown in the empty quadrant pane. */
+  rdEmptyHeadline: string;
+  /** Body copy under the headline in the empty quadrant pane. */
+  rdEmptySupporting: string;
   urgent: boolean;
   important: boolean;
 }
@@ -63,6 +67,8 @@ export const quadrants: QuadrantMeta[] = [
     rdHint: "Crises, deadlines. Handle now.",
     rdIcon: "flame",
     rdEmpty: "Clear. Nothing urgent demanding you right now.",
+    rdEmptyHeadline: "Nothing on fire.",
+    rdEmptySupporting: "Stay sharp.",
     urgent: true,
     important: true,
   },
@@ -85,6 +91,8 @@ export const quadrants: QuadrantMeta[] = [
     rdHint: "Strategy, growth. Protect time.",
     rdIcon: "calendar",
     rdEmpty: "Plan something meaningful. This is where growth lives.",
+    rdEmptyHeadline: "Plan the week.",
+    rdEmptySupporting: "What's important but not on fire? Block time before it becomes urgent.",
     urgent: false,
     important: true,
   },
@@ -107,6 +115,8 @@ export const quadrants: QuadrantMeta[] = [
     rdHint: "Interruptions. Hand these off.",
     rdIcon: "users",
     rdEmpty: "Nothing to hand off.",
+    rdEmptyHeadline: "Hand it off.",
+    rdEmptySupporting: "Save your attention for the matrix. Route interruptions elsewhere.",
     urgent: true,
     important: false,
   },
@@ -129,6 +139,8 @@ export const quadrants: QuadrantMeta[] = [
     rdHint: "Noise. Stop doing these.",
     rdIcon: "trash",
     rdEmpty: "No noise to clear. Good.",
+    rdEmptyHeadline: "No noise to clear.",
+    rdEmptySupporting: "Good.",
     urgent: false,
     important: false,
   }

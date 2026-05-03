@@ -7,6 +7,7 @@ import { QuadrantPane } from "./quadrant-pane";
 
 interface MatrixGridProps {
   tasks: TaskRecord[];
+  allTasks: TaskRecord[];
   onEdit: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
@@ -15,6 +16,7 @@ interface MatrixGridProps {
 
 export function MatrixGrid({
   tasks,
+  allTasks,
   onEdit,
   onToggleComplete,
   onDelete,
@@ -48,7 +50,7 @@ export function MatrixGrid({
           meta={meta}
           position={POSITIONS[index]}
           tasks={grouped[meta.rdKey]}
-          allTasks={tasks}
+          allTasks={allTasks}
           onEdit={onEdit}
           onToggleComplete={onToggleComplete}
           onDelete={onDelete}

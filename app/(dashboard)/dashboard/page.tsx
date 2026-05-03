@@ -1,7 +1,7 @@
 "use client";
 
 import type { Route } from "next";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2Icon,
@@ -57,15 +57,39 @@ export default function DashboardPage() {
     [tasks],
   );
   const timeByQuadrant = useMemo(() => getTimeByQuadrant(tasks), [tasks]);
-  const todayTrend = last7TrendData.at(-1)?.completed ?? 0;
-  const previousSixDays = last7TrendData.slice(0, -1);
-  const previousSixAverage = previousSixDays.length > 0
-    ? previousSixDays.reduce((sum, point) => sum + point.completed, 0) / previousSixDays.length
-    : 0;
-  const completedTrend = previousSixAverage > 0
-    ? Math.round(((todayTrend - previousSixAverage) / previousSixAverage) * 100)
-    : todayTrend > 0 ? 100 : 0;
-  const completionPeak = Math.max(1, ...last7TrendData.map((point) => point.completed));
+  const completedSeries = useMemo(
+    () => last7TrendData.map((p) => p.completed),
+    [last7TrendData],
+  );
+  const createdSeries = useMemo(
+    () => last7TrendData.map((p) => p.created),
+    [last7TrendData],
+  );
+  const completionRateSeries = useMemo(
+    () =>
+      last7TrendData.map((p) => {
+        const denom = p.created || 1;
+        return Math.round((p.completed / denom) * 100);
+      }),
+    [last7TrendData],
+  );
+  const { completedTrend, previousSixAverage } = useMemo(() => {
+    const todayTrend = last7TrendData.at(-1)?.completed ?? 0;
+    let previousTotal = 0;
+    for (let i = 0; i < last7TrendData.length - 1; i += 1) {
+      previousTotal += last7TrendData[i].completed;
+    }
+    const previousCount = Math.max(0, last7TrendData.length - 1);
+    const nextPreviousSixAverage =
+      previousCount > 0 ? previousTotal / previousCount : 0;
+    const nextCompletedTrend = nextPreviousSixAverage > 0
+      ? Math.round(((todayTrend - nextPreviousSixAverage) / nextPreviousSixAverage) * 100)
+      : todayTrend > 0 ? 100 : 0;
+    return {
+      completedTrend: nextCompletedTrend,
+      previousSixAverage: nextPreviousSixAverage,
+    };
+  }, [last7TrendData]);
   const completedInsight = metrics.completedToday === 0
     ? "Ready to start today"
     : completedTrend > 10
@@ -87,11 +111,29 @@ export default function DashboardPage() {
       ? "Healthy momentum"
       : "Room to tighten execution";
 
-  const openMatrixAction = (params?: URLSearchParams) => {
+  const openMatrixAction = useCallback((params?: URLSearchParams) => {
     const query = params?.toString();
     const href = query ? (`/?${query}` as Route) : ROUTES.HOME;
     router.push(href);
-  };
+  }, [router]);
+
+  const handleDeadlineTaskClick = useCallback(
+    (task: { id: string }) => {
+      const params = new URLSearchParams();
+      params.set("highlight", task.id);
+      openMatrixAction(params);
+    },
+    [openMatrixAction]
+  );
+
+  const trendOptions = useMemo(
+    () => [
+      { value: "7", label: "7 Days" },
+      { value: "30", label: "30 Days" },
+      { value: "90", label: "90 Days" },
+    ],
+    []
+  );
 
   useKeyboardShortcuts(
     {
@@ -149,33 +191,27 @@ export default function DashboardPage() {
                   <StatsCard
                     title="Completed Today"
                     value={metrics.completedToday}
-                    subtitle={`${metrics.completedThisWeek} this week`}
                     icon={CheckCircle2Icon}
                     trend={previousSixAverage > 0 ? { value: completedTrend, isPositive: completedTrend >= 0 } : undefined}
                     insight={completedInsight}
-                    progressValue={Math.round((metrics.completedToday / completionPeak) * 100)}
-                    progressLabel="Vs. recent best day"
-                    accentColor="emerald"
+                    footerMeta={`${metrics.completedThisWeek} / 7d`}
+                    series={completedSeries}
                   />
                   <StatsCard
                     title="Active Tasks"
                     value={metrics.activeTasks}
-                    subtitle={`${metrics.totalTasks} total tasks`}
                     icon={ListTodoIcon}
                     insight={activeInsight}
-                    progressValue={plannedActiveShare}
-                    progressLabel="Have a due date"
-                    accentColor="blue"
+                    footerMeta={`${plannedActiveShare}% scheduled`}
+                    series={createdSeries}
                   />
                   <StatsCard
                     title="Completion Rate"
                     value={`${metrics.completionRate}%`}
-                    subtitle={`${metrics.completedTasks} completed`}
                     icon={TrendingUpIcon}
                     insight={completionInsight}
-                    progressValue={metrics.completionRate}
-                    progressLabel="Done overall"
-                    accentColor="amber"
+                    footerMeta={`${metrics.completedTasks} done overall`}
+                    series={completionRateSeries}
                   />
                   <StreakIndicator streakData={streakData} />
                 </div>
@@ -202,11 +238,7 @@ export default function DashboardPage() {
                   <div className="space-y-4 lg:col-span-2">
                     <div className="flex items-center">
                       <SegmentedControl
-                        options={[
-                          { value: "7", label: "7 Days" },
-                          { value: "30", label: "30 Days" },
-                          { value: "90", label: "90 Days" },
-                        ]}
+                        options={trendOptions}
                         value={String(trendPeriod) as "7" | "30" | "90"}
                         onChange={(v) =>
                           setTrendPeriod(Number(v) as 7 | 30 | 90)
@@ -223,11 +255,7 @@ export default function DashboardPage() {
                 <div className="grid gap-6 lg:grid-cols-2">
                   <UpcomingDeadlines
                     tasks={tasks}
-                    onTaskClick={(task) => {
-                      const params = new URLSearchParams();
-                      params.set("highlight", task.id);
-                      openMatrixAction(params);
-                    }}
+                    onTaskClick={handleDeadlineTaskClick}
                   />
                   {metrics.tagStats.length > 0 ? (
                     <TagAnalytics tagStats={metrics.tagStats} maxTags={8} />

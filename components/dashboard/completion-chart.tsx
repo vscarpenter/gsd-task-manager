@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -17,8 +17,10 @@ interface CompletionChartProps {
 }
 
 /**
- * Area chart showing task completion and creation trends.
- * Uses theme-aware colors via CSS variable-derived values.
+ * Line chart showing task completion vs creation. Encoding:
+ *   Completed → solid green (status-success), strokeWidth 2
+ *   Created   → dotted indigo (accent), strokeWidth 1.6
+ * No fills — keeps the comparison legible at small sizes.
  */
 export function CompletionChart({ data }: CompletionChartProps) {
   const chartData = useMemo(() => {
@@ -41,24 +43,22 @@ export function CompletionChart({ data }: CompletionChartProps) {
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background-muted/70 px-3 py-1.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--accent))]" />
+          <span className="h-[2px] w-3 rounded-full bg-status-success" />
           <span className="text-xs font-medium text-foreground-muted">Completed</span>
-          <div className="ml-2 h-2.5 w-2.5 rounded-full bg-[rgb(var(--chart-series-2))]" />
+          <span
+            className="ml-2 h-[2px] w-3 rounded-full bg-accent"
+            style={{
+              backgroundImage: "linear-gradient(to right, currentColor 50%, transparent 50%)",
+              backgroundSize: "4px 2px",
+              backgroundColor: "transparent",
+              color: "rgb(var(--accent))",
+            }}
+          />
           <span className="text-xs font-medium text-foreground-muted">Created</span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={280}>
-        <AreaChart data={chartData}>
-          <defs>
-            <linearGradient id="gradientCompleted" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgb(var(--accent))" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="rgb(var(--accent))" stopOpacity={0.02} />
-            </linearGradient>
-            <linearGradient id="gradientCreated" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgb(var(--chart-series-2))" stopOpacity={0.22} />
-              <stop offset="95%" stopColor="rgb(var(--chart-series-2))" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
+        <LineChart data={chartData}>
           <CartesianGrid
             strokeDasharray="3 3"
             stroke="currentColor"
@@ -92,25 +92,24 @@ export function CompletionChart({ data }: CompletionChartProps) {
             }}
             cursor={{ stroke: "rgb(var(--foreground-muted))", strokeOpacity: 0.3 }}
           />
-          <Area
+          <Line
             type="monotone"
             dataKey="Completed"
-            stroke="rgb(var(--accent))"
+            stroke="rgb(var(--status-success))"
             strokeWidth={2}
-            fill="url(#gradientCompleted)"
+            dot={false}
+            activeDot={{ r: 5, fill: "rgb(var(--status-success))", stroke: "#fff", strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="Created"
+            stroke="rgb(var(--accent))"
+            strokeWidth={1.6}
+            strokeDasharray="3 3"
             dot={false}
             activeDot={{ r: 5, fill: "rgb(var(--accent))", stroke: "#fff", strokeWidth: 2 }}
           />
-          <Area
-            type="monotone"
-            dataKey="Created"
-            stroke="rgb(var(--chart-series-2))"
-            strokeWidth={2}
-            fill="url(#gradientCreated)"
-            dot={false}
-            activeDot={{ r: 5, fill: "rgb(var(--chart-series-2))", stroke: "#fff", strokeWidth: 2 }}
-          />
-        </AreaChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

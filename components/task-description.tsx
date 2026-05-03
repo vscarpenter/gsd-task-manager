@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { getDescriptionSegments } from "@/lib/task-links";
 import { cn } from "@/lib/utils";
 
@@ -7,7 +8,7 @@ interface TaskDescriptionProps {
 }
 
 export function TaskDescription({ description, className }: TaskDescriptionProps) {
-  const segments = getDescriptionSegments(description);
+  const segments = useMemo(() => getDescriptionSegments(description), [description]);
 
   return (
     <span className={cn("break-words", className)}>

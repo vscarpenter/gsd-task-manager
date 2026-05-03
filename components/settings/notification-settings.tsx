@@ -41,7 +41,11 @@ export function NotificationSettingsSection({
 	return (
 		<>
 			{/* Enable Notifications Row */}
-			<SettingsRow label="Push notifications" description="Get reminded about tasks">
+			<SettingsRow
+				label="Push notifications"
+				description="Get reminded about tasks"
+				state={settings.enabled}
+			>
 				<Switch
 					checked={settings.enabled}
 					onCheckedChange={onNotificationToggle}

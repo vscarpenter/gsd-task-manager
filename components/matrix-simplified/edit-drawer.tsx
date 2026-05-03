@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { XIcon, CheckIcon } from "lucide-react";
+import { XIcon, CheckIcon, CalendarIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
 import { resolveDuePreset, DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
@@ -39,6 +39,26 @@ function classifyExistingDate(iso: string | undefined): DuePreset {
   return "none";
 }
 
+/**
+ * If an existing iso date doesn't fall into a preset bucket but is set,
+ * surface it as a custom date string ("YYYY-MM-DD"). Otherwise undefined.
+ */
+function classifyExistingCustomDate(iso: string | undefined): string | undefined {
+  if (!iso) return undefined;
+  const dateOnly = iso.slice(0, 10);
+  if (classifyExistingDate(iso) !== "none") return undefined;
+  return dateOnly;
+}
+
+function formatChipDate(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
 export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: EditDrawerProps) {
   const titleRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
@@ -46,6 +66,8 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const [urgent, setUrgent] = useState(false);
   const [important, setImportant] = useState(false);
   const [duePreset, setDuePreset] = useState<DuePreset>("none");
+  const [customDate, setCustomDate] = useState<string | undefined>(undefined);
+  const [showCustomDateInput, setShowCustomDateInput] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
@@ -59,6 +81,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
       setUrgent(task.urgent);
       setImportant(task.important);
       setDuePreset(classifyExistingDate(task.dueDate));
+      setCustomDate(classifyExistingCustomDate(task.dueDate));
       setTags(task.tags ?? []);
     } else {
       setTitle(initialDraft?.title ?? "");
@@ -66,8 +89,10 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
       setUrgent(initialDraft?.urgent ?? false);
       setImportant(initialDraft?.important ?? false);
       setDuePreset("none");
+      setCustomDate(undefined);
       setTags(initialDraft?.tags ?? []);
     }
+    setShowCustomDateInput(false);
     setTagInput("");
     setTimeout(() => titleRef.current?.focus(), 50);
   }, [open, task, initialDraft]);
@@ -91,7 +116,8 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
     if (!title.trim()) return;
-    const rawDate = resolveDuePreset(duePreset);
+    // Custom date wins over preset when set.
+    const rawDate = customDate ?? resolveDuePreset(duePreset);
     // Convert date-only "YYYY-MM-DD" to full ISO datetime required by taskDraftSchema
     const dueDate = rawDate ? new Date(`${rawDate}T00:00:00`).toISOString() : undefined;
     void onSubmit(
@@ -198,23 +224,73 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
           </Field>
 
           <Field label="Due date">
-            <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
-              {DUE_PRESETS.map((p) => (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
+                {DUE_PRESETS.map((p) => {
+                  const isActive = !customDate && duePreset === p.value;
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => {
+                        setDuePreset(p.value);
+                        setCustomDate(undefined);
+                        setShowCustomDateInput(false);
+                      }}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-foreground-muted hover:text-foreground"
+                      )}
+                      aria-pressed={isActive}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {customDate ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-2.5 py-1 text-[12px] font-medium text-foreground">
+                  <CalendarIcon className="h-3 w-3" aria-hidden />
+                  {formatChipDate(customDate)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomDate(undefined);
+                      setShowCustomDateInput(false);
+                    }}
+                    aria-label="Clear custom date"
+                    className="ml-0.5 text-foreground-muted hover:text-foreground"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              ) : showCustomDateInput ? (
+                <input
+                  type="date"
+                  autoFocus
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setCustomDate(e.target.value);
+                      setShowCustomDateInput(false);
+                    }
+                  }}
+                  onBlur={() => setShowCustomDateInput(false)}
+                  className="rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted"
+                  aria-label="Pick a custom due date"
+                />
+              ) : (
                 <button
-                  key={p.value}
                   type="button"
-                  onClick={() => setDuePreset(p.value)}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all duration-200",
-                    duePreset === p.value
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-foreground-muted hover:text-foreground"
-                  )}
-                  aria-pressed={duePreset === p.value}
+                  onClick={() => setShowCustomDateInput(true)}
+                  className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-[12.5px] font-medium text-foreground-muted transition-colors hover:border-foreground-muted/50 hover:text-foreground"
                 >
-                  {p.label}
+                  <CalendarIcon className="h-3 w-3" aria-hidden />
+                  Pick a date…
                 </button>
-              ))}
+              )}
             </div>
           </Field>
 

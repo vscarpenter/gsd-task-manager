@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { AlertCircleIcon, CalendarIcon, ClockIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants } from "@/lib/quadrants";
@@ -11,31 +12,43 @@ interface UpcomingDeadlinesProps {
   onTaskClick?: (task: TaskRecord) => void;
 }
 
+const QUADRANT_BY_ID = new Map(quadrants.map((quadrant) => [quadrant.id, quadrant]));
+
 /**
  * Widget showing tasks due soon, grouped by urgency.
  * Uses theme-aware colors for proper dark mode support.
  */
 export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps) {
-  const now = new Date();
-
-  const overdueTasks = tasks.filter(
-    (t) => !t.completed && t.dueDate && isOverdue(t.dueDate),
-  );
-  const dueTodayTasks = tasks.filter(
-    (t) => !t.completed && t.dueDate && isDueToday(t.dueDate),
-  );
-  const dueThisWeekTasks = tasks.filter((t) => {
-    if (!t.dueDate || t.completed) return false;
-    const dueDate = new Date(t.dueDate);
+  const { overdueTasks, dueTodayTasks, dueThisWeekTasks, hasDeadlines } = useMemo(() => {
+    const now = new Date();
     const weekFromNow = new Date(now);
     weekFromNow.setDate(weekFromNow.getDate() + 7);
-    return dueDate > now && dueDate <= weekFromNow && !isDueToday(t.dueDate);
-  });
 
-  const hasDeadlines =
-    overdueTasks.length > 0 ||
-    dueTodayTasks.length > 0 ||
-    dueThisWeekTasks.length > 0;
+    const overdue: TaskRecord[] = [];
+    const today: TaskRecord[] = [];
+    const thisWeek: TaskRecord[] = [];
+
+    for (const task of tasks) {
+      if (task.completed || !task.dueDate) continue;
+      if (isOverdue(task.dueDate)) {
+        overdue.push(task);
+      } else if (isDueToday(task.dueDate)) {
+        today.push(task);
+      } else {
+        const dueDate = new Date(task.dueDate);
+        if (dueDate > now && dueDate <= weekFromNow) {
+          thisWeek.push(task);
+        }
+      }
+    }
+
+    return {
+      overdueTasks: overdue,
+      dueTodayTasks: today,
+      dueThisWeekTasks: thisWeek,
+      hasDeadlines: overdue.length > 0 || today.length > 0 || thisWeek.length > 0,
+    };
+  }, [tasks]);
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -123,7 +136,7 @@ function DeadlineSection({
       </div>
       <ul className="space-y-1.5">
         {tasks.slice(0, 5).map((task) => {
-          const quadrant = quadrants.find((q) => q.id === task.quadrant);
+          const quadrant = QUADRANT_BY_ID.get(task.quadrant);
           return (
             <li key={task.id}>
               <button

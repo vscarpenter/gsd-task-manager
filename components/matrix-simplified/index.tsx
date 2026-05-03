@@ -17,6 +17,7 @@ import {
   readShowCompleted,
 } from "@/lib/preferences/show-completed";
 import type { TaskRecord } from "@/lib/types";
+import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { TaskCard } from "@/components/task-card";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
@@ -29,9 +30,9 @@ function isEditable(el: Element | null): boolean {
   return t === "INPUT" || t === "TEXTAREA" || el.isContentEditable;
 }
 
-function filterTasks(tasks: TaskRecord[], query: string): TaskRecord[] {
-  if (!query.trim()) return tasks;
-  const q = query.trim().toLowerCase();
+function filterTasks(tasks: TaskRecord[], trimmedQuery: string): TaskRecord[] {
+  if (!trimmedQuery) return tasks;
+  const q = trimmedQuery.toLowerCase();
   return tasks.filter((t) => {
     const hay = [
       t.title,
@@ -99,16 +100,32 @@ export function MatrixSimplified() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const visibleTasks = useMemo(() => {
-    const base = showCompleted ? all : all.filter((t) => !t.completed);
-    return filterTasks(base, searchQuery);
-  }, [all, searchQuery, showCompleted]);
-  const total = all.length;
-  const completed = all.filter((t) => t.completed).length;
-  const overdue = all.filter((t) => {
-    if (t.completed || !t.dueDate) return false;
-    return t.dueDate < new Date().toISOString().slice(0, 10);
-  }).length;
+  const trimmedSearchQuery = searchQuery.trim();
+  const { visibleTasks, total, completed, overdue } = useMemo(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    let completedCount = 0;
+    let overdueCount = 0;
+    const activeTasks: TaskRecord[] = [];
+
+    for (const task of all) {
+      if (task.completed) {
+        completedCount += 1;
+      } else {
+        activeTasks.push(task);
+        if (task.dueDate && task.dueDate < todayIso) {
+          overdueCount += 1;
+        }
+      }
+    }
+
+    const base = showCompleted ? all : activeTasks;
+    return {
+      visibleTasks: filterTasks(base, trimmedSearchQuery),
+      total: all.length,
+      completed: completedCount,
+      overdue: overdueCount,
+    };
+  }, [all, showCompleted, trimmedSearchQuery]);
 
   const handleCapture = useCallback(
     async ({ title, urgent, important, tags }: CapturePayload) => {
@@ -129,8 +146,15 @@ export function MatrixSimplified() {
     [showToast]
   );
 
-  const handleAddInQuadrant = useCallback(() => {
-    captureInputRef.current?.focus();
+  const handleAddInQuadrant = useCallback((key: RedesignQuadrantKey) => {
+    const meta = quadrantByRdKey(key);
+    setCreateInitial({
+      title: "",
+      urgent: meta.urgent,
+      important: meta.important,
+      tags: [],
+    });
+    setCreateDrawerOpen(true);
   }, []);
 
   const handleToggle = useCallback(
@@ -207,24 +231,30 @@ export function MatrixSimplified() {
     [showToast]
   );
 
-  const activeDragTask = activeId ? all.find((t) => t.id === activeId) ?? null : null;
+  const activeDragTask = useMemo(
+    () => (activeId ? all.find((t) => t.id === activeId) ?? null : null),
+    [activeId, all]
+  );
 
-  const caption = (
-    <>
-      <span>
-        <strong className="font-semibold text-foreground">{total - completed}</strong> active
-      </span>
-      <span className="text-foreground-muted/60">·</span>
-      <span>
-        <strong className="font-semibold text-foreground">{completed}</strong> done
-      </span>
-      {overdue > 0 ? (
-        <>
-          <span className="text-foreground-muted/60">·</span>
-          <span className="text-status-overdue">{overdue} overdue</span>
-        </>
-      ) : null}
-    </>
+  const caption = useMemo(
+    () => (
+      <>
+        <span>
+          <strong className="font-semibold text-foreground">{total - completed}</strong> active
+        </span>
+        <span className="text-foreground-muted/60">·</span>
+        <span>
+          <strong className="font-semibold text-foreground">{completed}</strong> done
+        </span>
+        {overdue > 0 ? (
+          <>
+            <span className="text-foreground-muted/60">·</span>
+            <span className="text-status-overdue">{overdue} overdue</span>
+          </>
+        ) : null}
+      </>
+    ),
+    [completed, overdue, total]
   );
 
   return (
@@ -241,6 +271,7 @@ export function MatrixSimplified() {
         </div>
         <MatrixGrid
           tasks={visibleTasks}
+          allTasks={all}
           onEdit={handleEditOpen}
           onToggleComplete={handleToggle}
           onDelete={handleDelete}
