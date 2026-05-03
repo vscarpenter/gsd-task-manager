@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/vinnycarpenter/Projects/gsd-taskmanager/.claude/hooks/block-sensitive-files.sh"
+            "command": "bash .claude/hooks/block-sensitive-files.sh"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/vinnycarpenter/Projects/gsd-taskmanager/.claude/hooks/lint-on-edit.sh"
+            "command": "bash .claude/hooks/lint-on-edit.sh"
           }
         ]
       }
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /Users/vinnycarpenter/Projects/gsd-taskmanager && bun typecheck 2>&1 | tail -10",
+            "command": "bun typecheck 2>&1 | tail -10",
             "timeout": 60,
             "statusMessage": "Type-check verification gate..."
           }
