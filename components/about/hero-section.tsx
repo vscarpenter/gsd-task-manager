@@ -56,20 +56,22 @@ export function HeroSection() {
             </a>
           </div>
 
-          {/* Trust signals */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-foreground-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <Lock size={16} />
-              No account required
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Monitor size={16} />
-              Works offline
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Code2 size={16} />
-              MIT open source
-            </span>
+          {/* Trust signals — hairline divider above frames the row visually */}
+          <div className="mx-auto mt-12 max-w-2xl border-t border-border-muted pt-6">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-caption text-foreground-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <Lock size={16} strokeWidth={1.75} aria-hidden />
+                No account required
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Monitor size={16} strokeWidth={1.75} aria-hidden />
+                Works offline
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Code2 size={16} strokeWidth={1.75} aria-hidden />
+                MIT open source
+              </span>
+            </div>
           </div>
         </ScrollReveal>
       </div>

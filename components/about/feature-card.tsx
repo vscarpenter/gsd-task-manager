@@ -15,7 +15,9 @@ export function FeatureCard({ icon: Icon, title, description, className }: Featu
       "hover:border-foreground/10 hover:bg-background-muted/35",
       className
     )}>
-      <Icon className="mb-4 h-5 w-5 text-accent" aria-hidden="true" />
+      <div className="mb-4 grid h-9 w-9 place-items-center rounded-lg bg-accent/10">
+        <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
+      </div>
       <h3 className="rd-serif mb-2 text-xl tracking-tight text-foreground">
         {title}
       </h3>

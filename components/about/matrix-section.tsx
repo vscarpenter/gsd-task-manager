@@ -38,7 +38,7 @@ export function MatrixSection() {
               <p className="text-xs uppercase tracking-widest text-accent mb-3">
                 The Eisenhower Matrix
               </p>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-6">
+              <h2 className="rd-serif font-normal text-display tracking-tight text-foreground mb-6">
                 Prioritize by urgency and importance. Not just vibes.
               </h2>
               <div className="text-foreground-muted leading-relaxed space-y-4">
@@ -70,10 +70,10 @@ export function MatrixSection() {
                     <span className="text-[10px] uppercase tracking-widest text-foreground-muted font-medium">
                       {q.label}
                     </span>
-                    <h3 className="text-sm sm:text-base font-semibold text-foreground mt-1">
+                    <h3 className="rd-serif text-base text-foreground mt-1">
                       {q.name}
                     </h3>
-                    <p className="text-xs text-foreground-muted mt-1">
+                    <p className="text-caption text-foreground-muted mt-0.5">
                       {q.description}
                     </p>
                   </div>

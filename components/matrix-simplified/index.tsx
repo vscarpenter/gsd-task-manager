@@ -236,21 +236,22 @@ export function MatrixSimplified() {
     [activeId, all]
   );
 
+  // Header counts — three small inline pills, semantic colors. Overdue
+  // pill is conditional on count > 0. Sits on the same baseline as the title
+  // (the topbar wraps the caption slot in a flex row).
   const caption = useMemo(
     () => (
       <>
-        <span>
-          <strong className="font-semibold text-foreground">{total - completed}</strong> active
+        <span className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground">
+          {total - completed} active
         </span>
-        <span className="text-foreground-muted/60">·</span>
-        <span>
-          <strong className="font-semibold text-foreground">{completed}</strong> done
+        <span className="inline-flex items-center rounded-full bg-status-success-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-success">
+          {completed} done
         </span>
         {overdue > 0 ? (
-          <>
-            <span className="text-foreground-muted/60">·</span>
-            <span className="text-status-overdue">{overdue} overdue</span>
-          </>
+          <span className="inline-flex items-center rounded-full bg-status-overdue-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-overdue">
+            {overdue} overdue
+          </span>
         ) : null}
       </>
     ),

@@ -79,7 +79,7 @@ export function QuadrantPane({
     >
       <header
         className={cn(
-          "-mx-5 -mt-5 mb-4 flex items-center gap-2.5 border-b border-border-muted px-5 py-3",
+          "-mx-5 -mt-5 mb-4 flex items-baseline gap-1 border-b border-border-muted px-5 py-3",
           HEADER_CLASS[meta.rdKey]
         )}
       >
@@ -89,7 +89,7 @@ export function QuadrantPane({
         >
           {meta.title}
         </span>
-        <span className="text-[12.5px] text-foreground-muted">{meta.rdHint}</span>
+        <span className="ml-1 text-caption text-foreground-muted">{meta.rdHint}</span>
         <span className="ml-auto rounded bg-background-muted px-1.5 text-[11px] font-medium tabular-nums text-foreground-muted">
           {activeTaskCount}
         </span>

@@ -1,11 +1,20 @@
 "use client";
 
-import { PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, Share2Icon, CopyIcon, MoreHorizontalIcon } from "lucide-react";
-import { formatRelative } from "@/lib/utils";
+import { PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon } from "lucide-react";
+import { cn, formatRelative } from "@/lib/utils";
+import { TIME_MS } from "@/lib/constants";
 import { SnoozeDropdown } from "@/components/snooze-dropdown";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { TaskRecord } from "@/lib/types";
+
+/** True when a future due date is within 24h. Used to color-shift the clock glyph. */
+function isWithinDay(iso: string): boolean {
+  const due = new Date(iso).getTime();
+  const now = Date.now();
+  const diff = due - now;
+  return diff > 0 && diff < TIME_MS.DAY;
+}
 
 export interface TaskCardActionsProps {
   task: TaskRecord;
@@ -37,7 +46,15 @@ export function TaskCardActions({
             Due today
           </span>
         ) : task.dueDate && !taskIsOverdue ? (
-          <span className="truncate">{formatRelative(task.dueDate)}</span>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 truncate",
+              isWithinDay(task.dueDate) && "text-status-overdue"
+            )}
+          >
+            <ClockIcon className="h-3 w-3 shrink-0" aria-hidden />
+            {formatRelative(task.dueDate)}
+          </span>
         ) : null}
         {task.recurrence !== "none" ? (
           <span

@@ -6,6 +6,7 @@ import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
 import { resolveDuePreset, DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import { cn } from "@/lib/utils";
+import { DrawerHint } from "@/components/ui/drawer-hint";
 
 export interface EditDraft {
   title: string;
@@ -173,16 +174,15 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
         </header>
 
         <div className="flex flex-1 flex-col gap-5 overflow-auto px-5 py-5">
-          <Field label="Title">
-            <input
-              ref={titleRef}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs doing?"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-[15px] font-medium text-foreground outline-none focus:border-foreground-muted"
-              aria-label="Title"
-            />
-          </Field>
+          {/* Title — placeholder carries affordance, the uppercase label is dropped */}
+          <input
+            ref={titleRef}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="What needs doing?"
+            className="w-full rounded-lg border border-border bg-background px-3 py-3 text-[18px] font-medium text-foreground outline-none focus:border-foreground-muted placeholder:font-normal"
+            aria-label="Title"
+          />
 
           <Field label="Description">
             <textarea
@@ -333,9 +333,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
         </div>
 
         <footer className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5">
-          <span className="text-[12px] text-foreground-muted">
-            <kbd>Esc</kbd> to cancel
-          </span>
+          <DrawerHint />
           <div className="flex-1" />
           <button
             type="button"
