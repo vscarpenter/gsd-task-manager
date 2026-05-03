@@ -4,7 +4,13 @@
 # This script publishes both functions and attaches them to the distribution
 # (viewer-request and viewer-response respectively).
 
-set -e  # Exit on error
+set -euo pipefail
+
+# Disable the AWS CLI pager so this is safe to run in CI / non-tty contexts.
+export AWS_PAGER=""
+# CloudFront's control plane lives in us-east-1; pin it so a developer with a
+# different default region doesn't get confusing errors.
+export AWS_REGION="${AWS_REGION:-us-east-1}"
 
 # Get the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,6 +26,35 @@ REQUEST_FUNCTION_COMMENT="URL rewrite + Accept: text/markdown negotiation for Ne
 RESPONSE_FUNCTION_NAME="gsd-response-headers"
 RESPONSE_FUNCTION_FILE="$PROJECT_ROOT/cloudfront-function-response-headers.cjs"
 RESPONSE_FUNCTION_COMMENT="Agent discovery: Link headers + Vary: Accept + markdown content-type"
+
+# Preflight: fail fast on missing tools / source files BEFORE we touch AWS.
+for cmd in aws jq node; do
+  command -v "$cmd" >/dev/null 2>&1 || {
+    echo "❌ Required tool not found on PATH: $cmd" >&2
+    exit 1
+  }
+done
+
+for f in "$REQUEST_FUNCTION_FILE" "$RESPONSE_FUNCTION_FILE"; do
+  [[ -f "$f" ]] || {
+    echo "❌ CloudFront Function source missing: $f" >&2
+    exit 1
+  }
+done
+
+# Syntax-check both function files. CloudFront Functions run on a V8-based
+# runtime; if `node --check` fails locally it will fail at the edge too — and
+# a broken viewer-request function takes down the whole distribution.
+echo "🔍 Validating function syntax..."
+node --check "$REQUEST_FUNCTION_FILE"
+node --check "$RESPONSE_FUNCTION_FILE"
+echo "✅ Syntax OK"
+
+# Use a private temp dir with a registered cleanup trap. Avoids /tmp symlink
+# attacks and guarantees the (sensitive) distribution config doesn't linger
+# on disk if the script aborts mid-run.
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
 
 publish_function() {
   local name="$1"
@@ -76,9 +111,9 @@ echo "  viewer-response: $RESPONSE_FUNCTION_ARN"
 # Step 2: Get the distribution config
 echo ""
 echo "📋 Getting CloudFront distribution config..."
-aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID" > /tmp/dist-config.json
-DIST_ETAG=$(jq -r '.ETag' /tmp/dist-config.json)
-jq '.DistributionConfig' /tmp/dist-config.json > /tmp/dist-config-only.json
+aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID" > "$TMPDIR/dist-config.json"
+DIST_ETAG=$(jq -r '.ETag' "$TMPDIR/dist-config.json")
+jq '.DistributionConfig' "$TMPDIR/dist-config.json" > "$TMPDIR/dist-config-only.json"
 
 # Step 3: Attach both functions to DefaultCacheBehavior
 echo ""
@@ -88,12 +123,12 @@ jq --arg req "$REQUEST_FUNCTION_ARN" --arg res "$RESPONSE_FUNCTION_ARN" \
    .DefaultCacheBehavior.FunctionAssociations.Items = [
      { "FunctionARN": $req, "EventType": "viewer-request" },
      { "FunctionARN": $res, "EventType": "viewer-response" }
-   ]' /tmp/dist-config-only.json > /tmp/dist-config-updated.json
+   ]' "$TMPDIR/dist-config-only.json" > "$TMPDIR/dist-config-updated.json"
 
 aws cloudfront update-distribution \
   --id "$DISTRIBUTION_ID" \
   --if-match "$DIST_ETAG" \
-  --distribution-config file:///tmp/dist-config-updated.json > /dev/null
+  --distribution-config "file://$TMPDIR/dist-config-updated.json" > /dev/null
 
 echo "✅ Distribution updated"
 
@@ -106,9 +141,6 @@ INVALIDATION_ID=$(aws cloudfront create-invalidation \
   --query 'Invalidation.Id' \
   --output text)
 echo "✅ Cache invalidation created: $INVALIDATION_ID"
-
-# Cleanup
-rm -f /tmp/dist-config.json /tmp/dist-config-only.json /tmp/dist-config-updated.json
 
 echo ""
 echo "🎉 Deployment complete!"
