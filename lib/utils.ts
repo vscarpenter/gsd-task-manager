@@ -67,6 +67,20 @@ export function isOverdue(value?: string): boolean {
 }
 
 /**
+ * How many whole days a due date is overdue. Returns 0 for today or future dates.
+ * Used by the task-card overdue caption (e.g. "2D OVERDUE").
+ */
+export function daysOverdue(value?: string): number {
+  if (!value) return 0;
+  const due = new Date(value);
+  const now = new Date();
+  due.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  const diff = now.getTime() - due.getTime();
+  return diff > 0 ? Math.floor(diff / TIME_MS.DAY) : 0;
+}
+
+/**
  * Check if a date is due today
  */
 export function isDueToday(value?: string): boolean {

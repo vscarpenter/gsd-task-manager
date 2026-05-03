@@ -52,6 +52,7 @@ export function AppearanceSettings({
 			<SettingsRow
 				label="Show completed"
 				description="Display finished tasks in the matrix"
+				state={showCompleted}
 			>
 				<Switch
 					checked={showCompleted}

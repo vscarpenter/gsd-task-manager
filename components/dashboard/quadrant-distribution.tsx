@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useMemo } from "react";
 import type { QuadrantId } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
 
@@ -16,104 +16,84 @@ const SHORT_LABELS: Record<QuadrantId, string> = {
 };
 
 /**
- * Donut chart showing task distribution across Eisenhower quadrants.
- * Displays the total task count in the center of the donut.
+ * Active task split across the matrix, rendered as a single horizontal
+ * segmented bar. Saves vertical space and reinforces quadrant identity by
+ * placing labels and colors on the same visual axis.
  */
 export function QuadrantDistribution({ distribution }: QuadrantDistributionProps) {
-  const data = quadrants
-    .map((quadrant) => ({
-      name: quadrant.title,
-      shortName: SHORT_LABELS[quadrant.id],
-      value: distribution[quadrant.id],
-      id: quadrant.id,
-    }))
-    .filter((item) => item.value > 0);
+  const { segments, total } = useMemo(() => {
+    const items = quadrants
+      .map((quadrant) => ({
+        name: quadrant.title,
+        shortName: SHORT_LABELS[quadrant.id],
+        value: distribution[quadrant.id],
+        id: quadrant.id,
+        color: QUADRANT_ACCENT_BY_ID[quadrant.id],
+      }))
+      .filter((item) => item.value > 0);
 
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-
-  if (data.length === 0) {
-    return (
-      <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
-        <h3 className="rd-serif text-title text-foreground">
-          Quadrant Distribution
-        </h3>
-        <p className="mt-1 text-sm text-foreground-muted">
-          Active work split across the matrix.
-        </p>
-        <div className="flex h-[280px] items-center justify-center">
-          <p className="text-sm text-foreground-muted">No active tasks to display</p>
-        </div>
-      </div>
-    );
-  }
+    return {
+      segments: items,
+      total: items.reduce((sum, item) => sum + item.value, 0),
+    };
+  }, [distribution]);
 
   return (
     <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
-      <h3 className="rd-serif text-title text-foreground">
-        Quadrant Distribution
-      </h3>
-      <p className="mt-1 text-sm text-foreground-muted">
-        Active work split across the matrix.
-      </p>
-      <div className="relative">
-        <ResponsiveContainer width="100%" height={240}>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={65}
-              outerRadius={95}
-              paddingAngle={3}
-              dataKey="value"
-              strokeWidth={0}
-            >
-              {data.map((entry) => (
-                <Cell
-                  key={`cell-${entry.id}`}
-                  fill={QUADRANT_ACCENT_BY_ID[entry.id as QuadrantId]}
-                  className="transition-opacity hover:opacity-85"
+      <div className="flex items-baseline justify-between gap-3">
+        <div>
+          <h3 className="rd-serif text-title text-foreground">
+            Quadrant Distribution
+          </h3>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Active work split across the matrix.
+          </p>
+        </div>
+        <p className="text-sm tabular-nums text-foreground-muted">
+          <span className="font-semibold text-foreground">{total}</span> active
+        </p>
+      </div>
+
+      {segments.length === 0 ? (
+        <div className="mt-6 flex h-[120px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-background-muted/30">
+          <p className="text-sm text-foreground-muted">No active tasks to display</p>
+        </div>
+      ) : (
+        <div className="mt-6 space-y-3">
+          <div className="grid gap-2" style={{ gridTemplateColumns: segments.map((s) => `${s.value}fr`).join(" ") }}>
+            {segments.map((segment) => {
+              const pct = Math.round((segment.value / total) * 100);
+              return (
+                <div key={segment.id} className="min-w-0 text-xs">
+                  <div className="flex items-baseline gap-1.5 truncate">
+                    <span className="font-medium text-foreground">{segment.shortName}</span>
+                    <span className="tabular-nums text-foreground-muted">{segment.value}</span>
+                    <span className="tabular-nums text-foreground-muted/70">·</span>
+                    <span className="tabular-nums text-foreground-muted">{pct}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div
+            className="flex h-3 overflow-hidden rounded-full"
+            role="img"
+            aria-label={`${total} active tasks across ${segments.length} quadrants`}
+          >
+            {segments.map((segment) => {
+              const pct = (segment.value / total) * 100;
+              return (
+                <div
+                  key={segment.id}
+                  className="h-full"
+                  style={{ width: `${pct}%`, backgroundColor: segment.color }}
+                  title={`${segment.name}: ${segment.value} (${Math.round(pct)}%)`}
                 />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "rgb(var(--card-background))",
-                border: "1px solid rgb(var(--border))",
-                borderRadius: "10px",
-                fontSize: "13px",
-                color: "rgb(var(--foreground))",
-                boxShadow: "var(--shadow-card-hover)",
-              }}
-              formatter={(value, name) => [
-                `${value} task${Number(value) !== 1 ? "s" : ""}`,
-                String(name),
-              ]}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-        {/* Center label — total count */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-3xl font-bold tabular-nums text-foreground">{total}</p>
-            <p className="text-xs text-foreground-muted">active</p>
+              );
+            })}
           </div>
         </div>
-      </div>
-      {/* Legend */}
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        {data.map((entry) => (
-          <div key={entry.id} className="flex items-center gap-2 rounded-2xl border border-border/60 bg-background-muted/40 px-3 py-2">
-            <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: QUADRANT_ACCENT_BY_ID[entry.id as QuadrantId] }} />
-            <span className="truncate text-xs font-medium text-foreground-muted">
-              {entry.shortName}
-            </span>
-            <span className="ml-auto text-xs font-semibold tabular-nums text-foreground">
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 }

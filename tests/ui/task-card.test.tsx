@@ -154,7 +154,8 @@ describe("TaskCard", () => {
 
     render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
-    expect(screen.getByText("Overdue")).toBeInTheDocument();
+    // Polished overdue surface: top-right caption like "1D Overdue".
+    expect(screen.getByText(/\dD Overdue/i)).toBeInTheDocument();
   });
 
   it("displays due today alert for today's due date", () => {
@@ -175,14 +176,15 @@ describe("TaskCard", () => {
     expect(repeatIcon).toBeInTheDocument();
   });
 
-  it("applies red border styling for overdue tasks", () => {
+  it("applies overdue border styling for overdue tasks", () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const overdueTask = { ...mockTask, dueDate: yesterday.toISOString() };
     const { container } = render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    expect(article).toHaveClass("overdue-task", "border-l-4");
+    // Polish v0.9.2: 3px left edge in status-overdue, no pink fill.
+    expect(article).toHaveClass("overdue-task", "border-l-status-overdue");
   });
 
   it("does not show overdue warning for completed tasks", () => {

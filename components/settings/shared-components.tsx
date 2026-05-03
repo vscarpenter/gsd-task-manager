@@ -10,13 +10,15 @@ import { ChevronRightIcon } from "lucide-react";
 interface SettingsRowProps {
 	label: string;
 	description?: string;
+	/** Optional toggle state — when provided, appends "· on" / "· off" to the description for skim readers and screen readers. */
+	state?: boolean;
 	children: React.ReactNode;
 }
 
 /**
  * Settings row with label, optional description, and inline content
  */
-export function SettingsRow({ label, description, children }: SettingsRowProps) {
+export function SettingsRow({ label, description, state, children }: SettingsRowProps) {
 	return (
 		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
 			<div className="flex-1 min-w-0">
@@ -24,6 +26,14 @@ export function SettingsRow({ label, description, children }: SettingsRowProps) 
 				{description && (
 					<p className="text-xs text-foreground-muted mt-0.5">
 						{description}
+						{state !== undefined && (
+							<span
+								className={state ? "text-foreground" : "text-foreground-muted"}
+							>
+								{" · "}
+								{state ? "on" : "off"}
+							</span>
+						)}
 					</p>
 				)}
 			</div>

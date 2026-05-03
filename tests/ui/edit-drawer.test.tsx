@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
 import type { TaskRecord } from "@/lib/types";
@@ -137,6 +137,32 @@ describe("<EditDrawer>", () => {
     it("disables Create task button when title is empty", () => {
       render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
       expect(screen.getByRole("button", { name: /create task/i })).toBeDisabled();
+    });
+  });
+
+  describe("custom due date pill (polish v0.9.2 — item 10)", () => {
+    it("renders a 'Pick a date…' affordance after the preset chips", () => {
+      render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      expect(screen.getByRole("button", { name: "Pick a date…" })).toBeInTheDocument();
+    });
+
+    it("submits the custom-picked date as the task's dueDate", async () => {
+      const onSubmit = vi.fn();
+      render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+      await user.type(screen.getByLabelText(/^title$/i), "Pick test");
+      await user.click(screen.getByRole("button", { name: "Pick a date…" }));
+
+      // The native date input is revealed once the pill is clicked.
+      const dateInput = screen.getByLabelText(/pick a custom due date/i);
+      // userEvent.type doesn't drive type=date reliably in jsdom — fireEvent.change
+      // routes the value through React's synthetic event system.
+      fireEvent.change(dateInput, { target: { value: "2026-05-12" } });
+
+      await user.click(screen.getByRole("button", { name: /create task/i }));
+
+      const submitted = onSubmit.mock.calls.at(-1)?.[0];
+      expect(submitted?.dueDate?.slice(0, 10)).toBe("2026-05-12");
     });
   });
 });

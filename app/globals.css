@@ -337,6 +337,21 @@ main {
     animation: slide-in-card 0.3s ease-out both;
   }
 
+  @keyframes quadrant-pill-in {
+    from {
+      opacity: 0;
+      transform: translateX(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-quadrant-pill-in {
+    animation: quadrant-pill-in 0.16s ease-out both;
+  }
+
   @keyframes complete-flash {
     0% {
       box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);

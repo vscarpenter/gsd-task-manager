@@ -268,7 +268,7 @@ describe("TaskCardActions", () => {
     expect(screen.getByRole("button", { name: /duplicate task/i })).toBeInTheDocument();
   });
 
-  it("shows overdue badge", async () => {
+  it("does not render overdue badge in actions row (now hoisted to card root)", async () => {
     const { TaskCardActions } = await import(
       "@/components/task-card/task-card-actions"
     );
@@ -299,7 +299,9 @@ describe("TaskCardActions", () => {
       />
     );
 
-    expect(screen.getByText("Overdue")).toBeInTheDocument();
+    // Polish v0.9.2: the overdue caption now lives on the TaskCard root,
+    // not in the actions footer. Confirm it is gone from this scope.
+    expect(screen.queryByText("Overdue")).not.toBeInTheDocument();
   });
 
   it("shows recurrence icon", async () => {

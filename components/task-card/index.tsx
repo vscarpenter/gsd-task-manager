@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { cn, isOverdue, isDueToday } from "@/lib/utils";
+import { cn, isOverdue, isDueToday, daysOverdue } from "@/lib/utils";
 import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
 import { areTaskCardPropsEqual, type TaskCardProps } from "@/lib/task-card-memo";
 import { TaskCardHeader } from "@/components/task-card/task-card-header";
@@ -29,6 +29,7 @@ function TaskCardComponent({
 }: TaskCardProps) {
   const taskIsOverdue = !task.completed && isOverdue(task.dueDate);
   const taskIsDueToday = !task.completed && isDueToday(task.dueDate);
+  const overdueDays = taskIsOverdue ? daysOverdue(task.dueDate) : 0;
   const completedSubtasks = task.subtasks.filter(st => st.completed).length;
   const totalSubtasks = task.subtasks.length;
 
@@ -58,15 +59,22 @@ function TaskCardComponent({
       }}
       style={style}
       className={cn(
-        "group flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200 animate-slide-in-card",
+        "group relative flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200 animate-slide-in-card",
+        "border-card-border",
         task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
-        taskIsOverdue ? "overdue-task border-l-4 border-status-overdue/30 bg-status-overdue-muted/40" : "border-card-border",
+        taskIsOverdue && "overdue-task border-l-[3px] border-l-status-overdue",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}
     >
+      {taskIsOverdue ? (
+        <span className="pointer-events-none absolute right-2.5 top-2 text-[10px] font-semibold uppercase tracking-wide text-status-overdue">
+          {overdueDays}D Overdue
+        </span>
+      ) : null}
+
       <TaskCardHeader
         task={task}
         selectionMode={selectionMode}

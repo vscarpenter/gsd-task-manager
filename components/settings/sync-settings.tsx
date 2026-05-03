@@ -96,7 +96,11 @@ export function SyncSettings({
 	return (
 		<>
 			{/* Auto-Sync Toggle */}
-			<SettingsRow label="Auto-sync" description="Sync changes in the background">
+			<SettingsRow
+				label="Auto-sync"
+				description="Sync changes in the background"
+				state={autoSyncEnabled}
+			>
 				<Switch
 					checked={autoSyncEnabled}
 					onCheckedChange={handleAutoSyncToggle}

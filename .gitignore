@@ -89,3 +89,5 @@ coverage/
 
 # Design reference bundle — not for deploy
 design_handoff_gsd_redesign/
+design_handoff_gsd_polish/
+.fallow/
