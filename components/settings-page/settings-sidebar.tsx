@@ -94,10 +94,10 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
 
       {/* Desktop: vertical nav card */}
       <aside className="hidden lg:block lg:w-[260px] lg:shrink-0">
-        <div className="sticky top-24 rounded-2xl border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="sticky top-24 flex flex-col gap-3 rounded-2xl border border-border bg-card p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           {groups.map(({ group, items }) => (
-            <div key={group} className="pb-2 last:pb-0">
-              <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted/80">
+            <div key={group}>
+              <p className="px-3 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted/80">
                 {group}
               </p>
               <ul className="space-y-0.5">
