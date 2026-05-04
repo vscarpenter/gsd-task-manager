@@ -46,6 +46,10 @@ vi.mock("@/lib/tasks", () => ({
   deleteTask: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/confetti", () => ({
+  celebrateCompletion: vi.fn(),
+}));
+
 vi.mock("@/lib/use-auto-archive", () => ({
   useAutoArchive: vi.fn(),
 }));
@@ -95,12 +99,40 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
 }));
 
 import { MatrixSimplified } from "@/components/matrix-simplified";
-import { createTask } from "@/lib/tasks";
+import { createTask, toggleCompleted } from "@/lib/tasks";
+import { celebrateCompletion } from "@/lib/confetti";
 
 describe("<MatrixSimplified>", () => {
   beforeEach(() => {
     tasksFixture.current = [];
     localStorage.removeItem("gsd:show-completed");
+    vi.mocked(celebrateCompletion).mockClear();
+    vi.mocked(toggleCompleted).mockClear();
+  });
+
+  describe("completion celebration", () => {
+    it("fires confetti when a task is marked complete", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [makeTask({ id: "a", title: "Active alpha", completed: false })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /mark as complete/i }));
+
+      await waitFor(() => expect(toggleCompleted).toHaveBeenCalledWith("a", true));
+      expect(celebrateCompletion).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not fire confetti when a task is uncompleted", async () => {
+      const user = userEvent.setup();
+      localStorage.setItem("gsd:show-completed", "true");
+      tasksFixture.current = [makeTask({ id: "b", title: "Done bravo", completed: true })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /mark as incomplete/i }));
+
+      await waitFor(() => expect(toggleCompleted).toHaveBeenCalledWith("b", false));
+      expect(celebrateCompletion).not.toHaveBeenCalled();
+    });
   });
 
   it("submitting capture bar calls createTask with parsed payload", async () => {

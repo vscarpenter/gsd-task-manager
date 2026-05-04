@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { createTask, toggleCompleted, updateTask, deleteTask } from "@/lib/tasks";
+import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { useTasks } from "@/lib/use-tasks";
 import { useToast } from "@/components/ui/toast";
@@ -161,6 +162,7 @@ export function MatrixSimplified() {
     async (task: TaskRecord, completedNext: boolean) => {
       try {
         await toggleCompleted(task.id, completedNext);
+        if (completedNext) celebrateCompletion();
       } catch {
         showToast("Failed to update task", undefined, TOAST_DURATION.LONG);
       }
