@@ -1,0 +1,106 @@
+name: Publish MCP Server
+
+on:
+  push:
+    tags:
+      - 'mcp-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (build + pack, no publish)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/mcp-server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node (npm registry)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches package.json version
+        if: github.event_name == 'push'
+        env:
+          TAG_REF: ${{ github.ref_name }}
+        run: |
+          TAG_VERSION="${TAG_REF#mcp-v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Publishing version $PKG_VERSION"
+
+      - name: Install dependencies
+        working-directory: ${{ github.workspace }}
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck (workspace)
+        working-directory: ${{ github.workspace }}
+        run: bun typecheck
+
+      - name: Test
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish to npm
+        if: github.event_name == 'push' || inputs.dry_run == false
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Rewrite package name for GitHub Packages
+        if: github.event_name == 'push' || inputs.dry_run == false
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const owner = process.env.REPO_OWNER.toLowerCase();
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            pkg.name = "@" + owner + "/gsd-mcp-server";
+            pkg.publishConfig = { access: "public", registry: "https://npm.pkg.github.com" };
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          '
+
+      - name: Setup Node (GitHub Packages registry)
+        if: github.event_name == 'push' || inputs.dry_run == false
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Publish to GitHub Packages
+        if: github.event_name == 'push' || inputs.dry_run == false
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dry-run pack (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        run: |
+          npm pack --dry-run
+          echo "Dry run complete — no publish performed"
