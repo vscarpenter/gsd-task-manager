@@ -90,10 +90,8 @@
 		"undici": ">=7.24.0",
 		"flatted": ">=3.4.2",
 		"express-rate-limit": ">=8.2.2",
-		"postcss": ">=8.5.10",
 		"path-to-regexp": ">=8.4.0",
-		"picomatch": ">=4.0.4",
-		"vite": ">=8.0.7"
+		"picomatch": ">=4.0.4"
 	},
 	"license": "MIT"
 }
