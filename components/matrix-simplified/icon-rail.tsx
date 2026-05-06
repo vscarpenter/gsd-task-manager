@@ -38,7 +38,7 @@ export function IconRail({ onHelp }: IconRailProps) {
   return (
     <>
       <aside
-        className="group/rail hidden md:flex md:w-[60px] md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-background md:transition-[width] md:duration-[250ms] md:ease-out md:hover:w-[180px] md:focus-within:w-[180px]"
+        className="group/rail hidden md:flex md:w-[60px] md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-background md:transition-[width] md:duration-[250ms] md:ease-out md:hover:w-[180px] md:hover:[transition-delay:500ms] md:focus-within:w-[180px] md:focus-within:[transition-delay:0s]"
         aria-label="Primary navigation"
       >
         <div className="sticky top-0 flex h-screen flex-col gap-1 px-2 py-3.5">

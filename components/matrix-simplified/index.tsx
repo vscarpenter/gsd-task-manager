@@ -5,6 +5,7 @@ import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { createTask, toggleCompleted, updateTask, deleteTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
+import { parseShareCaptureParams } from "@/lib/share-capture";
 import { useTasks } from "@/lib/use-tasks";
 import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
@@ -74,16 +75,31 @@ export function MatrixSimplified() {
     return () => window.removeEventListener(SHOW_COMPLETED_EVENT, handler);
   }, []);
 
-  // PWA shortcut: ?action=new-task → focus capture bar (not drawer)
+  // URL-driven actions: PWA shortcut focuses the capture bar; bookmarklet
+  // (`?action=capture&title=…&url=…&tags=…`) materializes a task in the
+  // Eliminate quadrant. Both clean their params off the URL afterward.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("action") === "new-task") {
+    const action = params.get("action");
+    if (!action) return;
+
+    if (action === "new-task") {
       setTimeout(() => captureInputRef.current?.focus(), 50);
-      params.delete("action");
-      const next = params.toString();
-      window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
+    } else if (action === "capture") {
+      const draft = parseShareCaptureParams(params);
+      if (draft) {
+        createTask(draft)
+          .then(() => showToast("Task captured", undefined, TOAST_DURATION.SHORT))
+          .catch(() => showToast("Failed to capture task", undefined, TOAST_DURATION.LONG));
+      }
+    } else {
+      return;
     }
-  }, []);
+
+    ["action", "title", "url", "tags"].forEach((k) => params.delete(k));
+    const next = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
+  }, [showToast]);
 
   // Global "/" focuses search; "n" handled by CaptureBar; "?" opens help
   useEffect(() => {
