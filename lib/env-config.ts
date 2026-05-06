@@ -60,9 +60,12 @@ function detectEnvironment(): Environment {
  */
 function resolvePocketBaseUrl(environment: Environment): string {
   if (typeof window === 'undefined') {
+    // SSR/SSG context — this app is client-side only so this path is never
+    // exercised at runtime. Return localhost for dev; empty string otherwise
+    // to avoid leaking data to a hardcoded third-party server.
     return environment === 'development'
       ? 'http://127.0.0.1:8090'
-      : 'https://api.vinny.io';
+      : '';
   }
 
   if (

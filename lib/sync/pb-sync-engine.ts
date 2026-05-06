@@ -40,7 +40,7 @@ export async function applyRemoteChange(
     return;
   }
 
-  const remoteTask = pocketBaseToTaskRecord(record);
+  const remoteTask = pocketBaseToTaskRecord(record, null);
   if (!remoteTask) {
     logger.warn('Realtime change skipped: invalid record', { action });
     return;
@@ -58,8 +58,12 @@ export async function applyRemoteChange(
   // update — LWW
   const localTask = await db.tasks.get(remoteTask.id);
   if (!localTask || new Date(remoteTask.updatedAt).getTime() >= new Date(localTask.updatedAt).getTime()) {
-    await db.tasks.put(remoteTask);
-    logger.debug('Realtime update applied', { taskId: remoteTask.id });
+    // Re-map with existing local task to preserve device-local fields
+    const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
+    if (mergedTask) {
+      await db.tasks.put(mergedTask);
+      logger.debug('Realtime update applied', { taskId: mergedTask.id });
+    }
   }
 }
 

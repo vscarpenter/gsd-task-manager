@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
+import { createLogger } from "@/lib/logger";
 import { importPayloadSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
@@ -14,13 +15,23 @@ function getUtf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
+const logger = createLogger("IMPORT");
+
 /**
  * Export all tasks as a structured payload
  */
 export async function exportTasks(): Promise<ImportPayload> {
   const db = getDb();
   const tasks = await db.tasks.toArray();
-  const normalized = tasks.map((task) => taskRecordSchema.parse(task));
+  const normalized: TaskRecord[] = [];
+  for (const task of tasks) {
+    const result = taskRecordSchema.safeParse(task);
+    if (result.success) {
+      normalized.push(result.data);
+    } else {
+      logger.warn('Skipping corrupt task during export', { taskId: task.id });
+    }
+  }
   return {
     tasks: normalized,
     exportedAt: isoNow(),

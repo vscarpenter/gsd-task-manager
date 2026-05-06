@@ -144,7 +144,8 @@ describe('task-mapper', () => {
   describe('pocketBaseToTaskRecord', () => {
     it('should map snake_case PB fields to camelCase local fields', () => {
       const pb = buildPBRecord();
-      const result = pocketBaseToTaskRecord(pb);
+      const existingLocal = buildLocalTask();
+      const result = pocketBaseToTaskRecord(pb, existingLocal);
 
       expect(result).not.toBeNull();
       expect(result!.id).toBe('task-123');
@@ -179,24 +180,20 @@ describe('task-mapper', () => {
       expect(result!.estimatedMinutes).toBeUndefined();
     });
 
-    it('should preserve notification state from PocketBase records', () => {
-      const result = pocketBaseToTaskRecord(buildPBRecord({
-        notification_sent: true,
-        last_notification_at: '2026-04-08T10:30:00.000Z',
-        snoozed_until: '2026-04-10T12:00:00.000Z',
-      }));
+    it('should preserve device-local notification state from existing local task', () => {
+      const existingLocal = buildLocalTask({
+        notificationSent: true,
+        lastNotificationAt: '2026-04-08T10:30:00.000Z',
+        snoozedUntil: '2026-04-10T12:00:00.000Z',
+      });
+      const result = pocketBaseToTaskRecord(buildPBRecord(), existingLocal);
       expect(result!.notificationSent).toBe(true);
       expect(result!.lastNotificationAt).toBe('2026-04-08T10:30:00.000Z');
       expect(result!.snoozedUntil).toBe('2026-04-10T12:00:00.000Z');
     });
 
-    it('should default missing notification state safely', () => {
-      const pb = buildPBRecord();
-      delete (pb as Record<string, unknown>).notification_sent;
-      delete (pb as Record<string, unknown>).last_notification_at;
-      delete (pb as Record<string, unknown>).snoozed_until;
-
-      const result = pocketBaseToTaskRecord(pb);
+    it('should default notification state when no existing local task', () => {
+      const result = pocketBaseToTaskRecord(buildPBRecord());
       expect(result!.notificationSent).toBe(false);
       expect(result!.lastNotificationAt).toBeUndefined();
       expect(result!.snoozedUntil).toBeUndefined();

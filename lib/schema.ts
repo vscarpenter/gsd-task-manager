@@ -35,9 +35,9 @@ export const taskDraftSchema = z.object({
 	important: z.boolean(),
 	dueDate: z.string().datetime({ offset: true }).optional(),
 	recurrence: recurrenceTypeSchema.default("none"),
-	tags: z.array(z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH)).default([]),
-	subtasks: z.array(subtaskSchema).default([]),
-	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).default([]), // IDs of tasks that must be completed first
+	tags: z.array(z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH)).max(SCHEMA_LIMITS.MAX_TAGS).default([]),
+	subtasks: z.array(subtaskSchema).max(SCHEMA_LIMITS.MAX_SUBTASKS).default([]),
+	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).max(SCHEMA_LIMITS.MAX_DEPENDENCIES).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
 	estimatedMinutes: z.preprocess(
@@ -60,7 +60,7 @@ export const taskRecordSchema = taskDraftSchema
 		snoozedUntil: z.string().datetime({ offset: true }).optional(),
 		// Time tracking fields
 		timeSpent: z.number().int().min(0).optional(), // Total minutes spent (calculated)
-		timeEntries: z.array(timeEntrySchema).default([]),
+		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
 	})
 	.strict();
 
@@ -78,7 +78,7 @@ const taskRecordImportSchema = taskDraftSchema
 		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
 		snoozedUntil: z.string().datetime({ offset: true }).optional(),
 		timeSpent: z.number().int().min(0).optional(),
-		timeEntries: z.array(timeEntrySchema).default([]),
+		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
 	})
 	.strip();
 
