@@ -27,5 +27,17 @@ export const SCHEMA_LIMITS = {
 
   /** Default minutes before due date to send notifications */
   DEFAULT_NOTIFY_MINUTES: 15,
+
+  /** Maximum number of tags per task */
+  MAX_TAGS: 20,
+
+  /** Maximum number of subtasks per task */
+  MAX_SUBTASKS: 50,
+
+  /** Maximum number of dependencies per task */
+  MAX_DEPENDENCIES: 50,
+
+  /** Maximum number of time entries per task */
+  MAX_TIME_ENTRIES: 1000,
 } as const;
 

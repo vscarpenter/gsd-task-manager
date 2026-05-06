@@ -114,8 +114,12 @@ const pbTaskRecordSchema = z.object({
  * Convert a PocketBase record to local TaskRecord format.
  * Validates the remote data with Zod before mapping to catch
  * malformed or unexpected payloads at the sync boundary.
+ *
+ * Device-local fields (notificationSent, lastNotificationAt, snoozedUntil)
+ * are preserved from the existing local record when available, since these
+ * are per-device behavioral state that should not be overwritten by remote values.
  */
-export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord | null {
+export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: TaskRecord | null): TaskRecord | null {
   const parsed = pbTaskRecordSchema.safeParse(record);
 
   if (!parsed.success) {
@@ -145,12 +149,12 @@ export function pocketBaseToTaskRecord(record: RecordModel): TaskRecord | null {
     subtasks: r.subtasks,
     dependencies: r.dependencies,
     notificationEnabled: r.notification_enabled,
-    notificationSent: r.notification_sent,
+    notificationSent: existingLocal?.notificationSent ?? false,
     notifyBefore: r.notify_before ?? undefined,
-    lastNotificationAt: r.last_notification_at || undefined,
+    lastNotificationAt: existingLocal?.lastNotificationAt,
     estimatedMinutes: r.estimated_minutes ?? undefined,
     timeSpent: r.time_spent,
     timeEntries: r.time_entries,
-    snoozedUntil: r.snoozed_until || undefined,
+    snoozedUntil: existingLocal?.snoozedUntil,
   };
 }

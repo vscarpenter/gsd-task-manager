@@ -164,12 +164,17 @@ export function SettingsPage() {
   }, []);
 
   const handleImportClick = useCallback(() => {
+    const MAX_IMPORT_BYTES = 10 * 1024 * 1024; // 10 MB
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json";
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) return;
+      if (file.size > MAX_IMPORT_BYTES) {
+        toast.error(`Import file is too large (max 10 MB). Selected file: ${(file.size / 1024 / 1024).toFixed(1)} MB`);
+        return;
+      }
       try {
         const contents = await file.text();
         JSON.parse(contents);

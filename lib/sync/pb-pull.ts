@@ -19,11 +19,20 @@ const logger = createLogger('SYNC_ENGINE');
  */
 async function applyRemoteRecords(records: RecordModel[]): Promise<{ pulledCount: number; skippedCount: number }> {
   const db = getDb();
-  const remoteTasks = records.map(pocketBaseToTaskRecord);
-  const validRemoteTasks = remoteTasks.filter((t): t is NonNullable<typeof t> => t !== null);
+  // First pass: validate records without local state (just to filter invalid ones)
+  const validRecords: RecordModel[] = [];
+  for (const record of records) {
+    const test = pocketBaseToTaskRecord(record, null);
+    if (test) {
+      validRecords.push(record);
+    }
+  }
 
-  // Pre-fetch matching local tasks in bulk to avoid N individual lookups
-  const localTasksRaw = await db.tasks.bulkGet(validRemoteTasks.map(t => t.id));
+  const skippedCount = records.length - validRecords.length;
+
+  // Pre-fetch matching local tasks in bulk to preserve device-local fields
+  const taskIds = validRecords.map(r => r['task_id'] as string);
+  const localTasksRaw = await db.tasks.bulkGet(taskIds);
   const localTaskMap = new Map(
     localTasksRaw
       .filter((t): t is NonNullable<typeof t> => t !== undefined)
@@ -31,10 +40,12 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{ pulledCount
   );
 
   let pulledCount = 0;
-  const skippedCount = remoteTasks.length - validRemoteTasks.length;
 
-  for (const remoteTask of validRemoteTasks) {
-    const localTask = localTaskMap.get(remoteTask.id);
+  for (const record of validRecords) {
+    const taskId = record['task_id'] as string;
+    const localTask = localTaskMap.get(taskId);
+    const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
+    if (!remoteTask) continue;
 
     if (!localTask) {
       await db.tasks.add(remoteTask);

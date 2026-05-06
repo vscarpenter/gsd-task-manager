@@ -235,7 +235,7 @@ export class Logger {
         ...metadata,
         errorType: error?.constructor.name,
         errorMessage: error?.message,
-        stack: error?.stack,
+        stack: process.env.NODE_ENV === 'production' ? undefined : error?.stack,
       };
 
       formatLog('error', this.context, message, errorMetadata);

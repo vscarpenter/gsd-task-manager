@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createLogger } from "@/lib/logger";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 
 const logger = createLogger("WEBMCP");
 
@@ -44,12 +45,12 @@ const TOOLS: WebMCPToolDefinition[] = [
 					type: "string",
 					description: "Short, action-oriented title (e.g. 'Review PR #42').",
 					minLength: 1,
-					maxLength: 200,
+					maxLength: SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH,
 				},
 				description: {
 					type: "string",
 					description: "Optional longer notes for the task.",
-					maxLength: 2000,
+					maxLength: SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH,
 				},
 				urgent: {
 					type: "boolean",

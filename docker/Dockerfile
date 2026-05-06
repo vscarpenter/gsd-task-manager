@@ -25,7 +25,7 @@ RUN node scripts/generate-build-info.cjs \
     && bash -c 'source .build-env.sh && bunx --bun next build'
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)
-ARG POCKETBASE_VERSION=0.24.4
+ARG POCKETBASE_VERSION=0.26.1
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-certificates \
     && curl -fsSL -o /tmp/pb.zip \
