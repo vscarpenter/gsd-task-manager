@@ -440,7 +440,7 @@ When you do want to constrain behavior:
 - Set `isolation: worktree` on agents that modify files.
 - Use `model: haiku` for read-only analysis. `sonnet/opus` for architecture reasoning.
 
-**Standard agent files:** `build-validator`, `code-simplifier`, `security-reviewer`, `tdd-enforcer`, `verify-app`.
+**Project agent files:** `a11y-reviewer` (WCAG checks on changed `.tsx`/`.jsx` files), `pb-sync-reviewer` (PocketBase v0.23+ gotcha checks on `lib/sync/**`). Both are invoked from `/tdd` before the refactor step. `/qcheck` covers the same concerns inline rather than dispatching subagents.
 
 ### Hooks
 
