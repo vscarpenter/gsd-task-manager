@@ -112,7 +112,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const isCreateMode = !task;
 
   const activeQuadrant = quadrants.find((q) => q.urgent === urgent && q.important === important);
-  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "#c2410c";
+  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "var(--q1)";
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
@@ -212,7 +212,15 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
                       "rounded-lg border px-3 py-2.5 text-left transition-colors",
                       active ? "border-2" : "border-border hover:bg-background-muted/50"
                     )}
-                    style={active ? { borderColor: a, backgroundColor: `${a}14`, color: a } : undefined}
+                    style={
+                      active
+                        ? {
+                            borderColor: a,
+                            backgroundColor: `color-mix(in srgb, ${a} 8%, transparent)`,
+                            color: a,
+                          }
+                        : undefined
+                    }
                     aria-pressed={active}
                   >
                     <div className="text-[12px] font-bold uppercase tracking-wider">{q.title}</div>

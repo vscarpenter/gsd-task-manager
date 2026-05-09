@@ -154,7 +154,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
             onClick={cycleQuadrant}
             title="Tab to cycle quadrant"
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in"
-            style={{ backgroundColor: `${accent}33`, color: accent }}
+            style={{ backgroundColor: `color-mix(in srgb, ${accent} 20%, transparent)`, color: accent }}
           >
             <span
               className="h-[5px] w-[5px] rounded-full bg-current"

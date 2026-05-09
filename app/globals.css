@@ -4,68 +4,84 @@
 :root {
   color-scheme: light;
 
-  /* Surfaces — warm paper */
-  --background: 246 245 241;           /* #f6f5f1 */
-  --background-muted: 239 237 231;     /* #efede7 */
-  --background-accent: 235 232 224;    /* #ebe8e0 */
+  /* ──────────────────────────────────────────────────────────────
+   * Inkwell — Indigo & Cloud (light mode)
+   * Tokens map GSD's existing names onto Inkwell's palette so
+   * the entire Tailwind utility surface keeps working unchanged.
+   * Reference: inkwell/DESIGN_SYSTEM.md
+   * ────────────────────────────────────────────────────────────── */
 
-  /* Text */
-  --foreground: 24 24 27;              /* #18181b */
-  --foreground-muted: 113 113 122;     /* #71717a — AA on paper 4.8:1 */
+  /* Surfaces — cool stone (Inkwell ivory / paper / oat) */
+  --background: 244 244 240;           /* ivory  #F4F4F0 */
+  --background-muted: 237 237 234;     /* gray-100 #EDEDEA */
+  --background-accent: 225 225 222;    /* gray-200 #E1E1DE */
 
-  /* Borders — warm */
-  --border: 230 227 219;               /* #e6e3db */
-  --border-muted: 239 237 231;         /* #efede7 */
+  /* Text — slate (cool, never pure black) */
+  --foreground: 19 20 27;              /* slate  #13141B */
+  --foreground-muted: 133 133 138;     /* gray-500 #85858A */
 
-  /* Accent */
-  --accent: 67 56 202;                  /* #4338ca — indigo-700, AA on paper 7.1:1 */
-  --accent-hover: 79 70 229;           /* #4f46e5 */
-  --accent-muted: 199 210 254;         /* #c7d2fe */
+  /* Borders — cool putty hairlines */
+  --border: 207 207 204;               /* gray-300 #CFCFCC — the 1.5px hairline color */
+  --border-muted: 237 237 234;         /* gray-100 #EDEDEA */
 
-  /* Quadrant tint pairs (match redesign scope) */
-  --quadrant-focus: 253 241 231;       /* #fdf1e7 */
-  --quadrant-schedule: 238 242 253;    /* #eef2fd */
-  --quadrant-delegate: 232 242 236;    /* #e8f2ec */
-  --quadrant-eliminate: 245 239 223;   /* #f5efdf */
+  /* Accent — saturated indigo */
+  --accent: 59 74 140;                 /* #3B4A8C  AA on paper */
+  --accent-hover: 42 55 104;           /* accent-d #2A3768 — pressed/hover (darker) */
+  --accent-muted: 197 205 228;         /* light periwinkle for tinted surfaces */
 
-  /* Quadrant washes — ~5% accent for pane backgrounds (v9 simplified) */
-  --q1-wash: 194 65 12;        /* #c2410c */
-  --q2-wash: 29 78 216;        /* #1d4ed8 */
-  --q3-wash: 21 128 61;        /* #15803d */
-  --q4-wash: 133 77 14;        /* #854d0e */
+  /* Quadrant pane tints (Inkwell-aligned: rust/sky/olive/warning) */
+  --quadrant-focus: 253 235 232;       /* rust tint */
+  --quadrant-schedule: 225 232 240;    /* sky tint */
+  --quadrant-delegate: 230 235 220;    /* olive tint */
+  --quadrant-eliminate: 250 240 220;   /* warning tint */
 
-  /* Card */
-  --card-background: 251 250 246;      /* #fbfaf6 — paper */
-  --card-border: 230 227 219;          /* matches --border */
+  /* Quadrant washes — accent bars and pane backgrounds */
+  --q1-wash: 176 74 63;                /* rust    #B04A3F */
+  --q2-wash: 92 124 163;               /* info    #5C7CA3 */
+  --q3-wash: 120 140 93;               /* olive   #788C5D */
+  --q4-wash: 199 142 63;               /* warning #C78E3F */
+
+  /* Quadrant accents — mode-aware. Light values are deeper saturations
+   * that hold ≥4.5:1 against the soft tint header bands; the lighter
+   * Inkwell rust/info/olive/warning hues live in --qN-wash and are
+   * used for tinted bg fills, where contrast isn't load-bearing. */
+  --q1: #9A3F3F;
+  --q2: #3D5577;
+  --q3: #3F5034;
+  --q4: #85581A;
+
+  /* Card — pure white surface against ivory page (Inkwell convention) */
+  --card-background: 255 255 255;      /* paper #FFFFFF */
+  --card-border: 207 207 204;          /* matches --border (gray-300) */
 
   --overlay: 0 0 0;
 
-  /* Shadows — softer for paper */
-  --shadow-card: 0 1px 0 rgba(24, 24, 27, 0.04), 0 1px 2px rgba(24, 24, 27, 0.04);
-  --shadow-card-hover: 0 1px 0 rgba(24, 24, 27, 0.04), 0 6px 18px -8px rgba(24, 24, 27, 0.12);
-  --shadow-column: 0 1px 2px rgba(24, 24, 27, 0.05), 0 1px 0 rgba(24, 24, 27, 0.04);
-  --shadow-fab: 0 8px 30px rgba(67, 56, 202, 0.35);
+  /* Shadows — Inkwell low-spread, slight orange undertone */
+  --shadow-card: 0 1px 2px rgba(20, 20, 19, 0.06);
+  --shadow-card-hover: 0 10px 30px rgba(20, 20, 19, 0.10);
+  --shadow-column: 0 1px 2px rgba(20, 20, 19, 0.05);
+  --shadow-fab: 0 8px 30px rgba(59, 74, 140, 0.35);
 
-  /* Quadrant solid gradients — used by dashboard donut, etc. */
-  --gradient-focus: linear-gradient(135deg, #c2410c, #ea580c);
-  --gradient-schedule: linear-gradient(135deg, #1d4ed8, #3b82f6);
-  --gradient-delegate: linear-gradient(135deg, #15803d, #22c55e);
-  --gradient-eliminate: linear-gradient(135deg, #854d0e, #ca8a04);
+  /* Quadrant gradients — desaturated to sit on the cool palette */
+  --gradient-focus: linear-gradient(135deg, #9A3F3F, #B04A3F);
+  --gradient-schedule: linear-gradient(135deg, #465F87, #5C7CA3);
+  --gradient-delegate: linear-gradient(135deg, #5F724B, #788C5D);
+  --gradient-eliminate: linear-gradient(135deg, #A47026, #C78E3F);
 
-  /* Chart palette — series 1 uses --accent; series 2+ are tokenized here. */
-  --chart-series-2: 59 130 246;        /* blue-500 */
+  /* Chart palette — series 1 uses --accent; series 2 is Inkwell info */
+  --chart-series-2: 92 124 163;        /* info #5C7CA3 */
 
-  /* Semantic status colors */
-  --status-overdue: 220 38 38;          /* red-600 */
-  --status-overdue-muted: 254 226 226;  /* red-100 */
-  --status-blocked: 217 119 6;          /* amber-600 */
-  --status-blocked-muted: 254 243 199;  /* amber-100 */
-  --status-blocking: 37 99 235;         /* blue-600 */
-  --status-blocking-muted: 219 234 254; /* blue-100 */
-  --status-success: 22 163 74;          /* green-600 */
-  --status-success-muted: 220 252 231;  /* green-100 */
+  /* Semantic status colors — Inkwell rust/warning/info/olive */
+  --status-overdue: 176 74 63;          /* rust */
+  --status-overdue-muted: 253 235 232;  /* rust tint */
+  --status-blocked: 199 142 63;         /* warning */
+  --status-blocked-muted: 250 240 220;  /* warning tint */
+  --status-blocking: 92 124 163;        /* info */
+  --status-blocking-muted: 225 232 240; /* sky tint */
+  --status-success: 120 140 93;         /* olive */
+  --status-success-muted: 230 235 220;  /* olive tint */
 
-  /* Motion tokens */
+  /* Motion tokens — match Inkwell --t-base / --t-slow */
   --duration-fast: 150ms;
   --duration-normal: 250ms;
 }
@@ -73,52 +89,73 @@
 .dark {
   color-scheme: dark;
 
-  --background: 12 12 13;              /* #0c0c0d */
-  --background-muted: 23 23 26;        /* #17171a */
-  --background-accent: 31 31 34;       /* #1f1f22 */
+  /* ──────────────────────────────────────────────────────────────
+   * Inkwell — Indigo & Cloud (dark mode)
+   * Hue-preserved, luminance-lifted: accent goes periwinkle,
+   * semantics stay desaturated. Reference: DESIGN_SYSTEM.md §1.1
+   * ────────────────────────────────────────────────────────────── */
 
-  --foreground: 244 244 245;           /* #f4f4f5 */
-  --foreground-muted: 161 161 170;     /* #a1a1aa — AA 5.5:1 */
+  /* Surfaces */
+  --background: 15 16 24;              /* ivory dark  #0F1018 */
+  --background-muted: 30 31 41;        /* gray-100 dk #1E1F29 */
+  --background-accent: 38 39 50;       /* gray-200 dk #262732 */
 
-  --border: 39 39 42;                  /* #27272a */
-  --border-muted: 31 31 34;            /* #1f1f22 */
+  /* Text */
+  --foreground: 232 232 238;           /* slate dk    #E8E8EE */
+  --foreground-muted: 154 154 160;     /* gray-500 dk #9A9AA0 */
 
-  --accent: 129 140 248;               /* #818cf8 */
-  --accent-hover: 165 180 252;         /* #a5b4fc */
-  --accent-muted: 165 180 252;         /* #a5b4fc — lighter for dark mode readability */
+  /* Borders */
+  --border: 52 54 63;                  /* gray-300 dk #34363F */
+  --border-muted: 30 31 41;            /* gray-100 dk #1E1F29 */
 
-  --quadrant-focus: 42 22 9;           /* #2a1609 */
-  --quadrant-schedule: 15 26 58;       /* #0f1a3a */
-  --quadrant-delegate: 11 36 26;       /* #0b241a */
-  --quadrant-eliminate: 44 32 9;       /* #2c2009 */
+  /* Accent — lifted periwinkle so it reads as "highlighted element" on dark */
+  --accent: 122 138 209;               /* #7A8AD1 */
+  --accent-hover: 98 115 192;          /* accent-d  #6273C0 */
+  --accent-muted: 165 180 252;         /* lifted periwinkle for tinted surfaces */
 
-  /* Wash channels reused; opacity bumped at use-site for dark legibility */
-  --q1-wash: 194 65 12;
-  --q2-wash: 29 78 216;
-  --q3-wash: 21 128 61;
-  --q4-wash: 133 77 14;
+  /* Quadrant pane tints (dark, low-luminance) */
+  --quadrant-focus: 60 28 25;          /* rust dark soft */
+  --quadrant-schedule: 30 45 65;       /* sky dark soft */
+  --quadrant-delegate: 35 45 25;       /* olive dark soft */
+  --quadrant-eliminate: 60 45 20;      /* warning dark soft */
 
-  --card-background: 26 26 29;         /* #1a1a1d */
-  --card-border: 39 39 42;
+  /* Quadrant washes — lifted hue versions */
+  --q1-wash: 210 116 104;              /* rust dk    #D27468 */
+  --q2-wash: 124 159 210;              /* info dk    #7C9FD2 */
+  --q3-wash: 156 176 122;              /* olive dk   #9CB07A */
+  --q4-wash: 217 165 95;               /* warning dk #D9A55F */
+
+  /* Quadrant accents (dark) — extra-lifted so labels clear AA
+   * (4.5:1) on the 20%-wash dark header band. The wash hue still
+   * carries quadrant identity; the label rides above it brightly. */
+  --q1: #E89788;
+  --q2: #9CB8DA;
+  --q3: #B5C497;
+  --q4: #E8C58B;
+
+  /* Card */
+  --card-background: 24 26 36;         /* paper dk #181A24 */
+  --card-border: 52 54 63;
 
   --overlay: 0 0 0;
 
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --shadow-column: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
+  /* Shadows — deeper black, larger spread on dark surfaces */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
+  --shadow-column: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-fab: 0 8px 30px rgba(122, 138, 209, 0.35);
 
-  --chart-series-2: 96 165 250;        /* blue-400 — slightly lighter for dark mode */
+  --chart-series-2: 124 159 210;       /* info dk */
 
-  /* Semantic status colors — dark */
-  --status-overdue: 248 113 113;        /* red-400 */
-  --status-overdue-muted: 69 10 10;     /* red-950/50 */
-  --status-blocked: 251 191 36;         /* amber-400 */
-  --status-blocked-muted: 69 26 3;      /* amber-950/50 */
-  --status-blocking: 96 165 250;        /* blue-400 */
-  --status-blocking-muted: 23 37 84;    /* blue-950/50 */
-  --status-success: 74 222 128;         /* green-400 */
-  --status-success-muted: 5 46 22;      /* green-950/50 */
+  /* Semantic status colors — Inkwell dark variants */
+  --status-overdue: 210 116 104;        /* rust dk */
+  --status-overdue-muted: 60 28 25;
+  --status-blocked: 217 165 95;         /* warning dk */
+  --status-blocked-muted: 60 45 20;
+  --status-blocking: 124 159 210;       /* info dk */
+  --status-blocking-muted: 30 45 65;
+  --status-success: 156 176 122;        /* olive dk */
+  --status-success-muted: 35 45 25;
 }
 
 body {
@@ -518,10 +555,11 @@ main {
   --rd-accent: rgb(var(--accent));
   --rd-accent-soft: rgb(var(--accent-muted) / 0.25);
 
-  --q1: #c2410c; --q1-soft: #fdf1e7; --q1-tint: #faebdd;
-  --q2: #1d4ed8; --q2-soft: #eef2fd; --q2-tint: #e3e9fb;
-  --q3: #15803d; --q3-soft: #e8f2ec; --q3-tint: #dbebe1;
-  --q4: #854d0e; --q4-soft: #f5efdf; --q4-tint: #ede4cd;
+  /* Inkwell-aligned quadrant accents (rust / sky / olive / warning) */
+  --q1: #B04A3F; --q1-soft: #FDEBE8; --q1-tint: #F8DDD8;
+  --q2: #5C7CA3; --q2-soft: #E1E8F0; --q2-tint: #D1DCE8;
+  --q3: #788C5D; --q3-soft: #E6EBDC; --q3-tint: #D7DEC9;
+  --q4: #C78E3F; --q4-soft: #FAF0DC; --q4-tint: #F5E5C2;
 
   --rd-radius: 14px;
   --rd-radius-sm: 10px;
@@ -537,10 +575,11 @@ main {
 }
 
 .dark .redesign-scope {
-  --q1-soft: #2a1609; --q1-tint: #3a1e0c;
-  --q2-soft: #0f1a3a; --q2-tint: #152350;
-  --q3-soft: #0b241a; --q3-tint: #0f2e22;
-  --q4-soft: #2c2009; --q4-tint: #3a2a0d;
+  /* Inkwell dark — keep accent hues identical to light, only tint surfaces shift */
+  --q1: #D27468; --q1-soft: #3C1C19; --q1-tint: #4A2520;
+  --q2: #7C9FD2; --q2-soft: #1E2D41; --q2-tint: #2A3D55;
+  --q3: #9CB07A; --q3-soft: #232D19; --q3-tint: #2F3D22;
+  --q4: #D9A55F; --q4-soft: #3C2D14; --q4-tint: #4D3A1B;
 }
 
 /* Editorial serif utility — global so dashboard and settings pages can use
@@ -800,9 +839,98 @@ main {
 }
 
 .overdue-task {
-  border-left-color: rgb(239 68 68);
+  border-left-color: rgb(var(--status-overdue));
 }
 
 .dark .overdue-task {
-  border-left-color: rgb(248 113 113);
+  border-left-color: rgb(var(--status-overdue));
+}
+
+/* ─────────────────────────────────────────────── */
+/* Inkwell — editorial typography utilities         */
+/* Cherry-picked from inkwell/tokens.css. Use serif */
+/* for headings, mono for technical metadata, and   */
+/* an accent-ruled eyebrow for section labels.      */
+/* ─────────────────────────────────────────────── */
+
+@layer utilities {
+  .t-display {
+    font-family: var(--font-instrument-serif), ui-serif, Georgia, "Times New Roman", Times, serif;
+    font-weight: 500;
+    font-size: 48px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .t-h1 {
+    font-family: var(--font-instrument-serif), ui-serif, Georgia, "Times New Roman", Times, serif;
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .t-h2 {
+    font-family: var(--font-instrument-serif), ui-serif, Georgia, "Times New Roman", Times, serif;
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .t-h3 {
+    font-family: var(--font-instrument-serif), ui-serif, Georgia, "Times New Roman", Times, serif;
+    font-weight: 500;
+    font-size: 19px;
+    line-height: 1.22;
+    letter-spacing: -0.008em;
+  }
+
+  .t-body {
+    font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 430;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .t-small {
+    font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 430;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgb(var(--foreground-muted));
+  }
+
+  .t-caption {
+    font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgb(var(--foreground-muted));
+  }
+
+  /* Eyebrow — small uppercase mono label with leading accent rule */
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--foreground-muted));
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 24px;
+    height: 1.5px;
+    background: rgb(var(--accent));
+  }
+
+  /* Inkwell signature — 1.5px hairline border using the same gray-300 stop */
+  .border-hairline {
+    border: 1.5px solid rgb(var(--border));
+  }
 }

@@ -2,20 +2,27 @@ import type { QuadrantId } from "@/lib/types";
 
 export type RedesignQuadrantKey = "q1" | "q2" | "q3" | "q4";
 
-/** Canonical accent hex per quadrant — single source of truth for charts, panes, and inline styles. */
+/**
+ * Canonical accent per quadrant — single source of truth for charts, panes,
+ * and inline styles. Values are CSS custom-property references so the actual
+ * color tracks light/dark mode (defined in app/globals.css :root and .dark).
+ *
+ * Dark variants are deliberately extra-lifted so labels clear WCAG AA (4.5:1)
+ * over the 20%-wash header band. The band tint carries quadrant identity.
+ */
 export const QUADRANT_ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
+  q1: "var(--q1)",
+  q2: "var(--q2)",
+  q3: "var(--q3)",
+  q4: "var(--q4)",
 };
 
 /** Same palette keyed by QuadrantId for components that reference the long-form id. */
 export const QUADRANT_ACCENT_BY_ID: Record<QuadrantId, string> = {
-  "urgent-important": "#c2410c",
-  "not-urgent-important": "#1d4ed8",
-  "urgent-not-important": "#15803d",
-  "not-urgent-not-important": "#854d0e",
+  "urgent-important": "var(--q1)",
+  "not-urgent-important": "var(--q2)",
+  "urgent-not-important": "var(--q3)",
+  "not-urgent-not-important": "var(--q4)",
 };
 export type RedesignIconKey = "flame" | "calendar" | "users" | "trash";
 
