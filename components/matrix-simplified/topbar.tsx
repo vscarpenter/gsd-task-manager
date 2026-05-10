@@ -56,7 +56,7 @@ export function SimplifiedTopbar({
           <Input
             ref={searchInputRef}
             placeholder="Search tasks…"
-            className="pl-9"
+            style={{ paddingLeft: "2.25rem" }}
             value={searchQuery ?? ""}
             onChange={(e) => onSearchChange(e.target.value)}
             aria-label="Search tasks"

@@ -1,17 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   BarChart3Icon,
   CircleHelpIcon,
   InfoIcon,
   LayoutGridIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
 import { GsdLogo } from "@/components/gsd-logo";
 import { ROUTES, isRouteActive, type RouteKey } from "@/lib/routes";
 import { useViewTransition } from "@/lib/use-view-transition";
+import { readRailCollapsed, writeRailCollapsed } from "@/lib/preferences/icon-rail";
 import { cn } from "@/lib/utils";
 
 interface IconRailProps {
@@ -34,17 +38,32 @@ const PRIMARY: RailItem[] = [
 export function IconRail({ onHelp }: IconRailProps) {
   const pathname = usePathname();
   const { navigateWithTransition, isPending } = useViewTransition();
+  const [collapsed, setCollapsed] = useState<boolean>(readRailCollapsed);
+
+  useEffect(() => {
+    writeRailCollapsed(collapsed);
+  }, [collapsed]);
+
+  const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
 
   return (
     <>
       <aside
-        className="group/rail hidden md:flex md:w-[60px] md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-background md:transition-[width] md:duration-[250ms] md:ease-out md:hover:w-[180px] md:hover:[transition-delay:500ms] md:focus-within:w-[180px] md:focus-within:[transition-delay:0s]"
+        className={cn(
+          "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-background md:transition-[width] md:duration-150 md:ease-out",
+          collapsed ? "md:w-[60px]" : "md:w-[180px]"
+        )}
         aria-label="Primary navigation"
       >
         <div className="sticky top-0 flex h-screen flex-col gap-1 px-2 py-3.5">
           <div className="mb-2.5 flex h-8 items-center gap-2.5 px-1.5" title="GSD">
             <GsdLogo size={28} />
-            <span className="rd-serif whitespace-nowrap text-[15px] tracking-tight text-foreground opacity-0 transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">
+            <span
+              className={cn(
+                "rd-serif whitespace-nowrap text-[15px] tracking-tight text-foreground transition-opacity duration-150",
+                collapsed ? "opacity-0" : "opacity-100"
+              )}
+            >
               GSD
             </span>
           </div>
@@ -56,11 +75,23 @@ export function IconRail({ onHelp }: IconRailProps) {
               icon={item.icon}
               active={isRouteActive(pathname, item.routeKey)}
               disabled={isPending}
+              collapsed={collapsed}
               onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
             />
           ))}
           <div className="flex-1" />
-          <RailButton label="Help · Keyboard shortcuts" icon={CircleHelpIcon} onClick={onHelp} />
+          <RailButton
+            label="Help · Keyboard shortcuts"
+            icon={CircleHelpIcon}
+            collapsed={collapsed}
+            onClick={onHelp}
+          />
+          <RailButton
+            label={toggleLabel}
+            icon={collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon}
+            collapsed={collapsed}
+            onClick={() => setCollapsed((prev) => !prev)}
+          />
         </div>
       </aside>
       <nav
@@ -89,6 +120,7 @@ function RailButton({
   icon: Icon,
   active = false,
   disabled = false,
+  collapsed = false,
   onClick,
   mobile = false,
 }: {
@@ -96,6 +128,7 @@ function RailButton({
   icon: LucideIcon;
   active?: boolean;
   disabled?: boolean;
+  collapsed?: boolean;
   onClick: () => void;
   mobile?: boolean;
 }) {
@@ -140,7 +173,12 @@ function RailButton({
       )}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden />
-      <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">
+      <span
+        className={cn(
+          "whitespace-nowrap transition-opacity duration-150",
+          collapsed ? "opacity-0" : "opacity-100"
+        )}
+      >
         {label}
       </span>
     </button>
