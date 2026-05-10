@@ -112,7 +112,7 @@ export function TaskTimer({
         className={cn(
           "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition touch-manipulation",
           isRunning
-            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 animate-pulse"
+            ? "bg-status-success-muted text-status-success animate-pulse"
             : "bg-background-muted text-foreground-muted hover:bg-background hover:text-foreground",
           isLoading && "opacity-50 cursor-not-allowed",
           className
@@ -147,8 +147,8 @@ export function TaskTimer({
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-full transition touch-manipulation",
           isRunning
-            ? "bg-green-500 text-white hover:bg-green-600"
-            : "bg-background-muted text-foreground-muted hover:bg-accent hover:text-white",
+            ? "bg-status-success text-card hover:bg-status-success/90"
+            : "bg-background-muted text-foreground-muted hover:bg-accent hover:text-card",
           isLoading && "opacity-50 cursor-not-allowed"
         )}
         aria-label={ariaLabel}
@@ -162,13 +162,13 @@ export function TaskTimer({
 
       <div className="flex flex-col">
         {isRunning && (
-          <span className="font-mono text-sm font-medium text-green-600 dark:text-green-400">
+          <span className="font-mono text-sm font-medium text-status-success">
             {formatElapsedTime(elapsedSeconds)}
           </span>
         )}
         <div className="flex items-center gap-1 text-xs text-foreground-muted">
           <ClockIcon className="h-3 w-3" />
-          <span className={cn(isOverEstimate && "text-amber-600 dark:text-amber-400")}>
+          <span className={cn(isOverEstimate && "text-status-blocked")}>
             {formatTimeSpent(totalTimeSpent)}
           </span>
           {estimatedMinutes && (

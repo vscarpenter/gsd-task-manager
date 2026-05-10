@@ -1,3 +1,6 @@
+const withAlpha = (value: string) =>
+  `color-mix(in srgb, ${value} calc(<alpha-value> * 100%), transparent)`;
+
 const config = {
   darkMode: "class",
   safelist: [
@@ -17,52 +20,52 @@ const config = {
     extend: {
       colors: {
         background: {
-          DEFAULT: "rgb(var(--background) / <alpha-value>)",
-          muted: "rgb(var(--background-muted) / <alpha-value>)",
-          accent: "rgb(var(--background-accent) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--ivory)"),
+          muted: withAlpha("var(--gray-100)"),
+          accent: withAlpha("var(--oat)")
         },
         foreground: {
-          DEFAULT: "rgb(var(--foreground) / <alpha-value>)",
-          muted: "rgb(var(--foreground-muted) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--slate)"),
+          muted: withAlpha("var(--gray-500)")
         },
         border: {
-          DEFAULT: "rgb(var(--border) / <alpha-value>)",
-          muted: "rgb(var(--border-muted) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--gray-300)"),
+          muted: withAlpha("var(--gray-100)")
         },
         accent: {
-          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
-          hover: "rgb(var(--accent-hover) / <alpha-value>)",
-          muted: "rgb(var(--accent-muted) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--accent)"),
+          hover: withAlpha("var(--accent-d)"),
+          muted: withAlpha("var(--accent-tint)")
         },
         quadrant: {
-          focus: "rgb(var(--quadrant-focus) / <alpha-value>)",
-          schedule: "rgb(var(--quadrant-schedule) / <alpha-value>)",
-          delegate: "rgb(var(--quadrant-delegate) / <alpha-value>)",
-          eliminate: "rgb(var(--quadrant-eliminate) / <alpha-value>)"
+          focus: withAlpha("var(--quadrant-focus)"),
+          schedule: withAlpha("var(--quadrant-schedule)"),
+          delegate: withAlpha("var(--quadrant-delegate)"),
+          eliminate: withAlpha("var(--quadrant-eliminate)")
         },
         card: {
-          DEFAULT: "rgb(var(--card-background) / <alpha-value>)",
-          border: "rgb(var(--card-border) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--paper)"),
+          border: withAlpha("var(--gray-300)")
         },
-        overlay: "rgb(var(--overlay) / <alpha-value>)",
+        overlay: "rgb(0 0 0 / <alpha-value>)",
         status: {
-          overdue: "rgb(var(--status-overdue) / <alpha-value>)",
-          "overdue-muted": "rgb(var(--status-overdue-muted) / <alpha-value>)",
-          blocked: "rgb(var(--status-blocked) / <alpha-value>)",
-          "blocked-muted": "rgb(var(--status-blocked-muted) / <alpha-value>)",
-          blocking: "rgb(var(--status-blocking) / <alpha-value>)",
-          "blocking-muted": "rgb(var(--status-blocking-muted) / <alpha-value>)",
-          success: "rgb(var(--status-success) / <alpha-value>)",
-          "success-muted": "rgb(var(--status-success-muted) / <alpha-value>)"
+          overdue: withAlpha("var(--status-overdue)"),
+          "overdue-muted": withAlpha("var(--status-overdue-muted)"),
+          blocked: withAlpha("var(--status-blocked)"),
+          "blocked-muted": withAlpha("var(--status-blocked-muted)"),
+          blocking: withAlpha("var(--status-blocking)"),
+          "blocking-muted": withAlpha("var(--status-blocking-muted)"),
+          success: withAlpha("var(--status-success)"),
+          "success-muted": withAlpha("var(--status-success-muted)")
         },
         // Legacy aliases for backward compatibility
         canvas: {
-          DEFAULT: "rgb(var(--background) / <alpha-value>)",
-          foreground: "rgb(var(--background-muted) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--ivory)"),
+          foreground: withAlpha("var(--gray-100)")
         },
         muted: {
-          DEFAULT: "rgb(var(--foreground-muted) / <alpha-value>)",
-          foreground: "rgb(var(--foreground-muted) / <alpha-value>)"
+          DEFAULT: withAlpha("var(--gray-500)"),
+          foreground: withAlpha("var(--gray-500)")
         }
       },
       fontSize: {
@@ -74,12 +77,15 @@ const config = {
         "label": ["11px", { lineHeight: "1.45", letterSpacing: "0.04em" }]
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
-        serif: ["var(--font-instrument-serif)", "ui-serif", "Georgia", "serif"]
+        sans: ["var(--sans)"],
+        mono: ["var(--mono)"],
+        serif: ["var(--serif)"]
       },
       boxShadow: {
-        card: "0 10px 30px -12px rgba(15, 33, 50, 0.45)"
+        card: "var(--shadow-md)"
+      },
+      borderWidth: {
+        DEFAULT: "1.5px"
       }
     }
   },

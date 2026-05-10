@@ -14,10 +14,10 @@ export function GsdLogo({ className, size = 28 }: GsdLogoProps) {
       className={className}
       aria-hidden="true"
     >
-      <rect x="2" y="2" width="7" height="7" rx="1.6" fill="#1d4ed8" opacity="0.32" />
-      <rect x="11" y="2" width="7" height="7" rx="1.6" fill="#c2410c" />
-      <rect x="2" y="11" width="7" height="7" rx="1.6" fill="#15803d" opacity="0.32" />
-      <rect x="11" y="11" width="7" height="7" rx="1.6" fill="#854d0e" opacity="0.32" />
+      <rect x="2" y="2" width="7" height="7" rx="1.6" fill="var(--accent)" opacity="0.32" />
+      <rect x="11" y="2" width="7" height="7" rx="1.6" fill="var(--rust)" />
+      <rect x="2" y="11" width="7" height="7" rx="1.6" fill="var(--olive)" opacity="0.32" />
+      <rect x="11" y="11" width="7" height="7" rx="1.6" fill="var(--warning)" opacity="0.32" />
     </svg>
   );
 }

@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import "./globals.css";
-import { cn } from "@/lib/utils";
 import { PwaRegister } from "@/components/pwa-register";
 import { WebMcpRegister } from "@/components/webmcp-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
@@ -15,25 +13,9 @@ import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  display: "swap",
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-instrument-serif",
-  display: "swap",
-});
+const scriptSrc = process.env.NODE_ENV === "development"
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -43,7 +25,7 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self' https: wss:",
   "worker-src 'self' blob:",
@@ -102,8 +84,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
+        {/* eslint-disable-next-line @next/next/no-css-tags -- Inkwell is installed as canonical static CSS. */}
+        <link rel="stylesheet" href="/css/inkwell.css" />
       </head>
-      <body className={cn(geist.variable, geistMono.variable, instrumentSerif.variable, "font-sans bg-background text-foreground antialiased")}>
+      <body className="font-sans bg-background text-foreground antialiased">
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>

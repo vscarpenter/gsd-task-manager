@@ -51,7 +51,7 @@ export function CompletionChart({ data }: CompletionChartProps) {
               backgroundImage: "linear-gradient(to right, currentColor 50%, transparent 50%)",
               backgroundSize: "4px 2px",
               backgroundColor: "transparent",
-              color: "rgb(var(--accent))",
+              color: "var(--accent)",
             }}
           />
           <span className="text-xs font-medium text-foreground-muted">Created</span>
@@ -83,31 +83,31 @@ export function CompletionChart({ data }: CompletionChartProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "rgb(var(--card-background))",
-              border: "1px solid rgb(var(--border))",
+              backgroundColor: "var(--paper)",
+              border: "var(--border)",
               borderRadius: "10px",
               fontSize: "13px",
-              color: "rgb(var(--foreground))",
+              color: "var(--slate)",
               boxShadow: "var(--shadow-card-hover)",
             }}
-            cursor={{ stroke: "rgb(var(--foreground-muted))", strokeOpacity: 0.3 }}
+            cursor={{ stroke: "var(--gray-500)", strokeOpacity: 0.3 }}
           />
           <Line
             type="monotone"
             dataKey="Completed"
-            stroke="rgb(var(--status-success))"
+            stroke="var(--status-success)"
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 5, fill: "rgb(var(--status-success))", stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "var(--status-success)", stroke: "var(--paper)", strokeWidth: 2 }}
           />
           <Line
             type="monotone"
             dataKey="Created"
-            stroke="rgb(var(--accent))"
+            stroke="var(--accent)"
             strokeWidth={1.6}
             strokeDasharray="3 3"
             dot={false}
-            activeDot={{ r: 5, fill: "rgb(var(--accent))", stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "var(--accent)", stroke: "var(--paper)", strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>

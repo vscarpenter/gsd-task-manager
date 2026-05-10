@@ -2,129 +2,55 @@
 @config "../tailwind.config.ts";
 
 :root {
-  color-scheme: light;
+  /* App bridge aliases. Inkwell owns the canonical tokens loaded from /css/inkwell.css. */
+  --background: var(--ivory);
+  --background-muted: var(--gray-100);
+  --background-accent: var(--oat);
+  --foreground: var(--slate);
+  --foreground-muted: var(--gray-500);
+  --border-muted: var(--gray-100);
+  --accent-hover: var(--accent-d);
+  --accent-muted: var(--accent-tint);
+  --card-background: var(--paper);
+  --card-border: var(--gray-300);
 
-  /* Surfaces — warm paper */
-  --background: 246 245 241;           /* #f6f5f1 */
-  --background-muted: 239 237 231;     /* #efede7 */
-  --background-accent: 235 232 224;    /* #ebe8e0 */
+  --quadrant-focus: color-mix(in srgb, var(--rust) 12%, var(--paper));
+  --quadrant-schedule: color-mix(in srgb, var(--accent) 12%, var(--paper));
+  --quadrant-delegate: color-mix(in srgb, var(--olive) 12%, var(--paper));
+  --quadrant-eliminate: color-mix(in srgb, var(--warning) 14%, var(--paper));
+  --q1: var(--rust);
+  --q2: var(--accent);
+  --q3: var(--olive);
+  --q4: var(--warning);
 
-  /* Text */
-  --foreground: 24 24 27;              /* #18181b */
-  --foreground-muted: 113 113 122;     /* #71717a — AA on paper 4.8:1 */
+  --shadow-card: var(--shadow-sm);
+  --shadow-column: var(--shadow-sm);
+  --shadow-fab: 0 8px 30px var(--accent-focus-ring);
 
-  /* Borders — warm */
-  --border: 230 227 219;               /* #e6e3db */
-  --border-muted: 239 237 231;         /* #efede7 */
+  /* Solid color slots retained for existing chart/quadrant call sites. */
+  --gradient-focus: var(--rust);
+  --gradient-schedule: var(--accent);
+  --gradient-delegate: var(--olive);
+  --gradient-eliminate: var(--warning);
+  --chart-series-2: var(--sky);
 
-  /* Accent */
-  --accent: 67 56 202;                  /* #4338ca — indigo-700, AA on paper 7.1:1 */
-  --accent-hover: 79 70 229;           /* #4f46e5 */
-  --accent-muted: 199 210 254;         /* #c7d2fe */
+  --status-overdue: var(--rust);
+  --status-overdue-muted: color-mix(in srgb, var(--rust) 14%, var(--paper));
+  --status-blocked: var(--warning);
+  --status-blocked-muted: var(--warning-tint);
+  --status-blocking: var(--sky);
+  --status-blocking-muted: color-mix(in srgb, var(--sky) 14%, var(--paper));
+  --status-success: var(--olive);
+  --status-success-muted: var(--olive-tint);
 
-  /* Quadrant tint pairs (match redesign scope) */
-  --quadrant-focus: 253 241 231;       /* #fdf1e7 */
-  --quadrant-schedule: 238 242 253;    /* #eef2fd */
-  --quadrant-delegate: 232 242 236;    /* #e8f2ec */
-  --quadrant-eliminate: 245 239 223;   /* #f5efdf */
-
-  /* Quadrant washes — ~5% accent for pane backgrounds (v9 simplified) */
-  --q1-wash: 194 65 12;        /* #c2410c */
-  --q2-wash: 29 78 216;        /* #1d4ed8 */
-  --q3-wash: 21 128 61;        /* #15803d */
-  --q4-wash: 133 77 14;        /* #854d0e */
-
-  /* Card */
-  --card-background: 251 250 246;      /* #fbfaf6 — paper */
-  --card-border: 230 227 219;          /* matches --border */
-
-  --overlay: 0 0 0;
-
-  /* Shadows — softer for paper */
-  --shadow-card: 0 1px 0 rgba(24, 24, 27, 0.04), 0 1px 2px rgba(24, 24, 27, 0.04);
-  --shadow-card-hover: 0 1px 0 rgba(24, 24, 27, 0.04), 0 6px 18px -8px rgba(24, 24, 27, 0.12);
-  --shadow-column: 0 1px 2px rgba(24, 24, 27, 0.05), 0 1px 0 rgba(24, 24, 27, 0.04);
-  --shadow-fab: 0 8px 30px rgba(67, 56, 202, 0.35);
-
-  /* Quadrant solid gradients — used by dashboard donut, etc. */
-  --gradient-focus: linear-gradient(135deg, #c2410c, #ea580c);
-  --gradient-schedule: linear-gradient(135deg, #1d4ed8, #3b82f6);
-  --gradient-delegate: linear-gradient(135deg, #15803d, #22c55e);
-  --gradient-eliminate: linear-gradient(135deg, #854d0e, #ca8a04);
-
-  /* Chart palette — series 1 uses --accent; series 2+ are tokenized here. */
-  --chart-series-2: 59 130 246;        /* blue-500 */
-
-  /* Semantic status colors */
-  --status-overdue: 220 38 38;          /* red-600 */
-  --status-overdue-muted: 254 226 226;  /* red-100 */
-  --status-blocked: 217 119 6;          /* amber-600 */
-  --status-blocked-muted: 254 243 199;  /* amber-100 */
-  --status-blocking: 37 99 235;         /* blue-600 */
-  --status-blocking-muted: 219 234 254; /* blue-100 */
-  --status-success: 22 163 74;          /* green-600 */
-  --status-success-muted: 220 252 231;  /* green-100 */
-
-  /* Motion tokens */
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-}
-
-.dark {
-  color-scheme: dark;
-
-  --background: 12 12 13;              /* #0c0c0d */
-  --background-muted: 23 23 26;        /* #17171a */
-  --background-accent: 31 31 34;       /* #1f1f22 */
-
-  --foreground: 244 244 245;           /* #f4f4f5 */
-  --foreground-muted: 161 161 170;     /* #a1a1aa — AA 5.5:1 */
-
-  --border: 39 39 42;                  /* #27272a */
-  --border-muted: 31 31 34;            /* #1f1f22 */
-
-  --accent: 129 140 248;               /* #818cf8 */
-  --accent-hover: 165 180 252;         /* #a5b4fc */
-  --accent-muted: 165 180 252;         /* #a5b4fc — lighter for dark mode readability */
-
-  --quadrant-focus: 42 22 9;           /* #2a1609 */
-  --quadrant-schedule: 15 26 58;       /* #0f1a3a */
-  --quadrant-delegate: 11 36 26;       /* #0b241a */
-  --quadrant-eliminate: 44 32 9;       /* #2c2009 */
-
-  /* Wash channels reused; opacity bumped at use-site for dark legibility */
-  --q1-wash: 194 65 12;
-  --q2-wash: 29 78 216;
-  --q3-wash: 21 128 61;
-  --q4-wash: 133 77 14;
-
-  --card-background: 26 26 29;         /* #1a1a1d */
-  --card-border: 39 39 42;
-
-  --overlay: 0 0 0;
-
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --shadow-column: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-fab: 0 8px 30px rgba(129, 140, 248, 0.35);
-
-  --chart-series-2: 96 165 250;        /* blue-400 — slightly lighter for dark mode */
-
-  /* Semantic status colors — dark */
-  --status-overdue: 248 113 113;        /* red-400 */
-  --status-overdue-muted: 69 10 10;     /* red-950/50 */
-  --status-blocked: 251 191 36;         /* amber-400 */
-  --status-blocked-muted: 69 26 3;      /* amber-950/50 */
-  --status-blocking: 96 165 250;        /* blue-400 */
-  --status-blocking-muted: 23 37 84;    /* blue-950/50 */
-  --status-success: 74 222 128;         /* green-400 */
-  --status-success-muted: 5 46 22;      /* green-950/50 */
+  --duration-fast: var(--t-fast);
+  --duration-normal: var(--t-slow);
 }
 
 body {
-  font-family: var(--font-sans, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
-  background: rgb(var(--background));
-  color: rgb(var(--foreground));
+  font-family: var(--sans);
+  background: var(--ivory);
+  color: var(--slate);
   min-height: 100vh;
   overflow-y: scroll;
   /* iOS safe area support - respect notch and home indicator */
@@ -144,7 +70,7 @@ main {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(var(--foreground-muted) / 0.3);
+  background-color: color-mix(in srgb, var(--gray-500) 30%, transparent);
   border-radius: 9999px;
 }
 
@@ -155,7 +81,7 @@ main {
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(var(--foreground-muted) / 0.3) transparent;
+  scrollbar-color: color-mix(in srgb, var(--gray-500) 30%, transparent) transparent;
 }
 
 /* Hide scrollbar utility for horizontal scroll containers */
@@ -221,16 +147,16 @@ main {
 
   /* Subtle quadrant gradient glow — adds depth without overwhelming content */
   .matrix-card.bg-quadrant-focus {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-focus) / 0.15), transparent 60%);
+    background-color: color-mix(in srgb, var(--rust) 8%, var(--paper));
   }
   .matrix-card.bg-quadrant-schedule {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-schedule) / 0.15), transparent 60%);
+    background-color: color-mix(in srgb, var(--accent) 8%, var(--paper));
   }
   .matrix-card.bg-quadrant-delegate {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-delegate) / 0.15), transparent 60%);
+    background-color: color-mix(in srgb, var(--olive) 8%, var(--paper));
   }
   .matrix-card.bg-quadrant-eliminate {
-    background-image: radial-gradient(ellipse at top left, rgb(var(--quadrant-eliminate) / 0.15), transparent 60%);
+    background-color: color-mix(in srgb, var(--warning) 10%, var(--paper));
   }
 
   .matrix-card__header {
@@ -245,25 +171,25 @@ main {
     @apply text-sm text-foreground-muted;
   }
 
-  .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.045); }
-  .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.045); }
-  .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.05); }
-  .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.055); }
+  .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--rust) 5%, transparent); }
+  .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--olive) 6%, transparent); }
+  .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--warning) 7%, transparent); }
 
-  .dark .quadrant-wash-q1 { background-color: rgb(var(--q1-wash) / 0.14); }
-  .dark .quadrant-wash-q2 { background-color: rgb(var(--q2-wash) / 0.14); }
-  .dark .quadrant-wash-q3 { background-color: rgb(var(--q3-wash) / 0.15); }
-  .dark .quadrant-wash-q4 { background-color: rgb(var(--q4-wash) / 0.16); }
+  .dark .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--rust) 15%, transparent); }
+  .dark .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--accent) 15%, transparent); }
+  .dark .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--olive) 16%, transparent); }
+  .dark .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--warning) 17%, transparent); }
 
-  .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.07); }
-  .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.07); }
-  .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.075); }
-  .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.08); }
+  .quadrant-header-q1 { background-color: color-mix(in srgb, var(--rust) 8%, transparent); }
+  .quadrant-header-q2 { background-color: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .quadrant-header-q3 { background-color: color-mix(in srgb, var(--olive) 9%, transparent); }
+  .quadrant-header-q4 { background-color: color-mix(in srgb, var(--warning) 10%, transparent); }
 
-  .dark .quadrant-header-q1 { background-color: rgb(var(--q1-wash) / 0.20); }
-  .dark .quadrant-header-q2 { background-color: rgb(var(--q2-wash) / 0.20); }
-  .dark .quadrant-header-q3 { background-color: rgb(var(--q3-wash) / 0.21); }
-  .dark .quadrant-header-q4 { background-color: rgb(var(--q4-wash) / 0.22); }
+  .dark .quadrant-header-q1 { background-color: color-mix(in srgb, var(--rust) 21%, transparent); }
+  .dark .quadrant-header-q2 { background-color: color-mix(in srgb, var(--accent) 21%, transparent); }
+  .dark .quadrant-header-q3 { background-color: color-mix(in srgb, var(--olive) 22%, transparent); }
+  .dark .quadrant-header-q4 { background-color: color-mix(in srgb, var(--warning) 23%, transparent); }
 }
 
 /* View Transitions */
@@ -370,10 +296,10 @@ main {
 
   @keyframes new-task-glow {
     0%, 100% {
-      box-shadow: 0 0 0 0 rgba(var(--accent), 0.4);
+      box-shadow: 0 0 0 0 var(--accent-focus-ring);
     }
     50% {
-      box-shadow: 0 0 0 6px rgba(var(--accent), 0);
+      box-shadow: 0 0 0 6px transparent;
     }
   }
 
@@ -405,10 +331,10 @@ main {
   /* Drop zone pulse when drag is over */
   @keyframes drop-zone-pulse {
     0%, 100% {
-      box-shadow: 0 0 0 0 rgba(var(--accent), 0.2);
+      box-shadow: 0 0 0 0 var(--accent-focus-ring);
     }
     50% {
-      box-shadow: 0 0 0 8px rgba(var(--accent), 0);
+      box-shadow: 0 0 0 8px transparent;
     }
   }
 
@@ -506,22 +432,21 @@ main {
 /* ─────────────────────────────────────────────── */
 
 .redesign-scope {
-  --bg: rgb(var(--background));
-  --bg-inset: rgb(var(--background-muted));
-  --paper: rgb(var(--card-background));
-  --ink: rgb(var(--foreground));
-  --ink-2: rgb(var(--foreground) / 0.75);
-  --ink-3: rgb(var(--foreground-muted));
-  --ink-4: rgb(var(--foreground-muted) / 0.6);
-  --line: rgb(var(--border));
-  --line-soft: rgb(var(--border-muted));
-  --rd-accent: rgb(var(--accent));
-  --rd-accent-soft: rgb(var(--accent-muted) / 0.25);
+  --bg: var(--ivory);
+  --bg-inset: var(--gray-100);
+  --ink: var(--slate);
+  --ink-2: color-mix(in srgb, var(--slate) 75%, transparent);
+  --ink-3: var(--gray-500);
+  --ink-4: color-mix(in srgb, var(--gray-500) 60%, transparent);
+  --line: var(--gray-300);
+  --line-soft: var(--gray-100);
+  --rd-accent: var(--accent);
+  --rd-accent-soft: var(--accent-tint);
 
-  --q1: #c2410c; --q1-soft: #fdf1e7; --q1-tint: #faebdd;
-  --q2: #1d4ed8; --q2-soft: #eef2fd; --q2-tint: #e3e9fb;
-  --q3: #15803d; --q3-soft: #e8f2ec; --q3-tint: #dbebe1;
-  --q4: #854d0e; --q4-soft: #f5efdf; --q4-tint: #ede4cd;
+  --q1-soft: color-mix(in srgb, var(--rust) 10%, var(--paper)); --q1-tint: color-mix(in srgb, var(--rust) 16%, var(--paper));
+  --q2-soft: color-mix(in srgb, var(--accent) 10%, var(--paper)); --q2-tint: color-mix(in srgb, var(--accent) 16%, var(--paper));
+  --q3-soft: color-mix(in srgb, var(--olive) 10%, var(--paper)); --q3-tint: color-mix(in srgb, var(--olive) 16%, var(--paper));
+  --q4-soft: color-mix(in srgb, var(--warning) 12%, var(--paper)); --q4-tint: color-mix(in srgb, var(--warning) 18%, var(--paper));
 
   --rd-radius: 14px;
   --rd-radius-sm: 10px;
@@ -532,36 +457,29 @@ main {
 
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--sans);
   font-feature-settings: "ss01", "cv11";
-}
-
-.dark .redesign-scope {
-  --q1-soft: #2a1609; --q1-tint: #3a1e0c;
-  --q2-soft: #0f1a3a; --q2-tint: #152350;
-  --q3-soft: #0b241a; --q3-tint: #0f2e22;
-  --q4-soft: #2c2009; --q4-tint: #3a2a0d;
 }
 
 /* Editorial serif utility — global so dashboard and settings pages can use
  * the same display typography as the redesign scope without duplicating
  * the font-family fallback chain inline. */
 .rd-serif {
-  font-family: var(--font-instrument-serif, ui-serif, Georgia, serif);
+  font-family: var(--serif);
   font-weight: 400;
   letter-spacing: -0.01em;
 }
 
 .redesign-scope .rd-mono {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--mono);
 }
 
 .redesign-scope kbd {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--mono);
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 5px;
-  border: 1px solid var(--line);
+  border: var(--border);
   background: var(--paper);
   color: var(--ink-2);
   box-shadow: 0 1px 0 var(--line);
@@ -742,7 +660,7 @@ main {
 /* RdButton variants — split out of inline styles so :hover rules can attach
  * and so `prefers-reduced-motion` gating works consistently. */
 .redesign-scope .rd-button-default {
-  border: 1px solid var(--line);
+  border: var(--border);
   background: var(--paper);
   color: var(--ink);
 }
@@ -751,7 +669,7 @@ main {
   border-color: var(--ink-3);
 }
 .redesign-scope .rd-button-primary {
-  border: 1px solid var(--ink);
+  border: var(--border-strong);
   background: var(--ink);
   color: var(--paper);
 }

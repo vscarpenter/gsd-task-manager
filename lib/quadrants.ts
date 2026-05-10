@@ -2,20 +2,20 @@ import type { QuadrantId } from "@/lib/types";
 
 export type RedesignQuadrantKey = "q1" | "q2" | "q3" | "q4";
 
-/** Canonical accent hex per quadrant — single source of truth for charts, panes, and inline styles. */
+/** Canonical accent token per quadrant - single source of truth for charts, panes, and inline styles. */
 export const QUADRANT_ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "#c2410c",
-  q2: "#1d4ed8",
-  q3: "#15803d",
-  q4: "#854d0e",
+  q1: "var(--rust)",
+  q2: "var(--accent)",
+  q3: "var(--olive)",
+  q4: "var(--warning)",
 };
 
 /** Same palette keyed by QuadrantId for components that reference the long-form id. */
 export const QUADRANT_ACCENT_BY_ID: Record<QuadrantId, string> = {
-  "urgent-important": "#c2410c",
-  "not-urgent-important": "#1d4ed8",
-  "urgent-not-important": "#15803d",
-  "not-urgent-not-important": "#854d0e",
+  "urgent-important": "var(--rust)",
+  "not-urgent-important": "var(--accent)",
+  "urgent-not-important": "var(--olive)",
+  "not-urgent-not-important": "var(--warning)",
 };
 export type RedesignIconKey = "flame" | "calendar" | "users" | "trash";
 
@@ -52,10 +52,10 @@ export const quadrants: QuadrantMeta[] = [
     id: "urgent-important",
     title: "Do First",
     subtitle: "High urgency, high impact tasks",
-    accentClass: "bg-[#f9e3e0] text-[#c94b3a] dark:bg-[#763632]/55 dark:text-[#f3b2a8]",
+    accentClass: "bg-status-overdue-muted text-status-overdue",
     bgClass: "bg-quadrant-focus",
-    colorClass: "bg-[#e74f43] dark:bg-[#f08b78]",
-    iconColor: "text-[#e74f43] dark:text-[#f5b0a4]",
+    colorClass: "bg-status-overdue",
+    iconColor: "text-status-overdue",
     emptyMessage: "What needs your attention right now?",
     emptyEmoji: "🎯",
     emptyHeadline: "No urgent tasks right now",
@@ -76,10 +76,10 @@ export const quadrants: QuadrantMeta[] = [
     id: "not-urgent-important",
     title: "Schedule",
     subtitle: "Plan meaningful progress",
-    accentClass: "bg-[#e3ebff] text-[#4f73e8] dark:bg-[#374a78]/55 dark:text-[#b9c9ff]",
+    accentClass: "bg-accent-muted text-accent",
     bgClass: "bg-quadrant-schedule",
-    colorClass: "bg-[#4d74f5] dark:bg-[#7ea0ff]",
-    iconColor: "text-[#4d74f5] dark:text-[#abc1ff]",
+    colorClass: "bg-accent",
+    iconColor: "text-accent",
     emptyMessage: "What's important but not urgent?",
     emptyEmoji: "📅",
     emptyHeadline: "Nothing scheduled yet",
@@ -100,10 +100,10 @@ export const quadrants: QuadrantMeta[] = [
     id: "urgent-not-important",
     title: "Delegate",
     subtitle: "Hand off quick wins",
-    accentClass: "bg-[#e1f2e9] text-[#31996f] dark:bg-[#315548]/55 dark:text-[#a5dec2]",
+    accentClass: "bg-status-success-muted text-status-success",
     bgClass: "bg-quadrant-delegate",
-    colorClass: "bg-[#36c28a] dark:bg-[#71d4a9]",
-    iconColor: "text-[#36c28a] dark:text-[#9fe6c3]",
+    colorClass: "bg-status-success",
+    iconColor: "text-status-success",
     emptyMessage: "What can someone else handle?",
     emptyEmoji: "🤝",
     emptyHeadline: "No delegated tasks",
@@ -124,10 +124,10 @@ export const quadrants: QuadrantMeta[] = [
     id: "not-urgent-not-important",
     title: "Eliminate",
     subtitle: "Reduce noise and distractors",
-    accentClass: "bg-[#fdebcf] text-[#c07a12] dark:bg-[#6c4d21]/55 dark:text-[#ffd08a]",
+    accentClass: "bg-status-blocked-muted text-status-blocked",
     bgClass: "bg-quadrant-eliminate",
-    colorClass: "bg-[#ff9800] dark:bg-[#ffc15a]",
-    iconColor: "text-[#ff9800] dark:text-[#ffd58f]",
+    colorClass: "bg-status-blocked",
+    iconColor: "text-status-blocked",
     emptyMessage: "Anything you can let go of?",
     emptyEmoji: "🗑️",
     emptyHeadline: "Nothing to eliminate",
