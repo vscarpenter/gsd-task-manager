@@ -112,7 +112,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const isCreateMode = !task;
 
   const activeQuadrant = quadrants.find((q) => q.urgent === urgent && q.important === important);
-  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "#c2410c";
+  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "var(--rust)";
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();

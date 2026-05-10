@@ -112,7 +112,7 @@ export function ResetEverythingDialog({
 		<Dialog open={open} onOpenChange={handleClose}>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2 text-red-600">
+					<DialogTitle className="flex items-center gap-2 text-status-overdue">
 						<AlertTriangleIcon className="h-5 w-5" />
 						Reset Everything
 					</DialogTitle>
@@ -123,11 +123,11 @@ export function ResetEverythingDialog({
 
 				<div className="space-y-4">
 					{/* Data Summary */}
-					<div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20 p-4">
-						<h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+					<div className="rounded-lg border border-status-overdue/35 bg-status-overdue-muted p-4">
+						<h4 className="mb-2 font-semibold text-status-overdue">
 							What will be deleted:
 						</h4>
-						<ul className="space-y-1 text-sm text-red-800 dark:text-red-200">
+						<ul className="space-y-1 text-sm text-status-overdue">
 							<li>• {totalTasks} task{totalTasks !== 1 ? "s" : ""} ({activeTasks} active, {completedTasks} completed)</li>
 							<li>• All custom smart views</li>
 							<li>• All notification settings</li>
@@ -136,8 +136,8 @@ export function ResetEverythingDialog({
 								<li>• Cloud sync configuration (you will be logged out)</li>
 							)}
 							{pendingSync > 0 && (
-								<li className="font-semibold text-red-600 dark:text-red-400">
-									⚠️ {pendingSync} unsynchronized change{pendingSync !== 1 ? "s" : ""}
+								<li className="font-semibold text-status-overdue">
+									{pendingSync} unsynchronized change{pendingSync !== 1 ? "s" : ""}
 								</li>
 							)}
 						</ul>
@@ -187,7 +187,7 @@ export function ResetEverythingDialog({
 								</Button>
 							)}
 							{exportFirst && hasExported && (
-								<p className="text-xs text-green-600">✓ Exported successfully</p>
+								<p className="text-xs text-status-success">Exported successfully</p>
 							)}
 						</div>
 					</div>
@@ -211,7 +211,7 @@ export function ResetEverythingDialog({
 					{/* Confirmation Input */}
 					<div className="space-y-2">
 						<Label htmlFor="confirm-text" className="text-sm font-semibold">
-							Type <span className="font-mono text-red-600">RESET</span> to confirm:
+							Type <span className="font-mono text-status-overdue">RESET</span> to confirm:
 						</Label>
 						<Input
 							id="confirm-text"

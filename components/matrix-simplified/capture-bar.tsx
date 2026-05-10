@@ -135,14 +135,14 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       <ZapIcon
         aria-hidden
         className="h-4 w-4 shrink-0 transition-colors"
-        style={{ color: text.trim() ? accent : "rgb(var(--foreground-muted) / 0.7)" }}
+        style={{ color: text.trim() ? accent : "color-mix(in srgb, var(--gray-500) 70%, transparent)" }}
       />
       <input
         ref={internalRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onInputKey}
-        placeholder="Capture a task… use ! urgent  * important  #tag"
+        placeholder="Capture a task..."
         aria-label="Capture a task"
         className="min-w-0 flex-1 border-0 bg-transparent text-[15px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
       />
@@ -154,7 +154,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
             onClick={cycleQuadrant}
             title="Tab to cycle quadrant"
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in"
-            style={{ backgroundColor: `${accent}33`, color: accent }}
+            style={{
+              backgroundColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
+              color: accent,
+            }}
           >
             <span
               className="h-[5px] w-[5px] rounded-full bg-current"
@@ -193,7 +196,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         className={cn(
           "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-colors duration-[120ms]",
           parsed.title
-            ? "bg-accent text-white hover:bg-accent-hover"
+            ? "bg-accent text-card hover:bg-accent-hover"
             : "bg-accent/15 text-accent hover:bg-accent/20"
         )}
       >

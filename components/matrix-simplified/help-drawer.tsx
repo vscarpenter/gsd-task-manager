@@ -31,7 +31,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
         <header
           style={{
             padding: "20px 52px 16px 24px",
-            borderBottom: "1px solid var(--line)",
+            borderBottom: "var(--border-hair)",
             display: "flex",
             alignItems: "flex-start",
             gap: 12,
@@ -270,11 +270,11 @@ const bodyStyle: React.CSSProperties = {
 };
 
 const codeStyle: React.CSSProperties = {
-  fontFamily: "var(--font-mono, ui-monospace, monospace)",
+  fontFamily: "var(--mono)",
   fontSize: 12,
   padding: "2px 8px",
   borderRadius: 6,
-  border: "1px solid var(--line)",
+  border: "var(--line)",
   background: "var(--bg-inset)",
   color: "var(--ink)",
 };

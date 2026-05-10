@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 type BadgeVariant = "default" | "outline" | "ghost" | "accent";
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: "bg-white/10 text-white",
-  outline: "border border-white/20 text-white",
-  ghost: "bg-transparent text-white",
-  accent: "bg-accent/10 text-accent border border-accent/20"
+  default: "badge-neutral",
+  outline: "border-border bg-transparent text-foreground",
+  ghost: "bg-transparent text-foreground-muted",
+  accent: "badge-accent"
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -18,6 +18,7 @@ export const Badge = ({ className, variant = "default", ...props }: BadgeProps) 
   <span
     className={cn(
       "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium uppercase tracking-wide",
+      "badge",
       variantClasses[variant],
       className
     )}
