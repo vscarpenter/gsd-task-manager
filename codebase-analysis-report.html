@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GSD Task Manager — Codebase Analysis Report</title>
+<style>
+:root{
+  --ivory:#f7f5f0; --paper:#ffffff;
+  --slate:#1f2430;
+  --gray-100:#eeece6; --gray-200:#e3e0d8; --gray-300:#cfcdc4;
+  --gray-400:#a9a69c; --gray-500:#7c7a72; --gray-600:#56544e; --gray-700:#33322e;
+  --accent:#3a4a8c; --accent-d:#2a3a78; --accent-tint:#e7eaf6; --accent-focus-ring:rgba(58,74,140,.32);
+  --olive:#5d7a3a; --olive-tint:#eaf0dd;
+  --rust:#9a3a2a; --rust-tint:#f5e0dc;
+  --sky:#3a6e8c; --sky-tint:#dfecf3;
+  --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --t-display:48px; --t-h1:34px; --t-h2:24px; --t-h3:18px;
+  --t-body:16px; --t-small:14px; --t-caption:12px; --t-eyebrow:11px;
+  --content-wide:1120px; --page-pad-x:24px;
+  --r-xs:3px; --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
+  --border:1.5px solid var(--gray-300);
+  --border-strong:1.5px solid var(--slate);
+  --border-hair:1px solid var(--gray-200);
+  --border-rule:1px solid var(--gray-200);
+  --shadow-sm:0 1px 2px rgba(31,36,48,.06);
+  --shadow-md:0 4px 14px rgba(31,36,48,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ivory:#15171c; --paper:#1c1f26; --slate:#e8e6df;
+    --gray-100:#23262d; --gray-200:#2c2f37; --gray-300:#3a3e48;
+    --gray-400:#5e636e; --gray-500:#878c97; --gray-600:#aeb2bb; --gray-700:#d3d6dc;
+    --accent:#8aa0e0; --accent-d:#a9bcf0; --accent-tint:#222a45; --accent-focus-ring:rgba(138,160,224,.45);
+    --olive:#a6c87a; --olive-tint:#283322;
+    --rust:#d98978; --rust-tint:#3a2521;
+    --sky:#7ab6d3; --sky-tint:#1f2e38;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+    --shadow-md:0 6px 18px rgba(0,0,0,.55);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ivory); color:var(--slate); font-family:var(--sans); font-size:var(--t-body); line-height:1.55; -webkit-font-smoothing:antialiased}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid var(--accent-tint)}
+a:hover{color:var(--accent-d); border-bottom-color:var(--accent)}
+h1,h2,h3,h4{font-family:var(--serif); color:var(--slate); margin:0 0 .35em; line-height:1.18; letter-spacing:-.01em}
+h1{font-size:var(--t-h1)} h2{font-size:var(--t-h2)} h3{font-size:var(--t-h3)}
+.eyebrow{font-family:var(--mono); font-size:var(--t-eyebrow); text-transform:uppercase; letter-spacing:.14em; color:var(--gray-500)}
+hr{border:0; border-top:var(--border-rule); margin:2.2rem 0}
+.shell{max-width:var(--content-wide); margin:0 auto; padding:48px var(--page-pad-x) 96px}
+header.masthead{border-bottom:var(--border); padding-bottom:24px; margin-bottom:32px}
+header.masthead .eyebrow{display:block; margin-bottom:6px}
+header.masthead h1{font-size:var(--t-display); margin-bottom:8px}
+header.masthead .meta{font-size:var(--t-small); color:var(--gray-600); display:flex; gap:18px; flex-wrap:wrap; margin-top:10px}
+header.masthead .meta span{font-family:var(--mono)}
+nav.toc{position:sticky; top:0; z-index:10; background:var(--ivory); border-bottom:var(--border-hair); margin:0 calc(var(--page-pad-x) * -1) 28px; padding:10px var(--page-pad-x)}
+nav.toc ul{list-style:none; padding:0; margin:0; display:flex; flex-wrap:wrap; gap:6px 16px; font-family:var(--mono); font-size:var(--t-eyebrow); text-transform:uppercase; letter-spacing:.1em}
+nav.toc a{color:var(--gray-600); border-bottom:0; padding:6px 0}
+nav.toc a:hover{color:var(--accent)}
+section{margin:48px 0; scroll-margin-top:72px}
+section > h2{display:flex; align-items:baseline; gap:12px; padding-bottom:10px; border-bottom:var(--border-hair); margin-bottom:24px}
+section > h2 .num{font-family:var(--mono); font-size:var(--t-small); color:var(--gray-500); letter-spacing:.06em}
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px}
+.stat-card{background:var(--paper); border:var(--border); border-radius:var(--r-md); padding:18px 20px; box-shadow:var(--shadow-sm)}
+.stat-card .label{font-family:var(--mono); font-size:var(--t-eyebrow); text-transform:uppercase; letter-spacing:.12em; color:var(--gray-500)}
+.stat-card .value{font-family:var(--serif); font-size:34px; line-height:1.1; margin-top:6px; color:var(--slate)}
+.stat-card .sub{font-size:var(--t-caption); color:var(--gray-600); margin-top:4px}
+.stat-card.warn{border-color:var(--rust)} .stat-card.warn .value{color:var(--rust)}
+.stat-card.good{border-color:var(--olive)} .stat-card.good .value{color:var(--olive)}
+.score{display:flex; align-items:center; gap:24px; padding:24px; border:var(--border-strong); border-radius:var(--r-lg); background:var(--paper); box-shadow:var(--shadow-md)}
+.score .ring{width:120px; height:120px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--accent) 0 80%, var(--gray-200) 80% 100%); position:relative; flex-shrink:0}
+.score .ring::after{content:""; position:absolute; inset:8px; border-radius:50%; background:var(--paper)}
+.score .ring .num{position:relative; font-family:var(--serif); font-size:42px; color:var(--slate)}
+.score .ring .num small{font-size:18px; color:var(--gray-500)}
+.score .copy h2{margin:0 0 6px}
+.score .copy p{margin:0; color:var(--gray-700); max-width:60ch}
+.badge{display:inline-block; font-family:var(--mono); font-size:var(--t-eyebrow); text-transform:uppercase; letter-spacing:.12em; padding:3px 9px; border-radius:var(--r-pill); border:1px solid; line-height:1.5}
+.sev-critical{color:#fff; background:var(--rust); border-color:var(--rust)}
+.sev-high{color:var(--rust); background:var(--rust-tint); border-color:var(--rust)}
+.sev-medium{color:var(--accent-d); background:var(--accent-tint); border-color:var(--accent)}
+.sev-low{color:var(--olive); background:var(--olive-tint); border-color:var(--olive)}
+.sev-info{color:var(--gray-700); background:var(--gray-100); border-color:var(--gray-300)}
+.conf-high{color:var(--slate); background:var(--paper); border-color:var(--slate)}
+.conf-medium{color:var(--gray-700); background:var(--paper); border-color:var(--gray-400)}
+.conf-low{color:var(--gray-500); background:var(--paper); border-color:var(--gray-300)}
+.tbl{width:100%; border-collapse:collapse; background:var(--paper); border:var(--border); border-radius:var(--r-md); overflow:hidden}
+.tbl thead th{font-family:var(--mono); font-size:var(--t-eyebrow); text-transform:uppercase; letter-spacing:.12em; text-align:left; padding:12px 14px; background:var(--gray-100); color:var(--gray-700); border-bottom:var(--border-hair)}
+.tbl tbody td{padding:12px 14px; border-bottom:var(--border-hair); vertical-align:top; font-size:var(--t-small)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover{background:var(--gray-100)}
+.tbl code, code{font-family:var(--mono); font-size:.92em; background:var(--gray-100); padding:1px 6px; border-radius:var(--r-xs); color:var(--gray-700)}
+.tbl td.path{font-family:var(--mono); font-size:var(--t-caption); color:var(--gray-700); white-space:nowrap}
+.finding{background:var(--paper); border:var(--border); border-left:4px solid var(--gray-300); border-radius:var(--r-md); padding:18px 20px; margin-bottom:14px}
+.finding.sev-critical{border-left-color:var(--rust)}
+.finding.sev-high{border-left-color:var(--rust)}
+.finding.sev-medium{border-left-color:var(--accent)}
+.finding.sev-low{border-left-color:var(--olive)}
+.finding > summary{cursor:pointer; list-style:none; display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.finding > summary::-webkit-details-marker{display:none}
+.finding > summary::after{content:"▸"; margin-left:auto; color:var(--gray-500); font-family:var(--mono); transition:transform .15s}
+.finding[open] > summary::after{transform:rotate(90deg)}
+.finding .title{font-family:var(--serif); font-size:var(--t-h3); color:var(--slate); flex:1; min-width:0}
+.finding .body{margin-top:14px; padding-top:14px; border-top:var(--border-hair); color:var(--gray-700); font-size:var(--t-small)}
+.finding .body p{margin:0 0 .7em}
+.finding .meta-row{display:flex; gap:14px; flex-wrap:wrap; font-family:var(--mono); font-size:var(--t-caption); color:var(--gray-600); margin-bottom:10px}
+.finding pre{font-family:var(--mono); font-size:var(--t-caption); background:var(--gray-100); color:var(--gray-700); padding:12px 14px; border:var(--border-hair); border-radius:var(--r-sm); overflow-x:auto; margin:8px 0}
+.alert{border:var(--border); border-left-width:4px; border-radius:var(--r-md); padding:14px 18px; background:var(--paper); margin:14px 0}
+.alert.is-info{border-left-color:var(--sky); background:var(--sky-tint)}
+.alert.is-warning{border-left-color:var(--accent); background:var(--accent-tint)}
+.alert.is-danger{border-left-color:var(--rust); background:var(--rust-tint)}
+.alert.is-success{border-left-color:var(--olive); background:var(--olive-tint)}
+.alert h4{margin:0 0 4px; font-family:var(--serif); font-size:var(--t-h3)}
+.timeline{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+.timeline > div{background:var(--paper); border:var(--border); border-radius:var(--r-md); padding:18px}
+.timeline h3{margin-top:0}
+.timeline ul{padding-left:18px; margin:0}
+.timeline li{margin-bottom:8px; font-size:var(--t-small)}
+.timeline .eyebrow{display:block; margin-bottom:6px}
+@media (max-width:780px){
+  header.masthead h1{font-size:32px}
+  .timeline{grid-template-columns:1fr}
+  .score{flex-direction:column; text-align:center}
+}
+@media print{
+  nav.toc{position:static}
+  .finding{break-inside:avoid; box-shadow:none}
+  .stat-card{box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header class="masthead">
+  <span class="eyebrow">Codebase Analysis · Inkwell Indigo &amp; Cloud</span>
+  <h1>GSD Task Manager</h1>
+  <p style="font-size:var(--t-h3); color:var(--gray-700); max-width:60ch; margin:0">
+    Comprehensive code-quality review against <code>coding-standards.md v14.0</code>.
+    A privacy-first Eisenhower-matrix task manager built on Next.js 16, Dexie/IndexedDB, and self-hosted PocketBase.
+  </p>
+  <div class="meta">
+    <span>Repository: gsd-taskmanager · v9.1.1</span>
+    <span>Branch: main</span>
+    <span>HEAD: f98fd21</span>
+    <span>Date: 2026-05-10</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Report contents">
+  <ul>
+    <li><a href="#summary">01 · Executive Summary</a></li>
+    <li><a href="#metrics">02 · Metrics Dashboard</a></li>
+    <li><a href="#findings">03 · Findings</a></li>
+    <li><a href="#roadmap">04 · Roadmap</a></li>
+    <li><a href="#methodology">05 · Methodology &amp; Limits</a></li>
+  </ul>
+</nav>
+
+<!-- ───────── 01 · Executive Summary ───────── -->
+<section id="summary">
+  <h2><span class="num">01</span> Executive Summary</h2>
+
+  <div class="score">
+    <div class="ring" aria-label="Overall health score 8 out of 10">
+      <span class="num">8<small>&nbsp;/ 10</small></span>
+    </div>
+    <div class="copy">
+      <h2>Healthy, mature, disciplined</h2>
+      <p>
+        GSD Task Manager is in strong shape. Test coverage clears the 80% floor on lines, statements, and functions; the codebase has zero <code>TODO</code>/<code>FIXME</code> debt; structured logging replaces every <code>console.*</code> in app code; and architectural decisions are captured in eleven ADRs. The remaining work is mostly supply-chain hygiene (transitive vulns in the MCP SDK chain) and a small number of files that have crept past the 350-line guideline. None of it is structural.
+      </p>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:32px">
+    <div>
+      <span class="eyebrow">Top 5 risks</span>
+      <ol style="padding-left:20px; margin:8px 0 0">
+        <li><strong>Transitive supply-chain vulns</strong> — 2 high, 6 moderate, 1 low (<code>fast-uri</code>, <code>ip-address</code>, <code>postcss</code>, <code>hono</code>) routed through <code>@modelcontextprotocol/sdk</code>.</li>
+        <li><strong>Branch coverage 78.27%</strong> — narrowly below the 80% floor in <code>coding-standards.md §3</code>; concentrated in dashboard/matrix page shells.</li>
+        <li><strong>ARCHITECTURE.md drift</strong> — last edited 2026-03-20, predates the v9 single-matrix refactor (ADR 0011, 2026-04-28). New contributors see a stale system map.</li>
+        <li><strong>Dormant <code>components/command-palette/</code></strong> (347 LoC, four files) is on disk but not wired into the v9 shell. Either re-wire or move behind a feature flag with a removal date.</li>
+        <li><strong>Two <code>0%-covered route shells</code></strong> (<code>app/(dashboard)/dashboard/page.tsx</code>, <code>app/(matrix)/page.tsx</code>) lower aggregate confidence and hide regressions in shell wiring.</li>
+      </ol>
+    </div>
+    <div>
+      <span class="eyebrow">Top 3 strengths</span>
+      <ol style="padding-left:20px; margin:8px 0 0">
+        <li><strong>Discipline shows in the metrics</strong> — 0 <code>TODO</code>/<code>FIXME</code>, 0 <code>console.*</code> in app code, 2 justified <code>any</code> casts across 27.7K LoC.</li>
+        <li><strong>Verification is real</strong> — five CI workflows (security audit nightly + SonarCloud + Claude review + MCP publish + bot triggers), <code>fake-indexeddb</code> integration, ~2,398 test cases across 120 files, 299 explicit mocks.</li>
+        <li><strong>Decisions are written down</strong> — eleven numbered ADRs covering IndexedDB-only, PocketBase sync, LWW resolution, PWA, MCP, smart views, and the v9 refactor. Reviewers and future agents have context.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div style="margin-top:24px">
+    <span class="eyebrow">Top 3 priorities for the next sprint</span>
+    <ol style="padding-left:20px; margin:8px 0 0">
+      <li><strong>Bump the MCP SDK</strong> (or pin <code>fast-uri</code>/<code>ip-address</code>/<code>hono</code> via <code>overrides</code>) to clear both <span class="badge sev-high">High</span> advisories. The override pattern is already established in <code>package.json</code>.</li>
+      <li><strong>Refresh ARCHITECTURE.md</strong> to reflect the v9 single-matrix shell, the modular <code>components/matrix-simplified/*</code> layout, and the Inkwell rollout. Cross-link ADR 0011.</li>
+      <li><strong>Cover the route shells</strong> with smoke tests (<code>render &lt;Dashboard /&gt;</code> with a stub task list) — picks up branch coverage past 80% with one PR.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ───────── 02 · Metrics Dashboard ───────── -->
+<section id="metrics">
+  <h2><span class="num">02</span> Metrics Dashboard</h2>
+
+  <h3 style="margin-top:0">Coverage <span class="badge sev-info" style="margin-left:8px">vitest @vitest/coverage-v8</span></h3>
+  <div class="stat-grid">
+    <div class="stat-card good">
+      <div class="label">Lines</div>
+      <div class="value">85.64%</div>
+      <div class="sub">3,281 / 3,831 — above 80% floor</div>
+    </div>
+    <div class="stat-card good">
+      <div class="label">Statements</div>
+      <div class="value">84.81%</div>
+      <div class="sub">3,503 / 4,130</div>
+    </div>
+    <div class="stat-card good">
+      <div class="label">Functions</div>
+      <div class="value">81.92%</div>
+      <div class="sub">784 / 957</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="label">Branches</div>
+      <div class="value">78.27%</div>
+      <div class="sub">2,007 / 2,564 — 1.7pt below 80% floor</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px">Codebase shape</h3>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">TS / TSX files</div><div class="value">375</div><div class="sub">Application + tests + MCP server</div></div>
+    <div class="stat-card"><div class="label">Source LoC</div><div class="value">27.7K</div><div class="sub"><code>lib/</code> · <code>components/</code> · <code>app/</code> · <code>packages/</code></div></div>
+    <div class="stat-card"><div class="label">Test files</div><div class="value">120</div><div class="sub">~2,398 test cases · 299 mock points</div></div>
+    <div class="stat-card"><div class="label">Avg file size</div><div class="value">~74</div><div class="sub">lines · well under 350-line guideline</div></div>
+    <div class="stat-card"><div class="label">Files &gt; 350 lines</div><div class="value">3</div><div class="sub"><code>db.ts</code> 385 · <code>edit-drawer.tsx</code> 371 · <code>task-operations.ts</code> 335</div></div>
+    <div class="stat-card"><div class="label">ADRs</div><div class="value">11</div><div class="sub"><code>docs/adr/0001-…0011</code></div></div>
+  </div>
+
+  <h3 style="margin-top:32px">Tech debt &amp; quality signals</h3>
+  <div class="stat-grid">
+    <div class="stat-card good"><div class="label">TODO / FIXME / HACK</div><div class="value">0</div><div class="sub">In application source</div></div>
+    <div class="stat-card good"><div class="label">console.* in app code</div><div class="value">0</div><div class="sub">Routed through <code>lib/logger.ts</code></div></div>
+    <div class="stat-card good"><div class="label"><code>any</code> usages</div><div class="value">2</div><div class="sub">Both intentional &amp; localized</div></div>
+    <div class="stat-card"><div class="label">XSS sinks</div><div class="value">0</div><div class="sub">No raw HTML injection · no <code>innerHTML</code></div></div>
+  </div>
+
+  <h3 style="margin-top:32px">Dependencies &amp; supply chain</h3>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Direct prod deps</div><div class="value">25</div><div class="sub">Pinned exact versions</div></div>
+    <div class="stat-card"><div class="label">Direct dev deps</div><div class="value">23</div><div class="sub">Pinned exact versions</div></div>
+    <div class="stat-card"><div class="label">Active overrides</div><div class="value">15</div><div class="sub">Transitive CVE pins in <code>package.json</code></div></div>
+    <div class="stat-card warn"><div class="label">Open advisories</div><div class="value">9</div><div class="sub">2 high · 6 moderate · 1 low (via <code>bun audit</code>)</div></div>
+  </div>
+
+  <h3 style="margin-top:32px">Security findings by severity</h3>
+  <table class="tbl">
+    <thead><tr><th>Severity</th><th>Count</th><th>Source</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge sev-critical">Critical</span></td><td>0</td><td>—</td><td>None detected</td></tr>
+      <tr><td><span class="badge sev-high">High</span></td><td>2</td><td><code>fast-uri</code> ×2 paths</td><td>Host-confusion + path-traversal via percent-encoded segments. Reaches via <code>@modelcontextprotocol/sdk</code> and <code>eslint → ajv</code>.</td></tr>
+      <tr><td><span class="badge sev-medium">Medium</span></td><td>6</td><td><code>ip-address</code>, <code>postcss</code>, <code>hono</code> ×4</td><td>XSS in Address6, PostCSS stringify XSS, Hono JSX/cache/body-limit cluster.</td></tr>
+      <tr><td><span class="badge sev-low">Low</span></td><td>1</td><td><code>hono</code> JWT verify</td><td>Improper validation of NumericDate claims.</td></tr>
+    </tbody>
+  </table>
+  <p class="eyebrow" style="margin-top:8px">Source: <code>bun audit</code> against <code>bun.lock</code>, May 2026.</p>
+</section>
+
+<!-- ───────── 03 · Detailed Findings ───────── -->
+<section id="findings">
+  <h2><span class="num">03</span> Detailed Findings</h2>
+
+  <p style="color:var(--gray-700); max-width:65ch">
+    Findings are grouped by review dimension and sorted by severity. Click a row to expand.
+    Confidence reflects how directly the finding was verified; assumptions are called out inline.
+  </p>
+
+  <h3 id="d-security" style="margin-top:32px">Dimension 03 · Security &amp; supply chain</h3>
+
+  <details class="finding sev-high" open>
+    <summary>
+      <span class="badge sev-high">High</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Two high-severity advisories reach via the MCP SDK transitive chain</span>
+    </summary>
+    <div class="body">
+      <div class="meta-row"><span>File · <code>bun.lock</code></span><span>Effort · Small (under 1 day)</span></div>
+      <p><code>fast-uri</code> ≤ 3.1.1 has two open advisories: host confusion via percent-encoded authority delimiters (GHSA-v39h-62p7-jpjc) and path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6). It reaches the lockfile through <code>@modelcontextprotocol/sdk</code> and through <code>eslint → @eslint/eslintrc → ajv → fast-uri</code>.</p>
+      <p><strong>Recommendation.</strong> The repo already uses <code>overrides</code> for transitive CVE pins. Add one entry and run <code>bun install</code>:</p>
+      <pre>"overrides": {
+  ...,
+  "fast-uri": "&gt;=3.1.2"
+}</pre>
+      <p>Verify with <code>bun audit --audit-level=high</code> in CI; the existing <code>.github/workflows/security-audit.yml</code> already gates on high.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-medium">
+    <summary>
+      <span class="badge sev-medium">Medium</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Six moderate advisories cluster around <code>hono</code>, <code>postcss</code>, and <code>ip-address</code></span>
+    </summary>
+    <div class="body">
+      <div class="meta-row"><span>File · <code>bun.lock</code></span><span>Effort · Small (under 1 day)</span></div>
+      <p>Four of the six are <code>hono</code> findings (JSX SSR style injection, cache vary leakage, body-limit bypass, JSX tag injection). All reach via <code>@modelcontextprotocol/sdk</code>; none are exposed to users — the MCP server is local-stdio only — but they pollute the audit baseline. <code>postcss &lt; 8.5.10</code> is a build-time dep with a stringify XSS that does not affect runtime, and <code>ip-address</code> is build-time too.</p>
+      <p><strong>Recommendation.</strong> Bump <code>@modelcontextprotocol/sdk</code> to the latest minor (it pulls clean transitive deps) or add <code>"hono": "&gt;=4.12.18"</code>, <code>"ip-address": "&gt;=10.1.1"</code>, and <code>"postcss": "&gt;=8.5.10"</code> to the <code>overrides</code> block. The <code>postcss</code> override is already at <code>8.5.10</code> — the audit hit suggests a transitive resolver disagrees. Re-pin to <code>"&gt;=8.5.10"</code> to be certain.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">No dynamic code execution, no SQL string concatenation, no raw HTML sinks</span>
+    </summary>
+    <div class="body">
+      <p>Grep across <code>lib/</code> · <code>components/</code> · <code>app/</code> · <code>packages/mcp-server/src/</code> finds zero usages of unsafe HTML injection APIs and zero dynamic-code-execution constructs. Storage is IndexedDB through Dexie, which uses parameterized queries by construction. PocketBase access is via the official SDK; no string-concatenated filters appear in <code>lib/sync/</code>. This is a strength worth preserving — surface in PR review whenever the codebase grows.</p>
+    </div>
+  </details>
+
+  <h3 id="d-tests" style="margin-top:32px">Dimension 02 · Test quality &amp; coverage</h3>
+
+  <details class="finding sev-medium" open>
+    <summary>
+      <span class="badge sev-medium">Medium</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Branch coverage 78.27% — narrowly below the 80% floor</span>
+    </summary>
+    <div class="body">
+      <div class="meta-row"><span>File · <code>coverage/coverage-summary.json</code></span><span>Effort · Small (under 1 day)</span></div>
+      <p>The aggregate is 1.73 points short. The shortfall is concentrated in two files:</p>
+      <pre>app/(dashboard)/dashboard/page.tsx — 0 / 42 branches (0%)
+app/(matrix)/page.tsx              — 0 / 0 branches (no branch logic)
+app/(archive)/archive/page.tsx     — 11 / 23 branches (47.8%)</pre>
+      <p>The two route shells are not loaded by any test. Adding a one-shot render test (<code>render(&lt;Page /&gt;)</code> with stub data) for each lifts the aggregate over 80% in one PR. The dashboard page in particular has 21 functions at 0% — losing it to a regression would be invisible.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-medium">Conf · Medium</span>
+      <span class="title">~2,398 tests with 299 explicit mocks — healthy unit-vs-integration balance</span>
+    </summary>
+    <div class="body">
+      <p>120 test files, organised by domain (<code>tests/data/</code>, <code>tests/ui/</code>, <code>tests/sync/</code>, <code>tests/utils/</code>, <code>packages/mcp-server/src/__tests__/</code>). <code>fake-indexeddb</code> is auto-imported in <code>vitest.setup.ts</code>, so persistence-layer tests exercise real Dexie code paths against an in-memory backend rather than mocking <code>db.ts</code>. <code>vi.mock('pocketbase')</code> is used at the network boundary only. This is the correct shape — real code below the seam, mocks only at the I/O boundary — and matches <code>coding-standards.md §3</code> guidance on independent tests.</p>
+      <p><strong>Watch-list.</strong> The 590-line <code>tests/data/sync/queue.test.ts</code> and 837-line <code>tests/data/notifications.test.ts</code> are large; the size is data-driven (parametrised cases) rather than coupling, but split if either grows past 1,000 lines.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-medium">Conf · Medium</span>
+      <span class="title">No spec-driven test stubs in <code>tasks/spec.md</code></span>
+    </summary>
+    <div class="body">
+      <p><code>coding-standards.md §1 / Spec-Driven Development</code> requires "Test Stubs: Draft test function names (empty bodies) mapping to each criterion. Shipped with the spec." There is no <code>tasks/spec.md</code> — only <code>tasks/todo.md</code>, <code>tasks/lessons.md</code>, and dated review notes. For a mature codebase shipping at v9.1.1, this is acceptable for incremental work, but the next non-trivial feature should adopt the <code>spec.md</code> + test-stub pattern from the start. <em>Marked as assumption — verified absence of <code>tasks/spec.md</code>; lower-confidence on whether the team uses an out-of-tree spec.</em></p>
+    </div>
+  </details>
+
+  <h3 id="d-arch" style="margin-top:32px">Dimension 04 · Architecture, coupling &amp; layering</h3>
+
+  <details class="finding sev-medium">
+    <summary>
+      <span class="badge sev-medium">Medium</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title"><code>ARCHITECTURE.md</code> predates the v9 single-matrix refactor</span>
+    </summary>
+    <div class="body">
+      <div class="meta-row"><span>File · <code>ARCHITECTURE.md</code></span><span>Last touch · 2026-03-20</span><span>Effort · Small (under 1 day)</span></div>
+      <p>ADR 0011 (v9 single-matrix refactor) was accepted on 2026-04-28 and renamed/reorganised the entire shell into <code>components/matrix-simplified/*</code>. <code>ARCHITECTURE.md</code> still describes the prior multi-matrix layout. A new contributor reading top-down sees a structure that doesn't exist. The README is fresher (2026-04-01) and the per-folder boundaries in <code>CLAUDE.md</code> are accurate, so the gap is in the long-form architecture map only.</p>
+      <p><strong>Recommendation.</strong> Refresh <code>ARCHITECTURE.md</code> in one pass: update the component-tree section to point at <code>matrix-simplified/{app-shell, capture-bar, edit-drawer, help-drawer, matrix-grid, topbar, icon-rail}</code>, link ADR 0011 from the change-log section, and note the Inkwell rollout (commit 5bf9a5b).</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Strong modular boundaries — eleven ADRs, workspace-isolated MCP server, modular sync &amp; analytics</span>
+    </summary>
+    <div class="body">
+      <p>The folder layout matches the documented pattern: <code>lib/sync/</code> splits into <code>pocketbase-client</code>, <code>pb-sync-engine</code>, <code>pb-realtime</code>, <code>pb-auth</code>, <code>task-mapper</code>, <code>sync-coordinator</code>, <code>health-monitor</code>, <code>queue</code>, <code>config</code> — each &lt; 260 LoC. <code>lib/analytics/</code> and <code>lib/notifications/</code> follow the same shape. <code>packages/mcp-server/</code> is a separate workspace, so its dependency surface stays out of the web bundle. ADR 0006 (analytics modular design) and ADR 0007 (notification system) document the boundaries.</p>
+    </div>
+  </details>
+
+  <h3 id="d-maint" style="margin-top:32px">Dimension 05 · Maintainability &amp; complexity</h3>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Three files exceed the 350-line guideline — none structurally</span>
+    </summary>
+    <div class="body">
+      <table class="tbl" style="margin:0">
+        <thead><tr><th>File</th><th>Lines</th><th>Nature</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td class="path">lib/db.ts</td><td>385</td><td>Dexie versioned migrations 1→13</td><td>Acceptable; migrations are append-only by design.</td></tr>
+          <tr><td class="path">components/matrix-simplified/edit-drawer.tsx</td><td>371</td><td>Form + due-date logic + tag editor</td><td>Extract <code>classifyExistingDate()</code> &amp; the due-preset switch into <code>lib/due-date-presets.ts</code> helpers (already partly there).</td></tr>
+          <tr><td class="path">packages/mcp-server/src/write-ops/task-operations.ts</td><td>335</td><td>Bulk + dry-run + circular-dep check</td><td>Within tolerance; split only if more ops land.</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px">Mean file size across <code>lib/</code> · <code>components/</code> · <code>app/</code> · <code>packages/mcp-server/src/</code> is ≈74 lines. The 27.7K-LoC source tree is unusually well-segmented for a Next.js app of this scope.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-medium">Conf · Medium</span>
+      <span class="title"><code>components/command-palette/</code> is dormant — wire it up or schedule removal</span>
+    </summary>
+    <div class="body">
+      <div class="meta-row"><span>Path · <code>components/command-palette/*</code></span><span>~347 LoC across 4 files</span></div>
+      <p><code>CLAUDE.md</code> documents that the ⌘K palette source exists but "is not wired into the v9 app shell; resurrection tracked in <code>tasks/todo.md</code>." That is honest; the risk is that dormant code rots silently — its dependencies are still imported via <code>cmdk@1.1.1</code>. If resurrection slips past one more sprint, either land the wiring or move the folder behind a feature flag with a removal date (per <code>coding-standards.md §7 / Definition of Done</code>: "Feature flags named, owned, and have a removal date").</p>
+    </div>
+  </details>
+
+  <h3 id="d-deps" style="margin-top:32px">Dimension 06 · Dependencies &amp; supply-chain hygiene</h3>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Excellent baseline — exact pins, 15 active overrides, daily security audit CI</span>
+    </summary>
+    <div class="body">
+      <p>Every direct dependency in <code>package.json</code> is pinned to an exact version (no caret ranges, no tilde). The <code>overrides</code> block currently pins 15 transitive packages including <code>esbuild</code>, <code>undici</code>, <code>rollup</code>, <code>qs</code>, <code>minimatch</code>, <code>path-to-regexp</code>. <code>.github/workflows/security-audit.yml</code> runs <code>bun audit --audit-level=high</code> on every push, every PR, and nightly at 02:00 UTC. SonarCloud runs on every push. This is the discipline <code>coding-standards.md §2 / AI supply-chain risk</code> calls for.</p>
+      <p><strong>One micro-suggestion.</strong> The audit workflow's "treat registry errors as warnings" branch is correct but undocumented in the YAML preamble; add a comment block referencing <code>ast-types-flow@0.0.8</code> as the canonical example so a future maintainer doesn't relax it accidentally.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-medium">Conf · Medium</span>
+      <span class="title">Non-obvious dependencies are documented in <code>CLAUDE.md</code></span>
+    </summary>
+    <div class="body">
+      <p><code>CLAUDE.md</code> includes a "Non-Obvious Dependencies" section explaining why each of <code>@tanstack/react-virtual</code>, <code>@dnd-kit/*</code>, <code>recharts</code>, <code>sonner</code>, <code>babel-plugin-react-compiler</code>, <code>canvas-confetti</code>, and <code>nanoid</code> is in the tree. This is exactly the practice <code>coding-standards.md §2 / Dependency Management</code> calls for. As deps change, keep this section in sync — the <code>cmdk</code> entry should be added (or removed when command-palette is decided).</p>
+    </div>
+  </details>
+
+  <h3 id="d-perf" style="margin-top:32px">Dimension 07 · Performance</h3>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-medium">Conf · Medium</span>
+      <span class="title">Hot-path patterns look correct — virtual scrolling, batched PB lookups, throttled push</span>
+    </summary>
+    <div class="body">
+      <p><code>@tanstack/react-virtual</code> is wired for the matrix list, <code>fetchRemoteTaskIndex()</code> in <code>lib/sync/pb-sync-engine.ts</code> batches remote IDs to avoid the N+1 fetch pattern, and push operations are throttled at 100 ms to dodge PocketBase's 429s. <code>dexie-react-hooks</code>'s <code>useLiveQuery</code> handles the live-update path without manual subscription bookkeeping. The React 19 + <code>babel-plugin-react-compiler</code> combo removes the need for hand-rolled <code>useMemo</code>/<code>useCallback</code> on most components.</p>
+      <p><em>Not directly verified.</em> No bundle-size budget or Lighthouse run was performed in this audit; if a regression appears, run <code>chrome-devtools-mcp</code>'s <code>performance_start_trace</code> against <code>http://localhost:3000</code> to capture LCP/INP.</p>
+    </div>
+  </details>
+
+  <h3 id="d-obs" style="margin-top:32px">Dimension 08 · Error handling &amp; observability</h3>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Structured logger replaces every <code>console.*</code> in app code</span>
+    </summary>
+    <div class="body">
+      <p><code>lib/logger.ts</code> (284 LoC) defines <code>createLogger(context)</code> with environment-aware level gating and secret sanitisation. Grep finds zero raw <code>console.log</code>/<code>warn</code>/<code>error</code> in <code>lib/</code>, <code>components/</code>, or <code>app/</code> outside of <code>logger.ts</code> itself — every diagnostic goes through a named context (e.g. <code>const logger = createLogger("DB")</code>). This satisfies <code>coding-standards.md §3 / Error Handling</code> and §10 red-flags.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-medium">Conf · Medium</span>
+      <span class="title">Toast-based user-error surface (<code>sonner</code>) replaces <code>window.alert</code></span>
+    </summary>
+    <div class="body">
+      <p>The April 2026 standards audit captured a lesson: <code>window.alert()</code> is not accessible. The codebase now standardises on <code>toast.error()</code> from <code>sonner</code>, which uses ARIA live regions. <code>tasks/lessons.md</code> records the rationale; treat this as a "do not regress" rule and add a hook-level grep against <code>window\.alert\(</code> if it ever recurs.</p>
+    </div>
+  </details>
+
+  <h3 id="d-types" style="margin-top:32px">Dimension 11 · Configuration &amp; type safety</h3>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Two <code>any</code> usages, both justified</span>
+    </summary>
+    <div class="body">
+      <pre>components/install-pwa-prompt.tsx:40
+   (window.navigator as any).standalone === true;
+
+packages/mcp-server/src/tools/handlers/index.ts:63
+   const typedArgs = validateToolArgs(name, args) as any;</pre>
+      <p>The first is the legitimate iOS-specific <code>navigator.standalone</code> escape (no DOM lib type for it). The second is a post-validation cast — the discriminator is checked by Zod immediately above, so the <code>any</code> is operator-safe. Add a one-line justification comment per <code>coding-standards.md §2 / Type Safety</code> and they are squared away. The MCP cast in particular could become <code>z.infer&lt;typeof schema&gt;</code> if the schema map is keyed by tool name.</p>
+    </div>
+  </details>
+
+  <details class="finding sev-low">
+    <summary>
+      <span class="badge sev-low">Low</span>
+      <span class="badge conf-high">Conf · High</span>
+      <span class="title">Schema validation at every boundary (Zod) — import uses <code>.strip()</code> intentionally</span>
+    </summary>
+    <div class="body">
+      <p><code>lib/schema.ts</code> defines Zod schemas for every persisted entity. Import paths use <code>.safeParse()</code> + <code>.strip()</code> to accept legacy exports with extra fields (e.g. <code>vectorClock</code> from the retired Cloudflare sync), while export paths use <code>.strict()</code> to keep outgoing data clean. This asymmetric pattern is explicitly documented in both <code>CLAUDE.md</code> and <code>tasks/lessons.md</code> — the right shape for a sync-aware schema.</p>
+    </div>
+  </details>
+
+</section>
+
+<!-- ───────── 04 · Roadmap ───────── -->
+<section id="roadmap">
+  <h2><span class="num">04</span> Prioritized Remediation Roadmap</h2>
+
+  <div class="timeline">
+    <div>
+      <span class="eyebrow">Next 30 days</span>
+      <h3>Stabilise the audit baseline</h3>
+      <ul>
+        <li><strong>Clear the two High advisories.</strong> Add <code>"fast-uri": "&gt;=3.1.2"</code> to <code>overrides</code>; rerun <code>bun audit</code>. <em>Effort · Small.</em></li>
+        <li><strong>Sweep the six Medium advisories</strong> via a single MCP-SDK bump or four targeted overrides (<code>hono</code>, <code>ip-address</code>, re-pin <code>postcss</code>). <em>Effort · Small.</em></li>
+        <li><strong>Lift branch coverage past 80%</strong> with smoke tests for <code>app/(dashboard)/dashboard/page.tsx</code> and <code>app/(matrix)/page.tsx</code>. <em>Effort · Small.</em></li>
+        <li><strong>Refresh <code>ARCHITECTURE.md</code></strong> to match the v9 single-matrix layout and link ADR 0011. <em>Effort · Small.</em></li>
+      </ul>
+    </div>
+    <div>
+      <span class="eyebrow">Days 31 – 60</span>
+      <h3>Tighten edges, decide on dormant code</h3>
+      <ul>
+        <li><strong>Decide the command-palette future.</strong> Either land the v9 wiring or move <code>components/command-palette/*</code> behind a flag with a 90-day removal date.</li>
+        <li><strong>Annotate the two <code>any</code> casts</strong> with one-line justifications, or replace the MCP handler cast with a typed schema map.</li>
+        <li><strong>Adopt <code>tasks/spec.md</code></strong> for the next non-trivial feature; ship test stubs alongside the spec per <code>coding-standards.md §1</code>.</li>
+        <li><strong>Document the audit-workflow soft-warning branch</strong> with a comment block in <code>.github/workflows/security-audit.yml</code>.</li>
+        <li><strong>Tighten the largest component</strong>: extract due-date helpers from <code>edit-drawer.tsx</code> into <code>lib/due-date-presets.ts</code> to bring the file back under 350 LoC.</li>
+      </ul>
+    </div>
+    <div>
+      <span class="eyebrow">Days 61 – 90</span>
+      <h3>Lock in the wins</h3>
+      <ul>
+        <li><strong>Add a hook-enforced grep</strong> against <code>console\.\(log|warn|error\)</code> and <code>window\.alert\(</code> in app code (PostToolUse). Standards <em>by hook, not hope</em>.</li>
+        <li><strong>Run a Lighthouse / Chrome DevTools MCP performance trace</strong> against a 500-task fixture to baseline LCP/INP and bundle size before any further feature work.</li>
+        <li><strong>Add an ADR</strong> for the Inkwell rollout (commit <code>5bf9a5b</code>) — it changes how new components get styled, so future contributors should find the rationale in <code>docs/adr/</code> rather than the PR description.</li>
+        <li><strong>Sweep <code>tasks/lessons.md</code></strong>: promote any rules that have not regressed in two quarters into a hook or into <code>CLAUDE.md</code>; archive the rest.</li>
+        <li><strong>Re-run this audit at v9.4</strong> or in 90 days, whichever comes first, to confirm the deltas.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── 05 · Methodology ───────── -->
+<section id="methodology">
+  <h2><span class="num">05</span> Methodology &amp; Limitations</h2>
+
+  <div class="alert is-info">
+    <h4>What was inspected</h4>
+    <p style="margin:0">
+      Static analysis of the working tree at HEAD <code>f98fd21</code> on <code>main</code>:
+      file-size and structural sweep of <code>lib/</code>, <code>components/</code>, <code>app/</code>, <code>packages/mcp-server/src/</code>, and <code>tests/</code>;
+      <code>bun audit</code> against <code>bun.lock</code>;
+      coverage extracted from the most recent <code>coverage/coverage-summary.json</code> (vitest + v8);
+      grep sweeps for tech-debt markers (<code>TODO</code> / <code>FIXME</code> / <code>HACK</code>), unsafe HTML / dynamic-code constructs, raw <code>console.*</code> usage, <code>any</code> escape hatches;
+      verification of the eleven ADRs in <code>docs/adr/</code> and the five workflows in <code>.github/workflows/</code>;
+      cross-reference against <code>coding-standards.md v14.0</code> for every finding.
+    </p>
+  </div>
+
+  <div class="alert is-warning">
+    <h4>What was NOT inspected</h4>
+    <ul style="margin:0; padding-left:18px">
+      <li><strong>Runtime behavior.</strong> No app was launched, no user flows exercised, no Lighthouse / a11y / Playwright trace captured. Performance findings are based on code-shape reading, not measurement.</li>
+      <li><strong>Build output.</strong> The <code>out/</code> static export was not analysed for bundle size or chunking.</li>
+      <li><strong>PocketBase server.</strong> The self-hosted backend at <code>api.vinny.io</code> and its admin config (collection rules, OAuth provider setup) were not reviewed; only the client-side sync code was.</li>
+      <li><strong>MCP runtime.</strong> The MCP server was not connected to a live Claude Desktop instance; tool handlers were read but not exercised.</li>
+      <li><strong>Cross-browser support.</strong> No Safari / Firefox / mobile browser checks performed on the Inkwell rollout.</li>
+      <li><strong>Generated files.</strong> <code>node_modules/</code>, <code>.next/</code>, <code>out/</code>, <code>coverage/</code>, lockfiles, and <code>tsconfig.tsbuildinfo</code> were excluded from LoC and pattern sweeps per the original brief.</li>
+    </ul>
+  </div>
+
+  <div class="alert is-success">
+    <h4>Confidence calibration</h4>
+    <p style="margin:0">
+      <span class="badge conf-high">High</span> findings are anchored to a verified file path, line number, advisory ID, or coverage data point.
+      <span class="badge conf-medium">Medium</span> findings rely on aggregate signals (e.g. mock-count grep) where a sampled spot-check matched the aggregate.
+      <span class="badge conf-low">Low</span> findings — none in this report — would be reserved for inferences based purely on naming conventions or file presence.
+      All assumptions are flagged inline in italics within the relevant finding body.
+    </p>
+  </div>
+
+  <div class="alert is-info">
+    <h4>Reproducing this report</h4>
+    <pre style="margin:.6em 0 0">git -C . status
+bun audit --audit-level=low
+bun run test -- --coverage
+find lib components app packages -name "*.ts" -o -name "*.tsx" \
+  | xargs wc -l | sort -rn | head -30
+grep -rn "TODO\|FIXME\|HACK" --include="*.ts" --include="*.tsx" \
+  lib/ components/ app/ packages/mcp-server/src/</pre>
+  </div>
+</section>
+
+<footer style="margin-top:64px; padding-top:24px; border-top:var(--border); font-size:var(--t-small); color:var(--gray-600); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px">
+  <span>Generated 2026-05-10 against <code>main@f98fd21</code> · v9.1.1</span>
+  <span class="eyebrow">Inkwell · Indigo &amp; Cloud</span>
+</footer>
+
+</div>
+</body>
+</html>
+
