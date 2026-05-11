@@ -81,7 +81,7 @@ export function IconRail({ onHelp }: IconRailProps) {
           ))}
           <div className="flex-1" />
           <RailButton
-            label="Help · Keyboard shortcuts"
+            label="Help"
             icon={CircleHelpIcon}
             collapsed={collapsed}
             onClick={onHelp}
