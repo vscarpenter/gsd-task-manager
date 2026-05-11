@@ -26,6 +26,9 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - `bun run test:watch` - Run Vitest in watch mode
 - `bun run test -- --coverage` - Generate coverage report (target: ≥80%)
 - `bun lint` - Run ESLint
+- `bun run test:e2e` - Run Playwright end-to-end tests
+- `bun run test:e2e:ui` - Run Playwright tests with UI mode
+- `bun run test:e2e:debug` - Run Playwright tests in debug mode
 
 ### Build & Deployment
 - `bun run build` - Build production bundle
@@ -115,8 +118,25 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ## Testing Guidelines
 - UI tests in `tests/ui/`, data logic in `tests/data/`
-- Use `@testing-library/react` and `@testing-library/jest-dom`
+- E2E tests in `tests/e2e/` using Playwright
+- Use `@testing-library/react` and `@testing-library/jest-dom` for unit tests
 - Coverage thresholds: 80% statements, 80% lines, 80% functions, 75% branches
+
+### E2E Testing
+- **Framework**: Playwright with TypeScript support
+- **Configuration**: `playwright.config.ts` with auto-starting dev server
+- **Test Location**: `tests/e2e/` directory
+- **Browser Support**: Chromium, Firefox, WebKit
+- **Key Features**:
+  - Automatic IndexedDB cleanup between tests
+  - Page Object Model for maintainable tests
+  - Handles app redirect (root → about page) automatically
+  - Tests core user workflows: CRUD, navigation, search, settings
+- **Data Attributes**: Components use `data-testid` attributes for reliable selector targeting
+- **Running Tests**:
+  - `bun run test:e2e` - Run all e2e tests
+  - `bun run test:e2e:ui` - Run with interactive UI
+  - `bun run test:e2e:debug` - Run in debug mode with step-through
 
 ## Code Style
 - **TypeScript strict mode** with Next.js typed routes

@@ -35,6 +35,13 @@ const PRIMARY: RailItem[] = [
   { routeKey: "ABOUT", label: "About", icon: InfoIcon },
 ];
 
+const ROUTE_TEST_IDS: Record<RouteKey, string> = {
+  HOME: "nav-matrix",
+  DASHBOARD: "nav-dashboard",
+  SETTINGS: "nav-settings",
+  ABOUT: "nav-about",
+};
+
 export function IconRail({ onHelp }: IconRailProps) {
   const pathname = usePathname();
   const { navigateWithTransition, isPending } = useViewTransition();
@@ -76,6 +83,7 @@ export function IconRail({ onHelp }: IconRailProps) {
               active={isRouteActive(pathname, item.routeKey)}
               disabled={isPending}
               collapsed={collapsed}
+              testId={ROUTE_TEST_IDS[item.routeKey]}
               onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
             />
           ))}
@@ -121,6 +129,7 @@ function RailButton({
   active = false,
   disabled = false,
   collapsed = false,
+  testId,
   onClick,
   mobile = false,
 }: {
@@ -129,12 +138,14 @@ function RailButton({
   active?: boolean;
   disabled?: boolean;
   collapsed?: boolean;
+  testId?: string;
   onClick: () => void;
   mobile?: boolean;
 }) {
   if (mobile) {
     return (
       <button
+        data-testid={testId}
         type="button"
         onClick={onClick}
         disabled={disabled}
@@ -157,6 +168,7 @@ function RailButton({
 
   return (
     <button
+      data-testid={testId}
       type="button"
       onClick={onClick}
       disabled={disabled}

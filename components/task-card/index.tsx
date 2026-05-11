@@ -51,6 +51,9 @@ function TaskCardComponent({
 
   return (
     <article
+      data-testid="task-card"
+      data-task-id={task.id}
+      data-task-title={task.title}
       ref={(node) => {
         setNodeRef(node);
         if (taskRef && node) {

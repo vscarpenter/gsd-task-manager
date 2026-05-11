@@ -66,6 +66,7 @@ export function QuadrantPane({
   );
   return (
     <section
+      data-testid={`quadrant-${meta.rdKey}`}
       ref={setNodeRef}
       className={cn(
         "relative flex min-h-[280px] flex-col rounded-2xl border border-border p-5 transition-colors",

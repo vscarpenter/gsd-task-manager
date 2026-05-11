@@ -54,6 +54,7 @@ export function SimplifiedTopbar({
         <div className="relative hidden w-72 sm:block">
           <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <Input
+            data-testid="search-input"
             ref={searchInputRef}
             placeholder="Search tasks…"
             style={{ paddingLeft: "2.25rem" }}
