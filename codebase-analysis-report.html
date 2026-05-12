@@ -1,868 +1,1193 @@
-<!doctype html>
-<html lang="en" data-theme="light">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GSD Task Manager — Codebase Quality Review</title>
-<meta name="description" content="Comprehensive code quality review for vscarpenter/gsd-task-manager — standards compliance, prioritized 30/60/90 roadmap." />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSD Task Manager — Codebase Analysis Report</title>
+<script>
+  (function () {
+    var s = localStorage.getItem('theme-preview') || 'auto';
+    if (s === 'light' || s === 'dark') document.documentElement.setAttribute('data-theme', s);
+  })();
+</script>
 <style>
-/* Inkwell tokens — vendored from https://github.com/vscarpenter/inkwell main branch */
+/* =====================================================================
+   Inkwell tokens (inlined from inkwell-tokens.css v1.3.0)
+   ===================================================================== */
 :root {
-  --ivory:#F4F4F0; --paper:#FFFFFF; --slate:#13141B; --oat:#DDDCDF;
-  --accent:#3B4A8C; --accent-d:#2A3768;
-  --accent-tint:rgba(59,74,140,0.14);
-  --accent-strong-border:rgba(59,74,140,0.5);
-  --olive:#788C5D; --olive-tint:rgba(120,140,93,0.16);
-  --rust:#B04A3F; --rust-tint:rgba(176,74,63,0.14);
-  --warning:#C78E3F; --warning-tint:rgba(199,142,63,0.18);
-  --info:#5C7CA3; --sky:#6A8CAF;
-  --gray-100:#EDEDEA; --gray-200:#E1E1DE; --gray-300:#CFCFCC;
-  --gray-500:#6F6F75; --gray-700:#3A3B41;
-  --serif:ui-serif,Georgia,"Times New Roman",Times,serif;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --mono:ui-monospace,"SF Mono",Menlo,Monaco,Consolas,monospace;
-  --t-display:48px; --t-h1:32px; --t-h2:24px; --t-h3:19px;
-  --t-body:16px; --t-small:14px; --t-caption:12px; --t-eyebrow:11px;
-  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
-  --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
-  --r-xs:4px; --r-sm:8px; --r-md:12px; --r-lg:14px; --r-pill:999px;
-  --border:1.5px solid var(--gray-300);
-  --border-strong:1.5px solid var(--slate);
-  --border-hair:1px solid var(--gray-100);
-  --border-rule:1px solid var(--gray-300);
-  --shadow-sm:0 1px 2px rgba(20,20,19,0.06);
-  --shadow-md:0 4px 14px rgba(20,20,19,0.08);
-  --t-fast:120ms; --content-wide:1120px; --page-pad-x:24px;
-  color-scheme:light dark;
+  --ivory: #F4F4F0;
+  --paper: #FFFFFF;
+  --slate: #13141B;
+  --oat:   #DDDCDF;
+  --accent:               #3B4A8C;
+  --accent-d:             #2A3768;
+  --accent-tint:          rgba(59, 74, 140, 0.14);
+  --accent-focus-ring:    rgba(59, 74, 140, 0.18);
+  --accent-strong-border: rgba(59, 74, 140, 0.5);
+  --olive:        #788C5D;
+  --olive-tint:   rgba(120, 140, 93, 0.16);
+  --olive-strong-border: rgba(120, 140, 93, 0.45);
+  --rust:         #B04A3F;
+  --rust-d:       #9A3F3F;
+  --rust-tint:    rgba(176, 74, 63, 0.10);
+  --rust-tint-border: rgba(176, 74, 63, 0.45);
+  --rust-focus-ring:  rgba(176, 74, 63, 0.18);
+  --warning:      #C78E3F;
+  --warning-dark: #A06A2A;
+  --warning-tint: rgba(199, 142, 63, 0.16);
+  --warning-strong-border: rgba(199, 142, 63, 0.45);
+  --info:         #5C7CA3;
+  --sky:          #6A8CAF;
+  --gray-100: #EDEDEA;
+  --gray-200: #E1E1DE;
+  --gray-300: #CFCFCC;
+  --gray-500: #6F6F75;
+  --gray-700: #3A3B41;
+  --serif: ui-serif, Georgia, "Times New Roman", Times, serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --t-display: 48px;
+  --t-h1:      32px;
+  --t-h2:      24px;
+  --t-h3:      19px;
+  --t-body:    16px;
+  --t-small:   14px;
+  --t-caption: 12px;
+  --t-eyebrow: 11px;
+  --sp-1:  4px; --sp-2:  8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
+  --border:        1.5px solid var(--gray-300);
+  --border-strong: 1.5px solid var(--slate);
+  --border-hair:   1px   solid var(--gray-100);
+  --border-rule:   1px   solid var(--gray-300);
+  --shadow-sm:         0 1px 2px  rgba(20, 20, 19, 0.06);
+  --shadow-md:         0 4px 14px rgba(20, 20, 19, 0.08);
+  --shadow-lg:         0 12px 28px rgba(20, 20, 19, 0.12);
+  --shadow-card-hover: 0 10px 30px rgba(20, 20, 19, 0.10);
+  --backdrop: rgba(15, 16, 24, 0.55);
+  --t-fast: 120ms; --t-base: 150ms; --t-slow: 300ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --content-narrow:  820px;
+  --content-default: 920px;
+  --content-wide:   1120px;
+  --page-pad-x:      24px;
+  --z-base: 1; --z-raised: 10; --z-sticky: 20; --z-overlay: 30; --z-modal: 50;
+  color-scheme: light dark;
 }
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    color-scheme:dark;
-    --ivory:#0F1018; --paper:#181A24; --slate:#E8E8EE; --oat:#2B2D38;
-    --accent:#7A8AD1; --accent-d:#6273C0;
-    --accent-tint:rgba(122,138,209,0.18);
-    --accent-strong-border:rgba(122,138,209,0.55);
-    --olive:#9CB07F; --olive-tint:rgba(156,176,127,0.18);
-    --rust:#D27268; --rust-tint:rgba(210,114,104,0.18);
-    --warning:#E0AF63; --warning-tint:rgba(224,175,99,0.20);
-    --info:#8FA8C5; --sky:#A4BAD2;
-    --gray-100:#23252F; --gray-200:#2B2D38; --gray-300:#3F424D;
-    --gray-500:#9598A2; --gray-700:#C1C3CC;
-    --shadow-sm:0 1px 2px rgba(0,0,0,0.45);
-    --shadow-md:0 6px 18px rgba(0,0,0,0.55);
+    color-scheme: dark;
+    --ivory: #0F1018; --paper: #181A24; --slate: #E8E8EE; --oat: #2B2D38;
+    --accent: #7A8AD1; --accent-d: #6273C0;
+    --accent-tint: rgba(122, 138, 209, 0.18);
+    --accent-focus-ring: rgba(122, 138, 209, 0.28);
+    --accent-strong-border: rgba(122, 138, 209, 0.6);
+    --olive: #9CB07A; --olive-tint: rgba(156, 176, 122, 0.18);
+    --olive-strong-border: rgba(156, 176, 122, 0.6);
+    --rust: #D27468; --rust-d: #C96B5F;
+    --rust-tint: rgba(210, 116, 104, 0.18);
+    --rust-tint-border: rgba(210, 116, 104, 0.6);
+    --rust-focus-ring: rgba(210, 116, 104, 0.28);
+    --warning: #D9A55F; --warning-dark: #D9A55F;
+    --warning-tint: rgba(217, 165, 95, 0.18);
+    --warning-strong-border: rgba(217, 165, 95, 0.6);
+    --info: #7C9FD2; --sky: #85A6CB;
+    --gray-100: #1E1F29; --gray-200: #262732; --gray-300: #34363F;
+    --gray-500: #9A9AA0; --gray-700: #C0C0C7;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.45);
+    --shadow-md: 0 4px 14px rgba(0,0,0,0.50);
+    --shadow-lg: 0 12px 28px rgba(0,0,0,0.55);
+    --shadow-card-hover: 0 10px 30px rgba(0,0,0,0.50);
+    --backdrop: rgba(0,0,0,0.6);
   }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ivory: #0F1018; --paper: #181A24; --slate: #E8E8EE; --oat: #2B2D38;
+  --accent: #7A8AD1; --accent-d: #6273C0;
+  --accent-tint: rgba(122, 138, 209, 0.18);
+  --accent-focus-ring: rgba(122, 138, 209, 0.28);
+  --accent-strong-border: rgba(122, 138, 209, 0.6);
+  --olive: #9CB07A; --olive-tint: rgba(156, 176, 122, 0.18);
+  --olive-strong-border: rgba(156, 176, 122, 0.6);
+  --rust: #D27468; --rust-d: #C96B5F;
+  --rust-tint: rgba(210, 116, 104, 0.18);
+  --rust-tint-border: rgba(210, 116, 104, 0.6);
+  --rust-focus-ring: rgba(210, 116, 104, 0.28);
+  --warning: #D9A55F; --warning-dark: #D9A55F;
+  --warning-tint: rgba(217, 165, 95, 0.18);
+  --warning-strong-border: rgba(217, 165, 95, 0.6);
+  --info: #7C9FD2; --sky: #85A6CB;
+  --gray-100: #1E1F29; --gray-200: #262732; --gray-300: #34363F;
+  --gray-500: #9A9AA0; --gray-700: #C0C0C7;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.45);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.50);
+  --shadow-lg: 0 12px 28px rgba(0,0,0,0.55);
+  --shadow-card-hover: 0 10px 30px rgba(0,0,0,0.50);
+  --backdrop: rgba(0,0,0,0.6);
+}
 
-* { box-sizing:border-box; }
-html { scroll-behavior:smooth; }
+/* =====================================================================
+   Inkwell component CSS (inlined subset from inkwell-components.css v1.3.0)
+   ===================================================================== */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
-  margin:0; background:var(--ivory); color:var(--slate);
-  font-family:var(--sans); font-size:var(--t-body); line-height:1.55;
-  -webkit-font-smoothing:antialiased;
+  margin: 0; background: var(--ivory); color: var(--slate);
+  font-family: var(--sans); font-size: var(--t-body); line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
-h1,h2,h3,h4 { font-family:var(--serif); font-weight:600; line-height:1.2; margin:0 0 var(--sp-3); }
-h1 { font-size:var(--t-h1); letter-spacing:-0.01em; }
-h2 { font-size:var(--t-h2); margin-top:var(--sp-7); }
-h3 { font-size:var(--t-h3); margin-top:var(--sp-5); color:var(--gray-700); }
-h4 { font-size:var(--t-body); margin-top:var(--sp-4); color:var(--gray-700); }
-p { margin:0 0 var(--sp-3); }
-a { color:var(--accent); text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:3px; }
-a:hover { color:var(--accent-d); }
-code, .mono { font-family:var(--mono); font-size:0.9em; background:var(--gray-100); padding:1px 6px; border-radius:var(--r-xs); }
-pre code { display:block; padding:var(--sp-3); overflow-x:auto; line-height:1.5; }
-hr { border:0; border-top:var(--border-rule); margin:var(--sp-6) 0; }
-
+.t-display { font-family: var(--serif); font-weight: 500; font-size: var(--t-display); line-height: 1.1; letter-spacing: -0.02em; }
+.t-h1 { font-family: var(--serif); font-weight: 500; font-size: var(--t-h1); line-height: 1.2; letter-spacing: -0.01em; }
+.t-h2 { font-family: var(--serif); font-weight: 500; font-size: var(--t-h2); line-height: 1.3; letter-spacing: -0.01em; }
+.t-h3 { font-family: var(--serif); font-weight: 500; font-size: var(--t-h3); line-height: 1.22; }
+.t-body    { font: 430 var(--t-body)/1.55 var(--sans); }
+.t-small   { font: 430 var(--t-small)/1.5 var(--sans); color: var(--gray-700); }
+.t-caption { font: 500 var(--t-caption)/1.4 var(--sans); color: var(--gray-500); }
 .eyebrow {
-  font-family:var(--mono); font-size:var(--t-eyebrow);
-  letter-spacing:0.18em; text-transform:uppercase; color:var(--gray-500);
+  font-family: var(--mono); font-size: var(--t-eyebrow);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray-500);
+  display: inline-flex; align-items: center; gap: 12px;
 }
-
-.shell {
-  max-width:var(--content-wide); margin:0 auto;
-  padding:var(--sp-7) var(--page-pad-x) var(--sp-8);
+.eyebrow::before { content: ""; width: 24px; height: 1.5px; background: var(--accent); }
+code, .code-inline {
+  font-family: var(--mono); font-size: 0.86em;
+  background: var(--gray-100); padding: 1.5px 5px; border-radius: var(--r-xs);
 }
-@media (max-width:760px) { .shell { padding:var(--sp-5) var(--page-pad-x); } }
-
-.cover {
-  border:var(--border); border-radius:var(--r-lg);
-  background:var(--paper); padding:var(--sp-6);
-  display:grid; grid-template-columns:1fr auto; gap:var(--sp-5);
-  align-items:end; margin-bottom:var(--sp-6);
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 38px; padding: 0 16px; font-family: var(--sans); font-size: 14px; font-weight: 500;
+  border-radius: var(--r-sm); border: 1.5px solid transparent; cursor: pointer;
+  transition: background var(--t-fast) ease, border-color var(--t-fast) ease;
+  text-decoration: none;
 }
-.cover h1 { font-size:var(--t-display); margin-bottom:var(--sp-2); }
-.cover .meta { font-family:var(--mono); font-size:var(--t-caption); color:var(--gray-500); }
-.cover .meta span + span::before { content:"  ·  "; color:var(--gray-300); }
-.score-card {
-  border:var(--border-strong); border-radius:var(--r-md);
-  padding:var(--sp-4) var(--sp-5); text-align:center;
-  background:var(--accent-tint); min-width:140px;
-}
-.score-card .num { font-family:var(--serif); font-size:48px; font-weight:600; line-height:1; color:var(--accent-d); }
-.score-card .lbl { font-family:var(--mono); font-size:var(--t-eyebrow); letter-spacing:0.16em; text-transform:uppercase; color:var(--gray-700); margin-top:var(--sp-2); }
-@media (max-width:680px) { .cover { grid-template-columns:1fr; } .cover h1 { font-size:var(--t-h1); } }
-
-nav.toc {
-  position:sticky; top:0; z-index:5; background:var(--ivory);
-  border-bottom:var(--border-rule); padding:var(--sp-2) 0; margin-bottom:var(--sp-5);
-  display:flex; flex-wrap:wrap; gap:var(--sp-1) var(--sp-3);
-}
-nav.toc a {
-  font-family:var(--mono); font-size:var(--t-caption);
-  text-decoration:none; color:var(--gray-700); padding:var(--sp-1) var(--sp-2);
-  border-radius:var(--r-xs); border:1px solid transparent;
-}
-nav.toc a:hover { background:var(--accent-tint); color:var(--accent-d); border-color:var(--accent-tint); }
-
+.btn-primary { background: var(--accent); color: var(--paper); }
+.btn-primary:hover { background: var(--accent-d); }
+.btn-secondary { background: var(--paper); color: var(--slate); border-color: var(--gray-300); }
+.btn-secondary:hover { background: var(--gray-100); }
 .card {
-  background:var(--paper); border:var(--border); border-radius:var(--r-md);
-  padding:var(--sp-5); margin-bottom:var(--sp-4);
-}
-.tldr {
-  background:var(--slate); color:var(--ivory);
-  border-radius:var(--r-md); padding:var(--sp-4) var(--sp-5);
-  margin-bottom:var(--sp-5); font-size:var(--t-small);
-}
-.tldr strong { color:var(--ivory); font-family:var(--serif); font-size:var(--t-body); display:block; margin-bottom:var(--sp-1); }
-.alert {
-  border-left:4px solid var(--gray-300); border-radius:var(--r-sm);
-  padding:var(--sp-3) var(--sp-4); margin:var(--sp-3) 0;
-  background:var(--paper); border-top:var(--border); border-right:var(--border); border-bottom:var(--border);
-}
-.alert.is-danger  { border-left-color:var(--rust);    background:var(--rust-tint); }
-.alert.is-warning { border-left-color:var(--warning); background:var(--warning-tint); }
-.alert.is-success { border-left-color:var(--olive);   background:var(--olive-tint); }
-.alert.is-info    { border-left-color:var(--info);    background:var(--accent-tint); }
-
-.stat-grid {
-  display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
-  gap:var(--sp-3); margin-bottom:var(--sp-5);
+  background: var(--paper); border: var(--border); border-radius: var(--r-lg);
+  padding: var(--sp-5);
 }
 .stat-card {
-  border:var(--border); border-radius:var(--r-md);
-  padding:var(--sp-3) var(--sp-4); background:var(--paper);
+  background: var(--paper); border: var(--border); border-radius: var(--r-md);
+  padding: 20px 22px 18px;
 }
-.stat-card .lbl {
-  font-family:var(--mono); font-size:var(--t-eyebrow);
-  letter-spacing:0.14em; text-transform:uppercase; color:var(--gray-500);
-}
-.stat-card .num { font-family:var(--serif); font-size:28px; font-weight:600; color:var(--slate); margin-top:var(--sp-1); }
-.stat-card .delta { font-family:var(--mono); font-size:var(--t-caption); color:var(--gray-500); margin-top:2px; }
-.stat-card.is-danger  .num { color:var(--rust); }
-.stat-card.is-warning .num { color:var(--warning); }
-.stat-card.is-success .num { color:var(--olive); }
-
+.stat-card.warn { border-left: 4px solid var(--accent); padding-left: 19px; }
+.stat-num   { font: 500 44px/1 var(--serif); margin-bottom: 8px; color: var(--slate); }
+.stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
+.stat-delta { font-family: var(--mono); font-size: 11px; margin-top: 6px; }
+.stat-delta.up   { color: var(--olive); }
+.stat-delta.down { color: var(--rust); }
 .tbl {
-  width:100%; border-collapse:collapse;
-  font-size:var(--t-small); margin:var(--sp-3) 0 var(--sp-5);
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--paper); border: var(--border); border-radius: var(--r-md); overflow: hidden;
 }
-.tbl th, .tbl td {
-  text-align:left; padding:var(--sp-2) var(--sp-3);
-  border-bottom:var(--border-hair); vertical-align:top;
+.tbl thead th {
+  text-align: left; font: 600 11px/1 var(--sans); text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--gray-500); background: var(--gray-100);
+  padding: 12px 16px; border-bottom: 1px solid var(--gray-300);
 }
-.tbl th {
-  font-family:var(--mono); font-size:var(--t-eyebrow);
-  letter-spacing:0.14em; text-transform:uppercase; color:var(--gray-500);
-  border-bottom:var(--border);
-}
-.tbl tr:last-child td { border-bottom:0; }
-.tbl td.path { font-family:var(--mono); font-size:var(--t-caption); word-break:break-all; }
-.tbl td.num  { font-family:var(--mono); text-align:right; }
-
+.tbl tbody td { padding: 13px 16px; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
+.tbl tbody tr:last-child td { border-bottom: none; }
 .badge {
-  display:inline-block; font-family:var(--mono); font-size:var(--t-eyebrow);
-  letter-spacing:0.10em; text-transform:uppercase;
-  padding:2px 8px; border-radius:var(--r-pill);
-  border:1.5px solid var(--gray-300); background:var(--paper); color:var(--gray-700);
-  white-space:nowrap;
+  display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  font-size: 12px; font-weight: 500; border-radius: var(--r-pill);
 }
-.badge.crit { background:var(--rust); color:#fff; border-color:var(--rust); }
-.badge.high { background:var(--rust-tint); color:var(--rust); border-color:var(--rust); }
-.badge.med  { background:var(--warning-tint); color:#7C5921; border-color:var(--warning); }
-.badge.low  { background:var(--olive-tint); color:#3F4F2C; border-color:var(--olive); }
-.badge.info { background:var(--accent-tint); color:var(--accent-d); border-color:var(--accent); }
-.badge.eff-s { background:var(--paper); }
-.badge.eff-m { background:var(--gray-100); }
-.badge.eff-l { background:var(--gray-200); }
-.conf {
-  font-family:var(--mono); font-size:var(--t-eyebrow);
-  letter-spacing:0.10em; color:var(--gray-500); text-transform:uppercase;
+.badge-neutral { background: var(--gray-100); color: var(--gray-700); }
+.badge-accent  { background: var(--accent-tint); color: var(--accent); }
+.badge-success { background: var(--olive-tint); color: var(--olive); }
+.badge-warning { background: var(--warning-tint); color: var(--warning-dark); }
+.badge-danger  { background: var(--rust-tint); color: var(--rust); border: 1.5px solid var(--rust-tint-border); }
+.tldr {
+  background: var(--slate); color: var(--ivory); border-radius: var(--r-md); padding: 22px 26px;
 }
+.tldr-label {
+  font: 500 var(--t-eyebrow)/1 var(--mono); text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--oat); margin-bottom: 10px;
+}
+.sec-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+.sec-head .idx { font: 600 13px/1 var(--mono); color: var(--accent); width: 34px; flex-shrink: 0; }
+.sec-head h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 27px; letter-spacing: -0.012em; }
+.sec-head .count {
+  font: 11px/1 var(--mono); color: var(--gray-500); background: var(--gray-100);
+  padding: 2px 8px; border-radius: var(--r-pill);
+}
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  font-size: 12.5px; padding: 7px 14px; border: var(--border); border-radius: var(--r-pill);
+  text-decoration: none; color: var(--gray-700); background: var(--paper);
+  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.toc a .n { font: 10px/1 var(--mono); color: var(--gray-500); }
+.toc a:hover { border-color: var(--slate); color: var(--slate); }
+.alert {
+  display: flex; gap: 12px; padding: 12px 16px; border-radius: var(--r-md);
+  border: var(--border); background: var(--paper); font-size: 14px; line-height: 1.5; color: var(--slate);
+}
+.alert-title { font-weight: 600; margin: 0 0 2px; font-size: 14px; }
+.alert-body  { color: var(--gray-700); }
+.alert.is-info    { background: var(--accent-tint); border-color: var(--accent-strong-border); }
+.alert.is-info    .alert-title { color: var(--accent); }
+.alert.is-success { background: var(--olive-tint); border-color: var(--olive-strong-border); }
+.alert.is-success .alert-title { color: var(--olive); }
+.alert.is-warning { background: var(--warning-tint); border-color: var(--warning-strong-border); }
+.alert.is-warning .alert-title { color: var(--warning-dark); }
+.alert.is-danger  { background: var(--rust-tint); border-color: var(--rust-tint-border); }
+.alert.is-danger  .alert-title { color: var(--rust); }
+.chip-dot {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: var(--r-sm); border: var(--border);
+  font: 12.5px var(--mono); color: var(--slate); background: var(--paper);
+}
+.chip-dot .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.chip-dot.safe      { background: var(--olive-tint); border-color: var(--olive-strong-border); }
+.chip-dot.safe .dot      { background: var(--olive); }
+.chip-dot.attention { background: var(--accent-tint); border-color: var(--accent-strong-border); }
+.chip-dot.attention .dot { background: var(--accent); }
+.wrap-wide { max-width: var(--content-wide); margin: 0 auto; padding: 0 var(--page-pad-x); }
+hr.rule { border: none; border-top: var(--border-rule); margin: 0 0 22px; }
+kbd, .kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  font: 500 11px/1 var(--mono); color: var(--gray-700);
+  background: var(--paper); border: 1px solid var(--gray-300);
+  border-bottom-width: 2px; border-radius: var(--r-xs); vertical-align: baseline;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+*:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.finding { border-top:var(--border-hair); padding:var(--sp-3) 0; }
-.finding:first-child { border-top:0; padding-top:0; }
-.finding-head {
-  display:flex; flex-wrap:wrap; gap:var(--sp-2);
-  align-items:center; margin-bottom:var(--sp-2);
+/* =====================================================================
+   Report-specific styles
+   ===================================================================== */
+header { padding: var(--sp-7) 0 var(--sp-6); border-bottom: var(--border-rule); margin-bottom: var(--sp-6); }
+header .meta { display: flex; gap: 16px; align-items: center; margin-top: var(--sp-3); flex-wrap: wrap; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin: var(--sp-5) 0; }
+section { margin-bottom: var(--sp-7); }
+.finding { margin-bottom: var(--sp-5); }
+.finding-header {
+  display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-2);
+  cursor: pointer; user-select: none;
 }
-.finding-head .title { font-weight:600; }
-.finding .where {
-  font-family:var(--mono); font-size:var(--t-caption);
-  color:var(--gray-500); margin-bottom:var(--sp-2); word-break:break-all;
+.finding-header:hover { color: var(--accent); }
+.finding-header .arrow {
+  width: 18px; height: 18px; transition: transform var(--t-fast);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--gray-500);
 }
-.finding .rec { font-size:var(--t-small); }
-
-details.section {
-  border:var(--border); border-radius:var(--r-md); background:var(--paper);
-  margin-bottom:var(--sp-4); padding:0;
+.finding-header[aria-expanded="true"] .arrow { transform: rotate(90deg); }
+.finding-body { padding-left: var(--sp-6); }
+.finding-body[hidden] { display: none; }
+.sev-critical { background: var(--rust); color: var(--paper); }
+.sev-high     { background: var(--warning); color: var(--paper); }
+.sev-medium   { background: var(--accent-tint); color: var(--accent); border: 1.5px solid var(--accent-strong-border); }
+.sev-low      { background: var(--gray-100); color: var(--gray-700); }
+footer { padding: var(--sp-6) 0; border-top: var(--border-rule); margin-top: var(--sp-7); }
+footer p { font-size: var(--t-small); color: var(--gray-500); }
+nav.sticky-nav {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  background: var(--ivory); padding: var(--sp-3) 0; border-bottom: var(--border-rule);
+  margin-bottom: var(--sp-5);
 }
-details.section[open] { box-shadow:var(--shadow-sm); }
-details.section > summary {
-  cursor:pointer; padding:var(--sp-4) var(--sp-5);
-  font-family:var(--serif); font-size:var(--t-h3); font-weight:600;
-  list-style:none; display:flex; justify-content:space-between; align-items:center;
+.theme-toggle-wrap { position: fixed; top: 16px; right: 16px; z-index: var(--z-overlay); }
+.theme-toggle-wrap button {
+  height: 34px; padding: 0 14px; font: 500 12px/1 var(--mono);
+  background: var(--paper); border: var(--border); border-radius: var(--r-pill);
+  cursor: pointer; color: var(--gray-700);
 }
-details.section > summary::-webkit-details-marker { display:none; }
-details.section > summary::after {
-  content:"+"; font-family:var(--mono); font-size:20px; color:var(--gray-500);
-  transition:transform var(--t-fast);
-}
-details.section[open] > summary::after { content:"−"; }
-details.section > .body { padding:0 var(--sp-5) var(--sp-5); }
-details.section > summary .meta-counts { font-family:var(--mono); font-size:var(--t-caption); font-weight:400; color:var(--gray-500); margin-left:var(--sp-3); }
-
-.timeline { display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--sp-3); }
-@media (max-width:760px) { .timeline { grid-template-columns:1fr; } }
-.timeline .stop {
-  border:var(--border); border-radius:var(--r-md);
-  padding:var(--sp-4); background:var(--paper);
-}
-.timeline .stop h4 { font-family:var(--mono); font-size:var(--t-eyebrow); letter-spacing:0.16em; text-transform:uppercase; color:var(--accent-d); margin:0 0 var(--sp-2); }
-.timeline .stop ul { padding-left:var(--sp-4); margin:0; font-size:var(--t-small); }
-.timeline .stop ul li { margin-bottom:var(--sp-2); }
-
-ul.bullets { padding-left:var(--sp-4); margin:var(--sp-2) 0; }
-ul.bullets li { margin-bottom:var(--sp-1); }
-
-@media print {
-  nav.toc { position:static; }
-  details.section { break-inside:avoid; box-shadow:none; }
-  details.section:not([open]) > .body { display:block; }
+.theme-toggle-wrap button:hover { border-color: var(--slate); color: var(--slate); }
+pre.code-sample {
+  background: var(--gray-100); padding: 12px 16px; border-radius: var(--r-sm);
+  font: 13px/1.55 var(--mono); overflow-x: auto; border: var(--border-hair);
+  margin-top: 8px;
 }
 </style>
 </head>
 <body>
-<div class="shell">
-<header class="cover">
-  <div>
-    <div class="eyebrow">Codebase quality review · Executive briefing</div>
-    <h1>GSD Task Manager</h1>
-    <p style="margin:0;color:var(--gray-700);max-width:60ch">Privacy-first Eisenhower matrix · Next.js 16 App Router static export · Dexie/IndexedDB local store · optional PocketBase cloud sync · MCP server for Claude Desktop integration.</p>
-    <div class="meta" style="margin-top:var(--sp-3)">
-      <span>Repo: vscarpenter/gsd-task-manager</span>
-      <span>Branch: main</span>
-      <span>Version: 9.1.1</span>
-      <span>Reviewed: 2026-05-10</span>
-    </div>
-  </div>
-  <div class="score-card">
-    <div class="num">7.0</div>
-    <div class="lbl">Health · 1–10</div>
+
+<!-- Theme toggle -->
+<div class="theme-toggle-wrap">
+  <button id="theme-toggle" type="button">Theme: <span id="theme-label">auto</span></button>
+</div>
+
+<div class="wrap-wide">
+
+<!-- ================================================================
+     HEADER
+     ================================================================ -->
+<header>
+  <p class="eyebrow">Codebase Analysis Report</p>
+  <h1 class="t-display" style="margin: 12px 0 0;">GSD Task Manager</h1>
+  <div class="meta">
+    <span class="badge badge-accent">v9 Architecture</span>
+    <span class="badge badge-neutral">Next.js 16 &middot; React 19 &middot; Dexie 4</span>
+    <span class="t-caption">May 12, 2026</span>
   </div>
 </header>
 
-<nav class="toc" aria-label="Sections">
-  <a href="#summary">Summary</a>
-  <a href="#methodology">Methodology</a>
-  <a href="#metrics">Metrics</a>
-  <a href="#standards">Standards</a>
-  <a href="#tests">Tests</a>
-  <a href="#security">Security</a>
-  <a href="#architecture">Architecture</a>
-  <a href="#maintainability">Maintainability</a>
-  <a href="#dependencies">Dependencies</a>
-  <a href="#performance">Performance</a>
-  <a href="#observability">Observability</a>
-  <a href="#docs">Docs</a>
-  <a href="#debt">Debt</a>
-  <a href="#config">Config</a>
-  <a href="#roadmap">Roadmap</a>
+<!-- ================================================================
+     NAVIGATION
+     ================================================================ -->
+<nav class="sticky-nav" aria-label="Report sections">
+  <div class="toc">
+    <a href="#executive"><span class="n">01</span> Executive Summary</a>
+    <a href="#metrics"><span class="n">02</span> Metrics Dashboard</a>
+    <a href="#findings"><span class="n">03</span> Detailed Findings</a>
+    <a href="#e2e"><span class="n">04</span> E2E Test Health</a>
+    <a href="#roadmap"><span class="n">05</span> Remediation Roadmap</a>
+    <a href="#methodology"><span class="n">06</span> Methodology</a>
+  </div>
 </nav>
 
-<section id="summary">
-  <div class="eyebrow">Section 1</div>
-  <h2 style="margin-top:var(--sp-3)">Executive summary</h2>
-
-  <div class="tldr">
-    <strong>One-line verdict</strong>
-    A well-architected, well-documented codebase actively maintained against modern standards — but three large React components concentrate change risk, the sync push/pull engines lack direct unit tests, and nine transitive CVEs in the MCP server's dependency tree need patched overrides this sprint.
+<!-- ================================================================
+     1. EXECUTIVE SUMMARY
+     ================================================================ -->
+<section id="executive">
+  <div class="sec-head">
+    <span class="idx">01</span>
+    <h2>Executive Summary</h2>
   </div>
 
-  <h3>Top 5 risks</h3>
-  <ol class="bullets">
-    <li><strong>Sync push/pull engines lack direct unit tests.</strong> <code>lib/sync/pb-push.ts</code>, <code>lib/sync/pb-pull.ts</code>, and <code>lib/sync/pb-sync-helpers.ts</code> are the LWW-conflict heart of multi-device data integrity and only get indirect coverage through <code>pb-sync-engine.test.ts</code>. <span class="badge high">High</span></li>
-    <li><strong>Nine transitive vulnerability advisories in the MCP server.</strong> Two High (<code>fast-uri</code> host confusion + path traversal), four Medium (<code>hono</code> &lt;4.12.18), one Medium (<code>ip-address</code> XSS), one Medium (<code>postcss</code>). The existing override <code>"hono": "&gt;=4.12.14"</code> is stale relative to the current advisory floor. <span class="badge high">High</span></li>
-    <li><strong>Three large components concentrate change risk.</strong> <code>EditDrawer</code> (298-line function), <code>MatrixSimplified</code> (279-line function), and <code>SettingsPage</code> (269-line function) each violate the &lt;40-line function rule by 7–8×. They are also where five chronic <code>edit-drawer.test.tsx</code> timeouts live. <span class="badge high">High</span></li>
-    <li><strong>MCP server tests are excluded from the main Vitest run.</strong> <code>vitest.config.ts:16</code> excludes <code>packages/mcp-server/**</code> — five test files for token validation, schemas, and write-ops never execute under <code>bun run test</code>, so pre-commit verification can ship MCP regressions silently. <span class="badge med">Medium</span></li>
-    <li><strong>Service worker accepts <code>postMessage</code> without origin verification.</strong> <code>public/sw.js:47</code> handles a <code>SKIP_WAITING</code> command from any frame controlling the SW client. Practical exploit surface is small (same-origin scope, single command, no data return) but the missing <code>event.origin</code> check is a defensible-default omission. <span class="badge med">Medium</span></li>
-  </ol>
+  <div class="tldr" style="margin-bottom: var(--sp-5);">
+    <p class="tldr-label">Overall Health Score</p>
+    <p style="font: 500 64px/1 var(--serif); margin: 0 0 8px;">8.2 <span style="font-size: 24px; color: var(--oat);">/ 10</span></p>
+    <p style="color: var(--oat); margin: 0;">The codebase is in excellent health with strong modular architecture, comprehensive unit test coverage exceeding targets, disciplined coding standards adherence, and zero known security vulnerabilities. Key growth areas center on E2E test coverage expansion and async error handling.</p>
+  </div>
 
-  <h3>Top 3 strengths</h3>
-  <ol class="bullets">
-    <li><strong>Disciplined layering.</strong> Zero <code>components/**</code> or <code>app/**</code> files import <code>lib/db</code> directly; the sync subsystem is a clean DAG with no cycles; only three <code>any</code>/<code>as unknown</code> escape hatches across all production TS source.</li>
-    <li><strong>Substantial, fast test suite.</strong> 1830 tests across 115 files, 1829 pass + 1 skip, 8.3s wall-clock. Coverage thresholds correctly set to 80/80/80/75. <code>fake-indexeddb</code> and <code>localStorage</code> polyfills handled in <code>vitest.setup.ts</code>.</li>
-    <li><strong>Documentation discipline.</strong> Eleven ADRs in <code>docs/adr/</code>, lessons captured in <code>tasks/lessons.md</code>, CLAUDE.md current with non-obvious dep rationale and PocketBase v0.23+ gotchas. <code>.env.local</code> and <code>.env*</code> gitignored; no secrets in tracked source.</li>
-  </ol>
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Top 5 Risks</h3>
+  <table class="tbl">
+    <thead><tr><th>Risk</th><th>Severity</th><th>Impact</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>E2E tests cover only ~30% of critical user paths</td>
+        <td><span class="badge badge-danger">High</span></td>
+        <td>Regressions in sync, keyboard shortcuts, recurring tasks go undetected</td>
+      </tr>
+      <tr>
+        <td>No global <code>unhandledrejection</code> listener</td>
+        <td><span class="badge badge-danger">High</span></td>
+        <td>Async errors in sync realtime handler fail silently</td>
+      </tr>
+      <tr>
+        <td>3 user-input paths use <code>.parse()</code> instead of <code>.safeParse()</code></td>
+        <td><span class="badge badge-warning">Medium</span></td>
+        <td>Corrupt single record can abort entire operation</td>
+      </tr>
+      <tr>
+        <td>No server-side error tracking (Sentry/Datadog)</td>
+        <td><span class="badge badge-warning">Medium</span></td>
+        <td>Production errors visible only in browser console</td>
+      </tr>
+      <tr>
+        <td>Hard-coded PocketBase URL fallback in env-config</td>
+        <td><span class="badge badge-warning">Medium</span></td>
+        <td>Self-hosted deployments may leak data to wrong endpoint</td>
+      </tr>
+    </tbody>
+  </table>
 
-  <h3>Top 3 priorities for next sprint</h3>
-  <ol class="bullets">
-    <li><strong>Clear the dependency advisories.</strong> Bump <code>hono</code> override to <code>&gt;=4.12.18</code>; add <code>fast-uri &gt;=3.1.2</code>, <code>ip-address &gt;=10.1.1</code>, <code>postcss &gt;=8.5.14</code> overrides; bump direct deps <code>next 16.2.6</code>, <code>pocketbase 0.26.9</code>, <code>zod 4.4.3</code>. Drives <code>bun audit</code> to zero. <strong>Effort: Small.</strong></li>
-    <li><strong>Fill the sync test gap.</strong> Direct unit tests for <code>pb-push</code>, <code>pb-pull</code>, <code>pb-sync-helpers</code>; delete the four duplicate test files in <code>tests/sync/</code> that mirror <code>tests/data/sync/</code>; re-include <code>packages/mcp-server/**</code> in Vitest projects so MCP tests run under <code>bun run test</code>. <strong>Effort: Medium.</strong></li>
-    <li><strong>Decompose the three large components.</strong> Extract <code>useMatrixState</code>, <code>useEditDraft</code>, <code>useSettingsPageState</code> hooks. Drops the largest functions in the codebase, unblocks the five chronic <code>edit-drawer.test.tsx</code> timeouts, and reduces the change-risk concentration in the matrix shell. <strong>Effort: Medium.</strong></li>
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Top 3 Strengths</h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-4); margin-top: var(--sp-3);">
+    <div class="card">
+      <p class="eyebrow" style="margin: 0 0 8px;">Strength</p>
+      <p class="t-h3" style="margin: 0 0 6px;">Modular Architecture</p>
+      <p class="t-small" style="margin: 0;">Zero files exceed the 350-line limit. <code>lib/sync/</code> has 20+ focused modules. Clean dependency DAG with no circular imports.</p>
+    </div>
+    <div class="card">
+      <p class="eyebrow" style="margin: 0 0 8px;">Strength</p>
+      <p class="t-h3" style="margin: 0 0 6px;">Unit Test Coverage</p>
+      <p class="t-small" style="margin: 0;">85.7% line coverage exceeds the 80% target. 1,857 tests pass. Structured logger used in 43 files with secret sanitization.</p>
+    </div>
+    <div class="card">
+      <p class="eyebrow" style="margin: 0 0 8px;">Strength</p>
+      <p class="t-h3" style="margin: 0 0 6px;">Security Posture</p>
+      <p class="t-small" style="margin: 0;">Zero audit vulnerabilities, zero hardcoded secrets, zero XSS sinks. Zod validation on all data paths. CSP headers configured.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Top 3 Sprint Priorities</h3>
+  <ol style="padding-left: 20px;">
+    <li style="margin-bottom: 8px;"><strong>Expand E2E coverage</strong> &mdash; Add Playwright specs for sync auth, keyboard shortcuts, recurring tasks, and import flow (estimated: 3&ndash;5 days)</li>
+    <li style="margin-bottom: 8px;"><strong>Add global error boundary</strong> &mdash; Wire <code>unhandledrejection</code> listener + wrap realtime handler in try/catch (estimated: &lt;1 day)</li>
+    <li style="margin-bottom: 8px;"><strong>Migrate remaining <code>.parse()</code> to <code>.safeParse()</code></strong> &mdash; 3 call sites in task update and notification settings (estimated: &lt;1 day)</li>
   </ol>
 </section>
 
-<!-- METHODOLOGY -->
-<section id="methodology">
-  <div class="eyebrow">Section 2</div>
-  <h2 style="margin-top:var(--sp-3)">Methodology &amp; limitations</h2>
-  <div class="card">
-    <h3 style="margin-top:0">What was inspected</h3>
-    <ul class="bullets">
-      <li><strong>Standards source of truth:</strong> <code>coding-standards.md</code> v14.0 (file ≤350–400 lines, function ≤40 lines, nesting ≤3, ≥80% coverage, TDD, no <code>any</code> without justification).</li>
-      <li><strong>Source review:</strong> 369 TS/TSX files across <code>lib/</code>, <code>components/</code>, <code>app/</code>, <code>packages/mcp-server/src/</code> totaling 26,346 lines (per <code>wc -l</code>). Hand-read of <code>vitest.config.ts</code>, <code>vitest.setup.ts</code>, <code>tsconfig.json</code>, <code>eslint.config.mjs</code>, <code>next.config.ts</code>, <code>public/sw.js</code>, <code>scripts/setup-pocketbase-collections.sh</code>, the largest source files, and the entire <code>lib/sync/</code> dependency graph.</li>
-      <li><strong>Dependency evidence:</strong> <code>bun audit</code> in repo root and <code>packages/mcp-server</code>; <code>bun outdated</code>; review of <code>package.json</code> overrides block; license inspection of direct dependencies.</li>
-      <li><strong>Architecture probe:</strong> <code>grep</code> sweeps for <code>any</code>/<code>as unknown</code> escape hatches; cross-file import maps to detect circular dependencies and layering violations between UI, hooks, and the data layer; module-fan-out counts on the largest components.</li>
-      <li><strong>Test evidence:</strong> 115 test files in <code>tests/</code>, 5 more in <code>packages/mcp-server/src/__tests__/</code>; 1830 tests, 1829 pass + 1 skip, 8.3s wall-clock. Mock-pattern audit, brittle-selector grep, behavior-vs-implementation naming sample.</li>
-      <li><strong>CI surface:</strong> <code>.github/workflows/{security-audit,publish-mcp-server,claude-code-review,claude}.yml</code>.</li>
-    </ul>
-    <h3>What was <em>not</em> inspected</h3>
-    <ul class="bullets">
-      <li><strong>Runtime behavior.</strong> No browser load test, no Playwright run, no IndexedDB integration sweep, no PocketBase production-server probe. All findings derive from static analysis and the existing test suite output — performance claims are confidence-flagged Medium where empirical signal is missing.</li>
-      <li><strong>PocketBase collection schema drift.</strong> <code>scripts/setup-pocketbase-collections.sh</code> was read; the live collection at <code>https://api.vinny.io</code> was not introspected.</li>
-      <li><strong>CloudFront edge configuration.</strong> <code>cloudfront-function-*.cjs</code> files were inspected for code shape only; deployed function state at the CDN was not verified.</li>
-      <li><strong>Native &amp; Worker workspaces.</strong> <code>packages/native/</code> and <code>worker/</code> were excluded — out of scope for the v9 web build.</li>
-      <li><strong>Coverage percentage.</strong> <code>bun run test -- --coverage</code> was not executed during this audit (would require ~minutes; not gated on); coverage analysis is structural (which files have any test) rather than line-percentage.</li>
-    </ul>
-    <h3>Confidence calibration</h3>
-    <p style="margin-bottom:0">Findings tagged <strong>High</strong> confidence are corroborated by direct source read plus a second signal (test-suite output, <code>bun audit</code> JSON + advisory database, or git-history cross-reference). <strong>Medium</strong> confidence indicates one source only or pattern-match without empirical execution. <strong>Low</strong> confidence findings are flagged for review rather than treated as conclusions.</p>
-  </div>
-</section>
-
-<!-- METRICS -->
+<!-- ================================================================
+     2. METRICS DASHBOARD
+     ================================================================ -->
 <section id="metrics">
-  <div class="eyebrow">Section 3</div>
-  <h2 style="margin-top:var(--sp-3)">Metrics dashboard</h2>
-
-  <div class="stat-grid">
-    <div class="stat-card"><div class="lbl">Source files</div><div class="num">369</div><div class="delta">.ts + .tsx in scope</div></div>
-    <div class="stat-card"><div class="lbl">Production lines</div><div class="num">26,346</div><div class="delta">lib + components + app + mcp</div></div>
-    <div class="stat-card"><div class="lbl">Tests</div><div class="num">1,830</div><div class="delta">1829 pass · 1 skip · 0 fail</div></div>
-    <div class="stat-card"><div class="lbl">Test files</div><div class="num">115</div><div class="delta">+ 5 in MCP workspace</div></div>
-    <div class="stat-card is-success"><div class="lbl">Suite wall-clock</div><div class="num">8.3s</div><div class="delta">fast feedback loop</div></div>
-    <div class="stat-card is-success"><div class="lbl">any / as unknown</div><div class="num">3</div><div class="delta">production TS only</div></div>
-    <div class="stat-card is-success"><div class="lbl">TODO / FIXME</div><div class="num">0</div><div class="delta">in lib/components/app</div></div>
-    <div class="stat-card is-success"><div class="lbl">Architecture decisions</div><div class="num">11</div><div class="delta">ADRs in docs/adr</div></div>
-    <div class="stat-card is-warning"><div class="lbl">Files over 40-line fn rule</div><div class="num">3</div><div class="delta">EditDrawer · Matrix · Settings</div></div>
-    <div class="stat-card is-warning"><div class="lbl">Untested sync engines</div><div class="num">3</div><div class="delta">pb-push · pb-pull · helpers</div></div>
-    <div class="stat-card is-warning"><div class="lbl">Raw console.* sites</div><div class="num">52</div><div class="delta">should use lib/logger</div></div>
-    <div class="stat-card is-danger"><div class="lbl">Dep CVEs (bun audit)</div><div class="num">9</div><div class="delta">2H · 6M · 1L · all fixable via overrides</div></div>
+  <div class="sec-head">
+    <span class="idx">02</span>
+    <h2>Metrics Dashboard</h2>
   </div>
 
-  <h3>Largest source files</h3>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-num">85.7%</div>
+      <div class="stat-label">Line Coverage</div>
+      <div class="stat-delta up">&#9650; Above 80% target</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">84.8%</div>
+      <div class="stat-label">Statement Coverage</div>
+      <div class="stat-delta up">&#9650; Above 80% target</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">82.0%</div>
+      <div class="stat-label">Function Coverage</div>
+      <div class="stat-delta up">&#9650; Above 80% target</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">78.6%</div>
+      <div class="stat-label">Branch Coverage</div>
+      <div class="stat-delta up">&#9650; Above 75% target</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="stat-num">1,857</div>
+      <div class="stat-label">Unit Tests Passing</div>
+      <div class="stat-delta up">0 failures &middot; 1 skipped</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">102</div>
+      <div class="stat-label">E2E Tests Passing</div>
+      <div class="stat-delta up">3 browsers &middot; 0 failures</div>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Codebase Metrics</h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sp-4);">
+    <table class="tbl">
+      <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Source files</td><td><code>188</code></td></tr>
+        <tr><td>Test files</td><td><code>120</code></td></tr>
+        <tr><td>Lines of code</td><td><code>~50,600</code></td></tr>
+        <tr><td>Production dependencies</td><td><code>27</code></td></tr>
+        <tr><td>Dev dependencies</td><td><code>24</code></td></tr>
+        <tr><td>ADRs documented</td><td><code>11</code></td></tr>
+        <tr><td>Security vulnerabilities</td><td><code>0</code></td></tr>
+        <tr><td>Files using structured logger</td><td><code>43</code></td></tr>
+      </tbody>
+    </table>
+
+    <table class="tbl">
+      <thead><tr><th>Standard</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Files &gt; 350 lines</td><td><span class="chip-dot safe"><span class="dot"></span>0 violations</span></td></tr>
+        <tr><td>TODO/FIXME in source</td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
+        <tr><td>Unjustified <code>any</code></td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
+        <tr><td>Raw console calls</td><td><span class="chip-dot safe"><span class="dot"></span>Only in logger.ts</span></td></tr>
+        <tr><td><code>window.alert()</code></td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
+        <tr><td>Commented-out code</td><td><span class="chip-dot safe"><span class="dot"></span>0 blocks</span></td></tr>
+        <tr><td><code>dangerouslySetInnerHTML</code></td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
+        <tr><td>Hardcoded secrets</td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Playwright E2E Results by Browser</h3>
   <table class="tbl">
-    <thead><tr><th>File</th><th class="num">Lines</th><th>Status</th></tr></thead>
+    <thead><tr><th>Browser</th><th>Tests</th><th>Passed</th><th>Failed</th><th>Duration</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td class="path">lib/db.ts</td><td class="num">385</td><td><span class="badge low">In soft cap (350–400)</span></td></tr>
-      <tr><td class="path">components/matrix-simplified/edit-drawer.tsx</td><td class="num">371</td><td><span class="badge high">298-line function inside</span></td></tr>
-      <tr><td class="path">packages/mcp-server/src/write-ops/task-operations.ts</td><td class="num">335</td><td><span class="badge med">Two oversized functions</span></td></tr>
-      <tr><td class="path">components/matrix-simplified/index.tsx</td><td class="num">330</td><td><span class="badge high">279-line function inside</span></td></tr>
-      <tr><td class="path">components/settings-page/index.tsx</td><td class="num">316</td><td><span class="badge high">269-line function inside</span></td></tr>
-      <tr><td class="path">app/(dashboard)/dashboard/page.tsx</td><td class="num">287</td><td><span class="badge med">Render fn approaches budget</span></td></tr>
-      <tr><td class="path">packages/mcp-server/src/analytics/metrics.ts</td><td class="num">296</td><td><span class="badge low">OK</span></td></tr>
-      <tr><td class="path">lib/notification-checker.ts</td><td class="num">296</td><td><span class="badge low">OK</span></td></tr>
-      <tr><td class="path">lib/logger.ts</td><td class="num">284</td><td><span class="badge low">OK</span></td></tr>
+      <tr><td>Chromium (Desktop Chrome)</td><td>34</td><td>34</td><td>0</td><td>~50s</td><td><span class="badge badge-success">Pass</span></td></tr>
+      <tr><td>Firefox (Desktop Firefox)</td><td>34</td><td>34</td><td>0</td><td>~50s</td><td><span class="badge badge-success">Pass</span></td></tr>
+      <tr><td>WebKit (Desktop Safari)</td><td>34</td><td>34</td><td>0</td><td>~50s</td><td><span class="badge badge-success">Pass</span></td></tr>
     </tbody>
   </table>
-  <p style="font-family:var(--mono);font-size:var(--t-caption);color:var(--gray-500)">Zero source files exceed the 400-line hard cap. The 350–400 elastic budget is occupied by <code>lib/db.ts</code> only.</p>
 
-  <h3>Dependency advisories (<code>bun audit</code>)</h3>
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Playwright E2E Results by Spec File</h3>
   <table class="tbl">
-    <thead><tr><th>Package</th><th>Advisory</th><th>Severity</th><th>Path</th></tr></thead>
+    <thead><tr><th>Spec File</th><th>Tests</th><th>Workflows Covered</th></tr></thead>
     <tbody>
-      <tr><td><code>fast-uri</code> ≤3.1.1</td><td>GHSA-v39h-62p7-jpjc (host confusion)</td><td><span class="badge high">High</span></td><td>mcp-server → SDK; eslint → ajv</td></tr>
-      <tr><td><code>fast-uri</code> ≤3.1.1</td><td>GHSA-q3j6-qgpj-74h6 (path traversal)</td><td><span class="badge high">High</span></td><td>same</td></tr>
-      <tr><td><code>hono</code> &lt;4.12.18</td><td>GHSA-qp7p-654g-cw7p (CSS injection)</td><td><span class="badge med">Medium</span></td><td>mcp-server → SDK</td></tr>
-      <tr><td><code>hono</code> &lt;4.12.18</td><td>GHSA-p77w-8qqv-26rm (Vary cache leakage)</td><td><span class="badge med">Medium</span></td><td>same</td></tr>
-      <tr><td><code>hono</code> &lt;4.12.18</td><td>GHSA-9vqf-7f2p-gf9v (bodyLimit bypass)</td><td><span class="badge med">Medium</span></td><td>same</td></tr>
-      <tr><td><code>hono</code> &lt;4.12.18</td><td>GHSA-69xw-7hcm-h432 (HTML injection)</td><td><span class="badge med">Medium</span></td><td>same</td></tr>
-      <tr><td><code>hono</code> &lt;4.12.18</td><td>GHSA-hm8q-7f3q-5f36 (JWT NumericDate)</td><td><span class="badge low">Low</span></td><td>same</td></tr>
-      <tr><td><code>ip-address</code> ≤10.1.0</td><td>GHSA-v2v4-37r5-5v8g (Address6 XSS)</td><td><span class="badge med">Medium</span></td><td>mcp-server → SDK</td></tr>
-      <tr><td><code>postcss</code> &lt;8.5.10</td><td>GHSA-qx2v-qp2m-jg93 (CSS XSS)</td><td><span class="badge med">Medium</span></td><td>direct + transitive</td></tr>
+      <tr><td><code>task-crud.spec.ts</code></td><td>7</td><td>Create, read, complete, update (title/desc/quadrant), delete, multi-create</td></tr>
+      <tr><td><code>quadrant-classification.spec.ts</code></td><td>7</td><td>All 4 quadrants, capture parser (!, *, !!), move between quadrants</td></tr>
+      <tr><td><code>search.spec.ts</code></td><td>9</td><td>Title search, tag search, case-insensitive, partial match, no-results, clear</td></tr>
+      <tr><td><code>settings-navigation.spec.ts</code></td><td>8</td><td>Theme toggle, show-completed, export trigger, section navigation</td></tr>
+      <tr><td><code>matrix-navigation.spec.ts</code></td><td>5</td><td>Settings/dashboard nav, active highlighting, return-to-matrix</td></tr>
     </tbody>
   </table>
-  <p style="font-family:var(--mono);font-size:var(--t-caption);color:var(--gray-500)">Existing override <code>"hono": "&gt;=4.12.14"</code> is below the current advisory floor of 4.12.18 — see Security findings.</p>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Security Findings by Severity</h3>
+  <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
+    <span class="badge sev-critical" style="font-size: 14px; height: 28px; padding: 0 14px;">Critical: 0</span>
+    <span class="badge sev-high" style="font-size: 14px; height: 28px; padding: 0 14px;">High: 0</span>
+    <span class="badge sev-medium" style="font-size: 14px; height: 28px; padding: 0 14px;">Medium: 3</span>
+    <span class="badge sev-low" style="font-size: 14px; height: 28px; padding: 0 14px;">Low: 1</span>
+  </div>
 </section>
 
-<section>
-  <div class="eyebrow">Section 4</div>
-  <h2 style="margin-top:var(--sp-3)">Detailed findings</h2>
-  <p style="color:var(--gray-700);max-width:60ch">Each dimension is a collapsible section. Findings are sorted highest severity first. Severity (Critical/High/Medium/Low), confidence (H/M/L), effort (Small &lt;1d / Medium 1–5d / Large &gt;1w).</p>
-  <details class="section" id="standards" open>
-    <summary>1 · Standards compliance <span class="meta-counts">5 findings · 2 High</span></summary>
-    <div class="body">
-      <p>Measured against <code>coding-standards.md</code> v14.0. The codebase clearly follows the standards by default — most violations cluster in a small number of identifiable hot-spots.</p>
+<!-- ================================================================
+     3. DETAILED FINDINGS
+     ================================================================ -->
+<section id="findings">
+  <div class="sec-head">
+    <span class="idx">03</span>
+    <h2>Detailed Findings</h2>
+    <span class="count">18 findings</span>
+  </div>
 
-      <div class="finding">
-        <div class="finding-head"><span class="badge high">High</span><span class="conf">conf: H</span><span class="badge eff-m">Effort M</span><span class="title">Three component functions exceed the 40-line rule by 7–8×</span></div>
-        <div class="where">components/matrix-simplified/edit-drawer.tsx:63–361 · components/matrix-simplified/index.tsx:51–330 · components/settings-page/index.tsx:47–316</div>
-        <p class="rec">Standard requires functions ≤40 lines with single responsibility. <code>EditDrawer</code> is 298 lines, <code>MatrixSimplified</code> 279, <code>SettingsPage</code> 269. Each owns 6+ <code>useState</code> calls plus draft hydration, URL-action wiring, and child-component coordination. Extract <code>useEditDraft</code>, <code>useMatrixState</code>/<code>useUrlActions</code>, <code>useSettingsPageState</code> hooks; render JSX in &lt;80-line bodies.</p>
-      </div>
+  <!-- Dimension 1: Standards Compliance -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    1. Standards Compliance
+  </h3>
 
-      <div class="finding">
-        <div class="finding-head"><span class="badge high">High</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">High-complexity functions in MCP write-ops and the dashboard</span></div>
-        <div class="where">app/(dashboard)/dashboard/page.tsx:41 · packages/mcp-server/src/write-ops/task-operations.ts:36, :133 · packages/mcp-server/src/write-ops/bulk-operations.ts:75 · lib/filters.ts:228 · lib/sync/pb-push.ts:81</div>
-        <p class="rec">Each of these functions interleaves validation, dry-run preview, formatting, and persistence in one body — the cognitive-load pattern the standards target. Extract validate/format/persist sub-functions in MCP write-ops (one decomposition covers <code>task-operations</code> and <code>bulk-operations</code>); extract <code>useDashboardData()</code> from the dashboard page; replace <code>filters.ts:228</code>'s chained conditional with a predicate table.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Three <code>any</code>/<code>as unknown</code> escapes without justification comment</span></div>
-        <div class="where">components/install-pwa-prompt.tsx:40 · packages/mcp-server/src/tools/handlers/index.ts:63 · packages/mcp-server/src/cli/index.ts:132</div>
-        <p class="rec">Standard requires a justification comment beside any <code>any</code>. Replace with narrow types: declare <code>NavigatorWithStandalone</code>; make <code>validateToolArgs&lt;T&gt;</code> generic; use Node's <code>tty.ReadStream</code>.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">~45 exported components missing explicit return types</span></div>
-        <div class="where">components/matrix-simplified/*.tsx · components/task-card/*.tsx · components/settings-page/*.tsx · components/dashboard/*.tsx · components/about/*.tsx</div>
-        <p class="rec">Already tracked in <code>tasks/todo.md</code> §2 as a ~2-hour pass. Add <code>: React.ReactElement</code> to each.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Stale hardcoded version string in About section</span></div>
-        <div class="where">components/settings/about-section.tsx:10–11</div>
-        <p class="rec">Falls back to <code>"6.1.1"</code> / <code>"dev build"</code> if env vars missing — three majors stale (current is 9.1.1). Remove fallback or wire to <code>pkg.version</code> at build.</p>
-      </div>
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Compliant</span>
+      <strong>File size, naming, and structure conventions</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
-  </details>
-
-  <details class="section" id="tests">
-    <summary>2 · Test quality &amp; coverage <span class="meta-counts">8 findings · 2 High</span></summary>
-    <div class="body">
-      <p style="font-family:var(--mono);font-size:var(--t-caption);color:var(--gray-500)">Suite: 1830 tests · 1829 pass · 1 skip · 0 fail · 8.3s · thresholds 80/80/80/75 (compliant).</p>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge high">High</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Four duplicate sync test files run on every CI build</span></div>
-        <div class="where">tests/sync/{error-categorizer,health-monitor,pb-sync-engine,retry-manager}.test.ts duplicate tests/data/sync/*</div>
-        <p class="rec">Both copies execute every run — inflates the test count and creates drift risk where two assertions diverge silently. Delete <code>tests/sync/</code>; keep <code>tests/data/sync/</code> (where 11 of 13 sync tests already live) as canonical.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge high">High</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">MCP server tests excluded from main Vitest run</span></div>
-        <div class="where">vitest.config.ts:16 · packages/mcp-server/src/__tests__/*.test.* (5 files)</div>
-        <p class="rec">Local <code>bun run test</code> never executes MCP tests, so pre-commit verification can ship MCP regressions. Either remove the exclude and run via Vitest projects, or document the separate command in CLAUDE.md and add a CI step. Former preferred.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-m">Effort M</span><span class="title">Three sync engine files have no direct unit tests</span></div>
-        <div class="where">lib/sync/pb-pull.ts · lib/sync/pb-push.ts · lib/sync/pb-sync-helpers.ts</div>
-        <p class="rec">These are the LWW conflict-resolution engines for multi-device sync. Indirect coverage via <code>pb-sync-engine.test.ts</code> exercises orchestration but not <code>fetchRemoteTaskIndex</code> batch-lookup, throttle behavior, 429 handling, or LWW timestamp comparison. Add direct tests with mocked PocketBase SDK.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Brittle Tailwind className assertions in three test files</span></div>
-        <div class="where">tests/ui/icon-rail.test.tsx:26–60 · tests/ui/dashboard-components.test.tsx:581–630 · tests/ui/sync-auth-dialog.test.tsx:193,234</div>
-        <p class="rec">Assertions on <code>md:w-[180px]</code>, <code>.text-red-600</code>, <code>.fixed.inset-0.z-50.bg-black\/50</code>, <code>.animate-spin</code> couple tests to utility classes — they break on a Tailwind config change without indicating a real regression. Replace with <code>role</code>/<code>aria-busy</code>/<code>aria-label</code> queries; add <code>data-testid</code> only where roles are insufficient.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: M</span><span class="badge eff-m">Effort M</span><span class="title">296 <code>vi.mock</code> invocations — heavy internal-module mocking</span></div>
-        <div class="where">tests/ui/matrix-simplified.test.tsx:8–92 (10+ mocks) · tests/data/sync/pb-realtime.test.ts:20–41</div>
-        <p class="rec">Standard Part 3 says "Mock external deps at the boundary." Mocking <code>@/components/matrix-simplified/app-shell</code> from the matrix shell test, or three sibling sync modules from a sync test, leaks implementation. Mock IndexedDB / network / time only; let component composition render naturally.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Five chronic <code>edit-drawer.test.tsx</code> timeouts</span></div>
-        <div class="where">tests/ui/edit-drawer.test.tsx</div>
-        <p class="rec">Predate the v9 cleanup (per <code>tasks/todo.md</code> §5); fail-on-timeout in every CI run. Likely an unresolved promise / missing <code>await act()</code> tied to the <code>setState in effect</code> warning at <code>edit-drawer.tsx:62</code>. Either root-cause fix or delete with a commit-message note.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-m">Effort M</span><span class="title">Coverage-chasing test files signal post-hoc tests</span></div>
-        <div class="where">tests/data/{coverage-boost,sync-and-utils-boost,functions-branches-boost,additional-branches}.test.ts · tests/ui/{coverage-boost-ui,gap-closing,gap-closing-2,more-function-coverage,final-function-push,final-coverage-push}.test.tsx</div>
-        <p class="rec">Filenames betray "test after implementation to hit threshold" — anti-pattern under the project's TDD-default standard (Part 3). Tests inside are valid; on next refactor, fold into feature-aligned suites and delete the boost files.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">132 <code>waitFor</code> calls — could simplify to <code>findBy*</code></span></div>
-        <div class="where">tests/ui/**</div>
-        <p class="rec">Functional but verbose. <code>findByRole</code>/<code>findByText</code> retry internally with cleaner intent. Cleanup-quality, not urgent.</p>
-      </div>
+    <div class="finding-body">
+      <p>All 188 source files adhere to the 350-line maximum. PascalCase for components/types, camelCase for functions, kebab-case for filenames. <code>@/</code> alias used consistently for imports. Tailwind classes grouped by layout &rarr; spacing &rarr; color.</p>
     </div>
-  </details>
+  </div>
 
-  <details class="section" id="security">
-    <summary>3 · Security &amp; supply chain <span class="meta-counts">10 findings · 2 High</span></summary>
-    <div class="body">
-      <p>Headline: <strong>0 Critical / 2 High / 5 Medium / 3 Low</strong>. Nine of those are transitive dep advisories — all addressable via the existing <code>overrides</code> block in one PR.</p>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge high">High</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title"><code>fast-uri</code> ≤3.1.1 — host confusion + path traversal</span></div>
-        <div class="where">GHSA-v39h-62p7-jpjc · GHSA-q3j6-qgpj-74h6 · transitive via <code>@modelcontextprotocol/sdk</code>, <code>ajv</code></div>
-        <p class="rec">Add <code>"fast-uri": "&gt;=3.1.2"</code> to the root <code>package.json</code> overrides block.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Existing <code>hono</code> override is stale relative to advisory floor</span></div>
-        <div class="where">package.json:79–95 — current override pins <code>"hono": "&gt;=4.12.14"</code></div>
-        <p class="rec">Four advisories require <code>&gt;=4.12.18</code> (CSS injection, Vary cache leakage, bodyLimit bypass, JSX HTML injection), plus Low GHSA-hm8q-7f3q-5f36 (JWT NumericDate). Bump override to <code>&gt;=4.12.18</code>.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title"><code>ip-address</code> ≤10.1.0 Address6 XSS · <code>postcss</code> &lt;8.5.10 CSS XSS</span></div>
-        <div class="where">transitive via mcp-server SDK · direct dep <code>postcss@8.5.10</code> at advisory floor (latest is 8.5.14)</div>
-        <p class="rec">Add overrides <code>"ip-address": "&gt;=10.1.1"</code>, <code>"postcss": "&gt;=8.5.14"</code>; bump direct dep <code>postcss</code> to <code>8.5.14</code>.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Service worker <code>postMessage</code> handler does not verify origin</span></div>
-        <div class="where">public/sw.js:47</div>
-        <p class="rec"><code>self.addEventListener("message", ...)</code> trusts <code>event.data.type === "SKIP_WAITING"</code> without checking <code>event.origin</code>. Practical exploit surface is small (same-origin scope, no data echoed back) but a defensible default is to gate on <code>event.origin === self.location.origin</code> or <code>event.source instanceof Client</code>.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: M</span><span class="badge eff-l">Effort L</span><span class="title">PocketBase auth token persisted in browser local storage</span></div>
-        <div class="where">PocketBase SDK default · acknowledged in <code>lib/sync/config/enable.ts</code></div>
-        <p class="rec">Any cross-site script injection would exfiltrate the JWT. The app has zero raw HTML injection sinks, no dynamic eval, and React escapes by default — practical surface is small but local-storage tokens are a known weakness. Document threat model in a new ADR; revisit cookie-based auth when the static-export constraint relaxes.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">GitHub Actions referenced by tag, not commit SHA</span></div>
-        <div class="where">.github/workflows/{claude-code-review,publish-mcp-server,security-audit,claude}.yml</div>
-        <p class="rec">Tag-pinned actions can be silently retagged by a compromised maintainer. Pin to full commit SHA; Dependabot can keep them current with a config entry. Standards Part 4 (least privilege) applies.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Override block lacks justification comments</span></div>
-        <div class="where">package.json:79–95</div>
-        <p class="rec">15 overrides with no inline note. The stale <code>hono</code> override above is the kind of drift this prevents. Add a <code>covers GHSA-...</code> note beside each entry; pin <code>baseline-browser-mapping: 2.9.11</code> with a "build-noise suppression" note so it isn't dropped.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Patch-level updates pending on three direct deps</span></div>
-        <div class="where">next 16.2.3→16.2.6 · pocketbase 0.26.8→0.26.9 · zod 4.3.6→4.4.3</div>
-        <p class="rec">No advisories pending; routine patch hygiene. Bundle into one bump-PR.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Verified clean — no findings</span></div>
-        <p class="rec">Zero hard-coded secrets in tracked source · zero raw HTML injection sinks (React escaping respected throughout) · zero dynamic-code-eval surface · zero raw SQL · <code>.env.local</code> gitignored and absent from history · PocketBase API rules enforce owner-based row-level security on all five operations · MCP <code>GSD_AUTH_TOKEN</code> never logged (presence flag only) · root license MIT, no copyleft transitive deps · service worker bypasses cross-origin requests and caches GET-only same-origin assets.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">Add <code>bun audit</code> to PostToolUse hook</span></div>
-        <div class="where">.claude/settings.json (does not currently gate Claude-driven dep additions)</div>
-        <p class="rec">Per <code>coding-standards.md</code> Part 2, dependencies added during agentic sessions should be audit-gated in-session, not just in CI. Add <code>bun audit --audit-level=high</code> as a PostToolUse hook scoped to <code>package.json</code> writes.</p>
-      </div>
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-warning">Medium</span>
+      <strong>3 functions exceed 40-line limit</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
     </div>
-  </details>
-
-  <details class="section" id="architecture">
-    <summary>4 · Architecture <span class="meta-counts">7 findings · 0 Critical · 0 High</span></summary>
-    <div class="body">
-      <p>The architecture is in good shape. The DAG of <code>lib/sync/</code> is clean, the DB boundary is respected, and only three <code>any</code> escapes exist in production. Findings concentrate on shim-cleanup and one strict-layering deviation.</p>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Two redundant re-export shims worth inlining</span></div>
-        <div class="where">lib/sync/config.ts (20 lines, 8 callers, double-indirect over <code>lib/sync/config/index.ts</code>) · lib/tasks/crud.ts (28 lines, single caller)</div>
-        <p class="rec">Both forward to a barrel that itself re-exports — needless indirection. Delete <code>lib/sync/config.ts</code> and repoint imports to <code>@/lib/sync/config/</code>; delete <code>lib/tasks/crud.ts</code> and point <code>lib/analytics/time-tracking.ts</code> at <code>@/lib/tasks/crud/time-tracking</code> directly.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Two dead shim files ready for deletion</span></div>
-        <div class="where">components/command-palette.tsx (10-line shim, no importers anywhere) · packages/mcp-server/src/analytics.ts (33 lines, marked <code>@deprecated</code>, no internal importers)</div>
-        <p class="rec">CLAUDE.md notes the palette is "not wired into the v9 app shell" — the shim was kept for an upcoming resurrection but no incoming imports exist today. Delete now and re-import the canonical path when the palette is wired (tracked in <code>tasks/todo.md</code> §1). The MCP <code>analytics.ts</code> shim has no consumers and can be deleted outright.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">One layering deviation — UI imports the PocketBase client singleton directly</span></div>
-        <div class="where">components/sync/use-sync-auth-dialog.ts:5 imports <code>isAuthenticated</code> from <code>@/lib/sync/pocketbase-client</code></div>
-        <p class="rec">Every other UI access to sync state goes through <code>pb-auth</code>, <code>config</code>, <code>queue</code>, or <code>health-monitor</code>. Re-export <code>isAuthenticated</code> from <code>lib/sync/pb-auth.ts</code> and import from there to keep the SDK singleton hidden behind the auth boundary.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title"><code>pb-sync-engine</code> still re-exports <code>pushLocalChanges</code> / <code>pullRemoteChanges</code> for back-compat</span></div>
-        <div class="where">lib/sync/pb-sync-engine.ts:21–23</div>
-        <p class="rec">Comment says "for backward compatibility" but new callers should depend on the leaf modules <code>pb-push</code>/<code>pb-pull</code>. Mark <code>@deprecated</code>, audit external callers, drop on next minor.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Verified clean — DAG and boundaries</span></div>
-        <p class="rec">No circular dependencies in <code>lib/sync/</code> (clean DAG: <code>{background-sync, sync-coordinator, pb-realtime} → pb-sync-engine → {pb-push, pb-pull} → {task-mapper, helpers, retry-manager, queue, pocketbase-client}</code>) · zero <code>components/**</code> or <code>app/**</code> files import <code>lib/db</code> directly · all DB access is funneled through <code>lib/tasks</code>, <code>lib/use-tasks</code>, or feature modules.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">ADR coverage is current</span></div>
-        <p class="rec">11 ADRs in <code>docs/adr/</code> covering client-side IndexedDB choice, PocketBase sync, LWW, PWA, MCP integration, analytics modularity, notifications, BFS dependency detection, smart views, agent-discovery surface, and the v9 single-matrix refactor. The "explain in Slack instead of an ADR" anti-pattern from <code>coding-standards.md</code> Part 6 is not in evidence.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: M</span><span class="title">Reasonable component fan-out</span></div>
-        <p class="rec">Top import counts: <code>settings-page/index.tsx</code> 23, <code>matrix-simplified/index.tsx</code> 22, <code>dashboard/page.tsx</code> 20. High-but-not-pathological — the size of the JSX bodies (see <em>Maintainability</em>) is the more important signal.</p>
-      </div>
+    <div class="finding-body" hidden>
+      <p><strong>Files:</strong> <code>components/matrix-simplified/edit-drawer.tsx</code> (~50 lines), <code>components/settings-page/index.tsx</code> (~55 lines), <code>lib/db.ts</code> (migration chains).</p>
+      <p><strong>Recommendation:</strong> These are UI orchestration and schema definition contexts &mdash; acceptable exceptions per ADR 0011. Consider extracting form field groups in edit-drawer to reduce component body length.</p>
     </div>
-  </details>
+  </div>
 
-  <details class="section" id="maintainability">
-    <summary>5 · Maintainability <span class="meta-counts">3 findings · 1 High</span></summary>
-    <div class="body">
-      <p>The 350–400 line file budget is respected (zero hard-cap violations) and the &lt;40-line function rule is breached by exactly three component bodies — all in <code>components/matrix-simplified/</code> and <code>components/settings-page/</code>. Tech debt is documented in <code>tasks/todo.md</code> rather than scattered as inline TODOs.</p>
+  <!-- Dimension 2: Test Quality -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    2. Test Quality &amp; Coverage
+  </h3>
 
-      <h4 style="margin-top:0">Largest source files (TS/TSX, in scope)</h4>
-      <table class="tbl">
-        <thead><tr><th>File</th><th class="num">Lines</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td class="path">lib/db.ts</td><td class="num">385</td><td>In soft cap (350–400)</td></tr>
-          <tr><td class="path">components/matrix-simplified/edit-drawer.tsx</td><td class="num">371</td><td>One 298-line function</td></tr>
-          <tr><td class="path">packages/mcp-server/src/write-ops/task-operations.ts</td><td class="num">335</td><td>Two functions over budget</td></tr>
-          <tr><td class="path">components/matrix-simplified/index.tsx</td><td class="num">330</td><td>One 279-line function</td></tr>
-          <tr><td class="path">components/settings-page/index.tsx</td><td class="num">316</td><td>One 269-line function</td></tr>
-          <tr><td class="path">app/(dashboard)/dashboard/page.tsx</td><td class="num">287</td><td>Cognitive complexity 25</td></tr>
-          <tr><td class="path">packages/mcp-server/src/analytics/metrics.ts</td><td class="num">296</td><td>OK</td></tr>
-          <tr><td class="path">lib/notification-checker.ts</td><td class="num">296</td><td>OK</td></tr>
-          <tr><td class="path">lib/logger.ts</td><td class="num">284</td><td>OK</td></tr>
-        </tbody>
-      </table>
-      <p style="font-family:var(--mono);font-size:var(--t-caption);color:var(--gray-500)">Zero source files exceed the 400-line hard cap. The 350–400 zone is the elastic budget; <code>lib/db.ts</code> is the only entrant.</p>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge high">High</span><span class="conf">conf: H</span><span class="badge eff-m">Effort M</span><span class="title">Three large component bodies (EditDrawer, MatrixSimplified, SettingsPage)</span></div>
-        <div class="where">edit-drawer.tsx:63–361 · matrix-simplified/index.tsx:51–330 · settings-page/index.tsx:47–316</div>
-        <p class="rec">Cross-referenced with the <em>Standards</em> section. Refactoring these three is the single highest-leverage maintainability move: drops the largest functions, removes 4 of 11 cognitive-complexity Criticals, unblocks the 5 chronic <code>edit-drawer.test.tsx</code> timeouts, and reduces the new-code duplication metric driving the gate failure.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Two MCP write-ops functions over budget</span></div>
-        <div class="where">packages/mcp-server/src/write-ops/task-operations.ts:36–132 (createTask, 96 lines) · :133–244 (updateTask, 111 lines)</div>
-        <p class="rec">Both files mix dry-run formatting + validation + persistence inline. Extract <code>validateUpdateInput</code>, <code>formatDryRunPreview</code>, <code>persistUpdate</code> — same shape works for create. Same pattern applies to <code>bulk-operations.ts:75</code> (cognitive 21).</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title"><code>lib/db.ts</code> approaching soft cap</span></div>
-        <div class="where">lib/db.ts (385 lines)</div>
-        <p class="rec">Inside the 350–400 elastic zone. Each future migration adds a Dexie version block. Extract version 13+ migration handlers into <code>lib/db/migrations/</code> when the next migration lands; keep the schema declaration in <code>lib/db.ts</code>.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Zero TODO / FIXME / XXX / HACK markers in production source</span></div>
-        <p class="rec">Active tech debt is documented in <code>tasks/todo.md</code> rather than scattered as comments — preferred per <code>coding-standards.md</code> Part 10 (TODOs without ticket links are a red flag).</p>
-      </div>
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Strength</span>
+      <strong>Unit test coverage exceeds all targets</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
-  </details>
-
-  <details class="section" id="dependencies">
-    <summary>6 · Dependencies <span class="meta-counts">5 findings · 0 Critical</span></summary>
-    <div class="body">
-      <p>See <em>Security</em> for advisory specifics. This section covers dep hygiene independent of CVEs.</p>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Patch-level updates pending on <code>next</code>, <code>pocketbase</code>, <code>zod</code></span></div>
-        <div class="where">next 16.2.3→16.2.6 · pocketbase 0.26.8→0.26.9 · zod 4.3.6→4.4.3 (zod is the input-validation library across <code>lib/schema.ts</code>)</div>
-        <p class="rec">Bundle one bump-PR. Test smoke: matrix render, edit drawer, sync push/pull, MCP token validation.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title"><code>lucide-react</code> 5 minor versions behind</span></div>
-        <div class="where">package.json — lucide-react 1.7.0 (latest 1.12.x)</div>
-        <p class="rec">Already tracked in <code>tasks/todo.md</code> §3. Risk is icon renames between minors; resolution is a quick visual smoke pass.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-m">Effort M</span><span class="title">Dev-deps with major bumps available</span></div>
-        <div class="where">eslint 9.39.4→10.3.0 · vite 7.3.2→8.0.11 · typescript 5.9.3→6.0.3</div>
-        <p class="rec">All dev-only; no runtime risk. Schedule one quarterly pass; verify the React Compiler babel plugin still resolves under TS 6.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Override block has no inline justification comments</span></div>
-        <div class="where">package.json:79–95</div>
-        <p class="rec">Same finding as in <em>Security</em>. Repeated here because the consequence is dependency hygiene drift, not just security drift — overrides without rationale tend to be removed during cleanups by future maintainers.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Verified clean — license &amp; dep rationale</span></div>
-        <p class="rec">Root license MIT · production dep stack is uniformly MIT/Apache-2.0/ISC (Next, React, Radix, dnd-kit, Dexie, Zod, PocketBase SDK, recharts, sonner, nanoid, canvas-confetti, tailwind-merge) · no copyleft (GPL/AGPL) transitive deps · CLAUDE.md documents non-obvious dep rationale (canvas-confetti pin reason, sonner-vs-react-hot-toast a11y rationale, react-virtual purpose, etc.) per Part 2's "document why non-obvious dependencies exist" requirement.</p>
-      </div>
+    <div class="finding-body">
+      <p>Statements: 84.81% (target: 80%). Lines: 85.70% (target: 80%). Functions: 81.99% (target: 80%). Branches: 78.62% (target: 75%). 1,857 tests pass with 0 failures across 114 test files.</p>
+      <p><strong>Patterns:</strong> Proper Arrange-Act-Assert structure. Mock IndexedDB with <code>fake-indexeddb</code>. Behavior-based test names (<code>should_return_...</code>). Independent tests with no shared mutable state.</p>
     </div>
-  </details>
+  </div>
 
-  <details class="section" id="performance">
-    <summary>7 · Performance <span class="meta-counts">4 findings · 0 Critical · all M-confidence</span></summary>
-    <div class="body">
-      <p style="font-family:var(--mono);font-size:var(--t-caption);color:var(--gray-500)">Confidence note: this audit was static. Empirical Lighthouse / bundle-analyzer / IndexedDB-profiling measurement was not run; findings are pattern-based and flagged Medium confidence.</p>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">Sync push throttle is fixed at 100ms — fine for typical, but no batching</span></div>
-        <div class="where">lib/sync/pb-push.ts:111 · CLAUDE.md notes: "Push operations are throttled (100ms between requests) to avoid PocketBase 429 errors"</div>
-        <p class="rec">For users with hundreds of queued mutations after a long offline period, sequential 100ms requests = many seconds of push time. Batch via PocketBase's <code>batch</code> API (PB v0.23 supports it), or migrate to a single-request payload-list endpoint when available. Empirical first: instrument <code>pushedCount/duration</code> and ship telemetry before optimizing.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">Dashboard page cognitive complexity 25 likely renders all charts upfront</span></div>
-        <div class="where">app/(dashboard)/dashboard/page.tsx:41</div>
-        <p class="rec">recharts is composable but every chart inside the dashboard is rendered on first paint. For below-the-fold charts (long-form trends, tag analytics), gate on <code>IntersectionObserver</code> or <code>React.lazy()</code>. Reduces TTI on the dashboard route. Empirical: run Lighthouse against the dashboard before/after.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">Capture parser regex risk under pathological input</span></div>
-        <div class="where">lib/capture-parser.ts:17 · lib/task-links.ts:6</div>
-        <p class="rec">Already covered in <em>Security</em>. Performance dimension: even if the input length is bounded, a worst-case backtracking pass on a 2KB string is non-trivial work on the UI thread. Add a single <code>String#includes("://")</code> short-circuit before the regex pass to skip the typical no-URL case.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: M</span><span class="title">Virtualization, memoization, and PWA caching look correct on inspection</span></div>
-        <p class="rec"><code>@tanstack/react-virtual</code> is wired into long task lists per CLAUDE.md · React Compiler is enabled in <code>next.config.ts</code> reducing manual <code>useMemo</code> need · <code>public/sw.js</code> caches <em>only</em> same-origin GET responses (line 63–67), correctly bypassing the PocketBase API · canvas-confetti is pinned to a specific version to keep the bundle reproducible. No obvious N+1 patterns found in <code>lib/tasks</code> or <code>lib/sync</code>.</p>
-      </div>
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-danger">High</span>
+      <strong>Zero coverage for <code>lib/tasks.ts</code> and <code>lib/confetti.ts</code></strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Medium</span>
     </div>
-  </details>
-
-  <details class="section" id="observability">
-    <summary>8 · Error handling &amp; observability <span class="meta-counts">3 findings · 0 Critical</span></summary>
-    <div class="body">
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">52 raw <code>console.log</code> / <code>console.debug</code> sites in production source</span></div>
-        <div class="where">lib · components · app · packages/mcp-server/src — excluding paths matching <code>logger</code>/<code>test</code>/<code>spec</code></div>
-        <p class="rec">A structured logger exists at <code>lib/logger.ts</code> with environment-aware levels and secret sanitization. Funnel any remaining raw <code>console.*</code> calls through it (or remove). The <code>console.log</code>/<code>print</code> red flag in <code>coding-standards.md</code> Part 10 applies.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="title">Verified clean — secret sanitization &amp; PII-safe logging</span></div>
-        <p class="rec"><code>lib/logger.ts</code> sanitizes secrets before output; MCP <code>GSD_AUTH_TOKEN</code> never logged (only its presence flag is); user task content is local-first by design — no telemetry pipe ships task titles to a remote system. Aligns with the project's privacy-first positioning.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-m">Effort M</span><span class="title">No error boundary at the App Router root</span></div>
-        <div class="where">app/layout.tsx</div>
-        <p class="rec">A static-export Next.js app benefits from a top-level error boundary that renders a graceful fallback when a child component throws (especially the dashboard charts). Add <code>app/error.tsx</code> with a minimal "Something went wrong — reload" UI; report to <code>logger.error</code>.</p>
-      </div>
+    <div class="finding-body" hidden>
+      <p><code>lib/tasks.ts</code> shows 0% coverage across all metrics. This appears to be a barrel re-export superseded by <code>lib/tasks/</code> modules. <code>lib/confetti.ts</code> (canvas-confetti wrapper) has 0% coverage.</p>
+      <p><strong>Recommendation:</strong> Verify <code>lib/tasks.ts</code> is not dead code; if it is, remove it. For confetti, add a simple mock-based test verifying the function is callable.</p>
     </div>
-  </details>
+  </div>
 
-  <details class="section" id="docs">
-    <summary>9 · Documentation &amp; onboarding <span class="meta-counts">3 findings · 0 Critical</span></summary>
-    <div class="body">
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Strong baseline — README, CLAUDE.md, ADRs, lessons.md all current</span></div>
-        <p class="rec">README, CLAUDE.md (with non-obvious dep rationale and PB v0.23+ gotchas), 11 ADRs in <code>docs/adr/</code>, <code>tasks/todo.md</code> with explicit "Resuming From Here", and <code>tasks/lessons.md</code> all align with <code>coding-standards.md</code> Part 1's resumed-session protocol. <code>.env.example</code> exists at root and at <code>packages/mcp-server/</code>.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">Add an ADR for the localStorage-token threat model decision</span></div>
-        <div class="where">docs/adr/0012-... (proposed)</div>
-        <p class="rec">If the team accepts the localStorage-token risk (see <em>Security</em>) for the v9 static-export constraint, that decision deserves a written ADR per Part 6 ("if you are explaining it in Slack, write an ADR instead").</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: M</span><span class="badge eff-s">Effort S</span><span class="title">Local dev setup friction — MCP test command not in CLAUDE.md</span></div>
-        <div class="where">CLAUDE.md "Testing" section</div>
-        <p class="rec">Cross-references <em>Tests</em> finding #2: MCP tests are excluded from <code>bun run test</code>. Either fix the exclude or document <code>cd packages/mcp-server &amp;&amp; bun run test</code> as a separate command in CLAUDE.md so MCP regressions aren't shipped.</p>
-      </div>
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-warning">Medium</span>
+      <strong>Vitest config picks up Playwright spec files</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
     </div>
-  </details>
-
-  <details class="section" id="debt">
-    <summary>10 · Tech debt <span class="meta-counts">2 findings · 0 Critical</span></summary>
-    <div class="body">
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Six explicit follow-ups already enumerated in <code>tasks/todo.md</code></span></div>
-        <div class="where">tasks/todo.md "Open follow-ups" section</div>
-        <p class="rec">Wire ⌘K palette into v9 shell · explicit return types on ~45 components · <code>lucide-react</code> bump · sync-engine unit tests · fix 5 chronic <code>edit-drawer.test.tsx</code> timeouts · adopt <code>knip</code> or <code>ts-prune</code>. Treat the todo as authoritative; cross-reference items 4 and 5 with this report's <em>Tests</em> findings.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Tech-debt is tracked, scoped, and bounded</span></div>
-        <p class="rec">Zero unanchored TODO/FIXME/XXX/HACK markers in <code>lib</code>/<code>components</code>/<code>app</code> · debt items are in <code>tasks/todo.md</code> with effort estimates and acceptance criteria · ADR for the v9 cleanup (<code>0011</code>) documents what was deleted and what was kept and why. The v8→v9 refactor is one of the cleanest debt-reduction efforts visible in the repo's recent history.</p>
-      </div>
+    <div class="finding-body" hidden>
+      <p>Running <code>bun run test</code> reports 5 &ldquo;failed&rdquo; files &mdash; all are Playwright <code>.spec.ts</code> files incorrectly matched by Vitest. This inflates the failure count in CI.</p>
+      <p><strong>Recommendation:</strong> Add <code>exclude: ['tests/e2e/**']</code> to <code>vitest.config.ts</code>:</p>
+      <pre class="code-sample">// vitest.config.ts
+exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
     </div>
-  </details>
+  </div>
 
-  <details class="section" id="config">
-    <summary>11 · Configuration &amp; type safety <span class="meta-counts">4 findings · 0 Critical</span></summary>
-    <div class="body">
+  <!-- Dimension 3: Security -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    3. Security &amp; Supply Chain
+  </h3>
 
-      <div class="finding">
-        <div class="finding-head"><span class="badge med">Medium</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title"><code>tsconfig.json</code> excludes the entire <code>tests/</code> directory</span></div>
-        <div class="where">tsconfig.json:42–51</div>
-        <p class="rec">Tests don't get type-checked under <code>bun typecheck</code>. <code>tsconfig.vitest.json</code> exists for the Vitest run, but pre-commit type checking only covers production code. Either consolidate tests into the main <code>tsconfig</code> with a <code>tests/</code> override for relaxed rules, or wire <code>tsconfig.vitest.json</code> into the <code>typecheck</code> script (project references).</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="badge eff-s">Effort S</span><span class="title">Three React-hooks lint rules downgraded to <code>warn</code></span></div>
-        <div class="where">eslint.config.mjs:29–33</div>
-        <p class="rec"><code>react-hooks/set-state-in-effect</code>, <code>refs</code>, and <code>immutability</code> are warnings rather than errors with explanatory comments. Acceptable, but the <code>set-state-in-effect</code> warning at <code>edit-drawer.tsx:62</code> is the suspected root cause of the five chronic test timeouts. Treat the warning as a reproducer and aim to remove it.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge low">Low</span><span class="conf">conf: H</span><span class="title">No feature flags currently in use — flag hygiene N/A</span></div>
-        <p class="rec"><code>coding-standards.md</code> Part 10 flags "feature flags with no owner, date, or removal plan" as a smell. None found in the codebase. If feature flags are introduced (e.g., for the command-palette resurrection), apply the standard then.</p>
-      </div>
-
-      <div class="finding">
-        <div class="finding-head"><span class="badge info">Info</span><span class="conf">conf: H</span><span class="title">Strict TypeScript and a static-export-aware Next config</span></div>
-        <p class="rec"><code>tsconfig.json</code>: <code>strict: true</code>, <code>forceConsistentCasingInFileNames: true</code>, no <code>any</code>-permissive flags. <code>next.config.ts</code>: <code>output: "export"</code> with explicit static-export comment ("security headers cannot be set here for static exports — must be configured at the CDN/hosting level"); <code>typedRoutes: true</code>; <code>reactCompiler: true</code>. <code>vitest.config.ts</code> coverage thresholds match the standard (80/80/80/75).</p>
-      </div>
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Strength</span>
+      <strong>Zero audit vulnerabilities, zero XSS sinks</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
-  </details>
+    <div class="finding-body">
+      <p><code>bun audit</code> reports zero vulnerabilities across all 51 dependencies. No <code>dangerouslySetInnerHTML</code>. No hardcoded secrets. CSP headers configured in Docker Caddyfile and <code>layout.tsx</code>. PocketBase auth uses SDK-managed JWT with auto-refresh.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge sev-medium">Medium</span>
+      <strong><code>.parse()</code> on user-input paths should be <code>.safeParse()</code></strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+    </div>
+    <div class="finding-body" hidden>
+      <p><strong>Affected files:</strong></p>
+      <ul>
+        <li><code>lib/tasks/crud/update.ts:28</code> &mdash; <code>taskDraftSchema.parse(nextDraft)</code></li>
+        <li><code>lib/notifications/settings.ts:33</code> &mdash; <code>notificationSettingsSchema.parse(settings)</code></li>
+        <li><code>lib/notifications/settings.ts:53</code> &mdash; <code>notificationSettingsSchema.parse(updated)</code></li>
+      </ul>
+      <p><code>.parse()</code> throws on invalid input, aborting the operation. The project standard requires <code>.safeParse()</code> with explicit error handling on all user-input paths.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge sev-medium">Medium</span>
+      <strong>Hard-coded PocketBase URL fallback</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+    </div>
+    <div class="finding-body" hidden>
+      <p><strong>File:</strong> <code>lib/env-config.ts</code></p>
+      <p>The env config falls back to <code>https://api.vinny.io</code> when <code>NEXT_PUBLIC_POCKETBASE_URL</code> is not set. Self-hosted deployments may silently connect to the wrong instance.</p>
+      <p><strong>Recommendation:</strong> Remove the hardcoded fallback. Require the env var explicitly and throw during initialization if missing.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 4: Architecture -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    4. Architecture
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Strength</span>
+      <strong>Clean dependency graph, no circular imports</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>Unidirectional dependency DAG throughout. <code>lib/sync/</code> (20+ modules) properly layered. <code>lib/tasks/</code> splits CRUD into 10 focused files. <code>lib/analytics/</code> maintains 5 side-effect-free modules. All 56 database accesses funneled through <code>getDb()</code>.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 5: Maintainability -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    5. Maintainability
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Compliant</span>
+      <strong>Excellent module boundaries and file sizes</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>Zero files exceed 350 lines. Zero commented-out code blocks. Zero TODO/FIXME in production source (tracked in <code>tasks/todo.md</code>). All 3 <code>any</code> type usages include justification comments.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 6: Dependencies -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    6. Dependencies
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Healthy</span>
+      <strong>Well-managed with minimal risk</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>27 production dependencies, all current versions. <code>bun audit</code>: 0 vulnerabilities. Each dependency serves a clear purpose with no duplicates.</p>
+      <p><strong>Note:</strong> <code>@playwright/test</code> uses <code>^1.60.0</code> (floating range) in devDependencies &mdash; acceptable for dev-only tooling but worth pinning in CI for reproducibility.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 7: Performance -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    7. Performance
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Optimized</span>
+      <strong>No N+1 queries, proper memoization, virtual scrolling</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>Batch operations (<code>db.tasks.toArray()</code>) used throughout. React Compiler enabled for automatic memoization. 8 memoized metrics in dashboard. <code>@tanstack/react-virtual</code> for large lists. No synchronous I/O on hot paths.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 8: Error Handling -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    8. Error Handling &amp; Observability
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-danger">High</span>
+      <strong>No global <code>unhandledrejection</code> listener</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+    </div>
+    <div class="finding-body" hidden>
+      <p>No <code>window.addEventListener('unhandledrejection', ...)</code> handler. The realtime event handler in <code>lib/sync/pb-realtime.ts:83</code> has no try/catch &mdash; errors bubble as unhandled rejections that fail silently.</p>
+      <p><strong>Recommendation:</strong> Add a global listener at the app root that logs via <code>createLogger('ERROR_BOUNDARY')</code> and shows a <code>toast.error()</code>.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge sev-medium">Medium</span>
+      <strong>No server-side error tracking service</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Medium</span>
+    </div>
+    <div class="finding-body" hidden>
+      <p>The structured logger (24 context types, secret sanitization, correlation IDs) outputs only to <code>console.*</code>. Production errors are only visible if a user opens DevTools.</p>
+      <p><strong>Recommendation:</strong> Integrate Sentry, LogRocket, or a self-hosted alternative. The logger architecture already supports this via the placeholder at <code>lib/error-logger.ts:37</code>.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Strength</span>
+      <strong>Comprehensive structured logging with 24 contexts</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>43 files use <code>createLogger()</code>. Only <code>lib/logger.ts</code> itself makes raw <code>console.*</code> calls. Secret sanitization masks tokens, API keys, passwords, JWTs. Error boundary wraps the entire app in <code>layout.tsx</code>.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 9: Documentation -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    9. Documentation &amp; Onboarding
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Excellent</span>
+      <strong>Comprehensive documentation ecosystem</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>11 ADRs. <code>CLAUDE.md</code> for AI-agent guidance. <code>coding-standards.md</code> v14. <code>DATABASE_ARCHITECTURE.md</code> for ERD. <code>.github/copilot-instructions.md</code> for VS Code integration. Local dev: <code>bun install &amp;&amp; bun dev</code>.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 10: Tech Debt -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    10. Tech Debt
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge sev-low">Low</span>
+      <strong>Dead code detection not automated</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+    </div>
+    <div class="finding-body" hidden>
+      <p>Adoption of <code>knip</code> or <code>ts-prune</code> tracked in <code>tasks/todo.md</code> but not implemented. Manual audits removed 6 dead files in v9, but ongoing detection relies on human review.</p>
+      <p><strong>Recommendation:</strong> Add <code>knip</code> to CI for automated dead code and unused dependency detection.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge sev-low">Low</span>
+      <strong>Command palette not wired into v9 shell</strong>
+      <span class="t-caption" style="margin-left: auto;">Effort: Medium</span>
+    </div>
+    <div class="finding-body" hidden>
+      <p>The command palette (<code>components/command-palette/</code>) has 17 passing unit tests but is not rendered in the v9 app shell. Code is maintained but not exercised in production.</p>
+    </div>
+  </div>
+
+  <!-- Dimension 11: Configuration -->
+  <h3 class="t-h3" style="margin-top: var(--sp-5); border-bottom: var(--border-rule); padding-bottom: 8px;">
+    11. Configuration &amp; Type Safety
+  </h3>
+
+  <div class="finding">
+    <div class="finding-header" aria-expanded="true" onclick="toggleFinding(this)">
+      <span class="arrow">&#9654;</span>
+      <span class="badge badge-success">Compliant</span>
+      <strong>TypeScript strict mode, typed routes, Zod validation</strong>
+      <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
+    </div>
+    <div class="finding-body">
+      <p>TypeScript strict mode enabled. Next.js typed routes configured. All data types have Zod schemas. Constants centralized in <code>lib/constants/</code>. No magic numbers.</p>
+    </div>
+  </div>
 </section>
 
-<!-- ROADMAP -->
+<!-- ================================================================
+     4. E2E TEST HEALTH
+     ================================================================ -->
+<section id="e2e">
+  <div class="sec-head">
+    <span class="idx">04</span>
+    <h2>E2E Test Health</h2>
+    <span class="count">Dimension 12</span>
+  </div>
+
+  <div class="alert is-success" style="margin-bottom: var(--sp-4);">
+    <div>
+      <p class="alert-title">All 102 E2E tests passing</p>
+      <p class="alert-body">34 tests &times; 3 browsers (Chromium, Firefox, WebKit) = 102 total. Duration: 2.5 minutes. Zero failures, zero flaky tests.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3">Test Infrastructure Quality</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Aspect</th><th>Status</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Page Object Model</td>
+        <td><span class="badge badge-success">Used</span></td>
+        <td><code>tests/e2e/pages/matrix-page.ts</code> &mdash; abstracts selectors, handles redirect &amp; PWA dialog</td>
+      </tr>
+      <tr>
+        <td>Test Fixtures</td>
+        <td><span class="badge badge-success">Used</span></td>
+        <td><code>tests/e2e/fixtures/test-fixtures.ts</code> &mdash; custom Playwright fixtures with pre-seeded state</td>
+      </tr>
+      <tr>
+        <td>Selector Strategy</td>
+        <td><span class="badge badge-success">Good</span></td>
+        <td>~85% use <code>data-testid</code>; 15% use role/text-based selectors</td>
+      </tr>
+      <tr>
+        <td>Test Isolation</td>
+        <td><span class="badge badge-success">Clean</span></td>
+        <td>IndexedDB deleted &amp; <code>gsd-has-launched</code> seeded before each test</td>
+      </tr>
+      <tr>
+        <td>Cross-browser</td>
+        <td><span class="badge badge-success">3 browsers</span></td>
+        <td>Chromium, Firefox, WebKit &mdash; all passing</td>
+      </tr>
+      <tr>
+        <td>Flakiness</td>
+        <td><span class="badge badge-success">None</span></td>
+        <td>Zero flaky tests detected</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Fragile Selectors (to harden)</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Selector</th><th>File</th><th>Risk</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>getByRole("button", { name: "Dark" })</code></td>
+        <td><code>settings-navigation.spec.ts:72</code></td>
+        <td>Depends on exact button label text</td>
+      </tr>
+      <tr>
+        <td><code>aside.lg\\:block</code></td>
+        <td><code>settings-navigation.spec.ts:53</code></td>
+        <td>Coupled to Tailwind breakpoint class</td>
+      </tr>
+      <tr>
+        <td><code>main h1</code>, <code>main h2</code></td>
+        <td><code>settings-navigation.spec.ts:50</code></td>
+        <td>Assumes heading hierarchy in layout</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Critical Missing E2E Coverage</h3>
+
+  <div class="alert is-danger" style="margin-bottom: var(--sp-3);">
+    <div>
+      <p class="alert-title">~70% of critical user paths have no E2E coverage</p>
+      <p class="alert-body">The following features have zero Playwright test coverage. Regressions can only be caught by manual testing.</p>
+    </div>
+  </div>
+
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Feature</th><th>Priority</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Cloud Sync (auth, push/pull, LWW, realtime, errors)</td>
+        <td><span class="badge badge-danger">Critical</span></td>
+        <td>Core multi-device feature; sync bugs cause data loss</td>
+      </tr>
+      <tr>
+        <td>Keyboard Shortcuts (<kbd>n</kbd>=new, <kbd>/</kbd>=search, help drawer)</td>
+        <td><span class="badge badge-danger">Critical</span></td>
+        <td>Primary interaction pattern for power users</td>
+      </tr>
+      <tr>
+        <td>Recurring Tasks (auto-create next instance on complete)</td>
+        <td><span class="badge badge-danger">Critical</span></td>
+        <td>Core productivity feature; broken recurrence loses tasks</td>
+      </tr>
+      <tr>
+        <td>Bulk Operations (multi-select, batch updates)</td>
+        <td><span class="badge badge-warning">High</span></td>
+        <td>Power user feature; atomicity bugs cause partial updates</td>
+      </tr>
+      <tr>
+        <td>Import Flow (file upload, validation, conflict handling)</td>
+        <td><span class="badge badge-warning">High</span></td>
+        <td>Data migration path; broken imports lose user data</td>
+      </tr>
+      <tr>
+        <td>Drag &amp; Drop (inter-quadrant task moves)</td>
+        <td><span class="badge badge-warning">High</span></td>
+        <td>Core UX interaction; regression would break the matrix</td>
+      </tr>
+      <tr>
+        <td>Dependencies (add, circular ref validation, blocking)</td>
+        <td><span class="badge badge-warning">High</span></td>
+        <td>Circular deps crash the app without BFS validation</td>
+      </tr>
+      <tr>
+        <td>PWA Install (install flow, offline mode)</td>
+        <td><span class="badge badge-neutral">Medium</span></td>
+        <td>PWA install prompt and offline functionality</td>
+      </tr>
+      <tr>
+        <td>Notifications (permission, due-date alerts)</td>
+        <td><span class="badge badge-neutral">Medium</span></td>
+        <td>Notification permissions and scheduling</td>
+      </tr>
+      <tr>
+        <td>Archive (archive page, restore)</td>
+        <td><span class="badge badge-neutral">Medium</span></td>
+        <td>Data management feature</td>
+      </tr>
+      <tr>
+        <td>Dashboard Analytics (metrics, trends, charts)</td>
+        <td><span class="badge badge-neutral">Medium</span></td>
+        <td>Productivity insights feature</td>
+      </tr>
+      <tr>
+        <td>Time Tracking (timer UI, time entries)</td>
+        <td><span class="badge badge-neutral">Medium</span></td>
+        <td>Time estimation and tracking</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================
+     5. REMEDIATION ROADMAP
+     ================================================================ -->
 <section id="roadmap">
-  <div class="eyebrow">Section 5</div>
-  <h2 style="margin-top:var(--sp-3)">30 / 60 / 90 day remediation roadmap</h2>
-  <p style="color:var(--gray-700);max-width:60ch">Sequenced for impact-per-effort. The 30-day stops alone are sufficient to clear all open dependency advisories and close the highest-leverage test gaps.</p>
-
-  <div class="timeline">
-    <div class="stop">
-      <h4>30 days · Patch &amp; verify</h4>
-      <ul>
-        <li><strong>Patch the override block.</strong> Bump <code>hono &gt;=4.12.18</code>; add <code>fast-uri &gt;=3.1.2</code>, <code>ip-address &gt;=10.1.1</code>, <code>postcss &gt;=8.5.14</code>; bump direct deps <code>next 16.2.6</code>, <code>pocketbase 0.26.9</code>, <code>zod 4.4.3</code>, <code>postcss 8.5.14</code>. Run <code>bun audit</code> — should report zero. <em>Effort: S.</em></li>
-        <li><strong>Delete duplicate <code>tests/sync/</code> files.</strong> Keep <code>tests/data/sync/</code> as canonical. <em>Effort: S.</em></li>
-        <li><strong>Re-include MCP tests in main Vitest run.</strong> Use Vitest projects feature; remove the <code>vitest.config.ts:16</code> exclude. <em>Effort: S.</em></li>
-        <li><strong>Verify <code>public/sw.js:47</code> origin.</strong> Add <code>event.origin === self.location.origin</code> guard. <em>Effort: S.</em></li>
-        <li><strong>Pin GitHub Actions to commit SHA.</strong> Five workflow files; configure Dependabot to keep them updated. <em>Effort: S.</em></li>
-      </ul>
-    </div>
-
-    <div class="stop">
-      <h4>60 days · Reduce change risk</h4>
-      <ul>
-        <li><strong>Decompose the three large components.</strong> Extract <code>useEditDraft</code>, <code>useMatrixState</code>+<code>useUrlActions</code>, <code>useSettingsPageState</code>. Drops largest functions, kills 4 of 11 cognitive-complexity Criticals, unblocks 5 chronic <code>edit-drawer.test.tsx</code> timeouts. <em>Effort: M.</em></li>
-        <li><strong>Add direct unit tests for <code>pb-push</code>, <code>pb-pull</code>, <code>pb-sync-helpers</code>.</strong> Mock PocketBase SDK; cover happy-path, 429, network failure, LWW edge. <em>Effort: M.</em></li>
-        <li><strong>Refactor MCP write-ops.</strong> Split <code>createTask</code>, <code>updateTask</code>, <code>bulk-operations</code> into validate / format / persist sub-functions. <em>Effort: S.</em></li>
-        <li><strong>Replace brittle Tailwind className assertions in three test files</strong> with role/aria queries. <em>Effort: S.</em></li>
-        <li><strong>Inline two redundant shims</strong> (<code>lib/sync/config.ts</code>, <code>lib/tasks/crud.ts</code>); <strong>delete two dead shims</strong> (<code>components/command-palette.tsx</code>, <code>packages/mcp-server/src/analytics.ts</code>). <em>Effort: S each.</em></li>
-        <li><strong>Migrate the 52 raw <code>console.*</code> sites</strong> to the structured logger. <em>Effort: S.</em></li>
-        <li><strong>Add <code>app/error.tsx</code> root error boundary.</strong> <em>Effort: M.</em></li>
-      </ul>
-    </div>
-
-    <div class="stop">
-      <h4>90 days · Tighten the loop</h4>
-      <ul>
-        <li><strong>Adopt <code>knip</code> or <code>ts-prune</code>.</strong> Closes the dead-code detection gap that the v9 cleanup hit (5 transitive imports missed by regex audit). Tracked in <code>tasks/todo.md</code> §6. <em>Effort: S.</em></li>
-        <li><strong>Add explicit return types to ~45 exported components.</strong> Tracked in <code>tasks/todo.md</code> §2; clears the largest standards violation by count. <em>Effort: M.</em></li>
-        <li><strong>Add <code>bun audit --audit-level=high</code> as PostToolUse hook.</strong> Closes the AI supply-chain gap from <code>coding-standards.md</code> Part 2. <em>Effort: S.</em></li>
-        <li><strong>Write the localStorage-token threat-model ADR.</strong> Document accepted risk and revisit triggers. <em>Effort: S.</em></li>
-        <li><strong>Reduce internal-module mocking</strong> in <code>tests/ui/matrix-simplified.test.tsx</code> and similar; mock at the data/network boundary only. <em>Effort: M.</em></li>
-        <li><strong>Bump <code>lucide-react</code></strong> 1.7.0 → 1.12.x with visual smoke pass. <em>Effort: S.</em></li>
-        <li><strong>Performance instrumentation pass.</strong> Lighthouse + bundle-analyzer baseline; instrument sync push duration; lazy-load below-the-fold dashboard charts. <em>Effort: M.</em></li>
-        <li><strong>Wire ⌘K command palette into v9 shell.</strong> Tracked in <code>tasks/todo.md</code> §1. <em>Effort: S.</em></li>
-      </ul>
-    </div>
+  <div class="sec-head">
+    <span class="idx">05</span>
+    <h2>Remediation Roadmap</h2>
   </div>
 
-  <hr/>
+  <h3 class="t-h3" style="margin-top: var(--sp-4);">30 Days &mdash; Quick Wins</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Action</th><th>Severity</th><th>Effort</th><th>Impact</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Migrate 3 <code>.parse()</code> calls to <code>.safeParse()</code></td>
+        <td><span class="badge badge-warning">Medium</span></td>
+        <td>&lt;1 day</td>
+        <td>Prevents silent data loss on corrupt records</td>
+      </tr>
+      <tr>
+        <td>Add global <code>unhandledrejection</code> listener</td>
+        <td><span class="badge badge-danger">High</span></td>
+        <td>&lt;1 day</td>
+        <td>Catches async sync errors that fail silently</td>
+      </tr>
+      <tr>
+        <td>Wrap realtime handler in try/catch</td>
+        <td><span class="badge badge-danger">High</span></td>
+        <td>&lt;1 day</td>
+        <td>Prevents unhandled rejections in SSE handler</td>
+      </tr>
+      <tr>
+        <td>Exclude <code>tests/e2e/</code> from Vitest config</td>
+        <td><span class="badge sev-low">Low</span></td>
+        <td>&lt;1 hour</td>
+        <td>Eliminates false failure noise in CI</td>
+      </tr>
+      <tr>
+        <td>Remove hard-coded PocketBase URL fallback</td>
+        <td><span class="badge badge-warning">Medium</span></td>
+        <td>&lt;1 day</td>
+        <td>Prevents data leakage in self-hosted deployments</td>
+      </tr>
+      <tr>
+        <td>Add <code>knip</code> for dead code detection</td>
+        <td><span class="badge sev-low">Low</span></td>
+        <td>&lt;1 day</td>
+        <td>Automates dead code detection in CI</td>
+      </tr>
+    </tbody>
+  </table>
 
-  <div class="alert is-info" role="note">
-    <strong>How this report should be used.</strong> Treat the executive summary and the 30/60/90 roadmap as the steerable layer. The detailed-findings sections are the reference layer — open the relevant section when the corresponding sprint item is being scoped, not on every read. All findings are derived from direct file inspection, the existing test suite, and <code>bun audit</code> — no third-party static-analysis platform was consulted, so re-runs of those tools may surface additional items.
-  </div>
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">60 Days &mdash; E2E Coverage Expansion</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Action</th><th>Severity</th><th>Effort</th><th>Impact</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Add E2E specs for keyboard shortcuts</td>
+        <td><span class="badge badge-danger">Critical</span></td>
+        <td>1&ndash;2 days</td>
+        <td>Covers primary power-user interaction pattern</td>
+      </tr>
+      <tr>
+        <td>Add E2E specs for recurring tasks</td>
+        <td><span class="badge badge-danger">Critical</span></td>
+        <td>1&ndash;2 days</td>
+        <td>Verifies auto-create on completion</td>
+      </tr>
+      <tr>
+        <td>Add E2E specs for import/export flow</td>
+        <td><span class="badge badge-warning">High</span></td>
+        <td>2&ndash;3 days</td>
+        <td>Validates data migration path end-to-end</td>
+      </tr>
+      <tr>
+        <td>Harden fragile E2E selectors</td>
+        <td><span class="badge sev-low">Low</span></td>
+        <td>1 day</td>
+        <td>Reduces test maintenance burden</td>
+      </tr>
+      <tr>
+        <td>Integrate error tracking service</td>
+        <td><span class="badge badge-warning">Medium</span></td>
+        <td>2&ndash;3 days</td>
+        <td>Captures production errors beyond browser console</td>
+      </tr>
+    </tbody>
+  </table>
 
-  <p style="font-family:var(--mono);font-size:var(--t-caption);color:var(--gray-500);margin-top:var(--sp-5)">
-    Generated 2026-05-10 against branch <code>main</code> · <code>bun audit</code> snapshot 2026-05-10 · 369 source files · 26,346 production lines · 1,830 tests across 115 files (8.3s) · Inkwell design tokens vendored from <a href="https://github.com/vscarpenter/inkwell">vscarpenter/inkwell</a>.
-  </p>
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">90 Days &mdash; Comprehensive Coverage</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Action</th><th>Severity</th><th>Effort</th><th>Impact</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Add E2E specs for sync auth + push/pull</td>
+        <td><span class="badge badge-danger">Critical</span></td>
+        <td>3&ndash;5 days</td>
+        <td>Validates core multi-device sync (requires mock PocketBase)</td>
+      </tr>
+      <tr>
+        <td>Add E2E specs for drag-and-drop, bulk ops, dependencies</td>
+        <td><span class="badge badge-warning">High</span></td>
+        <td>3&ndash;5 days</td>
+        <td>Covers advanced user workflows</td>
+      </tr>
+      <tr>
+        <td>Wire command palette into v9 shell</td>
+        <td><span class="badge sev-low">Low</span></td>
+        <td>2&ndash;3 days</td>
+        <td>Activates already-tested code for power users</td>
+      </tr>
+      <tr>
+        <td>Add E2E specs for archive, dashboard, time tracking</td>
+        <td><span class="badge badge-neutral">Medium</span></td>
+        <td>3&ndash;5 days</td>
+        <td>Completes E2E coverage of all app pages</td>
+      </tr>
+    </tbody>
+  </table>
 </section>
 
-</div>
+<!-- ================================================================
+     6. METHODOLOGY
+     ================================================================ -->
+<section id="methodology">
+  <div class="sec-head">
+    <span class="idx">06</span>
+    <h2>Methodology &amp; Limitations</h2>
+  </div>
+
+  <h3 class="t-h3">What Was Inspected</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Area</th><th>Method</th></tr></thead>
+    <tbody>
+      <tr><td>Unit tests</td><td><code>bun run test -- --coverage</code> &mdash; 1,857 tests, <code>coverage/coverage-summary.json</code></td></tr>
+      <tr><td>E2E tests</td><td><code>npx playwright test --reporter=line</code> &mdash; 102 tests across 3 browsers (2.5 min)</td></tr>
+      <tr><td>Security audit</td><td><code>bun audit</code> &mdash; zero vulnerabilities</td></tr>
+      <tr><td>Source analysis</td><td>188 source files in <code>lib/</code>, <code>components/</code>, <code>app/</code> &mdash; grep, AST-level review</td></tr>
+      <tr><td>Standards compliance</td><td><code>coding-standards.md</code> v14 &mdash; all 8 parts checked</td></tr>
+      <tr><td>Architecture</td><td>Import graph analysis, dependency direction, module cohesion</td></tr>
+      <tr><td>Documentation</td><td>CLAUDE.md, README, 11 ADRs, inline comments</td></tr>
+      <tr><td>Tech debt</td><td>TODO/FIXME scan, commented-out code, dead export detection</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">What Was NOT Inspected</h3>
+  <table class="tbl" style="margin-top: var(--sp-3);">
+    <thead><tr><th>Area</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>MCP server (<code>packages/mcp-server/</code>)</td><td>Standalone package with separate build; excluded from main analysis scope</td></tr>
+      <tr><td>PocketBase server config</td><td>Remote infrastructure &mdash; not accessible for review</td></tr>
+      <tr><td>Bundle size analysis</td><td>Would require <code>bun run build</code> + <code>@next/bundle-analyzer</code></td></tr>
+      <tr><td>Runtime performance profiling</td><td>Would require Lighthouse/Chrome DevTools against running app</td></tr>
+      <tr><td>Accessibility audit</td><td>Would require axe-core scanning or manual screen reader testing</td></tr>
+      <tr><td>Generated files</td><td><code>coverage/</code>, <code>node_modules/</code>, <code>.next/</code> &mdash; excluded per scope definition</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">Confidence Levels</h3>
+  <ul>
+    <li><strong>High confidence:</strong> Finding verified by running tools, reading source, and cross-referencing. (14 of 18 findings)</li>
+    <li><strong>Medium confidence:</strong> Finding based on code reading with limited dynamic verification. (4 of 18 findings)</li>
+    <li><strong>Low confidence:</strong> None &mdash; all findings were verified before inclusion.</li>
+  </ul>
+</section>
+
+</div><!-- .wrap-wide -->
+
+<footer>
+  <div class="wrap-wide">
+    <p>Generated May 12, 2026 &middot; Inkwell design system v1.3.0 &middot; GSD Task Manager codebase analysis</p>
+  </div>
+</footer>
+
+<script>
+  function toggleFinding(header) {
+    var body = header.nextElementSibling;
+    var expanded = header.getAttribute('aria-expanded') === 'true';
+    header.setAttribute('aria-expanded', String(!expanded));
+    body.hidden = expanded;
+  }
+
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('theme-toggle');
+    var label = document.getElementById('theme-label');
+    var KEY = 'theme-preview';
+    var order = ['auto', 'light', 'dark'];
+    function apply(s) {
+      if (s === 'auto') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', s);
+      if (label) label.textContent = s;
+    }
+    var current = localStorage.getItem(KEY) || 'auto';
+    if (order.indexOf(current) === -1) current = 'auto';
+    apply(current);
+    btn.addEventListener('click', function () {
+      current = order[(order.indexOf(current) + 1) % order.length];
+      localStorage.setItem(KEY, current);
+      apply(current);
+    });
+  })();
+</script>
 </body>
 </html>
