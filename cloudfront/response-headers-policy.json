@@ -1,0 +1,51 @@
+{
+  "Comment": "Security headers for gsd.vinny.dev — CSP, HSTS, COOP/CORP, Permissions-Policy, frame protection.",
+  "Name": "gsd-security-headers",
+  "SecurityHeadersConfig": {
+    "XSSProtection": {
+      "Override": true,
+      "Protection": false
+    },
+    "FrameOptions": {
+      "Override": true,
+      "FrameOption": "DENY"
+    },
+    "ReferrerPolicy": {
+      "Override": true,
+      "ReferrerPolicy": "strict-origin-when-cross-origin"
+    },
+    "ContentSecurityPolicy": {
+      "Override": true,
+      "ContentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://github.com; object-src 'none'; manifest-src 'self'; worker-src 'self';"
+    },
+    "ContentTypeOptions": {
+      "Override": true
+    },
+    "StrictTransportSecurity": {
+      "Override": true,
+      "IncludeSubdomains": true,
+      "Preload": true,
+      "AccessControlMaxAgeSec": 63072000
+    }
+  },
+  "CustomHeadersConfig": {
+    "Quantity": 3,
+    "Items": [
+      {
+        "Header": "Cross-Origin-Opener-Policy",
+        "Value": "same-origin-allow-popups",
+        "Override": true
+      },
+      {
+        "Header": "Cross-Origin-Resource-Policy",
+        "Value": "same-origin",
+        "Override": true
+      },
+      {
+        "Header": "Permissions-Policy",
+        "Value": "accelerometer=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=()",
+        "Override": true
+      }
+    ]
+  }
+}
