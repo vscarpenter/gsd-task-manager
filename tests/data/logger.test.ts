@@ -375,6 +375,57 @@ describe("Logger module", () => {
 			expect(metadata.passphrase).toBe("***");
 		});
 
+		it("should redact fields containing 'jwt'", () => {
+			const logger = createLogger("AUTH", "debug");
+			logger.info("auth event", { jwt: "eyJhbGciOiJIUzI1NiJ9.payload.sig" });
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			const metadata = logObject.metadata as Record<string, unknown>;
+			expect(metadata.jwt).toBe("***");
+		});
+
+		it("should redact fields containing 'refresh' (standalone, e.g. refreshExpiry)", () => {
+			const logger = createLogger("AUTH", "debug");
+			// 'refreshExpiry' does NOT contain 'token' — must match on 'refresh' alone
+			logger.info("oauth", { refreshExpiry: "rfsh-abc-123" });
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			const metadata = logObject.metadata as Record<string, unknown>;
+			expect(metadata.refreshExpiry).toBe("***");
+		});
+
+		it("should redact fields containing 'access' (standalone, e.g. accessGrant)", () => {
+			const logger = createLogger("AUTH", "debug");
+			// 'accessGrant' does NOT contain 'token' — must match on 'access' alone
+			logger.info("oauth", { accessGrant: "acc-xyz-789" });
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			const metadata = logObject.metadata as Record<string, unknown>;
+			expect(metadata.accessGrant).toBe("***");
+		});
+
+		it("should redact fields containing 'bearer' (standalone, e.g. bearerScheme)", () => {
+			const logger = createLogger("AUTH", "debug");
+			// 'bearerScheme' does NOT contain 'token' — must match on 'bearer' alone
+			logger.info("header", { bearerScheme: "abc-bearer-value" });
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			const metadata = logObject.metadata as Record<string, unknown>;
+			expect(metadata.bearerScheme).toBe("***");
+		});
+
 		it("should perform case-insensitive key matching for sanitization", () => {
 			const logger = createLogger("AUTH", "debug");
 			logger.info("mixed case", {
