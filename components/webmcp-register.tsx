@@ -40,6 +40,9 @@ const TOOLS: WebMCPToolDefinition[] = [
 		inputSchema: {
 			type: "object",
 			required: ["title"],
+			// Reject unknown fields so an AI cannot smuggle subtasks/dependencies/etc.
+			// past the JSON Schema layer and rely on `execute` whitelist alone.
+			additionalProperties: false,
 			properties: {
 				title: {
 					type: "string",
@@ -68,7 +71,11 @@ const TOOLS: WebMCPToolDefinition[] = [
 				tags: {
 					type: "array",
 					items: { type: "string", minLength: 1, maxLength: 32 },
-					description: "Optional list of lowercase, kebab-case tags.",
+					// maxItems mirrors the Zod constraint in createTask so the AI
+					// sees the same limit the validator will enforce. Without it,
+					// >20 tags pass JSON Schema and hit a confusing Zod error.
+					maxItems: SCHEMA_LIMITS.MAX_TAGS,
+					description: "Optional list of lowercase, kebab-case tags (max 20).",
 				},
 			},
 		},

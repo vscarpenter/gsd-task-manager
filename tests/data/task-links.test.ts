@@ -38,4 +38,17 @@ describe("task link sanitization", () => {
       { type: "text", text: "<img src=x onerror=alert(1)> javascript:alert(1)" },
     ]);
   });
+
+  it("caps oversize descriptions to protect the renderer", () => {
+    // Defense in depth: Zod bounds description length at the write boundary,
+    // but if a future sync-pull bypass ever ships an oversize string, the
+    // renderer must not iterate it unbounded.
+    const oversize = "x".repeat(10_000);
+    const segments = getDescriptionSegments(oversize);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0].type).toBe("text");
+    // Cap is 2x SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH (600) = 1200 chars.
+    expect(segments[0].text.length).toBeLessThanOrEqual(1200);
+  });
 });

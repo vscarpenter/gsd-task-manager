@@ -22,16 +22,37 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
   const [isImporting, setIsImporting] = useState(false);
   const [importTaskCount, setImportTaskCount] = useState<number | null>(null);
 
-  // Parse the file to get task count when fileContents changes
+  // Parse the file to get task count when fileContents changes.
+  //
+  // We only need the count for the dialog copy ("Importing 5 tasks") — the
+  // real validation runs later in `importFromJson` via `importPayloadSchema`.
+  // Tri-state result:
+  //   number  — known count (valid array, or valid JSON without tasks key → 0)
+  //   null    — couldn't determine (parse error, or `tasks` is the wrong type)
+  // Avoids a misleading count for malformed payloads like `{ "tasks": "AAAA" }`
+  // where the old `parsed.tasks?.length ?? 0` would have reported `4`.
   useEffect(() => {
-    if (fileContents) {
-      try {
-        const parsed = JSON.parse(fileContents);
-        setImportTaskCount(parsed.tasks?.length ?? 0);
-      } catch {
+    if (!fileContents) {
+      setImportTaskCount(null);
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(fileContents);
+      if (parsed === null || typeof parsed !== 'object') {
+        setImportTaskCount(null);
+        return;
+      }
+      const tasks = (parsed as { tasks?: unknown }).tasks;
+      if (tasks === undefined) {
+        // Valid JSON, no tasks key — definitively 0 tasks to import.
+        setImportTaskCount(0);
+      } else if (Array.isArray(tasks)) {
+        setImportTaskCount(tasks.length);
+      } else {
+        // Malformed: tasks key present but not an array.
         setImportTaskCount(null);
       }
-    } else {
+    } catch {
       setImportTaskCount(null);
     }
   }, [fileContents]);
