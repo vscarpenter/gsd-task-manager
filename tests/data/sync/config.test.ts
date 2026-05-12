@@ -271,6 +271,43 @@ describe('Sync Config', () => {
       // Should not throw — disableSync returns early when config is null
       await expect(disableSync()).resolves.not.toThrow();
     });
+
+    it('should clear sync history (privacy on shared device)', async () => {
+      // Seed sync history with entries that include device IDs and counts.
+      // Without clearing on logout, the next user on the same browser
+      // profile would see these.
+      await db.syncHistory.bulkAdd([
+        {
+          id: 'h1',
+          timestamp: new Date().toISOString(),
+          status: 'success',
+          pushedCount: 5,
+          pulledCount: 3,
+          conflictsResolved: 0,
+          deviceId: 'device-123',
+          triggeredBy: 'user',
+        },
+        {
+          id: 'h2',
+          timestamp: new Date().toISOString(),
+          status: 'failure',
+          pushedCount: 0,
+          pulledCount: 0,
+          conflictsResolved: 0,
+          deviceId: 'device-123',
+          triggeredBy: 'auto',
+          errorMessage: 'something failed',
+        },
+      ]);
+
+      const historyCountBefore = await db.syncHistory.count();
+      expect(historyCountBefore).toBe(2);
+
+      await disableSync();
+
+      const historyCountAfter = await db.syncHistory.count();
+      expect(historyCountAfter).toBe(0);
+    });
   });
 
   describe('isSyncEnabled', () => {

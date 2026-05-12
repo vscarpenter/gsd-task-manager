@@ -64,6 +64,27 @@ describe('PocketBase Auth', () => {
 
       await expect(loginWithProvider('github')).rejects.toThrow('OAuth popup closed');
     });
+
+    it('rejects provider names not in the runtime whitelist', async () => {
+      // `OAuthProvider` is a TS type — erased at runtime. A caller (XSS
+      // payload, future feature regression, console invocation) could pass
+      // an arbitrary string. The runtime allowlist must catch this before
+      // the SDK call is made.
+      await expect(
+        loginWithProvider('facebook' as unknown as 'google')
+      ).rejects.toThrow(/not allowed|whitelist|provider/i);
+      expect(mockAuthWithOAuth2).not.toHaveBeenCalled();
+    });
+
+    it('rejects empty/null provider strings', async () => {
+      await expect(
+        loginWithProvider('' as unknown as 'google')
+      ).rejects.toThrow();
+      await expect(
+        loginWithProvider(null as unknown as 'google')
+      ).rejects.toThrow();
+      expect(mockAuthWithOAuth2).not.toHaveBeenCalled();
+    });
   });
 
   describe('loginWithGoogle', () => {
