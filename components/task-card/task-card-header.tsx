@@ -67,6 +67,7 @@ export function TaskCardHeader({
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            data-testid="complete-task"
             type="button"
             onClick={() => onToggleComplete(task, !task.completed)}
             className={cn(

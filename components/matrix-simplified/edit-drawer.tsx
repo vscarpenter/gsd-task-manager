@@ -147,6 +147,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   return (
     <div onClick={onClose} className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay">
       <form
+        data-testid="edit-drawer"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
         className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl animate-drawer-slide-in"
@@ -176,6 +177,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
         <div className="flex flex-1 flex-col gap-5 overflow-auto px-5 py-5">
           {/* Title — placeholder carries affordance, the uppercase label is dropped */}
           <input
+            data-testid="edit-title"
             ref={titleRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -186,6 +188,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
 
           <Field label="Description">
             <textarea
+              data-testid="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -201,6 +204,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
                 const a = QUADRANT_ACCENT[q.rdKey];
                 return (
                   <button
+                    data-testid={`edit-quadrant-${q.rdKey}`}
                     key={q.id}
                     type="button"
                     aria-label={q.title}
@@ -343,6 +347,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
             Cancel
           </button>
           <button
+            data-testid="save-task"
             type="submit"
             disabled={!title.trim()}
             className={cn(

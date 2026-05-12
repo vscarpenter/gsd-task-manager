@@ -126,6 +126,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
 
   return (
     <form
+      data-testid="capture-bar"
       onSubmit={submit}
       className={cn(
         "flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5",
@@ -138,6 +139,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         style={{ color: text.trim() ? accent : "color-mix(in srgb, var(--gray-500) 70%, transparent)" }}
       />
       <input
+        data-testid="capture-input"
         ref={internalRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -149,6 +151,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       {text.trim() ? (
         <>
           <button
+            data-testid="quadrant-toggle"
             key={effectiveKey}
             type="button"
             onClick={cycleQuadrant}
@@ -168,6 +171,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
           </button>
           {onMoreOptions ? (
             <button
+              data-testid="more-options"
               type="button"
               onClick={() => {
                 const flags = override
@@ -191,6 +195,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         </span>
       )}
       <button
+        data-testid="submit-task"
         type="submit"
         aria-disabled={!parsed.title}
         className={cn(

@@ -125,6 +125,7 @@ function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            data-testid="edit-task"
             type="button"
             onClick={() => onEdit(task)}
             className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground transition-colors"
@@ -138,6 +139,7 @@ function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            data-testid="delete-task"
             type="button"
             onClick={() => onDelete(task)}
             className="rounded px-1.5 py-0.5 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 transition-colors"
@@ -164,6 +166,7 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileA
   return (
     <div className="flex sm:hidden items-center gap-0.5">
       <button
+        data-testid="edit-task-mobile"
         type="button"
         onClick={() => onEdit(task)}
         className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
@@ -174,6 +177,7 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileA
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
+            data-testid="task-card-menu"
             type="button"
             className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-background-muted hover:text-foreground touch-manipulation transition-colors"
             aria-label="More actions"
@@ -194,7 +198,7 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileA
               Duplicate
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={() => onDelete(task)} className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
+          <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
             <Trash2Icon className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
