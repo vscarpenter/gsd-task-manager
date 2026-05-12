@@ -1,3 +1,5 @@
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+
 export type DescriptionSegment =
   | { type: "text"; text: string }
   | { type: "link"; text: string; href: string };
@@ -6,6 +8,9 @@ const URL_CANDIDATE_PATTERN = /\bhttps?:\/\/[^\s<>"'`{}|\\^]+/giu;
 const TRAILING_URL_PUNCTUATION_PATTERN = /[),.!?;:]+$/u;
 const MAX_URL_LENGTH = 2048;
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
+
+// Defensive ceiling for getDescriptionSegments — see comment on the cap there.
+const MAX_DESCRIPTION_RENDER_LENGTH = SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH * 2;
 
 export function sanitizeHttpUrl(candidate: string): string | null {
   const value = candidate.trim();
@@ -36,6 +41,16 @@ export function sanitizeHttpUrl(candidate: string): string | null {
 }
 
 export function getDescriptionSegments(description: string): DescriptionSegment[] {
+  // Zod bounds description at TASK_DESCRIPTION_MAX_LENGTH at the write
+  // boundary. This defensive slice protects the regex/iteration cost if a
+  // future bypass (e.g. a sync-pull mapper change) ever lets an oversize
+  // string reach the renderer. Doubled to leave headroom for legacy data
+  // that may predate the cap.
+  const safeDescription =
+    description.length > MAX_DESCRIPTION_RENDER_LENGTH
+      ? description.slice(0, MAX_DESCRIPTION_RENDER_LENGTH)
+      : description;
+
   const segments: DescriptionSegment[] = [];
   let lastIndex = 0;
   const pushText = (text: string) => {
@@ -50,7 +65,7 @@ export function getDescriptionSegments(description: string): DescriptionSegment[
     segments.push({ type: "text", text });
   };
 
-  for (const match of description.matchAll(URL_CANDIDATE_PATTERN)) {
+  for (const match of safeDescription.matchAll(URL_CANDIDATE_PATTERN)) {
     const rawMatch = match[0];
     const matchIndex = match.index ?? 0;
     const trimmedCandidate = rawMatch.replace(TRAILING_URL_PUNCTUATION_PATTERN, "");
@@ -62,7 +77,7 @@ export function getDescriptionSegments(description: string): DescriptionSegment[
     }
 
     if (matchIndex > lastIndex) {
-      pushText(description.slice(lastIndex, matchIndex));
+      pushText(safeDescription.slice(lastIndex, matchIndex));
     }
 
     segments.push({ type: "link", text: trimmedCandidate, href });
@@ -70,9 +85,9 @@ export function getDescriptionSegments(description: string): DescriptionSegment[
     lastIndex = matchIndex + rawMatch.length;
   }
 
-  if (lastIndex < description.length) {
-    pushText(description.slice(lastIndex));
+  if (lastIndex < safeDescription.length) {
+    pushText(safeDescription.slice(lastIndex));
   }
 
-  return segments.length > 0 ? segments : [{ type: "text", text: description }];
+  return segments.length > 0 ? segments : [{ type: "text", text: safeDescription }];
 }
