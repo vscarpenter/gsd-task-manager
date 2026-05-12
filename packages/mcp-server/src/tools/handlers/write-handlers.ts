@@ -158,10 +158,9 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
 
 export async function handleBulkUpdateTasks(
   config: GsdConfig,
-  args: { taskIds: string[]; operation: BulkOperation; maxTasks?: number; dryRun?: boolean }
+  args: { taskIds: string[]; operation: BulkOperation; dryRun?: boolean }
 ): Promise<McpToolResponse> {
   const result = await bulkUpdateTasks(config, args.taskIds, args.operation, {
-    maxTasks: args.maxTasks,
     dryRun: args.dryRun,
   });
 

@@ -120,29 +120,70 @@ export async function prompt(question: string, defaultValue?: string): Promise<s
 }
 
 /**
- * Prompt for password (hidden input)
+ * Prompt for password with echo suppressed.
+ *
+ * Implementation note: in a TTY we put stdin into raw mode and consume bytes
+ * one at a time, never writing the character back to stdout. This is the only
+ * portable way to suppress echo for password input in Node — readline.question
+ * always echoes, and `setRawMode(false)` is cooked mode (the default) which
+ * also echoes.
+ *
+ * When stdin is not a TTY (CI pipeline, scripted input) we fall back to a
+ * regular line read; echo behavior is whatever the caller's environment does.
  */
 export async function promptPassword(question: string): Promise<string> {
-  const rl = createReadline();
+  process.stdout.write(`${question}: `);
 
-  return new Promise((resolve) => {
-    // Disable echo for password input
-    // Node.js typings don't expose all Readable methods consistently across versions;
-    // safe to cast since process.stdin is always a Readable TTY stream at runtime.
-    const stdin = process.stdin as unknown as {
-      setEncoding: (enc: string) => void;
-      isTTY: boolean;
-      setRawMode: (mode: boolean) => boolean;
-    };
-    const originalMode = stdin.isTTY && stdin.setRawMode ? stdin.setRawMode(false) : null;
+  const stdin = process.stdin as NodeJS.ReadStream;
 
-    rl.question(`${question}: `, (answer: string) => {
-      rl.close();
-      if (originalMode !== null && stdin.isTTY) {
-        stdin.setRawMode(originalMode);
-      }
-      console.log(); // New line after password input
-      resolve(answer.trim());
+  if (!stdin.isTTY || typeof stdin.setRawMode !== 'function') {
+    // Non-TTY fallback (CI, piped input). Read one line via readline.
+    const rl = createReadline();
+    return new Promise<string>((resolve) => {
+      rl.question('', (answer: string) => {
+        rl.close();
+        process.stdout.write('\n');
+        resolve(answer.trim());
+      });
     });
+  }
+
+  stdin.setRawMode(true);
+  stdin.resume();
+  stdin.setEncoding('utf8');
+
+  return new Promise<string>((resolve) => {
+    let buffer = '';
+    const onData = (chunk: string) => {
+      for (const char of chunk) {
+        const code = char.charCodeAt(0);
+        if (char === '\n' || char === '\r' || code === 4) {
+          // Enter or Ctrl-D — finalize input
+          stdin.setRawMode(false);
+          stdin.pause();
+          stdin.removeListener('data', onData);
+          process.stdout.write('\n');
+          resolve(buffer.trim());
+          return;
+        }
+        if (code === 3) {
+          // Ctrl-C — abort
+          stdin.setRawMode(false);
+          stdin.pause();
+          process.stdout.write('\n');
+          process.exit(130);
+        }
+        if (code === 127 || code === 8) {
+          // Backspace
+          if (buffer.length > 0) {
+            buffer = buffer.slice(0, -1);
+          }
+          continue;
+        }
+        // Append printable byte to buffer; do NOT echo to stdout.
+        buffer += char;
+      }
+    };
+    stdin.on('data', onData);
   });
 }

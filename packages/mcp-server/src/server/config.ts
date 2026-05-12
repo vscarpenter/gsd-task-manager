@@ -4,14 +4,41 @@ import { createMcpLogger } from '../utils/logger.js';
 
 const logger = createMcpLogger('CONFIG');
 
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+
+/**
+ * Validate that a URL either uses HTTPS, or uses HTTP only when targeting a
+ * loopback hostname. Uses exact hostname matching after parsing so that
+ * `http://localhost.attacker.com` and `http://localhost@attacker.com` are
+ * correctly rejected (a `startsWith` check is bypassable).
+ */
+function isSafePocketBaseUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol === 'https:') {
+    return true;
+  }
+  if (parsed.protocol !== 'http:') {
+    return false;
+  }
+  // URL.hostname for `[::1]` is `[::1]` (with brackets); strip them.
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
+  return LOOPBACK_HOSTNAMES.has(hostname);
+}
+
 /**
  * Configuration schema for GSD MCP Server (PocketBase)
  */
 export const configSchema = z.object({
-  pocketBaseUrl: z.string().url().refine(
-    (url) => url.startsWith('https://') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1'),
-    { message: 'PocketBase URL must use HTTPS (except localhost for local development)' }
-  ),
+  pocketBaseUrl: z.string().url().refine(isSafePocketBaseUrl, {
+    message:
+      'PocketBase URL must use HTTPS (or http://localhost / http://127.0.0.1 / http://[::1] for local development)',
+  }),
   authToken: z.string().min(1),
 });
 

@@ -72,21 +72,42 @@ function applyOperation(task: Task, operation: BulkOperation, now: string): Task
   throw new Error(`Unknown operation type: ${(operation as { type: string }).type}`);
 }
 
+/**
+ * Server-side policy ceilings for bulk operations. Not caller-controllable
+ * (see input-schemas.ts — `maxTasks` is intentionally absent from the input
+ * schema so an over-eager LLM cannot raise the limit).
+ */
+const BULK_MAX_TASKS = 50;
+const BULK_MAX_DELETES = 10;
+
 export async function bulkUpdateTasks(
   config: GsdConfig,
   taskIds: string[],
   operation: BulkOperation,
-  options?: { maxTasks?: number; dryRun?: boolean }
+  options?: { dryRun?: boolean }
 ): Promise<{ updated: number; deleted: number; errors: string[]; dryRun: boolean }> {
-  const isDryRun = options?.dryRun ?? false;
-  const maxTasks = options?.maxTasks ?? 50;
+  // Destructive deletes default to dryRun=true. Callers must pass
+  // `dryRun: false` explicitly to actually delete.
+  const isDryRun =
+    operation.type === 'delete' ? options?.dryRun !== false : options?.dryRun ?? false;
 
-  if (taskIds.length > maxTasks) {
+  if (taskIds.length > BULK_MAX_TASKS) {
     throw new Error(
       `Bulk operation limit exceeded\n\n` +
         `Requested: ${taskIds.length} tasks\n` +
-        `Maximum: ${maxTasks} tasks\n\n` +
+        `Maximum: ${BULK_MAX_TASKS} tasks\n\n` +
         `Please reduce the number of tasks or split into multiple operations.`
+    );
+  }
+
+  if (operation.type === 'delete' && taskIds.length > BULK_MAX_DELETES) {
+    throw new Error(
+      `Bulk delete limit exceeded\n\n` +
+        `Requested: ${taskIds.length} deletes\n` +
+        `Maximum: ${BULK_MAX_DELETES} deletes per call\n\n` +
+        `Delete operations are capped lower than other bulk operations to limit ` +
+        `accidental data loss from an LLM-driven call. Split into multiple ` +
+        `delete calls of ${BULK_MAX_DELETES} or fewer task ids each.`
     );
   }
 
