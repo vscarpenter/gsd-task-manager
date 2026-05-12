@@ -1,6 +1,6 @@
 // Cache version — updated at build time by scripts/update-sw-version.cjs
 // Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '9.1.3';
+const CACHE_VERSION = '9.1.4';
 const CACHE_NAME = `gsd-cache-v${CACHE_VERSION}`;
 const OFFLINE_ASSETS = [
 	"/",

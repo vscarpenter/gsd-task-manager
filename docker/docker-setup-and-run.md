@@ -134,7 +134,7 @@ No more certificate warnings — the browser trusts the mkcert-issued certificat
 Override the default PocketBase version at build time:
 
 ```bash
-docker compose build --build-arg POCKETBASE_VERSION=0.25.6
+docker compose build --build-arg POCKETBASE_VERSION=0.26.9
 ```
 
 ## Data Persistence & Backups

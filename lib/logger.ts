@@ -136,6 +136,7 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
   const sensitivePatterns = [
     'token', 'password', 'secret', 'apikey', 'authorization',
     'passphrase', 'email', 'credential', 'cookie', 'session',
+    'jwt', 'refresh', 'access', 'bearer',
   ];
   for (const key of Object.keys(sanitized)) {
     const lower = key.toLowerCase();
