@@ -10,6 +10,12 @@ export const test = base.extend<{ clearIndexedDB: void }>({
   // We rename it from the conventional `use` to dodge a false-positive
   // react-hooks/rules-of-hooks lint match against React's `use()`.
   clearIndexedDB: async ({ page }, runTest) => {
+    // Pre-seed the first-visit flag so FirstTimeRedirect never fires in tests.
+    // Without this, the redirect to /about races page.goto("/") and WebKit
+    // throws "interrupted by another navigation" (Chromium/Firefox tolerate it).
+    await page.addInitScript(() => {
+      window.localStorage.setItem("gsd-has-launched", "true");
+    });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.evaluate(
       () =>
