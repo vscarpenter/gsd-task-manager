@@ -5,6 +5,68 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-05-12 🔒
+
+Security hardening release. Addresses the MCP server findings from the May 2026
+security review (tranche 2). The common thread is misuse-of-trust failures
+where the local user — or an LLM acting on their behalf — is the threat
+actor, not a remote attacker. No protocol or tool-surface changes; existing
+clients continue to work.
+
+### Security
+- **Setup wizard no longer prints the auth token to stdout.** The generated
+  Claude Desktop config snippet is written to `~/.gsd-mcp-setup.json` with
+  mode `0600` (owner-only). Stdout shows only a redacted preview
+  (`abc…xyz (N chars)`) so the token never lands in terminal scrollback,
+  screen-shares, or shell history. The wizard's failure path unlinks the
+  file so a partial setup does not leak. Users are instructed to delete
+  the file after pasting the config.
+- **`promptPassword` now actually suppresses echo.** The previous
+  implementation called `setRawMode(false)` — that is cooked mode, which
+  echoes typed characters. Replaced with proper raw-mode input that
+  consumes stdin bytes one at a time, handles Backspace / Ctrl-C / Ctrl-D,
+  and never writes typed characters to stdout. Non-TTY paths (piped input,
+  CI) fall back to `readline`.
+- **`pocketBaseUrl` hostname validation is now exact-match.** The old
+  `startsWith('http://localhost')` check was bypassable — URLs like
+  `http://localhost.attacker.com` and `http://localhost@attacker.com`
+  passed validation. Replaced with a parsed-URL check against the exact
+  hostname set `{localhost, 127.0.0.1, ::1}`. Bracketed IPv6 (`http://[::1]`)
+  is handled correctly.
+- **PocketBase host is redacted in client error messages.** A new
+  `redactPocketBaseHost` helper masks the host portion of the configured URL
+  when `apiRequest` reports a connection failure, so error logs piped into
+  shared support channels do not leak the server address.
+
+### Changed
+- **`bulk_update_tasks` delete operations default to `dryRun: true`.**
+  Callers must now pass `dryRun: false` explicitly to actually delete. Reduces
+  the blast radius of an LLM-driven call that interpreted "remove these" too
+  literally. Non-delete bulk operations are unchanged (`dryRun` still
+  defaults to `false`).
+- **Bulk delete cap reduced from 50 to 10 tasks per call.** Other bulk
+  operations (complete, move, tag, set-due-date) remain capped at 50. Split
+  larger deletes into multiple calls. Tool description and JSON Schema
+  updated to reflect both caps.
+
+### Removed
+- **`bulk_update_tasks` no longer accepts a caller-supplied `maxTasks`.** The
+  policy ceiling is now a server-side constant (`BULK_MAX_TASKS = 50`,
+  `BULK_MAX_DELETES = 10`) rather than LLM input. The field is removed from
+  the JSON Schema; any client still sending it will get a Zod validation
+  error from the dispatcher boundary. Migration: drop the `maxTasks`
+  argument from your call site.
+
+### Tests
+- 23 new tests added across `server/config.test.ts` (12, hostname allowlist
+  and redaction), `write-ops/bulk-operations.test.ts` (5, dryRun-default and
+  delete-cap), `api/client.test.ts` (5, host redaction in error messages),
+  and `tools/input-schemas.test.ts` (+1, `maxTasks` rejection). Every
+  behavioral change in this release was driven by a red test first.
+- The setup-wizard and `promptPassword` changes are TTY-interaction behaviors
+  that are not portably mockable; they were verified by code reading plus
+  the existing post-build manual setup flow.
+
 ## [1.0.0] - 2026-04-24 🎉
 
 First stable release. Graduates the server from its pre-1.0 iteration phase and
@@ -467,6 +529,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.1.4]: https://github.com/vscarpenter/gsd-taskmanager/compare/v1.1.3...v1.1.4
 [0.3.0]: https://github.com/vscarpenter/gsd-taskmanager/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/vscarpenter/gsd-taskmanager/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/vscarpenter/gsd-taskmanager/compare/v0.1.0...v0.2.0
