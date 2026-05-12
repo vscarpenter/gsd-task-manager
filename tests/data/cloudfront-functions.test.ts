@@ -59,6 +59,33 @@ describe('cloudfront-function-url-rewrite (viewer-request)', () => {
 		const out = urlRewrite({ request: req }) as CFRequest;
 		expect(out.uri).toBe('/about/index.html');
 	});
+
+	describe('path safety', () => {
+		it('rejects URIs containing carriage returns', () => {
+			const req = makeRequest('/about\r/');
+			const out = urlRewrite({ request: req }) as CFRequest;
+			// Should fall back to /index.html, not propagate the CR.
+			expect(out.uri).not.toContain('\r');
+		});
+
+		it('rejects URIs containing newlines (CRLF injection defense)', () => {
+			const req = makeRequest('/about\n/');
+			const out = urlRewrite({ request: req }) as CFRequest;
+			expect(out.uri).not.toContain('\n');
+		});
+
+		it('rejects URIs containing null bytes', () => {
+			const req = makeRequest('/about\0/');
+			const out = urlRewrite({ request: req }) as CFRequest;
+			expect(out.uri).not.toContain('\0');
+		});
+
+		it('rejects URIs containing path traversal sequences', () => {
+			const req = makeRequest('/about/../../etc/passwd');
+			const out = urlRewrite({ request: req }) as CFRequest;
+			expect(out.uri).not.toContain('..');
+		});
+	});
 });
 
 describe('cloudfront-function-response-headers (viewer-response)', () => {

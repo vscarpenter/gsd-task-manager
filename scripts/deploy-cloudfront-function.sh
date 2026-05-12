@@ -3,6 +3,11 @@
 # Deploy CloudFront Functions for URL rewriting and agent-discovery response headers.
 # This script publishes both functions and attaches them to the distribution
 # (viewer-request and viewer-response respectively).
+#
+# Note: security headers (CSP, HSTS, COOP/CORP, Permissions-Policy, frame
+# protection) are managed by the separate `deploy-cloudfront-response-headers-policy.sh`
+# script using the JSON definition in `cloudfront/response-headers-policy.json`.
+# Run that script whenever the policy file changes.
 
 set -euo pipefail
 

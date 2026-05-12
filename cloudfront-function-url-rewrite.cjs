@@ -21,6 +21,20 @@ function handler(event) {
   var uri = request.uri;
   var headers = request.headers;
 
+  // 0. Path-safety guard. Bail to the root index for URIs containing control
+  //    characters, null bytes, or path-traversal sequences. CloudFront and
+  //    S3 reject most of these downstream, but a cheap defense-in-depth check
+  //    here prevents any chance of CRLF injection into the rewritten URI.
+  if (
+    uri.indexOf('\r') !== -1 ||
+    uri.indexOf('\n') !== -1 ||
+    uri.indexOf('\0') !== -1 ||
+    uri.indexOf('..') !== -1
+  ) {
+    request.uri = '/index.html';
+    return request;
+  }
+
   // 1. Resolve trailing-slash and extensionless paths to their `index.html`.
   if (uri.endsWith('/')) {
     request.uri = uri + 'index.html';

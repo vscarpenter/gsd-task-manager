@@ -22,13 +22,28 @@
 
 	# Security headers
 	header {
-		X-Content-Type-Options    "nosniff"
-		X-Frame-Options           "DENY"
-		Referrer-Policy           "strict-origin-when-cross-origin"
-		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-		Permissions-Policy        "geolocation=(), microphone=(), camera=(), payment=()"
-		Content-Security-Policy   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://github.com;"
+		X-Content-Type-Options       "nosniff"
+		X-Frame-Options              "DENY"
+		Referrer-Policy              "strict-origin-when-cross-origin"
+		Strict-Transport-Security    "max-age=63072000; includeSubDomains; preload"
+
+		# COOP is required for OAuth popup-flow safety (`window.opener`
+		# isolation, tabnabbing defense). COEP intentionally omitted —
+		# enabling it would break OAuth popup `postMessage`.
+		Cross-Origin-Opener-Policy   "same-origin-allow-popups"
+		Cross-Origin-Resource-Policy "same-origin"
+
+		# Permissions-Policy: deny everything the app does not use. Modern
+		# directives (browsing-topics, interest-cohort, display-capture,
+		# etc.) close future-feature gaps that the original 4-directive
+		# allowlist did not cover.
+		Permissions-Policy           "accelerometer=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=()"
+
+		Content-Security-Policy      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://github.com; object-src 'none'; manifest-src 'self'; worker-src 'self';"
+
+		# Hide server / upstream framework banners.
 		-Server
+		-X-Powered-By
 	}
 
 	# ---- PocketBase reverse proxy ----
