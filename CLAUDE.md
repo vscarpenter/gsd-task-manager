@@ -173,7 +173,7 @@ These packages are not self-explanatory from their names alone:
 ### Navigation & UI
 - Use `useViewTransition()` hook for client-side navigation with View Transitions API
 - Button component variants: "primary" | "subtle" | "ghost" (no size prop)
-- Smart view shortcuts (1-9, 0) use `useSmartViewShortcuts` with typing detection
+- Smart view shortcuts and pinning UI were removed in v9 (see ADR 0011). The `smartViews` Dexie table is retained for data continuity but has no UI surface in the v9 shell.
 
 ### Cloud Sync
 - **PocketBase Admin**: `https://api.vinny.io/_/` for collection management

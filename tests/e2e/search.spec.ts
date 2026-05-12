@@ -86,12 +86,55 @@ test.describe("Search Functionality", () => {
 
   test("should handle partial matches", async ({ page }) => {
     await matrixPage.createTask("Complete the project report");
-    
+
     await page.waitForTimeout(500);
-    
+
     // Search for partial word
     await matrixPage.search("project");
-    
+
     await expect(page.locator("[data-testid='task-card']").filter({ hasText: "Complete the project report" })).toBeVisible();
   });
+
+  test("should search by tag", async ({ page }) => {
+    // Capture parser strips `#tag` from the title and stores it on the task.
+    // The search filter joins tags into the searchable haystack.
+    await matrixPage.createTask("Buy lettuce #grocery");
+    await matrixPage.createTask("Write quarterly memo #work");
+    await matrixPage.createTask("Untagged task");
+
+    await page.waitForTimeout(500);
+
+    await matrixPage.search("grocery");
+
+    await expect(
+      page.locator("[data-testid='task-card']").filter({ hasText: "Buy lettuce" })
+    ).toBeVisible();
+    await expect(
+      page.locator("[data-testid='task-card']").filter({ hasText: "Write quarterly memo" })
+    ).not.toBeVisible();
+    await expect(
+      page.locator("[data-testid='task-card']").filter({ hasText: "Untagged task" })
+    ).not.toBeVisible();
+  });
+
+  test("should search across multiple tags", async ({ page }) => {
+    await matrixPage.createTask("Refactor module #work #urgent");
+    await matrixPage.createTask("Call dentist #personal");
+
+    await page.waitForTimeout(500);
+
+    await matrixPage.search("urgent");
+    await expect(
+      page.locator("[data-testid='task-card']").filter({ hasText: "Refactor module" })
+    ).toBeVisible();
+    await expect(
+      page.locator("[data-testid='task-card']").filter({ hasText: "Call dentist" })
+    ).not.toBeVisible();
+  });
+
+  // NOTE: "search by subtasks" from the spec is deferred. The v9 edit drawer
+  // does not expose a subtask editor (only a count badge on the task card), so
+  // there is no user-facing path to add subtasks. The search filter itself
+  // (lib/matrix-simplified/index.tsx → filterTasks) does include subtask titles
+  // in its haystack and is covered by unit tests.
 });

@@ -45,6 +45,34 @@ test.describe("Task CRUD Operations", () => {
     expect(newCount).toBe(initialCount - 1);
   });
 
+  test("should update task title, description, and quadrant", async ({ page }) => {
+    await matrixPage.createTask("Original title");
+
+    // Task defaults to Q4 (not urgent, not important) since no flags were set
+    await expect(
+      page.locator("[data-testid='quadrant-q4'] [data-testid='task-card']").filter({ hasText: "Original title" })
+    ).toBeVisible();
+
+    await matrixPage.openEditDrawer("Original title");
+    await matrixPage.saveEditDrawer({
+      title: "Updated title",
+      description: "Now with details",
+      quadrant: "q1",
+    });
+
+    // Updated card now lives in Q1 with the new title and description
+    const updatedCard = page
+      .locator("[data-testid='quadrant-q1'] [data-testid='task-card']")
+      .filter({ hasText: "Updated title" });
+    await expect(updatedCard).toBeVisible();
+    await expect(updatedCard).toContainText("Now with details");
+
+    // Original title is gone everywhere
+    await expect(
+      page.locator("[data-testid='task-card']").filter({ hasText: "Original title" })
+    ).toHaveCount(0);
+  });
+
   test("should delete a task", async ({ page }) => {
     await matrixPage.createTask("Task to delete");
     

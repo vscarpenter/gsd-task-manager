@@ -75,6 +75,41 @@ export class MatrixPage {
     await this.page.waitForTimeout(500);
   }
 
+  /**
+   * Opens the edit drawer for the task with the given title.
+   * Uses the desktop edit button revealed on hover; the same testid
+   * exists on mobile so this works for both viewports.
+   */
+  async openEditDrawer(title: string): Promise<void> {
+    const taskCard = this.page.locator("[data-testid='task-card']").filter({ hasText: title });
+    await taskCard.hover();
+    await taskCard.locator("[data-testid='edit-task']").first().click();
+    await this.page.locator("[data-testid='edit-drawer']").waitFor({ state: "visible" });
+  }
+
+  /**
+   * Updates the open edit drawer's title, description, and quadrant, then saves.
+   * Requires the drawer to be open (call openEditDrawer first).
+   */
+  async saveEditDrawer(updates: {
+    title?: string;
+    description?: string;
+    quadrant?: "q1" | "q2" | "q3" | "q4";
+  }): Promise<void> {
+    const drawer = this.page.locator("[data-testid='edit-drawer']");
+    if (updates.title !== undefined) {
+      await drawer.locator("[data-testid='edit-title']").fill(updates.title);
+    }
+    if (updates.description !== undefined) {
+      await drawer.locator("[data-testid='edit-description']").fill(updates.description);
+    }
+    if (updates.quadrant) {
+      await drawer.locator(`[data-testid='edit-quadrant-${updates.quadrant}']`).click();
+    }
+    await drawer.locator("[data-testid='save-task']").click();
+    await drawer.waitFor({ state: "hidden" });
+  }
+
   async search(query: string): Promise<void> {
     await this.searchInput.fill(query);
     await this.page.waitForTimeout(300);

@@ -80,7 +80,14 @@ Each item below is sized to be a single self-contained PR. Pick any one cold and
   - Either the tests pass deterministically (root-cause fix in component or test) or the tests are deleted with a short note in commit message
 - **Effort:** ~1-2 hours debugging.
 
-#### 6. Adopt `knip` or `ts-prune` for periodic dead-code detection
+#### 6. E2E test gaps left by v9 surface removal (2026-05-11)
+- **Why:** The original `tasks/e2e-testing-spec.md` was written generically and assumes UI affordances that v9 removed (per ADR 0011). The implemented suite covers the v9 surface; the items below are gaps **by design**, not omissions.
+- **Smart views (`smart-views.spec.ts` from spec § Test Stubs):** Not implementable. v9 deleted the smart-view pinning UI, the 1-9 keyboard shortcuts, and the `useSmartViewShortcuts` hook. The Dexie `smartViews` table is retained for data continuity but has no entry point in the UI. **Action:** revisit if smart views are ever resurrected (similar to the planned command-palette resurrection in #1 above).
+- **Search by subtask (`search.spec.ts` stub):** Search filter logic includes subtask titles in the haystack (covered by unit tests), but v9's edit drawer exposes no subtask editor — only a count badge on task cards. To exercise this end-to-end, either resurrect a subtask editor or seed subtasks via JSON import in a fixture.
+- **Archive navigation:** The `/archive` route exists and is reachable from `Settings → Archive → View archive`, but that link is conditional on `archivedCount > 0`. Direct `page.goto('/archive')` works but doesn't validate the user-facing path. To cover this, the test would need to seed archived tasks first (via import, or by completing a task and triggering auto-archive with a backdated `completedAt`).
+- **Effort to close:** ~3-4 hours, but blocked on UI decisions for smart views and subtasks.
+
+#### 7. Adopt `knip` or `ts-prune` for periodic dead-code detection
 - **Why:** This PR's audit used regex grep against import paths and **missed 5 transitive/lazy imports** (documented in ADR 0011's audit-gap section). A TS-compiler-API-based tool would catch them. Without one, the next "v10 refactor without cleanup" will need another manual review.
 - **Where to start:** evaluate `knip` (more comprehensive, knows Next.js conventions) vs `ts-prune` (smaller, simpler). Add as a dev dep with config that:
   - Whitelists Next.js conventional entrypoints (`app/**/page.tsx`, `app/**/layout.tsx`, `next.config.ts`, etc.)
