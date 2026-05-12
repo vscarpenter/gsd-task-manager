@@ -35,7 +35,7 @@ const PRIMARY: RailItem[] = [
   { routeKey: "ABOUT", label: "About", icon: InfoIcon },
 ];
 
-const ROUTE_TEST_IDS: Record<RouteKey, string> = {
+const ROUTE_TEST_IDS: Partial<Record<RouteKey, string>> = {
   HOME: "nav-matrix",
   DASHBOARD: "nav-dashboard",
   SETTINGS: "nav-settings",
