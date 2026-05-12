@@ -13,6 +13,17 @@ const logger = createLogger('SYNC_AUTH');
 
 export type OAuthProvider = 'google' | 'github';
 
+/**
+ * Runtime whitelist of OAuth providers. The `OAuthProvider` type is erased
+ * at compile time, so a caller (XSS payload, console invocation, future
+ * feature regression) could pass any string into `loginWithProvider`.
+ * PocketBase will happily attempt OAuth with any provider configured on the
+ * server — including potentially malicious ones added by an admin attacker.
+ * Gating here ensures the SDK call only runs for providers we explicitly
+ * support.
+ */
+const ALLOWED_OAUTH_PROVIDERS = new Set<OAuthProvider>(['google', 'github']);
+
 export interface AuthState {
   isLoggedIn: boolean;
   userId: string | null;
@@ -28,6 +39,12 @@ export interface AuthState {
  * Returns the authenticated user record on success.
  */
 export async function loginWithProvider(provider: OAuthProvider): Promise<AuthState> {
+  if (!provider || !ALLOWED_OAUTH_PROVIDERS.has(provider)) {
+    throw new Error(
+      `OAuth provider not allowed: ${String(provider)}. Allowed providers: ${[...ALLOWED_OAUTH_PROVIDERS].join(', ')}`
+    );
+  }
+
   const pb = getPocketBase();
 
   try {

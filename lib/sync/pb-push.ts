@@ -10,9 +10,25 @@ import { getSyncQueue } from './queue';
 import { taskRecordToPocketBase } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
+import { sanitizeSyncError } from './error-categorizer';
 import type { SyncQueueItem } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
+
+/**
+ * Detect HTTP 429 responses in arbitrary thrown values. PocketBase SDK
+ * surfaces 429s either as `{status: 429}` (ClientResponseError) or as a
+ * plain Error whose message includes the status code.
+ */
+function isRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { status?: number; message?: string };
+  if (candidate.status === 429) return true;
+  if (typeof candidate.message === 'string') {
+    return /\b429\b|too many requests/i.test(candidate.message);
+  }
+  return false;
+}
 
 export interface PushResult {
   pushedCount: number;
@@ -104,7 +120,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
         pushedCount++;
       } else {
         failedCount++;
-        lastError = 'Remote index unavailable for delete verification';
+        lastError = 'remote_index_unavailable';
       }
 
       if (pushedCount + failedCount < pending.length) {
@@ -112,12 +128,28 @@ export async function pushLocalChanges(): Promise<PushResult> {
       }
     } catch (error) {
       failedCount++;
-      lastError = error instanceof Error ? error.message : String(error);
+      // Persist a stable error code only — never the raw error message,
+      // which (for 4xx responses) can echo task content back from PocketBase.
+      const errorCode = sanitizeSyncError(error);
+      lastError = errorCode;
       logger.error('Push failed for item', error instanceof Error ? error : new Error(String(error)), {
         taskId: item.taskId,
         operation: item.operation,
+        errorCode,
       });
-      await queue.recordAttemptFailure(item.id, lastError);
+      await queue.recordAttemptFailure(item.id, errorCode);
+
+      // 429 means the server is under load. Abort the push loop early so
+      // we don't hammer it through the remaining queue items at 100ms
+      // throttle and amplify the rate-limit response.
+      if (isRateLimitError(error)) {
+        logger.warn('Aborting push loop due to rate limit (429)', {
+          pushedCount,
+          failedCount,
+          remaining: pending.length - (pushedCount + failedCount),
+        });
+        break;
+      }
     }
   }
 

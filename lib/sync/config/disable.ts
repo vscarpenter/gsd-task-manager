@@ -26,7 +26,12 @@ async function stopHealthMonitor(): Promise<void> {
 }
 
 /**
- * Reset sync config to disabled state
+ * Reset sync config to disabled state and wipe per-user sync artefacts.
+ *
+ * Important on shared/kiosk devices: the next user on the same browser
+ * profile must not see the previous user's sync metadata, queued
+ * operations, or sync-history entries (which carry device IDs, task
+ * counts, and error messages that may contain task content).
  */
 async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
   const db = getDb();
@@ -48,6 +53,9 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
 
   // Clear sync queue
   await db.syncQueue.clear();
+
+  // Clear sync history — privacy on shared devices.
+  await db.syncHistory.clear();
 }
 
 /**

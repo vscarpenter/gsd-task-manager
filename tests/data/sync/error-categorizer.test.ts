@@ -4,6 +4,8 @@ import {
   isTransientError,
   isAuthError,
   isPermanentError,
+  sanitizeSyncError,
+  parseRetryAfterMs,
 } from '@/lib/sync/error-categorizer';
 
 describe('error-categorizer', () => {
@@ -94,6 +96,95 @@ describe('error-categorizer', () => {
     it('should return false for transient errors', () => {
       expect(isPermanentError(new Error('Network error'))).toBe(false);
       expect(isPermanentError(new Error('500 Internal Server Error'))).toBe(false);
+    });
+  });
+
+  describe('sanitizeSyncError', () => {
+    it('returns rate_limited for 429 errors', () => {
+      expect(sanitizeSyncError(new Error('429 Too Many Requests'))).toBe('rate_limited');
+    });
+
+    it('returns unauthorized for 401/403/auth errors', () => {
+      expect(sanitizeSyncError(new Error('401 Unauthorized'))).toBe('unauthorized');
+      expect(sanitizeSyncError(new Error('403 Forbidden'))).toBe('unauthorized');
+      expect(sanitizeSyncError(new Error('Token expired'))).toBe('unauthorized');
+    });
+
+    it('returns validation_failed for 400/422 errors', () => {
+      expect(sanitizeSyncError(new Error('400 Bad Request'))).toBe('validation_failed');
+      expect(sanitizeSyncError(new Error('422 Unprocessable Entity'))).toBe('validation_failed');
+      expect(sanitizeSyncError(new Error('Validation failed: title required'))).toBe(
+        'validation_failed'
+      );
+    });
+
+    it('returns not_found for 404 errors', () => {
+      expect(sanitizeSyncError(new Error('404 Not Found'))).toBe('not_found');
+    });
+
+    it('returns server_error for 5xx errors', () => {
+      expect(sanitizeSyncError(new Error('500 Internal Server Error'))).toBe('server_error');
+      expect(sanitizeSyncError(new Error('502 Bad Gateway'))).toBe('server_error');
+      expect(sanitizeSyncError(new Error('503 Service Unavailable'))).toBe('server_error');
+    });
+
+    it('returns network_error for fetch/timeout failures', () => {
+      expect(sanitizeSyncError(new Error('Network request failed'))).toBe('network_error');
+      expect(sanitizeSyncError(new Error('Failed to fetch'))).toBe('network_error');
+      expect(sanitizeSyncError(new Error('ECONNREFUSED'))).toBe('network_error');
+      expect(sanitizeSyncError(new Error('Request timeout'))).toBe('network_error');
+    });
+
+    it('returns unknown_error for unrecognized errors', () => {
+      expect(sanitizeSyncError(new Error('something broke'))).toBe('unknown_error');
+    });
+
+    it('NEVER leaks task content from validation error messages', () => {
+      // PocketBase 4xx responses echo the request payload — e.g.
+      // "failed to validate field 'title': 'My private task title'"
+      const result = sanitizeSyncError(
+        new Error("400 failed to validate field 'title': 'My private task title'")
+      );
+      expect(result).toBe('validation_failed');
+      expect(result).not.toContain('My private task title');
+      expect(result).not.toContain('title');
+    });
+
+    it('handles non-Error inputs safely', () => {
+      expect(sanitizeSyncError('plain string')).toBe('unknown_error');
+      expect(sanitizeSyncError(null)).toBe('unknown_error');
+      expect(sanitizeSyncError(undefined)).toBe('unknown_error');
+      expect(sanitizeSyncError({ message: 'an object' })).toBe('unknown_error');
+    });
+  });
+
+  describe('parseRetryAfterMs', () => {
+    it('parses a numeric Retry-After value (seconds) into milliseconds', () => {
+      expect(parseRetryAfterMs('30')).toBe(30_000);
+      expect(parseRetryAfterMs('1')).toBe(1_000);
+    });
+
+    it('parses an HTTP-date Retry-After value into ms from now', () => {
+      const futureMs = Date.now() + 60_000;
+      const httpDate = new Date(futureMs).toUTCString();
+      const parsed = parseRetryAfterMs(httpDate);
+      // Allow a small tolerance for clock drift during the test.
+      expect(parsed).toBeGreaterThan(50_000);
+      expect(parsed).toBeLessThan(70_000);
+    });
+
+    it('returns null for missing/empty input', () => {
+      expect(parseRetryAfterMs(null)).toBeNull();
+      expect(parseRetryAfterMs(undefined)).toBeNull();
+      expect(parseRetryAfterMs('')).toBeNull();
+    });
+
+    it('returns null for garbage input', () => {
+      expect(parseRetryAfterMs('not a number or date')).toBeNull();
+    });
+
+    it('clamps negative numeric values to 0', () => {
+      expect(parseRetryAfterMs('-5')).toBe(0);
     });
   });
 });

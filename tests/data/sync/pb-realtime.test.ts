@@ -146,5 +146,45 @@ describe('pb-realtime', () => {
 
       expect(mockApplyRemoteChange).toHaveBeenCalledWith('create', record);
     });
+
+    it('does NOT echo-filter when remote device_id is empty/null', async () => {
+      // Legacy / corrupted records may have empty device_id. If currentDeviceId
+      // is also somehow empty, naive `===` would treat the event as an echo
+      // and silently drop it. Echo filter must require BOTH sides non-empty.
+      await subscribe('device-1');
+      const handler = mockSubscribe.mock.calls[0][1];
+
+      await handler({
+        action: 'create',
+        record: {
+          device_id: '',
+          owner: 'user-123',
+          task_id: 'task-1',
+        },
+      });
+
+      // Empty device_id from a remote record is not an echo of 'device-1';
+      // event must flow through.
+      expect(mockApplyRemoteChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores records with non-string device_id (defense against bad data)', async () => {
+      await subscribe('device-1');
+      const handler = mockSubscribe.mock.calls[0][1];
+
+      // PocketBase responses are normally well-typed, but a compromised or
+      // misbehaving server could push something weird. The handler should
+      // tolerate (drop) the event without throwing.
+      await handler({
+        action: 'create',
+        record: {
+          device_id: { toString: () => 'device-1' },
+          owner: 'user-123',
+          task_id: 'task-1',
+        },
+      });
+
+      expect(mockApplyRemoteChange).not.toHaveBeenCalled();
+    });
   });
 });
