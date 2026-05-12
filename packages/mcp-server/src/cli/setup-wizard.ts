@@ -3,6 +3,9 @@
  * Guides users through PocketBase URL and auth token setup
  */
 
+import { writeFileSync, chmodSync, unlinkSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
@@ -78,13 +81,16 @@ async function testTaskAccess(pbUrl: string, authToken: string): Promise<void> {
   }
 }
 
-/**
- * Display generated configuration JSON
- */
-function displayConfiguration(pbUrl: string, authToken: string): void {
-  console.log('Step 3/4: Generated Configuration');
-  console.log(`Add this to ${getClaudeConfigPath()}:\n`);
+/** Where the wizard writes the generated config snippet (mode 0600). */
+const GENERATED_CONFIG_PATH = join(homedir(), '.gsd-mcp-setup.json');
 
+/**
+ * Write the generated config snippet to a chmod-600 file. The token is never
+ * printed to stdout (no terminal scrollback, no screenshot leak, no shell
+ * history if the output is piped). The user reads the file to copy the
+ * config into Claude Desktop, then deletes it.
+ */
+function writeConfigurationFile(pbUrl: string, authToken: string): string {
   const configJson = {
     mcpServers: {
       'gsd-tasks': {
@@ -98,7 +104,52 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
     },
   };
 
-  console.log(JSON.stringify(configJson, null, 2));
+  // Write first, then chmod — avoids a brief window where the file is
+  // world-readable on POSIX. Use writeFileSync with mode option for the
+  // initial write, and chmodSync as belt-and-braces (mode is honored on
+  // Linux/macOS; on Windows the chmod is a no-op but the file lives in
+  // the user's home directory under the user's ACLs).
+  writeFileSync(GENERATED_CONFIG_PATH, JSON.stringify(configJson, null, 2), {
+    mode: 0o600,
+  });
+  chmodSync(GENERATED_CONFIG_PATH, 0o600);
+  return GENERATED_CONFIG_PATH;
+}
+
+/**
+ * Display configuration step. Writes the JSON to a chmod-600 file and prints
+ * only a redacted preview to the terminal so the token never lives in
+ * scrollback, screenshots, or shell history.
+ */
+function displayConfiguration(pbUrl: string, authToken: string): void {
+  const configPath = writeConfigurationFile(pbUrl, authToken);
+  const tokenPreview =
+    authToken.length > 6
+      ? `${authToken.slice(0, 3)}…${authToken.slice(-3)} (${authToken.length} chars)`
+      : `(${authToken.length} chars)`;
+
+  console.log('Step 3/4: Generated Configuration');
+  console.log(`Written to: ${configPath}  (mode 0600, owner-only)`);
+  console.log();
+  console.log('Preview (token redacted — full token is in the file above):\n');
+  console.log(
+    JSON.stringify(
+      {
+        mcpServers: {
+          'gsd-tasks': {
+            command: 'npx',
+            args: ['-y', 'gsd-mcp-server'],
+            env: {
+              GSD_POCKETBASE_URL: pbUrl,
+              GSD_AUTH_TOKEN: `<see ${configPath}>  // ${tokenPreview}`,
+            },
+          },
+        },
+      },
+      null,
+      2
+    )
+  );
   console.log();
 }
 
@@ -107,13 +158,26 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
  */
 function displayNextSteps(): void {
   console.log('Step 4/4: Next Steps');
-  console.log('1. Copy the config above');
-  console.log(`2. Open ${getClaudeConfigPath()}`);
-  console.log('3. Add the configuration to the "mcpServers" section');
-  console.log('4. Restart Claude Desktop');
-  console.log("5. Ask Claude: \"What's my GSD sync status?\"");
+  console.log(`1. Open the generated file:  cat ${GENERATED_CONFIG_PATH}`);
+  console.log(`2. Open Claude Desktop config: ${getClaudeConfigPath()}`);
+  console.log('3. Merge the "mcpServers" section into the Claude config');
+  console.log(`4. Delete the generated file:  rm ${GENERATED_CONFIG_PATH}`);
+  console.log('5. Restart Claude Desktop');
+  console.log("6. Ask Claude: \"What's my GSD sync status?\"");
   console.log();
   console.log('✓ Setup complete! Need help? Run: npx gsd-mcp-server --help');
+}
+
+/**
+ * Best-effort cleanup of the generated config file on wizard failure so a
+ * partial setup does not leave a token in the user's home directory.
+ */
+function cleanupGeneratedConfigOnError(): void {
+  try {
+    unlinkSync(GENERATED_CONFIG_PATH);
+  } catch {
+    // File may not exist yet — ignore.
+  }
 }
 
 /**
@@ -146,6 +210,7 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
     // Step 4: Next Steps
     displayNextSteps();
   } catch (error) {
+    cleanupGeneratedConfigOnError();
     console.error('\n✗ Setup failed:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
   }

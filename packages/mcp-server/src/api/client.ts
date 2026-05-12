@@ -3,6 +3,21 @@ import type { GsdConfig } from '../types.js';
 import { fetchWithRetry, DEFAULT_RETRY_CONFIG, type RetryConfig } from './retry.js';
 
 /**
+ * Replace the hostname (and port) in a PocketBase URL with a stable
+ * `[pocketbase-host]` placeholder so error messages can be safely shared
+ * (chat logs, screenshots, bug reports) without leaking a private
+ * self-hosted endpoint. The user's local config still has the real URL.
+ */
+export function redactPocketBaseHost(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//[pocketbase-host]`;
+  } catch {
+    return '[pocketbase-host]';
+  }
+}
+
+/**
  * Make authenticated API request to PocketBase
  */
 export async function apiRequest<T>(
@@ -49,12 +64,13 @@ async function fetchWithErrorHandling(
       retryConfig
     );
   } catch (error) {
+    const redactedHost = redactPocketBaseHost(config.pocketBaseUrl);
     throw new Error(
-      `Failed to connect to ${config.pocketBaseUrl}\n\n` +
+      `Failed to connect to ${redactedHost}\n\n` +
         `Network error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
         `Please check:\n` +
         `  1. Your internet connection\n` +
-        `  2. GSD_POCKETBASE_URL is correct (${config.pocketBaseUrl})\n` +
+        `  2. GSD_POCKETBASE_URL is correct\n` +
         `  3. PocketBase server is running\n\n` +
         `Run: npx gsd-mcp-server --validate`
     );

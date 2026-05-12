@@ -149,7 +149,6 @@ export const bulkUpdateTasksArgsSchema = z
   .object({
     taskIds: z.array(z.string().min(1)).min(1).max(50),
     operation: bulkOperationSchema,
-    maxTasks: z.number().int().positive().optional(),
     dryRun: z.boolean().optional(),
   })
   .strict();

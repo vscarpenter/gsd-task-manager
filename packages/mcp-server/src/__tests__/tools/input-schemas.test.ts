@@ -126,6 +126,16 @@ describe('validateToolArgs', () => {
         })
       ).toThrow(/taskIds/);
     });
+
+    it('rejects caller-supplied maxTasks (policy lives server-side, not in input)', () => {
+      expect(() =>
+        validateToolArgs('bulk_update_tasks', {
+          taskIds: ['id1'],
+          operation: { type: 'delete' },
+          maxTasks: 9999,
+        })
+      ).toThrow(/maxTasks/);
+    });
   });
 
   describe('list_tasks', () => {

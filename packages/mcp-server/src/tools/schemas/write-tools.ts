@@ -217,7 +217,7 @@ export const deleteTaskTool: Tool = {
 export const bulkUpdateTasksTool: Tool = {
   name: 'bulk_update_tasks',
   description:
-    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation for safety. Use dryRun=true to preview changes.',
+    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -260,13 +260,10 @@ export const bulkUpdateTasksTool: Tool = {
         },
         required: ['type'],
       },
-      maxTasks: {
-        type: 'number',
-        description: 'Safety limit (default: 50)',
-      },
       dryRun: {
         type: 'boolean',
-        description: 'If true, validate and show what would change without actually saving',
+        description:
+          'If true, preview changes without saving. Defaults to true for delete operations — pass dryRun=false to actually delete.',
       },
     },
     required: ['taskIds', 'operation'],
