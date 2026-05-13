@@ -208,6 +208,21 @@ describe("<MatrixSimplified>", () => {
       );
     });
 
+    it("opens the share dialog with the target task when its share button is clicked", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [makeTask({ id: "shareable", title: "Shareable thing" })];
+      render(<MatrixSimplified />);
+
+      // Dialog is closed until the user clicks Share.
+      expect(screen.queryByTestId("share-task-dialog")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /share task/i }));
+
+      const dialog = await screen.findByTestId("share-task-dialog");
+      expect(dialog).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /share task: shareable thing/i })).toBeInTheDocument();
+    });
+
     it("opens the create drawer pre-set to a quadrant when its empty-state pill is clicked (polish v0.9.2 — item 3)", async () => {
       const user = userEvent.setup();
       tasksFixture.current = [];
