@@ -21,6 +21,7 @@ import {
 import type { TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { TaskCard } from "@/components/task-card";
+import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
 import { MatrixGrid } from "./matrix-grid";
@@ -65,6 +66,7 @@ export function MatrixSimplified() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [createInitial, setCreateInitial] = useState<Partial<EditDraft> | undefined>(undefined);
   const [showCompleted, setShowCompleted] = useState<boolean>(readShowCompleted);
+  const [sharingTask, setSharingTask] = useState<TaskRecord | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -199,6 +201,10 @@ export function MatrixSimplified() {
 
   const handleEditOpen = useCallback((task: TaskRecord) => setEditingTask(task), []);
   const handleEditClose = useCallback(() => setEditingTask(null), []);
+  const handleShareOpen = useCallback((task: TaskRecord) => setSharingTask(task), []);
+  const handleShareOpenChange = useCallback((next: boolean) => {
+    if (!next) setSharingTask(null);
+  }, []);
 
   const handleOpenCreateDrawer = useCallback((payload?: CapturePayload) => {
     if (payload) {
@@ -294,9 +300,16 @@ export function MatrixSimplified() {
           onEdit={handleEditOpen}
           onToggleComplete={handleToggle}
           onDelete={handleDelete}
+          onShare={handleShareOpen}
           onAddInQuadrant={handleAddInQuadrant}
         />
       </AppShell>
+
+      <ShareTaskDialog
+        task={sharingTask}
+        open={Boolean(sharingTask)}
+        onOpenChange={handleShareOpenChange}
+      />
 
       <EditDrawer
         open={Boolean(editingTask)}

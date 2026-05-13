@@ -11,6 +11,7 @@ interface MatrixGridProps {
   onEdit: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
+  onShare: (task: TaskRecord) => void;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
 }
 
@@ -20,6 +21,7 @@ export function MatrixGrid({
   onEdit,
   onToggleComplete,
   onDelete,
+  onShare,
   onAddInQuadrant,
 }: MatrixGridProps) {
   const grouped = useMemo(() => {
@@ -54,6 +56,7 @@ export function MatrixGrid({
           onEdit={onEdit}
           onToggleComplete={onToggleComplete}
           onDelete={onDelete}
+          onShare={onShare}
           onAddInQuadrant={onAddInQuadrant}
         />
       ))}

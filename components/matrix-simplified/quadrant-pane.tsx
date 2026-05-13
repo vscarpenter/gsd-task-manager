@@ -44,6 +44,7 @@ interface QuadrantPaneProps {
   onEdit: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
+  onShare: (task: TaskRecord) => void;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
 }
 
@@ -55,6 +56,7 @@ export function QuadrantPane({
   onEdit,
   onToggleComplete,
   onDelete,
+  onShare,
   onAddInQuadrant,
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
@@ -135,6 +137,7 @@ export function QuadrantPane({
                 allTasks={allTasks}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onShare={onShare}
                 onToggleComplete={onToggleComplete}
               />
             ))
