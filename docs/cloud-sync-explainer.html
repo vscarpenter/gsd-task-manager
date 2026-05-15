@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GSD Cloud Sync — how it works</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161922;
+    --panel-2: #1d2230;
+    --ink: #e7ecf3;
+    --ink-dim: #98a2b3;
+    --rule: #2a3142;
+    --accent: #7cc4ff;
+    --accent-2: #c8a8ff;
+    --warn: #ffb86b;
+    --bad: #ff7a7a;
+    --good: #7ee0a8;
+    --code-bg: #0b0d12;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); margin: 0; }
+  body {
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    max-width: 980px; padding: 40px 28px 80px; margin: 0 auto;
+  }
+  h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; margin: 40px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  h3 { font-size: 15px; margin: 22px 0 6px; color: var(--accent); font-weight: 600; }
+  p { margin: 8px 0; color: var(--ink); }
+  .lede { color: var(--ink-dim); margin-bottom: 24px; }
+  code, pre {
+    font: 13px/1.55 ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+  }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; margin: 8px 0 4px;
+  }
+  .file {
+    display: inline-block; font: 12px ui-monospace, monospace;
+    color: var(--ink-dim); background: var(--panel); padding: 2px 8px;
+    border-radius: 4px; border: 1px solid var(--rule); margin-bottom: 6px;
+  }
+  .note {
+    color: var(--ink-dim); font-size: 13px; margin: 6px 0 18px;
+    border-left: 2px solid var(--accent); padding: 2px 0 2px 12px;
+  }
+  .grid-cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px; margin: 16px 0 8px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h4 { margin: 0 0 6px; font-size: 14px; color: var(--accent-2); }
+  .card p { margin: 0; color: var(--ink-dim); font-size: 13px; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px;
+  }
+  th, td {
+    text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { color: var(--ink-dim); font-weight: 600; }
+  ul.gotchas { padding-left: 0; list-style: none; }
+  ul.gotchas li {
+    background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--warn);
+    border-radius: 8px; padding: 10px 14px; margin: 8px 0;
+  }
+  ul.gotchas li b { color: var(--warn); }
+  ul.gotchas li.bad { border-left-color: var(--bad); }
+  ul.gotchas li.bad b { color: var(--bad); }
+  ul.gotchas li.good { border-left-color: var(--good); }
+  ul.gotchas li.good b { color: var(--good); }
+  .diagram {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 16px; overflow-x: auto;
+  }
+  .diagram svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  .annot { color: var(--accent); }
+  .tag {
+    display: inline-block; font: 11px ui-monospace, monospace;
+    color: var(--ink); background: var(--panel-2); border: 1px solid var(--rule);
+    padding: 1px 6px; border-radius: 4px; margin-right: 4px;
+  }
+  .tag.write { color: var(--warn); }
+  .tag.read  { color: var(--accent); }
+  .tag.rt    { color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<h1>GSD Cloud Sync — how it works</h1>
+<p class="lede">
+  Local-first task storage in IndexedDB, mirrored opportunistically to a self-hosted PocketBase at
+  <code>api.vinny.io</code>. Last-write-wins on a per-task timestamp; SSE pushes other devices'
+  changes back in real time. This page is everything you need to read once before touching
+  <code>lib/sync/</code>.
+</p>
+
+<h2>1. The big picture</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 920 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cloud sync data flow diagram">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7cc4ff"/>
+    </marker>
+    <marker id="arrW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ffb86b"/>
+    </marker>
+    <marker id="arrP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c8a8ff"/>
+    </marker>
+    <style>
+      .b { fill: #1d2230; stroke: #2a3142; }
+      .bAuth { fill: #1a2230; stroke: #355068; }
+      .t  { fill: #e7ecf3; font: 13px -apple-system, system-ui, sans-serif; }
+      .ts { fill: #98a2b3; font: 11px -apple-system, system-ui, sans-serif; }
+      .th { fill: #c8a8ff; font: 12px ui-monospace, monospace; }
+      .lr { stroke: #7cc4ff; stroke-width: 1.5; fill: none; }
+      .lw { stroke: #ffb86b; stroke-width: 1.5; fill: none; }
+      .lp { stroke: #c8a8ff; stroke-width: 1.5; fill: none; }
+      .ld { stroke: #2a3142; stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Device A column -->
+  <text x="160" y="22" text-anchor="middle" class="ts">— THIS DEVICE —</text>
+
+  <rect class="b" x="40" y="40" width="240" height="60" rx="8"/>
+  <text class="t" x="160" y="62" text-anchor="middle">UI mutation</text>
+  <text class="ts" x="160" y="80" text-anchor="middle">createTask / updateTask / deleteTask</text>
+
+  <rect class="b" x="40" y="130" width="240" height="80" rx="8"/>
+  <text class="th" x="160" y="152" text-anchor="middle">IndexedDB (Dexie)</text>
+  <text class="ts" x="160" y="172" text-anchor="middle">tasks · syncQueue · syncMetadata</text>
+  <text class="ts" x="160" y="190" text-anchor="middle">enqueue(op, taskId, payload)</text>
+
+  <rect class="b" x="40" y="240" width="240" height="80" rx="8"/>
+  <text class="th" x="160" y="262" text-anchor="middle">SyncCoordinator</text>
+  <text class="ts" x="160" y="280" text-anchor="middle">single-flight + dedup</text>
+  <text class="ts" x="160" y="298" text-anchor="middle">user &gt; auto priority</text>
+
+  <rect class="b" x="40" y="350" width="240" height="100" rx="8"/>
+  <text class="th" x="160" y="372" text-anchor="middle">fullSync()</text>
+  <text class="ts" x="160" y="390" text-anchor="middle">1. pushLocalChanges()</text>
+  <text class="ts" x="160" y="406" text-anchor="middle">2. pullRemoteChanges(cursor)</text>
+  <text class="ts" x="160" y="422" text-anchor="middle">3. reconcileDeletedTasks()</text>
+  <text class="ts" x="160" y="438" text-anchor="middle">4. update lastSyncAt cursor</text>
+
+  <!-- arrows -->
+  <path class="ld" d="M160 100 L160 130" marker-end="url(#arr)"/>
+  <path class="ld" d="M160 210 L160 240" marker-end="url(#arr)"/>
+  <path class="ld" d="M160 320 L160 350" marker-end="url(#arr)"/>
+
+  <!-- Server column -->
+  <text x="640" y="22" text-anchor="middle" class="ts">— api.vinny.io (PocketBase) —</text>
+
+  <rect class="bAuth" x="520" y="40" width="240" height="80" rx="8"/>
+  <text class="th" x="640" y="62" text-anchor="middle">OAuth2 (Google / GitHub)</text>
+  <text class="ts" x="640" y="80" text-anchor="middle">pb.collection('users')</text>
+  <text class="ts" x="640" y="98" text-anchor="middle">.authWithOAuth2({ provider })</text>
+
+  <rect class="b" x="520" y="160" width="240" height="80" rx="8"/>
+  <text class="th" x="640" y="182" text-anchor="middle">tasks collection</text>
+  <text class="ts" x="640" y="200" text-anchor="middle">snake_case · owner FK</text>
+  <text class="ts" x="640" y="218" text-anchor="middle">API rule: owner = @request.auth.id</text>
+
+  <rect class="b" x="520" y="280" width="240" height="80" rx="8"/>
+  <text class="th" x="640" y="302" text-anchor="middle">Realtime (SSE)</text>
+  <text class="ts" x="640" y="320" text-anchor="middle">subscribe('*', handler)</text>
+  <text class="ts" x="640" y="338" text-anchor="middle">create / update / delete events</text>
+
+  <rect class="b" x="520" y="390" width="240" height="60" rx="8"/>
+  <text class="th" x="640" y="414" text-anchor="middle">Device B, C, …</text>
+  <text class="ts" x="640" y="432" text-anchor="middle">apply via LWW into local Dexie</text>
+
+  <!-- auth -->
+  <path class="lp" d="M280 70 L520 70" marker-end="url(#arrP)"/>
+  <text class="ts" x="400" y="62" text-anchor="middle">popup, exchanges code, JWT in localStorage</text>
+
+  <!-- push -->
+  <path class="lw" d="M280 380 C380 380, 420 200, 520 200" marker-end="url(#arrW)"/>
+  <text class="ts" x="430" y="290" text-anchor="middle">PUSH: upsert / delete (throttled 100ms)</text>
+
+  <!-- pull -->
+  <path class="lr" d="M520 220 C420 220, 380 410, 280 410" marker-end="url(#arr)"/>
+  <text class="ts" x="430" y="375" text-anchor="middle">PULL: client_updated_at &gt; cursor</text>
+
+  <!-- realtime -->
+  <path class="lp" d="M520 310 C400 310, 350 180, 280 180" marker-end="url(#arrP)"/>
+  <text class="ts" x="395" y="155" text-anchor="middle">SSE: applyRemoteChange()</text>
+
+  <!-- fanout -->
+  <path class="ld" d="M640 240 L640 280" marker-end="url(#arr)"/>
+  <path class="ld" d="M640 360 L640 390" marker-end="url(#arr)"/>
+</svg>
+</div>
+
+<div class="grid-cards">
+  <div class="card"><h4>Where data lives</h4><p>Source of truth is local IndexedDB. PocketBase is a mirror for multi-device fan-out.</p></div>
+  <div class="card"><h4>What triggers a sync</h4><p>UI mutation enqueues an op. Background-sync timer, app focus, and the sync button all call <code>coordinator.requestSync()</code>.</p></div>
+  <div class="card"><h4>Conflict resolution</h4><p>Last-write-wins on <code>client_updated_at</code>. Whichever side has the newer timestamp wins; ties go to remote.</p></div>
+  <div class="card"><h4>Realtime</h4><p>SSE subscription delivers other devices' writes immediately. Periodic sync is a safety net for missed events.</p></div>
+</div>
+
+<h2>2. Auth flow</h2>
+
+<p>
+  PocketBase's SDK does all the heavy lifting. The user clicks "Sign in with Google" →
+  <code>authWithOAuth2</code> opens a popup, runs the OAuth dance, stashes the JWT in
+  <code>localStorage</code>, and keeps it refreshed. Sync code just asks the singleton
+  whether it's authenticated and grabs the user id.
+</p>
+
+<span class="file">lib/sync/pb-auth.ts:41</span>
+<pre><code><span class="annot">// Runtime allowlist — type erasure means callers could pass anything</span>
+const ALLOWED_OAUTH_PROVIDERS = new Set&lt;OAuthProvider&gt;(['google', 'github']);
+
+export async function loginWithProvider(provider: OAuthProvider): Promise&lt;AuthState&gt; {
+  if (!provider || !ALLOWED_OAUTH_PROVIDERS.has(provider)) {
+    throw new Error(`OAuth provider not allowed: ${String(provider)}`);
+  }
+
+  const pb = getPocketBase();
+  <span class="annot">// SDK handles popup, code exchange, token storage, and refresh</span>
+  const authData = await pb.collection('users').authWithOAuth2({ provider });
+
+  return {
+    isLoggedIn: true,
+    userId: authData.record.id,   <span class="annot">// becomes the `owner` FK on every task row</span>
+    email: authData.record.email,
+    provider,
+  };
+}</code></pre>
+
+<p class="note">
+  The allowlist isn't theatre: any provider configured server-side would otherwise be callable
+  from the browser console. We only accept the two we ship UI for.
+</p>
+
+<h3>The singleton</h3>
+<span class="file">lib/sync/pocketbase-client.ts:18</span>
+<pre><code>export function getPocketBase(): PocketBase {
+  if (!pbInstance) {
+    pbInstance = new PocketBase(ENV_CONFIG.pocketBaseUrl);
+    <span class="annot">// CRITICAL: SDK cancels in-flight requests by default when a new one</span>
+    <span class="annot">// fires on the same collection. Our push loop would tear itself apart.</span>
+    pbInstance.autoCancellation(false);
+  }
+  return pbInstance;
+}</code></pre>
+
+<h2>3. Local mutation → push</h2>
+
+<p>
+  Every task mutation does two things in order: write to Dexie, then enqueue a sync op.
+  The queue is durable (it's an IndexedDB table), so offline edits survive a reload and get
+  flushed on the next successful sync.
+</p>
+
+<span class="file">lib/sync/pb-push.ts:97</span>
+<pre><code>export async function pushLocalChanges(): Promise&lt;PushResult&gt; {
+  const ownerId = getCurrentUserId();
+  if (!ownerId) return { ..., authenticated: false };  <span class="annot">// no-op when logged out</span>
+
+  const pending = await getSyncQueue().getPending();
+  if (pending.length === 0) return { ..., authenticated: true };
+
+  <span class="annot">// Pre-fetch all remote ids in ONE request — avoids N "does this exist?" lookups</span>
+  const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
+
+  for (const item of pending) {
+    try {
+      await pushSingleItem(item, remoteIndex, fetchSucceeded, ownerId, deviceId);
+      pushedCount++;
+      if (pushedCount + failedCount &lt; pending.length) {
+        await delay(THROTTLE_MS);   <span class="annot">// 100ms gap → stay under PB's 429 threshold</span>
+      }
+    } catch (error) {
+      const errorCode = sanitizeSyncError(error);   <span class="annot">// stable code only — raw 4xx bodies can echo task text</span>
+      await queue.recordAttemptFailure(item.id, errorCode);
+      if (isRateLimitError(error)) break;            <span class="annot">// 429 → abort, don't amplify the storm</span>
+    }
+  }
+}</code></pre>
+
+<p class="note">
+  After <code>SYNC_CONFIG.MAX_RETRIES</code> attempts, a queue item flips to <code>status: 'failed'</code>
+  rather than being deleted. Failed items are visible in the sync UI for manual recovery.
+</p>
+
+<h2>4. Pull + last-write-wins</h2>
+
+<p>
+  Pull uses a cursor (<code>lastSyncAt</code>) so we only fetch what changed since last time. The
+  filter is the most subtle part — see Gotcha #1 about why we can't use PocketBase's own
+  <code>updated</code> column.
+</p>
+
+<span class="file">lib/sync/pb-pull.ts:83</span>
+<pre><code>export async function pullRemoteChanges(lastSyncAt: string | null) {
+  const ownerId = getCurrentUserId();
+  if (!ownerId) return { ..., authenticated: false };
+
+  assertSafeRecordId(ownerId, 'ownerId');           <span class="annot">// reject filter-injection attempts</span>
+
+  let filter = `owner = "${escapeFilterValue(ownerId)}"`;
+  if (lastSyncAt) {
+    filter += ` && client_updated_at &gt; "${escapeFilterValue(lastSyncAt)}"`;
+  }
+
+  const records = await pb.collection('tasks').getFullList({
+    filter,
+    sort: '-client_updated_at',   <span class="annot">// NOT `-updated` — system fields aren't sortable in PB v0.23+</span>
+  });
+
+  <span class="annot">// LWW merge into Dexie. Remote wins on ties (>=).</span>
+  for (const record of validRecords) {
+    const localTask = localTaskMap.get(taskId);
+    const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
+    if (!localTask || new Date(remoteTask.updatedAt) &gt;= new Date(localTask.updatedAt)) {
+      await db.tasks.put(remoteTask);
+    }
+  }
+
+  await reconcileDeletedTasks(ownerId);   <span class="annot">// drop local rows the server no longer has</span>
+}</code></pre>
+
+<p>
+  The mapper layer is the single place where camelCase ↔ snake_case lives, and it also
+  preserves <em>device-local fields</em> (notification dismissal state, snooze) so a sync
+  doesn't undo "I dismissed that ping on this device":
+</p>
+
+<span class="file">lib/sync/task-mapper.ts:122</span>
+<pre><code>export function pocketBaseToTaskRecord(record, existingLocal) {
+  const parsed = pbTaskRecordSchema.safeParse(record);   <span class="annot">// fail closed on malformed remote payloads</span>
+  if (!parsed.success) return null;
+
+  const r = parsed.data;
+  return {
+    id: r.task_id, title: r.title, /* … */
+    notificationSent:    existingLocal?.notificationSent ?? false,    <span class="annot">// per-device</span>
+    lastNotificationAt:  existingLocal?.lastNotificationAt,           <span class="annot">// per-device</span>
+    snoozedUntil:        existingLocal?.snoozedUntil,                 <span class="annot">// per-device</span>
+  };
+}</code></pre>
+
+<h2>5. Realtime (SSE)</h2>
+
+<p>
+  The pull loop covers correctness; the SSE subscription covers latency. PocketBase pushes
+  every write on the <code>tasks</code> collection to all connected clients; we filter out our
+  own writes by <code>device_id</code> so we don't ping-pong our own changes back into Dexie.
+</p>
+
+<span class="file">lib/sync/pb-realtime.ts:38</span>
+<pre><code>const realtimeRecordShape = z.object({
+  device_id: z.string(), task_id: z.string(), owner: z.string(),
+});
+
+export async function subscribe(deviceId: string) {
+  currentDeviceId = deviceId;
+  unsubscribeFn = await pb.collection('tasks').subscribe('*', handleRealtimeEvent);
+}
+
+async function handleRealtimeEvent(event) {
+  const parsed = realtimeRecordShape.safeParse(event.record);
+  if (!parsed.success) return;   <span class="annot">// fail closed on weird shapes from a compromised server</span>
+  const record = parsed.data;
+
+  <span class="annot">// Echo filter — require BOTH non-empty so cold-start (null deviceId) doesn't swallow everything</span>
+  if (record.device_id && currentDeviceId && record.device_id === currentDeviceId) return;
+  if (record.owner !== getCurrentUserId()) return;
+
+  await applyRemoteChange(event.action, event.record);   <span class="annot">// same LWW merge as pull</span>
+}</code></pre>
+
+<h2>6. The coordinator (why concurrent sync calls are safe)</h2>
+
+<p>
+  Anyone can call <code>requestSync()</code> — the sync button, the background timer, the health
+  monitor, the app on focus. The coordinator collapses concurrent requests into one in-flight
+  sync plus at most one queued follow-up, with user-priority overriding auto-priority.
+</p>
+
+<table>
+  <tr><th>Signal</th><th>Where</th><th>What happens</th></tr>
+  <tr><td>Click "Sync now"</td><td><code>sync-provider.tsx:172</code></td><td><code>requestSync('user')</code> — bypasses backoff</td></tr>
+  <tr><td>Background timer</td><td><code>background-sync.ts</code></td><td><code>requestSync('auto')</code> — gated by retry backoff</td></tr>
+  <tr><td>Local mutation</td><td><code>tasks/crud/*</code></td><td>Enqueue only; sync happens on next tick</td></tr>
+  <tr><td>SSE event</td><td><code>pb-realtime.ts</code></td><td>Apply directly via <code>applyRemoteChange()</code></td></tr>
+  <tr><td>Health monitor</td><td><code>health-monitor.ts</code></td><td>Logs issues, does not auto-sync</td></tr>
+</table>
+
+<h2>7. Gotchas</h2>
+
+<ul class="gotchas">
+  <li class="bad">
+    <b>System fields are unsortable / unfilterable in PocketBase v0.23+.</b>
+    You cannot <code>sort: '-updated'</code> or <code>filter: 'updated &gt; X'</code> — the query parser refuses.
+    Every timestamp the sync code touches is <code>client_updated_at</code>, a custom field we set
+    from <code>task.updatedAt</code>. Same applies to indexes: custom indexes can't reference
+    <code>updated</code>/<code>created</code>.
+  </li>
+  <li class="bad">
+    <b>Admin endpoint moved.</b>
+    Use <code>/api/collections/_superusers/auth-with-password</code>, not the legacy
+    <code>/api/admins/auth-with-password</code>. If you script collection setup, hit the new one.
+  </li>
+  <li class="bad">
+    <b><code>_pb_users_auth_</code> is not a real collectionId.</b>
+    Don't use that placeholder as the <code>collectionId</code> of a relation field — it silently
+    breaks. Either use a plain <code>text</code> field for the owner FK (what we do), or look up
+    the actual users-collection id and substitute it.
+  </li>
+  <li>
+    <b>SDK auto-cancellation will tear apart a push loop.</b>
+    The default behaviour cancels any in-flight request when a new one fires on the same
+    collection. We call <code>pb.autoCancellation(false)</code> in the singleton — don't
+    re-enable it.
+  </li>
+  <li>
+    <b>100ms throttle is load-bearing, not paranoia.</b>
+    PocketBase will return 429s under bursts. We sleep <code>THROTTLE_MS</code> between push
+    items, and if a 429 still slips through we <em>abort the push loop early</em> rather than
+    grind through the rest of the queue and amplify the response.
+  </li>
+  <li>
+    <b>LWW uses <code>&gt;=</code>, not <code>&gt;</code>.</b>
+    On a timestamp tie, remote wins. This is deliberate — if two devices write at the same
+    millisecond, whichever made it to the server first becomes truth, which is the same
+    invariant the pull cursor relies on.
+  </li>
+  <li>
+    <b>Device-local fields are not synced through.</b>
+    <code>notificationSent</code>, <code>lastNotificationAt</code>, <code>snoozedUntil</code>
+    are preserved from the existing local row when a remote update lands. Adding a new
+    "per-device" field means editing <code>pocketBaseToTaskRecord</code> in
+    <code>task-mapper.ts</code> — not just the schema.
+  </li>
+  <li>
+    <b>Echo filter needs both sides non-empty.</b>
+    A naïve <code>record.device_id === currentDeviceId</code> would treat a cold-start race
+    (where <code>currentDeviceId</code> is still null) as "this is my echo, skip it" and drop
+    every legitimate event. The actual check requires both to be truthy.
+  </li>
+  <li>
+    <b>Deletes are reconciled, not pushed individually.</b>
+    Pull ends with <code>reconcileDeletedTasks()</code>: any local task that's missing from the
+    remote index and has <em>no pending sync op</em> gets deleted locally. If the remote
+    index fetch fails, reconciliation is skipped — better to keep a stale row than to delete
+    real data based on an incomplete view.
+  </li>
+  <li>
+    <b>Failed queue items aren't deleted.</b>
+    After <code>MAX_RETRIES</code>, items transition to <code>status: 'failed'</code> and stay
+    in <code>db.syncQueue</code>. They show up in the sync history UI for manual retry or
+    dismissal. <code>getPending()</code> filters them out so they don't keep clogging the push
+    loop.
+  </li>
+  <li>
+    <b>Raw error messages from PB must never be persisted.</b>
+    4xx responses can echo task content (titles, descriptions) back. Push errors run through
+    <code>sanitizeSyncError()</code> to a stable code before they hit <code>queue.lastError</code>
+    or any log. Do the same if you add new write paths.
+  </li>
+  <li class="good">
+    <b>Local dev tip:</b>
+    Set <code>NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io</code> in <code>.env.local</code> to
+    test against production OAuth. A local PocketBase at <code>127.0.0.1:8090</code> needs its
+    own provider setup — Google/GitHub apps need the right redirect URIs registered.
+  </li>
+</ul>
+
+<h2>8. If you only remember four things</h2>
+
+<ol>
+  <li>Local Dexie is the source of truth. PocketBase is a fan-out mirror.</li>
+  <li>Every timestamp comparison uses <code>client_updated_at</code>. Never trust system fields.</li>
+  <li>Mutations enqueue durably; the coordinator decides when to flush.</li>
+  <li>Realtime SSE applies the same LWW merge as the pull loop — there is one merge rule, in two places.</li>
+</ol>
+
+</body>
+</html>
