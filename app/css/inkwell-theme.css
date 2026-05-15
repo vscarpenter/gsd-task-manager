@@ -1,0 +1,195 @@
+/* =====================================================================
+   Inkwell — Tailwind v4 entry.
+   Version: 1.3.1
+
+   Drop this into a Tailwind v4 project AFTER `@import "tailwindcss"`:
+
+       @import "tailwindcss";
+       @import "./inkwell-theme.css";
+
+   It is self-contained: pulls in Inkwell tokens (with the Pattern B
+   dark cascade), wraps Inkwell components in @layer components so
+   Tailwind utilities can override them, and aliases Inkwell tokens
+   into Tailwind v4's @theme namespace so you get utilities like
+   bg-accent, text-slate, border-accent, font-serif, rounded-md,
+   text-display, max-w-default, and dark: behavior that honors both
+   the OS preference AND Inkwell's [data-theme] toggle.
+
+   No JavaScript. No tailwind.config.js. No build configuration
+   beyond what Tailwind already needs.
+
+   See TAILWIND.md for the install guide, the border-hair convention,
+   the components-vs-utilities rule, and the two-universes caveat
+   (Tailwind support targets the --accent universe only; the legacy
+   variants/ palettes are not Tailwind-compatible).
+   ===================================================================== */
+
+/* Inkwell tokens stay unlayered so :root custom properties resolve
+   without surprises across every layer. */
+@import url('inkwell-tokens.css');
+
+/* Components go inside @layer components so Tailwind utilities
+   (which live in @layer utilities) override them by default.
+   This is why <button class="btn px-8"> respects Inkwell's button
+   visual identity but uses Tailwind's padding. The `layer()`
+   parameter on @import is the standard CSS form for assigning an
+   imported stylesheet to a cascade layer — @import inside a
+   `@layer name { ... }` block is non-standard and would be ignored. */
+@import url('inkwell-components.css') layer(components);
+
+/* =====================================================================
+   @theme — alias Inkwell tokens into the Tailwind v4 namespace.
+
+   These declarations don't copy values; they point Tailwind at
+   Inkwell's existing custom properties. Change --accent in
+   inkwell-tokens.css and every Tailwind utility (bg-accent,
+   border-accent, ring-accent-focus, etc.) updates instantly.
+   ===================================================================== */
+@theme {
+  /* Surfaces & text */
+  --color-ivory: var(--ivory);
+  --color-paper: var(--paper);
+  --color-slate: var(--slate);
+  --color-oat:   var(--oat);
+
+  /* Neutral scale (cool putty) */
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-500: var(--gray-500);
+  --color-gray-700: var(--gray-700);
+
+  /* Accent family — alpha tints exposed as full color tokens so
+     they preserve their intended values rather than getting faked
+     via Tailwind's /N opacity scale. */
+  --color-accent:               var(--accent);
+  --color-accent-d:             var(--accent-d);
+  --color-accent-tint:          var(--accent-tint);
+  --color-accent-focus:         var(--accent-focus-ring);
+  --color-accent-strong-border: var(--accent-strong-border);
+
+  /* Semantic */
+  --color-olive:           var(--olive);
+  --color-olive-tint:      var(--olive-tint);
+  --color-rust:            var(--rust);
+  --color-rust-d:          var(--rust-d);
+  --color-rust-tint:       var(--rust-tint);
+  --color-rust-tint-border: var(--rust-tint-border);
+  --color-warning:         var(--warning);
+  --color-warning-dark:    var(--warning-dark);
+  --color-warning-tint:    var(--warning-tint);
+  --color-info:            var(--info);
+  --color-sky:             var(--sky);
+
+  /* Type families */
+  --font-serif: var(--serif);
+  --font-sans:  var(--sans);
+  --font-mono:  var(--mono);
+
+  /* Type scale — exposed as Tailwind text-* sizes with bundled
+     line-height, letter-spacing, and font-weight modifiers so a
+     single utility like `text-h1` matches the full `.t-h1` style.
+     The numeric values mirror the .t-* rules in inkwell-components.css;
+     if you adjust either, adjust both. */
+  --text-display: var(--t-display);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 500;
+
+  --text-h1: var(--t-h1);
+  --text-h1--line-height: 1.2;
+  --text-h1--letter-spacing: -0.01em;
+  --text-h1--font-weight: 500;
+
+  --text-h2: var(--t-h2);
+  --text-h2--line-height: 1.3;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 500;
+
+  --text-h3: var(--t-h3);
+  --text-h3--line-height: 1.22;
+  --text-h3--letter-spacing: -0.008em;
+  --text-h3--font-weight: 500;
+
+  --text-body: var(--t-body);
+  --text-body--line-height: 1.55;
+  --text-body--font-weight: 430;
+
+  --text-small: var(--t-small);
+  --text-small--line-height: 1.5;
+  --text-small--font-weight: 430;
+
+  --text-caption: var(--t-caption);
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 500;
+
+  --text-eyebrow: var(--t-eyebrow);
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.12em;
+  --text-eyebrow--font-weight: 500;
+
+  /* Radii */
+  --radius-xs:   var(--r-xs);
+  --radius-sm:   var(--r-sm);
+  --radius-md:   var(--r-md);
+  --radius-lg:   var(--r-lg);
+  --radius-xl:   var(--r-xl);
+  --radius-full: var(--r-pill);
+
+  /* Container max-widths — match Inkwell's --content-* tokens.
+     Tailwind v4's --container-* namespace generates both
+     max-w-* and container-* utilities automatically. */
+  --container-narrow:  820px;
+  --container-default: 920px;
+  --container-wide:   1120px;
+}
+
+/* =====================================================================
+   @utility border-hair — the 1.5px signature.
+
+   We deliberately do NOT redefine the default `border` width.
+   Overriding the default would surprise any third-party Tailwind
+   component that assumes 1px. Use border-hair explicitly in
+   Inkwell-flavored markup.
+
+   Tailwind v4 does not auto-generate border-width utilities from
+   the @theme namespace (border widths are core utilities, not
+   theme-extensible the same way as colors / radii / containers).
+   `@utility` is v4's mechanism for registering custom utility
+   classes that can be composed with variants like `dark:border-hair`
+   or `md:border-hair`.
+   ===================================================================== */
+@utility border-hair {
+  border-width: 1.5px;
+}
+
+/* =====================================================================
+   @custom-variant dark — fires on Inkwell's manual [data-theme="dark"]
+   toggle. The single-line parameter form is what Tailwind v4 reliably
+   compiles; the block form with nested @media and multiple @slot
+   blocks is documented but isn't honored by every v4 toolchain
+   (notably the in-browser CDN compiler), so we stick to the form
+   that works everywhere.
+
+   OS preference (prefers-color-scheme: dark) is NOT handled by this
+   Tailwind variant. It's handled one layer down — Inkwell's tokens
+   themselves shift on OS dark mode via inkwell-tokens.css. That
+   means `bg-paper` (Tailwind utility) and `.card` (Inkwell component)
+   both adapt to OS dark automatically, because their resolved values
+   come from `--paper` / `--slate` / `--accent` and those tokens shift.
+
+   What you GIVE UP by not exposing OS-dark to the `dark:` variant:
+   utilities that select different VALUES per mode (e.g.
+   `bg-paper dark:bg-rust`) only switch under the manual toggle, not
+   under OS preference alone. For mode-aware coloring that should
+   follow OS, set the `--token` via Inkwell's cascade and reference
+   it from one utility (e.g. `bg-paper`) — it'll adapt either way.
+
+   Set `data-theme="dark"` on <html> to opt into the variant. Use
+   the toggle script from index.html or examples/tailwind.html. To
+   auto-mirror OS preference into `data-theme`, add a small bootstrap
+   script: `if (matchMedia('(prefers-color-scheme: dark)').matches &&
+   !localStorage.getItem('theme-preview'))
+     document.documentElement.setAttribute('data-theme', 'dark');`
+   ===================================================================== */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

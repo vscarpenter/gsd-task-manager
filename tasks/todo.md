@@ -2,6 +2,40 @@
 
 ---
 
+## Active task — 2026-05-14: Apply Inkwell Design System (1.3.1)
+
+**Goal:** Make Inkwell 1.3.1 the canonical token + component source, wired through Tailwind v4's official integration. Eliminate the v3-style `tailwind.config.ts` as a competing styling system. Preserve GSD-specific tokens (quadrants, status, custom type scale) and the 1.5px border identity.
+
+**Source of truth:** `https://github.com/vscarpenter/inkwell` `main` — `agent-instructions.md`, `DESIGN_SYSTEM.md`, `TAILWIND.md`, `inkwell-{tokens,components,theme}.css`.
+
+### Findings from audit
+
+- GSD already uses Inkwell-style tokens (`--ivory`, `--paper`, `--slate`, `--accent`) and applies Inkwell component classes (`.btn`, `.badge`, `.input`).
+- Old monolithic Inkwell shim (`public/css/tokens.css`, 929 lines) is loaded via a `<link>` tag, *outside* Tailwind v4. Modern Inkwell ships as a 3-file split with an official `@theme` integration.
+- `tailwind.config.ts` redeclares Inkwell tokens v3-style via `@config` — the competing system the user wants eliminated.
+- `borderWidth: { DEFAULT: "1.5px" }` is load-bearing: bare `border` utility is used widely. Must preserve.
+- Quadrant + status tokens are GSD-specific (not in Inkwell). Must migrate to `@theme` block.
+- Dynamic class construction: none. All `bg-quadrant-*` / `bg-status-*` are static string literals. v4 scanner picks them up.
+- A few hardcoded hex anti-patterns: `.overdue-task`, `complete-flash`, dialog `bg-black/40`.
+
+### Plan (checkable items)
+
+- [ ] Vendor Inkwell 1.3.1 into the bundler's reach (`app/css/inkwell-tokens.css`, `app/css/inkwell-components.css`, `app/css/inkwell-theme.css`).
+- [ ] Refresh the public-facing copy at `public/css/{inkwell,tokens,inkwell-tokens,inkwell-components}.css` to match 1.3.1 (for any external consumer or service-worker cache).
+- [ ] In `app/globals.css`: replace `@config "../tailwind.config.ts"` with `@import "./css/inkwell-theme.css";`. Add GSD-specific tokens (quadrant, status, custom type scale) inside a `@theme` block. Preserve the 1.5px border default via `@utility border { border-width: 1.5px; }`. Remove duplicate bridge aliases where Inkwell already provides the token.
+- [ ] Remove the `<link rel="stylesheet" href="/css/inkwell.css">` from `app/layout.tsx` — Inkwell is now bundled via PostCSS.
+- [ ] Delete `tailwind.config.ts` (no longer referenced).
+- [ ] Anti-pattern sweep: replace hardcoded hex in `.overdue-task`, `complete-flash` with Inkwell tokens. Switch dialog overlay from `bg-black/40` to `var(--backdrop)`.
+- [ ] Verify: `bun typecheck`, `bun lint`, `bun run test`, manual visual smoke test of the matrix shell in light + dark.
+
+### Anti-goals (out of scope for this PR)
+
+- Rewriting `.redesign-scope` / `.matrix-card` / `.rd-*` CSS into Inkwell classes — app-specific layer, not competing system.
+- Migrating `border` → `border-hair` codebase-wide (preserved as project-specific override).
+- Touching MCP server, sync engine, or any non-styling code.
+
+---
+
 ## Resuming From Here (2026-04-28)
 
 ### Just Completed — v9 cleanup (Phases 1, 2, 3) on `claude/infallible-neumann-68a882`
