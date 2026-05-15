@@ -1,224 +1,516 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GSD Cloud Sync — how it works</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSD Task Manager — Cloud Sync Explainer</title>
+<script>
+  (function () {
+    var s = localStorage.getItem('theme-preview') || 'auto';
+    if (s === 'light' || s === 'dark') document.documentElement.setAttribute('data-theme', s);
+  })();
+</script>
 <style>
-  :root {
-    --bg: #0f1115;
-    --panel: #161922;
-    --panel-2: #1d2230;
-    --ink: #e7ecf3;
-    --ink-dim: #98a2b3;
-    --rule: #2a3142;
-    --accent: #7cc4ff;
-    --accent-2: #c8a8ff;
-    --warn: #ffb86b;
-    --bad: #ff7a7a;
-    --good: #7ee0a8;
-    --code-bg: #0b0d12;
+/* =====================================================================
+   Inkwell tokens (inlined from inkwell-tokens.css v1.3.0)
+   ===================================================================== */
+:root {
+  --ivory: #F4F4F0;
+  --paper: #FFFFFF;
+  --slate: #13141B;
+  --oat:   #DDDCDF;
+  --accent:               #3B4A8C;
+  --accent-d:             #2A3768;
+  --accent-tint:          rgba(59, 74, 140, 0.14);
+  --accent-focus-ring:    rgba(59, 74, 140, 0.18);
+  --accent-strong-border: rgba(59, 74, 140, 0.5);
+  --olive:        #788C5D;
+  --olive-tint:   rgba(120, 140, 93, 0.16);
+  --olive-strong-border: rgba(120, 140, 93, 0.45);
+  --rust:         #B04A3F;
+  --rust-d:       #9A3F3F;
+  --rust-tint:    rgba(176, 74, 63, 0.10);
+  --rust-tint-border: rgba(176, 74, 63, 0.45);
+  --rust-focus-ring:  rgba(176, 74, 63, 0.18);
+  --warning:      #C78E3F;
+  --warning-dark: #A06A2A;
+  --warning-tint: rgba(199, 142, 63, 0.16);
+  --warning-strong-border: rgba(199, 142, 63, 0.45);
+  --info:         #5C7CA3;
+  --sky:          #6A8CAF;
+  --sky-tint:     rgba(106, 140, 175, 0.16);
+  --gray-100: #EDEDEA;
+  --gray-200: #E1E1DE;
+  --gray-300: #CFCFCC;
+  --gray-500: #6F6F75;
+  --gray-700: #3A3B41;
+  --serif: ui-serif, Georgia, "Times New Roman", Times, serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --t-display: 48px;
+  --t-h1:      32px;
+  --t-h2:      24px;
+  --t-h3:      19px;
+  --t-body:    16px;
+  --t-small:   14px;
+  --t-caption: 12px;
+  --t-eyebrow: 11px;
+  --sp-1:  4px; --sp-2:  8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
+  --border:        1.5px solid var(--gray-300);
+  --border-strong: 1.5px solid var(--slate);
+  --border-hair:   1px   solid var(--gray-100);
+  --border-rule:   1px   solid var(--gray-300);
+  --shadow-sm:         0 1px 2px  rgba(20, 20, 19, 0.06);
+  --shadow-md:         0 4px 14px rgba(20, 20, 19, 0.08);
+  --t-fast: 120ms; --t-base: 150ms; --t-slow: 300ms;
+  --content-narrow:  820px;
+  --content-default: 920px;
+  --content-wide:   1120px;
+  --page-pad-x:      24px;
+  --z-base: 1; --z-raised: 10; --z-sticky: 20; --z-overlay: 30; --z-modal: 50;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ivory: #0F1018; --paper: #181A24; --slate: #E8E8EE; --oat: #2B2D38;
+    --accent: #7A8AD1; --accent-d: #6273C0;
+    --accent-tint: rgba(122, 138, 209, 0.18);
+    --accent-focus-ring: rgba(122, 138, 209, 0.28);
+    --accent-strong-border: rgba(122, 138, 209, 0.6);
+    --olive: #9CB07A; --olive-tint: rgba(156, 176, 122, 0.18);
+    --olive-strong-border: rgba(156, 176, 122, 0.6);
+    --rust: #D27468; --rust-d: #C96B5F;
+    --rust-tint: rgba(210, 116, 104, 0.18);
+    --rust-tint-border: rgba(210, 116, 104, 0.6);
+    --rust-focus-ring: rgba(210, 116, 104, 0.28);
+    --warning: #D9A55F; --warning-dark: #D9A55F;
+    --warning-tint: rgba(217, 165, 95, 0.18);
+    --warning-strong-border: rgba(217, 165, 95, 0.6);
+    --info: #7C9FD2; --sky: #85A6CB;
+    --sky-tint: rgba(133, 166, 203, 0.20);
+    --gray-100: #1E1F29; --gray-200: #262732; --gray-300: #34363F;
+    --gray-500: #9A9AA0; --gray-700: #C0C0C7;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.45);
+    --shadow-md: 0 4px 14px rgba(0,0,0,0.50);
   }
-  * { box-sizing: border-box; }
-  html, body { background: var(--bg); color: var(--ink); margin: 0; }
-  body {
-    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-    max-width: 980px; padding: 40px 28px 80px; margin: 0 auto;
-  }
-  h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
-  h2 { font-size: 20px; margin: 40px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
-  h3 { font-size: 15px; margin: 22px 0 6px; color: var(--accent); font-weight: 600; }
-  p { margin: 8px 0; color: var(--ink); }
-  .lede { color: var(--ink-dim); margin-bottom: 24px; }
-  code, pre {
-    font: 13px/1.55 ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
-  }
-  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
-  pre {
-    background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px;
-    padding: 14px 16px; overflow-x: auto; margin: 8px 0 4px;
-  }
-  .file {
-    display: inline-block; font: 12px ui-monospace, monospace;
-    color: var(--ink-dim); background: var(--panel); padding: 2px 8px;
-    border-radius: 4px; border: 1px solid var(--rule); margin-bottom: 6px;
-  }
-  .note {
-    color: var(--ink-dim); font-size: 13px; margin: 6px 0 18px;
-    border-left: 2px solid var(--accent); padding: 2px 0 2px 12px;
-  }
-  .grid-cards {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px; margin: 16px 0 8px;
-  }
-  .card {
-    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .card h4 { margin: 0 0 6px; font-size: 14px; color: var(--accent-2); }
-  .card p { margin: 0; color: var(--ink-dim); font-size: 13px; }
-  table {
-    width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px;
-  }
-  th, td {
-    text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule);
-    vertical-align: top;
-  }
-  th { color: var(--ink-dim); font-weight: 600; }
-  ul.gotchas { padding-left: 0; list-style: none; }
-  ul.gotchas li {
-    background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--warn);
-    border-radius: 8px; padding: 10px 14px; margin: 8px 0;
-  }
-  ul.gotchas li b { color: var(--warn); }
-  ul.gotchas li.bad { border-left-color: var(--bad); }
-  ul.gotchas li.bad b { color: var(--bad); }
-  ul.gotchas li.good { border-left-color: var(--good); }
-  ul.gotchas li.good b { color: var(--good); }
-  .diagram {
-    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
-    padding: 16px; overflow-x: auto;
-  }
-  .diagram svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
-  .annot { color: var(--accent); }
-  .tag {
-    display: inline-block; font: 11px ui-monospace, monospace;
-    color: var(--ink); background: var(--panel-2); border: 1px solid var(--rule);
-    padding: 1px 6px; border-radius: 4px; margin-right: 4px;
-  }
-  .tag.write { color: var(--warn); }
-  .tag.read  { color: var(--accent); }
-  .tag.rt    { color: var(--accent-2); }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ivory: #0F1018; --paper: #181A24; --slate: #E8E8EE; --oat: #2B2D38;
+  --accent: #7A8AD1; --accent-d: #6273C0;
+  --accent-tint: rgba(122, 138, 209, 0.18);
+  --accent-focus-ring: rgba(122, 138, 209, 0.28);
+  --accent-strong-border: rgba(122, 138, 209, 0.6);
+  --olive: #9CB07A; --olive-tint: rgba(156, 176, 122, 0.18);
+  --olive-strong-border: rgba(156, 176, 122, 0.6);
+  --rust: #D27468; --rust-d: #C96B5F;
+  --rust-tint: rgba(210, 116, 104, 0.18);
+  --rust-tint-border: rgba(210, 116, 104, 0.6);
+  --rust-focus-ring: rgba(210, 116, 104, 0.28);
+  --warning: #D9A55F; --warning-dark: #D9A55F;
+  --warning-tint: rgba(217, 165, 95, 0.18);
+  --warning-strong-border: rgba(217, 165, 95, 0.6);
+  --info: #7C9FD2; --sky: #85A6CB;
+  --sky-tint: rgba(133, 166, 203, 0.20);
+  --gray-100: #1E1F29; --gray-200: #262732; --gray-300: #34363F;
+  --gray-500: #9A9AA0; --gray-700: #C0C0C7;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.45);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.50);
+}
+
+/* =====================================================================
+   Inkwell component CSS (inlined subset from inkwell-components.css v1.3.0)
+   ===================================================================== */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--ivory); color: var(--slate);
+  font-family: var(--sans); font-size: var(--t-body); line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.t-display { font-family: var(--serif); font-weight: 500; font-size: var(--t-display); line-height: 1.1; letter-spacing: -0.02em; }
+.t-h1 { font-family: var(--serif); font-weight: 500; font-size: var(--t-h1); line-height: 1.2; letter-spacing: -0.01em; }
+.t-h2 { font-family: var(--serif); font-weight: 500; font-size: var(--t-h2); line-height: 1.3; letter-spacing: -0.01em; }
+.t-h3 { font-family: var(--serif); font-weight: 500; font-size: var(--t-h3); line-height: 1.22; }
+.t-lede   { font: 400 19px/1.55 var(--serif); color: var(--gray-700); font-style: italic; }
+.t-body   { font: 430 var(--t-body)/1.55 var(--sans); }
+.t-small  { font: 430 var(--t-small)/1.5 var(--sans); color: var(--gray-700); }
+.t-caption{ font: 500 var(--t-caption)/1.4 var(--sans); color: var(--gray-500); }
+.eyebrow {
+  font-family: var(--mono); font-size: var(--t-eyebrow);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray-500);
+  display: inline-flex; align-items: center; gap: 12px;
+}
+.eyebrow::before { content: ""; width: 24px; height: 1.5px; background: var(--accent); }
+code, .code-inline {
+  font-family: var(--mono); font-size: 0.86em;
+  background: var(--gray-100); padding: 1.5px 5px; border-radius: var(--r-xs);
+}
+.card {
+  background: var(--paper); border: var(--border); border-radius: var(--r-lg);
+  padding: var(--sp-5);
+}
+.card h4 {
+  margin: 0 0 var(--sp-2); font-family: var(--serif); font-weight: 500;
+  font-size: var(--t-h3); letter-spacing: -0.005em;
+}
+.card p { margin: 0; color: var(--gray-700); font-size: var(--t-small); line-height: 1.5; }
+.tbl {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--paper); border: var(--border); border-radius: var(--r-md); overflow: hidden;
+}
+.tbl thead th {
+  text-align: left; font: 600 11px/1 var(--sans); text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--gray-500); background: var(--gray-100);
+  padding: 12px 16px; border-bottom: 1px solid var(--gray-300);
+}
+.tbl tbody td { padding: 13px 16px; border-bottom: 1px solid var(--gray-100); font-size: 14px; vertical-align: top; }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.badge {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  font-size: 12px; font-weight: 500; border-radius: var(--r-pill);
+}
+.badge-neutral { background: var(--gray-100); color: var(--gray-700); }
+.badge-accent  { background: var(--accent-tint); color: var(--accent); }
+.badge-success { background: var(--olive-tint); color: var(--olive); }
+.badge-danger  { background: var(--rust-tint); color: var(--rust); border: 1.5px solid var(--rust-tint-border); }
+.tldr {
+  background: var(--slate); color: var(--ivory); border-radius: var(--r-md); padding: 22px 26px;
+}
+.tldr-label {
+  font: 500 var(--t-eyebrow)/1 var(--mono); text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--oat); margin-bottom: 10px;
+}
+.tldr ol { margin: 0; padding-left: 22px; font: 430 15px/1.6 var(--sans); }
+.tldr ol li + li { margin-top: 6px; }
+.tldr code {
+  background: rgba(255,255,255,0.10); color: var(--ivory);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.sec-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: var(--sp-2); }
+.sec-head .idx { font: 600 13px/1 var(--mono); color: var(--accent); width: 34px; flex-shrink: 0; }
+.sec-head h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 27px; letter-spacing: -0.012em; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a {
+  font-size: 12.5px; padding: 7px 14px; border: var(--border); border-radius: var(--r-pill);
+  text-decoration: none; color: var(--gray-700); background: var(--paper);
+  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.toc a .n { font: 10px/1 var(--mono); color: var(--gray-500); }
+.toc a:hover { border-color: var(--slate); color: var(--slate); }
+.alert {
+  display: flex; gap: 12px; padding: 14px 18px; border-radius: var(--r-md);
+  border: var(--border); background: var(--paper); font-size: 14px; line-height: 1.55; color: var(--slate);
+}
+.alert-body { flex: 1; }
+.alert-title { font-weight: 600; margin: 0 0 4px; font-size: 14px; }
+.alert.is-info    { background: var(--accent-tint); border-color: var(--accent-strong-border); }
+.alert.is-info    .alert-title { color: var(--accent); }
+.alert.is-success { background: var(--olive-tint); border-color: var(--olive-strong-border); }
+.alert.is-success .alert-title { color: var(--olive); }
+.alert.is-warning { background: var(--warning-tint); border-color: var(--warning-strong-border); }
+.alert.is-warning .alert-title { color: var(--warning-dark); }
+.alert.is-danger  { background: var(--rust-tint); border-color: var(--rust-tint-border); }
+.alert.is-danger  .alert-title { color: var(--rust); }
+.chip-dot {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 11px; border-radius: var(--r-sm); border: var(--border);
+  font: 12px/1.2 var(--mono); color: var(--slate); background: var(--paper);
+}
+.chip-dot .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chip-dot.accent  { background: var(--accent-tint); border-color: var(--accent-strong-border); }
+.chip-dot.accent .dot  { background: var(--accent); }
+.chip-dot.olive   { background: var(--olive-tint);  border-color: var(--olive-strong-border); }
+.chip-dot.olive .dot   { background: var(--olive); }
+.chip-dot.sky     { background: var(--sky-tint); }
+.chip-dot.sky .dot     { background: var(--sky); }
+.wrap-default { max-width: var(--content-default); margin: 0 auto; padding: 0 var(--page-pad-x); }
+hr.rule { border: none; border-top: var(--border-rule); margin: var(--sp-6) 0; }
+kbd, .kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  font: 500 11px/1 var(--mono); color: var(--gray-700);
+  background: var(--paper); border: 1px solid var(--gray-300);
+  border-bottom-width: 2px; border-radius: var(--r-xs); vertical-align: baseline;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+*:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* =====================================================================
+   Page-specific composition (token-driven only)
+   ===================================================================== */
+header.page-head {
+  padding: var(--sp-7) 0 var(--sp-6);
+  border-bottom: var(--border-rule);
+  margin-bottom: var(--sp-6);
+}
+header.page-head h1 { margin: var(--sp-3) 0 var(--sp-4); }
+header.page-head .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-4); }
+header.page-head .lede { max-width: 62ch; }
+header.page-head .lede code { background: var(--accent-tint); color: var(--accent); }
+
+nav.sticky-nav {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  background: var(--ivory); padding: var(--sp-3) 0; border-bottom: var(--border-rule);
+  margin-bottom: var(--sp-6);
+}
+.theme-toggle-wrap { position: fixed; top: 16px; right: 16px; z-index: var(--z-overlay); }
+.theme-toggle-wrap button {
+  height: 34px; padding: 0 14px; font: 500 12px/1 var(--mono);
+  background: var(--paper); border: var(--border); border-radius: var(--r-pill);
+  cursor: pointer; color: var(--gray-700);
+}
+.theme-toggle-wrap button:hover { border-color: var(--slate); color: var(--slate); }
+
+section.sec { margin-bottom: var(--sp-7); }
+section.sec > p { max-width: 68ch; }
+
+.cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-4); margin: var(--sp-5) 0 var(--sp-3);
+}
+
+.diagram {
+  background: var(--paper); border: var(--border); border-radius: var(--r-lg);
+  padding: var(--sp-5); margin: var(--sp-5) 0;
+}
+.diagram svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.diagram-legend {
+  display: flex; gap: var(--sp-3); flex-wrap: wrap;
+  margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: var(--border-hair);
+}
+
+.file-ref {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 11px/1 var(--mono); color: var(--gray-700);
+  background: var(--gray-100); padding: 5px 10px; border-radius: var(--r-xs);
+  border: var(--border-hair);
+}
+.file-ref::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+.snippet {
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+pre.code-sample {
+  background: var(--gray-100); padding: 14px 16px; border-radius: var(--r-sm);
+  font: 13px/1.55 var(--mono); overflow-x: auto; border: var(--border-hair);
+  margin: var(--sp-2) 0 0;
+}
+.code-sample .c-note { color: var(--accent); }
+.code-sample .c-warn { color: var(--warning-dark); }
+.code-sample .c-danger { color: var(--rust); }
+
+.gotcha-list { display: grid; gap: var(--sp-3); margin: var(--sp-4) 0 0; }
+
+.lessons-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-3); margin-top: var(--sp-4);
+}
+.lesson {
+  background: var(--paper); border: var(--border); border-left: 4px solid var(--accent);
+  border-radius: var(--r-sm); padding: var(--sp-3) var(--sp-4);
+}
+.lesson .n { font: 600 11px/1 var(--mono); color: var(--accent); letter-spacing: 0.08em; }
+.lesson p { margin: 6px 0 0; font-size: var(--t-small); line-height: 1.55; }
+
+footer.page-foot {
+  padding: var(--sp-6) 0; border-top: var(--border-rule); margin-top: var(--sp-7);
+  color: var(--gray-500); font-size: var(--t-small);
+}
 </style>
 </head>
 <body>
 
-<h1>GSD Cloud Sync — how it works</h1>
-<p class="lede">
-  Local-first task storage in IndexedDB, mirrored opportunistically to a self-hosted PocketBase at
-  <code>api.vinny.io</code>. Last-write-wins on a per-task timestamp; SSE pushes other devices'
-  changes back in real time. This page is everything you need to read once before touching
-  <code>lib/sync/</code>.
-</p>
-
-<h2>1. The big picture</h2>
-
-<div class="diagram">
-<svg viewBox="0 0 920 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cloud sync data flow diagram">
-  <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#7cc4ff"/>
-    </marker>
-    <marker id="arrW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#ffb86b"/>
-    </marker>
-    <marker id="arrP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#c8a8ff"/>
-    </marker>
-    <style>
-      .b { fill: #1d2230; stroke: #2a3142; }
-      .bAuth { fill: #1a2230; stroke: #355068; }
-      .t  { fill: #e7ecf3; font: 13px -apple-system, system-ui, sans-serif; }
-      .ts { fill: #98a2b3; font: 11px -apple-system, system-ui, sans-serif; }
-      .th { fill: #c8a8ff; font: 12px ui-monospace, monospace; }
-      .lr { stroke: #7cc4ff; stroke-width: 1.5; fill: none; }
-      .lw { stroke: #ffb86b; stroke-width: 1.5; fill: none; }
-      .lp { stroke: #c8a8ff; stroke-width: 1.5; fill: none; }
-      .ld { stroke: #2a3142; stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
-    </style>
-  </defs>
-
-  <!-- Device A column -->
-  <text x="160" y="22" text-anchor="middle" class="ts">— THIS DEVICE —</text>
-
-  <rect class="b" x="40" y="40" width="240" height="60" rx="8"/>
-  <text class="t" x="160" y="62" text-anchor="middle">UI mutation</text>
-  <text class="ts" x="160" y="80" text-anchor="middle">createTask / updateTask / deleteTask</text>
-
-  <rect class="b" x="40" y="130" width="240" height="80" rx="8"/>
-  <text class="th" x="160" y="152" text-anchor="middle">IndexedDB (Dexie)</text>
-  <text class="ts" x="160" y="172" text-anchor="middle">tasks · syncQueue · syncMetadata</text>
-  <text class="ts" x="160" y="190" text-anchor="middle">enqueue(op, taskId, payload)</text>
-
-  <rect class="b" x="40" y="240" width="240" height="80" rx="8"/>
-  <text class="th" x="160" y="262" text-anchor="middle">SyncCoordinator</text>
-  <text class="ts" x="160" y="280" text-anchor="middle">single-flight + dedup</text>
-  <text class="ts" x="160" y="298" text-anchor="middle">user &gt; auto priority</text>
-
-  <rect class="b" x="40" y="350" width="240" height="100" rx="8"/>
-  <text class="th" x="160" y="372" text-anchor="middle">fullSync()</text>
-  <text class="ts" x="160" y="390" text-anchor="middle">1. pushLocalChanges()</text>
-  <text class="ts" x="160" y="406" text-anchor="middle">2. pullRemoteChanges(cursor)</text>
-  <text class="ts" x="160" y="422" text-anchor="middle">3. reconcileDeletedTasks()</text>
-  <text class="ts" x="160" y="438" text-anchor="middle">4. update lastSyncAt cursor</text>
-
-  <!-- arrows -->
-  <path class="ld" d="M160 100 L160 130" marker-end="url(#arr)"/>
-  <path class="ld" d="M160 210 L160 240" marker-end="url(#arr)"/>
-  <path class="ld" d="M160 320 L160 350" marker-end="url(#arr)"/>
-
-  <!-- Server column -->
-  <text x="640" y="22" text-anchor="middle" class="ts">— api.vinny.io (PocketBase) —</text>
-
-  <rect class="bAuth" x="520" y="40" width="240" height="80" rx="8"/>
-  <text class="th" x="640" y="62" text-anchor="middle">OAuth2 (Google / GitHub)</text>
-  <text class="ts" x="640" y="80" text-anchor="middle">pb.collection('users')</text>
-  <text class="ts" x="640" y="98" text-anchor="middle">.authWithOAuth2({ provider })</text>
-
-  <rect class="b" x="520" y="160" width="240" height="80" rx="8"/>
-  <text class="th" x="640" y="182" text-anchor="middle">tasks collection</text>
-  <text class="ts" x="640" y="200" text-anchor="middle">snake_case · owner FK</text>
-  <text class="ts" x="640" y="218" text-anchor="middle">API rule: owner = @request.auth.id</text>
-
-  <rect class="b" x="520" y="280" width="240" height="80" rx="8"/>
-  <text class="th" x="640" y="302" text-anchor="middle">Realtime (SSE)</text>
-  <text class="ts" x="640" y="320" text-anchor="middle">subscribe('*', handler)</text>
-  <text class="ts" x="640" y="338" text-anchor="middle">create / update / delete events</text>
-
-  <rect class="b" x="520" y="390" width="240" height="60" rx="8"/>
-  <text class="th" x="640" y="414" text-anchor="middle">Device B, C, …</text>
-  <text class="ts" x="640" y="432" text-anchor="middle">apply via LWW into local Dexie</text>
-
-  <!-- auth -->
-  <path class="lp" d="M280 70 L520 70" marker-end="url(#arrP)"/>
-  <text class="ts" x="400" y="62" text-anchor="middle">popup, exchanges code, JWT in localStorage</text>
-
-  <!-- push -->
-  <path class="lw" d="M280 380 C380 380, 420 200, 520 200" marker-end="url(#arrW)"/>
-  <text class="ts" x="430" y="290" text-anchor="middle">PUSH: upsert / delete (throttled 100ms)</text>
-
-  <!-- pull -->
-  <path class="lr" d="M520 220 C420 220, 380 410, 280 410" marker-end="url(#arr)"/>
-  <text class="ts" x="430" y="375" text-anchor="middle">PULL: client_updated_at &gt; cursor</text>
-
-  <!-- realtime -->
-  <path class="lp" d="M520 310 C400 310, 350 180, 280 180" marker-end="url(#arrP)"/>
-  <text class="ts" x="395" y="155" text-anchor="middle">SSE: applyRemoteChange()</text>
-
-  <!-- fanout -->
-  <path class="ld" d="M640 240 L640 280" marker-end="url(#arr)"/>
-  <path class="ld" d="M640 360 L640 390" marker-end="url(#arr)"/>
-</svg>
+<div class="theme-toggle-wrap">
+  <button id="theme-toggle" type="button">Theme: <span id="theme-label">auto</span></button>
 </div>
 
-<div class="grid-cards">
-  <div class="card"><h4>Where data lives</h4><p>Source of truth is local IndexedDB. PocketBase is a mirror for multi-device fan-out.</p></div>
-  <div class="card"><h4>What triggers a sync</h4><p>UI mutation enqueues an op. Background-sync timer, app focus, and the sync button all call <code>coordinator.requestSync()</code>.</p></div>
-  <div class="card"><h4>Conflict resolution</h4><p>Last-write-wins on <code>client_updated_at</code>. Whichever side has the newer timestamp wins; ties go to remote.</p></div>
-  <div class="card"><h4>Realtime</h4><p>SSE subscription delivers other devices' writes immediately. Periodic sync is a safety net for missed events.</p></div>
-</div>
+<div class="wrap-default">
 
-<h2>2. Auth flow</h2>
+<header class="page-head">
+  <p class="eyebrow">Engineering &middot; Cloud Sync</p>
+  <h1 class="t-display">How sync works</h1>
+  <div class="meta">
+    <span class="badge badge-accent">PocketBase v0.23+</span>
+    <span class="badge badge-neutral">IndexedDB &middot; Dexie 4</span>
+    <span class="badge badge-success">Last-write-wins</span>
+    <span class="t-caption">Read once before touching <code>lib/sync/</code></span>
+  </div>
+  <p class="t-lede lede">
+    Local-first task storage in IndexedDB, mirrored opportunistically to a self-hosted
+    PocketBase at <code>api.vinny.io</code>. Conflicts resolve by per-task timestamp;
+    SSE pushes other devices' changes back in real time.
+  </p>
+</header>
 
-<p>
-  PocketBase's SDK does all the heavy lifting. The user clicks "Sign in with Google" →
-  <code>authWithOAuth2</code> opens a popup, runs the OAuth dance, stashes the JWT in
-  <code>localStorage</code>, and keeps it refreshed. Sync code just asks the singleton
-  whether it's authenticated and grabs the user id.
-</p>
+<nav class="sticky-nav" aria-label="Sections">
+  <div class="toc">
+    <a href="#big-picture"><span class="n">01</span> The big picture</a>
+    <a href="#auth"><span class="n">02</span> Auth flow</a>
+    <a href="#push"><span class="n">03</span> Local &rarr; push</a>
+    <a href="#pull"><span class="n">04</span> Pull &amp; LWW</a>
+    <a href="#realtime"><span class="n">05</span> Realtime</a>
+    <a href="#coordinator"><span class="n">06</span> Coordinator</a>
+    <a href="#gotchas"><span class="n">07</span> Gotchas</a>
+    <a href="#summary"><span class="n">08</span> Summary</a>
+  </div>
+</nav>
 
-<span class="file">lib/sync/pb-auth.ts:41</span>
-<pre><code><span class="annot">// Runtime allowlist — type erasure means callers could pass anything</span>
+<!-- ================================================================
+     1. BIG PICTURE
+     ================================================================ -->
+<section class="sec" id="big-picture">
+  <div class="sec-head">
+    <span class="idx">01</span>
+    <h2>The big picture</h2>
+  </div>
+
+  <div class="cards-grid">
+    <div class="card">
+      <h4>Where data lives</h4>
+      <p>Source of truth is local IndexedDB. PocketBase is a mirror for multi-device fan-out, not the database of record.</p>
+    </div>
+    <div class="card">
+      <h4>What triggers a sync</h4>
+      <p>UI mutations enqueue an op. Background timer, app focus, and the sync button all call <code>coordinator.requestSync()</code>.</p>
+    </div>
+    <div class="card">
+      <h4>Conflict resolution</h4>
+      <p>Last-write-wins on <code>client_updated_at</code>. Newer timestamp wins; ties go to remote.</p>
+    </div>
+    <div class="card">
+      <h4>Realtime</h4>
+      <p>SSE subscription delivers other devices' writes immediately. Periodic sync is a safety net.</p>
+    </div>
+  </div>
+
+  <div class="diagram" role="img" aria-label="Cloud sync data flow diagram">
+    <svg viewBox="0 0 920 480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr-accent" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="arr-olive" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--olive)"/>
+        </marker>
+        <marker id="arr-sky" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--sky)"/>
+        </marker>
+        <style>
+          .panel       { fill: var(--paper); stroke: var(--gray-300); stroke-width: 1.5; }
+          .panel-auth  { fill: var(--accent-tint); stroke: var(--accent-strong-border); stroke-width: 1.5; }
+          .col-label   { fill: var(--gray-500); font: 11px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+          .title       { fill: var(--slate); font: 500 14px var(--serif); }
+          .title-mono  { fill: var(--accent); font: 12px var(--mono); }
+          .sub         { fill: var(--gray-700); font: 12px var(--sans); }
+          .flow-accent { stroke: var(--accent); stroke-width: 1.5; fill: none; }
+          .flow-olive  { stroke: var(--olive);  stroke-width: 1.5; fill: none; }
+          .flow-sky    { stroke: var(--sky);    stroke-width: 1.5; fill: none; }
+          .flow-dashed { stroke: var(--gray-300); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+          .flow-note   { fill: var(--gray-500); font: 11px var(--sans); }
+        </style>
+      </defs>
+
+      <text x="160" y="22" text-anchor="middle" class="col-label">— This device —</text>
+
+      <rect class="panel" x="40" y="40" width="240" height="64" rx="12"/>
+      <text class="title" x="160" y="64" text-anchor="middle">UI mutation</text>
+      <text class="sub" x="160" y="84" text-anchor="middle">createTask · updateTask · deleteTask</text>
+
+      <rect class="panel" x="40" y="134" width="240" height="80" rx="12"/>
+      <text class="title-mono" x="160" y="158" text-anchor="middle">IndexedDB (Dexie)</text>
+      <text class="sub" x="160" y="178" text-anchor="middle">tasks · syncQueue · syncMetadata</text>
+      <text class="sub" x="160" y="196" text-anchor="middle">enqueue(op, taskId, payload)</text>
+
+      <rect class="panel" x="40" y="244" width="240" height="80" rx="12"/>
+      <text class="title-mono" x="160" y="268" text-anchor="middle">SyncCoordinator</text>
+      <text class="sub" x="160" y="288" text-anchor="middle">single-flight + dedup</text>
+      <text class="sub" x="160" y="306" text-anchor="middle">user &gt; auto priority</text>
+
+      <rect class="panel" x="40" y="354" width="240" height="100" rx="12"/>
+      <text class="title-mono" x="160" y="378" text-anchor="middle">fullSync()</text>
+      <text class="sub" x="160" y="396" text-anchor="middle">1. pushLocalChanges()</text>
+      <text class="sub" x="160" y="414" text-anchor="middle">2. pullRemoteChanges(cursor)</text>
+      <text class="sub" x="160" y="432" text-anchor="middle">3. reconcileDeletedTasks()</text>
+      <text class="sub" x="160" y="450" text-anchor="middle">4. update lastSyncAt cursor</text>
+
+      <path class="flow-dashed" d="M160 104 L160 134" marker-end="url(#arr-accent)"/>
+      <path class="flow-dashed" d="M160 214 L160 244" marker-end="url(#arr-accent)"/>
+      <path class="flow-dashed" d="M160 324 L160 354" marker-end="url(#arr-accent)"/>
+
+      <text x="640" y="22" text-anchor="middle" class="col-label">— api.vinny.io (PocketBase) —</text>
+
+      <rect class="panel-auth" x="520" y="40" width="240" height="80" rx="12"/>
+      <text class="title-mono" x="640" y="64" text-anchor="middle">OAuth2 (Google / GitHub)</text>
+      <text class="sub" x="640" y="84" text-anchor="middle">pb.collection('users')</text>
+      <text class="sub" x="640" y="102" text-anchor="middle">.authWithOAuth2({ provider })</text>
+
+      <rect class="panel" x="520" y="160" width="240" height="80" rx="12"/>
+      <text class="title-mono" x="640" y="184" text-anchor="middle">tasks collection</text>
+      <text class="sub" x="640" y="204" text-anchor="middle">snake_case · owner FK</text>
+      <text class="sub" x="640" y="222" text-anchor="middle">owner = @request.auth.id</text>
+
+      <rect class="panel" x="520" y="280" width="240" height="80" rx="12"/>
+      <text class="title-mono" x="640" y="304" text-anchor="middle">Realtime (SSE)</text>
+      <text class="sub" x="640" y="324" text-anchor="middle">subscribe('*', handler)</text>
+      <text class="sub" x="640" y="342" text-anchor="middle">create · update · delete events</text>
+
+      <rect class="panel" x="520" y="390" width="240" height="64" rx="12"/>
+      <text class="title-mono" x="640" y="414" text-anchor="middle">Device B, C, …</text>
+      <text class="sub" x="640" y="434" text-anchor="middle">apply via LWW into local Dexie</text>
+
+      <path class="flow-sky" d="M280 70 L520 70" marker-end="url(#arr-sky)"/>
+      <text class="flow-note" x="400" y="62" text-anchor="middle">Popup &middot; code exchange &middot; JWT to localStorage</text>
+
+      <path class="flow-olive" d="M280 380 C 380 380, 420 200, 520 200" marker-end="url(#arr-olive)"/>
+      <text class="flow-note" x="430" y="296" text-anchor="middle">PUSH &middot; upsert/delete &middot; 100ms throttle</text>
+
+      <path class="flow-accent" d="M520 220 C 420 220, 380 410, 280 410" marker-end="url(#arr-accent)"/>
+      <text class="flow-note" x="430" y="378" text-anchor="middle">PULL &middot; client_updated_at &gt; cursor</text>
+
+      <path class="flow-sky" d="M520 310 C 400 310, 350 180, 280 180" marker-end="url(#arr-sky)"/>
+      <text class="flow-note" x="395" y="156" text-anchor="middle">SSE &middot; applyRemoteChange()</text>
+
+      <path class="flow-dashed" d="M640 240 L640 280" marker-end="url(#arr-accent)"/>
+      <path class="flow-dashed" d="M640 360 L640 390" marker-end="url(#arr-accent)"/>
+    </svg>
+
+    <div class="diagram-legend">
+      <span class="chip-dot olive"><span class="dot"></span>Push (writes)</span>
+      <span class="chip-dot accent"><span class="dot"></span>Pull (reads)</span>
+      <span class="chip-dot sky"><span class="dot"></span>Auth &amp; realtime SSE</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     2. AUTH FLOW
+     ================================================================ -->
+<section class="sec" id="auth">
+  <div class="sec-head">
+    <span class="idx">02</span>
+    <h2>Auth flow</h2>
+  </div>
+  <p>
+    The PocketBase SDK does all the heavy lifting. The user clicks &ldquo;Sign in with
+    Google&rdquo; &rarr; <code>authWithOAuth2</code> opens a popup, runs the OAuth dance,
+    stashes the JWT in <code>localStorage</code>, and keeps it refreshed. Sync code just
+    asks the singleton whether it's authenticated and grabs the user id.
+  </p>
+
+  <div class="snippet">
+    <span class="file-ref">lib/sync/pb-auth.ts:41</span>
+<pre class="code-sample"><span class="c-note">// Runtime allowlist — type erasure means callers could pass anything</span>
 const ALLOWED_OAUTH_PROVIDERS = new Set&lt;OAuthProvider&gt;(['google', 'github']);
 
 export async function loginWithProvider(provider: OAuthProvider): Promise&lt;AuthState&gt; {
@@ -227,51 +519,64 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
   }
 
   const pb = getPocketBase();
-  <span class="annot">// SDK handles popup, code exchange, token storage, and refresh</span>
+  <span class="c-note">// SDK handles popup, code exchange, token storage, and refresh</span>
   const authData = await pb.collection('users').authWithOAuth2({ provider });
 
   return {
     isLoggedIn: true,
-    userId: authData.record.id,   <span class="annot">// becomes the `owner` FK on every task row</span>
+    userId: authData.record.id,   <span class="c-note">// becomes the `owner` FK on every task row</span>
     email: authData.record.email,
     provider,
   };
-}</code></pre>
+}</pre>
+  </div>
 
-<p class="note">
-  The allowlist isn't theatre: any provider configured server-side would otherwise be callable
-  from the browser console. We only accept the two we ship UI for.
-</p>
+  <div class="alert is-info" role="note" style="margin-top: var(--sp-3);">
+    <div class="alert-body">
+      <p class="alert-title">Why the allowlist isn't theatre</p>
+      <p>Any provider configured server-side would otherwise be callable from the browser console. We only accept the two we ship UI for.</p>
+    </div>
+  </div>
 
-<h3>The singleton</h3>
-<span class="file">lib/sync/pocketbase-client.ts:18</span>
-<pre><code>export function getPocketBase(): PocketBase {
+  <h3 class="t-h3" style="margin-top: var(--sp-5);">The singleton</h3>
+  <div class="snippet">
+    <span class="file-ref">lib/sync/pocketbase-client.ts:18</span>
+<pre class="code-sample">export function getPocketBase(): PocketBase {
   if (!pbInstance) {
     pbInstance = new PocketBase(ENV_CONFIG.pocketBaseUrl);
-    <span class="annot">// CRITICAL: SDK cancels in-flight requests by default when a new one</span>
-    <span class="annot">// fires on the same collection. Our push loop would tear itself apart.</span>
+    <span class="c-warn">// CRITICAL: SDK cancels in-flight requests by default when a new one</span>
+    <span class="c-warn">// fires on the same collection. Our push loop would tear itself apart.</span>
     pbInstance.autoCancellation(false);
   }
   return pbInstance;
-}</code></pre>
+}</pre>
+  </div>
+</section>
 
-<h2>3. Local mutation → push</h2>
+<!-- ================================================================
+     3. LOCAL -> PUSH
+     ================================================================ -->
+<section class="sec" id="push">
+  <div class="sec-head">
+    <span class="idx">03</span>
+    <h2>Local mutation &rarr; push</h2>
+  </div>
+  <p>
+    Every task mutation does two things in order: write to Dexie, then enqueue a sync op.
+    The queue is durable (it's an IndexedDB table), so offline edits survive a reload
+    and get flushed on the next successful sync.
+  </p>
 
-<p>
-  Every task mutation does two things in order: write to Dexie, then enqueue a sync op.
-  The queue is durable (it's an IndexedDB table), so offline edits survive a reload and get
-  flushed on the next successful sync.
-</p>
-
-<span class="file">lib/sync/pb-push.ts:97</span>
-<pre><code>export async function pushLocalChanges(): Promise&lt;PushResult&gt; {
+  <div class="snippet">
+    <span class="file-ref">lib/sync/pb-push.ts:97</span>
+<pre class="code-sample">export async function pushLocalChanges(): Promise&lt;PushResult&gt; {
   const ownerId = getCurrentUserId();
-  if (!ownerId) return { ..., authenticated: false };  <span class="annot">// no-op when logged out</span>
+  if (!ownerId) return { ..., authenticated: false };  <span class="c-note">// no-op when logged out</span>
 
   const pending = await getSyncQueue().getPending();
   if (pending.length === 0) return { ..., authenticated: true };
 
-  <span class="annot">// Pre-fetch all remote ids in ONE request — avoids N "does this exist?" lookups</span>
+  <span class="c-note">// Pre-fetch all remote ids in ONE request — avoids N "does this exist?" lookups</span>
   const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
 
   for (const item of pending) {
@@ -279,47 +584,58 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
       await pushSingleItem(item, remoteIndex, fetchSucceeded, ownerId, deviceId);
       pushedCount++;
       if (pushedCount + failedCount &lt; pending.length) {
-        await delay(THROTTLE_MS);   <span class="annot">// 100ms gap → stay under PB's 429 threshold</span>
+        await delay(THROTTLE_MS);   <span class="c-note">// 100ms gap → stay under PB's 429 threshold</span>
       }
     } catch (error) {
-      const errorCode = sanitizeSyncError(error);   <span class="annot">// stable code only — raw 4xx bodies can echo task text</span>
+      const errorCode = sanitizeSyncError(error);   <span class="c-warn">// stable code only — raw 4xx bodies can echo task text</span>
       await queue.recordAttemptFailure(item.id, errorCode);
-      if (isRateLimitError(error)) break;            <span class="annot">// 429 → abort, don't amplify the storm</span>
+      if (isRateLimitError(error)) break;            <span class="c-danger">// 429 → abort, don't amplify the storm</span>
     }
   }
-}</code></pre>
+}</pre>
+  </div>
 
-<p class="note">
-  After <code>SYNC_CONFIG.MAX_RETRIES</code> attempts, a queue item flips to <code>status: 'failed'</code>
-  rather than being deleted. Failed items are visible in the sync UI for manual recovery.
-</p>
+  <div class="alert is-warning" style="margin-top: var(--sp-3);">
+    <div class="alert-body">
+      <p class="alert-title">Failed items aren't deleted</p>
+      <p>After <code>SYNC_CONFIG.MAX_RETRIES</code> attempts, a queue item flips to <code>status: 'failed'</code> and stays in <code>db.syncQueue</code>. Failed items are visible in the sync history UI for manual recovery; <code>getPending()</code> filters them so they don't clog the push loop.</p>
+    </div>
+  </div>
+</section>
 
-<h2>4. Pull + last-write-wins</h2>
+<!-- ================================================================
+     4. PULL & LWW
+     ================================================================ -->
+<section class="sec" id="pull">
+  <div class="sec-head">
+    <span class="idx">04</span>
+    <h2>Pull &amp; last-write-wins</h2>
+  </div>
+  <p>
+    Pull uses a cursor (<code>lastSyncAt</code>) so we only fetch what changed since last
+    time. The filter is the most subtle part — see Gotcha #1 about why we can't use
+    PocketBase's own <code>updated</code> column.
+  </p>
 
-<p>
-  Pull uses a cursor (<code>lastSyncAt</code>) so we only fetch what changed since last time. The
-  filter is the most subtle part — see Gotcha #1 about why we can't use PocketBase's own
-  <code>updated</code> column.
-</p>
-
-<span class="file">lib/sync/pb-pull.ts:83</span>
-<pre><code>export async function pullRemoteChanges(lastSyncAt: string | null) {
+  <div class="snippet">
+    <span class="file-ref">lib/sync/pb-pull.ts:83</span>
+<pre class="code-sample">export async function pullRemoteChanges(lastSyncAt: string | null) {
   const ownerId = getCurrentUserId();
   if (!ownerId) return { ..., authenticated: false };
 
-  assertSafeRecordId(ownerId, 'ownerId');           <span class="annot">// reject filter-injection attempts</span>
+  assertSafeRecordId(ownerId, 'ownerId');           <span class="c-note">// reject filter-injection attempts</span>
 
   let filter = `owner = "${escapeFilterValue(ownerId)}"`;
   if (lastSyncAt) {
-    filter += ` && client_updated_at &gt; "${escapeFilterValue(lastSyncAt)}"`;
+    filter += ` &amp;&amp; client_updated_at &gt; "${escapeFilterValue(lastSyncAt)}"`;
   }
 
   const records = await pb.collection('tasks').getFullList({
     filter,
-    sort: '-client_updated_at',   <span class="annot">// NOT `-updated` — system fields aren't sortable in PB v0.23+</span>
+    sort: '-client_updated_at',   <span class="c-warn">// NOT `-updated` — system fields aren't sortable in PB v0.23+</span>
   });
 
-  <span class="annot">// LWW merge into Dexie. Remote wins on ties (>=).</span>
+  <span class="c-note">// LWW merge into Dexie. Remote wins on ties (&gt;=).</span>
   for (const record of validRecords) {
     const localTask = localTaskMap.get(taskId);
     const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
@@ -328,39 +644,51 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
     }
   }
 
-  await reconcileDeletedTasks(ownerId);   <span class="annot">// drop local rows the server no longer has</span>
-}</code></pre>
+  await reconcileDeletedTasks(ownerId);   <span class="c-note">// drop local rows the server no longer has</span>
+}</pre>
+  </div>
 
-<p>
-  The mapper layer is the single place where camelCase ↔ snake_case lives, and it also
-  preserves <em>device-local fields</em> (notification dismissal state, snooze) so a sync
-  doesn't undo "I dismissed that ping on this device":
-</p>
+  <p style="margin-top: var(--sp-4);">
+    The mapper layer is the single place where camelCase &harr; snake_case lives, and it
+    also preserves <em>device-local fields</em> (notification dismissal state, snooze) so
+    a sync doesn't undo &ldquo;I dismissed that ping on this device&rdquo;:
+  </p>
 
-<span class="file">lib/sync/task-mapper.ts:122</span>
-<pre><code>export function pocketBaseToTaskRecord(record, existingLocal) {
-  const parsed = pbTaskRecordSchema.safeParse(record);   <span class="annot">// fail closed on malformed remote payloads</span>
+  <div class="snippet">
+    <span class="file-ref">lib/sync/task-mapper.ts:122</span>
+<pre class="code-sample">export function pocketBaseToTaskRecord(record, existingLocal) {
+  const parsed = pbTaskRecordSchema.safeParse(record);   <span class="c-warn">// fail closed on malformed remote payloads</span>
   if (!parsed.success) return null;
 
   const r = parsed.data;
   return {
     id: r.task_id, title: r.title, /* … */
-    notificationSent:    existingLocal?.notificationSent ?? false,    <span class="annot">// per-device</span>
-    lastNotificationAt:  existingLocal?.lastNotificationAt,           <span class="annot">// per-device</span>
-    snoozedUntil:        existingLocal?.snoozedUntil,                 <span class="annot">// per-device</span>
+    notificationSent:    existingLocal?.notificationSent ?? false,    <span class="c-note">// per-device</span>
+    lastNotificationAt:  existingLocal?.lastNotificationAt,           <span class="c-note">// per-device</span>
+    snoozedUntil:        existingLocal?.snoozedUntil,                 <span class="c-note">// per-device</span>
   };
-}</code></pre>
+}</pre>
+  </div>
+</section>
 
-<h2>5. Realtime (SSE)</h2>
+<!-- ================================================================
+     5. REALTIME
+     ================================================================ -->
+<section class="sec" id="realtime">
+  <div class="sec-head">
+    <span class="idx">05</span>
+    <h2>Realtime (SSE)</h2>
+  </div>
+  <p>
+    The pull loop covers correctness; the SSE subscription covers latency. PocketBase
+    pushes every write on the <code>tasks</code> collection to all connected clients; we
+    filter out our own writes by <code>device_id</code> so we don't ping-pong our changes
+    back into Dexie.
+  </p>
 
-<p>
-  The pull loop covers correctness; the SSE subscription covers latency. PocketBase pushes
-  every write on the <code>tasks</code> collection to all connected clients; we filter out our
-  own writes by <code>device_id</code> so we don't ping-pong our own changes back into Dexie.
-</p>
-
-<span class="file">lib/sync/pb-realtime.ts:38</span>
-<pre><code>const realtimeRecordShape = z.object({
+  <div class="snippet">
+    <span class="file-ref">lib/sync/pb-realtime.ts:38</span>
+<pre class="code-sample">const realtimeRecordShape = z.object({
   device_id: z.string(), task_id: z.string(), owner: z.string(),
 });
 
@@ -371,121 +699,229 @@ export async function subscribe(deviceId: string) {
 
 async function handleRealtimeEvent(event) {
   const parsed = realtimeRecordShape.safeParse(event.record);
-  if (!parsed.success) return;   <span class="annot">// fail closed on weird shapes from a compromised server</span>
+  if (!parsed.success) return;   <span class="c-warn">// fail closed on weird shapes from a compromised server</span>
   const record = parsed.data;
 
-  <span class="annot">// Echo filter — require BOTH non-empty so cold-start (null deviceId) doesn't swallow everything</span>
-  if (record.device_id && currentDeviceId && record.device_id === currentDeviceId) return;
+  <span class="c-note">// Echo filter — require BOTH non-empty so cold-start (null deviceId) doesn't swallow everything</span>
+  if (record.device_id &amp;&amp; currentDeviceId &amp;&amp; record.device_id === currentDeviceId) return;
   if (record.owner !== getCurrentUserId()) return;
 
-  await applyRemoteChange(event.action, event.record);   <span class="annot">// same LWW merge as pull</span>
-}</code></pre>
+  await applyRemoteChange(event.action, event.record);   <span class="c-note">// same LWW merge as pull</span>
+}</pre>
+  </div>
+</section>
 
-<h2>6. The coordinator (why concurrent sync calls are safe)</h2>
+<!-- ================================================================
+     6. COORDINATOR
+     ================================================================ -->
+<section class="sec" id="coordinator">
+  <div class="sec-head">
+    <span class="idx">06</span>
+    <h2>The coordinator</h2>
+  </div>
+  <p>
+    Anyone can call <code>requestSync()</code> — the sync button, the background timer,
+    the health monitor, the app on focus. The coordinator collapses concurrent requests
+    into one in-flight sync plus at most one queued follow-up, with user-priority
+    overriding auto-priority.
+  </p>
 
-<p>
-  Anyone can call <code>requestSync()</code> — the sync button, the background timer, the health
-  monitor, the app on focus. The coordinator collapses concurrent requests into one in-flight
-  sync plus at most one queued follow-up, with user-priority overriding auto-priority.
-</p>
+  <table class="tbl" style="margin-top: var(--sp-4);">
+    <thead>
+      <tr><th>Signal</th><th>Where</th><th>What happens</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Click &ldquo;Sync now&rdquo;</td>
+        <td><code>sync-provider.tsx:172</code></td>
+        <td><code>requestSync('user')</code> — bypasses backoff</td>
+      </tr>
+      <tr>
+        <td>Background timer</td>
+        <td><code>background-sync.ts</code></td>
+        <td><code>requestSync('auto')</code> — gated by retry backoff</td>
+      </tr>
+      <tr>
+        <td>Local mutation</td>
+        <td><code>tasks/crud/*</code></td>
+        <td>Enqueue only; sync happens on next tick</td>
+      </tr>
+      <tr>
+        <td>SSE event</td>
+        <td><code>pb-realtime.ts</code></td>
+        <td>Apply directly via <code>applyRemoteChange()</code></td>
+      </tr>
+      <tr>
+        <td>Health monitor</td>
+        <td><code>health-monitor.ts</code></td>
+        <td>Logs issues, does not auto-sync</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
 
-<table>
-  <tr><th>Signal</th><th>Where</th><th>What happens</th></tr>
-  <tr><td>Click "Sync now"</td><td><code>sync-provider.tsx:172</code></td><td><code>requestSync('user')</code> — bypasses backoff</td></tr>
-  <tr><td>Background timer</td><td><code>background-sync.ts</code></td><td><code>requestSync('auto')</code> — gated by retry backoff</td></tr>
-  <tr><td>Local mutation</td><td><code>tasks/crud/*</code></td><td>Enqueue only; sync happens on next tick</td></tr>
-  <tr><td>SSE event</td><td><code>pb-realtime.ts</code></td><td>Apply directly via <code>applyRemoteChange()</code></td></tr>
-  <tr><td>Health monitor</td><td><code>health-monitor.ts</code></td><td>Logs issues, does not auto-sync</td></tr>
-</table>
+<!-- ================================================================
+     7. GOTCHAS
+     ================================================================ -->
+<section class="sec" id="gotchas">
+  <div class="sec-head">
+    <span class="idx">07</span>
+    <h2>Gotchas</h2>
+  </div>
 
-<h2>7. Gotchas</h2>
+  <div class="gotcha-list">
 
-<ul class="gotchas">
-  <li class="bad">
-    <b>System fields are unsortable / unfilterable in PocketBase v0.23+.</b>
-    You cannot <code>sort: '-updated'</code> or <code>filter: 'updated &gt; X'</code> — the query parser refuses.
-    Every timestamp the sync code touches is <code>client_updated_at</code>, a custom field we set
-    from <code>task.updatedAt</code>. Same applies to indexes: custom indexes can't reference
-    <code>updated</code>/<code>created</code>.
-  </li>
-  <li class="bad">
-    <b>Admin endpoint moved.</b>
-    Use <code>/api/collections/_superusers/auth-with-password</code>, not the legacy
-    <code>/api/admins/auth-with-password</code>. If you script collection setup, hit the new one.
-  </li>
-  <li class="bad">
-    <b><code>_pb_users_auth_</code> is not a real collectionId.</b>
-    Don't use that placeholder as the <code>collectionId</code> of a relation field — it silently
-    breaks. Either use a plain <code>text</code> field for the owner FK (what we do), or look up
-    the actual users-collection id and substitute it.
-  </li>
-  <li>
-    <b>SDK auto-cancellation will tear apart a push loop.</b>
-    The default behaviour cancels any in-flight request when a new one fires on the same
-    collection. We call <code>pb.autoCancellation(false)</code> in the singleton — don't
-    re-enable it.
-  </li>
-  <li>
-    <b>100ms throttle is load-bearing, not paranoia.</b>
-    PocketBase will return 429s under bursts. We sleep <code>THROTTLE_MS</code> between push
-    items, and if a 429 still slips through we <em>abort the push loop early</em> rather than
-    grind through the rest of the queue and amplify the response.
-  </li>
-  <li>
-    <b>LWW uses <code>&gt;=</code>, not <code>&gt;</code>.</b>
-    On a timestamp tie, remote wins. This is deliberate — if two devices write at the same
-    millisecond, whichever made it to the server first becomes truth, which is the same
-    invariant the pull cursor relies on.
-  </li>
-  <li>
-    <b>Device-local fields are not synced through.</b>
-    <code>notificationSent</code>, <code>lastNotificationAt</code>, <code>snoozedUntil</code>
-    are preserved from the existing local row when a remote update lands. Adding a new
-    "per-device" field means editing <code>pocketBaseToTaskRecord</code> in
-    <code>task-mapper.ts</code> — not just the schema.
-  </li>
-  <li>
-    <b>Echo filter needs both sides non-empty.</b>
-    A naïve <code>record.device_id === currentDeviceId</code> would treat a cold-start race
-    (where <code>currentDeviceId</code> is still null) as "this is my echo, skip it" and drop
-    every legitimate event. The actual check requires both to be truthy.
-  </li>
-  <li>
-    <b>Deletes are reconciled, not pushed individually.</b>
-    Pull ends with <code>reconcileDeletedTasks()</code>: any local task that's missing from the
-    remote index and has <em>no pending sync op</em> gets deleted locally. If the remote
-    index fetch fails, reconciliation is skipped — better to keep a stale row than to delete
-    real data based on an incomplete view.
-  </li>
-  <li>
-    <b>Failed queue items aren't deleted.</b>
-    After <code>MAX_RETRIES</code>, items transition to <code>status: 'failed'</code> and stay
-    in <code>db.syncQueue</code>. They show up in the sync history UI for manual retry or
-    dismissal. <code>getPending()</code> filters them out so they don't keep clogging the push
-    loop.
-  </li>
-  <li>
-    <b>Raw error messages from PB must never be persisted.</b>
-    4xx responses can echo task content (titles, descriptions) back. Push errors run through
-    <code>sanitizeSyncError()</code> to a stable code before they hit <code>queue.lastError</code>
-    or any log. Do the same if you add new write paths.
-  </li>
-  <li class="good">
-    <b>Local dev tip:</b>
-    Set <code>NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io</code> in <code>.env.local</code> to
-    test against production OAuth. A local PocketBase at <code>127.0.0.1:8090</code> needs its
-    own provider setup — Google/GitHub apps need the right redirect URIs registered.
-  </li>
-</ul>
+    <div class="alert is-danger">
+      <div class="alert-body">
+        <p class="alert-title">System fields are unsortable / unfilterable in PocketBase v0.23+</p>
+        <p>You cannot <code>sort: '-updated'</code> or <code>filter: 'updated &gt; X'</code> — the query parser refuses. Every timestamp the sync code touches is <code>client_updated_at</code>, a custom field set from <code>task.updatedAt</code>. Same applies to indexes: custom indexes can't reference <code>updated</code>/<code>created</code>.</p>
+      </div>
+    </div>
 
-<h2>8. If you only remember four things</h2>
+    <div class="alert is-danger">
+      <div class="alert-body">
+        <p class="alert-title">Admin endpoint moved</p>
+        <p>Use <code>/api/collections/_superusers/auth-with-password</code>, not the legacy <code>/api/admins/auth-with-password</code>. If you script collection setup, hit the new one.</p>
+      </div>
+    </div>
 
-<ol>
-  <li>Local Dexie is the source of truth. PocketBase is a fan-out mirror.</li>
-  <li>Every timestamp comparison uses <code>client_updated_at</code>. Never trust system fields.</li>
-  <li>Mutations enqueue durably; the coordinator decides when to flush.</li>
-  <li>Realtime SSE applies the same LWW merge as the pull loop — there is one merge rule, in two places.</li>
-</ol>
+    <div class="alert is-danger">
+      <div class="alert-body">
+        <p class="alert-title"><code>_pb_users_auth_</code> is not a real collectionId</p>
+        <p>Don't use that placeholder as the <code>collectionId</code> of a relation field — it silently breaks. Either use a plain <code>text</code> field for the owner FK (what we do), or look up the actual users-collection id and substitute it.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">SDK auto-cancellation will tear apart a push loop</p>
+        <p>The default behaviour cancels any in-flight request when a new one fires on the same collection. We call <code>pb.autoCancellation(false)</code> in the singleton — don't re-enable it.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">100ms throttle is load-bearing, not paranoia</p>
+        <p>PocketBase returns 429s under bursts. We sleep <code>THROTTLE_MS</code> between push items, and if a 429 still slips through we abort the push loop early rather than grind through the queue and amplify the response.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">LWW uses <code>&gt;=</code>, not <code>&gt;</code></p>
+        <p>On a timestamp tie, remote wins. Deliberate — if two devices write at the same millisecond, whichever made it to the server first becomes truth, the same invariant the pull cursor relies on.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">Device-local fields are not synced through</p>
+        <p><code>notificationSent</code>, <code>lastNotificationAt</code>, <code>snoozedUntil</code> are preserved from the existing local row when a remote update lands. Adding a new per-device field means editing <code>pocketBaseToTaskRecord</code> in <code>task-mapper.ts</code> — not just the schema.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">Echo filter needs both sides non-empty</p>
+        <p>A naïve <code>record.device_id === currentDeviceId</code> would treat a cold-start race (where <code>currentDeviceId</code> is still null) as &ldquo;this is my echo, skip it&rdquo; and drop every legitimate event. The actual check requires both to be truthy.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">Deletes are reconciled, not pushed individually</p>
+        <p>Pull ends with <code>reconcileDeletedTasks()</code>: any local task missing from the remote index and with <em>no pending sync op</em> gets deleted locally. If the remote index fetch fails, reconciliation is skipped — better to keep a stale row than to delete real data based on an incomplete view.</p>
+      </div>
+    </div>
+
+    <div class="alert is-warning">
+      <div class="alert-body">
+        <p class="alert-title">Raw error messages from PB must never be persisted</p>
+        <p>4xx responses can echo task content (titles, descriptions) back. Push errors run through <code>sanitizeSyncError()</code> to a stable code before they hit <code>queue.lastError</code> or any log. Do the same if you add new write paths.</p>
+      </div>
+    </div>
+
+    <div class="alert is-success">
+      <div class="alert-body">
+        <p class="alert-title">Local dev tip</p>
+        <p>Set <code>NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io</code> in <code>.env.local</code> to test against production OAuth. A local PocketBase at <code>127.0.0.1:8090</code> needs its own provider setup — Google/GitHub apps need the right redirect URIs registered.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================================================================
+     8. SUMMARY
+     ================================================================ -->
+<section class="sec" id="summary">
+  <div class="sec-head">
+    <span class="idx">08</span>
+    <h2>If you only remember four things</h2>
+  </div>
+
+  <div class="tldr">
+    <p class="tldr-label">TL;DR</p>
+    <ol>
+      <li>Local Dexie is the source of truth. PocketBase is a fan-out mirror.</li>
+      <li>Every timestamp comparison uses <code>client_updated_at</code>. Never trust system fields.</li>
+      <li>Mutations enqueue durably; the coordinator decides when to flush.</li>
+      <li>Realtime SSE applies the same LWW merge as the pull loop — one merge rule, two places.</li>
+    </ol>
+  </div>
+
+  <div class="lessons-grid">
+    <div class="lesson">
+      <span class="n">01 / Source of truth</span>
+      <p>Treat Dexie as the database. PocketBase is replication infrastructure.</p>
+    </div>
+    <div class="lesson">
+      <span class="n">02 / Custom timestamps</span>
+      <p>Always <code>client_updated_at</code>. The <code>updated</code> system field is off-limits for filter/sort.</p>
+    </div>
+    <div class="lesson">
+      <span class="n">03 / Durable queue</span>
+      <p>Mutations enqueue locally; the coordinator owns scheduling and backoff.</p>
+    </div>
+    <div class="lesson">
+      <span class="n">04 / One merge rule</span>
+      <p>Pull and realtime apply the same LWW (<code>&gt;=</code>) merge. Two surfaces, identical behavior.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="page-foot">
+  <p>
+    Source: <code>lib/sync/</code> &middot;
+    Cross-reference: <code>docs/adr/0002-pocketbase-cloud-sync.md</code> &middot;
+    PocketBase admin: <code>https://api.vinny.io/_/</code>
+  </p>
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+    const label = document.getElementById('theme-label');
+    const KEY = 'theme-preview';
+    const order = ['auto', 'light', 'dark'];
+    function apply(s) {
+      if (s === 'auto') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', s);
+      if (label) label.textContent = s;
+    }
+    let current = localStorage.getItem(KEY) || 'auto';
+    if (!order.includes(current)) current = 'auto';
+    apply(current);
+    btn.addEventListener('click', () => {
+      current = order[(order.indexOf(current) + 1) % order.length];
+      localStorage.setItem(KEY, current);
+      apply(current);
+    });
+  })();
+</script>
 
 </body>
 </html>
