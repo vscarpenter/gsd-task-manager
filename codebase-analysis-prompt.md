@@ -66,7 +66,7 @@ Report structure:
 Output requirements:
 - Fetch https://raw.githubusercontent.com/vscarpenter/inkwell/main/agent-instructions.md
   and apply the Inkwell design system
-- Save the report as codebase-analysis-report.html
+- Save the report as docs/codebase-analysis-report.html
 - Make it executive ready: clean tables, severity color coding, collapsible
   detail sections, and anchored navigation
 - Include a "Methodology and limitations" section so readers know what was
