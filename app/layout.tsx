@@ -84,8 +84,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
-        {/* eslint-disable-next-line @next/next/no-css-tags -- Inkwell is installed as canonical static CSS. */}
-        <link rel="stylesheet" href="/css/inkwell.css" />
       </head>
       <body className="font-sans bg-background text-foreground antialiased">
         <ErrorBoundary>

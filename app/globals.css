@@ -1,50 +1,210 @@
+/* All @import rules must appear before any other CSS rules (CSS spec),
+   so the Inkwell import chain is flattened here at the entry point
+   rather than nesting through inkwell-theme.css. The vendored
+   inkwell-theme.css is kept verbatim in app/css/ for reference. */
 @import "tailwindcss";
-@config "../tailwind.config.ts";
+@import "./css/inkwell-tokens.css";
+@import "./css/inkwell-components.css" layer(components);
 
+/* =====================================================================
+   Inkwell @theme aliases — alias Inkwell tokens into Tailwind v4's
+   namespace so utilities like bg-accent, text-slate, font-serif,
+   border-accent, text-h1, max-w-default, rounded-md resolve.
+   Mirrors the @theme block in app/css/inkwell-theme.css verbatim.
+   ===================================================================== */
+@theme {
+  /* Surfaces & text */
+  --color-ivory: var(--ivory);
+  --color-paper: var(--paper);
+  --color-slate: var(--slate);
+  --color-oat:   var(--oat);
+
+  /* Neutral scale (cool putty) */
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-500: var(--gray-500);
+  --color-gray-700: var(--gray-700);
+
+  /* Accent family */
+  --color-accent:               var(--accent);
+  --color-accent-d:             var(--accent-d);
+  --color-accent-tint:          var(--accent-tint);
+  --color-accent-focus:         var(--accent-focus-ring);
+  --color-accent-strong-border: var(--accent-strong-border);
+
+  /* Semantic */
+  --color-olive:            var(--olive);
+  --color-olive-tint:       var(--olive-tint);
+  --color-rust:             var(--rust);
+  --color-rust-d:           var(--rust-d);
+  --color-rust-tint:        var(--rust-tint);
+  --color-rust-tint-border: var(--rust-tint-border);
+  --color-warning:          var(--warning);
+  --color-warning-dark:     var(--warning-dark);
+  --color-warning-tint:     var(--warning-tint);
+  --color-info:             var(--info);
+  --color-sky:              var(--sky);
+
+  /* Type families */
+  --font-serif: var(--serif);
+  --font-sans:  var(--sans);
+  --font-mono:  var(--mono);
+
+  /* Inkwell type scale — exposed as Tailwind `text-h1`, `text-h2`, etc. */
+  --text-display: var(--t-display);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 500;
+  --text-h1: var(--t-h1);
+  --text-h1--line-height: 1.2;
+  --text-h1--letter-spacing: -0.01em;
+  --text-h1--font-weight: 500;
+  --text-h2: var(--t-h2);
+  --text-h2--line-height: 1.3;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 500;
+  --text-h3: var(--t-h3);
+  --text-h3--line-height: 1.22;
+  --text-h3--letter-spacing: -0.008em;
+  --text-h3--font-weight: 500;
+  --text-body: var(--t-body);
+  --text-body--line-height: 1.55;
+  --text-body--font-weight: 430;
+  --text-small: var(--t-small);
+  --text-small--line-height: 1.5;
+  --text-small--font-weight: 430;
+  --text-caption: var(--t-caption);
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 500;
+  --text-eyebrow: var(--t-eyebrow);
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.12em;
+  --text-eyebrow--font-weight: 500;
+
+  /* Radii */
+  --radius-xs:   var(--r-xs);
+  --radius-sm:   var(--r-sm);
+  --radius-md:   var(--r-md);
+  --radius-lg:   var(--r-lg);
+  --radius-xl:   var(--r-xl);
+  --radius-full: var(--r-pill);
+
+  /* Container max-widths */
+  --container-narrow:  820px;
+  --container-default: 920px;
+  --container-wide:   1120px;
+}
+
+/* The 1.5px hairline — Inkwell's signature, exposed as an opt-in utility. */
+@utility border-hair {
+  border-width: 1.5px;
+}
+
+/* Dark variant fires on Inkwell's manual [data-theme="dark"] toggle.
+   Mirrors @custom-variant dark in inkwell-theme.css. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* =====================================================================
+   GSD-specific tokens — extensions on top of Inkwell 1.3.1.
+   Inkwell owns surfaces / accent / semantic / type / radii / dark cascade
+   via the imports above; everything below is GSD-only.
+   ===================================================================== */
 :root {
-  /* App bridge aliases. Inkwell owns the canonical tokens loaded from /css/inkwell.css. */
-  --background: var(--ivory);
-  --background-muted: var(--gray-100);
-  --background-accent: var(--oat);
-  --foreground: var(--slate);
-  --foreground-muted: var(--gray-500);
-  --border-muted: var(--gray-100);
-  --accent-hover: var(--accent-d);
-  --accent-muted: var(--accent-tint);
-  --card-background: var(--paper);
-  --card-border: var(--gray-300);
-
-  --quadrant-focus: color-mix(in srgb, var(--rust) 12%, var(--paper));
-  --quadrant-schedule: color-mix(in srgb, var(--accent) 12%, var(--paper));
-  --quadrant-delegate: color-mix(in srgb, var(--olive) 12%, var(--paper));
+  /* Quadrant fills — Eisenhower matrix backdrops, derived from Inkwell tokens. */
+  --quadrant-focus:    color-mix(in srgb, var(--rust)    12%, var(--paper));
+  --quadrant-schedule: color-mix(in srgb, var(--accent)  12%, var(--paper));
+  --quadrant-delegate: color-mix(in srgb, var(--olive)   12%, var(--paper));
   --quadrant-eliminate: color-mix(in srgb, var(--warning) 14%, var(--paper));
   --q1: var(--rust);
   --q2: var(--accent);
   --q3: var(--olive);
   --q4: var(--warning);
 
-  --shadow-card: var(--shadow-sm);
-  --shadow-column: var(--shadow-sm);
-  --shadow-fab: 0 8px 30px var(--accent-focus-ring);
-
-  /* Solid color slots retained for existing chart/quadrant call sites. */
-  --gradient-focus: var(--rust);
-  --gradient-schedule: var(--accent);
-  --gradient-delegate: var(--olive);
+  /* Chart / quadrant accent slots used by recharts and matrix headers. */
+  --gradient-focus:     var(--rust);
+  --gradient-schedule:  var(--accent);
+  --gradient-delegate:  var(--olive);
   --gradient-eliminate: var(--warning);
-  --chart-series-2: var(--sky);
+  --chart-series-2:     var(--sky);
 
-  --status-overdue: var(--rust);
-  --status-overdue-muted: color-mix(in srgb, var(--rust) 14%, var(--paper));
-  --status-blocked: var(--warning);
-  --status-blocked-muted: var(--warning-tint);
-  --status-blocking: var(--sky);
-  --status-blocking-muted: color-mix(in srgb, var(--sky) 14%, var(--paper));
-  --status-success: var(--olive);
-  --status-success-muted: var(--olive-tint);
+  /* Task-status palette — derived from Inkwell semantic tokens. */
+  --status-overdue:        var(--rust);
+  --status-overdue-muted:  color-mix(in srgb, var(--rust)  14%, var(--paper));
+  --status-blocked:        var(--warning);
+  --status-blocked-muted:  var(--warning-tint);
+  --status-blocking:       var(--sky);
+  --status-blocking-muted: color-mix(in srgb, var(--sky)   14%, var(--paper));
+  --status-success:        var(--olive);
+  --status-success-muted:  var(--olive-tint);
 
-  --duration-fast: var(--t-fast);
+  /* Component-tier shadow aliases. */
+  --shadow-card:   var(--shadow-sm);
+  --shadow-column: var(--shadow-sm);
+  --shadow-fab:    0 8px 30px var(--accent-focus-ring);
+
+  /* Animation aliases. */
+  --duration-fast:   var(--t-fast);
   --duration-normal: var(--t-slow);
+}
+
+/* =====================================================================
+   GSD @theme additions — surface GSD-only tokens as Tailwind utilities,
+   without redefining any token Inkwell already exposes. Inkwell's
+   display / body / caption / h1-h3 / eyebrow type scale wins; GSD only
+   adds the names Inkwell doesn't ship (text-title, text-label).
+   ===================================================================== */
+@theme {
+  /* Surface / foreground aliases preserved for existing call sites
+     ("bg-background", "text-foreground-muted", "border-card-border"). */
+  --color-background:       var(--ivory);
+  --color-background-muted: var(--gray-100);
+  --color-background-accent: var(--oat);
+  --color-foreground:       var(--slate);
+  --color-foreground-muted: var(--gray-500);
+  --color-border:           var(--gray-300);
+  --color-border-muted:     var(--gray-100);
+  --color-accent-hover:     var(--accent-d);
+  --color-accent-muted:     var(--accent-tint);
+  --color-card:             var(--paper);
+  --color-card-border:      var(--gray-300);
+  --color-canvas:           var(--ivory);
+  --color-canvas-foreground: var(--gray-100);
+  --color-muted:            var(--gray-500);
+  --color-muted-foreground: var(--gray-500);
+
+  /* Quadrant + status palettes — Eisenhower matrix backdrops and task
+     state colors, both derived from Inkwell semantic tokens. */
+  --color-quadrant-focus:     var(--quadrant-focus);
+  --color-quadrant-schedule:  var(--quadrant-schedule);
+  --color-quadrant-delegate:  var(--quadrant-delegate);
+  --color-quadrant-eliminate: var(--quadrant-eliminate);
+  --color-status-overdue:        var(--status-overdue);
+  --color-status-overdue-muted:  var(--status-overdue-muted);
+  --color-status-blocked:        var(--status-blocked);
+  --color-status-blocked-muted:  var(--status-blocked-muted);
+  --color-status-blocking:       var(--status-blocking);
+  --color-status-blocking-muted: var(--status-blocking-muted);
+  --color-status-success:        var(--status-success);
+  --color-status-success-muted:  var(--status-success-muted);
+
+  /* Type names Inkwell does not ship — kept verbatim for existing call sites. */
+  --text-title: 18px;
+  --text-title--line-height: 1.35;
+  --text-title--letter-spacing: -0.01em;
+  --text-label: 11px;
+  --text-label--line-height: 1.45;
+  --text-label--letter-spacing: 0.04em;
+}
+
+/* GSD chooses to make the 1.5px hairline the default Tailwind `border` width.
+   Inkwell's TAILWIND.md leaves Tailwind's 1px default alone and ships
+   `border-hair` (1.5px) as an opt-in utility — we deliberately invert that
+   trade-off because GSD has no third-party Tailwind components in conflict
+   and the hairline IS the brand. `border-hair` from Inkwell still works for
+   any code that wants to be explicit. */
+@utility border {
+  border-width: 1.5px;
 }
 
 body {
@@ -280,13 +440,13 @@ main {
 
   @keyframes complete-flash {
     0% {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--olive) 40%, transparent);
     }
     50% {
-      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--olive) 0%, transparent);
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--olive) 0%, transparent);
     }
   }
 
@@ -718,9 +878,5 @@ main {
 }
 
 .overdue-task {
-  border-left-color: rgb(239 68 68);
-}
-
-.dark .overdue-task {
-  border-left-color: rgb(248 113 113);
+  border-left-color: var(--rust);
 }
