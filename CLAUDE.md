@@ -40,7 +40,7 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 ## Architecture
 
 ### Data Layer
-- **IndexedDB via Dexie** (`lib/db.ts`): `tasks`, `smartViews`, `notificationSettings`, `appPreferences` tables (v13)
+- **IndexedDB via Dexie** (`lib/db.ts`): `tasks`, `archivedTasks`, `smartViews`, `notificationSettings`, `appPreferences` (plus sync-internal tables) at schema v14
 - **CRUD Operations** (`lib/tasks.ts`): Task mutations, subtask/dependency management
 - **Bulk Operations** (`lib/bulk-operations.ts`): Batch operations for multi-select
 - **Live Queries** (`lib/use-tasks.ts`): `useTasks()` hook with live updates
@@ -123,20 +123,11 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - Coverage thresholds: 80% statements, 80% lines, 80% functions, 75% branches
 
 ### E2E Testing
-- **Framework**: Playwright with TypeScript support
-- **Configuration**: `playwright.config.ts` with auto-starting dev server
-- **Test Location**: `tests/e2e/` directory
-- **Browser Support**: Chromium, Firefox, WebKit
-- **Key Features**:
-  - Automatic IndexedDB cleanup between tests
-  - Page Object Model for maintainable tests
-  - Handles app redirect (root → about page) automatically
-  - Tests core user workflows: CRUD, navigation, search, settings
-- **Data Attributes**: Components use `data-testid` attributes for reliable selector targeting
-- **Running Tests**:
-  - `bun run test:e2e` - Run all e2e tests
-  - `bun run test:e2e:ui` - Run with interactive UI
-  - `bun run test:e2e:debug` - Run in debug mode with step-through
+- Playwright tests in `tests/e2e/` with auto-starting dev server (`playwright.config.ts`)
+- Tests run against Chromium, Firefox, WebKit
+- IndexedDB is cleared between tests automatically; root URL redirects to the about page on first load
+- Use `data-testid` attributes on components for stable selectors
+- Page Object Model for maintainable test fixtures
 
 ## Code Style
 - **TypeScript strict mode** with Next.js typed routes
@@ -153,14 +144,14 @@ These packages are not self-explanatory from their names alone:
 - **`@tanstack/react-virtual`** — Virtual scrolling for large task lists; only renders visible DOM rows, preventing performance degradation when lists grow into hundreds of tasks.
 - **`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`** — Accessible, headless drag-and-drop primitives. Supports screen readers and full keyboard navigation, unlike most DnD libraries.
 - **`recharts`** — Lightweight, composable chart library used for dashboard analytics (completion trends, quadrant distribution). Chosen for small bundle size and React-native API.
-- **`sonner`** — Accessible toast notifications. Replaced `react-hot-toast` for better a11y (ARIA live regions, focus management).
+- **`sonner`** — Accessible toast notifications (ARIA live regions, focus management). The app uses `toast.error()` for user-facing errors instead of `window.alert()`.
 - **`babel-plugin-react-compiler`** — Enables the React compiler for automatic memoization optimization, reducing manual `useMemo`/`useCallback` boilerplate.
 - **`canvas-confetti`** — Task completion celebration animation. Pinned to exact version `1.9.4` for reproducible builds (the API changed in v2).
 - **`nanoid`** — Cryptographically-secure unique ID generation for tasks and smart views. Produces URL-safe IDs smaller than UUIDs.
 
 ### Schema & Database
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
-- Database migrations in `lib/db.ts` - current version is 13
+- Database migrations in `lib/db.ts` - current version is 14
 - New task fields (recurrence, tags, subtasks, dependencies) are optional with sensible defaults
 - **Import schema** uses `.strip()` (not `.strict()`) to accept legacy exports with extra fields (e.g., `vectorClock` from the old Cloudflare sync system)
 - Export schema still uses `.strict()` to ensure clean outgoing data
@@ -198,10 +189,9 @@ These packages are not self-explanatory from their names alone:
 - Use `fetchWithRetry()` for resilient API calls
 
 ### OAuth Authentication
-- PocketBase SDK handles OAuth popup flow automatically (`authWithOAuth2`)
-- Supports Google and GitHub providers (both implemented client-side; Google configured on server, GitHub needs PocketBase admin setup at `https://api.vinny.io/_/` → Settings → Auth providers)
-- Auth state persists in PocketBase's built-in `authStore` (localStorage)
-- **Local dev**: Set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PocketBase (local PocketBase at 127.0.0.1:8090 requires separate OAuth provider setup)
+- OAuth popup flow is delegated to the PocketBase SDK via `authWithOAuth2`; auth tokens live in the SDK's `authStore` (localStorage) and auto-refresh
+- GitHub provider requires server-side setup in PocketBase admin (`https://api.vinny.io/_/` → Settings → Auth providers); Google is already configured
+- **Local dev**: Set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PocketBase. A local PocketBase at `127.0.0.1:8090` would need its own OAuth provider setup.
 
 ### Test-Driven Development (TDD)
 
@@ -227,18 +217,10 @@ These packages are not self-explanatory from their names alone:
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
 - Static export mode means no API routes or SSR
 
-### Testing
-- Use `bun run test` (not `bun test`) — the latter invokes bun's built-in runner, not Vitest
-- Mock IndexedDB with `fake-indexeddb` (already auto-imported in vitest.setup.ts)
-- `localStorage` is polyfilled in vitest.setup.ts with a full in-memory implementation — use `localStorage.removeItem(key)` (not `localStorage.clear()`) in test beforeEach for targeted cleanup
-- The sync module (`lib/sync/`) has partial test coverage — use `vi.mock('pocketbase')` pattern from existing sync tests
-
-### April 2026 Coding Standards Audit — Lessons
-- Removed unused `dompurify` / `@types/dompurify` — React handles XSS natively
-- Pinned `canvas-confetti` from `^1.9.4` to exact `1.9.4`
-- Migrated `.parse()` to `.safeParse()` in user-input paths (import, create)
-- `window.alert()` is not accessible — always use `toast.error()` from sonner instead
-- `localStorage.clear()` is not available in jsdom under Bun's test runner — use targeted `removeItem()` calls in tests
+### Testing Gotchas
+- `fake-indexeddb` is auto-imported in `vitest.setup.ts` — no per-test setup needed
+- `localStorage` is polyfilled in-memory — use `localStorage.removeItem(key)` (not `.clear()`, which jsdom under Bun doesn't expose) in test `beforeEach`
+- For `lib/sync/` tests, mock the SDK with `vi.mock('pocketbase')` — follow the pattern in existing sync tests
 
 ## Modular Architecture
 
