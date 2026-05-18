@@ -14,10 +14,46 @@ import type { RecordModel } from 'pocketbase';
 
 const logger = createLogger('SYNC_ENGINE');
 
+/** Five minutes — anything further into the future is treated as clock skew. */
+const FUTURE_TIMESTAMP_CLAMP_MS = 5 * 60 * 1000;
+
+/** Overlap window subtracted from the persisted cursor to avoid boundary misses. */
+const CURSOR_OVERLAP_MS = 30 * 1000;
+
+/**
+ * Clamp a client-supplied timestamp so it cannot exceed `now + 5min`.
+ * Anything further into the future is treated as clock skew, not a real event.
+ * A NaN/malformed input falls back to the current time.
+ */
+function clampFutureTimestamp(iso: string): string {
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return new Date().toISOString();
+  const ceiling = Date.now() + FUTURE_TIMESTAMP_CLAMP_MS;
+  return ts > ceiling ? new Date(ceiling).toISOString() : iso;
+}
+
+/** Find the max client_updated_at across records that were successfully applied. */
+function findMaxAppliedTimestamp(appliedRecords: RecordModel[]): string | null {
+  let max: string | null = null;
+  for (const record of appliedRecords) {
+    const raw = record['client_updated_at'] as string | undefined;
+    if (!raw) continue;
+    const clamped = clampFutureTimestamp(raw);
+    if (!max || clamped > max) max = clamped;
+  }
+  return max;
+}
+
 /**
  * Apply fetched remote records to local IndexedDB using LWW resolution.
+ * Returns the records that were actually applied (post-validation, post-LWW)
+ * so the caller can compute a cursor from real, persisted events only.
  */
-async function applyRemoteRecords(records: RecordModel[]): Promise<{ pulledCount: number; skippedCount: number }> {
+async function applyRemoteRecords(records: RecordModel[]): Promise<{
+  appliedRecords: RecordModel[];
+  pulledCount: number;
+  skippedCount: number;
+}> {
   const db = getDb();
   // First pass: validate records without local state (just to filter invalid ones)
   const validRecords: RecordModel[] = [];
@@ -39,6 +75,7 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{ pulledCount
       .map(t => [t.id, t])
   );
 
+  const appliedRecords: RecordModel[] = [];
   let pulledCount = 0;
 
   for (const record of validRecords) {
@@ -49,30 +86,20 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{ pulledCount
 
     if (!localTask) {
       await db.tasks.add(remoteTask);
+      appliedRecords.push(record);
       pulledCount++;
     } else {
       const remoteTime = new Date(remoteTask.updatedAt).getTime();
       const localTime = new Date(localTask.updatedAt).getTime();
       if (remoteTime >= localTime) {
         await db.tasks.put(remoteTask);
+        appliedRecords.push(record);
         pulledCount++;
       }
     }
   }
 
-  return { pulledCount, skippedCount };
-}
-
-/** Find the maximum client_updated_at across a set of PocketBase records */
-function findMaxTimestamp(records: RecordModel[]): string | null {
-  let max: string | null = null;
-  for (const record of records) {
-    const ts = record['client_updated_at'] as string;
-    if (ts && (!max || ts > max)) {
-      max = ts;
-    }
-  }
-  return max;
+  return { appliedRecords, pulledCount, skippedCount };
 }
 
 /**
@@ -93,7 +120,10 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pu
 
   let filter = `owner = "${escapeFilterValue(ownerId)}"`;
   if (lastSyncAt) {
-    filter += ` && client_updated_at > "${escapeFilterValue(lastSyncAt)}"`;
+    // `>=` (paired with the 30s overlap subtracted when persisting the cursor)
+    // protects against boundary misses caused by clock drift across devices.
+    // Re-fetched records are no-ops via LWW.
+    filter += ` && client_updated_at >= "${escapeFilterValue(lastSyncAt)}"`;
   }
 
   const records = await pb.collection('tasks').getFullList({
@@ -101,12 +131,18 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pu
     sort: '-client_updated_at',
   });
 
-  const { pulledCount, skippedCount } = await applyRemoteRecords(records);
+  const { appliedRecords, pulledCount, skippedCount } = await applyRemoteRecords(records);
   if (skippedCount > 0) {
     logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }
 
-  const maxObservedTimestamp = findMaxTimestamp(records);
+  // Advance the cursor only from records we actually applied — never from
+  // skipped/invalid ones — and subtract a 30s overlap window so the next
+  // pull's `>=` filter catches anything written near the boundary.
+  const maxApplied = findMaxAppliedTimestamp(appliedRecords);
+  const maxObservedTimestamp = maxApplied
+    ? new Date(new Date(maxApplied).getTime() - CURSOR_OVERLAP_MS).toISOString()
+    : null;
 
   await reconcileDeletedTasks(ownerId);
 

@@ -252,7 +252,9 @@ describe('pb-sync-engine', () => {
       const result = await pullRemoteChanges(null);
 
       expect(result.authenticated).toBe(true);
-      expect(result.maxObservedTimestamp).toBe('2024-06-15T12:00:00.000Z');
+      // Cursor is persisted with a 30s overlap subtracted so the next pull's
+      // `>=` filter can re-catch boundary records across clock drift.
+      expect(result.maxObservedTimestamp).toBe('2024-06-15T11:59:30.000Z');
     });
 
     it('should return null maxObservedTimestamp when no records pulled', async () => {
@@ -385,7 +387,8 @@ describe('pb-sync-engine', () => {
       const putCalls = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls;
       expect(putCalls.length).toBeGreaterThan(0);
       const putCall = putCalls[0][0];
-      expect(putCall.lastSyncAt).toBe('2024-06-15T12:00:00.000Z');
+      // Cursor is persisted with a 30s overlap subtracted; see pb-pull.ts.
+      expect(putCall.lastSyncAt).toBe('2024-06-15T11:59:30.000Z');
     });
 
     it('should not call recordSuccess on partial failure', async () => {
