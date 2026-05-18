@@ -5,7 +5,7 @@
 import { getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import type { PBSyncConfig } from './types';
+import type { PBSyncConfig, RemoteTaskIndexEntry } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -53,21 +53,28 @@ export async function getDeviceId(): Promise<string> {
 export { getCurrentUserId };
 
 /**
- * Fetch all existing remote task_ids for the current user in one request.
- * Returns a Map of task_id -> PocketBase record id for efficient lookups.
+ * Fetch all existing remote task records for the current user in one request.
+ * Returns a Map of task_id -> { pbRecordId, clientUpdatedAt } for efficient
+ * lookups + LWW timestamp comparison in the push path.
  */
-export async function fetchRemoteTaskIndex(ownerId: string): Promise<{ index: Map<string, string>; fetchSucceeded: boolean }> {
+export async function fetchRemoteTaskIndex(ownerId: string): Promise<{
+  index: Map<string, RemoteTaskIndexEntry>;
+  fetchSucceeded: boolean;
+}> {
   assertSafeRecordId(ownerId, 'ownerId');
   const pb = getPocketBase();
-  const index = new Map<string, string>();
+  const index = new Map<string, RemoteTaskIndexEntry>();
 
   try {
     const records = await pb.collection('tasks').getFullList({
       filter: `owner = "${escapeFilterValue(ownerId)}"`,
-      fields: 'id,task_id',
+      fields: 'id,task_id,client_updated_at',
     });
     for (const r of records) {
-      index.set(r['task_id'] as string, r.id);
+      index.set(r['task_id'] as string, {
+        pbRecordId: r.id,
+        clientUpdatedAt: (r['client_updated_at'] as string) ?? null,
+      });
     }
     return { index, fetchSucceeded: true };
   } catch {
