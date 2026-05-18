@@ -86,6 +86,13 @@ describe('Task Import/Export Operations', () => {
         toArray: vi.fn(),
         clear: vi.fn(),
         bulkAdd: vi.fn(),
+        toCollection: vi.fn(() => ({
+          primaryKeys: vi.fn().mockResolvedValue([]),
+        })),
+      },
+      syncQueue: {
+        add: vi.fn(),
+        clear: vi.fn(),
       },
       syncMetadata: {
         get: vi.fn().mockResolvedValue(null),
@@ -308,7 +315,7 @@ describe('Task Import/Export Operations', () => {
 
       expect(mockDb.transaction).toHaveBeenCalledWith(
         'rw',
-        mockDb.tasks,
+        [mockDb.tasks, mockDb.syncQueue],
         expect.any(Function)
       );
     });
