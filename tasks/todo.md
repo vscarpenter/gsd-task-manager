@@ -206,3 +206,13 @@ None currently.
 - [x] Card consistency audit — Matrix + Archive use TaskCard
 - [x] Smart View language clarification (info tooltip)
 
+---
+
+## Follow-ups from PR5 (Codex Finding #2 review) — 2026-05-18
+
+- [ ] Decompose `updateTask` (~126 lines) and `bulkUpdateTasks` (~149 lines) in `packages/mcp-server/src/write-ops/`. Suggested extractions: `buildUpdatedTask(currentTask, input)`, `diffChanges(currentTask, input)`, `writeOneWithPreflight(...)`. Both are well over the 40-line standard.
+- [ ] Unify the conflict surface: have `bulk-operations.ts` catch `ConflictError` from a shared `writeOneWithPreflight` helper and push `err.taskId` to `conflicts`. Eliminates the duplicated `if (preflight.clientUpdatedAt !== X)` comparison and gives one definition of "conflict."
+- [ ] Verify whether PocketBase rate-limits all requests or only writes. If all requests, the bulk preflight doubles request count but the throttle only sleeps between iterations — may still trip 429s on large bulks. Either apply throttle to both preflight and write, or document the assumption.
+- [ ] Pre-existing `findPBRecordId` in `helpers.ts` has the same silent-error-swallowing flaw fixed in PR5 for `fetchSinglePBTaskFresh`. Apply the same `status === 404` discrimination there.
+- [ ] Add lessons.md entry: MCP write-path test fixtures didn't catch the original stale-spread bug because mocks never went stale between calls. Future tests should exercise the read→write timeline, not just data shapes.
+

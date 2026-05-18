@@ -183,6 +183,16 @@ export async function handleBulkUpdateTasks(
     });
   }
 
+  // Surface conflicts so the model can decide to refetch + retry. Conflicts
+  // are an expected LWW outcome (a concurrent writer changed the task between
+  // snapshot and write), not a failure — reported separately from errors.
+  if (result.conflicts && result.conflicts.length > 0) {
+    message += `\nConflicts (${result.conflicts.length} skipped — task changed during bulk operation):\n`;
+    result.conflicts.forEach((id, idx) => {
+      message += `${idx + 1}. ${id} (re-fetch and retry if you still want to apply the change)\n`;
+    });
+  }
+
   return {
     content: [
       {

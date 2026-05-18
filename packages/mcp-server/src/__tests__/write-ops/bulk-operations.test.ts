@@ -8,7 +8,11 @@ vi.mock('../../write-ops/helpers.js', async () => {
   return {
     ...actual,
     getAuthInfo: vi.fn().mockResolvedValue({ ownerId: 'owner-1', deviceId: 'device-1' }),
-    fetchPBRecordIdsForTasks: vi.fn().mockResolvedValue(new Map()),
+    // Snapshot-prefetch returns fresh PB records for the whole batch in one
+    // request — bulk now sources task content from this instead of listTasks.
+    fetchPBSnapshotForTasks: vi.fn().mockResolvedValue(new Map()),
+    // Per-item preflight check just before each write.
+    fetchSinglePBTaskFresh: vi.fn().mockResolvedValue(null),
     updateTaskInPBById: vi.fn().mockResolvedValue(undefined),
     deleteTaskInPBById: vi.fn().mockResolvedValue(undefined),
     sleep: vi.fn().mockResolvedValue(undefined),
@@ -48,6 +52,48 @@ function makeTask(id: string): Task {
   };
 }
 
+/**
+ * Build a PB snapshot entry for the write path. Bulk now reads task content
+ * from PocketBase (cache bypassed) instead of `listTasks`, so write-path tests
+ * mock `fetchPBSnapshotForTasks` with one of these entries per task.
+ */
+function makeSnapshotEntry(id: string) {
+  return {
+    pbRecordId: `rec-${id}`,
+    clientUpdatedAt: '2026-04-01T00:00:00Z',
+    record: {
+      id: `rec-${id}`,
+      task_id: id,
+      owner: 'owner-1',
+      title: `task ${id}`,
+      description: '',
+      urgent: false,
+      important: false,
+      quadrant: 'not-urgent-not-important',
+      due_date: '',
+      completed: false,
+      completed_at: '',
+      recurrence: 'none',
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notification_enabled: true,
+      notify_before: 0,
+      notification_sent: false,
+      last_notification_at: '',
+      snoozed_until: '',
+      estimated_minutes: 0,
+      time_spent: 0,
+      time_entries: [],
+      client_updated_at: '2026-04-01T00:00:00Z',
+      client_created_at: '2026-04-01T00:00:00Z',
+      device_id: 'device-1',
+      created: '2026-04-01T00:00:00Z',
+      updated: '2026-04-01T00:00:00Z',
+    },
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -66,12 +112,13 @@ describe('bulkUpdateTasks — delete safety', () => {
   });
 
   it('actually deletes when dryRun is explicitly false', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
     const helpers = await import('../../write-ops/helpers.js');
-    vi.mocked(listTasks).mockResolvedValueOnce([makeTask('t1')]);
-    vi.mocked(helpers.fetchPBRecordIdsForTasks).mockResolvedValueOnce(
-      new Map([['t1', 'pb-rec-1']])
+    const snapshot = makeSnapshotEntry('t1');
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(
+      new Map([['t1', snapshot]])
     );
+    // Preflight returns the same client_updated_at as the snapshot — no conflict.
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(snapshot);
 
     const result = await bulkUpdateTasks(
       config,
@@ -82,6 +129,7 @@ describe('bulkUpdateTasks — delete safety', () => {
 
     expect(result.dryRun).toBe(false);
     expect(result.deleted).toBe(1);
+    expect(result.conflicts).toEqual([]);
     expect(helpers.deleteTaskInPBById).toHaveBeenCalledTimes(1);
   });
 
@@ -105,12 +153,14 @@ describe('bulkUpdateTasks — delete safety', () => {
   });
 
   it('does not apply the 10-cap to non-delete operations (50-cap still applies via schema)', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
     const helpers = await import('../../write-ops/helpers.js');
     const ids = Array.from({ length: 11 }, (_, i) => `t${i}`);
-    const recordMap = new Map(ids.map((id) => [id, `rec-${id}`]));
-    vi.mocked(listTasks).mockResolvedValueOnce(ids.map((id) => makeTask(id)));
-    vi.mocked(helpers.fetchPBRecordIdsForTasks).mockResolvedValueOnce(recordMap);
+    const snapshot = new Map(ids.map((id) => [id, makeSnapshotEntry(id)]));
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(snapshot);
+    // Each task's preflight returns the same timestamp — no conflicts.
+    for (const id of ids) {
+      vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(snapshot.get(id)!);
+    }
 
     const result = await bulkUpdateTasks(
       config,
@@ -121,5 +171,6 @@ describe('bulkUpdateTasks — delete safety', () => {
 
     expect(result.dryRun).toBe(false);
     expect(result.updated).toBe(11);
+    expect(result.conflicts).toEqual([]);
   });
 });

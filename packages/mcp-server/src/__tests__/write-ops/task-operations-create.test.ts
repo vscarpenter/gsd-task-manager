@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { GsdConfig, Task } from '../../types.js';
+import type { GsdConfig } from '../../types.js';
 
 // Mock the helpers so we never touch real PocketBase.
 vi.mock('../../write-ops/helpers.js', async () => {
@@ -9,12 +9,19 @@ vi.mock('../../write-ops/helpers.js', async () => {
   return {
     ...actual,
     createTaskInPB: vi.fn().mockResolvedValue(undefined),
+    updateTaskInPB: vi.fn().mockResolvedValue(undefined),
+    updateTaskInPBById: vi.fn().mockResolvedValue(undefined),
+    fetchSinglePBTaskFresh: vi.fn().mockResolvedValue(null),
     getAuthInfo: vi.fn().mockResolvedValue({ ownerId: 'owner-1', deviceId: 'device-1' }),
   };
 });
 
 vi.mock('../../tools/list-tasks.js', () => ({
   listTasks: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../../cache.js', () => ({
+  getTaskCache: () => ({ invalidate: vi.fn() }),
 }));
 
 import { createTask, updateTask } from '../../write-ops/task-operations.js';
@@ -110,24 +117,46 @@ describe('createTask URL extraction', () => {
 
 describe('updateTask URL parity', () => {
   it('does NOT extract URLs from title (mirrors webapp non-extraction on edit)', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
+    const helpers = await import('../../write-ops/helpers.js');
 
-    const seedTask: Task = {
-      id: 'task-1',
+    // updateTask now reads the current task via fetchSinglePBTaskFresh (bypass
+    // cache). Mock it with a PBTask shape (snake_case) that pbTaskToTask
+    // translates into the same seed as before.
+    const seedRecord = {
+      id: 'rec-task-1',
+      task_id: 'task-1',
+      owner: 'owner-1',
       title: 'Original',
       description: 'Original description',
       urgent: false,
       important: false,
       quadrant: 'not-urgent-not-important',
+      due_date: '',
       completed: false,
+      completed_at: '',
+      recurrence: 'none',
       tags: [],
       subtasks: [],
-      recurrence: 'none',
       dependencies: [],
-      createdAt: '2026-04-01T00:00:00Z',
-      updatedAt: '2026-04-01T00:00:00Z',
-    };
-    vi.mocked(listTasks).mockResolvedValueOnce([seedTask]);
+      notification_enabled: true,
+      notify_before: 0,
+      notification_sent: false,
+      last_notification_at: '',
+      snoozed_until: '',
+      estimated_minutes: 0,
+      time_spent: 0,
+      time_entries: [],
+      client_updated_at: '2026-04-01T00:00:00Z',
+      client_created_at: '2026-04-01T00:00:00Z',
+      device_id: 'device-1',
+      created: '2026-04-01T00:00:00Z',
+      updated: '2026-04-01T00:00:00Z',
+    } as never;
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce({
+      pbRecordId: 'rec-task-1',
+      clientUpdatedAt: '2026-04-01T00:00:00Z',
+      record: seedRecord,
+    });
 
     const result = await updateTask(config, {
       id: 'task-1',
