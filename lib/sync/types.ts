@@ -69,6 +69,16 @@ export interface SyncQueueItem {
 }
 
 // ============================================================================
+// Remote task index entry (used by fetchRemoteTaskIndex for push LWW guard)
+// ============================================================================
+
+/** One row of the remote task index used by push/pull pre-fetch. */
+export interface RemoteTaskIndexEntry {
+  pbRecordId: string;
+  clientUpdatedAt: string | null;
+}
+
+// ============================================================================
 // Device info
 // ============================================================================
 
