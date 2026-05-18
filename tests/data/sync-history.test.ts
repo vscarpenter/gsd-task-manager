@@ -8,6 +8,7 @@ import { getDb } from '@/lib/db';
 import {
   recordSyncSuccess,
   recordSyncError,
+  recordSyncPartial,
   getRecentHistory,
   getHistoryForDevice,
   getHistoryStats,
@@ -119,6 +120,59 @@ describe('sync-history', () => {
       const record = records[0];
       expect(record.errorMessage).toBe('Authentication failed');
       expect(record.duration).toBeUndefined();
+    });
+  });
+
+  describe('recordSyncPartial', () => {
+    it('writes a history record with status="partial"', async () => {
+      await recordSyncPartial({
+        pushedCount: 3,
+        pulledCount: 1,
+        failedCount: 2,
+        errorMessage: 'rate_limited',
+        deviceId: 'dev-1',
+        triggeredBy: 'auto',
+        duration: 1234,
+      });
+
+      const recent = await getRecentHistory(10);
+      expect(recent).toHaveLength(1);
+      expect(recent[0].status).toBe('partial');
+      expect(recent[0].pushedCount).toBe(3);
+      expect(recent[0].pulledCount).toBe(1);
+      expect(recent[0].failedCount).toBe(2);
+      expect(recent[0].errorMessage).toBe('rate_limited');
+    });
+
+    it('increments partialSyncs in stats', async () => {
+      await recordSyncPartial({
+        pushedCount: 1,
+        pulledCount: 0,
+        failedCount: 1,
+        errorMessage: 'oops',
+        deviceId: 'dev-1',
+        triggeredBy: 'auto',
+        duration: 50,
+      });
+
+      const stats = await getHistoryStats();
+      expect(stats.partialSyncs).toBe(1);
+      expect(stats.successfulSyncs).toBe(0);
+    });
+
+    it('omits errorMessage when not provided', async () => {
+      await recordSyncPartial({
+        pushedCount: 2,
+        pulledCount: 0,
+        failedCount: 1,
+        deviceId: 'dev-1',
+        triggeredBy: 'auto',
+      });
+
+      const recent = await getRecentHistory(10);
+      expect(recent).toHaveLength(1);
+      expect(recent[0].status).toBe('partial');
+      expect(recent[0].errorMessage).toBeUndefined();
     });
   });
 
@@ -289,6 +343,7 @@ describe('sync-history', () => {
         successfulSyncs: 0,
         failedSyncs: 0,
         conflictSyncs: 0,
+        partialSyncs: 0,
         totalPushed: 0,
         totalPulled: 0,
         totalConflictsResolved: 0,

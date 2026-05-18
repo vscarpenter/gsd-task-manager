@@ -25,6 +25,8 @@ function getStatusIcon(status: SyncHistoryRecord["status"]) {
 			return <XCircleIcon className="h-5 w-5 text-red-600" />;
 		case "conflict":
 			return <AlertTriangleIcon className="h-5 w-5 text-amber-600" />;
+		case "partial":
+			return <AlertTriangleIcon className="h-5 w-5 text-orange-600" />;
 	}
 }
 
@@ -36,6 +38,8 @@ function getStatusColor(status: SyncHistoryRecord["status"]): string {
 			return "bg-red-50 border-red-200";
 		case "conflict":
 			return "bg-amber-50 border-amber-200";
+		case "partial":
+			return "bg-orange-50 border-orange-200";
 	}
 }
 

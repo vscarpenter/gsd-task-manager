@@ -72,6 +72,7 @@ vi.mock('@/lib/sync/retry-manager', () => ({
 vi.mock('@/lib/sync-history', () => ({
   recordSyncSuccess: vi.fn(),
   recordSyncError: vi.fn(),
+  recordSyncPartial: vi.fn(),
 }));
 
 vi.mock('@/lib/sync/notifications', () => ({

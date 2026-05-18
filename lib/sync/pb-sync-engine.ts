@@ -9,7 +9,7 @@ import { getDb } from '@/lib/db';
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { getRetryManager } from './retry-manager';
-import { recordSyncSuccess, recordSyncError } from '@/lib/sync-history';
+import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/sync-history';
 import { notifySyncSuccess, notifySyncError } from './notifications';
 import { getDeviceId } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
@@ -144,7 +144,15 @@ async function reportPartialFailure(
 ): Promise<PBSyncResult> {
   const errorMsg = `${pushResult.failedCount} item(s) failed to sync: ${pushResult.lastError}`;
   await retryManager.recordFailure(new Error(errorMsg));
-  await recordSyncSuccess(pushResult.pushedCount, pullResult.pulledCount, 0, deviceId, triggeredBy, duration);
+  await recordSyncPartial({
+    pushedCount: pushResult.pushedCount,
+    pulledCount: pullResult.pulledCount,
+    failedCount: pushResult.failedCount,
+    ...(pushResult.lastError ? { errorMessage: pushResult.lastError } : {}),
+    deviceId,
+    triggeredBy,
+    duration,
+  });
   notifySyncError(errorMsg, false);
   return {
     status: 'partial',

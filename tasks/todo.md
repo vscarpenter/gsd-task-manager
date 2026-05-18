@@ -2,6 +2,28 @@
 
 ---
 
+## Pending plan — 2026-05-18: Codex adversarial review fixes
+
+5-PR plan addressing silent data-loss paths in sync/MCP/import.
+Full plan: `docs/superpowers/plans/2026-05-18-codex-adversarial-review-fixes.md`
+
+PR order (low risk → high):
+1. PR1 — sync history `status='partial'` (Finding 5)
+2. PR2 — replace import queues remote deletes (Finding 4)
+3. PR3 — pull cursor clamp + overlap window (Finding 3)
+4. PR4 — push LWW timestamp guard (Finding 1, **critical**)
+5. PR5 — MCP `updateTask` fresh read + preflight check (Finding 2)
+
+---
+
+## Follow-ups from PR1 (Codex Finding #5 review) — 2026-05-18
+
+- [ ] Render `failedCount` and `partialSyncs` in `app/(sync)/sync-history/page.tsx` (currently written but not displayed). Add a "Partial" stat tile and a "{failedCount} failed" line on partial rows.
+- [ ] Status-driven coloring for the error pill on partial rows (line ~225-229) — currently hardcoded red regardless of status.
+- [ ] Consolidate the three `recordSync{Success,Error,Partial}` writers into one helper or normalize their signatures (positional vs. options-object).
+
+---
+
 ## Active task — 2026-05-14: Apply Inkwell Design System (1.3.1)
 
 **Goal:** Make Inkwell 1.3.1 the canonical token + component source, wired through Tailwind v4's official integration. Eliminate the v3-style `tailwind.config.ts` as a competing styling system. Preserve GSD-specific tokens (quadrants, status, custom type scale) and the 1.5px border identity.

@@ -89,6 +89,46 @@ export async function recordSyncError(
 }
 
 /**
+ * Record a partial sync — some items pushed, some failed.
+ * Distinct from `recordSyncError` (which means the whole sync failed).
+ */
+export async function recordSyncPartial(args: {
+  pushedCount: number;
+  pulledCount: number;
+  failedCount: number;
+  errorMessage?: string;
+  deviceId: string;
+  triggeredBy: 'user' | 'auto';
+  duration?: number;
+}): Promise<void> {
+  const db = getDb();
+
+  const record: SyncHistoryRecord = {
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+    status: 'partial',
+    pushedCount: args.pushedCount,
+    pulledCount: args.pulledCount,
+    conflictsResolved: 0,
+    failedCount: args.failedCount,
+    errorMessage: args.errorMessage,
+    deviceId: args.deviceId,
+    triggeredBy: args.triggeredBy,
+    duration: args.duration,
+  };
+
+  await db.syncHistory.add(record);
+
+  logger.warn('Sync partial recorded', {
+    id: record.id,
+    pushedCount: args.pushedCount,
+    failedCount: args.failedCount,
+  });
+
+  await cleanupOldRecords();
+}
+
+/**
  * Get recent sync history (limited to MAX_HISTORY_RECORDS)
  */
 export async function getRecentHistory(limit: number = SYNC_CONFIG.DEFAULT_HISTORY_LIMIT): Promise<SyncHistoryRecord[]> {
@@ -127,6 +167,7 @@ export async function getHistoryStats(): Promise<{
   successfulSyncs: number;
   failedSyncs: number;
   conflictSyncs: number;
+  partialSyncs: number;
   totalPushed: number;
   totalPulled: number;
   totalConflictsResolved: number;
@@ -141,6 +182,7 @@ export async function getHistoryStats(): Promise<{
     successfulSyncs: allRecords.filter(r => r.status === 'success').length,
     failedSyncs: allRecords.filter(r => r.status === 'error').length,
     conflictSyncs: allRecords.filter(r => r.status === 'conflict').length,
+    partialSyncs: allRecords.filter(r => r.status === 'partial').length,
     totalPushed: allRecords.reduce((sum, r) => sum + r.pushedCount, 0),
     totalPulled: allRecords.reduce((sum, r) => sum + r.pulledCount, 0),
     totalConflictsResolved: allRecords.reduce((sum, r) => sum + r.conflictsResolved, 0),

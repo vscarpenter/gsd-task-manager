@@ -88,10 +88,12 @@ export interface ArchiveSettings {
 export interface SyncHistoryRecord {
   id: string;
   timestamp: string; // ISO 8601 timestamp
-  status: "success" | "error" | "conflict";
+  status: "success" | "error" | "conflict" | "partial";
   pushedCount: number; // Number of local changes pushed
   pulledCount: number; // Number of remote changes pulled
   conflictsResolved: number; // Number of conflicts automatically resolved
+  /** Items that failed to push in this sync cycle. Only set for status='partial'. */
+  failedCount?: number;
   errorMessage?: string; // Error message if status is "error"
   duration?: number; // Sync duration in milliseconds
   deviceId: string; // Device that performed the sync
