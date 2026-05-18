@@ -91,6 +91,7 @@ vi.mock('@/lib/sync/retry-manager', () => ({
 vi.mock('@/lib/sync-history', () => ({
   recordSyncSuccess: vi.fn().mockResolvedValue(undefined),
   recordSyncError: vi.fn().mockResolvedValue(undefined),
+  recordSyncPartial: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock notifications
@@ -200,6 +201,30 @@ describe('pb-sync-engine', () => {
 
       expect(result.status).toBe('partial');
       expect(result.error).toContain('1 item(s) failed');
+    });
+
+    it('records partial sync via recordSyncPartial (not recordSyncSuccess)', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { recordSyncPartial, recordSyncSuccess } = await import('@/lib/sync-history');
+      vi.mocked(pushLocalChanges).mockResolvedValueOnce({
+        pushedCount: 2,
+        failedCount: 1,
+        lastError: 'rate_limited',
+        authenticated: true,
+      });
+
+      await fullSync('auto');
+
+      expect(recordSyncPartial).toHaveBeenCalledTimes(1);
+      expect(recordSyncSuccess).not.toHaveBeenCalled();
+      expect(vi.mocked(recordSyncPartial).mock.calls[0][0]).toMatchObject({
+        pushedCount: 2,
+        failedCount: 1,
+        pulledCount: 0,
+        errorMessage: 'rate_limited',
+        deviceId: 'device-123',
+        triggeredBy: 'auto',
+      });
     });
 
     it('should handle sync errors gracefully', async () => {
