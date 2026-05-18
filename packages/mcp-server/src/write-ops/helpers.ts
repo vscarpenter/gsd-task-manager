@@ -102,6 +102,74 @@ async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string
 }
 
 /**
+ * Fetch a single PocketBase task record by its client task_id, bypassing any
+ * cache. Returns null if the record does not exist.
+ *
+ * Used by updateTask + bulk operations to read a fresh `client_updated_at`
+ * snapshot for LWW precondition checks. The task cache is intentionally NOT
+ * consulted here — a stale snapshot would defeat the conflict detection.
+ */
+export async function fetchSinglePBTaskFresh(
+  config: GsdConfig,
+  taskId: string
+): Promise<{ pbRecordId: string; clientUpdatedAt: string; record: PBTask } | null> {
+  const pb = getPocketBase(config);
+  try {
+    const record = await pb
+      .collection('tasks')
+      .getFirstListItem<PBTask>(`task_id = "${escapeFilterValue(taskId)}"`);
+    return {
+      pbRecordId: record.id,
+      clientUpdatedAt: record.client_updated_at,
+      record,
+    };
+  } catch (err) {
+    // PocketBase's ClientResponseError surfaces an HTTP status. Only treat a
+    // true 404 as "not found" (return null). Any other status — 401 auth, 5xx,
+    // network failure — must propagate; otherwise downstream code would
+    // misreport it as "task deleted between read and write" and the LLM may
+    // try to recreate a task that still exists.
+    const status = (err as { status?: number })?.status;
+    if (status === 404) return null;
+    throw err;
+  }
+}
+
+/**
+ * Pre-fetch fresh PocketBase records for a batch of client task ids in a
+ * single request. Returns a map keyed by client task_id.
+ *
+ * Returns the full PBTask record (not just identifiers) so the caller can both
+ * derive task content via `pbTaskToTask` AND use `client_updated_at` for LWW
+ * conflict detection. This deliberately bypasses the task cache.
+ */
+export async function fetchPBSnapshotForTasks(
+  config: GsdConfig,
+  taskIds: string[]
+): Promise<Map<string, { pbRecordId: string; clientUpdatedAt: string; record: PBTask }>> {
+  const map = new Map<
+    string,
+    { pbRecordId: string; clientUpdatedAt: string; record: PBTask }
+  >();
+  if (taskIds.length === 0) return map;
+
+  const pb = getPocketBase(config);
+  const filter = taskIds
+    .map((id) => `task_id = "${escapeFilterValue(id)}"`)
+    .join(' || ');
+
+  const records = await pb.collection('tasks').getFullList<PBTask>({ filter });
+  for (const record of records) {
+    map.set(record.task_id, {
+      pbRecordId: record.id,
+      clientUpdatedAt: record.client_updated_at,
+      record,
+    });
+  }
+  return map;
+}
+
+/**
  * Pre-fetch PocketBase record ids for a batch of client task ids in a single
  * request. Avoids the N+1 lookup pattern when bulk-updating many tasks.
  */

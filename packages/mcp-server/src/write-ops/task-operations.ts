@@ -4,6 +4,7 @@
  */
 
 import type { GsdConfig, Task } from '../types.js';
+import { pbTaskToTask } from '../types.js';
 import type { CreateTaskInput, UpdateTaskInput } from './types.js';
 import { listTasks } from '../tools/list-tasks.js';
 import {
@@ -11,7 +12,9 @@ import {
   deriveQuadrant,
   createTaskInPB,
   updateTaskInPB,
+  updateTaskInPBById,
   deleteTaskInPB,
+  fetchSinglePBTaskFresh,
   getAuthInfo,
 } from './helpers.js';
 import {
@@ -20,6 +23,8 @@ import {
   formatDependencyError,
 } from '../dependencies.js';
 import { extractUrlsFromTitle, buildDescription } from '../text/capture-parser.js';
+import { ConflictError } from '../errors.js';
+import { getTaskCache } from '../cache.js';
 
 /**
  * Create task result with dry-run information
@@ -129,6 +134,12 @@ export interface UpdateTaskResult {
 
 /**
  * Update an existing task
+ *
+ * LWW conflict detection (Codex finding #2): the current task snapshot is read
+ * directly from PocketBase (cache bypassed) so we never spread a stale value
+ * back over a concurrent writer's change. Immediately before the PUT we
+ * re-read the same record and compare `client_updated_at` against the value
+ * captured at first read — on mismatch we throw `ConflictError`.
  */
 export async function updateTask(
   config: GsdConfig,
@@ -137,16 +148,19 @@ export async function updateTask(
   const warnings: string[] = [];
   const changes: string[] = [];
 
-  const tasks = await listTasks(config);
-  const currentTask = tasks.find((t) => t.id === input.id);
-
-  if (!currentTask) {
+  const fresh = await fetchSinglePBTaskFresh(config, input.id);
+  if (!fresh) {
     throw new Error(`Task not found: ${input.id}\n\nThe task may have been deleted.`);
   }
+  const currentTask = pbTaskToTask(fresh.record);
+  const readClientUpdatedAt = fresh.clientUpdatedAt;
 
-  // Validate dependencies if changing
+  // Validate dependencies if changing. Cache is acceptable here: cycle-checking
+  // is a non-mutating read and the cache invalidates on writes, so a slightly
+  // stale dependency graph is safe.
   if (input.dependencies !== undefined) {
-    const validation = validateDependencies(input.id, input.dependencies, tasks);
+    const allTasks = await listTasks(config);
+    const validation = validateDependencies(input.id, input.dependencies, allTasks);
     if (!validation.valid) {
       throw new Error(formatDependencyError(validation.error!));
     }
@@ -228,8 +242,23 @@ export async function updateTask(
     };
   }
 
+  // Preflight LWW check: re-read the record and confirm `client_updated_at`
+  // hasn't moved between the initial read and now. If it has, a concurrent
+  // writer changed the task — abort with ConflictError rather than overwriting
+  // their change.
+  const preflight = await fetchSinglePBTaskFresh(config, input.id);
+  if (!preflight) {
+    throw new Error(`Task ${input.id} was deleted between read and write.`);
+  }
+  if (preflight.clientUpdatedAt !== readClientUpdatedAt) {
+    throw new ConflictError(input.id, readClientUpdatedAt, preflight.clientUpdatedAt);
+  }
+
   const { ownerId, deviceId } = await getAuthInfo(config);
-  await updateTaskInPB(config, updatedTask, ownerId, deviceId);
+  await updateTaskInPBById(config, preflight.pbRecordId, updatedTask, ownerId, deviceId);
+  // updateTaskInPBById skips the cache invalidation done in updateTaskInPB, so
+  // invalidate here explicitly (matches the contract callers expect).
+  getTaskCache().invalidate();
 
   return {
     task: updatedTask,

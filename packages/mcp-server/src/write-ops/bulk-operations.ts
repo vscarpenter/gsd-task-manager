@@ -8,13 +8,15 @@
  */
 
 import type { GsdConfig, Task } from '../types.js';
+import { pbTaskToTask } from '../types.js';
 import type { BulkOperation } from './types.js';
 import { listTasks } from '../tools/list-tasks.js';
 import { getTaskCache } from '../cache.js';
 import {
   deriveQuadrant,
   getAuthInfo,
-  fetchPBRecordIdsForTasks,
+  fetchPBSnapshotForTasks,
+  fetchSinglePBTaskFresh,
   updateTaskInPBById,
   deleteTaskInPBById,
   sleep,
@@ -80,12 +82,26 @@ function applyOperation(task: Task, operation: BulkOperation, now: string): Task
 const BULK_MAX_TASKS = 50;
 const BULK_MAX_DELETES = 10;
 
+export interface BulkUpdateResult {
+  updated: number;
+  deleted: number;
+  errors: string[];
+  /**
+   * Task ids whose `client_updated_at` changed between the batch snapshot and
+   * the per-item preflight check, so the write was skipped. Distinct from
+   * `errors`: conflicts are an expected LWW outcome, not failures. Always
+   * present (empty when nothing was skipped).
+   */
+  conflicts: string[];
+  dryRun: boolean;
+}
+
 export async function bulkUpdateTasks(
   config: GsdConfig,
   taskIds: string[],
   operation: BulkOperation,
   options?: { dryRun?: boolean }
-): Promise<{ updated: number; deleted: number; errors: string[]; dryRun: boolean }> {
+): Promise<BulkUpdateResult> {
   // Destructive deletes default to dryRun=true. Callers must pass
   // `dryRun: false` explicitly to actually delete.
   const isDryRun =
@@ -112,52 +128,90 @@ export async function bulkUpdateTasks(
   }
 
   if (taskIds.length === 0) {
-    return { updated: 0, deleted: 0, errors: [], dryRun: isDryRun };
+    return { updated: 0, deleted: 0, errors: [], conflicts: [], dryRun: isDryRun };
   }
 
-  const allTasks = await listTasks(config);
-  const tasksToUpdate = allTasks.filter((t) => taskIds.includes(t.id));
-
-  if (tasksToUpdate.length === 0) {
-    return { updated: 0, deleted: 0, errors: ['No matching tasks found'], dryRun: isDryRun };
-  }
-
+  // Dry-run path: cached listTasks is fine — no PUTs will happen, so a stale
+  // snapshot only affects the preview counts.
   if (isDryRun) {
+    const allTasks = await listTasks(config);
+    const tasksToUpdate = allTasks.filter((t) => taskIds.includes(t.id));
+    if (tasksToUpdate.length === 0) {
+      return {
+        updated: 0,
+        deleted: 0,
+        errors: ['No matching tasks found'],
+        conflicts: [],
+        dryRun: true,
+      };
+    }
     const deletes = operation.type === 'delete' ? tasksToUpdate.length : 0;
     const updates = operation.type === 'delete' ? 0 : tasksToUpdate.length;
-    return { updated: updates, deleted: deletes, errors: [], dryRun: true };
+    return { updated: updates, deleted: deletes, errors: [], conflicts: [], dryRun: true };
   }
 
-  // Pre-fetch PB record ids for the whole batch in one request.
-  const [{ ownerId, deviceId }, recordIdMap] = await Promise.all([
+  // Write path: read fresh PB records (one request) so both content and the
+  // snapshot timestamps come from PocketBase, never from the cache. Closes the
+  // stale-spread hole from Codex finding #2.
+  const [{ ownerId, deviceId }, snapshot] = await Promise.all([
     getAuthInfo(config),
-    fetchPBRecordIdsForTasks(
-      config,
-      tasksToUpdate.map((t) => t.id)
-    ),
+    fetchPBSnapshotForTasks(config, taskIds),
   ]);
 
+  if (snapshot.size === 0) {
+    return {
+      updated: 0,
+      deleted: 0,
+      errors: ['No matching tasks found'],
+      conflicts: [],
+      dryRun: false,
+    };
+  }
+
+  // Iterate in the caller's requested order so the result is predictable.
+  // Note: we only carry the snapshot timestamp forward — `pbRecordId` comes
+  // from the preflight read below to avoid drifting from the freshest record.
+  const tasksToProcess: Array<{ task: Task; snapshotTimestamp: string }> = [];
+  for (const id of taskIds) {
+    const entry = snapshot.get(id);
+    if (entry) {
+      tasksToProcess.push({
+        task: pbTaskToTask(entry.record),
+        snapshotTimestamp: entry.clientUpdatedAt,
+      });
+    }
+  }
+
   const errors: string[] = [];
+  const conflicts: string[] = [];
   let updateCount = 0;
   let deleteCount = 0;
   const now = new Date().toISOString();
 
-  for (let i = 0; i < tasksToUpdate.length; i++) {
-    const task = tasksToUpdate[i];
-    const pbRecordId = recordIdMap.get(task.id);
-
-    if (!pbRecordId) {
-      errors.push(`Task ${task.id}: not found in PocketBase`);
-      continue;
-    }
+  for (let i = 0; i < tasksToProcess.length; i++) {
+    const { task, snapshotTimestamp } = tasksToProcess[i];
 
     try {
+      // Per-item preflight: re-read the record and compare client_updated_at
+      // against the snapshot taken at the start of the batch. If the record
+      // changed underneath us, surface the id in `conflicts` and skip the
+      // write — bulk operations are continue-on-conflict, not abort-on-first.
+      const preflight = await fetchSinglePBTaskFresh(config, task.id);
+      if (!preflight) {
+        conflicts.push(task.id);
+        continue;
+      }
+      if (preflight.clientUpdatedAt !== snapshotTimestamp) {
+        conflicts.push(task.id);
+        continue;
+      }
+
       if (operation.type === 'delete') {
-        await deleteTaskInPBById(config, pbRecordId);
+        await deleteTaskInPBById(config, preflight.pbRecordId);
         deleteCount++;
       } else {
         const updated = applyOperation(task, operation, now);
-        await updateTaskInPBById(config, pbRecordId, updated, ownerId, deviceId);
+        await updateTaskInPBById(config, preflight.pbRecordId, updated, ownerId, deviceId);
         updateCount++;
       }
     } catch (error) {
@@ -167,8 +221,16 @@ export async function bulkUpdateTasks(
     }
 
     // Throttle between writes to avoid PocketBase 429s.
-    if (i < tasksToUpdate.length - 1) {
+    if (i < tasksToProcess.length - 1) {
       await sleep(PB_BULK_WRITE_DELAY_MS);
+    }
+  }
+
+  // Report tasks the caller asked for but PocketBase didn't return (deleted on
+  // another device between the request and the snapshot fetch).
+  for (const id of taskIds) {
+    if (!snapshot.has(id)) {
+      errors.push(`Task ${id}: not found in PocketBase`);
     }
   }
 
@@ -179,6 +241,7 @@ export async function bulkUpdateTasks(
     updated: updateCount,
     deleted: deleteCount,
     errors,
+    conflicts,
     dryRun: false,
   };
 }
