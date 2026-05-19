@@ -205,8 +205,140 @@ A `workflow_dispatch` from the Actions tab also works — useful for re-deployin
 
 ---
 
-## Future phases (heads-up)
+## Step 6 — Create the CloudFront infrastructure role and environment
 
-- **Phase 5 — CloudFront infra.** Separate role `gsd-deploy-cloudfront-infra` with the additional `cloudfront:CreateFunction / UpdateFunction / PublishFunction / GetDistributionConfig / UpdateDistribution / *ResponseHeadersPolicy` permissions. Also gated by a required reviewer.
+This role is separate from the app deploy roles because it has materially
+broader privileges: it can publish new edge functions and modify the
+distribution config. A misconfigured viewer-request function can take the
+whole distribution offline, so the blast radius warrants a dedicated role
+and a dedicated approval gate.
 
-Each subsequent role reuses the OIDC provider from Step 1 — that step is one-time per AWS account.
+### 6a. Trust policy
+
+Same shape as Step 2a, but the `sub` claim scopes to the new environment.
+Save as `trust-policy-cloudfront-infra.json`:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<YOUR_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:vscarpenter/gsd-task-manager:environment:cloudfront-infra"
+        }
+      }
+    }
+  ]
+}
+```
+
+### 6b. Permission policy
+
+Save as `policy-cloudfront-infra.json`:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageFunctions",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:ListFunctions",
+        "cloudfront:DescribeFunction",
+        "cloudfront:CreateFunction",
+        "cloudfront:UpdateFunction",
+        "cloudfront:PublishFunction"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AttachFunctionsToDistribution",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:GetDistributionConfig",
+        "cloudfront:UpdateDistribution",
+        "cloudfront:CreateInvalidation"
+      ],
+      "Resource": "arn:aws:cloudfront::<YOUR_ACCOUNT_ID>:distribution/E1T6GDX0TQEP94"
+    },
+    {
+      "Sid": "ManageResponseHeadersPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:ListResponseHeadersPolicies",
+        "cloudfront:GetResponseHeadersPolicy",
+        "cloudfront:CreateResponseHeadersPolicy",
+        "cloudfront:UpdateResponseHeadersPolicy"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+Notes on resource scoping:
+
+- `ManageFunctions` is `Resource: "*"` because CloudFront Function ARNs are
+  not allowed in IAM resource scoping for these actions — they have to be
+  account-wide. The trust-policy scoping to the `cloudfront-infra`
+  environment is the actual access boundary.
+- `AttachFunctionsToDistribution` is scoped to the prod distribution ID
+  (the same one the prod app deploy role uses). Update if you add staging.
+- `ManageResponseHeadersPolicy` is `Resource: "*"` for the same reason —
+  IAM doesn't accept policy ARNs as scopes for these actions.
+
+### 6c. Create the role
+
+```bash
+aws iam create-role \
+  --role-name gsd-deploy-cloudfront-infra \
+  --assume-role-policy-document file://trust-policy-cloudfront-infra.json
+
+aws iam put-role-policy \
+  --role-name gsd-deploy-cloudfront-infra \
+  --policy-name gsd-deploy-cloudfront-infra-inline \
+  --policy-document file://policy-cloudfront-infra.json
+```
+
+### 6d. Create the `cloudfront-infra` GitHub Environment
+
+Settings → Environments → New environment → `cloudfront-infra`:
+
+- **Required reviewers:** `vscarpenter` (same gate as production)
+- **Variables:**
+
+| Name | Value |
+|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::<YOUR_ACCOUNT_ID>:role/gsd-deploy-cloudfront-infra` |
+| `CLOUDFRONT_DISTRIBUTION_ID` | `E1T6GDX0TQEP94` |
+
+(No `S3_BUCKET` / `SITE_URL` / `ENV_LABEL` — this environment doesn't touch
+S3 or run the app deploy.)
+
+### First-run cloudfront-infra test
+
+Pick the safer of the two scripts as the first test — the response headers
+policy update is reversible and doesn't take the site down on failure:
+
+1. Make a trivial whitespace edit to `cloudfront/response-headers-policy.json` on a branch.
+2. Open + merge a PR.
+3. Watch the **Deploy CloudFront Infrastructure** workflow appear in Actions.
+4. Verify the "Detect what changed" step output shows `deploy_policy=true`, `deploy_functions=false`.
+5. Approve in **Environments → cloudfront-infra**.
+6. Verify the policy ID stays the same and the in-place update succeeded
+   (`aws cloudfront get-response-headers-policy --id <ID>`).
+
+For testing the function-deploy path, modify a comment in
+`cloudfront-function-url-rewrite.cjs` (no behavior change), open + merge a PR,
+approve, then `aws cloudfront describe-function --name gsd-url-rewrite --stage LIVE`
+to confirm the new ETag.
+
+---
