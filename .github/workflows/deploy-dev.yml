@@ -1,0 +1,88 @@
+name: Deploy to Development
+
+on:
+  # Auto-deploy after CI succeeds on a push to main.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Manual override — re-builds inline and deploys.
+  workflow_dispatch:
+
+# Per locked decision §7.7 of the plan: queue overlapping deploys rather
+# than cancel. A half-applied S3 sync is worse than a slightly delayed deploy.
+concurrency:
+  group: deploy-development
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to development
+    # Gate workflow_run on success + push (a failed CI or a PR-targeted CI
+    # run should never reach this point). workflow_dispatch is trusted.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: development
+      url: ${{ vars.SITE_URL }}
+    permissions:
+      id-token: write   # OIDC token for AWS role assumption
+      contents: read
+      actions: read     # cross-workflow artifact download
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          # workflow_run runs against the default branch context; for a
+          # push to main the head_sha is also on main, so a default checkout
+          # gives us the right tree. workflow_dispatch checks out the
+          # branch the user dispatched against.
+
+      # workflow_run path: the CI workflow already built and uploaded
+      # static-export-<sha> for us. Download it — do NOT rebuild.
+      - name: Download CI build artifact
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: static-export-${{ github.event.workflow_run.head_sha }}
+          path: out/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      # workflow_dispatch path: no upstream artifact, so build inline.
+      - name: Build (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: ./.github/actions/build-static-export
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy to S3 + create CloudFront invalidation
+        id: deploy
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_ID: ${{ vars.CLOUDFRONT_ID }}
+          ENV_LABEL: ${{ vars.ENV_LABEL }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bash scripts/deploy-app.sh
+
+      # Block until every edge has the invalidation; otherwise the smoke
+      # test below races stale cache and produces false negatives.
+      - name: Wait for CloudFront invalidation
+        run: |
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ vars.CLOUDFRONT_ID }}" \
+            --id "${{ steps.deploy.outputs.invalidation_id }}"
+
+      - name: Smoke test
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bash scripts/smoke-test.sh
