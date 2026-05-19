@@ -1,0 +1,129 @@
+name: Deploy CloudFront Infrastructure
+
+on:
+  push:
+    branches: [main]
+    # Only fire when the relevant sources change. The workflow itself is
+    # NOT in this list — editing the workflow file should not trigger a
+    # spurious approval prompt with nothing to deploy.
+    paths:
+      - 'cloudfront-function-url-rewrite.cjs'
+      - 'cloudfront-function-response-headers.cjs'
+      - 'cloudfront/response-headers-policy.json'
+      - 'scripts/deploy-cloudfront-function.sh'
+      - 'scripts/deploy-cloudfront-response-headers-policy.sh'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Which infra component to deploy
+        type: choice
+        required: true
+        default: both
+        options:
+          - both
+          - functions
+          - policy
+
+# Locked decision §7.7: queue overlapping deploys, never cancel.
+concurrency:
+  group: deploy-cloudfront-infra
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy CloudFront infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The cloudfront-infra environment gates this on a required reviewer.
+    # A broken viewer-request function or a malformed policy can take the
+    # whole distribution offline at the edge — slower to recover than an
+    # S3 sync mistake. Treated as a tier-1 change.
+    environment:
+      name: cloudfront-infra
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so `git diff github.event.before HEAD` always
+          # resolves, even when a push contains multiple commits.
+          fetch-depth: 0
+
+      - name: Detect what changed
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPLOY_INPUT: ${{ inputs.deploy }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: |
+          set -euo pipefail
+
+          deploy_functions=false
+          deploy_policy=false
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            case "$DEPLOY_INPUT" in
+              both)      deploy_functions=true; deploy_policy=true ;;
+              functions) deploy_functions=true ;;
+              policy)    deploy_policy=true ;;
+              *)
+                echo "::error::Unknown deploy input: $DEPLOY_INPUT"
+                exit 1
+                ;;
+            esac
+          else
+            # Push event: compute the diff against the previous main tip.
+            # First push to a new branch sets before to all-zeros; treat
+            # that as "everything is new".
+            if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+              changed=$(git ls-files \
+                'cloudfront-function-*.cjs' \
+                'cloudfront/response-headers-policy.json' \
+                'scripts/deploy-cloudfront-*.sh')
+            else
+              changed=$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" || true)
+            fi
+
+            echo "Changed files in this push:"
+            echo "$changed" | sed 's/^/  /'
+
+            if echo "$changed" | grep -qE '^(cloudfront-function-.+\.cjs|scripts/deploy-cloudfront-function\.sh)$'; then
+              deploy_functions=true
+            fi
+            if echo "$changed" | grep -qE '^(cloudfront/response-headers-policy\.json|scripts/deploy-cloudfront-response-headers-policy\.sh)$'; then
+              deploy_policy=true
+            fi
+          fi
+
+          echo "deploy_functions=$deploy_functions" >> "$GITHUB_OUTPUT"
+          echo "deploy_policy=$deploy_policy" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## CloudFront infra deploy plan"
+            echo "- Trigger: $EVENT_NAME"
+            echo "- Deploy CloudFront Functions: $deploy_functions"
+            echo "- Deploy Response Headers Policy: $deploy_policy"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure AWS credentials (OIDC)
+        if: |
+          steps.changes.outputs.deploy_functions == 'true' ||
+          steps.changes.outputs.deploy_policy == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy CloudFront Functions
+        if: steps.changes.outputs.deploy_functions == 'true'
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: bash scripts/deploy-cloudfront-function.sh
+
+      - name: Deploy Response Headers Policy
+        if: steps.changes.outputs.deploy_policy == 'true'
+        run: bash scripts/deploy-cloudfront-response-headers-policy.sh
