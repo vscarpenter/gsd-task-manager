@@ -88,7 +88,7 @@ interface DesktopActionsProps {
 
 function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze }: DesktopActionsProps) {
   return (
-    <div className="hidden sm:flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+    <div className="task-card-desktop-actions hidden sm:flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
       {onShare && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -164,7 +164,7 @@ interface MobileActionsProps {
 
 function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileActionsProps) {
   return (
-    <div className="flex sm:hidden items-center gap-0.5">
+    <div className="task-card-mobile-actions flex sm:hidden items-center gap-0.5">
       <button
         data-testid="edit-task-mobile"
         type="button"
