@@ -2,6 +2,16 @@
 
 ---
 
+## Pending plan — 2026-05-18: GitHub Actions CI/CD deploy pipeline
+
+Move dev + prod app deploys off laptops into GitHub Actions (OIDC, no long-lived keys), wire the `typecheck`/`lint`/`test`/`build` PR status checks already declared in `REPOSITORY_SETTINGS.md`, and gate CloudFront infra changes behind manual approval. 5-phase rollout, one PR per phase.
+
+Full plan: `docs/superpowers/plans/2026-05-18-github-ci-deploy-pipeline.md`
+
+Status: **Proposed — awaiting review.** Open decisions in §7 of the plan.
+
+---
+
 ## Pending plan — 2026-05-18: Codex adversarial review fixes
 
 5-PR plan addressing silent data-loss paths in sync/MCP/import.
