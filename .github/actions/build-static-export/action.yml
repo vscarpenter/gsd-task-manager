@@ -1,0 +1,54 @@
+name: Build static export
+description: >
+  Install deps, restore the Next.js build cache, run `bun run build`, and
+  optionally upload the resulting out/ directory as an artifact so deploy
+  workflows can promote the exact same bytes across environments.
+
+inputs:
+  artifact-name:
+    description: >
+      If non-empty, upload out/ as an artifact with this name. Leave empty
+      on PR builds to avoid generating artifacts for runs we won't deploy.
+    required: false
+    default: ''
+  retention-days:
+    description: Artifact retention in days (only used when artifact-name is set).
+    required: false
+    default: '14'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    - name: Prefer IPv4 for npm registry
+      shell: bash
+      run: echo 'precedence ::ffff:0:0/96 100' | sudo tee -a /etc/gai.conf
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile
+
+    - name: Restore Next.js build cache
+      uses: actions/cache@v4
+      with:
+        path: .next/cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts') }}-${{ github.sha }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('bun.lock', 'next.config.ts') }}-
+
+    - name: Build static export
+      shell: bash
+      run: bun run build
+
+    - name: Upload out/ artifact
+      if: inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: out/
+        retention-days: ${{ inputs.retention-days }}
+        if-no-files-found: error

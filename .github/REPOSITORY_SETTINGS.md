@@ -18,11 +18,15 @@ Check these options:
 
 - [x] **Require status checks to pass before merging**
   - [x] Require branches to be up to date before merging
-  - After setting up GitHub Actions CI, add these required checks:
+  - Required checks produced by `.github/workflows/ci.yml`:
     - `typecheck`
     - `lint`
     - `test`
     - `build`
+  - To enable: Settings → Branches → branch protection rule for `main` →
+    "Require status checks to pass before merging" → search for each name
+    above and add it. (The checks must have run at least once on any branch
+    before they appear as searchable options.)
 
 - [x] **Require conversation resolution before merging**
 
