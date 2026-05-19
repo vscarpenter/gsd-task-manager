@@ -150,9 +150,63 @@ Add these **Environment variables** (not secrets — none of these are confident
 
 ---
 
+## Step 5 — Create the production deploy role and environment
+
+Same shape as Steps 2-3, with these substitutions:
+
+| Setting | Dev (already done) | Prod (this step) |
+|---|---|---|
+| IAM role name | `gsd-deploy-development` | `gsd-deploy-prod` |
+| Trust `sub` claim | `repo:vscarpenter/gsd-task-manager:environment:development` | `repo:vscarpenter/gsd-task-manager:environment:production` |
+| S3 bucket ARN | `arn:aws:s3:::gsd-dev.vinny.dev` | `arn:aws:s3:::gsd.vinny.dev` |
+| CloudFront distribution ARN | `arn:aws:cloudfront::ACCT:distribution/E1HY1IKF5GT513` | `arn:aws:cloudfront::ACCT:distribution/E1T6GDX0TQEP94` |
+| GitHub Environment name | `development` | `production` |
+| Required reviewers | none | **vscarpenter** (locked decision §7.5) |
+| `S3_BUCKET` var | `s3://gsd-dev.vinny.dev` | `s3://gsd.vinny.dev` |
+| `CLOUDFRONT_ID` var | `E1HY1IKF5GT513` | `E1T6GDX0TQEP94` |
+| `ENV_LABEL` var | `Development` | `Production` |
+| `SITE_URL` var | `https://gsd-dev.vinny.dev` | `https://gsd.vinny.dev` |
+
+Concretely:
+
+```bash
+# Reuse trust-policy-development.json, swap the sub claim, save as trust-policy-prod.json
+sed 's|environment:development|environment:production|' \
+  trust-policy-development.json > trust-policy-prod.json
+
+# Reuse policy-development.json, swap the bucket name and distribution ID, save as policy-prod.json
+sed -e 's|gsd-dev\.vinny\.dev|gsd.vinny.dev|g' \
+    -e 's|E1HY1IKF5GT513|E1T6GDX0TQEP94|g' \
+  policy-development.json > policy-prod.json
+
+aws iam create-role \
+  --role-name gsd-deploy-prod \
+  --assume-role-policy-document file://trust-policy-prod.json
+
+aws iam put-role-policy \
+  --role-name gsd-deploy-prod \
+  --policy-name gsd-deploy-prod-inline \
+  --policy-document file://policy-prod.json
+```
+
+Then in GitHub: Settings → Environments → New environment → `production` →
+- **Required reviewers:** add `vscarpenter`.
+- **Variables:** the 5 from the table above, including `AWS_DEPLOY_ROLE_ARN` = `arn:aws:iam::ACCT:role/gsd-deploy-prod`.
+
+### First-run prod test
+
+1. Bump `package.json` version (e.g. 9.1.10 → 9.1.11), commit to main, merge via PR.
+2. Tag the merge commit: `git tag v9.1.11 && git push origin v9.1.11`.
+3. Watch the **Deploy to Production** workflow appear in Actions.
+4. It pauses at "Waiting for approval" — go to **Environments → production** and approve.
+5. The deploy runs, smoke-tests, completes. Verify `https://gsd.vinny.dev/` serves the new build.
+
+A `workflow_dispatch` from the Actions tab also works — useful for re-deploying the current main without bumping the version.
+
+---
+
 ## Future phases (heads-up)
 
-- **Phase 4 — production deploy.** Same shape, separate role `gsd-deploy-prod` scoped to `environment:production`, separate GitHub Environment with a **required reviewer**.
 - **Phase 5 — CloudFront infra.** Separate role `gsd-deploy-cloudfront-infra` with the additional `cloudfront:CreateFunction / UpdateFunction / PublishFunction / GetDistributionConfig / UpdateDistribution / *ResponseHeadersPolicy` permissions. Also gated by a required reviewer.
 
 Each subsequent role reuses the OIDC provider from Step 1 — that step is one-time per AWS account.

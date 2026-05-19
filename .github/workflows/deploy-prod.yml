@@ -1,0 +1,84 @@
+name: Deploy to Production
+
+on:
+  # Tag-triggered release: v*.*.* on any branch.
+  # Matches the package.json semver (e.g. v9.1.11 → 9.1.11).
+  push:
+    tags: ['v*.*.*']
+  # Manual override — useful for re-deploying the current ref.
+  workflow_dispatch:
+
+# Locked decision §7.7: queue overlapping deploys, never cancel.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # The `production` environment carries the required-reviewer gate
+    # (locked decision §7.5). The job pauses for human approval before
+    # any of these steps run — no compute wasted on rejected deploys.
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
+    permissions:
+      id-token: write   # OIDC token for AWS role assumption
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Mirrors publish-mcp-server.yml's tag-vs-package.json check.
+      # Stops a v9.1.11 tag from accidentally deploying a 9.1.10 build.
+      - name: Verify tag matches package.json version
+        if: github.event_name == 'push'
+        env:
+          TAG_REF: ${{ github.ref_name }}
+        run: |
+          TAG_VERSION="${TAG_REF#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Deploying version $PKG_VERSION"
+          echo "## Deploying v$PKG_VERSION to production" >> "$GITHUB_STEP_SUMMARY"
+
+      # Always rebuild for prod — the tag can point at any commit, and the
+      # 14-day artifact retention from CI can't be relied on for older tags.
+      # The build is deterministic from the tree, so this produces the same
+      # bytes CI built when the tagged commit was on main.
+      - name: Build static export
+        uses: ./.github/actions/build-static-export
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy to S3 + create CloudFront invalidation
+        id: deploy
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_ID: ${{ vars.CLOUDFRONT_ID }}
+          ENV_LABEL: ${{ vars.ENV_LABEL }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bash scripts/deploy-app.sh
+
+      - name: Wait for CloudFront invalidation
+        run: |
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ vars.CLOUDFRONT_ID }}" \
+            --id "${{ steps.deploy.outputs.invalidation_id }}"
+
+      - name: Smoke test
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bash scripts/smoke-test.sh
