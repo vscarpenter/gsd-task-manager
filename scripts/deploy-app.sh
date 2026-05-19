@@ -78,6 +78,12 @@ INVALIDATION_ID=$(aws cloudfront create-invalidation \
 echo -e "${GREEN}✓${NC} Invalidation created: ${INVALIDATION_ID}"
 echo ""
 
+# Expose the invalidation ID to GitHub Actions so the calling workflow can
+# wait on it before running the smoke test. No-op outside CI.
+if [ -n "${GITHUB_OUTPUT:-}" ]; then
+  echo "invalidation_id=${INVALIDATION_ID}" >> "$GITHUB_OUTPUT"
+fi
+
 echo -e "${BLUE}[3/3]${NC} Deployment Summary"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "Environment:   ${GREEN}${ENV_LABEL}${NC}"
