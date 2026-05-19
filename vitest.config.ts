@@ -13,7 +13,8 @@ export default defineConfig({
       "**/node_modules/**",
       "**/dist/**",
       "**/.claude/worktrees/**",
-      "**/packages/mcp-server/**"
+      "**/packages/mcp-server/**",
+      "tests/e2e/**"
     ],
     coverage: {
       enabled: false, // Only enable when --coverage flag is passed
