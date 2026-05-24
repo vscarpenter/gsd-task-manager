@@ -95,17 +95,11 @@ PR: https://github.com/vscarpenter/gsd-task-manager/pull/238
 
 Each item below is sized to be a single self-contained PR. Pick any one cold and start.
 
-#### 1. Wire `components/command-palette/` back into the v9 shell (cluster-1 resurrection)
-- **Why:** v8 command palette was kept (not deleted) when v9 shipped, but never mounted. CLAUDE.md and ADR 0011 both promise the feature exists; right now ⌘K does nothing.
-- **Where to start:** `components/matrix-simplified/app-shell.tsx`. Mount `CommandPalette` from `@/components/command-palette` similarly to how `HelpDrawer` is mounted (state + window event listener). Wire ⌘K via `lib/use-command-palette.ts` (already keybound internally). Pass handlers built from `lib/command-actions.ts`.
-- **Acceptance criteria:**
-  - Pressing ⌘K (Mac) / Ctrl+K (other) anywhere in the app opens the palette
-  - Palette returns the action set defined in `command-actions.ts` (new task, theme toggle, navigation, export, etc.)
-  - Selecting a task navigates / opens the edit-drawer
-  - Esc closes; existing palette tests still pass
-  - `keyboard-hints-toast` was deleted in this cleanup, so do NOT re-introduce keyboard-hints; surface ⌘K hint in the topbar or help-drawer instead
-- **Effort:** ~2-3 hours. Mostly wiring; tests already cover the palette internals.
-- **Spec first:** write `tasks/spec-command-palette-v9.md` per coding-standards.md before touching code.
+#### 1. Wire `components/command-palette/` back into the v9 shell (cluster-1 resurrection) — ✅ DONE 2026-05-24
+- Spec: `tasks/spec-command-palette-v9.md`.
+- Implementation: added `showSmartViews` prop to `CommandPalette`, new `lib/use-shell-command-handlers.ts`, mounted palette in `AppShell`. Smart-view actions suppressed in v9 per ADR 0011.
+- Tests: new `tests/ui/app-shell.test.tsx` (5 tests). Full suite: 1893 passing.
+- Deferred: topbar ⌘K hint chip; deep-link export/import (handlers currently route to `/settings`); surfacing the new-task event listener on the matrix page (currently routes to `/?action=new-task` which the matrix already handles).
 
 #### 2. Add explicit return types to live exported components
 - **Why:** April 22 audit + 2026-04-28 review both flagged this. Standard requires `: React.ReactElement` (or `: JSX.Element`) on every exported component function. ~45 sites missing.
