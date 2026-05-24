@@ -100,18 +100,18 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
           <button
             onClick={() => handleImport("merge")}
             disabled={isImporting}
-            className="w-full rounded-lg border-2 border-emerald-200 bg-emerald-50 p-4 text-left transition-all hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950 dark:hover:border-emerald-700 dark:hover:bg-emerald-900"
+            className="w-full rounded-lg border-2 border-olive/30 bg-olive-tint p-4 text-left transition-all hover:border-olive/50 hover:bg-status-success-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-olive text-paper">
                 <PlusCircleIcon className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">Merge Tasks</h3>
-                <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
+                <h3 className="font-semibold text-foreground">Merge Tasks</h3>
+                <p className="mt-1 text-sm text-foreground-muted">
                   Keep your existing tasks and add the imported tasks. Duplicate IDs will be regenerated to avoid conflicts.
                 </p>
-                <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <p className="mt-2 text-xs font-medium text-olive">
                   ✓ Safe - No data loss
                 </p>
               </div>
@@ -122,18 +122,18 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
           <button
             onClick={() => handleImport("replace")}
             disabled={isImporting}
-            className="w-full rounded-lg border-2 border-red-200 bg-red-50 p-4 text-left transition-all hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:bg-red-950 dark:hover:border-red-700 dark:hover:bg-red-900"
+            className="w-full rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-left transition-all hover:border-rust/50 hover:bg-status-overdue-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-500 text-white">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rust text-paper">
                 <RefreshCwIcon className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-red-900 dark:text-red-100">Replace All Tasks</h3>
-                <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                <h3 className="font-semibold text-foreground">Replace All Tasks</h3>
+                <p className="mt-1 text-sm text-foreground-muted">
                   Delete all existing tasks and replace them with the imported tasks. This action cannot be undone.
                 </p>
-                <div className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
+                <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust">
                   <AlertTriangleIcon className="h-3 w-3" />
                   <span>Warning - Deletes {existingTaskCount} existing task{existingTaskCount !== 1 ? "s" : ""}</span>
                 </div>

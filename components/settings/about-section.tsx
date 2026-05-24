@@ -25,7 +25,7 @@ export function AboutSection() {
 			{/* Privacy Row */}
 			<div className="px-4 py-3.5 min-h-[52px]">
 				<div className="flex items-start gap-3">
-					<ShieldCheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+					<ShieldCheckIcon className="w-5 h-5 text-olive flex-shrink-0 mt-0.5" />
 					<div>
 						<p className="text-sm font-medium text-foreground">Privacy First</p>
 						<p className="text-xs text-foreground-muted mt-1 leading-relaxed">
