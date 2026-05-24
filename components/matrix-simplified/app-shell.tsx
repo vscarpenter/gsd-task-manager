@@ -5,6 +5,8 @@ import { IconRail } from "./icon-rail";
 import { SimplifiedTopbar } from "./topbar";
 import { HelpDrawer } from "@/components/matrix-simplified/help-drawer";
 import { AppFooter } from "@/components/app-footer";
+import { CommandPalette } from "@/components/command-palette";
+import { useShellCommandHandlers } from "@/lib/use-shell-command-handlers";
 
 interface AppShellProps {
   title: string;
@@ -26,6 +28,7 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const [helpOpen, setHelpOpen] = useState(false);
+  const { handlers, conditions } = useShellCommandHandlers();
 
   useEffect(() => {
     const open = () => setHelpOpen(true);
@@ -51,6 +54,7 @@ export function AppShell({
         <AppFooter />
       </div>
       <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <CommandPalette handlers={handlers} conditions={conditions} showSmartViews={false} />
     </div>
   );
 }

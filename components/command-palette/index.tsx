@@ -17,6 +17,12 @@ interface CommandPaletteProps {
     selectionMode: boolean;
     hasSelection: boolean;
   };
+  /**
+   * When false, the palette will not load or render built-in smart-view
+   * actions. v9 (ADR 0011) removed the smart-view UI; the shell passes
+   * `showSmartViews={false}` to keep the palette consistent with that surface.
+   */
+  showSmartViews?: boolean;
 }
 
 /**
@@ -25,18 +31,19 @@ interface CommandPaletteProps {
  * Opens with ⌘K / Ctrl+K
  * Provides quick access to actions, navigation, and task search
  */
-export function CommandPalette({ handlers, conditions }: CommandPaletteProps) {
+export function CommandPalette({ handlers, conditions, showSmartViews = true }: CommandPaletteProps) {
   const { all: tasks } = useTasks();
   const [smartViews, setSmartViews] = useState<SmartView[]>([]);
 
-  // Load smart views
+  // Load smart views (only when surface is enabled)
   useEffect(() => {
+    if (!showSmartViews) return;
     const loadViews = async () => {
       const views = await getSmartViews();
       setSmartViews(views.filter((v) => v.isBuiltIn));
     };
     loadViews();
-  }, []);
+  }, [showSmartViews]);
 
   const actions = useMemo(
     () => buildCommandActions(handlers, smartViews, conditions),
@@ -119,11 +126,13 @@ export function CommandPalette({ handlers, conditions }: CommandPaletteProps) {
             actions={actionsBySection.navigation || []}
             onExecute={executeAction}
           />
-          <CommandGroup
-            heading="Smart Views"
-            actions={actionsBySection.views || []}
-            onExecute={executeAction}
-          />
+          {showSmartViews ? (
+            <CommandGroup
+              heading="Smart Views"
+              actions={actionsBySection.views || []}
+              onExecute={executeAction}
+            />
+          ) : null}
           <CommandGroup
             heading="Settings"
             actions={actionsBySection.settings || []}
