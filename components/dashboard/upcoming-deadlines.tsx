@@ -67,30 +67,30 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
           {overdueTasks.length > 0 && (
             <DeadlineSection
               title="Overdue"
-              icon={<AlertCircleIcon className="h-4 w-4 text-red-500" />}
+              icon={<AlertCircleIcon className="h-4 w-4 text-status-overdue" />}
               tasks={overdueTasks}
               onTaskClick={onTaskClick}
-              color="red"
+              color="overdue"
             />
           )}
 
           {dueTodayTasks.length > 0 && (
             <DeadlineSection
               title="Due Today"
-              icon={<CalendarIcon className="h-4 w-4 text-amber-500" />}
+              icon={<CalendarIcon className="h-4 w-4 text-warning" />}
               tasks={dueTodayTasks}
               onTaskClick={onTaskClick}
-              color="amber"
+              color="warning"
             />
           )}
 
           {dueThisWeekTasks.length > 0 && (
             <DeadlineSection
               title="Due This Week"
-              icon={<ClockIcon className="h-4 w-4 text-blue-500" />}
+              icon={<ClockIcon className="h-4 w-4 text-sky" />}
               tasks={dueThisWeekTasks}
               onTaskClick={onTaskClick}
-              color="blue"
+              color="info"
             />
           )}
         </div>
@@ -104,7 +104,7 @@ interface DeadlineSectionProps {
   icon: React.ReactNode;
   tasks: TaskRecord[];
   onTaskClick?: (task: TaskRecord) => void;
-  color: "red" | "amber" | "blue";
+  color: "overdue" | "warning" | "info";
 }
 
 function DeadlineSection({
@@ -115,15 +115,15 @@ function DeadlineSection({
   color,
 }: DeadlineSectionProps) {
   const borderColor = {
-    red: "border-l-red-500",
-    amber: "border-l-amber-500",
-    blue: "border-l-blue-500",
+    overdue: "border-l-status-overdue",
+    warning: "border-l-warning",
+    info: "border-l-sky",
   }[color];
 
   const bgColor = {
-    red: "bg-red-500/5 dark:bg-red-500/10",
-    amber: "bg-amber-500/5 dark:bg-amber-500/10",
-    blue: "bg-blue-500/5 dark:bg-blue-500/10",
+    overdue: "bg-status-overdue-muted",
+    warning: "bg-warning-tint",
+    info: "bg-status-blocking-muted",
   }[color];
 
   return (

@@ -38,11 +38,11 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
     >
       {/* Top: icon + streak count */}
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/40">
-          <FlameIcon className="h-6 w-6 text-orange-500" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-warning-tint">
+          <FlameIcon className="h-6 w-6 text-warning" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+          <p className="text-eyebrow text-foreground-muted">
             Streak
           </p>
           <div className="flex items-center gap-2">
@@ -64,7 +64,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
               <div
                 className={`h-3 w-3 rounded-full transition-colors ${
                   active
-                    ? "bg-orange-500 shadow-sm shadow-orange-500/30"
+                    ? "bg-warning shadow-sm shadow-warning-tint"
                     : "bg-background-muted"
                 }`}
                 title={`${DAY_LABELS[index]}: ${active ? "Completed" : "No completions"}`}
@@ -81,7 +81,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
       <div className="mt-3 flex items-center justify-between">
         <p className="text-xs text-foreground-muted">{getStreakMessage(current)}</p>
         {milestone ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-warning-tint px-2 py-0.5 text-[10px] font-semibold text-warning-dark">
             <TrophyIcon className="h-2.5 w-2.5" />
             {milestone.label}
           </span>

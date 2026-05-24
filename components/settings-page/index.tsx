@@ -231,7 +231,7 @@ export function SettingsPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
             Preferences & Data
           </p>
-          <h1 className="rd-serif mt-2 text-4xl tracking-tight text-foreground sm:text-5xl">
+          <h1 className="rd-serif mt-2 text-h1 text-foreground sm:text-display">
             Settings
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground-muted">

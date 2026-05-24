@@ -217,14 +217,14 @@ export default function DashboardPage() {
                 </div>
 
                 {metrics.overdueCount > 0 && (
-                  <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-500/5 px-5 py-3.5 dark:border-red-900/50 dark:bg-red-500/10">
-                    <AlertTriangleIcon className="h-5 w-5 shrink-0 text-red-500" />
+                  <div className="alert is-danger items-center rounded-xl px-5 py-3.5">
+                    <AlertTriangleIcon className="h-5 w-5 shrink-0 text-rust" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="alert-title text-sm">
                         {metrics.overdueCount} overdue{" "}
                         {metrics.overdueCount === 1 ? "task" : "tasks"}
                         {metrics.dueTodayCount > 0 && (
-                          <span className="text-foreground-muted">
+                          <span className="alert-body">
                             {" "}
                             &middot; {metrics.dueTodayCount} due today
                           </span>

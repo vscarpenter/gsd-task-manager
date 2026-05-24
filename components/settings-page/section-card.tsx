@@ -20,7 +20,8 @@ export function SectionCard({ eyebrow, title, description, icon: Icon, children 
   return (
     <section
       aria-labelledby={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
-      className="overflow-hidden rounded-[28px] border border-border/70 bg-card/95 shadow-[0_8px_30px_rgba(15,23,42,0.06)]"
+      className="overflow-hidden rounded-[28px] border border-border/70 bg-card/95"
+      style={{ boxShadow: "var(--shadow-md)" }}
     >
       <header className="flex items-start gap-4 border-b border-border/60 bg-gradient-to-b from-background to-background-muted/30 px-6 py-6 sm:px-8 sm:py-7">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/15">

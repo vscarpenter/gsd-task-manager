@@ -125,14 +125,14 @@ function ActionRow({
 				w-full flex items-center gap-3 px-4 py-3.5 min-h-[52px] text-left
 				transition-colors disabled:opacity-50
 				${isDanger
-					? "hover:bg-red-50 dark:hover:bg-red-950/20"
+					? "hover:bg-rust-tint"
 					: "hover:bg-background-muted/50"
 				}
 			`}
 		>
-			<Icon className={`w-5 h-5 ${isDanger ? "text-red-500" : "text-accent"}`} />
+			<Icon className={`w-5 h-5 ${isDanger ? "text-rust" : "text-accent"}`} />
 			<div className="flex-1 min-w-0">
-				<p className={`text-sm font-medium ${isDanger ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
+				<p className={`text-sm font-medium ${isDanger ? "text-rust" : "text-foreground"}`}>
 					{label}
 				</p>
 				{description && (
