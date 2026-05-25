@@ -5,8 +5,18 @@
       "Bash(bun lint:*)",
       "Bash(bun audit:*)",
       "Bash(bun outdated:*)",
+      "Bash(bun run test)",
+      "Bash(bun run test *)",
+      "Bash(bun run test:e2e)",
+      "Bash(bun run test:e2e *)",
+      "Bash(bun run build)",
+      "Bash(bun run build *)",
       "mcp__claude-in-chrome__tabs_context_mcp",
-      "mcp__claude-in-chrome__read_page"
+      "mcp__claude-in-chrome__read_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__resize_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_pages"
     ]
   },
   "hooks": {
