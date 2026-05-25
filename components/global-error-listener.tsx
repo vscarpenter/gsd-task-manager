@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/logger";
+import { captureException } from "@/lib/sentry";
 
 const logger = createLogger("GLOBAL_ERROR");
 
@@ -21,6 +22,10 @@ export function GlobalErrorListener() {
           : new Error(String(event.reason ?? "Unknown rejection"));
 
       logger.error("Unhandled promise rejection", error, {
+        type: event.reason instanceof Error ? event.reason.name : typeof event.reason,
+      });
+
+      captureException(error, {
         type: event.reason instanceof Error ? event.reason.name : typeof event.reason,
       });
 

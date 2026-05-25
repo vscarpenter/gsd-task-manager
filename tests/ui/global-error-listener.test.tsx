@@ -21,6 +21,10 @@ vi.mock("sonner", () => ({
   toast: mockToast,
 }));
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 describe("GlobalErrorListener", () => {
   let addEventSpy: ReturnType<typeof vi.spyOn>;
   let removeEventSpy: ReturnType<typeof vi.spyOn>;

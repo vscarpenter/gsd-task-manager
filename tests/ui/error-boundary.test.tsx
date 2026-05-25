@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ErrorBoundary } from "@/components/error-boundary";
 
+vi.mock("@/lib/sentry", () => ({
+  captureException: vi.fn(),
+}));
+
 const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   if (shouldThrow) {
     throw new Error("Test error");
@@ -80,6 +84,31 @@ describe("ErrorBoundary", () => {
 
     const homeButton = screen.getByText("Go home");
     expect(homeButton).toBeInTheDocument();
+
+    consoleError.mockRestore();
+  });
+
+  it("should call captureException when error is caught", async () => {
+    const { captureException } = await import("@/lib/sentry");
+    const mockCapture = vi.mocked(captureException);
+    mockCapture.mockClear();
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const ThrowError = () => {
+      throw new Error("Sentry test error");
+    };
+
+    render(
+      <ErrorBoundary>
+        <ThrowError />
+      </ErrorBoundary>
+    );
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ componentStack: expect.anything() })
+    );
 
     consoleError.mockRestore();
   });

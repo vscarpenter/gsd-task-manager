@@ -7,6 +7,10 @@ import {
 	type ErrorContext,
 } from "@/lib/error-logger";
 
+vi.mock("@/lib/sentry", () => ({
+	captureException: vi.fn(),
+}));
+
 describe("Error Logger module", () => {
 	const originalEnv = process.env.NODE_ENV;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,6 +182,27 @@ describe("Error Logger module", () => {
 			expect(logged.timestamp).not.toBe(oldTimestamp);
 			expect(logged.timestamp).toMatch(
 				/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+			);
+		});
+
+		it("should call captureException with error and context", async () => {
+			const { captureException: mockCapture } = vi.mocked(
+				await import("@/lib/sentry")
+			);
+			mockCapture.mockClear();
+
+			const error = new Error("Sentry test");
+			const context: ErrorContext = {
+				action: "test_action",
+				timestamp: "2025-01-15T12:00:00Z",
+				userMessage: "Test message",
+			};
+
+			logError(error, context);
+
+			expect(mockCapture).toHaveBeenCalledWith(
+				error,
+				expect.objectContaining({ action: "test_action" })
 			);
 		});
 
