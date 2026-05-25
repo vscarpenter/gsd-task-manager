@@ -82,8 +82,15 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### PWA Configuration
 - `public/manifest.json` - App metadata
-- `public/sw.js` - Service worker for offline caching
+- `public/sw.js` - Service worker with multi-cache strategy (see ADR 0012)
+- `public/sw-cache-logic.js` - Pure cache routing functions loaded via `importScripts()`
+- `lib/sw-cache-logic.ts` - Canonical TypeScript source for the cache logic (keep in sync with the JS copy)
 - `components/pwa-register.tsx` - SW registration
+
+**Cache architecture** (three purpose-specific caches):
+- `gsd-immutable-v1` — content-hashed `/_next/static/*` assets (cache-first, FIFO-pruned at 60 entries, survives deploys)
+- `gsd-pages-v{version}` — HTML + RSC flight data (network-first, rotated on deploy)
+- `gsd-runtime-v{version}` — icons, manifest, other static (cache-first, rotated on deploy)
 
 ### Cloud Sync Architecture
 - **Backend**: Self-hosted PocketBase at `https://api.vinny.io` (AWS EC2)

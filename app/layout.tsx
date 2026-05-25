@@ -86,6 +86,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
+        <link rel="preconnect" href="https://api.vinny.io" />
       </head>
       <body className="font-sans bg-background text-foreground antialiased">
         <ErrorBoundary>
