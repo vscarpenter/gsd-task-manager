@@ -145,13 +145,13 @@ script-src 'self';
 style-src 'self';
 img-src 'self' data: blob:;
 font-src 'self';
-connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
+connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com https://*.ingest.us.sentry.io;
 frame-ancestors 'none';
 base-uri 'self';
 form-action 'self' https://accounts.google.com https://github.com;
 ```
 
-> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. The `connect-src` includes the PocketBase server and OAuth provider domains.
+> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. The `connect-src` includes the PocketBase server, OAuth provider domains, and the Sentry US-region ingest endpoint for error reporting.
 
 #### 2. X-Frame-Options
 ```
