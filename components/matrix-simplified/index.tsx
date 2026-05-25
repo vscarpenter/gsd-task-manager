@@ -62,11 +62,14 @@ export function MatrixSimplified() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [mounted, setMounted] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [createInitial, setCreateInitial] = useState<Partial<EditDraft> | undefined>(undefined);
   const [showCompleted, setShowCompleted] = useState<boolean>(readShowCompleted);
   const [sharingTask, setSharingTask] = useState<TaskRecord | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -267,19 +270,19 @@ export function MatrixSimplified() {
     () => (
       <>
         <span className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground">
-          {total - completed} active
+          {mounted ? `${total - completed} active` : " "}
         </span>
         <span className="inline-flex items-center rounded-full bg-status-success-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-success">
-          {completed} done
+          {mounted ? `${completed} done` : " "}
         </span>
-        {overdue > 0 ? (
+        {mounted && overdue > 0 ? (
           <span className="inline-flex items-center rounded-full bg-status-overdue-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-overdue">
             {overdue} overdue
           </span>
         ) : null}
       </>
     ),
-    [completed, overdue, total]
+    [completed, mounted, overdue, total]
   );
 
   return (
