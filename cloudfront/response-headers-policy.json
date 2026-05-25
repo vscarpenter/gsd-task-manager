@@ -16,7 +16,7 @@
     },
     "ContentSecurityPolicy": {
       "Override": true,
-      "ContentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://github.com; object-src 'none'; manifest-src 'self'; worker-src 'self';"
+      "ContentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com https://*.ingest.sentry.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://github.com; object-src 'none'; manifest-src 'self'; worker-src 'self';"
     },
     "ContentTypeOptions": {
       "Override": true
