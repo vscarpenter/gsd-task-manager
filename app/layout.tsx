@@ -4,11 +4,10 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
-import { initSentry } from "@/lib/sentry";
 import "./globals.css";
 
-initSentry();
 import { PwaRegister } from "@/components/pwa-register";
+import { SentryInit } from "@/components/sentry-init";
 import { WebMcpRegister } from "@/components/webmcp-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
@@ -103,6 +102,7 @@ export default function RootLayout({
                   <InstallPwaPrompt />
                   <PwaUpdateToast />
                   <GlobalErrorListener />
+                  <SentryInit />
                   <Toaster richColors position="top-center" />
                 </TooltipProvider>
               </QueryProvider>
