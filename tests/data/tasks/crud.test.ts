@@ -276,6 +276,24 @@ describe('Task CRUD Operations', () => {
       expect(result.lastNotificationAt).toBeUndefined();
       expect(result.snoozedUntil).toBeUndefined();
     });
+
+    it('should throw descriptive error with field details when draft is invalid', async () => {
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+
+      await expect(
+        updateTask('task-1', { title: '' })
+      ).rejects.toThrow(/Task validation failed.*title/i);
+    });
   });
 
   describe('toggleCompleted', () => {

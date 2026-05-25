@@ -25,7 +25,12 @@ export async function updateTask(
     }
 
     const nextDraft = mergeTaskUpdates(existing, updates);
-    const validated = taskDraftSchema.parse(nextDraft);
+    const result = taskDraftSchema.safeParse(nextDraft);
+    if (!result.success) {
+      const fields = result.error.issues.map((i) => i.path.join('.')).join(', ');
+      throw new Error(`Task validation failed: invalid fields — ${fields}`);
+    }
+    const validated = result.data;
 
     const { syncConfig } = await getSyncContext();
     const nextRecord = buildUpdatedRecord(existing, validated, updates);
@@ -47,9 +52,6 @@ export async function updateTask(
       taskId: id,
       updates,
     });
-    if (error instanceof Error && error.name === "ZodError") {
-      throw new Error(`Task validation failed: ${error.message}`);
-    }
     throw new Error(`Failed to update task: ${formatErrorMessage(error)}`);
   }
 }
