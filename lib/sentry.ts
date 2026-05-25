@@ -1,8 +1,6 @@
 import * as Sentry from "@sentry/browser";
 import { ENV_CONFIG } from "@/lib/env-config";
 
-let initialized = false;
-
 export function initSentry(): void {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -16,15 +14,13 @@ export function initSentry(): void {
     tracesSampleRate: 0.1,
     enabled: true,
   });
-
-  initialized = true;
 }
 
 export function captureException(
   error: unknown,
   context?: Record<string, unknown>
 ): void {
-  if (!initialized) return;
+  if (!Sentry.getClient()) return;
 
   Sentry.captureException(
     error,
@@ -33,5 +29,5 @@ export function captureException(
 }
 
 export function isInitialized(): boolean {
-  return initialized;
+  return !!Sentry.getClient();
 }
