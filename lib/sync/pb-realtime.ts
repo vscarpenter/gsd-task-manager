@@ -51,11 +51,11 @@ export async function subscribe(deviceId: string): Promise<void> {
     return;
   }
 
-  logger.info('Subscribing to realtime task changes');
+  logger.debug('Subscribing to realtime task changes');
 
   unsubscribeFn = await pb.collection('tasks').subscribe('*', handleRealtimeEvent);
 
-  logger.info('Realtime subscription active');
+  logger.debug('Realtime subscription active');
 }
 
 /**
@@ -66,7 +66,7 @@ export function unsubscribe(): void {
     unsubscribeFn();
     unsubscribeFn = null;
     currentDeviceId = null;
-    logger.info('Unsubscribed from realtime');
+    logger.debug('Unsubscribed from realtime');
   }
 }
 

@@ -128,7 +128,7 @@ export class SyncCoordinator {
       logger.debug('Starting sync execution', { priority });
       const result = await fullSync(priority);
       this.lastResult = result;
-      logger.info('Sync completed', { status: result.status });
+      logger.debug('Sync completed', { status: result.status });
     } catch (error) {
       logger.error('Sync failed', error instanceof Error ? error : new Error(String(error)));
       this.lastResult = {

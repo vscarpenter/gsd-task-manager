@@ -21,6 +21,7 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
 
 vi.mock('@/lib/logger', () => ({
   createLogger: () => ({
+    debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),

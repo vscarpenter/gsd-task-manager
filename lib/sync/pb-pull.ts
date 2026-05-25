@@ -146,7 +146,7 @@ export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pu
 
   await reconcileDeletedTasks(ownerId);
 
-  logger.info('Pull completed', { pulledCount, fetched: records.length });
+  logger.debug('Pull completed', { pulledCount, fetched: records.length });
   return { pulledCount, authenticated: true, maxObservedTimestamp };
 }
 
