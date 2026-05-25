@@ -69,6 +69,10 @@ export async function updateNotificationSettings(
   };
 
   // Validate before saving
-  const validated = notificationSettingsSchema.parse(updated);
-  await db.notificationSettings.put(validated);
+  const result = notificationSettingsSchema.safeParse(updated);
+  if (!result.success) {
+    const fields = result.error.issues.map((i) => i.path.join(".")).join(", ");
+    throw new Error(`Notification settings validation failed: invalid fields — ${fields}`);
+  }
+  await db.notificationSettings.put(result.data);
 }

@@ -110,6 +110,19 @@ describe("notification settings", () => {
     expect(settings.defaultReminder).toBe(30);
   });
 
+  it("updateNotificationSettings throws descriptive error for invalid input", async () => {
+    const { getNotificationSettings, updateNotificationSettings } =
+      await import("@/lib/notifications/settings");
+
+    await getNotificationSettings(); // initialize
+
+    await expect(
+      updateNotificationSettings({
+        defaultReminder: -5,
+      })
+    ).rejects.toThrow(/Notification settings validation failed/);
+  });
+
   it("getNotificationSettings returns defaults when stored settings are corrupt", async () => {
     const { getDb } = await import("@/lib/db");
     const db = getDb();
