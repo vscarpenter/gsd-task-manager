@@ -4,6 +4,9 @@ import { getDb } from "@/lib/db";
 import type { NotificationSettings } from "@/lib/types";
 import { notificationSettingsSchema } from "@/lib/schema";
 import { NOTIFICATION_TIMING } from "@/lib/constants";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("NOTIFICATION_SETTINGS");
 
 /**
  * Get notification settings from database
@@ -29,8 +32,24 @@ export async function getNotificationSettings(): Promise<NotificationSettings> {
     settings = defaultSettings;
   }
 
-  // Validate settings with schema
-  return notificationSettingsSchema.parse(settings);
+  // Validate settings with schema — self-heal on corrupt data
+  const result = notificationSettingsSchema.safeParse(settings);
+  if (!result.success) {
+    logger.warn("Stored notification settings are corrupt, returning defaults", {
+      issues: result.error.issues.map((i) => i.path.join(".")).join(", "),
+    });
+    const defaultSettings: NotificationSettings = {
+      id: "settings",
+      enabled: true,
+      defaultReminder: NOTIFICATION_TIMING.DEFAULT_REMINDER_MINUTES,
+      soundEnabled: true,
+      permissionAsked: false,
+      updatedAt: new Date().toISOString(),
+    };
+    await db.notificationSettings.put(defaultSettings);
+    return defaultSettings;
+  }
+  return result.data;
 }
 
 /**
@@ -50,6 +69,10 @@ export async function updateNotificationSettings(
   };
 
   // Validate before saving
-  const validated = notificationSettingsSchema.parse(updated);
-  await db.notificationSettings.put(validated);
+  const result = notificationSettingsSchema.safeParse(updated);
+  if (!result.success) {
+    const fields = result.error.issues.map((i) => i.path.join(".")).join(", ");
+    throw new Error(`Notification settings validation failed: invalid fields — ${fields}`);
+  }
+  await db.notificationSettings.put(result.data);
 }

@@ -109,6 +109,42 @@ describe("notification settings", () => {
     expect(settings.id).toBe("settings");
     expect(settings.defaultReminder).toBe(30);
   });
+
+  it("updateNotificationSettings throws descriptive error for invalid input", async () => {
+    const { getNotificationSettings, updateNotificationSettings } =
+      await import("@/lib/notifications/settings");
+
+    await getNotificationSettings(); // initialize
+
+    await expect(
+      updateNotificationSettings({
+        defaultReminder: -5,
+      })
+    ).rejects.toThrow(/Notification settings validation failed/);
+  });
+
+  it("getNotificationSettings returns defaults when stored settings are corrupt", async () => {
+    const { getDb } = await import("@/lib/db");
+    const db = getDb();
+
+    // Insert a corrupt record — missing required `updatedAt` field
+    await db.notificationSettings.put({
+      id: "settings",
+      enabled: "not-a-boolean",
+      updatedAt: 12345,
+    } as unknown as import("@/lib/types").NotificationSettings);
+
+    const { getNotificationSettings } = await import(
+      "@/lib/notifications/settings"
+    );
+
+    const settings = await getNotificationSettings();
+
+    // Should self-heal to defaults instead of crashing
+    expect(settings.enabled).toBe(true);
+    expect(settings.soundEnabled).toBe(true);
+    expect(settings.id).toBe("settings");
+  });
 });
 
 // ---------------------------------------------------------------------------

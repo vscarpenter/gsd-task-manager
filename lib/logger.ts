@@ -45,6 +45,7 @@ export type LogContext =
   | 'DB'
   | 'PWA'
   | 'NOTIFICATIONS'
+  | 'NOTIFICATION_SETTINGS'
   | 'IMPORT'
   | 'SMART_VIEWS'
   | 'ERROR_BOUNDARY'
