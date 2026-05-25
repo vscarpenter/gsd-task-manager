@@ -40,7 +40,7 @@ export async function recordSyncSuccess(
 
   await db.syncHistory.add(record);
 
-  logger.info('Sync success recorded', {
+  logger.debug('Sync success recorded', {
     id: record.id,
     pushedCount,
     pulledCount,

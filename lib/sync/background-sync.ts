@@ -38,7 +38,7 @@ export class BackgroundSyncManager {
         this.config = config;
         this.isActive = true;
 
-        logger.info('Starting background sync', {
+        logger.debug('Starting background sync', {
             enabled: config.enabled,
             intervalMinutes: config.intervalMinutes,
         });
@@ -194,7 +194,7 @@ export class BackgroundSyncManager {
             const queue = getSyncQueue();
             const pendingCount = await queue.getPendingCount();
 
-            logger.info('Triggering background sync', { trigger, pendingCount });
+            logger.debug('Triggering background sync', { trigger, pendingCount });
             this.lastSyncTimestamp = now;
 
             const coordinator = getSyncCoordinator();

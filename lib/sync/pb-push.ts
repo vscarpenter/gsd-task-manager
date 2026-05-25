@@ -233,6 +233,6 @@ export async function pushLocalChanges(): Promise<PushResult> {
     }
   }
 
-  logger.info('Push completed', { pushedCount, failedCount, skippedCount, total: pending.length });
+  logger.debug('Push completed', { pushedCount, failedCount, skippedCount, total: pending.length });
   return { pushedCount, failedCount, lastError, authenticated: true };
 }

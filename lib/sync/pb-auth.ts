@@ -96,7 +96,7 @@ export async function refreshAuth(): Promise<boolean> {
 
   try {
     await pb.collection('users').authRefresh();
-    logger.info('Auth token refreshed successfully');
+    logger.debug('Auth token refreshed successfully');
     return true;
   } catch (error) {
     logger.warn('Auth token refresh failed', {
