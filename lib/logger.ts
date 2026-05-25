@@ -49,6 +49,7 @@ export type LogContext =
   | 'IMPORT'
   | 'SMART_VIEWS'
   | 'ERROR_BOUNDARY'
+  | 'GLOBAL_ERROR'
   | 'WEBMCP';
 
 export interface LogMetadata {
