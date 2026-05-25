@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockInit = vi.hoisted(() => vi.fn());
 const mockCaptureException = vi.hoisted(() => vi.fn());
+const mockGetClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@sentry/browser", () => ({
-  init: mockInit,
+  init: (...args: unknown[]) => {
+    mockInit(...args);
+    mockGetClient.mockReturnValue({});
+  },
   captureException: mockCaptureException,
+  getClient: mockGetClient,
 }));
 
 describe("Sentry wrapper", () => {
@@ -14,6 +19,7 @@ describe("Sentry wrapper", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mockGetClient.mockReturnValue(undefined);
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
   });
 
