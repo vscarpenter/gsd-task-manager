@@ -326,7 +326,7 @@ pre.code-sample {
   <div class="meta">
     <span class="badge badge-accent">v9 Architecture</span>
     <span class="badge badge-neutral">Next.js 16 &middot; React 19 &middot; Dexie 4</span>
-    <span class="t-caption">May 12, 2026</span>
+    <span class="t-caption">May 25, 2026</span>
   </div>
 </header>
 
@@ -355,8 +355,8 @@ pre.code-sample {
 
   <div class="tldr" style="margin-bottom: var(--sp-5);">
     <p class="tldr-label">Overall Health Score</p>
-    <p style="font: 500 64px/1 var(--serif); margin: 0 0 8px;">8.2 <span style="font-size: 24px; color: var(--oat);">/ 10</span></p>
-    <p style="color: var(--oat); margin: 0;">The codebase is in excellent health with strong modular architecture, comprehensive unit test coverage exceeding targets, disciplined coding standards adherence, and zero known security vulnerabilities. Key growth areas center on E2E test coverage expansion and async error handling.</p>
+    <p style="font: 500 64px/1 var(--serif); margin: 0 0 8px;">8.7 <span style="font-size: 24px; color: var(--oat);">/ 10</span></p>
+    <p style="color: var(--oat); margin: 0;">The codebase is in excellent health with strong modular architecture, comprehensive test coverage exceeding all targets, and zero known security vulnerabilities. Since May 12: all <code>.parse()</code> calls migrated to <code>.safeParse()</code>, global <code>unhandledrejection</code> listener added, Sentry error tracking integrated, command palette wired into v9 shell, and E2E coverage expanded to 48 tests across 8 spec files. Key remaining growth area is E2E coverage breadth.</p>
   </div>
 
   <h3 class="t-h3" style="margin-top: var(--sp-5);">Top 5 Risks</h3>
@@ -364,24 +364,24 @@ pre.code-sample {
     <thead><tr><th>Risk</th><th>Severity</th><th>Impact</th></tr></thead>
     <tbody>
       <tr>
-        <td>E2E tests cover only ~30% of critical user paths</td>
+        <td>E2E tests cover ~40% of critical user paths (up from ~30%)</td>
         <td><span class="badge badge-danger">High</span></td>
-        <td>Regressions in sync, keyboard shortcuts, recurring tasks go undetected</td>
+        <td>Regressions in sync, keyboard shortcuts, recurring tasks still undetected</td>
       </tr>
       <tr>
-        <td>No global <code>unhandledrejection</code> listener</td>
-        <td><span class="badge badge-danger">High</span></td>
-        <td>Async errors in sync realtime handler fail silently</td>
+        <td><del>No global <code>unhandledrejection</code> listener</del></td>
+        <td><span class="badge badge-success">Resolved</span></td>
+        <td>Fixed in PR #303 &mdash; <code>GlobalErrorListener</code> logs + shows toast</td>
       </tr>
       <tr>
-        <td>3 user-input paths use <code>.parse()</code> instead of <code>.safeParse()</code></td>
-        <td><span class="badge badge-warning">Medium</span></td>
-        <td>Corrupt single record can abort entire operation</td>
+        <td><del>3 user-input paths use <code>.parse()</code> instead of <code>.safeParse()</code></del></td>
+        <td><span class="badge badge-success">Resolved</span></td>
+        <td>Fixed in PR #302 &mdash; all 3 calls migrated to <code>.safeParse()</code></td>
       </tr>
       <tr>
-        <td>No server-side error tracking (Sentry/Datadog)</td>
-        <td><span class="badge badge-warning">Medium</span></td>
-        <td>Production errors visible only in browser console</td>
+        <td><del>No error tracking (Sentry/Datadog)</del></td>
+        <td><span class="badge badge-success">Resolved</span></td>
+        <td>Fixed in PR #304 &mdash; <code>@sentry/browser</code> integrated</td>
       </tr>
       <tr>
         <td>Hard-coded PocketBase URL fallback in env-config</td>
@@ -396,25 +396,25 @@ pre.code-sample {
     <div class="card">
       <p class="eyebrow" style="margin: 0 0 8px;">Strength</p>
       <p class="t-h3" style="margin: 0 0 6px;">Modular Architecture</p>
-      <p class="t-small" style="margin: 0;">Zero files exceed the 350-line limit. <code>lib/sync/</code> has 20+ focused modules. Clean dependency DAG with no circular imports.</p>
+      <p class="t-small" style="margin: 0;">4 files slightly exceed the 350-line limit (max 435). <code>lib/sync/</code> has 20+ focused modules. Clean dependency DAG with no circular imports.</p>
     </div>
     <div class="card">
       <p class="eyebrow" style="margin: 0 0 8px;">Strength</p>
       <p class="t-h3" style="margin: 0 0 6px;">Unit Test Coverage</p>
-      <p class="t-small" style="margin: 0;">85.7% line coverage exceeds the 80% target. 1,857 tests pass. Structured logger used in 43 files with secret sanitization.</p>
+      <p class="t-small" style="margin: 0;">86.3% line coverage exceeds the 80% target. 1,910 unit tests + 48 E2E tests pass. Structured logger used in 46 files with secret sanitization.</p>
     </div>
     <div class="card">
       <p class="eyebrow" style="margin: 0 0 8px;">Strength</p>
       <p class="t-h3" style="margin: 0 0 6px;">Security Posture</p>
-      <p class="t-small" style="margin: 0;">Zero audit vulnerabilities, zero hardcoded secrets, zero XSS sinks. Zod validation on all data paths. CSP headers configured.</p>
+      <p class="t-small" style="margin: 0;">Zero audit vulnerabilities, zero hardcoded secrets, zero XSS sinks. Zod <code>.safeParse()</code> on all data paths. Sentry error tracking integrated. CSP headers configured.</p>
     </div>
   </div>
 
   <h3 class="t-h3" style="margin-top: var(--sp-5);">Top 3 Sprint Priorities</h3>
   <ol style="padding-left: 20px;">
-    <li style="margin-bottom: 8px;"><strong>Expand E2E coverage</strong> &mdash; Add Playwright specs for sync auth, keyboard shortcuts, recurring tasks, and import flow (estimated: 3&ndash;5 days)</li>
-    <li style="margin-bottom: 8px;"><strong>Add global error boundary</strong> &mdash; Wire <code>unhandledrejection</code> listener + wrap realtime handler in try/catch (estimated: &lt;1 day)</li>
-    <li style="margin-bottom: 8px;"><strong>Migrate remaining <code>.parse()</code> to <code>.safeParse()</code></strong> &mdash; 3 call sites in task update and notification settings (estimated: &lt;1 day)</li>
+    <li style="margin-bottom: 8px;"><strong>Expand E2E coverage</strong> &mdash; Add Playwright specs for keyboard shortcuts, recurring tasks, and sync auth (estimated: 3&ndash;5 days)</li>
+    <li style="margin-bottom: 8px;"><strong>Configure Sentry source maps</strong> &mdash; Add source map upload to CI for readable stack traces in Sentry (estimated: &lt;1 day)</li>
+    <li style="margin-bottom: 8px;"><strong>Add <code>knip</code> for dead code detection</strong> &mdash; Automate unused export/dependency detection in CI (estimated: &lt;1 day)</li>
   </ol>
 </section>
 
@@ -429,34 +429,34 @@ pre.code-sample {
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-num">85.7%</div>
+      <div class="stat-num">86.3%</div>
       <div class="stat-label">Line Coverage</div>
       <div class="stat-delta up">&#9650; Above 80% target</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num">84.8%</div>
+      <div class="stat-num">85.4%</div>
       <div class="stat-label">Statement Coverage</div>
       <div class="stat-delta up">&#9650; Above 80% target</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num">82.0%</div>
+      <div class="stat-num">82.2%</div>
       <div class="stat-label">Function Coverage</div>
       <div class="stat-delta up">&#9650; Above 80% target</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num">78.6%</div>
+      <div class="stat-num">79.0%</div>
       <div class="stat-label">Branch Coverage</div>
       <div class="stat-delta up">&#9650; Above 75% target</div>
     </div>
     <div class="stat-card warn">
-      <div class="stat-num">1,857</div>
+      <div class="stat-num">1,910</div>
       <div class="stat-label">Unit Tests Passing</div>
       <div class="stat-delta up">0 failures &middot; 1 skipped</div>
     </div>
     <div class="stat-card">
-      <div class="stat-num">102</div>
-      <div class="stat-label">E2E Tests Passing</div>
-      <div class="stat-delta up">3 browsers &middot; 0 failures</div>
+      <div class="stat-num">48</div>
+      <div class="stat-label">E2E Tests (Chromium)</div>
+      <div class="stat-delta up">0 failures &middot; 48 passed</div>
     </div>
   </div>
 
@@ -465,21 +465,25 @@ pre.code-sample {
     <table class="tbl">
       <thead><tr><th>Metric</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td>Source files</td><td><code>188</code></td></tr>
-        <tr><td>Test files</td><td><code>120</code></td></tr>
-        <tr><td>Lines of code</td><td><code>~50,600</code></td></tr>
-        <tr><td>Production dependencies</td><td><code>27</code></td></tr>
+        <tr><td>Source files (non-test)</td><td><code>257</code></td></tr>
+        <tr><td>Test files (unit + e2e)</td><td><code>140</code></td></tr>
+        <tr><td>Lines of code (source)</td><td><code>~27,900</code></td></tr>
+        <tr><td>Lines of code (tests)</td><td><code>~32,000</code></td></tr>
+        <tr><td>Production dependencies</td><td><code>28</code></td></tr>
         <tr><td>Dev dependencies</td><td><code>24</code></td></tr>
         <tr><td>ADRs documented</td><td><code>11</code></td></tr>
         <tr><td>Security vulnerabilities</td><td><code>0</code></td></tr>
-        <tr><td>Files using structured logger</td><td><code>43</code></td></tr>
+        <tr><td>Files using structured logger</td><td><code>46</code></td></tr>
+        <tr><td>Error tracking</td><td><code>Sentry (browser)</code></td></tr>
+        <tr><td>Total git commits</td><td><code>377</code></td></tr>
+        <tr><td>Version</td><td><code>9.3.0</code></td></tr>
       </tbody>
     </table>
 
     <table class="tbl">
       <thead><tr><th>Standard</th><th>Status</th></tr></thead>
       <tbody>
-        <tr><td>Files &gt; 350 lines</td><td><span class="chip-dot safe"><span class="dot"></span>0 violations</span></td></tr>
+        <tr><td>Files &gt; 350 lines</td><td><span class="chip-dot attention"><span class="dot"></span>4 files</span></td></tr>
         <tr><td>TODO/FIXME in source</td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
         <tr><td>Unjustified <code>any</code></td><td><span class="chip-dot safe"><span class="dot"></span>0 found</span></td></tr>
         <tr><td>Raw console calls</td><td><span class="chip-dot safe"><span class="dot"></span>Only in logger.ts</span></td></tr>
@@ -495,9 +499,9 @@ pre.code-sample {
   <table class="tbl">
     <thead><tr><th>Browser</th><th>Tests</th><th>Passed</th><th>Failed</th><th>Duration</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td>Chromium (Desktop Chrome)</td><td>34</td><td>34</td><td>0</td><td>~50s</td><td><span class="badge badge-success">Pass</span></td></tr>
-      <tr><td>Firefox (Desktop Firefox)</td><td>34</td><td>34</td><td>0</td><td>~50s</td><td><span class="badge badge-success">Pass</span></td></tr>
-      <tr><td>WebKit (Desktop Safari)</td><td>34</td><td>34</td><td>0</td><td>~50s</td><td><span class="badge badge-success">Pass</span></td></tr>
+      <tr><td>Chromium (Desktop Chrome)</td><td>48</td><td>48</td><td>0</td><td>~45s</td><td><span class="badge badge-success">Pass</span></td></tr>
+      <tr><td>Firefox (Desktop Firefox)</td><td>48</td><td colspan="3">&mdash;</td><td><span class="badge badge-neutral">Not installed</span></td></tr>
+      <tr><td>WebKit (Desktop Safari)</td><td>48</td><td colspan="3">&mdash;</td><td><span class="badge badge-neutral">Not installed</span></td></tr>
     </tbody>
   </table>
 
@@ -505,11 +509,14 @@ pre.code-sample {
   <table class="tbl">
     <thead><tr><th>Spec File</th><th>Tests</th><th>Workflows Covered</th></tr></thead>
     <tbody>
-      <tr><td><code>task-crud.spec.ts</code></td><td>7</td><td>Create, read, complete, update (title/desc/quadrant), delete, multi-create</td></tr>
-      <tr><td><code>quadrant-classification.spec.ts</code></td><td>7</td><td>All 4 quadrants, capture parser (!, *, !!), move between quadrants</td></tr>
-      <tr><td><code>search.spec.ts</code></td><td>9</td><td>Title search, tag search, case-insensitive, partial match, no-results, clear</td></tr>
-      <tr><td><code>settings-navigation.spec.ts</code></td><td>8</td><td>Theme toggle, show-completed, export trigger, section navigation</td></tr>
+      <tr><td><code>quadrant-classification.spec.ts</code></td><td>8</td><td>All 4 quadrants, capture parser (!, *, !!), move between quadrants, empty state</td></tr>
+      <tr><td><code>search.spec.ts</code></td><td>8</td><td>Title search, tag search, multi-tag, case-insensitive, partial match, clear</td></tr>
+      <tr><td><code>settings-navigation.spec.ts</code></td><td>7</td><td>Theme toggle, show-completed, export trigger, section navigation</td></tr>
+      <tr><td><code>settings-sections.spec.ts</code></td><td>7</td><td>Notification/archive/about controls, sync hidden when disabled, deep-linking</td></tr>
+      <tr><td><code>task-crud.spec.ts</code></td><td>6</td><td>Create, read, complete, update (title/desc/quadrant), delete, multi-create</td></tr>
       <tr><td><code>matrix-navigation.spec.ts</code></td><td>5</td><td>Settings/dashboard nav, active highlighting, return-to-matrix</td></tr>
+      <tr><td><code>data-management.spec.ts</code></td><td>4</td><td>Invalid JSON import, valid import dialog, cancel import, task count display</td></tr>
+      <tr><td><code>sync-states.spec.ts</code></td><td>3</td><td>Sync-history page render, sidebar omits sync, deep-link fallback</td></tr>
     </tbody>
   </table>
 
@@ -517,7 +524,7 @@ pre.code-sample {
   <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
     <span class="badge sev-critical" style="font-size: 14px; height: 28px; padding: 0 14px;">Critical: 0</span>
     <span class="badge sev-high" style="font-size: 14px; height: 28px; padding: 0 14px;">High: 0</span>
-    <span class="badge sev-medium" style="font-size: 14px; height: 28px; padding: 0 14px;">Medium: 3</span>
+    <span class="badge sev-medium" style="font-size: 14px; height: 28px; padding: 0 14px;">Medium: 0</span>
     <span class="badge sev-low" style="font-size: 14px; height: 28px; padding: 0 14px;">Low: 1</span>
   </div>
 </section>
@@ -529,7 +536,7 @@ pre.code-sample {
   <div class="sec-head">
     <span class="idx">03</span>
     <h2>Detailed Findings</h2>
-    <span class="count">18 findings</span>
+    <span class="count">18 findings (7 resolved)</span>
   </div>
 
   <!-- Dimension 1: Standards Compliance -->
@@ -545,7 +552,7 @@ pre.code-sample {
       <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
     <div class="finding-body">
-      <p>All 188 source files adhere to the 350-line maximum. PascalCase for components/types, camelCase for functions, kebab-case for filenames. <code>@/</code> alias used consistently for imports. Tailwind classes grouped by layout &rarr; spacing &rarr; color.</p>
+      <p>263 source files follow naming conventions (PascalCase for components/types, camelCase for functions, kebab-case for filenames). 4 files slightly exceed the 350-line limit: <code>tests/fixtures/index.ts</code> (435), <code>lib/db.ts</code> (385), <code>edit-drawer.tsx</code> (376), <code>mcp task-operations.ts</code> (364). <code>@/</code> alias used consistently for imports. Tailwind classes grouped by layout &rarr; spacing &rarr; color.</p>
     </div>
   </div>
 
@@ -553,12 +560,12 @@ pre.code-sample {
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
       <span class="badge badge-warning">Medium</span>
-      <strong>3 functions exceed 40-line limit</strong>
+      <strong>10 functions exceed 40-line limit</strong>
       <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
     </div>
     <div class="finding-body" hidden>
-      <p><strong>Files:</strong> <code>components/matrix-simplified/edit-drawer.tsx</code> (~50 lines), <code>components/settings-page/index.tsx</code> (~55 lines), <code>lib/db.ts</code> (migration chains).</p>
-      <p><strong>Recommendation:</strong> These are UI orchestration and schema definition contexts &mdash; acceptable exceptions per ADR 0011. Consider extracting form field groups in edit-drawer to reduce component body length.</p>
+      <p><strong>Top offenders:</strong> <code>edit-drawer.tsx</code> (302 lines), <code>matrix-simplified/index.tsx</code> (291 lines), <code>settings-page/index.tsx</code> (269 lines), <code>sync-provider.tsx</code> (194 lines), <code>capture-bar.tsx</code> (174 lines).</p>
+      <p><strong>Recommendation:</strong> Most are UI orchestration and state management contexts &mdash; acceptable exceptions per ADR 0011. Consider extracting form field groups in edit-drawer and settings sections to reduce component body length.</p>
     </div>
   </div>
 
@@ -575,7 +582,7 @@ pre.code-sample {
       <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
     <div class="finding-body">
-      <p>Statements: 84.81% (target: 80%). Lines: 85.70% (target: 80%). Functions: 81.99% (target: 80%). Branches: 78.62% (target: 75%). 1,857 tests pass with 0 failures across 114 test files.</p>
+      <p>Statements: 85.35% (target: 80%). Lines: 86.26% (target: 80%). Functions: 82.24% (target: 80%). Branches: 79.02% (target: 75%). 1,910 tests pass with 0 failures across 122 test files.</p>
       <p><strong>Patterns:</strong> Proper Arrange-Act-Assert structure. Mock IndexedDB with <code>fake-indexeddb</code>. Behavior-based test names (<code>should_return_...</code>). Independent tests with no shared mutable state.</p>
     </div>
   </div>
@@ -596,15 +603,12 @@ pre.code-sample {
   <div class="finding">
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
-      <span class="badge badge-warning">Medium</span>
-      <strong>Vitest config picks up Playwright spec files</strong>
-      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+      <span class="badge badge-success">Resolved</span>
+      <strong>Vitest config now excludes Playwright spec files</strong>
+      <span class="t-caption" style="margin-left: auto;">Fixed since last report</span>
     </div>
     <div class="finding-body" hidden>
-      <p>Running <code>bun run test</code> reports 5 &ldquo;failed&rdquo; files &mdash; all are Playwright <code>.spec.ts</code> files incorrectly matched by Vitest. This inflates the failure count in CI.</p>
-      <p><strong>Recommendation:</strong> Add <code>exclude: ['tests/e2e/**']</code> to <code>vitest.config.ts</code>:</p>
-      <pre class="code-sample">// vitest.config.ts
-exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
+      <p><code>vitest.config.ts</code> now includes <code>exclude: ['tests/e2e/**']</code>, preventing Playwright <code>.spec.ts</code> files from being matched by Vitest. CI reports are clean.</p>
     </div>
   </div>
 
@@ -628,32 +632,25 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
   <div class="finding">
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
-      <span class="badge sev-medium">Medium</span>
-      <strong><code>.parse()</code> on user-input paths should be <code>.safeParse()</code></strong>
-      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+      <span class="badge badge-success">Resolved</span>
+      <strong>All <code>.parse()</code> calls migrated to <code>.safeParse()</code></strong>
+      <span class="t-caption" style="margin-left: auto;">Fixed in PR #302</span>
     </div>
     <div class="finding-body" hidden>
-      <p><strong>Affected files:</strong></p>
-      <ul>
-        <li><code>lib/tasks/crud/update.ts:28</code> &mdash; <code>taskDraftSchema.parse(nextDraft)</code></li>
-        <li><code>lib/notifications/settings.ts:33</code> &mdash; <code>notificationSettingsSchema.parse(settings)</code></li>
-        <li><code>lib/notifications/settings.ts:53</code> &mdash; <code>notificationSettingsSchema.parse(updated)</code></li>
-      </ul>
-      <p><code>.parse()</code> throws on invalid input, aborting the operation. The project standard requires <code>.safeParse()</code> with explicit error handling on all user-input paths.</p>
+      <p>All 3 <code>.parse()</code> calls migrated to <code>.safeParse()</code> with descriptive field-level errors. <code>getNotificationSettings()</code> now self-heals corrupt DB records to defaults instead of crashing. Zero <code>.parse()</code> calls remain on user-input paths.</p>
     </div>
   </div>
 
   <div class="finding">
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
-      <span class="badge sev-medium">Medium</span>
-      <strong>Hard-coded PocketBase URL fallback</strong>
-      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+      <span class="badge badge-success">Mitigated</span>
+      <strong>PocketBase URL resolution is safe for known and unknown hosts</strong>
+      <span class="t-caption" style="margin-left: auto;">Reviewed May 25</span>
     </div>
     <div class="finding-body" hidden>
       <p><strong>File:</strong> <code>lib/env-config.ts</code></p>
-      <p>The env config falls back to <code>https://api.vinny.io</code> when <code>NEXT_PUBLIC_POCKETBASE_URL</code> is not set. Self-hosted deployments may silently connect to the wrong instance.</p>
-      <p><strong>Recommendation:</strong> Remove the hardcoded fallback. Require the env var explicitly and throw during initialization if missing.</p>
+      <p>The <code>KNOWN_REMOTE_POCKETBASE_HOSTS</code> map is intentional for known deployments (<code>gsd.vinny.dev</code>, <code>gsd-dev.vinny.dev</code>). Unknown HTTPS hosts fall back to <code>window.location.origin</code> (safe for reverse-proxy setups). Self-hosted deployments can set <code>NEXT_PUBLIC_POCKETBASE_URL</code> explicitly.</p>
     </div>
   </div>
 
@@ -670,7 +667,7 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
       <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
     <div class="finding-body">
-      <p>Unidirectional dependency DAG throughout. <code>lib/sync/</code> (20+ modules) properly layered. <code>lib/tasks/</code> splits CRUD into 10 focused files. <code>lib/analytics/</code> maintains 5 side-effect-free modules. All 56 database accesses funneled through <code>getDb()</code>.</p>
+      <p>Unidirectional dependency DAG throughout. <code>lib/sync/</code> (20+ modules) properly layered. <code>lib/tasks/</code> splits CRUD into 10 focused files. <code>lib/analytics/</code> maintains 5 side-effect-free modules. 83 components, 94 lib modules. All database accesses funneled through <code>getDb()</code>.</p>
     </div>
   </div>
 
@@ -687,7 +684,7 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
       <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
     <div class="finding-body">
-      <p>Zero files exceed 350 lines. Zero commented-out code blocks. Zero TODO/FIXME in production source (tracked in <code>tasks/todo.md</code>). All 3 <code>any</code> type usages include justification comments.</p>
+      <p>4 files slightly exceed 350 lines (max 435). Zero commented-out code blocks. Zero TODO/FIXME in production source. Single <code>any</code> usage (<code>install-pwa-prompt.tsx</code> for <code>navigator.standalone</code>) is justified by missing browser type definition. Zero raw <code>.parse()</code> calls on user-input paths.</p>
     </div>
   </div>
 
@@ -704,7 +701,7 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
       <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
     <div class="finding-body">
-      <p>27 production dependencies, all current versions. <code>bun audit</code>: 0 vulnerabilities. Each dependency serves a clear purpose with no duplicates.</p>
+      <p>28 production dependencies (added <code>@sentry/browser</code>), all current versions. <code>bun audit</code>: 0 vulnerabilities. Each dependency serves a clear purpose with no duplicates.</p>
       <p><strong>Note:</strong> <code>@playwright/test</code> uses <code>^1.60.0</code> (floating range) in devDependencies &mdash; acceptable for dev-only tooling but worth pinning in CI for reproducibility.</p>
     </div>
   </div>
@@ -734,26 +731,24 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
   <div class="finding">
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
-      <span class="badge badge-danger">High</span>
-      <strong>No global <code>unhandledrejection</code> listener</strong>
-      <span class="t-caption" style="margin-left: auto;">Effort: Small</span>
+      <span class="badge badge-success">Resolved</span>
+      <strong>Global <code>unhandledrejection</code> listener added</strong>
+      <span class="t-caption" style="margin-left: auto;">Fixed in PR #303</span>
     </div>
     <div class="finding-body" hidden>
-      <p>No <code>window.addEventListener('unhandledrejection', ...)</code> handler. The realtime event handler in <code>lib/sync/pb-realtime.ts:83</code> has no try/catch &mdash; errors bubble as unhandled rejections that fail silently.</p>
-      <p><strong>Recommendation:</strong> Add a global listener at the app root that logs via <code>createLogger('ERROR_BOUNDARY')</code> and shows a <code>toast.error()</code>.</p>
+      <p><code>GlobalErrorListener</code> component mounted in root layout. Catches unhandled promise rejections, logs via <code>createLogger('GLOBAL_ERROR')</code>, shows <code>toast.error()</code>, and reports to Sentry. Throttles rapid successive errors (2s window).</p>
     </div>
   </div>
 
   <div class="finding">
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
-      <span class="badge sev-medium">Medium</span>
-      <strong>No server-side error tracking service</strong>
-      <span class="t-caption" style="margin-left: auto;">Effort: Medium</span>
+      <span class="badge badge-success">Resolved</span>
+      <strong>Sentry error tracking integrated</strong>
+      <span class="t-caption" style="margin-left: auto;">Fixed in PR #304</span>
     </div>
     <div class="finding-body" hidden>
-      <p>The structured logger (24 context types, secret sanitization, correlation IDs) outputs only to <code>console.*</code>. Production errors are only visible if a user opens DevTools.</p>
-      <p><strong>Recommendation:</strong> Integrate Sentry, LogRocket, or a self-hosted alternative. The logger architecture already supports this via the placeholder at <code>lib/error-logger.ts:37</code>.</p>
+      <p><code>@sentry/browser</code> integrated via <code>lib/sentry.ts</code> wrapper. Wired into <code>error-logger.ts</code> (production path), <code>ErrorBoundary</code> (<code>componentDidCatch</code>), and <code>GlobalErrorListener</code> (unhandled rejections). Graceful no-op when <code>NEXT_PUBLIC_SENTRY_DSN</code> is not set. No session replay (privacy-first). 10% trace sample rate.</p>
     </div>
   </div>
 
@@ -765,7 +760,7 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
       <span class="t-caption" style="margin-left: auto;">Confidence: High</span>
     </div>
     <div class="finding-body">
-      <p>43 files use <code>createLogger()</code>. Only <code>lib/logger.ts</code> itself makes raw <code>console.*</code> calls. Secret sanitization masks tokens, API keys, passwords, JWTs. Error boundary wraps the entire app in <code>layout.tsx</code>.</p>
+      <p>46 files use <code>createLogger()</code>. Only <code>lib/logger.ts</code> itself makes raw <code>console.*</code> calls &mdash; zero raw console calls in any other source file. Secret sanitization masks tokens, API keys, passwords, JWTs. Error boundary wraps the entire app in <code>layout.tsx</code>. Sentry captures all production errors.</p>
     </div>
   </div>
 
@@ -807,12 +802,12 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
   <div class="finding">
     <div class="finding-header" aria-expanded="false" onclick="toggleFinding(this)">
       <span class="arrow">&#9654;</span>
-      <span class="badge sev-low">Low</span>
-      <strong>Command palette not wired into v9 shell</strong>
-      <span class="t-caption" style="margin-left: auto;">Effort: Medium</span>
+      <span class="badge badge-success">Resolved</span>
+      <strong>Command palette wired into v9 shell</strong>
+      <span class="t-caption" style="margin-left: auto;">Fixed in PR #298</span>
     </div>
     <div class="finding-body" hidden>
-      <p>The command palette (<code>components/command-palette/</code>) has 17 passing unit tests but is not rendered in the v9 app shell. Code is maintained but not exercised in production.</p>
+      <p>The command palette (<code>components/command-palette/</code>) is now rendered in <code>app-shell.tsx</code> and accessible via <kbd>&#8984;K</kbd> / <kbd>Ctrl+K</kbd>. Previously maintained but unexercised code is now fully active in production.</p>
     </div>
   </div>
 
@@ -846,8 +841,8 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
 
   <div class="alert is-success" style="margin-bottom: var(--sp-4);">
     <div>
-      <p class="alert-title">All 102 E2E tests passing</p>
-      <p class="alert-body">34 tests &times; 3 browsers (Chromium, Firefox, WebKit) = 102 total. Duration: 2.5 minutes. Zero failures, zero flaky tests.</p>
+      <p class="alert-title">All 48 Chromium E2E tests passing</p>
+      <p class="alert-body">48 tests across 8 spec files. Duration: ~45 seconds. Zero failures, zero flaky tests. Firefox and WebKit browsers not installed locally &mdash; requires <code>npx playwright install</code> for multi-browser runs.</p>
     </div>
   </div>
 
@@ -912,10 +907,10 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
 
   <h3 class="t-h3" style="margin-top: var(--sp-5);">Critical Missing E2E Coverage</h3>
 
-  <div class="alert is-danger" style="margin-bottom: var(--sp-3);">
+  <div class="alert is-warning" style="margin-bottom: var(--sp-3);">
     <div>
-      <p class="alert-title">~70% of critical user paths have no E2E coverage</p>
-      <p class="alert-body">The following features have zero Playwright test coverage. Regressions can only be caught by manual testing.</p>
+      <p class="alert-title">~60% of critical user paths have no E2E coverage</p>
+      <p class="alert-body">New specs added for import flow, settings sections, and sync UI states since last report. The following features still have zero or minimal Playwright coverage.</p>
     </div>
   </div>
 
@@ -943,9 +938,9 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
         <td>Power user feature; atomicity bugs cause partial updates</td>
       </tr>
       <tr>
-        <td>Import Flow (file upload, validation, conflict handling)</td>
-        <td><span class="badge badge-warning">High</span></td>
-        <td>Data migration path; broken imports lose user data</td>
+        <td>Import Flow (conflict handling, overwrite confirmation)</td>
+        <td><span class="badge badge-neutral">Partial</span></td>
+        <td>Basic import/cancel covered in <code>data-management.spec.ts</code>; conflict resolution untested</td>
       </tr>
       <tr>
         <td>Drag &amp; Drop (inter-quadrant task moves)</td>
@@ -1000,34 +995,34 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
     <thead><tr><th>Action</th><th>Severity</th><th>Effort</th><th>Impact</th></tr></thead>
     <tbody>
       <tr>
-        <td>Migrate 3 <code>.parse()</code> calls to <code>.safeParse()</code></td>
-        <td><span class="badge badge-warning">Medium</span></td>
-        <td>&lt;1 day</td>
-        <td>Prevents silent data loss on corrupt records</td>
+        <td><del>Migrate 3 <code>.parse()</code> calls to <code>.safeParse()</code></del></td>
+        <td><span class="badge badge-success">Done</span></td>
+        <td>&mdash;</td>
+        <td>Resolved in PR #302 &mdash; all 3 calls migrated with field-level errors</td>
       </tr>
       <tr>
-        <td>Add global <code>unhandledrejection</code> listener</td>
-        <td><span class="badge badge-danger">High</span></td>
-        <td>&lt;1 day</td>
-        <td>Catches async sync errors that fail silently</td>
+        <td><del>Add global <code>unhandledrejection</code> listener</del></td>
+        <td><span class="badge badge-success">Done</span></td>
+        <td>&mdash;</td>
+        <td>Resolved in PR #303 &mdash; <code>GlobalErrorListener</code> with throttling</td>
       </tr>
       <tr>
-        <td>Wrap realtime handler in try/catch</td>
-        <td><span class="badge badge-danger">High</span></td>
-        <td>&lt;1 day</td>
-        <td>Prevents unhandled rejections in SSE handler</td>
+        <td><del>Wrap realtime handler in try/catch</del></td>
+        <td><span class="badge badge-success">Done</span></td>
+        <td>&mdash;</td>
+        <td>Already fixed in <code>pb-realtime.ts:110-118</code></td>
       </tr>
       <tr>
-        <td>Exclude <code>tests/e2e/</code> from Vitest config</td>
-        <td><span class="badge sev-low">Low</span></td>
-        <td>&lt;1 hour</td>
-        <td>Eliminates false failure noise in CI</td>
+        <td><del>Exclude <code>tests/e2e/</code> from Vitest config</del></td>
+        <td><span class="badge badge-success">Done</span></td>
+        <td>&mdash;</td>
+        <td>Resolved &mdash; <code>vitest.config.ts</code> now excludes <code>tests/e2e/**</code></td>
       </tr>
       <tr>
-        <td>Remove hard-coded PocketBase URL fallback</td>
-        <td><span class="badge badge-warning">Medium</span></td>
-        <td>&lt;1 day</td>
-        <td>Prevents data leakage in self-hosted deployments</td>
+        <td><del>Hard-coded PocketBase URL fallback</del></td>
+        <td><span class="badge badge-success">Mitigated</span></td>
+        <td>&mdash;</td>
+        <td>Unknown hosts fall back to <code>window.location.origin</code> (safe)</td>
       </tr>
       <tr>
         <td>Add <code>knip</code> for dead code detection</td>
@@ -1055,10 +1050,10 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
         <td>Verifies auto-create on completion</td>
       </tr>
       <tr>
-        <td>Add E2E specs for import/export flow</td>
+        <td>Expand E2E import/export specs (conflict handling, overwrite)</td>
         <td><span class="badge badge-warning">High</span></td>
-        <td>2&ndash;3 days</td>
-        <td>Validates data migration path end-to-end</td>
+        <td>1&ndash;2 days</td>
+        <td>Basic import flow covered; conflict resolution and overwrite still untested</td>
       </tr>
       <tr>
         <td>Harden fragile E2E selectors</td>
@@ -1067,10 +1062,10 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
         <td>Reduces test maintenance burden</td>
       </tr>
       <tr>
-        <td>Integrate error tracking service</td>
-        <td><span class="badge badge-warning">Medium</span></td>
-        <td>2&ndash;3 days</td>
-        <td>Captures production errors beyond browser console</td>
+        <td><del>Integrate error tracking service</del></td>
+        <td><span class="badge badge-success">Done</span></td>
+        <td>&mdash;</td>
+        <td>Resolved in PR #304 &mdash; <code>@sentry/browser</code> integrated</td>
       </tr>
     </tbody>
   </table>
@@ -1092,10 +1087,10 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
         <td>Covers advanced user workflows</td>
       </tr>
       <tr>
-        <td>Wire command palette into v9 shell</td>
-        <td><span class="badge sev-low">Low</span></td>
-        <td>2&ndash;3 days</td>
-        <td>Activates already-tested code for power users</td>
+        <td><del>Wire command palette into v9 shell</del></td>
+        <td><span class="badge badge-success">Done</span></td>
+        <td>&mdash;</td>
+        <td>Resolved in PR #298 &mdash; <kbd>&#8984;K</kbd>/<kbd>Ctrl+K</kbd> opens palette</td>
       </tr>
       <tr>
         <td>Add E2E specs for archive, dashboard, time tracking</td>
@@ -1120,10 +1115,12 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
   <table class="tbl" style="margin-top: var(--sp-3);">
     <thead><tr><th>Area</th><th>Method</th></tr></thead>
     <tbody>
-      <tr><td>Unit tests</td><td><code>bun run test -- --coverage</code> &mdash; 1,857 tests, <code>coverage/coverage-summary.json</code></td></tr>
-      <tr><td>E2E tests</td><td><code>npx playwright test --reporter=line</code> &mdash; 102 tests across 3 browsers (2.5 min)</td></tr>
+      <tr><td>Unit tests</td><td><code>bun run test -- --coverage</code> &mdash; 1,910 tests, v8 coverage report</td></tr>
+      <tr><td>E2E tests</td><td><code>bun run test:e2e -- --project=chromium</code> &mdash; 48 tests (45s)</td></tr>
+      <tr><td>Type checking</td><td><code>bun typecheck</code> &mdash; zero errors</td></tr>
+      <tr><td>Linting</td><td><code>bun lint</code> &mdash; zero warnings</td></tr>
       <tr><td>Security audit</td><td><code>bun audit</code> &mdash; zero vulnerabilities</td></tr>
-      <tr><td>Source analysis</td><td>188 source files in <code>lib/</code>, <code>components/</code>, <code>app/</code> &mdash; grep, AST-level review</td></tr>
+      <tr><td>Source analysis</td><td>257 source files in <code>lib/</code>, <code>components/</code>, <code>app/</code> &mdash; grep, code review</td></tr>
       <tr><td>Standards compliance</td><td><code>coding-standards.md</code> v14 &mdash; all 8 parts checked</td></tr>
       <tr><td>Architecture</td><td>Import graph analysis, dependency direction, module cohesion</td></tr>
       <tr><td>Documentation</td><td>CLAUDE.md, README, 11 ADRs, inline comments</td></tr>
@@ -1156,7 +1153,7 @@ exclude: [...configDefaults.exclude, 'tests/e2e/**']</pre>
 
 <footer>
   <div class="wrap-wide">
-    <p>Generated May 12, 2026 &middot; Inkwell design system v1.3.0 &middot; GSD Task Manager codebase analysis</p>
+    <p>Updated May 25, 2026 &middot; Inkwell design system v1.3.0 &middot; GSD Task Manager v9.3.0 codebase analysis</p>
   </div>
 </footer>
 
