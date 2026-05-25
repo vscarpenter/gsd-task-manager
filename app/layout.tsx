@@ -9,6 +9,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { WebMcpRegister } from "@/components/webmcp-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
+import { GlobalErrorListener } from "@/components/global-error-listener";
 import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
@@ -99,6 +100,7 @@ export default function RootLayout({
                   <WebMcpRegister />
                   <InstallPwaPrompt />
                   <PwaUpdateToast />
+                  <GlobalErrorListener />
                   <Toaster richColors position="top-center" />
                 </TooltipProvider>
               </QueryProvider>
