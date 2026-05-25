@@ -20,12 +20,18 @@ fix_type() {
   local key="$1"
   local ctype="$2"
   local cache="${3:-public,max-age=300,must-revalidate}"
-  echo "  → $key  ($ctype)"
-  aws s3 cp "$BUCKET/$key" "$BUCKET/$key" \
-    --metadata-directive REPLACE \
-    --content-type "$ctype" \
-    --cache-control "$cache" \
-    >/dev/null
+  
+  # Check if the file exists before trying to fix it
+  if aws s3 ls "$BUCKET/$key" >/dev/null 2>&1; then
+    echo "  → $key  ($ctype)"
+    aws s3 cp "$BUCKET/$key" "$BUCKET/$key" \
+      --metadata-directive REPLACE \
+      --content-type "$ctype" \
+      --cache-control "$cache" \
+      >/dev/null
+  else
+    echo "  → $key  (skipped, not found)"
+  fi
 }
 
 echo "Fixing Content-Type on discovery files in $BUCKET ..."
