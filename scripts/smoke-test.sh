@@ -47,8 +47,8 @@ pass "root URL returns 200"
 #    shell, /sw.js would return index.html instead and this would fail.
 echo "  [2/4] GET ${SITE_URL}/sw.js"
 sw_body=$(curl -fsS "${SITE_URL}/sw.js" | head -c 500)
-echo "$sw_body" | grep -q "gsd-cache" \
-  || fail "sw.js did not contain 'gsd-cache' marker (SPA fallback?)"
+echo "$sw_body" | grep -q "CACHE_VERSION" \
+  || fail "sw.js did not contain CACHE_VERSION marker (SPA fallback?)"
 pass "sw.js served correctly"
 
 # 3. .well-known/api-catalog must be application/linkset+json (RFC 9727).
