@@ -3,6 +3,7 @@
 import { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { createLogger } from "@/lib/logger";
+import { captureException } from "@/lib/sentry";
 
 const logger = createLogger("ERROR_BOUNDARY");
 
@@ -28,6 +29,9 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
   componentDidCatch(error: Error, errorInfo: unknown) {
     const info = errorInfo as { componentStack?: string } | undefined;
     logger.error("Error caught by boundary", error, {
+      componentStack: info?.componentStack ?? undefined,
+    });
+    captureException(error, {
       componentStack: info?.componentStack ?? undefined,
     });
   }

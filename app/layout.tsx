@@ -4,7 +4,10 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
+import { initSentry } from "@/lib/sentry";
 import "./globals.css";
+
+initSentry();
 import { PwaRegister } from "@/components/pwa-register";
 import { WebMcpRegister } from "@/components/webmcp-register";
 import { InstallPwaPrompt } from "@/components/install-pwa-prompt";

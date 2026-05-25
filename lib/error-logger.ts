@@ -7,6 +7,8 @@
  * - Never swallow exceptions
  */
 
+import { captureException } from '@/lib/sentry';
+
 export interface ErrorContext {
   action: string;
   taskId?: string;
@@ -53,6 +55,8 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
       timestamp: loggedError.timestamp
     });
   }
+
+  captureException(error, { ...loggedError });
 
   return loggedError;
 }
