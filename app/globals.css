@@ -111,11 +111,18 @@
    via the imports above; everything below is GSD-only.
    ===================================================================== */
 :root {
-  /* Quadrant fills — Eisenhower matrix backdrops, derived from Inkwell tokens. */
-  --quadrant-focus:    color-mix(in srgb, var(--rust)    12%, var(--paper));
-  --quadrant-schedule: color-mix(in srgb, var(--accent)  12%, var(--paper));
-  --quadrant-delegate: color-mix(in srgb, var(--olive)   12%, var(--paper));
-  --quadrant-eliminate: color-mix(in srgb, var(--warning) 14%, var(--paper));
+  /* Quadrant fill hues — Inkwell's lifted dark-mode values reused on light
+     surfaces. Dark mode rebinds to the canonical tokens below. */
+  --q1-fill: #D27468;  /* coral       — lifted --rust    */
+  --q2-fill: #7A8AD1;  /* periwinkle  — lifted --accent  */
+  --q3-fill: #9CB07A;  /* sage        — lifted --olive   */
+  --q4-fill: #D9A55F;  /* amber       — lifted --warning */
+
+  /* Quadrant fills — Eisenhower matrix backdrops, derived from fill tokens. */
+  --quadrant-focus:    color-mix(in srgb, var(--q1-fill) 18%, var(--paper));
+  --quadrant-schedule: color-mix(in srgb, var(--q2-fill) 17%, var(--paper));
+  --quadrant-delegate: color-mix(in srgb, var(--q3-fill) 20%, var(--paper));
+  --quadrant-eliminate: color-mix(in srgb, var(--q4-fill) 22%, var(--paper));
   --q1: var(--rust);
   --q2: var(--accent);
   --q3: var(--olive);
@@ -146,6 +153,23 @@
   /* Animation aliases. */
   --duration-fast:   var(--t-fast);
   --duration-normal: var(--t-slow);
+}
+
+/* Dark-mode fill rebinding — canonical tokens carry through any future
+   Inkwell palette swap. Follows the dual-cascade pattern from inkwell-tokens. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --q1-fill: var(--rust);
+    --q2-fill: var(--accent);
+    --q3-fill: var(--olive);
+    --q4-fill: var(--warning);
+  }
+}
+:root[data-theme="dark"] {
+  --q1-fill: var(--rust);
+  --q2-fill: var(--accent);
+  --q3-fill: var(--olive);
+  --q4-fill: var(--warning);
 }
 
 /* =====================================================================
@@ -307,16 +331,16 @@ main {
 
   /* Subtle quadrant gradient glow — adds depth without overwhelming content */
   .matrix-card.bg-quadrant-focus {
-    background-color: color-mix(in srgb, var(--rust) 8%, var(--paper));
+    background-color: color-mix(in srgb, var(--q1-fill) 18%, var(--paper));
   }
   .matrix-card.bg-quadrant-schedule {
-    background-color: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    background-color: color-mix(in srgb, var(--q2-fill) 17%, var(--paper));
   }
   .matrix-card.bg-quadrant-delegate {
-    background-color: color-mix(in srgb, var(--olive) 8%, var(--paper));
+    background-color: color-mix(in srgb, var(--q3-fill) 20%, var(--paper));
   }
   .matrix-card.bg-quadrant-eliminate {
-    background-color: color-mix(in srgb, var(--warning) 10%, var(--paper));
+    background-color: color-mix(in srgb, var(--q4-fill) 22%, var(--paper));
   }
 
   .matrix-card__header {
@@ -331,25 +355,25 @@ main {
     @apply text-sm text-foreground-muted;
   }
 
-  .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--rust) 5%, transparent); }
-  .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--accent) 5%, transparent); }
-  .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--olive) 6%, transparent); }
-  .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--warning) 7%, transparent); }
+  .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--q1-fill) 18%, var(--paper)); }
+  .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--q2-fill) 17%, var(--paper)); }
+  .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--q3-fill) 20%, var(--paper)); }
+  .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--q4-fill) 22%, var(--paper)); }
 
-  .dark .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--rust) 15%, transparent); }
-  .dark .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--accent) 15%, transparent); }
-  .dark .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--olive) 16%, transparent); }
-  .dark .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--warning) 17%, transparent); }
+  .dark .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--q1-fill) 18%, transparent); }
+  .dark .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--q2-fill) 17%, transparent); }
+  .dark .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--q3-fill) 20%, transparent); }
+  .dark .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--q4-fill) 22%, transparent); }
 
-  .quadrant-header-q1 { background-color: color-mix(in srgb, var(--rust) 8%, transparent); }
-  .quadrant-header-q2 { background-color: color-mix(in srgb, var(--accent) 8%, transparent); }
-  .quadrant-header-q3 { background-color: color-mix(in srgb, var(--olive) 9%, transparent); }
-  .quadrant-header-q4 { background-color: color-mix(in srgb, var(--warning) 10%, transparent); }
+  .quadrant-header-q1 { background-color: color-mix(in srgb, var(--q1-fill) 10%, var(--paper)); }
+  .quadrant-header-q2 { background-color: color-mix(in srgb, var(--q2-fill) 10%, var(--paper)); }
+  .quadrant-header-q3 { background-color: color-mix(in srgb, var(--q3-fill) 12%, var(--paper)); }
+  .quadrant-header-q4 { background-color: color-mix(in srgb, var(--q4-fill) 14%, var(--paper)); }
 
-  .dark .quadrant-header-q1 { background-color: color-mix(in srgb, var(--rust) 21%, transparent); }
-  .dark .quadrant-header-q2 { background-color: color-mix(in srgb, var(--accent) 21%, transparent); }
-  .dark .quadrant-header-q3 { background-color: color-mix(in srgb, var(--olive) 22%, transparent); }
-  .dark .quadrant-header-q4 { background-color: color-mix(in srgb, var(--warning) 23%, transparent); }
+  .dark .quadrant-header-q1 { background-color: color-mix(in srgb, var(--q1-fill) 22%, transparent); }
+  .dark .quadrant-header-q2 { background-color: color-mix(in srgb, var(--q2-fill) 22%, transparent); }
+  .dark .quadrant-header-q3 { background-color: color-mix(in srgb, var(--q3-fill) 24%, transparent); }
+  .dark .quadrant-header-q4 { background-color: color-mix(in srgb, var(--q4-fill) 26%, transparent); }
 }
 
 /* View Transitions */
