@@ -106,6 +106,19 @@ function remapTaskReferences(
   });
 }
 
+/** Resolve sync modules outside transaction to avoid detaching Dexie context */
+async function resolveSyncDeps() {
+  const { getSyncConfig } = await import("@/lib/sync/config");
+  const { getSyncQueue } = await import("@/lib/sync/queue");
+  const { scheduleSyncAfterChange } = await import("@/lib/tasks/crud/helpers");
+  const syncConfig = await getSyncConfig();
+  return {
+    syncEnabled: !!syncConfig?.enabled,
+    queue: getSyncQueue(),
+    scheduleSyncAfterChange,
+  };
+}
+
 /**
  * Import tasks from a payload with merge or replace mode
  */
@@ -121,24 +134,13 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
     throw new Error(`Import exceeds maximum of ${MAX_IMPORT_TASKS.toLocaleString()} tasks. Please split into smaller files.`);
   }
 
-  // Resolve sync modules BEFORE opening the transaction so we don't introduce
-  // unrelated awaits that could detach the Dexie transaction context.
-  const { getSyncConfig } = await import("@/lib/sync/config");
-  const { getSyncQueue } = await import("@/lib/sync/queue");
-  const { scheduleSyncAfterChange } = await import("@/lib/tasks/crud/helpers");
-  const syncConfig = await getSyncConfig();
-  const syncEnabled = !!syncConfig?.enabled;
-  const queue = getSyncQueue();
+  const { syncEnabled, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
 
   let tasksToCreate: TaskRecord[] = [];
   let taskIdsToDelete: string[] = [];
 
   await db.transaction("rw", [db.tasks, db.syncQueue], async () => {
     if (mode === "replace") {
-      // Replace mode: clear existing and add imported tasks.
-      // Capture the pre-import IDs so we can queue remote deletes for tasks
-      // that are not present in the imported payload — without this, the next
-      // pull would resurrect them from the server.
       const existingIds = new Set(
         (await db.tasks.toCollection().primaryKeys()) as string[],
       );
@@ -149,7 +151,6 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       await db.tasks.bulkAdd(parsed.tasks);
       tasksToCreate = parsed.tasks;
     } else {
-      // Merge mode: keep existing, add imported with regenerated IDs if needed
       const existingTasks = await db.tasks.toArray();
       const existingIds = new Set(existingTasks.map(t => t.id));
       const { tasks: regeneratedTasks, idMap } = regenerateConflictingIds(parsed.tasks, existingIds);
@@ -158,8 +159,6 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       tasksToCreate = tasksToImport;
     }
 
-    // Enqueue sync operations inside the same transaction so the local mutation
-    // and the queued remote intent are atomically committed together.
     if (syncEnabled) {
       for (const id of taskIdsToDelete) {
         await queue.enqueue('delete', id, null);

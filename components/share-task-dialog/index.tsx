@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
 import type { TaskRecord } from "@/lib/types";
 import { TOAST_DURATION } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
@@ -37,7 +37,6 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
     canUseWebShare() ? "native" : "email"
   );
   const [recipientEmail, setRecipientEmail] = useState("");
-  const { showToast } = useToast();
 
   if (!task) return null;
 
@@ -64,10 +63,10 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
   const handleCopyDetails = async () => {
     try {
       await navigator.clipboard.writeText(taskDetails);
-      showToast("Task details copied to clipboard", undefined, TOAST_DURATION.SHORT);
+      toast.success("Task details copied to clipboard", { duration: TOAST_DURATION.SHORT });
       onOpenChange(false);
     } catch {
-      showToast("Failed to copy to clipboard", undefined, TOAST_DURATION.SHORT);
+      toast.error("Failed to copy to clipboard", { duration: TOAST_DURATION.SHORT });
     }
   };
 
@@ -77,7 +76,7 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
         title: `Task: ${task.title}`,
         text: taskDetails,
       });
-      showToast("Task shared successfully", undefined, TOAST_DURATION.SHORT);
+      toast.success("Task shared successfully", { duration: TOAST_DURATION.SHORT });
       onOpenChange(false);
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -85,7 +84,7 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
           "Failed to share task",
           error instanceof Error ? error : new Error(String(error))
         );
-        showToast("Failed to share task", undefined, TOAST_DURATION.SHORT);
+        toast.error("Failed to share task", { duration: TOAST_DURATION.SHORT });
       }
     }
   };

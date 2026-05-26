@@ -168,6 +168,24 @@ describe('Task CRUD Operations', () => {
       await expect(createTask(invalid)).rejects.toThrow();
     });
 
+    it('should throw wrapped error when database add fails', async () => {
+      mockDb.tasks.add.mockRejectedValue(new Error('Constraint violation'));
+
+      await expect(createTask(baseDraft)).rejects.toThrow('Failed to create task');
+    });
+
+    it('should enqueue sync operation when sync is enabled', async () => {
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: true,
+        deviceId: 'test-device',
+      });
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      const result = await createTask(baseDraft);
+
+      expect(mockEnqueue).toHaveBeenCalledWith('create', result.id, expect.objectContaining({ title: baseDraft.title }));
+    });
+
     it.each([
       {
         scenario: 'extracts URLs from title into description',
@@ -294,6 +312,47 @@ describe('Task CRUD Operations', () => {
         updateTask('task-1', { title: '' })
       ).rejects.toThrow(/Task validation failed.*title/i);
     });
+
+    it('should enqueue sync operation when sync is enabled', async () => {
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: true,
+        deviceId: 'test-device',
+      });
+
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+      mockDb.tasks.put.mockResolvedValue(undefined);
+
+      await updateTask('task-1', { title: 'Updated' });
+
+      expect(mockEnqueue).toHaveBeenCalledWith('update', 'task-1', expect.objectContaining({ title: 'Updated' }));
+    });
+
+    it('should throw wrapped error when database put fails', async () => {
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+      mockDb.tasks.put.mockRejectedValue(new Error('Write failed'));
+
+      await expect(updateTask('task-1', { title: 'Updated' })).rejects.toThrow('Failed to update task');
+    });
   });
 
   describe('toggleCompleted', () => {
@@ -364,6 +423,36 @@ describe('Task CRUD Operations', () => {
       expect(newInstance.completed).toBe(false);
       expect(new Date(newInstance.dueDate).getTime()).toBeGreaterThan(new Date(existing.dueDate!).getTime());
     });
+
+    it('should enqueue sync operation when sync is enabled', async () => {
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: true,
+        deviceId: 'test-device',
+      });
+
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+      mockDb.tasks.put.mockResolvedValue(undefined);
+
+      await toggleCompleted('task-1', true);
+
+      expect(mockEnqueue).toHaveBeenCalledWith('update', 'task-1', expect.objectContaining({ completed: true }));
+    });
+
+    it('should throw wrapped error when database operation fails', async () => {
+      mockDb.tasks.get.mockRejectedValue(new Error('DB unavailable'));
+
+      await expect(toggleCompleted('task-1', true)).rejects.toThrow('Failed to toggle task completion');
+    });
   });
 
   describe('deleteTask', () => {
@@ -397,6 +486,37 @@ describe('Task CRUD Operations', () => {
       await expect(deleteTask('nonexistent')).resolves.not.toThrow();
       expect(mockRemoveDependencyReferences).not.toHaveBeenCalled();
     });
+
+    it('should enqueue sync delete when sync is enabled', async () => {
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: true,
+        deviceId: 'test-device',
+      });
+
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+      mockRemoveDependencyReferences.mockResolvedValue(undefined);
+      mockDb.tasks.delete.mockResolvedValue(undefined);
+
+      await deleteTask('task-1');
+
+      expect(mockEnqueue).toHaveBeenCalledWith('delete', 'task-1', null);
+    });
+
+    it('should throw wrapped error when database operation fails', async () => {
+      mockDb.tasks.get.mockRejectedValue(new Error('DB connection lost'));
+
+      await expect(deleteTask('task-1')).rejects.toThrow('Failed to delete task');
+    });
   });
 
   describe('moveTaskToQuadrant', () => {
@@ -421,6 +541,38 @@ describe('Task CRUD Operations', () => {
       expect(result.urgent).toBe(false);
       expect(result.important).toBe(true);
       expect(result.quadrant).toBe('not-urgent-important');
+    });
+
+    it('should throw when task does not exist', async () => {
+      mockDb.tasks.get.mockResolvedValue(null);
+
+      await expect(moveTaskToQuadrant('nonexistent', 'urgent-important')).rejects.toThrow('Failed to move task to quadrant');
+    });
+
+    it('should enqueue sync operation when sync is enabled', async () => {
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: true,
+        deviceId: 'test-device',
+      });
+
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        urgent: true,
+        important: true,
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+      mockDb.tasks.put.mockResolvedValue(undefined);
+
+      await moveTaskToQuadrant('task-1', 'not-urgent-not-important');
+
+      expect(mockEnqueue).toHaveBeenCalledWith('update', 'task-1', expect.objectContaining({ quadrant: 'not-urgent-not-important' }));
     });
   });
 
@@ -486,6 +638,12 @@ describe('Task CRUD Operations', () => {
       await clearTasks();
 
       expect(mockDb.tasks.clear).toHaveBeenCalled();
+    });
+
+    it('should throw wrapped error when database operation fails', async () => {
+      mockDb.tasks.count.mockRejectedValue(new Error('DB error'));
+
+      await expect(clearTasks()).rejects.toThrow('Failed to clear tasks');
     });
   });
 });

@@ -6,8 +6,8 @@ import { createTask, toggleCompleted, updateTask, deleteTask } from "@/lib/tasks
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { parseShareCaptureParams } from "@/lib/share-capture";
+import { toast } from "sonner";
 import { useTasks } from "@/lib/use-tasks";
-import { useToast } from "@/components/ui/toast";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { useAutoArchive } from "@/lib/use-auto-archive";
@@ -51,7 +51,6 @@ function filterTasks(tasks: TaskRecord[], trimmedQuery: string): TaskRecord[] {
 
 export function MatrixSimplified() {
   const { all } = useTasks();
-  const { showToast } = useToast();
   const { handleError } = useErrorHandlerWithUndo();
   const { sensors, activeId, handleDragStart, handleDragEnd } = useDragAndDrop(handleError);
 
@@ -62,15 +61,15 @@ export function MatrixSimplified() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [mounted, setMounted] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [createInitial, setCreateInitial] = useState<Partial<EditDraft> | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [sharingTask, setSharingTask] = useState<TaskRecord | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- canonical SSR-safe pattern for static export
     setShowCompleted(readShowCompleted());
   }, []);
 
@@ -97,8 +96,8 @@ export function MatrixSimplified() {
       const draft = parseShareCaptureParams(params);
       if (draft) {
         createTask(draft)
-          .then(() => showToast("Task captured", undefined, TOAST_DURATION.SHORT))
-          .catch(() => showToast("Failed to capture task", undefined, TOAST_DURATION.LONG));
+          .then(() => toast.success("Task captured", { duration: TOAST_DURATION.SHORT }))
+          .catch(() => toast.error("Failed to capture task", { duration: TOAST_DURATION.LONG }));
       }
     } else {
       return;
@@ -107,7 +106,7 @@ export function MatrixSimplified() {
     ["action", "title", "url", "tags"].forEach((k) => params.delete(k));
     const next = params.toString();
     window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
-  }, [showToast]);
+  }, []);
 
   // Global "/" focuses search; "n" handled by CaptureBar; "?" opens help
   useEffect(() => {
@@ -163,12 +162,12 @@ export function MatrixSimplified() {
           important,
           tags: tags.length > 0 ? tags : undefined,
         });
-        showToast("Task added", undefined, TOAST_DURATION.SHORT);
+        toast.success("Task added", { duration: TOAST_DURATION.SHORT });
       } catch {
-        showToast("Failed to create task", undefined, TOAST_DURATION.LONG);
+        toast.error("Failed to create task", { duration: TOAST_DURATION.LONG });
       }
     },
-    [showToast]
+    []
   );
 
   const handleAddInQuadrant = useCallback((key: RedesignQuadrantKey) => {
@@ -188,10 +187,10 @@ export function MatrixSimplified() {
         await toggleCompleted(task.id, completedNext);
         if (completedNext) celebrateCompletion();
       } catch {
-        showToast("Failed to update task", undefined, TOAST_DURATION.LONG);
+        toast.error("Failed to update task", { duration: TOAST_DURATION.LONG });
       }
     },
-    [showToast]
+    []
   );
 
   const handleDelete = useCallback(
@@ -199,10 +198,10 @@ export function MatrixSimplified() {
       try {
         await deleteTask(task.id);
       } catch {
-        showToast("Failed to delete task", undefined, TOAST_DURATION.LONG);
+        toast.error("Failed to delete task", { duration: TOAST_DURATION.LONG });
       }
     },
-    [showToast]
+    []
   );
 
   const handleEditOpen = useCallback((task: TaskRecord) => setEditingTask(task), []);
@@ -238,7 +237,7 @@ export function MatrixSimplified() {
       try {
         if (taskId) {
           await updateTask(taskId, draft);
-          showToast("Task updated", undefined, TOAST_DURATION.SHORT);
+          toast.success("Task updated", { duration: TOAST_DURATION.SHORT });
           setEditingTask(null);
         } else {
           const { cleanTitle, urls } = extractUrlsFromTitle(draft.title);
@@ -250,15 +249,15 @@ export function MatrixSimplified() {
             dueDate: draft.dueDate,
             tags: draft.tags.length > 0 ? draft.tags : undefined,
           });
-          showToast("Task added", undefined, TOAST_DURATION.SHORT);
+          toast.success("Task added", { duration: TOAST_DURATION.SHORT });
           setCreateDrawerOpen(false);
           setCreateInitial(undefined);
         }
       } catch {
-        showToast("Failed to save task", undefined, TOAST_DURATION.LONG);
+        toast.error("Failed to save task", { duration: TOAST_DURATION.LONG });
       }
     },
-    [showToast]
+    []
   );
 
   const activeDragTask = useMemo(
