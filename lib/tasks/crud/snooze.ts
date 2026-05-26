@@ -7,6 +7,15 @@ import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TASK_CRUD");
 
+/** Build a snoozed copy of a task record */
+function buildSnoozedRecord(existing: TaskRecord, minutes: number): TaskRecord {
+  const snoozedUntil = minutes > 0
+    ? new Date(Date.now() + minutes * TIME_TRACKING.MS_PER_MINUTE).toISOString()
+    : undefined;
+
+  return { ...existing, snoozedUntil, updatedAt: isoNow() };
+}
+
 /**
  * Snooze a task's notifications for a specified duration
  * @param id - The task ID to snooze
@@ -34,23 +43,14 @@ export async function snoozeTask(
     }
 
     const { syncConfig } = await getSyncContext();
-
-    const snoozedUntil = minutes > 0
-      ? new Date(Date.now() + minutes * TIME_TRACKING.MS_PER_MINUTE).toISOString()
-      : undefined;
-
-    const nextRecord: TaskRecord = {
-      ...existing,
-      snoozedUntil,
-      updatedAt: isoNow(),
-    };
+    const nextRecord = buildSnoozedRecord(existing, minutes);
 
     await db.tasks.put(nextRecord);
 
     logger.info("Task snoozed", {
       taskId: id,
       title: nextRecord.title,
-      snoozedUntil: snoozedUntil ?? "cleared"
+      snoozedUntil: nextRecord.snoozedUntil ?? "cleared"
     });
 
     await enqueueSyncOperation(

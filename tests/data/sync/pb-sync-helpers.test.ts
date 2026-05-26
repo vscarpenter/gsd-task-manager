@@ -5,7 +5,7 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
 
-import { fetchRemoteTaskIndex } from '@/lib/sync/pb-sync-helpers';
+import { fetchRemoteTaskIndex, escapeFilterValue, assertSafeRecordId } from '@/lib/sync/pb-sync-helpers';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 
 describe('fetchRemoteTaskIndex', () => {
@@ -41,5 +41,38 @@ describe('fetchRemoteTaskIndex', () => {
     const { index, fetchSucceeded } = await fetchRemoteTaskIndex('user-1');
     expect(fetchSucceeded).toBe(false);
     expect(index.size).toBe(0);
+  });
+});
+
+describe('escapeFilterValue', () => {
+  it('escapes backslashes and double quotes', () => {
+    expect(escapeFilterValue('hello "world"')).toBe('hello \\"world\\"');
+    expect(escapeFilterValue('back\\slash')).toBe('back\\\\slash');
+  });
+
+  it('throws when value exceeds max length', () => {
+    const longValue = 'a'.repeat(501);
+    expect(() => escapeFilterValue(longValue)).toThrow('exceeds maximum length');
+  });
+});
+
+describe('assertSafeRecordId', () => {
+  it('accepts valid alphanumeric IDs', () => {
+    expect(() => assertSafeRecordId('abc123')).not.toThrow();
+    expect(() => assertSafeRecordId('user-1_test')).not.toThrow();
+  });
+
+  it('throws for empty strings', () => {
+    expect(() => assertSafeRecordId('')).toThrow('unexpected length');
+  });
+
+  it('throws for strings exceeding 50 characters', () => {
+    expect(() => assertSafeRecordId('a'.repeat(51))).toThrow('unexpected length');
+  });
+
+  it('throws for strings with unsafe characters', () => {
+    expect(() => assertSafeRecordId('user"injection')).toThrow('unsafe characters');
+    expect(() => assertSafeRecordId("user'id")).toThrow('unsafe characters');
+    expect(() => assertSafeRecordId('a && b')).toThrow('unsafe characters');
   });
 });

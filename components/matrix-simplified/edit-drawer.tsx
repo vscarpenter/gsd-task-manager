@@ -145,7 +145,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay">
+    <div onClick={onClose} onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }} role="presentation" className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay">
       <form
         data-testid="edit-drawer"
         onClick={(e) => e.stopPropagation()}

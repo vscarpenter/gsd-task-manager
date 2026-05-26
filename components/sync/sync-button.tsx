@@ -3,8 +3,8 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 import { useSync } from '@/lib/hooks/use-sync';
-import { useToast } from '@/components/ui/toast';
 import { useState } from 'react';
 import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
 import { SYNC_TOAST_DURATION } from '@/lib/constants/sync';
@@ -21,12 +21,16 @@ import {
 
 export function SyncButton() {
   const { sync, isSyncing, status, error, isEnabled, nextRetryAt } = useSync();
-  const { showToast } = useToast();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   useSyncHealth({
     isEnabled,
-    onHealthIssue: showToast,
+    onHealthIssue: (message, action, duration) => {
+      toast(message, {
+        duration,
+        action: action ? { label: action.label, onClick: action.onClick } : undefined,
+      });
+    },
     onSync: handleSync,
   });
 
@@ -36,14 +40,13 @@ export function SyncButton() {
     error,
     nextRetryAt,
     onAuthError: (message, _action, duration) => {
-      showToast(
-        message,
-        {
+      toast(message, {
+        duration,
+        action: {
           label: 'Re-login',
           onClick: () => setAuthDialogOpen(true),
         },
-        duration
-      );
+      });
     },
   });
 
@@ -56,11 +59,9 @@ export function SyncButton() {
     }
 
     if (hasAuthError) {
-      showToast(
-        'Please re-login to continue syncing',
-        undefined,
-        SYNC_TOAST_DURATION.MEDIUM
-      );
+      toast('Please re-login to continue syncing', {
+        duration: SYNC_TOAST_DURATION.MEDIUM,
+      });
       setAuthDialogOpen(true);
       return;
     }

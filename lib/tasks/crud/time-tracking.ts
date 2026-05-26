@@ -67,6 +67,21 @@ export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
   return nextRecord;
 }
 
+/** Close the running entry and recalculate total time */
+function closeRunningEntry(
+  entries: TimeEntry[],
+  runningIndex: number,
+  notes?: string
+): { updatedEntries: TimeEntry[]; timeSpent: number } {
+  const updatedEntries = [...entries];
+  updatedEntries[runningIndex] = {
+    ...updatedEntries[runningIndex],
+    endedAt: isoNow(),
+    notes: notes || updatedEntries[runningIndex].notes,
+  };
+  return { updatedEntries, timeSpent: calculateTimeSpent(updatedEntries) };
+}
+
 /**
  * Stop the running time tracking session for a task
  */
@@ -88,15 +103,11 @@ export async function stopTimeTracking(
   }
 
   const { syncConfig } = await getSyncContext();
-
-  const updatedEntries = [...(existing.timeEntries || [])];
-  updatedEntries[runningEntryIndex] = {
-    ...updatedEntries[runningEntryIndex],
-    endedAt: isoNow(),
-    notes: notes || updatedEntries[runningEntryIndex].notes,
-  };
-
-  const timeSpent = calculateTimeSpent(updatedEntries);
+  const { updatedEntries, timeSpent } = closeRunningEntry(
+    existing.timeEntries || [],
+    runningEntryIndex,
+    notes
+  );
 
   const nextRecord: TaskRecord = {
     ...existing,
@@ -113,12 +124,7 @@ export async function stopTimeTracking(
     duration: timeSpent - (existing.timeSpent || 0),
   });
 
-  await enqueueSyncOperation(
-    "update",
-    taskId,
-    nextRecord,
-    syncConfig?.enabled ?? false
-  );
+  await enqueueSyncOperation("update", taskId, nextRecord, syncConfig?.enabled ?? false);
 
   return nextRecord;
 }

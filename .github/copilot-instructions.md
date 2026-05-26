@@ -16,6 +16,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Task Fields**: Core (id, title, description, urgent, important, quadrant, completed, completedAt, dueDate, createdAt, updatedAt) + Advanced (recurrence, tags, subtasks, dependencies, notifyBefore, snoozedUntil, estimatedMinutes, timeSpent, timeEntries)
 - **Indexes**: Performance-critical indexes on `quadrant`, `completed`, `dueDate`, `completedAt`, `createdAt`, `updatedAt`, `*tags`, `*dependencies`, `notificationSent`
 - **Migrations**: Schema changes always require migration in `lib/db.ts`. See `DATABASE_ARCHITECTURE.md` for full ERD.
+- **Schema change checklist**: Zod schema changes typically require updates in three places: `lib/constants/schema.ts` (add/update limits), `taskDraftSchema` in `lib/schema.ts`, and `taskRecordImportSchema` in `lib/schema.ts` (a separate definition that uses `.strip()` — not derived from the draft schema for validation rules).
 
 ### Key Architectural Decisions
 1. **PocketBase cloud sync**: Optional cloud sync via self-hosted PocketBase server. Tasks stored as plaintext (user owns the server). OAuth authentication with Google/GitHub.
@@ -41,6 +42,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - **Frontend**: `lib/sync/` with modular architecture: `pb-sync-engine.ts` (push/pull), `pb-realtime.ts` (SSE subscriptions), `pb-auth.ts` (OAuth), `pocketbase-client.ts` (SDK singleton), `task-mapper.ts` (field mapping), `sync-coordinator.ts` (orchestrator).
 - **Backend**: Self-hosted PocketBase server at `https://api.vinny.io` (AWS EC2). OAuth with Google/GitHub. API rules enforce per-user data isolation.
 - **Realtime**: PocketBase SSE (Server-Sent Events) for instant cross-device updates with echo filtering via `device_id`.
+- **Device-local fields**: `notificationSent`, `lastNotificationAt`, and `snoozedUntil` are device-local state — never overwritten from remote on sync pull. `pocketBaseToTaskRecord()` accepts an optional `existingLocal` parameter; callers must pass the existing local task to preserve these fields.
 
 ### MCP Server Integration
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language.
@@ -55,7 +57,9 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - `bun dev` — Dev server at http://localhost:3000
 - `bun typecheck` — TypeScript type checking (no emit)
 - `bun lint` — ESLint with Next.js config
-- `bun run test` — Vitest CI mode (`bun test` invokes bun's built-in runner, not vitest)
+- `bun run test` — Vitest CI mode (**not** `bun test` — that invokes bun's built-in runner, not Vitest)
+- `bun run test -- tests/data/tasks.test.ts` — Run a single test file
+- `bun run test -- -t "test name pattern"` — Run tests matching a name pattern
 - `bun run test:watch` — Vitest watch mode
 - `bun run test -- --coverage` — Coverage report (target: ≥80% statements/lines/functions, ≥75% branches)
 - `bun run build` — Production build (includes typecheck)
@@ -84,12 +88,14 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 
 ### Patterns to Follow
 1. **Live reactivity**: Use `useLiveQuery()` from `dexie-react-hooks` for real-time updates.
-2. **Validation**: Always validate with Zod schemas before persisting to IndexedDB.
+2. **Validation**: Always validate with Zod schemas before persisting to IndexedDB. Use `.safeParse()` (not `.parse()`) on all user-input paths.
 3. **Error handling**: Use `try/catch` with structured logging (`lib/logger.ts`). Sanitize secrets in logs.
-4. **Keyboard shortcuts**: Global shortcuts in `lib/shortcuts.ts`. Component-level shortcuts use `useEffect` with event listeners.
-5. **Recurring tasks**: Auto-create next instance on completion via `handleRecurrence()` in `lib/tasks.ts`.
-6. **Circular dependencies**: Always validate with `wouldCreateCircularDependency()` (BFS algorithm in `lib/dependencies.ts`) before adding dependencies.
-7. **Transaction-based bulk ops**: Use `db.transaction('rw', [...tables], async () => { ... })` for atomicity.
+4. **Toast notifications**: Use `toast.error()` / `toast.success()` from `sonner` for user-facing messages. Do **not** use the legacy `useToast()` hook from `components/ui/toast.tsx` — it has a different API and is being phased out. Never use `window.alert()`.
+5. **Structured logging**: `createLogger()` requires a value from the `LogContext` union type in `lib/logger.ts` (e.g., `'UI'`, `'IMPORT'`, `'SYNC_ENGINE'`, `'TASK_CRUD'`). Check the type definition before adding a new logger — add a new literal to the union if needed.
+6. **Keyboard shortcuts**: Global shortcuts in `lib/shortcuts.ts`. Component-level shortcuts use `useEffect` with event listeners.
+7. **Recurring tasks**: Auto-create next instance on completion via `handleRecurrence()` in `lib/tasks.ts`.
+8. **Circular dependencies**: Always validate with `wouldCreateCircularDependency()` (BFS algorithm in `lib/dependencies.ts`) before adding dependencies.
+9. **Transaction-based bulk ops**: Use `db.transaction('rw', [...tables], async () => { ... })` for atomicity.
 
 ## Coding Standards & Philosophy
 
