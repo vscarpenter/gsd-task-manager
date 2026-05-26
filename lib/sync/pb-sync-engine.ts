@@ -57,7 +57,7 @@ export async function applyRemoteChange(
 
   // update — LWW
   const localTask = await db.tasks.get(remoteTask.id);
-  if (!localTask || new Date(remoteTask.updatedAt).getTime() >= new Date(localTask.updatedAt).getTime()) {
+  if (!localTask || new Date(remoteTask.updatedAt).getTime() > new Date(localTask.updatedAt).getTime()) {
     // Re-map with existing local task to preserve device-local fields
     const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
     if (mergedTask) {

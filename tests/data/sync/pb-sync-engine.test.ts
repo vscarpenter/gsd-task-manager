@@ -148,6 +148,16 @@ describe('pb-sync-engine', () => {
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
 
+    it('should skip realtime update when timestamps are equal (consistent LWW with pull/push)', async () => {
+      const equalTimestamp = '2026-04-08T00:00:00.000Z';
+      mockTasks.set('task-1', { id: 'task-1', title: 'Local', updatedAt: equalTimestamp });
+
+      const record = { task_id: 'task-1', title: 'Remote Same Time', client_updated_at: equalTimestamp };
+      await applyRemoteChange('update', record as never);
+
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
+    });
+
     it('should apply a remote delete', async () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'To Delete' });
 
