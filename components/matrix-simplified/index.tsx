@@ -66,10 +66,13 @@ export function MatrixSimplified() {
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [createInitial, setCreateInitial] = useState<Partial<EditDraft> | undefined>(undefined);
-  const [showCompleted, setShowCompleted] = useState<boolean>(readShowCompleted);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [sharingTask, setSharingTask] = useState<TaskRecord | null>(null);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setShowCompleted(readShowCompleted());
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {

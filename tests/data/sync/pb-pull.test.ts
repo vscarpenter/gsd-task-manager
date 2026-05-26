@@ -72,4 +72,38 @@ describe('pullRemoteChanges cursor clamping', () => {
     // can re-catch boundary records reliably across clock drift.
     expect(maxObservedTimestamp).toBe('2026-05-17T23:59:30.000Z');
   });
+
+  it('skips records where remote timestamp equals local (no phantom pull count)', async () => {
+    const timestamp = '2026-05-18T12:00:00.000Z';
+
+    const { getDb } = await import('@/lib/db');
+    const db = getDb();
+    await db.tasks.add({
+      id: 't-equal',
+      title: 'Existing',
+      description: '',
+      urgent: false,
+      important: false,
+      quadrant: 'not-urgent-not-important',
+      completed: false,
+      createdAt: '2026-05-18T00:00:00.000Z',
+      updatedAt: timestamp,
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: false,
+      notificationSent: false,
+      timeSpent: 0,
+      timeEntries: [],
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('t-equal', timestamp)]),
+      }),
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+    expect(pulledCount).toBe(0);
+  });
 });

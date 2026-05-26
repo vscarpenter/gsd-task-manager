@@ -91,7 +91,7 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
     } else {
       const remoteTime = new Date(remoteTask.updatedAt).getTime();
       const localTime = new Date(localTask.updatedAt).getTime();
-      if (remoteTime >= localTime) {
+      if (remoteTime > localTime) {
         await db.tasks.put(remoteTask);
         appliedRecords.push(record);
         pulledCount++;
@@ -105,7 +105,7 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
 /**
  * Pull remote changes from PocketBase into local IndexedDB.
  * Fetches tasks updated after the last sync timestamp.
- * LWW: remote wins if remote client_updated_at >= local updatedAt.
+ * LWW: remote wins if remote client_updated_at > local updatedAt.
  */
 export async function pullRemoteChanges(lastSyncAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const pb = getPocketBase();
