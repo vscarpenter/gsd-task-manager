@@ -69,7 +69,7 @@ export function MatrixSimplified() {
   const [sharingTask, setSharingTask] = useState<TaskRecord | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- canonical SSR-safe pattern for static export
     setShowCompleted(readShowCompleted());
   }, []);
 
