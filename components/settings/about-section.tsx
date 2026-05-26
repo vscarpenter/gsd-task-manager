@@ -47,6 +47,18 @@ export function AboutSection() {
 				<span className="text-sm font-medium text-accent">View on GitHub</span>
 				<ExternalLinkIcon className="w-4 h-4 text-foreground-muted/50" />
 			</a>
+
+			{/* Codebase Analysis Report Link Row */}
+			<a
+				href="/docs/codebase-analysis-report.html"
+				target="_blank"
+				rel="noopener noreferrer"
+				className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
+				           text-left hover:bg-background-muted/50 transition-colors"
+			>
+				<span className="text-sm font-medium text-accent">Codebase Analysis Report</span>
+				<ExternalLinkIcon className="w-4 h-4 text-foreground-muted/50" />
+			</a>
 		</>
 	);
 }
