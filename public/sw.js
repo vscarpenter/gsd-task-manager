@@ -1,6 +1,6 @@
 // Cache version — updated at build time by scripts/update-sw-version.cjs
 // Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '9.3.5';
+const CACHE_VERSION = '9.3.7';
 const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 
