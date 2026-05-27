@@ -36,7 +36,10 @@ tests/e2e/
 ├── quadrant-classification.spec.ts ← capture-parser quadrant assignment + move
 ├── matrix-navigation.spec.ts       ← matrix ↔ dashboard ↔ settings routing
 ├── search.spec.ts                  ← title and tag search
-└── settings-navigation.spec.ts     ← section nav, theme, toggles, export
+├── settings-navigation.spec.ts     ← section nav, theme, toggles, export
+├── data-management.spec.ts         ← import flows and import validation
+├── about-install.spec.ts           ← about + install page smoke tests
+└── first-time-redirect.spec.ts     ← first-visit /about redirect
 ```
 
 ## Conventions

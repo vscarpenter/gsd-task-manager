@@ -111,6 +111,73 @@ test.describe("Data Management — Import", () => {
     await expect(dialog).toContainText(/2 tasks/i);
   });
 
+  test("complete JSON import flow merges tasks into the matrix", async ({ page }) => {
+    await matrixPage.createTask("Existing task");
+    await gotoDataSection(matrixPage);
+
+    const validPayload = JSON.stringify({
+      version: "1.0.0",
+      exportedAt: "2026-01-01T00:00:00.000Z",
+      tasks: [
+        {
+          id: "task-1",
+          title: "Imported task one",
+          description: "",
+          urgent: false,
+          important: true,
+          quadrant: "not-urgent-important",
+          completed: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          recurrence: "none",
+          tags: [],
+          subtasks: [],
+          dependencies: [],
+          notificationEnabled: false,
+          notificationSent: false,
+        },
+        {
+          id: "task-2",
+          title: "Imported task two",
+          description: "",
+          urgent: true,
+          important: true,
+          quadrant: "urgent-important",
+          completed: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          recurrence: "none",
+          tags: [],
+          subtasks: [],
+          dependencies: [],
+          notificationEnabled: false,
+          notificationSent: false,
+        },
+      ],
+    });
+
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: /import/i }).click();
+    const fileChooser = await fileChooserPromise;
+
+    await fileChooser.setFiles({
+      name: "complete-import.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(validPayload),
+    });
+
+    const dialog = page.getByRole("dialog", { name: /import tasks/i });
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: /merge tasks/i }).click();
+    await expect(dialog).toBeHidden();
+
+    await matrixPage.openMatrix();
+    await expect(page.locator("[data-testid='task-card']")).toHaveCount(3);
+    await expect(page.getByText("Existing task")).toBeVisible();
+    await expect(page.getByText("Imported task one")).toBeVisible();
+    await expect(page.getByText("Imported task two")).toBeVisible();
+  });
+
   test("import dialog cancel button closes the dialog without changes", async ({ page }) => {
     await gotoDataSection(matrixPage);
 
