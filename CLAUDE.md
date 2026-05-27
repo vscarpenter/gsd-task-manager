@@ -249,3 +249,17 @@ All modules maintain backward compatibility through re-export layers.
 For git operations: when asked to commit and push, write a descriptive conventional commit message, bump the version if appropriate, and create a PR unless told otherwise. Standard workflow: commit → push → create PR.
 
 Always leverage @coding-standards.md for coding standards and guidelines.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues on `vscarpenter/gsd-task-manager`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
