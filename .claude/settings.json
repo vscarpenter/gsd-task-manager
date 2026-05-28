@@ -29,6 +29,16 @@
             "command": "bash .claude/hooks/block-sensitive-files.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/no-main-commits.sh",
+            "if": "Bash(git commit*)"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -51,6 +61,12 @@
             "command": "bun typecheck 2>&1 | tail -10",
             "timeout": 60,
             "statusMessage": "Type-check verification gate..."
+          },
+          {
+            "type": "command",
+            "command": "bun lint 2>&1 | tail -10",
+            "timeout": 60,
+            "statusMessage": "Lint verification gate..."
           }
         ]
       }

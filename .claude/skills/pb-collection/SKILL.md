@@ -2,6 +2,12 @@
 name: pb-collection
 description: Add or modify a field on the PocketBase tasks collection end-to-end — schema script, task-mapper, Zod schema, Dexie version bump, migration test. Use when the user wants to add/remove/rename a synced task field. Codifies the PocketBase v0.23+ gotchas and recurring step-order mistakes.
 disable-model-invocation: true
+paths:
+  - lib/sync/**
+  - lib/schema.ts
+  - lib/db.ts
+  - scripts/setup-pocketbase-collections.sh
+  - packages/mcp-server/src/tools/**
 ---
 
 # pb-collection — End-to-end PocketBase tasks-collection field change
