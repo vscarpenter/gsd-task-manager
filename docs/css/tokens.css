@@ -1,0 +1,20 @@
+/* =====================================================================
+   Inkwell — design system entry (legacy single-file shim).
+   Version: 1.3.1
+   Default palette: Indigo & Cloud (cool stone + deep indigo).
+
+   This file is now a two-line aggregator. The actual content lives in:
+     • inkwell-tokens.css     → :root tokens + Pattern B dark cascade
+     • inkwell-components.css → base reset, components, layout, a11y
+
+   The split exists so Tailwind v4 consumers (via inkwell-theme.css)
+   can place components inside @layer components while keeping tokens
+   unlayered. Non-Tailwind consumers see no change: link inkwell.css
+   (or this file) from <head> and everything Just Works exactly as
+   it did before.
+
+   The brand-named alias inkwell.css is the recommended import.
+   ===================================================================== */
+
+@import url('inkwell-tokens.css');
+@import url('inkwell-components.css');

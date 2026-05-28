@@ -1,0 +1,256 @@
+/* =====================================================================
+   Inkwell — design tokens & dark-mode cascade.
+   Version: 2.0.0
+   Default palette: Indigo & Cloud (cool stone + deep indigo).
+
+   This file contains ONLY:
+     • :root custom-property declarations
+     • Pattern B dark-mode cascade (auto via prefers-color-scheme,
+       manual override via [data-theme="dark"|"light"] on <html>)
+     • The dark-mode .select chevron overrides (specificity-locked
+       to the .select base rule that lives in inkwell-components.css)
+
+   Component CSS lives in inkwell-components.css. The legacy
+   `tokens.css` re-exports both files for backward compatibility.
+   Tailwind v4 consumers should import `inkwell-theme.css` instead.
+
+   The system separates structure (borders, type scale, spacing,
+   motion, components) from brand (colors). Three alternate palettes
+   — clay, sage, burgundy — live in /variants/ as standalone files
+   that override only the brand-layer tokens.
+   ===================================================================== */
+
+:root {
+  /* ---------- Surfaces ---------- */
+  --ivory: #F4F4F0;       /* page background — cool stone, barely warm */
+  --paper: #FFFFFF;       /* card / panel surface */
+  --slate: #13141B;       /* primary text, slight cool undertone */
+  --oat:   #DDDCDF;       /* tertiary surface, hover thumbnails */
+
+  /* ---------- Accent (saturated indigo) ---------- */
+  --accent:               #3B4A8C;
+  --accent-d:             #2A3768;                /* hover/pressed */
+  --accent-tint:          rgba(59, 74, 140, 0.14); /* badge bg, periwinkle on cool paper */
+  --accent-focus-ring:    rgba(59, 74, 140, 0.18); /* input focus halo */
+  --accent-strong-border: rgba(59, 74, 140, 0.5);  /* tinted chip border */
+
+  /* ---------- Semantic ---------- */
+  --olive:        #788C5D;                         /* success, additions */
+  --olive-tint:   rgba(120, 140, 93, 0.16);
+  --olive-strong-border: rgba(120, 140, 93, 0.45); /* tinted success border */
+  --rust:         #B04A3F;                         /* danger, deletions */
+  --rust-d:       #9A3F3F;                         /* rust hover/pressed */
+  --rust-tint:    rgba(176, 74, 63, 0.10);        /* danger alert background */
+  --rust-tint-border: rgba(176, 74, 63, 0.45);    /* danger alert border */
+  --rust-focus-ring:  rgba(176, 74, 63, 0.18);    /* danger input focus halo */
+  --warning:      #C78E3F;
+  --warning-dark: #A06A2A;                         /* warning text (darker for contrast) */
+  --warning-tint: rgba(199, 142, 63, 0.16);
+  --warning-strong-border: rgba(199, 142, 63, 0.45); /* tinted warning border */
+  --info:         #5C7CA3;                         /* informational */
+  --sky:          #6A8CAF;                         /* alt info / data viz */
+
+  /* ---------- Neutral scale (cool putty) ---------- */
+  --gray-100: #EDEDEA;
+  --gray-200: #E1E1DE;
+  --gray-300: #CFCFCC;
+  --gray-500: #6F6F75;  /* WCAG AA: 5.05:1 on --paper, 4.64:1 on --ivory */
+  --gray-700: #3A3B41;
+
+  /* ---------- Typography ----------
+     Headline serif: leads with platform serifs we've QA'd at display sizes.
+     ui-serif was dropped in 1.4.0 — it resolves to wildly variable fonts
+     (New York on Apple, Noto Serif on Android, DejaVu Serif on many Linux
+     distros) and can't be QA'd. Iowan Old Style is preinstalled on
+     iOS/macOS and renders well at display weights; Palatino covers
+     Windows; Source Serif Pro picks up where it's installed; Georgia
+     is the final fallback and renders consistently everywhere. */
+  --serif: "Iowan Old Style", "Palatino", "Palatino Linotype",
+           "Source Serif Pro", Georgia, serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+  /* Type scale */
+  --t-display: 48px;
+  --t-h1:      32px;
+  --t-h2:      24px;
+  --t-h3:      19px;
+  --t-lede:    20px;  /* deck/intro paragraph — sits between h3 and body */
+  --t-body:    16px;
+  --t-small:   14px;
+  --t-caption: 12px;
+  --t-eyebrow: 11px;
+
+  /* ---------- Spacing (8px base, 4px micro) ---------- */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* ---------- Radius ---------- */
+  --r-xs:    4px;
+  --r-sm:    8px;
+  --r-md:   12px;
+  --r-lg:   14px;
+  --r-xl:   20px;
+  --r-pill: 999px;
+
+  /* ---------- Borders (signature 1.5px) ---------- */
+  --border:        1.5px solid var(--gray-300);
+  --border-strong: 1.5px solid var(--slate);
+  --border-hair:   1px   solid var(--gray-100);
+  --border-rule:   1px   solid var(--gray-300);
+
+  /* ---------- Shadows (warm low-spread) ---------- */
+  --shadow-sm:         0 1px 2px  rgba(20, 20, 19, 0.06);
+  --shadow-md:         0 4px 14px rgba(20, 20, 19, 0.08);
+  --shadow-lg:         0 12px 28px rgba(20, 20, 19, 0.12);
+  --shadow-card-hover: 0 10px 30px rgba(20, 20, 19, 0.10);
+
+  /* ---------- Backdrop (dialog::backdrop, modal scrims) ---------- */
+  --backdrop: rgba(15, 16, 24, 0.55);
+
+  /* ---------- TLDR code-chip tint ----------
+     Subtle overlay on the inverted .tldr surface. The .tldr panel flips
+     light↔dark with the theme (it always shows the *opposite* of body),
+     so this tint inverts too: white-at-8% on dark, black-at-8% on light. */
+  --tldr-code-tint: rgba(255, 255, 255, 0.08);
+
+  /* ---------- Motion ---------- */
+  --t-fast:   120ms;
+  --t-base:   150ms;
+  --t-slow:   300ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---------- Layout ---------- */
+  --content-narrow:  820px;
+  --content-default: 920px;
+  --content-wide:   1120px;
+  --page-pad-x:      24px;
+
+  /* ---------- Z-index scale ---------- */
+  --z-base:    1;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal:  50;
+
+  /* Declare both schemes so native UI follows whichever is active */
+  color-scheme: light dark;
+}
+
+/* =====================================================================
+   Dark mode — Pattern B
+   • prefers-color-scheme: dark applies UNLESS data-theme="light" is set
+   • data-theme="dark"  → forces dark regardless of OS preference
+   • data-theme="light" → forces light regardless of OS preference
+   ===================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ivory: #0F1018;
+    --paper: #181A24;
+    --slate: #E8E8EE;
+    --oat:   #2B2D38;
+
+    --accent:               #7A8AD1;                 /* lifted indigo → periwinkle */
+    --accent-d:             #6273C0;
+    --accent-tint:          rgba(122, 138, 209, 0.18);
+    --accent-focus-ring:    rgba(122, 138, 209, 0.28);
+    --accent-strong-border: rgba(122, 138, 209, 0.6);
+
+    --olive:        #9CB07A;                         /* lifted */
+    --olive-tint:   rgba(156, 176, 122, 0.18);
+    --olive-strong-border: rgba(156, 176, 122, 0.6); /* lifted tinted success border */
+    --rust:         #D27468;
+    --rust-d:       #C96B5F;                         /* lifted rust hover/pressed */
+    --rust-tint:    rgba(210, 116, 104, 0.18);       /* lifted danger alert background */
+    --rust-tint-border: rgba(210, 116, 104, 0.6);    /* lifted danger alert border */
+    --rust-focus-ring:  rgba(210, 116, 104, 0.28);   /* lifted danger input focus halo */
+    --warning:      #D9A55F;
+    --warning-dark: #D9A55F;                         /* lifted warning text (same as warning for contrast) */
+    --warning-tint: rgba(217, 165, 95, 0.18);
+    --warning-strong-border: rgba(217, 165, 95, 0.6); /* lifted tinted warning border */
+    --info:         #7C9FD2;
+    --sky:          #85A6CB;
+
+    --gray-100: #1E1F29;
+    --gray-200: #262732;
+    --gray-300: #34363F;
+    --gray-500: #9A9AA0;
+    --gray-700: #C0C0C7;
+
+    --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
+    --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
+    --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
+    --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
+
+    --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
+
+    --tldr-code-tint: rgba(0, 0, 0, 0.08);           /* .tldr surface is light in dark mode */
+  }
+  /* Select chevron dark-mode override: the base .select rule in inkwell-components.css
+   uses a data URI SVG with a hardcoded stroke color. Since data URIs can't reference
+   CSS variables, we override the entire background-image in dark mode with the
+   lifted gray-500 color. These overrides carry higher specificity than the base
+   rule, ensuring the dark chevron always wins regardless of cascade order. */
+:root:not([data-theme="light"]) .select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%239A9AA0' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ivory: #0F1018;
+  --paper: #181A24;
+  --slate: #E8E8EE;
+  --oat:   #2B2D38;
+
+  --accent:               #7A8AD1;
+  --accent-d:             #6273C0;
+  --accent-tint:          rgba(122, 138, 209, 0.18);
+  --accent-focus-ring:    rgba(122, 138, 209, 0.28);
+  --accent-strong-border: rgba(122, 138, 209, 0.6);
+
+  --olive:        #9CB07A;
+  --olive-tint:   rgba(156, 176, 122, 0.18);
+  --olive-strong-border: rgba(156, 176, 122, 0.6); /* lifted tinted success border */
+  --rust:         #D27468;
+  --rust-d:       #C96B5F;                         /* lifted rust hover/pressed */
+  --rust-tint:    rgba(210, 116, 104, 0.18);       /* lifted danger alert background */
+  --rust-tint-border: rgba(210, 116, 104, 0.6);    /* lifted danger alert border */
+  --rust-focus-ring:  rgba(210, 116, 104, 0.28);   /* lifted danger input focus halo */
+  --warning:      #D9A55F;
+  --warning-dark: #D9A55F;                         /* lifted warning text (same as warning for contrast) */
+  --warning-tint: rgba(217, 165, 95, 0.18);
+  --warning-strong-border: rgba(217, 165, 95, 0.6); /* lifted tinted warning border */
+  --info:         #7C9FD2;
+  --sky:          #85A6CB;
+
+  --gray-100: #1E1F29;
+  --gray-200: #262732;
+  --gray-300: #34363F;
+  --gray-500: #9A9AA0;
+  --gray-700: #C0C0C7;
+
+  --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
+  --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
+  --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
+  --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
+
+  --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
+
+  --tldr-code-tint: rgba(0, 0, 0, 0.08);           /* .tldr surface is light in dark mode */
+}
+/* Select chevron dark-mode override: see comment above in @media section for rationale */
+:root[data-theme="dark"] .select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%239A9AA0' stroke-width='1.5' stroke-linecap='round'/></svg>");
+}
