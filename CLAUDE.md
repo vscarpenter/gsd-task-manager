@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code working in this repository. Coding standards live in @coding-standards.md (imported). Path-scoped rules live in `.claude/rules/*.md` and auto-load when their globs match.
 
 ## Project Overview
 
@@ -13,6 +13,12 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - **Realtime Sync** — PocketBase SSE (Server-Sent Events) for instant cross-device updates
 - **iOS-style Settings** — Full-page settings with grouped layout and modular sections (`components/settings-page/`)
 - **Command Palette (planned)** — Global ⌘K/Ctrl+K palette source exists at `components/command-palette/` but is **not wired into the v9 app shell**; resurrection tracked in `tasks/todo.md`
+
+**Path-scoped rules** (auto-loaded by glob — open these only when working in the matching subtree):
+- `.claude/rules/pocketbase-sync.md` — PocketBase v0.23+ gotchas, sync architecture, OAuth callback debugging
+- `.claude/rules/testing.md` — Test runner, TDD workflow, jsdom/bun gotchas
+- `.claude/rules/sw-cache.md` — Service worker multi-cache strategy (ADR 0012)
+- `.claude/rules/mcp-server.md` — MCP server package conventions and tool layout
 
 ## Core Commands
 
@@ -80,48 +86,16 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 - **Recurring tasks**: Completed recurring tasks auto-create next instance
 - **Enhanced search**: Includes tags and subtasks
 
-### PWA Configuration
-- `public/manifest.json` - App metadata
-- `public/sw.js` - Service worker with multi-cache strategy (see ADR 0012)
-- `public/sw-cache-logic.js` - Pure cache routing functions loaded via `importScripts()`
-- `lib/sw-cache-logic.ts` - Canonical TypeScript source for the cache logic (keep in sync with the JS copy)
-- `components/pwa-register.tsx` - SW registration
+### PWA, Cloud Sync, MCP Server
+Architecture details for these subsystems live in path-scoped rules:
+- PWA / service-worker cache strategy → `.claude/rules/sw-cache.md` (auto-loads on `public/sw*.js`, `lib/sw-cache-logic.ts`)
+- PocketBase sync + OAuth → `.claude/rules/pocketbase-sync.md` (auto-loads on `lib/sync/**`)
+- MCP server package → `.claude/rules/mcp-server.md` (auto-loads on `packages/mcp-server/**`)
 
-**Cache architecture** (three purpose-specific caches):
-- `gsd-immutable-v1` — content-hashed `/_next/static/*` assets (cache-first, FIFO-pruned at 60 entries, survives deploys)
-- `gsd-pages-v{version}` — HTML + RSC flight data (network-first, rotated on deploy)
-- `gsd-runtime-v{version}` — icons, manifest, other static (cache-first, rotated on deploy)
-
-### Cloud Sync Architecture
-- **Backend**: Self-hosted PocketBase at `https://api.vinny.io` (AWS EC2)
-- **Authentication**: PocketBase built-in OAuth2 with Google and GitHub providers (both fully implemented client-side; GitHub requires server-side provider setup in PocketBase admin)
-- **Sync Protocol**: Last-write-wins (LWW) with `client_updated_at` timestamps
-- **Realtime**: PocketBase SSE subscriptions for instant cross-device updates
-- **Storage**: Tasks stored as plaintext in PocketBase (user owns the server)
-
-**Key Locations**:
-- `lib/sync/pocketbase-client.ts` - PocketBase SDK singleton wrapper
-- `lib/sync/pb-sync-engine.ts` - Push/pull sync engine with LWW resolution
-- `lib/sync/pb-realtime.ts` - SSE subscription manager with echo filtering
-- `lib/sync/pb-auth.ts` - OAuth login/logout via PocketBase SDK
-- `lib/sync/task-mapper.ts` - camelCase ↔ snake_case field mapping
-
-**PocketBase Collections**: `tasks` (with API rules: `@request.auth.id != "" && owner = @request.auth.id`), `devices`
-
-### MCP Server Architecture
-- **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language
-- **Location**: `packages/mcp-server/` - Standalone npm package
-- **Runtime**: Node.js 18+ with TypeScript, stdio transport (JSON-RPC 2.0)
-
-**20 MCP Tools**:
-- *Read (7)*: list_tasks, get_task, search_tasks, get_sync_status, list_devices, get_task_stats, get_token_status
-- *Write (5)*: create_task, update_task, complete_task, delete_task, bulk_update_tasks (all support dryRun)
-- *Analytics (5)*: get_productivity_metrics, get_quadrant_analysis, get_tag_analytics, get_upcoming_deadlines, get_task_insights
-- *System (3)*: validate_config, get_help, get_cache_stats
-
-**Key Features**: Retry logic with exponential backoff, TTL cache, dry-run mode, circular dependency validation
-
-**Configuration**: Claude Desktop config at `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_POCKETBASE_URL`, `GSD_AUTH_TOKEN`
+**Quick refs that survive without opening a rule file**:
+- Backend: self-hosted PocketBase at `https://api.vinny.io`; admin UI at `/_/`.
+- MCP server: `packages/mcp-server/` workspace; build with `npm run build`; 20 tools exposed.
+- Cache layers: `gsd-immutable-v1` (hashed, cache-first), `gsd-pages-v{v}` (network-first), `gsd-runtime-v{v}` (cache-first).
 
 ## Testing Guidelines
 - UI tests in `tests/ui/`, data logic in `tests/data/`
@@ -173,32 +147,15 @@ These packages are not self-explanatory from their names alone:
 - Button component variants: "primary" | "subtle" | "ghost" (no size prop)
 - Smart view shortcuts and pinning UI were removed in v9 (see ADR 0011). The `smartViews` Dexie table is retained for data continuity but has no UI surface in the v9 shell.
 
-### Cloud Sync
-- **PocketBase Admin**: `https://api.vinny.io/_/` for collection management
-- **PocketBase Version**: v0.23+ (uses `_superusers` collection for admin auth, not legacy `/api/admins/`)
-- PocketBase SDK (v0.26.8) auto-stores auth tokens in localStorage and auto-refreshes
-- LWW conflict resolution uses `client_updated_at` field — remote wins if newer
-- SSE subscriptions auto-reconnect; periodic sync runs as safety net
-- Echo filtering skips own-device changes via `device_id` comparison
-- **Rate Limiting**: Push operations are throttled (100ms between requests) to avoid PocketBase 429 errors
-- **Batch Lookups**: `fetchRemoteTaskIndex()` pre-fetches all remote task IDs in one request instead of N individual lookups
-- **PocketBase v0.23+ Gotchas**:
-  - System fields (`created`, `updated`) **cannot** be used in `sort` or `filter` — use custom fields like `client_updated_at` instead
-  - Custom indexes cannot reference system columns (`updated`, `created`)
-  - The `_pb_users_auth_` placeholder doesn't work as a `collectionId` for relation fields — use `text` type for owner FK or look up the real collection ID
-  - Admin auth endpoint is `/api/collections/_superusers/auth-with-password` (not `/api/admins/auth-with-password`)
-- **Collection Setup**: Run `scripts/setup-pocketbase-collections.sh` to create the `tasks` collection with correct schema, indexes, and API rules
+### Cloud Sync, MCP Server, OAuth
+Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and `.claude/rules/mcp-server.md`. Those auto-load when you edit the relevant subtrees.
 
-### MCP Server
-- Build with `npm run build` in `packages/mcp-server/`
-- Add tools: schemas in `tools/schemas/`, handlers in `tools/handlers/`
-- Uses PocketBase JS SDK to communicate with `GSD_POCKETBASE_URL`
-- Use `fetchWithRetry()` for resilient API calls
-
-### OAuth Authentication
-- OAuth popup flow is delegated to the PocketBase SDK via `authWithOAuth2`; auth tokens live in the SDK's `authStore` (localStorage) and auto-refresh
-- GitHub provider requires server-side setup in PocketBase admin (`https://api.vinny.io/_/` → Settings → Auth providers); Google is already configured
-- **Local dev**: Set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PocketBase. A local PocketBase at `127.0.0.1:8090` would need its own OAuth provider setup.
+### Sentry verification (recurring debugging task)
+When testing Sentry capture after a DSN change or deploy:
+1. Confirm DSN is loaded: `console.log` in `lib/sentry/init.ts` (or wherever Sentry.init runs) and grep dev console for "Sentry initialized".
+2. Trigger a test error: `Sentry.captureException(new Error("manual-test-from-claude"))` in a dev-only handler, OR throw from a component error boundary.
+3. Verify in Sentry dashboard within ~30s.
+4. Remove the test trigger before commit (it's not a regression — leave it out of source).
 
 ### Test-Driven Development (TDD)
 
@@ -224,10 +181,8 @@ These packages are not self-explanatory from their names alone:
 - Run `bun run test`, `bun typecheck`, and `bun lint` before committing
 - Static export mode means no API routes or SSR
 
-### Testing Gotchas
-- `fake-indexeddb` is auto-imported in `vitest.setup.ts` — no per-test setup needed
-- `localStorage` is polyfilled in-memory — use `localStorage.removeItem(key)` (not `.clear()`, which jsdom under Bun doesn't expose) in test `beforeEach`
-- For `lib/sync/` tests, mock the SDK with `vi.mock('pocketbase')` — follow the pattern in existing sync tests
+### Testing
+Detail moved to `.claude/rules/testing.md` — auto-loads when editing `tests/**` or test setup. TL;DR: use `bun run test` (not `bun test`), `fake-indexeddb` is auto-imported, `localStorage.clear()` doesn't work in jsdom-under-Bun.
 
 ## Modular Architecture
 
@@ -244,11 +199,13 @@ The codebase follows coding standards (<350 lines per file, <30 lines per functi
 
 All modules maintain backward compatibility through re-export layers.
 
-## Git Workflow 
+## Git Workflow
 
-For git operations: when asked to commit and push, write a descriptive conventional commit message, bump the version if appropriate, and create a PR unless told otherwise. Standard workflow: commit → push → create PR.
+**Default commit flow**: when the user says "commit and push", "commit, push, create a PR", or any close variant, invoke the `commit-commands:commit-push-pr` skill — don't manually compose the steps. Write a descriptive conventional commit message, bump the version if appropriate, create a PR unless told otherwise.
 
-Always leverage @coding-standards.md for coding standards and guidelines.
+**Branch rule**: never commit on `main`. Create a feature branch (`<type>/<short-desc>`) first. A `PreToolUse` hook (`.claude/hooks/no-main-commits.sh`) enforces this.
+
+Coding standards: see @coding-standards.md (imported).
 
 ## Agent skills
 

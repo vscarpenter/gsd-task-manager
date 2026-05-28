@@ -52,6 +52,7 @@ sync.md
 !.claude/agents/
 !.claude/commands/
 !.claude/hooks/
+!.claude/rules/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/pb-collection/
