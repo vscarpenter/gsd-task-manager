@@ -1,834 +1,1160 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GSD Task Manager — Codebase Analysis Report</title>
-<style>
-/* Inkwell tokens inline (standalone report — no external deps) */
-:root {
-  --ivory: #F5F3EF;
-  --paper: #FFFFFF;
-  --slate: #13141B;
-  --accent: #3B4A8C;
-  --accent-d: #2D3A6E;
-  --accent-tint: #EEF0F7;
-  --olive: #5A7A50;
-  --rust: #A04030;
-  --sky: #4A8DAD;
-  --gray-100: #E8E6E2;
-  --gray-200: #D4D1CC;
-  --gray-300: #B8B4AE;
-  --gray-400: #9C9890;
-  --gray-500: #7A776F;
-  --gray-600: #5C5950;
-  --gray-700: #3E3B34;
-  --serif: "Iowan Old Style", Palatino, "Source Serif Pro", Georgia, serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
-  --border: 1.5px solid var(--gray-300);
-  --border-hair: 1px solid var(--gray-100);
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
-  --t-fast: 120ms;
-  --t-base: 150ms;
-  --content-default: 920px;
-  --content-wide: 1120px;
-  --page-pad-x: 24px;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSD Task Manager — Codebase Analysis Report</title>
+  <link rel="stylesheet" href="css/inkwell.css">
+  <style>
+    body {
+      background: var(--ivory);
+      color: var(--slate);
+      font-family: var(--sans);
+      line-height: 1.6;
+      padding: 0;
+      margin: 0;
+    }
+    .report-container {
+      max-width: var(--content-wide);
+      margin: 0 auto;
+      padding: 2rem var(--page-pad-x);
+    }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 600; }
+    h1 { font-size: var(--t-display); margin-bottom: 0.5rem; }
+    h2 { font-size: var(--t-h2); margin-top: 2.5rem; margin-bottom: 1rem; border-bottom: var(--border-rule); padding-bottom: 0.5rem; }
+    h3 { font-size: var(--t-h3); margin-top: 1.5rem; margin-bottom: 0.75rem; }
 
-[data-theme="dark"] {
-  --ivory: #1A1B20;
-  --paper: #24252B;
-  --slate: #E8E6E2;
-  --accent: #7B8FD4;
-  --accent-d: #9AADE8;
-  --accent-tint: #2A2D3A;
-  --gray-100: #2E2F36;
-  --gray-200: #3A3B42;
-  --gray-300: #4A4B54;
-  --gray-400: #6A6B74;
-  --gray-500: #8A8B94;
-  --gray-600: #AAABB4;
-  --gray-700: #CACCCE;
-  --olive: #7BA070;
-  --rust: #D06050;
-  --sky: #6AADD0;
-}
+    .eyebrow { font-family: var(--mono); text-transform: uppercase; font-size: var(--t-eyebrow); letter-spacing: 0.08em; color: var(--gray-500); margin-bottom: 0.25rem; }
+    .lede { font-size: var(--t-lede); color: var(--gray-600); margin-bottom: 2rem; }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: var(--sans);
-  background: var(--ivory);
-  color: var(--slate);
-  line-height: 1.6;
-  padding: var(--page-pad-x);
-}
-h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; }
-h1 { font-size: 2rem; margin-bottom: 0.5em; }
-h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; border-bottom: var(--border); padding-bottom: 0.5rem; }
-h3 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; }
-code, .mono { font-family: var(--mono); font-size: 0.88em; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-p { margin: 0.5rem 0; }
-ul, ol { margin: 0.5rem 0 0.5rem 1.5rem; }
-li { margin: 0.25rem 0; }
-pre { background: var(--accent-tint); border: var(--border-hair); border-radius: var(--r-sm); padding: 0.75rem; overflow-x: auto; font-size: 0.85rem; margin: 0.5rem 0; }
+    /* Navigation */
+    .toc { position: sticky; top: 1rem; }
+    .toc a { display: block; padding: 0.35rem 0.75rem; font-size: var(--t-small); font-family: var(--mono); color: var(--gray-600); text-decoration: none; border-radius: var(--r-sm); }
+    .toc a:hover { background: var(--gray-100); color: var(--accent); }
 
-.container { max-width: var(--content-wide); margin: 0 auto; }
-.eyebrow { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-500); margin-bottom: 0.25rem; }
+    /* Score badge */
+    .score-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-family: var(--serif); font-size: var(--t-h1); font-weight: 600;
+      color: var(--accent);
+    }
+    .score-badge .out-of { font-size: var(--t-body); color: var(--gray-500); font-family: var(--sans); }
 
-/* Cards */
-.card {
-  background: var(--paper);
-  border: var(--border);
-  border-radius: var(--r-lg);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
-}
+    /* Stat cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .stat-card {
+      background: var(--paper);
+      border: var(--border);
+      border-radius: var(--r-md);
+      padding: 1.25rem;
+    }
+    .stat-card.is-primary { border-left: 4px solid var(--accent); }
+    .stat-card .stat-value { font-family: var(--serif); font-size: var(--t-h2); font-weight: 600; color: var(--slate); }
+    .stat-card .stat-label { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); margin-top: 0.25rem; }
 
-/* Metric tile */
-.metric {
-  text-align: center;
-  padding: 1rem;
-  background: var(--paper);
-  border: var(--border-hair);
-  border-radius: var(--r-md);
-}
-.metric-value { font-family: var(--serif); font-size: 1.75rem; font-weight: 600; }
-.metric-label { font-size: 0.8rem; color: var(--gray-500); margin-top: 0.25rem; }
+    /* Severity badges */
+    .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: var(--r-pill); font-size: var(--t-caption); font-weight: 500; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em; }
+    .badge-critical { background: #fde8e8; color: #9b1c1c; border: 1.5px solid #f8b4b4; }
+    .badge-high { background: #feecdc; color: #8a2c0d; border: 1.5px solid #fcd9bd; }
+    .badge-medium { background: #fef3cd; color: #723b13; border: 1.5px solid #fcefc7; }
+    .badge-low { background: #def7ec; color: #03543f; border: 1.5px solid #bcf0da; }
 
-/* Severity badges */
-.badge {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.15em 0.6em;
-  border-radius: 999px;
-  vertical-align: middle;
-}
-.badge-critical { background: var(--rust); color: #fff; }
-.badge-high { background: #D4740A; color: #fff; }
-.badge-medium { background: var(--sky); color: #fff; }
-.badge-low { background: var(--gray-400); color: #fff; }
+    /* Confidence */
+    .confidence { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
 
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  margin: 1rem 0;
-}
-th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: var(--border-hair); }
-th { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gray-500); }
-tr:hover td { background: var(--accent-tint); }
+    /* Tables */
+    .tbl { width: 100%; border-collapse: collapse; font-size: var(--t-small); }
+    .tbl th { font-family: var(--sans); font-weight: 600; text-align: left; padding: 0.6rem 0.75rem; border-bottom: var(--border); background: var(--paper); }
+    .tbl td { padding: 0.6rem 0.75rem; border-bottom: var(--border-hair); vertical-align: top; }
+    .tbl tr:hover td { background: var(--gray-100); }
 
-/* Collapsible */
-details { margin: 0.75rem 0; }
-details summary {
-  cursor: pointer;
-  font-weight: 600;
-  padding: 0.5rem 0;
-  list-style: none;
-}
-details summary::before { content: "\25B8 "; color: var(--accent); }
-details[open] summary::before { content: "\25BE "; }
+    /* Collapsible sections */
+    details { margin: 1rem 0; }
+    details summary {
+      cursor: pointer; font-weight: 600; font-family: var(--sans);
+      padding: 0.75rem 1rem;
+      background: var(--paper);
+      border: var(--border);
+      border-radius: var(--r-sm);
+      list-style: none;
+    }
+    details summary::before { content: "▸ "; font-family: var(--mono); }
+    details[open] summary::before { content: "▾ "; }
+    details[open] summary { border-radius: var(--r-sm) var(--r-sm) 0 0; border-bottom: var(--border-hair); }
+    details .detail-content {
+      padding: 1rem;
+      border: var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--r-sm) var(--r-sm);
+      background: var(--paper);
+    }
 
-/* Score ring */
-.score-ring {
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  border: 4px solid var(--accent);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--serif);
-  font-size: 2rem;
-  font-weight: 600;
-  margin: 0 auto 0.5rem;
-}
+    /* Finding card */
+    .finding {
+      background: var(--paper);
+      border: var(--border);
+      border-radius: var(--r-md);
+      padding: 1.25rem;
+      margin: 1rem 0;
+    }
+    .finding-header { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .finding-title { font-weight: 600; font-size: var(--t-body); }
+    .finding-meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .finding-path { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
+    .finding-body { font-size: var(--t-small); margin-top: 0.5rem; }
+    .finding-recommendation { margin-top: 0.75rem; padding: 0.75rem; background: var(--gray-100); border-radius: var(--r-sm); font-size: var(--t-small); }
+    .finding-recommendation strong { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; letter-spacing: 0.03em; }
+    .effort-tag { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-600); background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: var(--r-xs); }
 
-/* Nav */
-nav.toc {
-  background: var(--paper);
-  border: var(--border);
-  border-radius: var(--r-md);
-  padding: 1rem;
-  margin-bottom: 2rem;
-}
-nav.toc a { display: block; padding: 0.3rem 0; font-size: 0.85rem; }
-nav.toc a:hover { color: var(--accent-d); }
+    code { font-family: var(--mono); font-size: 0.875em; background: var(--gray-100); padding: 0.15em 0.4em; border-radius: var(--r-xs); }
+    pre { background: var(--gray-100); padding: 1rem; border-radius: var(--r-sm); overflow-x: auto; font-size: var(--t-small); }
+    pre code { background: none; padding: 0; }
 
-/* Layout */
-@media (min-width: 900px) {
-  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 2rem; }
-  nav.toc { position: sticky; top: 1rem; align-self: start; }
-}
+    /* Layout */
+    .two-col { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; align-items: start; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } .toc { position: static; } }
 
-/* Roadmap phases */
-.phase { border-left: 3px solid var(--accent); padding-left: 1rem; margin: 1rem 0; }
-.phase-label { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); text-transform: uppercase; }
+    /* Roadmap timeline */
+    .timeline { border-left: 2px solid var(--accent); padding-left: 1.5rem; margin: 1.5rem 0; }
+    .timeline-entry { position: relative; margin-bottom: 1.5rem; }
+    .timeline-entry::before { content: ""; position: absolute; left: -1.75rem; top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper); }
+    .timeline-label { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 0.25rem; }
 
-/* Theme toggle */
-#theme-toggle {
-  position: fixed; top: 1rem; right: 1rem;
-  background: var(--paper); border: var(--border);
-  border-radius: var(--r-sm); padding: 0.4rem 0.8rem;
-  font-family: var(--sans);
-  font-size: 0.8rem; cursor: pointer; z-index: 100;
-  color: var(--slate);
-}
-</style>
+    .dark .badge-critical { background: #4a1c1c; color: #f8b4b4; border-color: #9b1c1c; }
+    .dark .badge-high { background: #4a2c0d; color: #fcd9bd; border-color: #8a2c0d; }
+    .dark .badge-medium { background: #4a3b13; color: #fef3cd; border-color: #723b13; }
+    .dark .badge-low { background: #03543f40; color: #bcf0da; border-color: #03543f; }
+  </style>
 </head>
 <body>
-<button id="theme-toggle" type="button">Theme: <span id="theme-label">light</span></button>
-
-<div class="container">
-<p class="eyebrow">GSD Task Manager &middot; Code Quality Report</p>
-<h1>Codebase Analysis Report</h1>
-<p style="color:var(--gray-500); margin-bottom:2rem;">Generated 2026-05-26 &middot; Coding Standards v14.0 &middot; 196 source files analyzed</p>
-
-<div class="layout">
-<nav class="toc">
-  <strong>Contents</strong>
-  <a href="#executive">Executive Summary</a>
-  <a href="#metrics">Metrics Dashboard</a>
-  <a href="#dim1">1. Standards Compliance</a>
-  <a href="#dim2">2. Test Quality</a>
-  <a href="#dim3">3. Security</a>
-  <a href="#dim4">4. Architecture</a>
-  <a href="#dim5">5. Maintainability</a>
-  <a href="#dim6">6. Dependencies</a>
-  <a href="#dim7">7. Performance</a>
-  <a href="#dim8">8. Error Handling</a>
-  <a href="#dim9">9. Documentation</a>
-  <a href="#dim10">10. Tech Debt</a>
-  <a href="#dim11">11. Config &amp; Type Safety</a>
-  <a href="#dim12">12. E2E Test Health</a>
-  <a href="#roadmap">Remediation Roadmap</a>
-  <a href="#methodology">Methodology</a>
-</nav>
-
-<main>
-
-<!-- ====================================================== -->
-<section id="executive">
-<h2>Executive Summary</h2>
-
-<div class="card" style="text-align:center;">
-  <div class="score-ring">7.5</div>
-  <p><strong>Overall Health Score: 7.5 / 10</strong></p>
-  <p style="font-size:0.85rem; color:var(--gray-500);">Strong fundamentals. Main gaps are E2E reliability and branch coverage.</p>
-</div>
-
-<h3>Top 5 Risks</h3>
-<table>
-  <tr><th>#</th><th>Risk</th><th>Severity</th></tr>
-  <tr><td>1</td><td>E2E tests 100% failing &mdash; browsers not installed in dev environment; no CI enforcement</td><td><span class="badge badge-critical">Critical</span></td></tr>
-  <tr><td>2</td><td>Branch coverage at 79.25% &mdash; below the 80% floor from coding-standards.md Part 3</td><td><span class="badge badge-high">High</span></td></tr>
-  <tr><td>3</td><td>CSP allows <code>'unsafe-inline'</code> for scripts in production &mdash; XSS vector</td><td><span class="badge badge-high">High</span></td></tr>
-  <tr><td>4</td><td>Functions exceeding 40-line limit in sync layer (applyRemoteRecords 52 lines)</td><td><span class="badge badge-medium">Medium</span></td></tr>
-  <tr><td>5</td><td>Missing return type annotations on 8+ exported hooks</td><td><span class="badge badge-medium">Medium</span></td></tr>
-</table>
-
-<h3>Top 3 Strengths</h3>
-<table>
-  <tr><th>#</th><th>Strength</th></tr>
-  <tr><td>1</td><td><strong>Excellent modular architecture</strong> &mdash; zero circular dependencies, clean layering, 12 ADRs documenting decisions</td></tr>
-  <tr><td>2</td><td><strong>Comprehensive unit test suite</strong> &mdash; 1,956 tests, 123 test files, 85.64% statement coverage, all passing</td></tr>
-  <tr><td>3</td><td><strong>Strong security posture</strong> &mdash; CSP headers, no raw <code>eval</code>, no <code>dangerouslySetInnerHTML</code>, no secrets in source, Zod validation on all inputs</td></tr>
-</table>
-
-<h3>Top 3 Priorities for Next Sprint</h3>
-<ol>
-  <li>Fix E2E test infrastructure (install browsers in CI, verify all 8 specs pass)</li>
-  <li>Close branch coverage gap (79.25% &rarr; 80%) by testing sync edge-cases</li>
-  <li>Remove <code>'unsafe-inline'</code> from production CSP script-src (use nonces or hashes)</li>
-</ol>
-</section>
-
-<!-- ====================================================== -->
-<section id="metrics">
-<h2>Metrics Dashboard</h2>
-
-<div class="card-grid">
-  <div class="metric"><div class="metric-value">85.6%</div><div class="metric-label">Statement Coverage</div></div>
-  <div class="metric"><div class="metric-value">79.3%</div><div class="metric-label">Branch Coverage</div></div>
-  <div class="metric"><div class="metric-value">82.4%</div><div class="metric-label">Function Coverage</div></div>
-  <div class="metric"><div class="metric-value">86.6%</div><div class="metric-label">Line Coverage</div></div>
-</div>
-
-<div class="card-grid">
-  <div class="metric"><div class="metric-value">1,956</div><div class="metric-label">Unit Tests (all pass)</div></div>
-  <div class="metric"><div class="metric-value">123</div><div class="metric-label">Test Files</div></div>
-  <div class="metric"><div class="metric-value">8</div><div class="metric-label">E2E Spec Files</div></div>
-  <div class="metric"><div class="metric-value" style="color:var(--rust)">0%</div><div class="metric-label">E2E Pass Rate</div></div>
-</div>
-
-<div class="card-grid">
-  <div class="metric"><div class="metric-value">196</div><div class="metric-label">Source Files</div></div>
-  <div class="metric"><div class="metric-value">28 + 24</div><div class="metric-label">Deps + DevDeps</div></div>
-  <div class="metric"><div class="metric-value">12</div><div class="metric-label">ADRs</div></div>
-  <div class="metric"><div class="metric-value">0</div><div class="metric-label">Circular Deps</div></div>
-</div>
-
-<h3>Coverage by Module</h3>
-<table>
-  <tr><th>Module</th><th>Stmts</th><th>Branches</th><th>Funcs</th><th>Lines</th></tr>
-  <tr><td><code>lib/tasks/</code></td><td>99.4%</td><td>93.5%</td><td>100%</td><td>99.3%</td></tr>
-  <tr><td><code>lib/sync/</code></td><td>90.1%</td><td>84.1%</td><td>88.1%</td><td>91.6%</td></tr>
-  <tr><td><code>lib/analytics/</code></td><td>100%</td><td>98%+</td><td>100%</td><td>100%</td></tr>
-  <tr><td><code>lib/sync/config/</code></td><td>97.1%</td><td>90.6%</td><td>93.3%</td><td>97.1%</td></tr>
-  <tr><td><code>components/</code> (UI)</td><td>~70%</td><td>~60%</td><td>~65%</td><td>~72%</td></tr>
-</table>
-
-<h3>E2E Test Results (Environment Issue)</h3>
-<table>
-  <tr><th>Spec File</th><th>Chromium</th><th>Firefox</th><th>WebKit</th></tr>
-  <tr><td>task-crud.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>matrix-navigation.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>quadrant-classification.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>search.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>settings-navigation.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>settings-sections.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>sync-states.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-  <tr><td>data-management.spec.ts</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td><td style="color:var(--rust)">FAIL*</td></tr>
-</table>
-<p style="font-size:0.8rem; color:var(--gray-500);">* All failures due to <code>browserType.launch: Executable doesn't exist</code> &mdash; Playwright browsers not installed. Run <code>npx playwright install</code> to fix locally. CI must include this step.</p>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim1">
-<h2>1. Standards Compliance</h2>
-
-<details>
-<summary><span class="badge badge-high">High</span> Branch coverage 79.25% &mdash; below 80% floor (Part 3)</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> Project-wide (coverage/coverage-summary.json)</p>
-  <p><strong>Confidence:</strong> High &mdash; measured via Vitest coverage report.</p>
-  <p><strong>Recommendation:</strong> Target uncovered branches in <code>lib/sync/background-sync.ts</code> (64.15%), <code>lib/sync/sync-coordinator.ts</code> (75.6%), and <code>lib/sync/pb-pull.ts</code> (76.47%). These files have many conditional paths with moderate test coverage gaps.</p>
-  <p><strong>Effort:</strong> Small (1&ndash;2 days)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> Functions exceeding 40-line limit (Part 2)</summary>
-<div class="card">
-  <table>
-    <tr><th>File</th><th>Function</th><th>Lines</th></tr>
-    <tr><td><code>lib/sync/pb-pull.ts:52</code></td><td>applyRemoteRecords()</td><td>52</td></tr>
-    <tr><td><code>lib/use-shell-command-handlers.ts:38</code></td><td>useShellCommandHandlers()</td><td>48</td></tr>
-    <tr><td><code>lib/reset-everything.ts:186</code></td><td>resetEverything()</td><td>44</td></tr>
-    <tr><td><code>lib/reset-everything.ts:41</code></td><td>clearIndexedDB()</td><td>42</td></tr>
-    <tr><td><code>lib/sync/pb-pull.ts:110</code></td><td>pullRemoteChanges()</td><td>42</td></tr>
-  </table>
-  <p><strong>Confidence:</strong> High &mdash; measured by line counts.</p>
-  <p><strong>Recommendation:</strong> Extract helper functions. For <code>applyRemoteRecords</code>, split the upsert vs create logic into a <code>reconcileRecord()</code> helper. For <code>useShellCommandHandlers</code>, extract individual handler factories.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> Missing return type annotations on exported functions (Part 2)</summary>
-<div class="card">
-  <table>
-    <tr><th>File</th><th>Function</th></tr>
-    <tr><td><code>lib/use-error-handler.ts:27</code></td><td>useErrorHandler()</td></tr>
-    <tr><td><code>lib/use-error-handler.ts:60</code></td><td>useErrorHandlerWithUndo()</td></tr>
-    <tr><td><code>lib/use-auto-archive.ts:15</code></td><td>useAutoArchive()</td></tr>
-    <tr><td><code>lib/use-view-transition.ts:52</code></td><td>useViewTransition()</td></tr>
-    <tr><td><code>lib/use-command-palette.ts:15</code></td><td>useCommandPalette()</td></tr>
-    <tr><td><code>lib/use-keyboard-shortcuts.ts:33</code></td><td>useKeyboardShortcuts()</td></tr>
-    <tr><td><code>components/matrix-simplified/index.tsx</code></td><td>MatrixSimplified()</td></tr>
-    <tr><td><code>components/matrix-simplified/app-shell.tsx</code></td><td>AppShell()</td></tr>
-  </table>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Recommendation:</strong> Add explicit return types. React components return <code>React.ReactElement | null</code>; hooks return their specific shape (document as a named interface).</p>
-  <p><strong>Effort:</strong> Small (&lt; 1 hour)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Single empty catch block (Part 3)</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>components/matrix-simplified/index.tsx:96</code></p>
-  <p><strong>Confidence:</strong> High &mdash; confirmed via AST-like grep.</p>
-  <p><strong>Recommendation:</strong> Add at minimum a <code>logger.debug()</code> call or a comment explaining why the error is intentionally swallowed.</p>
-  <p><strong>Effort:</strong> Small (5 min)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Legacy ToastProvider still imported in layout (Part 2)</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>app/layout.tsx:4</code></p>
-  <p><strong>Confidence:</strong> High &mdash; <code>sonner</code> Toaster is also imported on line 6. The ToastProvider is vestigial.</p>
-  <p><strong>Recommendation:</strong> Remove <code>ToastProvider</code> import and wrapper from <code>app/layout.tsx</code>. Verify no component still imports from <code>components/ui/toast.tsx</code>, then delete the file.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim2">
-<h2>2. Test Quality &amp; Coverage</h2>
-
-<details>
-<summary><span class="badge badge-critical">Critical</span> E2E test suite entirely broken &mdash; browser binaries not installed</summary>
-<div class="card">
-  <p><strong>Root Cause:</strong> <code>browserType.launch: Executable doesn't exist at ~/Library/Caches/ms-playwright/chromium_headless_shell-1223/</code></p>
-  <p><strong>Confidence:</strong> High &mdash; reproduced.</p>
-  <p><strong>Recommendation:</strong> 1) Add <code>npx playwright install --with-deps</code> to CI pipeline. 2) Add a <code>postinstall</code> script or document it in README. 3) Add <code>bun run test:e2e</code> to the pre-merge gate.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> E2E specs lack coverage for sync, PWA install, recurring tasks, bulk operations</summary>
-<div class="card">
-  <p><strong>Current E2E coverage:</strong> task-crud, matrix-navigation, quadrant-classification, search, settings-navigation, settings-sections, sync-states (UI only), data-management</p>
-  <p><strong>Missing critical paths:</strong></p>
-  <ul>
-    <li>Cloud sync flow (connect/disconnect/conflict resolution)</li>
-    <li>PWA install and offline behavior</li>
-    <li>Recurring task auto-creation on completion</li>
-    <li>Bulk operations (multi-select, batch move)</li>
-    <li>Drag-and-drop between quadrants</li>
-    <li>Time tracking start/stop flow</li>
-  </ul>
-  <p><strong>Confidence:</strong> High &mdash; based on spec file listing.</p>
-  <p><strong>Effort:</strong> Medium (3&ndash;5 days)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Page Object Model only covers MatrixPage &mdash; other pages use raw locators</summary>
-<div class="card">
-  <p><strong>File:</strong> <code>tests/e2e/pages/matrix-page.ts</code> (only POM)</p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Recommendation:</strong> Create SettingsPage and DashboardPage page objects for reuse across specs. Reduces brittleness when selectors change.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Only 23 data-testid attributes across all components</summary>
-<div class="card">
-  <p><strong>Confidence:</strong> High &mdash; <code>grep -rn "data-testid"</code> returns 23 matches.</p>
-  <p><strong>Recommendation:</strong> Add <code>data-testid</code> to all interactive elements referenced in E2E tests. Current specs appear to rely on text content selectors which are more brittle.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim3">
-<h2>3. Security &amp; Supply Chain</h2>
-
-<details>
-<summary><span class="badge badge-high">High</span> CSP allows 'unsafe-inline' for script-src in production</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>app/layout.tsx:21</code></p>
-  <p><strong>Issue:</strong> <code>script-src 'self' 'unsafe-inline'</code> allows injected inline scripts to execute, weakening XSS protection.</p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Recommendation:</strong> Replace with nonce-based CSP. Next.js supports <code>nonce</code> via <code>headers()</code> in middleware. Alternatively, use <code>'strict-dynamic'</code> with a script loader.</p>
-  <p><strong>Effort:</strong> Medium (requires testing all inline scripts including theme-toggle)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> connect-src allows all HTTPS &mdash; overly permissive</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>app/layout.tsx:33</code> &mdash; <code>connect-src 'self' https: wss:</code></p>
-  <p><strong>Issue:</strong> Any HTTPS endpoint can be contacted. Should be scoped to <code>https://api.vinny.io</code> and <code>wss://api.vinny.io</code>.</p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Recommendation:</strong> <code>connect-src 'self' https://api.vinny.io wss://api.vinny.io https://*.ingest.sentry.io</code></p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Single justified 'as any' for navigator.standalone (iOS)</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>components/install-pwa-prompt.tsx:40</code></p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Recommendation:</strong> Add a justification comment: <code>// navigator.standalone is non-standard iOS WebKit property</code></p>
-  <p><strong>Effort:</strong> Small (1 min)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> No automated dependency auditing in CI</summary>
-<div class="card">
-  <p><strong>Issue:</strong> <code>package.json</code> has an <code>"audit"</code> script but it is not integrated into CI or pre-commit hooks.</p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Recommendation:</strong> Add <code>npm audit --audit-level=high || exit 1</code> step to CI pipeline. Consider adding to PostToolUse hook per coding-standards Part 9.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim4">
-<h2>4. Architecture</h2>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Zero circular dependencies &mdash; excellent layering</summary>
-<div class="card">
-  <p><strong>Confidence:</strong> High &mdash; verified with <code>madge --circular</code>.</p>
-  <p>The codebase has clean module boundaries: <code>lib/tasks/</code> &rarr; <code>lib/db.ts</code>, <code>lib/sync/</code> &rarr; <code>lib/tasks/</code>, <code>components/</code> &rarr; <code>lib/</code>. No upward dependencies.</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> 12 ADRs documented for key decisions</summary>
-<div class="card">
-  <p>Well-structured decision records covering: IndexedDB choice, PocketBase sync, LWW conflicts, PWA architecture, MCP integration, analytics design, notifications, BFS dependency detection, smart views, agent discovery, v9 matrix refactor, SW cache strategy.</p>
-  <p><strong>Gap:</strong> No ADR for the OAuth provider selection or the Dexie v4 migration from v3.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim5">
-<h2>5. Maintainability</h2>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> 5 functions exceed 40-line limit</summary>
-<div class="card">
-  <p>See <a href="#dim1">Dimension 1</a> for the full list. The largest is <code>applyRemoteRecords()</code> at 52 lines &mdash; a sync reconciliation loop that could be split into a per-record handler.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> No file exceeds 400-line limit</summary>
-<div class="card">
-  <p>Largest production file: <code>lib/db.ts</code> at 385 lines (14 schema migrations). Second: <code>components/matrix-simplified/edit-drawer.tsx</code> at 376 lines. Both are under the 400-line threshold from coding-standards Part 2.</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Zero TODOs/FIXMEs in production source</summary>
-<div class="card">
-  <p><strong>Confidence:</strong> High &mdash; grep returns no matches in <code>lib/</code>, <code>components/</code>, <code>app/</code>.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim6">
-<h2>6. Dependencies</h2>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Single floating version: @playwright/test ^1.60.0 (devDependency)</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>package.json</code> (devDependencies)</p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Impact:</strong> Low &mdash; devDependency only. But coding-standards Part 2 says "pin versions in lockfiles" with no exception for dev.</p>
-  <p><strong>Recommendation:</strong> Pin to <code>"1.60.0"</code>.</p>
-  <p><strong>Effort:</strong> Small (1 min)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> All 28 production dependencies are pinned &mdash; good practice</summary>
-<div class="card">
-  <p>Every production dependency uses exact version pinning (no <code>^</code> or <code>~</code>). Lockfile (<code>bun.lock</code>) is committed.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim7">
-<h2>7. Performance</h2>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Batch sync lookups &mdash; fetchRemoteTaskIndex pre-fetches all IDs</summary>
-<div class="card">
-  <p>The sync engine avoids N+1 by fetching all remote task IDs in one request (<code>fetchRemoteTaskIndex()</code>) rather than individual lookups per task. Push operations are throttled at 100ms between requests to avoid PocketBase 429 errors.</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Virtual scrolling for large task lists</summary>
-<div class="card">
-  <p><code>@tanstack/react-virtual</code> is used for rendering only visible DOM rows, preventing degradation with hundreds of tasks.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim8">
-<h2>8. Error Handling &amp; Observability</h2>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> One empty catch block swallowing errors silently</summary>
-<div class="card">
-  <p><strong>File/Line:</strong> <code>components/matrix-simplified/index.tsx:96</code></p>
-  <p><strong>Confidence:</strong> High.</p>
-  <p><strong>Issue:</strong> Violates coding-standards Part 3: "Never swallow exceptions."</p>
-  <p><strong>Recommendation:</strong> Add <code>logger.warn('Failed to X', { error })</code> or at minimum a comment explaining why the error is safe to ignore.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Structured logging with context and secret sanitization &mdash; well-implemented</summary>
-<div class="card">
-  <p><code>lib/logger.ts</code> provides environment-aware logging with typed <code>LogContext</code> union, PII sanitization of auth tokens, and configurable log levels. All production modules use the structured logger instead of raw <code>console.*</code>.</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Sentry error boundary in place</summary>
-<div class="card">
-  <p><code>components/error-boundary.tsx</code> catches render errors globally. <code>components/sentry-init.tsx</code> initializes the SDK with environment detection. <code>components/global-error-listener.tsx</code> catches unhandled promise rejections.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim9">
-<h2>9. Documentation &amp; Onboarding</h2>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Comprehensive documentation suite</summary>
-<div class="card">
-  <p>The project has extensive documentation:</p>
-  <ul>
-    <li><code>CLAUDE.md</code> &mdash; AI agent onboarding with commands, architecture, and gotchas</li>
-    <li><code>coding-standards.md</code> &mdash; 10-part coding standards reference</li>
-    <li><code>README.md</code> &mdash; Project overview</li>
-    <li><code>docs/adr/</code> &mdash; 12 architecture decision records</li>
-    <li><code>.github/copilot-instructions.md</code> &mdash; IDE-specific guidance</li>
-    <li><code>SECURITY.md</code> &mdash; Security policy</li>
-  </ul>
-  <p><strong>Gap:</strong> No explicit CONTRIBUTING.md file (guidance is spread across CLAUDE.md and copilot-instructions).</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim10">
-<h2>10. Tech Debt</h2>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> Legacy ToastProvider still loaded in app shell</summary>
-<div class="card">
-  <p><strong>File:</strong> <code>app/layout.tsx:4</code>, <code>components/ui/toast.tsx</code></p>
-  <p><strong>Issue:</strong> The app imports both <code>ToastProvider</code> (legacy custom hook) and <code>Toaster</code> (sonner). The legacy provider has no remaining consumers but still renders a DOM container.</p>
-  <p><strong>Recommendation:</strong> Remove <code>ToastProvider</code> from layout, delete <code>components/ui/toast.tsx</code>.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> Command palette exists but is not wired into v9 shell</summary>
-<div class="card">
-  <p><strong>File:</strong> <code>components/command-palette/</code></p>
-  <p><strong>Issue:</strong> Full implementation exists but is disconnected from the app shell after the v9 refactor. Documented in <code>tasks/todo.md</code> as planned resurrection.</p>
-  <p><strong>Recommendation:</strong> Either wire it in or remove dead code to reduce maintenance burden.</p>
-  <p><strong>Effort:</strong> Medium</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> SW cache logic has dual maintenance (TS + JS copy)</summary>
-<div class="card">
-  <p><strong>Files:</strong> <code>lib/sw-cache-logic.ts</code> (canonical) + <code>public/sw-cache-logic.js</code> (runtime copy)</p>
-  <p><strong>Issue:</strong> Two files must be kept in sync manually. A build script could auto-transpile the TS source.</p>
-  <p><strong>Effort:</strong> Small</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim11">
-<h2>11. Configuration &amp; Type Safety</h2>
-
-<details>
-<summary><span class="badge badge-low">Low</span> TypeScript strict mode enabled &mdash; strong type safety</summary>
-<div class="card">
-  <p>Only 1 <code>as any</code> in production code (justified iOS <code>navigator.standalone</code> check). Zero <code>@ts-ignore</code> or <code>@ts-expect-error</code> in source files. Strict mode with typed routes enabled in tsconfig.</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> No magic numbers in source &mdash; constants are named</summary>
-<div class="card">
-  <p>Configuration values are centralized in <code>lib/constants.ts</code> (toast durations, limits) and <code>lib/constants/schema.ts</code> (field length limits). No raw numeric literals found in business logic.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="dim12">
-<h2>12. E2E Test Health</h2>
-
-<details>
-<summary><span class="badge badge-critical">Critical</span> 0% pass rate &mdash; Playwright browser binaries not installed</summary>
-<div class="card">
-  <p><strong>Error:</strong> <code>browserType.launch: Executable doesn't exist at ~/Library/Caches/ms-playwright/chromium_headless_shell-1223/</code></p>
-  <p><strong>Root Cause:</strong> <code>npx playwright install</code> has not been run in this environment. The <code>@playwright/test</code> package was updated (or freshly installed) without running the browser download step.</p>
-  <p><strong>Confidence:</strong> High &mdash; error is deterministic and environment-specific.</p>
-  <p><strong>Impact:</strong> Cannot validate E2E coverage, cannot gate PRs on E2E results. Regressions could ship undetected.</p>
-  <p><strong>Fix:</strong></p>
-  <pre><code>npx playwright install --with-deps</code></pre>
-  <p>Add to CI and document in README setup steps.</p>
-  <p><strong>Effort:</strong> Small (30 min for CI + docs)</p>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-medium">Medium</span> Good test infrastructure &mdash; fixtures, POM, IndexedDB isolation</summary>
-<div class="card">
-  <p><strong>Positives:</strong></p>
-  <ul>
-    <li>Custom fixture (<code>tests/e2e/fixtures/test-fixtures.ts</code>) clears IndexedDB between tests</li>
-    <li>Page Object Model for matrix page (<code>tests/e2e/pages/matrix-page.ts</code>)</li>
-    <li>Uses <code>data-testid</code> selectors in POM (stable selectors)</li>
-    <li>Pre-seeds <code>localStorage</code> to avoid first-visit redirect race condition</li>
-    <li>Tests target all 3 browsers (Chromium, Firefox, WebKit)</li>
-  </ul>
-  <p><strong>Gaps:</strong></p>
-  <ul>
-    <li>Only 1 page object (MatrixPage) &mdash; settings and dashboard specs use raw locators</li>
-    <li>Only 23 <code>data-testid</code> attributes in components &mdash; some specs likely use fragile text/CSS selectors</li>
-    <li>No PWA install, recurring task, or bulk operation E2E specs</li>
-    <li>No flakiness detection or retry strategy for CI (retries: 0 locally)</li>
-  </ul>
-</div>
-</details>
-
-<details>
-<summary><span class="badge badge-low">Low</span> 851 lines across 8 spec files &mdash; reasonable test density</summary>
-<div class="card">
-  <p>Average 106 lines per spec. Specs cover the major user workflows: CRUD, navigation, quadrant classification, search, settings. Sync-states spec tests UI display without requiring a live PocketBase backend.</p>
-</div>
-</details>
-</section>
-
-<!-- ====================================================== -->
-<section id="roadmap">
-<h2>Prioritized Remediation Roadmap</h2>
-
-<div class="phase">
-  <div class="phase-label">30 Days &mdash; Critical &amp; High Priority</div>
-  <table>
-    <tr><th>#</th><th>Item</th><th>Effort</th><th>Impact</th></tr>
-    <tr><td>1</td><td>Install Playwright browsers + add to CI pipeline + document in README</td><td>Small</td><td>Unblocks E2E validation</td></tr>
-    <tr><td>2</td><td>Close branch coverage gap: test <code>background-sync.ts</code>, <code>sync-coordinator.ts</code>, <code>pb-pull.ts</code> edge paths</td><td>Small</td><td>Meets 80% floor</td></tr>
-    <tr><td>3</td><td>Remove <code>'unsafe-inline'</code> from production CSP script-src (use nonce or hash)</td><td>Medium</td><td>XSS protection</td></tr>
-    <tr><td>4</td><td>Scope <code>connect-src</code> to <code>https://api.vinny.io wss://api.vinny.io</code></td><td>Small</td><td>Limits exfiltration</td></tr>
-    <tr><td>5</td><td>Add <code>npm audit</code> to CI pipeline as a blocking gate</td><td>Small</td><td>Supply-chain hygiene</td></tr>
-  </table>
-</div>
-
-<div class="phase">
-  <div class="phase-label">60 Days &mdash; Medium Priority</div>
-  <table>
-    <tr><th>#</th><th>Item</th><th>Effort</th><th>Impact</th></tr>
-    <tr><td>6</td><td>Split 5 oversized functions (applyRemoteRecords, pullRemoteChanges, useShellCommandHandlers, clearIndexedDB, resetEverything)</td><td>Small</td><td>Maintainability, testability</td></tr>
-    <tr><td>7</td><td>Add explicit return type annotations to 8 exported hooks</td><td>Small</td><td>Type safety, IDE support</td></tr>
-    <tr><td>8</td><td>Remove legacy ToastProvider from layout + delete <code>components/ui/toast.tsx</code></td><td>Small</td><td>Dead code removal</td></tr>
-    <tr><td>9</td><td>Add E2E specs for recurring tasks, bulk operations, and time tracking</td><td>Medium</td><td>Critical path coverage</td></tr>
-    <tr><td>10</td><td>Create SettingsPage and DashboardPage page objects</td><td>Small</td><td>E2E maintainability</td></tr>
-    <tr><td>11</td><td>Fix empty catch block in matrix-simplified/index.tsx:96</td><td>Small</td><td>Observability</td></tr>
-  </table>
-</div>
-
-<div class="phase">
-  <div class="phase-label">90 Days &mdash; Low Priority / Polish</div>
-  <table>
-    <tr><th>#</th><th>Item</th><th>Effort</th><th>Impact</th></tr>
-    <tr><td>12</td><td>Pin <code>@playwright/test</code> to exact version</td><td>Small</td><td>Reproducibility</td></tr>
-    <tr><td>13</td><td>Add more <code>data-testid</code> attributes to interactive components</td><td>Small</td><td>E2E resilience</td></tr>
-    <tr><td>14</td><td>Wire command palette into v9 shell or remove dead code</td><td>Medium</td><td>Reduce maintenance surface</td></tr>
-    <tr><td>15</td><td>Auto-transpile <code>sw-cache-logic.ts</code> &rarr; <code>.js</code> in build step</td><td>Small</td><td>Eliminate dual-maintenance</td></tr>
-    <tr><td>16</td><td>Add CONTRIBUTING.md (consolidate from CLAUDE.md + copilot-instructions)</td><td>Small</td><td>Onboarding clarity</td></tr>
-    <tr><td>17</td><td>Add justification comment to <code>as any</code> in install-pwa-prompt.tsx</td><td>Small</td><td>Code clarity</td></tr>
-  </table>
-</div>
-</section>
-
-<!-- ====================================================== -->
-<section id="methodology">
-<h2>Methodology &amp; Limitations</h2>
-
-<div class="card">
-<h3>What Was Inspected</h3>
-<ul>
-  <li><strong>196 source files</strong> in <code>lib/</code>, <code>components/</code>, <code>app/</code></li>
-  <li><strong>132 test files</strong> in <code>tests/</code> (unit, integration, E2E)</li>
-  <li><strong>Configuration:</strong> package.json, tsconfig.json, eslint.config.mjs, playwright.config.ts, vitest.config.ts, next.config.ts</li>
-  <li><strong>Infrastructure:</strong> CloudFront functions, Docker config, deployment scripts</li>
-  <li><strong>Documentation:</strong> CLAUDE.md, coding-standards.md, 12 ADRs, README</li>
-</ul>
-
-<h3>What Was NOT Inspected</h3>
-<ul>
-  <li><strong>MCP server package</strong> (<code>packages/mcp-server/</code>) &mdash; separate npm package with own test suite; included in file count but not deeply analyzed</li>
-  <li><strong>Generated files:</strong> <code>.next/</code>, <code>coverage/</code>, <code>node_modules/</code>, <code>bun.lock</code></li>
-  <li><strong>PocketBase backend:</strong> Server-side configuration and API rules at <code>https://api.vinny.io</code> were not audited</li>
-  <li><strong>Bundle size analysis:</strong> Production build was not generated; bundle size metrics unavailable</li>
-  <li><strong>Runtime performance:</strong> No Lighthouse or profiler runs were conducted</li>
-</ul>
-
-<h3>Tools Used</h3>
-<table>
-  <tr><th>Tool</th><th>Purpose</th></tr>
-  <tr><td>Vitest + v8</td><td>Unit test execution and code coverage</td></tr>
-  <tr><td>Playwright</td><td>E2E test execution (browsers unavailable &mdash; environment issue)</td></tr>
-  <tr><td>TypeScript compiler</td><td>Type checking (<code>bun typecheck</code> &mdash; 0 errors)</td></tr>
-  <tr><td>ESLint</td><td>Lint analysis (<code>bun lint</code> &mdash; 0 warnings)</td></tr>
-  <tr><td>madge</td><td>Circular dependency detection (0 found)</td></tr>
-  <tr><td>grep / awk / wc</td><td>File size, function length, pattern matching</td></tr>
-</table>
-
-<h3>Confidence Levels</h3>
-<table>
-  <tr><th>Level</th><th>Meaning</th></tr>
-  <tr><td><strong>High</strong></td><td>Verified by running tools and reading source code directly</td></tr>
-  <tr><td><strong>Medium</strong></td><td>Based on pattern matching and reasonable inference; may have edge cases</td></tr>
-  <tr><td><strong>Low</strong></td><td>Assumption-based; requires manual verification</td></tr>
-</table>
-</div>
-</section>
-
-</main>
-</div><!-- .layout -->
-</div><!-- .container -->
-
-<script>
-(function () {
-  var root = document.documentElement;
-  var btn = document.getElementById('theme-toggle');
-  var label = document.getElementById('theme-label');
-  var KEY = 'theme-preview';
-  var order = ['light', 'dark'];
-  function apply(s) {
-    root.setAttribute('data-theme', s);
-    if (label) label.textContent = s;
-  }
-  var current = localStorage.getItem(KEY) || 'light';
-  if (order.indexOf(current) === -1) current = 'light';
-  apply(current);
-  btn.addEventListener('click', function() {
-    current = order[(order.indexOf(current) + 1) % order.length];
-    localStorage.setItem(KEY, current);
-    apply(current);
-  });
-})();
-</script>
+  <div class="report-container">
+    <div class="two-col">
+      <!-- Sidebar Nav -->
+      <nav class="toc" aria-label="Report navigation">
+        <a href="#executive-summary">Executive Summary</a>
+        <a href="#metrics">Metrics Dashboard</a>
+        <a href="#dim-1">1. Standards Compliance</a>
+        <a href="#dim-2">2. Test Quality</a>
+        <a href="#dim-3">3. Security</a>
+        <a href="#dim-4">4. Architecture</a>
+        <a href="#dim-5">5. Maintainability</a>
+        <a href="#dim-6">6. Dependencies</a>
+        <a href="#dim-7">7. Performance</a>
+        <a href="#dim-8">8. Error Handling</a>
+        <a href="#dim-9">9. Documentation</a>
+        <a href="#dim-10">10. Tech Debt</a>
+        <a href="#dim-11">11. Configuration</a>
+        <a href="#dim-12">12. E2E Health</a>
+        <a href="#roadmap">Remediation Roadmap</a>
+        <a href="#methodology">Methodology</a>
+      </nav>
+
+      <!-- Main Content -->
+      <main>
+        <p class="eyebrow">Codebase Analysis Report</p>
+        <h1>GSD Task Manager</h1>
+        <p class="lede">Comprehensive code quality review — 28 May 2026, updated 28 May 2026. Repository: <code>vscarpenter/gsd-task-manager</code>.</p>
+
+        <!-- ===== EXECUTIVE SUMMARY ===== -->
+        <section id="executive-summary">
+          <h2>Executive Summary</h2>
+          <div class="score-badge">8.5 <span class="out-of">/ 10</span></div>
+          <p style="margin-top:0.5rem; font-size:var(--t-small); color:var(--gray-600);">Overall health score — production-ready with minor improvements recommended.</p>
+
+          <h3>Top 5 Risks</h3>
+          <ol>
+            <li><strong>Branch coverage at 79.39%</strong> — below the project's stated 80% target; concentrated in UI components.</li>
+            <li><strong>Outdated major dependencies</strong> — Vite 7→8, ESLint 9→10, TypeScript 5→6 have major version updates available.</li>
+            <li><strong>13 empty catch blocks in production</strong> — silent failure hides operational issues.</li>
+            <li><strong>Missing E2E critical-path coverage</strong> — sync flow, PWA install, recurring tasks, and bulk operations are untested at the E2E level.</li>
+            <li><strong>Missing <code>SECURITY_HEADERS.md</code></strong> — referenced in next.config.ts but does not exist; security header documentation gap.</li>
+          </ol>
+
+          <h3>Top 3 Strengths</h3>
+          <ol>
+            <li><strong>Exceptional test suite</strong> — 1,967 unit test cases + 156 cross-browser E2E tests, all passing, zero flaky.</li>
+            <li><strong>Zero TODOs/FIXMEs</strong> — rare for a 21K-line codebase; indicates diligent maintenance.</li>
+            <li><strong>Security-first architecture</strong> — daily automated audits, OAuth provider whitelist, structured logging with secret sanitization, Sentry integration, and documented CSP strategy.</li>
+          </ol>
+
+          <h3>Top 3 Sprint Priorities</h3>
+          <ol>
+            <li><s>Add <code>app/global-error.tsx</code> and <code>app/not-found.tsx</code> for complete error coverage.</s> ✅ Done</li>
+            <li>Boost branch coverage above 80% — focus on <code>matrix-simplified/</code> and <code>settings/</code> components.</li>
+            <li>Add E2E specs for sync auth flow, bulk task operations, and recurring task creation.</li>
+          </ol>
+        </section>
+
+        <!-- ===== METRICS DASHBOARD ===== -->
+        <section id="metrics">
+          <h2>Metrics Dashboard</h2>
+          <div class="stats-grid">
+            <div class="stat-card is-primary">
+              <div class="stat-value">85.7%</div>
+              <div class="stat-label">Statement Coverage</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">79.4%</div>
+              <div class="stat-label">Branch Coverage</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">82.4%</div>
+              <div class="stat-label">Function Coverage</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">86.7%</div>
+              <div class="stat-label">Line Coverage</div>
+            </div>
+            <div class="stat-card is-primary">
+              <div class="stat-value">156</div>
+              <div class="stat-label">E2E Tests (all pass)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">1,967</div>
+              <div class="stat-label">Unit Test Cases</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Flaky Tests</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">0</div>
+              <div class="stat-label">TODOs / FIXMEs</div>
+            </div>
+          </div>
+
+          <h3>Coverage by Category</h3>
+          <table class="tbl">
+            <thead><tr><th>Metric</th><th>Covered</th><th>Total</th><th>Percentage</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Statements</td><td>3,732</td><td>4,354</td><td>85.71%</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td>Branches</td><td>2,165</td><td>2,727</td><td>79.39%</td><td><span class="badge badge-medium">Below target</span></td></tr>
+              <tr><td>Functions</td><td>830</td><td>1,007</td><td>82.42%</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td>Lines</td><td>3,498</td><td>4,036</td><td>86.66%</td><td><span class="badge badge-low">Pass</span></td></tr>
+            </tbody>
+          </table>
+
+          <h3>E2E Results by Browser</h3>
+          <table class="tbl">
+            <thead><tr><th>Browser</th><th>Tests</th><th>Passed</th><th>Failed</th><th>Flaky</th></tr></thead>
+            <tbody>
+              <tr><td>Chromium</td><td>52</td><td>52</td><td>0</td><td>0</td></tr>
+              <tr><td>Firefox</td><td>52</td><td>52</td><td>0</td><td>0</td></tr>
+              <tr><td>WebKit</td><td>52</td><td>52</td><td>0</td><td>0</td></tr>
+            </tbody>
+          </table>
+
+          <h3>E2E Results by Spec File</h3>
+          <table class="tbl">
+            <thead><tr><th>Spec File</th><th>Tests (per browser)</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><code>task-crud.spec.ts</code></td><td>6 × 3 = 18</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>quadrant-classification.spec.ts</code></td><td>5 × 3 = 15</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>search.spec.ts</code></td><td>5 × 3 = 15</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>data-management.spec.ts</code></td><td>7 × 3 = 21</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>settings-navigation.spec.ts</code></td><td>5 × 3 = 15</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>settings-sections.spec.ts</code></td><td>4 × 3 = 12</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>matrix-navigation.spec.ts</code></td><td>4 × 3 = 12</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>sync-states.spec.ts</code></td><td>3 × 3 = 9</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>about-install.spec.ts</code></td><td>3 × 3 = 9</td><td><span class="badge badge-low">Pass</span></td></tr>
+              <tr><td><code>first-time-redirect.spec.ts</code></td><td>1 × 3 = 3</td><td><span class="badge badge-low">Pass</span></td></tr>
+            </tbody>
+          </table>
+
+          <h3>Codebase Size</h3>
+          <table class="tbl">
+            <thead><tr><th>Metric</th><th>Count</th></tr></thead>
+            <tbody>
+              <tr><td>Production source files</td><td>196</td></tr>
+              <tr><td>Lines of production code</td><td>~21,200</td></tr>
+              <tr><td>Test files (unit + integration)</td><td>124</td></tr>
+              <tr><td>E2E spec files</td><td>10</td></tr>
+              <tr><td>Production dependencies</td><td>28</td></tr>
+              <tr><td>Dev dependencies</td><td>24</td></tr>
+              <tr><td>Architecture Decision Records</td><td>12</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ===== DIMENSION 1: STANDARDS COMPLIANCE ===== -->
+        <section id="dim-1">
+          <h2>1. Standards Compliance</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">Files exceeding 350-line limit</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/db.ts (385), components/matrix-simplified/edit-drawer.tsx (376)</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>Coding standards specify ~350-400 lines max per file. Two files exceed this limit, with <code>lib/db.ts</code> at 385 lines containing schema definitions and migrations.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Extract DB migrations to a separate <code>lib/db-migrations.ts</code> file. Split edit-drawer form sections into sub-components.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">TypeScript strict mode could be stricter</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">tsconfig.json</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p><code>strict: true</code> is enabled, but <code>noUncheckedIndexedAccess</code> and <code>exactOptionalPropertyTypes</code> are not. These catch subtle bugs with array/object access patterns.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Enable <code>noUncheckedIndexedAccess</code> for safer array access. Evaluate <code>exactOptionalPropertyTypes</code> separately as it may require significant refactoring.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Single `any` in production code</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">components/install-pwa-prompt.tsx:39</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>One <code>eslint-disable @typescript-eslint/no-explicit-any</code> in production code for a browser-specific <code>beforeinstallprompt</code> event type. This is a known limitation of browser APIs but should be typed.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Create a <code>BeforeInstallPromptEvent</code> interface declaration in a <code>types/</code> folder to properly type this event.
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 2: TEST QUALITY ===== -->
+        <section id="dim-2">
+          <h2>2. Test Quality & Coverage</h2>
+          <details>
+            <summary>Detailed Findings (4 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">Branch coverage below 80% target</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">Global — 79.39% vs 80% target</span>
+                  <span class="effort-tag">Medium</span>
+                </div>
+                <div class="finding-body">
+                  <p>Branch coverage is 0.61% below the project's stated threshold. The gap is concentrated in UI components: <code>matrix-grid.tsx</code> (37.5%), <code>help-drawer.tsx</code> (25%), <code>sync-button.tsx</code> (44.8%), <code>pwa-register.tsx</code> (25%), and <code>reset-everything-dialog.tsx</code> (42.85%).</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Prioritize tests for conditional rendering paths in matrix-grid and sync-button. These are high-traffic components where branch misses indicate untested user interactions.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Dashboard page at 0% coverage</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">app/(dashboard)/dashboard/page.tsx, app/(matrix)/page.tsx, app/settings/page.tsx</span>
+                  <span class="effort-tag">Medium</span>
+                </div>
+                <div class="finding-body">
+                  <p>Three page-level components have 0% coverage. These are thin wrappers that compose domain components (which are well-tested individually), so the risk is low. However, they contain conditional rendering logic that could regress.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Add smoke-test renders for each page component. The E2E suite partially covers these, but unit tests catch regressions faster in CI.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Test mocking pattern uses many eslint-disable comments</span>
+                  <span class="confidence">Confidence: Medium</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">tests/data/notifications.test.ts (26 suppressions), tests/data/use-view-transition.test.ts (10)</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>Test files contain ~65 <code>eslint-disable @typescript-eslint/no-explicit-any</code> comments, primarily for mocking browser globals (window, navigator, Notification). While acceptable in tests, this volume suggests the mocking helpers could be better typed.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Create shared typed mock utilities in <code>tests/helpers/typed-mocks.ts</code> that pre-type common browser API mocks (window.Notification, navigator.serviceWorker, etc.).
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Test infrastructure is exemplary</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">tests/e2e/fixtures/, tests/e2e/pages/</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> The E2E suite uses Page Object Model (<code>MatrixPage</code>), custom fixtures (<code>clearIndexedDB</code>), and resilient <code>data-testid</code> selectors (149 total usages). Test isolation is excellent — IndexedDB is explicitly deleted between runs and <code>localStorage</code> is pre-seeded to prevent redirect races.</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 3: SECURITY ===== -->
+        <section id="dim-3">
+          <h2>3. Security & Supply Chain</h2>
+          <details>
+            <summary>Detailed Findings (4 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">Missing SECURITY_HEADERS.md referenced in config</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">next.config.ts (line 22 comment references it)</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>The <code>next.config.ts</code> comment says "See SECURITY_HEADERS.md for CloudFront configuration instructions" but this file does not exist in the repository. Security header configuration is critical for XSS prevention, clickjacking, and MIME sniffing.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Create <code>SECURITY_HEADERS.md</code> documenting the CloudFront response headers policy. Include CSP, X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security, and Permissions-Policy.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">No XSS vectors in production code</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">Global scan</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Zero uses of <code>dangerouslySetInnerHTML</code> or <code>eval()</code> in production code. The 3 <code>innerHTML</code> usages are in test assertions only. React's JSX escaping provides baseline XSS protection.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">OAuth provider whitelist is properly enforced</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/sync/pb-auth.ts:25</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> <code>ALLOWED_OAUTH_PROVIDERS</code> Set gates provider strings before passing to PocketBase SDK. Well-documented threat model (XSS payload injection, malicious admin provider).</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Automated security audit in CI</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">.github/workflows/security-audit.yml</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Daily scheduled <code>bun audit --audit-level=high</code> with intelligent error handling that distinguishes registry failures from actual vulnerabilities. Runs on push, PR, and daily cron.</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 4: ARCHITECTURE ===== -->
+        <section id="dim-4">
+          <h2>4. Architecture</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Excellent modular decomposition</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/sync/ (20+ modules), lib/tasks/ (10 modules), lib/analytics/ (5 modules)</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Clear separation of concerns. The sync engine is decomposed into auth, push, pull, realtime, queue, retry, health-monitor, and coordinator modules. Tasks follow CRUD boundaries. Analytics are pure, side-effect-free functions. Re-export layers maintain backward compatibility.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Well-documented decisions via ADRs</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">docs/adr/ — 12 ADRs</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Key architectural decisions are formally documented: client-side-only IndexedDB, PocketBase sync, last-write-wins conflict resolution, PWA architecture, MCP server, analytics design, BFS circular dependency detection, smart views, v9 refactor, and service worker caching strategy.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Clean layering with @/ alias convention</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">tsconfig.json — paths alias</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> All internal imports use <code>@/</code> alias. Clear dependency direction: <code>app/ → components/ → lib/</code>. No evidence of circular import issues from the grep analysis (madge was unavailable for formal verification).</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 5: MAINTAINABILITY ===== -->
+        <section id="dim-5">
+          <h2>5. Maintainability</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">Some components have high cognitive complexity</span>
+                  <span class="confidence">Confidence: Medium</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">components/matrix-simplified/index.tsx (348 lines, 4 empty catches), lib/notification-checker.ts (296 lines)</span>
+                  <span class="effort-tag">Medium</span>
+                </div>
+                <div class="finding-body">
+                  <p>The main matrix shell component contains 4 empty catch blocks and handles drag-and-drop, keyboard shortcuts, task state, and audio/confetti effects. While under the 350-line limit, the mix of concerns increases cognitive load.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Extract DnD logic into a <code>use-matrix-dnd.ts</code> hook. Extract celebration/audio effects into a separate hook. Each concern becomes independently testable.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Console logging centralized through logger</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/logger.ts, lib/error-logger.ts — only 7 console.* calls in the entire codebase</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Only 7 direct <code>console.*</code> calls exist across all production source — 5 in logger.ts (the implementation) and 2 in error-logger.ts. All other logging routes through <code>createLogger()</code> with typed contexts and secret sanitization.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Function sizes well-controlled</span>
+                  <span class="confidence">Confidence: Medium</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">Global — average file size 108 lines</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> 196 files at ~21K lines = ~108 lines average. Well below the 350-line limit. Only 2 files exceed it. Modules are focused and cohesive.</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 6: DEPENDENCIES ===== -->
+        <section id="dim-6">
+          <h2>6. Dependencies</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">Major version updates available for 3 dev dependencies</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">package.json — vite 7→8, eslint 9→10, @vitejs/plugin-react 5→6</span>
+                  <span class="effort-tag">Medium</span>
+                </div>
+                <div class="finding-body">
+                  <p>Three dev dependencies have major version bumps: Vite 7.3.2→8.0.10, ESLint 9.39.4→10.4.0, and @vitejs/plugin-react 5.2.0→6.0.2. TypeScript 5.9.3→6.0.3 is also available. Major versions may include breaking changes but also security fixes and performance improvements.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Schedule a dependency update sprint. Prioritize Vite 8 (build tooling) and TypeScript 6 (stricter checks). ESLint 10 may require config migration. Test thoroughly in CI before merging.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Minor version updates available for production deps</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">package.json — date-fns 4.1→4.3, lucide-react 1.7→1.16, react 19.2.4→19.2.6</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>Several production dependencies have minor/patch updates. These are typically non-breaking and include bug fixes. <code>lucide-react</code> has the largest gap (1.7→1.16) suggesting several feature releases of new icons.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Batch minor updates into a single PR. Run full test suite to verify no regressions.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Dependencies well-documented and justified</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">CLAUDE.md — "Non-Obvious Dependencies" section</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Every non-obvious dependency is documented with rationale in CLAUDE.md: @tanstack/react-virtual (virtual scrolling), @dnd-kit (accessible DnD), recharts (lightweight charts), sonner (accessible toasts), canvas-confetti (pinned to 1.9.4 for API stability), nanoid (URL-safe IDs).</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 7: PERFORMANCE ===== -->
+        <section id="dim-7">
+          <h2>7. Performance</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Virtual scrolling for large lists</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">@tanstack/react-virtual in use</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> The project uses <code>@tanstack/react-virtual</code> for list rendering, ensuring DOM size stays constant regardless of task count. This prevents performance degradation with hundreds of tasks.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: React Compiler enabled for automatic memoization</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">next.config.ts — reactCompiler: true, babel-plugin-react-compiler</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> The React Compiler (<code>babel-plugin-react-compiler</code>) is enabled, providing automatic memoization optimization. This eliminates the need for manual <code>useMemo</code>/<code>useCallback</code> boilerplate while maintaining render performance.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Multi-cache service worker strategy</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">public/sw.js, public/sw-cache-logic.js</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Sophisticated caching with separate layers for immutable assets (hashed, cache-first) and pages (network-first). Version-stamped cache names with precaching of critical routes. ADR 0012 documents the strategy.</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 8: ERROR HANDLING ===== -->
+        <section id="dim-8">
+          <h2>8. Error Handling & Observability</h2>
+          <details>
+            <summary>Detailed Findings (4 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">✅ Resolved: global-error.tsx page implemented</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">app/global-error.tsx — created with Sentry integration and inline Inkwell-aligned styles</span>
+                  <span class="effort-tag">Done</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Resolved during this analysis session.</strong> Created <code>app/global-error.tsx</code> with inline styles (Inkwell tokens: #fafaf9 ivory, #3B4A8C accent, 1.5px borders), Sentry <code>captureException</code> reporting, "Try again" and "Go home" actions. Added 6 unit tests. Also added 3 tests for the existing <code>app/not-found.tsx</code>.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">13 empty catch blocks in production code</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">components/matrix-simplified/index.tsx (4), lib/confetti.ts (2), lib/task-links.ts, lib/capture-parser.ts, lib/share-capture.ts, lib/sync/pb-sync-helpers.ts, components/import-dialog.tsx, components/settings-page/index.tsx, components/share-task-dialog/index.tsx</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>Empty <code>catch {}</code> blocks swallow errors silently. While some are intentional (confetti rendering, clipboard access), they make debugging production issues harder. The coding standards say "Never swallow exceptions."</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Add <code>// Expected: [reason]</code> comments to intentional empty catches (confetti, clipboard). For others, add at minimum <code>logger.debug()</code> to preserve observability without user-facing noise.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Sentry integration with structured context</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/sentry.ts, components/error-boundary.tsx</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Sentry is integrated at the ErrorBoundary level with component stack traces. The <code>captureException</code> wrapper passes structured metadata. Logger sanitizes secrets before any data reaches Sentry.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: PII-safe logging with secret sanitization</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/logger.ts — SENSITIVE_QUERY_PARAMS_PATTERN, BEARER_TOKEN_PATTERN</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> The logger automatically masks tokens, API keys, and Bearer tokens in all log output. Typed <code>LogContext</code> union prevents misspelled context strings. Environment-aware log levels (debug in dev, info+ in prod).</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 9: DOCUMENTATION ===== -->
+        <section id="dim-9">
+          <h2>9. Documentation & Onboarding</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Comprehensive developer documentation</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">CLAUDE.md, TECHNICAL.md, coding-standards.md, DATABASE_ARCHITECTURE.md, GSD_FEATURES_GUIDE.md</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> The project has exceptional documentation: CLAUDE.md for AI-assisted development, coding-standards.md (14 pages), DATABASE_ARCHITECTURE.md for schema, and a user-facing features guide. Path-scoped rules in <code>.claude/rules/</code> auto-load relevant guidance.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Inline code comments focus on "why"</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/confetti.ts (CSP explanation), lib/sync/pb-auth.ts (threat model), tests/e2e/fixtures/test-fixtures.ts (WebKit race condition)</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Comments explain non-obvious decisions: CSP constraints for confetti, WebKit navigation race conditions in E2E fixtures, OAuth provider whitelist threat model. Follows the "comment WHY not WHAT" standard.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Missing SECURITY_HEADERS.md creates onboarding gap</span>
+                  <span class="confidence">Confidence: Medium</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">Referenced in next.config.ts but file does not exist</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>A new developer following the code reference would hit a dead link. This is the only broken documentation reference found in the codebase.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Create the file or update the comment to reference the actual location of security header configuration (e.g., CloudFront console or IaC templates).
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 10: TECH DEBT ===== -->
+        <section id="dim-10">
+          <h2>10. Tech Debt</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Zero TODOs, FIXMEs, or commented-out code</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">Global grep — 0 results</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> A comprehensive search across all .ts/.tsx/.js files found zero TODO, FIXME, HACK, or XXX markers. This is exceptional for a 21K-line codebase and indicates disciplined development practices.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Command palette component exists but is not wired</span>
+                  <span class="confidence">Confidence: Medium</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">components/command-palette/ (0% coverage)</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>The command palette component exists with full implementation but is documented as "not wired into the v9 app shell" (CLAUDE.md). It represents dormant code that is maintained but unused. Tracked in tasks/todo.md for resurrection.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Either wire it into the v9 shell (if desired) or move to a <code>deprecated/</code> folder to clarify its status. Its 0% coverage is acceptable only if it's known-dead code.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">One unused eslint-disable for unused-vars</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/archive.ts:113</span>
+                  <span class="effort-tag">Small</span>
+                </div>
+                <div class="finding-body">
+                  <p>Single <code>eslint-disable @typescript-eslint/no-unused-vars</code> in production code suggests a destructuring pattern where a variable is intentionally discarded. Should use underscore prefix convention instead.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Replace with underscore prefix: <code>const { unusedProp: _unusedProp, ...rest } = obj;</code>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 11: CONFIGURATION ===== -->
+        <section id="dim-11">
+          <h2>11. Configuration & Type Safety</h2>
+          <details>
+            <summary>Detailed Findings (3 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Environment config is centralized and typed</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/env-config.ts</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Environment detection is centralized in <code>getEnvironmentConfig()</code> with a typed <code>Environment</code> union and <code>EnvironmentConfig</code> interface. PocketBase URL resolution follows a secure fallback chain — unknown hostnames default to same-origin rather than leaking data to a hardcoded server.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Schema validation constants centralized</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">lib/constants/schema.ts, lib/constants/sync.ts, lib/constants/ui.ts</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Magic numbers are extracted to named constants in dedicated files. Limits (max title length, max tags, etc.) are defined once and referenced by both Zod schemas and UI components.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Typed routes enabled</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">next.config.ts — typedRoutes: true</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Next.js typed routes ensure link hrefs are compile-time checked. Combined with <code>lib/routes.ts</code> for a centralized route registry.</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== DIMENSION 12: E2E HEALTH ===== -->
+        <section id="dim-12">
+          <h2>12. E2E Test Health</h2>
+          <details>
+            <summary>Detailed Findings (4 items)</summary>
+            <div class="detail-content">
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-medium">Medium</span>
+                  <span class="finding-title">Missing critical-path E2E coverage</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">tests/e2e/ — no specs for sync auth, PWA install, recurring tasks, bulk operations, drag-and-drop</span>
+                  <span class="effort-tag">Medium</span>
+                </div>
+                <div class="finding-body">
+                  <p>The E2E suite covers CRUD, quadrant classification, search, navigation, settings, data management, and sync states (UI-only). Missing: actual sync authentication flow, PWA install prompt interaction, recurring task creation on completion, bulk select/delete/move, and drag-and-drop reordering.</p>
+                </div>
+                <div class="finding-recommendation">
+                  <strong>Recommendation:</strong> Prioritize E2E specs for: (1) bulk task operations (highest user impact), (2) recurring task auto-creation (complex logic), (3) drag-and-drop between quadrants. Sync auth can be mocked at the network layer using Playwright's route interception.
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: 100% pass rate across all browsers</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">Chromium 52/52, Firefox 52/52, WebKit 52/52</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> 156 tests pass across all three browsers with zero flakiness. Total duration ~204s. The test infrastructure handles WebKit-specific quirks (PWA dialog dismissal, navigation race conditions) gracefully.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Resilient selector strategy</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">149 data-testid attributes in components, Page Object Model in tests/e2e/pages/</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Tests use <code>data-testid</code> selectors exclusively (no fragile CSS selectors). The <code>MatrixPage</code> Page Object Model encapsulates all locators and actions, making tests readable and maintainable. Custom fixtures handle IndexedDB cleanup and first-visit bypass.</p>
+                </div>
+              </div>
+
+              <div class="finding">
+                <div class="finding-header">
+                  <span class="badge badge-low">Low</span>
+                  <span class="finding-title">Good: Test isolation is robust</span>
+                  <span class="confidence">Confidence: High</span>
+                </div>
+                <div class="finding-meta">
+                  <span class="finding-path">tests/e2e/fixtures/test-fixtures.ts — clearIndexedDB fixture</span>
+                  <span class="effort-tag">N/A</span>
+                </div>
+                <div class="finding-body">
+                  <p><strong>Strength:</strong> Each test starts with a clean slate via <code>indexedDB.deleteDatabase("GsdTaskManager")</code>. localStorage is pre-seeded to prevent redirect interference. Fully parallel execution (<code>fullyParallel: true</code>) with trace/screenshot/video on failure.</p>
+                </div>
+              </div>
+
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== ROADMAP ===== -->
+        <section id="roadmap">
+          <h2>Prioritized Remediation Roadmap</h2>
+
+          <div class="timeline">
+            <div class="timeline-entry">
+              <div class="timeline-label">30 Days</div>
+              <ul>
+                <li><s>Create <code>app/global-error.tsx</code> and <code>app/not-found.tsx</code></s> ✅ Done</li>
+                <li>Create <code>SECURITY_HEADERS.md</code> with CloudFront header configuration <span class="effort-tag">Small</span></li>
+                <li>Add comments or <code>logger.debug()</code> to 13 empty catch blocks <span class="effort-tag">Small</span></li>
+                <li>Type the <code>BeforeInstallPromptEvent</code> to remove the single production <code>any</code> <span class="effort-tag">Small</span></li>
+                <li>Batch-update minor/patch dependencies (date-fns, react, nanoid, etc.) <span class="effort-tag">Small</span></li>
+              </ul>
+            </div>
+            <div class="timeline-entry">
+              <div class="timeline-label">60 Days</div>
+              <ul>
+                <li>Boost branch coverage above 80% — target matrix-grid, sync-button, pwa-register <span class="effort-tag">Medium</span></li>
+                <li>Add E2E specs for bulk operations and recurring task auto-creation <span class="effort-tag">Medium</span></li>
+                <li>Extract DnD logic from matrix-simplified/index.tsx into a custom hook <span class="effort-tag">Medium</span></li>
+                <li>Create typed mock utilities in tests/helpers/ to reduce eslint-disable volume <span class="effort-tag">Small</span></li>
+                <li>Decide: wire command palette into v9 shell or archive it <span class="effort-tag">Small</span></li>
+              </ul>
+            </div>
+            <div class="timeline-entry">
+              <div class="timeline-label">90 Days</div>
+              <ul>
+                <li>Upgrade Vite 7→8, TypeScript 5→6, ESLint 9→10 <span class="effort-tag">Medium</span></li>
+                <li>Enable <code>noUncheckedIndexedAccess</code> and fix resulting type errors <span class="effort-tag">Medium</span></li>
+                <li>Add E2E specs for sync auth flow (with mocked PocketBase) and drag-and-drop <span class="effort-tag">Medium</span></li>
+                <li>Split <code>lib/db.ts</code> migrations into dedicated file <span class="effort-tag">Small</span></li>
+                <li>Evaluate <code>exactOptionalPropertyTypes</code> impact and enable if feasible <span class="effort-tag">Large</span></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== METHODOLOGY ===== -->
+        <section id="methodology">
+          <h2>Methodology & Limitations</h2>
+
+          <h3>What Was Inspected</h3>
+          <ul>
+            <li><strong>Production source:</strong> All 196 .ts/.tsx files in <code>lib/</code>, <code>components/</code>, <code>app/</code> (~21,200 lines)</li>
+            <li><strong>Test suite:</strong> 124 unit/integration test files (1,932 test cases), 10 E2E spec files (156 tests × 3 browsers)</li>
+            <li><strong>Configuration:</strong> tsconfig.json, next.config.ts, playwright.config.ts, package.json</li>
+            <li><strong>CI/CD:</strong> All workflows in .github/workflows/ (ci.yml, security-audit.yml, deploy-*.yml, claude-code-review.yml)</li>
+            <li><strong>Documentation:</strong> CLAUDE.md, coding-standards.md, 12 ADRs, inline comments</li>
+            <li><strong>Service worker:</strong> public/sw.js, public/sw-cache-logic.js</li>
+            <li><strong>MCP server:</strong> packages/mcp-server/ (source structure only)</li>
+          </ul>
+
+          <h3>What Was NOT Inspected</h3>
+          <ul>
+            <li><strong>Runtime behavior:</strong> No live app testing was performed beyond automated test execution</li>
+            <li><strong>Bundle size analysis:</strong> No webpack/next bundle analyzer was run (would require a full build with analysis plugin)</li>
+            <li><strong>Circular dependency graph:</strong> <code>madge</code> was unavailable; analysis inferred from import patterns</li>
+            <li><strong>Security audit results:</strong> <code>bun audit</code> returned a 401 auth error (likely a registry issue); no vulnerability data was obtained</li>
+            <li><strong>PocketBase server:</strong> Backend configuration and API rules were not inspected</li>
+            <li><strong>CloudFront configuration:</strong> Actual deployed security headers and cache policies were not verified</li>
+            <li><strong>Third-party dependency source code:</strong> No manual code review of node_modules</li>
+            <li><strong>Performance profiling:</strong> No Lighthouse, Core Web Vitals, or memory leak analysis</li>
+          </ul>
+
+          <h3>Tools Used</h3>
+          <table class="tbl">
+            <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>Vitest + @vitest/coverage-v8</td><td>Unit/integration test execution and coverage</td></tr>
+              <tr><td>Playwright</td><td>E2E test execution across 3 browsers</td></tr>
+              <tr><td>ripgrep (rg)</td><td>Pattern search for security, debt, and quality indicators</td></tr>
+              <tr><td>bun outdated</td><td>Dependency freshness analysis</td></tr>
+              <tr><td>Manual file review</td><td>Architecture, error handling, and documentation assessment</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Confidence Notes</h3>
+          <ul>
+            <li>All findings based on actual test execution and file content are marked <strong>High confidence</strong>.</li>
+            <li>Findings requiring runtime verification (performance, actual security header deployment) are marked <strong>Medium confidence</strong>.</li>
+            <li>Circular dependency analysis is <strong>Medium confidence</strong> (inferred, not formally verified).</li>
+          </ul>
+        </section>
+
+        <footer style="margin-top:3rem; padding-top:1.5rem; border-top: var(--border-rule); text-align:center;">
+          <p style="font-family:var(--mono); font-size:var(--t-caption); color:var(--gray-500);">
+            Generated 28 May 2026 · Powered by automated analysis · Styled with <a href="https://github.com/vscarpenter/inkwell" style="color:var(--accent);">Inkwell</a>
+          </p>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <!-- Theme toggle -->
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const KEY = 'theme-preview';
+      const s = localStorage.getItem(KEY) || 'auto';
+      if (s === 'light' || s === 'dark') root.setAttribute('data-theme', s);
+    })();
+  </script>
 </body>
 </html>

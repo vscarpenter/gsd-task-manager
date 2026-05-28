@@ -1,0 +1,13 @@
+/* =====================================================================
+   Inkwell — brand-named alias for tokens.css.
+   Version: 1.3.1
+
+   Most projects link this file from <head>:
+       <link rel="stylesheet" href="inkwell.css">
+
+   Under the hood it re-exports tokens.css; you can link either one.
+   The branded name is recommended for brand-consistent imports —
+   "inkwell" is what your team will say in conversation.
+   ===================================================================== */
+
+@import url('tokens.css');
