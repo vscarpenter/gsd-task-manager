@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSD Task Manager — Architecture Document</title>
+<script>
+  (function () {
+    var s = localStorage.getItem('theme-preview') || 'auto';
+    if (s === 'light' || s === 'dark') document.documentElement.setAttribute('data-theme', s);
+  })();
+</script>
+<link rel="stylesheet" href="../public/css/inkwell-tokens.css">
+<link rel="stylesheet" href="../public/css/inkwell-components.css">
+<style>
+header.page-head {
+  padding: var(--sp-7) 0 var(--sp-6);
+  border-bottom: var(--border-rule);
+  margin-bottom: var(--sp-6);
+}
+header.page-head h1 { margin: var(--sp-3) 0 var(--sp-4); }
+header.page-head .meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-4); }
+header.page-head .lede { max-width: 62ch; }
+header.page-head .lede code { background: var(--accent-tint); color: var(--accent); }
+nav.sticky-nav {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  background: var(--ivory); padding: var(--sp-3) 0; border-bottom: var(--border-rule);
+  margin-bottom: var(--sp-6);
+}
+.theme-toggle-wrap { position: fixed; top: 16px; right: 16px; z-index: var(--z-overlay); }
+.theme-toggle-wrap button {
+  height: 34px; padding: 0 14px; font: 500 12px/1 var(--mono);
+  background: var(--paper); border: var(--border); border-radius: var(--r-pill);
+  cursor: pointer; color: var(--gray-700);
+}
+.theme-toggle-wrap button:hover { border-color: var(--slate); color: var(--slate); }
+section.sec { margin-bottom: var(--sp-7); }
+section.sec > p { max-width: 68ch; }
+.cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-4); margin: var(--sp-5) 0 var(--sp-3);
+}
+.card h4 {
+  margin: 0 0 var(--sp-2); font-family: var(--serif); font-weight: 500;
+  font-size: var(--t-h3); letter-spacing: -0.005em;
+}
+.card p { margin: 0; color: var(--gray-700); font-size: var(--t-small); line-height: 1.5; }
+.file-ref {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 11px/1 var(--mono); color: var(--gray-700);
+  background: var(--gray-100); padding: 5px 10px; border-radius: var(--r-xs);
+  border: var(--border-hair);
+}
+.file-ref::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.diagram {
+  background: var(--paper); border: var(--border); border-radius: var(--r-lg);
+  padding: var(--sp-5); margin: var(--sp-5) 0;
+}
+.diagram svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.flow-steps { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; margin: var(--sp-4) 0; }
+.flow-step {
+  background: var(--paper); border: var(--border); border-radius: var(--r-sm);
+  padding: 8px 14px; font: 500 13px/1.3 var(--sans); color: var(--slate);
+}
+.flow-arrow { color: var(--gray-500); font-size: 18px; }
+.q-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin: var(--sp-4) 0;
+}
+.q-card {
+  background: var(--paper); border: var(--border); border-radius: var(--r-md);
+  padding: var(--sp-4); border-left: 4px solid var(--accent);
+}
+.q-card.q1 { border-left-color: var(--rust); }
+.q-card.q2 { border-left-color: var(--accent); }
+.q-card.q3 { border-left-color: var(--warning); }
+.q-card.q4 { border-left-color: var(--gray-500); }
+.q-card h5 { margin: 0 0 4px; font: 600 13px/1.2 var(--sans); }
+.q-card p { margin: 0; font-size: var(--t-small); color: var(--gray-700); }
+.hard-q { counter-reset: hq; margin: var(--sp-4) 0 0; }
+.hard-q li {
+  counter-increment: hq; list-style: none; position: relative;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-7);
+  background: var(--paper); border: var(--border); border-radius: var(--r-sm);
+  margin-bottom: var(--sp-3); font-size: var(--t-small); line-height: 1.55;
+}
+.hard-q li::before {
+  content: counter(hq); position: absolute; left: 14px; top: 13px;
+  font: 600 12px/1 var(--mono); color: var(--accent);
+}
+.stat-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-3); margin: var(--sp-4) 0;
+}
+.stat-card {
+  background: var(--paper); border: var(--border); border-radius: var(--r-md);
+  padding: 16px 18px;
+}
+.stat-num { font: 500 32px/1 var(--serif); margin-bottom: 6px; color: var(--slate); }
+.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
+@media (max-width: 640px) {
+  .q-grid { grid-template-columns: 1fr; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .stat-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<!-- Theme toggle -->
+<div class="theme-toggle-wrap">
+  <button onclick="(function(){var h=document.documentElement,t=h.getAttribute('data-theme');var n=t==='dark'?'light':t==='light'?'auto':('dark');if(n==='auto'){h.removeAttribute('data-theme');localStorage.removeItem('theme-preview')}else{h.setAttribute('data-theme',n);localStorage.setItem('theme-preview',n)}this.textContent=n==='auto'?'Auto':n==='dark'?'Dark':'Light'}).call(this)">Auto</button>
+</div>
+
+<div class="wrap">
+
+<!-- HEADER -->
+<header class="page-head">
+  <span class="eyebrow">Architecture</span>
+  <h1 class="t-display">GSD Task Manager</h1>
+  <div class="meta">
+    <span class="badge badge-accent">Next.js 16</span>
+    <span class="badge badge-neutral">PWA</span>
+    <span class="badge badge-success">Offline-First</span>
+    <span class="badge badge-neutral">IndexedDB</span>
+    <span class="badge badge-accent">PocketBase Sync</span>
+  </div>
+  <p class="t-lede lede">A privacy-first Eisenhower matrix task manager. All data lives locally in IndexedDB; cloud sync is opt-in to a self-hosted PocketBase instance. Built as a static-export PWA deployed to S3/CloudFront.</p>
+</header>
+
+<!-- TL;DR -->
+<div class="tldr">
+  <div class="tldr-label">TL;DR</div>
+  <ol>
+    <li>All data lives in <strong>IndexedDB via Dexie</strong> (schema v14, 10 tables). The app is fully functional offline with zero infrastructure.</li>
+    <li>Cloud sync is <strong>opt-in</strong> via self-hosted PocketBase. Last-write-wins conflict resolution with <code>client_updated_at</code> timestamps. SSE realtime for instant cross-device updates.</li>
+    <li>Static export to <strong>S3/CloudFront</strong> with a three-cache service worker strategy. No SSR, no API routes, no hydration complexity.</li>
+    <li>MCP server provides <strong>20 AI tools</strong> for Claude Desktop integration. All writes support dry-run mode.</li>
+    <li>Key risks: LWW data loss on concurrent edits, single EC2 instance for PocketBase, no automated backups, documentation drift from reality.</li>
+  </ol>
+</div>
+
+<!-- TOC -->
+<nav class="sticky-nav" aria-label="Table of contents">
+  <div class="toc">
+    <a href="#overview"><span class="n">01</span> Overview</a>
+    <a href="#ux"><span class="n">02</span> User Experience</a>
+    <a href="#tech"><span class="n">03</span> Technical Architecture</a>
+    <a href="#persistence"><span class="n">04</span> Persistence &amp; Sync</a>
+    <a href="#risks"><span class="n">05</span> Risk Assessment</a>
+    <a href="#adrs"><span class="n">06</span> Decision Records</a>
+  </div>
+</nav>
+
+<!-- ================================================================= -->
+<!-- SECTION 1: OVERVIEW -->
+<!-- ================================================================= -->
+<section class="sec" id="overview">
+  <div class="sec-head">
+    <span class="idx">01</span>
+    <h2>Overview</h2>
+  </div>
+
+  <p>GSD organizes tasks into an Eisenhower matrix using two boolean flags: <code>urgent</code> and <code>important</code>. The v9 architecture replaced a multi-view layout with a single-matrix shell, capture bar, and edit drawer.</p>
+
+  <div class="q-grid">
+    <div class="q-card q1">
+      <h5>Q1 &mdash; Do First</h5>
+      <p>Urgent + Important. Crisis, deadlines, emergencies.</p>
+    </div>
+    <div class="q-card q2">
+      <h5>Q2 &mdash; Schedule</h5>
+      <p>Not Urgent + Important. Planning, growth, prevention.</p>
+    </div>
+    <div class="q-card q3">
+      <h5>Q3 &mdash; Delegate</h5>
+      <p>Urgent + Not Important. Interruptions, some meetings.</p>
+    </div>
+    <div class="q-card q4">
+      <h5>Q4 &mdash; Eliminate</h5>
+      <p>Not Urgent + Not Important. Time wasters, busy work.</p>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-num">16</div>
+      <div class="stat-label">Next.js 16 App Router</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">v14</div>
+      <div class="stat-label">Dexie Schema Version</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">20</div>
+      <div class="stat-label">MCP Tools</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">10</div>
+      <div class="stat-label">IndexedDB Tables</div>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Tech Stack</h3>
+  <table class="tbl">
+    <thead><tr><th>Layer</th><th>Technology</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Framework</td><td><code>Next.js 16.2.6</code></td><td>App Router, static export, React 19 with React Compiler</td></tr>
+      <tr><td>Persistence</td><td><code>Dexie 4.4.1</code></td><td>IndexedDB wrapper with live queries via <code>useLiveQuery</code></td></tr>
+      <tr><td>Cloud Sync</td><td><code>PocketBase 0.26.8</code></td><td>Optional self-hosted backend with OAuth2 and SSE realtime</td></tr>
+      <tr><td>Validation</td><td><code>Zod 4.3.6</code></td><td>Runtime schema validation at all data boundaries</td></tr>
+      <tr><td>Styling</td><td><code>Tailwind 4.2.2</code></td><td>Utility-first CSS with Radix UI primitives</td></tr>
+      <tr><td>Testing</td><td><code>Vitest + Playwright</code></td><td>Unit/integration tests + E2E browser tests</td></tr>
+      <tr><td>AI Integration</td><td><code>MCP Server</code></td><td>20-tool stdio server for Claude Desktop</td></tr>
+      <tr><td>Monitoring</td><td><code>Sentry</code></td><td>Error tracking (client-side)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<hr class="rule">
+
+<!-- ================================================================= -->
+<!-- SECTION 2: USER EXPERIENCE -->
+<!-- ================================================================= -->
+<section class="sec" id="ux">
+  <div class="sec-head">
+    <span class="idx">02</span>
+    <h2>User Experience</h2>
+  </div>
+
+  <p>The v9 architecture centers on a single-matrix view with progressive disclosure: a capture bar for fast entry, an edit drawer for detail, and keyboard shortcuts for power users.</p>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Interaction Model</h3>
+
+  <div class="cards-grid">
+    <div class="card">
+      <h4>Capture Bar</h4>
+      <p>Press <kbd>n</kbd> to focus. Type with <code>!</code> (urgent), <code>*</code> (important), <code>#tag</code> markers. <kbd>Tab</kbd> cycles quadrant. <kbd>Enter</kbd> to submit. <kbd>Shift+N</kbd> escalates to full drawer.</p>
+    </div>
+    <div class="card">
+      <h4>Edit Drawer</h4>
+      <p>Slide-in panel over the matrix preserving spatial context. Supports title, description, quadrant picker, due-date presets, tags, subtasks, and dependencies.</p>
+    </div>
+    <div class="card">
+      <h4>Drag &amp; Drop</h4>
+      <p><code>@dnd-kit</code> with 8px activation distance. Tasks dragged between quadrants with ghost overlay. Drop targets highlight with quadrant accent color.</p>
+    </div>
+    <div class="card">
+      <h4>Command Palette</h4>
+      <p><kbd>Cmd</kbd>+<kbd>K</kbd> opens <code>cmdk</code>-based palette for quick actions and task search. Mounted in AppShell on every route.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Navigation Architecture</h3>
+  <p>Every route shares the <code>AppShell</code> component providing a collapsible icon rail (desktop) or bottom tab bar (mobile), topbar with search, help drawer, and command palette.</p>
+
+  <div class="flow-steps">
+    <span class="flow-step">Matrix</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Dashboard</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Settings</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Archive</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">About</span>
+  </div>
+  <p class="t-small">Route groups: <code>(matrix)</code>, <code>(dashboard)</code>, <code>(archive)</code>, <code>(sync)</code>, <code>(pwa)</code>, plus standalone <code>/settings</code> and <code>/about</code></p>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Accessibility</h3>
+  <div class="alert is-success" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">What works well</div>
+      <div>ARIA landmarks on navigation, <code>aria-pressed</code> on toggles, <code>aria-current="page"</code> on active nav, Radix Dialog with focus trapping for help drawer, <code>focus-visible</code> rings, 44x44px mobile touch targets, <code>prefers-reduced-motion</code> support.</div>
+    </div>
+  </div>
+  <div class="alert is-warning" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">Gap: Edit Drawer accessibility</div>
+      <div>The edit drawer is a hand-rolled <code>&lt;div role="presentation"&gt;</code> overlay with no <code>aria-modal</code>, no focus trap, and a fragile <code>setTimeout</code> for initial focus. Unlike the help drawer (Radix Dialog), keyboard-only and screen-reader users may experience focus escaping behind the overlay. <span class="file-ref">components/matrix-simplified/edit-drawer.tsx</span></div>
+    </div>
+  </div>
+  <div class="alert is-warning" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">Gap: Mobile discoverability</div>
+      <div>Search is <code>hidden sm:block</code> on mobile. The drag grip icon is <code>opacity-0</code> until hover (invisible on touch). Sync entry point is also hidden on mobile. Three features invisible to a mobile-only user.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================================================================= -->
+<!-- SECTION 3: TECHNICAL ARCHITECTURE -->
+<!-- ================================================================= -->
+<section class="sec" id="tech">
+  <div class="sec-head">
+    <span class="idx">03</span>
+    <h2>Technical Architecture</h2>
+  </div>
+
+  <p>GSD is a fully client-side application. All components use <code>"use client"</code> &mdash; there is no server rendering. The static export eliminates hydration mismatches, SSR infrastructure, and server/client divergence.</p>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Module Structure</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <h4>lib/</h4>
+      <p>40+ files. Data layer core: <code>db.ts</code> (Dexie schema), <code>tasks.ts</code> (CRUD), <code>schema.ts</code> (Zod), <code>use-tasks.ts</code> (live queries), <code>quadrants.ts</code> (Eisenhower logic). Subdirectories: <code>analytics/</code>, <code>notifications/</code>, <code>sync/</code>.</p>
+    </div>
+    <div class="card">
+      <h4>lib/sync/</h4>
+      <p>18 files. Modular sync system: <code>pocketbase-client.ts</code>, <code>pb-sync-engine.ts</code> (push/pull), <code>pb-realtime.ts</code> (SSE), <code>pb-auth.ts</code> (OAuth), <code>task-mapper.ts</code>, <code>sync-coordinator.ts</code>, <code>health-monitor.ts</code>, <code>queue.ts</code>, <code>retry-manager.ts</code>.</p>
+    </div>
+    <div class="card">
+      <h4>components/</h4>
+      <p>Domain-specific groups: <code>matrix-simplified/</code> (v9 shell), <code>task-card/</code> (composable card), <code>sync/</code>, <code>settings/</code>, <code>settings-page/</code>, <code>dashboard/</code>, <code>command-palette/</code>.</p>
+    </div>
+    <div class="card">
+      <h4>packages/mcp-server/</h4>
+      <p>Standalone workspace. 7 read tools, 5 write tools (with dry-run), 5 analytics tools, 3 system tools. Stdio transport, TTL cache, retry logic.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Data Flow</h3>
+  <p><strong>Write path:</strong></p>
+  <div class="flow-steps">
+    <span class="flow-step">User Action</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Zod Validation</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Dexie Transaction</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">IndexedDB</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step" style="border-color:var(--accent);color:var(--accent)">PocketBase Push (async, optional)</span>
+  </div>
+
+  <p><strong>Read path:</strong></p>
+  <div class="flow-steps">
+    <span class="flow-step">IndexedDB</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">useLiveQuery</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">React Component</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Auto Re-render</span>
+  </div>
+
+  <p><strong>Sync path:</strong></p>
+  <div class="flow-steps">
+    <span class="flow-step">sync-coordinator</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">pb-push (100ms throttle)</span>
+    <span class="flow-arrow">&harr;</span>
+    <span class="flow-step">PocketBase API</span>
+    <span class="flow-arrow">&harr;</span>
+    <span class="flow-step">pb-pull (LWW)</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Dexie</span>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Build &amp; Deployment</h3>
+  <table class="tbl">
+    <thead><tr><th>Stage</th><th>Tool</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Build</td><td><code>next build</code></td><td>Static export (<code>output: "export"</code>) produces self-contained <code>out/</code> directory</td></tr>
+      <tr><td>Hosting</td><td>S3 + CloudFront</td><td>CloudFront Function rewrites directory paths to <code>index.html</code> for SPA routing</td></tr>
+      <tr><td>Caching</td><td>Service Worker</td><td>Three purpose-specific caches (ADR 0012): immutable chunks, pages, runtime assets</td></tr>
+      <tr><td>CI/CD</td><td>Pre-build scripts</td><td>Generate build info, bump SW cache version, validate types and lint</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Service Worker Cache Strategy</h3>
+  <div class="cards-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="card" style="border-left: 4px solid var(--olive);">
+      <h4><code>gsd-immutable-v1</code></h4>
+      <p>Content-hashed <code>/_next/static/*</code> chunks. Cache-first. FIFO-pruned at 60 entries. Survives deploys.</p>
+    </div>
+    <div class="card" style="border-left: 4px solid var(--accent);">
+      <h4><code>gsd-pages-v{ver}</code></h4>
+      <p>HTML + RSC flight data. Network-first. Rotated on deploy.</p>
+    </div>
+    <div class="card" style="border-left: 4px solid var(--warning);">
+      <h4><code>gsd-runtime-v{ver}</code></h4>
+      <p>Icons, manifest, other static. Cache-first. Rotated on deploy.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">App Shell Providers</h3>
+  <div class="flow-steps" style="flex-wrap:wrap">
+    <span class="flow-step">ErrorBoundary</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">ThemeProvider</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">ToastProvider</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">QueryProvider</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">TooltipProvider</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">ClientLayout</span>
+  </div>
+  <p class="t-small">Plus standalone: <code>PwaRegister</code>, <code>SentryInit</code>, <code>WebMcpRegister</code>, <code>InstallPwaPrompt</code>, <code>PwaUpdateToast</code>, <code>GlobalErrorListener</code>, <code>FirstTimeRedirect</code></p>
+</section>
+
+<hr class="rule">
+
+<!-- ================================================================= -->
+<!-- SECTION 4: PERSISTENCE & SYNC -->
+<!-- ================================================================= -->
+<section class="sec" id="persistence">
+  <div class="sec-head">
+    <span class="idx">04</span>
+    <h2>Persistence &amp; Sync</h2>
+  </div>
+
+  <p>All data lives locally in IndexedDB via Dexie. Cloud sync is an opt-in layer that pushes and pulls to a self-hosted PocketBase instance using last-write-wins conflict resolution.</p>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">IndexedDB Schema (v14)</h3>
+  <table class="tbl">
+    <thead><tr><th>Table</th><th>Purpose</th><th>Key Indexes</th></tr></thead>
+    <tbody>
+      <tr><td><code>tasks</code></td><td>Active tasks</td><td><code>quadrant</code>, <code>completed</code>, <code>dueDate</code>, <code>*tags</code>, <code>[quadrant+completed]</code>, <code>*dependencies</code></td></tr>
+      <tr><td><code>archivedTasks</code></td><td>Completed/archived tasks</td><td>Same as tasks</td></tr>
+      <tr><td><code>syncQueue</code></td><td>Pending sync operations</td><td><code>status</code> field (v14)</td></tr>
+      <tr><td><code>syncMetadata</code></td><td>Sync cursors and state</td><td>&mdash;</td></tr>
+      <tr><td><code>syncHistory</code></td><td>Sync operation log</td><td>&mdash;</td></tr>
+      <tr><td><code>deviceInfo</code></td><td>Device identity for echo filtering</td><td>&mdash;</td></tr>
+      <tr><td><code>smartViews</code></td><td>Retained from v8 (no UI surface)</td><td>&mdash;</td></tr>
+      <tr><td><code>notificationSettings</code></td><td>Per-task notification config</td><td>&mdash;</td></tr>
+      <tr><td><code>archiveSettings</code></td><td>Auto-archive configuration</td><td>&mdash;</td></tr>
+      <tr><td><code>appPreferences</code></td><td>User preferences</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Task Data Model</h3>
+  <p>Tasks are validated by Zod schemas at all data boundaries. The quadrant is derived from <code>urgent</code> + <code>important</code> booleans via <code>resolveQuadrantId()</code>.</p>
+  <div class="cards-grid">
+    <div class="card">
+      <h4>Core Fields</h4>
+      <p><code>id</code>, <code>title</code>, <code>description</code>, <code>urgent</code>, <code>important</code>, <code>quadrant</code>, <code>completed</code>, <code>completedAt</code>, <code>dueDate</code>, <code>createdAt</code>, <code>updatedAt</code></p>
+    </div>
+    <div class="card">
+      <h4>Nested Structures</h4>
+      <p><code>subtasks[]</code> (id/title/completed), <code>tags[]</code>, <code>dependencies[]</code> (task IDs), <code>timeEntries[]</code> (start/end/notes)</p>
+    </div>
+    <div class="card">
+      <h4>Recurrence &amp; Snooze</h4>
+      <p><code>recurrence</code> pattern, <code>snoozedUntil</code>. Completed recurring tasks auto-create the next instance.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Sync Protocol</h3>
+  <div class="alert is-info" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">Last-Write-Wins (LWW)</div>
+      <div>Conflict resolution uses <code>client_updated_at</code> timestamps. Remote wins if its timestamp is newer. A 30-second overlap window on pull cursors and a 5-minute future clamp handle boundary conditions and clock drift.</div>
+    </div>
+  </div>
+
+  <table class="tbl" style="margin-top:var(--sp-4)">
+    <thead><tr><th>Operation</th><th>Mechanism</th><th>Safeguards</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Push</strong></td><td>Drain <code>syncQueue</code> sequentially, 100ms throttle</td><td>Pre-fetch remote index, LWW guard before write, abort on HTTP 429</td></tr>
+      <tr><td><strong>Pull</strong></td><td>Fetch by <code>owner</code> + <code>client_updated_at &gt;= cursor</code></td><td>30s overlap window, preserve device-local fields, skip invalid records</td></tr>
+      <tr><td><strong>Realtime</strong></td><td>PocketBase SSE <code>subscribe('*')</code></td><td>Echo filtering via <code>device_id</code>, owner validation, Zod schema check</td></tr>
+      <tr><td><strong>Delete Reconciliation</strong></td><td>Compare remote index vs local after pull</td><td>Protected by pending-queue check and <code>fetchSucceeded</code> guard</td></tr>
+      <tr><td><strong>Field Mapping</strong></td><td>camelCase (local) &harr; snake_case (PocketBase)</td><td>Bidirectional Zod validation with <code>.strip()</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Import / Export</h3>
+  <div class="cards-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="card">
+      <h4>Export</h4>
+      <p><strong>Strict validation</strong> &mdash; <code>taskRecordSchema.strict()</code> rejects unknown fields. Wraps in <code>{tasks, exportedAt, version}</code> payload. Skips corrupt tasks with warning.</p>
+    </div>
+    <div class="card">
+      <h4>Import</h4>
+      <p><strong>Lenient validation</strong> &mdash; <code>.strip()</code> silently drops unknown fields (e.g., legacy <code>vectorClock</code>). Two modes: <em>replace</em> (clear + replace) or <em>merge</em> (regenerate conflicting IDs). Safety limits: 10K tasks, 10MB max.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================================================================= -->
+<!-- SECTION 5: RISK ASSESSMENT -->
+<!-- ================================================================= -->
+<section class="sec" id="risks">
+  <div class="sec-head">
+    <span class="idx">05</span>
+    <h2>Risk Assessment</h2>
+  </div>
+
+  <p>A constructively critical review of the architecture, surfacing contradictions, complexity hotspots, and hard questions that need honest answers.</p>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Documentation vs. Reality</h3>
+  <div class="alert is-danger" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">ADR-0011 documents deletions that never happened</div>
+      <div>The ADR states <code>share-task-dialog/</code>, <code>lib/confetti.ts</code>, and <code>canvas-confetti</code> should be deleted. All still exist and are actively imported in <code>components/matrix-simplified/index.tsx</code>. This ADR describes aspirations, not reality.</div>
+    </div>
+  </div>
+  <div class="alert is-danger" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">CLAUDE.md says the command palette is "not wired in"</div>
+      <div><code>app-shell.tsx</code> imports and renders <code>&lt;CommandPalette&gt;</code> on every page. The documentation is stale. The help drawer&rsquo;s keyboard shortcuts section doesn't mention <kbd>Cmd</kbd>+<kbd>K</kbd>. Users may not discover the feature; developers may not trust CLAUDE.md.</div>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Complexity Hotspots</h3>
+  <div class="stat-row">
+    <div class="stat-card" style="border-left: 4px solid var(--warning);">
+      <div class="stat-num">19</div>
+      <div class="stat-label">Sync module files</div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid var(--warning);">
+      <div class="stat-num">~2,740</div>
+      <div class="stat-label">Lines of sync code</div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid var(--rust);">
+      <div class="stat-num">376</div>
+      <div class="stat-label">edit-drawer.tsx lines</div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid var(--warning);">
+      <div class="stat-num">16</div>
+      <div class="stat-label">Dependency overrides</div>
+    </div>
+  </div>
+  <p class="t-small">The sync module alone (19 files, ~2,740 lines) rivals the complexity of the core product for an optional feature. <code>edit-drawer.tsx</code> at 376 lines exceeds the project&rsquo;s own 350-line ceiling.</p>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Single Points of Failure</h3>
+  <table class="tbl">
+    <thead><tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="chip-dot attention"><span class="dot"></span>PocketBase on single EC2</span></td>
+        <td>All synced users lose multi-device capability</td>
+        <td>None documented. No failover, no multi-region.</td>
+      </tr>
+      <tr>
+        <td><span class="chip-dot attention"><span class="dot"></span>No automated PocketBase backup</span></td>
+        <td>Disk failure loses all synced data permanently</td>
+        <td>SQLite on EC2 with no backup scripts or S3 snapshots.</td>
+      </tr>
+      <tr>
+        <td><span class="chip-dot medium"><span class="dot"></span>Hand-written service worker</span></td>
+        <td>A bug silently breaks offline for all users</td>
+        <td>TypeScript source exists but must be manually synced to JS copy.</td>
+      </tr>
+      <tr>
+        <td><span class="chip-dot medium"><span class="dot"></span>LWW data loss</span></td>
+        <td>Simultaneous edits to different fields silently loses one set</td>
+        <td>Acknowledged in ADR-0003. No conflict visibility for users.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Security Surface</h3>
+  <div class="alert is-warning" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">Auth tokens in localStorage</div>
+      <div>PocketBase auth tokens live in <code>localStorage</code> via the SDK&rsquo;s <code>authStore</code>. Any XSS vulnerability grants full read/write access to all synced task data. No encryption in the sync layer.</div>
+    </div>
+  </div>
+  <div class="alert is-warning" style="margin-top:var(--sp-3)">
+    <div class="alert-body">
+      <div class="alert-title">MCP server bearer token</div>
+      <div><code>GSD_AUTH_TOKEN</code> is a long-lived bearer token visible in shell history, process listings, and Claude Desktop config files. Token rotation is not documented.</div>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">Dead Weight</h3>
+  <div class="cards-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="card">
+      <h4>Coverage-Gaming Tests</h4>
+      <p>14 test files named <code>coverage-boost.test.ts</code>, <code>final-coverage-push.test.ts</code>, <code>gap-closing-2.test.tsx</code>. These exist to hit the 80% threshold and likely test implementation details rather than behavior.</p>
+    </div>
+    <div class="card">
+      <h4>Orphaned Features</h4>
+      <p><code>smartViews</code> Dexie table retained with no UI surface. <code>share-task-dialog/</code> and <code>confetti.ts</code> documented as deleted but still shipping. Schema and export/import surface area for unused data.</p>
+    </div>
+  </div>
+
+  <h3 class="t-h3" style="margin-top:var(--sp-5)">The Hard Questions</h3>
+  <ul class="hard-q">
+    <li>If <code>api.vinny.io</code> goes down for 48 hours, what happens? What&rsquo;s the user experience? What&rsquo;s the data recovery story? Is there even a backup?</li>
+    <li>The app markets itself as &ldquo;privacy-first&rdquo; but stores plaintext tasks on a server with localStorage tokens and no encryption. What is the actual threat model?</li>
+    <li>19 files and 2,740 lines of sync code for an optional feature on a personal task app &mdash; is this proportional to the value it delivers?</li>
+    <li>Are the <code>coverage-boost</code> / <code>gap-closing</code> test files testing behavior or gaming the 80% threshold? If removed, does coverage actually meet the stated standard?</li>
+    <li>MCP server requires cloud sync to function. It cannot access local-only IndexedDB data. Does this limit the &ldquo;privacy-first&rdquo; story for AI-powered task management?</li>
+  </ul>
+</section>
+
+<hr class="rule">
+
+<!-- ================================================================= -->
+<!-- SECTION 6: ARCHITECTURE DECISION RECORDS -->
+<!-- ================================================================= -->
+<section class="sec" id="adrs">
+  <div class="sec-head">
+    <span class="idx">06</span>
+    <h2>Architecture Decision Records</h2>
+  </div>
+
+  <p>Key architectural decisions are captured in ADRs under <code>docs/adr/</code>. Each documents the context, decision, consequences, and alternatives considered.</p>
+
+  <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+    <div class="card">
+      <h4>ADR-0001</h4>
+      <p><strong>Client-Side Only IndexedDB</strong> &mdash; All data stored locally. No server required for core functionality.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0002</h4>
+      <p><strong>PocketBase Cloud Sync</strong> &mdash; Self-hosted PocketBase for opt-in multi-device sync.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0003</h4>
+      <p><strong>Last-Write-Wins Conflict Resolution</strong> &mdash; Whole-record LWW using <code>client_updated_at</code> timestamps.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0004</h4>
+      <p><strong>PWA Architecture</strong> &mdash; Progressive Web App with service worker and offline support.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0005</h4>
+      <p><strong>MCP Server Integration</strong> &mdash; 20-tool Claude Desktop integration via stdio JSON-RPC.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0006</h4>
+      <p><strong>Analytics Modular Design</strong> &mdash; Modular metrics, streaks, tags, and trends system.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0007</h4>
+      <p><strong>Notification System Design</strong> &mdash; Modular notification display, permissions, settings, and badges.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0008</h4>
+      <p><strong>BFS Circular Dependency Detection</strong> &mdash; Breadth-first search to prevent dependency cycles.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0009</h4>
+      <p><strong>Smart Views System</strong> &mdash; Custom filtered views (UI removed in v9, schema retained).</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0010</h4>
+      <p><strong>Agent Discovery Surface</strong> &mdash; Exposing task data to AI agents via structured tools.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0011</h4>
+      <p><strong>v9 Single Matrix Refactor</strong> &mdash; Simplified from ~30 files to single-matrix shell + capture bar.</p>
+    </div>
+    <div class="card">
+      <h4>ADR-0012</h4>
+      <p><strong>SW Multi-Cache Strategy</strong> &mdash; Three purpose-specific caches reducing post-deploy re-download by ~95%.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="padding: var(--sp-6) 0 var(--sp-7); border-top: var(--border-rule); margin-top: var(--sp-6); text-align: center;">
+  <p class="t-caption">Generated 2025-05-27 by a 4-agent team: UX Architect, Technical Architect, Persistence Architect, and Devil&rsquo;s Advocate.<br>
+  Built with <a href="#" class="link" style="color:var(--accent);text-decoration:none;">Inkwell Design System</a> v1.3.1</p>
+</footer>
+
+</div><!-- .wrap -->
+</body>
+</html>
+</body>
+</html>
