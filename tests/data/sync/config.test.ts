@@ -391,6 +391,17 @@ describe('Sync Config', () => {
       expect(status).not.toHaveProperty('serverUrl');
     });
 
+    // Migrated from the former tests/ui/more-function-coverage.test.tsx (F2.1):
+    // covers the `config?.deviceId || null` fallback when no config exists.
+    it('returns a null deviceId when no config exists', async () => {
+      await db.syncMetadata.clear();
+
+      const status = await getSyncStatus();
+
+      expect(status.deviceId).toBeNull();
+      expect(status.enabled).toBe(false);
+    });
+
     it('should include pending operation count', async () => {
       await db.syncQueue.bulkAdd([
         {
