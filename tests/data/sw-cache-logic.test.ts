@@ -64,6 +64,36 @@ describe("classifyRequest", () => {
 		);
 	});
 
+	it("should return passthrough for same-origin API requests", () => {
+		expect(
+			classifyRequest("/api/collections/tasks/records", null, true, "GET"),
+		).toBe("passthrough");
+	});
+
+	it("should return passthrough for PocketBase admin requests", () => {
+		expect(classifyRequest("/_/", "text/html", true, "GET")).toBe(
+			"passthrough",
+		);
+	});
+
+	it("should return passthrough for auth-bearing requests", () => {
+		expect(
+			classifyRequest("/manifest.json", null, true, "GET", true),
+		).toBe("passthrough");
+	});
+
+	it("should return passthrough for no-store requests", () => {
+		expect(
+			classifyRequest("/manifest.json", null, true, "GET", false, "no-store"),
+		).toBe("passthrough");
+	});
+
+	it("should return passthrough for unknown same-origin runtime requests", () => {
+		expect(classifyRequest("/robots.txt", null, true, "GET")).toBe(
+			"passthrough",
+		);
+	});
+
 	it("should return passthrough for cross-origin requests", () => {
 		expect(
 			classifyRequest("/api/collections/tasks", null, false, "GET"),
@@ -212,6 +242,12 @@ describe("source sync check", () => {
 		);
 		expect(js.classifyRequest("/api/x", null, false, "GET")).toBe(
 			classifyRequest("/api/x", null, false, "GET"),
+		);
+		expect(js.classifyRequest("/api/x", null, true, "GET")).toBe(
+			classifyRequest("/api/x", null, true, "GET"),
+		);
+		expect(js.classifyRequest("/robots.txt", null, true, "GET")).toBe(
+			classifyRequest("/robots.txt", null, true, "GET"),
 		);
 		expect(js.getCacheNames("1.0.0", 1)).toEqual(getCacheNames("1.0.0", 1));
 		expect(js.shouldDeleteCache("gsd-cache-v1", js.getCacheNames("2.0.0", 1))).toBe(

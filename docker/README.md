@@ -15,15 +15,26 @@ Open **https://localhost** (accept the self-signed certificate warning on first 
 
 PocketBase starts with no collections or admin account. Complete these steps once:
 
-1. Visit **https://localhost/_/** to open the PocketBase admin dashboard.
-2. Create a superuser account (email + password).
-3. Create the **tasks** collection. You can either:
-   - Use the admin UI to create it manually (see the schema below), or
-   - Run the setup script from outside the container:
-     ```bash
-     PB_URL=https://localhost ./scripts/setup-pocketbase-collections.sh
-     ```
-4. Go to **Settings → Auth providers** to configure OAuth (Google, GitHub) if desired.
+1. Create or update a PocketBase superuser inside the container:
+   ```bash
+   docker compose exec gsd pocketbase superuser upsert admin@example.com 'change-this-password' --dir=/pb_data
+   ```
+2. Create the **tasks** collection from outside the container:
+   ```bash
+   PB_URL=https://localhost \
+   PB_ADMIN_EMAIL=admin@example.com \
+   PB_ADMIN_PASSWORD='change-this-password' \
+   ../scripts/setup-pocketbase-collections.sh
+   ```
+3. If you need the PocketBase admin dashboard, temporarily publish it on localhost only:
+   ```yaml
+   ports:
+     - "443:443"
+     - "80:80"
+     - "127.0.0.1:8090:8090"
+   ```
+   Then open **http://127.0.0.1:8090/_/** and remove the port mapping when setup is complete.
+4. Go to **Settings → Auth providers** in the local admin dashboard to configure OAuth (Google, GitHub) if desired.
 
 ## Architecture
 
@@ -36,12 +47,12 @@ Browser (https://localhost)
 │  :443                        │
 │                              │
 │  /api/*  ──► PocketBase:8090 │
-│  /_/*    ──► PocketBase:8090 │
 │  /*      ──► Static files    │
 └──────────────────────────────┘
 ```
 
 Everything runs behind a single HTTPS origin, so there are no CORS or mixed-content issues.
+The PocketBase admin dashboard is not exposed through the public app origin by default.
 For custom domains, the app now defaults sync to the same origin unless
 `NEXT_PUBLIC_POCKETBASE_URL` is explicitly set.
 
@@ -159,7 +170,7 @@ ports:
 Then access `https://localhost:8443`.
 
 ### PocketBase admin not loading
-Wait a few seconds after container start — PocketBase needs time to initialize on first run. Check logs with `docker compose logs -f`.
+The admin dashboard is not exposed through `https://localhost/_/` by default. Temporarily add `127.0.0.1:8090:8090` to `ports`, restart, and open `http://127.0.0.1:8090/_/`. Remove that port mapping when setup is complete. If the local port still does not respond, wait a few seconds after container start and check logs with `docker compose logs -f`.
 
 ### OAuth not working
 OAuth providers must be configured in PocketBase admin (**Settings → Auth providers**). The redirect URL should be `https://localhost/api/oauth2-redirect` (or your custom `SITE_ADDRESS`).

@@ -39,7 +39,7 @@
 		# allowlist did not cover.
 		Permissions-Policy           "accelerometer=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=()"
 
-		Content-Security-Policy      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com https://github.com; object-src 'none'; manifest-src 'self'; worker-src 'self';"
+		Content-Security-Policy      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://accounts.google.com https://github.com; object-src 'none'; manifest-src 'self'; worker-src 'self';"
 
 		# Hide server / upstream framework banners.
 		-Server
@@ -52,9 +52,11 @@
 		reverse_proxy localhost:8090
 	}
 
-	# Admin dashboard
+	# PocketBase admin is intentionally not exposed on the public app origin.
+	# For setup, either use scripts/setup-pocketbase-collections.sh through
+	# /api/* or publish 127.0.0.1:8090 from docker-compose temporarily.
 	handle /_/* {
-		reverse_proxy localhost:8090
+		respond "PocketBase admin is not exposed through this origin." 404
 	}
 
 	# ---- Static site (SPA fallback) ----

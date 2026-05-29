@@ -134,24 +134,24 @@ img-src 'self' data: blob:;
 font-src 'self' data:;
 connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
 frame-ancestors 'none';
-base-uri 'self';
+base-uri 'none';
 form-action 'self' https://accounts.google.com https://github.com;
 ```
 
-**Production (Recommended):**
+**Production (Current):**
 ```
 default-src 'self';
-script-src 'self';
-style-src 'self';
+script-src 'self' 'unsafe-inline';
+style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob:;
-font-src 'self';
+font-src 'self' data:;
 connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com https://*.ingest.us.sentry.io;
 frame-ancestors 'none';
-base-uri 'self';
+base-uri 'none';
 form-action 'self' https://accounts.google.com https://github.com;
 ```
 
-> **Note:** The production CSP removes `unsafe-inline` and `unsafe-eval`. The `connect-src` includes the PocketBase server, OAuth provider domains, and the Sentry US-region ingest endpoint for error reporting.
+> **Note:** The current static Next.js export emits inline hydration/RSC scripts, so production still allows `unsafe-inline` for scripts and styles. Production must not allow `unsafe-eval`, and `connect-src` should stay limited to the app origin, PocketBase, OAuth provider domains, and the Sentry US-region ingest endpoint. The next hardening step is a deploy-time CSP hash pipeline that removes script `unsafe-inline`.
 
 #### 2. X-Frame-Options
 ```

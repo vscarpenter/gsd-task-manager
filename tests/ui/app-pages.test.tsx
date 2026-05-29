@@ -156,7 +156,10 @@ describe('RootLayout', () => {
     const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
     expect(csp).toHaveAttribute('content', expect.stringContaining("form-action 'self'"));
     expect(csp).toHaveAttribute('content', expect.stringContaining("object-src 'none'"));
-    expect(csp).toHaveAttribute('content', expect.stringContaining("base-uri 'self'"));
+    expect(csp).toHaveAttribute('content', expect.stringContaining("base-uri 'none'"));
+    const cspContent = csp?.getAttribute('content') ?? '';
+    expect(cspContent).not.toContain("connect-src 'self' https: wss:");
+    expect(cspContent).toContain('https://api.vinny.io');
   });
 });
 

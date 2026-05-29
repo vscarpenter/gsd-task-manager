@@ -16,20 +16,42 @@ import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 
+// The current static Next export emits inline hydration/RSC scripts. Keep
+// production inline script allowance until a deploy-time hash pipeline exists.
 const scriptSrc = process.env.NODE_ENV === "development"
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
   : "script-src 'self' 'unsafe-inline'";
 
+const connectSrc = process.env.NODE_ENV === "development"
+  ? [
+      "connect-src 'self'",
+      "http://127.0.0.1:8090",
+      "http://localhost:8090",
+      "ws://127.0.0.1:8090",
+      "ws://localhost:8090",
+      "https://api.vinny.io",
+      "https://accounts.google.com",
+      "https://github.com",
+      "https://*.ingest.us.sentry.io",
+    ].join(" ")
+  : [
+      "connect-src 'self'",
+      "https://api.vinny.io",
+      "https://accounts.google.com",
+      "https://github.com",
+      "https://*.ingest.us.sentry.io",
+    ].join(" ");
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "base-uri 'self'",
+  "base-uri 'none'",
   "object-src 'none'",
   "form-action 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   scriptSrc,
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https: wss:",
+  connectSrc,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");

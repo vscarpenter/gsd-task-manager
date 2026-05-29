@@ -45,7 +45,7 @@ echo ""
 echo "==========================================="
 echo "  GSD Task Manager is running!"
 echo "  App:   https://${SITE_ADDRESS:-localhost}"
-echo "  Admin: https://${SITE_ADDRESS:-localhost}/_/"
+echo "  Admin: not exposed on the public app origin"
 echo "==========================================="
 echo ""
 

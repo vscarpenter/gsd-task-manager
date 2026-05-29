@@ -72,12 +72,14 @@ self.addEventListener("fetch", (event) => {
 	}
 
 	const requestUrl = new URL(request.url);
-	const isSameOrigin = requestUrl.hostname === self.location.hostname;
+	const isSameOrigin = requestUrl.origin === self.location.origin;
 	const classification = classifyRequest(
 		requestUrl.pathname,
 		request.headers.get("accept"),
 		isSameOrigin,
 		request.method,
+		request.headers.has("authorization"),
+		request.cache,
 	);
 
 	if (classification === "passthrough") {

@@ -9,6 +9,8 @@ services:
     ports:
       - "443:443"    # HTTPS — app + PocketBase API
       - "80:80"      # HTTP  — redirects to HTTPS
+      # Optional local-only PocketBase admin/API access for initial setup:
+      # - "127.0.0.1:8090:8090"
     volumes:
       - pb_data:/pb_data          # PocketBase database persistence
       # Uncomment to use your own SSL certificates (see README.md):
