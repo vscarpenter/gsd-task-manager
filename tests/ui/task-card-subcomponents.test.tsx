@@ -1,5 +1,5 @@
 /**
- * UI coverage boost — tests for task-card sub-components.
+ * Tests for the task-card sub-components (actions, header, metadata).
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
