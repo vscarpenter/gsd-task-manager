@@ -4,6 +4,21 @@ Project-specific learnings, gotchas, and patterns. Review at the start of every 
 
 ---
 
+## Decoupling coverage-padding test files (finding F2.1)
+
+When removing a `*-boost` / `*-coverage-push` / `gap-closing` padding test file, **classify by delete-and-measure, not by similarity.** Asking "does a canonical test that looks similar exist?" is unreliable and over-classifies tests as duplicates: in the batch removal of `final-coverage-push` / `function-coverage-final` / `last-function-push`, `lib/command-actions.ts` function coverage silently fell 83%→50% because the padding tests were the *sole* invokers of certain `buildCommandActions` lambdas, even though a similar-looking canonical test existed.
+
+The reliable method, per file:
+1. Snapshot per-module baseline from `coverage/coverage-summary.json`.
+2. Delete the file *alone*, run `bun run test -- --coverage`.
+3. Any module whose lines/func/branch drop = that file's unique coverage. Open lcov, find the test hitting the now-uncovered lines, migrate **that** test into the canonical module-named file (rewriting tautological `expect(typeof x).toBe('string')` assertions into real ones).
+4. Only delete once the module holds baseline.
+
+Safe-to-bulk-delete (verified, all duplicates): `coverage-boost`, `sync-and-utils-boost`, `db-coverage`, `functions-branches-boost` (after migrating its `useCountUp` + settings edge-case tests).
+Still deferred (have genuine unique coverage — need per-branch migration): `final-coverage-push` (command-actions, filters), `function-coverage-final` (snooze, time-tracking branches), `last-function-push` (snooze branches).
+
+---
+
 ## PocketBase v0.23+ Gotchas
 
 - System fields (`created`, `updated`) **cannot** be used in `sort` or `filter` — use custom fields like `client_updated_at` instead.
