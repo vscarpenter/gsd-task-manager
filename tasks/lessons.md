@@ -24,7 +24,11 @@ All 7 data-layer padding files are now eliminated. Where each one's unique cover
 
 Key gotcha: mock-based canonical tests (`vi.mock('@/lib/db')` + helpers) leave the real-execution defensive branches uncovered. The padding files happened to cover them via real fake-indexeddb. Migrate those as a real-DB integration test, not into the mocked canonical file.
 
-Still remaining for F2.1: 6 UI padding files in `tests/ui/` (`coverage-boost-ui`, `final-function-push`, `gap-closing`, `gap-closing-2`, `more-function-coverage`, `task-card-coverage`), then add the guardrail test banning metric-named test files.
+UI padding files (different from data files — these were the *sole* tests for their components, so the fix was rename/relocate, not delete):
+- `gap-closing-2` → `install-pwa-prompt.test.tsx` (rename); `coverage-boost-ui` → `task-card-subcomponents.test.tsx` (rename); `task-card-coverage` → `task-card-states.test.tsx` (rename); `final-function-push` → deleted (dupes).
+- `gap-closing` + `more-function-coverage` split into `pwa-update-toast.test.tsx` + a consolidated `task-timer.test.tsx`; the unique get-set branch (getSyncStatus deviceId fallback) moved to `sync/config.test.ts`; filter tests were dupes.
+
+**F2.1 is complete.** Guardrail in place: `tests/suite-hygiene.test.ts` fails if any test file name matches `/(coverage|boost|gap-closing|function-push|function-final|function-coverage)/i` (verified it does not false-positive on `pb-push`). All 13 padding files eliminated; total coverage held/improved at every step (delete-and-measure gated each change).
 
 ---
 
