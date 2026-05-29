@@ -190,4 +190,91 @@ describe("BackgroundSyncManager", () => {
 
     manager.stop();
   });
+
+  // Migrated from the former tests/data/sync-and-utils-boost.test.ts
+  // "BackgroundSyncManager" block (finding F2.1). Only the cases that covered
+  // branches not already exercised above were kept; the debounce case was
+  // rewritten to assert the sync actually fires (the original asserted nothing).
+
+  it("start with syncOnFocus registers a visibilitychange listener", async () => {
+    const addSpy = vi.spyOn(document, "addEventListener");
+    const manager = new BackgroundSyncManager();
+
+    await manager.start({
+      enabled: true,
+      intervalMinutes: 5,
+      syncOnFocus: true,
+      syncOnOnline: false,
+      debounceAfterChangeMs: 500,
+    });
+
+    expect(addSpy).toHaveBeenCalledWith(
+      "visibilitychange",
+      expect.any(Function)
+    );
+
+    manager.stop();
+    addSpy.mockRestore();
+  });
+
+  it("start with syncOnOnline registers an online listener", async () => {
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const manager = new BackgroundSyncManager();
+
+    await manager.start({
+      enabled: true,
+      intervalMinutes: 5,
+      syncOnFocus: false,
+      syncOnOnline: true,
+      debounceAfterChangeMs: 500,
+    });
+
+    expect(addSpy).toHaveBeenCalledWith("online", expect.any(Function));
+
+    manager.stop();
+    addSpy.mockRestore();
+  });
+
+  it("scheduleDebouncedSync triggers one sync after the debounce window when running", async () => {
+    const manager = new BackgroundSyncManager();
+
+    // enabled:false starts the manager (active, config set) without an initial
+    // or periodic sync, so the debounced sync is the first one and is not
+    // suppressed by the min-interval "too soon since last sync" guard.
+    await manager.start({
+      enabled: false,
+      intervalMinutes: 5,
+      syncOnFocus: false,
+      syncOnOnline: false,
+      debounceAfterChangeMs: 500,
+    });
+
+    manager.scheduleDebouncedSync();
+    // A second call within the window resets the timer rather than double-firing.
+    manager.scheduleDebouncedSync();
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(mockRequestSync).toHaveBeenCalledTimes(1);
+
+    manager.stop();
+  });
+
+  it("start stops a previous run before starting again", async () => {
+    const manager = new BackgroundSyncManager();
+    const config = {
+      enabled: true,
+      intervalMinutes: 5,
+      syncOnFocus: false,
+      syncOnOnline: false,
+      debounceAfterChangeMs: 500,
+    };
+
+    await manager.start(config);
+    await manager.start(config); // should stop the previous run first
+
+    expect(manager.isRunning()).toBe(true);
+
+    manager.stop();
+  });
 });

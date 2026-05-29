@@ -101,7 +101,7 @@ function renderTaskCard(
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("TaskCard — additional coverage", () => {
+describe("TaskCard states", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

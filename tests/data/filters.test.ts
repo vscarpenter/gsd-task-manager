@@ -250,6 +250,19 @@ describe("Filter utilities", () => {
     it("should return false when search query specified", () => {
       expect(isEmptyFilter({ searchQuery: "test" })).toBe(false);
     });
+
+    // Migrated from the former tests/data/final-coverage-push.test.ts (F2.1):
+    // exercises the remaining `&&` sub-conditions not covered above.
+    it("should return false for each remaining active criterion", () => {
+      expect(isEmptyFilter({ dueToday: true })).toBe(false);
+      expect(isEmptyFilter({ dueThisWeek: true })).toBe(false);
+      expect(isEmptyFilter({ noDueDate: true })).toBe(false);
+      expect(isEmptyFilter({ recurrence: ["daily"] })).toBe(false);
+      expect(isEmptyFilter({ recentlyAdded: true })).toBe(false);
+      expect(isEmptyFilter({ recentlyCompleted: true })).toBe(false);
+      expect(isEmptyFilter({ readyToWork: true })).toBe(false);
+      expect(isEmptyFilter({ dueDateRange: { start: "2026-01-01" } })).toBe(false);
+    });
   });
 
   describe("getFilterDescription", () => {
@@ -288,6 +301,39 @@ describe("Filter utilities", () => {
       expect(desc).toContain("1 tag");
       expect(desc).toContain("overdue");
       expect(desc).toContain('"urgent"');
+    });
+
+    // Migrated from the former tests/data/final-coverage-push.test.ts (F2.1):
+    // covers the per-criterion description branches not exercised above.
+    it("should describe the remaining single-criterion filters", () => {
+      expect(getFilterDescription({ dueToday: true })).toBe("due today");
+      expect(getFilterDescription({ dueThisWeek: true })).toBe("due this week");
+      expect(getFilterDescription({ noDueDate: true })).toBe("no due date");
+      expect(getFilterDescription({ recurrence: ["daily", "weekly"] })).toBe(
+        "daily, weekly recurrence"
+      );
+      expect(getFilterDescription({ recentlyAdded: true })).toBe("recently added");
+      expect(getFilterDescription({ recentlyCompleted: true })).toBe(
+        "recently completed"
+      );
+      expect(getFilterDescription({ readyToWork: true })).toBe("ready to work");
+    });
+  });
+
+  // Migrated from the former tests/data/final-coverage-push.test.ts (F2.1):
+  // the applyFilters suite above never exercised the readyToWork branch.
+  describe("applyFilters — readyToWork", () => {
+    it("keeps only tasks with no uncompleted blocking dependencies", () => {
+      const blocker = createMockTask({ id: "b1", completed: false });
+      const ready = createMockTask({ id: "r1" });
+      const blocked = createMockTask({ id: "x1", dependencies: ["b1"] });
+      const all = [blocker, ready, blocked];
+
+      const ids = applyFilters(all, { readyToWork: true }, all).map((t) => t.id);
+
+      expect(ids).toContain("b1"); // no dependencies → ready
+      expect(ids).toContain("r1"); // no dependencies → ready
+      expect(ids).not.toContain("x1"); // blocked by uncompleted b1
     });
   });
 

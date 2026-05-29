@@ -173,4 +173,40 @@ describe('buildCommandActions', () => {
     const viewAction = actions.find((a: CommandAction) => a.id === 'view-no-icon');
     expect(viewAction!.label).toContain('📋');
   });
+
+  // Migrated from the former tests/data/final-coverage-push.test.ts (finding F2.1).
+  // These exercise the `condition()` predicates on conditional actions — the
+  // canonical tests above only assert membership, never invoking the predicates.
+  describe('action conditions', () => {
+    it('gates sync-now on sync being enabled', () => {
+      const handlers = createMockHandlers({ onTriggerSync: vi.fn() });
+      const actions = buildCommandActions(handlers, [], {
+        ...defaultConditions,
+        isSyncEnabled: true,
+      });
+      const syncNow = actions.find((a) => a.id === 'sync-now');
+      expect(syncNow?.condition?.()).toBe(true);
+    });
+
+    it('gates view-sync-history on sync being enabled', () => {
+      const handlers = createMockHandlers({ onViewSyncHistory: vi.fn() });
+      const actions = buildCommandActions(handlers, [], {
+        ...defaultConditions,
+        isSyncEnabled: true,
+      });
+      const viewSyncHistory = actions.find((a) => a.id === 'view-sync-history');
+      expect(viewSyncHistory?.condition?.()).toBe(true);
+    });
+
+    it('gates clear-selection on an active selection in selection mode', () => {
+      const handlers = createMockHandlers({ onClearSelection: vi.fn() });
+      const actions = buildCommandActions(handlers, [], {
+        isSyncEnabled: false,
+        selectionMode: true,
+        hasSelection: true,
+      });
+      const clearSelection = actions.find((a) => a.id === 'clear-selection');
+      expect(clearSelection?.condition?.()).toBe(true);
+    });
+  });
 });

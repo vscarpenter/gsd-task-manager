@@ -7,6 +7,7 @@ import {
   isSyncEnabled,
   getSyncStatus,
   resetAndFullSync,
+  getAutoSyncConfig,
 } from '@/lib/sync/config';
 import { getDb } from '@/lib/db';
 import type { PBSyncConfig } from '@/lib/sync/types';
@@ -390,6 +391,17 @@ describe('Sync Config', () => {
       expect(status).not.toHaveProperty('serverUrl');
     });
 
+    // Migrated from the former tests/ui/more-function-coverage.test.tsx (F2.1):
+    // covers the `config?.deviceId || null` fallback when no config exists.
+    it('returns a null deviceId when no config exists', async () => {
+      await db.syncMetadata.clear();
+
+      const status = await getSyncStatus();
+
+      expect(status.deviceId).toBeNull();
+      expect(status.enabled).toBe(false);
+    });
+
     it('should include pending operation count', async () => {
       await db.syncQueue.bulkAdd([
         {
@@ -500,6 +512,20 @@ describe('Sync Config', () => {
       await db.syncMetadata.clear();
 
       await expect(resetAndFullSync()).rejects.toThrow('Sync not enabled');
+    });
+  });
+
+  // Migrated from the former tests/data/last-function-push.test.ts (finding F2.1).
+  // mockSyncConfig (set in the outer beforeEach) has no autoSyncEnabled /
+  // autoSyncIntervalMinutes fields, so this exercises the `?? default` fallbacks.
+  describe('getAutoSyncConfig', () => {
+    it('returns defaults when the auto-sync fields are unset', async () => {
+      const config = await getAutoSyncConfig();
+
+      expect(config.enabled).toBe(true);
+      expect(config.intervalMinutes).toBe(2);
+      expect(config.syncOnFocus).toBe(true);
+      expect(config.syncOnOnline).toBe(true);
     });
   });
 });

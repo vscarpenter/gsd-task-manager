@@ -4,6 +4,34 @@ Project-specific learnings, gotchas, and patterns. Review at the start of every 
 
 ---
 
+## Decoupling coverage-padding test files (finding F2.1)
+
+When removing a `*-boost` / `*-coverage-push` / `gap-closing` padding test file, **classify by delete-and-measure, not by similarity.** Asking "does a canonical test that looks similar exist?" is unreliable and over-classifies tests as duplicates: in the batch removal of `final-coverage-push` / `function-coverage-final` / `last-function-push`, `lib/command-actions.ts` function coverage silently fell 83%→50% because the padding tests were the *sole* invokers of certain `buildCommandActions` lambdas, even though a similar-looking canonical test existed.
+
+The reliable method, per file:
+1. Snapshot per-module baseline from `coverage/coverage-summary.json`.
+2. Delete the file *alone*, run `bun run test -- --coverage`.
+3. Any module whose lines/func/branch drop = that file's unique coverage. Open lcov, find the test hitting the now-uncovered lines, migrate **that** test into the canonical module-named file (rewriting tautological `expect(typeof x).toBe('string')` assertions into real ones).
+4. Only delete once the module holds baseline.
+
+All 7 data-layer padding files are now eliminated. Where each one's unique coverage went:
+- `coverage-boost` → smart-views pin/prefs to `smart-views.test.ts`; rest duplicates.
+- `sync-and-utils-boost` → 4 BackgroundSyncManager branch tests to `sync/background-sync.test.ts`; rest duplicates.
+- `db-coverage` → all duplicates.
+- `functions-branches-boost` → `useCountUp` to new `use-count-up.test.ts`; 2 settings edge-cases to `notifications/settings.test.ts`; rest duplicates.
+- `final-coverage-push` → command-actions `condition()` tests + filters `isEmptyFilter`/`getFilterDescription`/`readyToWork` branches (command-actions 83→100% func).
+- `function-coverage-final` + `last-function-push` → snooze + time-tracking real-execution branches to new `tasks/crud-side-effects.test.ts` (the canonical files mock `@/lib/db` + crud helpers, so `?? false`/`|| []` branches were only hit by real fake-indexeddb); `getAutoSyncConfig` to `sync/config.test.ts`; `haveDependenciesChanged` inner loop to `task-card-memo.test.ts`.
+
+Key gotcha: mock-based canonical tests (`vi.mock('@/lib/db')` + helpers) leave the real-execution defensive branches uncovered. The padding files happened to cover them via real fake-indexeddb. Migrate those as a real-DB integration test, not into the mocked canonical file.
+
+UI padding files (different from data files — these were the *sole* tests for their components, so the fix was rename/relocate, not delete):
+- `gap-closing-2` → `install-pwa-prompt.test.tsx` (rename); `coverage-boost-ui` → `task-card-subcomponents.test.tsx` (rename); `task-card-coverage` → `task-card-states.test.tsx` (rename); `final-function-push` → deleted (dupes).
+- `gap-closing` + `more-function-coverage` split into `pwa-update-toast.test.tsx` + a consolidated `task-timer.test.tsx`; the unique get-set branch (getSyncStatus deviceId fallback) moved to `sync/config.test.ts`; filter tests were dupes.
+
+**F2.1 is complete.** Guardrail in place: `tests/suite-hygiene.test.ts` fails if any test file name matches `/(coverage|boost|gap-closing|function-push|function-final|function-coverage)/i` (verified it does not false-positive on `pb-push`). All 13 padding files eliminated; total coverage held/improved at every step (delete-and-measure gated each change).
+
+---
+
 ## PocketBase v0.23+ Gotchas
 
 - System fields (`created`, `updated`) **cannot** be used in `sort` or `filter` — use custom fields like `client_updated_at` instead.

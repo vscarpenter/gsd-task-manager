@@ -6,1155 +6,641 @@
   <title>GSD Task Manager — Codebase Analysis Report</title>
   <link rel="stylesheet" href="css/inkwell.css">
   <style>
-    body {
-      background: var(--ivory);
-      color: var(--slate);
-      font-family: var(--sans);
-      line-height: 1.6;
-      padding: 0;
-      margin: 0;
-    }
-    .report-container {
-      max-width: var(--content-wide);
-      margin: 0 auto;
-      padding: 2rem var(--page-pad-x);
-    }
-    h1, h2, h3 { font-family: var(--serif); font-weight: 600; }
-    h1 { font-size: var(--t-display); margin-bottom: 0.5rem; }
-    h2 { font-size: var(--t-h2); margin-top: 2.5rem; margin-bottom: 1rem; border-bottom: var(--border-rule); padding-bottom: 0.5rem; }
-    h3 { font-size: var(--t-h3); margin-top: 1.5rem; margin-bottom: 0.75rem; }
-
+    body { background: var(--ivory); color: var(--slate); font-family: var(--sans); line-height: 1.6; margin: 0; padding: 0; }
+    .layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; max-width: var(--content-wide); margin: 0 auto; padding: 2rem var(--page-pad-x); }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { position: static !important; } }
+    h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; }
+    h1 { font-size: var(--t-display); margin: 0 0 0.5rem; }
+    h2 { font-size: var(--t-h2); margin: 2.5rem 0 1rem; border-bottom: var(--border-rule); padding-bottom: 0.5rem; scroll-margin-top: 1rem; }
+    h3 { font-size: var(--t-h3); margin: 1.5rem 0 0.75rem; }
+    h4 { font-size: var(--t-body); margin: 1rem 0 0.5rem; }
+    a { color: var(--accent); }
     .eyebrow { font-family: var(--mono); text-transform: uppercase; font-size: var(--t-eyebrow); letter-spacing: 0.08em; color: var(--gray-500); margin-bottom: 0.25rem; }
-    .lede { font-size: var(--t-lede); color: var(--gray-600); margin-bottom: 2rem; }
+    .lede { font-size: var(--t-lede); color: var(--gray-600); margin-bottom: 1.5rem; }
+    .meta-line { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); margin-bottom: 1.5rem; }
+    .meta-line span { margin-right: 1.25rem; }
 
     /* Navigation */
-    .toc { position: sticky; top: 1rem; }
-    .toc a { display: block; padding: 0.35rem 0.75rem; font-size: var(--t-small); font-family: var(--mono); color: var(--gray-600); text-decoration: none; border-radius: var(--r-sm); }
+    .toc { position: sticky; top: 1rem; align-self: start; }
+    .toc .eyebrow { margin-bottom: 0.5rem; }
+    .toc a { display: block; padding: 0.3rem 0.6rem; font-size: var(--t-small); font-family: var(--mono); color: var(--gray-600); text-decoration: none; border-radius: var(--r-sm); }
     .toc a:hover { background: var(--gray-100); color: var(--accent); }
 
-    /* Score badge */
-    .score-badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      font-family: var(--serif); font-size: var(--t-h1); font-weight: 600;
-      color: var(--accent);
-    }
-    .score-badge .out-of { font-size: var(--t-body); color: var(--gray-500); font-family: var(--sans); }
+    /* Score */
+    .score-wrap { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; background: var(--paper); border: var(--border); border-left: 4px solid var(--accent); border-radius: var(--r-md); padding: 1.5rem; margin: 1rem 0 1.5rem; }
+    .score-num { font-family: var(--serif); font-size: 3.5rem; font-weight: 600; color: var(--accent); line-height: 1; }
+    .score-num .out-of { font-size: 1.25rem; color: var(--gray-500); font-family: var(--sans); }
+    .score-text { flex: 1; min-width: 260px; }
 
     /* Stat cards */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
-    .stat-card {
-      background: var(--paper);
-      border: var(--border);
-      border-radius: var(--r-md);
-      padding: 1.25rem;
-    }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .stat-card { background: var(--paper); border: var(--border); border-radius: var(--r-md); padding: 1.1rem; }
     .stat-card.is-primary { border-left: 4px solid var(--accent); }
-    .stat-card .stat-value { font-family: var(--serif); font-size: var(--t-h2); font-weight: 600; color: var(--slate); }
-    .stat-card .stat-label { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); margin-top: 0.25rem; }
+    .stat-card.is-good { border-left: 4px solid var(--olive); }
+    .stat-card.is-warn { border-left: 4px solid var(--rust); }
+    .stat-value { font-family: var(--serif); font-size: var(--t-h2); font-weight: 600; color: var(--slate); }
+    .stat-value.sm { font-size: var(--t-h3); }
+    .stat-label { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); margin-top: 0.25rem; }
 
     /* Severity badges */
-    .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: var(--r-pill); font-size: var(--t-caption); font-weight: 500; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em; }
+    .badge { display: inline-block; padding: 0.12rem 0.55rem; border-radius: var(--r-pill); font-size: var(--t-caption); font-weight: 600; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
     .badge-critical { background: #fde8e8; color: #9b1c1c; border: 1.5px solid #f8b4b4; }
     .badge-high { background: #feecdc; color: #8a2c0d; border: 1.5px solid #fcd9bd; }
-    .badge-medium { background: #fef3cd; color: #723b13; border: 1.5px solid #fcefc7; }
+    .badge-medium { background: #fef3cd; color: #723b13; border: 1.5px solid #f6e05e; }
     .badge-low { background: #def7ec; color: #03543f; border: 1.5px solid #bcf0da; }
-
-    /* Confidence */
-    .confidence { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
+    .badge-pass { background: #def7ec; color: #03543f; border: 1.5px solid #bcf0da; }
+    .badge-fail { background: #fde8e8; color: #9b1c1c; border: 1.5px solid #f8b4b4; }
+    .conf { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
 
     /* Tables */
-    .tbl { width: 100%; border-collapse: collapse; font-size: var(--t-small); }
-    .tbl th { font-family: var(--sans); font-weight: 600; text-align: left; padding: 0.6rem 0.75rem; border-bottom: var(--border); background: var(--paper); }
-    .tbl td { padding: 0.6rem 0.75rem; border-bottom: var(--border-hair); vertical-align: top; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: var(--t-small); margin: 1rem 0; }
+    .tbl th { font-family: var(--sans); font-weight: 600; text-align: left; padding: 0.55rem 0.7rem; border-bottom: var(--border); background: var(--paper); }
+    .tbl td { padding: 0.55rem 0.7rem; border-bottom: var(--border-hair); vertical-align: top; }
     .tbl tr:hover td { background: var(--gray-100); }
+    .tbl code, code.path { font-family: var(--mono); font-size: 0.85em; background: var(--gray-100); padding: 0.05rem 0.3rem; border-radius: var(--r-xs); }
+    .num { text-align: right; font-family: var(--mono); }
 
-    /* Collapsible sections */
-    details { margin: 1rem 0; }
-    details summary {
-      cursor: pointer; font-weight: 600; font-family: var(--sans);
-      padding: 0.75rem 1rem;
-      background: var(--paper);
-      border: var(--border);
-      border-radius: var(--r-sm);
-      list-style: none;
-    }
-    details summary::before { content: "▸ "; font-family: var(--mono); }
-    details[open] summary::before { content: "▾ "; }
-    details[open] summary { border-radius: var(--r-sm) var(--r-sm) 0 0; border-bottom: var(--border-hair); }
-    details .detail-content {
-      padding: 1rem;
-      border: var(--border);
-      border-top: none;
-      border-radius: 0 0 var(--r-sm) var(--r-sm);
-      background: var(--paper);
-    }
-
-    /* Finding card */
-    .finding {
-      background: var(--paper);
-      border: var(--border);
-      border-radius: var(--r-md);
-      padding: 1.25rem;
-      margin: 1rem 0;
-    }
-    .finding-header { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
-    .finding-title { font-weight: 600; font-size: var(--t-body); }
-    .finding-meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .finding-path { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
-    .finding-body { font-size: var(--t-small); margin-top: 0.5rem; }
-    .finding-recommendation { margin-top: 0.75rem; padding: 0.75rem; background: var(--gray-100); border-radius: var(--r-sm); font-size: var(--t-small); }
-    .finding-recommendation strong { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; letter-spacing: 0.03em; }
-    .effort-tag { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-600); background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: var(--r-xs); }
-
-    code { font-family: var(--mono); font-size: 0.875em; background: var(--gray-100); padding: 0.15em 0.4em; border-radius: var(--r-xs); }
-    pre { background: var(--gray-100); padding: 1rem; border-radius: var(--r-sm); overflow-x: auto; font-size: var(--t-small); }
-    pre code { background: none; padding: 0; }
-
-    /* Layout */
-    .two-col { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; align-items: start; }
-    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } .toc { position: static; } }
-
-    /* Roadmap timeline */
-    .timeline { border-left: 2px solid var(--accent); padding-left: 1.5rem; margin: 1.5rem 0; }
-    .timeline-entry { position: relative; margin-bottom: 1.5rem; }
-    .timeline-entry::before { content: ""; position: absolute; left: -1.75rem; top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper); }
-    .timeline-label { font-family: var(--mono); font-size: var(--t-caption); text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 0.25rem; }
-
-    .dark .badge-critical { background: #4a1c1c; color: #f8b4b4; border-color: #9b1c1c; }
-    .dark .badge-high { background: #4a2c0d; color: #fcd9bd; border-color: #8a2c0d; }
-    .dark .badge-medium { background: #4a3b13; color: #fef3cd; border-color: #723b13; }
-    .dark .badge-low { background: #03543f40; color: #bcf0da; border-color: #03543f; }
+    /* Findings */
+    .finding { border: var(--border); border-radius: var(--r-md); margin: 0.6rem 0; background: var(--paper); overflow: hidden; }
+    .finding > summary { cursor: pointer; padding: 0.7rem 0.9rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; list-style: none; }
+    .finding > summary::-webkit-details-marker { display: none; }
+    .finding > summary::before { content: "▸"; color: var(--gray-500); font-size: 0.8em; }
+    .finding[open] > summary::before { content: "▾"; }
+    .finding > summary .f-title { font-weight: 600; flex: 1; min-width: 200px; }
+    .finding > summary .f-id { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
+    .finding .f-body { padding: 0.2rem 0.9rem 0.9rem 1.8rem; font-size: var(--t-small); border-top: var(--border-hair); }
+    .finding .f-body p { margin: 0.5rem 0; }
+    .f-meta { font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-600); margin: 0.4rem 0; }
+    .f-meta b { color: var(--slate); }
+    pre { background: var(--slate); color: var(--ivory); padding: 0.8rem 1rem; border-radius: var(--r-sm); overflow-x: auto; font-family: var(--mono); font-size: 0.8rem; line-height: 1.45; }
+    .callout { border: var(--border); border-left: 4px solid var(--accent); border-radius: var(--r-sm); padding: 0.8rem 1rem; margin: 1rem 0; background: var(--paper); }
+    .callout.good { border-left-color: var(--olive); }
+    .callout.warn { border-left-color: var(--rust); }
+    ul.tight { margin: 0.5rem 0; padding-left: 1.3rem; }
+    ul.tight li { margin: 0.25rem 0; }
+    .dim-summary { font-size: var(--t-small); color: var(--gray-600); font-style: italic; margin-bottom: 0.75rem; }
+    footer { border-top: var(--border-rule); margin-top: 3rem; padding-top: 1rem; font-family: var(--mono); font-size: var(--t-caption); color: var(--gray-500); }
   </style>
 </head>
 <body>
-  <div class="report-container">
-    <div class="two-col">
-      <!-- Sidebar Nav -->
-      <nav class="toc" aria-label="Report navigation">
-        <a href="#executive-summary">Executive Summary</a>
-        <a href="#metrics">Metrics Dashboard</a>
-        <a href="#dim-1">1. Standards Compliance</a>
-        <a href="#dim-2">2. Test Quality</a>
-        <a href="#dim-3">3. Security</a>
-        <a href="#dim-4">4. Architecture</a>
-        <a href="#dim-5">5. Maintainability</a>
-        <a href="#dim-6">6. Dependencies</a>
-        <a href="#dim-7">7. Performance</a>
-        <a href="#dim-8">8. Error Handling</a>
-        <a href="#dim-9">9. Documentation</a>
-        <a href="#dim-10">10. Tech Debt</a>
-        <a href="#dim-11">11. Configuration</a>
-        <a href="#dim-12">12. E2E Health</a>
-        <a href="#roadmap">Remediation Roadmap</a>
-        <a href="#methodology">Methodology</a>
-      </nav>
-
-      <!-- Main Content -->
-      <main>
-        <p class="eyebrow">Codebase Analysis Report</p>
-        <h1>GSD Task Manager</h1>
-        <p class="lede">Comprehensive code quality review — 28 May 2026, updated 28 May 2026. Repository: <code>vscarpenter/gsd-task-manager</code>.</p>
-
-        <!-- ===== EXECUTIVE SUMMARY ===== -->
-        <section id="executive-summary">
-          <h2>Executive Summary</h2>
-          <div class="score-badge">8.5 <span class="out-of">/ 10</span></div>
-          <p style="margin-top:0.5rem; font-size:var(--t-small); color:var(--gray-600);">Overall health score — production-ready with minor improvements recommended.</p>
-
-          <h3>Top 5 Risks</h3>
-          <ol>
-            <li><strong>Branch coverage at 79.39%</strong> — below the project's stated 80% target; concentrated in UI components.</li>
-            <li><strong>Outdated major dependencies</strong> — Vite 7→8, ESLint 9→10, TypeScript 5→6 have major version updates available.</li>
-            <li><strong>13 empty catch blocks in production</strong> — silent failure hides operational issues.</li>
-            <li><strong>Missing E2E critical-path coverage</strong> — sync flow, PWA install, recurring tasks, and bulk operations are untested at the E2E level.</li>
-            <li><strong>Missing <code>SECURITY_HEADERS.md</code></strong> — referenced in next.config.ts but does not exist; security header documentation gap.</li>
-          </ol>
-
-          <h3>Top 3 Strengths</h3>
-          <ol>
-            <li><strong>Exceptional test suite</strong> — 1,967 unit test cases + 156 cross-browser E2E tests, all passing, zero flaky.</li>
-            <li><strong>Zero TODOs/FIXMEs</strong> — rare for a 21K-line codebase; indicates diligent maintenance.</li>
-            <li><strong>Security-first architecture</strong> — daily automated audits, OAuth provider whitelist, structured logging with secret sanitization, Sentry integration, and documented CSP strategy.</li>
-          </ol>
-
-          <h3>Top 3 Sprint Priorities</h3>
-          <ol>
-            <li><s>Add <code>app/global-error.tsx</code> and <code>app/not-found.tsx</code> for complete error coverage.</s> ✅ Done</li>
-            <li>Boost branch coverage above 80% — focus on <code>matrix-simplified/</code> and <code>settings/</code> components.</li>
-            <li>Add E2E specs for sync auth flow, bulk task operations, and recurring task creation.</li>
-          </ol>
-        </section>
-
-        <!-- ===== METRICS DASHBOARD ===== -->
-        <section id="metrics">
-          <h2>Metrics Dashboard</h2>
-          <div class="stats-grid">
-            <div class="stat-card is-primary">
-              <div class="stat-value">85.7%</div>
-              <div class="stat-label">Statement Coverage</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">79.4%</div>
-              <div class="stat-label">Branch Coverage</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">82.4%</div>
-              <div class="stat-label">Function Coverage</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">86.7%</div>
-              <div class="stat-label">Line Coverage</div>
-            </div>
-            <div class="stat-card is-primary">
-              <div class="stat-value">156</div>
-              <div class="stat-label">E2E Tests (all pass)</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">1,967</div>
-              <div class="stat-label">Unit Test Cases</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">0</div>
-              <div class="stat-label">Flaky Tests</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">0</div>
-              <div class="stat-label">TODOs / FIXMEs</div>
-            </div>
-          </div>
-
-          <h3>Coverage by Category</h3>
-          <table class="tbl">
-            <thead><tr><th>Metric</th><th>Covered</th><th>Total</th><th>Percentage</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td>Statements</td><td>3,732</td><td>4,354</td><td>85.71%</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td>Branches</td><td>2,165</td><td>2,727</td><td>79.39%</td><td><span class="badge badge-medium">Below target</span></td></tr>
-              <tr><td>Functions</td><td>830</td><td>1,007</td><td>82.42%</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td>Lines</td><td>3,498</td><td>4,036</td><td>86.66%</td><td><span class="badge badge-low">Pass</span></td></tr>
-            </tbody>
-          </table>
-
-          <h3>E2E Results by Browser</h3>
-          <table class="tbl">
-            <thead><tr><th>Browser</th><th>Tests</th><th>Passed</th><th>Failed</th><th>Flaky</th></tr></thead>
-            <tbody>
-              <tr><td>Chromium</td><td>52</td><td>52</td><td>0</td><td>0</td></tr>
-              <tr><td>Firefox</td><td>52</td><td>52</td><td>0</td><td>0</td></tr>
-              <tr><td>WebKit</td><td>52</td><td>52</td><td>0</td><td>0</td></tr>
-            </tbody>
-          </table>
-
-          <h3>E2E Results by Spec File</h3>
-          <table class="tbl">
-            <thead><tr><th>Spec File</th><th>Tests (per browser)</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td><code>task-crud.spec.ts</code></td><td>6 × 3 = 18</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>quadrant-classification.spec.ts</code></td><td>5 × 3 = 15</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>search.spec.ts</code></td><td>5 × 3 = 15</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>data-management.spec.ts</code></td><td>7 × 3 = 21</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>settings-navigation.spec.ts</code></td><td>5 × 3 = 15</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>settings-sections.spec.ts</code></td><td>4 × 3 = 12</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>matrix-navigation.spec.ts</code></td><td>4 × 3 = 12</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>sync-states.spec.ts</code></td><td>3 × 3 = 9</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>about-install.spec.ts</code></td><td>3 × 3 = 9</td><td><span class="badge badge-low">Pass</span></td></tr>
-              <tr><td><code>first-time-redirect.spec.ts</code></td><td>1 × 3 = 3</td><td><span class="badge badge-low">Pass</span></td></tr>
-            </tbody>
-          </table>
-
-          <h3>Codebase Size</h3>
-          <table class="tbl">
-            <thead><tr><th>Metric</th><th>Count</th></tr></thead>
-            <tbody>
-              <tr><td>Production source files</td><td>196</td></tr>
-              <tr><td>Lines of production code</td><td>~21,200</td></tr>
-              <tr><td>Test files (unit + integration)</td><td>124</td></tr>
-              <tr><td>E2E spec files</td><td>10</td></tr>
-              <tr><td>Production dependencies</td><td>28</td></tr>
-              <tr><td>Dev dependencies</td><td>24</td></tr>
-              <tr><td>Architecture Decision Records</td><td>12</td></tr>
-            </tbody>
-          </table>
-        </section>
-
-        <!-- ===== DIMENSION 1: STANDARDS COMPLIANCE ===== -->
-        <section id="dim-1">
-          <h2>1. Standards Compliance</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">Files exceeding 350-line limit</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/db.ts (385), components/matrix-simplified/edit-drawer.tsx (376)</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>Coding standards specify ~350-400 lines max per file. Two files exceed this limit, with <code>lib/db.ts</code> at 385 lines containing schema definitions and migrations.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Extract DB migrations to a separate <code>lib/db-migrations.ts</code> file. Split edit-drawer form sections into sub-components.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">TypeScript strict mode could be stricter</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">tsconfig.json</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p><code>strict: true</code> is enabled, but <code>noUncheckedIndexedAccess</code> and <code>exactOptionalPropertyTypes</code> are not. These catch subtle bugs with array/object access patterns.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Enable <code>noUncheckedIndexedAccess</code> for safer array access. Evaluate <code>exactOptionalPropertyTypes</code> separately as it may require significant refactoring.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Single `any` in production code</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">components/install-pwa-prompt.tsx:39</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>One <code>eslint-disable @typescript-eslint/no-explicit-any</code> in production code for a browser-specific <code>beforeinstallprompt</code> event type. This is a known limitation of browser APIs but should be typed.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Create a <code>BeforeInstallPromptEvent</code> interface declaration in a <code>types/</code> folder to properly type this event.
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 2: TEST QUALITY ===== -->
-        <section id="dim-2">
-          <h2>2. Test Quality & Coverage</h2>
-          <details>
-            <summary>Detailed Findings (4 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">Branch coverage below 80% target</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">Global — 79.39% vs 80% target</span>
-                  <span class="effort-tag">Medium</span>
-                </div>
-                <div class="finding-body">
-                  <p>Branch coverage is 0.61% below the project's stated threshold. The gap is concentrated in UI components: <code>matrix-grid.tsx</code> (37.5%), <code>help-drawer.tsx</code> (25%), <code>sync-button.tsx</code> (44.8%), <code>pwa-register.tsx</code> (25%), and <code>reset-everything-dialog.tsx</code> (42.85%).</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Prioritize tests for conditional rendering paths in matrix-grid and sync-button. These are high-traffic components where branch misses indicate untested user interactions.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Dashboard page at 0% coverage</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">app/(dashboard)/dashboard/page.tsx, app/(matrix)/page.tsx, app/settings/page.tsx</span>
-                  <span class="effort-tag">Medium</span>
-                </div>
-                <div class="finding-body">
-                  <p>Three page-level components have 0% coverage. These are thin wrappers that compose domain components (which are well-tested individually), so the risk is low. However, they contain conditional rendering logic that could regress.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Add smoke-test renders for each page component. The E2E suite partially covers these, but unit tests catch regressions faster in CI.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Test mocking pattern uses many eslint-disable comments</span>
-                  <span class="confidence">Confidence: Medium</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">tests/data/notifications.test.ts (26 suppressions), tests/data/use-view-transition.test.ts (10)</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>Test files contain ~65 <code>eslint-disable @typescript-eslint/no-explicit-any</code> comments, primarily for mocking browser globals (window, navigator, Notification). While acceptable in tests, this volume suggests the mocking helpers could be better typed.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Create shared typed mock utilities in <code>tests/helpers/typed-mocks.ts</code> that pre-type common browser API mocks (window.Notification, navigator.serviceWorker, etc.).
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Test infrastructure is exemplary</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">tests/e2e/fixtures/, tests/e2e/pages/</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> The E2E suite uses Page Object Model (<code>MatrixPage</code>), custom fixtures (<code>clearIndexedDB</code>), and resilient <code>data-testid</code> selectors (149 total usages). Test isolation is excellent — IndexedDB is explicitly deleted between runs and <code>localStorage</code> is pre-seeded to prevent redirect races.</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 3: SECURITY ===== -->
-        <section id="dim-3">
-          <h2>3. Security & Supply Chain</h2>
-          <details>
-            <summary>Detailed Findings (4 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">Missing SECURITY_HEADERS.md referenced in config</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">next.config.ts (line 22 comment references it)</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>The <code>next.config.ts</code> comment says "See SECURITY_HEADERS.md for CloudFront configuration instructions" but this file does not exist in the repository. Security header configuration is critical for XSS prevention, clickjacking, and MIME sniffing.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Create <code>SECURITY_HEADERS.md</code> documenting the CloudFront response headers policy. Include CSP, X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security, and Permissions-Policy.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">No XSS vectors in production code</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">Global scan</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Zero uses of <code>dangerouslySetInnerHTML</code> or <code>eval()</code> in production code. The 3 <code>innerHTML</code> usages are in test assertions only. React's JSX escaping provides baseline XSS protection.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">OAuth provider whitelist is properly enforced</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/sync/pb-auth.ts:25</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> <code>ALLOWED_OAUTH_PROVIDERS</code> Set gates provider strings before passing to PocketBase SDK. Well-documented threat model (XSS payload injection, malicious admin provider).</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Automated security audit in CI</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">.github/workflows/security-audit.yml</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Daily scheduled <code>bun audit --audit-level=high</code> with intelligent error handling that distinguishes registry failures from actual vulnerabilities. Runs on push, PR, and daily cron.</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 4: ARCHITECTURE ===== -->
-        <section id="dim-4">
-          <h2>4. Architecture</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Excellent modular decomposition</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/sync/ (20+ modules), lib/tasks/ (10 modules), lib/analytics/ (5 modules)</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Clear separation of concerns. The sync engine is decomposed into auth, push, pull, realtime, queue, retry, health-monitor, and coordinator modules. Tasks follow CRUD boundaries. Analytics are pure, side-effect-free functions. Re-export layers maintain backward compatibility.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Well-documented decisions via ADRs</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">docs/adr/ — 12 ADRs</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Key architectural decisions are formally documented: client-side-only IndexedDB, PocketBase sync, last-write-wins conflict resolution, PWA architecture, MCP server, analytics design, BFS circular dependency detection, smart views, v9 refactor, and service worker caching strategy.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Clean layering with @/ alias convention</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">tsconfig.json — paths alias</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> All internal imports use <code>@/</code> alias. Clear dependency direction: <code>app/ → components/ → lib/</code>. No evidence of circular import issues from the grep analysis (madge was unavailable for formal verification).</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 5: MAINTAINABILITY ===== -->
-        <section id="dim-5">
-          <h2>5. Maintainability</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">Some components have high cognitive complexity</span>
-                  <span class="confidence">Confidence: Medium</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">components/matrix-simplified/index.tsx (348 lines, 4 empty catches), lib/notification-checker.ts (296 lines)</span>
-                  <span class="effort-tag">Medium</span>
-                </div>
-                <div class="finding-body">
-                  <p>The main matrix shell component contains 4 empty catch blocks and handles drag-and-drop, keyboard shortcuts, task state, and audio/confetti effects. While under the 350-line limit, the mix of concerns increases cognitive load.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Extract DnD logic into a <code>use-matrix-dnd.ts</code> hook. Extract celebration/audio effects into a separate hook. Each concern becomes independently testable.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Console logging centralized through logger</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/logger.ts, lib/error-logger.ts — only 7 console.* calls in the entire codebase</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Only 7 direct <code>console.*</code> calls exist across all production source — 5 in logger.ts (the implementation) and 2 in error-logger.ts. All other logging routes through <code>createLogger()</code> with typed contexts and secret sanitization.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Function sizes well-controlled</span>
-                  <span class="confidence">Confidence: Medium</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">Global — average file size 108 lines</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> 196 files at ~21K lines = ~108 lines average. Well below the 350-line limit. Only 2 files exceed it. Modules are focused and cohesive.</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 6: DEPENDENCIES ===== -->
-        <section id="dim-6">
-          <h2>6. Dependencies</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">Major version updates available for 3 dev dependencies</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">package.json — vite 7→8, eslint 9→10, @vitejs/plugin-react 5→6</span>
-                  <span class="effort-tag">Medium</span>
-                </div>
-                <div class="finding-body">
-                  <p>Three dev dependencies have major version bumps: Vite 7.3.2→8.0.10, ESLint 9.39.4→10.4.0, and @vitejs/plugin-react 5.2.0→6.0.2. TypeScript 5.9.3→6.0.3 is also available. Major versions may include breaking changes but also security fixes and performance improvements.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Schedule a dependency update sprint. Prioritize Vite 8 (build tooling) and TypeScript 6 (stricter checks). ESLint 10 may require config migration. Test thoroughly in CI before merging.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Minor version updates available for production deps</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">package.json — date-fns 4.1→4.3, lucide-react 1.7→1.16, react 19.2.4→19.2.6</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>Several production dependencies have minor/patch updates. These are typically non-breaking and include bug fixes. <code>lucide-react</code> has the largest gap (1.7→1.16) suggesting several feature releases of new icons.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Batch minor updates into a single PR. Run full test suite to verify no regressions.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Dependencies well-documented and justified</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">CLAUDE.md — "Non-Obvious Dependencies" section</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Every non-obvious dependency is documented with rationale in CLAUDE.md: @tanstack/react-virtual (virtual scrolling), @dnd-kit (accessible DnD), recharts (lightweight charts), sonner (accessible toasts), canvas-confetti (pinned to 1.9.4 for API stability), nanoid (URL-safe IDs).</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 7: PERFORMANCE ===== -->
-        <section id="dim-7">
-          <h2>7. Performance</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Virtual scrolling for large lists</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">@tanstack/react-virtual in use</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> The project uses <code>@tanstack/react-virtual</code> for list rendering, ensuring DOM size stays constant regardless of task count. This prevents performance degradation with hundreds of tasks.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: React Compiler enabled for automatic memoization</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">next.config.ts — reactCompiler: true, babel-plugin-react-compiler</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> The React Compiler (<code>babel-plugin-react-compiler</code>) is enabled, providing automatic memoization optimization. This eliminates the need for manual <code>useMemo</code>/<code>useCallback</code> boilerplate while maintaining render performance.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Multi-cache service worker strategy</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">public/sw.js, public/sw-cache-logic.js</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Sophisticated caching with separate layers for immutable assets (hashed, cache-first) and pages (network-first). Version-stamped cache names with precaching of critical routes. ADR 0012 documents the strategy.</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 8: ERROR HANDLING ===== -->
-        <section id="dim-8">
-          <h2>8. Error Handling & Observability</h2>
-          <details>
-            <summary>Detailed Findings (4 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">✅ Resolved: global-error.tsx page implemented</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">app/global-error.tsx — created with Sentry integration and inline Inkwell-aligned styles</span>
-                  <span class="effort-tag">Done</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Resolved during this analysis session.</strong> Created <code>app/global-error.tsx</code> with inline styles (Inkwell tokens: #fafaf9 ivory, #3B4A8C accent, 1.5px borders), Sentry <code>captureException</code> reporting, "Try again" and "Go home" actions. Added 6 unit tests. Also added 3 tests for the existing <code>app/not-found.tsx</code>.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">13 empty catch blocks in production code</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">components/matrix-simplified/index.tsx (4), lib/confetti.ts (2), lib/task-links.ts, lib/capture-parser.ts, lib/share-capture.ts, lib/sync/pb-sync-helpers.ts, components/import-dialog.tsx, components/settings-page/index.tsx, components/share-task-dialog/index.tsx</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>Empty <code>catch {}</code> blocks swallow errors silently. While some are intentional (confetti rendering, clipboard access), they make debugging production issues harder. The coding standards say "Never swallow exceptions."</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Add <code>// Expected: [reason]</code> comments to intentional empty catches (confetti, clipboard). For others, add at minimum <code>logger.debug()</code> to preserve observability without user-facing noise.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Sentry integration with structured context</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/sentry.ts, components/error-boundary.tsx</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Sentry is integrated at the ErrorBoundary level with component stack traces. The <code>captureException</code> wrapper passes structured metadata. Logger sanitizes secrets before any data reaches Sentry.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: PII-safe logging with secret sanitization</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/logger.ts — SENSITIVE_QUERY_PARAMS_PATTERN, BEARER_TOKEN_PATTERN</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> The logger automatically masks tokens, API keys, and Bearer tokens in all log output. Typed <code>LogContext</code> union prevents misspelled context strings. Environment-aware log levels (debug in dev, info+ in prod).</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 9: DOCUMENTATION ===== -->
-        <section id="dim-9">
-          <h2>9. Documentation & Onboarding</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Comprehensive developer documentation</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">CLAUDE.md, TECHNICAL.md, coding-standards.md, DATABASE_ARCHITECTURE.md, GSD_FEATURES_GUIDE.md</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> The project has exceptional documentation: CLAUDE.md for AI-assisted development, coding-standards.md (14 pages), DATABASE_ARCHITECTURE.md for schema, and a user-facing features guide. Path-scoped rules in <code>.claude/rules/</code> auto-load relevant guidance.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Inline code comments focus on "why"</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/confetti.ts (CSP explanation), lib/sync/pb-auth.ts (threat model), tests/e2e/fixtures/test-fixtures.ts (WebKit race condition)</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Comments explain non-obvious decisions: CSP constraints for confetti, WebKit navigation race conditions in E2E fixtures, OAuth provider whitelist threat model. Follows the "comment WHY not WHAT" standard.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Missing SECURITY_HEADERS.md creates onboarding gap</span>
-                  <span class="confidence">Confidence: Medium</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">Referenced in next.config.ts but file does not exist</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>A new developer following the code reference would hit a dead link. This is the only broken documentation reference found in the codebase.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Create the file or update the comment to reference the actual location of security header configuration (e.g., CloudFront console or IaC templates).
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 10: TECH DEBT ===== -->
-        <section id="dim-10">
-          <h2>10. Tech Debt</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Zero TODOs, FIXMEs, or commented-out code</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">Global grep — 0 results</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> A comprehensive search across all .ts/.tsx/.js files found zero TODO, FIXME, HACK, or XXX markers. This is exceptional for a 21K-line codebase and indicates disciplined development practices.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Command palette component exists but is not wired</span>
-                  <span class="confidence">Confidence: Medium</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">components/command-palette/ (0% coverage)</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>The command palette component exists with full implementation but is documented as "not wired into the v9 app shell" (CLAUDE.md). It represents dormant code that is maintained but unused. Tracked in tasks/todo.md for resurrection.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Either wire it into the v9 shell (if desired) or move to a <code>deprecated/</code> folder to clarify its status. Its 0% coverage is acceptable only if it's known-dead code.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">One unused eslint-disable for unused-vars</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/archive.ts:113</span>
-                  <span class="effort-tag">Small</span>
-                </div>
-                <div class="finding-body">
-                  <p>Single <code>eslint-disable @typescript-eslint/no-unused-vars</code> in production code suggests a destructuring pattern where a variable is intentionally discarded. Should use underscore prefix convention instead.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Replace with underscore prefix: <code>const { unusedProp: _unusedProp, ...rest } = obj;</code>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 11: CONFIGURATION ===== -->
-        <section id="dim-11">
-          <h2>11. Configuration & Type Safety</h2>
-          <details>
-            <summary>Detailed Findings (3 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Environment config is centralized and typed</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/env-config.ts</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Environment detection is centralized in <code>getEnvironmentConfig()</code> with a typed <code>Environment</code> union and <code>EnvironmentConfig</code> interface. PocketBase URL resolution follows a secure fallback chain — unknown hostnames default to same-origin rather than leaking data to a hardcoded server.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Schema validation constants centralized</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">lib/constants/schema.ts, lib/constants/sync.ts, lib/constants/ui.ts</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Magic numbers are extracted to named constants in dedicated files. Limits (max title length, max tags, etc.) are defined once and referenced by both Zod schemas and UI components.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Typed routes enabled</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">next.config.ts — typedRoutes: true</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Next.js typed routes ensure link hrefs are compile-time checked. Combined with <code>lib/routes.ts</code> for a centralized route registry.</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== DIMENSION 12: E2E HEALTH ===== -->
-        <section id="dim-12">
-          <h2>12. E2E Test Health</h2>
-          <details>
-            <summary>Detailed Findings (4 items)</summary>
-            <div class="detail-content">
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-medium">Medium</span>
-                  <span class="finding-title">Missing critical-path E2E coverage</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">tests/e2e/ — no specs for sync auth, PWA install, recurring tasks, bulk operations, drag-and-drop</span>
-                  <span class="effort-tag">Medium</span>
-                </div>
-                <div class="finding-body">
-                  <p>The E2E suite covers CRUD, quadrant classification, search, navigation, settings, data management, and sync states (UI-only). Missing: actual sync authentication flow, PWA install prompt interaction, recurring task creation on completion, bulk select/delete/move, and drag-and-drop reordering.</p>
-                </div>
-                <div class="finding-recommendation">
-                  <strong>Recommendation:</strong> Prioritize E2E specs for: (1) bulk task operations (highest user impact), (2) recurring task auto-creation (complex logic), (3) drag-and-drop between quadrants. Sync auth can be mocked at the network layer using Playwright's route interception.
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: 100% pass rate across all browsers</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">Chromium 52/52, Firefox 52/52, WebKit 52/52</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> 156 tests pass across all three browsers with zero flakiness. Total duration ~204s. The test infrastructure handles WebKit-specific quirks (PWA dialog dismissal, navigation race conditions) gracefully.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Resilient selector strategy</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">149 data-testid attributes in components, Page Object Model in tests/e2e/pages/</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Tests use <code>data-testid</code> selectors exclusively (no fragile CSS selectors). The <code>MatrixPage</code> Page Object Model encapsulates all locators and actions, making tests readable and maintainable. Custom fixtures handle IndexedDB cleanup and first-visit bypass.</p>
-                </div>
-              </div>
-
-              <div class="finding">
-                <div class="finding-header">
-                  <span class="badge badge-low">Low</span>
-                  <span class="finding-title">Good: Test isolation is robust</span>
-                  <span class="confidence">Confidence: High</span>
-                </div>
-                <div class="finding-meta">
-                  <span class="finding-path">tests/e2e/fixtures/test-fixtures.ts — clearIndexedDB fixture</span>
-                  <span class="effort-tag">N/A</span>
-                </div>
-                <div class="finding-body">
-                  <p><strong>Strength:</strong> Each test starts with a clean slate via <code>indexedDB.deleteDatabase("GsdTaskManager")</code>. localStorage is pre-seeded to prevent redirect interference. Fully parallel execution (<code>fullyParallel: true</code>) with trace/screenshot/video on failure.</p>
-                </div>
-              </div>
-
-            </div>
-          </details>
-        </section>
-
-        <!-- ===== ROADMAP ===== -->
-        <section id="roadmap">
-          <h2>Prioritized Remediation Roadmap</h2>
-
-          <div class="timeline">
-            <div class="timeline-entry">
-              <div class="timeline-label">30 Days</div>
-              <ul>
-                <li><s>Create <code>app/global-error.tsx</code> and <code>app/not-found.tsx</code></s> ✅ Done</li>
-                <li>Create <code>SECURITY_HEADERS.md</code> with CloudFront header configuration <span class="effort-tag">Small</span></li>
-                <li>Add comments or <code>logger.debug()</code> to 13 empty catch blocks <span class="effort-tag">Small</span></li>
-                <li>Type the <code>BeforeInstallPromptEvent</code> to remove the single production <code>any</code> <span class="effort-tag">Small</span></li>
-                <li>Batch-update minor/patch dependencies (date-fns, react, nanoid, etc.) <span class="effort-tag">Small</span></li>
-              </ul>
-            </div>
-            <div class="timeline-entry">
-              <div class="timeline-label">60 Days</div>
-              <ul>
-                <li>Boost branch coverage above 80% — target matrix-grid, sync-button, pwa-register <span class="effort-tag">Medium</span></li>
-                <li>Add E2E specs for bulk operations and recurring task auto-creation <span class="effort-tag">Medium</span></li>
-                <li>Extract DnD logic from matrix-simplified/index.tsx into a custom hook <span class="effort-tag">Medium</span></li>
-                <li>Create typed mock utilities in tests/helpers/ to reduce eslint-disable volume <span class="effort-tag">Small</span></li>
-                <li>Decide: wire command palette into v9 shell or archive it <span class="effort-tag">Small</span></li>
-              </ul>
-            </div>
-            <div class="timeline-entry">
-              <div class="timeline-label">90 Days</div>
-              <ul>
-                <li>Upgrade Vite 7→8, TypeScript 5→6, ESLint 9→10 <span class="effort-tag">Medium</span></li>
-                <li>Enable <code>noUncheckedIndexedAccess</code> and fix resulting type errors <span class="effort-tag">Medium</span></li>
-                <li>Add E2E specs for sync auth flow (with mocked PocketBase) and drag-and-drop <span class="effort-tag">Medium</span></li>
-                <li>Split <code>lib/db.ts</code> migrations into dedicated file <span class="effort-tag">Small</span></li>
-                <li>Evaluate <code>exactOptionalPropertyTypes</code> impact and enable if feasible <span class="effort-tag">Large</span></li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <!-- ===== METHODOLOGY ===== -->
-        <section id="methodology">
-          <h2>Methodology & Limitations</h2>
-
-          <h3>What Was Inspected</h3>
-          <ul>
-            <li><strong>Production source:</strong> All 196 .ts/.tsx files in <code>lib/</code>, <code>components/</code>, <code>app/</code> (~21,200 lines)</li>
-            <li><strong>Test suite:</strong> 124 unit/integration test files (1,932 test cases), 10 E2E spec files (156 tests × 3 browsers)</li>
-            <li><strong>Configuration:</strong> tsconfig.json, next.config.ts, playwright.config.ts, package.json</li>
-            <li><strong>CI/CD:</strong> All workflows in .github/workflows/ (ci.yml, security-audit.yml, deploy-*.yml, claude-code-review.yml)</li>
-            <li><strong>Documentation:</strong> CLAUDE.md, coding-standards.md, 12 ADRs, inline comments</li>
-            <li><strong>Service worker:</strong> public/sw.js, public/sw-cache-logic.js</li>
-            <li><strong>MCP server:</strong> packages/mcp-server/ (source structure only)</li>
-          </ul>
-
-          <h3>What Was NOT Inspected</h3>
-          <ul>
-            <li><strong>Runtime behavior:</strong> No live app testing was performed beyond automated test execution</li>
-            <li><strong>Bundle size analysis:</strong> No webpack/next bundle analyzer was run (would require a full build with analysis plugin)</li>
-            <li><strong>Circular dependency graph:</strong> <code>madge</code> was unavailable; analysis inferred from import patterns</li>
-            <li><strong>Security audit results:</strong> <code>bun audit</code> returned a 401 auth error (likely a registry issue); no vulnerability data was obtained</li>
-            <li><strong>PocketBase server:</strong> Backend configuration and API rules were not inspected</li>
-            <li><strong>CloudFront configuration:</strong> Actual deployed security headers and cache policies were not verified</li>
-            <li><strong>Third-party dependency source code:</strong> No manual code review of node_modules</li>
-            <li><strong>Performance profiling:</strong> No Lighthouse, Core Web Vitals, or memory leak analysis</li>
-          </ul>
-
-          <h3>Tools Used</h3>
-          <table class="tbl">
-            <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
-            <tbody>
-              <tr><td>Vitest + @vitest/coverage-v8</td><td>Unit/integration test execution and coverage</td></tr>
-              <tr><td>Playwright</td><td>E2E test execution across 3 browsers</td></tr>
-              <tr><td>ripgrep (rg)</td><td>Pattern search for security, debt, and quality indicators</td></tr>
-              <tr><td>bun outdated</td><td>Dependency freshness analysis</td></tr>
-              <tr><td>Manual file review</td><td>Architecture, error handling, and documentation assessment</td></tr>
-            </tbody>
-          </table>
-
-          <h3>Confidence Notes</h3>
-          <ul>
-            <li>All findings based on actual test execution and file content are marked <strong>High confidence</strong>.</li>
-            <li>Findings requiring runtime verification (performance, actual security header deployment) are marked <strong>Medium confidence</strong>.</li>
-            <li>Circular dependency analysis is <strong>Medium confidence</strong> (inferred, not formally verified).</li>
-          </ul>
-        </section>
-
-        <footer style="margin-top:3rem; padding-top:1.5rem; border-top: var(--border-rule); text-align:center;">
-          <p style="font-family:var(--mono); font-size:var(--t-caption); color:var(--gray-500);">
-            Generated 28 May 2026 · Powered by automated analysis · Styled with <a href="https://github.com/vscarpenter/inkwell" style="color:var(--accent);">Inkwell</a>
-          </p>
-        </footer>
-      </main>
+<div class="layout">
+  <nav class="toc">
+    <div class="eyebrow">Contents</div>
+    <a href="#summary">Executive Summary</a>
+    <a href="#metrics">Metrics Dashboard</a>
+    <a href="#dim-1">1 · Standards</a>
+    <a href="#dim-2">2 · Test Quality</a>
+    <a href="#dim-3">3 · Security</a>
+    <a href="#dim-4">4 · Architecture</a>
+    <a href="#dim-5">5 · Maintainability</a>
+    <a href="#dim-6">6 · Dependencies</a>
+    <a href="#dim-7">7 · Performance</a>
+    <a href="#dim-8">8 · Error / Observability</a>
+    <a href="#dim-9">9 · Documentation</a>
+    <a href="#dim-10">10 · Tech Debt</a>
+    <a href="#dim-11">11 · Config / Types</a>
+    <a href="#dim-12">12 · E2E Health</a>
+    <a href="#roadmap">30/60/90 Roadmap</a>
+    <a href="#methodology">Methodology &amp; Limits</a>
+  </nav>
+  <main>
+    <div class="eyebrow">Codebase Quality Audit</div>
+    <h1>GSD Task Manager</h1>
+    <p class="lede">A comprehensive, evidence-based code-quality review across 12 dimensions, graded against <code>coding-standards.md</code> v14.0.</p>
+    <div class="meta-line">
+      <span>Date: 2026-05-29</span>
+      <span>Branch: test/decouple-smart-views-coverage-padding</span>
+      <span>Commit: 96184d6</span>
+      <span>Version: 9.3.6</span>
+      <span>Re-run: post-F2.1 remediation</span>
     </div>
-  </div>
 
-  <!-- Theme toggle -->
-  <script>
-    (function () {
-      const root = document.documentElement;
-      const KEY = 'theme-preview';
-      const s = localStorage.getItem(KEY) || 'auto';
-      if (s === 'light' || s === 'dark') root.setAttribute('data-theme', s);
-    })();
-  </script>
+    <h2 id="summary">Executive Summary</h2>
+    <div class="score-wrap">
+      <div class="score-num">7<span class="out-of">/10</span></div>
+      <div class="score-text">
+        <strong>Healthy core; the test-suite-integrity debt has been paid down.</strong> Production code, security posture, and architecture each independently score ~8: clean layering, 0 real circular dependencies, 1 <code>any</code> in the whole tree, no secrets, no XSS sinks, and verified resource cleanup. The coverage-padding finding (F2.1) that previously pulled the score to 6 is now <strong>resolved</strong> — all 13 metric-named test files were eliminated, their unique coverage migrated to behavior-named homes, and a guardrail added — leaving two High findings, in documentation accuracy and E2E coverage.
+        <div class="f-meta" style="margin-top:0.6rem">Rubric: 2 High findings + coverage ≥80% → 7–8 band → <b>7</b>. No finding is Critical (suite passes, coverage clears thresholds, no data-loss / secret / XSS). Prior score this cycle: 6.</div>
+      </div>
+    </div>
+
+    <h3>Top 5 Risks</h3>
+    <p class="dim-summary">The prior #1 risk — coverage-padding (F2.1) — has been resolved this cycle and dropped off the list.</p>
+    <ol class="tight">
+      <li><strong>Core flows have zero E2E coverage.</strong> Recurring tasks, task dependencies, and drag-and-drop — all central features with unit tests only — are never exercised end-to-end across browsers. <span class="badge badge-high">High</span></li>
+      <li><strong>Docs advertise deleted features and are two majors stale.</strong> <code>README.md</code> markets Command Palette, Smart-View pinning, and Batch Operations (all removed in v9 per ADR 0011) with ✅ checkmarks, and declares "Current Version: 7.8.1" against a <code>package.json</code> at 9.3.6. <span class="badge badge-high">High</span></li>
+      <li><strong>Observability has two real gaps.</strong> <code>logger.error()</code> never forwards to Sentry — so the sync engine's primary error path is invisible — and Sentry payloads are sent without the scrubber the logger applies, so exception messages/stacks reach Sentry un-sanitized. <span class="badge badge-medium">Medium ×2</span></li>
+      <li><strong>The <code>matrix-navigation</code> E2E tests are flaky.</strong> Confirmed across two runs (failed on WebKit one run, Chromium the next), so CI with <code>retries: 0</code> will go red intermittently. Root cause is the <code>waitForTimeout</code> reliance (F12.2). <span class="badge badge-medium">Medium</span></li>
+      <li><strong>A duplicate <code>tests/sync/</code> directory still runs divergent copies</strong> of 6 sync modules already covered (more thoroughly) under <code>tests/data/sync/</code> — a "which one do I edit?" maintenance trap. <span class="badge badge-medium">Medium</span></li>
+    </ol>
+
+    <h3>Top 3 Strengths</h3>
+    <ol class="tight">
+      <li><strong>Test-suite integrity restored (this cycle).</strong> All 13 coverage-padding files eliminated; their genuinely-unique coverage migrated to behavior-named homes; a guardrail (<code>tests/suite-hygiene.test.ts</code>) now fails CI if a metric-named test file reappears. Coverage held or improved at every step (now 86.9% lines / 82.9% functions across 1,849 tests), so the headline number can be trusted again.</li>
+      <li><strong>Exemplary production-code hygiene.</strong> No file exceeds 400 lines; exactly one <code>as any</code> in the entire <code>lib/</code> + <code>components/</code> + <code>app/</code> tree; zero swallowed <code>catch {}</code> blocks; no runtime circular dependencies; sync engine fully decoupled from React (no component imports the PocketBase SDK).</li>
+      <li><strong>Strong, deliberate security posture.</strong> Zero committed secrets, zero XSS sinks, an allow-listed URL renderer, a hardened service worker, a comprehensive CloudFront security-header policy, and a logger whose secret-sanitization claim was verified true. Only two moderate transitive CVEs remain, neither exploitable in the browser bundle.</li>
+    </ol>
+
+    <h3>Top 3 Priorities for Next Sprint</h3>
+    <p class="dim-summary">Coverage-padding (the prior #1) is done. Remaining priorities:</p>
+    <ol class="tight">
+      <li><strong>Stabilise &amp; extend E2E:</strong> the <code>matrix-navigation</code> nav tests are flaky (failed on WebKit one run, Chromium the next) — replace their <code>waitForTimeout</code> sleeps with assertions; then add specs for recurring tasks, dependencies, and drag-and-drop, plus a <code>SettingsPage</code> POM.</li>
+      <li><strong>Fix onboarding docs:</strong> bring <code>README.md</code>/<code>ARCHITECTURE.md</code> to v9 reality (or banner + link ADR 0011), create the referenced-but-missing <code>CONTEXT.md</code>, and commit a <code>.env.example</code>.</li>
+      <li><strong>Tighten observability and finish test-dir cleanup:</strong> add a Sentry <code>beforeSend</code> scrubber + decide <code>logger.error()</code>→Sentry forwarding; delete the duplicate <code>tests/sync/</code> directory (now the only remaining padding-era test dir).</li>
+    </ol>
+
+    <h2 id="metrics">Metrics Dashboard</h2>
+    <div class="stats-grid">
+      <div class="stat-card is-good"><div class="stat-value">86.9%</div><div class="stat-label">Lines covered</div></div>
+      <div class="stat-card is-good"><div class="stat-value">85.9%</div><div class="stat-label">Statements</div></div>
+      <div class="stat-card is-good"><div class="stat-value">82.9%</div><div class="stat-label">Functions</div></div>
+      <div class="stat-card is-good"><div class="stat-value">79.5%</div><div class="stat-label">Branches</div></div>
+      <div class="stat-card is-primary"><div class="stat-value">1849</div><div class="stat-label">Unit tests pass (1 skip)</div></div>
+      <div class="stat-card is-primary"><div class="stat-value">154<span style="font-size:1rem;color:var(--gray-500)">/156</span></div><div class="stat-label">E2E pass (2 flaky fails)</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value sm">0</div><div class="stat-label"><span class="badge badge-critical">Critical</span></div></div>
+      <div class="stat-card is-warn"><div class="stat-value sm">2</div><div class="stat-label"><span class="badge badge-high">High</span> (−1 resolved)</div></div>
+      <div class="stat-card"><div class="stat-value sm">23</div><div class="stat-label"><span class="badge badge-medium">Medium</span></div></div>
+      <div class="stat-card"><div class="stat-value sm">21</div><div class="stat-label"><span class="badge badge-low">Low</span></div></div>
+      <div class="stat-card"><div class="stat-value sm">46</div><div class="stat-label">Active findings (F2.1 resolved)</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value sm">248</div><div class="stat-label">Source files</div></div>
+      <div class="stat-card"><div class="stat-value sm">3 / 0</div><div class="stat-label">Files &gt;350 / &gt;400 lines</div></div>
+      <div class="stat-card"><div class="stat-value sm">0</div><div class="stat-label">TODO / FIXME markers</div></div>
+      <div class="stat-card"><div class="stat-value sm">2</div><div class="stat-label">Moderate CVEs (bun audit)</div></div>
+      <div class="stat-card"><div class="stat-value sm">12</div><div class="stat-label">ADRs</div></div>
+    </div>
+
+    <h3>Playwright E2E — by browser project</h3>
+    <table class="tbl">
+      <thead><tr><th>Project</th><th class="num">Passed</th><th class="num">Failed</th><th class="num">Flaky</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>chromium</td><td class="num">50</td><td class="num">2</td><td class="num">0</td><td><span class="badge badge-fail">2 failed</span></td></tr>
+        <tr><td>firefox</td><td class="num">52</td><td class="num">0</td><td class="num">0</td><td><span class="badge badge-pass">Green</span></td></tr>
+        <tr><td>webkit</td><td class="num">52</td><td class="num">0</td><td class="num">0</td><td><span class="badge badge-pass">Green</span></td></tr>
+        <tr><td><strong>Total</strong></td><td class="num"><strong>154</strong></td><td class="num"><strong>2</strong></td><td class="num"><strong>0</strong></td><td>~140s wall</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Playwright E2E — by spec file</h3>
+    <table class="tbl">
+      <thead><tr><th>Spec (× 3 browsers)</th><th class="num">Passed</th><th class="num">Failed</th></tr></thead>
+      <tbody>
+        <tr><td><code>quadrant-classification.spec.ts</code></td><td class="num">24</td><td class="num">0</td></tr>
+        <tr><td><code>search.spec.ts</code></td><td class="num">24</td><td class="num">0</td></tr>
+        <tr><td><code>settings-navigation.spec.ts</code></td><td class="num">21</td><td class="num">0</td></tr>
+        <tr><td><code>settings-sections.spec.ts</code></td><td class="num">21</td><td class="num">0</td></tr>
+        <tr><td><code>task-crud.spec.ts</code></td><td class="num">18</td><td class="num">0</td></tr>
+        <tr><td><code>data-management.spec.ts</code></td><td class="num">15</td><td class="num">0</td></tr>
+        <tr><td><code>matrix-navigation.spec.ts</code></td><td class="num">13</td><td class="num">2</td></tr>
+        <tr><td><code>sync-states.spec.ts</code></td><td class="num">9</td><td class="num">0</td></tr>
+        <tr><td><code>about-install.spec.ts</code></td><td class="num">6</td><td class="num">0</td></tr>
+        <tr><td><code>first-time-redirect.spec.ts</code></td><td class="num">3</td><td class="num">0</td></tr>
+      </tbody>
+    </table>
+    <p class="dim-summary">This run failed 2 <code>matrix-navigation</code> tests (settings + dashboard) on <strong>Chromium</strong>; the prior run failed 1 (dashboard) on <strong>WebKit</strong>. The failure moving browsers across runs confirms a timing flake, not an engine-specific bug — see finding 12.4.</p>
+
+    <h2 id="dim-1">1 · Standards Compliance</h2>
+    <p class="dim-summary">Mechanical limits from coding-standards.md: files ≤350–400 lines, functions ≤40 lines, nesting ≤3, no magic numbers. Codebase is broadly compliant — 0 files over 400 lines, 0 TODO/FIXME markers — but a few foundational functions are far over the line limit.</p>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">385-line <code>GsdDatabase</code> constructor holds 14 schema versions inline</span><span class="f-id">F1.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/db.ts:30–366</code> · <b>Effort:</b> Medium</p>
+      <p>The constructor is ~337 lines — 8× the 40-line function limit — with 14 nested <code>.upgrade()</code> callbacks. It is the single longest function in the codebase and the migration history is structurally hard to test in isolation (side effects run on instantiation).</p>
+      <p><b>Recommendation:</b> Extract each version into a private method (<code>registerSchemaV12()</code>) called sequentially from the constructor; hoist schema strings to named constants.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">126-line <code>updateTask</code> in the MCP write path</span><span class="f-id">F1.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>packages/mcp-server/src/write-ops/task-operations.ts:144–269</code> · <b>Effort:</b> Small</p>
+      <p>One function does fresh-read, dependency validation, 8-field change tracking (a 20-line near-identical <code>if</code> block), payload construction, an LWW preflight, and the PocketBase write.</p>
+      <p><b>Recommendation:</b> Extract <code>trackChanges()</code>, <code>buildUpdatedTask()</code>, and <code>performLwwWrite()</code> — each lands under 40 lines.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">297-line <code>MatrixSimplified</code> component body</span><span class="f-id">F1.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>components/matrix-simplified/index.tsx:52–348</code> · <b>Effort:</b> Small</p>
+      <p>Owns URL-action handling, keyboard shortcuts, search filtering, three task-creation paths, drag-and-drop wiring, and caption composition in one function.</p>
+      <p><b>Recommendation:</b> Extract <code>useUrlActionHandler()</code>, <code>useKeyboardShortcuts()</code>, and <code>useTaskCountCaption()</code> hooks — pushes the body under 100 lines with no behavior change.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Nesting depth reaches level 5 in the v12 upgrade callback</span><span class="f-id">F1.4</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/db.ts:247–278</code> · <b>Effort:</b> Small</p>
+      <p><code>.upgrade()</code> → <code>modify()</code> → <code>if/else</code> → <code>filter()</code> → nested <code>if</code> = 5 levels (limit is 3).</p>
+      <p><b>Recommendation:</b> Extract <code>validateTimeEntries()</code> / <code>validateTimeSpent()</code> as module-level helpers.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Magic number <code>50</code> for focus timeout, duplicated</span><span class="f-id">F1.5</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>components/matrix-simplified/edit-drawer.tsx:98</code>, <code>index.tsx:94</code> · <b>Effort:</b> Small</p>
+      <p><code>setTimeout(() =&gt; ref.current?.focus(), 50)</code> appears twice with no named constant.</p>
+      <p><b>Recommendation:</b> <code>const FOCUS_DELAY_MS = 50</code> in <code>lib/constants.ts</code>.</p>
+    </div></details>
+
+    <h2 id="dim-2">2 · Test Quality &amp; Coverage</h2>
+    <p class="dim-summary">Coverage is high and the sync tests are exemplary (boundary-level mocking, behavior-named). The coverage-padding files (F2.1) were eliminated this cycle; the remaining integrity debt is a duplicate test tree (F2.2) and one component test that mocks its own child (F2.3).</p>
+
+    <details class="finding"><summary><span class="badge badge-pass">Resolved</span><span class="f-title">Coverage-padding test files — eliminated this cycle</span><span class="f-id">F2.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Was:</b> High · <b>Status:</b> Resolved (branch <code>test/decouple-smart-views-coverage-padding</code>, 12 commits) · <b>Effort spent:</b> ~Large</p>
+      <p>All 13 metric-named test files (<code>coverage-boost</code>, <code>gap-closing</code>, <code>last-function-push</code>, …) have been removed. Their genuinely-unique coverage was migrated into behavior-named canonical homes via a <em>delete-and-measure</em> process: delete each file, re-run <code>--coverage</code>, and migrate exactly the tests covering any dropped lines/branches — rewriting tautological assertions (<code>expect(typeof x).toBe('string')</code>) into real ones. Data-layer files were mostly duplicates of thorough canonical tests; UI files were the <em>sole</em> tests for their components and were renamed/relocated (e.g. <code>gap-closing-2</code> → <code>install-pwa-prompt.test.tsx</code>).</p>
+      <p><b>Guardrail:</b> <code>tests/suite-hygiene.test.ts</code> now fails CI if any test file name matches a coverage-metric pattern, so the cleanup can't silently regress. Total coverage held or improved at every step (86.74 → 86.86% lines), and the suite shrank from 1,976 to 1,849 tests by removing the redundant ones — so the headline number now reflects behavioral coverage.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Duplicate, divergent <code>tests/sync/</code> directory runs alongside <code>tests/data/sync/</code></span><span class="f-id">F2.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/sync/*.ts</code> (6 files) vs <code>tests/data/sync/*.ts</code> (16 files) · <b>Effort:</b> Small</p>
+      <p>The vitest config excludes neither, so both run. <code>error-categorizer</code>, <code>health-monitor</code>, <code>pb-sync-engine</code>, <code>retry-manager</code>, and <code>sync-coordinator</code> are tested in both trees with different setups (the <code>tests/sync/</code> set uses <code>tests/fixtures/</code> helpers; the newer <code>tests/data/sync/</code> set uses <code>vi.mock</code>). A developer editing sync code won't know which to update.</p>
+      <p><b>Recommendation:</b> Treat <code>tests/data/sync/</code> as canonical; delete <code>tests/sync/</code>. Also remove <code>tests/fixtures/fixtures.test.ts</code> and <code>example-usage.test.ts</code> (they test the helpers, not the app).</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title"><code>matrix-simplified.test.tsx</code> mocks 13 first-party modules, including its own child</span><span class="f-id">F2.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/ui/matrix-simplified.test.tsx</code> · <b>Effort:</b> Medium</p>
+      <p>13 <code>vi.mock</code> calls stub first-party collaborators including <code>app-shell</code> (the component's direct child, replaced by a bare <code>&lt;div&gt;</code>). The test then verifies the harness rendered — a refactor of <code>app-shell</code> wouldn't fail it. This is testing the mock, not the component.</p>
+      <p><b>Recommendation:</b> Mock only the IO boundary (<code>pocketbase</code>, browser APIs); let the tree render against the auto-imported <code>fake-indexeddb</code>.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">~40% of tests are implementation-named, not behavior-named</span><span class="f-id">F2.4</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> e.g. <code>tests/ui/matrix-simplified.test.tsx</code> ("renders four quadrant panes") · <b>Effort:</b> Medium</p>
+      <p>The sync tests model the convention well ("skips a queued update whose payload is older than the remote record"); UI tests describe HTML output rather than behavior, so they survive bugs but not refactors.</p>
+      <p><b>Recommendation:</b> Adopt "should &lt;behavior&gt; when &lt;condition&gt;" consistently, using the sync tests as the template.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Inconsistent Dexie cleanup → shared mutable state risk</span><span class="f-id">F2.5</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> <code>tests/data/db.test.ts</code> and other data suites · <b>Effort:</b> Small (per file) · <b>Partially mitigated</b></p>
+      <p><code>fake-indexeddb</code> is shared across a file; not every data test clears tables in <code>beforeEach</code>. The worst offender cited last cycle (<code>coverage-boost.test.ts</code>, which used in-body dynamic <code>import()</code> to dodge module state) was removed during the F2.1 cleanup, and the migrated <code>smart-views.test.ts</code> now clears both <code>smartViews</code> and <code>appPreferences</code>. The general pattern still warrants an audit.</p>
+      <p><b>Recommendation:</b> Audit remaining data tests for a <code>beforeEach</code> table clear; standardize a shared reset helper.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">UI component tests cover the happy path only</span><span class="f-id">F2.6</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/ui/{task-card,edit-drawer,capture-bar}.test.tsx</code> · <b>Effort:</b> Medium</p>
+      <p>No tests for create-rejection, save-failure, or validation-failure in the UI layer (the data layer's CRUD tests do better). coding-standards requires positive <em>and</em> negative cases.</p>
+      <p><b>Recommendation:</b> Add rejection/validation-failure cases per interactive component.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title"><code>config.test.ts</code> over-mocks its own collaborators</span><span class="f-id">F2.7</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/data/sync/config.test.ts</code> · <b>Effort:</b> Small</p>
+      <p>Mocks 4 internal collaborators (<code>queue</code>, <code>health-monitor</code>, <code>pocketbase-client</code>, <code>browser-cache</code>) rather than testing config behavior through its public API. Most other sync tests mock correctly at the SDK boundary.</p>
+      <p><b>Recommendation:</b> Drive through the public surface; reserve mocks for the external SDK.</p>
+    </div></details>
+
+    <h2 id="dim-3">3 · Security &amp; Supply Chain</h2>
+    <p class="dim-summary">Strong posture for a client-first PWA. <b>Verified clean:</b> 0 committed secrets, 0 XSS sinks (no <code>dangerouslySetInnerHTML</code>/<code>innerHTML</code>/<code>eval</code>), an allow-listed URL renderer, <code>bun.lock</code> committed. Accepted trade-offs (documented, not findings): <code>localStorage</code> JWT, <code>'unsafe-inline'</code> styles/scripts for static export, public <code>NEXT_PUBLIC_*</code> vars, omitted COEP.</p>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Service-worker <code>SKIP_WAITING</code> handler has no origin check</span><span class="f-id">F3.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>public/sw.js:60–63</code> · <b>Effort:</b> Small</p>
+      <p>The message handler calls <code>self.skipWaiting()</code> without validating <code>event.origin</code>/<code>event.source</code>. Any same-origin page (incl. a self-XSS or compromised chunk) can force premature SW rotation — integrity/cache-consistency risk, not exfiltration.</p>
+      <pre>self.addEventListener("message", (event) =&gt; {
+  if (event.origin !== self.location.origin) return; // add this
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});</pre>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">CSP via <code>&lt;meta&gt;</code> diverges from the authoritative CloudFront policy, and they deploy separately</span><span class="f-id">F3.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>app/layout.tsx:21–57</code> vs <code>cloudfront/response-headers-policy.json</code> · <b>Effort:</b> Small (docs) / Medium (CI coupling)</p>
+      <p>The CloudFront policy is comprehensive (<code>frame-ancestors 'none'</code>, HSTS+preload, COOP, CORP, Permissions-Policy); the meta CSP can't express <code>frame-ancestors</code> at all and omits those headers. The two are deployed by different workflows, opening a window where the static export is live before headers catch up. <code>form-action</code> also differs between the two.</p>
+      <p><b>Recommendation:</b> Document which directives live only at the CDN (in <code>layout.tsx</code>, not just <code>next.config.ts</code>); couple the infra deploy to the app deploy; record the COEP decision in an ADR.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">MCP setup wizard parks a PocketBase JWT in the unprotected Claude Desktop config</span><span class="f-id">F3.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> <code>packages/mcp-server/src/cli/setup-wizard.ts:43</code> · <b>Effort:</b> Small</p>
+      <p>The wizard instructs users to copy the <code>pocketbase_auth</code> token into <code>claude_desktop_config.json</code> as a plaintext env var. The wizard's own scratch file is <code>chmod 600</code>, but the destination is managed by Claude Desktop and may be world-readable or cloud-synced. (Storing the JWT in <code>localStorage</code> itself is an accepted client-only trade-off.)</p>
+      <p><b>Recommendation:</b> Add an advisory in <code>displayNextSteps()</code> to treat the config as a secret and rotate periodically; warn if the file is group/other-readable.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title"><code>userId</code> logged on OAuth success (not matched by the logger's PII patterns)</span><span class="f-id">F3.4</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/sync/pb-auth.ts:53–56</code> · <b>Effort:</b> Small</p>
+      <p>The logger redacts <code>token</code>/<code>email</code>/<code>password</code> keys but not <code>userId</code>, so the PocketBase record ID passes through at <code>info</code> level in production. Low sensitivity today (logger output doesn't flow to Sentry), but a correlation handle if logs are ever forwarded.</p>
+      <p><b>Recommendation:</b> Drop <code>userId</code> from the success log or treat it as PII in any future sink.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">SW <code>push</code> handler forwards <code>data.data</code> verbatim into the notification (latent)</span><span class="f-id">F3.5</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>public/sw.js:207–228</code> · <b>Effort:</b> Small</p>
+      <p>Title/body/tag are type-checked, but the <code>data.data</code> sub-object is passed through unvalidated. No active risk (<code>notificationclick</code> hard-codes <code>openWindow("/")</code>), but a future use of <code>event.notification.data.url</code> would become an open-redirect/injection vector.</p>
+      <p><b>Recommendation:</b> Whitelist fields (<code>{ taskId }</code>) or comment the constraint at the <code>notificationclick</code> site.</p>
+    </div></details>
+
+    <h2 id="dim-4">4 · Architecture</h2>
+    <p class="dim-summary">The standout dimension. <b>Verified clean:</b> no runtime circular dependencies, re-export barrels leak nothing, and the sync engine is fully decoupled from React — no component imports the PocketBase SDK; <code>SyncProvider</code> is the single lifecycle owner consumed via <code>useSyncContext()</code>.</p>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Two UI surfaces reach into IndexedDB directly via <code>getDb()</code></span><span class="f-id">F4.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>app/(archive)/archive/page.tsx:14,59</code>; <code>components/sync/use-sync-auth-dialog.ts:9</code> · <b>Effort:</b> Small</p>
+      <p>Pages normally go through <code>lib/</code> services (<code>lib/archive</code>, <code>lib/tasks/crud</code>, <code>useTasks</code>), but the archive undo handler runs <code>db.tasks.get()</code> inline in an <code>onClick</code>, and the auth dialog reads the DB directly — coupling UI to the schema.</p>
+      <p><b>Recommendation:</b> Move both behind service functions in <code>lib/archive</code> / a sync service.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Type-only circular edge between analytics modules</span><span class="f-id">F4.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/analytics/metrics.ts:4</code> ↔ <code>lib/analytics/tags.ts:2</code> · <b>Effort:</b> Small</p>
+      <p><code>madge</code> flags a cycle, but the back-edge is <code>import type { TagStatistic }</code> — erased at compile time, no runtime hazard. Worth clearing for tooling cleanliness.</p>
+      <p><b>Recommendation:</b> Move <code>TagStatistic</code> to <code>lib/types.ts</code>.</p>
+    </div></details>
+
+    <h2 id="dim-5">5 · Maintainability</h2>
+    <p class="dim-summary">No file exceeds 400 lines; complexity hotspots overlap with the oversized functions in Dimension 1. The main maintainability risk is silent drift between the web app and the vendored MCP-server copies of shared logic.</p>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Parallel implementations in <code>lib/</code> and <code>packages/mcp-server/</code> will drift</span><span class="f-id">F5.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/capture-parser.ts</code> vs <code>packages/mcp-server/src/text/capture-parser.ts</code> (126 vs 80 lines); <code>lib/analytics/metrics.ts</code> vs <code>packages/mcp-server/src/analytics/metrics.ts</code> · <b>Effort:</b> Small (parity test) / Large (dedup)</p>
+      <p>Two copies of capture-parsing and analytics with structurally identical logic (the MCP copy hand-rolls dates; the web app uses <code>date-fns</code>). The capture-parser pair already diverges by 46 lines. A bug fixed in one isn't fixed in the other.</p>
+      <p><b>Recommendation:</b> Wire a parity test into MCP CI now; longer-term, extract a <code>shared-utils</code> workspace package.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Migration logic is structurally hard to test</span><span class="f-id">F5.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> <code>lib/db.ts:30–366</code> · <b>Effort:</b> Medium</p>
+      <p>The v12 corrupt-data guard (silent <code>filter</code>-out) and v13 <code>vectorClock</code> strip run as constructor side effects, so they can't be unit-tested without instantiating the whole DB. These silent data transforms are exactly the code that most needs a test.</p>
+      <p><b>Recommendation:</b> Pair the F1.1 extraction with per-migration unit tests on the extracted methods.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title"><code>extractUrlsFromTitle</code> + <code>buildDescription</code> repeated 3× in one component</span><span class="f-id">F5.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>components/matrix-simplified/index.tsx:155–246</code> · <b>Effort:</b> Small</p>
+      <p>Three creation paths (capture submit, "more options", edit-drawer submit) repeat the same normalize sequence — the DRY threshold.</p>
+      <p><b>Recommendation:</b> Extract <code>normalizeCapture(title, description?)</code> and call from all three handlers.</p>
+    </div></details>
+
+    <h2 id="dim-6">6 · Dependencies &amp; Supply Chain Hygiene</h2>
+    <p class="dim-summary"><b>Verified good:</b> <code>bun.lock</code> committed, no floating production ranges, 0 high/critical advisories. The 19 <code>overrides</code> are a legitimate transitive-pinning pattern; the residual risk is drift if <code>bun audit</code> isn't gated in CI.</p>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Two moderate CVEs survive the overrides</span><span class="f-id">F6.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>bun audit</code> — <code>qs</code> (GHSA-q8mj-m7cp-5q26), <code>brace-expansion</code> (GHSA-jxxr-4gwj-5jf2) · <b>Effort:</b> Small</p>
+      <p><code>qs</code> reaches the tree via <code>@modelcontextprotocol/sdk</code> (Node-only, not the browser bundle); <code>brace-expansion</code> is a dev-only <code>eslint</code> path. The <code>overrides</code> block already targets both, but the SDK pins a narrower <code>qs</code> range the override can't satisfy.</p>
+      <p><b>Recommendation:</b> Bump <code>@modelcontextprotocol/sdk</code> to a version pulling patched <code>qs</code>; re-run <code>bun audit</code>.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">19 overrides need a CI audit gate to avoid silent re-vulnerability</span><span class="f-id">F6.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> <code>package.json</code> overrides block · <b>Effort:</b> Small</p>
+      <p>A future <code>bun update</code> could satisfy an override while introducing a new advisory in the same package. No PR-time <code>bun audit</code> step was observed in <code>deploy-prod.yml</code>.</p>
+      <p><b>Recommendation:</b> Gate <code>bun audit --audit-level=high</code> (the existing <code>audit</code> script) in the PR workflow, not just at install.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">A couple of dependencies are notably behind</span><span class="f-id">F6.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Low · <b>Location:</b> <code>bun outdated</code> — <code>lucide-react</code> 1.7.0→1.17.0, <code>vite</code> 7.3.2→8.x (dev) · <b>Effort:</b> Small (recurring)</p>
+      <p>Most packages are 1–2 minors behind; the icon library and dev Vite are the outliers. No CVEs, but large gaps raise the chance of missing security patches.</p>
+      <p><b>Recommendation:</b> Schedule a quarterly dependency-update pass.</p>
+    </div></details>
+
+    <h2 id="dim-7">7 · Performance</h2>
+    <p class="dim-summary"><b>Verified clean:</b> SSE + DOM listeners are fully torn down (<code>SyncProvider</code> → <code>BackgroundSyncManager.stop()</code> → <code>unsubscribeRealtime()</code> + listener/interval removal); <code>subscribe()</code>/<code>start()</code> are idempotent; sync push/pull batch-fetch the remote index to avoid N+1 and abort early on 429; the archive list uses <code>@tanstack/react-virtual</code>. Findings here are scaling notes, not present problems.</p>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title"><code>useTasks</code> loads the whole table and buckets in JS each call</span><span class="f-id">F7.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/use-tasks.ts:18</code> · <b>Effort:</b> N/A (monitor)</p>
+      <p><code>db.tasks.toArray()</code> then sort/bucket on each invocation. Fine at the matrix's bounded task counts; the per-render <code>byQuadrant</code> rebuild is covered by the React Compiler (<code>reactCompiler: true</code> confirmed). Only a concern at thousands of tasks.</p>
+      <p><b>Recommendation:</b> No action now; revisit with indexed queries if lists grow large.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Bundle size / code-splitting unmeasured</span><span class="f-id">F7.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Low · <b>Location:</b> <code>components/dashboard/completion-chart.tsx</code> (recharts) · <b>Effort:</b> Small</p>
+      <p><code>next build</code> was not run in this audit, so chunk sizes are unverified. App Router code-splits per segment, so <code>recharts</code> should land in the dashboard chunk (and <code>ImportDialog</code> is already <code>lazy()</code>-loaded), but this is inferred, not measured.</p>
+      <p><b>Recommendation:</b> Run a bundle analyzer before optimizing; lazy-load the chart only if dashboard TTI is shown to matter.</p>
+    </div></details>
+
+    <h2 id="dim-8">8 · Error Handling &amp; Observability</h2>
+    <p class="dim-summary"><b>Verified clean:</b> 0 swallowed <code>catch {}</code> blocks, and the logger's secret-sanitization claim holds (<code>lib/logger.ts:67–153</code> masks query-param tokens, Bearer tokens, and recursively redacts sensitive metadata keys). The gaps are about what does — and doesn't — reach Sentry.</p>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Sentry receives exception content without the logger's scrubber</span><span class="f-id">F8.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> <code>lib/sentry.ts:11–16</code> (no <code>beforeSend</code>), <code>lib/error-logger.ts:59</code> · <b>Effort:</b> Medium</p>
+      <p>Sanitization is asymmetric: the logger carefully masks secrets, but <code>captureException(error, { ...loggedError })</code> spreads the full message + stack to Sentry verbatim. <code>pb-push.ts:210–213</code> deliberately keeps task content out of <em>persisted</em> error strings because PocketBase 4xx bodies can echo user content back — that same content reaches Sentry unscrubbed. (<code>sendDefaultPii: false</code> is set, so IP/cookies are not attached.)</p>
+      <p><b>Recommendation:</b> Extract the logger's scrubber and call it from a <code>Sentry.init({ beforeSend })</code> so both paths share one sanitizer.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title"><code>logger.error()</code> never forwards to Sentry — sync-engine errors are invisible</span><span class="f-id">F8.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/logger.ts:246–247</code> · <b>Effort:</b> Small</p>
+      <p>A stale comment ("you can call error-logger.ts here / for now we'll just use console.error") marks an integration that was never wired. Only <code>error-logger.logError()</code> and the global-error boundary reach Sentry — so the sync engine's primary error path (<code>logger.error()</code>) is not captured at all. Deduped with the tech-debt comment finding.</p>
+      <p><b>Recommendation:</b> Decide whether <code>logger.error()</code> should forward to <code>captureException</code>; remove the stale comment either way.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">No route-level <code>error.tsx</code> — recovery is all-or-nothing</span><span class="f-id">F8.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> only <code>app/global-error.tsx</code> exists · <b>Effort:</b> Small</p>
+      <p>Render errors are caught (they bubble to <code>global-error</code>), so this isn't a correctness gap — but any page error replaces the whole shell and nav instead of being contained to the failing route.</p>
+      <p><b>Recommendation:</b> Add an <code>app/error.tsx</code> (and/or per-segment) for contained recovery that keeps the shell mounted.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Misleading "Example:" comment above a real <code>captureException</code></span><span class="f-id">F8.4</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/error-logger.ts:48–57</code> · <b>Effort:</b> Small</p>
+      <p>A <code>// Example: Sentry.captureException(...)</code> comment sits directly above an unconditional real call at line 59 — dead documentation that now misleads.</p>
+      <p><b>Recommendation:</b> Delete the example comment.</p>
+    </div></details>
+
+    <h2 id="dim-9">9 · Documentation &amp; Onboarding</h2>
+    <p class="dim-summary">ADRs are a genuine strength (12, well-structured, recent ones excellent). The weakness is the contributor-facing surface: the README is frozen at a pre-v9 feature set and a referenced anchor doc is missing.</p>
+
+    <details class="finding"><summary><span class="badge badge-high">High</span><span class="f-title">README/ARCHITECTURE advertise deleted features and are two majors stale</span><span class="f-id">F9.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>README.md</code>, <code>ARCHITECTURE.md</code> · <b>Effort:</b> Small</p>
+      <p><code>README.md</code> documents Command Palette (⌘K), Smart-View pinning (1–9 shortcuts), Quick Settings, and Batch Operations with ✅ checkmarks — all removed in v9 per ADR 0011 (accepted 2026-04-28). It declares "Current Version: 7.8.1" while <code>package.json</code> is 9.3.6 and <code>ARCHITECTURE.md</code> says 7.2.4. A new contributor will hunt for features that no longer exist. (Verified: README contains "7.8.1"; package.json contains "9.3.6".)</p>
+      <p><b>Recommendation:</b> Update both to v9 reality, or add a prominent banner linking ADR 0011 and marking historical sections.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title"><code>CONTEXT.md</code> is referenced by agent docs but does not exist</span><span class="f-id">F9.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> referenced in <code>CLAUDE.md</code> &amp; <code>docs/agents/domain.md</code>; absent at repo root · <b>Effort:</b> Small</p>
+      <p><code>CLAUDE.md</code> calls this a "single-context repo — one <code>CONTEXT.md</code> + <code>docs/adr/</code>", and <code>domain.md</code> tells agents to read it first (then "proceed silently" if absent — so the gap is invisible). The domain glossary and invariants it should hold are undocumented, risking drift between ADR language and code naming. (Verified absent.)</p>
+      <p><b>Recommendation:</b> Create <code>CONTEXT.md</code>: project description, glossary (quadrant, capture-bar, LWW, sync queue), key invariants, ADR links.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">ADR 0003 (LWW) may be stale; no schema-versioning ADR</span><span class="f-id">F9.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>docs/adr/0003-*.md</code> · <b>Effort:</b> Medium</p>
+      <p>ADR 0003 predates the PocketBase migration and may not reflect the current <code>client_updated_at</code> LWW implementation. The 14-version Dexie schema strategy is documented only in CLAUDE.md prose, not an ADR.</p>
+      <p><b>Recommendation:</b> Review ADR 0003 against the current implementation; write a schema-versioning ADR.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title"><code>.env.example</code> is gitignored — no committed env-var reference</span><span class="f-id">F9.4</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> repo root · <b>Effort:</b> Small</p>
+      <p>The app reads <code>NEXT_PUBLIC_POCKETBASE_URL</code>, <code>NEXT_PUBLIC_BASE_URL</code>, <code>NEXT_PUBLIC_SENTRY_DSN</code>, and <code>NODE_ENV</code>, but a contributor has no committed list of required vs optional vars and defaults.</p>
+      <p><b>Recommendation:</b> Commit a secret-free <code>.env.example</code> documenting each variable, requiredness, default, and failure mode.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">WHY comments are inconsistent across the tree</span><span class="f-id">F9.5</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> Medium · <b>Location:</b> exemplary in <code>tests/data/sync/pb-push.test.ts</code>; sparse in <code>tests/ui/matrix-simplified.test.tsx</code> · <b>Effort:</b> Small</p>
+      <p>Sync tests explain LWW/NaN contracts; the UI test's 13 mocks carry no rationale, so a maintainer can't tell whether removing a mock is safe.</p>
+      <p><b>Recommendation:</b> Annotate non-obvious mocking decisions with their why.</p>
+    </div></details>
+
+    <h2 id="dim-10">10 · Tech Debt</h2>
+    <p class="dim-summary"><b>Notable strength:</b> zero <code>TODO</code>/<code>FIXME</code>/<code>HACK</code>/<code>XXX</code> markers anywhere in scope. The debt that exists is a handful of stale comments and one logging shortcut. (The logger→Sentry stale comment is filed under F8.2; the <code>as any</code> cast under F11.2.)</p>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Inaccurate comment justifying a now-removed <code>any</code></span><span class="f-id">F10.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>lib/db.ts:118–119</code> · <b>Effort:</b> Small</p>
+      <p>Comment still says "Uses any because…" though <code>LegacyTaskMigrationRecord</code> (lines 13–16) now exists specifically to avoid it.</p>
+      <p><b>Recommendation:</b> Update the comment to reference the typed record.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Raw <code>console.error</code> in the MCP delete write-path</span><span class="f-id">F10.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>packages/mcp-server/src/write-ops/task-operations.ts:348–354</code> · <b>Effort:</b> Small</p>
+      <p>The dependency-cleanup loop in <code>deleteTask</code> uses <code>console.error</code> directly, so cleanup failures are invisible to any structured log aggregation.</p>
+      <p><b>Recommendation:</b> Route through the MCP server's logger.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">Dead <code>command-palette/</code> subtree (unwired)</span><span class="f-id">F10.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>components/command-palette/</code> · <b>Effort:</b> Small</p>
+      <p>Source exists but is not wired into the v9 shell. It's dead-coded rather than flag-gated (lower risk than a stale flag), but a resurrection/removal decision is still pending (tracked in <code>tasks/todo.md</code> per CLAUDE.md).</p>
+      <p><b>Recommendation:</b> Make the keep-or-delete call explicitly; don't leave it indefinitely.</p>
+    </div></details>
+
+    <h2 id="dim-11">11 · Configuration &amp; Type Safety</h2>
+    <p class="dim-summary"><b>Verified strong:</b> exactly one <code>any</code> in the app tree, zero <code>@ts-ignore</code>/<code>@ts-expect-error</code>, two non-null assertions both guarded (<code>dependencies.ts:54</code> by a <code>while</code>, <code>pb-push.ts:50</code> by upstream type checks). No feature flags to leak. <code>lib/env-config.ts</code> is a correct single source of truth.</p>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title"><code>api.vinny.io</code> literals duplicated in <code>layout.tsx</code></span><span class="f-id">F11.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>app/layout.tsx:32,39,111</code> · <b>Effort:</b> Small</p>
+      <p><code>env-config.ts</code> centralizes the URL, but the CSP <code>connect-src</code> and <code>preconnect</code> repeat the literal three times. For a static export these largely must be build-time literals in the head, so priority is low.</p>
+      <p><b>Recommendation:</b> Reference a shared constant where feasible; otherwise document the coupling.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">The lone <code>as any</code>: <code>navigator.standalone</code> without justification</span><span class="f-id">F11.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>components/install-pwa-prompt.tsx:40</code> · <b>Effort:</b> Small</p>
+      <p>The only <code>any</code> in the tree casts <code>window.navigator</code> to reach the iOS-only <code>standalone</code> property, with no justification comment (standards require one). Reported by two reviewers; deduped here.</p>
+      <pre>interface SafariNavigator { standalone?: boolean }
+const isStandalone = (navigator as SafariNavigator).standalone === true;</pre>
+    </div></details>
+
+    <h2 id="dim-12">12 · E2E Test Health</h2>
+    <p class="dim-summary">The suite is broad (154/156 this run) and IndexedDB is reset per test. The weaknesses: missing critical-path coverage, timing-based waits that contradict the suite's own README, fragile selectors in settings specs, and the now-confirmed <code>matrix-navigation</code> flake (different tests/browsers failed across two runs).</p>
+
+    <details class="finding" open><summary><span class="badge badge-high">High</span><span class="f-title">Core flows have no E2E coverage</span><span class="f-id">F12.1</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/e2e/</code> (10 specs) · <b>Effort:</b> Medium</p>
+      <p>Covered: CRUD, quadrant classification, search, settings, import/export, first-visit redirect, disabled-sync UI. <b>Not covered end-to-end:</b> recurring tasks, task dependencies, drag-and-drop, dashboard metric assertions, archive (no spec seeds archived tasks), and any authenticated sync flow. Several have unit tests only, so regressions in the wiring between layers would ship undetected.</p>
+      <table class="tbl">
+        <thead><tr><th>Flow</th><th>E2E</th></tr></thead>
+        <tbody>
+          <tr><td>Recurring tasks</td><td><span class="badge badge-fail">None</span></td></tr>
+          <tr><td>Task dependencies</td><td><span class="badge badge-fail">None</span></td></tr>
+          <tr><td>Drag-and-drop</td><td><span class="badge badge-fail">None</span></td></tr>
+          <tr><td>Dashboard analytics (assertions)</td><td><span class="badge badge-fail">None</span></td></tr>
+          <tr><td>Archive lifecycle</td><td><span class="badge badge-fail">None</span></td></tr>
+          <tr><td>Authenticated sync</td><td><span class="badge badge-fail">None</span></td></tr>
+        </tbody>
+      </table>
+      <p><b>Recommendation:</b> Add specs for the three feature gaps first; mock a PocketBase server for an authenticated-sync happy path.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title"><code>waitForTimeout</code> sleeps contradict the suite's own guidance</span><span class="f-id">F12.2</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/e2e/pages/matrix-page.ts</code> (12), <code>helpers/test-helpers.ts</code> (8), <code>search.spec.ts</code> (7) · <b>Effort:</b> Small</p>
+      <p>The E2E README says "No <code>page.waitForTimeout</code> for state", yet a 2s unconditional sleep sits in both <code>goto()</code> and <code>waitForAppLoad()</code>, and most action sleeps follow a state mutation that a proper assertion would cover. This is the suite's leading flakiness vector.</p>
+      <p><b>Recommendation:</b> Replace with <code>await expect(locator).toHaveCount(n)</code>; the 2s <code>goto()</code> sleep is redundant with the <code>matrixGrid.waitFor()</code> that follows it.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Settings specs select by Tailwind utility classes (29 sites)</span><span class="f-id">F12.3</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>settings-navigation.spec.ts</code>, <code>settings-sections.spec.ts</code>, <code>data-management.spec.ts:214</code>, <code>sync-states.spec.ts</code> · <b>Effort:</b> Medium</p>
+      <p>Selectors like <code>aside.lg\:block</code> and <code>main.min-w-0</code> bind tests to layout utility classes — any Tailwind/layout refactor breaks them with no signal of intent. <code>MatrixPage</code> avoids this; the settings specs went direct because no <code>SettingsPage</code> POM exists.</p>
+      <p><b>Recommendation:</b> Add a <code>SettingsPage</code> POM, add <code>data-testid="settings-sidebar"</code>, and navigate via <code>getByRole('button', { name })</code>.</p>
+    </div></details>
+
+    <details class="finding" open><summary><span class="badge badge-medium">Medium</span><span class="f-title">Flaky <code>matrix-navigation</code> tests — confirmed across two runs</span><span class="f-id">F12.4</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/e2e/matrix-navigation.spec.ts</code> (settings + dashboard nav) · <b>Effort:</b> Small</p>
+      <p><b>Now confirmed flaky.</b> The first run failed 1 test on WebKit (a Radix <code>data-state="closed"</code> vs <code>{null}</code> hydration diff on the theme toggle); this re-run failed 2 different nav tests on <em>Chromium</em>, with WebKit green. A failure that moves browsers and count between runs is a timing flake, not an engine-specific bug — and the suite's <code>retries: 0</code> means each flake surfaces as a hard failure. The root cause is the <code>waitForTimeout</code> reliance flagged in F12.2.</p>
+      <p><b>Recommendation:</b> Replace the <code>matrix-navigation</code> sleeps with <code>await expect(locator).toBeVisible()</code>-style assertions (per F12.2); do not paper over it with retries. The fix removes both the flake and the ambiguity.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-medium">Medium</span><span class="f-title">Two specs bypass <code>clearIndexedDB</code>; fixture deletes DB after the first navigate</span><span class="f-id">F12.5</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>tests/e2e/about-install.spec.ts</code>, <code>first-time-redirect.spec.ts</code>; <code>tests/e2e/fixtures/test-fixtures.ts</code> · <b>Effort:</b> Small</p>
+      <p>Per-test Playwright contexts make this safe today, but the fixture's order (init-script → <code>goto("/")</code> → <code>deleteDatabase</code>) means a future app that writes defaults on first load would lose them. The two bypassing specs rely on context isolation that should be asserted explicitly.</p>
+      <p><b>Recommendation:</b> Delete the DB before the initial navigate; add <code>clearIndexedDB</code> to the two specs for belt-and-braces.</p>
+    </div></details>
+
+    <details class="finding"><summary><span class="badge badge-low">Low</span><span class="f-title">POM adoption is partial (4 of 10 specs go direct)</span><span class="f-id">F12.6</span></summary>
+    <div class="f-body">
+      <p class="f-meta"><b>Confidence:</b> High · <b>Location:</b> <code>about-install</code>, <code>first-time-redirect</code>, <code>sync-states</code>, <code>settings-sections</code> · <b>Effort:</b> Medium</p>
+      <p>Only <code>matrix-page.ts</code> exists under <code>tests/e2e/pages/</code>. Settings/about/sync specs use raw locators, duplicating navigation logic and diverging from the README's "specs should read like a story" convention.</p>
+      <p><b>Recommendation:</b> Extract <code>SettingsPage</code> (and optionally <code>AboutPage</code>); keep the trivial redirect spec as-is.</p>
+    </div></details>
+
+    <h2 id="roadmap">Prioritized 30 / 60 / 90-Day Roadmap</h2>
+
+    <h3>0–30 days — restore trust in the metrics &amp; docs</h3>
+    <ul class="tight">
+      <li>Delete the duplicate <code>tests/sync/</code> tree and the <code>tests/fixtures/*.test.ts</code> helper-tests <span class="f-meta">(F2.2)</span>.</li>
+      <li><s>Replace the 13 coverage-padding files with behavior-named tests + add a guardrail</s> <span class="f-meta">(F2.1 — ✅ done this cycle; guardrail in <code>tests/suite-hygiene.test.ts</code>)</span>.</li>
+      <li>Bring <code>README.md</code> / <code>ARCHITECTURE.md</code> to v9 and fix the version strings; create <code>CONTEXT.md</code>; commit <code>.env.example</code> <span class="f-meta">(F9.1, F9.2, F9.4)</span>.</li>
+      <li>Add a <code>Sentry.init({ beforeSend })</code> scrubber and decide the <code>logger.error()</code>→Sentry forwarding <span class="f-meta">(F8.1, F8.2)</span>.</li>
+      <li>Add the SW origin check; bump <code>@modelcontextprotocol/sdk</code> to clear the <code>qs</code> CVE; gate <code>bun audit</code> in CI <span class="f-meta">(F3.1, F6.1, F6.2)</span>.</li>
+    </ul>
+
+    <h3>30–60 days — close integration &amp; observability gaps</h3>
+    <ul class="tight">
+      <li>Add E2E specs for recurring tasks, dependencies, drag-and-drop, and archive; add an authenticated-sync happy path against a mock PocketBase <span class="f-meta">(F12.1)</span>.</li>
+      <li>Introduce a <code>SettingsPage</code> POM, replace <code>waitForTimeout</code> with assertions, and retire the fragile utility-class selectors <span class="f-meta">(F12.2, F12.3, F12.6)</span>.</li>
+      <li>Triage the WebKit dashboard failure with <code>--repeat-each</code>; root-cause if it reproduces <span class="f-meta">(F12.4)</span>.</li>
+      <li>Route the two direct <code>getDb()</code> UI accesses through the service layer; add a route-level <code>error.tsx</code> <span class="f-meta">(F4.1, F8.3)</span>.</li>
+      <li>Add UI error-path tests and standardize Dexie cleanup in data tests <span class="f-meta">(F2.5, F2.6)</span>.</li>
+    </ul>
+
+    <h3>60–90 days — structural debt &amp; durability</h3>
+    <ul class="tight">
+      <li>Split the <code>GsdDatabase</code> constructor into per-version methods with migration unit tests; refactor <code>updateTask</code> and <code>MatrixSimplified</code> <span class="f-meta">(F1.1, F1.2, F1.3, F5.2)</span>.</li>
+      <li>Extract a <code>shared-utils</code> workspace package to deduplicate the <code>lib/</code> ↔ MCP capture-parser and analytics copies <span class="f-meta">(F5.1)</span>.</li>
+      <li>Write a schema-versioning ADR and review ADR 0003 (LWW) against the PocketBase implementation <span class="f-meta">(F9.3)</span>.</li>
+      <li>Resolve the dead <code>command-palette/</code> subtree (resurrect or remove); run a quarterly dependency-update pass <span class="f-meta">(F10.3, F6.3)</span>.</li>
+      <li>Mop up the Low-severity polish (stale comments, magic number, typed <code>SafariNavigator</code>, CSP literal sharing) <span class="f-meta">(F1.4, F1.5, F8.4, F10.1, F11.1, F11.2)</span>.</li>
+    </ul>
+
+    <h2 id="methodology">Methodology &amp; Limitations</h2>
+    <div class="callout">
+      <h4 style="margin-top:0">What was inspected</h4>
+      <ul class="tight">
+        <li><b>This is a re-run</b> on branch <code>test/decouple-smart-views-coverage-padding</code> after the F2.1 remediation. Because that work touched only test files (no <code>lib/</code>/<code>components/</code>/<code>app/</code> production code), the empirical data (coverage, unit + E2E runs) and the test-quality dimension were <em>freshly measured</em>; the security, architecture, dependency, performance, observability, config, and documentation findings were carried forward from the prior run after verifying their underlying code is byte-identical.</li>
+        <li><b>Production source:</b> <code>lib/</code>, <code>components/</code>, <code>app/</code>, <code>scripts/</code>, <code>packages/mcp-server/src/</code> (248 source files).</li>
+        <li><b>Tests:</b> Vitest unit/integration suites and Playwright E2E specs.</li>
+        <li><b>Config &amp; CI/CD:</b> <code>vitest.config.ts</code>, <code>playwright.config.ts</code>, <code>package.json</code>, deploy workflows, and the CloudFront response-headers policy. <em>Note: this is a static-export PWA — "infrastructure as code" is limited to <code>scripts/deploy-*.sh</code> and the CloudFront JSON; there is no Terraform/CDK.</em></li>
+        <li><b>Live evidence (this run):</b> <code>bun run test -- --coverage</code> (1,849 passing tests; <code>coverage-summary.json</code>), Playwright across Chromium/Firefox/WebKit, <code>bun audit</code>, <code>bun outdated</code>, <code>madge</code>, and targeted greps. Prior-run findings were gathered by four parallel read-only analysis agents; every High-severity claim was independently re-verified against source.</li>
+      </ul>
+    </div>
+    <div class="callout warn">
+      <h4 style="margin-top:0">What was NOT inspected / caveats</h4>
+      <ul class="tight">
+        <li><b><code>next build</code> was not run</b> → bundle-size and code-splitting findings (F7.2) are inferred, not measured; flagged Low confidence.</li>
+        <li><b>Performance was assessed statically</b>, not by runtime profiling; F7.x are scaling notes, not observed regressions.</li>
+        <li><b>Cyclomatic/cognitive complexity averages were not computed</b> (no complexity tool was run). File and function <em>size</em> (Dimensions 1 &amp; 5) are used as a structural proxy; the metrics dashboard reports size counts in place of complexity averages.</li>
+        <li><b>E2E was run twice across this cycle</b> (prior run + this re-run), each with <code>retries: 0</code> locally. The two runs failed <em>different</em> <code>matrix-navigation</code> tests on <em>different</em> browsers, which is what upgraded F12.4 from "undeterminable" to "confirmed flaky". Still local-only — no CI history for duration trends.</li>
+        <li><b>No duration "trend"</b> is available — a single run is one data point and there is no historical/CI baseline; absolute durations are reported instead (per the corrected prompt).</li>
+        <li><b>Severity was normalized</b> across four independently-calibrated agents to one rubric. Nothing is graded Critical because the build and test suites pass, coverage clears all thresholds, and no data-loss, secret, or XSS was found. Two agent-assigned "Critical" labels (the duplicate test directory and coverage-padding files) were normalized to Medium and High respectively.</li>
+        <li><b>Authenticated sync &amp; live PocketBase behavior</b> were reviewed by code reading only — no credentialed live-server test was performed.</li>
+        <li><b>MCP server tests</b> are excluded from the main Vitest run (separate workspace) and were not executed for this report.</li>
+        <li><b>Design system:</b> the Inkwell spec was fetched to confirm tokens, but styling is applied via the repo-local <code>docs/css/inkwell.css</code> (already present and conformant) rather than re-downloading the stylesheet bundle.</li>
+      </ul>
+    </div>
+
+    <footer>
+      GSD Task Manager — Codebase Analysis Report · Re-run 2026-05-29 · Branch test/decouple-smart-views-coverage-padding @ 96184d6 · Styled with the Inkwell design system · This report writes no source changes (read-only audit).
+    </footer>
+  </main>
+</div>
 </body>
 </html>

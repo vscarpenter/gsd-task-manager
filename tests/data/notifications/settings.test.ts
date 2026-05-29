@@ -60,6 +60,27 @@ describe('Notification Settings', () => {
       expect(result.enabled).toBe(true);
       expect(result.defaultReminder).toBe(15);
     });
+
+    // Migrated from the former tests/data/functions-branches-boost.test.ts
+    // (finding F2.1): the only test of the corrupt-data self-heal path.
+    it('should self-heal to defaults when stored settings are corrupt', async () => {
+      mockDb.notificationSettings.get.mockResolvedValue({
+        id: 'settings',
+        enabled: 'not-a-boolean',
+        updatedAt: 12345,
+      });
+      mockDb.notificationSettings.put.mockResolvedValue(undefined);
+
+      const result = await getNotificationSettings();
+
+      expect(result.enabled).toBe(true);
+      expect(result.soundEnabled).toBe(true);
+      expect(result.id).toBe('settings');
+      // The healed defaults are re-persisted.
+      expect(mockDb.notificationSettings.put).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'settings', enabled: true })
+      );
+    });
   });
 
   describe('updateNotificationSettings', () => {
@@ -128,6 +149,23 @@ describe('Notification Settings', () => {
       const call = mockDb.notificationSettings.put.mock.calls[0][0];
       expect(call.updatedAt).toBeDefined();
       expect(call.updatedAt).not.toBe(currentSettings.updatedAt);
+    });
+
+    // Migrated from the former tests/data/functions-branches-boost.test.ts
+    // (finding F2.1): the only test of the validation-failure throw path.
+    it('should throw a descriptive error when the merged settings are invalid', async () => {
+      mockDb.notificationSettings.get.mockResolvedValue({
+        id: 'settings',
+        enabled: true,
+        defaultReminder: 15,
+        soundEnabled: true,
+        permissionAsked: false,
+        updatedAt: '2025-01-15T10:00:00Z',
+      });
+
+      await expect(
+        updateNotificationSettings({ defaultReminder: -5 })
+      ).rejects.toThrow(/Notification settings validation failed/);
     });
   });
 });

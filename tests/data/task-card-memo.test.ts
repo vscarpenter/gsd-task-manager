@@ -105,6 +105,20 @@ describe('areTaskCardPropsEqual', () => {
     expect(areTaskCardPropsEqual(prev, next)).toBe(false);
   });
 
+  // Migrated from the former tests/data/last-function-push.test.ts (finding F2.1).
+  // allTasks has the same length, but a task this card *depends on* changed its
+  // completed state — this exercises the inner comparison loop of
+  // haveDependenciesChanged that the length-only test above does not reach.
+  it('returns false when a depended-on task changes completion in allTasks', () => {
+    const task = createTask({ id: 't1', dependencies: ['t2'] });
+    const depBefore = createTask({ id: 't2', completed: false });
+    const depAfter = createTask({ id: 't2', completed: true });
+
+    const prev = createProps({ task, allTasks: [task, depBefore] });
+    const next = createProps({ task, allTasks: [task, depAfter] });
+    expect(areTaskCardPropsEqual(prev, next)).toBe(false);
+  });
+
   it('returns true when tags are in same order', () => {
     const tags = ['a', 'b', 'c'];
     const prev = createProps({ task: createTask({ tags }) });
