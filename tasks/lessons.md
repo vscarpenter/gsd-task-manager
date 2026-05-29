@@ -14,8 +14,17 @@ The reliable method, per file:
 3. Any module whose lines/func/branch drop = that file's unique coverage. Open lcov, find the test hitting the now-uncovered lines, migrate **that** test into the canonical module-named file (rewriting tautological `expect(typeof x).toBe('string')` assertions into real ones).
 4. Only delete once the module holds baseline.
 
-Safe-to-bulk-delete (verified, all duplicates): `coverage-boost`, `sync-and-utils-boost`, `db-coverage`, `functions-branches-boost` (after migrating its `useCountUp` + settings edge-case tests).
-Still deferred (have genuine unique coverage — need per-branch migration): `final-coverage-push` (command-actions, filters), `function-coverage-final` (snooze, time-tracking branches), `last-function-push` (snooze branches).
+All 7 data-layer padding files are now eliminated. Where each one's unique coverage went:
+- `coverage-boost` → smart-views pin/prefs to `smart-views.test.ts`; rest duplicates.
+- `sync-and-utils-boost` → 4 BackgroundSyncManager branch tests to `sync/background-sync.test.ts`; rest duplicates.
+- `db-coverage` → all duplicates.
+- `functions-branches-boost` → `useCountUp` to new `use-count-up.test.ts`; 2 settings edge-cases to `notifications/settings.test.ts`; rest duplicates.
+- `final-coverage-push` → command-actions `condition()` tests + filters `isEmptyFilter`/`getFilterDescription`/`readyToWork` branches (command-actions 83→100% func).
+- `function-coverage-final` + `last-function-push` → snooze + time-tracking real-execution branches to new `tasks/crud-side-effects.test.ts` (the canonical files mock `@/lib/db` + crud helpers, so `?? false`/`|| []` branches were only hit by real fake-indexeddb); `getAutoSyncConfig` to `sync/config.test.ts`; `haveDependenciesChanged` inner loop to `task-card-memo.test.ts`.
+
+Key gotcha: mock-based canonical tests (`vi.mock('@/lib/db')` + helpers) leave the real-execution defensive branches uncovered. The padding files happened to cover them via real fake-indexeddb. Migrate those as a real-DB integration test, not into the mocked canonical file.
+
+Still remaining for F2.1: 6 UI padding files in `tests/ui/` (`coverage-boost-ui`, `final-function-push`, `gap-closing`, `gap-closing-2`, `more-function-coverage`, `task-card-coverage`), then add the guardrail test banning metric-named test files.
 
 ---
 
