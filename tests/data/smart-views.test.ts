@@ -6,6 +6,11 @@ import {
   updateSmartView,
   deleteSmartView,
   clearCustomSmartViews,
+  getAppPreferences,
+  updateAppPreferences,
+  getPinnedSmartViews,
+  pinSmartView,
+  unpinSmartView,
 } from '@/lib/smart-views';
 import { getDb } from '@/lib/db';
 
@@ -25,9 +30,11 @@ vi.mock('@/lib/utils', async () => {
 
 describe('Smart Views', () => {
   beforeEach(async () => {
-    // Ensure database is initialized
-    await getDb();
+    // Start each test from a clean slate: clear both custom views and the
+    // pin/preference state so app-preferences tests are isolated.
+    const db = getDb();
     await clearCustomSmartViews();
+    await db.appPreferences.clear();
   });
 
   afterEach(async () => {
@@ -330,6 +337,84 @@ describe('Smart Views', () => {
 
     it('should work when no custom views exist', async () => {
       await expect(clearCustomSmartViews()).resolves.not.toThrow();
+    });
+  });
+
+  // Migrated from the former tests/data/coverage-boost.test.ts "smart-views"
+  // block (finding F2.1). The CRUD cases there duplicated the suites above and
+  // were dropped; these app-preferences / pinning cases were the block's unique
+  // coverage of lib/smart-views.ts and are preserved here, rewritten against the
+  // real `criteria` API with deterministic (no conditional) assertions.
+  describe('app preferences', () => {
+    it('should return default preferences when none are stored', async () => {
+      const prefs = await getAppPreferences();
+
+      expect(prefs.id).toBe('preferences');
+      expect(prefs.pinnedSmartViewIds).toEqual([]);
+      expect(prefs.maxPinnedViews).toBe(5);
+    });
+
+    it('should persist updated preferences', async () => {
+      await updateAppPreferences({ pinnedSmartViewIds: ['view-1', 'view-2'] });
+
+      const prefs = await getAppPreferences();
+      expect(prefs.pinnedSmartViewIds).toEqual(['view-1', 'view-2']);
+    });
+  });
+
+  describe('pinning', () => {
+    it('should pin a smart view', async () => {
+      await pinSmartView('view-1');
+
+      const prefs = await getAppPreferences();
+      expect(prefs.pinnedSmartViewIds).toContain('view-1');
+    });
+
+    it('should be a no-op when pinning an already-pinned view', async () => {
+      await updateAppPreferences({ pinnedSmartViewIds: ['view-1'] });
+      await pinSmartView('view-1');
+
+      const prefs = await getAppPreferences();
+      expect(prefs.pinnedSmartViewIds).toEqual(['view-1']);
+    });
+
+    it('should throw when the maximum number of pinned views is reached', async () => {
+      await updateAppPreferences({
+        pinnedSmartViewIds: ['v1', 'v2', 'v3', 'v4', 'v5'],
+        maxPinnedViews: 5,
+      });
+
+      await expect(pinSmartView('v6')).rejects.toThrow(/Maximum/);
+    });
+
+    it('should unpin a smart view', async () => {
+      await updateAppPreferences({ pinnedSmartViewIds: ['v1', 'v2'] });
+      await unpinSmartView('v1');
+
+      const prefs = await getAppPreferences();
+      expect(prefs.pinnedSmartViewIds).toEqual(['v2']);
+    });
+
+    it('should resolve pinned views in the stored order', async () => {
+      const allViews = await getSmartViews();
+      const [first, second] = allViews;
+
+      await updateAppPreferences({ pinnedSmartViewIds: [second.id, first.id] });
+
+      const pinned = await getPinnedSmartViews();
+      expect(pinned.map(v => v.id)).toEqual([second.id, first.id]);
+    });
+
+    it('should skip pinned IDs that no longer resolve to a view', async () => {
+      const allViews = await getSmartViews();
+      const real = allViews[0];
+
+      await updateAppPreferences({
+        pinnedSmartViewIds: ['deleted-or-unknown', real.id],
+      });
+
+      const pinned = await getPinnedSmartViews();
+      expect(pinned.map(v => v.id)).toEqual([real.id]);
     });
   });
 });
