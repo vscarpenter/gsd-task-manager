@@ -2,8 +2,26 @@
 // Loaded via importScripts() in sw.js (functions land on global scope).
 // Imported in tests via: require("../../public/sw-cache-logic")
 
-function classifyRequest(pathname, acceptHeader, isSameOrigin, method) {
+function classifyRequest(
+	pathname,
+	acceptHeader,
+	isSameOrigin,
+	method,
+	hasAuthorizationHeader,
+	cacheMode,
+) {
 	if (method !== "GET" || !isSameOrigin) {
+		return "passthrough";
+	}
+
+	if (
+		hasAuthorizationHeader ||
+		cacheMode === "no-store" ||
+		pathname === "/api" ||
+		pathname.startsWith("/api/") ||
+		pathname === "/_" ||
+		pathname.startsWith("/_/")
+	) {
 		return "passthrough";
 	}
 
@@ -20,7 +38,19 @@ function classifyRequest(pathname, acceptHeader, isSameOrigin, method) {
 		return "pages";
 	}
 
-	return "runtime";
+	if (isRuntimeAsset(pathname)) {
+		return "runtime";
+	}
+
+	return "passthrough";
+}
+
+function isRuntimeAsset(pathname) {
+	return (
+		pathname === "/manifest.json" ||
+		pathname === "/favicon.svg" ||
+		pathname.startsWith("/icons/")
+	);
 }
 
 function getCacheNames(cacheVersion, immutableVersion) {

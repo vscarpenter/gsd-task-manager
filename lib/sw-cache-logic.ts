@@ -15,8 +15,21 @@ export function classifyRequest(
 	acceptHeader: string | null,
 	isSameOrigin: boolean,
 	method: string,
+	hasAuthorizationHeader = false,
+	cacheMode: string | null = null,
 ): CacheClassification {
 	if (method !== "GET" || !isSameOrigin) {
+		return "passthrough";
+	}
+
+	if (
+		hasAuthorizationHeader ||
+		cacheMode === "no-store" ||
+		pathname === "/api" ||
+		pathname.startsWith("/api/") ||
+		pathname === "/_" ||
+		pathname.startsWith("/_/")
+	) {
 		return "passthrough";
 	}
 
@@ -33,7 +46,19 @@ export function classifyRequest(
 		return "pages";
 	}
 
-	return "runtime";
+	if (isRuntimeAsset(pathname)) {
+		return "runtime";
+	}
+
+	return "passthrough";
+}
+
+function isRuntimeAsset(pathname: string): boolean {
+	return (
+		pathname === "/manifest.json" ||
+		pathname === "/favicon.svg" ||
+		pathname.startsWith("/icons/")
+	);
 }
 
 export function getCacheNames(

@@ -35,6 +35,12 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   clearPocketBase: vi.fn(),
 }));
 
+const mockClearAppCaches = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+
+vi.mock('@/lib/browser-cache', () => ({
+  clearAppCaches: (...args: unknown[]) => mockClearAppCaches(...args),
+}));
+
 describe('Sync Config', () => {
   let db: ReturnType<typeof getDb>;
   const mockSyncConfig: PBSyncConfig = {
@@ -265,11 +271,20 @@ describe('Sync Config', () => {
       expect(clearPocketBase).toHaveBeenCalled();
     });
 
+    it('should clear app service worker caches', async () => {
+      mockClearAppCaches.mockResolvedValueOnce(['gsd-runtime-v9.3.7']);
+
+      await disableSync();
+
+      expect(mockClearAppCaches).toHaveBeenCalledTimes(1);
+    });
+
     it('should handle disabling when config does not exist', async () => {
       await db.syncMetadata.clear();
 
-      // Should not throw — disableSync returns early when config is null
+      // Should not throw — auth and browser caches are still cleared for privacy.
       await expect(disableSync()).resolves.not.toThrow();
+      expect(mockClearAppCaches).toHaveBeenCalledTimes(1);
     });
 
     it('should clear sync history (privacy on shared device)', async () => {

@@ -9,6 +9,7 @@ import { clearPocketBase } from "../pocketbase-client";
 import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
 import { createLogger } from "@/lib/logger";
+import { clearAppCaches } from "@/lib/browser-cache";
 
 const logger = createLogger('SYNC_CONFIG');
 
@@ -58,6 +59,21 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
   await db.syncHistory.clear();
 }
 
+async function clearBrowserCaches(): Promise<void> {
+  try {
+    const clearedCaches = await clearAppCaches();
+    if (clearedCaches.length > 0) {
+      logger.info('Cleared app caches during sync disable', {
+        clearedCacheCount: clearedCaches.length,
+      });
+    }
+  } catch (err) {
+    logger.warn('Failed to clear app caches during sync disable', {
+      errorMessage: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+}
+
 /**
  * Disable sync (logout)
  */
@@ -65,6 +81,8 @@ export async function disableSync(): Promise<void> {
   const current = await getSyncConfig();
 
   if (!current) {
+    clearPocketBase();
+    await clearBrowserCaches();
     return;
   }
 
@@ -73,6 +91,7 @@ export async function disableSync(): Promise<void> {
 
   // Clear PocketBase auth state (token + localStorage)
   clearPocketBase();
+  await clearBrowserCaches();
 
   // Reset config in IndexedDB
   await resetSyncConfigState(current);

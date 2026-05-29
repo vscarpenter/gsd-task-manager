@@ -36,7 +36,7 @@ Once ready you'll see:
 ===========================================
   GSD Task Manager is running!
   App:   https://localhost
-  Admin: https://localhost/_/
+  Admin: not exposed on the public app origin
 ===========================================
 ```
 
@@ -44,15 +44,26 @@ Once ready you'll see:
 
 PocketBase starts with no collections or admin account. Complete these steps once:
 
-1. Open **https://localhost/_/** in your browser (accept the self-signed cert warning).
-2. Create a superuser account (email + password).
-3. Set up the **tasks** collection — either:
-   - Manually via the admin UI (see the schema in `docker/README.md`), or
-   - Via the setup script from **another terminal**:
-     ```bash
-     PB_URL=https://localhost ./scripts/setup-pocketbase-collections.sh
-     ```
-4. Optionally configure OAuth providers under **Settings → Auth providers**.
+1. Create or update a PocketBase superuser inside the container:
+   ```bash
+   docker compose exec gsd pocketbase superuser upsert admin@example.com 'change-this-password' --dir=/pb_data
+   ```
+2. Set up the **tasks** collection via the setup script from the repo root:
+   ```bash
+   PB_URL=https://localhost \
+   PB_ADMIN_EMAIL=admin@example.com \
+   PB_ADMIN_PASSWORD='change-this-password' \
+   ./scripts/setup-pocketbase-collections.sh
+   ```
+3. To use the admin UI, temporarily publish PocketBase on localhost only:
+   ```yaml
+   ports:
+     - "443:443"
+     - "80:80"
+     - "127.0.0.1:8090:8090"
+   ```
+   Restart, open **http://127.0.0.1:8090/_/**, then remove the port mapping when setup is complete.
+4. Optionally configure OAuth providers under **Settings → Auth providers** in the local admin dashboard.
 
 ## Test the App
 
@@ -69,11 +80,11 @@ curl -ks https://localhost/ | head -5
 # PocketBase API responds on same origin
 curl -ks https://localhost/api/health
 
-# PocketBase admin is accessible
+# PocketBase admin is not exposed on the app origin
 curl -ks -o /dev/null -w "%{http_code}" https://localhost/_/
 ```
 
-All three should return `200` from the same `https://localhost` origin.
+The static site and API should return `200` from the same `https://localhost` origin. The admin check should return `404` unless you temporarily publish `127.0.0.1:8090:8090`.
 
 ## Useful Commands
 
@@ -174,7 +185,7 @@ Then access the app at `https://localhost:8443`.
 
 ### PocketBase admin not loading
 
-Wait a few seconds after container start — PocketBase needs time to initialize on first run. Check logs:
+The admin dashboard is not exposed through `https://localhost/_/` by default. Temporarily add `127.0.0.1:8090:8090` to `ports`, restart, and open `http://127.0.0.1:8090/_/`. If the local port still does not respond, wait a few seconds after container start and check logs:
 
 ```bash
 docker compose logs -f
