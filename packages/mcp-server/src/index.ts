@@ -5,7 +5,7 @@ import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js'
 import { loadConfig } from './server/config.js';
 import { createServer, registerHandlers } from './server/setup.js';
 import { createMcpLogger } from './utils/logger.js';
-import { initSentry, captureException, flush } from './utils/sentry.js';
+import { initSentry, reportFatal } from './utils/sentry.js';
 
 const logger = createMcpLogger('SERVER');
 
@@ -60,9 +60,9 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  captureException(error, { module: 'SERVER', phase: 'fatal' });
+  // Diagnostic first so it is never lost to a telemetry failure.
   console.error('Fatal error:', error);
-  // Flush queued events before exit (no-op unless Sentry is initialized).
-  await flush();
+  // Best-effort capture + flush; reportFatal is guaranteed not to throw.
+  await reportFatal(error);
   process.exit(1);
 });

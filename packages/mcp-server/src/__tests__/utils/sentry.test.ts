@@ -126,6 +126,38 @@ describe('MCP Sentry wrapper', () => {
     expect(mockCaptureMessage).not.toHaveBeenCalled();
   });
 
+  it('should capture with fatal context and flush in reportFatal', async () => {
+    mockGetClient.mockReturnValue({});
+    const { reportFatal } = await import('../../utils/sentry.js');
+
+    await reportFatal(new Error('fatal boom'));
+
+    expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    const [, opts] = mockCaptureException.mock.calls[0];
+    expect(opts).toEqual({
+      contexts: { gsd: { module: 'SERVER', phase: 'fatal' } },
+    });
+    expect(mockFlush).toHaveBeenCalled();
+  });
+
+  it('should not throw from reportFatal when captureException throws', async () => {
+    mockGetClient.mockReturnValue({});
+    mockCaptureException.mockImplementationOnce(() => {
+      throw new Error('sentry down');
+    });
+    const { reportFatal } = await import('../../utils/sentry.js');
+
+    await expect(reportFatal(new Error('fatal'))).resolves.toBeUndefined();
+  });
+
+  it('should not throw from reportFatal when flush rejects', async () => {
+    mockGetClient.mockReturnValue({});
+    mockFlush.mockImplementationOnce(() => Promise.reject(new Error('flush down')));
+    const { reportFatal } = await import('../../utils/sentry.js');
+
+    await expect(reportFatal(new Error('fatal'))).resolves.toBeUndefined();
+  });
+
   it('should mask Bearer tokens and token/apikey params in maskSecrets', async () => {
     const { maskSecrets } = await import('../../utils/sentry.js');
 
