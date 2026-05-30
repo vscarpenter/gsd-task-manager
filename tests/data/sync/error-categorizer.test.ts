@@ -136,6 +136,15 @@ describe('error-categorizer', () => {
       expect(sanitizeSyncError(new Error('Request timeout'))).toBe('network_error');
     });
 
+    it('returns network_error for PocketBase ClientResponseError status 0', () => {
+      // PB SDK reports network faults with `status === 0` and a generic
+      // "Something went wrong." message. Detect via the structured field.
+      const pbError = Object.assign(new Error('Something went wrong.'), {
+        status: 0,
+      });
+      expect(sanitizeSyncError(pbError)).toBe('network_error');
+    });
+
     it('returns unknown_error for unrecognized errors', () => {
       expect(sanitizeSyncError(new Error('something broke'))).toBe('unknown_error');
     });

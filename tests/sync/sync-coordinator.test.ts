@@ -272,5 +272,49 @@ describe('SyncCoordinator', () => {
       expect(status.lastResult?.status).toBe('error');
       expect(status.lastError).toBe('Network failure');
     });
+
+    it('records non-transient errors with full status / error message', async () => {
+      // A permanent error (validation) should NOT be downgraded to WARN — it
+      // takes the ERROR branch in executeSync's catch. Both branches still
+      // surface identical PBSyncResult shape.
+      mockFullSync.mockRejectedValueOnce(new Error('400 Bad Request: invalid'));
+
+      await coordinator.requestSync('user');
+
+      const status = await coordinator.getStatus();
+
+      expect(status.lastResult?.status).toBe('error');
+      expect(status.lastError).toBe('400 Bad Request: invalid');
+    });
+
+    it('records transient PB ClientResponseError status 0 (network fault)', async () => {
+      // PocketBase SDK signature: Error with `status: 0` and "Something went
+      // wrong." message. This is the case the Sentry noise fix targets.
+      const pbNetworkError = Object.assign(new Error('Something went wrong.'), {
+        status: 0,
+        isAbort: false,
+      });
+      mockFullSync.mockRejectedValueOnce(pbNetworkError);
+
+      await coordinator.requestSync('auto');
+
+      const status = await coordinator.getStatus();
+
+      expect(status.lastResult?.status).toBe('error');
+      expect(status.lastError).toBe('Something went wrong.');
+    });
+
+    it('handles non-Error thrown values from fullSync', async () => {
+      // Defensive path: the `error instanceof Error ? error : new Error(...)`
+      // guard converts non-Error throws into Error instances.
+      mockFullSync.mockRejectedValueOnce('plain string failure');
+
+      await coordinator.requestSync('auto');
+
+      const status = await coordinator.getStatus();
+
+      expect(status.lastResult?.status).toBe('error');
+      expect(status.lastError).toBe('plain string failure');
+    });
   });
 });

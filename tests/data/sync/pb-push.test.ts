@@ -231,6 +231,78 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(0);
   });
 
+  it('records a transient PB ClientResponseError as network_error without crashing the loop', async () => {
+    // Per-item catch: when the SDK's update() rejects with a status-0
+    // ClientResponseError, the loop logs WARN, records the failure with a
+    // sanitized error code, and continues. This exercises the WARN branch
+    // of the catch handler.
+    const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', payload);
+
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const pbNetworkError = Object.assign(new Error('Something went wrong.'), {
+      status: 0,
+      isAbort: false,
+    });
+    const updateSpy = vi.fn(async () => {
+      throw pbNetworkError;
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(result.pushedCount).toBe(0);
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('network_error');
+    // Item should remain queued for a future retry.
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
+  });
+
+  it('records a permanent validation error via the ERROR log branch', async () => {
+    // Per-item catch: a 422 validation error is non-transient and goes
+    // through the ERROR log branch. The error code is still sanitized so
+    // task content never leaks into the persisted lastError field.
+    const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', payload);
+
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const validationError = Object.assign(
+      new Error("422 failed to validate field 'title'"),
+      { status: 422 },
+    );
+    const updateSpy = vi.fn(async () => {
+      throw validationError;
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(result.pushedCount).toBe(0);
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('validation_failed');
+    // Crucially, the persisted lastError must NEVER echo task field names
+    // or values that the 4xx response body might have included.
+    expect(result.lastError).not.toContain('title');
+  });
+
   it('fails open and proceeds with the write when remote clientUpdatedAt is unparseable', async () => {
     // NaN contract: isRemoteNewer returns false on parse failure, so the
     // write must proceed rather than silently dropping the user's edit.

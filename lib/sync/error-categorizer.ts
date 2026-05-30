@@ -130,6 +130,14 @@ export function sanitizeSyncError(error: unknown): SyncErrorCode {
     return 'unknown_error';
   }
 
+  // PocketBase ClientResponseError surfaces network faults as `status === 0`
+  // with a generic "Something went wrong." message. Detect via the structured
+  // status field rather than the (unreliable) message text.
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === 'number' && status === 0) {
+    return 'network_error';
+  }
+
   const message = error.message.toLowerCase();
 
   // Rate limit must be checked first — 429 contains '4' and the validation
