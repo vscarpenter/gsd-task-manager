@@ -193,6 +193,23 @@ Add the MCP server to your Claude Desktop config:
 - Replace `your-auth-token-here` with your actual token from Step 1
 - `GSD_POCKETBASE_URL`: Your self-hosted PocketBase instance URL
 
+### Optional: Error Reporting (Sentry)
+
+Error reporting is **off by default** — nothing is sent anywhere. If you want
+the server's errors tracked, set `GSD_SENTRY_DSN` to **your own** Sentry DSN in
+the `env` block:
+
+```json
+"env": {
+  "GSD_POCKETBASE_URL": "https://api.vinny.io",
+  "GSD_AUTH_TOKEN": "your-auth-token-here",
+  "GSD_SENTRY_DSN": "https://your-key@your-org.ingest.sentry.io/your-project"
+}
+```
+
+Errors then go to **your** Sentry project. Auth tokens are masked before any
+event is sent. Leave `GSD_SENTRY_DSN` unset to keep the server fully offline.
+
 ### 3. Restart Claude Desktop
 
 Close and reopen Claude Desktop to load the MCP server.

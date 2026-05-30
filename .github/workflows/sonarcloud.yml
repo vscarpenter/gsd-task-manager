@@ -45,6 +45,19 @@ jobs:
         env:
           CI: true
 
+      - name: Run MCP server tests with coverage
+        # The MCP package has its own vitest suite (separate from the root app).
+        # Generate its lcov and rewrite the SF paths to be repo-root-relative so
+        # SonarCloud — which scans from the repo root — maps coverage onto
+        # packages/mcp-server source. `|| true` keeps the path rewrite running
+        # even when the package's pre-existing global threshold trips vitest.
+        continue-on-error: true
+        run: |
+          bun run --cwd packages/mcp-server test:coverage || true
+          sed -i 's|^SF:src/|SF:packages/mcp-server/src/|' packages/mcp-server/coverage/lcov.info
+        env:
+          CI: true
+
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@v6
         env:
