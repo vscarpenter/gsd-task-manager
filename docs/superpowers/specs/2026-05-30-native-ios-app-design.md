@@ -343,7 +343,7 @@ After parsing, the cleaned title has the tokens and URLs removed and whitespace 
 **Behavior.** `recurrence ∈ {none, daily, weekly, monthly}`. When a **recurring** task is marked complete, the app immediately creates a **new task instance**:
 - New `id`, `createdAt`, `updatedAt`.
 - `parentTaskId` set to the completed task's `id` (or, if the completed task was itself an instance, to *its* `parentTaskId` — keep a single-level lineage to the original).
-- `dueDate` advanced from the prior due date by: **daily → +1 day, weekly → +7 days, monthly → +1 calendar month.**
+- `dueDate` advanced from the prior due date by: **daily → +1 day, weekly → +7 days, monthly → +1 calendar month.** Use the platform's calendar month arithmetic for month-end clamping (e.g. Jan 31 + 1 month → Feb 28/29). If a recurring task has **no** `dueDate`, the spawned instance also has none (recurrence simply re-creates the task on completion).
 - `completed = false`; **all subtasks reset to incomplete**.
 - Reminder state reset (`notificationSent = false`; `lastNotificationAt`, `snoozedUntil` cleared).
 - The original (now completed) task remains as a historical record; the new instance carries the recurrence forward.
@@ -481,6 +481,15 @@ Port the web's grouped settings into native `Form`/`List` sections:
 - **Archive** — auto-archive toggle; archive-after (30 / 60 / 90 days); "Archive now."
 - **Data & Storage** — export; import; erase all (guarded).
 - **About** — version, privacy summary, links, re-show onboarding.
+
+### 6.18 Task sharing (outbound)
+
+**Behavior.** Every task card and the editor expose a **Share** action that exports a single task as human-readable text. The web app offers three variants — **native share**, **email**, and **copy to clipboard** — over a formatted rendering of the task (title, description, tags, due date, and relevant metadata). This is *outbound* sharing of one task's content; it is distinct from the inbound Share Extension (§10.3) and from JSON export (§6.16).
+
+**Native reimagining.**
+- A single **share sheet** (`ShareLink` / `UIActivityViewController`) is the primary path — it subsumes the web's separate "email" and "copy" buttons, since Mail, Messages, Copy, etc. are all activities in the sheet.
+- Share a **formatted plain-text rendering** of the task; optionally append a `gsd://task/<id>` deep link so a recipient with the app can open it (the link resolves only if they have that task locally — it is a convenience, not a transfer of data).
+- Available from the card context menu, the trailing-swipe overflow, and the editor.
 
 ---
 
