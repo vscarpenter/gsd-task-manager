@@ -86,3 +86,17 @@ export function flush(timeoutMs = 2000): Promise<boolean> {
   if (!Sentry.getClient()) return Promise.resolve(true);
   return Sentry.flush(timeoutMs);
 }
+
+/**
+ * Best-effort fatal-error report: capture + flush, guaranteed not to throw.
+ * Used by the entry point so a telemetry failure can never swallow the final
+ * diagnostic or block the process exit.
+ */
+export async function reportFatal(error: unknown): Promise<void> {
+  try {
+    captureException(error, { module: 'SERVER', phase: 'fatal' });
+    await flush();
+  } catch {
+    // Telemetry must never break the fatal error path.
+  }
+}
