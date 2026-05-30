@@ -28,6 +28,22 @@ export function captureException(
   );
 }
 
+/**
+ * Capture a string message as an error-level Sentry event.
+ * Used for logged errors that carry no Error object (e.g. validation failures).
+ */
+export function captureMessage(
+  message: string,
+  context?: Record<string, unknown>
+): void {
+  if (!Sentry.getClient()) return;
+
+  Sentry.captureMessage(message, {
+    level: "error",
+    ...(context ? { contexts: { gsd: context } } : {}),
+  });
+}
+
 export function isInitialized(): boolean {
   return !!Sentry.getClient();
 }

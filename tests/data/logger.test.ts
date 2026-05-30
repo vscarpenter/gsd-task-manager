@@ -6,6 +6,14 @@ import {
 	type LogMetadata,
 } from "@/lib/logger";
 
+const mockCaptureException = vi.hoisted(() => vi.fn());
+const mockCaptureMessage = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/sentry", () => ({
+	captureException: mockCaptureException,
+	captureMessage: mockCaptureMessage,
+}));
+
 describe("Logger module", () => {
 	let consoleDebugSpy: ReturnType<typeof vi.spyOn>;
 	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
@@ -17,6 +25,8 @@ describe("Logger module", () => {
 		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 		consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		mockCaptureException.mockClear();
+		mockCaptureMessage.mockClear();
 	});
 
 	afterEach(() => {
@@ -653,6 +663,138 @@ describe("Logger module", () => {
 					}),
 				}),
 			);
+		});
+	});
+
+	describe("Sentry forwarding", () => {
+		it("should forward logged errors to Sentry via captureException", () => {
+			const logger = createLogger("SYNC_ENGINE", "debug");
+			const error = new Error("Connection failed");
+
+			logger.error("sync failed", error, { phase: "push" });
+
+			expect(mockCaptureException).toHaveBeenCalledTimes(1);
+			expect(mockCaptureMessage).not.toHaveBeenCalled();
+			const [forwardedError, context] = mockCaptureException.mock.calls[0];
+			expect(forwardedError).toBeInstanceOf(Error);
+			expect((forwardedError as Error).message).toBe("Connection failed");
+			expect(context).toMatchObject({
+				context: "SYNC_ENGINE",
+				phase: "push",
+			});
+		});
+
+		it("should preserve the original error type name when forwarding to Sentry", () => {
+			class SyncError extends Error {
+				constructor(message: string) {
+					super(message);
+					this.name = "SyncError";
+				}
+			}
+
+			const logger = createLogger("SYNC_ENGINE", "debug");
+			logger.error("sync issue", new SyncError("timeout"));
+
+			const [forwardedError] = mockCaptureException.mock.calls[0];
+			expect((forwardedError as Error).name).toBe("SyncError");
+		});
+
+		it("should mask secrets in the error and context before forwarding to Sentry", () => {
+			const logger = createLogger("SYNC_ENGINE", "debug");
+			const error = new Error(
+				"auth failed token=abc123 with Bearer xyz789",
+			);
+
+			logger.error("login failed", error, {
+				url: "https://api.example.com?token=secret123",
+			});
+
+			const [forwardedError, context] = mockCaptureException.mock.calls[0];
+			const masked = forwardedError as Error;
+			expect(masked.message).not.toContain("abc123");
+			expect(masked.message).toContain("token=***");
+			expect(masked.message).toContain("Bearer ***");
+			expect(masked.stack ?? "").not.toContain("abc123");
+			expect((context as Record<string, unknown>).url).toBe(
+				"https://api.example.com?token=***",
+			);
+		});
+
+		it("should forward message-only errors to Sentry via captureMessage", () => {
+			const logger = createLogger("SYNC_RETRY", "debug");
+
+			logger.error("Cannot record failure: sync config not found");
+
+			expect(mockCaptureMessage).toHaveBeenCalledTimes(1);
+			expect(mockCaptureException).not.toHaveBeenCalled();
+			const [message, context] = mockCaptureMessage.mock.calls[0];
+			expect(message).toBe("Cannot record failure: sync config not found");
+			expect(context).toMatchObject({ context: "SYNC_RETRY" });
+		});
+
+		it("should mask secrets in message-only forwards to Sentry", () => {
+			const logger = createLogger("SYNC_ENGINE", "debug");
+
+			logger.error("request failed with token=abc123");
+
+			const [message] = mockCaptureMessage.mock.calls[0];
+			expect(message).toBe("request failed with token=***");
+		});
+
+		it("should drop content-bearing metadata keys before forwarding to Sentry", () => {
+			const logger = createLogger("TASK_CRUD", "debug");
+
+			logger.error("Task validation failed", undefined, {
+				input: { title: "Call oncologist about results" },
+				validationErrors: "title required",
+			});
+
+			const [, context] = mockCaptureMessage.mock.calls[0];
+			const ctx = context as Record<string, unknown>;
+			expect(ctx).not.toHaveProperty("input");
+			expect(ctx.validationErrors).toBe("title required");
+			expect(ctx.context).toBe("TASK_CRUD");
+		});
+
+		it("should keep allowlisted diagnostic keys when forwarding to Sentry", () => {
+			const logger = createLogger("SYNC_PUSH", "debug");
+
+			logger.error("Push failed", new Error("boom"), {
+				taskId: "task-1",
+				phase: "push",
+				correlationId: "corr-9",
+				record: { title: "private note" },
+			});
+
+			const [, context] = mockCaptureException.mock.calls[0];
+			const ctx = context as Record<string, unknown>;
+			expect(ctx.taskId).toBe("task-1");
+			expect(ctx.phase).toBe("push");
+			expect(ctx.correlationId).toBe("corr-9");
+			expect(ctx).not.toHaveProperty("record");
+		});
+
+		it("should not forward debug, info, or warn logs to Sentry", () => {
+			const logger = createLogger("SYNC_ENGINE", "debug");
+
+			logger.debug("d");
+			logger.info("i");
+			logger.warn("w");
+
+			expect(mockCaptureException).not.toHaveBeenCalled();
+			expect(mockCaptureMessage).not.toHaveBeenCalled();
+		});
+
+		it("should not throw when Sentry forwarding fails", () => {
+			mockCaptureException.mockImplementationOnce(() => {
+				throw new Error("Sentry down");
+			});
+			const logger = createLogger("SYNC_ENGINE", "debug");
+
+			expect(() =>
+				logger.error("boom", new Error("real error")),
+			).not.toThrow();
+			expect(consoleErrorSpy).toHaveBeenCalled();
 		});
 	});
 
