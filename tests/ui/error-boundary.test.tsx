@@ -4,6 +4,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 
 vi.mock("@/lib/sentry", () => ({
   captureException: vi.fn(),
+  captureMessage: vi.fn(),
 }));
 
 const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
@@ -88,7 +89,7 @@ describe("ErrorBoundary", () => {
     consoleError.mockRestore();
   });
 
-  it("should call captureException when error is caught", async () => {
+  it("should report the caught error to Sentry exactly once", async () => {
     const { captureException } = await import("@/lib/sentry");
     const mockCapture = vi.mocked(captureException);
     mockCapture.mockClear();
@@ -105,6 +106,8 @@ describe("ErrorBoundary", () => {
       </ErrorBoundary>
     );
 
+    // logger.error forwards to Sentry; the boundary must not double-report.
+    expect(mockCapture).toHaveBeenCalledTimes(1);
     expect(mockCapture).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({ componentStack: expect.anything() })

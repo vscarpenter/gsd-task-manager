@@ -21,6 +21,8 @@
  * ```
  */
 
+import { captureException, captureMessage } from '@/lib/sentry';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export type LogContext =
@@ -190,6 +192,71 @@ function formatLog(
 }
 
 /**
+ * Create a copy of an error with secrets masked from its message and stack.
+ * Sentry reads `message`/`stack` directly off the Error object, so masking the
+ * copy itself (not just metadata) is required to keep secrets off the wire.
+ * The caller's error is never mutated; the type name is preserved for grouping.
+ */
+function maskError(error: Error): Error {
+  const masked = new Error(maskSensitiveString(error.message));
+  masked.name = error.name;
+  masked.stack = error.stack ? maskSensitiveString(error.stack) : undefined;
+  return masked;
+}
+
+/**
+ * Diagnostic metadata keys that are safe to send to Sentry (an external SaaS).
+ * Allowlist, not denylist: anything not listed — task `input`, PocketBase
+ * `record`, etc. — is dropped so free-text user content never leaves the device.
+ */
+const SENTRY_SAFE_METADATA_KEYS: ReadonlySet<string> = new Set([
+  'correlationId', 'userId', 'taskId', 'deviceId', 'phase', 'operation',
+  'trigger', 'triggeredBy', 'validationErrors', 'componentStack', 'count',
+  'attempt', 'status', 'statusCode', 'type', 'url', 'timestamp',
+]);
+
+/**
+ * Build the Sentry context: the logger context name plus only the allowlisted,
+ * secret-masked diagnostic metadata. Content-bearing keys are stripped.
+ */
+function buildSentryContext(
+  context: LogContext,
+  metadata?: LogMetadata
+): Record<string, unknown> {
+  const allowed: LogMetadata = {};
+  for (const key of Object.keys(metadata ?? {})) {
+    if (SENTRY_SAFE_METADATA_KEYS.has(key)) {
+      allowed[key] = metadata![key];
+    }
+  }
+  return { context, ...(sanitizeMetadata(allowed) ?? {}) };
+}
+
+/**
+ * Forward an error log to Sentry. Errors with an Error object are captured as
+ * exceptions (using a masked copy); message-only errors as messages. Wrapped so
+ * a misconfigured Sentry can never turn an error-log into a thrown exception.
+ */
+function reportToSentry(
+  context: LogContext,
+  message: string,
+  error?: Error,
+  metadata?: LogMetadata
+): void {
+  try {
+    const sentryContext = buildSentryContext(context, metadata);
+
+    if (error) {
+      captureException(maskError(error), sentryContext);
+    } else {
+      captureMessage(maskSensitiveString(message), sentryContext);
+    }
+  } catch {
+    // Telemetry must never break the application's error path.
+  }
+}
+
+/**
  * Logger class with context-aware logging
  */
 export class Logger {
@@ -229,8 +296,9 @@ export class Logger {
   }
 
   /**
-   * Log error message with optional Error object
-   * Integrates with existing error-logger.ts for structured error tracking
+   * Log error message with optional Error object.
+   * Logs to the console (structured, masked) and forwards to Sentry so every
+   * `logger.error` call is captured for monitoring.
    */
   error(message: string, error?: Error, metadata?: LogMetadata): void {
     if (shouldLog('error', this.minLevel)) {
@@ -243,8 +311,7 @@ export class Logger {
 
       formatLog('error', this.context, message, errorMetadata);
 
-      // If this is a critical error that needs tracking, you can call error-logger.ts here
-      // For now, we'll just use console.error with structured format
+      reportToSentry(this.context, message, error, metadata);
     }
   }
 

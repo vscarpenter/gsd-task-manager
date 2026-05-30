@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockInit = vi.hoisted(() => vi.fn());
 const mockCaptureException = vi.hoisted(() => vi.fn());
+const mockCaptureMessage = vi.hoisted(() => vi.fn());
 const mockGetClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@sentry/browser", () => ({
@@ -10,6 +11,7 @@ vi.mock("@sentry/browser", () => ({
     mockGetClient.mockReturnValue({});
   },
   captureException: mockCaptureException,
+  captureMessage: mockCaptureMessage,
   getClient: mockGetClient,
 }));
 
@@ -77,6 +79,31 @@ describe("Sentry wrapper", () => {
     captureException(new Error("test"), { action: "test" });
 
     expect(mockCaptureException).not.toHaveBeenCalled();
+  });
+
+  it("should call Sentry.captureMessage with error level when initialized", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureMessage } = await import("@/lib/sentry");
+    initSentry();
+
+    captureMessage("something went wrong", { action: "test" });
+
+    expect(mockCaptureMessage).toHaveBeenCalledWith("something went wrong", {
+      level: "error",
+      contexts: { gsd: { action: "test" } },
+    });
+  });
+
+  it("should not call Sentry.captureMessage when not initialized", async () => {
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+    const { initSentry, captureMessage } = await import("@/lib/sentry");
+    initSentry();
+
+    captureMessage("noop", { action: "test" });
+
+    expect(mockCaptureMessage).not.toHaveBeenCalled();
   });
 
   it("should report initialization state via isInitialized()", async () => {
