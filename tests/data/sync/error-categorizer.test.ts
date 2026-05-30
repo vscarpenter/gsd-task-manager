@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   categorizeError,
   isTransientError,
+  isTransientSyncFailure,
   isAuthError,
   isPermanentError,
   sanitizeSyncError,
@@ -155,6 +156,71 @@ describe('error-categorizer', () => {
       expect(sanitizeSyncError(null)).toBe('unknown_error');
       expect(sanitizeSyncError(undefined)).toBe('unknown_error');
       expect(sanitizeSyncError({ message: 'an object' })).toBe('unknown_error');
+    });
+  });
+
+  describe('isTransientSyncFailure', () => {
+    it('returns true for PocketBase ClientResponseError with status 0 (network fault)', () => {
+      // Mirrors the PB SDK shape: Error subclass with a numeric `status` field.
+      // status === 0 means the fetch produced no HTTP response.
+      const pbError = Object.assign(new Error('Something went wrong.'), {
+        status: 0,
+        isAbort: false,
+      });
+      expect(isTransientSyncFailure(pbError)).toBe(true);
+    });
+
+    it('returns true for aborted PB SDK requests (status 0, isAbort true)', () => {
+      const pbAbort = Object.assign(new Error('The request was aborted.'), {
+        status: 0,
+        isAbort: true,
+      });
+      expect(isTransientSyncFailure(pbAbort)).toBe(true);
+    });
+
+    it('returns true for known transient text patterns', () => {
+      expect(isTransientSyncFailure(new Error('Network error'))).toBe(true);
+      expect(isTransientSyncFailure(new Error('Request timeout'))).toBe(true);
+      expect(isTransientSyncFailure(new Error('500 Internal Server Error'))).toBe(true);
+      expect(isTransientSyncFailure(new Error('502 Bad Gateway'))).toBe(true);
+      expect(isTransientSyncFailure(new Error('429 Too Many Requests'))).toBe(true);
+    });
+
+    it('returns false for auth errors (still need ERROR-level visibility)', () => {
+      expect(isTransientSyncFailure(new Error('401 Unauthorized'))).toBe(false);
+      expect(isTransientSyncFailure(new Error('403 Forbidden'))).toBe(false);
+      expect(isTransientSyncFailure(new Error('Token expired'))).toBe(false);
+    });
+
+    it('returns false for permanent errors (validation, 4xx)', () => {
+      expect(isTransientSyncFailure(new Error('400 Bad Request'))).toBe(false);
+      expect(isTransientSyncFailure(new Error('404 Not Found'))).toBe(false);
+      expect(isTransientSyncFailure(new Error('422 Unprocessable'))).toBe(false);
+      expect(isTransientSyncFailure(new Error('Validation failed'))).toBe(false);
+    });
+
+    it('returns false for unknown errors without status (preserve ERROR visibility)', () => {
+      // An unrecognized error should NOT be silently downgraded. The whole
+      // point of this helper is to suppress *known* transient noise; unknown
+      // failures must still surface as ERROR so they can be investigated.
+      expect(isTransientSyncFailure(new Error('Something exploded'))).toBe(false);
+    });
+
+    it('returns false for "Something went wrong" string without status field', () => {
+      // Match by `status === 0` only — text alone is too ambiguous to trust.
+      expect(isTransientSyncFailure(new Error('Something went wrong.'))).toBe(false);
+    });
+
+    it('returns false for non-Error inputs', () => {
+      expect(isTransientSyncFailure('string error')).toBe(false);
+      expect(isTransientSyncFailure(null)).toBe(false);
+      expect(isTransientSyncFailure(undefined)).toBe(false);
+      expect(isTransientSyncFailure({ status: 0 })).toBe(false);
+    });
+
+    it('ignores non-numeric status values', () => {
+      const weird = Object.assign(new Error('weird'), { status: '0' });
+      expect(isTransientSyncFailure(weird)).toBe(false);
     });
   });
 

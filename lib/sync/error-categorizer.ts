@@ -58,6 +58,31 @@ export function isAuthError(error: Error): boolean {
 }
 
 /**
+ * Should this failure be treated as transient operational noise?
+ *
+ * Returns true for errors the retry/backoff machinery already handles
+ * (network blips, 5xx, 429, PocketBase SDK `status === 0`). Callers use
+ * this to choose WARN over ERROR log severity so error-monitoring tools
+ * are not flooded with handled events from offline-leg syncs and brief
+ * backend hiccups.
+ *
+ * Returns false for unknown errors so genuinely new failure modes still
+ * surface as ERROR for investigation.
+ */
+export function isTransientSyncFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  // PocketBase ClientResponseError exposes a numeric `status` field; a 0
+  // means the fetch never produced an HTTP response (network fault or
+  // aborted request). This is the canonical "ClientResponseError 0:
+  // Something went wrong." signature and is purely operational noise.
+  const status = (error as { status?: unknown }).status;
+  if (typeof status === 'number' && status === 0) return true;
+
+  return isTransientError(error);
+}
+
+/**
  * Check if error is permanent (400/404/validation)
  */
 export function isPermanentError(error: Error): boolean {

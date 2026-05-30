@@ -11,6 +11,7 @@ import { createLogger } from '@/lib/logger';
 import { getRetryManager } from './retry-manager';
 import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/sync-history';
 import { notifySyncSuccess, notifySyncError } from './notifications';
+import { isTransientSyncFailure } from './error-categorizer';
 import { getDeviceId } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
@@ -174,6 +175,10 @@ async function reportSyncError(
   await retryManager.recordFailure(errorObj);
   await recordSyncError(errorObj.message, deviceId, triggeredBy, Date.now() - startTime);
   notifySyncError(errorObj.message, false);
-  logger.error('Full sync failed', errorObj, { triggeredBy });
+  if (isTransientSyncFailure(errorObj)) {
+    logger.warn('Full sync failed (transient)', { triggeredBy, errorMessage: errorObj.message });
+  } else {
+    logger.error('Full sync failed', errorObj, { triggeredBy });
+  }
   return { status: 'error', error: errorObj.message };
 }
