@@ -5,6 +5,7 @@ import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js'
 import { loadConfig } from './server/config.js';
 import { createServer, registerHandlers } from './server/setup.js';
 import { createMcpLogger } from './utils/logger.js';
+import { initSentry, captureException, flush } from './utils/sentry.js';
 
 const logger = createMcpLogger('SERVER');
 
@@ -15,6 +16,9 @@ const logger = createMcpLogger('SERVER');
  * Handles CLI argument parsing and server initialization.
  */
 async function main() {
+  // Opt-in error reporting — no-op unless the user sets GSD_SENTRY_DSN.
+  initSentry();
+
   // Parse CLI arguments
   const options = parseCLIArgs(process.argv);
 
@@ -55,7 +59,10 @@ async function main() {
   logger.info('GSD MCP Server running on stdio');
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
+  captureException(error, { module: 'SERVER', phase: 'fatal' });
   console.error('Fatal error:', error);
+  // Flush queued events before exit (no-op unless Sentry is initialized).
+  await flush();
   process.exit(1);
 });
