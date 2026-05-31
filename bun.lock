@@ -63,7 +63,7 @@
     },
     "packages/mcp-server": {
       "name": "gsd-mcp-server",
-      "version": "1.1.5",
+      "version": "1.2.1",
       "bin": {
         "gsd-mcp-server": "dist/index.js",
       },
