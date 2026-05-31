@@ -110,7 +110,7 @@ function getSubtitle(
 interface DialogBodyProps {
   state: ReturnType<typeof useSyncAuthDialog>;
   oauthCallbacks: {
-    onStart: () => void;
+    onStart: (provider: "google" | "github") => void;
     onSuccess: ReturnType<typeof useSyncAuthDialog>["handleOAuthSuccess"];
     onError: (err: Error) => void;
   };

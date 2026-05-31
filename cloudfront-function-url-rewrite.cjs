@@ -35,6 +35,18 @@ function handler(event) {
     return request;
   }
 
+  // API and PocketBase admin paths are not static-export routes. Leave them
+  // untouched so CloudFront origin behaviors can route them correctly instead
+  // of turning callback paths into `/index.html` lookups.
+  if (
+    uri === '/api' ||
+    uri.startsWith('/api/') ||
+    uri === '/_' ||
+    uri.startsWith('/_/')
+  ) {
+    return request;
+  }
+
   // 1. Resolve trailing-slash and extensionless paths to their `index.html`.
   if (uri.endsWith('/')) {
     request.uri = uri + 'index.html';

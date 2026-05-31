@@ -42,5 +42,6 @@ paths:
 
 If users hit `redirect_uri_mismatch` after a deploy:
 1. Check the `redirect_uri` registered in the provider (Google Cloud Console / GitHub OAuth App).
-2. Confirm it matches the exact origin used in production — including trailing slash and `www` vs apex.
-3. PB redirects back to `<your-app>/api/auth/oauth-callback` — verify that route exists in the static export.
+2. Confirm it matches the exact PocketBase origin used for auth — including trailing slash and `www` vs apex.
+3. The PocketBase JS SDK popup flow redirects to `<pocketbase-origin>/api/oauth2-redirect`. The static app does not own an `/api/auth/oauth-callback` route.
+4. Production CloudFront rewrites must pass `/api/*` and `/_/*` through unchanged so OAuth callback/admin paths are never turned into static `index.html` lookups.

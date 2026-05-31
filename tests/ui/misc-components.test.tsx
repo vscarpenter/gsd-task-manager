@@ -123,8 +123,10 @@ describe('PwaRegister', () => {
     render(<PwaRegister />);
     // Allow the async register() to run
     await vi.waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith('/sw.js', { scope: '/' });
+      expect(mockRegister).toHaveBeenCalledWith('/sw.js', {
+        scope: '/',
+        updateViaCache: 'none',
+      });
     });
   });
 });
-

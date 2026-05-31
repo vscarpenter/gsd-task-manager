@@ -18,6 +18,7 @@ const {
   mockToastError,
   mockIsAuthenticated,
   mockRefreshAuth,
+  mockClearPocketBase,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockGetSyncQueue: vi.fn(),
@@ -27,6 +28,7 @@ const {
   mockToastError: vi.fn(),
   mockIsAuthenticated: vi.fn().mockReturnValue(true),
   mockRefreshAuth: vi.fn().mockResolvedValue(true),
+  mockClearPocketBase: vi.fn(),
 }));
 
 // Mock modules
@@ -37,10 +39,12 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/sync/pb-auth', () => ({
   logout: vi.fn(),
   refreshAuth: (...args: unknown[]) => mockRefreshAuth(...args),
+  getOAuthErrorMessage: (error: Error) => error.message,
 }));
 
 vi.mock('@/lib/sync/pocketbase-client', () => ({
   isAuthenticated: () => mockIsAuthenticated(),
+  clearPocketBase: () => mockClearPocketBase(),
 }));
 
 vi.mock('@/lib/sync/config', () => ({
@@ -60,7 +64,7 @@ vi.mock('sonner', () => ({
 }));
 
 // Capture OAuthButtons callbacks so tests can invoke them directly
-let capturedOnSuccess: ((authState: AuthState) => void) | undefined;
+let capturedOnSuccess: ((authState: AuthState) => void | Promise<void>) | undefined;
 let capturedOnError: ((error: Error) => void) | undefined;
 
 vi.mock('@/components/sync/oauth-buttons', () => ({
@@ -70,7 +74,7 @@ vi.mock('@/components/sync/oauth-buttons', () => ({
     onError,
   }: {
     onStart?: (provider: 'google' | 'github') => void;
-    onSuccess?: (authState: AuthState) => void;
+    onSuccess?: (authState: AuthState) => void | Promise<void>;
     onError?: (error: Error) => void;
   }) => {
     capturedOnSuccess = onSuccess;
@@ -313,6 +317,26 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         expect(mockQueue.populateFromExistingTasks).toHaveBeenCalled();
       });
+    });
+
+    it('should clear PocketBase auth and report an error when sync setup fails after OAuth', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnSuccess).toBeDefined();
+      });
+
+      mockDb.syncMetadata.put.mockRejectedValueOnce(new Error('IndexedDB unavailable'));
+
+      const authState: AuthState = {
+        isLoggedIn: true,
+        userId: 'user123',
+        email: 'test@example.com',
+        provider: 'google',
+      };
+
+      await expect(capturedOnSuccess!(authState)).rejects.toThrow(/sync setup failed/i);
+      expect(mockClearPocketBase).toHaveBeenCalled();
     });
 
     it('should display error on OAuth failure', async () => {

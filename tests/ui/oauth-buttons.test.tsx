@@ -10,15 +10,26 @@ import userEvent from '@testing-library/user-event';
 import type { AuthState } from '@/lib/sync/pb-auth';
 
 // Hoisted mocks
-const { mockLoginWithGoogle, mockLoginWithGithub } = vi.hoisted(() => ({
+const {
+  mockLoginWithGoogle,
+  mockLoginWithGithub,
+  mockOpenOAuthPopup,
+  mockCancelOAuthLogin,
+  mockPopupWindow,
+} = vi.hoisted(() => ({
   mockLoginWithGoogle: vi.fn(),
   mockLoginWithGithub: vi.fn(),
+  mockOpenOAuthPopup: vi.fn(),
+  mockCancelOAuthLogin: vi.fn(),
+  mockPopupWindow: { closed: false },
 }));
 
 // Mock PocketBase auth module
 vi.mock('@/lib/sync/pb-auth', () => ({
   loginWithGoogle: (...args: unknown[]) => mockLoginWithGoogle(...args),
   loginWithGithub: (...args: unknown[]) => mockLoginWithGithub(...args),
+  openOAuthPopup: (...args: unknown[]) => mockOpenOAuthPopup(...args),
+  cancelOAuthLogin: (...args: unknown[]) => mockCancelOAuthLogin(...args),
 }));
 
 // Import component after mocks
@@ -42,6 +53,7 @@ describe('OAuthButtons', () => {
     // Default: login functions resolve successfully
     mockLoginWithGoogle.mockResolvedValue(createAuthState({ provider: 'google' }));
     mockLoginWithGithub.mockResolvedValue(createAuthState({ provider: 'github' }));
+    mockOpenOAuthPopup.mockReturnValue(mockPopupWindow);
   });
 
   describe('Button Rendering', () => {
@@ -106,6 +118,23 @@ describe('OAuthButtons', () => {
       expect(mockLoginWithGoogle).toHaveBeenCalledOnce();
     });
 
+    it('should pre-open the OAuth popup before starting Google login', async () => {
+      const user = userEvent.setup();
+
+      render(<OAuthButtons />);
+
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
+      await user.click(googleButton);
+
+      expect(mockOpenOAuthPopup).toHaveBeenCalledWith('google');
+      expect(mockLoginWithGoogle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          popupWindow: mockPopupWindow,
+          requestKey: expect.stringMatching(/^oauth_google_/),
+        })
+      );
+    });
+
     it('should call loginWithGithub when GitHub button is clicked', async () => {
       const user = userEvent.setup();
 
@@ -165,6 +194,21 @@ describe('OAuthButtons', () => {
       });
     });
 
+    it('should cancel a pending OAuth request when unmounted', async () => {
+      const user = userEvent.setup();
+      mockLoginWithGoogle.mockReturnValue(new Promise(() => {}));
+
+      const { unmount } = render(<OAuthButtons />);
+
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
+      await user.click(googleButton);
+      const requestKey = mockLoginWithGoogle.mock.calls[0][0].requestKey;
+
+      unmount();
+
+      expect(mockCancelOAuthLogin).toHaveBeenCalledWith(requestKey);
+    });
+
     it('should re-enable buttons after successful OAuth', async () => {
       const user = userEvent.setup();
       mockLoginWithGoogle.mockResolvedValue(createAuthState({ provider: 'google' }));
@@ -214,6 +258,23 @@ describe('OAuthButtons', () => {
 
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledWith(expectedAuth);
+      });
+    });
+
+    it('should route async onSuccess failures to onError', async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn().mockRejectedValue(new Error('Sync setup failed'));
+      const onError = vi.fn();
+      mockLoginWithGoogle.mockResolvedValue(createAuthState({ provider: 'google' }));
+
+      render(<OAuthButtons onSuccess={onSuccess} onError={onError} />);
+
+      const googleButton = screen.getByRole('button', { name: /continue with google/i });
+      await user.click(googleButton);
+
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalledWith(expect.any(Error));
+        expect(onError.mock.calls[0][0].message).toBe('Sync setup failed');
       });
     });
 
