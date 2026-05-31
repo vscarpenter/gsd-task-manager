@@ -247,5 +247,38 @@ describe('pb-sync-engine', () => {
       expect(result.error).toContain('Connection refused');
       expect(mockRetryManager.recordFailure).toHaveBeenCalled();
     });
+
+    it('reports non-transient errors via the ERROR log branch', async () => {
+      // A permanent (validation) error should NOT be treated as transient
+      // noise — it takes the ERROR-level branch in reportSyncError. All
+      // side-effects (recordFailure, recordSyncError) still fire identically.
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      vi.mocked(pushLocalChanges).mockRejectedValueOnce(
+        new Error('422 Unprocessable Entity'),
+      );
+
+      const result = await fullSync();
+
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('422 Unprocessable Entity');
+      expect(mockRetryManager.recordFailure).toHaveBeenCalled();
+    });
+
+    it('reports PB ClientResponseError status 0 via the WARN log branch', async () => {
+      // PB SDK network fault — Error with `status: 0`. The reportSyncError
+      // function downgrades the log level to WARN but the returned result
+      // shape and side-effects remain unchanged.
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const pbNetworkError = Object.assign(new Error('Something went wrong.'), {
+        status: 0,
+      });
+      vi.mocked(pushLocalChanges).mockRejectedValueOnce(pbNetworkError);
+
+      const result = await fullSync();
+
+      expect(result.status).toBe('error');
+      expect(result.error).toBe('Something went wrong.');
+      expect(mockRetryManager.recordFailure).toHaveBeenCalled();
+    });
   });
 });

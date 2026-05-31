@@ -10,7 +10,7 @@ import { getSyncQueue } from './queue';
 import { taskRecordToPocketBase } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
-import { sanitizeSyncError } from './error-categorizer';
+import { sanitizeSyncError, isTransientSyncFailure } from './error-categorizer';
 import type { SyncQueueItem, RemoteTaskIndexEntry } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -211,11 +211,20 @@ export async function pushLocalChanges(): Promise<PushResult> {
       // which (for 4xx responses) can echo task content back from PocketBase.
       const errorCode = sanitizeSyncError(error);
       lastError = errorCode;
-      logger.error('Push failed for item', error instanceof Error ? error : new Error(String(error)), {
-        taskId: item.taskId,
-        operation: item.operation,
-        errorCode,
-      });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      if (isTransientSyncFailure(errorObj)) {
+        logger.warn('Push failed for item (transient)', {
+          taskId: item.taskId,
+          operation: item.operation,
+          errorCode,
+        });
+      } else {
+        logger.error('Push failed for item', errorObj, {
+          taskId: item.taskId,
+          operation: item.operation,
+          errorCode,
+        });
+      }
       await queue.recordAttemptFailure(item.id, errorCode);
 
       // 429 means the server is under load. Abort the push loop early so

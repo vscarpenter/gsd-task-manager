@@ -8,6 +8,7 @@
 
 import { fullSync } from './pb-sync-engine';
 import { getRetryManager } from './retry-manager';
+import { isTransientSyncFailure } from './error-categorizer';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -130,10 +131,15 @@ export class SyncCoordinator {
       this.lastResult = result;
       logger.debug('Sync completed', { status: result.status });
     } catch (error) {
-      logger.error('Sync failed', error instanceof Error ? error : new Error(String(error)));
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      if (isTransientSyncFailure(errorObj)) {
+        logger.warn('Sync failed (transient)', { errorMessage: errorObj.message });
+      } else {
+        logger.error('Sync failed', errorObj);
+      }
       this.lastResult = {
         status: 'error',
-        error: error instanceof Error ? error.message : 'Sync failed',
+        error: errorObj.message,
       };
     } finally {
       this.isRunning = false;
