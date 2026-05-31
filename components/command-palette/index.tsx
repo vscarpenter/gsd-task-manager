@@ -3,6 +3,7 @@
 import { Command } from "cmdk";
 import { useCommandPalette } from "@/lib/use-command-palette";
 import { buildCommandActions, type CommandActionHandlers } from "@/lib/command-actions";
+import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { getSmartViews } from "@/lib/smart-views";
 import { useTasks } from "@/lib/use-tasks";
 import { useState, useEffect, useMemo } from "react";
@@ -17,10 +18,10 @@ interface CommandPaletteProps {
     selectionMode: boolean;
     hasSelection: boolean;
   };
+  onSelectTask?: (taskId: string) => void;
   /**
    * When false, the palette will not load or render built-in smart-view
-   * actions. v9 (ADR 0011) removed the smart-view UI; the shell passes
-   * `showSmartViews={false}` to keep the palette consistent with that surface.
+   * actions. The shell wires this to the user's feature preference.
    */
   showSmartViews?: boolean;
 }
@@ -31,7 +32,12 @@ interface CommandPaletteProps {
  * Opens with ⌘K / Ctrl+K
  * Provides quick access to actions, navigation, and task search
  */
-export function CommandPalette({ handlers, conditions, showSmartViews = true }: CommandPaletteProps) {
+export function CommandPalette({
+  handlers,
+  conditions,
+  onSelectTask,
+  showSmartViews = true,
+}: CommandPaletteProps) {
   const { all: tasks } = useTasks();
   const [smartViews, setSmartViews] = useState<SmartView[]>([]);
 
@@ -59,7 +65,7 @@ export function CommandPalette({ handlers, conditions, showSmartViews = true }: 
     matchingTasks,
     executeAction,
     selectTask,
-  } = useCommandPalette({ actions, tasks });
+  } = useCommandPalette({ actions, tasks, onSelectTask });
 
   // Group actions by section
   const actionsBySection = useMemo(
@@ -79,23 +85,17 @@ export function CommandPalette({ handlers, conditions, showSmartViews = true }: 
 
   return (
     <>
-      {/* Visually hidden but accessible title and description */}
-      <div className="sr-only">
-        <h2 id="command-palette-title">Command Palette</h2>
-        <p id="command-palette-description">
-          Search for tasks, actions, and settings. Use arrow keys to navigate and Enter to select.
-        </p>
-      </div>
-
       <Command.Dialog
         open={open}
         onOpenChange={setOpen}
         label="Command Palette"
         className="fixed left-[50%] top-[20%] z-50 w-full max-w-[640px] translate-x-[-50%] overflow-hidden rounded-xl border border-border bg-card shadow-2xl sm:top-[20%] md:w-[640px]"
         contentClassName="max-h-[60vh] overflow-y-auto"
-        aria-labelledby="command-palette-title"
-        aria-describedby="command-palette-description"
       >
+        <DialogTitle className="sr-only">Command Palette</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search for tasks, actions, and settings. Use arrow keys to navigate and Enter to select.
+        </DialogDescription>
         <SearchInput search={search} onSearchChange={setSearch} />
 
         <Command.List className="max-h-[400px] overflow-y-auto p-2">

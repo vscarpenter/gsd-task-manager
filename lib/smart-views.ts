@@ -5,6 +5,19 @@ import type { AppPreferences } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { SMART_VIEWS_CONFIG } from "@/lib/constants";
 
+export const APP_PREFERENCES_EVENT = "gsd:app-preferences";
+
+export interface AppPreferencesEventDetail {
+  preferences: AppPreferences;
+}
+
+const DEFAULT_APP_PREFERENCES: AppPreferences = {
+  id: "preferences",
+  pinnedSmartViewIds: [],
+  maxPinnedViews: SMART_VIEWS_CONFIG.MAX_PINNED,
+  smartViewsEnabled: false,
+};
+
 /**
  * Get all Smart Views (built-in + custom)
  */
@@ -119,14 +132,14 @@ export async function getAppPreferences(): Promise<AppPreferences> {
 
   // Return defaults if not found (for initial load before migration runs)
   if (!prefs) {
-    return {
-      id: "preferences" as const,
-      pinnedSmartViewIds: [],
-      maxPinnedViews: SMART_VIEWS_CONFIG.MAX_PINNED
-    };
+    return DEFAULT_APP_PREFERENCES;
   }
 
-  return prefs;
+  return {
+    ...DEFAULT_APP_PREFERENCES,
+    ...prefs,
+    id: "preferences",
+  };
 }
 
 /**
@@ -191,4 +204,3 @@ export async function unpinSmartView(viewId: string): Promise<void> {
     pinnedSmartViewIds: prefs.pinnedSmartViewIds.filter(id => id !== viewId)
   });
 }
-

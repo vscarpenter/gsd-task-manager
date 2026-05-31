@@ -352,13 +352,18 @@ describe('Smart Views', () => {
       expect(prefs.id).toBe('preferences');
       expect(prefs.pinnedSmartViewIds).toEqual([]);
       expect(prefs.maxPinnedViews).toBe(5);
+      expect(prefs.smartViewsEnabled).toBe(false);
     });
 
     it('should persist updated preferences', async () => {
-      await updateAppPreferences({ pinnedSmartViewIds: ['view-1', 'view-2'] });
+      await updateAppPreferences({
+        pinnedSmartViewIds: ['view-1', 'view-2'],
+        smartViewsEnabled: true,
+      });
 
       const prefs = await getAppPreferences();
       expect(prefs.pinnedSmartViewIds).toEqual(['view-1', 'view-2']);
+      expect(prefs.smartViewsEnabled).toBe(true);
     });
   });
 

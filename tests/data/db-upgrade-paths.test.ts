@@ -248,6 +248,7 @@ describe('db upgrade callbacks', () => {
     expect(prefs).toBeDefined();
     expect(prefs!.pinnedSmartViewIds).toEqual([]);
     expect(prefs!.maxPinnedViews).toBe(5);
+    expect(prefs!.smartViewsEnabled).toBe(false);
   });
 
   it('v12 upgrade: should initialise time-tracking fields and reset corrupt data', async () => {

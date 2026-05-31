@@ -226,7 +226,8 @@ class GsdDatabase extends Dexie {
         return trans.table("appPreferences").add({
           id: "preferences",
           pinnedSmartViewIds: [],
-          maxPinnedViews: 5
+          maxPinnedViews: 5,
+          smartViewsEnabled: false
         });
       });
 

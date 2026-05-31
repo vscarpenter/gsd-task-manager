@@ -111,6 +111,7 @@ function hasUIStateChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): 
   return (
     prevProps.selectionMode !== nextProps.selectionMode ||
     prevProps.isSelected !== nextProps.isSelected ||
+    prevProps.isHighlighted !== nextProps.isHighlighted ||
     prevProps.allTasks.length !== nextProps.allTasks.length
   );
 }

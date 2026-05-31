@@ -99,6 +99,12 @@ describe('areTaskCardPropsEqual', () => {
     expect(areTaskCardPropsEqual(prev, next)).toBe(false);
   });
 
+  it('returns false when highlight state changes', () => {
+    const prev = createProps({ isHighlighted: false });
+    const next = createProps({ isHighlighted: true });
+    expect(areTaskCardPropsEqual(prev, next)).toBe(false);
+  });
+
   it('returns false when allTasks length changes', () => {
     const prev = createProps({ allTasks: [] });
     const next = createProps({ allTasks: [createTask()] });

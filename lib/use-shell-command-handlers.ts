@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import type { CommandActionHandlers } from "@/lib/command-actions";
+import type { FilterCriteria } from "@/lib/filters";
 
 /**
  * Window event dispatched by the command palette when the user picks
@@ -11,6 +12,8 @@ import type { CommandActionHandlers } from "@/lib/command-actions";
  * Other routes fall back to a URL-driven flow (`/?action=new-task`).
  */
 export const NEW_TASK_EVENT = "gsd:new-task";
+export const HIGHLIGHT_TASK_EVENT = "gsd:highlight-task";
+export const APPLY_SMART_VIEW_EVENT = "gsd:apply-smart-view";
 
 /**
  * Window event dispatched by the command palette when the user picks
@@ -18,8 +21,14 @@ export const NEW_TASK_EVENT = "gsd:new-task";
  */
 export const OPEN_HELP_EVENT = "gsd:open-help";
 
+export interface ApplySmartViewEventDetail {
+  viewId: string;
+  criteria?: FilterCriteria;
+}
+
 interface ShellCommandResult {
   handlers: CommandActionHandlers;
+  onSelectTask: (taskId: string) => void;
   conditions: {
     isSyncEnabled: boolean;
     selectionMode: boolean;
@@ -40,6 +49,17 @@ export function useShellCommandHandlers(): ShellCommandResult {
   const { theme, resolvedTheme, setTheme } = useTheme();
 
   return useMemo(() => {
+    const onSelectTask = (taskId: string) => {
+      if (typeof window === "undefined") return;
+      if (window.location.pathname === "/") {
+        window.dispatchEvent(
+          new CustomEvent(HIGHLIGHT_TASK_EVENT, { detail: { taskId } })
+        );
+      } else {
+        router.push(`/?highlight=${encodeURIComponent(taskId)}`);
+      }
+    };
+
     const handlers: CommandActionHandlers = {
       onNewTask: () => {
         if (typeof window === "undefined") return;
@@ -67,14 +87,23 @@ export function useShellCommandHandlers(): ShellCommandResult {
       onViewDashboard: () => router.push("/dashboard"),
       onViewMatrix: () => router.push("/"),
       onViewArchive: () => router.push("/archive"),
-      onApplySmartView: () => {
-        // Smart-view actions are not surfaced in v9 (see ADR 0011); this
-        // handler exists only to satisfy the CommandActionHandlers contract.
+      onApplySmartView: (criteria, viewId) => {
+        if (typeof window === "undefined") return;
+        if (window.location.pathname === "/") {
+          window.dispatchEvent(
+            new CustomEvent<ApplySmartViewEventDetail>(APPLY_SMART_VIEW_EVENT, {
+              detail: { viewId, criteria },
+            })
+          );
+        } else {
+          router.push(`/?smartView=${encodeURIComponent(viewId)}`);
+        }
       },
     };
 
     return {
       handlers,
+      onSelectTask,
       conditions: {
         isSyncEnabled: false,
         selectionMode: false,

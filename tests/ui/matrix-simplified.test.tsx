@@ -2,8 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { TaskRecord } from "@/lib/types";
+import type { SmartView } from "@/lib/filters";
 
 const tasksFixture = vi.hoisted(() => ({ current: [] as TaskRecord[] }));
+const smartViewsFixture = vi.hoisted(() => ({
+  enabled: false,
+  current: [] as SmartView[],
+}));
 
 vi.mock("@/lib/use-tasks", () => ({
   useTasks: () => ({
@@ -44,6 +49,22 @@ vi.mock("@/lib/tasks", () => ({
   toggleCompleted: vi.fn().mockResolvedValue(undefined),
   updateTask: vi.fn().mockResolvedValue(undefined),
   deleteTask: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/smart-views", () => ({
+  APP_PREFERENCES_EVENT: "gsd:app-preferences",
+  getAppPreferences: vi.fn().mockImplementation(() =>
+    Promise.resolve({
+      id: "preferences",
+      pinnedSmartViewIds: [],
+      maxPinnedViews: 5,
+      smartViewsEnabled: smartViewsFixture.enabled,
+    })
+  ),
+  getSmartViews: vi.fn().mockImplementation(() => Promise.resolve(smartViewsFixture.current)),
+  getSmartView: vi.fn().mockImplementation((id: string) =>
+    Promise.resolve(smartViewsFixture.current.find((view) => view.id === id))
+  ),
 }));
 
 vi.mock("@/lib/confetti", () => ({
@@ -105,7 +126,13 @@ import { celebrateCompletion } from "@/lib/confetti";
 describe("<MatrixSimplified>", () => {
   beforeEach(() => {
     tasksFixture.current = [];
+    smartViewsFixture.enabled = false;
+    smartViewsFixture.current = [];
     localStorage.removeItem("gsd:show-completed");
+    window.history.replaceState({}, "", "/");
+    if (!Element.prototype.scrollIntoView) {
+      Element.prototype.scrollIntoView = vi.fn();
+    }
     vi.mocked(celebrateCompletion).mockClear();
     vi.mocked(toggleCompleted).mockClear();
   });
@@ -164,6 +191,63 @@ describe("<MatrixSimplified>", () => {
     expect(screen.getByRole("region", { name: /schedule quadrant/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /delegate quadrant/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /eliminate quadrant/i })).toBeInTheDocument();
+  });
+
+  it("opens the create drawer when the shell new-task event fires", async () => {
+    render(<MatrixSimplified />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent("gsd:new-task"));
+    });
+
+    expect(await screen.findByRole("heading", { name: /new task/i })).toBeInTheDocument();
+  });
+
+  it("highlights a task when the shell highlight event fires", async () => {
+    tasksFixture.current = [makeTask({ id: "target", title: "Target task" })];
+    render(<MatrixSimplified />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("gsd:highlight-task", { detail: { taskId: "target" } })
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("task-card")).toHaveClass("ring-4")
+    );
+  });
+
+  it("shows and applies smart views when the feature preference is enabled", async () => {
+    const user = userEvent.setup();
+    smartViewsFixture.enabled = true;
+    smartViewsFixture.current = [
+      {
+        id: "built-in-completed",
+        name: "All Completed",
+        icon: "✅",
+        criteria: { status: "completed" },
+        isBuiltIn: true,
+        createdAt: "2025-01-01T00:00:00.000Z",
+        updatedAt: "2025-01-01T00:00:00.000Z",
+      },
+    ];
+    tasksFixture.current = [
+      makeTask({ id: "active", title: "Active alpha", completed: false }),
+      makeTask({ id: "done", title: "Done bravo", completed: true }),
+    ];
+
+    render(<MatrixSimplified />);
+
+    expect(screen.getByText("Active alpha")).toBeInTheDocument();
+    expect(screen.queryByText("Done bravo")).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: /all completed/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Active alpha")).not.toBeInTheDocument();
+      expect(screen.getByText("Done bravo")).toBeInTheDocument();
+    });
   });
 
   describe("show-completed preference", () => {

@@ -98,6 +98,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
           <Section label="Keyboard shortcuts">
             <ShortcutRow keys={["n"]} action="Jump to the capture bar" />
+            <ShortcutRow keys={["⌘", "K"]} action="Open the command palette" />
             <ShortcutRow keys={["Shift", "N"]} action="Open the full composer" />
             <ShortcutRow keys={["/"]} action="Focus the search field" />
             <ShortcutRow keys={["Tab"]} action="Cycle quadrant override (in the capture bar)" />

@@ -22,7 +22,7 @@ vi.mock('@/lib/constants/ui', () => ({
   },
 }));
 
-import { useCommandPalette } from '@/lib/use-command-palette';
+import { OPEN_COMMAND_PALETTE_EVENT, useCommandPalette } from '@/lib/use-command-palette';
 import type { CommandAction } from '@/lib/command-actions';
 import type { TaskRecord } from '@/lib/types';
 
@@ -245,6 +245,31 @@ describe('useCommandPalette', () => {
     dispatchSpy.mockRestore();
   });
 
+  it('should use onSelectTask when provided', () => {
+    const onSelectTask = vi.fn();
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks, onSelectTask })
+    );
+
+    act(() => {
+      result.current.setOpen(true);
+    });
+
+    act(() => {
+      result.current.selectTask('task-42');
+    });
+
+    expect(onSelectTask).toHaveBeenCalledWith('task-42');
+    expect(dispatchSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'highlightTask' })
+    );
+    expect(result.current.open).toBe(false);
+
+    dispatchSpy.mockRestore();
+  });
+
   it('should open palette directly with setOpen(true)', () => {
     const { result } = renderHook(() =>
       useCommandPalette({ actions, tasks })
@@ -254,6 +279,18 @@ describe('useCommandPalette', () => {
 
     act(() => {
       result.current.setOpen(true);
+    });
+
+    expect(result.current.open).toBe(true);
+  });
+
+  it('should open palette when the shell open event is dispatched', () => {
+    const { result } = renderHook(() =>
+      useCommandPalette({ actions, tasks })
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
     });
 
     expect(result.current.open).toBe(true);

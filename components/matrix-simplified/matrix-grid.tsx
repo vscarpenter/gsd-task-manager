@@ -13,6 +13,8 @@ interface MatrixGridProps {
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
+  highlightedTaskId?: string | null;
+  onTaskRef?: (taskId: string, element: HTMLElement | null) => void;
 }
 
 export function MatrixGrid({
@@ -23,6 +25,8 @@ export function MatrixGrid({
   onDelete,
   onShare,
   onAddInQuadrant,
+  highlightedTaskId,
+  onTaskRef,
 }: MatrixGridProps) {
   const grouped = useMemo(() => {
     const out: Record<RedesignQuadrantKey, TaskRecord[]> = { q1: [], q2: [], q3: [], q4: [] };
@@ -58,6 +62,8 @@ export function MatrixGrid({
           onDelete={onDelete}
           onShare={onShare}
           onAddInQuadrant={onAddInQuadrant}
+          highlightedTaskId={highlightedTaskId}
+          onTaskRef={onTaskRef}
         />
       ))}
     </div>
