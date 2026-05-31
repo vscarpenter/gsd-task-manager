@@ -2,6 +2,41 @@
 
 ---
 
+## In progress — 2026-05-31: Smart-view strip overflow → "More" menu
+
+**Problem:** `SmartViewStrip` renders 10 pills in a single `overflow-x-auto` row with a hidden scrollbar. The last pills clip off-screen with no affordance (see screenshot). User chose the **"More" overflow menu** fix.
+
+**Tier:** Standard (one component subtree, no new public contract; real measurement logic → test-first).
+
+**Design:**
+- "All tasks" pill pinned inline first. As many view pills as fit render inline; the rest collapse into a Radix `DropdownMenu` triggered by a "More ▾" button.
+- Measurement via a hidden, `aria-hidden` ghost row rendering all pills at natural width → read offsetWidths → pure greedy `computeVisibleViewCount()` decides the inline count. Recompute on mount + `ResizeObserver`.
+- Reuse `components/ui/dropdown-menu.tsx` (Radix → free keyboard nav / focus / Escape / click-outside / `role=menu`).
+- If the active view lives in the overflow set, mark the "More" button active so users see their filter is still applied.
+
+**Files:**
+- `components/matrix-simplified/use-smart-view-overflow.ts` — pure `computeVisibleViewCount` + `useSmartViewOverflow` hook.
+- `components/matrix-simplified/smart-view-strip.tsx` — rewrite to use the hook + ghost + More menu.
+- `tests/ui/smart-view-strip.test.tsx` — pure-fn algorithm cases + render/interaction tests.
+
+**Acceptance:**
+- [x] No pill clips off-screen at any container width; overflow pills are reachable via the More menu.
+- [x] Selecting a view (inline or in menu) applies it; "All tasks" clears.
+- [x] Active overflow view reflected on the More button.
+- [x] Ghost layer is `aria-hidden` + `inert`; no duplicate buttons for AT.
+- [x] `computeVisibleViewCount` covered: all-fit, none-fit, exact boundary, reserve-more boundary, empty.
+
+**Review (2026-05-31 — done):**
+- Implemented test-first (red/green/refactor): pure `computeVisibleViewCount` + presentational `SmartViewOverflowMenu` + strip behaviors + a faked-layout test driving the real measurement path.
+- Verified in **real Chromium** (the gate jsdom can't own): at 1400px → 8 inline + "More (2)"; at 760px → 4 inline + "More (6)"; menu reveals overflow views w/ icons; selection applies; active-overflow filter surfaced in the More button's accessible name; **no horizontal page scrollbar** (scrollWidth === clientWidth).
+- a11y-reviewer: 0 blocking. Fixed IMPORTANT (`role="group"` on the pill row — `aria-label` on a bare div is dropped by AT) + nit (comment on `aria-current` vs `aria-pressed`).
+- Graceful degradation: unmeasured/zero-width container → show all inline (fixed a broken matrix-simplified test that relied on inline pills under jsdom's no-layout).
+- Coverage: strip 96% / hook 95% (both >80% DoD). Full suite 1920 pass, typecheck 0, lint 0.
+- Files: `smart-view-strip.tsx` (rewrite), `use-smart-view-overflow.ts` (new), `tests/ui/smart-view-strip.test.tsx` (new).
+- **Not committed** — awaiting user go-ahead.
+
+---
+
 ## Pending plan — 2026-05-18: GitHub Actions CI/CD deploy pipeline
 
 Move dev + prod app deploys off laptops into GitHub Actions (OIDC, no long-lived keys), wire the `typecheck`/`lint`/`test`/`build` PR status checks already declared in `REPOSITORY_SETTINGS.md`, and gate CloudFront infra changes behind manual approval. 5-phase rollout, one PR per phase.
