@@ -30,6 +30,12 @@ function isRateLimitError(error: unknown): boolean {
   return false;
 }
 
+function makeSafePushError(errorCode: string): Error {
+  const error = new Error(errorCode);
+  error.name = 'SyncPushError';
+  return error;
+}
+
 export interface PushResult {
   pushedCount: number;
   failedCount: number;
@@ -219,7 +225,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
           errorCode,
         });
       } else {
-        logger.error('Push failed for item', errorObj, {
+        logger.error('Push failed for item', makeSafePushError(errorCode), {
           taskId: item.taskId,
           operation: item.operation,
           errorCode,

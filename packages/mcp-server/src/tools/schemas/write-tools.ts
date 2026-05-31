@@ -1,4 +1,5 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { SCHEMA_LIMITS } from '../../constants.js';
 
 /**
  * Write operation tool schemas for modifying task data
@@ -13,10 +14,13 @@ export const createTaskTool: Tool = {
     properties: {
       title: {
         type: 'string',
+        minLength: 1,
+        maxLength: SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH,
         description: 'Task title (required)',
       },
       description: {
         type: 'string',
+        maxLength: SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH,
         description: 'Task description',
       },
       urgent: {
@@ -33,15 +37,21 @@ export const createTaskTool: Tool = {
       },
       tags: {
         type: 'array',
-        items: { type: 'string' },
+        maxItems: SCHEMA_LIMITS.MAX_TAGS,
+        items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
         description: 'Tags for categorization (e.g., ["#work", "#project-alpha"])',
       },
       subtasks: {
         type: 'array',
+        maxItems: SCHEMA_LIMITS.MAX_SUBTASKS,
         items: {
           type: 'object',
           properties: {
-            title: { type: 'string' },
+            title: {
+              type: 'string',
+              minLength: 1,
+              maxLength: SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH,
+            },
             completed: { type: 'boolean' },
           },
           required: ['title', 'completed'],
@@ -55,7 +65,8 @@ export const createTaskTool: Tool = {
       },
       dependencies: {
         type: 'array',
-        items: { type: 'string' },
+        maxItems: SCHEMA_LIMITS.MAX_DEPENDENCIES,
+        items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
         description: 'Task IDs that must be completed before this task',
       },
       notifyBefore: {
@@ -92,14 +103,19 @@ export const updateTaskTool: Tool = {
     properties: {
       id: {
         type: 'string',
+        minLength: 1,
+        maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH,
         description: 'Task ID (required)',
       },
       title: {
         type: 'string',
+        minLength: 1,
+        maxLength: SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH,
         description: 'New task title',
       },
       description: {
         type: 'string',
+        maxLength: SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH,
         description: 'New task description',
       },
       urgent: {
@@ -116,16 +132,22 @@ export const updateTaskTool: Tool = {
       },
       tags: {
         type: 'array',
-        items: { type: 'string' },
+        maxItems: SCHEMA_LIMITS.MAX_TAGS,
+        items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
         description: 'Replace tags entirely',
       },
       subtasks: {
         type: 'array',
+        maxItems: SCHEMA_LIMITS.MAX_SUBTASKS,
         items: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
-            title: { type: 'string' },
+            id: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
+            title: {
+              type: 'string',
+              minLength: 1,
+              maxLength: SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH,
+            },
             completed: { type: 'boolean' },
           },
           required: ['id', 'title', 'completed'],
@@ -139,7 +161,8 @@ export const updateTaskTool: Tool = {
       },
       dependencies: {
         type: 'array',
-        items: { type: 'string' },
+        maxItems: SCHEMA_LIMITS.MAX_DEPENDENCIES,
+        items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
         description: 'Replace dependencies entirely',
       },
       completed: {
@@ -179,6 +202,8 @@ export const completeTaskTool: Tool = {
     properties: {
       id: {
         type: 'string',
+        minLength: 1,
+        maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH,
         description: 'Task ID',
       },
       completed: {
@@ -203,6 +228,8 @@ export const deleteTaskTool: Tool = {
     properties: {
       id: {
         type: 'string',
+        minLength: 1,
+        maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH,
         description: 'Task ID to delete',
       },
       dryRun: {
@@ -223,7 +250,9 @@ export const bulkUpdateTasksTool: Tool = {
     properties: {
       taskIds: {
         type: 'array',
-        items: { type: 'string' },
+        minItems: 1,
+        maxItems: SCHEMA_LIMITS.MAX_BULK_TASKS,
+        items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
         description: 'Array of task IDs to update (max 50)',
       },
       operation: {
@@ -250,7 +279,9 @@ export const bulkUpdateTasksTool: Tool = {
           },
           tags: {
             type: 'array',
-            items: { type: 'string' },
+            minItems: 1,
+            maxItems: SCHEMA_LIMITS.MAX_TAGS,
+            items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
             description: 'For type=add_tags or remove_tags: array of tags',
           },
           dueDate: {

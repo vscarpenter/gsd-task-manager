@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { SCHEMA_LIMITS } from '../../constants.js';
 import {
   allTools,
   readTools,
@@ -171,6 +172,47 @@ describe('Tool Schemas', () => {
       expect(properties).toHaveProperty('notifyBefore');
       expect(properties).toHaveProperty('notificationEnabled');
       expect(properties).toHaveProperty('estimatedMinutes');
+    });
+
+    it('write tool schemas should advertise bounded payload sizes', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const createProperties = createTaskTool.inputSchema.properties as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateProperties = updateTaskTool.inputSchema.properties as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const completeProperties = completeTaskTool.inputSchema.properties as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const deleteProperties = deleteTaskTool.inputSchema.properties as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bulkProperties = bulkUpdateTasksTool.inputSchema.properties as any;
+
+      expect(createProperties.title.maxLength).toBe(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH);
+      expect(createProperties.description.maxLength).toBe(
+        SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH
+      );
+      expect(createProperties.tags.maxItems).toBe(SCHEMA_LIMITS.MAX_TAGS);
+      expect(createProperties.tags.items.maxLength).toBe(SCHEMA_LIMITS.TAG_MAX_LENGTH);
+      expect(createProperties.subtasks.maxItems).toBe(SCHEMA_LIMITS.MAX_SUBTASKS);
+      expect(createProperties.subtasks.items.properties.title.maxLength).toBe(
+        SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH
+      );
+      expect(createProperties.dependencies.maxItems).toBe(SCHEMA_LIMITS.MAX_DEPENDENCIES);
+      expect(createProperties.dependencies.items.maxLength).toBe(SCHEMA_LIMITS.ID_MAX_LENGTH);
+
+      expect(updateProperties.id.maxLength).toBe(SCHEMA_LIMITS.ID_MAX_LENGTH);
+      expect(updateProperties.title.maxLength).toBe(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH);
+      expect(updateProperties.tags.maxItems).toBe(SCHEMA_LIMITS.MAX_TAGS);
+      expect(updateProperties.subtasks.maxItems).toBe(SCHEMA_LIMITS.MAX_SUBTASKS);
+      expect(updateProperties.dependencies.maxItems).toBe(SCHEMA_LIMITS.MAX_DEPENDENCIES);
+      expect(completeProperties.id.maxLength).toBe(SCHEMA_LIMITS.ID_MAX_LENGTH);
+      expect(deleteProperties.id.maxLength).toBe(SCHEMA_LIMITS.ID_MAX_LENGTH);
+
+      expect(bulkProperties.taskIds.maxItems).toBe(SCHEMA_LIMITS.MAX_BULK_TASKS);
+      expect(bulkProperties.taskIds.items.maxLength).toBe(SCHEMA_LIMITS.ID_MAX_LENGTH);
+      expect(bulkProperties.operation.properties.tags.maxItems).toBe(SCHEMA_LIMITS.MAX_TAGS);
+      expect(bulkProperties.operation.properties.tags.items.maxLength).toBe(
+        SCHEMA_LIMITS.TAG_MAX_LENGTH
+      );
     });
 
     it('update_task should expose notification and time fields', () => {

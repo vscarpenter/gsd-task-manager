@@ -4,7 +4,7 @@
 #
 # This script is idempotent:
 # - it only adds missing fields
-# - it preserves the existing collection rules, indexes, and field order
+# - it hardens owner-scoped collection rules while preserving indexes and field order
 #
 # Required environment variables:
 #   PB_ADMIN_EMAIL
@@ -34,19 +34,40 @@ if [[ -z "${PB_ADMIN_EMAIL:-}" || -z "${PB_ADMIN_PASSWORD:-}" ]]; then
   exit 1
 fi
 
-for cmd in curl jq mktemp; do
+for cmd in curl jq mktemp python3; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Error: Required command not found: $cmd"
     exit 1
   fi
 done
 
+AUTH_PAYLOAD_FILE=$(mktemp)
+PB_CURL_CONFIG=$(mktemp)
+TMP_JSON=$(mktemp)
+chmod 600 "$AUTH_PAYLOAD_FILE" "$PB_CURL_CONFIG" "$TMP_JSON"
+trap 'rm -f "$AUTH_PAYLOAD_FILE" "$PB_CURL_CONFIG" "$TMP_JSON"' EXIT
+
 echo "==> Authenticating with PocketBase at $PB_URL..."
+
+python3 - "$AUTH_PAYLOAD_FILE" <<'PY'
+import json
+import os
+import sys
+
+with open(sys.argv[1], "w", encoding="utf-8") as handle:
+    json.dump(
+        {
+            "identity": os.environ["PB_ADMIN_EMAIL"],
+            "password": os.environ["PB_ADMIN_PASSWORD"],
+        },
+        handle,
+    )
+PY
 
 AUTH_RESPONSE=$(
   curl -fsS -X POST "$PB_URL/api/collections/_superusers/auth-with-password" \
     -H "Content-Type: application/json" \
-    -d "{\"identity\":\"$PB_ADMIN_EMAIL\",\"password\":\"$PB_ADMIN_PASSWORD\"}"
+    --data-binary @"$AUTH_PAYLOAD_FILE"
 )
 
 TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.token // empty')
@@ -57,19 +78,22 @@ if [[ -z "$TOKEN" ]]; then
   exit 1
 fi
 
+cat > "$PB_CURL_CONFIG" <<EOF
+header = "Authorization: $TOKEN"
+EOF
+
 echo "==> Fetching existing 'tasks' collection..."
 
 CURRENT_COLLECTION=$(
   curl -fsS "$PB_URL/api/collections/tasks" \
-    -H "Authorization: $TOKEN"
+    --config "$PB_CURL_CONFIG"
 )
-
-TMP_JSON=$(mktemp)
-trap 'rm -f "$TMP_JSON"' EXIT
 
 echo "$CURRENT_COLLECTION" | jq '
   def ensure_field($field):
     if any(.fields[]; .name == $field.name) then . else .fields += [$field] end;
+  def owner_rule: "@request.auth.id != \"\" && owner = @request.auth.id";
+  def immutable_owner_rule: owner_rule + " && (@request.body.owner:isset = false || @request.body.owner = owner)";
 
   ensure_field({
     "name": "notification_sent",
@@ -98,6 +122,11 @@ echo "$CURRENT_COLLECTION" | jq '
       "max": 50
     }
   })
+  | .listRule = owner_rule
+  | .viewRule = owner_rule
+  | .createRule = owner_rule
+  | .updateRule = immutable_owner_rule
+  | .deleteRule = owner_rule
   | {
       name,
       type,
@@ -116,7 +145,7 @@ echo "==> Updating 'tasks' collection schema..."
 
 RESPONSE=$(
   curl -fsS -X PATCH "$PB_URL/api/collections/tasks" \
-    -H "Authorization: $TOKEN" \
+    --config "$PB_CURL_CONFIG" \
     -H "Content-Type: application/json" \
     --data-binary @"$TMP_JSON"
 )
@@ -124,6 +153,7 @@ RESPONSE=$(
 echo "==> Verifying required fields..."
 
 FIELD_NAMES=$(echo "$RESPONSE" | jq -r '.fields[].name')
+UPDATE_RULE=$(echo "$RESPONSE" | jq -r '.updateRule // empty')
 
 for field in notification_sent last_notification_at snoozed_until; do
   if ! grep -qx "$field" <<< "$FIELD_NAMES"; then
@@ -132,9 +162,16 @@ for field in notification_sent last_notification_at snoozed_until; do
   fi
 done
 
+if [[ "$UPDATE_RULE" != *"@request.body.owner:isset = false"* || "$UPDATE_RULE" != *"@request.body.owner = owner"* ]]; then
+  echo "Error: Owner immutability rule was not applied"
+  exit 1
+fi
+
 echo "==> Success! 'tasks' collection updated."
 echo ""
 echo "Verified fields:"
 echo "  - notification_sent"
 echo "  - last_notification_at"
 echo "  - snoozed_until"
+echo "Verified rules:"
+echo "  - owner cannot be changed after create"

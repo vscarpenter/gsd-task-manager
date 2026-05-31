@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { SCHEMA_LIMITS } from '../../constants.js';
 import { validateToolArgs } from '../../tools/handlers/input-schemas.js';
 
 describe('validateToolArgs', () => {
@@ -73,6 +74,74 @@ describe('validateToolArgs', () => {
       ).toThrow(/estimatedMinutes/);
     });
 
+    it('rejects oversized write payload fields', () => {
+      const basePayload = {
+        title: 'x',
+        urgent: true,
+        important: true,
+      };
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          title: 'x'.repeat(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH + 1),
+        })
+      ).toThrow(/title/);
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          description: 'x'.repeat(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH + 1),
+        })
+      ).toThrow(/description/);
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, i) => `tag-${i}`),
+        })
+      ).toThrow(/tags/);
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          tags: ['x'.repeat(SCHEMA_LIMITS.TAG_MAX_LENGTH + 1)],
+        })
+      ).toThrow(/tags/);
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          subtasks: Array.from({ length: SCHEMA_LIMITS.MAX_SUBTASKS + 1 }, () => ({
+            title: 'subtask',
+            completed: false,
+          })),
+        })
+      ).toThrow(/subtasks/);
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          subtasks: [
+            {
+              title: 'x'.repeat(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH + 1),
+              completed: false,
+            },
+          ],
+        })
+      ).toThrow(/subtasks/);
+
+      expect(() =>
+        validateToolArgs('create_task', {
+          ...basePayload,
+          dependencies: Array.from(
+            { length: SCHEMA_LIMITS.MAX_DEPENDENCIES + 1 },
+            (_, i) => `dep-${i}`
+          ),
+        })
+      ).toThrow(/dependencies/);
+    });
+
     it('rejects unknown fields (strict mode)', () => {
       expect(() =>
         validateToolArgs('create_task', {
@@ -97,6 +166,42 @@ describe('validateToolArgs', () => {
     it('requires id', () => {
       expect(() => validateToolArgs('update_task', { title: 'x' })).toThrow(/id/);
     });
+
+    it('rejects oversized mutable fields', () => {
+      expect(() =>
+        validateToolArgs('update_task', {
+          id: 'abc',
+          title: 'x'.repeat(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH + 1),
+        })
+      ).toThrow(/title/);
+
+      expect(() =>
+        validateToolArgs('update_task', {
+          id: 'abc',
+          tags: ['x'.repeat(SCHEMA_LIMITS.TAG_MAX_LENGTH + 1)],
+        })
+      ).toThrow(/tags/);
+
+      expect(() =>
+        validateToolArgs('update_task', {
+          id: 'abc',
+          subtasks: [
+            {
+              id: 'sub-1',
+              title: 'x'.repeat(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH + 1),
+              completed: false,
+            },
+          ],
+        })
+      ).toThrow(/subtasks/);
+
+      expect(() =>
+        validateToolArgs('update_task', {
+          id: 'abc',
+          dependencies: ['x'.repeat(SCHEMA_LIMITS.ID_MAX_LENGTH + 1)],
+        })
+      ).toThrow(/dependencies/);
+    });
   });
 
   describe('bulk_update_tasks', () => {
@@ -118,13 +223,42 @@ describe('validateToolArgs', () => {
     });
 
     it('rejects more than 50 task ids', () => {
-      const ids = Array.from({ length: 51 }, (_, i) => `id${i}`);
+      const ids = Array.from({ length: SCHEMA_LIMITS.MAX_BULK_TASKS + 1 }, (_, i) => `id${i}`);
       expect(() =>
         validateToolArgs('bulk_update_tasks', {
           taskIds: ids,
           operation: { type: 'delete' },
         })
       ).toThrow(/taskIds/);
+    });
+
+    it('rejects oversized task ids and operation tags', () => {
+      expect(() =>
+        validateToolArgs('bulk_update_tasks', {
+          taskIds: ['x'.repeat(SCHEMA_LIMITS.ID_MAX_LENGTH + 1)],
+          operation: { type: 'delete' },
+        })
+      ).toThrow(/taskIds/);
+
+      expect(() =>
+        validateToolArgs('bulk_update_tasks', {
+          taskIds: ['id1'],
+          operation: {
+            type: 'add_tags',
+            tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, i) => `tag-${i}`),
+          },
+        })
+      ).toThrow(/tags/);
+
+      expect(() =>
+        validateToolArgs('bulk_update_tasks', {
+          taskIds: ['id1'],
+          operation: {
+            type: 'remove_tags',
+            tags: ['x'.repeat(SCHEMA_LIMITS.TAG_MAX_LENGTH + 1)],
+          },
+        })
+      ).toThrow(/tags/);
     });
 
     it('rejects caller-supplied maxTasks (policy lives server-side, not in input)', () => {

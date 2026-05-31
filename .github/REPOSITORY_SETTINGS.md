@@ -82,7 +82,34 @@ Navigate to: **Settings → Code security and analysis**
 - [x] **Secret scanning**: Enable (if available)
 - [x] **Push protection**: Enable (if available)
 
-## Step 4: Moderation Settings
+## Step 4: Release Environments and Tag Rules
+
+Navigate to: **Settings → Environments**
+
+Create or verify these environments:
+
+- [x] `production`
+  - [x] Required reviewers: `vscarpenter`
+  - [x] Deployment branches and tags: protected branches and protected tags only
+
+- [x] `mcp-release`
+  - [x] Required reviewers: `vscarpenter`
+  - [x] Deployment branches and tags: protected branches and protected tags only
+
+Navigate to: **Settings → Rules → Rulesets**
+
+Create release tag rulesets:
+
+- [x] `v*.*.*` app release tags
+- [x] `mcp-v*.*.*` MCP package release tags
+- [x] Require creation/update through reviewed `main` release flow
+- [x] Block force-pushes and deletions
+
+The workflows also verify that release commits are reachable from `origin/main`.
+The environment rules provide the human approval boundary before production
+deploys or package publishes can use protected credentials.
+
+## Step 5: Moderation Settings
 
 Navigate to: **Settings → Moderation options**
 
@@ -93,7 +120,7 @@ Navigate to: **Settings → Moderation options**
 ### Code review limits
 - Leave at default (allow anyone)
 
-## Step 5: Make Repository Public
+## Step 6: Make Repository Public
 
 Navigate to: **Settings → General → Danger Zone**
 
@@ -103,7 +130,7 @@ Navigate to: **Settings → General → Danger Zone**
 4. Type repository name to confirm: `gsd-task-manager`
 5. Click **I understand, change repository visibility**
 
-## Step 6: Add Repository Topics (Optional)
+## Step 7: Add Repository Topics (Optional)
 
 At the top of your repository page:
 
@@ -119,7 +146,7 @@ Add topics:
 - `indexeddb`
 - `productivity`
 
-## Step 7: Update Repository Description
+## Step 8: Update Repository Description
 
 In the same About section:
 
