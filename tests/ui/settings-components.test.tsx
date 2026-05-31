@@ -2,6 +2,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { SettingsRow, SettingsSelectRow } from '@/components/settings/shared-components';
 import { AboutSection } from '@/components/settings/about-section';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
+import { FeatureSettings } from '@/components/settings/feature-settings';
 import { NotificationSettingsSection } from '@/components/settings/notification-settings';
 import { ArchiveSettings } from '@/components/settings/archive-settings';
 import { DataManagement } from '@/components/settings/data-management';
@@ -202,6 +203,21 @@ describe('Settings Components', () => {
     it('switch reflects showCompleted=true state', () => {
       render(<AppearanceSettings showCompleted={true} onToggleCompleted={vi.fn()} />);
       expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    });
+  });
+
+  describe('FeatureSettings', () => {
+    it('renders the smart views feature toggle', () => {
+      render(<FeatureSettings smartViewsEnabled={false} onToggleSmartViews={vi.fn()} />);
+      expect(screen.getByText('Smart views')).toBeInTheDocument();
+      expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('calls onToggleSmartViews when the switch is clicked', () => {
+      const onToggle = vi.fn();
+      render(<FeatureSettings smartViewsEnabled={false} onToggleSmartViews={onToggle} />);
+      fireEvent.click(screen.getByRole('switch'));
+      expect(onToggle).toHaveBeenCalledTimes(1);
     });
   });
 

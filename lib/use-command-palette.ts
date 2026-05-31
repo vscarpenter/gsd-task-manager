@@ -4,15 +4,18 @@ import type { TaskRecord } from "@/lib/types";
 import { applyFilters } from "@/lib/filters";
 import { SEARCH_CONFIG } from "@/lib/constants/ui";
 
+export const OPEN_COMMAND_PALETTE_EVENT = "gsd:open-command-palette";
+
 interface UseCommandPaletteOptions {
   actions: CommandAction[];
   tasks: TaskRecord[];
+  onSelectTask?: (taskId: string) => void;
 }
 
 /**
  * Hook to manage command palette state and filtering
  */
-export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) {
+export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPaletteOptions) {
   const [open, setOpenState] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
@@ -45,6 +48,12 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
   }, [open, setOpen]);
+
+  useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
+    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
+  }, [setOpen]);
 
   // Filter actions by search query
   const filteredActions = useMemo(() => {
@@ -89,13 +98,19 @@ export function useCommandPalette({ actions, tasks }: UseCommandPaletteOptions) 
 
   // Handle task selection (navigate to matrix and highlight)
   const selectTask = useCallback((taskId: string) => {
+    if (onSelectTask) {
+      onSelectTask(taskId);
+      setOpen(false);
+      return;
+    }
+
     // Dispatch event for matrix to handle highlighting
     window.dispatchEvent(new CustomEvent('highlightTask', {
       detail: { taskId }
     }));
 
     setOpen(false);
-  }, [setOpen]);
+  }, [onSelectTask, setOpen]);
 
   return {
     open,

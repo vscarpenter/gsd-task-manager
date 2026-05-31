@@ -13,11 +13,25 @@ import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useNotificationChecker } from "@/lib/use-notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
+import { applyFilters, type SmartView } from "@/lib/filters";
 import {
   SHOW_COMPLETED_EVENT,
   type ShowCompletedEventDetail,
   readShowCompleted,
 } from "@/lib/preferences/show-completed";
+import {
+  APPLY_SMART_VIEW_EVENT,
+  HIGHLIGHT_TASK_EVENT,
+  NEW_TASK_EVENT,
+  type ApplySmartViewEventDetail,
+} from "@/lib/use-shell-command-handlers";
+import {
+  APP_PREFERENCES_EVENT,
+  getAppPreferences,
+  getSmartView,
+  getSmartViews,
+  type AppPreferencesEventDetail,
+} from "@/lib/smart-views";
 import type { TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { TaskCard } from "@/components/task-card";
@@ -26,6 +40,7 @@ import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
 import { MatrixGrid } from "./matrix-grid";
 import { EditDrawer, type EditDraft } from "./edit-drawer";
+import { SmartViewStrip } from "./smart-view-strip";
 
 function isEditable(el: Element | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
@@ -66,12 +81,71 @@ export function MatrixSimplified() {
   const [createInitial, setCreateInitial] = useState<Partial<EditDraft> | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [smartViewsEnabled, setSmartViewsEnabled] = useState(false);
+  const [smartViews, setSmartViews] = useState<SmartView[]>([]);
+  const [activeSmartView, setActiveSmartView] = useState<SmartView | null>(null);
   const [sharingTask, setSharingTask] = useState<TaskRecord | null>(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
+  const taskRefs = useRef(new Map<string, HTMLElement>());
+  const clearHighlightTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- canonical SSR-safe pattern for static export
     setShowCompleted(readShowCompleted());
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSmartViewPreference = async () => {
+      const preferences = await getAppPreferences();
+      if (!cancelled) {
+        setSmartViewsEnabled(preferences.smartViewsEnabled);
+      }
+    };
+
+    loadSmartViewPreference().catch(() => {
+      if (!cancelled) {
+        setSmartViewsEnabled(false);
+      }
+    });
+
+    const onPreferencesChange = (event: Event) => {
+      const preferences = (event as CustomEvent<AppPreferencesEventDetail>).detail?.preferences;
+      if (!preferences) return;
+      setSmartViewsEnabled(preferences.smartViewsEnabled);
+      if (!preferences.smartViewsEnabled) {
+        setActiveSmartView(null);
+      }
+    };
+
+    window.addEventListener(APP_PREFERENCES_EVENT, onPreferencesChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(APP_PREFERENCES_EVENT, onPreferencesChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!smartViewsEnabled) return;
+
+    let cancelled = false;
+    getSmartViews()
+      .then((views) => {
+        if (!cancelled) {
+          setSmartViews(views);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSmartViews([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [smartViewsEnabled]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -124,6 +198,63 @@ export function MatrixSimplified() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const handleTaskRef = useCallback((taskId: string, element: HTMLElement | null) => {
+    if (element) {
+      taskRefs.current.set(taskId, element);
+    } else {
+      taskRefs.current.delete(taskId);
+    }
+  }, []);
+
+  const scrollTaskIntoView = useCallback((taskId: string) => {
+    const node = taskRefs.current.get(taskId);
+    if (!node) return;
+
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({
+      block: "center",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+    node.focus({ preventScroll: true });
+  }, []);
+
+  const highlightTaskById = useCallback((taskId: string) => {
+    if (!taskId) return;
+
+    setSearchQuery("");
+    setHighlightedTaskId(taskId);
+
+    if (clearHighlightTimerRef.current) {
+      window.clearTimeout(clearHighlightTimerRef.current);
+    }
+    clearHighlightTimerRef.current = window.setTimeout(() => {
+      setHighlightedTaskId((current) => (current === taskId ? null : current));
+      clearHighlightTimerRef.current = null;
+    }, 3500);
+  }, []);
+
+  const applySmartViewById = useCallback(async (viewId: string) => {
+    const view = await getSmartView(viewId);
+    if (!view) {
+      toast.error("Smart view not found", { duration: TOAST_DURATION.SHORT });
+      return;
+    }
+    setSearchQuery("");
+    setActiveSmartView(view);
+  }, []);
+
+  const handleClearSmartView = useCallback(() => {
+    setActiveSmartView(null);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (clearHighlightTimerRef.current) {
+        window.clearTimeout(clearHighlightTimerRef.current);
+      }
+    };
+  }, []);
+
   const trimmedSearchQuery = searchQuery.trim();
   const { visibleTasks, total, completed, overdue } = useMemo(() => {
     const todayIso = new Date().toISOString().slice(0, 10);
@@ -142,14 +273,27 @@ export function MatrixSimplified() {
       }
     }
 
-    const base = showCompleted ? all : activeTasks;
+    const effectiveSmartView = smartViewsEnabled ? activeSmartView : null;
+    const base = effectiveSmartView ? all : showCompleted ? all : activeTasks;
+    const smartViewTasks = effectiveSmartView
+      ? applyFilters(base, effectiveSmartView.criteria, all)
+      : base;
     return {
-      visibleTasks: filterTasks(base, trimmedSearchQuery),
+      visibleTasks: filterTasks(smartViewTasks, trimmedSearchQuery),
       total: all.length,
       completed: completedCount,
       overdue: overdueCount,
     };
-  }, [all, showCompleted, trimmedSearchQuery]);
+  }, [activeSmartView, all, showCompleted, smartViewsEnabled, trimmedSearchQuery]);
+
+  useEffect(() => {
+    if (!highlightedTaskId) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      scrollTaskIntoView(highlightedTaskId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [highlightedTaskId, scrollTaskIntoView, visibleTasks]);
 
   const handleCapture = useCallback(
     async ({ title, urgent, important, tags }: CapturePayload) => {
@@ -227,6 +371,54 @@ export function MatrixSimplified() {
     setCreateDrawerOpen(true);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get("highlight");
+    const smartViewId = params.get("smartView");
+    if (!taskId && !smartViewId) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      if (taskId) {
+        highlightTaskById(taskId);
+      }
+      if (smartViewId) {
+        void applySmartViewById(smartViewId);
+      }
+    });
+    params.delete("highlight");
+    params.delete("smartView");
+    const next = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
+    return () => window.cancelAnimationFrame(frame);
+  }, [applySmartViewById, highlightTaskById]);
+
+  useEffect(() => {
+    const openNewTask = () => handleOpenCreateDrawer();
+    const highlightTask = (event: Event) => {
+      const taskId = (event as CustomEvent<{ taskId?: string }>).detail?.taskId;
+      if (taskId) {
+        highlightTaskById(taskId);
+      }
+    };
+    const applySmartView = (event: Event) => {
+      const viewId = (event as CustomEvent<ApplySmartViewEventDetail>).detail?.viewId;
+      if (viewId) {
+        void applySmartViewById(viewId);
+      }
+    };
+
+    window.addEventListener(NEW_TASK_EVENT, openNewTask);
+    window.addEventListener(HIGHLIGHT_TASK_EVENT, highlightTask);
+    window.addEventListener(APPLY_SMART_VIEW_EVENT, applySmartView);
+    window.addEventListener("highlightTask", highlightTask);
+    return () => {
+      window.removeEventListener(NEW_TASK_EVENT, openNewTask);
+      window.removeEventListener(HIGHLIGHT_TASK_EVENT, highlightTask);
+      window.removeEventListener(APPLY_SMART_VIEW_EVENT, applySmartView);
+      window.removeEventListener("highlightTask", highlightTask);
+    };
+  }, [applySmartViewById, handleOpenCreateDrawer, highlightTaskById]);
+
   const handleCreateClose = useCallback(() => {
     setCreateDrawerOpen(false);
     setCreateInitial(undefined);
@@ -298,6 +490,16 @@ export function MatrixSimplified() {
       >
         <div className="sticky top-[60px] z-10 -mx-4 mb-10 bg-background/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-9 sm:mb-12 sm:px-9 sm:py-4">
           <CaptureBar onSubmit={handleCapture} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
+          {smartViewsEnabled ? (
+            <div className="mt-3">
+              <SmartViewStrip
+                views={smartViews}
+                activeViewId={activeSmartView?.id}
+                onSelectView={applySmartViewById}
+                onClearView={handleClearSmartView}
+              />
+            </div>
+          ) : null}
         </div>
         <MatrixGrid
           tasks={visibleTasks}
@@ -307,6 +509,8 @@ export function MatrixSimplified() {
           onDelete={handleDelete}
           onShare={handleShareOpen}
           onAddInQuadrant={handleAddInQuadrant}
+          highlightedTaskId={highlightedTaskId}
+          onTaskRef={handleTaskRef}
         />
       </AppShell>
 

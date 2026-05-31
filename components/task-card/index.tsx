@@ -56,10 +56,11 @@ function TaskCardComponent({
       data-task-title={task.title}
       ref={(node) => {
         setNodeRef(node);
-        if (taskRef && node) {
+        if (taskRef) {
           taskRef(node);
         }
       }}
+      tabIndex={-1}
       style={style}
       className={cn(
         "group relative flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200 animate-slide-in-card",

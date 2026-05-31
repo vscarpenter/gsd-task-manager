@@ -46,6 +46,8 @@ interface QuadrantPaneProps {
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
+  highlightedTaskId?: string | null;
+  onTaskRef?: (taskId: string, element: HTMLElement | null) => void;
 }
 
 export function QuadrantPane({
@@ -58,6 +60,8 @@ export function QuadrantPane({
   onDelete,
   onShare,
   onAddInQuadrant,
+  highlightedTaskId,
+  onTaskRef,
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
@@ -139,6 +143,8 @@ export function QuadrantPane({
                 onDelete={onDelete}
                 onShare={onShare}
                 onToggleComplete={onToggleComplete}
+                isHighlighted={task.id === highlightedTaskId}
+                taskRef={(element) => onTaskRef?.(task.id, element)}
               />
             ))
           )}

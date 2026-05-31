@@ -8,12 +8,14 @@ import {
   ArchiveIcon,
   DatabaseIcon,
   InfoIcon,
+  SlidersHorizontalIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type SettingsSectionId =
   | "appearance"
+  | "features"
   | "notifications"
   | "sync"
   | "archive"
@@ -32,6 +34,7 @@ export interface SectionMeta {
 
 export const SETTINGS_SECTIONS: SectionMeta[] = [
   { id: "appearance", label: "Appearance", icon: PaletteIcon, description: "Theme and display preferences", group: "Preferences" },
+  { id: "features", label: "Features", icon: SlidersHorizontalIcon, description: "Optional workspace capabilities", group: "Preferences" },
   { id: "notifications", label: "Notifications", icon: BellIcon, description: "Reminders and alerts", group: "Preferences" },
   { id: "sync", label: "Cloud Sync", icon: CloudIcon, description: "Multi-device synchronization", group: "Preferences" },
   { id: "archive", label: "Archive", icon: ArchiveIcon, description: "Auto-archive completed tasks", group: "Data" },

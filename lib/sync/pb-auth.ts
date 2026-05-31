@@ -72,6 +72,14 @@ export function openOAuthPopup(provider: OAuthProvider): Window | null {
   return window.open('about:blank', `gsd_oauth_${provider}`, features);
 }
 
+function closeOAuthPopup(popupWindow?: Window | null): void {
+  try {
+    popupWindow?.close?.();
+  } catch {
+    // Some mobile browsers do not allow closing OAuth browser contexts.
+  }
+}
+
 export function cancelOAuthLogin(requestKey: string): void {
   if (!requestKey) return;
   getPocketBase().cancelRequest(requestKey);
@@ -137,11 +145,6 @@ export async function loginWithProvider(
         if (options.requestKey) {
           pb.cancelRequest(options.requestKey);
         }
-        try {
-          options.popupWindow?.close();
-        } catch {
-          // Some mobile browsers do not allow closing OAuth browser contexts.
-        }
         reject(new Error('OAuth sign-in timed out. Please close the sign-in page and try again.'));
       }, timeoutMs);
     });
@@ -160,11 +163,6 @@ export async function loginWithProvider(
       provider,
     };
   } catch (error) {
-    try {
-      options.popupWindow?.close();
-    } catch {
-      // Some mobile browsers do not allow closing OAuth browser contexts.
-    }
     const diagnostic = error as OAuthDiagnosticError;
     logger.error('OAuth login failed', error instanceof Error ? error : new Error(String(error)), {
       provider,
@@ -176,6 +174,7 @@ export async function loginWithProvider(
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
+    closeOAuthPopup(options.popupWindow);
   }
 }
 

@@ -12,10 +12,16 @@ import {
   getNotificationSettings,
   updateNotificationSettings,
 } from "@/lib/notifications";
-import type { NotificationSettings } from "@/lib/types";
+import type { AppPreferences, NotificationSettings } from "@/lib/types";
 import { getSyncStatus } from "@/lib/sync/config";
 import { exportToJson } from "@/lib/tasks";
 import { createLogger } from "@/lib/logger";
+import {
+  APP_PREFERENCES_EVENT,
+  getAppPreferences,
+  updateAppPreferences,
+  type AppPreferencesEventDetail,
+} from "@/lib/smart-views";
 import {
   SHOW_COMPLETED_EVENT,
   SHOW_COMPLETED_KEY,
@@ -23,6 +29,7 @@ import {
 } from "@/lib/preferences/show-completed";
 
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
+import { FeatureSettings } from "@/components/settings/feature-settings";
 import { NotificationSettingsSection } from "@/components/settings/notification-settings";
 import { SyncSettings } from "@/components/settings/sync-settings";
 import { ArchiveSettings } from "@/components/settings/archive-settings";
@@ -50,6 +57,7 @@ export function SettingsPage() {
 
   const [activeSection, setActiveSection] = useState<SettingsSectionId>(DEFAULT_SECTION);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [appPreferences, setAppPreferences] = useState<AppPreferences | null>(null);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings | null>(null);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [pendingSync, setPendingSync] = useState(0);
@@ -76,12 +84,14 @@ export function SettingsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [notif, sync] = await Promise.all([
+        const [notif, sync, prefs] = await Promise.all([
           getNotificationSettings(),
           getSyncStatus(),
+          getAppPreferences(),
         ]);
         if (cancelled) return;
         setNotificationSettings(notif);
+        setAppPreferences(prefs);
         setSyncEnabled(sync.enabled);
         setPendingSync(sync.pendingCount);
         setShowCompleted(readShowCompleted());
@@ -117,6 +127,19 @@ export function SettingsPage() {
       return next;
     });
   }, []);
+
+  const handleToggleSmartViews = useCallback(async () => {
+    if (!appPreferences) return;
+    const updated = await updateAppPreferences({
+      smartViewsEnabled: !appPreferences.smartViewsEnabled,
+    });
+    setAppPreferences(updated);
+    window.dispatchEvent(
+      new CustomEvent<AppPreferencesEventDetail>(APP_PREFERENCES_EVENT, {
+        detail: { preferences: updated },
+      }),
+    );
+  }, [appPreferences]);
 
   const reloadNotificationSettings = useCallback(async () => {
     const next = await getNotificationSettings();
@@ -261,6 +284,12 @@ export function SettingsPage() {
                   <AppearanceSettings
                     showCompleted={showCompleted}
                     onToggleCompleted={handleToggleCompleted}
+                  />
+                )}
+                {activeSection === "features" && appPreferences && (
+                  <FeatureSettings
+                    smartViewsEnabled={appPreferences.smartViewsEnabled}
+                    onToggleSmartViews={handleToggleSmartViews}
                   />
                 )}
                 {activeSection === "notifications" && (

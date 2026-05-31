@@ -90,6 +90,22 @@ describe('PocketBase Auth', () => {
       expect(popupWindow.location.href).toBe('https://accounts.example.test/auth');
     });
 
+    it('should close a pre-opened popup after successful OAuth handoff', async () => {
+      mockAuthWithOAuth2.mockResolvedValue({
+        record: { id: 'user-123', email: 'test@example.com' },
+      });
+      const close = vi.fn();
+      const popupWindow = {
+        closed: false,
+        location: { href: '' },
+        close,
+      } as unknown as Window;
+
+      await loginWithProvider('google', { popupWindow });
+
+      expect(close).toHaveBeenCalledOnce();
+    });
+
     it('should cancel the PocketBase request when OAuth times out', async () => {
       vi.useFakeTimers();
       try {

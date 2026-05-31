@@ -104,6 +104,7 @@ export interface AppPreferences {
   id: "preferences";
   pinnedSmartViewIds: string[]; // IDs of smart views pinned to header
   maxPinnedViews: number; // Maximum number of views that can be pinned (default: 5)
+  smartViewsEnabled: boolean; // Exposes Smart Views in the matrix and command palette
 }
 
 /**
