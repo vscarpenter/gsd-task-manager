@@ -25,11 +25,17 @@ function handler(event) {
   //    characters, null bytes, or path-traversal sequences. CloudFront and
   //    S3 reject most of these downstream, but a cheap defense-in-depth check
   //    here prevents any chance of CRLF injection into the rewritten URI.
+  //
+  //    Traversal is a `..` *path segment* (`/../`), so we match `..` only as a
+  //    whole segment — NOT as a substring. Turbopack content hashes legitimately
+  //    contain `..` inside a filename (e.g. `chunks/09g3a9~1ks65..js`); a naive
+  //    `indexOf('..')` would rewrite those real assets to `/index.html`, serving
+  //    HTML where the browser expects JavaScript.
   if (
     uri.indexOf('\r') !== -1 ||
     uri.indexOf('\n') !== -1 ||
     uri.indexOf('\0') !== -1 ||
-    uri.indexOf('..') !== -1
+    uri.split('/').indexOf('..') !== -1
   ) {
     request.uri = '/index.html';
     return request;

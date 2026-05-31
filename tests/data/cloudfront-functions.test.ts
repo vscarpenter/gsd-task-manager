@@ -48,6 +48,15 @@ describe('cloudfront-function-url-rewrite (viewer-request)', () => {
 		expect(out.uri).toBe('/_next/static/chunks/main.js');
 	});
 
+	it('passes through chunk filenames whose content hash contains a double-dot', () => {
+		// Turbopack content hashes can contain `..` (e.g. `09g3a9~1ks65..js`).
+		// These are real files, not path traversal — the guard must not rewrite
+		// them to /index.html, which serves HTML where the browser expects JS.
+		const req = makeRequest('/_next/static/chunks/09g3a9~1ks65..js');
+		const out = urlRewrite({ request: req }) as CFRequest;
+		expect(out.uri).toBe('/_next/static/chunks/09g3a9~1ks65..js');
+	});
+
 	it('passes API and PocketBase admin paths through unchanged', () => {
 		for (const uri of ['/api', '/api/oauth2-redirect', '/api/auth/oauth-callback', '/_', '/_/']) {
 			const req = makeRequest(uri);
