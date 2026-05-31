@@ -48,6 +48,7 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --delete \
   --exclude "*.html" \
   --exclude "sw.js" \
+  --exclude "sw-cache-logic.js" \
   --cache-control "public,max-age=31536000,immutable"
 
 echo "  → Syncing HTML files and service worker..."
@@ -55,6 +56,7 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --exclude "*" \
   --include "*.html" \
   --include "sw.js" \
+  --include "sw-cache-logic.js" \
   --cache-control "public,max-age=0,must-revalidate"
 
 echo "  → Forcing no-cache on index.html..."

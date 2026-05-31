@@ -22,6 +22,7 @@ COPY . .
 
 # Build static export (produces out/ directory)
 RUN node scripts/generate-build-info.cjs \
+    && node scripts/update-sw-version.cjs \
     && bash -c 'source .build-env.sh && bunx --bun next build'
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)

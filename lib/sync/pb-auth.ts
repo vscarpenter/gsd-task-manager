@@ -12,6 +12,7 @@ import { createLogger } from '@/lib/logger';
 const logger = createLogger('SYNC_AUTH');
 
 export type OAuthProvider = 'google' | 'github';
+const DEFAULT_OAUTH_TIMEOUT_MS = 120_000;
 
 /**
  * Runtime whitelist of OAuth providers. The `OAuthProvider` type is erased
@@ -31,6 +32,66 @@ export interface AuthState {
   provider: string | null;
 }
 
+export interface OAuthLoginOptions {
+  popupWindow?: Window | null;
+  requestKey?: string;
+  timeoutMs?: number;
+}
+
+interface OAuthDiagnosticError {
+  message?: string;
+  status?: number;
+  isAbort?: boolean;
+  response?: {
+    code?: number;
+    message?: string;
+  };
+  originalError?: {
+    message?: string;
+  };
+}
+
+export function openOAuthPopup(provider: OAuthProvider): Window | null {
+  if (typeof window === 'undefined' || typeof window.open !== 'function') {
+    return null;
+  }
+
+  const width = Math.min(1024, window.innerWidth || 1024);
+  const height = Math.min(768, window.innerHeight || 768);
+  const left = Math.max(0, Math.round((window.innerWidth - width) / 2));
+  const top = Math.max(0, Math.round((window.innerHeight - height) / 2));
+  const features = [
+    `width=${width}`,
+    `height=${height}`,
+    `top=${top}`,
+    `left=${left}`,
+    'resizable',
+    'menubar=no',
+  ].join(',');
+
+  return window.open('about:blank', `gsd_oauth_${provider}`, features);
+}
+
+export function cancelOAuthLogin(requestKey: string): void {
+  if (!requestKey) return;
+  getPocketBase().cancelRequest(requestKey);
+}
+
+export function getOAuthErrorMessage(error: unknown): string {
+  const diagnostic = error as OAuthDiagnosticError;
+
+  if (diagnostic?.isAbort) {
+    return 'OAuth sign-in was cancelled. Please try again.';
+  }
+
+  return (
+    diagnostic?.response?.message ||
+    diagnostic?.originalError?.message ||
+    diagnostic?.message ||
+    'OAuth sign-in failed. Please try again.'
+  );
+}
+
 /**
  * Initiate OAuth login via PocketBase SDK
  *
@@ -38,7 +99,10 @@ export interface AuthState {
  * OAuth2 flow (redirect, code exchange, token storage) automatically.
  * Returns the authenticated user record on success.
  */
-export async function loginWithProvider(provider: OAuthProvider): Promise<AuthState> {
+export async function loginWithProvider(
+  provider: OAuthProvider,
+  options: OAuthLoginOptions = {}
+): Promise<AuthState> {
   if (!provider || !ALLOWED_OAUTH_PROVIDERS.has(provider)) {
     throw new Error(
       `OAuth provider not allowed: ${String(provider)}. Allowed providers: ${[...ALLOWED_OAUTH_PROVIDERS].join(', ')}`
@@ -46,9 +110,43 @@ export async function loginWithProvider(provider: OAuthProvider): Promise<AuthSt
   }
 
   const pb = getPocketBase();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_OAUTH_TIMEOUT_MS;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    const authData = await pb.collection('users').authWithOAuth2({ provider });
+    const authOptions = {
+      provider,
+      ...(options.popupWindow
+        ? {
+            urlCallback: (url: string) => {
+              if (options.popupWindow?.closed) {
+                throw new Error('OAuth sign-in window was closed before authentication started.');
+              }
+              options.popupWindow!.location.href = url;
+            },
+          }
+        : {}),
+      ...(options.requestKey ? { requestKey: options.requestKey } : {}),
+    };
+
+    const oauthPromise = pb.collection('users').authWithOAuth2(authOptions);
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      if (timeoutMs <= 0) return;
+      timeoutId = setTimeout(() => {
+        if (options.requestKey) {
+          pb.cancelRequest(options.requestKey);
+        }
+        try {
+          options.popupWindow?.close();
+        } catch {
+          // Some mobile browsers do not allow closing OAuth browser contexts.
+        }
+        reject(new Error('OAuth sign-in timed out. Please close the sign-in page and try again.'));
+      }, timeoutMs);
+    });
+
+    const authData = await Promise.race([oauthPromise, timeoutPromise]);
 
     logger.info('OAuth login successful', {
       provider,
@@ -62,21 +160,33 @@ export async function loginWithProvider(provider: OAuthProvider): Promise<AuthSt
       provider,
     };
   } catch (error) {
+    try {
+      options.popupWindow?.close();
+    } catch {
+      // Some mobile browsers do not allow closing OAuth browser contexts.
+    }
+    const diagnostic = error as OAuthDiagnosticError;
     logger.error('OAuth login failed', error instanceof Error ? error : new Error(String(error)), {
       provider,
+      status: diagnostic?.status,
+      type: diagnostic?.isAbort ? 'abort' : 'oauth',
     });
     throw error;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
 /** Convenience wrapper for Google OAuth */
-export function loginWithGoogle(): Promise<AuthState> {
-  return loginWithProvider('google');
+export function loginWithGoogle(options?: OAuthLoginOptions): Promise<AuthState> {
+  return loginWithProvider('google', options);
 }
 
 /** Convenience wrapper for GitHub OAuth */
-export function loginWithGithub(): Promise<AuthState> {
-  return loginWithProvider('github');
+export function loginWithGithub(options?: OAuthLoginOptions): Promise<AuthState> {
+  return loginWithProvider('github', options);
 }
 
 
@@ -105,4 +215,3 @@ export async function refreshAuth(): Promise<boolean> {
     return false;
   }
 }
-

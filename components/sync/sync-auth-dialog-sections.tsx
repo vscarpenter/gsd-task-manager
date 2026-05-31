@@ -6,7 +6,7 @@ import type { AuthState } from "@/lib/sync/pb-auth";
 import type { SyncStatusInfo } from "./use-sync-auth-dialog";
 
 interface OAuthCallbacks {
-  onStart: () => void;
+  onStart: (provider: "google" | "github") => void;
   onSuccess: (authState: AuthState) => Promise<void>;
   onError: (err: Error) => void;
 }

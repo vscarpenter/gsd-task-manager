@@ -48,6 +48,14 @@ describe('cloudfront-function-url-rewrite (viewer-request)', () => {
 		expect(out.uri).toBe('/_next/static/chunks/main.js');
 	});
 
+	it('passes API and PocketBase admin paths through unchanged', () => {
+		for (const uri of ['/api', '/api/oauth2-redirect', '/api/auth/oauth-callback', '/_', '/_/']) {
+			const req = makeRequest(uri);
+			const out = urlRewrite({ request: req }) as CFRequest;
+			expect(out.uri).toBe(uri);
+		}
+	});
+
 	it('rewrites to .md when the client sends Accept: text/markdown', () => {
 		const req = makeRequest('/about/', { accept: 'text/markdown, text/html;q=0.9' });
 		const out = urlRewrite({ request: req }) as CFRequest;

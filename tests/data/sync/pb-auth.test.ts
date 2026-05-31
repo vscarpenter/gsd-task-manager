@@ -1,5 +1,6 @@
 const mockAuthWithOAuth2 = vi.fn();
 const mockAuthRefresh = vi.fn();
+const mockCancelRequest = vi.fn();
 
 const mockPb = {
   collection: vi.fn(() => ({
@@ -11,6 +12,7 @@ const mockPb = {
     isValid: true,
     record: { id: 'user-123', email: 'test@example.com' },
   },
+  cancelRequest: mockCancelRequest,
 };
 
 vi.mock('@/lib/sync/pocketbase-client', () => ({
@@ -32,6 +34,8 @@ import {
   loginWithProvider,
   loginWithGoogle,
   loginWithGithub,
+  getOAuthErrorMessage,
+  openOAuthPopup,
   refreshAuth,
 } from '@/lib/sync/pb-auth';
 
@@ -57,6 +61,53 @@ describe('PocketBase Auth', () => {
         email: 'test@example.com',
         provider: 'google',
       });
+    });
+
+    it('should pass a pre-opened popup through urlCallback', async () => {
+      mockAuthWithOAuth2.mockResolvedValue({
+        record: { id: 'user-123', email: 'test@example.com' },
+      });
+      const popupWindow = {
+        closed: false,
+        location: { href: '' },
+      } as unknown as Window;
+
+      await loginWithProvider('google', {
+        popupWindow,
+        requestKey: 'oauth_google_test',
+      });
+
+      const options = mockAuthWithOAuth2.mock.calls[0][0];
+      expect(options).toEqual(
+        expect.objectContaining({
+          provider: 'google',
+          requestKey: 'oauth_google_test',
+          urlCallback: expect.any(Function),
+        })
+      );
+
+      options.urlCallback('https://accounts.example.test/auth');
+      expect(popupWindow.location.href).toBe('https://accounts.example.test/auth');
+    });
+
+    it('should cancel the PocketBase request when OAuth times out', async () => {
+      vi.useFakeTimers();
+      try {
+        mockAuthWithOAuth2.mockReturnValue(new Promise(() => {}));
+
+        const promise = loginWithProvider('github', {
+          requestKey: 'oauth_github_timeout',
+          timeoutMs: 50,
+        });
+        const assertion = expect(promise).rejects.toThrow(/timed out/i);
+
+        await vi.advanceTimersByTimeAsync(50);
+
+        await assertion;
+        expect(mockCancelRequest).toHaveBeenCalledWith('oauth_github_timeout');
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('should rethrow errors from OAuth2', async () => {
@@ -140,6 +191,36 @@ describe('PocketBase Auth', () => {
 
       expect(mockAuthRefresh).not.toHaveBeenCalled();
       expect(result).toBe(false);
+    });
+  });
+
+  describe('openOAuthPopup', () => {
+    it('opens a named OAuth popup window', () => {
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+
+      openOAuthPopup('google');
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'about:blank',
+        'gsd_oauth_google',
+        expect.stringContaining('menubar=no')
+      );
+      openSpy.mockRestore();
+    });
+  });
+
+  describe('getOAuthErrorMessage', () => {
+    it('uses PocketBase diagnostic messages when available', () => {
+      const message = getOAuthErrorMessage({
+        message: 'Outer message',
+        response: { message: 'Provider redirect failed' },
+      });
+
+      expect(message).toBe('Provider redirect failed');
+    });
+
+    it('returns a friendly cancellation message for aborts', () => {
+      expect(getOAuthErrorMessage({ isAbort: true, message: 'aborted' })).toMatch(/cancelled/i);
     });
   });
 });
