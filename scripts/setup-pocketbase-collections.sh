@@ -23,12 +23,40 @@ if [[ -z "${PB_ADMIN_EMAIL:-}" || -z "${PB_ADMIN_PASSWORD:-}" ]]; then
   exit 1
 fi
 
+for cmd in curl mktemp python3; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Error: Required command not found: $cmd"
+    exit 1
+  fi
+done
+
+AUTH_PAYLOAD_FILE=$(mktemp)
+COLLECTION_PAYLOAD_FILE=$(mktemp)
+COLLECTION_CURL_CONFIG=$(mktemp)
+chmod 600 "$AUTH_PAYLOAD_FILE" "$COLLECTION_PAYLOAD_FILE" "$COLLECTION_CURL_CONFIG"
+trap 'rm -f "$AUTH_PAYLOAD_FILE" "$COLLECTION_PAYLOAD_FILE" "$COLLECTION_CURL_CONFIG"' EXIT
+
 echo "==> Authenticating with PocketBase at $PB_URL..."
+
+python3 - "$AUTH_PAYLOAD_FILE" <<'PY'
+import json
+import os
+import sys
+
+with open(sys.argv[1], "w", encoding="utf-8") as handle:
+    json.dump(
+        {
+            "identity": os.environ["PB_ADMIN_EMAIL"],
+            "password": os.environ["PB_ADMIN_PASSWORD"],
+        },
+        handle,
+    )
+PY
 
 # PocketBase v0.23+ uses _superusers collection for admin auth
 AUTH_RESPONSE=$(curl -s -X POST "$PB_URL/api/collections/_superusers/auth-with-password" \
   -H "Content-Type: application/json" \
-  -d "{\"identity\":\"$PB_ADMIN_EMAIL\",\"password\":\"$PB_ADMIN_PASSWORD\"}")
+  --data-binary @"$AUTH_PAYLOAD_FILE")
 
 TOKEN=$(echo "$AUTH_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null)
 
@@ -40,8 +68,13 @@ fi
 
 echo "==> Authenticated. Creating 'tasks' collection..."
 
+cat > "$COLLECTION_CURL_CONFIG" <<EOF
+header = "Content-Type: application/json"
+header = "Authorization: $TOKEN"
+EOF
+
 # Create the tasks collection with all fields matching PBTaskRecord
-COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
+cat > "$COLLECTION_PAYLOAD_FILE" <<'ENDJSON'
 {
   "name": "tasks",
   "type": "base",
@@ -49,7 +82,7 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
   "listRule": "@request.auth.id != \"\" && owner = @request.auth.id",
   "viewRule": "@request.auth.id != \"\" && owner = @request.auth.id",
   "createRule": "@request.auth.id != \"\" && owner = @request.auth.id",
-  "updateRule": "@request.auth.id != \"\" && owner = @request.auth.id",
+  "updateRule": "@request.auth.id != \"\" && owner = @request.auth.id && (@request.body.owner:isset = false || @request.body.owner = owner)",
   "deleteRule": "@request.auth.id != \"\" && owner = @request.auth.id",
   "fields": [
     {
@@ -296,12 +329,10 @@ COLLECTION_PAYLOAD=$(cat <<'ENDJSON'
   ]
 }
 ENDJSON
-)
 
 RESPONSE=$(curl -s -X POST "$PB_URL/api/collections" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: $TOKEN" \
-  -d "$COLLECTION_PAYLOAD")
+  --config "$COLLECTION_CURL_CONFIG" \
+  --data-binary @"$COLLECTION_PAYLOAD_FILE")
 
 # Check for success
 if echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('id')" 2>/dev/null; then

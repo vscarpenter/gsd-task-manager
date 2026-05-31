@@ -19,6 +19,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment:
+      name: mcp-release
+      url: https://www.npmjs.com/package/gsd-mcp-server
     defaults:
       run:
         working-directory: packages/mcp-server
@@ -26,6 +29,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify publish ref is reviewed
+        if: github.event_name == 'push' || inputs.dry_run == false
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Manual publish must run from the main branch."
+            exit 1
+          fi
+
+          RELEASE_COMMIT=$(git rev-parse "${GITHUB_SHA}^{commit}")
+          if ! git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main; then
+            echo "::error::Publish commit $RELEASE_COMMIT is not reachable from origin/main"
+            exit 1
+          fi
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

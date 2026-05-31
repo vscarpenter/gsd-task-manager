@@ -267,40 +267,56 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(1);
   });
 
-  it('records a permanent validation error via the ERROR log branch', async () => {
+  it('records a permanent validation error via the ERROR log branch without logging raw PB content', async () => {
     // Per-item catch: a 422 validation error is non-transient and goes
     // through the ERROR log branch. The error code is still sanitized so
     // task content never leaks into the persisted lastError field.
-    const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    const leakedTaskTitle = 'Secret oncology follow-up';
+    const payload = {
+      ...makeTask('t1', '2026-05-18T12:00:00.000Z'),
+      title: leakedTaskTitle,
+    };
     await getSyncQueue().enqueue('update', 't1', payload);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    fetchRemoteTaskIndexMock.mockResolvedValue({
-      index: new Map([
-        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
-      ]),
-      fetchSucceeded: true,
-    });
+    try {
+      fetchRemoteTaskIndexMock.mockResolvedValue({
+        index: new Map([
+          ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+        ]),
+        fetchSucceeded: true,
+      });
 
-    const validationError = Object.assign(
-      new Error("422 failed to validate field 'title'"),
-      { status: 422 },
-    );
-    const updateSpy = vi.fn(async () => {
-      throw validationError;
-    });
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
-      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
-    });
+      const validationError = Object.assign(
+        new Error(`422 failed to validate field 'title' for ${leakedTaskTitle}`),
+        { status: 422 },
+      );
+      const updateSpy = vi.fn(async () => {
+        throw validationError;
+      });
+      (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+        collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+      });
 
-    const result = await pushLocalChanges();
+      const result = await pushLocalChanges();
 
-    expect(updateSpy).toHaveBeenCalledTimes(1);
-    expect(result.pushedCount).toBe(0);
-    expect(result.failedCount).toBe(1);
-    expect(result.lastError).toBe('validation_failed');
-    // Crucially, the persisted lastError must NEVER echo task field names
-    // or values that the 4xx response body might have included.
-    expect(result.lastError).not.toContain('title');
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+      expect(result.pushedCount).toBe(0);
+      expect(result.failedCount).toBe(1);
+      expect(result.lastError).toBe('validation_failed');
+      // Crucially, neither the persisted lastError nor the structured log
+      // should echo task field names or values that a 4xx body may include.
+      expect(result.lastError).not.toContain('title');
+
+      const syncErrorLog = consoleErrorSpy.mock.calls.find((call) => call[0] === '[SYNC_ENGINE]');
+      expect(syncErrorLog).toBeDefined();
+      const serializedLog = JSON.stringify(syncErrorLog);
+      expect(serializedLog).toContain('validation_failed');
+      expect(serializedLog).not.toContain('title');
+      expect(serializedLog).not.toContain(leakedTaskTitle);
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('fails open and proceeds with the write when remote clientUpdatedAt is unparseable', async () => {

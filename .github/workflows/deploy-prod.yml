@@ -1,11 +1,11 @@
 name: Deploy to Production
 
 on:
-  # Tag-triggered release: v*.*.* on any branch.
+  # Tag-triggered release: v*.*.*. The job verifies the tagged commit is on main.
   # Matches the package.json semver (e.g. v9.1.11 → 9.1.11).
   push:
     tags: ['v*.*.*']
-  # Manual override — useful for re-deploying the current ref.
+  # Manual override — useful for re-deploying a reviewed main ref.
   workflow_dispatch:
 
 # Locked decision §7.7: queue overlapping deploys, never cancel.
@@ -32,7 +32,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Verify deployment ref is on main
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          DEPLOY_COMMIT=$(git rev-parse "${GITHUB_SHA}^{commit}")
+          if ! git merge-base --is-ancestor "$DEPLOY_COMMIT" origin/main; then
+            echo "::error::Deployment commit $DEPLOY_COMMIT is not reachable from origin/main"
+            exit 1
+          fi
 
       # Mirrors publish-mcp-server.yml's tag-vs-package.json check.
       # Stops a v9.1.11 tag from accidentally deploying a 9.1.10 build.
@@ -50,7 +59,7 @@ jobs:
           echo "Deploying version $PKG_VERSION"
           echo "## Deploying v$PKG_VERSION to production" >> "$GITHUB_STEP_SUMMARY"
 
-      # Always rebuild for prod — the tag can point at any commit, and the
+      # Always rebuild for prod — older release tags might not have retained
       # 14-day artifact retention from CI can't be relied on for older tags.
       # The build is deterministic from the tree, so this produces the same
       # bytes CI built when the tagged commit was on main.

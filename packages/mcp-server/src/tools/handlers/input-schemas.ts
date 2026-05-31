@@ -10,6 +10,7 @@
  */
 
 import { z } from 'zod';
+import { SCHEMA_LIMITS } from '../../constants.js';
 
 export const quadrantSchema = z.enum([
   'urgent-important',
@@ -21,18 +22,25 @@ export const quadrantSchema = z.enum([
 export const recurrenceSchema = z.enum(['none', 'daily', 'weekly', 'monthly']);
 
 const optionalIsoDatetime = z.string().datetime({ offset: true }).optional();
+const idSchema = z.string().min(1).max(SCHEMA_LIMITS.ID_MAX_LENGTH);
+const taskTitleSchema = z.string().min(1).max(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH);
+const taskDescriptionSchema = z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH);
+const tagSchema = z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH);
+const subtaskTitleSchema = z.string().min(1).max(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH);
+const tagsSchema = z.array(tagSchema).max(SCHEMA_LIMITS.MAX_TAGS);
+const dependenciesSchema = z.array(idSchema).max(SCHEMA_LIMITS.MAX_DEPENDENCIES);
 
 export const listTasksArgsSchema = z
   .object({
     quadrant: quadrantSchema.optional(),
     completed: z.boolean().optional(),
-    tags: z.array(z.string()).optional(),
+    tags: tagsSchema.optional(),
   })
   .strict();
 
 export const getTaskArgsSchema = z
   .object({
-    taskId: z.string().min(1),
+    taskId: idSchema,
   })
   .strict();
 
@@ -65,17 +73,18 @@ const estimatedMinutesSchema = z.number().int().min(1).max(10080).optional();
 
 export const createTaskArgsSchema = z
   .object({
-    title: z.string().min(1),
-    description: z.string().optional(),
+    title: taskTitleSchema,
+    description: taskDescriptionSchema.optional(),
     urgent: z.boolean(),
     important: z.boolean(),
     dueDate: optionalIsoDatetime,
-    tags: z.array(z.string()).optional(),
+    tags: tagsSchema.optional(),
     subtasks: z
-      .array(z.object({ title: z.string().min(1), completed: z.boolean() }))
+      .array(z.object({ title: subtaskTitleSchema, completed: z.boolean() }))
+      .max(SCHEMA_LIMITS.MAX_SUBTASKS)
       .optional(),
     recurrence: recurrenceSchema.optional(),
-    dependencies: z.array(z.string().min(1)).optional(),
+    dependencies: dependenciesSchema.optional(),
     notifyBefore: notifyBeforeSchema,
     notificationEnabled: z.boolean().optional(),
     estimatedMinutes: estimatedMinutesSchema,
@@ -85,27 +94,28 @@ export const createTaskArgsSchema = z
 
 export const updateTaskArgsSchema = z
   .object({
-    id: z.string().min(1),
-    title: z.string().min(1).optional(),
-    description: z.string().optional(),
+    id: idSchema,
+    title: taskTitleSchema.optional(),
+    description: taskDescriptionSchema.optional(),
     urgent: z.boolean().optional(),
     important: z.boolean().optional(),
     // Empty string clears the due date; non-empty must be an ISO 8601 datetime.
     dueDate: z
       .union([z.literal(''), z.string().datetime({ offset: true })])
       .optional(),
-    tags: z.array(z.string()).optional(),
+    tags: tagsSchema.optional(),
     subtasks: z
       .array(
         z.object({
-          id: z.string().min(1),
-          title: z.string().min(1),
+          id: idSchema,
+          title: subtaskTitleSchema,
           completed: z.boolean(),
         })
       )
+      .max(SCHEMA_LIMITS.MAX_SUBTASKS)
       .optional(),
     recurrence: recurrenceSchema.optional(),
-    dependencies: z.array(z.string().min(1)).optional(),
+    dependencies: dependenciesSchema.optional(),
     completed: z.boolean().optional(),
     notifyBefore: notifyBeforeSchema,
     notificationEnabled: z.boolean().optional(),
@@ -116,7 +126,7 @@ export const updateTaskArgsSchema = z
 
 export const completeTaskArgsSchema = z
   .object({
-    id: z.string().min(1),
+    id: idSchema,
     completed: z.boolean(),
     dryRun: z.boolean().optional(),
   })
@@ -124,7 +134,7 @@ export const completeTaskArgsSchema = z
 
 export const deleteTaskArgsSchema = z
   .object({
-    id: z.string().min(1),
+    id: idSchema,
     dryRun: z.boolean().optional(),
   })
   .strict();
@@ -136,8 +146,8 @@ const bulkOperationSchema = z.discriminatedUnion('type', [
     urgent: z.boolean(),
     important: z.boolean(),
   }),
-  z.object({ type: z.literal('add_tags'), tags: z.array(z.string().min(1)).min(1) }),
-  z.object({ type: z.literal('remove_tags'), tags: z.array(z.string().min(1)).min(1) }),
+  z.object({ type: z.literal('add_tags'), tags: tagsSchema.min(1) }),
+  z.object({ type: z.literal('remove_tags'), tags: tagsSchema.min(1) }),
   z.object({
     type: z.literal('set_due_date'),
     dueDate: z.union([z.literal(''), z.string().datetime({ offset: true })]).optional(),
@@ -147,7 +157,7 @@ const bulkOperationSchema = z.discriminatedUnion('type', [
 
 export const bulkUpdateTasksArgsSchema = z
   .object({
-    taskIds: z.array(z.string().min(1)).min(1).max(50),
+    taskIds: z.array(idSchema).min(1).max(SCHEMA_LIMITS.MAX_BULK_TASKS),
     operation: bulkOperationSchema,
     dryRun: z.boolean().optional(),
   })
