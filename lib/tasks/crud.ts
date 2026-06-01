@@ -14,6 +14,7 @@ export {
   updateTask,
   toggleCompleted,
   deleteTask,
+  restoreTask,
   moveTaskToQuadrant,
   duplicateTask,
   snoozeTask,

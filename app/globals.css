@@ -911,3 +911,14 @@ main {
   .task-card-mobile-actions { display: flex; }
   .task-card-desktop-actions { display: none; }
 }
+
+/* Enforce the 44px touch-target floor (WCAG 2.5.5) on coarse pointers for the
+   compact v9 controls (task complete, quadrant add) that stay small on
+   mouse-driven desktops. The legacy .redesign-scope rule above doesn't reach
+   the v9 shell, which uses Tailwind utilities. */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

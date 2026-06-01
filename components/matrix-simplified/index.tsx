@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
-import { createTask, toggleCompleted, updateTask, deleteTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { parseShareCaptureParams } from "@/lib/share-capture";
@@ -66,7 +66,7 @@ function filterTasks(tasks: TaskRecord[], trimmedQuery: string): TaskRecord[] {
 
 export function MatrixSimplified() {
   const { all } = useTasks();
-  const { handleError } = useErrorHandlerWithUndo();
+  const { handleError, handleSuccess } = useErrorHandlerWithUndo();
   const { sensors, activeId, handleDragStart, handleDragEnd } = useDragAndDrop(handleError);
 
   useAutoArchive();
@@ -341,11 +341,13 @@ export function MatrixSimplified() {
     async (task: TaskRecord) => {
       try {
         await deleteTask(task.id);
+        // Faithful undo: restore the exact original record (id/timestamps intact).
+        handleSuccess("Task deleted", () => restoreTask(task));
       } catch {
         toast.error("Failed to delete task", { duration: TOAST_DURATION.LONG });
       }
     },
-    []
+    [handleSuccess]
   );
 
   const handleEditOpen = useCallback((task: TaskRecord) => setEditingTask(task), []);

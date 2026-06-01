@@ -104,7 +104,7 @@ export function QuadrantPane({
           type="button"
           onClick={() => onAddInQuadrant(meta.rdKey)}
           aria-label={`Add to ${meta.title}`}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted hover:text-foreground"
+          className="touch-target inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted hover:text-foreground"
         >
           <PlusIcon className="h-3.5 w-3.5" />
         </button>

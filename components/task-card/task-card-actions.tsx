@@ -88,7 +88,7 @@ interface DesktopActionsProps {
 
 function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze }: DesktopActionsProps) {
   return (
-    <div className="task-card-desktop-actions hidden sm:flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+    <div className="task-card-desktop-actions hidden sm:flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
       {onShare && (
         <Tooltip>
           <TooltipTrigger asChild>

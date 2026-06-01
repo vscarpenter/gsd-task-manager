@@ -42,7 +42,7 @@ export function TaskCardHeader({
         ) : (
           <button
             type="button"
-            className="cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 hover:bg-background-muted"
+            className="cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-background-muted"
             aria-label="Drag to move task"
             {...sortableAttributes}
             {...sortableListeners}
@@ -71,7 +71,7 @@ export function TaskCardHeader({
             type="button"
             onClick={() => onToggleComplete(task, !task.completed)}
             className={cn(
-              "button-reset relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 sm:h-9 sm:w-9",
+              "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 sm:h-9 sm:w-9",
               task.completed
                 ? "border-emerald-400 bg-emerald-500/15 text-emerald-600 shadow-sm shadow-emerald-500/10 dark:border-emerald-500 dark:text-emerald-400"
                 : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"

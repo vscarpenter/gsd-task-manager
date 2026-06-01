@@ -9,6 +9,7 @@ const smartViewsFixture = vi.hoisted(() => ({
   enabled: false,
   current: [] as SmartView[],
 }));
+const handleSuccessSpy = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/use-tasks", () => ({
   useTasks: () => ({
@@ -49,6 +50,7 @@ vi.mock("@/lib/tasks", () => ({
   toggleCompleted: vi.fn().mockResolvedValue(undefined),
   updateTask: vi.fn().mockResolvedValue(undefined),
   deleteTask: vi.fn().mockResolvedValue(undefined),
+  restoreTask: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/smart-views", () => ({
@@ -95,7 +97,7 @@ vi.mock("@/components/ui/toast", () => ({
 
 // useErrorHandlerWithUndo uses useToast internally
 vi.mock("@/lib/use-error-handler", () => ({
-  useErrorHandlerWithUndo: () => ({ handleError: vi.fn() }),
+  useErrorHandlerWithUndo: () => ({ handleError: vi.fn(), handleSuccess: handleSuccessSpy }),
 }));
 
 // useDragAndDrop sets up DnD sensors — stub it out to avoid pointer-sensor issues in jsdom
@@ -120,7 +122,7 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
 }));
 
 import { MatrixSimplified } from "@/components/matrix-simplified";
-import { createTask, toggleCompleted } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, restoreTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 
 describe("<MatrixSimplified>", () => {
@@ -135,6 +137,9 @@ describe("<MatrixSimplified>", () => {
     }
     vi.mocked(celebrateCompletion).mockClear();
     vi.mocked(toggleCompleted).mockClear();
+    vi.mocked(deleteTask).mockClear();
+    vi.mocked(restoreTask).mockClear();
+    handleSuccessSpy.mockClear();
   });
 
   describe("completion celebration", () => {
@@ -324,6 +329,24 @@ describe("<MatrixSimplified>", () => {
       // Pre-selected quadrant button should be Do First (urgent + important).
       const doFirstQuadrant = screen.getByRole("button", { name: /^do first$/i, pressed: true });
       expect(doFirstQuadrant).toBeInTheDocument();
+    });
+  });
+
+  describe("delete + undo", () => {
+    it("offers an Undo toast that restores the deleted task", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [makeTask({ id: "del-1", title: "Delete me" })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /delete task/i }));
+
+      await waitFor(() => expect(deleteTask).toHaveBeenCalledWith("del-1"));
+      expect(handleSuccessSpy).toHaveBeenCalledWith("Task deleted", expect.any(Function));
+
+      // Invoking the toast's undo action restores the exact original task record.
+      const undoAction = handleSuccessSpy.mock.calls[0][1] as () => Promise<void>;
+      await undoAction();
+      expect(restoreTask).toHaveBeenCalledWith(expect.objectContaining({ id: "del-1" }));
     });
   });
 });

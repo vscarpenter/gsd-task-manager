@@ -7,6 +7,7 @@ import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
 import { resolveDuePreset, DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import { cn } from "@/lib/utils";
 import { DrawerHint } from "@/components/ui/drawer-hint";
+import { useDialogFocus } from "./use-dialog-focus";
 
 export interface EditDraft {
   title: string;
@@ -62,6 +63,7 @@ function formatChipDate(iso: string): string {
 
 export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: EditDrawerProps) {
   const titleRef = useRef<HTMLInputElement>(null);
+  const drawerRef = useRef<HTMLFormElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [urgent, setUrgent] = useState(false);
@@ -71,6 +73,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   const [showCustomDateInput, setShowCustomDateInput] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const trapKeyDown = useDialogFocus(open, drawerRef);
 
   // The drawer owns draft state while open, then rehydrates from the selected task.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -148,7 +151,11 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
     <div onClick={onClose} onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }} role="presentation" className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay">
       <form
         data-testid="edit-drawer"
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={trapKeyDown}
         onSubmit={submit}
         className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl animate-drawer-slide-in"
         aria-label={isCreateMode ? "New task" : "Edit task"}
@@ -168,7 +175,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted"
+            className="touch-target ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted"
           >
             <XIcon className="h-4 w-4" />
           </button>
