@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
 import type { TaskRecord } from "@/lib/types";
@@ -163,6 +163,37 @@ describe("<EditDrawer>", () => {
 
       const submitted = onSubmit.mock.calls.at(-1)?.[0];
       expect(submitted?.dueDate?.slice(0, 10)).toBe("2026-05-12");
+    });
+  });
+
+  describe("dialog semantics (a11y)", () => {
+    it("exposes the drawer as a modal dialog (role=dialog, aria-modal)", () => {
+      render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      const dialog = screen.getByRole("dialog", { name: /edit task/i });
+      expect(dialog).toHaveAttribute("aria-modal", "true");
+    });
+
+    it("restores focus to the trigger element when the drawer closes", async () => {
+      function Harness({ open }: { open: boolean }) {
+        return (
+          <>
+            <button data-testid="trigger">Open</button>
+            <EditDrawer open={open} task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />
+          </>
+        );
+      }
+      const { rerender } = render(<Harness open={false} />);
+      const trigger = screen.getByTestId("trigger");
+      trigger.focus();
+      expect(trigger).toHaveFocus();
+
+      // Opening moves focus into the drawer (autofocused title).
+      rerender(<Harness open />);
+      await waitFor(() => expect(screen.getByLabelText(/title/i)).toHaveFocus());
+
+      // Closing must return focus to the trigger, not drop it to <body>.
+      rerender(<Harness open={false} />);
+      await waitFor(() => expect(trigger).toHaveFocus());
     });
   });
 });

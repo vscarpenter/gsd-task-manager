@@ -4,6 +4,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  restoreTask,
   toggleCompleted,
   moveTaskToQuadrant,
   duplicateTask,
@@ -516,6 +517,69 @@ describe('Task CRUD Operations', () => {
       mockDb.tasks.get.mockRejectedValue(new Error('DB connection lost'));
 
       await expect(deleteTask('task-1')).rejects.toThrow('Failed to delete task');
+    });
+  });
+
+  describe('restoreTask', () => {
+    const deletedRecord: TaskRecord = {
+      ...baseDraft,
+      id: 'task-restore-1',
+      quadrant: 'urgent-important',
+      completed: true,
+      completedAt: '2025-01-15T10:00:00Z',
+      createdAt: '2025-01-10T08:00:00Z',
+      updatedAt: '2025-01-15T10:00:00Z',
+      notificationSent: false,
+    };
+
+    it('should re-insert the exact record, preserving id, completed state, and createdAt', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      await restoreTask(deletedRecord);
+
+      expect(mockDb.tasks.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'task-restore-1',
+          completed: true,
+          completedAt: '2025-01-15T10:00:00Z',
+          createdAt: '2025-01-10T08:00:00Z',
+        })
+      );
+    });
+
+    it('should not regenerate the id (faithful restore, not a new task)', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      await restoreTask(deletedRecord);
+
+      const added = mockDb.tasks.add.mock.calls[0][0];
+      expect(added.id).toBe('task-restore-1');
+    });
+
+    it('should enqueue a create sync operation when sync is enabled', async () => {
+      (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+        enabled: true,
+        deviceId: 'test-device',
+      });
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      await restoreTask(deletedRecord);
+
+      expect(mockEnqueue).toHaveBeenCalledWith('create', 'task-restore-1', deletedRecord);
+    });
+
+    it('should not enqueue sync when sync is disabled', async () => {
+      mockDb.tasks.add.mockResolvedValue(undefined);
+
+      await restoreTask(deletedRecord);
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
+    it('should throw a wrapped error when the database add fails', async () => {
+      mockDb.tasks.add.mockRejectedValue(new Error('Constraint violation'));
+
+      await expect(restoreTask(deletedRecord)).rejects.toThrow('Failed to restore task');
     });
   });
 

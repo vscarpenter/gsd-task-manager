@@ -183,8 +183,8 @@ describe("TaskCard", () => {
     const { container } = render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    // Polish v0.9.2: 3px left edge in status-overdue, no pink fill.
-    expect(article).toHaveClass("overdue-task", "border-l-status-overdue");
+    // Overdue cards get a full rust hairline border (replaces the banned side-stripe).
+    expect(article).toHaveClass("border-status-overdue");
   });
 
   it("does not show overdue warning for completed tasks", () => {

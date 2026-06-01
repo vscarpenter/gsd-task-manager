@@ -2,6 +2,40 @@
 
 ---
 
+## In progress — 2026-06-01: Harden pass — `components/matrix-simplified` P1s
+
+**Branch:** `fix/matrix-shell-harden`
+**Contract:** critique snapshot `.impeccable/critique/2026-06-01T02-41-23Z__components-matrix-simplified.md` + approved plan (delete safety + keyboard a11y + touch targets, as one harden pass). Tier: Non-trivial; this todo + snapshot stand in for a spec.
+
+**Cycles (one behavior each, TDD where testable):**
+- [x] **C1 — data `restoreTask(record)`** ✅ — `lib/tasks/crud/restore.ts`, re-exported through the 3 barrels. 4 tests green, full suite 1925 pass, typecheck clean. `pb-sync-reviewer`: 0 blocking (verified delete→restore re-creates by `task_id`; keep original timestamp — do NOT bump, that would clobber concurrent edits under LWW).
+- [x] **C2 — UI delete→Undo** ✅ — `index.tsx` `handleDelete` now calls `handleSuccess("Task deleted", () => restoreTask(task))` after delete; captures the exact record in the closure. Test in `matrix-simplified.test.tsx` green; full suite 1926 pass, typecheck clean. Logic-only change (no markup) → a11y-reviewer deferred to C3–C5.
+- [x] **C3 — focus reveal** ✅ — `group-focus-within:opacity-100` on `DesktopActions` (task-card-actions.tsx) + drag handle (task-card-header.tsx). CSS-only.
+- [x] **C4 — edit-drawer dialog semantics** ✅ — chose surgical harden (not Radix rebuild). New `use-dialog-focus.ts` hook (capture+restore focus, Tab trap) + `role="dialog"`/`aria-modal` on the form. 2 tests green (role/aria-modal + focus-restore); Tab-trap verified by a11y-reviewer (jsdom can't assert wrapping).
+- [x] **C5 — touch targets ≥44px** ✅ — new `.touch-target` utility (globals.css, coarse-pointer gated) on the complete button, quadrant-add, and edit-drawer Close button. CSS-only.
+
+**Known limitations / follow-ups (not this pass):**
+- `restoreTask` restores the record but not inbound dependency edges stripped by `removeDependencyReferences` on delete. Undo copy must not over-promise.
+- `restoreTask`'s local `db.tasks.add` + `enqueueSyncOperation` are not in one Dexie transaction (pb-sync-reviewer nit, rule 12): a crash between the two awaits leaves the task locally visible but unprotected from the next reconcile pull. Low-probability; matches the existing non-transactional `create`/`delete` pattern. Follow-up issue, not gold-plated here.
+
+**a11y-reviewer follow-ups (deferred from this pass):**
+- **DONE — keyboard drag-and-drop:** wired `KeyboardSensor` + `sortableKeyboardCoordinates` into `lib/use-drag-and-drop.ts` (TDD). Drag handle is now keyboard-operable.
+- **DONE — colorize (P2):** card/sync layer realigned to Inkwell tokens (delete→rust, due→warning, subtask bar→status-success, sync→warning/info/success dots; completed check→sage at icon level).
+- **DONE — distill (P3):** banned overdue side-stripe → full rust hairline border; dead `.overdue-task` CSS removed.
+- **NEW follow-up — completion button `button-reset`:** its unlayered `color: inherit` neutralizes text/bg/border token classes ON the button (only the icon color renders). For a full sage ring+tint on the completed button, restyle the toggle (drop `button-reset`, add `appearance-none`) — affects both states, its own change.
+- nit: `Field` component (edit-drawer) wraps button groups (Quadrant, Due date) in a `<label>` — replace with `role="group" aria-label` for those two (keep `<label>` for title/description). Pre-existing.
+- nit: edit-drawer dialog could use `aria-labelledby` → the `<h2>` instead of `aria-label`; and `inert`/`aria-hidden` on background siblings for NVDA/Firefox virtual-cursor (aria-modal mitigates in Chrome/VoiceOver).
+- nit: `use-dialog-focus` restore targets the captured node; if the originating card re-renders/moves quadrant, the node detaches and focus drops to `<body>`. Edge case.
+- nit: edit-drawer initial focus uses `setTimeout(50)`; a `requestAnimationFrame` would close a tiny Tab-escape window (not changed — risks reintroducing this file's historic timer flakiness).
+
+**Coverage-config gap (follow-up):** `vitest.config.ts` coverage `include` is `components/**/*.tsx` — so `.ts` files under `components/` (`use-dialog-focus.ts`, `use-smart-view-overflow.ts`) and `components/**/index.tsx` are never instrumented. Their logic IS tested (the trap hook has 5 passing tests; the delete→undo wiring in `index.tsx` is tested) — coverage just doesn't count it. Add `components/**/*.ts` to the include glob so these are measured.
+
+**Process:** never commit on `main` (hook); `restoreTask` is a sync write path → `pb-sync-reviewer` before refactor; component edits → `a11y-reviewer` before refactor; `bun run test` (not `bun test`).
+
+**Resuming from here:** COMPLETE + SHIPPED to PR #343 (3 commits on `fix/matrix-shell-harden`). Full critique remediation P1–P3: delete-safety (C1+C2) + keyboard a11y (C3/C4 + KeyboardSensor) + touch targets (C5) + colorize (P2) + distill (P3). Full suite 1935 pass, typecheck/lint clean. pb-sync-reviewer + a11y-reviewer: 0 blocking. **Live-verified in Chrome:** delete→Undo→restore (id preserved); completed check computes to sage `rgb(120,140,93)`. Impeccable setup (PRODUCT/DESIGN/.impeccable/CSP) shipped separately as PR #344. Remaining = the deferred follow-ups above (button-reset toggle restyle, dependency-edge restore, coverage-include `.ts`, Field role=group + other a11y nits).
+
+---
+
 ## In progress — 2026-05-31: Smart-view strip overflow → "More" menu
 
 **Problem:** `SmartViewStrip` renders 10 pills in a single `overflow-x-auto` row with a hidden scrollbar. The last pills clip off-screen with no affordance (see screenshot). User chose the **"More" overflow menu** fix.

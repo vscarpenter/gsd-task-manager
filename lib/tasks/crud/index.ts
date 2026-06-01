@@ -22,6 +22,9 @@ export { toggleCompleted } from "./toggle";
 // Delete operation
 export { deleteTask } from "./delete";
 
+// Restore operation (undo delete)
+export { restoreTask } from "./restore";
+
 // Move to quadrant (drag-and-drop)
 export { moveTaskToQuadrant } from "./move";
 

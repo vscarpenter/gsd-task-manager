@@ -34,16 +34,21 @@ export function SyncStatusDisplay({
             Last sync: {formatRelativeTime(lastSyncTime)}
           </span>
           {retryCountdown !== null && retryCountdown > 0 ? (
-            <span className="text-orange-500 font-medium">
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden />
               Retry in {retryCountdown}s (attempt {retryCount + 1})
             </span>
           ) : pendingCount > 0 ? (
-            <span className="text-blue-500 font-medium">
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-info" aria-hidden />
               {pendingCount} pending operation
               {pendingCount !== 1 ? "s" : ""}
             </span>
           ) : (
-            <span className="text-green-500">All synced</span>
+            <span className="inline-flex items-center gap-1.5 text-foreground-muted">
+              <span className="h-1.5 w-1.5 rounded-full bg-status-success" aria-hidden />
+              All synced
+            </span>
           )}
         </div>
       ) : (

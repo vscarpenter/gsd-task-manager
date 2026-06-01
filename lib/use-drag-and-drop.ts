@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useSensors, useSensor, PointerSensor, TouchSensor, DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import { useSensors, useSensor, PointerSensor, TouchSensor, KeyboardSensor, DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { QuadrantId } from "@/lib/types";
 import { moveTaskToQuadrant } from "@/lib/tasks";
 import { DND_CONFIG } from "@/lib/constants";
@@ -26,7 +27,9 @@ export type DragErrorHandler = (
 export function useDragAndDrop(onError: DragErrorHandler) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Configure sensors for drag-and-drop (mouse + touch)
+  // Configure sensors for drag-and-drop (mouse + touch + keyboard).
+  // KeyboardSensor makes the drag handle operable without a pointer (WCAG 2.1.1);
+  // sortableKeyboardCoordinates drives arrow-key movement within the sortable list.
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -38,6 +41,9 @@ export function useDragAndDrop(onError: DragErrorHandler) {
         delay: DND_CONFIG.TOUCH_DELAY,
         tolerance: DND_CONFIG.TOUCH_TOLERANCE,
       },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
