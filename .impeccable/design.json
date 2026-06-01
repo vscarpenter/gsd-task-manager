@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-31",
+  "title": "Design System: GSD Task Manager",
+  "extensions": {
+    "colorMeta": {
+      "deep-indigo": {
+        "role": "primary",
+        "displayName": "Deep Indigo",
+        "canonical": "#3B4A8C",
+        "tonalRamp": ["oklch(0.16 0.06 270)", "oklch(0.27 0.09 270)", "oklch(0.40 0.10 270)", "oklch(0.52 0.10 270)", "oklch(0.63 0.09 270)", "oklch(0.74 0.07 270)", "oklch(0.85 0.04 270)", "oklch(0.95 0.02 270)"]
+      },
+      "rust": {
+        "role": "secondary",
+        "displayName": "Rust",
+        "canonical": "#B04A3F",
+        "tonalRamp": ["oklch(0.18 0.05 28)", "oklch(0.30 0.08 28)", "oklch(0.42 0.11 28)", "oklch(0.53 0.13 28)", "oklch(0.64 0.12 28)", "oklch(0.75 0.09 28)", "oklch(0.86 0.05 28)", "oklch(0.95 0.02 28)"]
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "Sage",
+        "canonical": "#788C5D",
+        "tonalRamp": ["oklch(0.20 0.04 130)", "oklch(0.32 0.06 130)", "oklch(0.44 0.07 130)", "oklch(0.56 0.08 130)", "oklch(0.67 0.08 130)", "oklch(0.77 0.06 130)", "oklch(0.87 0.04 130)", "oklch(0.95 0.02 130)"]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Amber",
+        "canonical": "#C78E3F",
+        "tonalRamp": ["oklch(0.22 0.05 75)", "oklch(0.34 0.08 75)", "oklch(0.46 0.10 75)", "oklch(0.58 0.11 75)", "oklch(0.69 0.10 75)", "oklch(0.79 0.08 75)", "oklch(0.88 0.05 75)", "oklch(0.95 0.02 75)"]
+      },
+      "cool-stone": {
+        "role": "neutral",
+        "displayName": "Cool Stone",
+        "canonical": "#F4F4F0",
+        "tonalRamp": ["oklch(0.18 0.004 110)", "oklch(0.30 0.004 110)", "oklch(0.42 0.004 110)", "oklch(0.55 0.004 110)", "oklch(0.68 0.004 110)", "oklch(0.80 0.004 110)", "oklch(0.90 0.004 110)", "oklch(0.96 0.004 110)"]
+      },
+      "ink-slate": {
+        "role": "neutral",
+        "displayName": "Ink Slate",
+        "canonical": "#13141B",
+        "tonalRamp": ["oklch(0.13 0.012 270)", "oklch(0.24 0.012 270)", "oklch(0.36 0.010 270)", "oklch(0.48 0.008 270)", "oklch(0.60 0.006 270)", "oklch(0.72 0.005 270)", "oklch(0.85 0.004 270)", "oklch(0.95 0.003 270)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Largest editorial moments (About, marketing). Serif, fixed 48px." },
+      "headline": { "displayName": "Headline", "purpose": "Page and section titles (H1/H2). Serif." },
+      "title": { "displayName": "Title", "purpose": "Card and panel headings. Serif 19px / sans 18px." },
+      "body": { "displayName": "Body", "purpose": "Running text and UI copy. System sans, weight 430." },
+      "label": { "displayName": "Label", "purpose": "Eyebrows, keyboard chips, micro-labels. Mono, uppercase, 0.12em tracking." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(20,20,19,0.06)", "purpose": "Resting card/column elevation; switch thumbs." },
+      { "name": "shadow-md", "value": "0 4px 14px rgba(20,20,19,0.08)", "purpose": "Dropdowns and popovers." },
+      { "name": "shadow-lg", "value": "0 12px 28px rgba(20,20,19,0.12)", "purpose": "Dialogs and the edit drawer." },
+      { "name": "shadow-card-hover", "value": "0 10px 30px rgba(20,20,19,0.10)", "purpose": "Card hover lift, paired with translateY(-3px)." }
+    ],
+    "motion": [
+      { "name": "t-fast", "value": "120ms", "purpose": "Button/border state transitions." },
+      { "name": "t-base", "value": "150ms", "purpose": "Default component transitions." },
+      { "name": "t-slow", "value": "300ms", "purpose": "Drawer slide-in, view transitions." },
+      { "name": "ease-out", "value": "cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Default easing for state transitions." },
+      { "name": "ease-pop", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Sparing pop emphasis (quadrant pill entrance)." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "720px" },
+      { "name": "tablet", "value": "900px" },
+      { "name": "desktop", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The default call to action. Deep-indigo fill, used once per context.",
+      "html": "<button class=\"ds-btn-primary\">Add task</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; font: 500 14px system-ui, sans-serif; color: #FFFFFF; background: #3B4A8C; border: 1.5px solid transparent; border-radius: 8px; cursor: pointer; transition: background 120ms ease, transform 120ms ease; } .ds-btn-primary:hover { background: #2A3768; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #F4F4F0, 0 0 0 4px #3B4A8C; } .ds-btn-primary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Subtle action. Cloud-white fill with the signature hairline border.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; font: 500 14px system-ui, sans-serif; color: #13141B; background: #FFFFFF; border: 1.5px solid #CFCFCC; border-radius: 8px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; } .ds-btn-secondary:hover { background: #EDEDEA; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #F4F4F0, 0 0 0 4px #3B4A8C; } .ds-btn-secondary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Lowest-emphasis action; borderless until hovered.",
+      "html": "<button class=\"ds-btn-ghost\">Skip</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; font: 500 14px system-ui, sans-serif; color: #3A3B41; background: transparent; border: 1.5px solid transparent; border-radius: 8px; cursor: pointer; transition: background 120ms ease, transform 120ms ease; } .ds-btn-ghost:hover { background: #EDEDEA; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #F4F4F0, 0 0 0 4px #3B4A8C; } .ds-btn-ghost:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Single-line field. Hairline border, indigo focus halo.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"What needs doing?\" />",
+      "css": ".ds-input { width: 280px; height: 38px; padding: 0 12px; font: 14px system-ui, sans-serif; color: #13141B; background: #FFFFFF; border: 1.5px solid #CFCFCC; border-radius: 8px; outline: none; transition: border-color 120ms ease, box-shadow 120ms ease; } .ds-input::placeholder { color: #6F6F75; } .ds-input:focus { border-color: #3B4A8C; box-shadow: 0 0 0 3px rgba(59,74,140,0.18); }"
+    },
+    {
+      "name": "Accent Badge",
+      "kind": "chip",
+      "refersTo": "badge-accent",
+      "description": "Pill label. Tinted background of the hue's own color, never gray text on a tint.",
+      "html": "<span class=\"ds-badge-accent\">Schedule</span>",
+      "css": ".ds-badge-accent { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; font: 500 12px system-ui, sans-serif; color: #3B4A8C; background: rgba(59,74,140,0.14); border-radius: 999px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Cloud-white panel on the cool-stone ground. Flat at rest; lifts as a link.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Quarterly review</div><div class=\"ds-card-body\">Draft the deck and circulate before Friday.</div></div>",
+      "css": ".ds-card { background: #FFFFFF; border: 1.5px solid #CFCFCC; border-radius: 14px; padding: 24px; transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease; } .ds-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(20,20,19,0.10); border-color: #13141B; } .ds-card-title { font: 500 19px ui-serif, Georgia, serif; letter-spacing: -0.008em; color: #13141B; margin-bottom: 8px; } .ds-card-body { font: 430 16px/1.55 system-ui, sans-serif; color: #3A3B41; }"
+    },
+    {
+      "name": "Checkbox",
+      "kind": "custom",
+      "refersTo": "checkbox",
+      "description": "Task completion control. Hairline square that fills indigo when checked.",
+      "html": "<label class=\"ds-checkbox\"><input type=\"checkbox\" checked /> Done</label>",
+      "css": ".ds-checkbox { display: inline-flex; align-items: center; gap: 10px; font: 430 16px system-ui, sans-serif; color: #13141B; cursor: pointer; user-select: none; } .ds-checkbox input { appearance: none; width: 18px; height: 18px; border: 1.5px solid #CFCFCC; border-radius: 5px; background: #FFFFFF; position: relative; cursor: pointer; transition: background 120ms, border-color 120ms; } .ds-checkbox input:checked { background: #3B4A8C; border-color: #3B4A8C; } .ds-checkbox input:checked::after { content: \"\"; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #FFFFFF; border-width: 0 2px 2px 0; transform: rotate(45deg); }"
+    },
+    {
+      "name": "Quadrant Pane (Do First)",
+      "kind": "custom",
+      "refersTo": "quadrant-pane",
+      "description": "Signature component: an Eisenhower quadrant. Hue wash over cloud-white, 3px top accent bar, tinted header. Shown here as Q1 / Do First (rust).",
+      "html": "<section class=\"ds-quadrant\"><header class=\"ds-quadrant-head\"><span class=\"ds-quadrant-eyebrow\">Urgent · Important</span><h3 class=\"ds-quadrant-title\">Do First</h3></header><div class=\"ds-quadrant-body\">Crises, deadlines, emergencies.</div></section>",
+      "css": ".ds-quadrant { position: relative; width: 300px; background: color-mix(in srgb, #B04A3F 18%, #FFFFFF); border: 1.5px solid #CFCFCC; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,20,19,0.06); } .ds-quadrant::before { content: \"\"; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #B04A3F; } .ds-quadrant-head { padding: 16px 20px 12px; background: color-mix(in srgb, #B04A3F 10%, #FFFFFF); } .ds-quadrant-eyebrow { display: inline-block; font: 500 11px ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #6F6F75; margin-bottom: 6px; } .ds-quadrant-title { margin: 0; font: 500 19px ui-serif, Georgia, serif; letter-spacing: -0.008em; color: #13141B; } .ds-quadrant-body { padding: 14px 20px 18px; font: 430 16px/1.55 system-ui, sans-serif; color: #3A3B41; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Strategist's Matrix",
+    "overview": "GSD is built around one act: deciding what matters before doing anything. The interface should feel like a strategist's well-ordered planning surface, not a cockpit of dials. Everything is calm, deliberate, and legible at a glance; the four-quadrant Eisenhower grid is the argument the whole system makes, and the visual language exists to make that prioritization decision feel obvious rather than busy. The Inkwell 'Indigo & Cloud' system carries this: a cool-stone paper ground, a single deep-indigo accent for intent, serif headings that lend authority without shouting, and a 1.5px hairline that draws structure with the lightest possible touch. The personality is calm and focused. Surfaces are quiet, type does the talking, and the one saturated color is spent only where it means something. Delight is reserved for genuine moments (completing a task) and never spread across the surface.",
+    "keyCharacteristics": [
+      "Cool-stone editorial ground; cloud-white panels; deep indigo as the sole accent.",
+      "Serif headings (Georgia family) against a system-sans body: a contrast pairing, not two competing sans.",
+      "The 1.5px hairline is the signature border; structure is drawn, not boxed in shadow.",
+      "Four fixed quadrant hues (rust / indigo / sage / amber), always paired with label + position.",
+      "Flat at rest; surfaces lift only in response to state. Motion is 120–300ms, ease-out, never decorative.",
+      "First-class dark mode (Pattern B), WCAG-AA contrast by construction."
+    ],
+    "rules": [
+      { "name": "The Quadrant Quartet Rule", "body": "Rust = Do First, Indigo = Schedule, Sage = Delegate, Amber = Eliminate. These four assignments are fixed. Never reassign a quadrant hue, and never convey a quadrant by color alone; always pair it with its label and grid position.", "section": "colors" },
+      { "name": "The One Accent Rule", "body": "Deep indigo is spent only on intent: primary actions, current selection, focus, links. It is never a decorative fill or a gradient. If indigo appears somewhere that isn't an action or a state, remove it.", "section": "colors" },
+      { "name": "The Serif-Up Rule", "body": "Serif climbs (display to title), sans holds the body and the working UI. Never set body copy in the serif, and never set a display heading in the sans. The contrast between the two faces is the hierarchy.", "section": "typography" },
+      { "name": "The One Eyebrow Rule", "body": "The mono uppercase eyebrow with its leading 24px indigo rule is a deliberate, named brand element used sparingly. A single signature kicker, never a tracked-uppercase label stamped above every section.", "section": "typography" },
+      { "name": "The Flat-at-Rest Rule", "body": "Surfaces are flat until they respond. Shadow is the language of state (hover, focus, float, overlay), not a default decoration. If a resting element has a shadow but no interaction, it should probably be a hairline border instead.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the 1.5px hairline (#CFCFCC) as the default border. It is the brand; structure is drawn, not shadowed.",
+      "Do reserve the serif (Georgia) for display and headings and the system sans for body and working UI: the contrast pairing is the hierarchy.",
+      "Do spend deep indigo only on intent: primary actions, current selection, focus rings, links. Keep it on 10% or less of any screen.",
+      "Do pair every quadrant hue with its label and grid position, so the matrix reads in grayscale and for color-blind users.",
+      "Do keep surfaces flat at rest and lift them only on interaction (hover translateY(-3px), focus halo, dialog shadow).",
+      "Do honor prefers-reduced-motion with an instant/crossfade fallback on every animation, and keep touch targets 44px or larger on coarse pointers.",
+      "Do hold muted text at gray-500 (#6F6F75) or darker (the AA floor), never a lighter 'elegant' gray."
+    ],
+    "donts": [
+      "Don't ship the flashy AI-startup look: no purple gradients, no glassmorphism as default, no background-clip:text gradient text, no buzzword copy (supercharge / streamline / seamless).",
+      "Don't drift toward a gamified todo toy: no mascots, no points or badge economies, no juvenile illustration. One tasteful completion confetti is the deliberate exception, not a license.",
+      "Don't build a dense enterprise PM tool: no overwhelming toolbars, no deeply nested settings, no feature soup. GSD is a focused personal tool.",
+      "Don't fall into the generic SaaS dashboard: no cookie-cutter card grids, no hero-metric template (big number + small label + gradient accent).",
+      "Don't use border-left/border-right greater than 1px as a colored accent stripe. The legacy .stat-card.warn and .overdue-task left-borders are anti-patterns to migrate, not to copy.",
+      "Don't extend the deprecated .matrix-card or .rd-* (redesign-scope) class systems. Build on components/ui/* and the Inkwell primitives.",
+      "Don't introduce a web font or a third type family. Three system stacks (serif / sans / mono) carry everything.",
+      "Don't set fluid clamp() headings in product UI. The type scale is fixed px on purpose."
+    ]
+  }
+}

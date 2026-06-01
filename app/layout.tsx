@@ -18,13 +18,16 @@ import { FirstTimeRedirect } from "@/components/first-time-redirect";
 
 // The current static Next export emits inline hydration/RSC scripts. Keep
 // production inline script allowance until a deploy-time hash pipeline exists.
+// The dev-only http://localhost:8400 entries below allow the impeccable
+// live-mode picker; they are stripped from the production CSP.
 const scriptSrc = process.env.NODE_ENV === "development"
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8400"
   : "script-src 'self' 'unsafe-inline'";
 
 const connectSrc = process.env.NODE_ENV === "development"
   ? [
       "connect-src 'self'",
+      "http://localhost:8400",
       "http://127.0.0.1:8090",
       "http://localhost:8090",
       "ws://127.0.0.1:8090",
