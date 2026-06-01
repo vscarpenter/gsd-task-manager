@@ -3,6 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { moveTaskToQuadrant } from "@/lib/tasks";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
+import { KeyboardSensor, useSensor } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
 
 vi.mock("@/lib/tasks", () => ({
@@ -33,6 +34,15 @@ describe("useDragAndDrop", () => {
     expect(result.current).toHaveProperty("sensors");
     expect(result.current).toHaveProperty("handleDragEnd");
     expect(typeof result.current.handleDragEnd).toBe("function");
+  });
+
+  it("configures a KeyboardSensor with sortable coordinates for accessible drag-and-drop", () => {
+    renderHook(() => useDragAndDrop(mockOnError));
+
+    expect(useSensor).toHaveBeenCalledWith(
+      KeyboardSensor,
+      expect.objectContaining({ coordinateGetter: expect.any(Function) })
+    );
   });
 
   it("moves task to new quadrant on drag end", async () => {

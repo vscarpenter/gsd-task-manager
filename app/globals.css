@@ -901,10 +901,6 @@ main {
   }
 }
 
-.overdue-task {
-  border-left-color: var(--rust);
-}
-
 /* Touch-primary devices (iPad, iPhone): show always-visible mobile actions instead of
    hover-only desktop actions. Unlayered rules override Tailwind's @layer utilities. */
 @media (hover: none) {

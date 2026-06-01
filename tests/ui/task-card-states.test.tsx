@@ -176,8 +176,8 @@ describe("TaskCard states", () => {
     });
 
     expect(screen.getByText("2/2")).toBeInTheDocument();
-    // The progress bar should have the emerald class
-    const progressBar = container.querySelector(".bg-emerald-500");
+    // The progress bar should use the success token (sage) when fully complete
+    const progressBar = container.querySelector(".bg-status-success");
     expect(progressBar).toBeInTheDocument();
   });
 

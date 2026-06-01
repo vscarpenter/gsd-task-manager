@@ -68,7 +68,7 @@ function TaskCardComponent({
         task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
-        taskIsOverdue && "overdue-task border-l-[3px] border-l-status-overdue",
+        taskIsOverdue && "border-status-overdue",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}

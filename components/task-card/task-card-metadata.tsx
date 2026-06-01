@@ -52,14 +52,14 @@ export function TaskCardMetadata({
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500",
-                completedSubtasks === totalSubtasks ? "bg-emerald-500" : "bg-accent"
+                completedSubtasks === totalSubtasks ? "bg-status-success" : "bg-accent"
               )}
               style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
             />
           </div>
           <span className={cn(
             "shrink-0 tabular-nums",
-            completedSubtasks === totalSubtasks ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-foreground-muted"
+            completedSubtasks === totalSubtasks ? "text-foreground font-medium" : "text-foreground-muted"
           )}>
             {completedSubtasks}/{totalSubtasks}
           </span>

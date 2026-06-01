@@ -73,7 +73,7 @@ export function TaskCardHeader({
             className={cn(
               "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 sm:h-9 sm:w-9",
               task.completed
-                ? "border-emerald-400 bg-emerald-500/15 text-emerald-600 shadow-sm shadow-emerald-500/10 dark:border-emerald-500 dark:text-emerald-400"
+                ? "border-status-success bg-status-success-muted text-status-success shadow-sm"
                 : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"
             )}
             aria-pressed={task.completed}

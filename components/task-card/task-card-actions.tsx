@@ -41,7 +41,7 @@ export function TaskCardActions({
     <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
       <div className="flex items-center gap-2">
         {taskIsDueToday && !taskIsOverdue ? (
-          <span className="flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-amber-600 dark:text-amber-400 font-medium">
+          <span className="flex items-center gap-1 rounded-full bg-warning-tint px-2 py-0.5 text-warning-dark font-medium">
             <AlertCircleIcon className="h-3 w-3" />
             Due today
           </span>
@@ -142,7 +142,7 @@ function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze
             data-testid="delete-task"
             type="button"
             onClick={() => onDelete(task)}
-            className="rounded px-1.5 py-0.5 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            className="rounded px-1.5 py-0.5 flex items-center justify-center text-rust hover:bg-rust-tint hover:text-rust-d transition-colors"
             aria-label="Delete task"
           >
             <Trash2Icon className="h-3 w-3" />
@@ -198,7 +198,7 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileA
               Duplicate
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
+          <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-rust focus:text-rust">
             <Trash2Icon className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
