@@ -80,7 +80,9 @@ export function TaskCardHeader({
             aria-label={completionLabel}
           >
             {task.completed ? (
-              <CheckCircle2Icon className="h-4 w-4 shrink-0" />
+              // Color lives on the icon: the button's `button-reset` (unlayered
+              // color: inherit) would neutralize a text-color class on the button.
+              <CheckCircle2Icon className="h-4 w-4 shrink-0 text-status-success" />
             ) : (
               <>
                 <CircleIcon className="h-4 w-4 shrink-0" />
