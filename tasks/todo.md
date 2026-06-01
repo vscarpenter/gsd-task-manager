@@ -19,7 +19,10 @@
 - `restoreTask`'s local `db.tasks.add` + `enqueueSyncOperation` are not in one Dexie transaction (pb-sync-reviewer nit, rule 12): a crash between the two awaits leaves the task locally visible but unprotected from the next reconcile pull. Low-probability; matches the existing non-transactional `create`/`delete` pattern. Follow-up issue, not gold-plated here.
 
 **a11y-reviewer follow-ups (deferred from this pass):**
-- **IMPORTANT — keyboard drag-and-drop:** `lib/use-drag-and-drop.ts` wires only Pointer+Touch sensors; the (now keyboard-visible) drag handle is a false affordance (WCAG 2.1.1). Fix = add `KeyboardSensor` + `sortableKeyboardCoordinates`. Distinct cycle in the DnD layer — pre-existed C3 (the handle was always focusable). Top follow-up candidate.
+- **DONE — keyboard drag-and-drop:** wired `KeyboardSensor` + `sortableKeyboardCoordinates` into `lib/use-drag-and-drop.ts` (TDD). Drag handle is now keyboard-operable.
+- **DONE — colorize (P2):** card/sync layer realigned to Inkwell tokens (delete→rust, due→warning, subtask bar→status-success, sync→warning/info/success dots; completed check→sage at icon level).
+- **DONE — distill (P3):** banned overdue side-stripe → full rust hairline border; dead `.overdue-task` CSS removed.
+- **NEW follow-up — completion button `button-reset`:** its unlayered `color: inherit` neutralizes text/bg/border token classes ON the button (only the icon color renders). For a full sage ring+tint on the completed button, restyle the toggle (drop `button-reset`, add `appearance-none`) — affects both states, its own change.
 - nit: `Field` component (edit-drawer) wraps button groups (Quadrant, Due date) in a `<label>` — replace with `role="group" aria-label` for those two (keep `<label>` for title/description). Pre-existing.
 - nit: edit-drawer dialog could use `aria-labelledby` → the `<h2>` instead of `aria-label`; and `inert`/`aria-hidden` on background siblings for NVDA/Firefox virtual-cursor (aria-modal mitigates in Chrome/VoiceOver).
 - nit: `use-dialog-focus` restore targets the captured node; if the originating card re-renders/moves quadrant, the node detaches and focus drops to `<body>`. Edge case.
@@ -29,7 +32,7 @@
 
 **Process:** never commit on `main` (hook); `restoreTask` is a sync write path → `pb-sync-reviewer` before refactor; component edits → `a11y-reviewer` before refactor; `bun run test` (not `bun test`).
 
-**Resuming from here:** ALL 5 cycles COMPLETE + verified. Harden pass = delete-safety (C1+C2, TDD + pb-sync-reviewed) + keyboard a11y (C3 focus reveal, C4 edit-drawer modal semantics, TDD) + touch targets (C5). Full suite 1934 pass, typecheck clean, lint clean (2 pre-existing generated-file warnings only). a11y-reviewer: 0 blocking, 1 important (KeyboardSensor — deferred follow-up), nits deferred/pre-existing. **Live-verified in real Chrome:** delete→Undo-toast→restore confirmed end-to-end; IndexedDB restore preserves the original id (verified count 4→delete→5-on-undo→back to 4 on cleanup). Ready to commit. KeyboardSensor is the recommended immediate follow-up.
+**Resuming from here:** COMPLETE + SHIPPED to PR #343 (3 commits on `fix/matrix-shell-harden`). Full critique remediation P1–P3: delete-safety (C1+C2) + keyboard a11y (C3/C4 + KeyboardSensor) + touch targets (C5) + colorize (P2) + distill (P3). Full suite 1935 pass, typecheck/lint clean. pb-sync-reviewer + a11y-reviewer: 0 blocking. **Live-verified in Chrome:** delete→Undo→restore (id preserved); completed check computes to sage `rgb(120,140,93)`. Impeccable setup (PRODUCT/DESIGN/.impeccable/CSP) shipped separately as PR #344. Remaining = the deferred follow-ups above (button-reset toggle restyle, dependency-edge restore, coverage-include `.ts`, Field role=group + other a11y nits).
 
 ---
 
