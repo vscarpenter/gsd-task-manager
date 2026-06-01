@@ -20,6 +20,15 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - `.claude/rules/sw-cache.md` — Service worker multi-cache strategy (ADR 0012)
 - `.claude/rules/mcp-server.md` — MCP server package conventions and tool layout
 
+## Design Context
+
+Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work or when running any `/impeccable` command.
+
+- **Register:** `product` — design serves the task (the matrix, capture bar, settings, dashboard), not a marketing surface.
+- **Personality:** calm & focused. Anti-references: flashy-AI startup, gamified todo toy, dense enterprise PM, generic SaaS dashboard.
+- **Principles:** tool disappears into the task · privacy is the foundation · the matrix is the argument · earned familiarity over novelty · delight in moments, restraint on pages.
+- **Visual system:** Inkwell 1.3.1 "Indigo & Cloud" — tokens in `app/css/inkwell-tokens.css`, signature 1.5px hairline, four-color quadrant language, WCAG-AA baseline. A `DESIGN.md` capturing this is planned (run `/impeccable document`).
+
 ## Core Commands
 
 ### Development
