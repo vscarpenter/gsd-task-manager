@@ -115,9 +115,9 @@ function DeadlineSection({
   color,
 }: DeadlineSectionProps) {
   const borderColor = {
-    overdue: "border-l-status-overdue",
-    warning: "border-l-warning",
-    info: "border-l-sky",
+    overdue: "border-status-overdue/35",
+    warning: "border-warning/35",
+    info: "border-sky/35",
   }[color];
 
   const bgColor = {
@@ -141,7 +141,7 @@ function DeadlineSection({
             <li key={task.id}>
               <button
                 onClick={() => onTaskClick?.(task)}
-                className={`w-full cursor-pointer rounded-lg border-l-4 ${borderColor} ${bgColor} p-3 text-left transition-all hover:shadow-sm`}
+                className={`w-full cursor-pointer rounded-lg border ${borderColor} ${bgColor} p-3 text-left transition-all hover:shadow-sm`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
