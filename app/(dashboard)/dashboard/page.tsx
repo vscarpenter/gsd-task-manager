@@ -160,7 +160,7 @@ export default function DashboardPage() {
       <div className="space-y-8 pb-10">
           <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
             <div className="mx-auto max-w-7xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+              <p className="eyebrow">
                 Workspace Insights
               </p>
               <h1 className="rd-serif mt-2 text-3xl tracking-tight text-foreground sm:text-4xl">
