@@ -22,7 +22,7 @@ const QUADRANT_LABELS: Record<string, { name: string }> = {
 /** Empty state when no time tracking data exists */
 function EmptyState({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
+    <div className={cn("rounded-lg border-hair border-border bg-card p-6 shadow-sm", className)}>
       <h3 className="flex items-center gap-2 rd-serif text-title text-foreground">
         <ClockIcon className="h-5 w-5 text-accent" />
         Time Tracking
@@ -90,7 +90,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
   }
 
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
+    <div className={cn("rounded-lg border-hair border-border bg-card p-6 shadow-sm", className)}>
       <h3 className="flex items-center gap-2 rd-serif text-title text-foreground">
         <ClockIcon className="h-5 w-5 text-accent" />
         Time Tracking
