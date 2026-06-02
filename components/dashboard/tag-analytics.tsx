@@ -8,19 +8,6 @@ interface TagAnalyticsProps {
   maxTags?: number;
 }
 
-const BAR_COLORS = [
-  "bg-accent",
-  "bg-olive",
-  "bg-warning",
-  "bg-rust",
-  "bg-sky",
-  "bg-accent-d",
-  "bg-info",
-  "bg-gray-500",
-  "bg-olive",
-  "bg-warning-dark",
-];
-
 /**
  * Horizontal bar visualization showing tag usage and completion rates.
  * Replaces the previous table layout with a more visual, dashboard-friendly design.
@@ -50,9 +37,8 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
     <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
       <h3 className="mb-4 rd-serif text-title text-foreground">Top Tags</h3>
       <div className="space-y-3">
-        {displayTags.map((stat, index) => {
+        {displayTags.map((stat) => {
           const barWidth = Math.max((stat.count / maxCount) * 100, 4);
-          const barColor = BAR_COLORS[index % BAR_COLORS.length];
 
           return (
             <div key={stat.tag} className="group">
@@ -70,14 +56,14 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
                 </div>
               </div>
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-background-muted">
-                {/* Total tasks bar (full width relative to max) */}
+                {/* Total tasks for this tag — neutral, encodes frequency */}
                 <div
-                  className={`absolute inset-y-0 left-0 rounded-full opacity-25 transition-all ${barColor}`}
+                  className="absolute inset-y-0 left-0 rounded-full bg-gray-300 transition-all"
                   style={{ width: `${barWidth}%` }}
                 />
-                {/* Completed portion (filled) */}
+                {/* Completed portion — success olive, matching the dashboard's completed language */}
                 <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-all ${barColor}`}
+                  className="absolute inset-y-0 left-0 rounded-full bg-status-success transition-all"
                   style={{
                     width: `${barWidth * (stat.completionRate / 100)}%`,
                   }}
