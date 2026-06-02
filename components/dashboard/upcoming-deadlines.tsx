@@ -51,7 +51,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
   }, [tasks]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
       <h3 className="mb-4 rd-serif text-title text-foreground">
         Upcoming Deadlines
       </h3>

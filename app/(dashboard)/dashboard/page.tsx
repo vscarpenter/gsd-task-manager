@@ -176,7 +176,7 @@ export default function DashboardPage() {
             {isLoading ? (
               <DashboardSkeleton />
             ) : tasks.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-12 text-center shadow-sm">
+              <div className="rounded-lg border-hair border-border bg-card p-12 text-center shadow-sm">
                 <ListTodoIcon className="mx-auto h-12 w-12 text-foreground-muted" />
                 <h2 className="mt-4 text-xl font-semibold text-foreground">
                   No tasks yet
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                   {metrics.tagStats.length > 0 ? (
                     <TagAnalytics tagStats={metrics.tagStats} maxTags={8} />
                   ) : (
-                    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                    <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
                       <h3 className="mb-4 text-lg font-semibold text-foreground">
                         Top Tags
                       </h3>

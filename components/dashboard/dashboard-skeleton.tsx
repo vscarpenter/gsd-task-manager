@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 function StatsCardSkeleton() {
   return (
     <div
-      className="rounded-3xl border border-border/70 bg-card p-6"
+      className="rounded-lg border-hair border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       <div className="flex items-start justify-between gap-4">
@@ -30,7 +30,7 @@ function StatsCardSkeleton() {
 
 function ChartSkeleton() {
   return (
-    <div className="rounded-3xl border border-border/70 bg-card p-6 space-y-4" style={{ boxShadow: "var(--shadow-column)" }}>
+    <div className="rounded-lg border-hair border-border bg-card p-6 space-y-4" style={{ boxShadow: "var(--shadow-column)" }}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <Skeleton className="h-5 w-40" />
@@ -45,7 +45,7 @@ function ChartSkeleton() {
 
 function DonutSkeleton() {
   return (
-    <div className="rounded-3xl border border-border/70 bg-card p-6 space-y-4" style={{ boxShadow: "var(--shadow-column)" }}>
+    <div className="rounded-lg border-hair border-border bg-card p-6 space-y-4" style={{ boxShadow: "var(--shadow-column)" }}>
       <Skeleton className="h-5 w-44" />
       <Skeleton className="h-4 w-44" />
       <div className="flex items-center justify-center py-4">
@@ -62,7 +62,7 @@ function DonutSkeleton() {
 
 function ListSkeleton() {
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+    <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm space-y-4">
       <Skeleton className="h-5 w-40" />
       {Array.from({ length: 4 }, (_, i) => (
         <Skeleton key={i} className="h-14 w-full rounded-lg" />

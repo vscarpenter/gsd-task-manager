@@ -39,7 +39,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
   }, [distribution]);
 
   return (
-    <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+    <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <h3 className="rd-serif text-title text-foreground">
@@ -55,26 +55,11 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
       </div>
 
       {segments.length === 0 ? (
-        <div className="mt-6 flex h-[120px] items-center justify-center rounded-xl border border-dashed border-border/70 bg-background-muted/30">
+        <div className="mt-6 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border bg-background-muted/30">
           <p className="text-sm text-foreground-muted">No active tasks to display</p>
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
-          <div className="grid gap-2" style={{ gridTemplateColumns: segments.map((s) => `${s.value}fr`).join(" ") }}>
-            {segments.map((segment) => {
-              const pct = Math.round((segment.value / total) * 100);
-              return (
-                <div key={segment.id} className="min-w-0 text-xs">
-                  <div className="flex items-baseline gap-1.5 truncate">
-                    <span className="font-medium text-foreground">{segment.shortName}</span>
-                    <span className="tabular-nums text-foreground-muted">{segment.value}</span>
-                    <span className="tabular-nums text-foreground-muted/70">·</span>
-                    <span className="tabular-nums text-foreground-muted">{pct}%</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="mt-6 space-y-5">
           <div
             className="flex h-3 overflow-hidden rounded-full"
             role="img"
@@ -92,6 +77,27 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
               );
             })}
           </div>
+          <ul className="space-y-2.5">
+            {segments.map((segment) => {
+              const pct = Math.round((segment.value / total) * 100);
+              return (
+                <li key={segment.id} className="flex items-center gap-2.5 text-sm">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: segment.color }}
+                    aria-hidden
+                  />
+                  <span className="flex-1 truncate font-medium text-foreground">
+                    {segment.shortName}
+                  </span>
+                  <span className="tabular-nums text-foreground-muted">{segment.value}</span>
+                  <span className="w-12 text-right tabular-nums text-foreground-muted">
+                    {pct}%
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>
