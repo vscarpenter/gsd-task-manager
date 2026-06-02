@@ -33,7 +33,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
 
   return (
     <div
-      className="flex h-full flex-col justify-between rounded-2xl border-2 border-border/80 bg-card p-6"
+      className="flex h-full flex-col justify-between rounded-lg border-hair border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       {/* Top: icon + streak count */}
