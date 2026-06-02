@@ -117,7 +117,7 @@ describe('Dashboard Components', () => {
       render(<StreakIndicator streakData={{ current: 0, longest: 0, lastCompletionDate: null, last7Days: [false, false, false, false, false, false, false] }} />);
 
       expect(screen.getByText('0')).toBeInTheDocument();
-      expect(screen.getByText(/start fresh today/i)).toBeInTheDocument();
+      expect(screen.getByText(/no streak yet/i)).toBeInTheDocument();
       // No "Best" label when longest is 0
       expect(screen.queryByText(/best/i)).not.toBeInTheDocument();
     });
@@ -136,22 +136,12 @@ describe('Dashboard Components', () => {
       expect(screen.getByText('1d')).toBeInTheDocument();
     });
 
-    it('should show 7-day milestone badge', () => {
-      render(<StreakIndicator streakData={{ current: 7, longest: 10, lastCompletionDate: null, last7Days: [true, true, true, true, true, true, true] }} />);
-
-      expect(screen.getByText('7 days')).toBeInTheDocument();
-    });
-
-    it('should show 30-day milestone badge', () => {
-      render(<StreakIndicator streakData={{ current: 30, longest: 30, lastCompletionDate: null, last7Days: [true, true, true, true, true, true, true] }} />);
-
-      expect(screen.getByText('30 days')).toBeInTheDocument();
-    });
-
-    it('should show 100-day milestone badge', () => {
+    it('should not render gamified milestone badges', () => {
       render(<StreakIndicator streakData={{ current: 100, longest: 100, lastCompletionDate: null, last7Days: [true, true, true, true, true, true, true] }} />);
 
-      expect(screen.getByText('100 days')).toBeInTheDocument();
+      // Milestone trophy badges were removed for the calm dashboard voice.
+      expect(screen.queryByText('100 days')).not.toBeInTheDocument();
+      expect(screen.getByText('100')).toBeInTheDocument();
     });
 
     it('should show singular "day" for streak of 1', () => {
@@ -159,24 +149,6 @@ describe('Dashboard Components', () => {
 
       expect(screen.getByText('1')).toBeInTheDocument();
       expect(screen.getByText('day')).toBeInTheDocument();
-    });
-
-    it('should show "Building momentum..." for streak 1-3', () => {
-      render(<StreakIndicator streakData={{ current: 2, longest: 5, lastCompletionDate: null, last7Days: [false, false, false, false, false, true, true] }} />);
-
-      expect(screen.getByText(/building momentum/i)).toBeInTheDocument();
-    });
-
-    it('should show "Great consistency!" for streak 4-6', () => {
-      render(<StreakIndicator streakData={{ current: 5, longest: 10, lastCompletionDate: null, last7Days: [false, false, true, true, true, true, true] }} />);
-
-      expect(screen.getByText(/great consistency/i)).toBeInTheDocument();
-    });
-
-    it('should show "On fire!" for streak 7+', () => {
-      render(<StreakIndicator streakData={{ current: 8, longest: 10, lastCompletionDate: null, last7Days: [true, true, true, true, true, true, true] }} />);
-
-      expect(screen.getByText(/on fire/i)).toBeInTheDocument();
     });
   });
 
