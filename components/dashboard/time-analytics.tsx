@@ -22,7 +22,7 @@ const QUADRANT_LABELS: Record<string, { name: string }> = {
 /** Empty state when no time tracking data exists */
 function EmptyState({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
+    <div className={cn("rounded-lg border-hair border-border bg-card p-6 shadow-sm", className)}>
       <h3 className="flex items-center gap-2 rd-serif text-title text-foreground">
         <ClockIcon className="h-5 w-5 text-accent" />
         Time Tracking
@@ -67,11 +67,11 @@ function EstimationInsights({ overCount, underCount }: { overCount: number; unde
       <h4 className="text-sm font-medium text-foreground">Estimation Insights</h4>
       <div className="mt-2 flex gap-6 text-sm">
         <div>
-          <span className="text-red-600 font-medium">{overCount}</span>
+          <span className="text-status-overdue font-medium">{overCount}</span>
           <span className="text-foreground-muted"> tasks over estimate</span>
         </div>
         <div>
-          <span className="text-green-600 font-medium">{underCount}</span>
+          <span className="text-status-success font-medium">{underCount}</span>
           <span className="text-foreground-muted"> tasks under estimate</span>
         </div>
       </div>
@@ -90,7 +90,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
   }
 
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
+    <div className={cn("rounded-lg border-hair border-border bg-card p-6 shadow-sm", className)}>
       <h3 className="flex items-center gap-2 rd-serif text-title text-foreground">
         <ClockIcon className="h-5 w-5 text-accent" />
         Time Tracking
@@ -122,7 +122,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
           label="Running Timers"
           value={summary.tasksWithRunningTimers}
           subtitle={summary.tasksWithRunningTimers > 0 ? "active now" : "none active"}
-          valueColor={summary.tasksWithRunningTimers > 0 ? "text-green-600" : undefined}
+          valueColor={summary.tasksWithRunningTimers > 0 ? "text-status-success" : undefined}
         />
       </div>
 
@@ -175,7 +175,7 @@ function getAccuracyLabel(accuracy: number): string {
 
 function getAccuracyColor(accuracy: number): string | undefined {
   if (accuracy === 0) return undefined;
-  if (accuracy >= 80 && accuracy <= 120) return "text-green-600";
-  if (accuracy > 150 || accuracy < 50) return "text-red-600";
-  return "text-amber-600";
+  if (accuracy >= 80 && accuracy <= 120) return "text-status-success";
+  if (accuracy > 150 || accuracy < 50) return "text-status-overdue";
+  return "text-warning-dark";
 }

@@ -577,8 +577,8 @@ describe('Dashboard Components', () => {
         <TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />
       );
 
-      // Should render with red accuracy color
-      const accuracyValue = container.querySelector('.text-red-600');
+      // Should render with the danger (overdue) accuracy color
+      const accuracyValue = container.querySelector('.text-status-overdue');
       expect(accuracyValue).toBeInTheDocument();
     });
 
@@ -594,7 +594,7 @@ describe('Dashboard Components', () => {
         <TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />
       );
 
-      const accuracyValue = container.querySelector('.text-amber-600');
+      const accuracyValue = container.querySelector('.text-warning-dark');
       expect(accuracyValue).toBeInTheDocument();
     });
   });

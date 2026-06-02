@@ -32,7 +32,7 @@ export function CompletionChart({ data }: CompletionChartProps) {
   }, [data]);
 
   return (
-    <div className="rounded-3xl border border-border/70 bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+    <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="rd-serif text-title text-foreground">
