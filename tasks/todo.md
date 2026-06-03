@@ -2,6 +2,22 @@
 
 ---
 
+## In progress — 2026-06-03: Matrix aesthetic polish (4 impeccable recs)
+
+**Branch:** `feat/matrix-aesthetic-polish`
+**Tier:** Non-trivial (shared CSS + core matrix components). Visual/styling → TDD-optional per CLAUDE.md; verify via running suite + `verify-frontend-change`.
+
+- [x] **#1 Radius hierarchy** ✅ — task card `rounded-xl`→`rounded-lg`; grid/quadrant-pane/capture-bar `rounded-2xl`→`rounded-xl`. Verified computed: card 14px inside 20px panel, both themes.
+- [x] **#2 Quadrant color identity** ✅ — 3px top accent bar per pane (`quadrant-pane.tsx`). **No `overflow-hidden`** (would clip card action menus near pane edges on mobile, where the grid has no `md:overflow-hidden` mask); instead the bar's top corners `inherit` the pane radius → follow the 20px corner on mobile, square on the rounded-none desktop grid. Verified: 3px, rust=Q1, lifts to #D27468 in dark, `topLeftRadius:0` on desktop, `paneOverflow:visible`.
+- [x] **#3 Flat-at-rest depth** ✅ — capture-bar resting `shadow-md` dropped (keeps `focus-within:shadow-lg`); task-card resting boxShadow `var(--shadow-card)` (dead/undefined) → `undefined`. Verified: card+bar `shadow: none` at rest, `shadow-lg` on focus.
+- [x] **#4 Motion at sanctioned moments** ✅ — `check-pop` keyframe (literal cubic-bezier, NOT `var()` — Lightning CSS tree-shakes keyframes referenced via var() in the `animation` shorthand). **Gated to the complete *moment*** (false→true via a `useRef`, not on mount) — a page load showing done tasks is not a completion moment (brand: no page-load motion). Drop-target accent bar thickens via `scaleY(2)` (no reflow). Verified: 0 pops on load, 1 (`check-pop`) on toggle.
+
+**Verify:** `bun typecheck` ✅ · `bun run test` ✅ 1930 pass · `bun lint` ⚠ env-broken (`@typescript-eslint/utils` FlatESLint module crash, pre-existing — unrelated to these CSS/className edits) · `/verify-frontend-change` ✅ live browser, light + dark, no console errors.
+
+**Review:** All four landed and verified in the running app (light + dark) with precise computed-style evidence. No new tests (visual/styling → TDD-optional per CLAUDE.md; existing 1930 pass, none asserted the changed classes). Branch ready; not yet committed.
+
+---
+
 ## In progress — 2026-06-01: Harden pass — `components/matrix-simplified` P1s
 
 **Branch:** `fix/matrix-shell-harden`

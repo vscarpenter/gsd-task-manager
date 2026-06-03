@@ -129,8 +129,9 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       data-testid="capture-bar"
       onSubmit={submit}
       className={cn(
-        "flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5",
-        "shadow-md transition-shadow focus-within:border-foreground-muted focus-within:shadow-lg"
+        "flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5",
+        // Flat at rest on the hairline; lifts only when engaged (Inkwell flat-at-rest signature).
+        "transition-shadow focus-within:border-foreground-muted focus-within:shadow-lg"
       )}
     >
       <ZapIcon

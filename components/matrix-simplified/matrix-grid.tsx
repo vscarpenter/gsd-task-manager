@@ -49,7 +49,7 @@ export function MatrixGrid({
   }, [tasks]);
 
   return (
-    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2 md:gap-0 md:overflow-hidden md:rounded-2xl md:border md:border-border md:bg-card md:shadow-sm">
+    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2 md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-card md:shadow-sm">
       {quadrants.map((meta, index) => (
         <QuadrantPane
           key={meta.id}

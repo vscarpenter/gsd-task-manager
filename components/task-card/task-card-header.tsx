@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CheckCircle2Icon, CircleIcon, GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -27,6 +28,15 @@ export function TaskCardHeader({
   sortableListeners,
 }: TaskCardHeaderProps) {
   const completionLabel = task.completed ? "Mark as incomplete" : "Mark as complete";
+
+  // Pop the check only on the complete *moment* (false→true), never on mount —
+  // a page load showing already-done tasks is not a completion moment, and the
+  // brand reserves motion for moments, not page loads.
+  const wasCompleted = useRef(task.completed);
+  const justCompleted = task.completed && !wasCompleted.current;
+  useEffect(() => {
+    wasCompleted.current = task.completed;
+  }, [task.completed]);
 
   return (
     <div className="flex items-start justify-between gap-2">
@@ -82,7 +92,7 @@ export function TaskCardHeader({
             {task.completed ? (
               // Color lives on the icon: the button's `button-reset` (unlayered
               // color: inherit) would neutralize a text-color class on the button.
-              <CheckCircle2Icon className="h-4 w-4 shrink-0 text-status-success" />
+              <CheckCircle2Icon className={cn("h-4 w-4 shrink-0 text-status-success", justCompleted && "animate-check-pop")} />
             ) : (
               <>
                 <CircleIcon className="h-4 w-4 shrink-0" />

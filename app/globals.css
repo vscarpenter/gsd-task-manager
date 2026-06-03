@@ -478,6 +478,30 @@ main {
     animation: complete-flash 0.6s ease-out;
   }
 
+  /* Completion delight: the check icon pops in with a restrained spring overshoot
+     (Inkwell "delight in moments"); auto-stilled by the reduced-motion reset below. */
+  @keyframes check-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-check-pop {
+    /* Literal cubic-bezier (value of --ease-pop), NOT var(): a var() in the
+       `animation` shorthand defeats Lightning CSS's static name analysis, which
+       then tree-shakes the @keyframes as "unused". */
+    animation: check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
   @keyframes new-task-glow {
     0%, 100% {
       box-shadow: 0 0 0 0 var(--accent-focus-ring);
