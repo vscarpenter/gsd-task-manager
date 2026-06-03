@@ -119,6 +119,9 @@ Architecture details for these subsystems live in path-scoped rules:
 - Use `data-testid` attributes on components for stable selectors
 - Page Object Model for maintainable test fixtures
 
+### Verifying UI changes in the running app
+After editing any `.tsx`/`.jsx` under `components/` or `app/` — matrix, dashboard, capture bar, settings, task cards — confirm it works in the **running app**, not just by reading the diff, before pushing or opening a PR. Use the **`verify-frontend-change`** skill (invoke explicitly with `/verify-frontend-change`): it drives the live app, seeds IndexedDB for data-dependent surfaces, and busts the PWA service-worker cache. Two repo-specific traps make a naive screenshot lie — the service worker serves **stale JS chunks** (you "verify" old code) and data surfaces **render empty on a fresh load** (you "verify" nothing) — so reach for the skill rather than eyeballing a screenshot.
+
 ## Code Style
 - **TypeScript strict mode** with Next.js typed routes
 - **Naming**: PascalCase for components/types, camelCase for functions, kebab-case for files
