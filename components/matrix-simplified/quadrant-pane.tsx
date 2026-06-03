@@ -75,7 +75,7 @@ export function QuadrantPane({
       data-testid={`quadrant-${meta.rdKey}`}
       ref={setNodeRef}
       className={cn(
-        "relative flex min-h-[280px] flex-col rounded-2xl border border-border p-5 transition-colors",
+        "relative flex min-h-[280px] flex-col rounded-xl border border-border p-5 transition-colors",
         WASH_CLASS[meta.rdKey],
         "md:rounded-none md:border-0",
         POSITION_RULES[position],
@@ -84,6 +84,22 @@ export function QuadrantPane({
       style={isOver ? { ["--tw-ring-color" as string]: accent } : undefined}
       aria-label={`${meta.title} quadrant`}
     >
+      {/* Quadrant identity: a 3px top accent bar in the quadrant hue, so the
+          four-quadrant argument reads on the merged desktop grid. Thickens via
+          scaleY (no reflow) to acknowledge an active drop target. Top corners
+          `inherit` the pane radius so the bar follows the rounded corners on
+          mobile (20px) and stays square on the md:rounded-none grid — no
+          overflow-hidden, which would clip card action menus near pane edges. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[3px] origin-top transition-transform duration-150"
+        style={{
+          backgroundColor: accent,
+          transform: isOver ? "scaleY(2)" : "scaleY(1)",
+          borderTopLeftRadius: "inherit",
+          borderTopRightRadius: "inherit",
+        }}
+      />
       <header
         className={cn(
           "-mx-5 -mt-5 mb-4 flex items-baseline gap-1 border-b border-border-muted px-5 py-3",
