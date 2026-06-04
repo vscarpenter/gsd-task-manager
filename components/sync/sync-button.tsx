@@ -122,7 +122,7 @@ export function SyncButton() {
               {isEnabled && !hasAuthError && pendingCount > 0 && (
                 <Badge
                   variant="default"
-                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-blue-500 text-white text-xs"
+                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-accent text-white text-xs"
                 >
                   {pendingCount}
                 </Badge>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Newsreader } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
@@ -44,6 +45,19 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://github.com",
       "https://*.ingest.us.sentry.io",
     ].join(" ");
+
+// Apple's "New York" serif (used for editorial headlines) only exists on Apple
+// devices; Newsreader is the cross-platform stand-in with near-identical
+// proportions. next/font self-hosts it (no runtime Google Fonts request, so no
+// CSP/connect-src change) and emits the @font-face at build time under output:export.
+// Exposed as --font-newsreader, which the --serif token chain references.
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-newsreader",
+  display: "swap",
+});
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -108,7 +122,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={newsreader.variable} suppressHydrationWarning>
       <head>
         <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
         <link rel="preconnect" href="https://api.vinny.io" />

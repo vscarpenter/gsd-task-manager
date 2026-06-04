@@ -2,20 +2,22 @@ import type { QuadrantId } from "@/lib/types";
 
 export type RedesignQuadrantKey = "q1" | "q2" | "q3" | "q4";
 
-/** Canonical accent token per quadrant - single source of truth for charts, panes, and inline styles. */
+/** Canonical accent token per quadrant - single source of truth for charts, panes, and inline styles.
+ *  References the first-class quadrant pigments (the editorial four-color language), decoupled from
+ *  semantic tokens: q3 is ochre (not --olive/success-green) and q4 is slate (not --warning/amber). */
 export const QUADRANT_ACCENT: Record<RedesignQuadrantKey, string> = {
-  q1: "var(--rust)",
-  q2: "var(--accent)",
-  q3: "var(--olive)",
-  q4: "var(--warning)",
+  q1: "var(--q1)",
+  q2: "var(--q2)",
+  q3: "var(--q3)",
+  q4: "var(--q4)",
 };
 
 /** Same palette keyed by QuadrantId for components that reference the long-form id. */
 export const QUADRANT_ACCENT_BY_ID: Record<QuadrantId, string> = {
-  "urgent-important": "var(--rust)",
-  "not-urgent-important": "var(--accent)",
-  "urgent-not-important": "var(--olive)",
-  "not-urgent-not-important": "var(--warning)",
+  "urgent-important": "var(--q1)",
+  "not-urgent-important": "var(--q2)",
+  "urgent-not-important": "var(--q3)",
+  "not-urgent-not-important": "var(--q4)",
 };
 export type RedesignIconKey = "flame" | "calendar" | "users" | "trash";
 

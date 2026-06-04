@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import {
-  LineChart,
+  ComposedChart,
+  Area,
   Line,
   XAxis,
   YAxis,
@@ -17,10 +18,10 @@ interface CompletionChartProps {
 }
 
 /**
- * Line chart showing task completion vs creation. Encoding:
- *   Completed → solid green (status-success), strokeWidth 2
- *   Created   → dotted indigo (accent), strokeWidth 1.6
- * No fills — keeps the comparison legible at small sizes.
+ * Trend chart showing task completion vs creation (editorial encoding):
+ *   Completed → solid forest-green (status-success) line + ~8% area fill
+ *   Created   → dotted graphite (ink-3), strokeWidth 1.6 — de-blued from the old accent
+ * The single soft area anchors "completed" without crowding the comparison.
  */
 export function CompletionChart({ data }: CompletionChartProps) {
   const chartData = useMemo(() => {
@@ -46,19 +47,19 @@ export function CompletionChart({ data }: CompletionChartProps) {
           <span className="h-[2px] w-3 rounded-full bg-status-success" />
           <span className="text-xs font-medium text-foreground-muted">Completed</span>
           <span
-            className="ml-2 h-[2px] w-3 rounded-full bg-accent"
+            className="ml-2 h-[2px] w-3 rounded-full"
             style={{
               backgroundImage: "linear-gradient(to right, currentColor 50%, transparent 50%)",
               backgroundSize: "4px 2px",
               backgroundColor: "transparent",
-              color: "var(--accent)",
+              color: "var(--ink-3)",
             }}
           />
           <span className="text-xs font-medium text-foreground-muted">Created</span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={280}>
-        <LineChart data={chartData}>
+        <ComposedChart data={chartData}>
           <CartesianGrid
             strokeDasharray="3 3"
             stroke="currentColor"
@@ -92,24 +93,26 @@ export function CompletionChart({ data }: CompletionChartProps) {
             }}
             cursor={{ stroke: "var(--gray-500)", strokeOpacity: 0.3 }}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="Completed"
             stroke="var(--status-success)"
             strokeWidth={2}
+            fill="var(--status-success)"
+            fillOpacity={0.08}
             dot={false}
             activeDot={{ r: 5, fill: "var(--status-success)", stroke: "var(--paper)", strokeWidth: 2 }}
           />
           <Line
             type="monotone"
             dataKey="Created"
-            stroke="var(--accent)"
+            stroke="var(--ink-3)"
             strokeWidth={1.6}
             strokeDasharray="3 3"
             dot={false}
-            activeDot={{ r: 5, fill: "var(--accent)", stroke: "var(--paper)", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "var(--ink-3)", stroke: "var(--paper)", strokeWidth: 2 }}
           />
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

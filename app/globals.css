@@ -111,28 +111,37 @@
    via the imports above; everything below is GSD-only.
    ===================================================================== */
 :root {
-  /* Quadrant fill hues — Inkwell's lifted dark-mode values reused on light
-     surfaces. Dark mode rebinds to the canonical tokens below. */
-  --q1-fill: #D27468;  /* coral       — lifted --rust    */
-  --q2-fill: #7A8AD1;  /* periwinkle  — lifted --accent  */
-  --q3-fill: #9CB07A;  /* sage        — lifted --olive   */
-  --q4-fill: #D9A55F;  /* amber       — lifted --warning */
+  /* Quadrant pigments — the only strong color (editorial). First-class and
+     decoupled from semantic tokens: q3 is ochre (NOT --olive, which is now
+     success-green) and q4 is slate (NOT --warning/amber). Dark values rebind
+     below. The matrix is the argument, so these four carry it. */
+  --q1: #B23A2E;  /* Do First  — rust  */
+  --q2: #2C6680;  /* Schedule  — tide  */
+  --q3: #8A6A22;  /* Delegate  — ochre */
+  --q4: #6F685F;  /* Eliminate — slate */
+  --q1-wash: #F4E4E0;
+  --q2-wash: #E1ECF1;
+  --q3-wash: #F0E9D8;
+  --q4-wash: #ECE9E3;
 
-  /* Quadrant fills — Eisenhower matrix backdrops, derived from fill tokens. */
-  --quadrant-focus:    color-mix(in srgb, var(--q1-fill) 18%, var(--paper));
-  --quadrant-schedule: color-mix(in srgb, var(--q2-fill) 17%, var(--paper));
-  --quadrant-delegate: color-mix(in srgb, var(--q3-fill) 20%, var(--paper));
-  --quadrant-eliminate: color-mix(in srgb, var(--q4-fill) 22%, var(--paper));
-  --q1: var(--rust);
-  --q2: var(--accent);
-  --q3: var(--olive);
-  --q4: var(--warning);
+  /* Wash/header component classes mix off these; repointed to the pigments so
+     the matrix backdrops follow the four-color language automatically. */
+  --q1-fill: var(--q1);
+  --q2-fill: var(--q2);
+  --q3-fill: var(--q3);
+  --q4-fill: var(--q4);
+
+  /* Eisenhower matrix pane backdrops — the exact editorial washes. */
+  --quadrant-focus:     var(--q1-wash);
+  --quadrant-schedule:  var(--q2-wash);
+  --quadrant-delegate:  var(--q3-wash);
+  --quadrant-eliminate: var(--q4-wash);
 
   /* Chart / quadrant accent slots used by recharts and matrix headers. */
-  --gradient-focus:     var(--rust);
-  --gradient-schedule:  var(--accent);
-  --gradient-delegate:  var(--olive);
-  --gradient-eliminate: var(--warning);
+  --gradient-focus:     var(--q1);
+  --gradient-schedule:  var(--q2);
+  --gradient-delegate:  var(--q3);
+  --gradient-eliminate: var(--q4);
   --chart-series-2:     var(--sky);
 
   /* Task-status palette — derived from Inkwell semantic tokens. */
@@ -155,21 +164,18 @@
   --duration-normal: var(--t-slow);
 }
 
-/* Dark-mode fill rebinding — canonical tokens carry through any future
-   Inkwell palette swap. Follows the dual-cascade pattern from inkwell-tokens. */
+/* Dark-mode pigment + wash rebinding (handoff warm-dark values). --q*-fill and
+   --quadrant-* reference these, so the matrix follows automatically. Dual-cascade
+   pattern from inkwell-tokens: auto via prefers-color-scheme, manual via data-theme. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --q1-fill: var(--rust);
-    --q2-fill: var(--accent);
-    --q3-fill: var(--olive);
-    --q4-fill: var(--warning);
+    --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
+    --q1-wash: #3A211D; --q2-wash: #173039; --q3-wash: #322B17; --q4-wash: #2A2620;
   }
 }
 :root[data-theme="dark"] {
-  --q1-fill: var(--rust);
-  --q2-fill: var(--accent);
-  --q3-fill: var(--olive);
-  --q4-fill: var(--warning);
+  --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
+  --q1-wash: #3A211D; --q2-wash: #173039; --q3-wash: #322B17; --q4-wash: #2A2620;
 }
 
 /* =====================================================================
@@ -196,6 +202,14 @@
   --color-canvas-foreground: var(--gray-100);
   --color-muted:            var(--gray-500);
   --color-muted-foreground: var(--gray-500);
+
+  /* Quadrant pigments + tertiary ink as utilities (text-q1, bg-q2, text-ink-3),
+     so the chrome and charts can reference the four-color language directly. */
+  --color-q1: var(--q1);
+  --color-q2: var(--q2);
+  --color-q3: var(--q3);
+  --color-q4: var(--q4);
+  --color-ink-3: var(--ink-3);
 
   /* Quadrant + status palettes — Eisenhower matrix backdrops and task
      state colors, both derived from Inkwell semantic tokens. */
@@ -355,15 +369,17 @@ main {
     @apply text-sm text-foreground-muted;
   }
 
-  .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--q1-fill) 18%, var(--paper)); }
-  .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--q2-fill) 17%, var(--paper)); }
-  .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--q3-fill) 20%, var(--paper)); }
-  .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--q4-fill) 22%, var(--paper)); }
+  /* Pane backdrops use the exact editorial washes; --q*-wash is dark-aware
+     (rebinds under [data-theme="dark"]), so light + .dark share one value. */
+  .quadrant-wash-q1 { background-color: var(--q1-wash); }
+  .quadrant-wash-q2 { background-color: var(--q2-wash); }
+  .quadrant-wash-q3 { background-color: var(--q3-wash); }
+  .quadrant-wash-q4 { background-color: var(--q4-wash); }
 
-  .dark .quadrant-wash-q1 { background-color: color-mix(in srgb, var(--q1-fill) 18%, transparent); }
-  .dark .quadrant-wash-q2 { background-color: color-mix(in srgb, var(--q2-fill) 17%, transparent); }
-  .dark .quadrant-wash-q3 { background-color: color-mix(in srgb, var(--q3-fill) 20%, transparent); }
-  .dark .quadrant-wash-q4 { background-color: color-mix(in srgb, var(--q4-fill) 22%, transparent); }
+  .dark .quadrant-wash-q1 { background-color: var(--q1-wash); }
+  .dark .quadrant-wash-q2 { background-color: var(--q2-wash); }
+  .dark .quadrant-wash-q3 { background-color: var(--q3-wash); }
+  .dark .quadrant-wash-q4 { background-color: var(--q4-wash); }
 
   .quadrant-header-q1 { background-color: color-mix(in srgb, var(--q1-fill) 10%, var(--paper)); }
   .quadrant-header-q2 { background-color: color-mix(in srgb, var(--q2-fill) 10%, var(--paper)); }

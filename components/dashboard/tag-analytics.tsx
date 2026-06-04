@@ -56,12 +56,12 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
                 </div>
               </div>
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-background-muted">
-                {/* Total tasks for this tag — neutral, encodes frequency */}
+                {/* Total tasks for this tag — q2 tide at ~82%, the editorial Top Tags bar color */}
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gray-300 transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-q2/80 transition-all"
                   style={{ width: `${barWidth}%` }}
                 />
-                {/* Completed portion — success olive, matching the dashboard's completed language */}
+                {/* Completed portion — success green, matching the dashboard's completed language */}
                 <div
                   className="absolute inset-y-0 left-0 rounded-full bg-status-success transition-all"
                   style={{

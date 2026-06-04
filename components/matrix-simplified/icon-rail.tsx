@@ -161,7 +161,7 @@ function RailButton({
           disabled && "cursor-wait opacity-60"
         )}
       >
-        <Icon className="h-5 w-5" aria-hidden />
+        <Icon className={cn("h-5 w-5", active && "text-q1")} aria-hidden />
       </button>
     );
   }
@@ -179,12 +179,12 @@ function RailButton({
         "relative flex h-10 w-full items-center gap-3 rounded-xl pl-2.5 pr-3 text-body transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
         active
-          ? "text-foreground before:absolute before:inset-y-1.5 before:left-0 before:w-[2px] before:rounded-full before:bg-accent before:content-['']"
+          ? "bg-background-muted text-foreground"
           : "text-foreground-muted hover:bg-background-muted/60 hover:text-foreground",
         disabled && "cursor-wait opacity-60"
       )}
     >
-      <Icon className="h-5 w-5 shrink-0" aria-hidden />
+      <Icon className={cn("h-5 w-5 shrink-0", active && "text-q1")} aria-hidden />
       <span
         className={cn(
           "whitespace-nowrap transition-opacity duration-150",
