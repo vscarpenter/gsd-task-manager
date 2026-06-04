@@ -10,12 +10,13 @@ interface TaskItemProps {
   onSelect: () => void;
 }
 
-// Quadrant badge styles
+// Quadrant badge styles — the editorial four-color pigments (dark-aware tokens),
+// replacing the old hard-coded system-blue/red/amber Tailwind palette swatches.
 const quadrantStyles = {
-  "urgent-important": "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-  "not-urgent-important": "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  "urgent-not-important": "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  "not-urgent-not-important": "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  "urgent-important": "bg-q1/15 text-q1",
+  "not-urgent-important": "bg-q2/15 text-q2",
+  "urgent-not-important": "bg-q3/15 text-q3",
+  "not-urgent-not-important": "bg-q4/15 text-q4",
 } as const;
 
 /**
@@ -34,13 +35,14 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
       onSelect={onSelect}
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none",
-        "hover:bg-accent/10 data-[selected]:bg-accent/10"
+        // Editorial chrome: row highlight is a neutral sunken fill, not a tint.
+        "hover:bg-background-muted data-[selected]:bg-background-muted"
       )}
     >
       <CheckIcon
         className={cn(
           "mr-2 h-4 w-4 shrink-0",
-          task.completed ? "text-green-500" : "text-foreground-muted/30"
+          task.completed ? "text-status-success" : "text-foreground-muted/30"
         )}
       />
       <div className="flex-1 min-w-0 space-y-1">

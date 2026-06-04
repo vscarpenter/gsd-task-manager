@@ -20,7 +20,8 @@ export function CommandActionItem({ action, onSelect }: CommandActionItemProps) 
       onSelect={onSelect}
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none",
-        "hover:bg-accent/10 data-[selected]:bg-accent/10"
+        // Editorial chrome: row highlight is a neutral sunken fill, not a tint.
+        "hover:bg-background-muted data-[selected]:bg-background-muted"
       )}
     >
       <span className="text-foreground">{action.label}</span>

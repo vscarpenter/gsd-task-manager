@@ -24,8 +24,10 @@ const PILL_BASE =
   "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
 
 function pillVariant(active: boolean): string {
+  // Editorial chrome: selection is a neutral sunken fill + ink, not a tinted pill.
+  // The tide tint is reserved for true actions, not for "active view" state.
   return active
-    ? "border-accent/40 bg-accent/10 text-foreground"
+    ? "border-border bg-background-muted text-foreground"
     : "border-border bg-card text-foreground-muted hover:bg-background-muted hover:text-foreground";
 }
 
@@ -173,11 +175,11 @@ export function SmartViewOverflowMenu({
               key={view.id}
               onSelect={() => onSelectView(view.id)}
               aria-current={isActive ? "true" : undefined}
-              className={cn("gap-2", isActive && "bg-accent/10 text-foreground")}
+              className={cn("gap-2", isActive && "bg-background-muted text-foreground")}
             >
               {view.icon ? <span aria-hidden>{view.icon}</span> : null}
               <span className="flex-1">{view.name}</span>
-              {isActive ? <CheckIcon className="h-3.5 w-3.5 text-accent" aria-hidden /> : null}
+              {isActive ? <CheckIcon className="h-3.5 w-3.5 text-foreground-muted" aria-hidden /> : null}
             </DropdownMenuItem>
           );
         })}

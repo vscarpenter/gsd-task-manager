@@ -94,7 +94,9 @@ export default function GlobalError({
               onClick={reset}
               style={{
                 padding: "0.5rem 1rem",
-                background: "#3B4A8C",
+                /* Editorial tide (--accent). Hard-coded: global-error renders outside
+                   the root layout, so the token cascade isn't available here. */
+                background: "#2C6680",
                 color: "#fff",
                 border: "none",
                 borderRadius: "0.375rem",
