@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { Shield, Check } from "lucide-react";
 import { ScrollReveal } from "@/components/about/scroll-reveal";
 
 const privacyChecklist = [
   "No account required",
   "IndexedDB local storage",
-  "Optional E2E encrypted sync",
+  "Optional secure cloud sync",
   "Export your data anytime as JSON",
   "Works entirely offline",
 ];
@@ -26,9 +27,9 @@ export function PrivacySection() {
                 analytics tracking what you type.
               </p>
               <p>
-                If you want sync across devices, the optional cloud backend uses
-                end-to-end client-side encryption. The server receives only
-                ciphertext — it cannot read your tasks. Ever.
+                If you want sync across devices, the optional cloud backend
+                stores your tasks securely — encrypted in transit and protected
+                by authentication and owner-scoped access controls.
               </p>
             </div>
             <div className="text-left max-w-sm mx-auto space-y-3">
@@ -39,6 +40,12 @@ export function PrivacySection() {
                 </div>
               ))}
             </div>
+            <Link
+              href="/privacy"
+              className="mt-8 inline-block text-sm text-accent transition-colors hover:text-accent-hover"
+            >
+              Read the full Privacy Policy &rarr;
+            </Link>
           </div>
         </ScrollReveal>
       </div>

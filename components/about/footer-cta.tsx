@@ -29,6 +29,14 @@ export function FooterCta({ version }: FooterCtaProps) {
             Built by Vinny Carpenter &middot; MIT License &middot; v{version}{" "}
             &middot; gsd.vinny.dev
           </p>
+          <p className="mt-2 text-xs text-foreground-muted">
+            <Link
+              href="/privacy"
+              className="text-accent transition-colors hover:text-accent-hover"
+            >
+              Privacy Policy
+            </Link>
+          </p>
         </ScrollReveal>
       </div>
     </section>

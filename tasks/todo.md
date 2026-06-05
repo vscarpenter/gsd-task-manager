@@ -2,6 +2,59 @@
 
 ---
 
+## In progress — 2026-06-05: Standalone `/privacy` policy page + `/about` accuracy fix
+
+**Branch:** `feat/privacy-policy-page`
+**Tier:** Standard (new route + one content component + small `/about` fix + tests; bounded, no new public contract). Lightweight plan + TDD per CLAUDE.md.
+
+**Why:** No privacy/legal route exists. The `/about` privacy section currently makes a **false claim** — "end-to-end client-side encryption… the server receives only ciphertext — it cannot read your tasks. Ever." But `lib/sync/task-mapper.ts` sends task content (title, description, tags, subtasks) to the server in **plaintext**. A privacy policy must be accurate, so this also corrects `/about`.
+
+**Verified facts the copy must match (source = code, not marketing):**
+- Local-first by default: data lives in IndexedDB (`lib/db.ts`); JSON export/import; works offline.
+- Sync is opt-in (sign in with Google/GitHub OAuth → `lib/sync/pb-auth.ts`). Task content stored on `api.vinny.io` in plaintext; secured **in transit** (HTTPS) + auth + owner-scoped access. **Not** end-to-end encrypted.
+- Error tracking = Sentry, **only if `NEXT_PUBLIC_SENTRY_DSN` is set** (`lib/sentry.ts`). Allowlist (`lib/logger.ts` `SENTRY_SAFE_METADATA_KEYS`) sends diagnostic IDs only (error type, user/task/device IDs, status codes); **task content is stripped** before egress.
+- Backend infra described generically as **AWS** (per user) — hosts the app (CloudFront/S3) and the sync database. No "PocketBase" naming in user-facing copy.
+
+**Decisions (approved):** document-style policy page; accurate sync wording + fix `/about`; disclose Google/GitHub OAuth, AWS (app + DB), Sentry, AWS hosting/logs. Contact `vscarpenter@gmail.com`. Last-updated June 5, 2026. Add a `/privacy` link to the `/about` footer.
+
+**Acceptance criteria:**
+- [ ] `/privacy` route renders inside `AppShell title="Privacy"` with `metadata` (title/description/openGraph).
+- [ ] Document has: `<h1>Privacy Policy</h1>`, "Last updated June 5, 2026", and sections — Our Approach, What We Collect, Local-First Storage, Optional Cloud Sync, Third-Party Services, Error Tracking, Your Choices, Changes to This Policy, Contact.
+- [ ] Sync section states data is encrypted in transit + access-controlled and honestly discloses it is **not** end-to-end encrypted. Page contains **no** "ciphertext" wording and makes **no** false E2E/zero-knowledge claim.
+- [ ] Third-Party Services discloses Google/GitHub OAuth + AWS (app + database). Error Tracking discloses Sentry and that task content never leaves the device.
+- [ ] Contact email present.
+- [ ] `/about` privacy section no longer claims E2E/ciphertext; links to `/privacy`; checklist item reworded to "Optional secure cloud sync".
+- [ ] `/about` footer links to `/privacy`.
+
+**Cycles (TDD — red first):**
+- [x] **C1 — `PrivacyPolicy` component** ✅ — `tests/ui/privacy-policy.test.tsx` (6 tests) red → built `components/privacy/privacy-policy.tsx` (title, date, 9 sections via local `Section` helper) → green.
+- [x] **C2 — `/privacy` route** ✅ — `app/privacy/page.tsx` (AppShell + metadata); render test added to `tests/ui/app-pages.test.tsx` (red→green). Suite 9 pass.
+- [x] **C3 — `/about` accuracy fix** ✅ — `tests/ui/about-components.test.tsx` +3 assertions (no "ciphertext"/"end-to-end"; `/privacy` link in section + footer) red → edited `privacy-section.tsx` (removed E2E claim, reworded checklist, added policy link) + `footer-cta.tsx` (footer link) → green. Suite 11 pass.
+
+**Out of scope:** cookie banner (none exist), terms-of-service, GDPR/CCPA boilerplate beyond plain language, adding actual encryption.
+
+**Verify:** `bun typecheck` ✅ · `bun run test` ✅ 1940 pass / 1 skip · `bun run build` ✅ (`/privacy` prerenders static) · `bun lint` ✅ 0 errors (10 pre-existing warnings, none in changed files) · `/verify-frontend-change` ✅ live browser, SW-cache busted.
+
+**Review:** Shipped `/privacy` (document-style, 9 sections, editorial Inkwell styling) + corrected the false E2E claim on `/about` (section copy + checklist) and added `/privacy` links (about section + footer). Copy is grounded in code, not marketing: plaintext sync stored on AWS, encrypted **in transit** only, honestly disclosed as **not** end-to-end encrypted; Sentry disclosed with task-content stripped. Live-verified in browser: 9 sections render, accurate sync language present, no "ciphertext", both `/privacy` links work (rendered `/privacy/` under `trailingSlash:true`), clean console. Double-h1 (topbar + doc title) matches the existing `/about` shell convention — not a new regression. No e2e spec added (static page, strong unit coverage). Branch `feat/privacy-policy-page`.
+
+**Advisor pass (accuracy hardening):** (1) Softened the Sentry "never sent" absolute — `error-logger.ts:59` calls `captureException(error, {...loggedError})` directly, bypassing the `logger.ts` `SENTRY_SAFE_METADATA_KEYS` allowlist, and Sentry's default `globalHandlers` auto-capture raw error messages/stacks; so the allowlist is not an app-wide guarantee. Copy now says error reporting is "designed to exclude" task content, not "never." (2) Fixed a self-contradiction: "By default, nothing… we do not collect personal information" vs. the disclosed AWS server logs (IP). "What We Collect" now scopes the no-collection claim to content and cross-references hosting logs. (3) Tightened "Our Approach" to "nothing you create is sent to a server." **Open before push:** confirm the `api.vinny.io` sync DB is actually on AWS (code only proves the static app is). → **Confirmed by maintainer: sync DB is on AWS.** Pushed; PR #354.
+
+**Follow-up (discoverability):** added a "Privacy Policy" nav row to Settings → About (`components/settings/about-section.tsx`) linking `/privacy` via `next/link` with a chevron affordance (internal nav, distinct from the external GitHub/report rows). TDD: `settings-components.test.tsx` +1 (red→green) + `next/link` mock. Live-verified at `/settings#about` (renders, href `/privacy/`, v9.7.0). Console PASS — only the pre-existing app-wide theme-toggle hydration mismatch (reproduced on untouched `/dashboard`), not mine. Full suite 1941 pass.
+
+---
+
+## Known issue (unscheduled) — 2026-06-05: Topbar theme-toggle SSR hydration mismatch
+
+**Severity:** low (cosmetic — React regenerates the subtree on the client, no functional break) · **Scope:** app-wide (topbar renders on every `AppShell` page) · **Tier when fixed:** Trivial (single component, ~3 lines; TDD optional — jsdom doesn't reproduce SSR/CSR hydration, so verify in a real browser console).
+
+**Symptom:** On first load, the console logs `Hydration failed because the server rendered HTML didn't match the client.` Reproduced on `/dashboard`, `/settings`, etc. (not page-specific). The mismatch is the theme-toggle button (`aria-label="Toggle theme"`): prerendered HTML shows the `<SunIcon>` fallback with no Radix Tooltip wrapper (`data-state` absent), while the client's first render shows the resolved-theme icon (`<MoonIcon>` in dark) wrapped in the Tooltip (`data-state="closed"`).
+
+**Root cause:** `components/theme-toggle.tsx:15` — `const [mounted] = useState(() => isBrowser)` where `isBrowser = typeof window !== "undefined"`. The lazy initializer makes `mounted` start as `true` on the client's **very first** render, so the client never produces a `mounted=false` render matching the prerendered HTML. The mount-guard pattern only works if the client's first render matches the server. The code comment "avoids useEffect" is precisely what breaks it.
+
+**Fix:** revert to the canonical pattern — `const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), [])`. First client render then matches the server (`mounted=false` → Sun fallback), and the effect flips it post-hydration. Re-verify by loading any page in a real browser with devtools open and confirming the hydration error is gone (jsdom won't catch it).
+
+---
+
 ## In progress — 2026-06-03: Matrix aesthetic polish (4 impeccable recs)
 
 **Branch:** `feat/matrix-aesthetic-polish`

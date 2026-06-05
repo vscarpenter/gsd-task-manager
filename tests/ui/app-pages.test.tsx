@@ -117,10 +117,16 @@ vi.mock('@/package.json', () => ({
   default: { version: '1.0.0-test' },
 }));
 
+// Privacy page mock
+vi.mock('@/components/privacy/privacy-policy', () => ({
+  PrivacyPolicy: () => <article data-testid="privacy-policy">Policy</article>,
+}));
+
 // --- Component Imports ---
 
 import RootLayout from '@/app/layout';
 import AboutPage from '@/app/about/page';
+import PrivacyPage from '@/app/privacy/page';
 import InstallPage from '@/app/(pwa)/install/page';
 
 // --- Tests ---
@@ -182,6 +188,14 @@ describe('AboutPage', () => {
     render(<AboutPage />);
 
     expect(screen.getByTestId('footer-cta')).toHaveTextContent('v1.0.0-test');
+  });
+});
+
+describe('PrivacyPage', () => {
+  it('renders the privacy policy inside the app shell', () => {
+    render(<PrivacyPage />);
+
+    expect(screen.getByTestId('privacy-policy')).toBeInTheDocument();
   });
 });
 
