@@ -72,6 +72,21 @@ describe('About Components', () => {
 
       expect(screen.getByText('Your tasks stay on your device.')).toBeInTheDocument();
     });
+
+    it('does not make a false end-to-end encryption claim', () => {
+      const { container } = render(<PrivacySection />);
+      const text = container.textContent ?? '';
+
+      expect(text).not.toMatch(/ciphertext/i);
+      expect(text).not.toMatch(/end-to-end/i);
+    });
+
+    it('links to the full privacy policy', () => {
+      render(<PrivacySection />);
+
+      const link = screen.getByRole('link', { name: /privacy policy/i });
+      expect(link).toHaveAttribute('href', '/privacy');
+    });
   });
 
   describe('McpSection', () => {
@@ -88,6 +103,13 @@ describe('About Components', () => {
 
       expect(screen.getByText('Ready to get stuff done?')).toBeInTheDocument();
       expect(screen.getByText(/v1\.0\.0/)).toBeInTheDocument();
+    });
+
+    it('links to the privacy policy', () => {
+      render(<FooterCta version="1.0.0" />);
+
+      const link = screen.getByRole('link', { name: /privacy/i });
+      expect(link).toHaveAttribute('href', '/privacy');
     });
   });
 
