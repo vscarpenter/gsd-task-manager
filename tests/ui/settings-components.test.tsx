@@ -30,6 +30,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock('next/link', () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
 vi.mock('@/lib/archive', () => ({
   getArchiveSettings: (...args: unknown[]) => mockGetArchiveSettings(...args),
   updateArchiveSettings: (...args: unknown[]) => mockUpdateArchiveSettings(...args),
@@ -159,6 +165,12 @@ describe('Settings Components', () => {
         'href',
         'https://github.com/vscarpenter/gsd-task-manager'
       );
+    });
+
+    it('links to the full privacy policy', () => {
+      render(<AboutSection />);
+      const link = screen.getByText('Privacy Policy');
+      expect(link.closest('a')).toHaveAttribute('href', '/privacy');
     });
   });
 
