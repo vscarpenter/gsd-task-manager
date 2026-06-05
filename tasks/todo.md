@@ -43,6 +43,18 @@
 
 ---
 
+## Known issue (unscheduled) — 2026-06-05: Topbar theme-toggle SSR hydration mismatch
+
+**Severity:** low (cosmetic — React regenerates the subtree on the client, no functional break) · **Scope:** app-wide (topbar renders on every `AppShell` page) · **Tier when fixed:** Trivial (single component, ~3 lines; TDD optional — jsdom doesn't reproduce SSR/CSR hydration, so verify in a real browser console).
+
+**Symptom:** On first load, the console logs `Hydration failed because the server rendered HTML didn't match the client.` Reproduced on `/dashboard`, `/settings`, etc. (not page-specific). The mismatch is the theme-toggle button (`aria-label="Toggle theme"`): prerendered HTML shows the `<SunIcon>` fallback with no Radix Tooltip wrapper (`data-state` absent), while the client's first render shows the resolved-theme icon (`<MoonIcon>` in dark) wrapped in the Tooltip (`data-state="closed"`).
+
+**Root cause:** `components/theme-toggle.tsx:15` — `const [mounted] = useState(() => isBrowser)` where `isBrowser = typeof window !== "undefined"`. The lazy initializer makes `mounted` start as `true` on the client's **very first** render, so the client never produces a `mounted=false` render matching the prerendered HTML. The mount-guard pattern only works if the client's first render matches the server. The code comment "avoids useEffect" is precisely what breaks it.
+
+**Fix:** revert to the canonical pattern — `const [mounted, setMounted] = useState(false); useEffect(() => setMounted(true), [])`. First client render then matches the server (`mounted=false` → Sun fallback), and the effect flips it post-hydration. Re-verify by loading any page in a real browser with devtools open and confirming the hydration error is gone (jsdom won't catch it).
+
+---
+
 ## In progress — 2026-06-03: Matrix aesthetic polish (4 impeccable recs)
 
 **Branch:** `feat/matrix-aesthetic-polish`
