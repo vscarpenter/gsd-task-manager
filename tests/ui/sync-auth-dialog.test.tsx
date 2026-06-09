@@ -113,6 +113,9 @@ describe('SyncAuthDialog', () => {
         get: vi.fn().mockResolvedValue(null),
         put: vi.fn().mockResolvedValue(undefined),
       },
+      tasks: {
+        count: vi.fn().mockResolvedValue(0),
+      },
       syncQueue: {
         clear: vi.fn().mockResolvedValue(undefined),
         count: vi.fn().mockResolvedValue(0),
@@ -317,6 +320,64 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         expect(mockQueue.populateFromExistingTasks).toHaveBeenCalled();
       });
+    });
+
+    it('should mark existing local tasks as owned by the authenticated sync user', async () => {
+      mockDb.tasks.count.mockResolvedValue(2);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnSuccess).toBeDefined();
+      });
+
+      const authState: AuthState = {
+        isLoggedIn: true,
+        userId: 'user123',
+        email: 'test@example.com',
+        provider: 'google',
+      };
+
+      await capturedOnSuccess!(authState);
+
+      expect(mockDb.syncMetadata.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          localTaskOwnerUserId: 'user123',
+        })
+      );
+      expect(mockQueue.populateFromExistingTasks).toHaveBeenCalled();
+    });
+
+    it('should reject OAuth setup when local tasks belong to another sync account', async () => {
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: false,
+        userId: null,
+        deviceId: 'device-123',
+        deviceName: 'Test Device',
+        email: null,
+        provider: null,
+        localTaskOwnerUserId: 'previous-user',
+      });
+      mockDb.tasks.count.mockResolvedValue(2);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnSuccess).toBeDefined();
+      });
+
+      const authState: AuthState = {
+        isLoggedIn: true,
+        userId: 'new-user',
+        email: 'new@example.com',
+        provider: 'google',
+      };
+
+      await expect(capturedOnSuccess!(authState)).rejects.toThrow(/different sync account/i);
+      expect(mockDb.syncMetadata.put).not.toHaveBeenCalled();
+      expect(mockQueue.populateFromExistingTasks).not.toHaveBeenCalled();
+      expect(mockClearPocketBase).toHaveBeenCalled();
     });
 
     it('should clear PocketBase auth and report an error when sync setup fails after OAuth', async () => {

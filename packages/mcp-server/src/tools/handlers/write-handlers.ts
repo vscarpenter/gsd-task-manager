@@ -133,7 +133,7 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
         message += `  - ${title}\n`;
       });
     }
-    message += `\nTo delete this task, remove dryRun or set it to false.`;
+    message += `\nTo delete this task, pass dryRun=false explicitly.`;
   } else {
     message = `✅ Task deleted successfully!\n\n`;
     message += `Deleted: "${result.taskTitle}" (${result.taskId})`;

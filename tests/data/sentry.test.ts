@@ -70,6 +70,53 @@ describe("Sentry wrapper", () => {
     });
   });
 
+  it("should mask token-bearing exception details and context before capture", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureException } = await import("@/lib/sentry");
+    initSentry();
+
+    const error = new Error("failed with token=abc123 and Bearer raw-token");
+    error.stack = "Error: failed\n    at call (https://app.test?access_token=stack-secret)";
+
+    captureException(error, {
+      url: "https://api.test/tasks?token=query-secret",
+      authToken: "context-secret",
+      nested: {
+        password: "password-secret",
+      },
+    });
+
+    const [capturedError, capturedOptions] = mockCaptureException.mock.calls[0];
+    expect(capturedError).not.toBe(error);
+    expect(capturedError).toBeInstanceOf(Error);
+    expect((capturedError as Error).message).not.toContain("abc123");
+    expect((capturedError as Error).message).not.toContain("raw-token");
+    expect((capturedError as Error).stack).not.toContain("stack-secret");
+
+    const serializedOptions = JSON.stringify(capturedOptions);
+    expect(serializedOptions).not.toContain("query-secret");
+    expect(serializedOptions).not.toContain("context-secret");
+    expect(serializedOptions).not.toContain("password-secret");
+    expect(serializedOptions).toContain("***");
+  });
+
+  it("should mask token-bearing custom error properties before capture", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureException } = await import("@/lib/sentry");
+    initSentry();
+
+    const error = new Error("clean message") as Error & { authToken: string };
+    error.authToken = "custom-secret";
+
+    captureException(error);
+
+    const [capturedError] = mockCaptureException.mock.calls[0];
+    expect(capturedError).not.toBe(error);
+    expect((capturedError as { authToken: string }).authToken).toBe("***");
+  });
+
   it("should not call Sentry.captureException when not initialized", async () => {
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -93,6 +140,23 @@ describe("Sentry wrapper", () => {
       level: "error",
       contexts: { gsd: { action: "test" } },
     });
+  });
+
+  it("should mask token-bearing messages and message context before capture", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureMessage } = await import("@/lib/sentry");
+    initSentry();
+
+    captureMessage("failed with refresh_token=refresh-secret and Bearer message-token", {
+      apiKey: "context-secret",
+    });
+
+    const [capturedMessage, capturedOptions] = mockCaptureMessage.mock.calls[0];
+    expect(capturedMessage).not.toContain("refresh-secret");
+    expect(capturedMessage).not.toContain("message-token");
+    expect(JSON.stringify(capturedOptions)).not.toContain("context-secret");
+    expect(JSON.stringify(capturedOptions)).toContain("***");
   });
 
   it("should not call Sentry.captureMessage when not initialized", async () => {

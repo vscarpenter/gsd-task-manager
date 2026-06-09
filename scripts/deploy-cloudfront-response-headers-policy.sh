@@ -13,6 +13,8 @@
 # Environment variables:
 #   POLICY_NAME  Defaults to 'gsd-security-headers' (matches what the
 #                CloudFront distribution references).
+#   CLOUDFRONT_DISTRIBUTION_ID  Required. Distribution that must reference
+#                the applied policy in DefaultCacheBehavior.
 
 set -euo pipefail
 
@@ -23,6 +25,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 POLICY_FILE="$PROJECT_ROOT/cloudfront/response-headers-policy.json"
 POLICY_NAME="${POLICY_NAME:-gsd-security-headers}"
+: "${CLOUDFRONT_DISTRIBUTION_ID:?Required env var CLOUDFRONT_DISTRIBUTION_ID}"
 
 for cmd in aws jq; do
   command -v "$cmd" >/dev/null 2>&1 || {
@@ -54,10 +57,10 @@ EXISTING_ID=$(aws cloudfront list-response-headers-policies \
 
 if [[ -z "$EXISTING_ID" || "$EXISTING_ID" == "None" ]]; then
   echo "✨ Creating new Response Headers Policy: $POLICY_NAME"
-  aws cloudfront create-response-headers-policy \
+  POLICY_ID=$(aws cloudfront create-response-headers-policy \
     --response-headers-policy-config "file://$POLICY_FILE" \
     --query 'ResponseHeadersPolicy.Id' \
-    --output text
+    --output text)
 else
   echo "📝 Updating existing Response Headers Policy: $POLICY_NAME (id=$EXISTING_ID)"
 
@@ -67,15 +70,28 @@ else
     --query 'ETag' \
     --output text)
 
-  aws cloudfront update-response-headers-policy \
+  POLICY_ID=$(aws cloudfront update-response-headers-policy \
     --id "$EXISTING_ID" \
     --if-match "$ETAG" \
     --response-headers-policy-config "file://$POLICY_FILE" \
     --query 'ResponseHeadersPolicy.Id' \
-    --output text
+    --output text)
 fi
 
 echo ""
-echo "✅ Policy applied. Distribution must reference it by id in its DefaultCacheBehavior."
-echo "    To verify: aws cloudfront get-distribution-config --id \$CLOUDFRONT_DISTRIBUTION_ID \\"
-echo "      | jq '.DistributionConfig.DefaultCacheBehavior.ResponseHeadersPolicyId'"
+echo "🔎 Verifying distribution $CLOUDFRONT_DISTRIBUTION_ID references policy $POLICY_ID"
+DISTRIBUTION_CONFIG_FILE="$TMPDIR_LOCAL/distribution-config.json"
+aws cloudfront get-distribution-config \
+  --id "$CLOUDFRONT_DISTRIBUTION_ID" \
+  --output json > "$DISTRIBUTION_CONFIG_FILE"
+
+ATTACHED_POLICY_ID=$(jq -r '.DistributionConfig.DefaultCacheBehavior.ResponseHeadersPolicyId // empty' "$DISTRIBUTION_CONFIG_FILE")
+if [[ "$ATTACHED_POLICY_ID" != "$POLICY_ID" ]]; then
+  echo "❌ Response Headers Policy was applied but is not attached to the distribution." >&2
+  echo "   Expected: $POLICY_ID" >&2
+  echo "   Attached: ${ATTACHED_POLICY_ID:-<none>}" >&2
+  echo "   Attach the policy to DefaultCacheBehavior before treating this deployment as complete." >&2
+  exit 1
+fi
+
+echo "✅ Policy applied and attached to distribution default cache behavior."

@@ -30,6 +30,12 @@ export interface PBSyncConfig {
   // Auto-sync configuration
   autoSyncEnabled?: boolean;
   autoSyncIntervalMinutes?: number;
+  /**
+   * The PocketBase user whose tasks are currently present in local IndexedDB.
+   * Preserved across logout so a later login cannot silently replay one user's
+   * local tasks into a different cloud account.
+   */
+  localTaskOwnerUserId?: string | null;
 }
 
 // ============================================================================

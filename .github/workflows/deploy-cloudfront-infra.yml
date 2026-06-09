@@ -126,4 +126,6 @@ jobs:
 
       - name: Deploy Response Headers Policy
         if: steps.changes.outputs.deploy_policy == 'true'
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
         run: bash scripts/deploy-cloudfront-response-headers-policy.sh
