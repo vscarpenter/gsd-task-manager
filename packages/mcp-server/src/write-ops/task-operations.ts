@@ -317,8 +317,9 @@ export async function deleteTask(
 
   const affectedTasks = getAffectedByDeletion(taskId, tasks);
   const affectedTitles = affectedTasks.map((t) => t.title);
+  const isDryRun = options?.dryRun !== false;
 
-  if (options?.dryRun) {
+  if (isDryRun) {
     return {
       taskId,
       taskTitle: task.title,

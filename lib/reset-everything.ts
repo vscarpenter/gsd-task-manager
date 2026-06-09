@@ -99,6 +99,7 @@ function buildPreservedSyncMetadata(deviceId: string) {
 		nextRetryAt: null,
 		autoSyncEnabled: true,
 		autoSyncIntervalMinutes: SYNC_CONFIG.DEFAULT_AUTO_SYNC_INTERVAL_MINUTES,
+		localTaskOwnerUserId: null,
 	};
 }
 

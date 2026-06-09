@@ -54,4 +54,48 @@ describe('security hardening scripts and workflows', () => {
     expect(workflow).toContain('git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main');
     expect(workflow).toContain('fetch-depth: 0');
   });
+
+  it('deletes stale HTML and service-worker objects during production deploy sync', () => {
+    const deployScript = readRepoFile('scripts/deploy-app.sh');
+    const htmlSyncStart = deployScript.indexOf('Syncing HTML files and service worker');
+    const cacheHeaderStart = deployScript.indexOf('Forcing no-cache on index.html');
+    const htmlSyncBlock = deployScript.slice(htmlSyncStart, cacheHeaderStart);
+
+    expect(htmlSyncStart).toBeGreaterThan(-1);
+    expect(cacheHeaderStart).toBeGreaterThan(htmlSyncStart);
+    expect(htmlSyncBlock).toContain('--delete');
+    expect(htmlSyncBlock).toContain('--include "*.html"');
+    expect(htmlSyncBlock).toContain('--include "sw.js"');
+  });
+
+  it('fails CloudFront header deployment unless the response headers policy is attached', () => {
+    const policyScript = readRepoFile('scripts/deploy-cloudfront-response-headers-policy.sh');
+    const workflow = readRepoFile('.github/workflows/deploy-cloudfront-infra.yml');
+
+    expect(policyScript).toContain('CLOUDFRONT_DISTRIBUTION_ID');
+    expect(policyScript).toContain('POLICY_ID=');
+    expect(policyScript).toContain('get-distribution-config');
+    expect(policyScript).toContain('ResponseHeadersPolicyId');
+    expect(policyScript).toContain('exit 1');
+    expect(workflow).toContain('CLOUDFRONT_DISTRIBUTION_ID');
+  });
+
+  it('verifies PocketBase release archives before extracting them into Docker images', () => {
+    const dockerfile = readRepoFile('docker/Dockerfile');
+
+    expect(dockerfile).toContain('POCKETBASE_SHA256_AMD64');
+    expect(dockerfile).toContain('POCKETBASE_SHA256_ARM64');
+    expect(dockerfile).toContain('sha256sum -c');
+  });
+
+  it('pins dependency overrides and MCP dev tools to audited patched versions', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
+
+    expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.6');
+    expect(rootPackage.overrides.hono).toBe('>=4.12.21');
+    expect(rootPackage.overrides.qs).toBe('>=6.15.2');
+    expect(mcpPackage.devDependencies.vitest).toBe('4.1.2');
+    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.2');
+  });
 });

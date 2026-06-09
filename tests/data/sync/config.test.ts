@@ -246,6 +246,14 @@ describe('Sync Config', () => {
       expect(config?.nextRetryAt).toBeNull();
     });
 
+    it('should preserve the local task owner marker from the disabled sync user', async () => {
+      await disableSync();
+
+      const config = await getSyncConfig();
+
+      expect(config?.localTaskOwnerUserId).toBe('user-123');
+    });
+
     it('should clear sync queue', async () => {
       const queueCountBefore = await db.syncQueue.count();
       expect(queueCountBefore).toBeGreaterThan(0);

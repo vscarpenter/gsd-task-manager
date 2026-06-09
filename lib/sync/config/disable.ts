@@ -36,6 +36,7 @@ async function stopHealthMonitor(): Promise<void> {
  */
 async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
   const db = getDb();
+  const localTaskOwnerUserId = current.localTaskOwnerUserId ?? current.userId ?? null;
 
   await db.syncMetadata.put({
     ...current,
@@ -49,6 +50,7 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
     lastFailureAt: null,
     lastFailureReason: null,
     nextRetryAt: null,
+    localTaskOwnerUserId,
     key: "sync_config",
   });
 

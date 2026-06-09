@@ -62,10 +62,11 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
     try {
       await persistSyncConfig(authState);
     } catch (err) {
+      const setupError = err instanceof Error ? err.message : "Please try again.";
       clearPocketBase();
       setSyncStatus({ enabled: false, email: null });
       setIsLoading(false);
-      throw new Error("Signed in, but sync setup failed. Please try again.", {
+      throw new Error(`Signed in, but sync setup failed. ${setupError}`, {
         cause: err,
       });
     }
@@ -201,6 +202,18 @@ async function persistSyncConfig(authState: AuthState) {
   const db = getDb();
   const existingConfig = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
   const deviceId = existingConfig?.deviceId ?? crypto.randomUUID();
+  const localTaskCount = await db.tasks.count();
+  const localTaskOwnerUserId = existingConfig?.localTaskOwnerUserId ?? null;
+
+  if (
+    localTaskCount > 0 &&
+    localTaskOwnerUserId &&
+    localTaskOwnerUserId !== authState.userId
+  ) {
+    throw new Error(
+      "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync."
+    );
+  }
 
   const newConfig: PBSyncConfig = {
     key: "sync_config",
@@ -218,6 +231,7 @@ async function persistSyncConfig(authState: AuthState) {
     nextRetryAt: null,
     autoSyncEnabled: true,
     autoSyncIntervalMinutes: 2,
+    localTaskOwnerUserId: authState.userId,
   };
 
   await db.syncMetadata.put(newConfig);

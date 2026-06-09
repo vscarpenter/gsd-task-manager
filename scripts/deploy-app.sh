@@ -53,6 +53,7 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
 
 echo "  → Syncing HTML files and service worker..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
+  --delete \
   --exclude "*" \
   --include "*.html" \
   --include "sw.js" \

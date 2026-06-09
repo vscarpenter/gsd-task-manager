@@ -222,7 +222,7 @@ export const completeTaskTool: Tool = {
 export const deleteTaskTool: Tool = {
   name: 'delete_task',
   description:
-    'Permanently delete a task. This action cannot be undone. Use with caution. Use dryRun=true to preview what would be deleted.',
+    'Permanently delete a task. This action cannot be undone. Deletes default to dryRun=true, so pass dryRun=false explicitly to apply.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -234,7 +234,8 @@ export const deleteTaskTool: Tool = {
       },
       dryRun: {
         type: 'boolean',
-        description: 'If true, show what would be deleted without actually deleting',
+        description:
+          'If true, show what would be deleted without actually deleting. Defaults to true; pass false explicitly to delete.',
       },
     },
     required: ['id'],

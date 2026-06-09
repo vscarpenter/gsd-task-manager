@@ -26,11 +26,19 @@ RUN node scripts/generate-build-info.cjs \
     && bash -c 'source .build-env.sh && bunx --bun next build'
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)
-ARG POCKETBASE_VERSION=0.26.9
+ARG POCKETBASE_VERSION=0.26.6
+ARG POCKETBASE_SHA256_AMD64=f4d9ad15dbadae3905d8404abed5c772d5c8b1c9563741c91adefb9f14b8201e
+ARG POCKETBASE_SHA256_ARM64=0758d9fe0ba054c0ca9e6a5c9425e9fe9044159ccbfa5fa4946f7d14bcbf01f1
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-certificates \
+    && case "$TARGETARCH" in \
+         amd64) PB_SHA256="$POCKETBASE_SHA256_AMD64" ;; \
+         arm64) PB_SHA256="$POCKETBASE_SHA256_ARM64" ;; \
+         *) echo "Unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
+       esac \
     && curl -fsSL -o /tmp/pb.zip \
        "https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_linux_${TARGETARCH}.zip" \
+    && echo "$PB_SHA256  /tmp/pb.zip" | sha256sum -c - \
     && unzip /tmp/pb.zip -d /tmp/pb/ \
     && chmod +x /tmp/pb/pocketbase \
     && rm /tmp/pb.zip
