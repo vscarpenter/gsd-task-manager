@@ -37,6 +37,7 @@ async function resetSyncMetadata(config: PBSyncConfig): Promise<void> {
   await db.syncMetadata.put({
     ...config,
     lastSyncAt: null,
+    lastServerUpdatedAt: null,
     localTaskOwnerUserId: config.userId ?? null,
     key: "sync_config",
   });
