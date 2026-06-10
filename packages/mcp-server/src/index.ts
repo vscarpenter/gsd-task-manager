@@ -2,6 +2,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js';
+import { removeSetupArtifact } from './cli/setup-artifact.js';
 import { loadConfig } from './server/config.js';
 import { createServer, registerHandlers } from './server/setup.js';
 import { createMcpLogger } from './utils/logger.js';
@@ -45,6 +46,11 @@ async function main() {
   } catch {
     process.exit(1);
   }
+
+  // The setup-wizard artifact (~/.gsd-mcp-setup.json) holds the same token
+  // we just loaded from env — once the server boots with valid config it
+  // has served its purpose. Best-effort; never blocks startup.
+  removeSetupArtifact();
 
   // Create MCP server
   const server = createServer();

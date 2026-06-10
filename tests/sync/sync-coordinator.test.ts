@@ -270,7 +270,7 @@ describe('SyncCoordinator', () => {
       const status = await coordinator.getStatus();
 
       expect(status.lastResult?.status).toBe('error');
-      expect(status.lastError).toBe('Network failure');
+      expect(status.lastError).toBe('network_error');
     });
 
     it('records non-transient errors with full status / error message', async () => {
@@ -284,7 +284,7 @@ describe('SyncCoordinator', () => {
       const status = await coordinator.getStatus();
 
       expect(status.lastResult?.status).toBe('error');
-      expect(status.lastError).toBe('400 Bad Request: invalid');
+      expect(status.lastError).toBe('validation_failed');
     });
 
     it('records transient PB ClientResponseError status 0 (network fault)', async () => {
@@ -301,7 +301,7 @@ describe('SyncCoordinator', () => {
       const status = await coordinator.getStatus();
 
       expect(status.lastResult?.status).toBe('error');
-      expect(status.lastError).toBe('Something went wrong.');
+      expect(status.lastError).toBe('network_error');
     });
 
     it('handles non-Error thrown values from fullSync', async () => {
@@ -314,7 +314,25 @@ describe('SyncCoordinator', () => {
       const status = await coordinator.getStatus();
 
       expect(status.lastResult?.status).toBe('error');
-      expect(status.lastError).toBe('plain string failure');
+      expect(status.lastError).toBe('unknown_error');
+    });
+
+    it('should_sanitize_rethrown_sync_errors_so_task_content_never_reaches_last_result', async () => {
+      // Defense-in-depth: fullSync catches its own errors in practice, but
+      // if it ever re-throws (e.g. a future refactor), the coordinator's
+      // catch must not store a raw PB 4xx message — those echo task titles.
+      const secretTitle = 'Confidential: acquire MegaCorp';
+      mockFullSync.mockRejectedValueOnce(
+        new Error(`422 Unprocessable Entity: title "${secretTitle}" failed to validate`)
+      );
+
+      await coordinator.requestSync('user');
+
+      const status = await coordinator.getStatus();
+
+      expect(status.lastResult?.status).toBe('error');
+      expect(status.lastError).toBe('validation_failed');
+      expect(JSON.stringify(status)).not.toContain(secretTitle);
     });
   });
 });

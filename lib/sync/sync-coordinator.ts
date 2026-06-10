@@ -8,7 +8,7 @@
 
 import { fullSync } from './pb-sync-engine';
 import { getRetryManager } from './retry-manager';
-import { isTransientSyncFailure } from './error-categorizer';
+import { isTransientSyncFailure, sanitizeSyncError } from './error-categorizer';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -132,14 +132,16 @@ export class SyncCoordinator {
       logger.debug('Sync completed', { status: result.status });
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
+      // PB 4xx bodies can echo task titles — store/log only the stable code.
+      const errorCode = sanitizeSyncError(errorObj);
       if (isTransientSyncFailure(errorObj)) {
-        logger.warn('Sync failed (transient)', { errorMessage: errorObj.message });
+        logger.warn('Sync failed (transient)', { errorCode });
       } else {
-        logger.error('Sync failed', errorObj);
+        logger.error('Sync failed', errorObj, { errorCode });
       }
       this.lastResult = {
         status: 'error',
-        error: errorObj.message,
+        error: errorCode,
       };
     } finally {
       this.isRunning = false;

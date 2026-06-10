@@ -25,6 +25,9 @@ import {
 import { extractUrlsFromTitle, buildDescription } from '../text/capture-parser.js';
 import { ConflictError } from '../errors.js';
 import { getTaskCache } from '../cache.js';
+import { createMcpLogger } from '../utils/logger.js';
+
+const logger = createMcpLogger('TASK_OPS');
 
 /**
  * Create task result with dry-run information
@@ -346,11 +349,14 @@ export async function deleteTask(
         dependenciesCleaned++;
       } catch (error) {
         // Log but don't throw — the primary delete already succeeded.
-        console.error(
-          `Failed to clean dependency reference on task ${affected.id}: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        );
+        // PB 4xx messages can echo field values (task titles), so log only
+        // content-free context: the affected task id and the HTTP status.
+        const status = (error as { status?: unknown }).status;
+        logger.warn('Failed to clean dependency reference after delete', {
+          taskId: affected.id,
+          ...(typeof status === 'number' ? { status } : {}),
+          errorName: error instanceof Error ? error.name : typeof error,
+        });
       }
     }
   }

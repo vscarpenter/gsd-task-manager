@@ -2,7 +2,27 @@
 
 ---
 
-## In progress — 2026-06-05: Standalone `/privacy` policy page + `/about` accuracy fix
+## In progress — 2026-06-10: Fix 3 medium security-review findings
+
+**Branch:** `fix/security-medium-findings`
+**Tier:** Standard (3 bounded fixes across webapp sync + MCP server; no new public contract). TDD per CLAUDE.md.
+
+**Findings (from full-codebase security review, 2026-06-09):**
+- **M1** — `reportSyncError()` (`lib/sync/pb-sync-engine.ts:167-184`) persists/toasts/logs raw `errorObj.message`; PB 4xx bodies can echo task titles into `db.syncHistory`, toasts, and log metadata. Fix: route through existing `sanitizeSyncError()` → stable `SyncErrorCode`, matching the push path and `reportPartialFailure` precedent. Keep raw `errorObj` only in `logger.error` for diagnostics (pre-existing app-wide policy).
+- **M3** — `deleteTask` dependency-cleanup (`packages/mcp-server/src/write-ops/task-operations.ts:349`) uses raw `console.error` with `error.message`, bypassing the structured MCP logger; PB 422 can echo titles into stderr. Fix: log via `createMcpLogger` with content-free context (taskId + numeric status), not the raw message.
+- **M2** — Setup wizard artifact `~/.gsd-mcp-setup.json` holds the plaintext JWT until the user manually deletes it. Fix: new `src/cli/setup-artifact.ts` with `removeSetupArtifact()`; call it (a) at wizard start to clear stale artifacts and (b) at MCP-server startup once env config loads (artifact has served its purpose). Update wizard step-4 copy + README-SECURITY revocation note.
+
+**Cycles (TDD — red first):**
+- [x] **C1 (M1)** ✅ — red test in `tests/data/sync/pb-sync-engine.test.ts` (4 failures, raw title leaking) → `reportSyncError` now routes through `sanitizeSyncError()` → green 15/15. Updated 3 existing assertions that pinned the leaky behavior.
+- [x] **C2 (M3)** ✅ — red test in `packages/mcp-server/src/__tests__/write-ops/task-operations-delete.test.ts` (console.error called) → `deleteTask` cleanup now logs via `createMcpLogger('TASK_OPS')` with `{taskId, status, errorName}` only → green 3/3.
+- [x] **C3 (M2)** ✅ — red test for new `src/cli/setup-artifact.ts` (`getSetupArtifactPath`/`removeSetupArtifact`, homedir mocked) → green 3/3. Wired: wizard start (stale-artifact cleanup), wizard error path, `index.ts` MCP mode after `loadConfig()`. Wizard step-4 copy updated; README-SECURITY gained "Token Lifetime, Revocation, and the Setup Artifact" + corrected the "log out to revoke" advice (PB has no per-token revocation).
+- [x] **C4 (reviewer nit)** ✅ — `pb-sync-reviewer` approved C1 but flagged `sync-coordinator.ts:142` (dead-in-practice re-throw path storing raw message, bypassing the new sanitization). Red: 4 updated + 1 new assertion in `tests/sync/sync-coordinator.test.ts` → green 18/18. Same `sanitizeSyncError` shim in `executeSync`'s catch.
+
+**Verify:** root `bun run test` ✅ 1953 pass / 1 skip · mcp-server vitest ✅ 140 pass + `tsc --noEmit` ✅ · root `bun typecheck` ✅ · `bun lint` ❌ **pre-existing breakage on main** (ESLint 10.4.1 vs `@typescript-eslint/utils` "Class extends value undefined" crash — verified identical with all changes stashed; introduced by `3c6e810 Ran bun update --latest`, unrelated to this branch) · `pb-sync-reviewer` ✅ APPROVE (0 blocking, 1 nit → fixed as C4).
+
+---
+
+## Done — 2026-06-05: Standalone `/privacy` policy page + `/about` accuracy fix
 
 **Branch:** `feat/privacy-policy-page`
 **Tier:** Standard (new route + one content component + small `/about` fix + tests; bounded, no new public contract). Lightweight plan + TDD per CLAUDE.md.

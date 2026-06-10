@@ -1,6 +1,17 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { GsdConfig, Task } from '../../types.js';
 
+const { mockLoggerWarn } = vi.hoisted(() => ({ mockLoggerWarn: vi.fn() }));
+
+vi.mock('../../utils/logger.js', () => ({
+  createMcpLogger: () => ({
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
 vi.mock('../../tools/list-tasks.js', () => ({
   listTasks: vi.fn(),
 }));
@@ -89,5 +100,36 @@ describe('deleteTask', () => {
         dependencies: [],
       })
     );
+  });
+
+  it('should_log_cleanup_failures_via_structured_logger_without_echoing_pb_error_message', async () => {
+    // PB 422 bodies echo submitted field values (task titles). A failed
+    // dependency-cleanup write must go through the masking MCP logger with
+    // content-free context (task id + status) — never raw console.error,
+    // which would land the title in Claude Desktop's stderr log.
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    const helpers = await import('../../write-ops/helpers.js');
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(listTasks).mockResolvedValueOnce([
+      makeTask('blocker'),
+      makeTask('dependent', ['blocker']),
+    ]);
+    const pbError = Object.assign(
+      new Error('422: title "Confidential: acquire MegaCorp" failed to validate'),
+      { status: 422 }
+    );
+    vi.mocked(helpers.updateTaskInPB).mockRejectedValueOnce(pbError);
+
+    const result = await deleteTask(config, 'blocker', { dryRun: false });
+
+    expect(result.dryRun).toBe(false);
+    expect(result.dependenciesCleaned).toBe(0);
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(mockLoggerWarn).toHaveBeenCalledTimes(1);
+    expect(mockLoggerWarn.mock.calls[0][1]).toMatchObject({
+      taskId: 'dependent',
+      status: 422,
+    });
+    expect(JSON.stringify(mockLoggerWarn.mock.calls)).not.toContain('Confidential');
   });
 });
