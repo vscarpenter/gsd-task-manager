@@ -32,10 +32,31 @@ Your real Claude Desktop config should be at:
 
 Use `claude-config.example.json` as a template, but keep your real credentials in the Claude Desktop config location only.
 
+## Token Lifetime, Revocation, and the Setup Artifact
+
+The MCP server authenticates with your **primary PocketBase session JWT** — the
+same token your browser session uses. Anything that can read it has full
+read/write/delete access to your tasks until it expires. Know the limits:
+
+- **PocketBase has no per-token revocation.** Logging out in the browser clears
+  that browser's copy but does **not** invalidate other copies of the token.
+  The only ways to invalidate an issued token early are changing your account
+  password/identity or rotating the collection's token secret on the server.
+- **The setup wizard writes a token-bearing file** (`~/.gsd-mcp-setup.json`,
+  mode 0600) for you to copy into the Claude Desktop config. It is deleted
+  automatically the first time the MCP server starts with valid env config,
+  and any stale copy is cleared when the wizard re-runs — but delete it
+  yourself (`rm ~/.gsd-mcp-setup.json`) if you abandon setup partway.
+- **The token lives permanently in the Claude Desktop config**
+  (`claude_desktop_config.json`). Treat that file as a credential store:
+  don't back it up to shared locations, sync it, or paste it into chats.
+
 ## If You Accidentally Commit Credentials
 
 1. **Immediately revoke the exposed credentials**:
-   - For JWT tokens: Log out and log back in to get a new token
+   - For JWT tokens: logging out is **not** enough (see above) — change your
+     account password or rotate the token secret in PocketBase to invalidate
+     all outstanding tokens, then sign in again for a fresh token
 
 2. **Remove from git history**:
    ```bash

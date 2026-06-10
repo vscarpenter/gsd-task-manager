@@ -3,12 +3,11 @@
  * Guides users through PocketBase URL and auth token setup
  */
 
-import { writeFileSync, chmodSync, unlinkSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { writeFileSync, chmodSync } from 'node:fs';
 import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
+import { getSetupArtifactPath, removeSetupArtifact } from './setup-artifact.js';
 
 /** Default production PocketBase URL used as prompt default value */
 const DEFAULT_POCKETBASE_URL = process.env.GSD_POCKETBASE_URL || 'https://api.vinny.io';
@@ -81,16 +80,15 @@ async function testTaskAccess(pbUrl: string, authToken: string): Promise<void> {
   }
 }
 
-/** Where the wizard writes the generated config snippet (mode 0600). */
-const GENERATED_CONFIG_PATH = join(homedir(), '.gsd-mcp-setup.json');
-
 /**
  * Write the generated config snippet to a chmod-600 file. The token is never
  * printed to stdout (no terminal scrollback, no screenshot leak, no shell
  * history if the output is piped). The user reads the file to copy the
- * config into Claude Desktop, then deletes it.
+ * config into Claude Desktop; the file is removed automatically the first
+ * time the MCP server starts with valid env config.
  */
 function writeConfigurationFile(pbUrl: string, authToken: string): string {
+  const artifactPath = getSetupArtifactPath();
   const configJson = {
     mcpServers: {
       'gsd-tasks': {
@@ -109,11 +107,11 @@ function writeConfigurationFile(pbUrl: string, authToken: string): string {
   // initial write, and chmodSync as belt-and-braces (mode is honored on
   // Linux/macOS; on Windows the chmod is a no-op but the file lives in
   // the user's home directory under the user's ACLs).
-  writeFileSync(GENERATED_CONFIG_PATH, JSON.stringify(configJson, null, 2), {
+  writeFileSync(artifactPath, JSON.stringify(configJson, null, 2), {
     mode: 0o600,
   });
-  chmodSync(GENERATED_CONFIG_PATH, 0o600);
-  return GENERATED_CONFIG_PATH;
+  chmodSync(artifactPath, 0o600);
+  return artifactPath;
 }
 
 /**
@@ -157,27 +155,20 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
  * Display next steps for user
  */
 function displayNextSteps(): void {
+  const artifactPath = getSetupArtifactPath();
   console.log('Step 4/4: Next Steps');
-  console.log(`1. Open the generated file:  cat ${GENERATED_CONFIG_PATH}`);
+  console.log(`1. Open the generated file:  cat ${artifactPath}`);
   console.log(`2. Open Claude Desktop config: ${getClaudeConfigPath()}`);
   console.log('3. Merge the "mcpServers" section into the Claude config');
-  console.log(`4. Delete the generated file:  rm ${GENERATED_CONFIG_PATH}`);
-  console.log('5. Restart Claude Desktop');
-  console.log("6. Ask Claude: \"What's my GSD sync status?\"");
+  console.log('4. Restart Claude Desktop');
+  console.log("5. Ask Claude: \"What's my GSD sync status?\"");
+  console.log();
+  console.log(
+    'The generated file is deleted automatically the first time the MCP server starts.'
+  );
+  console.log(`To remove it sooner:  rm ${artifactPath}`);
   console.log();
   console.log('✓ Setup complete! Need help? Run: npx gsd-mcp-server --help');
-}
-
-/**
- * Best-effort cleanup of the generated config file on wizard failure so a
- * partial setup does not leave a token in the user's home directory.
- */
-function cleanupGeneratedConfigOnError(): void {
-  try {
-    unlinkSync(GENERATED_CONFIG_PATH);
-  } catch {
-    // File may not exist yet — ignore.
-  }
 }
 
 /**
@@ -189,6 +180,10 @@ export async function runSetupWizard(): Promise<void> {
 
 Welcome! This wizard will help you configure the MCP server for Claude Desktop.
 `);
+
+  // A previous run (including one aborted mid-wizard via process.exit) may
+  // have left a token-bearing artifact behind — clear it before prompting.
+  removeSetupArtifact();
 
   try {
     // Step 1: PocketBase URL
@@ -210,7 +205,8 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
     // Step 4: Next Steps
     displayNextSteps();
   } catch (error) {
-    cleanupGeneratedConfigOnError();
+    // Best-effort cleanup so a partial setup does not leave a token at rest.
+    removeSetupArtifact();
     console.error('\n✗ Setup failed:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
   }

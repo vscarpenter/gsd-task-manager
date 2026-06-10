@@ -244,7 +244,7 @@ describe('pb-sync-engine', () => {
       const result = await fullSync();
 
       expect(result.status).toBe('error');
-      expect(result.error).toContain('Connection refused');
+      expect(result.error).toBe('network_error');
       expect(mockRetryManager.recordFailure).toHaveBeenCalled();
     });
 
@@ -260,7 +260,7 @@ describe('pb-sync-engine', () => {
       const result = await fullSync();
 
       expect(result.status).toBe('error');
-      expect(result.error).toContain('422 Unprocessable Entity');
+      expect(result.error).toBe('validation_failed');
       expect(mockRetryManager.recordFailure).toHaveBeenCalled();
     });
 
@@ -277,8 +277,33 @@ describe('pb-sync-engine', () => {
       const result = await fullSync();
 
       expect(result.status).toBe('error');
-      expect(result.error).toBe('Something went wrong.');
+      expect(result.error).toBe('network_error');
       expect(mockRetryManager.recordFailure).toHaveBeenCalled();
+    });
+
+    it('should_sanitize_unexpected_sync_errors_to_stable_codes_so_task_content_never_reaches_history_or_toasts', async () => {
+      // PB 4xx validation bodies echo submitted field values. An exception
+      // escaping fullSync must be reduced to a stable SyncErrorCode before
+      // it is persisted to syncHistory, shown in a toast, or returned —
+      // mirroring what the push path already does via sanitizeSyncError().
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { recordSyncError } = await import('@/lib/sync-history');
+      const { notifySyncError } = await import('@/lib/sync/notifications');
+      const secretTitle = 'Confidential: acquire MegaCorp';
+      vi.mocked(pushLocalChanges).mockRejectedValueOnce(
+        new Error(`422 Unprocessable Entity: title "${secretTitle}" failed to validate`),
+      );
+
+      const result = await fullSync('user');
+
+      expect(result.status).toBe('error');
+      expect(result.error).toBe('validation_failed');
+      expect(vi.mocked(recordSyncError)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(recordSyncError).mock.calls[0][0]).toBe('validation_failed');
+      expect(vi.mocked(notifySyncError)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(notifySyncError).mock.calls[0][0]).toBe('validation_failed');
+      expect(JSON.stringify(vi.mocked(recordSyncError).mock.calls)).not.toContain(secretTitle);
+      expect(JSON.stringify(vi.mocked(notifySyncError).mock.calls)).not.toContain(secretTitle);
     });
   });
 });

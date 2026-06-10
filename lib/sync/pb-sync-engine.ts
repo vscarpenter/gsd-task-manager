@@ -11,7 +11,7 @@ import { createLogger } from '@/lib/logger';
 import { getRetryManager } from './retry-manager';
 import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/sync-history';
 import { notifySyncSuccess, notifySyncError } from './notifications';
-import { isTransientSyncFailure } from './error-categorizer';
+import { isTransientSyncFailure, sanitizeSyncError } from './error-categorizer';
 import { getDeviceId } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
@@ -172,13 +172,16 @@ async function reportSyncError(
   startTime: number,
 ): Promise<PBSyncResult> {
   const errorObj = error instanceof Error ? error : new Error(String(error));
+  // PB 4xx bodies can echo submitted field values (task titles), so persist
+  // and surface only the stable code; keep the raw Error for diagnostics.
+  const errorCode = sanitizeSyncError(errorObj);
   await retryManager.recordFailure(errorObj);
-  await recordSyncError(errorObj.message, deviceId, triggeredBy, Date.now() - startTime);
-  notifySyncError(errorObj.message, false);
+  await recordSyncError(errorCode, deviceId, triggeredBy, Date.now() - startTime);
+  notifySyncError(errorCode, false);
   if (isTransientSyncFailure(errorObj)) {
-    logger.warn('Full sync failed (transient)', { triggeredBy, errorMessage: errorObj.message });
+    logger.warn('Full sync failed (transient)', { triggeredBy, errorCode });
   } else {
-    logger.error('Full sync failed', errorObj, { triggeredBy });
+    logger.error('Full sync failed', errorObj, { triggeredBy, errorCode });
   }
-  return { status: 'error', error: errorObj.message };
+  return { status: 'error', error: errorCode };
 }
