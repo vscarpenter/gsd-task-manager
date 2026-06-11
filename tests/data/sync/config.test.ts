@@ -217,6 +217,7 @@ describe('Sync Config', () => {
         userId: 'user-123',
         email: 'test@example.com',
         provider: 'google',
+        lastServerUpdatedAt: '2026-01-15T08:00:00.000Z',
       });
 
       // Add a queue item
@@ -240,6 +241,7 @@ describe('Sync Config', () => {
       expect(config?.email).toBeNull();
       expect(config?.provider).toBeNull();
       expect(config?.lastSyncAt).toBeNull();
+      expect(config?.lastServerUpdatedAt).toBeNull();
       expect(config?.consecutiveFailures).toBe(0);
       expect(config?.lastFailureAt).toBeNull();
       expect(config?.lastFailureReason).toBeNull();
@@ -453,6 +455,7 @@ describe('Sync Config', () => {
         email: 'test@example.com',
         provider: 'google',
         lastSyncAt: '2026-01-15T08:00:00.000Z',
+        lastServerUpdatedAt: '2026-01-15T08:00:00.000Z',
       });
 
       // Add tasks
@@ -491,6 +494,7 @@ describe('Sync Config', () => {
       const config = await getSyncConfig();
 
       expect(config?.lastSyncAt).toBeNull();
+      expect(config?.lastServerUpdatedAt).toBeNull();
 
       const taskCount = await db.tasks.count();
       expect(taskCount).toBe(0);

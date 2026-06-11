@@ -20,6 +20,16 @@ export interface PBSyncConfig {
   email: string | null;
   provider: string | null;
   lastSyncAt: string | null;
+  /**
+   * Pull cursor: the max PocketBase server-stamped `updated` observed (ISO
+   * form, 30s overlap already subtracted). Server-stamped so one device's
+   * skewed clock can never write records behind every other device's cursor.
+   * LWW conflict resolution stays on `client_updated_at` — a server-side
+   * re-save bumps `updated` without the content being newer. `lastSyncAt`
+   * above is the legacy client-stamped cursor, read once for migration and
+   * otherwise left untouched.
+   */
+  lastServerUpdatedAt?: string | null;
   /** ISO timestamp of the last successful sync operation (for UI display) */
   lastSuccessfulSyncAt: string | null;
   // Retry tracking fields

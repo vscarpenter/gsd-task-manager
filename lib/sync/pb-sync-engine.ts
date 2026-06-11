@@ -70,6 +70,23 @@ export async function applyRemoteChange(
 
 // ─── Full sync orchestration ─────────────────────────────────────────
 
+/** Rewind applied when migrating a legacy client-stamped cursor. */
+const LEGACY_CURSOR_REWIND_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Resolve the pull cursor. Prefers the server-stamped cursor; a config from a
+ * pre-2026-06 build has only the client-stamped `lastSyncAt`, which can carry
+ * client clock skew, so it is migrated once with a 24h rewind. The re-pulled
+ * records are LWW no-ops.
+ */
+function resolveServerCursor(config: PBSyncConfig | undefined): string | null {
+  if (config?.lastServerUpdatedAt) return config.lastServerUpdatedAt;
+  if (config?.lastSyncAt) {
+    return new Date(new Date(config.lastSyncAt).getTime() - LEGACY_CURSOR_REWIND_MS).toISOString();
+  }
+  return null;
+}
+
 /**
  * Full sync: push local changes, then pull remote changes.
  * Handles auth checks, cursor updates, partial failures, and error reporting.
@@ -82,10 +99,9 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
   try {
     const db = getDb();
     const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
-    const lastSyncAt = config?.lastSyncAt ?? null;
 
     const pushResult = await pushLocalChanges();
-    const pullResult = await pullRemoteChanges(lastSyncAt);
+    const pullResult = await pullRemoteChanges(resolveServerCursor(config));
 
     if (!pushResult.authenticated && !pullResult.authenticated) {
       return await reportAuthFailure(retryManager, deviceId, triggeredBy, startTime);
@@ -127,10 +143,12 @@ async function reportAuthFailure(
 async function updateSyncCursor(config: PBSyncConfig | undefined, maxTimestamp: string | null): Promise<void> {
   if (!config) return;
 
+  // The legacy client-stamped `lastSyncAt` is intentionally not advanced —
+  // it only feeds the one-time migration in resolveServerCursor.
   const db = getDb();
   await db.syncMetadata.put({
     ...config,
-    lastSyncAt: maxTimestamp ?? config.lastSyncAt ?? null,
+    lastServerUpdatedAt: maxTimestamp ?? config.lastServerUpdatedAt ?? null,
     lastSuccessfulSyncAt: new Date().toISOString(),
   });
 }

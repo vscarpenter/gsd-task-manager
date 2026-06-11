@@ -3,6 +3,13 @@
 # Create the PocketBase 'tasks' collection with the correct schema
 # for GSD Task Manager sync.
 #
+# The autodate `updated` field is the pull cursor for both the web and iOS
+# clients (server-stamped, immune to client clock skew); `client_updated_at`
+# stays the LWW conflict-resolution timestamp. On an instance created before
+# the autodate fields existed, run the iOS repo's
+# scripts/pb-add-autodate-fields.sh to add + backfill them (done on
+# api.vinny.io 2026-06-10).
+#
 # Prerequisites:
 #   - PocketBase server running at $PB_URL (default: https://api.vinny.io)
 #   - Superuser credentials: set PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD env vars
@@ -320,6 +327,18 @@ cat > "$COLLECTION_PAYLOAD_FILE" <<'ENDJSON'
         "min": null,
         "max": 100
       }
+    },
+    {
+      "name": "created",
+      "type": "autodate",
+      "onCreate": true,
+      "onUpdate": false
+    },
+    {
+      "name": "updated",
+      "type": "autodate",
+      "onCreate": true,
+      "onUpdate": true
     }
   ],
   "indexes": [

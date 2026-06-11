@@ -92,6 +92,7 @@ function buildPreservedSyncMetadata(deviceId: string) {
 		email: null,
 		provider: null,
 		lastSyncAt: null,
+		lastServerUpdatedAt: null,
 		lastSuccessfulSyncAt: null,
 		consecutiveFailures: 0,
 		lastFailureAt: null,
