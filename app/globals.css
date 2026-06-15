@@ -669,8 +669,8 @@ main {
 
   --q1-soft: color-mix(in srgb, var(--rust) 10%, var(--paper)); --q1-tint: color-mix(in srgb, var(--rust) 16%, var(--paper));
   --q2-soft: color-mix(in srgb, var(--accent) 10%, var(--paper)); --q2-tint: color-mix(in srgb, var(--accent) 16%, var(--paper));
-  --q3-soft: color-mix(in srgb, var(--olive) 10%, var(--paper)); --q3-tint: color-mix(in srgb, var(--olive) 16%, var(--paper));
-  --q4-soft: color-mix(in srgb, var(--warning) 12%, var(--paper)); --q4-tint: color-mix(in srgb, var(--warning) 18%, var(--paper));
+  --q3-soft: color-mix(in srgb, var(--q3) 10%, var(--paper)); --q3-tint: color-mix(in srgb, var(--q3) 16%, var(--paper));
+  --q4-soft: color-mix(in srgb, var(--q4) 12%, var(--paper)); --q4-tint: color-mix(in srgb, var(--q4) 18%, var(--paper));
 
   --rd-radius: 14px;
   --rd-radius-sm: 10px;
