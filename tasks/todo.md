@@ -11,24 +11,25 @@
 
 **Guardrails:** 94 pre-existing staged `.agents/` files + `GSD-Design-Reference.html` are NOT mine — use targeted `git add` only, never `git add -A`. `bun lint` is pre-existing-broken on main (ESLint 10 crash) — do not block on it.
 
-### Bucket 1 — Brand-asset migration drift (P1)
-- [ ] 1.2 `components/gsd-logo.tsx` glyph: Q3 `--olive`→`--q3`, Q4 `--warning`→`--q4`; add check on rust tile
-- [ ] 1.3 `components/about/matrix-section.tsx:20,26` Q3/Q4 → q3/q4 washes
-- [ ] 1.1 `public/icons/icon.svg` (+ regen 192/512 PNG) → 2×2 rust/tide/ochre/slate on warm paper + check on rust tile, no gradient
-- [ ] 1.4 `public/manifest.json` theme_color `#6366f1`→tide; background_color→ivory
-- [ ] 1.5 `public/og-image.svg` indigo → tide + pigments
-- [ ] 1.6 `app/globals.css:672-673` fix/remove dead `--q3-soft/--q4-soft`; 1.7 delete orphaned `public/css/*`
+### Bucket 1 — Brand-asset migration drift (P1) ✅ committed 67129d0
+- [x] 1.2 `components/gsd-logo.tsx` glyph: q1-q4 pigments + check on rust tile
+- [x] 1.3 `components/about/matrix-section.tsx` all four → `bg-qN/12 border-qN/40`
+- [x] 1.1 `public/icons/icon.svg` (+ regen 192/512 PNG) → 2×2 four-pigment + check, full-bleed maskable
+- [x] 1.4 `public/manifest.json` theme_color→tide; background_color→ivory
+- [x] 1.5 `public/og-image.svg` (+PNG) → warm paper + four pigments + serif title
+- [x] 1.6 `app/globals.css` dead `--q3-soft/--q4-soft` → q3/q4; 1.7 deleted orphaned `public/css/*`
 
-### Bucket 2 — Card anatomy (P1) — TDD
-- [ ] 2.0 Thread quadrant key into `TaskCard` (root fix)
-- [ ] 2.1 3pt left accent spine = `var(--qN)`
-- [ ] 2.2 completion disc fills quadrant accent + white check (not green)
-- [ ] 2.3 tag chips → quadrant-wash bg + accent text
-- [ ] 2.4 subtask fill → quadrant accent
-- [ ] 2.5 blocked card → 0.62 opacity
-- [ ] 2.6 quadrant header fixed 26pt icon column (render `meta.rdIcon`)
-- [ ] 2B card type scale: title 17 / desc 15 / meta 13
-- [ ] 2C due-today tide-semibold; overdue warning glyph
+### Bucket 2 — Card anatomy (P1) — TDD ✅
+- [x] 2.0 Derive quadrant in `TaskCard` from task.urgent/important (cleaner than threading a prop)
+- [x] 2.1 3pt left accent spine = `var(--qN)` (data-testid task-card-spine)
+- [x] 2.2 completion disc fills quadrant accent + paper-colored check (not green)
+- [x] 2.3 tag chips → quadrant-wash bg + accent text
+- [x] 2.4 subtask fill → quadrant accent (green preserved at 100%)
+- [x] 2.5 blocked card → 0.62 opacity
+- [x] 2.6 quadrant header fixed 26pt icon column (renders `meta.rdIcon`)
+- [~] 2B card type scale (title 17 / desc 15 / meta 13) — SKIPPED: accepted density divergence (6.2)
+- [x] 2C due-today tide-semibold (was amber); overdue warning glyph
+- Tests: `tests/ui/task-card-anatomy.test.tsx` (6 new, red→green); 54 card/matrix tests green; typecheck ✅
 
 ### Bucket 3 — Surfaces + color discipline (P2)
 - [ ] 3.4 editor quadrant picker: unselected cells = pigment@0.35

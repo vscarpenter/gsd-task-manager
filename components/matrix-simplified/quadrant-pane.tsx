@@ -3,12 +3,19 @@
 import { useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIcon } from "lucide-react";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
-import type { QuadrantMeta, RedesignQuadrantKey } from "@/lib/quadrants";
+import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
 import { QUADRANT_ACCENT } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
+
+const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
+  flame: FlameIcon,
+  calendar: CalendarIcon,
+  users: UsersIcon,
+  trash: Trash2Icon,
+};
 
 const WASH_CLASS: Record<RedesignQuadrantKey, string> = {
   q1: "quadrant-wash-q1",
@@ -65,6 +72,7 @@ export function QuadrantPane({
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
+  const QuadrantIcon = RD_ICON[meta.rdIcon];
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
   const activeTaskCount = useMemo(
     () => tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0),
@@ -102,17 +110,26 @@ export function QuadrantPane({
       />
       <header
         className={cn(
-          "-mx-5 -mt-5 mb-4 flex items-baseline gap-1 border-b border-border-muted px-5 py-3",
+          "-mx-5 -mt-5 mb-4 flex items-center gap-1.5 border-b border-border-muted px-5 py-3",
           HEADER_CLASS[meta.rdKey]
         )}
       >
+        {/* Fixed 26pt icon column in the quadrant pigment (reference §06) */}
+        <span
+          data-testid="quadrant-icon"
+          aria-hidden
+          className="flex w-[26px] shrink-0 items-center justify-center"
+          style={{ color: accent }}
+        >
+          <QuadrantIcon className="h-[18px] w-[18px]" />
+        </span>
         <span
           className="rd-serif text-[15px] font-semibold leading-none"
           style={{ color: accent, letterSpacing: "-0.005em" }}
         >
           {meta.title}
         </span>
-        <span className="ml-1 text-caption text-foreground-muted">{meta.rdHint}</span>
+        <span className="text-caption text-foreground-muted">{meta.rdHint}</span>
         <span className="ml-auto rounded bg-background-muted px-1.5 text-[11px] font-medium tabular-nums text-foreground-muted">
           {activeTaskCount}
         </span>
