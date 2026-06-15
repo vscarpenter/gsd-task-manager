@@ -49,7 +49,9 @@
 - [x] 5.3 omit empty CTA in Eliminate (q4)
 - Tests: onboarding (6) + onboarding-gate (4) + empty-state (3) red→green; e2e fixture seeds `gsd-onboarding-seen`; app-pages layout test mocks the gate. Full suite: 1977 pass / 1 skip; typecheck ✅.
 
-**Status:** Buckets 1–4 implemented & committed. Platform divergences accepted (not built): swipe, detented sheets, haptics, type-scale density, serif numerals, side-drawer, delete+undo, smart-views sidebar. Remaining before PR: `/verify-frontend-change` visual pass, push, open PR.
+**Status:** Buckets 1–4 implemented & committed. Platform divergences accepted (not built): swipe, detented sheets, haptics, type-scale density, serif numerals, side-drawer, delete+undo, smart-views sidebar.
+
+**Verification (2026-06-14, live browser, dev):** PASS. All 4 onboarding screens; card spines in 4 pigments; completion disc fills quadrant pigment + paper check; tag chip wash/accent; 26pt header icon column; empty-state marks + Eliminate omits CTA; brand glyph 4 pigments. No console errors. Verified light + dark mode. Version bumped 9.9.1 → 9.10.0. Ready to push + PR.
 
 ---
 
