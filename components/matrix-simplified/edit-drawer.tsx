@@ -221,9 +221,16 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
                     }}
                     className={cn(
                       "rounded-lg border px-3 py-2.5 text-left transition-colors",
-                      active ? "border-2" : "border-border hover:bg-background-muted/50"
+                      active ? "border-2" : "border hover:bg-background-muted/30"
                     )}
-                    style={active ? { borderColor: a, backgroundColor: `${a}14`, color: a } : undefined}
+                    // The picker mirrors the matrix: the selected cell is solid
+                    // (wash fill + full accent border), the other three carry their
+                    // own pigment at ~0.35 so all four colors read at a glance.
+                    style={
+                      active
+                        ? { borderColor: a, backgroundColor: `color-mix(in srgb, ${a} 14%, transparent)`, color: a }
+                        : { borderColor: `color-mix(in srgb, ${a} 35%, transparent)`, color: `color-mix(in srgb, ${a} 78%, var(--ink-3))` }
+                    }
                     aria-pressed={active}
                   >
                     <div className="text-[12px] font-bold uppercase tracking-wider">{q.title}</div>
@@ -249,9 +256,11 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
                         setShowCustomDateInput(false);
                       }}
                       className={cn(
+                        // Selected due-date preset reads in tide tint (reference §07);
+                        // unselected presets stay graphite.
                         "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all duration-200",
                         isActive
-                          ? "bg-background text-foreground shadow-sm"
+                          ? "bg-accent-tint text-accent font-semibold shadow-sm"
                           : "text-foreground-muted hover:text-foreground"
                       )}
                       aria-pressed={isActive}

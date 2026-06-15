@@ -74,6 +74,8 @@ function TaskCardComponent({
       style={style}
       className={cn(
         "group relative flex flex-col gap-2 rounded-lg border bg-card p-3 transition-all duration-200 animate-slide-in-card",
+        // Clear the sticky topbar + capture bar (plus ~12pt) when scrolled to.
+        "scroll-mt-24",
         "border-card-border",
         task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40",
         !task.completed && isBlocked && "opacity-[0.62]",

@@ -252,7 +252,7 @@ code, .code-inline {
   box-shadow: var(--shadow-sm);
   transition: left var(--t-fast) var(--ease-out);
 }
-.switch input:checked { background: var(--accent); }
+.switch input:checked { background: var(--olive); } /* toggle on = green (reference §03) */
 .switch input:checked::after { left: 18px; }
 
 /* ---------- Keyboard chip (<kbd>) ---------- */

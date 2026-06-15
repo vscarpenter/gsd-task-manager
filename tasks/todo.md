@@ -31,15 +31,17 @@
 - [x] 2C due-today tide-semibold (was amber); overdue warning glyph
 - Tests: `tests/ui/task-card-anatomy.test.tsx` (6 new, red→green); 54 card/matrix tests green; typecheck ✅
 
-### Bucket 3 — Surfaces + color discipline (P2)
-- [ ] 3.4 editor quadrant picker: unselected cells = pigment@0.35
-- [ ] 3.5 due-date presets in tint
-- [ ] 3.1 quadrant separation gap-4→gap-8 (phone); 3.2 scroll-padding-top under capture bar
-- [ ] 3.7 archive dimmed 0.72 read-only strikethrough
-- [ ] 7.1 Top Tags bars tide→graphite
-- [ ] 7.2 toggles tide→green
-- [ ] 7.3 dashboard stat/streak icons → graphite
-- [ ] 7.4 settings nav-row leading icons → graphite; 7.5 command palette serif title + pop shadow
+### Bucket 3 — Surfaces + color discipline (P2) ✅
+- [x] 3.4 editor quadrant picker: unselected cells carry pigment@0.35 (also fixed latent invalid `${var}14` bg → color-mix)
+- [x] 3.5 due-date presets active = tide tint
+- [x] 3.1 quadrant separation gap-4→gap-8 (phone); 3.2 `scroll-mt-24` on cards for capture-bar clearance
+- [x] 3.7 archive cards dimmed 0.72 (handlers already no-op = read-only)
+- [x] 7.1 Top Tags bars tide→graphite (bg-foreground-muted/30)
+- [x] 7.2 toggles tide→green (Switch + .switch CSS → status-success/olive; checkboxes/radios kept accent = selection)
+- [x] 7.3 dashboard stat/streak icons → graphite (no-flame streak kept per documented calm-voice decision)
+- [x] 7.4 data-management ActionRow leading icons → graphite (danger stays rust)
+- [x] 7.5 command palette: visible serif "Commands" title + --shadow-lg pop + backdrop scrim
+- Tests: 163 green across dashboard/settings/palette/edit-drawer/archive/matrix/anatomy; typecheck ✅
 
 ### Bucket 4 — Onboarding + empty states (P1 user-facing)
 - [ ] 5.1 4-screen skippable onboarding (Welcome→Matrix→Capture→Privacy); re-show from Settings
