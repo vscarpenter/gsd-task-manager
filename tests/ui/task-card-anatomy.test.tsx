@@ -148,4 +148,19 @@ describe("QuadrantPane header — fixed icon column", () => {
     renderPane("q1");
     expect(screen.getByTestId("quadrant-icon")).toBeInTheDocument();
   });
+
+  it("shows an empty-state mark tile when the quadrant is empty", () => {
+    renderPane("q1");
+    expect(screen.getByTestId("quadrant-empty-mark")).toBeInTheDocument();
+  });
+
+  it("offers an add action in actionable empty quadrants (q1)", () => {
+    renderPane("q1");
+    expect(screen.getByText(/Add to Do First/)).toBeInTheDocument();
+  });
+
+  it("omits the add action in the Eliminate quadrant (nothing useful to do)", () => {
+    renderPane("q4");
+    expect(screen.queryByText(/Add to Eliminate/)).not.toBeInTheDocument();
+  });
 });

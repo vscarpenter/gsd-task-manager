@@ -43,12 +43,13 @@
 - [x] 7.5 command palette: visible serif "Commands" title + --shadow-lg pop + backdrop scrim
 - Tests: 163 green across dashboard/settings/palette/edit-drawer/archive/matrix/anatomy; typecheck ✅
 
-### Bucket 4 — Onboarding + empty states (P1 user-facing)
-- [ ] 5.1 4-screen skippable onboarding (Welcome→Matrix→Capture→Privacy); re-show from Settings
-- [ ] 5.2 empty-state mark tile (icon in ink-3 on 60pt sunken)
-- [ ] 5.3 omit empty CTA where nothing to do (Q4)
+### Bucket 4 — Onboarding + empty states (P1 user-facing) ✅
+- [x] 5.1 4-screen skippable onboarding (Welcome→Matrix→Capture→Privacy) w/ dots, Skip, "Start using GSD" + quiet "Sign in to sync"; `OnboardingGate` (localStorage `gsd-onboarding-seen`, suppressed on /about,/install); replay from Settings→About via `gsd:replay-onboarding` event. Layered over the existing /about first-run redirect (kept intact).
+- [x] 5.2 empty-state mark tile (quadrant icon in ink-3 on 60pt sunken tile)
+- [x] 5.3 omit empty CTA in Eliminate (q4)
+- Tests: onboarding (6) + onboarding-gate (4) + empty-state (3) red→green; e2e fixture seeds `gsd-onboarding-seen`; app-pages layout test mocks the gate. Full suite: 1977 pass / 1 skip; typecheck ✅.
 
-**Verify each bucket:** `bun run test`, `bun typecheck`, `/verify-frontend-change` for UI surfaces. Commit per bucket.
+**Status:** Buckets 1–4 implemented & committed. Platform divergences accepted (not built): swipe, detented sheets, haptics, type-scale density, serif numerals, side-drawer, delete+undo, smart-views sidebar. Remaining before PR: `/verify-frontend-change` visual pass, push, open PR.
 
 ---
 

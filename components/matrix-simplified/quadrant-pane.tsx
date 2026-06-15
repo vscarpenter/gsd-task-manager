@@ -146,7 +146,16 @@ export function QuadrantPane({
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
           {tasks.length === 0 ? (
-            <div className="my-auto flex flex-col items-center gap-1.5 py-4 text-center">
+            <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">
+              {/* Reassuring mark: one icon in ink-3 on a 60pt sunken tile — never a
+                  colorful illustration (reference §09). */}
+              <span
+                data-testid="quadrant-empty-mark"
+                aria-hidden
+                className="flex h-[60px] w-[60px] items-center justify-center rounded-2xl bg-background-muted text-ink-3"
+              >
+                <QuadrantIcon className="h-6 w-6" />
+              </span>
               <p
                 className="rd-serif text-[18px] leading-tight text-foreground"
                 style={{ letterSpacing: "-0.01em" }}
@@ -156,15 +165,19 @@ export function QuadrantPane({
               <p className="max-w-[26ch] text-caption text-foreground-muted">
                 {meta.rdEmptySupporting}
               </p>
-              <button
-                type="button"
-                onClick={() => onAddInQuadrant(meta.rdKey)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40"
-                style={{ borderColor: accent, color: accent }}
-              >
-                <PlusIcon className="h-3 w-3" aria-hidden />
-                Add to {meta.title}
-              </button>
+              {/* Eliminate is the one quadrant where an empty state needs no action
+                  — there is nothing useful to add (reference §09). */}
+              {meta.rdKey !== "q4" ? (
+                <button
+                  type="button"
+                  onClick={() => onAddInQuadrant(meta.rdKey)}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40"
+                  style={{ borderColor: accent, color: accent }}
+                >
+                  <PlusIcon className="h-3 w-3" aria-hidden />
+                  Add to {meta.title}
+                </button>
+              ) : null}
             </div>
           ) : (
             tasks.map((task) => (
