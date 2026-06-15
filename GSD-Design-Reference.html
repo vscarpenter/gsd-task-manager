@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GSD — Design Reference</title>
+<style>
+  :root{
+    --serif: ui-serif,"New York",Georgia,"Times New Roman",serif;
+    --sans: -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro",system-ui,"Helvetica Neue",Arial,sans-serif;
+    --mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+    --q1:#B23A2E; --q2:#2C6680; --q3:#8A6A22; --q4:#6F685F;
+    --q1d:#E0705F; --q2d:#6FAACB; --q3d:#CFB266; --q4d:#A9A096;
+    --q1w:#F4E4E0; --q2w:#E1ECF1; --q3w:#F0E9D8; --q4w:#ECE9E3;
+    --paper:#F4F1E9; --sunken:#ECE7DC; --surface:#FFFFFF; --surface2:#FBF9F3;
+    --hairline:#E3DDD0; --hairlineS:#D8D1C1;
+    --ink:#211E1A; --ink2:#6E6760; --ink3:#A49B8D;
+    --success:#3E7D52; --alert:#B23A2E; --tint:#2C6680;
+    --shadow-card:0 1px 2px rgba(40,33,22,.05),0 8px 24px rgba(40,33,22,.06);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--sunken);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .page{max-width:920px;margin:0 auto;background:var(--paper);}
+  .pad{padding:0 64px}
+  /* cover */
+  .cover{padding:96px 64px 64px;background:var(--paper);border-bottom:1px solid var(--hairline)}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:40px}
+  .glyph{width:34px;height:34px;border-radius:9px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;padding:3px;background:var(--ink)}
+  .glyph i{border-radius:2px;display:block}
+  .brand .nm{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:-.01em}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--ink3);margin:0 0 16px}
+  h1{font-family:var(--serif);font-weight:600;font-size:60px;line-height:1.02;letter-spacing:-.025em;margin:0 0 22px}
+  h1 em{font-style:italic;color:var(--q1)}
+  .lede{font-size:21px;color:var(--ink2);max-width:62ch;line-height:1.5;margin:0}
+  .pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:30px}
+  .pill{border:1px solid var(--hairlineS);border-radius:999px;padding:7px 15px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px;background:var(--surface)}
+  .pill .dot{width:9px;height:9px;border-radius:50%}
+  /* toc */
+  .toc{padding:36px 64px;background:var(--surface2);border-bottom:1px solid var(--hairline);display:grid;grid-template-columns:repeat(3,1fr);gap:6px 26px}
+  .toc a{color:var(--ink2);text-decoration:none;font-size:14px;padding:5px 0;display:flex;gap:10px;border-bottom:1px solid transparent}
+  .toc a:hover{color:var(--ink)}
+  .toc a b{color:var(--ink3);font-family:var(--mono);font-size:12px;font-weight:500}
+  /* sections */
+  section{padding:64px;border-bottom:1px solid var(--hairline)}
+  .sec-no{font-family:var(--mono);font-size:13px;color:var(--ink3);margin:0 0 10px}
+  h2{font-family:var(--serif);font-weight:600;font-size:34px;letter-spacing:-.015em;margin:0 0 14px;line-height:1.1}
+  h3{font-family:var(--serif);font-weight:600;font-size:21px;margin:34px 0 12px;letter-spacing:-.01em}
+  h4{font-family:var(--sans);font-weight:600;font-size:14px;margin:22px 0 8px;color:var(--ink)}
+  p{margin:0 0 14px;max-width:68ch;color:var(--ink2)}
+  p.k{color:var(--ink)}
+  strong{color:var(--ink);font-weight:600}
+  ul{margin:0 0 14px;padding-left:0;list-style:none;max-width:68ch}
+  li{position:relative;padding-left:20px;margin-bottom:9px;color:var(--ink2);font-size:15px;line-height:1.55}
+  li::before{content:"";position:absolute;left:3px;top:9px;width:6px;height:6px;border-radius:50%;background:var(--q1)}
+  li b,li strong{color:var(--ink);font-weight:600}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--sunken);padding:1px 6px;border-radius:5px;color:var(--ink)}
+  /* swatches */
+  .accents{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}
+  .acc{border:1px solid var(--hairline);border-radius:14px;overflow:hidden;background:var(--surface)}
+  .acc .chip{height:74px;display:flex;align-items:flex-end;padding:10px;color:#fff;font-family:var(--serif);font-weight:600;font-size:16px}
+  .acc .body{padding:11px 13px 14px}
+  .acc .role{font-size:12px;color:var(--ink2);margin-bottom:8px}
+  .acc .hx{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink3);padding:3px 0;border-top:1px solid var(--hairline)}
+  .acc .hx b{color:var(--ink);font-weight:500}
+  .ramp{display:flex;border:1px solid var(--hairline);border-radius:12px;overflow:hidden;margin:8px 0 4px}
+  .ramp .s{flex:1;height:64px;position:relative}
+  .ramp .s span{position:absolute;left:7px;bottom:6px;font-family:var(--mono);font-size:9.5px}
+  .rlabel{font-size:12px;color:var(--ink3);font-weight:600;margin:14px 0 4px;text-transform:uppercase;letter-spacing:.06em}
+  /* type specimens */
+  .spec{border:1px solid var(--hairline);border-radius:14px;overflow:hidden;background:var(--surface);margin:14px 0}
+  .srow{display:grid;grid-template-columns:170px 1fr;gap:20px;align-items:baseline;padding:16px 20px;border-top:1px solid var(--hairline)}
+  .srow:first-child{border-top:0}
+  .srow .m{font-family:var(--mono);font-size:11.5px;color:var(--ink3);line-height:1.6}
+  .srow .m b{display:block;font-family:var(--sans);color:var(--ink2);font-size:13px;margin-bottom:2px}
+  .serif{font-family:var(--serif)} .sans{font-family:var(--sans)}
+  /* spacing bars */
+  .sgrid{margin:14px 0}
+  .sbar{display:flex;align-items:center;gap:14px;margin-bottom:9px;font-size:14px;color:var(--ink2)}
+  .sbar .bar{height:13px;background:var(--q1);border-radius:3px;opacity:.82}
+  .sbar code{min-width:38px;text-align:right}
+  /* radius */
+  .radii{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+  .rb{width:64px;height:64px;background:var(--sunken);border:1px solid var(--hairlineS);display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;font-size:10px;color:var(--ink3);font-family:var(--mono)}
+  /* cards / token tables */
+  table{width:100%;border-collapse:collapse;margin:10px 0 18px;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-top:1px solid var(--hairline);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);font-weight:600;border-top:0}
+  td b{color:var(--ink)} td code{white-space:nowrap}
+  .surf-card{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--shadow-card);padding:22px 24px;margin:14px 0}
+  .surf-card h3{margin-top:0}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  pre{margin:14px 0;padding:20px 22px;background:#211E1A;color:#F1ECE2;border-radius:14px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+  pre .c{color:#A49B8D} pre .k{color:#6FAACB} pre .s{color:#CFB266} pre .n{color:#E0705F}
+  .demo-card{position:relative;background:var(--surface);border:1px solid var(--hairline);border-radius:18px;box-shadow:var(--shadow-card);padding:16px 16px 16px 24px;max-width:380px;margin:10px 0}
+  .demo-card .sp{position:absolute;left:12px;top:16px;bottom:16px;width:3px;border-radius:3px;background:var(--q2)}
+  .demo-card .t{font-size:17px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+  .demo-card .d{font-size:15px;color:var(--ink2);margin-bottom:10px}
+  .demo-card .meta{display:flex;gap:8px;flex-wrap:wrap}
+  .demo-card .tag{font-size:13px;font-weight:500;padding:3px 10px;border-radius:999px;background:var(--q2w);color:var(--q2)}
+  .demo-card .check{position:absolute;top:15px;right:14px;width:26px;height:26px;border-radius:50%;border:2px solid var(--hairlineS)}
+  .note{font-size:13px;color:var(--ink3);font-style:italic;margin-top:6px}
+  .callout{background:var(--surface2);border:1px solid var(--hairline);border-left:3px solid var(--q1);border-radius:0 12px 12px 0;padding:16px 20px;margin:16px 0}
+  .callout p{margin:0;color:var(--ink2);font-size:14px}
+  .callout p b{color:var(--ink)}
+  footer{padding:48px 64px 70px;color:var(--ink3);font-size:14px;background:var(--paper)}
+  @media print{
+    body{background:#fff} .page{max-width:none} .toc{display:none}
+    section,.cover{padding:34px 0;break-inside:avoid} .pad{padding:0}
+    h1{font-size:46px} pre{background:#f4f1e9;color:#211e1a;border:1px solid #ddd}
+    pre .c{color:#8a8377}pre .k{color:#2C6680}pre .s{color:#8A6A22}pre .n{color:#B23A2E}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- COVER -->
+<div class="cover">
+  <div class="brand">
+    <div class="glyph"><i style="background:#B23A2E"></i><i style="background:#2C6680"></i><i style="background:#8A6A22"></i><i style="background:#6F685F"></i></div>
+    <span class="nm">GSD</span>
+  </div>
+  <p class="eyebrow">GSD Task Manager · Design Reference · v1 (post-polish)</p>
+  <h1>Get the right<br>things <em>done.</em></h1>
+  <p class="lede">The complete editorial design language for GSD — the privacy-first, Eisenhower-matrix task manager for iPhone and iPad. Editorial restraint over enterprise chrome: a serif voice, rationed color, and four quadrant pigments that do the only loud talking. This document is the standing reference; the annotated mockups and the Claude&nbsp;Code handoff are its companions.</p>
+  <div class="pills">
+    <span class="pill"><span class="dot" style="background:var(--q1)"></span>Editorial</span>
+    <span class="pill"><span class="dot" style="background:var(--q2)"></span>Calm</span>
+    <span class="pill"><span class="dot" style="background:var(--q3)"></span>Focused</span>
+    <span class="pill">New York serif</span>
+    <span class="pill">SF body</span>
+    <span class="pill">Warm paper</span>
+    <span class="pill">Native iOS</span>
+  </div>
+</div>
+
+<!-- TOC -->
+<nav class="toc">
+  <a href="#philosophy"><b>01</b>Philosophy</a>
+  <a href="#type"><b>02</b>Typography</a>
+  <a href="#color"><b>03</b>Color</a>
+  <a href="#space"><b>04</b>Spacing &amp; grid</a>
+  <a href="#shape"><b>05</b>Shape &amp; elevation</a>
+  <a href="#components"><b>06</b>Components</a>
+  <a href="#surfaces"><b>07</b>Surfaces</a>
+  <a href="#gestures"><b>08</b>Gestures &amp; motion</a>
+  <a href="#empty"><b>09</b>Empty &amp; onboarding</a>
+  <a href="#icon"><b>10</b>Iconography</a>
+  <a href="#tokens"><b>11</b>Handoff tokens</a>
+  <a href="#polish"><b>12</b>Polish state</a>
+</nav>
+
+<!-- 01 PHILOSOPHY -->
+<section id="philosophy">
+  <p class="sec-no">01 — Philosophy</p>
+  <h2>Three deliberate moves</h2>
+  <p class="k">The app should read as a calm, editorial, native iOS experience — never a generic productivity tool. Everything follows from three principles. When in doubt, defer to them.</p>
+
+  <h3>01 · Color earns its place</h3>
+  <p>The <strong>only</strong> strong color in the app is the four quadrant pigments. Chrome, nav icons, charts, and settings stay quiet graphite. Color must <em>mean</em> something — a pigment signals a quadrant, the one functional green signals completion, rust signals destructive. No system-blue floods, no rainbow charts, no second palette.</p>
+
+  <h3>02 · Type carries hierarchy</h3>
+  <p>Apple <strong>New York</strong> (ships free with iOS) does the headline and quadrant-title work; <strong>SF</strong> handles body, labels, metadata, and numerals. The serif speaks one editorial voice across page titles, sheet titles, section heads, and quadrant names. <strong>Never set body copy in the serif.</strong></p>
+
+  <h3>03 · Warm, not clinical</h3>
+  <p>A warm paper neutral replaces flat iOS gray — it reads composed and unhurried, like good stationery, and lets the rationed pigments sit naturally. A cool ramp exists as a one-token-swap alternative, never a second design. Elevation is soft, matte, warm-tinted. No glassmorphism, glow, or heavy shadows.</p>
+
+  <div class="callout"><p><b>The single rule.</b> This is a refined-native direction — clearly iOS, just calmer and more editorial. Every choice maps to a SwiftUI primitive and a token; nothing fights the platform.</p></div>
+</section>
+
+<!-- 02 TYPE -->
+<section id="type">
+  <p class="sec-no">02 — Typography</p>
+  <h2>A serif for the voice, SF for the work</h2>
+  <p class="k">Headlines, page titles, sheet titles, section heads, and quadrant names are New York. Everything functional stays SF for legibility and full Dynamic Type fidelity. Both scale correctly under Dynamic Type.</p>
+  <div class="spec">
+    <div class="srow"><div class="m"><b>Large Title</b>serif · 34 / semibold<br>.serif(.largeTitle)</div><div class="serif" style="font-size:34px;font-weight:600;letter-spacing:-.02em">Browse</div></div>
+    <div class="srow"><div class="m"><b>Title</b>serif · 28<br>.serif(.title)</div><div class="serif" style="font-size:28px;font-weight:600;letter-spacing:-.01em">New Task</div></div>
+    <div class="srow"><div class="m"><b>Quadrant Title</b>serif · 20<br>.serif(.title3)</div><div class="serif" style="font-size:20px;font-weight:600;color:var(--q1)">Do First</div></div>
+    <div class="srow"><div class="m"><b>Headline</b>SF · 17 / semibold<br>.headline</div><div class="sans" style="font-size:17px;font-weight:600">Finalize work report</div></div>
+    <div class="srow"><div class="m"><b>Body</b>SF · 17<br>.body</div><div class="sans" style="font-size:17px">Get the Accounting team to move on this.</div></div>
+    <div class="srow"><div class="m"><b>Subhead</b>SF · 15<br>.subheadline</div><div class="sans" style="font-size:15px;color:var(--ink2)">Field compensation quality</div></div>
+    <div class="srow"><div class="m"><b>Footnote</b>SF · 13<br>.footnote</div><div class="sans" style="font-size:13px;color:var(--ink3)">in 5 days · #work · #finance</div></div>
+    <div class="srow"><div class="m"><b>Caption</b>SF · 12 / caps<br>.caption</div><div class="sans" style="font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)">Built-in views</div></div>
+  </div>
+  <p class="note">SwiftUI: <code>Font.serif(_ style:)</code> returns <code>.system(style, design:.serif)</code> — Dynamic-Type aware. Large nav titles are set to New York via the UIKit appearance proxy in <code>Theme.swift</code>.</p>
+</section>
+
+<!-- 03 COLOR -->
+<section id="color">
+  <p class="sec-no">03 — Color</p>
+  <h2>Four pigments do all the talking</h2>
+  <p class="k">A harmonized, ink-like set that holds together on paper. These — and only these — carry strong color: card spines, quadrant headers, the editor's 2×2 picker, and every quadrant chart. Each is light/dark adaptive.</p>
+  <div class="accents">
+    <div class="acc"><div class="chip" style="background:var(--q1)">Do First</div><div class="body"><div class="role">Urgent · Important — Rust</div><div class="hx"><span>Light</span><b>#B23A2E</b></div><div class="hx"><span>Dark</span><b>#E0705F</b></div></div></div>
+    <div class="acc"><div class="chip" style="background:var(--q2)">Schedule</div><div class="body"><div class="role">Not urgent · Important — Tide</div><div class="hx"><span>Light</span><b>#2C6680</b></div><div class="hx"><span>Dark</span><b>#6FAACB</b></div></div></div>
+    <div class="acc"><div class="chip" style="background:var(--q3)">Delegate</div><div class="body"><div class="role">Urgent · Not important — Ochre</div><div class="hx"><span>Light</span><b>#8A6A22</b></div><div class="hx"><span>Dark</span><b>#CFB266</b></div></div></div>
+    <div class="acc"><div class="chip" style="background:var(--q4)">Eliminate</div><div class="body"><div class="role">Neither — Slate</div><div class="hx"><span>Light</span><b>#6F685F</b></div><div class="hx"><span>Dark</span><b>#A9A096</b></div></div></div>
+  </div>
+
+  <h3>Neutrals — warm is primary</h3>
+  <p>The whole UI is built on a warm paper ramp. Swap four hexes for the cool ramp to reflavor everything; it is an alternate, not a second design.</p>
+  <div class="rlabel">Warm · Light (primary)</div>
+  <div class="ramp">
+    <div class="s" style="background:#F4F1E9"><span style="color:#6E6760">paper</span></div>
+    <div class="s" style="background:#ECE7DC"><span style="color:#6E6760">sunken</span></div>
+    <div class="s" style="background:#FFFFFF"><span style="color:#6E6760">surface</span></div>
+    <div class="s" style="background:#E3DDD0"><span style="color:#6E6760">hairline</span></div>
+    <div class="s" style="background:#6E6760"><span style="color:#fff">ink-2</span></div>
+    <div class="s" style="background:#211E1A"><span style="color:#fff">ink</span></div>
+  </div>
+  <div class="rlabel">Warm · Dark</div>
+  <div class="ramp">
+    <div class="s" style="background:#17150F"><span style="color:#A79F92">paper</span></div>
+    <div class="s" style="background:#100E0A"><span style="color:#A79F92">sunken</span></div>
+    <div class="s" style="background:#221E17"><span style="color:#A79F92">surface</span></div>
+    <div class="s" style="background:#322D24"><span style="color:#A79F92">hairline</span></div>
+    <div class="s" style="background:#A79F92"><span style="color:#17150F">ink-2</span></div>
+    <div class="s" style="background:#F1ECE2"><span style="color:#17150F">ink</span></div>
+  </div>
+  <div class="rlabel">Functional &amp; washes</div>
+  <div class="ramp">
+    <div class="s" style="background:#3E7D52"><span style="color:#fff">success</span></div>
+    <div class="s" style="background:#B23A2E"><span style="color:#fff">alert</span></div>
+    <div class="s" style="background:#2C6680"><span style="color:#fff">tint</span></div>
+    <div class="s" style="background:#F4E4E0"><span style="color:#B23A2E">q1 wash</span></div>
+    <div class="s" style="background:#E1ECF1"><span style="color:#2C6680">q2 wash</span></div>
+    <div class="s" style="background:#F0E9D8"><span style="color:#8A6A22">q3 wash</span></div>
+  </div>
+  <div class="callout"><p><b>Tint discipline.</b> <code>tint (#2C6680)</code> is the single interactive accent — reserved for <b>genuine actions and links only</b>. Values read graphite (<code>ink-3</code>), navigation reads ink, destructive reads rust (<code>alert</code>), completion reads green (<code>success</code>). A toggle is green when on. Color = meaning, everywhere.</p></div>
+</section>
+
+<!-- 04 SPACE -->
+<section id="space">
+  <p class="sec-no">04 — Spacing &amp; grid</p>
+  <h2>The 4-pt grid</h2>
+  <p class="k">Every margin, pad, and gap lands on the 4-pt scale. Density is consistent across all surfaces — the same card reads identically on iPhone and iPad.</p>
+  <div class="sgrid">
+    <div class="sbar"><code>4</code><div class="bar" style="width:4px"></div><span>hairline gaps</span></div>
+    <div class="sbar"><code>8</code><div class="bar" style="width:8px"></div><span>chip padding</span></div>
+    <div class="sbar"><code>12</code><div class="bar" style="width:12px"></div><span>in-card rhythm · title→meta · label→control</span></div>
+    <div class="sbar"><code>16</code><div class="bar" style="width:16px"></div><span>card padding</span></div>
+    <div class="sbar"><code>20</code><div class="bar" style="width:20px"></div><span>screen inset</span></div>
+    <div class="sbar"><code>24</code><div class="bar" style="width:24px"></div><span>section gap</span></div>
+    <div class="sbar"><code>32</code><div class="bar" style="width:32px"></div><span>between quadrants</span></div>
+  </div>
+  <p class="note">Hit targets are always ≥ 44 pt. iPad matrix board panels gap at 16.</p>
+</section>
+
+<!-- 05 SHAPE -->
+<section id="shape">
+  <p class="sec-no">05 — Shape &amp; elevation</p>
+  <h2>Continuous corners, soft matte light</h2>
+  <p class="k">Always the iOS squircle — <code>.cornerRadius(_, style:.continuous)</code>, never circular corners. Shadows are low-contrast and warm-tinted; borders do the heavy lifting.</p>
+  <div class="radii">
+    <div class="rb" style="border-radius:8px">8</div>
+    <div class="rb" style="border-radius:12px">12</div>
+    <div class="rb" style="border-radius:16px">16</div>
+    <div class="rb" style="border-radius:22px">22</div>
+    <div class="rb" style="border-radius:26px">26</div>
+  </div>
+  <table>
+    <tr><th>Element</th><th>Radius</th><th>Elevation</th></tr>
+    <tr><td>Cards &amp; grouped panels</td><td><code>22</code></td><td>one soft warm card shadow</td></tr>
+    <tr><td>Detented sheets</td><td><code>26</code></td><td>sheet shadow (upward)</td></tr>
+    <tr><td>Inputs · stat tiles</td><td><code>16</code></td><td>card shadow</td></tr>
+    <tr><td>Chips · buttons · capture bar</td><td><code>pill</code></td><td>card shadow</td></tr>
+    <tr><td>Menus · command palette</td><td><code>16–22</code></td><td>deeper "pop" shadow</td></tr>
+  </table>
+  <p class="note">Card shadow: <code>0 1px 2px rgba(40,33,22,.05), 0 8px 24px rgba(40,33,22,.06)</code>. No glassmorphism, no glow.</p>
+</section>
+
+<!-- 06 COMPONENTS -->
+<section id="components">
+  <p class="sec-no">06 — Components</p>
+  <h2>One card system carries the app</h2>
+  <p class="k">A thin 3-pt accent spine signals quadrant; an SF semibold title; metadata in a quiet footnote row; a 28-pt completion disc that fills with the quadrant accent when done. Every state shares this structure across every surface.</p>
+
+  <div class="demo-card">
+    <span class="sp"></span>
+    <div class="t">Finalize work report</div>
+    <div class="d">Create the current-state slide to frame the problem.</div>
+    <div class="meta"><span class="tag">#work</span><span class="tag">#client</span></div>
+    <span class="check"></span>
+  </div>
+  <p class="note">Anatomy: spine (3 pt, quadrant accent) · title (.headline) · description (.subheadline, ink-2; ink-3 for links) · tag chips (quadrant wash) · meta row (.footnote, ink-3) · 28-pt disc (hairline-strong ring → fills with accent + check when complete).</p>
+
+  <h3>Card states</h3>
+  <ul>
+    <li><b>Default</b> — spine, title, optional description, tags, meta.</li>
+    <li><b>Completed</b> — strikethrough title in ink-3, disc filled with the quadrant accent + white check.</li>
+    <li><b>Subtask progress</b> — 84-pt track + <code>done/total</code>; fill is the accent, or green at 100%.</li>
+    <li><b>Due / overdue</b> — due-today = tide semibold; overdue = alert + warning glyph.</li>
+    <li><b>Live timer</b> — pulsing accent dot + tabular <code>HH:MM:SS</code> (suppressed under Reduce Motion).</li>
+    <li><b>Recurrence</b> — repeat glyph in the meta row.</li>
+    <li><b>Blocked</b> — whole card at 0.62 opacity + a lock "Blocked by n" badge.</li>
+  </ul>
+
+  <h3>Capture bar &amp; chips</h3>
+  <ul>
+    <li><b>Capture bar</b> — pill, surface fill, hairline border, soft shadow, pinned above the list. A live quadrant chip recolors and re-labels as shorthand (<code>!!</code> <code>*</code> <code>#tag</code>) is typed.</li>
+    <li><b>Tag chips</b> — pill, quadrant wash background, quadrant-accent text; 8-pt padding.</li>
+    <li><b>Quadrant header</b> — fixed 26-pt icon column + serif title in the pigment + quiet graphite tabular count.</li>
+    <li><b>Toggles</b> — green (<code>success</code>) when on. <b>Buttons/links</b> — tint only for true actions.</li>
+  </ul>
+</section>
+
+<!-- 07 SURFACES -->
+<section id="surfaces">
+  <p class="sec-no">07 — Surfaces</p>
+  <h2>The system in place</h2>
+  <p class="k">Each surface, with its layout intent and the colors that carry meaning. Visual mockups (light + dark, iPhone + iPad) live in the companion files <code>GSD Polish — *.html</code>.</p>
+
+  <div class="surf-card">
+    <h3>Matrix — the hero</h3>
+    <p>iPhone: capture bar + a vertically scrolling list of quadrant sections (Q1→Q4), each a grouped card of task rows. iPad: a true 2×2 board (Q1 top-left → Q4 bottom-right) in <code>NavigationSplitView</code> with a smart-views sidebar; drag a card across a boundary to reclassify. Serif quadrant titles in the pigment; 32-pt separation; capture bar clears the first card by 12 pt when scrolled.</p>
+  </div>
+  <div class="surf-card">
+    <h3>New Task / Edit</h3>
+    <p>iPhone: a detented sheet (<code>.medium → .large</code>) with a serif title. iPad: the same fields as an inspector column. A 2×2 quadrant picker mirrors the matrix — the selected cell fills with the quadrant wash + a full accent border; the others sit at accent-opacity 0.35. Due-date presets in tint; recurrence and other <em>values</em> read graphite.</p>
+  </div>
+  <div class="surf-card">
+    <h3>Browse &amp; Archive</h3>
+    <p>Browse: grouped smart-view list — graphite chrome, pigment <em>only</em> where a row carries quadrant meaning (Today's Focus = rust target, This Week / Ready to Work = tide, This Week's Wins = ochre, Overdue = alert). Archive: dimmed (0.72), read-only, strikethrough rows with the archived date; swipe Restore (tint) / Delete (rust), both with undo.</p>
+  </div>
+  <div class="surf-card">
+    <h3>Dashboard</h3>
+    <p>Serif numerals for every stat; labels and icons graphite (the Streak flame keeps rust). Completion trend = functional green (completed) + graphite dashed (created). Quadrant donut = the four pigments. Top Tags bars = graphite — a tag is not a quadrant, so it borrows no pigment. Every chart binds to the system; nothing invents a color.</p>
+  </div>
+  <div class="surf-card">
+    <h3>Command Palette &amp; Settings</h3>
+    <p>Palette (⌘K): a calm editorial overlay on a dimmed board — serif "Commands", meaning-color smart-view icons, graphite actions, deeper pop shadow. Settings: chrome goes ink, <em>values</em> graphite, the single tint reserved for true actions, destructive rust, toggles green. No wall of blue.</p>
+  </div>
+</section>
+
+<!-- 08 GESTURES -->
+<section id="gestures">
+  <p class="sec-no">08 — Gestures &amp; motion</p>
+  <h2>The card is the verb; motion has a job</h2>
+  <ul>
+    <li><b>Tap</b> — open the editor (sheet on iPhone, inspector on iPad).</li>
+    <li><b>Leading swipe →</b> — Complete / Uncomplete. Green fill, <code>.success</code> haptic, confetti on complete. Full-swipe triggers without lifting.</li>
+    <li><b>Trailing swipe ←</b> — Snooze (slate) and Delete (rust). Delete confirms once.</li>
+    <li><b>Long-press</b> — lifts the card into the full menu: Edit · Complete · Start/Stop timer · Snooze · Duplicate · Share · Move to quadrant · Delete (rust, last). Same menu on iPad secondary-click.</li>
+    <li><b>Capture → classify</b> — the chip recolors live as shorthand is typed; on submit the new card drops into its quadrant and focus stays for rapid serial capture.</li>
+  </ul>
+  <h4>Motion curves</h4>
+  <table>
+    <tr><th>Moment</th><th>Spec</th></tr>
+    <tr><td>Completion</td><td><code>spring(response: 0.34, dampingFraction: 0.8)</code> · haptic <code>.success</code> · confetti</td></tr>
+    <tr><td>Swipe</td><td><code>interactiveSpring()</code> · light haptic tick at threshold</td></tr>
+    <tr><td>Counts</td><td><code>.contentTransition(.numericText())</code> — roll when tasks move</td></tr>
+    <tr><td>Sheets</td><td><code>.presentationDetents([.medium, .large])</code></td></tr>
+  </table>
+  <div class="callout"><p><b>Reduce Motion.</b> Confetti is suppressed; transitions become simple cross-fades; looping illustrations stop. Every swipe action also has a VoiceOver custom action.</p></div>
+</section>
+
+<!-- 09 EMPTY -->
+<section id="empty">
+  <p class="sec-no">09 — Empty states &amp; onboarding</p>
+  <h2>Empty, not blank — and a first run that won't nag</h2>
+  <h3>Empty-state anatomy</h3>
+  <ul>
+    <li><b>Mark</b> — one SF Symbol in ink-3 on a 60-pt sunken tile. Tinted only to reassure (green check for "Nothing overdue"). Never a colorful illustration.</li>
+    <li><b>Headline</b> — one serif <code>.title3</code> line, calm and factual.</li>
+    <li><b>Body</b> — one sentence, ≤ 2 lines, ink-2: what will appear here and why it's empty.</li>
+    <li><b>Action</b> — at most one, in tint; omit where there's nothing useful to do.</li>
+    <li><b>In-context empties</b> (a quadrant in a populated matrix) use a dashed prompt row, never a full-screen takeover.</li>
+  </ul>
+  <h3>Onboarding — four screens, always skippable</h3>
+  <ul>
+    <li><b>Order</b> — Welcome → The Matrix → Capture shorthand → Privacy &amp; sync. Page dots; <code>Skip</code> top-right on every screen.</li>
+    <li><b>No forced sign-in</b> — the last screen's primary action is <b>Start using GSD</b> (offline); <code>Sign in to sync</code> is the quiet secondary.</li>
+    <li><b>Re-showable</b> from Settings → About. Reduce Motion cross-fades instead of sliding.</li>
+    <li><b>Voice</b> — plain, unhurried, second person; the privacy line is literally true about where data lives.</li>
+  </ul>
+</section>
+
+<!-- 10 ICON -->
+<section id="icon">
+  <p class="sec-no">10 — Iconography &amp; app mark</p>
+  <h2>Four tiles, one decision</h2>
+  <p class="k">SF Symbols throughout, consistent stroke weight and optical sizing. The app icon is a 2×2 of the quadrant pigments on warm paper — the product's whole idea in one glance — with a single check on the Do-First tile. No letterforms, no gloss; it reads at every size and stands apart from the sea of blue-gradient productivity icons.</p>
+  <div style="display:flex;gap:20px;align-items:flex-end;margin-top:18px">
+    <svg width="96" height="96" viewBox="0 0 200 200" style="border-radius:22%;box-shadow:var(--shadow-card)"><rect width="200" height="200" fill="#F4F1E9"/><rect x="34" y="34" width="60" height="60" rx="15" fill="#B23A2E"/><rect x="106" y="34" width="60" height="60" rx="15" fill="#2C6680"/><rect x="34" y="106" width="60" height="60" rx="15" fill="#8A6A22"/><rect x="106" y="106" width="60" height="60" rx="15" fill="#6F685F"/><path d="M52 64 L60 72 L78 50" fill="none" stroke="#F4F1E9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg width="72" height="72" viewBox="0 0 200 200" style="border-radius:22%;box-shadow:var(--shadow-card)"><rect width="200" height="200" fill="#17150F"/><rect x="34" y="34" width="60" height="60" rx="15" fill="#E0705F"/><rect x="106" y="34" width="60" height="60" rx="15" fill="#6FAACB"/><rect x="34" y="106" width="60" height="60" rx="15" fill="#CFB266"/><rect x="106" y="106" width="60" height="60" rx="15" fill="#A9A096"/><path d="M52 64 L60 72 L78 50" fill="none" stroke="#17150F" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="note" style="margin-bottom:6px">Light · Dark</span>
+  </div>
+</section>
+
+<!-- 11 TOKENS -->
+<section id="tokens">
+  <p class="sec-no">11 — Handoff tokens</p>
+  <h2>Copy-paste SwiftUI</h2>
+  <p class="k">Drop-in values matching <code>QuadrantStyle.swift</code> and <code>Theme.swift</code>. Light/dark adaptive via the existing <code>Color(light:dark:)</code> initializer.</p>
+<pre><span class="c">// Quadrant pigments — QuadrantStyle.accent(_:)</span>
+<span class="k">case</span> .urgentImportant:       Color(light: <span class="n">0xB23A2E</span>, dark: <span class="n">0xE0705F</span>) <span class="c">// Rust  · Do First</span>
+<span class="k">case</span> .notUrgentImportant:    Color(light: <span class="n">0x2C6680</span>, dark: <span class="n">0x6FAACB</span>) <span class="c">// Tide  · Schedule</span>
+<span class="k">case</span> .urgentNotImportant:    Color(light: <span class="n">0x8A6A22</span>, dark: <span class="n">0xCFB266</span>) <span class="c">// Ochre · Delegate</span>
+<span class="k">case</span> .notUrgentNotImportant: Color(light: <span class="n">0x6F685F</span>, dark: <span class="n">0xA9A096</span>) <span class="c">// Slate · Eliminate</span>
+
+<span class="c">// Warm-paper neutrals — Surface</span>
+<span class="k">static let</span> paper    = Color(light: <span class="n">0xF4F1E9</span>, dark: <span class="n">0x17150F</span>)
+<span class="k">static let</span> sunken   = Color(light: <span class="n">0xECE7DC</span>, dark: <span class="n">0x100E0A</span>)
+<span class="k">static let</span> surface  = Color(light: <span class="n">0xFFFFFF</span>, dark: <span class="n">0x221E17</span>)
+<span class="k">static let</span> hairline = Color(light: <span class="n">0xE3DDD0</span>, dark: <span class="n">0x322D24</span>)
+<span class="k">static let</span> ink      = Color(light: <span class="n">0x211E1A</span>, dark: <span class="n">0xF1ECE2</span>)
+<span class="k">static let</span> ink2     = Color(light: <span class="n">0x6E6760</span>, dark: <span class="n">0xA79F92</span>)
+<span class="k">static let</span> ink3     = Color(light: <span class="n">0xA49B8D</span>, dark: <span class="n">0x6F685B</span>)
+<span class="k">static let</span> success  = Color(light: <span class="n">0x3E7D52</span>, dark: <span class="n">0x6FB07F</span>) <span class="c">// completion</span>
+<span class="k">static let</span> alert    = Color(light: <span class="n">0xB23A2E</span>, dark: <span class="n">0xE0705F</span>) <span class="c">// destructive</span>
+<span class="k">static let</span> tint     = Color(light: <span class="n">0x2C6680</span>, dark: <span class="n">0x6FAACB</span>) <span class="c">// actions ONLY</span>
+
+<span class="c">// Spacing — 4-pt grid · cards 22 · sheets 26 · inputs 16 · hit targets ≥ 44</span>
+<span class="k">enum</span> Space { hairline 4 · chip 8 · inCard 12 · card 16 · inset 20 · section 24 · quadrant 32 }
+
+<span class="c">// Type — New York for display, SF for work</span>
+Text(<span class="s">"Do First"</span>).font(.serif(.title3).weight(.semibold))
+Text(<span class="s">"Finalize work report"</span>).font(.headline) <span class="c">// SF semibold 17</span></pre>
+</section>
+
+<!-- 12 POLISH -->
+<section id="polish">
+  <p class="sec-no">12 — Polish state</p>
+  <h2>What the v1 polish pass refined</h2>
+  <p class="k">The build was already a faithful implementation of this language. The polish pass was token-level — five changed surfaces, the rest verified compliant.</p>
+  <table>
+    <tr><th>Surface</th><th>Refinement</th></tr>
+    <tr><td><b>Matrix</b></td><td>capture-bar clearance (12-pt scroll inset) · fixed 26-pt icon column · quadrant separation 28→32 · card air 8→12 · counts roll</td></tr>
+    <tr><td><b>Editor</b></td><td>scope the form-wide tint so recurrence/values read graphite, not tide</td></tr>
+    <tr><td><b>Dashboard</b></td><td>Top Tags bars tide → graphite (the only strong color stays the donut + completed green)</td></tr>
+    <tr><td><b>Settings</b></td><td>shed the form-wide tint — values graphite, navigation ink, tint for true actions, destructive rust</td></tr>
+    <tr><td><b>Gestures</b></td><td>verify Delete renders rust, not system red</td></tr>
+    <tr><td colspan="2" style="color:var(--ink3)">Browse · Archive · Command Palette · Onboarding · Empty states — verified compliant, no change.</td></tr>
+  </table>
+  <p class="note">Detailed file/line mappings, acceptance criteria, and the copy-paste delta live in the Claude&nbsp;Code handoff (<code>design_handoff_visual_polish/</code>).</p>
+</section>
+
+<footer>
+  <div class="brand" style="margin-bottom:12px">
+    <div class="glyph"><i style="background:#B23A2E"></i><i style="background:#2C6680"></i><i style="background:#8A6A22"></i><i style="background:#6F685F"></i></div>
+    <span class="nm">GSD — Design Reference v1</span>
+  </div>
+  Companion to the web app at gsd.vinny.dev · New York + SF · Warm paper neutrals · Four rationed pigments · Native iOS.<br>
+  To save as PDF: open this file and use your browser's Print → Save as PDF.
+</footer>
+
+</div>
+</body>
+</html>
