@@ -14,10 +14,20 @@ export function GsdLogo({ className, size = 28 }: GsdLogoProps) {
       className={className}
       aria-hidden="true"
     >
-      <rect x="2" y="2" width="7" height="7" rx="1.6" fill="var(--accent)" opacity="0.32" />
-      <rect x="11" y="2" width="7" height="7" rx="1.6" fill="var(--rust)" />
-      <rect x="2" y="11" width="7" height="7" rx="1.6" fill="var(--olive)" opacity="0.32" />
-      <rect x="11" y="11" width="7" height="7" rx="1.6" fill="var(--warning)" opacity="0.32" />
+      {/* The four-pigment matrix: Q1 Do First (rust) with completion check,
+          Q2 Schedule (tide), Q3 Delegate (ochre), Q4 Eliminate (slate). */}
+      <rect x="2" y="2" width="7" height="7" rx="1.6" fill="var(--q1)" />
+      <rect x="11" y="2" width="7" height="7" rx="1.6" fill="var(--q2)" />
+      <rect x="2" y="11" width="7" height="7" rx="1.6" fill="var(--q3)" />
+      <rect x="11" y="11" width="7" height="7" rx="1.6" fill="var(--q4)" />
+      <path
+        d="M3.7 5.5 L4.9 6.7 L7.3 4.2"
+        fill="none"
+        stroke="var(--ivory)"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

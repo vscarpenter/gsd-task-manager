@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CheckCircle2Icon, CircleIcon, GripVerticalIcon } from "lucide-react";
+import { CheckIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { TaskRecord } from "@/lib/types";
@@ -10,6 +10,8 @@ import { TaskDescription } from "@/components/task-description";
 
 export interface TaskCardHeaderProps {
   task: TaskRecord;
+  /** CSS var for the task's quadrant pigment, e.g. "var(--q1)". */
+  accentVar: string;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
@@ -20,6 +22,7 @@ export interface TaskCardHeaderProps {
 
 export function TaskCardHeader({
   task,
+  accentVar,
   selectionMode,
   isSelected,
   onToggleSelect,
@@ -80,10 +83,14 @@ export function TaskCardHeader({
             data-testid="complete-task"
             type="button"
             onClick={() => onToggleComplete(task, !task.completed)}
+            // Completed disc fills with the task's quadrant pigment (reference §06),
+            // applied inline because the var is per-quadrant; the paper-colored check
+            // contrasts the pigment in both light and dark themes.
+            style={task.completed ? { backgroundColor: accentVar, borderColor: accentVar } : undefined}
             className={cn(
               "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 sm:h-9 sm:w-9",
               task.completed
-                ? "border-status-success bg-status-success-muted text-status-success shadow-sm"
+                ? "shadow-sm"
                 : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"
             )}
             aria-pressed={task.completed}
@@ -92,7 +99,10 @@ export function TaskCardHeader({
             {task.completed ? (
               // Color lives on the icon: the button's `button-reset` (unlayered
               // color: inherit) would neutralize a text-color class on the button.
-              <CheckCircle2Icon className={cn("h-4 w-4 shrink-0 text-status-success", justCompleted && "animate-check-pop")} />
+              <CheckIcon
+                style={{ color: "var(--ivory)" }}
+                className={cn("h-4 w-4 shrink-0", justCompleted && "animate-check-pop")}
+              />
             ) : (
               <>
                 <CircleIcon className="h-4 w-4 shrink-0" />

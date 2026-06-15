@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, Trash2Icon, RepeatIcon, AlertCircleIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon } from "lucide-react";
 import { cn, formatRelative } from "@/lib/utils";
 import { TIME_MS } from "@/lib/constants";
 import { SnoozeDropdown } from "@/components/snooze-dropdown";
@@ -41,8 +41,10 @@ export function TaskCardActions({
     <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
       <div className="flex items-center gap-2">
         {taskIsDueToday && !taskIsOverdue ? (
-          <span className="flex items-center gap-1 rounded-full bg-warning-tint px-2 py-0.5 text-warning-dark font-medium">
-            <AlertCircleIcon className="h-3 w-3" />
+          // Due today reads as tide-semibold (reference §06); the warning glyph
+          // is reserved for the overdue state.
+          <span className="flex items-center gap-1 rounded-full bg-accent-tint px-2 py-0.5 text-accent font-semibold">
+            <ClockIcon className="h-3 w-3" />
             Due today
           </span>
         ) : task.dueDate && !taskIsOverdue ? (

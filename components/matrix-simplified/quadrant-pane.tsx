@@ -3,12 +3,19 @@
 import { useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIcon } from "lucide-react";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
-import type { QuadrantMeta, RedesignQuadrantKey } from "@/lib/quadrants";
+import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
 import { QUADRANT_ACCENT } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
+
+const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
+  flame: FlameIcon,
+  calendar: CalendarIcon,
+  users: UsersIcon,
+  trash: Trash2Icon,
+};
 
 const WASH_CLASS: Record<RedesignQuadrantKey, string> = {
   q1: "quadrant-wash-q1",
@@ -65,6 +72,7 @@ export function QuadrantPane({
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
+  const QuadrantIcon = RD_ICON[meta.rdIcon];
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
   const activeTaskCount = useMemo(
     () => tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0),
@@ -102,17 +110,26 @@ export function QuadrantPane({
       />
       <header
         className={cn(
-          "-mx-5 -mt-5 mb-4 flex items-baseline gap-1 border-b border-border-muted px-5 py-3",
+          "-mx-5 -mt-5 mb-4 flex items-center gap-1.5 border-b border-border-muted px-5 py-3",
           HEADER_CLASS[meta.rdKey]
         )}
       >
+        {/* Fixed 26pt icon column in the quadrant pigment (reference §06) */}
+        <span
+          data-testid="quadrant-icon"
+          aria-hidden
+          className="flex w-[26px] shrink-0 items-center justify-center"
+          style={{ color: accent }}
+        >
+          <QuadrantIcon className="h-[18px] w-[18px]" />
+        </span>
         <span
           className="rd-serif text-[15px] font-semibold leading-none"
           style={{ color: accent, letterSpacing: "-0.005em" }}
         >
           {meta.title}
         </span>
-        <span className="ml-1 text-caption text-foreground-muted">{meta.rdHint}</span>
+        <span className="text-caption text-foreground-muted">{meta.rdHint}</span>
         <span className="ml-auto rounded bg-background-muted px-1.5 text-[11px] font-medium tabular-nums text-foreground-muted">
           {activeTaskCount}
         </span>
@@ -129,7 +146,16 @@ export function QuadrantPane({
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2">
           {tasks.length === 0 ? (
-            <div className="my-auto flex flex-col items-center gap-1.5 py-4 text-center">
+            <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">
+              {/* Reassuring mark: one icon in ink-3 on a 60pt sunken tile — never a
+                  colorful illustration (reference §09). */}
+              <span
+                data-testid="quadrant-empty-mark"
+                aria-hidden
+                className="flex h-[60px] w-[60px] items-center justify-center rounded-2xl bg-background-muted text-ink-3"
+              >
+                <QuadrantIcon className="h-6 w-6" />
+              </span>
               <p
                 className="rd-serif text-[18px] leading-tight text-foreground"
                 style={{ letterSpacing: "-0.01em" }}
@@ -139,15 +165,19 @@ export function QuadrantPane({
               <p className="max-w-[26ch] text-caption text-foreground-muted">
                 {meta.rdEmptySupporting}
               </p>
-              <button
-                type="button"
-                onClick={() => onAddInQuadrant(meta.rdKey)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40"
-                style={{ borderColor: accent, color: accent }}
-              >
-                <PlusIcon className="h-3 w-3" aria-hidden />
-                Add to {meta.title}
-              </button>
+              {/* Eliminate is the one quadrant where an empty state needs no action
+                  — there is nothing useful to add (reference §09). */}
+              {meta.rdKey !== "q4" ? (
+                <button
+                  type="button"
+                  onClick={() => onAddInQuadrant(meta.rdKey)}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40"
+                  style={{ borderColor: accent, color: accent }}
+                >
+                  <PlusIcon className="h-3 w-3" aria-hidden />
+                  Add to {meta.title}
+                </button>
+              ) : null}
             </div>
           ) : (
             tasks.map((task) => (

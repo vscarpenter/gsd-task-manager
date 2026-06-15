@@ -89,10 +89,14 @@ export function CommandPalette({
         open={open}
         onOpenChange={setOpen}
         label="Command Palette"
-        className="fixed left-[50%] top-[20%] z-50 w-full max-w-[640px] translate-x-[-50%] overflow-hidden rounded-xl border border-border bg-card shadow-2xl sm:top-[20%] md:w-[640px]"
+        overlayClassName="fixed inset-0 z-40 bg-[var(--backdrop)] backdrop-blur-sm"
+        className="fixed left-[50%] top-[20%] z-50 w-full max-w-[640px] translate-x-[-50%] overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-lg)] sm:top-[20%] md:w-[640px]"
         contentClassName="max-h-[60vh] overflow-y-auto"
       >
-        <DialogTitle className="sr-only">Command Palette</DialogTitle>
+        {/* Calm editorial overlay: a serif title over the dimmed board (reference §07) */}
+        <div className="flex items-baseline justify-between border-b border-border px-4 pt-3 pb-2">
+          <DialogTitle className="rd-serif text-[17px] font-semibold text-foreground">Commands</DialogTitle>
+        </div>
         <DialogDescription className="sr-only">
           Search for tasks, actions, and settings. Use arrow keys to navigate and Enter to select.
         </DialogDescription>

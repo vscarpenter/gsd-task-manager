@@ -63,6 +63,10 @@ vi.mock('@/components/first-time-redirect', () => ({
   FirstTimeRedirect: () => null,
 }));
 
+vi.mock('@/components/onboarding/onboarding-gate', () => ({
+  OnboardingGate: () => null,
+}));
+
 // Mock AppShell — render caption and topbarRightSlot so page-level assertions still work
 vi.mock('@/components/matrix-simplified/app-shell', () => ({
   AppShell: ({

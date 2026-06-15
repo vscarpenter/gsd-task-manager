@@ -15,6 +15,8 @@ export const test = base.extend<{ clearIndexedDB: void }>({
     // throws "interrupted by another navigation" (Chromium/Firefox tolerate it).
     await page.addInitScript(() => {
       window.localStorage.setItem("gsd-has-launched", "true");
+      // Suppress the welcome tour overlay so it never blocks app-level specs.
+      window.localStorage.setItem("gsd-onboarding-seen", "true");
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await page.evaluate(

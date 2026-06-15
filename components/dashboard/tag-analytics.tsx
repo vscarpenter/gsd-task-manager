@@ -56,9 +56,10 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
                 </div>
               </div>
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-background-muted">
-                {/* Total tasks for this tag — q2 tide at ~82%, the editorial Top Tags bar color */}
+                {/* Total tasks for this tag — graphite, because a tag is not a
+                    quadrant and borrows no pigment (reference §07 polish). */}
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-q2/80 transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-foreground-muted/30 transition-all"
                   style={{ width: `${barWidth}%` }}
                 />
                 {/* Completed portion — success green, matching the dashboard's completed language */}

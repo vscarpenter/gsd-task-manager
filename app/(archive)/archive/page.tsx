@@ -178,13 +178,17 @@ export default function ArchivePage() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {rowTasks.map((task) => (
                         <div key={task.id} className="relative group">
-                          <TaskCard
-                            task={task}
-                            allTasks={archivedTasks}
-                            onEdit={() => {}}
-                            onDelete={() => {}}
-                            onToggleComplete={() => {}}
-                          />
+                          {/* Archived items read dimmed and read-only (reference §07);
+                              handlers are no-ops and the card sits at 0.72 opacity. */}
+                          <div className="opacity-[0.72]">
+                            <TaskCard
+                              task={task}
+                              allTasks={archivedTasks}
+                              onEdit={() => {}}
+                              onDelete={() => {}}
+                              onToggleComplete={() => {}}
+                            />
+                          </div>
 
                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card via-card to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
                             <div className="flex items-center justify-end gap-2">

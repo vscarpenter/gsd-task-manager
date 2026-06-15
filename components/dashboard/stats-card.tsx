@@ -68,8 +68,8 @@ export function StatsCard({
           </p>
         </div>
         {Icon && (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-            <Icon className="h-4 w-4 text-accent" aria-hidden />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background-muted">
+            <Icon className="h-4 w-4 text-foreground-muted" aria-hidden />
           </div>
         )}
       </div>

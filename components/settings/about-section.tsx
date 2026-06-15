@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChevronRightIcon, ExternalLinkIcon, ShieldCheckIcon } from "lucide-react";
 import { SettingsRow } from "./shared-components";
+import { REPLAY_ONBOARDING_EVENT } from "@/components/onboarding/onboarding-gate";
 
 /**
  * iOS-style about section
@@ -36,6 +37,17 @@ export function AboutSection() {
 					</div>
 				</div>
 			</div>
+
+			{/* Replay the welcome tour (reference §09: re-showable from Settings → About) */}
+			<button
+				type="button"
+				onClick={() => window.dispatchEvent(new Event(REPLAY_ONBOARDING_EVENT))}
+				className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
+				           text-left hover:bg-background-muted/50 transition-colors"
+			>
+				<span className="text-sm font-medium text-foreground">Replay welcome tour</span>
+				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
+			</button>
 
 			{/* Privacy Policy Link Row */}
 			<Link

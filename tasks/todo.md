@@ -2,6 +2,59 @@
 
 ---
 
+## In progress — 2026-06-14: GSD Design Reference compliance (Buckets 1–4)
+
+**Branch:** `feat/design-reference-compliance`
+**Tier:** Non-trivial (coordinated changes across brand assets, card components, surfaces, new onboarding feature). Full process; TDD for behavioral changes. Spec = `docs/design-compliance-review.md` (approved by user 2026-06-14, "close Buckets 1–4, accept platform divergences").
+
+**Context:** App already matches the reference's tokens/serif exactly; this closes the remaining gaps. Platform-inherent iOS divergences (swipe, detented sheets, haptics, type-scale density, serif numerals, side-drawer, delete+undo, smart-views sidebar) are **accepted, not fixed**.
+
+**Guardrails:** 94 pre-existing staged `.agents/` files + `GSD-Design-Reference.html` are NOT mine — use targeted `git add` only, never `git add -A`. `bun lint` is pre-existing-broken on main (ESLint 10 crash) — do not block on it.
+
+### Bucket 1 — Brand-asset migration drift (P1) ✅ committed 67129d0
+- [x] 1.2 `components/gsd-logo.tsx` glyph: q1-q4 pigments + check on rust tile
+- [x] 1.3 `components/about/matrix-section.tsx` all four → `bg-qN/12 border-qN/40`
+- [x] 1.1 `public/icons/icon.svg` (+ regen 192/512 PNG) → 2×2 four-pigment + check, full-bleed maskable
+- [x] 1.4 `public/manifest.json` theme_color→tide; background_color→ivory
+- [x] 1.5 `public/og-image.svg` (+PNG) → warm paper + four pigments + serif title
+- [x] 1.6 `app/globals.css` dead `--q3-soft/--q4-soft` → q3/q4; 1.7 deleted orphaned `public/css/*`
+
+### Bucket 2 — Card anatomy (P1) — TDD ✅
+- [x] 2.0 Derive quadrant in `TaskCard` from task.urgent/important (cleaner than threading a prop)
+- [x] 2.1 3pt left accent spine = `var(--qN)` (data-testid task-card-spine)
+- [x] 2.2 completion disc fills quadrant accent + paper-colored check (not green)
+- [x] 2.3 tag chips → quadrant-wash bg + accent text
+- [x] 2.4 subtask fill → quadrant accent (green preserved at 100%)
+- [x] 2.5 blocked card → 0.62 opacity
+- [x] 2.6 quadrant header fixed 26pt icon column (renders `meta.rdIcon`)
+- [~] 2B card type scale (title 17 / desc 15 / meta 13) — SKIPPED: accepted density divergence (6.2)
+- [x] 2C due-today tide-semibold (was amber); overdue warning glyph
+- Tests: `tests/ui/task-card-anatomy.test.tsx` (6 new, red→green); 54 card/matrix tests green; typecheck ✅
+
+### Bucket 3 — Surfaces + color discipline (P2) ✅
+- [x] 3.4 editor quadrant picker: unselected cells carry pigment@0.35 (also fixed latent invalid `${var}14` bg → color-mix)
+- [x] 3.5 due-date presets active = tide tint
+- [x] 3.1 quadrant separation gap-4→gap-8 (phone); 3.2 `scroll-mt-24` on cards for capture-bar clearance
+- [x] 3.7 archive cards dimmed 0.72 (handlers already no-op = read-only)
+- [x] 7.1 Top Tags bars tide→graphite (bg-foreground-muted/30)
+- [x] 7.2 toggles tide→green (Switch + .switch CSS → status-success/olive; checkboxes/radios kept accent = selection)
+- [x] 7.3 dashboard stat/streak icons → graphite (no-flame streak kept per documented calm-voice decision)
+- [x] 7.4 data-management ActionRow leading icons → graphite (danger stays rust)
+- [x] 7.5 command palette: visible serif "Commands" title + --shadow-lg pop + backdrop scrim
+- Tests: 163 green across dashboard/settings/palette/edit-drawer/archive/matrix/anatomy; typecheck ✅
+
+### Bucket 4 — Onboarding + empty states (P1 user-facing) ✅
+- [x] 5.1 4-screen skippable onboarding (Welcome→Matrix→Capture→Privacy) w/ dots, Skip, "Start using GSD" + quiet "Sign in to sync"; `OnboardingGate` (localStorage `gsd-onboarding-seen`, suppressed on /about,/install); replay from Settings→About via `gsd:replay-onboarding` event. Layered over the existing /about first-run redirect (kept intact).
+- [x] 5.2 empty-state mark tile (quadrant icon in ink-3 on 60pt sunken tile)
+- [x] 5.3 omit empty CTA in Eliminate (q4)
+- Tests: onboarding (6) + onboarding-gate (4) + empty-state (3) red→green; e2e fixture seeds `gsd-onboarding-seen`; app-pages layout test mocks the gate. Full suite: 1977 pass / 1 skip; typecheck ✅.
+
+**Status:** Buckets 1–4 implemented & committed. Platform divergences accepted (not built): swipe, detented sheets, haptics, type-scale density, serif numerals, side-drawer, delete+undo, smart-views sidebar.
+
+**Verification (2026-06-14, live browser, dev):** PASS. All 4 onboarding screens; card spines in 4 pigments; completion disc fills quadrant pigment + paper check; tag chip wash/accent; 26pt header icon column; empty-state marks + Eliminate omits CTA; brand glyph 4 pigments. No console errors. Verified light + dark mode. Version bumped 9.9.1 → 9.10.0. Ready to push + PR.
+
+---
+
 ## In progress — 2026-06-10: Fix 3 medium security-review findings
 
 **Branch:** `fix/security-medium-findings`
