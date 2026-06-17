@@ -322,9 +322,7 @@ export function SettingsPage() {
                     completedTasks={completedTaskCount}
                     totalTasks={tasks.length}
                     estimatedSize={estimatedKb}
-                    onExport={async () => {
-                      await handleExport();
-                    }}
+                    onExport={handleExport}
                     onImportClick={handleImportClick}
                     isLoading={isExporting || tasksLoading}
                     syncEnabled={syncEnabled}

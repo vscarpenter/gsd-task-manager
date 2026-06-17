@@ -21,7 +21,8 @@ import { toast } from "sonner";
 interface ResetEverythingDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onExport: () => Promise<void>;
+	/** Export tasks to a JSON backup. Resolves `true` on success, `false` on failure. */
+	onExport: () => Promise<boolean>;
 	activeTasks: number;
 	completedTasks: number;
 	syncEnabled: boolean;
@@ -57,15 +58,10 @@ export function ResetEverythingDialog({
 	const isConfirmed = confirmText === "RESET";
 	const canReset = isConfirmed && (!exportFirst || hasExported);
 
+	// onExport (the parent's handleExport) owns its own success/error toast and reports
+	// whether the backup was actually written. Only a real success unlocks the reset gate.
 	const handleExport = async () => {
-		try {
-			await onExport();
-			setHasExported(true);
-			toast.success("Tasks exported successfully");
-		} catch (err) {
-			const errorMsg = err instanceof Error ? err.message : "Export failed";
-			toast.error(errorMsg);
-		}
+		setHasExported(await onExport());
 	};
 
 	const handleReset = async () => {
