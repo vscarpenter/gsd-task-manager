@@ -170,7 +170,10 @@ describe('Settings Components', () => {
     it('links to the full privacy policy', () => {
       render(<AboutSection />);
       const link = screen.getByText('Privacy Policy');
-      expect(link.closest('a')).toHaveAttribute('href', '/privacy');
+      expect(link.closest('a')).toHaveAttribute(
+        'href',
+        'https://gsdtaskmanager.com/privacy/'
+      );
     });
   });
 
