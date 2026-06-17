@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ChevronRightIcon, ExternalLinkIcon, ShieldCheckIcon } from "lucide-react";
 import { SettingsRow } from "./shared-components";
 import { REPLAY_ONBOARDING_EVENT } from "@/components/onboarding/onboarding-gate";
@@ -50,14 +49,16 @@ export function AboutSection() {
 			</button>
 
 			{/* Privacy Policy Link Row */}
-			<Link
-				href="/privacy"
+			<a
+				href="https://gsdtaskmanager.com/privacy/"
+				target="_blank"
+				rel="noopener noreferrer"
 				className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
 				           text-left hover:bg-background-muted/50 transition-colors"
 			>
 				<span className="text-sm font-medium text-accent">Privacy Policy</span>
-				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
-			</Link>
+				<ExternalLinkIcon className="w-4 h-4 text-foreground-muted/50" />
+			</a>
 
 			{/* GitHub Link Row */}
 			<a

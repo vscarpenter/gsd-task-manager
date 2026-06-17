@@ -85,7 +85,7 @@ describe('About Components', () => {
       render(<PrivacySection />);
 
       const link = screen.getByRole('link', { name: /privacy policy/i });
-      expect(link).toHaveAttribute('href', '/privacy');
+      expect(link).toHaveAttribute('href', 'https://gsdtaskmanager.com/privacy/');
     });
   });
 
@@ -109,7 +109,7 @@ describe('About Components', () => {
       render(<FooterCta version="1.0.0" />);
 
       const link = screen.getByRole('link', { name: /privacy/i });
-      expect(link).toHaveAttribute('href', '/privacy');
+      expect(link).toHaveAttribute('href', 'https://gsdtaskmanager.com/privacy/');
     });
   });
 

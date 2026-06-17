@@ -30,12 +30,14 @@ export function FooterCta({ version }: FooterCtaProps) {
             &middot; gsd.vinny.dev
           </p>
           <p className="mt-2 text-xs text-foreground-muted">
-            <Link
-              href="/privacy"
+            <a
+              href="https://gsdtaskmanager.com/privacy/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-accent transition-colors hover:text-accent-hover"
             >
               Privacy Policy
-            </Link>
+            </a>
           </p>
         </ScrollReveal>
       </div>

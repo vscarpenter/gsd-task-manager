@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Shield, Check } from "lucide-react";
 import { ScrollReveal } from "@/components/about/scroll-reveal";
 
@@ -40,12 +39,14 @@ export function PrivacySection() {
                 </div>
               ))}
             </div>
-            <Link
-              href="/privacy"
+            <a
+              href="https://gsdtaskmanager.com/privacy/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="mt-8 inline-block text-sm text-accent transition-colors hover:text-accent-hover"
             >
               Read the full Privacy Policy &rarr;
-            </Link>
+            </a>
           </div>
         </ScrollReveal>
       </div>
