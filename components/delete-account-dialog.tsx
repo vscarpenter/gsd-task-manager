@@ -23,8 +23,8 @@ import { toast } from "sonner";
 interface DeleteAccountDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/** Export the user's tasks to a JSON backup before deleting. */
-	onExport: () => Promise<void>;
+	/** Export the user's tasks to a JSON backup. Resolves `true` on success, `false` on failure. */
+	onExport: () => Promise<boolean>;
 	/** Called after a successful "keep local" deletion (so the host can refresh state). */
 	onDeleted?: () => void;
 }
@@ -61,14 +61,17 @@ export function DeleteAccountDialog({
 	const isConfirmed = confirmText === "DELETE";
 	const canDelete = isConfirmed && (!exportFirst || hasExported);
 
+	// onExport (the parent's handleExport) owns its own success/error toast and reports
+	// whether the backup was actually written. Only a real success unlocks the delete gate.
 	const handleExport = async () => {
-		try {
-			await onExport();
-			setHasExported(true);
-			toast.success("Tasks exported successfully");
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Export failed");
-		}
+		setHasExported(await onExport());
+	};
+
+	const resetForm = () => {
+		setConfirmText("");
+		setExportFirst(false);
+		setHasExported(false);
+		setEraseLocal(false);
 	};
 
 	const handleDelete = async () => {
@@ -93,8 +96,10 @@ export function DeleteAccountDialog({
 
 			await disableSync();
 			toast.success("Account deleted. Your tasks remain on this device.");
-			onDeleted?.();
+			setIsDeleting(false);
+			resetForm();
 			onOpenChange(false);
+			onDeleted?.();
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : "Account deletion failed");
 			setIsDeleting(false);
@@ -103,10 +108,7 @@ export function DeleteAccountDialog({
 
 	const handleClose = () => {
 		if (isDeleting) return;
-		setConfirmText("");
-		setExportFirst(false);
-		setHasExported(false);
-		setEraseLocal(false);
+		resetForm();
 		onOpenChange(false);
 	};
 

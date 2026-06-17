@@ -32,7 +32,8 @@ describe("SyncSettings danger zone", () => {
     render(
       <SyncSettings
         onViewHistory={vi.fn()}
-        onExport={vi.fn().mockResolvedValue(undefined)}
+        onExport={vi.fn().mockResolvedValue(true)}
+        onAccountDeleted={vi.fn()}
       />,
     );
 

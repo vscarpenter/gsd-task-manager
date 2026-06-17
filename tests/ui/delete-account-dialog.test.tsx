@@ -37,7 +37,7 @@ describe("DeleteAccountDialog", () => {
   const baseProps = {
     open: true,
     onOpenChange: vi.fn(),
-    onExport: vi.fn().mockResolvedValue(undefined),
+    onExport: vi.fn().mockResolvedValue(true),
     onDeleted: vi.fn(),
   };
 
@@ -101,5 +101,50 @@ describe("DeleteAccountDialog", () => {
     expect(disableSync).not.toHaveBeenCalled();
     // dialog stays open
     expect(screen.getByRole("heading", { name: /delete account/i })).toBeInTheDocument();
+  });
+
+  it("failed_export_does_not_unlock_delete_button", async () => {
+    const user = userEvent.setup();
+    const onExport = vi.fn().mockResolvedValue(false); // export failed
+    render(<DeleteAccountDialog {...baseProps} onExport={onExport} />);
+
+    await user.click(screen.getByRole("switch", { name: /export my tasks first/i }));
+    await user.type(screen.getByPlaceholderText("Type DELETE here"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /export now/i }));
+
+    await waitFor(() => expect(onExport).toHaveBeenCalled());
+    // gate stays closed: export-first is on but the export failed, so no backup exists
+    expect(screen.getByRole("button", { name: /^delete account$/i })).toBeDisabled();
+  });
+
+  it("successful_export_unlocks_delete_button_without_duplicate_toast", async () => {
+    const user = userEvent.setup();
+    const onExport = vi.fn().mockResolvedValue(true); // export succeeded (parent owns the toast)
+    render(<DeleteAccountDialog {...baseProps} onExport={onExport} />);
+
+    await user.click(screen.getByRole("switch", { name: /export my tasks first/i }));
+    await user.type(screen.getByPlaceholderText("Type DELETE here"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /export now/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^delete account$/i })).toBeEnabled(),
+    );
+    // the parent's handleExport already toasts; the dialog must not toast again
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("resets_confirmation_after_keep_local_success", async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteRemoteAccountAndTasks).mockResolvedValue({ ok: true, stage: "done" });
+    render(<DeleteAccountDialog {...baseProps} />);
+
+    const input = screen.getByPlaceholderText("Type DELETE here");
+    await user.type(input, "DELETE");
+    await user.click(screen.getByRole("button", { name: /^delete account$/i }));
+
+    await waitFor(() => expect(disableSync).toHaveBeenCalled());
+    // internal state must reset so a reopen isn't stuck with isDeleting/confirmText set
+    expect(input).toHaveValue("");
+    expect(screen.getByRole("button", { name: /^delete account$/i })).toBeDisabled();
   });
 });

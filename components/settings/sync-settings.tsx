@@ -14,8 +14,10 @@ const logger = createLogger("UI");
 
 interface SyncSettingsProps {
 	onViewHistory: () => void;
-	/** Export tasks to a JSON backup (offered before account deletion). */
-	onExport: () => Promise<void>;
+	/** Export tasks to a JSON backup (offered before account deletion). Resolves `true` on success. */
+	onExport: () => Promise<boolean>;
+	/** Called after a successful account deletion so the page can refresh sync state. */
+	onAccountDeleted: () => void;
 }
 
 const SYNC_INTERVAL_OPTIONS = [
@@ -33,6 +35,7 @@ const SYNC_INTERVAL_OPTIONS = [
 export function SyncSettings({
 	onViewHistory,
 	onExport,
+	onAccountDeleted,
 }: SyncSettingsProps) {
 	const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
 	const [syncInterval, setSyncInterval] = useState(2);
@@ -177,6 +180,7 @@ export function SyncSettings({
 				open={deleteDialogOpen}
 				onOpenChange={setDeleteDialogOpen}
 				onExport={onExport}
+				onDeleted={onAccountDeleted}
 			/>
 		</>
 	);

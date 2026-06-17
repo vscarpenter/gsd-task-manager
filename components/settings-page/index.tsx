@@ -166,7 +166,9 @@ export function SettingsPage() {
     [reloadNotificationSettings],
   );
 
-  const handleExport = useCallback(async () => {
+  // Returns whether the backup was actually written, so callers (e.g. the delete-account
+  // dialog's export-first gate) can refuse to proceed when the export failed.
+  const handleExport = useCallback(async (): Promise<boolean> => {
     setIsExporting(true);
     try {
       const json = await exportToJson();
@@ -178,9 +180,11 @@ export function SettingsPage() {
       link.click();
       URL.revokeObjectURL(url);
       toast.success("Tasks exported");
+      return true;
     } catch (error) {
       logger.error("Export failed", error instanceof Error ? error : undefined);
       toast.error("Failed to export tasks");
+      return false;
     } finally {
       setIsExporting(false);
     }
@@ -303,6 +307,10 @@ export function SettingsPage() {
                   <SyncSettings
                     onViewHistory={handleViewSyncHistory}
                     onExport={handleExport}
+                    onAccountDeleted={() => {
+                      setSyncEnabled(false);
+                      setPendingSync(0);
+                    }}
                   />
                 )}
                 {activeSection === "archive" && (
@@ -314,7 +322,9 @@ export function SettingsPage() {
                     completedTasks={completedTaskCount}
                     totalTasks={tasks.length}
                     estimatedSize={estimatedKb}
-                    onExport={handleExport}
+                    onExport={async () => {
+                      await handleExport();
+                    }}
                     onImportClick={handleImportClick}
                     isLoading={isExporting || tasksLoading}
                     syncEnabled={syncEnabled}
