@@ -300,7 +300,10 @@ export function SettingsPage() {
                   />
                 )}
                 {activeSection === "sync" && syncEnabled && (
-                  <SyncSettings onViewHistory={handleViewSyncHistory} />
+                  <SyncSettings
+                    onViewHistory={handleViewSyncHistory}
+                    onExport={handleExport}
+                  />
                 )}
                 {activeSection === "archive" && (
                   <ArchiveSettings onViewArchive={handleViewArchive} />

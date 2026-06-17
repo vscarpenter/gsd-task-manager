@@ -1,17 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { HistoryIcon, ZapIcon, ChevronRightIcon } from "lucide-react";
+import { HistoryIcon, ZapIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { getAutoSyncConfig, updateAutoSyncConfig } from "@/lib/sync/config";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/logger";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
+import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 
 const logger = createLogger("UI");
 
 interface SyncSettingsProps {
 	onViewHistory: () => void;
+	/** Export tasks to a JSON backup (offered before account deletion). */
+	onExport: () => Promise<void>;
 }
 
 const SYNC_INTERVAL_OPTIONS = [
@@ -28,10 +32,12 @@ const SYNC_INTERVAL_OPTIONS = [
  */
 export function SyncSettings({
 	onViewHistory,
+	onExport,
 }: SyncSettingsProps) {
 	const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
 	const [syncInterval, setSyncInterval] = useState(2);
 	const [isLoading, setIsLoading] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
@@ -145,6 +151,33 @@ export function SyncSettings({
 				<span className="flex-1 text-sm font-medium text-foreground">Sync history</span>
 				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
 			</button>
+
+			{/* Danger zone */}
+			<div className="px-4 py-3.5">
+				<div className="rounded-lg border border-status-overdue/35 bg-status-overdue-muted/40 p-4 space-y-3">
+					<div>
+						<p className="text-sm font-semibold text-status-overdue">Danger zone</p>
+						<p className="text-xs text-foreground-muted mt-1">
+							Permanently delete your account and every task synced to it. This
+							cannot be undone.
+						</p>
+					</div>
+					<Button
+						variant="destructive"
+						onClick={() => setDeleteDialogOpen(true)}
+						className="w-full sm:w-auto"
+					>
+						<Trash2Icon className="mr-2 h-4 w-4" />
+						Delete account…
+					</Button>
+				</div>
+			</div>
+
+			<DeleteAccountDialog
+				open={deleteDialogOpen}
+				onOpenChange={setDeleteDialogOpen}
+				onExport={onExport}
+			/>
 		</>
 	);
 }
