@@ -373,7 +373,7 @@ describe('Settings Components', () => {
       completedTasks: 3,
       totalTasks: 8,
       estimatedSize: '1.2',
-      onExport: vi.fn().mockResolvedValue(undefined),
+      onExport: vi.fn().mockResolvedValue(true),
       onImportClick: vi.fn(),
     };
 
@@ -396,7 +396,7 @@ describe('Settings Components', () => {
     });
 
     it('clicking Export tasks calls onExport', () => {
-      const onExport = vi.fn().mockResolvedValue(undefined);
+      const onExport = vi.fn().mockResolvedValue(true);
       render(<DataManagement {...defaultProps} onExport={onExport} />);
       fireEvent.click(screen.getByText('Export tasks'));
       expect(onExport).toHaveBeenCalled();

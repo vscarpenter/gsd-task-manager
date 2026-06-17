@@ -10,7 +10,8 @@ interface DataManagementProps {
 	completedTasks: number;
 	totalTasks: number;
 	estimatedSize: string;
-	onExport: () => Promise<void>;
+	/** Export tasks to a JSON backup. Resolves `true` on success, `false` on failure. */
+	onExport: () => Promise<boolean>;
 	onImportClick: () => void;
 	isLoading?: boolean;
 	syncEnabled?: boolean;
