@@ -63,6 +63,9 @@ const mockDb = {
     }),
     put: vi.fn().mockResolvedValue(undefined),
   },
+  syncQueue: {
+    toArray: vi.fn().mockResolvedValue([]),
+  },
 };
 vi.mock('@/lib/db', () => ({
   getDb: () => mockDb,
@@ -165,6 +168,21 @@ describe('pb-sync-engine', () => {
       await applyRemoteChange('delete', record as never);
 
       expect(mockDb.tasks.delete).toHaveBeenCalledWith('task-1');
+    });
+
+    it('should_skip_realtime_delete_when_a_local_change_is_pending_for_the_task', async () => {
+      // A remote delete must not wipe an unsynced local edit. This mirrors the
+      // guard in reconcileDeletedTasks: a queued op means the local change wins
+      // (edit-beats-delete) and will be re-pushed, recreating the remote record.
+      mockTasks.set('task-1', { id: 'task-1', title: 'Locally edited' });
+      mockDb.syncQueue.toArray.mockResolvedValueOnce([
+        { id: 'op-1', taskId: 'task-1', operation: 'update', status: 'pending' },
+      ]);
+
+      await applyRemoteChange('delete', { task_id: 'task-1' } as never);
+
+      expect(mockDb.tasks.delete).not.toHaveBeenCalled();
+      expect(mockTasks.has('task-1')).toBe(true);
     });
 
     it('should skip invalid records from mapper', async () => {

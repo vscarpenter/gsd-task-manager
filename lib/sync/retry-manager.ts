@@ -69,8 +69,7 @@ export class RetryManager {
    * Uses exponential backoff: 5s, 10s, 30s, 60s, 300s
    */
   getNextRetryDelay(failureCount?: number): number {
-    const config = failureCount !== undefined ? { consecutiveFailures: failureCount } : null;
-    const failures = config?.consecutiveFailures ?? 0;
+    const failures = failureCount ?? 0;
 
     // Cap at max delay
     const index = Math.min(failures - 1, RETRY_DELAYS.length - 1);

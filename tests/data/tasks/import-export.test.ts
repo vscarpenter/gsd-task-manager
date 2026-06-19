@@ -4,6 +4,7 @@ import {
   importTasks,
   importFromJson,
   exportToJson,
+  exportToJsonWithReport,
 } from '@/lib/tasks';
 import { getDb } from '@/lib/db';
 import type { TaskRecord, ImportPayload } from '@/lib/types';
@@ -14,7 +15,17 @@ const mockQueueEnqueue = vi.hoisted(() => vi.fn());
 const mockScheduleSyncAfterChange = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/db');
-vi.mock('@/lib/logger');
+// Real logger stub (not the auto-mock, which returns undefined and makes the
+// skip path throw). Export skips invalid tasks via logger.warn — that must not
+// blow up, so the count of skipped tasks can be observed instead.
+vi.mock('@/lib/logger', () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
 vi.mock('@/lib/sync/config', () => ({
   getSyncConfig: mockGetSyncConfig,
 }));
@@ -148,14 +159,18 @@ describe('Task Import/Export Operations', () => {
       expect(result.version).toBe('1.0.0');
     });
 
-    it('should throw error on invalid task data', async () => {
-      // Task with extra fields that violate schema
+    it('should skip invalid tasks instead of aborting the whole export', async () => {
+      // A corrupt task (extra field violates the strict schema) must NOT abort
+      // the entire backup — the user would otherwise lose every valid task too.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const taskWithExtra = { ...sampleTask1, extraField: 'should-cause-error' } as any;
-      mockDb.tasks.toArray.mockResolvedValue([taskWithExtra]);
+      const taskWithExtra = { ...sampleTask1, extraField: 'corrupt' } as any;
+      mockDb.tasks.toArray.mockResolvedValue([taskWithExtra, sampleTask2]);
 
-      // Schema validation should throw on unknown fields
-      await expect(exportTasks()).rejects.toThrow();
+      const result = await exportTasks();
+
+      // The valid task survives; the corrupt one is dropped (not thrown).
+      expect(result.tasks).toHaveLength(1);
+      expect(result.tasks[0].id).toBe('task-2');
     });
   });
 
@@ -431,6 +446,31 @@ describe('Task Import/Export Operations', () => {
         tags: ['work'],
         subtasks: [{ id: 'sub-1', title: 'Subtask 1', completed: false }],
       });
+    });
+  });
+
+  describe('exportToJsonWithReport', () => {
+    it('should_report_zero_skipped_when_all_tasks_are_valid', async () => {
+      mockDb.tasks.toArray.mockResolvedValue([sampleTask1, sampleTask2]);
+
+      const { json, skippedCount } = await exportToJsonWithReport();
+
+      expect(skippedCount).toBe(0);
+      expect(JSON.parse(json).tasks).toHaveLength(2);
+    });
+
+    it('should_report_the_count_of_corrupt_tasks_skipped_from_the_backup', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const corrupt = { ...sampleTask1, extraField: 'corrupt' } as any;
+      mockDb.tasks.toArray.mockResolvedValue([corrupt, sampleTask2]);
+
+      const { json, skippedCount } = await exportToJsonWithReport();
+
+      // The user is told one task was unreadable; the rest still export.
+      expect(skippedCount).toBe(1);
+      const parsed = JSON.parse(json);
+      expect(parsed.tasks).toHaveLength(1);
+      expect(parsed.tasks[0].id).toBe('task-2');
     });
   });
 

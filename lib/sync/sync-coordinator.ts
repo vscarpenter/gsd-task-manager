@@ -52,29 +52,41 @@ export class SyncCoordinator {
       return;
     }
 
-    // Set running flag early to prevent concurrent entry during async checks
+    // Hold the running flag across the ENTIRE lifecycle — backoff checks, the
+    // sync itself, and the queue drain. Because it is never cleared mid-await,
+    // a concurrent caller always hits the guard above and queues, so two
+    // fullSync runs can never overlap (even while a queued auto awaits backoff).
     this.isRunning = true;
-
-    // Enforce retry backoff for auto syncs (user-triggered syncs bypass backoff)
-    if (priority === 'auto') {
-      const canSync = await this.retryManager.canSyncNow();
-      if (!canSync) {
-        logger.debug('Auto sync blocked by retry backoff');
-        this.isRunning = false;
-        return;
-      }
-
-      const shouldRetry = await this.retryManager.shouldRetry();
-      if (!shouldRetry) {
-        logger.warn('Auto sync blocked: max retries exceeded');
-        this.isRunning = false;
-        return;
-      }
+    try {
+      await this.runRequest(priority);
+      await this.drainQueue();
+    } finally {
+      this.isRunning = false;
     }
+  }
 
-    // isRunning is already true; executeSync will reset it in finally
+  /**
+   * Run a single request, honoring auto-priority backoff. Assumes the caller
+   * holds `isRunning`. A blocked auto is a no-op (its slot is simply skipped).
+   */
+  private async runRequest(priority: 'user' | 'auto'): Promise<void> {
+    if (priority === 'auto' && !(await this.canRunAutoSync())) {
+      return;
+    }
     await this.executeSync(priority);
-    await this.processQueue();
+  }
+
+  /** Whether an auto sync may run now (user-triggered syncs bypass backoff). */
+  private async canRunAutoSync(): Promise<boolean> {
+    if (!(await this.retryManager.canSyncNow())) {
+      logger.debug('Auto sync blocked by retry backoff');
+      return false;
+    }
+    if (!(await this.retryManager.shouldRetry())) {
+      logger.warn('Auto sync blocked: max retries exceeded');
+      return false;
+    }
+    return true;
   }
 
   isSyncing(): boolean {
@@ -123,8 +135,7 @@ export class SyncCoordinator {
   }
 
   private async executeSync(priority: 'user' | 'auto'): Promise<void> {
-    this.isRunning = true;
-
+    // isRunning is owned by requestSync for the whole lifecycle — not toggled here.
     try {
       logger.debug('Starting sync execution', { priority });
       const result = await fullSync(priority);
@@ -143,29 +154,22 @@ export class SyncCoordinator {
         status: 'error',
         error: errorCode,
       };
-    } finally {
-      this.isRunning = false;
     }
   }
 
-  private async processQueue(): Promise<void> {
-    if (this.pendingRequests.length === 0) return;
-
-    const nextRequest = this.pendingRequests.shift();
-    if (!nextRequest) return;
-
-    // Enforce retry backoff for queued auto syncs
-    if (nextRequest.priority === 'auto') {
-      const canSync = await this.retryManager.canSyncNow();
-      if (!canSync) {
-        logger.debug('Queued auto sync blocked by retry backoff');
-        return;
-      }
+  /**
+   * Drain queued requests one at a time. Assumes the caller holds `isRunning`,
+   * so requests that arrive mid-drain queue rather than starting a parallel
+   * sync. Re-reads the queue each iteration to pick up anything enqueued while
+   * the previous request was running.
+   */
+  private async drainQueue(): Promise<void> {
+    while (this.pendingRequests.length > 0) {
+      const next = this.pendingRequests.shift();
+      if (!next) break;
+      logger.debug('Processing queued sync request', { priority: next.priority });
+      await this.runRequest(next.priority);
     }
-
-    logger.debug('Processing queued sync request', { priority: nextRequest.priority });
-    await this.executeSync(nextRequest.priority);
-    await this.processQueue();
   }
 
   private async getSyncConfig(): Promise<PBSyncConfig | null> {

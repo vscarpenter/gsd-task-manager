@@ -9,8 +9,19 @@ import type { Task } from '../types.js';
 import { getPocketBase } from '../pocketbase-client.js';
 import { getTaskCache } from '../cache.js';
 
-/** Escape a string value for safe use in PocketBase filter expressions */
-function escapeFilterValue(value: string): string {
+/** Maximum allowed length for filter values, mirroring lib/sync/pb-sync-helpers.ts. */
+const MAX_FILTER_VALUE_LENGTH = 500;
+
+/**
+ * Escape a string value for safe use in PocketBase filter expressions.
+ * Escaping `\` then `"` keeps the value a single quoted literal (no injection);
+ * the length cap is defense-in-depth against a pathologically long value
+ * reaching the PB filter parser.
+ */
+export function escapeFilterValue(value: string): string {
+  if (value.length > MAX_FILTER_VALUE_LENGTH) {
+    throw new Error(`Filter value exceeds maximum length of ${MAX_FILTER_VALUE_LENGTH}`);
+  }
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
@@ -199,6 +210,10 @@ export async function fetchPBRecordIdsForTasks(
 /**
  * Update a task by known PocketBase record id (skips the per-task lookup that
  * updateTaskInPB performs). Used by bulk-operations which pre-fetches ids.
+ *
+ * Cache contract: unlike updateTaskInPB, this does NOT invalidate the task
+ * cache — the caller must call getTaskCache().invalidate() after its batch so
+ * subsequent reads don't serve stale data.
  */
 export async function updateTaskInPBById(
   config: GsdConfig,

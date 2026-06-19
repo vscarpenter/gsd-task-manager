@@ -52,5 +52,7 @@ export {
   exportTasks,
   importTasks,
   importFromJson,
-  exportToJson
+  exportToJson,
+  exportToJsonWithReport
 } from "./tasks/import-export";
+export type { ExportReport } from "./tasks/import-export";

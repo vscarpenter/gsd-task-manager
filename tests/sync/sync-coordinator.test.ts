@@ -213,6 +213,93 @@ describe('SyncCoordinator', () => {
     });
   });
 
+  describe('queued request during retry-backoff window', () => {
+    it('should_process_a_request_queued_while_an_auto_sync_is_blocked_by_backoff', async () => {
+      // An auto sync is blocked by retry backoff. While requestSync('auto') is
+      // suspended on the async canSyncNow() check, a user-priority request
+      // arrives and is queued (isRunning is already true). The blocked auto
+      // path must still drain that queue before returning — otherwise the
+      // user's request is stranded until the next periodic trigger.
+      mockRetryManager.canSyncNow.mockResolvedValueOnce(false);
+
+      const autoSync = coordinator.requestSync('auto');
+      // Queued synchronously: the auto call has suspended on canSyncNow(), so
+      // isRunning === true and this user request lands in pendingRequests.
+      const userSync = coordinator.requestSync('user');
+
+      await Promise.all([autoSync, userSync]);
+
+      // User syncs bypass backoff, so the queued request must actually run.
+      expect(mockFullSync).toHaveBeenCalledWith('user');
+    });
+
+    it('should_not_leave_a_queued_request_pending_after_a_blocked_auto_sync', async () => {
+      mockRetryManager.canSyncNow.mockResolvedValueOnce(false);
+
+      const autoSync = coordinator.requestSync('auto');
+      const userSync = coordinator.requestSync('user');
+      await Promise.all([autoSync, userSync]);
+
+      const status = await coordinator.getStatus();
+      expect(status.pendingRequests).toBe(0);
+    });
+  });
+
+  describe('single-flight invariant during queue drain', () => {
+    function deferred<T = void>() {
+      let resolve!: (value: T | PromiseLike<T>) => void;
+      const promise = new Promise<T>((r) => {
+        resolve = r;
+      });
+      return { promise, resolve };
+    }
+
+    it('should_never_run_fullSync_concurrently_when_a_sync_arrives_during_a_queued_auto_drain', async () => {
+      let inFlight = 0;
+      let maxInFlight = 0;
+      let callCount = 0;
+      const firstFullSyncDone = deferred();
+      mockFullSync.mockImplementation(async () => {
+        callCount++;
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        // Hold the first sync open until we've parked processQueue on the auto
+        // backoff gate; later syncs resolve quickly.
+        if (callCount === 1) {
+          await firstFullSyncDone.promise;
+        } else {
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        inFlight--;
+        return { status: 'success', pushedCount: 0, pulledCount: 0 };
+      });
+
+      // The queued auto's backoff check is gated so we can inject a concurrent
+      // sync exactly while processQueue is awaiting it — the window under test.
+      const autoGate = deferred();
+      mockRetryManager.canSyncNow.mockImplementationOnce(() =>
+        autoGate.promise.then(() => true),
+      );
+
+      const user1 = coordinator.requestSync('user'); // isRunning=true, fullSync #1 (held)
+      const auto2 = coordinator.requestSync('auto'); // queued behind #1
+      await new Promise((r) => setTimeout(r, 5));
+
+      // Finish #1; processQueue shifts auto2 and parks on the gated canSyncNow.
+      firstFullSyncDone.resolve();
+      await new Promise((r) => setTimeout(r, 5));
+
+      // A user sync arrives while the auto drain is parked on the backoff gate.
+      const user3 = coordinator.requestSync('user');
+      autoGate.resolve();
+
+      await Promise.all([user1, auto2, user3]);
+
+      // The coordinator must serialize all syncs — never two fullSync at once.
+      expect(maxInFlight).toBe(1);
+    });
+  });
+
   describe('cancelPending', () => {
     it('should clear all pending requests', async () => {
       // Start first sync

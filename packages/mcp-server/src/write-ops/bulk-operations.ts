@@ -186,7 +186,6 @@ export async function bulkUpdateTasks(
   const conflicts: string[] = [];
   let updateCount = 0;
   let deleteCount = 0;
-  const now = new Date().toISOString();
 
   for (let i = 0; i < tasksToProcess.length; i++) {
     const { task, snapshotTimestamp } = tasksToProcess[i];
@@ -210,7 +209,9 @@ export async function bulkUpdateTasks(
         await deleteTaskInPBById(config, preflight.pbRecordId);
         deleteCount++;
       } else {
-        const updated = applyOperation(task, operation, now);
+        // Stamp at apply time, not batch-start time: a throttled batch can span
+        // seconds, and a stale timestamp could lose the next LWW round.
+        const updated = applyOperation(task, operation, new Date().toISOString());
         await updateTaskInPBById(config, preflight.pbRecordId, updated, ownerId, deviceId);
         updateCount++;
       }

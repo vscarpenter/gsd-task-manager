@@ -14,7 +14,7 @@ import {
 } from "@/lib/notifications";
 import type { AppPreferences, NotificationSettings } from "@/lib/types";
 import { getSyncStatus } from "@/lib/sync/config";
-import { exportToJson } from "@/lib/tasks";
+import { exportToJsonWithReport } from "@/lib/tasks";
 import { createLogger } from "@/lib/logger";
 import {
   APP_PREFERENCES_EVENT,
@@ -171,7 +171,7 @@ export function SettingsPage() {
   const handleExport = useCallback(async (): Promise<boolean> => {
     setIsExporting(true);
     try {
-      const json = await exportToJson();
+      const { json, skippedCount } = await exportToJsonWithReport();
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -179,7 +179,14 @@ export function SettingsPage() {
       link.download = `gsd-tasks-${new Date().toISOString()}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      toast.success("Tasks exported");
+      if (skippedCount > 0) {
+        // Never let a corrupt record silently vanish from the user's backup.
+        toast.warning(
+          `Exported, but ${skippedCount} unreadable task${skippedCount === 1 ? "" : "s"} could not be included.`,
+        );
+      } else {
+        toast.success("Tasks exported");
+      }
       return true;
     } catch (error) {
       logger.error("Export failed", error instanceof Error ? error : undefined);

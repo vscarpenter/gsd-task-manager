@@ -36,6 +36,17 @@ export async function applyRemoteChange(
 
   if (action === 'delete') {
     const taskId = record['task_id'] as string;
+
+    // Mirror reconcileDeletedTasks: don't drop a task that has a queued local
+    // change. The pending op (edit-beats-delete under LWW) will be re-pushed and
+    // recreate the remote record, so deleting locally now would just lose the
+    // unsynced edit until the next pull round-trips.
+    const queuedOps = await db.syncQueue.toArray();
+    if (queuedOps.some((op) => op.taskId === taskId)) {
+      logger.debug('Realtime delete skipped: local change pending', { taskId });
+      return;
+    }
+
     await db.tasks.delete(taskId);
     logger.debug('Realtime delete applied', { taskId });
     return;
