@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type PocketBase from 'pocketbase';
 import { deleteRemoteAccountAndTasks } from '@/lib/sync/pb-account-deletion';
 import { getPocketBase, getCurrentUserId } from '@/lib/sync/pocketbase-client';
@@ -50,6 +50,10 @@ describe('deleteRemoteAccountAndTasks', () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('deletes_all_remote_tasks_then_the_user_record_in_order', async () => {
     const result = await deleteRemoteAccountAndTasks({ throttleMs: 0 });
 
@@ -78,6 +82,19 @@ describe('deleteRemoteAccountAndTasks', () => {
 
     expect(result.ok).toBe(false);
     expect(result.stage).toBe('tasks');
+    expect(usersDelete).not.toHaveBeenCalled();
+  });
+
+  it('returns_authRejected_and_keeps_account_when_task_delete_is_forbidden', async () => {
+    tasksDelete.mockRejectedValueOnce(
+      Object.assign(new Error('forbidden'), { status: 403 }),
+    );
+
+    const result = await deleteRemoteAccountAndTasks({ throttleMs: 0 });
+
+    expect(result.ok).toBe(false);
+    expect(result.stage).toBe('tasks');
+    expect(result.authRejected).toBe(true);
     expect(usersDelete).not.toHaveBeenCalled();
   });
 
@@ -123,5 +140,26 @@ describe('deleteRemoteAccountAndTasks', () => {
     await deleteRemoteAccountAndTasks({ throttleMs: 0 });
 
     expect(tasksDelete).toHaveBeenCalledTimes(3);
+  });
+
+  it('uses_the_default_throttle_between_remote_deletes', async () => {
+    vi.useFakeTimers();
+
+    const deletion = deleteRemoteAccountAndTasks();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(callOrder).toEqual(['task:rec-a']);
+
+    await vi.advanceTimersByTimeAsync(99);
+    expect(callOrder).toEqual(['task:rec-a']);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(callOrder).toEqual(['task:rec-a', 'task:rec-b']);
+    expect(usersDelete).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(100);
+    await deletion;
+
+    expect(callOrder).toEqual(['task:rec-a', 'task:rec-b', 'user:user-123']);
   });
 });
