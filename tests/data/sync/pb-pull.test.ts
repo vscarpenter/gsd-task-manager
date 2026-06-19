@@ -1,16 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RecordModel } from 'pocketbase';
+import { getDb } from '@/lib/db';
+import { getSyncQueue } from '@/lib/sync/queue';
+import type { TaskRecord } from '@/lib/types';
 
 vi.mock('@/lib/sync/pocketbase-client', () => ({
   getPocketBase: vi.fn(),
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
 
+const { fetchRemoteTaskIndexMock } = vi.hoisted(() => ({
+  fetchRemoteTaskIndexMock: vi.fn(),
+}));
+
 vi.mock('@/lib/sync/pb-sync-helpers', async () => {
   const actual = await vi.importActual<typeof import('@/lib/sync/pb-sync-helpers')>('@/lib/sync/pb-sync-helpers');
   return {
     ...actual,
-    fetchRemoteTaskIndex: vi.fn(async () => ({ index: new Map(), fetchSucceeded: true })),
+    fetchRemoteTaskIndex: fetchRemoteTaskIndexMock,
     getCurrentUserId: vi.fn(() => 'user-1'),
   };
 });
@@ -39,8 +46,36 @@ function pbRecord(taskId: string, clientUpdatedAt: string): RecordModel {
   } as unknown as RecordModel;
 }
 
+function makeTask(id: string, updatedAt = '2026-05-18T00:00:00.000Z'): TaskRecord {
+  return {
+    id,
+    title: `Task ${id}`,
+    description: '',
+    urgent: false,
+    important: false,
+    quadrant: 'not-urgent-not-important',
+    completed: false,
+    createdAt: updatedAt,
+    updatedAt,
+    recurrence: 'none',
+    tags: [],
+    subtasks: [],
+    dependencies: [],
+    notificationEnabled: false,
+    notificationSent: false,
+    timeSpent: 0,
+    timeEntries: [],
+  };
+}
+
 describe('pullRemoteChanges cursor clamping', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.syncQueue.clear();
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+  });
 
   it('clamps year-3000 timestamps to now+5min when computing the cursor', async () => {
     const fiveMinFromNow = Date.now() + 5 * 60 * 1000;
@@ -105,5 +140,67 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     const { pulledCount } = await pullRemoteChanges(null);
     expect(pulledCount).toBe(0);
+  });
+});
+
+describe('pullRemoteChanges deletion reconciliation', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.syncQueue.clear();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => []),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+  });
+
+  it('deletes a local task that is absent from the remote index', async () => {
+    const db = getDb();
+    await db.tasks.bulkAdd([
+      makeTask('remote-kept'),
+      makeTask('server-deleted'),
+    ]);
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['remote-kept', { pbRecordId: 'rec-remote-kept', clientUpdatedAt: '2026-05-18T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    await pullRemoteChanges(null);
+
+    await expect(db.tasks.get('remote-kept')).resolves.toBeDefined();
+    await expect(db.tasks.get('server-deleted')).resolves.toBeUndefined();
+  });
+
+  it('preserves a remote-absent local task when it has a pending sync operation', async () => {
+    const db = getDb();
+    const unsyncedTask = makeTask('pending-local-edit');
+    await db.tasks.add(unsyncedTask);
+    await getSyncQueue().enqueue('update', unsyncedTask.id, unsyncedTask);
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map(),
+      fetchSucceeded: true,
+    });
+
+    await pullRemoteChanges(null);
+
+    await expect(db.tasks.get(unsyncedTask.id)).resolves.toEqual(unsyncedTask);
+  });
+
+  it('skips local deletion when the remote index cannot be fetched', async () => {
+    const db = getDb();
+    await db.tasks.add(makeTask('local-copy'));
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map(),
+      fetchSucceeded: false,
+    });
+
+    await pullRemoteChanges(null);
+
+    await expect(db.tasks.get('local-copy')).resolves.toBeDefined();
   });
 });
