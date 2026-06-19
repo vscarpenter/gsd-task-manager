@@ -148,6 +148,15 @@ export async function pullRemoteChanges(lastServerUpdatedAt: string | null): Pro
 /**
  * Remove local tasks that no longer exist remotely.
  * Tasks with pending sync operations are preserved.
+ *
+ * Self-healing by design: this re-fetches the remote index and deletes locals
+ * absent from it. On a single PocketBase node, getFullList reflects committed
+ * writes, so a task just pushed (and dequeued) in this same fullSync is present.
+ * On a replicated/proxied backend, read-after-write lag could briefly hide such
+ * a task and delete it locally. Recovery relies on the recently-pushed record's
+ * server `updated` timestamp falling inside the next pull's CURSOR_OVERLAP_MS
+ * window, so it is re-fetched and re-added (it still exists remotely). The
+ * pending-op guard below covers the common not-yet-pushed case directly.
  */
 async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);

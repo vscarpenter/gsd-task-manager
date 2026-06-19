@@ -152,6 +152,44 @@ describe('bulkUpdateTasks — delete safety', () => {
     expect(result.deleted).toBe(10);
   });
 
+  it('should_stamp_each_updated_task_with_a_fresh_timestamp_not_one_batch_wide_time', async () => {
+    // A throttled batch can span seconds. Each write must carry the time it was
+    // actually applied, not the time the batch started — otherwise a later
+    // item's stale timestamp can lose the next LWW round to a concurrent edit.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
+    try {
+      const helpers = await import('../../write-ops/helpers.js');
+      const ids = ['t1', 't2'];
+      const snapshot = new Map(ids.map((id) => [id, makeSnapshotEntry(id)]));
+      vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(snapshot);
+      for (const id of ids) {
+        vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(snapshot.get(id)!);
+      }
+      // The throttle between writes advances wall-clock time, simulating a slow
+      // batch where t2 is written a second after t1.
+      vi.mocked(helpers.sleep).mockImplementationOnce(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      const result = await bulkUpdateTasks(
+        config,
+        ids,
+        { type: 'complete', completed: true },
+        { dryRun: false }
+      );
+
+      expect(result.updated).toBe(2);
+      const calls = vi.mocked(helpers.updateTaskInPBById).mock.calls;
+      expect(calls).toHaveLength(2);
+      const firstUpdatedAt = (calls[0][2] as Task).updatedAt;
+      const secondUpdatedAt = (calls[1][2] as Task).updatedAt;
+      expect(secondUpdatedAt).not.toBe(firstUpdatedAt);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not apply the 10-cap to non-delete operations (50-cap still applies via schema)', async () => {
     const helpers = await import('../../write-ops/helpers.js');
     const ids = Array.from({ length: 11 }, (_, i) => `t${i}`);

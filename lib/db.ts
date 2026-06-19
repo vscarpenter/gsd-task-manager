@@ -119,7 +119,9 @@ class GsdDatabase extends Dexie {
         // Uses `any` because the original SyncConfig type no longer exists.
         const deviceId = crypto.randomUUID();
 
-        trans.table("syncMetadata").add({
+        // put() (not add()) so a pre-existing seed key never aborts the upgrade
+        // transaction with a ConstraintError — matches the v13 seed pattern.
+        trans.table("syncMetadata").put({
           key: "sync_config",
           enabled: false,
           userId: null,
@@ -134,8 +136,8 @@ class GsdDatabase extends Dexie {
           serverUrl: "",
         });
 
-        // Add deviceInfo
-        trans.table("deviceInfo").add({
+        // Add deviceInfo (put() for the same idempotency reason as above)
+        trans.table("deviceInfo").put({
           key: "device_info",
           deviceId,
           deviceName: navigator?.userAgent?.includes('Mac') ? 'Mac' : 'Desktop',
@@ -185,8 +187,8 @@ class GsdDatabase extends Dexie {
         archiveSettings: "id"
       })
       .upgrade((trans) => {
-        // Initialize archive settings with defaults
-        return trans.table("archiveSettings").add({
+        // Initialize archive settings with defaults (put() for idempotency)
+        return trans.table("archiveSettings").put({
           id: "settings",
           enabled: false,
           archiveAfterDays: 30
@@ -222,8 +224,8 @@ class GsdDatabase extends Dexie {
         appPreferences: "id"
       })
       .upgrade((trans) => {
-        // Initialize app preferences with defaults
-        return trans.table("appPreferences").add({
+        // Initialize app preferences with defaults (put() for idempotency)
+        return trans.table("appPreferences").put({
           id: "preferences",
           pinnedSmartViewIds: [],
           maxPinnedViews: 5,

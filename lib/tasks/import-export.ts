@@ -17,26 +17,46 @@ function getUtf8ByteLength(value: string): number {
 
 const logger = createLogger("IMPORT");
 
+/** An export plus a count of tasks dropped because they failed validation. */
+export interface ExportReport {
+  json: string;
+  /** Number of stored tasks excluded from the backup as unreadable/corrupt. */
+  skippedCount: number;
+}
+
 /**
- * Export all tasks as a structured payload
+ * Read all tasks, keeping only those that pass the strict schema. A corrupt
+ * task is skipped (not thrown) so one bad record never aborts the whole backup,
+ * but the count is returned so callers can surface it instead of losing data
+ * silently.
  */
-export async function exportTasks(): Promise<ImportPayload> {
+async function collectExportableTasks(): Promise<{ tasks: TaskRecord[]; skippedCount: number }> {
   const db = getDb();
   const tasks = await db.tasks.toArray();
   const normalized: TaskRecord[] = [];
+  let skippedCount = 0;
   for (const task of tasks) {
     const result = taskRecordSchema.safeParse(task);
     if (result.success) {
       normalized.push(result.data);
     } else {
+      skippedCount++;
       logger.warn('Skipping corrupt task during export', { taskId: task.id });
     }
   }
-  return {
-    tasks: normalized,
-    exportedAt: isoNow(),
-    version: "1.0.0"
-  } satisfies ImportPayload;
+  return { tasks: normalized, skippedCount };
+}
+
+function toPayload(tasks: TaskRecord[]): ImportPayload {
+  return { tasks, exportedAt: isoNow(), version: "1.0.0" } satisfies ImportPayload;
+}
+
+/**
+ * Export all tasks as a structured payload
+ */
+export async function exportTasks(): Promise<ImportPayload> {
+  const { tasks } = await collectExportableTasks();
+  return toPayload(tasks);
 }
 
 /**
@@ -196,9 +216,17 @@ export async function importFromJson(raw: string, mode: "replace" | "merge" = "r
 }
 
 /**
+ * Export all tasks as a JSON string plus a report of how many were skipped.
+ * Use this when you need to tell the user that some records were unreadable.
+ */
+export async function exportToJsonWithReport(): Promise<ExportReport> {
+  const { tasks, skippedCount } = await collectExportableTasks();
+  return { json: JSON.stringify(toPayload(tasks), null, 2), skippedCount };
+}
+
+/**
  * Export all tasks as a JSON string
  */
 export async function exportToJson(): Promise<string> {
-  const payload = await exportTasks();
-  return JSON.stringify(payload, null, 2);
+  return (await exportToJsonWithReport()).json;
 }

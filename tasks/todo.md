@@ -2,6 +2,28 @@
 
 ---
 
+## In progress — 2026-06-19: Review-findings fixes (TDD)
+
+**Branch:** `chore/refactor-review-refine` · **Tier:** Standard (bounded fixes across sync, import/export, MCP, db migrations; no new public contract). TDD per CLAUDE.md.
+
+Source: full security/correctness/standards review (2026-06-19, 2 verification subagents). All Low/Info — no Critical/High.
+
+- [x] **F1** — sync-coordinator: drain queue on backoff early-return (`lib/sync/sync-coordinator.ts`). RED→GREEN. **pb-sync-reviewer then found a BLOCKING double-run race** (isRunning cleared before drain → concurrent fullSync). Re-fixed: `isRunning` now held across the whole `requestSync` lifecycle (try/finally), `executeSync` no longer toggles it, `processQueue`→`drainQueue`/`runRequest`/`canRunAutoSync`. Regression test `should_never_run_fullSync_concurrently_*` pins it. pb-sync-reviewer re-review: **APPROVE, 0 findings.**
+- [x] **F2** — export: `exportToJsonWithReport()` returns `{json, skippedCount}`; corrupt tasks skipped+counted (not thrown). UI shows `toast.warning`. a11y-reviewer: APPROVE. Corrected the mis-pinned "should throw on invalid" test (was passing only via undefined auto-mocked logger).
+- [x] **F3** — MCP bulk: per-item `new Date().toISOString()` at apply time (was one batch-wide `now`). RED→GREEN (fake-timer concurrency test).
+- [x] **F4** — MCP `escapeFilterValue` exported + 500-char length cap (mirrors web-app). RED→GREEN. (assertSafeRecordId-on-task_ids NOT added: escaping already blocks injection and the web-app doesn't assert task_ids either — verifier-confirmed non-exploitable.)
+- [x] **F5** — realtime delete skips when a local queued op exists (mirrors reconcileDeletedTasks). RED→GREEN.
+- [x] **F6** — reconcileDeletedTasks: comment documents self-healing via CURSOR_OVERLAP_MS + single-node assumption (pb-sync-reviewer nit folded in).
+- [x] **F7** — db migrations v7/v9/v11: `.add()` → `.put()` for singleton seeds (matches v13). TDD-N/A (Dexie runs upgrades once); 53 migration tests stay green.
+- [x] **S2** — retry-manager `getNextRetryDelay` throwaway wrapper collapsed to `failureCount ?? 0`; cache-contract comment added to `updateTaskInPBById`.
+- [ ] **DEFERRED S1** — split `components/matrix-simplified/index.tsx` (separate PR, user decision 2026-06-19)
+
+**Verify:** root `bun typecheck` ✅ · root `bun run test` ✅ 1998 pass / 1 skip · MCP `bun run test` ✅ 145 pass + `tsc --noEmit` ✅ · pb-sync-reviewer ✅ APPROVE · a11y-reviewer ✅ APPROVE (1 UX nit: optional longer toast duration) · `bun lint` pre-existing-broken on main (ESLint 10), not run.
+
+Process: `lib/sync/**` changes → run `pb-sync-reviewer` before refactor/commit. `bun run test` (not `bun test`). NOT yet committed — awaiting user go-ahead.
+
+---
+
 ## In progress — 2026-06-14: GSD Design Reference compliance (Buckets 1–4)
 
 **Branch:** `feat/design-reference-compliance`
