@@ -81,7 +81,7 @@ const features: Feature[] = [
     icon: Cloud,
     title: "Optional Cloud Sync",
     description:
-      "End-to-end encrypted sync across devices. Zero-knowledge: the server never sees your data.",
+      "Optional sync to a server you control — protected in transit by TLS and owner-scoped access.",
   },
 ];
 

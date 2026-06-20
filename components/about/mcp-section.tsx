@@ -12,8 +12,7 @@ const claudeDesktopConfig = `{
       "command": "npx",
       "args": ["-y", "gsd-mcp-server"],
       "env": {
-        "GSD_SYNC_URL": "https://gsd.vinny.dev/api",
-        "ENCRYPTION_PASSPHRASE": "your-passphrase"
+        "GSD_SYNC_URL": "https://gsd.vinny.dev/api"
       }
     }
   }
