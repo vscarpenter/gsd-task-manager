@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GSD Privacy Data-Flow</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1d2430;
+    --muted: #5a6573;
+    --faint: #8b96a5;
+    --hair: #dde2ea;
+    --hair-strong: #c7cedb;
+
+    --device: #2f7d5b;      --device-tint: #e9f4ee;  --device-line: #b9ddc9;
+    --rest: #9a6b12;        --rest-tint: #f7efdd;    --rest-line: #e3cf9f;
+    --net: #b1452f;         --net-tint: #f7e8e3;     --net-line: #e7bdb1;
+
+    --ok: #2f7d5b;
+    --warn: #9a6b12;
+    --bad: #b1452f;
+
+    --serif: ui-serif, "Newsreader", Georgia, "Times New Roman", serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 24px 96px; }
+
+  header.masthead { border-bottom: 1.5px solid var(--hair-strong); padding-bottom: 22px; margin-bottom: 30px; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 38px; line-height: 1.1; margin: 8px 0 10px; letter-spacing: -.01em; }
+  .lede { color: var(--muted); font-size: 16px; max-width: 76ch; margin: 0; }
+  .meta { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 10px; font-size: 12.5px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--hair); border-radius: 999px; padding: 4px 11px; color: var(--muted); }
+  .chip code { font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
+  .chip.ok { border-color: var(--device-line); background: var(--device-tint); color: #225b41; }
+
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 24px; margin: 46px 0 6px; letter-spacing: -.01em; }
+  h2 .num { color: var(--faint); font-weight: 500; font-size: 18px; margin-right: 8px; }
+  .section-note { color: var(--muted); margin: 0 0 18px; max-width: 80ch; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; }
+  .legend .key { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; border: 1px solid var(--hair); background: var(--card); border-radius: 8px; padding: 6px 11px; }
+  .swatch { width: 13px; height: 13px; border-radius: 3px; flex: none; }
+  .sw-device { background: var(--device-tint); border: 1.5px solid var(--device); }
+  .sw-rest { background: var(--rest-tint); border: 1.5px solid var(--rest); }
+  .sw-net { background: var(--net-tint); border: 1.5px solid var(--net); }
+
+  /* Diagram frame */
+  .diagram { background: var(--card); border: 1px solid var(--hair); border-radius: 14px; padding: 12px; overflow: hidden; }
+  .diagram svg { display: block; width: 100%; height: auto; }
+
+  /* Table */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--hair); border-radius: 12px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 880px; }
+  thead th { text-align: left; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 12px 12px; border-bottom: 1.5px solid var(--hair-strong); background: #fbfcfd; position: sticky; top: 0; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: #fafbfc; }
+  td .what { font-weight: 600; color: var(--ink); }
+  td .sub { color: var(--muted); font-size: 12.5px; display: block; margin-top: 2px; }
+  a.loc { font-family: var(--mono); font-size: 12px; color: #2f5fb1; text-decoration: none; white-space: nowrap; border-bottom: 1px dotted #9db4dc; }
+  a.loc:hover { color: #1d3f80; border-bottom-style: solid; }
+
+  .ztag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .z-device { background: var(--device-tint); color: #225b41; border: 1px solid var(--device-line); }
+  .z-rest { background: var(--rest-tint); color: #7a540b; border: 1px solid var(--rest-line); }
+  .z-net { background: var(--net-tint); color: #8c3422; border: 1px solid var(--net-line); }
+
+  .content-yes { color: var(--bad); font-weight: 600; }
+  .content-read { color: var(--warn); font-weight: 600; }
+  .content-no { color: var(--muted); }
+  .flag { color: var(--bad); font-weight: 700; }
+
+  /* Claims */
+  .claims { display: grid; gap: 14px; }
+  .claim { background: var(--card); border: 1px solid var(--hair); border-left-width: 4px; border-radius: 10px; padding: 16px 18px; }
+  .claim.confirmed { border-left-color: var(--ok); }
+  .claim.attention { border-left-color: var(--warn); }
+  .claim h3 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .verdict { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; }
+  .verdict.ok { background: var(--device-tint); color: #225b41; }
+  .verdict.warn { background: var(--rest-tint); color: #7a540b; }
+  .claim p { margin: 6px 0 0; color: var(--muted); }
+  .claim p.code-note { color: var(--ink); }
+  .claim ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+  .claim li { margin: 3px 0; }
+  .claim code, .section-note code, .claim a.loc { font-family: var(--mono); }
+  .claim code { font-size: 12.5px; background: #f1f3f6; padding: 1px 5px; border-radius: 4px; }
+
+  .callout { background: var(--rest-tint); border: 1px solid var(--rest-line); border-radius: 10px; padding: 14px 16px; margin: 18px 0 0; }
+  .callout strong { color: #7a540b; }
+
+  footer.method { margin-top: 56px; padding-top: 22px; border-top: 1.5px solid var(--hair-strong); color: var(--muted); font-size: 13px; }
+  footer.method h2 { font-size: 18px; margin-top: 0; }
+  footer.method code { font-family: var(--mono); font-size: 12px; }
+  footer.method ol { padding-left: 20px; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 30px; }
+    .wrap { padding: 28px 16px 72px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Privacy Review · Data-Flow Map</div>
+    <h1>GSD Privacy Data-Flow</h1>
+    <p class="lede">
+      How a task&rsquo;s content (title, notes, subtask text, tags) is created, held in client state,
+      persisted, &ldquo;encrypted,&rdquo; and optionally synced &mdash; traced through the real code.
+      Every row links to the exact file and line, pinned to one commit so the evidence stays verifiable.
+    </p>
+    <div class="meta">
+      <span class="chip">Repo <code>vscarpenter/gsd-task-manager</code></span>
+      <span class="chip">Pinned <code>d004f1f</code></span>
+      <span class="chip">Reviewed <code>2026-06-20</code></span>
+      <span class="chip ok">Next.js server touchpoints: 0</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="diagram-h">
+    <h2 id="diagram-h"><span class="num">01</span>The flow, in three zones</h2>
+    <p class="section-note">
+      Data lives almost entirely in the green zone. The amber zone is deliberately honest: there is
+      <em>no application-level encryption</em> &mdash; only the browser/OS at rest and TLS on the wire.
+      The red zone is reached <strong>only when a user opts in</strong> to cloud sync or wires up the MCP server.
+    </p>
+    <div class="legend">
+      <span class="key"><span class="swatch sw-device"></span> On-device only</span>
+      <span class="key"><span class="swatch sw-rest"></span> &ldquo;Encrypted&rdquo; at rest / in transit</span>
+      <span class="key"><span class="swatch sw-net"></span> Crosses the network / reaches a server</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1060 912" role="img" aria-labelledby="svg-title svg-desc" font-family="ui-sans-serif, system-ui, sans-serif">
+  <title id="svg-title">GSD task-content data-flow across three privacy zones</title>
+  <desc id="svg-desc">Task content is created in the matrix UI, held in React state, validated, and written to IndexedDB — all on-device. There is no application-level encryption at rest or in transit. Only when a user opts into cloud sync or the MCP server does content cross the network to PocketBase, OAuth providers, Sentry, or the AI client. The Next.js app itself has zero server touchpoints.</desc>
+  <style>
+    .nt { font-size: 13px; font-weight: 600; fill: #1d2430; }
+    .ns { font-size: 10.5px; fill: #5a6573; }
+    .zt { font-size: 12px; font-weight: 700; fill: #fff; letter-spacing: .02em; }
+    .el { font-size: 11px; font-weight: 600; }
+    .restH { font-size: 12.5px; font-weight: 700; }
+    .restB { font-size: 11.5px; fill: #5a6573; }
+    .n { fill: #ffffff; stroke-width: 1.5; }
+    .n-device { stroke: #6fbf95; }
+    .n-net { stroke: #d98f78; }
+  </style>
+  <defs>
+    <marker id="ah-d" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#2f7d5b"/></marker>
+    <marker id="ah-n" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#b1452f"/></marker>
+    <marker id="ah-m" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9aa4b2"/></marker>
+  </defs>
+
+  <!-- ===== ZONE BANDS ===== -->
+  <rect x="16" y="54" width="1028" height="300" rx="12" fill="#e9f4ee" stroke="#b9ddc9"/>
+  <rect x="16" y="370" width="1028" height="150" rx="12" fill="#f7efdd" stroke="#e3cf9f"/>
+  <rect x="16" y="536" width="1028" height="360" rx="12" fill="#f7e8e3" stroke="#e7bdb1"/>
+
+  <!-- zone tabs -->
+  <rect x="16" y="54" width="186" height="26" rx="12" fill="#2f7d5b"/><text class="zt" x="34" y="71">ON-DEVICE ONLY</text>
+  <rect x="16" y="370" width="296" height="26" rx="12" fill="#9a6b12"/><text class="zt" x="34" y="387">&#8220;ENCRYPTED&#8221; AT REST / IN TRANSIT</text>
+  <rect x="16" y="536" width="288" height="26" rx="12" fill="#b1452f"/><text class="zt" x="34" y="553">NETWORK / SERVER &mdash; OPT-IN ONLY</text>
+
+  <!-- ===== ZONE 1: ON-DEVICE ===== -->
+  <!-- top create flow -->
+  <rect class="n n-device" x="40"  y="108" width="186" height="56" rx="9"/>
+  <text class="nt" x="52" y="132">Capture bar &middot; Edit drawer</text><text class="ns" x="52" y="149">user types title, notes, tags</text>
+  <rect class="n n-device" x="262" y="108" width="140" height="56" rx="9"/>
+  <text class="nt" x="274" y="132">React state</text><text class="ns" x="274" y="149">useState &middot; live query</text>
+  <rect class="n n-device" x="438" y="108" width="186" height="56" rx="9"/>
+  <text class="nt" x="450" y="132">createTask / updateTask</text><text class="ns" x="450" y="149">+ Zod validation</text>
+  <rect class="n n-device" x="660" y="108" width="352" height="56" rx="9"/>
+  <text class="nt" x="672" y="132">IndexedDB &mdash; GsdTaskManager (v14)</text><text class="ns" x="672" y="149">object stores: tasks &middot; archivedTasks &mdash; stored plaintext</text>
+
+  <path d="M226,136 L258,136" stroke="#2f7d5b" stroke-width="1.6" fill="none" marker-end="url(#ah-d)"/>
+  <path d="M402,136 L434,136" stroke="#2f7d5b" stroke-width="1.6" fill="none" marker-end="url(#ah-d)"/>
+  <path d="M624,136 L656,136" stroke="#2f7d5b" stroke-width="1.6" fill="none" marker-end="url(#ah-d)"/>
+
+  <!-- consumers row -->
+  <rect class="n n-device" x="660" y="254" width="200" height="52" rx="9"/>
+  <text class="nt" x="672" y="276">useTasks &rarr; matrix</text><text class="ns" x="672" y="293">live read, re-render</text>
+  <rect class="n n-device" x="438" y="254" width="186" height="52" rx="9"/>
+  <text class="nt" x="450" y="276">Local analytics</text><text class="ns" x="450" y="293">in-memory &middot; no network</text>
+  <rect class="n n-device" x="262" y="254" width="140" height="52" rx="9"/>
+  <text class="nt" x="274" y="276">JSON export</text><text class="ns" x="274" y="293">&rarr; local file</text>
+  <rect class="n n-device" x="40"  y="254" width="186" height="52" rx="9"/>
+  <text class="nt" x="52" y="276">Logger &rarr; console</text><text class="ns" x="52" y="293">secret-masked &middot; no content</text>
+
+  <!-- read/branch arrows (muted) -->
+  <path d="M760,164 L760,254" stroke="#7fbf9e" stroke-width="1.4" fill="none" marker-end="url(#ah-d)"/>
+  <path d="M700,164 C660,210 560,214 530,252" stroke="#7fbf9e" stroke-width="1.4" fill="none" marker-end="url(#ah-d)"/>
+  <path d="M676,164 C520,224 360,214 332,252" stroke="#7fbf9e" stroke-width="1.4" fill="none" marker-end="url(#ah-d)"/>
+  <path d="M470,164 C320,214 150,214 133,252" stroke="#cdd5df" stroke-width="1.4" fill="none" marker-end="url(#ah-m)" stroke-dasharray="3 3"/>
+  <text class="ns" x="770" y="210">read</text>
+
+  <!-- ===== ZONE 2: ENCRYPTION (honest) ===== -->
+  <text class="restH" x="40" y="424" fill="#7a540b">AT REST</text>
+  <text class="restB" x="40" y="443">IndexedDB is <tspan font-weight="700" fill="#7a540b">plaintext</tspan>. Browser/OS disk encryption only &mdash;</text>
+  <text class="restB" x="40" y="459">any code running on the device can read every field.</text>
+  <line x1="30" y1="410" x2="30" y2="466" stroke="#9a6b12" stroke-width="2"/>
+
+  <text class="restH" x="548" y="424" fill="#7a540b">IN TRANSIT</text>
+  <text class="restB" x="548" y="443"><tspan font-weight="700" fill="#7a540b">TLS only</tspan> &mdash; not end-to-end. The sync server</text>
+  <text class="restB" x="548" y="459">receives and stores task content as plaintext.</text>
+  <line x1="538" y1="410" x2="538" y2="466" stroke="#9a6b12" stroke-width="2"/>
+
+  <text x="40" y="497" font-size="12" font-weight="700" fill="#8c3422">&#9888; No application-level or E2E encryption anywhere &mdash; the old AES/PBKDF2 layer was removed in the PocketBase migration.</text>
+
+  <!-- egress arrow zone1 -> zone3 -->
+  <path d="M930,164 C930,300 200,360 135,586" stroke="#b1452f" stroke-width="2.4" fill="none" marker-end="url(#ah-n)"/>
+  <rect x="300" y="338" width="232" height="22" rx="11" fill="#fff" stroke="#e7bdb1"/>
+  <text class="el" x="316" y="353" fill="#8c3422">opt-in: sync enabled / MCP set up</text>
+
+  <!-- ===== ZONE 3: NETWORK / SERVER ===== -->
+  <rect class="n n-net" x="40"  y="588" width="190" height="56" rx="9"/>
+  <text class="nt" x="52" y="612">syncQueue</text><text class="ns" x="52" y="629">staged only when sync ON</text>
+  <rect class="n n-net" x="258" y="588" width="190" height="56" rx="9"/>
+  <text class="nt" x="270" y="612">PocketBase sync engine</text><text class="ns" x="270" y="629">push &middot; pull (last-write-wins)</text>
+  <rect class="n n-net" x="476" y="588" width="270" height="56" rx="9"/>
+  <text class="nt" x="488" y="612">api.vinny.io &middot; /tasks</text><text class="ns" x="488" y="629">PLAINTEXT: title, notes, tags, subtasks</text>
+
+  <path d="M230,616 L254,616" stroke="#b1452f" stroke-width="1.6" fill="none" marker-end="url(#ah-n)"/>
+  <path d="M448,616 L472,616" stroke="#b1452f" stroke-width="1.6" fill="none" marker-end="url(#ah-n)"/>
+
+  <!-- realtime receive (back up) -->
+  <path d="M740,600 C940,560 980,300 985,166" stroke="#9aa4b2" stroke-width="1.6" fill="none" marker-end="url(#ah-m)" stroke-dasharray="5 4"/>
+  <text class="ns" x="812" y="520" fill="#7a8493">SSE realtime (receive)</text>
+
+  <!-- callout: 0 server touchpoints -->
+  <rect x="768" y="588" width="244" height="92" rx="10" fill="#eef6f1" stroke="#6fbf95" stroke-width="1.5"/>
+  <text x="786" y="614" font-size="13.5" font-weight="700" fill="#225b41">0 Next.js server touchpoints</text>
+  <text class="ns" x="786" y="634">no Server Actions &middot; no app/api</text>
+  <text class="ns" x="786" y="650">no middleware &middot; route handlers: 0</text>
+  <text class="ns" x="786" y="666" font-weight="600" fill="#225b41">output: &#39;export&#39; (fully static)</text>
+
+  <!-- row B targets -->
+  <rect class="n n-net" x="40"  y="712" width="224" height="56" rx="9"/>
+  <text class="nt" x="52" y="736">OAuth &rarr; Google &middot; GitHub</text><text class="ns" x="52" y="753">auth token only &middot; no content</text>
+  <rect class="n n-net" x="288" y="712" width="300" height="56" rx="9"/>
+  <text class="nt" x="300" y="736">Sentry &rarr; *.ingest.us.sentry.io</text><text class="ns" x="300" y="753">errors only &middot; content allowlist-gated</text>
+  <rect class="n n-net" x="612" y="712" width="400" height="56" rx="9"/>
+  <text class="nt" x="624" y="736">MCP &rarr; PocketBase &rarr; Claude Desktop &rarr; Anthropic</text><text class="ns" x="624" y="753">full task content &mdash; only when MCP server is configured</text>
+
+  <text class="ns" x="40" y="800" fill="#7a8493">Enforced by CSP <tspan font-family="ui-monospace, monospace" fill="#5a6573">connect-src</tspan>: the only external origins the app may contact are the four boxes above &mdash; no analytics or tracker origins are allowed.</text>
+</svg>
+    </div>
+  </section>
+
+  <section aria-labelledby="table-h">
+    <h2 id="table-h"><span class="num">02</span>Every place we read, write, log, or transmit personal data</h2>
+    <p class="section-note">
+      &ldquo;Content&rdquo; = user-entered free text (title, description/notes, subtask titles, tags).
+      Rows flagged <span class="flag">&#9888;</span> are the ones a privacy reviewer should look at first.
+    </p>
+<div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30px">#</th>
+            <th>Surface &middot; what happens</th>
+            <th style="width:140px">Operation</th>
+            <th style="width:120px">Personal data</th>
+            <th style="width:96px">Zone</th>
+            <th style="width:230px">File : line</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="6" style="background:#eef6f1;color:#225b41;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:7px 12px">On-device — creation, state, persistence, local reads</td></tr>
+
+          <tr>
+            <td>1</td>
+            <td><span class="what">Capture bar</span><span class="sub">user types title, tags, urgent/important into React state</span></td>
+            <td>create &middot; hold-in-state</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/matrix-simplified/capture-bar.tsx#L40">capture-bar.tsx:40</a></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><span class="what">Edit drawer</span><span class="sub">title, description (notes), tags, due date held in state, then submitted</span></td>
+            <td>create / update</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/matrix-simplified/edit-drawer.tsx#L67">edit-drawer.tsx:67</a></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><span class="what">createTask</span><span class="sub">Zod-validate, then <code>db.tasks.add(record)</code></span></td>
+            <td>validate &middot; write IndexedDB</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/tasks/crud/create.ts#L41">crud/create.ts:41</a></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><span class="what">updateTask</span><span class="sub"><code>db.tasks.get</code> &rarr; merge &rarr; re-validate &rarr; <code>db.tasks.put</code></span></td>
+            <td>read + write IndexedDB</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/tasks/crud/update.ts#L38">crud/update.ts:38</a></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><span class="what">Subtask mutations</span><span class="sub">write subtask titles via <code>db.tasks.put</code> &mdash; note: skips <code>taskDraftSchema</code> validation</span></td>
+            <td>write IndexedDB</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/tasks/subtasks.ts#L61">tasks/subtasks.ts:61</a></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><span class="what">Dexie object stores</span><span class="sub"><code>tasks</code>, <code>archivedTasks</code> hold the full <code>TaskRecord</code> &mdash; free-text fields persisted, indexes prove plaintext</span></td>
+            <td>persist at rest</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/db.ts#L35">lib/db.ts:35</a></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><span class="what">useTasks live query</span><span class="sub"><code>db.tasks.toArray()</code> reads every task back into the matrix UI</span></td>
+            <td>read IndexedDB</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/use-tasks.ts#L18">lib/use-tasks.ts:18</a></td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><span class="what">Archive</span><span class="sub"><code>db.archivedTasks.bulkAdd</code> + <code>db.tasks.bulkDelete</code></span></td>
+            <td>write IndexedDB</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/archive.ts#L84">lib/archive.ts:84</a></td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><span class="what">Local analytics</span><span class="sub">pure in-memory aggregation over tasks/tags &mdash; <strong>no network calls</strong></span></td>
+            <td>read (stays local)</td>
+            <td class="content-read">Content (read)</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/analytics/metrics.ts#L60">analytics/metrics.ts:60</a></td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><span class="what">JSON export</span><span class="sub"><code>JSON.stringify</code> all tasks &rarr; <code>Blob</code> &rarr; <code>&lt;a download&gt;</code>. No upload &mdash; local file save only</span></td>
+            <td>export to file</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/tasks/import-export.ts#L224">import-export.ts:224</a></td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><span class="what">JSON import</span><span class="sub">native file picker &rarr; <code>file.text()</code> &rarr; <code>JSON.parse</code> &rarr; <code>db.tasks.bulkAdd</code></span></td>
+            <td>import from file</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/settings-page/index.tsx#L213">settings-page/index.tsx:213</a></td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td><span class="what">Logger &rarr; console</span><span class="sub">logs a structured, secret-masked object; the only 6 <code>console.*</code> sites never interpolate task fields</span></td>
+            <td>log to console</td>
+            <td class="content-no">No content</td>
+            <td><span class="ztag z-device">on-device</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/logger.ts#L180">lib/logger.ts:180</a></td>
+          </tr>
+
+          <tr><td colspan="6" style="background:#f7efdd;color:#7a540b;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:7px 12px">&ldquo;Encryption&rdquo; &mdash; what actually protects the data</td></tr>
+
+          <tr>
+            <td>13</td>
+            <td><span class="what">At rest = plaintext</span><span class="sub">no app-level encryption; relies on browser-managed IndexedDB + OS disk encryption only</span></td>
+            <td>persist at rest</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-rest">at-rest</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/db.ts#L35">lib/db.ts:35</a></td>
+          </tr>
+          <tr>
+            <td>14</td>
+            <td><span class="what">In transit = TLS only</span><span class="sub">content mapped to plaintext PocketBase fields; <strong>not</strong> end-to-end encrypted (E2E layer removed in PB migration)</span></td>
+            <td>transmit</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-rest">in-transit</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/task-mapper.ts#L57">task-mapper.ts:57</a></td>
+          </tr>
+
+          <tr><td colspan="6" style="background:#f7e8e3;color:#8c3422;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:7px 12px">Network / server &mdash; reached only on opt-in</td></tr>
+
+          <tr>
+            <td>15</td>
+            <td><span class="what">Sync field mapping</span><span class="sub"><code>taskRecordToPocketBase</code> maps 24 fields incl. title, description, tags, subtasks &mdash; all plaintext</span></td>
+            <td>transmit (shape)</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">network</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/task-mapper.ts#L54">task-mapper.ts:54</a></td>
+          </tr>
+          <tr>
+            <td>16</td>
+            <td><span class="what">Sync push</span><span class="sub"><code>pb.collection('tasks').create()/.update()</code> &rarr; api.vinny.io</span></td>
+            <td>transmit to server</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/pb-push.ts#L59">pb-push.ts:59</a></td>
+          </tr>
+          <tr>
+            <td>17</td>
+            <td><span class="what">Sync pull</span><span class="sub"><code>getFullList</code> returns full remote task records for the owner</span></td>
+            <td>receive from server</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/pb-pull.ts#L124">pb-pull.ts:124</a></td>
+          </tr>
+          <tr>
+            <td>18</td>
+            <td><span class="what">Realtime SSE</span><span class="sub">subscription delivers full task records on cross-device change</span></td>
+            <td>receive from server</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/pb-realtime.ts#L56">pb-realtime.ts:56</a></td>
+          </tr>
+          <tr>
+            <td>19</td>
+            <td><span class="what">Sync opt-in gate</span><span class="sub"><code>config?.enabled || false</code> &mdash; off by default; nothing transmits until the user signs in</span></td>
+            <td>gate (off by default)</td>
+            <td class="content-no">&mdash;</td>
+            <td><span class="ztag z-net">network</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/config/get-set.ts#L77">config/get-set.ts:77</a></td>
+          </tr>
+          <tr>
+            <td>20</td>
+            <td><span class="what">OAuth login</span><span class="sub"><code>authWithOAuth2</code> (Google/GitHub); stores a JWT &mdash; no task content</span></td>
+            <td>auth</td>
+            <td class="content-no">Token only</td>
+            <td><span class="ztag z-net">network</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/pb-auth.ts#L140">pb-auth.ts:140</a></td>
+          </tr>
+          <tr>
+            <td>21</td>
+            <td><span class="what">CSP egress allowlist</span><span class="sub"><code>connect-src</code> permits only api.vinny.io, Google, GitHub, *.ingest.us.sentry.io &mdash; blocks tracker origins</span></td>
+            <td>policy (enforced)</td>
+            <td class="content-no">&mdash;</td>
+            <td><span class="ztag z-net">network</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/app/layout.tsx#L43">app/layout.tsx:43</a></td>
+          </tr>
+          <tr>
+            <td>22</td>
+            <td><span class="what">Sentry capture</span><span class="sub">DSN-gated; sends error name/message/stack + allowlisted context to Sentry SaaS</span></td>
+            <td>transmit (errors)</td>
+            <td class="content-no">Gated</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sentry.ts#L36">lib/sentry.ts:36</a></td>
+          </tr>
+          <tr>
+            <td>23</td>
+            <td><span class="what">Sentry content allowlist</span><span class="sub"><code>SENTRY_SAFE_METADATA_KEYS</code> &mdash; strips everything except ~18 diagnostic keys; task <code>input</code>/<code>record</code> dropped</span></td>
+            <td>gate (strips content)</td>
+            <td class="content-no">Diagnostic only</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/logger.ts#L212">lib/logger.ts:212</a></td>
+          </tr>
+          <tr>
+            <td>24</td>
+            <td><span class="what flag">&#9888; Sentry allowlist bypass</span><span class="sub"><code>captureException(error, { ...loggedError })</code> goes <em>around</em> the logger allowlist &mdash; safe today by caller-discipline, not structurally</span></td>
+            <td>transmit (errors)</td>
+            <td class="content-read">Potential content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/error-logger.ts#L59">error-logger.ts:59</a></td>
+          </tr>
+          <tr>
+            <td>25</td>
+            <td><span class="what">MCP read</span><span class="sub">separate Node process fetches tasks from PocketBase over HTTPS (cannot read browser IndexedDB)</span></td>
+            <td>receive from server</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/packages/mcp-server/src/tools/list-tasks.ts#L52">mcp/list-tasks.ts:52</a></td>
+          </tr>
+          <tr>
+            <td>26</td>
+            <td><span class="what">MCP transport</span><span class="sub"><code>JSON.stringify(tasks)</code> &rarr; stdio JSON-RPC &rarr; Claude Desktop &rarr; Anthropic model</span></td>
+            <td>transmit to AI client</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/packages/mcp-server/src/tools/handlers/read-handlers.ts#L86">mcp/read-handlers.ts:86</a></td>
+          </tr>
+          <tr>
+            <td>27</td>
+            <td><span class="what">MCP write</span><span class="sub"><code>create_task</code>/<code>update_task</code> push content to PocketBase</span></td>
+            <td>transmit to server</td>
+            <td class="content-yes">Content</td>
+            <td><span class="ztag z-net">server</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/packages/mcp-server/src/write-ops/task-operations.ts#L119">mcp/task-operations.ts:119</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="claims-h">
+    <h2 id="claims-h"><span class="num">03</span>Privacy claims check</h2>
+    <p class="section-note">Each stated guarantee, marked against what the code actually does.</p>
+<div class="claims">
+
+      <div class="claim confirmed">
+        <h3>Local-first <span class="verdict ok">Confirmed</span></h3>
+        <p class="code-note">IndexedDB is the system of record. The entire create &rarr; validate &rarr; persist &rarr; read loop is local Dexie calls with zero <code>fetch</code> in the path. On a fresh install with no sign-in, task content never leaves the browser.</p>
+        <ul>
+          <li>Persistence is <code>db.tasks.add/put</code> only &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/tasks/crud/create.ts#L41">crud/create.ts:41</a></li>
+          <li>Reads via local live query &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/use-tasks.ts#L18">use-tasks.ts:18</a></li>
+          <li>Sync is off unless explicitly enabled &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/config/get-set.ts#L77">config/get-set.ts:77</a></li>
+        </ul>
+      </div>
+
+      <div class="claim confirmed">
+        <h3>No server-side storage of task content <span class="verdict ok">Confirmed</span> <span class="verdict warn">with one caveat</span></h3>
+        <p class="code-note">The shipped app has <strong>zero Next.js server touchpoints</strong> &mdash; no Server Actions, no <code>app/api</code> route handlers, no middleware. <code>output:&nbsp;'export'</code> makes a server runtime structurally impossible, and the build emits no server/edge functions. The app cannot store your content because it has no server to store it on.</p>
+        <ul>
+          <li><code>rg "use server"</code> &rarr; 0 real hits; <code>app/</code> is 10 <code>page</code>/<code>layout</code>/<code>error</code> files, no <code>route.ts</code>, no <code>middleware.ts</code></li>
+          <li>Static export confirmed &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/next.config.ts#L8">next.config.ts:8</a></li>
+        </ul>
+        <div class="callout" style="margin-top:12px">
+          <strong>Caveat &mdash; the claim is scope-sensitive.</strong> When a user <em>opts into</em> cloud sync, full task content (title, notes, tags, subtasks) <strong>is stored as plaintext</strong> on the PocketBase backend at <code>api.vinny.io</code> (<a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/task-mapper.ts#L54">task-mapper.ts:54</a>), and the MCP server reads/writes it there. That is server-side storage &mdash; on a self-hosted server, opt-in, but real. Recommend the public claim read <em>&ldquo;no server storage unless you enable sync.&rdquo;</em>
+        </div>
+      </div>
+
+      <div class="claim confirmed">
+        <h3>No third-party trackers <span class="verdict ok">Confirmed</span></h3>
+        <p class="code-note">No Google Analytics/GTM, Plausible, Fathom, Vercel Analytics, Segment, PostHog, Mixpanel, Hotjar, or Pixel in source or dependencies. Fonts are self-hosted (no runtime Google Fonts). The CSP <code>connect-src</code> enforces this at the policy layer.</p>
+        <ul>
+          <li>Egress allowlist is 4 origins only &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/app/layout.tsx#L43">app/layout.tsx:43</a></li>
+          <li><strong>Note:</strong> Sentry is present as <em>error telemetry</em> (not behavioral tracking) and is content-allowlist-gated; Google/GitHub are contacted only for OAuth. None profile usage.</li>
+        </ul>
+      </div>
+
+      <div class="claim attention">
+        <h3>Stated in-app: &ldquo;End-to-end encrypted &middot; zero-knowledge&rdquo; <span class="verdict warn">Needs attention</span></h3>
+        <p class="code-note">This is the one place the UI <strong>contradicts the code.</strong> There is no application-level or E2E encryption anywhere &mdash; content is plaintext in IndexedDB and plaintext-over-TLS to the server. The marketing copy overstates the guarantee.</p>
+        <ul>
+          <li><span class="flag">&#9888;</span> &ldquo;End-to-end encrypted sync&hellip; the server never sees your data&rdquo; &mdash; false &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/about/features-section.tsx#L84">features-section.tsx:84</a></li>
+          <li>&ldquo;encrypted in transit&rdquo; is TLS-true but framed to imply more &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/about/privacy-section.tsx#L30">privacy-section.tsx:30</a></li>
+          <li>Stale <code>ENCRYPTION_PASSPHRASE</code> in MCP docs (no code reads it) &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/about/mcp-section.tsx#L16">mcp-section.tsx:16</a></li>
+          <li>Secondary: route <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/error-logger.ts#L59">error-logger.ts:59</a> through the Sentry allowlist so content-exclusion is structural, not by convention.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+<footer class="method">
+    <h2>How this was traced</h2>
+    <ol>
+      <li>Six parallel read-only passes over the working tree at commit <code>d004f1f</code>: the write path (UI&rarr;state&rarr;IndexedDB), encryption, PocketBase sync, server touchpoints, analytics/telemetry/logging, and export/import + MCP.</li>
+      <li>Load-bearing claims were spot-checked directly: <code>rg "use server"</code>, <code>find app -name route.*</code> and middleware globs (server touchpoints); crypto-term grep + <code>package.json</code> (no encryption); and verbatim reads of the stale about-page copy.</li>
+      <li>Every <span style="white-space:nowrap">file&nbsp;:&nbsp;line</span> link is pinned to <code>d004f1f</code>, so anchors stay accurate even as <code>main</code> moves on.</li>
+    </ol>
+    <p style="margin-top:14px">
+      <strong>Runtime caveats.</strong> Zones are static-analysis truths; at runtime the red zone is entered only by user action (enabling sync, configuring MCP). &ldquo;Encrypted at rest&rdquo; here means application-controlled encryption &mdash; browser/OS disk encryption and TLS still apply but are outside the app&rsquo;s control. The PocketBase backend is self-hosted; &ldquo;server&rdquo; means a server you (or the operator) run, not a third party.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>
