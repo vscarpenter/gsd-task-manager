@@ -24,8 +24,10 @@ set -euo pipefail
 PB_BIN="${PB_BIN:-./pocketbase}"
 KEY="$(openssl rand -hex 16)"            # 32 hex chars
 WORK="$(mktemp -d)"
-ADMIN_EMAIL="verify@example.com"
-ADMIN_PASS="verify-pass-1234"
+# Throwaway superuser for the LOCAL ephemeral PocketBase only. Override via env if
+# needed. NEVER hardcode real/production credentials here — this file is public.
+ADMIN_EMAIL="${PB_ADMIN_EMAIL:-verify@example.com}"
+ADMIN_PASS="${PB_ADMIN_PASSWORD:-verify-pass-1234}"
 
 # Kill the background PocketBase process and remove the temp working dir on exit.
 trap 'kill "${PB_PID:-0}" 2>/dev/null || true; rm -rf "$WORK"' EXIT
@@ -60,6 +62,7 @@ echo "2) create superuser + tasks collection"
 
 # setup-pocketbase-collections.sh reads credentials from env vars:
 #   PB_URL, PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD
+# Point it at the LOCAL ephemeral instance — this harness must never touch prod.
 PB_URL=http://127.0.0.1:8099 \
   PB_ADMIN_EMAIL="$ADMIN_EMAIL" \
   PB_ADMIN_PASSWORD="$ADMIN_PASS" \
