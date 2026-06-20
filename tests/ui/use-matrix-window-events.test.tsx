@@ -94,6 +94,7 @@ describe("useMatrixWindowEvents", () => {
     });
     expect(document.activeElement).toBe(searchInput);
 
+    searchInput.blur();
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
     });
