@@ -46,10 +46,37 @@ Task content is encrypted at rest on the server. Generate a 32-character key onc
 
     openssl rand -hex 16        # 32 hex chars
 
-Put it in a gitignored `.env` beside the compose file (`GSD_TASKS_ENC_KEY=...`) or
-your secret manager. **Back it up separately from the database** — a database
-backup is useless without this key, and a lost key makes encrypted data
-unrecoverable. The container refuses to start if the key is missing or not 32 chars.
+The `docker compose` command must be able to find this key. Three equivalent options:
+
+- **Recommended:** create `docker/.env` with `GSD_TASKS_ENC_KEY=<key>` and pass it explicitly:
+  ```bash
+  docker compose -f docker/docker-compose.yml --env-file docker/.env up --build
+  ```
+- **Alternative:** run compose from inside the `docker/` directory (where `.env` is found automatically):
+  ```bash
+  cd docker && docker compose up --build
+  ```
+- **Shell export:** `export GSD_TASKS_ENC_KEY=<key>` before running compose.
+
+> **Note:** Running `docker compose -f docker/docker-compose.yml up` from the repo root without `--env-file` will load `.env` from the repo root (CWD), not from `docker/`. If the key is missing there, the container refuses to start.
+
+**Back up the key separately from the database** — a database backup is useless without this key, and a lost key makes encrypted data unrecoverable.
+
+### Staging verification gate (JSON fields)
+
+Before relying on at-rest encryption in production, validate it against a running PocketBase
+using the verification harness:
+
+```bash
+PB_BIN=/path/to/pocketbase ./scripts/verify-pb-encryption.sh
+```
+
+This harness creates a task with non-empty `tags`, `subtasks`, and `time_entries` values,
+asserts that all fields (including the `json`-typed columns) are stored as `enc:v1:` ciphertext
+in SQLite, and asserts that all fields round-trip back to their original arrays over the REST API.
+If any `json`-column assertion fails, the remedy is to change those three columns from `json` to
+`text` type in `scripts/setup-pocketbase-collections.sh` and re-confirm that the decrypt hook
+still returns arrays over the API.
 
 ## First-Time PocketBase Setup
 

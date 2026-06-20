@@ -53,6 +53,25 @@ describe("encryption-core", () => {
     expect(r._data.subtasks).toEqual([{ id: "s1", title: "step", completed: false }]);
   });
 
+  it("should_roundtrip_json_field_time_entries_with_non_empty_array", () => {
+    const timeEntries = [
+      { start: "2026-06-20T10:00:00Z", end: "2026-06-20T10:30:00Z" },
+    ];
+    const r = fakeRecord({
+      title: "t",
+      tags: [],
+      subtasks: [],
+      time_entries: timeEntries,
+    });
+    core.encryptRecord(r, enc);
+    // time_entries must be a ciphertext string after encryption
+    expect(typeof r._data.time_entries).toBe("string");
+    expect(r._data.time_entries).toMatch(/^enc:v1:/);
+    core.decryptRecord(r, dec);
+    // must round-trip back to the original array of objects
+    expect(r._data.time_entries).toEqual(timeEntries);
+  });
+
   it("should_be_idempotent_on_double_encrypt", () => {
     const r = fakeRecord({ title: "x", description: "", tags: [] });
     core.encryptRecord(r, enc);
