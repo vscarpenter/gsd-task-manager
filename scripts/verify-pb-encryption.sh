@@ -25,6 +25,7 @@ for cmd in curl jq sqlite3 python3 openssl; do
     exit 1
   fi
 done
+# Note: python3 is required by setup-pocketbase-collections.sh, invoked in step 2
 
 echo "1) start PocketBase with the encryption hook"
 GSD_TASKS_ENC_KEY="$KEY" "$PB_BIN" serve \
@@ -37,6 +38,11 @@ for i in $(seq 1 30); do
   curl -sf http://127.0.0.1:8099/api/health >/dev/null && break
   sleep 1
 done
+
+if ! curl -sf http://127.0.0.1:8099/api/health >/dev/null 2>&1; then
+  echo "FAIL: PocketBase did not start in 30s; check $WORK/pb.log" >&2
+  exit 1
+fi
 
 echo "2) create superuser + tasks collection"
 "$PB_BIN" superuser upsert "$ADMIN_EMAIL" "$ADMIN_PASS" --dir="$WORK" >/dev/null
