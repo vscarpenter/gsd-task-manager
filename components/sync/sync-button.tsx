@@ -25,8 +25,11 @@ export function SyncButton() {
 
   useSyncHealth({
     isEnabled,
-    onHealthIssue: (message, action, duration) => {
+    onHealthIssue: ({ id, message, action, duration }) => {
+      // The stable `id` lets sonner replace a recurring health toast in place
+      // instead of stacking duplicates (e.g. after a wake-from-sleep burst).
       toast(message, {
+        id,
         duration,
         action: action ? { label: action.label, onClick: action.onClick } : undefined,
       });

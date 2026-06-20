@@ -2,6 +2,30 @@
 
 ---
 
+## In progress — 2026-06-20: Fix stacked sync-health toasts (TDD)
+
+**Branch:** `fix/sync-health-toast-dedup` · **Tier:** Standard (one hook + its single consumer; internal callback contract change; TDD).
+
+**Problem:** On wake-from-sleep, multiple identical "N pending operations are older than 1 hour" toasts stack (user screenshot: 3 at once). Two root causes in `components/sync/use-sync-health.ts`:
+1. `toast()` is called with no stable `id`, so sonner stacks duplicates instead of replacing (the user-visible defect).
+2. The cooldown lives in React state (`lastNotificationTime`) that is also an effect dependency, alongside unstable `onHealthIssue`/`onSync` callbacks. Every status-poll re-render tears down and re-arms the health-check timers, so on wake several checks fire before the cooldown settles.
+
+**Plan (TDD):**
+- [x] RED: `useSyncHealth` passes a stable `id` (`sync-health-<type>`) + Sync Now action for a stale-queue warning. (3 RED failures confirmed: hook called `(message, action, duration)` positionally.)
+- [x] RED: error issues pass `sync-health-<type>` and no action; non-stale warnings are ignored.
+- [x] GREEN #1: derive a stable `id` from `issue.type` in a `buildNotification` helper; thread it to `toast({ id })` in `sync-button.tsx`.
+- [x] GREEN #2: cooldown moved to a `useRef`; callbacks held in refs; effect depends only on `isEnabled` (no timer re-arm churn).
+- [x] Guard: cooldown holds within window and across callback-identity changes; disabled + non-stale-warning branches covered.
+- [x] Verify: `bun run test` ✅ 2013 pass / 1 skip · `bun typecheck` ✅ · `bun run test -- tests/ui/sync-button.test.tsx` ✅ 5 pass (consumer unaffected).
+
+**Out of scope:** the underlying stuck sync operation itself (the message is legitimate; Sync Now flushes it). Only the duplicate-toast behavior.
+
+**Files:** `components/sync/use-sync-health.ts` (rewrite: stable id + ref cooldown), `components/sync/sync-button.tsx` (pass `id` to `toast`), `tests/ui/use-sync-health.test.tsx` (new, 7 tests).
+
+**Note on live verification:** no visual change (SyncButton renders identically); the fix is toast-dedup behavior under a wake-from-sleep timer race that requires sync-enabled + auth + a queued op stuck >1h to stage — impractical in a live browser and equally hard to drive via Playwright. Verified via deterministic fake-timer unit tests, which are the correct surface for this timing logic.
+
+---
+
 ## In progress — 2026-06-19: Review-findings fixes (TDD)
 
 **Branch:** `chore/refactor-review-refine` · **Tier:** Standard (bounded fixes across sync, import/export, MCP, db migrations; no new public contract). TDD per CLAUDE.md.
