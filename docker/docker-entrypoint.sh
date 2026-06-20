@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+# Refuse to start without a valid encryption key (fail closed at boot, not just
+# at first write).
+if [ -z "$GSD_TASKS_ENC_KEY" ] || [ "${#GSD_TASKS_ENC_KEY}" -ne 32 ]; then
+    echo "[gsd] FATAL: GSD_TASKS_ENC_KEY must be set to a 32-character key" >&2
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # GSD Task Manager — Container Entrypoint
 # Starts PocketBase (background) and Caddy (foreground-ish), with clean
@@ -21,6 +28,8 @@ echo "[gsd] Starting PocketBase..."
 /usr/local/bin/pocketbase serve \
     --http=0.0.0.0:8090 \
     --dir=/pb_data \
+    --hooksDir=/pb_hooks \
+    --migrationsDir=/pb_migrations \
     --publicDir=/pb_data/pb_public &
 PB_PID=$!
 

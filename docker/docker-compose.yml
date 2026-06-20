@@ -17,6 +17,9 @@ services:
       # - ~/certs:/certs:ro
     environment:
       - SITE_ADDRESS=localhost
+      # 32-char AES-256 key for at-rest task encryption. Provide via a gitignored
+      # .env file or your secret manager — NEVER commit it. `:?` fails the up if unset.
+      - GSD_TASKS_ENC_KEY=${GSD_TASKS_ENC_KEY:?set a 32-char key in .env or the environment}
       # For custom SSL certificates, uncomment and set paths:
       # - TLS_CERT=/certs/localhost-cert.pem
       # - TLS_KEY=/certs/localhost-key.pem

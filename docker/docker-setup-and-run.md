@@ -40,6 +40,17 @@ Once ready you'll see:
 ===========================================
 ```
 
+## Task encryption key (required)
+
+Task content is encrypted at rest on the server. Generate a 32-character key once:
+
+    openssl rand -hex 16        # 32 hex chars
+
+Put it in a gitignored `.env` beside the compose file (`GSD_TASKS_ENC_KEY=...`) or
+your secret manager. **Back it up separately from the database** — a database
+backup is useless without this key, and a lost key makes encrypted data
+unrecoverable. The container refuses to start if the key is missing or not 32 chars.
+
 ## First-Time PocketBase Setup
 
 PocketBase starts with no collections or admin account. Complete these steps once:

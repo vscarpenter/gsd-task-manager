@@ -62,6 +62,11 @@ COPY docker/Caddyfile /etc/caddy/Caddyfile
 COPY docker/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Encryption hook + backfill migration, baked into the image OUTSIDE the
+# /pb_data volume so an existing named volume cannot shadow them.
+COPY docker/pb_hooks/      /pb_hooks/
+COPY docker/pb_migrations/ /pb_migrations/
+
 # Allow non-root to bind privileged ports (80, 443)
 RUN apk add --no-cache libcap \
     && setcap cap_net_bind_service=+ep /usr/bin/caddy \
