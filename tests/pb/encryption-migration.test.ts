@@ -8,7 +8,7 @@ type FakeRecord = ReturnType<typeof fakeRecord>;
 type MigrationFn = (app: FakeApp) => void;
 
 interface FakeApp {
-  findAllRecords: ReturnType<typeof vi.fn<() => FakeRecord[]>>;
+  findAllRecords: ReturnType<typeof vi.fn<(collection: string) => FakeRecord[]>>;
   save: ReturnType<typeof vi.fn<(record: FakeRecord) => void>>;
 }
 
@@ -36,7 +36,7 @@ function loadMigration(key: string | undefined, records: FakeRecord[]) {
     return `cipher(${encKey.slice(0, 4)}:${value})`;
   });
   const app: FakeApp = {
-    findAllRecords: vi.fn(() => records),
+    findAllRecords: vi.fn((_collection: string) => records),
     save: vi.fn(),
   };
 
@@ -66,14 +66,16 @@ function loadMigration(key: string | undefined, records: FakeRecord[]) {
 }
 
 describe("task encryption backfill migration", () => {
-  it("fails closed before reading rows when the encryption key is invalid", () => {
-    const record = fakeRecord({ title: "Plaintext task" });
-    const migration = loadMigration("too-short", [record]);
+  it("fails closed before reading rows when the encryption key is missing or invalid", () => {
+    for (const invalidKey of [undefined, "too-short"]) {
+      const record = fakeRecord({ title: "Plaintext task" });
+      const migration = loadMigration(invalidKey, [record]);
 
-    expect(() => migration.run()).toThrow("GSD_TASKS_ENC_KEY");
-    expect(migration.app.findAllRecords).not.toHaveBeenCalled();
-    expect(migration.app.save).not.toHaveBeenCalled();
-    expect(migration.encrypt).not.toHaveBeenCalled();
+      expect(() => migration.run()).toThrow("GSD_TASKS_ENC_KEY");
+      expect(migration.app.findAllRecords).not.toHaveBeenCalled();
+      expect(migration.app.save).not.toHaveBeenCalled();
+      expect(migration.encrypt).not.toHaveBeenCalled();
+    }
   });
 
   it("encrypts plaintext task text and JSON fields before saving each row", () => {
@@ -85,10 +87,18 @@ describe("task encryption backfill migration", () => {
       subtasks: [{ id: "s1", title: "Check fridge", completed: false }],
       time_entries: [{ start: "2026-06-20T10:00:00Z", end: null }],
     });
-    const migration = loadMigration(key, [record]);
+    const secondRecord = fakeRecord({
+      title: "Call accountant",
+      description: "Ask about quarterly taxes",
+      tags: null,
+      subtasks: [],
+      time_entries: undefined,
+    });
+    const migration = loadMigration(key, [record, secondRecord]);
 
     migration.run();
 
+    expect(migration.app.findAllRecords).toHaveBeenCalledWith("tasks");
     expect(record.data.title).toBe("enc:v1:cipher(xxxx:Buy milk)");
     expect(record.data.description).toBe("");
     expect(record.data.tags).toBe(
@@ -100,8 +110,18 @@ describe("task encryption backfill migration", () => {
     expect(record.data.time_entries).toBe(
       'enc:v1:cipher(xxxx:[{"start":"2026-06-20T10:00:00Z","end":null}])',
     );
-    expect(migration.app.save).toHaveBeenCalledOnce();
-    expect(migration.app.save).toHaveBeenCalledWith(record);
+    expect(secondRecord.data.title).toBe(
+      "enc:v1:cipher(xxxx:Call accountant)",
+    );
+    expect(secondRecord.data.description).toBe(
+      "enc:v1:cipher(xxxx:Ask about quarterly taxes)",
+    );
+    expect(secondRecord.data.tags).toBeNull();
+    expect(secondRecord.data.subtasks).toBe("enc:v1:cipher(xxxx:[])");
+    expect(secondRecord.data.time_entries).toBeUndefined();
+    expect(migration.app.save).toHaveBeenCalledTimes(2);
+    expect(migration.app.save).toHaveBeenNthCalledWith(1, record);
+    expect(migration.app.save).toHaveBeenNthCalledWith(2, secondRecord);
   });
 
   it("does not double-encrypt values that already carry the encryption prefix", () => {
