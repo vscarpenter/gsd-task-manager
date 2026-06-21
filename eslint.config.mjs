@@ -6,6 +6,8 @@ const config = [
     {
         ignores: [
             ".next/**",
+            ".agents/**",
+            ".claude/skills/**",
             "out/**",
             "coverage/**",
             "worker/.wrangler/**",
@@ -31,6 +33,19 @@ const config = [
             "react-hooks/refs": "warn",
             // Allow variable access before declaration in effects (common callback pattern)
             "react-hooks/immutability": "warn",
+        },
+    },
+    {
+        files: ["docker/pb_hooks/**/*.js", "docker/pb_migrations/**/*.js"],
+        rules: {
+            "@typescript-eslint/no-require-imports": "off",
+            "@typescript-eslint/triple-slash-reference": "off",
+        },
+    },
+    {
+        files: ["docker/pb_hooks/**/*.d.ts"],
+        rules: {
+            "@typescript-eslint/no-explicit-any": "off",
         },
     },
     {
