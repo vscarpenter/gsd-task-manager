@@ -27,12 +27,12 @@ PocketBase instance is reachable (`NEXT_PUBLIC_POCKETBASE_URL`, defaults to
 `http://127.0.0.1:8090` on localhost). The core product runs and is testable
 fully local-only without it.
 
-**`bun lint` is currently broken on `main` (pre-existing, also red in CI).**
-`@typescript-eslint/utils@8.53.1` references ESLint's removed `FlatESLint`
-export, so ESLint 10 throws `Class extends value undefined`. This is a repo
-dependency issue, not an environment setup problem — do not try to fix it as
-part of environment work. `bun typecheck`, `bun run test`, and `bun run build`
-all pass.
+**Lint compatibility.** `bun lint` is expected to run. Keep ESLint on the
+latest supported 9.x line until the full Next/React lint stack supports ESLint
+10; `eslint-plugin-react@7.37.5` still peers on ESLint `^9.7`, while
+`typescript-eslint@8.61.1` is pinned/overridden for TypeScript 6 compatibility.
+Do not "fix" this by bumping ESLint back to 10 unless the React plugin and
+Next config have compatible releases.
 
 **Build is self-contained.** `bun run build` first runs
 `scripts/generate-build-info.cjs`, which generates the gitignored `.build-env.sh`
