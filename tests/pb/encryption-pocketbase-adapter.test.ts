@@ -187,8 +187,8 @@ describe("PocketBase task encryption hooks", () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
-  it("fails_closed_without_a_valid_key_and_does_not_continue", () => {
-    const runtime = loadTaskHookRuntime(undefined);
+  it("fails_closed_with_an_invalid_key_and_does_not_continue", () => {
+    const runtime = loadTaskHookRuntime("short");
     const record = fakeRecord({ title: "Plaintext task" });
     const next = vi.fn();
 
