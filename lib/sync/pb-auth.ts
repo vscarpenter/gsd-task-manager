@@ -76,7 +76,8 @@ function closeOAuthPopup(popupWindow?: Window | null): void {
   try {
     popupWindow?.close?.();
   } catch {
-    // Some mobile browsers do not allow closing OAuth browser contexts.
+    // Some mobile browsers do not allow closing OAuth browser contexts — expected, not an error.
+    logger.debug("Could not close OAuth popup window — expected on some mobile browsers");
   }
 }
 
