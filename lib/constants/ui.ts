@@ -42,6 +42,9 @@ export const UI_TIMING = {
 
   /** Auto-refresh interval for sync debug panel (2 seconds) */
   DEBUG_PANEL_REFRESH_MS: 2000,
+
+  /** Delay before focusing a newly-opened input field (50ms) */
+  FOCUS_DELAY_MS: 50,
 } as const;
 
 /**

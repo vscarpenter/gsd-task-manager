@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { createTask } from "@/lib/tasks";
 import { parseShareCaptureParams } from "@/lib/share-capture";
 import { TOAST_DURATION } from "@/lib/constants";
+import { UI_TIMING } from "@/lib/constants/ui";
 import {
   APPLY_SMART_VIEW_EVENT,
   HIGHLIGHT_TASK_EVENT,
@@ -47,7 +48,7 @@ export function useMatrixWindowEvents({
     if (!action) return;
 
     if (action === "new-task") {
-      setTimeout(() => captureInputRef.current?.focus(), 50);
+      setTimeout(() => captureInputRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
     } else if (action === "capture") {
       const draft = parseShareCaptureParams(params);
       if (draft) {

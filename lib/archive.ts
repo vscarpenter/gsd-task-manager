@@ -110,7 +110,6 @@ export async function restoreTask(taskId: string): Promise<void> {
   }
 
   // Remove archivedAt timestamp
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { archivedAt: _archivedAt, ...taskWithoutArchive } = archivedTask;
 
   // Move back to main tasks table

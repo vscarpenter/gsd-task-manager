@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { logError, getUserErrorMessage } from "@/lib/error-logger";
 import type { ErrorContext } from "@/lib/error-logger";
 import { TOAST_DURATION } from "@/lib/constants";
@@ -24,20 +24,12 @@ import { TOAST_DURATION } from "@/lib/constants";
  * }
  * ```
  */
-export function useErrorHandler() {
-  const { showToast } = useToast();
-
-  return useCallback(
-    (error: unknown, context: ErrorContext) => {
-      // Log the error with full context
-      logError(error, context);
-
-      // Show user-friendly error message
-      const userMessage = getUserErrorMessage(error, context.userMessage);
-      showToast(userMessage, undefined, TOAST_DURATION.LONG);
-    },
-    [showToast]
-  );
+export function useErrorHandler(): (error: unknown, context: ErrorContext) => void {
+  return useCallback((error: unknown, context: ErrorContext) => {
+    logError(error, context);
+    const userMessage = getUserErrorMessage(error, context.userMessage);
+    toast.error(userMessage, { duration: TOAST_DURATION.LONG });
+  }, []);
 }
 
 /**
@@ -57,23 +49,21 @@ export function useErrorHandler() {
  * }
  * ```
  */
-export function useErrorHandlerWithUndo() {
-  const { showToast } = useToast();
-
-  const handleError = useCallback(
-    (error: unknown, context: ErrorContext) => {
-      logError(error, context);
-      const userMessage = getUserErrorMessage(error, context.userMessage);
-      showToast(userMessage, undefined, TOAST_DURATION.LONG);
-    },
-    [showToast]
-  );
+export function useErrorHandlerWithUndo(): {
+  handleError: (error: unknown, context: ErrorContext) => void;
+  handleSuccess: (message: string, undoAction: () => Promise<void>, duration?: number) => void;
+} {
+  const handleError = useCallback((error: unknown, context: ErrorContext) => {
+    logError(error, context);
+    const userMessage = getUserErrorMessage(error, context.userMessage);
+    toast.error(userMessage, { duration: TOAST_DURATION.LONG });
+  }, []);
 
   const handleSuccess = useCallback(
     (message: string, undoAction: () => Promise<void>, duration = TOAST_DURATION.LONG) => {
-      showToast(
-        message,
-        {
+      toast(message, {
+        duration,
+        action: {
           label: "Undo",
           onClick: async () => {
             try {
@@ -84,14 +74,13 @@ export function useErrorHandlerWithUndo() {
                 userMessage: 'Failed to undo operation',
                 timestamp: new Date().toISOString()
               });
-              showToast('Failed to undo operation', undefined, TOAST_DURATION.SHORT);
+              toast.error('Failed to undo operation', { duration: TOAST_DURATION.SHORT });
             }
-          }
+          },
         },
-        duration
-      );
+      });
     },
-    [showToast]
+    []
   );
 
   return { handleError, handleSuccess };

@@ -2,6 +2,35 @@
 
 ---
 
+## Resuming From Here — 2026-06-23
+
+**Active branch:** `chore/coding-standards-compliance`
+
+**What was done in this session:** Full codebase compliance audit against `coding-standards.md`. Fixed all findings:
+- Migrated `lib/use-error-handler.ts` off legacy `useToast()` to `sonner` directly (🔴 blocking)
+- Fixed `scripts/test-coverage.sh` to use `bun run test` not `bun test` (🔴 blocking)
+- Fixed `localStorage.clear()` → `removeItem()` in `tests/data/reset-everything.test.ts` (🔴 blocking)
+- Added `FOCUS_DELAY_MS` constant to `lib/constants/ui.ts`; replaced two inline `50` literals
+- Removed dead `eslint-disable-next-line no-unused-vars` in `lib/archive.ts` (rule is off globally)
+- Added debug log to silent `catch {}` in `lib/sync/pb-auth.ts`
+- Improved eslint-disable comment in `edit-drawer.tsx` with justification
+- Added explicit return type to `resolveSyncDeps()` in `lib/tasks/import-export.ts`
+- Extracted `useEditDraftState` hook + `edit-drawer-fields.tsx` sub-components; `EditDrawer` function now ~40 lines
+- Extracted `useDashboardData` hook; `DashboardPage` now uses `DashboardContent` / `DashboardEmpty` sub-components
+- Extracted `SyncHistoryRow` + `SyncHistoryStats` sub-components; replaced `window.confirm` with sonner confirmation toast
+- Extracted `ArchivedTaskCard` sub-component from `ArchivePage`
+- Cleaned up `tasks/todo.md` handoff state
+
+**Next steps:** Run `bun typecheck` + `bun run test` on the branch, then open PR.
+
+**Branches pending merge (pre-existing, from prior sessions):**
+- `fix/sync-health-toast-dedup` — complete per 2026-06-20 entry below; awaiting commit/PR
+- `chore/refactor-review-refine` — complete per 2026-06-19 entry below; "awaiting user go-ahead"
+- `feat/design-reference-compliance` — complete per 2026-06-14 entry below; "ready to push + PR"
+- `fix/security-medium-findings` — complete per 2026-06-10 entry below
+
+---
+
 ## In progress — 2026-06-20: Fix stacked sync-health toasts (TDD)
 
 **Branch:** `fix/sync-health-toast-dedup` · **Tier:** Standard (one hook + its single consumer; internal callback contract change; TDD).

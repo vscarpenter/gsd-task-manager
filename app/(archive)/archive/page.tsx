@@ -33,6 +33,38 @@ function sortByArchivedDate(tasks: TaskRecord[]): TaskRecord[] {
   });
 }
 
+interface ArchivedTaskCardProps {
+  task: TaskRecord;
+  allTasks: TaskRecord[];
+  onRestore: (task: TaskRecord) => void;
+  onDelete: (task: TaskRecord) => void;
+}
+
+/** Renders a single archived task card with dimmed opacity and restore/delete hover actions. */
+function ArchivedTaskCard({ task, allTasks, onRestore, onDelete }: ArchivedTaskCardProps): React.ReactElement {
+  return (
+    <div className="relative group">
+      {/* Archived items read dimmed and read-only (reference §07);
+          handlers are no-ops and the card sits at 0.72 opacity. */}
+      <div className="opacity-[0.72]">
+        <TaskCard task={task} allTasks={allTasks} onEdit={() => {}} onDelete={() => {}} onToggleComplete={() => {}} />
+      </div>
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card via-card to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="subtle" onClick={() => onRestore(task)} className="gap-2 text-sm h-auto py-1 px-2">
+            <RefreshCcwIcon className="h-3 w-3" />
+            Restore
+          </Button>
+          <Button variant="destructive" onClick={() => onDelete(task)} className="gap-2 text-sm h-auto py-1 px-2">
+            <Trash2Icon className="h-3 w-3" />
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ArchivePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -158,59 +190,25 @@ export default function ArchivePage() {
             >
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const startIndex = virtualRow.index * columnCount;
-                const rowTasks = archivedTasks.slice(
-                  startIndex,
-                  startIndex + columnCount
-                );
-
+                const rowTasks = archivedTasks.slice(startIndex, startIndex + columnCount);
                 return (
                   <div
                     key={virtualRow.key}
                     style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
+                      position: "absolute", top: 0, left: 0, width: "100%",
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {rowTasks.map((task) => (
-                        <div key={task.id} className="relative group">
-                          {/* Archived items read dimmed and read-only (reference §07);
-                              handlers are no-ops and the card sits at 0.72 opacity. */}
-                          <div className="opacity-[0.72]">
-                            <TaskCard
-                              task={task}
-                              allTasks={archivedTasks}
-                              onEdit={() => {}}
-                              onDelete={() => {}}
-                              onToggleComplete={() => {}}
-                            />
-                          </div>
-
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card via-card to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="subtle"
-                                onClick={() => handleRestore(task)}
-                                className="gap-2 text-sm h-auto py-1 px-2"
-                              >
-                                <RefreshCcwIcon className="h-3 w-3" />
-                                Restore
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={() => handleDelete(task)}
-                                className="gap-2 text-sm h-auto py-1 px-2"
-                              >
-                                <Trash2Icon className="h-3 w-3" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                        <ArchivedTaskCard
+                          key={task.id}
+                          task={task}
+                          allTasks={archivedTasks}
+                          onRestore={handleRestore}
+                          onDelete={handleDelete}
+                        />
                       ))}
                     </div>
                   </div>

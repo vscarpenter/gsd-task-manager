@@ -1,7 +1,7 @@
 "use client";
 
 import type { Route } from "next";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2Icon,
@@ -20,15 +20,15 @@ import { TimeAnalytics } from "@/components/dashboard/time-analytics";
 import { useTasks } from "@/lib/use-tasks";
 import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { ROUTES } from "@/lib/routes";
-import {
-  calculateMetrics,
-  getCompletionTrend,
-  getStreakData,
-  calculateTimeTrackingSummary,
-  getTimeByQuadrant,
-} from "@/lib/analytics";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
+import { useDashboardData } from "./use-dashboard-data";
+
+const TREND_OPTIONS = [
+  { value: "7", label: "7 Days" },
+  { value: "30", label: "30 Days" },
+  { value: "90", label: "90 Days" },
+] as const;
 
 /**
  * Dashboard page showing productivity metrics and analytics.
@@ -38,83 +38,17 @@ import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
  *   Row 3: Upcoming deadlines + tag analytics
  *   Row 4: Time tracking (full width, conditional)
  */
-export default function DashboardPage() {
+export default function DashboardPage(): React.ReactElement {
   const router = useRouter();
   const { all: tasks, isLoading } = useTasks();
   const [trendPeriod, setTrendPeriod] = useState<7 | 30 | 90>(30);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const metrics = useMemo(() => calculateMetrics(tasks), [tasks]);
-  const last7TrendData = useMemo(() => getCompletionTrend(tasks, 7), [tasks]);
-  const trendData = useMemo(
-    () => getCompletionTrend(tasks, trendPeriod),
-    [tasks, trendPeriod],
-  );
-  const streakData = useMemo(() => getStreakData(tasks), [tasks]);
-  const timeTrackingSummary = useMemo(
-    () => calculateTimeTrackingSummary(tasks),
-    [tasks],
-  );
-  const timeByQuadrant = useMemo(() => getTimeByQuadrant(tasks), [tasks]);
-  const completedSeries = useMemo(
-    () => last7TrendData.map((p) => p.completed),
-    [last7TrendData],
-  );
-  const createdSeries = useMemo(
-    () => last7TrendData.map((p) => p.created),
-    [last7TrendData],
-  );
-  const completionRateSeries = useMemo(
-    () =>
-      last7TrendData.map((p) => {
-        const denom = p.created || 1;
-        return Math.round((p.completed / denom) * 100);
-      }),
-    [last7TrendData],
-  );
-  const { completedTrend, previousSixAverage } = useMemo(() => {
-    const todayTrend = last7TrendData.at(-1)?.completed ?? 0;
-    let previousTotal = 0;
-    for (let i = 0; i < last7TrendData.length - 1; i += 1) {
-      previousTotal += last7TrendData[i].completed;
-    }
-    const previousCount = Math.max(0, last7TrendData.length - 1);
-    const nextPreviousSixAverage =
-      previousCount > 0 ? previousTotal / previousCount : 0;
-    const nextCompletedTrend = nextPreviousSixAverage > 0
-      ? Math.round(((todayTrend - nextPreviousSixAverage) / nextPreviousSixAverage) * 100)
-      : todayTrend > 0 ? 100 : 0;
-    return {
-      completedTrend: nextCompletedTrend,
-      previousSixAverage: nextPreviousSixAverage,
-    };
-  }, [last7TrendData]);
-  const completedInsight = metrics.completedToday === 0
-    ? "Ready to start today"
-    : completedTrend > 10
-      ? "Above your recent pace"
-      : completedTrend < -10
-        ? "Below your recent pace"
-        : "Holding steady";
-  const plannedActiveShare = metrics.activeTasks > 0
-    ? Math.round(((metrics.activeTasks - metrics.noDueDateCount) / metrics.activeTasks) * 100)
-    : 0;
-  const activeInsight = metrics.overdueCount > 0
-    ? `${metrics.overdueCount} overdue`
-    : metrics.noDueDateCount > 0
-      ? `${metrics.noDueDateCount} unscheduled`
-      : "Well scoped";
-  const completionInsight = metrics.completionRate >= 80
-    ? "Strong follow-through"
-    : metrics.completionRate >= 60
-      ? "Healthy momentum"
-      : "Room to tighten execution";
+  const data = useDashboardData(tasks, trendPeriod);
 
   const openMatrixAction = useCallback((params?: URLSearchParams) => {
     const query = params?.toString();
-    const href = query ? (`/?${query}` as Route) : ROUTES.HOME;
-    router.push(href);
+    router.push(query ? (`/?${query}` as Route) : ROUTES.HOME);
   }, [router]);
 
   const handleDeadlineTaskClick = useCallback(
@@ -126,15 +60,6 @@ export default function DashboardPage() {
     [openMatrixAction]
   );
 
-  const trendOptions = useMemo(
-    () => [
-      { value: "7", label: "7 Days" },
-      { value: "30", label: "30 Days" },
-      { value: "90", label: "90 Days" },
-    ],
-    []
-  );
-
   useKeyboardShortcuts(
     {
       onNewTask: () => {
@@ -143,9 +68,7 @@ export default function DashboardPage() {
         openMatrixAction(params);
       },
       onSearch: () => searchInputRef.current?.focus(),
-      onHelp: () => {
-        window.dispatchEvent(new CustomEvent("gsd:open-help"));
-      },
+      onHelp: () => { window.dispatchEvent(new CustomEvent("gsd:open-help")); },
     },
     searchInputRef
   );
@@ -158,130 +81,136 @@ export default function DashboardPage() {
       searchInputRef={searchInputRef}
     >
       <div className="space-y-8 pb-10">
-          <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
-            <div className="mx-auto max-w-7xl">
-              <p className="eyebrow">
-                Workspace Insights
-              </p>
-              <h1 className="rd-serif mt-2 text-3xl tracking-tight text-foreground sm:text-4xl">
-                Dashboard
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted sm:text-base">
-                Track follow-through, spot overdue drag, and keep the matrix balanced before work starts to sprawl.
-              </p>
-            </div>
+        <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
+          <div className="mx-auto max-w-7xl">
+            <p className="eyebrow">Workspace Insights</p>
+            <h1 className="rd-serif mt-2 text-3xl tracking-tight text-foreground sm:text-4xl">Dashboard</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted sm:text-base">
+              Track follow-through, spot overdue drag, and keep the matrix balanced before work starts to sprawl.
+            </p>
           </div>
+        </div>
 
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-            {isLoading ? (
-              <DashboardSkeleton />
-            ) : tasks.length === 0 ? (
-              <div className="rounded-lg border-hair border-border bg-card p-12 text-center shadow-sm">
-                <ListTodoIcon className="mx-auto h-12 w-12 text-foreground-muted" />
-                <h2 className="mt-4 text-xl font-semibold text-foreground">
-                  No tasks yet
-                </h2>
-                <p className="mt-2 text-sm text-foreground-muted">
-                  Create your first task to start tracking your productivity!
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                  <StatsCard
-                    title="Completed Today"
-                    value={metrics.completedToday}
-                    icon={CheckCircle2Icon}
-                    trend={previousSixAverage > 0 ? { value: completedTrend, isPositive: completedTrend >= 0 } : undefined}
-                    insight={completedInsight}
-                    footerMeta={`${metrics.completedThisWeek} / 7d`}
-                    series={completedSeries}
-                  />
-                  <StatsCard
-                    title="Active Tasks"
-                    value={metrics.activeTasks}
-                    icon={ListTodoIcon}
-                    insight={activeInsight}
-                    footerMeta={`${plannedActiveShare}% scheduled`}
-                    series={createdSeries}
-                  />
-                  <StatsCard
-                    title="Completion Rate"
-                    value={`${metrics.completionRate}%`}
-                    icon={TrendingUpIcon}
-                    insight={completionInsight}
-                    footerMeta={`${metrics.completedTasks} done overall`}
-                    series={completionRateSeries}
-                  />
-                  <StreakIndicator streakData={streakData} />
-                </div>
-
-                {metrics.overdueCount > 0 && (
-                  <div className="alert is-danger items-center rounded-xl px-5 py-3.5">
-                    <AlertTriangleIcon className="h-5 w-5 shrink-0 text-rust" />
-                    <div className="flex-1">
-                      <p className="alert-title text-sm">
-                        {metrics.overdueCount} overdue{" "}
-                        {metrics.overdueCount === 1 ? "task" : "tasks"}
-                        {metrics.dueTodayCount > 0 && (
-                          <span className="alert-body">
-                            {" "}
-                            &middot; {metrics.dueTodayCount} due today
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-6 lg:grid-cols-3">
-                  <div className="space-y-4 lg:col-span-2">
-                    <div className="flex items-center">
-                      <SegmentedControl
-                        options={trendOptions}
-                        value={String(trendPeriod) as "7" | "30" | "90"}
-                        onChange={(v) =>
-                          setTrendPeriod(Number(v) as 7 | 30 | 90)
-                        }
-                      />
-                    </div>
-                    <CompletionChart data={trendData} />
-                  </div>
-                  <QuadrantDistribution
-                    distribution={metrics.quadrantDistribution}
-                  />
-                </div>
-
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <UpcomingDeadlines
-                    tasks={tasks}
-                    onTaskClick={handleDeadlineTaskClick}
-                  />
-                  {metrics.tagStats.length > 0 ? (
-                    <TagAnalytics tagStats={metrics.tagStats} maxTags={8} />
-                  ) : (
-                    <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-                      <h3 className="mb-4 text-lg font-semibold text-foreground">
-                        Top Tags
-                      </h3>
-                      <div className="flex h-[240px] items-center justify-center">
-                        <p className="text-sm text-foreground-muted">
-                          Add tags to your tasks to see analytics here.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <TimeAnalytics
-                  summary={timeTrackingSummary}
-                  quadrantDistribution={timeByQuadrant}
-                />
-              </div>
-            )}
-          </div>
-
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+          {isLoading ? (
+            <DashboardSkeleton />
+          ) : tasks.length === 0 ? (
+            <DashboardEmpty />
+          ) : (
+            <DashboardContent
+              data={data}
+              tasks={tasks}
+              trendPeriod={trendPeriod}
+              onTrendPeriodChange={setTrendPeriod}
+              onDeadlineTaskClick={handleDeadlineTaskClick}
+            />
+          )}
+        </div>
       </div>
     </AppShell>
+  );
+}
+
+function DashboardEmpty(): React.ReactElement {
+  return (
+    <div className="rounded-lg border-hair border-border bg-card p-12 text-center shadow-sm">
+      <ListTodoIcon className="mx-auto h-12 w-12 text-foreground-muted" />
+      <h2 className="mt-4 text-xl font-semibold text-foreground">No tasks yet</h2>
+      <p className="mt-2 text-sm text-foreground-muted">
+        Create your first task to start tracking your productivity!
+      </p>
+    </div>
+  );
+}
+
+interface DashboardContentProps {
+  data: ReturnType<typeof useDashboardData>;
+  tasks: ReturnType<typeof useTasks>["all"];
+  trendPeriod: 7 | 30 | 90;
+  onTrendPeriodChange: (v: 7 | 30 | 90) => void;
+  onDeadlineTaskClick: (task: { id: string }) => void;
+}
+
+function DashboardContent({ data, tasks, trendPeriod, onTrendPeriodChange, onDeadlineTaskClick }: DashboardContentProps): React.ReactElement {
+  const { metrics, trendData, streakData, timeTrackingSummary, timeByQuadrant,
+    completedSeries, createdSeries, completionRateSeries,
+    completedTrend, previousSixAverage,
+    completedInsight, activeInsight, completionInsight, plannedActiveShare } = data;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Completed Today"
+          value={metrics.completedToday}
+          icon={CheckCircle2Icon}
+          trend={previousSixAverage > 0 ? { value: completedTrend, isPositive: completedTrend >= 0 } : undefined}
+          insight={completedInsight}
+          footerMeta={`${metrics.completedThisWeek} / 7d`}
+          series={completedSeries}
+        />
+        <StatsCard
+          title="Active Tasks"
+          value={metrics.activeTasks}
+          icon={ListTodoIcon}
+          insight={activeInsight}
+          footerMeta={`${plannedActiveShare}% scheduled`}
+          series={createdSeries}
+        />
+        <StatsCard
+          title="Completion Rate"
+          value={`${metrics.completionRate}%`}
+          icon={TrendingUpIcon}
+          insight={completionInsight}
+          footerMeta={`${metrics.completedTasks} done overall`}
+          series={completionRateSeries}
+        />
+        <StreakIndicator streakData={streakData} />
+      </div>
+
+      {metrics.overdueCount > 0 && (
+        <div className="alert is-danger items-center rounded-xl px-5 py-3.5">
+          <AlertTriangleIcon className="h-5 w-5 shrink-0 text-rust" />
+          <div className="flex-1">
+            <p className="alert-title text-sm">
+              {metrics.overdueCount} overdue {metrics.overdueCount === 1 ? "task" : "tasks"}
+              {metrics.dueTodayCount > 0 && (
+                <span className="alert-body"> &middot; {metrics.dueTodayCount} due today</span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <div className="flex items-center">
+            <SegmentedControl
+              options={TREND_OPTIONS}
+              value={String(trendPeriod) as "7" | "30" | "90"}
+              onChange={(v) => onTrendPeriodChange(Number(v) as 7 | 30 | 90)}
+            />
+          </div>
+          <CompletionChart data={trendData} />
+        </div>
+        <QuadrantDistribution distribution={metrics.quadrantDistribution} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <UpcomingDeadlines tasks={tasks} onTaskClick={onDeadlineTaskClick} />
+        {metrics.tagStats.length > 0 ? (
+          <TagAnalytics tagStats={metrics.tagStats} maxTags={8} />
+        ) : (
+          <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-semibold text-foreground">Top Tags</h3>
+            <div className="flex h-[240px] items-center justify-center">
+              <p className="text-sm text-foreground-muted">Add tags to your tasks to see analytics here.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <TimeAnalytics summary={timeTrackingSummary} quadrantDistribution={timeByQuadrant} />
+    </div>
   );
 }

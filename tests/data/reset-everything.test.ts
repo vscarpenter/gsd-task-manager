@@ -64,7 +64,10 @@ describe('reset-everything', () => {
     vi.clearAllMocks();
     mockGetSyncConfig.mockResolvedValue(null);
     mockToArray.mockResolvedValue([]);
-    localStorage.clear();
+    // localStorage.clear() does not work in jsdom-under-Bun — remove keys individually
+    localStorage.removeItem('pocketbase_auth');
+    localStorage.removeItem('gsd-pwa-dismissed');
+    localStorage.removeItem('theme');
   });
 
   describe('resetEverything', () => {

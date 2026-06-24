@@ -3,6 +3,7 @@ import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import { importPayloadSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, TaskRecord } from "@/lib/types";
+import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 
 /** Maximum number of tasks allowed in a single import to prevent storage DoS */
@@ -127,7 +128,7 @@ function remapTaskReferences(
 }
 
 /** Resolve sync modules outside transaction to avoid detaching Dexie context */
-async function resolveSyncDeps() {
+async function resolveSyncDeps(): Promise<{ syncEnabled: boolean; queue: SyncQueue; scheduleSyncAfterChange: () => void }> {
   const { getSyncConfig } = await import("@/lib/sync/config");
   const { getSyncQueue } = await import("@/lib/sync/queue");
   const { scheduleSyncAfterChange } = await import("@/lib/tasks/crud/helpers");
