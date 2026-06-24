@@ -19,6 +19,7 @@ paths:
 
 - `tests/ui/` — UI/component tests (React Testing Library)
 - `tests/data/` — data logic, schemas, mappers
+- `tests/pb/` — PocketBase at-rest encryption (core crypto, adapters, backfill migration)
 - `tests/e2e/` — Playwright (auto-starts dev server via `playwright.config.ts`)
 - `packages/mcp-server/src/__tests__/` — MCP server tests
 
