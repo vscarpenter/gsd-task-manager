@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
+import { toast } from 'sonner';
 
 // --- Mocks ---
 
 const mockSync = vi.fn();
+const mockUseSyncHealth = vi.fn();
 const mockUseSync = vi.fn(() => ({
   sync: mockSync,
   isSyncing: false,
@@ -25,7 +27,11 @@ vi.mock('@/components/ui/toast', () => ({
 }));
 
 vi.mock('@/components/sync/use-sync-health', () => ({
-  useSyncHealth: vi.fn(),
+  useSyncHealth: (...args: unknown[]) => mockUseSyncHealth(...args),
+}));
+
+vi.mock('sonner', () => ({
+  toast: vi.fn(),
 }));
 
 const mockUseSyncStatus = vi.fn(() => ({
@@ -67,6 +73,8 @@ import { SyncButton } from '@/components/sync/sync-button';
 describe('SyncButton', () => {
   beforeEach(() => {
     mockSync.mockClear();
+    mockUseSyncHealth.mockReset();
+    vi.mocked(toast).mockClear();
     mockUseSync.mockReturnValue({
       sync: mockSync,
       isSyncing: false,
@@ -157,5 +165,35 @@ describe('SyncButton', () => {
 
     render(<SyncButton />);
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('forwards stable health issue ids to sonner so repeated warnings are deduped', () => {
+    mockUseSync.mockReturnValue({
+      sync: mockSync,
+      isSyncing: false,
+      status: 'idle',
+      error: null,
+      isEnabled: true,
+      nextRetryAt: null,
+    });
+    mockUseSyncHealth.mockImplementation(({ onHealthIssue }) => {
+      onHealthIssue({
+        id: 'sync-health-stale_queue',
+        message: 'Pending sync operations are stale',
+        duration: 6000,
+        action: { label: 'Sync Now', onClick: vi.fn() },
+      });
+    });
+
+    render(<SyncButton />);
+
+    expect(toast).toHaveBeenCalledWith(
+      'Pending sync operations are stale',
+      expect.objectContaining({
+        id: 'sync-health-stale_queue',
+        duration: 6000,
+        action: expect.objectContaining({ label: 'Sync Now' }),
+      })
+    );
   });
 });
