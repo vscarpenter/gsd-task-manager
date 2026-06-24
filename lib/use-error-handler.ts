@@ -60,7 +60,7 @@ export function useErrorHandlerWithUndo(): {
   }, []);
 
   const handleSuccess = useCallback(
-    (message: string, undoAction: () => Promise<void>, duration = TOAST_DURATION.LONG) => {
+    (message: string, undoAction: () => Promise<void>, duration: number = TOAST_DURATION.LONG) => {
       toast(message, {
         duration,
         action: {

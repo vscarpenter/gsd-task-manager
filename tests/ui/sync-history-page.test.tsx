@@ -56,12 +56,15 @@ vi.mock("@/lib/sync-history", () => ({
   clearHistory: () => mockClearHistory(),
 }));
 
-// Mock sonner toast
+// Mock sonner toast. The real export is a callable function with methods
+// attached; the page calls toast(message, { action }) for confirmations.
+const mockToast = Object.assign(vi.fn(), {
+  success: vi.fn(),
+  error: vi.fn(),
+});
+
 vi.mock("sonner", () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: mockToast,
 }));
 
 // Mock date-fns to avoid timezone issues
@@ -198,12 +201,10 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
     });
   });
 
-  it("clears history via useMutation with confirmation", async () => {
+  it("clears history when the confirmation toast action is invoked", async () => {
     const user = userEvent.setup();
     const records = [createMockHistoryRecord()];
     mockGetRecentHistory.mockResolvedValue(records);
-
-    vi.spyOn(window, "confirm").mockReturnValue(true);
 
     render(<SyncHistoryPage />, { wrapper: createQueryWrapper() });
 
@@ -214,18 +215,28 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
     });
 
     await user.click(screen.getByRole("button", { name: /clear history/i }));
+
+    // Clicking only surfaces a non-blocking confirmation toast — nothing cleared yet.
+    expect(mockToast).toHaveBeenCalledWith(
+      "Clear all sync history? This cannot be undone.",
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "Clear" }),
+      })
+    );
+    expect(mockClearHistory).not.toHaveBeenCalled();
+
+    // Invoking the toast's "Clear" action triggers the mutation.
+    mockToast.mock.calls[0][1].action.onClick();
 
     await waitFor(() => {
       expect(mockClearHistory).toHaveBeenCalledTimes(1);
     });
   });
 
-  it("does not clear history when confirmation cancelled", async () => {
+  it("does not clear history until the confirmation toast action is invoked", async () => {
     const user = userEvent.setup();
     const records = [createMockHistoryRecord()];
     mockGetRecentHistory.mockResolvedValue(records);
-
-    vi.spyOn(window, "confirm").mockReturnValue(false);
 
     render(<SyncHistoryPage />, { wrapper: createQueryWrapper() });
 
@@ -237,6 +248,8 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
 
     await user.click(screen.getByRole("button", { name: /clear history/i }));
 
+    // The confirmation toast appears, but without invoking its action nothing clears.
+    expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockClearHistory).not.toHaveBeenCalled();
   });
 
