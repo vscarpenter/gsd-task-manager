@@ -20,6 +20,15 @@ const config = [
     ...nextCoreWebVitals,
     ...nextTypescript,
     {
+        // eslint-plugin-react@7.37.5 (pulled via eslint-config-next) auto-detects
+        // the React version by calling context.getFilename(), which ESLint 10
+        // removed — crashing `react/*` rules. Pinning the version skips detection.
+        // Keep in sync with the `react` dependency in package.json.
+        settings: {
+            react: { version: "19.2.7" },
+        },
+    },
+    {
         plugins: {
             "react-hooks": reactHooksPlugin,
         },
