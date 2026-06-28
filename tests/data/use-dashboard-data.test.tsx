@@ -71,6 +71,7 @@ describe("useDashboardData", () => {
     );
 
     expect(result.current.completedSeries).toEqual([1, 1, 1, 1, 1, 1, 3]);
+    expect(result.current.trendData).toHaveLength(7);
     expect(result.current.completedTrend).toBe(200);
     expect(result.current.previousSixAverage).toBe(1);
     expect(result.current.completedInsight).toBe("Above your recent pace");
@@ -96,6 +97,31 @@ describe("useDashboardData", () => {
     expect(result.current.completionInsight).toBe("Room to tighten execution");
   });
 
+  it("uses holding-steady copy when today's completions match recent pace", () => {
+    const previousCompletions = [6, 5, 4, 3, 2, 1].map((daysAgo) =>
+      completedTask(`completed-${daysAgo}`, daysAgo)
+    );
+    const tasks = [...previousCompletions, completedTask("completed-today", 0)];
+
+    const { result } = renderHook(() => useDashboardData(tasks, 7));
+
+    expect(result.current.completedTrend).toBe(0);
+    expect(result.current.completedInsight).toBe("Holding steady");
+  });
+
+  it("uses below-pace copy when today's completions lag the recent average", () => {
+    const previousCompletions = [6, 5, 4, 3, 2, 1].flatMap((daysAgo) => [
+      completedTask(`completed-${daysAgo}-a`, daysAgo),
+      completedTask(`completed-${daysAgo}-b`, daysAgo),
+    ]);
+    const tasks = [...previousCompletions, completedTask("completed-today", 0)];
+
+    const { result } = renderHook(() => useDashboardData(tasks, 7));
+
+    expect(result.current.completedTrend).toBe(-50);
+    expect(result.current.completedInsight).toBe("Below your recent pace");
+  });
+
   it("uses strong follow-through and well-scoped copy at healthy thresholds", () => {
     const completedTasks = Array.from({ length: 4 }, (_, index) =>
       completedTask(`completed-${index}`, index)
@@ -104,6 +130,7 @@ describe("useDashboardData", () => {
 
     const { result } = renderHook(() => useDashboardData(tasks, 30));
 
+    expect(result.current.trendData).toHaveLength(30);
     expect(result.current.metrics.completionRate).toBe(80);
     expect(result.current.completionInsight).toBe("Strong follow-through");
     expect(result.current.activeInsight).toBe("Well scoped");
