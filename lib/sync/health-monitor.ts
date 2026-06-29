@@ -6,6 +6,7 @@
 
 import { getSyncQueue } from './queue';
 import { getPocketBase, isAuthenticated } from './pocketbase-client';
+import { ensureValidAuth } from './pb-auth';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
@@ -77,7 +78,7 @@ export class HealthMonitor {
       const failedIssue = await this.checkFailedItems();
       if (failedIssue) issues.push(failedIssue);
 
-      const authIssue = this.checkAuth();
+      const authIssue = await this.checkAuth();
       if (authIssue) issues.push(authIssue);
 
       const connectivityIssue = await this.checkServerConnectivity();
@@ -131,16 +132,19 @@ export class HealthMonitor {
     };
   }
 
-  private checkAuth(): HealthIssue | null {
-    if (!isAuthenticated()) {
-      return {
-        type: 'token_expired',
-        severity: 'error',
-        message: 'Authentication token has expired',
-        suggestedAction: 'Sign in again to continue syncing',
-      };
-    }
-    return null;
+  private async checkAuth(): Promise<HealthIssue | null> {
+    if (isAuthenticated()) return null;
+
+    // The JWT has lapsed, but the server session may still be valid — try a
+    // silent refresh before surfacing a "sign in again" error to the user.
+    if (await ensureValidAuth()) return null;
+
+    return {
+      type: 'token_expired',
+      severity: 'error',
+      message: 'Authentication token has expired',
+      suggestedAction: 'Sign in again to continue syncing',
+    };
   }
 
   private async checkServerConnectivity(): Promise<HealthIssue | null> {

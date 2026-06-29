@@ -37,12 +37,14 @@ import {
   getOAuthErrorMessage,
   openOAuthPopup,
   refreshAuth,
+  ensureValidAuth,
 } from '@/lib/sync/pb-auth';
 
 describe('PocketBase Auth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPb.authStore.token = 'test-token';
+    mockPb.authStore.isValid = true;
   });
 
   describe('loginWithProvider', () => {
@@ -204,6 +206,48 @@ describe('PocketBase Auth', () => {
       mockPb.authStore.token = '';
 
       const result = await refreshAuth();
+
+      expect(mockAuthRefresh).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('ensureValidAuth', () => {
+    it('returns true without refreshing when the token is still valid', async () => {
+      mockPb.authStore.isValid = true;
+
+      const result = await ensureValidAuth();
+
+      expect(result).toBe(true);
+      expect(mockAuthRefresh).not.toHaveBeenCalled();
+    });
+
+    it('attempts a silent refresh when the token is expired but present', async () => {
+      mockPb.authStore.isValid = false;
+      mockPb.authStore.token = 'expired-but-present';
+      mockAuthRefresh.mockResolvedValue({});
+
+      const result = await ensureValidAuth();
+
+      expect(mockAuthRefresh).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
+    });
+
+    it('reports failure cleanly when the silent refresh fails', async () => {
+      mockPb.authStore.isValid = false;
+      mockPb.authStore.token = 'expired-but-present';
+      mockAuthRefresh.mockRejectedValue(new Error('refresh rejected'));
+
+      const result = await ensureValidAuth();
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false without refreshing when there is no token at all', async () => {
+      mockPb.authStore.isValid = false;
+      mockPb.authStore.token = '';
+
+      const result = await ensureValidAuth();
 
       expect(mockAuthRefresh).not.toHaveBeenCalled();
       expect(result).toBe(false);

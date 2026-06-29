@@ -108,10 +108,17 @@ vi.mock('@/lib/sync/pb-sync-helpers', () => ({
   getDeviceId: vi.fn().mockResolvedValue('device-123'),
 }));
 
+// Mock auth — fullSync attempts a silent token refresh before push/pull.
+const mockEnsureValidAuth = vi.fn().mockResolvedValue(true);
+vi.mock('@/lib/sync/pb-auth', () => ({
+  ensureValidAuth: () => mockEnsureValidAuth(),
+}));
+
 describe('pb-sync-engine', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTasks.clear();
+    mockEnsureValidAuth.mockResolvedValue(true);
   });
 
   describe('applyRemoteChange', () => {
@@ -322,6 +329,48 @@ describe('pb-sync-engine', () => {
       expect(vi.mocked(notifySyncError).mock.calls[0][0]).toBe('validation_failed');
       expect(JSON.stringify(vi.mocked(recordSyncError).mock.calls)).not.toContain(secretTitle);
       expect(JSON.stringify(vi.mocked(notifySyncError).mock.calls)).not.toContain(secretTitle);
+    });
+
+    it('attempts a silent token refresh before pushing', async () => {
+      await fullSync('auto');
+
+      expect(mockEnsureValidAuth).toHaveBeenCalledTimes(1);
+    });
+
+    it('threads a push Retry-After hint into the retry manager on partial failure', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      vi.mocked(pushLocalChanges).mockResolvedValueOnce({
+        pushedCount: 0,
+        failedCount: 1,
+        lastError: 'rate_limited',
+        authenticated: true,
+        retryAfterMs: 30_000,
+      });
+
+      await fullSync('auto');
+
+      expect(mockRetryManager.recordFailure).toHaveBeenCalledWith(
+        expect.any(Error),
+        { retryAfterMs: 30_000 },
+      );
+    });
+
+    it('honors a Retry-After carried on a thrown 429 error', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const rateLimited = Object.assign(new Error('429 too many requests'), {
+        status: 429,
+        response: { retryAfterMs: 12_000 },
+      });
+      vi.mocked(pushLocalChanges).mockRejectedValueOnce(rateLimited);
+
+      const result = await fullSync('auto');
+
+      expect(result.status).toBe('error');
+      expect(result.error).toBe('rate_limited');
+      expect(mockRetryManager.recordFailure).toHaveBeenCalledWith(
+        rateLimited,
+        { retryAfterMs: 12_000 },
+      );
     });
   });
 });

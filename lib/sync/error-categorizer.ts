@@ -210,3 +210,23 @@ export function parseRetryAfterMs(value: string | null | undefined): number | nu
   if (Number.isNaN(timestamp)) return null;
   return Math.max(0, timestamp - Date.now());
 }
+
+/**
+ * Read a previously-captured Retry-After delay (in ms) off a thrown sync error.
+ *
+ * PocketBase's ClientResponseError forwards only `status` and the parsed body —
+ * never response headers. `pocketbase-client`'s afterSend hook folds the parsed
+ * `Retry-After` value into that body as `retryAfterMs`, so the 429 backoff path
+ * can read it back here without reaching into the SDK's internals. Returns
+ * `null` when no usable hint is present.
+ */
+export function extractRetryAfterMs(error: unknown): number | null {
+  if (!error || typeof error !== 'object') return null;
+
+  const response = (error as { response?: unknown }).response;
+  if (!response || typeof response !== 'object') return null;
+
+  const ms = (response as { retryAfterMs?: unknown }).retryAfterMs;
+  if (typeof ms === 'number' && Number.isFinite(ms) && ms >= 0) return ms;
+  return null;
+}
