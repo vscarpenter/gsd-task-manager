@@ -1,5 +1,7 @@
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
+import { subtaskSchema } from "@/lib/schema";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { getSyncQueue } from "@/lib/sync/queue";
@@ -46,15 +48,22 @@ export async function addSubtask(taskId: string, title: string): Promise<TaskRec
     throw new Error(`Task ${taskId} not found`);
   }
 
-  const newSubtask = {
+  if (existing.subtasks.length >= SCHEMA_LIMITS.MAX_SUBTASKS) {
+    throw new Error(`Cannot add subtask: maximum of ${SCHEMA_LIMITS.MAX_SUBTASKS} subtasks reached`);
+  }
+
+  const validation = subtaskSchema.safeParse({
     id: generateId(),
     title,
-    completed: false
-  };
+    completed: false,
+  });
+  if (!validation.success) {
+    throw new Error(`Invalid subtask: ${validation.error.issues.map((i) => i.message).join(", ")}`);
+  }
 
   const nextRecord: TaskRecord = {
     ...existing,
-    subtasks: [...existing.subtasks, newSubtask],
+    subtasks: [...existing.subtasks, validation.data],
     updatedAt: isoNow(),
   };
 
