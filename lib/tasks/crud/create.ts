@@ -56,8 +56,10 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
 
     return record;
   } catch (error) {
+    // Log only the operation, never the raw input — it holds the task
+    // title/description and these error logs fire in the production console.
     logger.error("Failed to create task", error instanceof Error ? error : undefined, {
-      input,
+      operation: "create",
     });
     throw new Error(`Failed to create task: ${formatErrorMessage(error)}`);
   }
