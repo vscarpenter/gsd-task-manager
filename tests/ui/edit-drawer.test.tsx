@@ -101,6 +101,37 @@ describe("<EditDrawer>", () => {
     expect(todayBtn.getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("preserves an existing custom due date when saving without changes", async () => {
+    const onSubmit = vi.fn();
+    const customDatedTask: TaskRecord = {
+      ...mockTask,
+      dueDate: "2026-05-20T14:30:00.000Z",
+    };
+    render(<EditDrawer open task={customDatedTask} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    expect(screen.getByRole("button", { name: /clear custom date/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    const [draft] = onSubmit.mock.calls[0] as [{ dueDate?: string }];
+    expect(draft.dueDate?.slice(0, 10)).toBe("2026-05-20");
+  });
+
+  it("normalizes typed tags and ignores duplicate tags before submit", async () => {
+    const onSubmit = vi.fn();
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText(/^title$/i), "Tagged task");
+    const tagInput = screen.getByPlaceholderText(/add a tag/i);
+    await user.type(tagInput, " #Work{Enter}");
+    await user.type(tagInput, "#work{Enter}");
+    await user.click(screen.getByRole("button", { name: /create task/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: ["work"] }),
+      undefined
+    );
+  });
+
   describe("create mode (task is null)", () => {
     it("shows 'New task' header and 'Create task' button", () => {
       render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
