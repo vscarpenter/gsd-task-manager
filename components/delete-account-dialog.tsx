@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer } from "react";
 import { AlertTriangleIcon, DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +29,52 @@ interface DeleteAccountDialogProps {
 	onDeleted?: () => void;
 }
 
+interface DeleteAccountFormState {
+	confirmText: string;
+	exportFirst: boolean;
+	hasExported: boolean;
+	eraseLocal: boolean;
+	isDeleting: boolean;
+}
+
+type DeleteAccountFormAction =
+	| { type: "setConfirmText"; value: string }
+	| { type: "setExportFirst"; value: boolean }
+	| { type: "setHasExported"; value: boolean }
+	| { type: "setEraseLocal"; value: boolean }
+	| { type: "setDeleting"; value: boolean }
+	| { type: "reset" };
+
+const INITIAL_DELETE_FORM_STATE: DeleteAccountFormState = {
+	confirmText: "",
+	exportFirst: false,
+	hasExported: false,
+	eraseLocal: false,
+	isDeleting: false,
+};
+
+function deleteAccountFormReducer(
+	state: DeleteAccountFormState,
+	action: DeleteAccountFormAction,
+): DeleteAccountFormState {
+	switch (action.type) {
+		case "setConfirmText":
+			return { ...state, confirmText: action.value };
+		case "setExportFirst":
+			// Turning the export toggle off invalidates any prior export.
+			return { ...state, exportFirst: action.value, hasExported: action.value ? state.hasExported : false };
+		case "setHasExported":
+			return { ...state, hasExported: action.value };
+		case "setEraseLocal":
+			return { ...state, eraseLocal: action.value };
+		case "setDeleting":
+			return { ...state, isDeleting: action.value };
+		case "reset":
+			// Preserve the in-flight deleting flag; only clear the form inputs.
+			return { ...INITIAL_DELETE_FORM_STATE, isDeleting: state.isDeleting };
+	}
+}
+
 /** Human-readable message for a failed remote deletion, by failure mode. */
 function failureMessage(result: DeleteAccountResult): string {
 	if (result.authRejected) {
@@ -52,11 +98,10 @@ export function DeleteAccountDialog({
 	onExport,
 	onDeleted,
 }: DeleteAccountDialogProps) {
-	const [confirmText, setConfirmText] = useState("");
-	const [exportFirst, setExportFirst] = useState(false);
-	const [hasExported, setHasExported] = useState(false);
-	const [eraseLocal, setEraseLocal] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
+	const [{ confirmText, exportFirst, hasExported, eraseLocal, isDeleting }, dispatch] = useReducer(
+		deleteAccountFormReducer,
+		INITIAL_DELETE_FORM_STATE,
+	);
 
 	const isConfirmed = confirmText === "DELETE";
 	const canDelete = isConfirmed && (!exportFirst || hasExported);
@@ -64,25 +109,18 @@ export function DeleteAccountDialog({
 	// onExport (the parent's handleExport) owns its own success/error toast and reports
 	// whether the backup was actually written. Only a real success unlocks the delete gate.
 	const handleExport = async () => {
-		setHasExported(await onExport());
-	};
-
-	const resetForm = () => {
-		setConfirmText("");
-		setExportFirst(false);
-		setHasExported(false);
-		setEraseLocal(false);
+		dispatch({ type: "setHasExported", value: await onExport() });
 	};
 
 	const handleDelete = async () => {
 		if (!canDelete) return;
-		setIsDeleting(true);
+		dispatch({ type: "setDeleting", value: true });
 
 		try {
 			const result = await deleteRemoteAccountAndTasks();
 			if (!result.ok) {
 				toast.error(failureMessage(result));
-				setIsDeleting(false);
+				dispatch({ type: "setDeleting", value: false });
 				return;
 			}
 
@@ -96,19 +134,19 @@ export function DeleteAccountDialog({
 
 			await disableSync();
 			toast.success("Account deleted. Your tasks remain on this device.");
-			setIsDeleting(false);
-			resetForm();
+			dispatch({ type: "setDeleting", value: false });
+			dispatch({ type: "reset" });
 			onOpenChange(false);
 			onDeleted?.();
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : "Account deletion failed");
-			setIsDeleting(false);
+			dispatch({ type: "setDeleting", value: false });
 		}
 	};
 
 	const handleClose = () => {
 		if (isDeleting) return;
-		resetForm();
+		dispatch({ type: "reset" });
 		onOpenChange(false);
 	};
 
@@ -149,10 +187,7 @@ export function DeleteAccountDialog({
 								<Switch
 									id="export-first"
 									checked={exportFirst}
-									onCheckedChange={(checked) => {
-										setExportFirst(checked === true);
-										if (!checked) setHasExported(false);
-									}}
+									onCheckedChange={(checked) => dispatch({ type: "setExportFirst", value: checked === true })}
 									disabled={isDeleting}
 								/>
 							</div>
@@ -181,7 +216,7 @@ export function DeleteAccountDialog({
 						<Switch
 							id="erase-local"
 							checked={eraseLocal}
-							onCheckedChange={(checked) => setEraseLocal(checked === true)}
+							onCheckedChange={(checked) => dispatch({ type: "setEraseLocal", value: checked === true })}
 							disabled={isDeleting}
 						/>
 					</div>
@@ -194,7 +229,7 @@ export function DeleteAccountDialog({
 						<Input
 							id="confirm-delete"
 							value={confirmText}
-							onChange={(e) => setConfirmText(e.target.value)}
+							onChange={(e) => dispatch({ type: "setConfirmText", value: e.target.value })}
 							placeholder="Type DELETE here"
 							disabled={isDeleting}
 							className="font-mono"

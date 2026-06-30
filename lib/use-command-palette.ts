@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
 import type { CommandAction } from "@/lib/command-actions";
 import type { TaskRecord } from "@/lib/types";
 import { applyFilters } from "@/lib/filters";
@@ -12,48 +12,73 @@ interface UseCommandPaletteOptions {
   onSelectTask?: (taskId: string) => void;
 }
 
+interface PaletteState {
+  open: boolean;
+  search: string;
+  selectedActionId: string | null;
+}
+
+type PaletteAction =
+  | { type: "toggle" }
+  | { type: "open" }
+  | { type: "close" }
+  | { type: "setSearch"; value: string }
+  | { type: "setSelectedActionId"; value: string | null };
+
+const INITIAL_PALETTE_STATE: PaletteState = { open: false, search: "", selectedActionId: null };
+
+// Closing also clears the in-flight search and selection.
+function paletteReducer(state: PaletteState, action: PaletteAction): PaletteState {
+  switch (action.type) {
+    case "toggle":
+      return state.open ? INITIAL_PALETTE_STATE : { ...state, open: true };
+    case "open":
+      return { ...state, open: true };
+    case "close":
+      return INITIAL_PALETTE_STATE;
+    case "setSearch":
+      return { ...state, search: action.value };
+    case "setSelectedActionId":
+      return { ...state, selectedActionId: action.value };
+  }
+}
+
 /**
  * Hook to manage command palette state and filtering
  */
 export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPaletteOptions) {
-  const [open, setOpenState] = useState(false);
-  const [search, setSearch] = useState('');
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(paletteReducer, INITIAL_PALETTE_STATE);
+  const { open, search, selectedActionId } = state;
 
-  const setOpen = (next: boolean | ((previous: boolean) => boolean)) => {
-    setOpenState((previous) => {
-      const resolved = typeof next === 'function' ? next(previous) : next;
-      if (!resolved) {
-        setSearch('');
-        setSelectedActionId(null);
-      }
-      return resolved;
-    });
-  };
-
-  // Open/close with ⌘K / Ctrl+K
+  // Open/close with ⌘K / Ctrl+K, Escape to close. `dispatch` is stable, so the
+  // listener subscribes once.
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen(prev => !prev);
-      }
-
-      // Escape to close
-      if (e.key === 'Escape' && open) {
-        setOpen(false);
+        dispatch({ type: "toggle" });
+      } else if (e.key === 'Escape') {
+        dispatch({ type: "close" });
       }
     };
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [open, setOpen]);
+  }, []);
 
   useEffect(() => {
-    const openPalette = () => setOpen(true);
+    const openPalette = () => dispatch({ type: "open" });
     window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
     return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
-  }, [setOpen]);
+  }, []);
+
+  const setOpen = (next: boolean | ((previous: boolean) => boolean)) => {
+    const resolved = typeof next === 'function' ? next(open) : next;
+    dispatch(resolved ? { type: "open" } : { type: "close" });
+  };
+  const setSearch = (value: string) => dispatch({ type: "setSearch", value });
+  const setSelectedActionId = (value: string | null) =>
+    dispatch({ type: "setSelectedActionId", value });
 
   // Filter actions by search query
   const filteredActions = (() => {

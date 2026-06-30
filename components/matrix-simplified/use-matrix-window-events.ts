@@ -45,24 +45,27 @@ export function useMatrixWindowEvents({
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get("action");
-    if (!action) return;
+    if (action !== "new-task" && action !== "capture") return;
 
+    let focusTimer: ReturnType<typeof setTimeout> | undefined;
     if (action === "new-task") {
-      setTimeout(() => captureInputRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
-    } else if (action === "capture") {
+      focusTimer = setTimeout(() => captureInputRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
+    } else {
       const draft = parseShareCaptureParams(params);
       if (draft) {
         createTask(draft)
           .then(() => toast.success("Task captured", { duration: TOAST_DURATION.SHORT }))
           .catch(() => toast.error("Failed to capture task", { duration: TOAST_DURATION.LONG }));
       }
-    } else {
-      return;
     }
 
     ["action", "title", "url", "tags"].forEach((k) => params.delete(k));
     const next = params.toString();
     window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
+
+    return () => {
+      if (focusTimer) clearTimeout(focusTimer);
+    };
   }, [captureInputRef]);
 
   // Global "/" focuses search; "n" handled by CaptureBar; "?" opens help

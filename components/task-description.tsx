@@ -1,4 +1,4 @@
-import { getDescriptionSegments } from "@/lib/task-links";
+import { getDescriptionSegments, type DescriptionSegment } from "@/lib/task-links";
 import { cn } from "@/lib/utils";
 
 interface TaskDescriptionProps {
@@ -6,18 +6,26 @@ interface TaskDescriptionProps {
   className?: string;
 }
 
+// Segments partition the description left-to-right and never reorder, so each
+// segment's cumulative character offset is a stable, content-derived key.
+function segmentKeys(segments: DescriptionSegment[]): string[] {
+  const keys: string[] = [];
+  let offset = 0;
+  for (const segment of segments) {
+    keys.push(`${offset}-${segment.type}`);
+    offset += segment.text.length;
+  }
+  return keys;
+}
+
 export function TaskDescription({ description, className }: TaskDescriptionProps) {
   const segments = getDescriptionSegments(description);
-
-  // Segments partition the description left-to-right and never reorder, so the
-  // cumulative character offset of each segment is a stable, content-derived key.
-  let offset = 0;
+  const keys = segmentKeys(segments);
 
   return (
     <span className={cn("break-words", className)}>
-      {segments.map((segment) => {
-        const key = `${offset}-${segment.type}`;
-        offset += segment.text.length;
+      {segments.map((segment, index) => {
+        const key = keys[index];
 
         if (segment.type === "text") {
           return <span key={key}>{segment.text}</span>;

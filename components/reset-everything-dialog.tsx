@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useReducer } from "react";
 import { AlertTriangleIcon, DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +17,49 @@ import { resetEverything, reloadAfterReset } from "@/lib/reset-everything";
 import { UI_TIMING } from "@/lib/constants/ui";
 import type { ResetOptions } from "@/lib/reset-everything";
 import { toast } from "sonner";
+
+interface ResetFormState {
+	confirmText: string;
+	exportFirst: boolean;
+	preserveTheme: boolean;
+	hasExported: boolean;
+	isResetting: boolean;
+}
+
+type ResetFormAction =
+	| { type: "setConfirmText"; value: string }
+	| { type: "setExportFirst"; value: boolean }
+	| { type: "setPreserveTheme"; value: boolean }
+	| { type: "setHasExported"; value: boolean }
+	| { type: "setResetting"; value: boolean }
+	| { type: "resetInputs" };
+
+const INITIAL_RESET_FORM_STATE: ResetFormState = {
+	confirmText: "",
+	exportFirst: false,
+	preserveTheme: true,
+	hasExported: false,
+	isResetting: false,
+};
+
+function resetFormReducer(state: ResetFormState, action: ResetFormAction): ResetFormState {
+	switch (action.type) {
+		case "setConfirmText":
+			return { ...state, confirmText: action.value };
+		case "setExportFirst":
+			// Turning the export toggle off invalidates any prior export.
+			return { ...state, exportFirst: action.value, hasExported: action.value ? state.hasExported : false };
+		case "setPreserveTheme":
+			return { ...state, preserveTheme: action.value };
+		case "setHasExported":
+			return { ...state, hasExported: action.value };
+		case "setResetting":
+			return { ...state, isResetting: action.value };
+		case "resetInputs":
+			// Clear the confirmation inputs but keep the sticky theme toggle.
+			return { ...state, confirmText: "", exportFirst: false, hasExported: false };
+	}
+}
 
 interface ResetEverythingDialogProps {
 	open: boolean;
@@ -48,11 +91,10 @@ export function ResetEverythingDialog({
 	syncEnabled,
 	pendingSync,
 }: ResetEverythingDialogProps) {
-	const [confirmText, setConfirmText] = useState("");
-	const [exportFirst, setExportFirst] = useState(false);
-	const [preserveTheme, setPreserveTheme] = useState(true);
-	const [hasExported, setHasExported] = useState(false);
-	const [isResetting, setIsResetting] = useState(false);
+	const [{ confirmText, exportFirst, preserveTheme, hasExported, isResetting }, dispatch] = useReducer(
+		resetFormReducer,
+		INITIAL_RESET_FORM_STATE,
+	);
 
 	const totalTasks = activeTasks + completedTasks;
 	const isConfirmed = confirmText === "RESET";
@@ -61,13 +103,13 @@ export function ResetEverythingDialog({
 	// onExport (the parent's handleExport) owns its own success/error toast and reports
 	// whether the backup was actually written. Only a real success unlocks the reset gate.
 	const handleExport = async () => {
-		setHasExported(await onExport());
+		dispatch({ type: "setHasExported", value: await onExport() });
 	};
 
 	const handleReset = async () => {
 		if (!canReset) return;
 
-		setIsResetting(true);
+		dispatch({ type: "setResetting", value: true });
 
 		try {
 			const options: ResetOptions = {
@@ -86,20 +128,18 @@ export function ResetEverythingDialog({
 			} else {
 				// Partial failure
 				toast.error(`Reset completed with errors: ${result.errors.join(", ")}`);
-				setIsResetting(false);
+				dispatch({ type: "setResetting", value: false });
 			}
 		} catch (err) {
 			const errorMsg = err instanceof Error ? err.message : "Reset failed";
 			toast.error(errorMsg);
-			setIsResetting(false);
+			dispatch({ type: "setResetting", value: false });
 		}
 	};
 
 	const handleClose = () => {
 		if (!isResetting) {
-			setConfirmText("");
-			setExportFirst(false);
-			setHasExported(false);
+			dispatch({ type: "resetInputs" });
 			onOpenChange(false);
 		}
 	};
@@ -164,10 +204,7 @@ export function ResetEverythingDialog({
 								<Switch
 									id="export-first"
 									checked={exportFirst}
-									onCheckedChange={(checked) => {
-										setExportFirst(checked === true);
-										if (!checked) setHasExported(false);
-									}}
+									onCheckedChange={(checked) => dispatch({ type: "setExportFirst", value: checked === true })}
 									disabled={isResetting}
 								/>
 							</div>
@@ -199,7 +236,7 @@ export function ResetEverythingDialog({
 						<Switch
 							id="preserve-theme"
 							checked={preserveTheme}
-							onCheckedChange={(checked) => setPreserveTheme(checked === true)}
+							onCheckedChange={(checked) => dispatch({ type: "setPreserveTheme", value: checked === true })}
 							disabled={isResetting}
 						/>
 					</div>
@@ -212,7 +249,7 @@ export function ResetEverythingDialog({
 						<Input
 							id="confirm-text"
 							value={confirmText}
-							onChange={(e) => setConfirmText(e.target.value)}
+							onChange={(e) => dispatch({ type: "setConfirmText", value: e.target.value })}
 							placeholder="Type RESET here"
 							disabled={isResetting}
 							className="font-mono"
