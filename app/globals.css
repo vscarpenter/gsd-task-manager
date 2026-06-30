@@ -142,7 +142,6 @@
   --gradient-schedule:  var(--q2);
   --gradient-delegate:  var(--q3);
   --gradient-eliminate: var(--q4);
-  --chart-series-2:     var(--sky);
 
   /* Task-status palette — derived from Inkwell semantic tokens. */
   --status-overdue:        var(--rust);

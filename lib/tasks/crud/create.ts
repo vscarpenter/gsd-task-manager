@@ -28,9 +28,14 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
 
   const result = taskDraftSchema.safeParse(normalized);
   if (!result.success) {
-    const msg = result.error.issues.map(i => i.message).join(", ");
-    logger.error("Task validation failed", undefined, { input, validationErrors: msg });
-    throw new Error(`Task validation failed: ${msg}`);
+    // Summarize failures as field + Zod error code only. Never log the raw
+    // input — it holds the task title/description and would leak free-text
+    // content to the browser console.
+    const fieldErrors = result.error.issues
+      .map(issue => `${issue.path.join(".") || "(root)"} (${issue.code})`)
+      .join(", ");
+    logger.error("Task validation failed", undefined, { validationErrors: fieldErrors });
+    throw new Error(`Task validation failed: ${fieldErrors}`);
   }
 
   try {
@@ -51,8 +56,10 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
 
     return record;
   } catch (error) {
+    // Log only the operation, never the raw input — it holds the task
+    // title/description and these error logs fire in the production console.
     logger.error("Failed to create task", error instanceof Error ? error : undefined, {
-      input,
+      operation: "create",
     });
     throw new Error(`Failed to create task: ${formatErrorMessage(error)}`);
   }

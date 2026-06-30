@@ -354,6 +354,49 @@ describe('Task CRUD Operations', () => {
 
       await expect(updateTask('task-1', { title: 'Updated' })).rejects.toThrow('Failed to update task');
     });
+
+    it.each([
+      {
+        scenario: 'extracts a URL from an updated title into the description',
+        initialDescription: 'Existing notes',
+        newTitle: 'Watch https://example.com/video',
+        expectedTitle: 'Watch',
+        expectedDescription: 'Existing notes\nhttps://example.com/video',
+      },
+      {
+        scenario: 'falls back to placeholder when the updated title is URL-only',
+        initialDescription: '',
+        newTitle: 'https://example.com',
+        expectedTitle: 'Review link below',
+        expectedDescription: 'https://example.com/',
+      },
+      {
+        scenario: 'leaves the title unchanged when the updated title has no URL',
+        initialDescription: 'Plain description',
+        newTitle: 'Plain updated title',
+        expectedTitle: 'Plain updated title',
+        expectedDescription: 'Plain description',
+      },
+    ])('$scenario', async ({ initialDescription, newTitle, expectedTitle, expectedDescription }) => {
+      const existing: TaskRecord = {
+        ...baseDraft,
+        id: 'task-1',
+        description: initialDescription,
+        quadrant: 'urgent-important',
+        completed: false,
+        createdAt: '2025-01-15T10:00:00Z',
+        updatedAt: '2025-01-15T10:00:00Z',
+        notificationSent: false,
+      };
+
+      mockDb.tasks.get.mockResolvedValue(existing);
+      mockDb.tasks.put.mockResolvedValue(undefined);
+
+      const result = await updateTask('task-1', { title: newTitle });
+
+      expect(result.title).toBe(expectedTitle);
+      expect(result.description).toBe(expectedDescription);
+    });
   });
 
   describe('toggleCompleted', () => {
