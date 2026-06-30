@@ -1,0 +1,8 @@
+{
+  "ignore": {
+    "overrides": [
+      { "files": ["docker/**"], "rules": ["react-doctor/no-dynamic-import-path"] },
+      { "files": ["public/docs/**"], "rules": ["react-doctor/public-debug-artifact"] }
+    ]
+  }
+}
