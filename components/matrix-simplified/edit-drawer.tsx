@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useRef, type FormEvent } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
@@ -28,20 +28,37 @@ interface EditDrawerProps {
   onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
 }
 
+type EditDrawerFormProps = Omit<EditDrawerProps, "open">;
+
 export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: EditDrawerProps): React.ReactElement | null {
+  if (!open) return null;
+  // Remount the form when the selected task changes so its field state is
+  // seeded fresh from props — no effect-based rehydration needed.
+  return (
+    <EditDrawerForm
+      key={task?.id ?? "__create__"}
+      task={task}
+      initialDraft={initialDraft}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function EditDrawerForm({ task, initialDraft, onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLFormElement>(null);
-  const draft = useEditDraftState(open, task, initialDraft, titleRef);
-  const trapKeyDown = useDialogFocus(open, drawerRef);
+  const draft = useEditDraftState(task, initialDraft, titleRef);
+  const trapKeyDown = useDialogFocus(true, drawerRef);
 
+  // `onClose` may change identity between renders; useEffectEvent keeps the
+  // keydown listener subscribed once while always calling the latest handler.
+  const handleEscape = useEffectEvent(() => onClose());
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleEscape(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, []);
 
   const isCreateMode = !task;
   const activeQuadrant = quadrants.find((q) => q.urgent === draft.urgent && q.important === draft.important);
@@ -56,7 +73,6 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
   return (
     <div
       onClick={onClose}
-      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
       role="presentation"
       className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay"
     >
@@ -107,6 +123,7 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
               onChange={(e) => draft.setDescription(e.target.value)}
               rows={4}
               placeholder="Optional details, links, context"
+              aria-label="Description"
               className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted"
             />
           </Field>

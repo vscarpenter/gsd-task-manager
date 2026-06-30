@@ -6,6 +6,8 @@ export function cn(...classNames: Array<string | undefined | false | null>): str
   return twMerge(clsx(classNames));
 }
 
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+
 /**
  * Extract a human-readable message from an unknown caught error.
  * Use in catch blocks to safely access the error message.
@@ -39,7 +41,6 @@ export function formatRelative(value?: string): string {
   }
 
   const date = new Date(value);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
   const now = new Date();
   const diff = date.getTime() - now.getTime();
   const dayDelta = Math.round(diff / TIME_MS.DAY);
@@ -48,7 +49,7 @@ export function formatRelative(value?: string): string {
     return formatDueDate(value);
   }
 
-  return formatter.format(dayDelta, "day");
+  return relativeTimeFormatter.format(dayDelta, "day");
 }
 
 /**

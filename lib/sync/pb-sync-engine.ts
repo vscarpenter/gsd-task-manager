@@ -115,6 +115,7 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     // A merely-expired JWT can still be refreshed from the server session.
     // Attempt that silently here; if it fails, push/pull report the auth
     // failure cleanly via the unauthenticated path below.
+    // react-doctor-disable-next-line react-doctor/async-parallel -- auth->push->pull ordering is required; not independent
     await ensureValidAuth();
 
     const pushResult = await pushLocalChanges();

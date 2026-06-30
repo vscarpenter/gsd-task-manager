@@ -72,26 +72,31 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
       .map(t => [t.id, t])
   );
 
-  let pulledCount = 0;
+  // Each record targets a distinct task id, so the local writes are
+  // independent and run concurrently.
+  const pullOutcomes = await Promise.all(
+    validRecords.map(async (record) => {
+      const taskId = record['task_id'] as string;
+      const localTask = localTaskMap.get(taskId);
+      const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
+      if (!remoteTask) return 0;
 
-  for (const record of validRecords) {
-    const taskId = record['task_id'] as string;
-    const localTask = localTaskMap.get(taskId);
-    const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
-    if (!remoteTask) continue;
+      if (!localTask) {
+        await db.tasks.add(remoteTask);
+        return 1;
+      }
 
-    if (!localTask) {
-      await db.tasks.add(remoteTask);
-      pulledCount++;
-    } else {
       const remoteTime = new Date(remoteTask.updatedAt).getTime();
       const localTime = new Date(localTask.updatedAt).getTime();
       if (remoteTime > localTime) {
         await db.tasks.put(remoteTask);
-        pulledCount++;
+        return 1;
       }
-    }
-  }
+      return 0;
+    })
+  );
+
+  const pulledCount = pullOutcomes.reduce((sum: number, n) => sum + n, 0);
 
   return { pulledCount, skippedCount };
 }
@@ -172,10 +177,13 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   const allPendingOps = await db.syncQueue.toArray();
   const pendingTaskIds = new Set(allPendingOps.map(op => op.taskId));
 
-  for (const local of localTasks) {
-    if (!remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)) {
-      await db.tasks.delete(local.id);
+  const toDelete = localTasks.filter(
+    local => !remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)
+  );
+  await Promise.all(
+    toDelete.map(local => {
       logger.debug('Deleted locally: task removed from server', { taskId: local.id });
-    }
-  }
+      return db.tasks.delete(local.id);
+    })
+  );
 }

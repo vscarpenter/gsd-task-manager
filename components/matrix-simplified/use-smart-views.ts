@@ -4,7 +4,7 @@
  * MatrixSimplified to keep the component focused.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { TOAST_DURATION } from "@/lib/constants";
 import { type SmartView } from "@/lib/filters";
@@ -86,22 +86,19 @@ export function useSmartViews(clearSearch: () => void): SmartViewsState {
     };
   }, [smartViewsEnabled]);
 
-  const applySmartViewById = useCallback(
-    async (viewId: string) => {
-      const view = await getSmartView(viewId);
-      if (!view) {
-        toast.error("Smart view not found", { duration: TOAST_DURATION.SHORT });
-        return;
-      }
-      clearSearch();
-      setActiveSmartView(view);
-    },
-    [clearSearch]
-  );
+  const applySmartViewById = async (viewId: string) => {
+    const view = await getSmartView(viewId);
+    if (!view) {
+      toast.error("Smart view not found", { duration: TOAST_DURATION.SHORT });
+      return;
+    }
+    clearSearch();
+    setActiveSmartView(view);
+  };
 
-  const clearSmartView = useCallback(() => {
+  const clearSmartView = () => {
     setActiveSmartView(null);
-  }, []);
+  };
 
   return { smartViewsEnabled, smartViews, activeSmartView, applySmartViewById, clearSmartView };
 }

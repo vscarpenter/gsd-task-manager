@@ -94,7 +94,7 @@ export function getClaudeConfigPath(): string {
 /**
  * Create readline interface for user input
  */
-export function createReadline() {
+function createReadline() {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createInterface } = require('node:readline');
   return createInterface({

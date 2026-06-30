@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { SettingsRow, SettingsSelectRow } from '@/components/settings/shared-components';
 import { AboutSection } from '@/components/settings/about-section';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
@@ -466,7 +466,11 @@ describe('Settings Components', () => {
       mockGetAutoSyncConfig.mockResolvedValue({ enabled: false, intervalMinutes: 5 });
       render(<SyncSettings onViewHistory={vi.fn()} />);
       await screen.findByText('Auto-sync');
-      expect(screen.queryByText('Sync interval')).not.toBeInTheDocument();
+      // auto-sync defaults on; the interval row hides once the async config
+      // (enabled: false) loads, so wait for that state to settle.
+      await waitFor(() =>
+        expect(screen.queryByText('Sync interval')).not.toBeInTheDocument()
+      );
     });
   });
 });

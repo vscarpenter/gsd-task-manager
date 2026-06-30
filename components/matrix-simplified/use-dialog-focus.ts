@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -24,21 +24,18 @@ export function useDialogFocus(
     };
   }, [open]);
 
-  return useCallback(
-    (event: KeyboardEvent<HTMLElement>) => {
-      if (event.key !== "Tab") return;
-      const nodes = ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-      if (!nodes || nodes.length === 0) return;
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    },
-    [ref]
-  );
+  return (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Tab") return;
+    const nodes = ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    if (!nodes || nodes.length === 0) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 }

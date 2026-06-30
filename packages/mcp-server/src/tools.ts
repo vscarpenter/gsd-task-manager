@@ -25,9 +25,6 @@ export {
   taskToPBFields,
 } from './types.js';
 
-// Re-export constants
-export { MAX_TASKS_PER_PULL } from './constants.js';
-
 // Re-export task tools
 export { listTasks } from './tools/list-tasks.js';
 export { getTask } from './tools/get-task.js';
@@ -35,10 +32,6 @@ export { searchTasks } from './tools/search-tasks.js';
 
 // Re-export sync tools
 export { getSyncStatus, getTaskStats } from './tools/sync-status.js';
-
-// Re-export task stats tool
-export { getDetailedTaskStats } from './tools/task-stats.js';
-export type { DetailedTaskStats } from './tools/task-stats.js';
 
 // Re-export device tools
 export { listDevices } from './tools/devices.js';

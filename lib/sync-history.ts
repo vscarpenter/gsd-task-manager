@@ -187,7 +187,7 @@ export async function getHistoryStats(): Promise<{
     totalPulled: allRecords.reduce((sum, r) => sum + r.pulledCount, 0),
     totalConflictsResolved: allRecords.reduce((sum, r) => sum + r.conflictsResolved, 0),
     lastSyncAt: allRecords.length > 0
-      ? allRecords.sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0].timestamp
+      ? allRecords.reduce((latest, r) => (r.timestamp > latest ? r.timestamp : latest), allRecords[0].timestamp)
       : null,
   };
 

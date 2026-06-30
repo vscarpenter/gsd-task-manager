@@ -13,6 +13,10 @@ export function FirstTimeRedirect() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // The redirect decision depends on localStorage (client-only) in a static-export
+  // SPA, so it cannot be resolved during render with next/navigation's redirect().
+  // A useEffect redirect is unavoidable here; the component renders null, so it never
+  // paints the wrong page itself (no flash originates from this component).
   useEffect(() => {
     const hasLaunched = localStorage.getItem(STORAGE_KEY);
     if (hasLaunched) return;
@@ -21,6 +25,7 @@ export function FirstTimeRedirect() {
     localStorage.setItem(STORAGE_KEY, "true");
 
     if (pathname !== "/about") {
+      // react-doctor-disable-next-line react-doctor/nextjs-no-client-side-redirect -- client-gated SPA redirect; renders null, no flash
       router.replace("/about");
     }
   }, [pathname, router]);

@@ -176,8 +176,10 @@ self.addEventListener("notificationclick", (event) => {
 			.matchAll({ type: "window", includeUncontrolled: true })
 			.then((clientList) => {
 				for (const client of clientList) {
+					// The SW scope is a URL prefix, so startsWith is the precise
+					// containment check (and is not an array-membership lookup).
 					if (
-						client.url.includes(self.registration.scope) &&
+						client.url.startsWith(self.registration.scope) &&
 						"focus" in client
 					) {
 						return client.focus();

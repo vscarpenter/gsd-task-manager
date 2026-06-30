@@ -16,7 +16,10 @@ console.log('\nValues:');
 console.log('GSD_POCKETBASE_URL:', vars.GSD_POCKETBASE_URL || '(not set)');
 console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? '***' : '(not set)');
 
-const missing = Object.entries(vars).filter(([, v]) => !v).map(([k]) => k);
+const missing = Object.entries(vars).reduce((acc, [k, v]) => {
+  if (!v) acc.push(k);
+  return acc;
+}, []);
 if (missing.length > 0) {
   console.log(`\n❌ Missing: ${missing.join(', ')}`);
   console.log('\nPossible fixes:');

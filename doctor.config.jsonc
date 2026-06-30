@@ -1,0 +1,38 @@
+{
+  // React Doctor configuration.
+  //
+  // Confirmed false positives are suppressed at the exact code site via inline
+  // `// react-doctor-disable-next-line <rule> -- <reason>` comments wherever
+  // that is syntactically possible (see the many annotations across lib/sync,
+  // packages/mcp-server, components/*, docker/, public/sw.js, etc.).
+  //
+  // The entries below are the ONLY ones that cannot be annotated inline:
+  //   - findings anchored to an attribute line inside a multi-line JSX opening
+  //     tag (no valid position for a preceding comment between attributes), and
+  //   - non-JS files (a YAML workflow and a static HTML report) whose comment
+  //     syntax React Doctor's disable directive does not recognize.
+  // Each is a documented false positive; the oxlint pass remains fully active.
+  "ignore": {
+    "overrides": [
+      // Hand-rolled modals (CLAUDE.md design intent): role="dialog" + aria-modal
+      // + managed focus/Escape already meet the a11y contract; a native <dialog>
+      // migration is separate behavior-changing work. Findings sit on JSX
+      // attribute lines, so they can't be inline-annotated.
+      { "files": ["components/install-pwa-prompt.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
+      { "files": ["components/matrix-simplified/edit-drawer.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/no-noninteractive-element-interactions"] },
+      { "files": ["components/onboarding/onboarding.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
+      // role="group" + aria-label is the correct ARIA for a toolbar of filter
+      // pills; the rule's suggested <address> is for contact info.
+      { "files": ["components/matrix-simplified/smart-view-strip.tsx"], "rules": ["react-doctor/prefer-tag-over-role"] },
+      // Generic shadcn <label> primitive: callers pass htmlFor via spread props.
+      { "files": ["components/ui/label.tsx"], "rules": ["react-doctor/label-has-associated-control"] },
+      // Links a static .html asset (not an App Router route); next/link would break it.
+      { "files": ["components/settings/about-section.tsx"], "rules": ["react-doctor/nextjs-no-a-element"] },
+      // YAML workflow: NPM_TOKEN is scoped to the publish step, so the install
+      // step runs without the secret in its environment.
+      { "files": [".github/workflows/publish-mcp-server.yml"], "rules": ["react-doctor/build-pipeline-secret-boundary"] },
+      // Static HTML report intentionally linked from the About page.
+      { "files": ["public/docs/**"], "rules": ["react-doctor/public-debug-artifact"] }
+    ]
+  }
+}

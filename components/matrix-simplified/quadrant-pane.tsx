@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIcon } from "lucide-react";
@@ -73,11 +72,8 @@ export function QuadrantPane({
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
   const QuadrantIcon = RD_ICON[meta.rdIcon];
-  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
-  const activeTaskCount = useMemo(
-    () => tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0),
-    [tasks]
-  );
+  const taskIds = tasks.map((t) => t.id);
+  const activeTaskCount = tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0);
   return (
     <section
       data-testid={`quadrant-${meta.rdKey}`}

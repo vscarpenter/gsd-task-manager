@@ -52,10 +52,8 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 			db.tasks, db.archivedTasks, db.notificationSettings,
 			db.archiveSettings, db.syncQueue, db.syncHistory,
 		] as const;
-		for (const table of tablesToClear) {
-			await table.clear();
-			cleared.push(table.name);
-		}
+		await Promise.all(tablesToClear.map((table) => table.clear()));
+		cleared.push(...tablesToClear.map((table) => table.name));
 
 		// Clear only custom smart views (preserve built-in)
 		const customViews = (await db.smartViews.toArray()).filter((v) => !v.isBuiltIn);

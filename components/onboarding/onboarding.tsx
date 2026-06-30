@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { XIcon, ZapIcon } from "lucide-react";
 import { GsdLogo } from "@/components/gsd-logo";
 import { cn } from "@/lib/utils";
@@ -96,27 +96,28 @@ const SCREENS: Screen[] = [
 ];
 
 export function Onboarding({ open, onClose, onSignIn }: OnboardingProps) {
+  if (!open) return null;
+  // Mounting the dialog only while `open` means it starts fresh on the welcome
+  // screen every time the flow opens — no reset-on-prop-change effect needed.
+  return <OnboardingDialog onClose={onClose} onSignIn={onSignIn} />;
+}
+
+function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) {
   const [index, setIndex] = useState(0);
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  // Reset to the first screen each time the flow opens.
+  // Escape dismisses the flow. useEffectEvent keeps the latest onClose without
+  // re-subscribing the keydown listener when the prop identity changes.
+  const onEscape = useEffectEvent(() => onClose());
   useEffect(() => {
-    if (open) setIndex(0);
-  }, [open]);
-
-  // Escape dismisses the flow.
-  useEffect(() => {
-    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onEscape();
     };
     window.addEventListener("keydown", onKey);
     closeRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, []);
 
   const screen = SCREENS[index];
   const isLast = index === SCREENS.length - 1;
@@ -126,6 +127,9 @@ export function Onboarding({ open, onClose, onSignIn }: OnboardingProps) {
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       style={{ backgroundColor: "var(--backdrop)" }}
     >
+      {/* Intentionally a hand-rolled modal (aria-modal + manual focus/Escape)
+          rather than a native <dialog>: the app owns its focus and backdrop
+          behavior here. See CLAUDE.md design notes. */}
       <div
         role="dialog"
         aria-modal="true"

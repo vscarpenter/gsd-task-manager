@@ -12,50 +12,56 @@ export function PwaRegister() {
 			return;
 		}
 
+		let cancelled = false;
+		let activeRegistration: ServiceWorkerRegistration | null = null;
+
+		// Check for updates when the page becomes visible.
+		const onVisibilityChange = () => {
+			if (document.visibilityState === "visible") {
+				activeRegistration?.update().catch((error) => {
+					logger.error('Service worker update check failed', error instanceof Error ? error : new Error(String(error)));
+				});
+			}
+		};
+
+		const onUpdateFound = (registration: ServiceWorkerRegistration) => () => {
+			const newWorker = registration.installing;
+			if (!newWorker) return;
+
+			newWorker.addEventListener("statechange", () => {
+				if (
+					newWorker.state === "installed" &&
+					navigator.serviceWorker.controller
+				) {
+					// New service worker is ready
+					logger.info('New service worker available');
+
+					// Dispatch custom event to notify PwaUpdateToast
+					window.dispatchEvent(
+						new CustomEvent("pwa-update-available", {
+							detail: newWorker,
+						}),
+					);
+				}
+			});
+		};
+		let updateFoundHandler: (() => void) | null = null;
+
 		const register = async () => {
 			try {
 				const registration = await navigator.serviceWorker.register("/sw.js", {
 					scope: "/",
 					updateViaCache: "none",
 				});
+				if (cancelled) return;
+				activeRegistration = registration;
 				logger.info('Service worker registered successfully');
 
-				// Check for updates when page becomes visible
-				const checkForUpdates = () => {
-					registration.update().catch((error) => {
-						logger.error('Service worker update check failed', error instanceof Error ? error : new Error(String(error)));
-					});
-				};
-
-				// Check for updates when the page becomes visible
-				document.addEventListener("visibilitychange", () => {
-					if (document.visibilityState === "visible") {
-						checkForUpdates();
-					}
-				});
+				document.addEventListener("visibilitychange", onVisibilityChange);
 
 				// Listen for service worker updates
-				registration.addEventListener("updatefound", () => {
-					const newWorker = registration.installing;
-					if (!newWorker) return;
-
-					newWorker.addEventListener("statechange", () => {
-						if (
-							newWorker.state === "installed" &&
-							navigator.serviceWorker.controller
-						) {
-							// New service worker is ready
-							logger.info('New service worker available');
-
-							// Dispatch custom event to notify PwaUpdateToast
-							window.dispatchEvent(
-								new CustomEvent("pwa-update-available", {
-									detail: newWorker,
-								}),
-							);
-						}
-					});
-				});
+				updateFoundHandler = onUpdateFound(registration);
+				registration.addEventListener("updatefound", updateFoundHandler);
 
 				// Wait for service worker to be active before registering periodic sync
 				await navigator.serviceWorker.ready;
@@ -107,6 +113,14 @@ export function PwaRegister() {
 		};
 
 		register();
+
+		return () => {
+			cancelled = true;
+			document.removeEventListener("visibilitychange", onVisibilityChange);
+			if (updateFoundHandler) {
+				activeRegistration?.removeEventListener("updatefound", updateFoundHandler);
+			}
+		};
 	}, []);
 
 	return null;

@@ -4,6 +4,7 @@
 // acquired INSIDE each callback (outer-scope variables are not visible).
 
 onRecordCreate((e) => {
+  // react-doctor-disable-next-line react-doctor/no-dynamic-import-path -- PocketBase `require(`${__hooks}/..`)` is its required hook idiom
   const core = require(`${__hooks}/encryption-core.js`);
   const key = $os.getenv("GSD_TASKS_ENC_KEY");
   core.requireValidKey(key);
@@ -12,6 +13,7 @@ onRecordCreate((e) => {
 }, "tasks");
 
 onRecordUpdate((e) => {
+  // react-doctor-disable-next-line react-doctor/no-dynamic-import-path -- PocketBase `require(`${__hooks}/..`)` is its required hook idiom
   const core = require(`${__hooks}/encryption-core.js`);
   const key = $os.getenv("GSD_TASKS_ENC_KEY");
   core.requireValidKey(key);
@@ -20,6 +22,7 @@ onRecordUpdate((e) => {
 }, "tasks");
 
 onRecordEnrich((e) => {
+  // react-doctor-disable-next-line react-doctor/no-dynamic-import-path -- PocketBase `require(`${__hooks}/..`)` is its required hook idiom
   const core = require(`${__hooks}/encryption-core.js`);
   const key = $os.getenv("GSD_TASKS_ENC_KEY");
   core.requireValidKey(key);

@@ -45,7 +45,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
       {/* Middle: 7-day activity strip — olive marks a completed day */}
       <div className="mt-4 flex items-center gap-1.5">
         {last7Days.map((active, index) => (
-          <div key={index} className="flex flex-col items-center gap-1">
+          <div key={DAY_LABELS[index]} className="flex flex-col items-center gap-1">
             <div
               className={`h-3 w-3 rounded-full transition-colors ${
                 active ? "bg-status-success" : "bg-background-muted"

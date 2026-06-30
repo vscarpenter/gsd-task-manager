@@ -109,6 +109,7 @@ describe('PwaRegister', () => {
       installing: null,
       update: vi.fn().mockResolvedValue(undefined),
       addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
     });
     Object.defineProperty(navigator, 'serviceWorker', {
       value: {

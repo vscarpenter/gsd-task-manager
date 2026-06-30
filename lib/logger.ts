@@ -122,6 +122,10 @@ function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
   return levelIndex >= minLevelIndex;
 }
 
+// Case-insensitive match on key substrings that indicate sensitive data.
+const SENSITIVE_KEY_PATTERN =
+  /token|password|secret|apikey|authorization|passphrase|email|credential|cookie|session|jwt|refresh|access|bearer/i;
+
 /**
  * Sanitize sensitive data from log metadata
  * Removes tokens, passwords, and other secrets
@@ -136,15 +140,9 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
     sanitized.url = maskSensitiveString(sanitized.url);
   }
 
-  // Remove sensitive fields (case-insensitive match on key substrings)
-  const sensitivePatterns = [
-    'token', 'password', 'secret', 'apikey', 'authorization',
-    'passphrase', 'email', 'credential', 'cookie', 'session',
-    'jwt', 'refresh', 'access', 'bearer',
-  ];
+  // Remove sensitive fields
   for (const key of Object.keys(sanitized)) {
-    const lower = key.toLowerCase();
-    if (sensitivePatterns.some(pattern => lower.includes(pattern))) {
+    if (SENSITIVE_KEY_PATTERN.test(key)) {
       sanitized[key] = '***';
     } else {
       sanitized[key] = sanitizeValue(sanitized[key]);

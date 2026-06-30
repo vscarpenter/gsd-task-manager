@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { AlertCircleIcon, CalendarIcon, ClockIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants } from "@/lib/quadrants";
@@ -19,7 +18,7 @@ const QUADRANT_BY_ID = new Map(quadrants.map((quadrant) => [quadrant.id, quadran
  * Uses theme-aware colors for proper dark mode support.
  */
 export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps) {
-  const { overdueTasks, dueTodayTasks, dueThisWeekTasks, hasDeadlines } = useMemo(() => {
+  const { overdueTasks, dueTodayTasks, dueThisWeekTasks, hasDeadlines } = (() => {
     const now = new Date();
     const weekFromNow = new Date(now);
     weekFromNow.setDate(weekFromNow.getDate() + 7);
@@ -48,7 +47,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
       dueThisWeekTasks: thisWeek,
       hasDeadlines: overdue.length > 0 || today.length > 0 || thisWeek.length > 0,
     };
-  }, [tasks]);
+  })();
 
   return (
     <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
@@ -140,6 +139,7 @@ function DeadlineSection({
           return (
             <li key={task.id}>
               <button
+                type="button"
                 onClick={() => onTaskClick?.(task)}
                 className={`w-full cursor-pointer rounded-lg border ${borderColor} ${bgColor} p-3 text-left transition-all hover:shadow-sm`}
               >

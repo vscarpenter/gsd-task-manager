@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import type { TagStatistic } from "@/lib/analytics";
 
 interface TagAnalyticsProps {
@@ -13,14 +12,11 @@ interface TagAnalyticsProps {
  * Replaces the previous table layout with a more visual, dashboard-friendly design.
  */
 export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
-  const { displayTags, maxCount } = useMemo(() => {
-    const nextDisplayTags = tagStats.slice(0, maxTags);
-    let nextMaxCount = 1;
-    for (const tag of nextDisplayTags) {
-      if (tag.count > nextMaxCount) nextMaxCount = tag.count;
-    }
-    return { displayTags: nextDisplayTags, maxCount: nextMaxCount };
-  }, [maxTags, tagStats]);
+  const displayTags = tagStats.slice(0, maxTags);
+  let maxCount = 1;
+  for (const tag of displayTags) {
+    if (tag.count > maxCount) maxCount = tag.count;
+  }
 
   if (displayTags.length === 0) {
     return (

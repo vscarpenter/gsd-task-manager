@@ -191,8 +191,10 @@ export async function pushLocalChanges(): Promise<PushResult> {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
 
-  const deviceId = await getDeviceId();
-  const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
+  const [deviceId, { index: remoteIndex, fetchSucceeded }] = await Promise.all([
+    getDeviceId(),
+    fetchRemoteTaskIndex(ownerId),
+  ]);
   let pushedCount = 0;
   let failedCount = 0;
   let skippedCount = 0;
@@ -201,6 +203,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
 
   for (const item of pending) {
     try {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       const outcome = await pushSingleItem(item, remoteIndex, fetchSucceeded, ownerId, deviceId);
       if (outcome === 'pushed') {
         pushedCount++;
@@ -234,6 +237,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
           errorCode,
         });
       }
+      // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
       await queue.recordAttemptFailure(item.id, errorCode);
 
       // 429 means the server is under load. Abort the push loop early so
