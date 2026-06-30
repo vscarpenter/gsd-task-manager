@@ -1,14 +1,16 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import {
+  ComposedChart,
+  Area,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import type { TrendDataPoint } from "@/lib/analytics";
-
-// Load the recharts-backed graph on demand so recharts stays out of the
-// initial bundle (client-only chart, no SSR).
-const CompletionChartGraph = dynamic(() => import("./completion-chart-graph"), {
-  ssr: false,
-  loading: () => <div className="h-[280px]" aria-hidden />,
-});
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "numeric",
@@ -58,7 +60,62 @@ export function CompletionChart({ data }: CompletionChartProps) {
           <span className="text-xs font-medium text-foreground-muted">Created</span>
         </div>
       </div>
-      <CompletionChartGraph chartData={chartData} />
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={chartData}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="currentColor"
+            className="text-border"
+            strokeOpacity={0.5}
+          />
+          <XAxis
+            dataKey="date"
+            stroke="currentColor"
+            className="text-foreground-muted"
+            style={{ fontSize: "12px" }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            stroke="currentColor"
+            className="text-foreground-muted"
+            style={{ fontSize: "12px" }}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "var(--paper)",
+              border: "var(--border)",
+              borderRadius: "10px",
+              fontSize: "13px",
+              color: "var(--slate)",
+              boxShadow: "var(--shadow-card-hover)",
+            }}
+            cursor={{ stroke: "var(--gray-500)", strokeOpacity: 0.3 }}
+          />
+          <Area
+            type="monotone"
+            dataKey="Completed"
+            stroke="var(--status-success)"
+            strokeWidth={2}
+            fill="var(--status-success)"
+            fillOpacity={0.08}
+            dot={false}
+            activeDot={{ r: 5, fill: "var(--status-success)", stroke: "var(--paper)", strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="Created"
+            stroke="var(--ink-3)"
+            strokeWidth={1.6}
+            strokeDasharray="3 3"
+            dot={false}
+            activeDot={{ r: 5, fill: "var(--ink-3)", stroke: "var(--paper)", strokeWidth: 2 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   );
 }

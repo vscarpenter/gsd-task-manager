@@ -69,8 +69,9 @@
       // String.prototype.includes substring check (single client URL vs scope),
       // not array membership — a Set does not apply.
       { "files": ["public/sw.js"], "rules": ["react-doctor/js-set-map-lookups"] },
-      // This module IS the next/dynamic target loaded lazily by completion-chart.tsx.
-      { "files": ["components/dashboard/completion-chart-graph.tsx"], "rules": ["react-doctor/prefer-dynamic-import"] },
+      // recharts is already route-split (only /dashboard loads it); a further
+      // next/dynamic boundary isn't worth orphaning the chart from its test.
+      { "files": ["components/dashboard/completion-chart.tsx"], "rules": ["react-doctor/prefer-dynamic-import"] },
       // NPM_TOKEN is scoped to the publish step; the install step runs without
       // the secret in its environment.
       { "files": [".github/workflows/publish-mcp-server.yml"], "rules": ["react-doctor/build-pipeline-secret-boundary"] }
