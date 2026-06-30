@@ -17,7 +17,6 @@ export type { StreakData } from './analytics/index.js';
 
 export {
   calculateMetrics,
-  calculateTagStatistics,
   getQuadrantPerformance,
   getUpcomingDeadlines,
   getStreakData,

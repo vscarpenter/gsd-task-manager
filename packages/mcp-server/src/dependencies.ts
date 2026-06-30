@@ -18,7 +18,7 @@ import type { Task } from './types.js';
  * @param allTasks - All tasks in the system
  * @returns true if circular dependency would be created
  */
-export function wouldCreateCircularDependency(
+function wouldCreateCircularDependency(
   taskId: string,
   dependencyId: string,
   allTasks: Task[]
@@ -105,9 +105,10 @@ export function validateDependencies(
 
   // Check for circular dependencies (only for existing tasks)
   if (taskId) {
+    const tasksById = new Map(allTasks.map((t) => [t.id, t]));
     for (const depId of dependencies) {
       if (wouldCreateCircularDependency(taskId, depId, allTasks)) {
-        const depTask = allTasks.find((t) => t.id === depId);
+        const depTask = tasksById.get(depId);
         return {
           valid: false,
           error: `Circular dependency detected with "${depTask?.title || depId}"`,

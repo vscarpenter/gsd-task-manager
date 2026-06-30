@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import type { TaskRecord } from "@/lib/types";
 import {
   calculateMetrics,
@@ -27,21 +26,20 @@ export interface DashboardData {
 
 /** Derives all analytics values for the Dashboard page from the raw task list. */
 export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90): DashboardData {
-  const metrics = useMemo(() => calculateMetrics(tasks), [tasks]);
-  const last7TrendData = useMemo(() => getCompletionTrend(tasks, 7), [tasks]);
-  const trendData = useMemo(() => getCompletionTrend(tasks, trendPeriod), [tasks, trendPeriod]);
-  const streakData = useMemo(() => getStreakData(tasks), [tasks]);
-  const timeTrackingSummary = useMemo(() => calculateTimeTrackingSummary(tasks), [tasks]);
-  const timeByQuadrant = useMemo(() => getTimeByQuadrant(tasks), [tasks]);
+  const metrics = calculateMetrics(tasks);
+  const last7TrendData = getCompletionTrend(tasks, 7);
+  const trendData = getCompletionTrend(tasks, trendPeriod);
+  const streakData = getStreakData(tasks);
+  const timeTrackingSummary = calculateTimeTrackingSummary(tasks);
+  const timeByQuadrant = getTimeByQuadrant(tasks);
 
-  const completedSeries = useMemo(() => last7TrendData.map((p) => p.completed), [last7TrendData]);
-  const createdSeries = useMemo(() => last7TrendData.map((p) => p.created), [last7TrendData]);
-  const completionRateSeries = useMemo(
-    () => last7TrendData.map((p) => Math.round((p.completed / (p.created || 1)) * 100)),
-    [last7TrendData]
+  const completedSeries = last7TrendData.map((p) => p.completed);
+  const createdSeries = last7TrendData.map((p) => p.created);
+  const completionRateSeries = last7TrendData.map((p) =>
+    Math.round((p.completed / (p.created || 1)) * 100)
   );
 
-  const { completedTrend, previousSixAverage } = useMemo(() => {
+  const { completedTrend, previousSixAverage } = (() => {
     const todayTrend = last7TrendData.at(-1)?.completed ?? 0;
     let previousTotal = 0;
     for (let i = 0; i < last7TrendData.length - 1; i += 1) {
@@ -53,7 +51,7 @@ export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90):
       ? Math.round(((todayTrend - nextPreviousSixAverage) / nextPreviousSixAverage) * 100)
       : todayTrend > 0 ? 100 : 0;
     return { completedTrend: nextCompletedTrend, previousSixAverage: nextPreviousSixAverage };
-  }, [last7TrendData]);
+  })();
 
   const completedInsight = metrics.completedToday === 0
     ? "Ready to start today"

@@ -191,8 +191,10 @@ export async function pushLocalChanges(): Promise<PushResult> {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
 
-  const deviceId = await getDeviceId();
-  const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
+  const [deviceId, { index: remoteIndex, fetchSucceeded }] = await Promise.all([
+    getDeviceId(),
+    fetchRemoteTaskIndex(ownerId),
+  ]);
   let pushedCount = 0;
   let failedCount = 0;
   let skippedCount = 0;

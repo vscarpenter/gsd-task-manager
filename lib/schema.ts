@@ -23,8 +23,8 @@ export const subtaskSchema = z.object({
 
 export const timeEntrySchema = z.object({
 	id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
-	startedAt: z.string().datetime({ offset: true }),
-	endedAt: z.string().datetime({ offset: true }).optional(),
+	startedAt: z.iso.datetime({ offset: true }),
+	endedAt: z.iso.datetime({ offset: true }).optional(),
 	notes: z.string().max(SCHEMA_LIMITS.TIME_ENTRY_NOTES_MAX_LENGTH).optional(),
 });
 
@@ -33,7 +33,7 @@ export const taskDraftSchema = z.object({
 	description: z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH).default(""),
 	urgent: z.boolean(),
 	important: z.boolean(),
-	dueDate: z.string().datetime({ offset: true }).optional(),
+	dueDate: z.iso.datetime({ offset: true }).optional(),
 	recurrence: recurrenceTypeSchema.default("none"),
 	tags: z.array(z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH)).max(SCHEMA_LIMITS.MAX_TAGS).default([]),
 	subtasks: z.array(subtaskSchema).max(SCHEMA_LIMITS.MAX_SUBTASKS).default([]),
@@ -51,13 +51,13 @@ export const taskRecordSchema = taskDraftSchema
 		id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
 		quadrant: quadrantIdSchema,
 		completed: z.boolean(),
-		completedAt: z.string().datetime({ offset: true }).optional(),
-		createdAt: z.string().datetime({ offset: true }),
-		updatedAt: z.string().datetime({ offset: true }),
+		completedAt: z.iso.datetime({ offset: true }).optional(),
+		createdAt: z.iso.datetime({ offset: true }),
+		updatedAt: z.iso.datetime({ offset: true }),
 		parentTaskId: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH).optional(),
 		notificationSent: z.boolean().default(false),
-		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
-		snoozedUntil: z.string().datetime({ offset: true }).optional(),
+		lastNotificationAt: z.iso.datetime({ offset: true }).optional(),
+		snoozedUntil: z.iso.datetime({ offset: true }).optional(),
 		// Time tracking fields
 		timeSpent: z.number().int().min(0).optional(), // Total minutes spent (calculated)
 		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
@@ -75,13 +75,13 @@ export const storedTaskRecordSchema = taskDraftSchema
 		id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
 		quadrant: quadrantIdSchema,
 		completed: z.boolean(),
-		completedAt: z.string().datetime({ offset: true }).optional(),
-		createdAt: z.string().datetime({ offset: true }),
-		updatedAt: z.string().datetime({ offset: true }),
+		completedAt: z.iso.datetime({ offset: true }).optional(),
+		createdAt: z.iso.datetime({ offset: true }),
+		updatedAt: z.iso.datetime({ offset: true }),
 		parentTaskId: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH).optional(),
 		notificationSent: z.boolean().default(false),
-		lastNotificationAt: z.string().datetime({ offset: true }).optional(),
-		snoozedUntil: z.string().datetime({ offset: true }).optional(),
+		lastNotificationAt: z.iso.datetime({ offset: true }).optional(),
+		snoozedUntil: z.iso.datetime({ offset: true }).optional(),
 		timeSpent: z.number().int().min(0).optional(),
 		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
 	})
@@ -89,7 +89,7 @@ export const storedTaskRecordSchema = taskDraftSchema
 
 export const importPayloadSchema = z.object({
 	tasks: z.array(storedTaskRecordSchema),
-	exportedAt: z.string().datetime({ offset: true }),
+	exportedAt: z.iso.datetime({ offset: true }),
 	version: z.string(),
 });
 
@@ -101,5 +101,5 @@ export const notificationSettingsSchema = z.object({
 	quietHoursStart: z.string().optional(), // HH:mm format
 	quietHoursEnd: z.string().optional(), // HH:mm format
 	permissionAsked: z.boolean().default(false),
-	updatedAt: z.string().datetime({ offset: true }),
+	updatedAt: z.iso.datetime({ offset: true }),
 });

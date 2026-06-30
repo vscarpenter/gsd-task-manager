@@ -303,38 +303,40 @@ class GsdDatabase extends Dexie {
         const existingConfig = await trans.table("syncMetadata").get("sync_config");
         const deviceId = existingConfig?.deviceId || crypto.randomUUID();
 
-        await trans.table("syncMetadata").put({
-          key: "sync_config",
-          enabled: false,
-          userId: null,
-          deviceId,
-          deviceName: navigator?.userAgent?.substring(0, 50) || "Desktop",
-          email: null,
-          provider: null,
-          lastSyncAt: null,
-          consecutiveFailures: 0,
-          lastFailureAt: null,
-          lastFailureReason: null,
-          nextRetryAt: null,
-          autoSyncEnabled: true,
-          autoSyncIntervalMinutes: 2,
-        });
+        // Steps 2-4 below are independent of one another, so run them together.
+        await Promise.all([
+          // 2. Reset sync metadata for PocketBase (user must re-authenticate)
+          trans.table("syncMetadata").put({
+            key: "sync_config",
+            enabled: false,
+            userId: null,
+            deviceId,
+            deviceName: navigator?.userAgent?.substring(0, 50) || "Desktop",
+            email: null,
+            provider: null,
+            lastSyncAt: null,
+            consecutiveFailures: 0,
+            lastFailureAt: null,
+            lastFailureReason: null,
+            nextRetryAt: null,
+            autoSyncEnabled: true,
+            autoSyncIntervalMinutes: 2,
+          }),
 
-        // 3. Remove encryption_salt entry (no longer needed)
-        await trans.table("syncMetadata").delete("encryption_salt").catch(() => {
-          // May not exist — that's fine
-        });
+          // 3. Remove encryption_salt entry (no longer needed)
+          trans.table("syncMetadata").delete("encryption_salt").catch(() => {
+            // May not exist — that's fine
+          }),
 
-        // 4. Strip vectorClock from existing tasks
-        // Uses legacy migration interface for fields not in current TypeScript schema.
-        await trans.table("tasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
-          delete task.vectorClock;
-        });
-
-        // Same migration interface for archived tasks.
-        await trans.table("archivedTasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
-          delete task.vectorClock;
-        });
+          // 4. Strip vectorClock from existing + archived tasks.
+          // Uses legacy migration interface for fields not in current TypeScript schema.
+          trans.table("tasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
+            delete task.vectorClock;
+          }),
+          trans.table("archivedTasks").toCollection().modify((task: LegacyTaskMigrationRecord) => {
+            delete task.vectorClock;
+          }),
+        ]);
 
         logger.info("PocketBase migration complete. Please re-authenticate to enable sync.");
       });

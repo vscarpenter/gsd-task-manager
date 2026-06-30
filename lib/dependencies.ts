@@ -168,9 +168,10 @@ export function validateDependencies(
   }
 
   // Check for circular dependencies
+  const tasksById = new Map(allTasks.map(t => [t.id, t]));
   for (const depId of dependencies) {
     if (wouldCreateCircularDependency(taskId, depId, allTasks)) {
-      const depTask = allTasks.find(t => t.id === depId);
+      const depTask = tasksById.get(depId);
       return {
         valid: false,
         error: `Circular dependency detected with "${depTask?.title || depId}"`

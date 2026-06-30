@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   ComposedChart,
   Area,
@@ -13,6 +12,11 @@ import {
 } from "recharts";
 import type { TrendDataPoint } from "@/lib/analytics";
 
+const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "numeric",
+  day: "numeric",
+});
+
 interface CompletionChartProps {
   data: TrendDataPoint[];
 }
@@ -24,13 +28,11 @@ interface CompletionChartProps {
  * The single soft area anchors "completed" without crowding the comparison.
  */
 export function CompletionChart({ data }: CompletionChartProps) {
-  const chartData = useMemo(() => {
-    return data.map((point) => ({
-      date: formatDate(point.date),
-      Completed: point.completed,
-      Created: point.created,
-    }));
-  }, [data]);
+  const chartData = data.map((point) => ({
+    date: formatDate(point.date),
+    Completed: point.completed,
+    Created: point.created,
+  }));
 
   return (
     <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
@@ -70,14 +72,14 @@ export function CompletionChart({ data }: CompletionChartProps) {
             dataKey="date"
             stroke="currentColor"
             className="text-foreground-muted"
-            style={{ fontSize: "11px" }}
+            style={{ fontSize: "12px" }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
             stroke="currentColor"
             className="text-foreground-muted"
-            style={{ fontSize: "11px" }}
+            style={{ fontSize: "12px" }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
@@ -119,9 +121,5 @@ export function CompletionChart({ data }: CompletionChartProps) {
 }
 
 function formatDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "numeric",
-    day: "numeric",
-  }).format(date);
+  return DATE_FORMATTER.format(new Date(isoDate));
 }

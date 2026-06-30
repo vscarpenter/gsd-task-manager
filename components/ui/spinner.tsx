@@ -13,16 +13,15 @@ const sizeMap = {
 
 export function Spinner({ className, size = "md" }: SpinnerProps) {
   return (
-    <div
+    <output
       className={cn(
         "animate-spin rounded-full border-2 border-current border-t-transparent",
         sizeMap[size],
         className
       )}
-      role="status"
       aria-label="Loading"
     >
       <span className="sr-only">Loading...</span>
-    </div>
+    </output>
   );
 }

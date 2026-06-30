@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
 import type { QuadrantId } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
+
+/** 1x1 transparent pixel so the accessible bar summary lives on a real <img alt>. */
+const TRANSPARENT_PIXEL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 interface QuadrantDistributionProps {
   distribution: Record<QuadrantId, number>;
@@ -21,22 +24,27 @@ const SHORT_LABELS: Record<QuadrantId, string> = {
  * placing labels and colors on the same visual axis.
  */
 export function QuadrantDistribution({ distribution }: QuadrantDistributionProps) {
-  const { segments, total } = useMemo(() => {
-    const items = quadrants
-      .map((quadrant) => ({
+  const segments: {
+    name: string;
+    shortName: string;
+    value: number;
+    id: QuadrantId;
+    color: string;
+  }[] = [];
+  let total = 0;
+  for (const quadrant of quadrants) {
+    const value = distribution[quadrant.id];
+    if (value > 0) {
+      segments.push({
         name: quadrant.title,
         shortName: SHORT_LABELS[quadrant.id],
-        value: distribution[quadrant.id],
+        value,
         id: quadrant.id,
         color: QUADRANT_ACCENT_BY_ID[quadrant.id],
-      }))
-      .filter((item) => item.value > 0);
-
-    return {
-      segments: items,
-      total: items.reduce((sum, item) => sum + item.value, 0),
-    };
-  }, [distribution]);
+      });
+      total += value;
+    }
+  }
 
   return (
     <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
@@ -60,11 +68,13 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
         </div>
       ) : (
         <div className="mt-6 space-y-5">
-          <div
-            className="flex h-3 overflow-hidden rounded-full"
-            role="img"
-            aria-label={`${total} active tasks across ${segments.length} quadrants`}
-          >
+          {/* Accessible summary as a real <img>; the segmented bar below is decorative. */}
+          <img
+            src={TRANSPARENT_PIXEL}
+            alt={`${total} active tasks across ${segments.length} quadrants`}
+            className="sr-only"
+          />
+          <div className="flex h-3 overflow-hidden rounded-full" aria-hidden>
             {segments.map((segment) => {
               const pct = (segment.value / total) * 100;
               return (

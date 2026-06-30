@@ -17,7 +17,6 @@ export type { StreakData } from './streaks.js';
 // Core metrics functions
 export {
   calculateMetrics,
-  calculateTagStatistics,
   getQuadrantPerformance,
   getUpcomingDeadlines,
 } from './metrics.js';

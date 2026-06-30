@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, use, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { TOAST_DURATION } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function useToast() {
-  const context = useContext(ToastContext);
+  const context = use(ToastContext);
   if (!context) {
     throw new Error("useToast must be used within ToastProvider");
   }
@@ -79,6 +79,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
               </Button>
             )}
             <button
+              type="button"
               onClick={() => hideToast(toast.id)}
               className="text-foreground-muted hover:text-foreground"
               aria-label="Dismiss"

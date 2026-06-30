@@ -40,9 +40,12 @@ export async function requestNotificationPermission(): Promise<boolean> {
   }
 
   try {
-    const permission = await Notification.requestPermission();
+    // Requesting the OS permission and reading current settings are independent.
+    const [permission, settings] = await Promise.all([
+      Notification.requestPermission(),
+      getNotificationSettings(),
+    ]);
     // Update settings to mark that we've asked
-    const settings = await getNotificationSettings();
     await updateNotificationSettings({ ...settings, permissionAsked: true });
     return permission === "granted";
   } catch (error) {

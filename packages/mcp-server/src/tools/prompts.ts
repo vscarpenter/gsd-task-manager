@@ -5,37 +5,37 @@ import type { Prompt } from '@modelcontextprotocol/sdk/types.js';
  * Prompts provide pre-built conversational templates for Claude
  */
 
-export const dailyStandupPrompt: Prompt = {
+const dailyStandupPrompt: Prompt = {
   name: 'daily-standup',
   description: "Daily task review: today's tasks, overdue items, and productivity summary",
   arguments: [],
 };
 
-export const weeklyReviewPrompt: Prompt = {
+const weeklyReviewPrompt: Prompt = {
   name: 'weekly-review',
   description: 'Weekly productivity analysis: completion stats, trends, and top quadrants',
   arguments: [],
 };
 
-export const focusModePrompt: Prompt = {
+const focusModePrompt: Prompt = {
   name: 'focus-mode',
   description: 'Get urgent and important tasks (Q1: Do First) to focus on right now',
   arguments: [],
 };
 
-export const upcomingDeadlinesPrompt: Prompt = {
+const upcomingDeadlinesPrompt: Prompt = {
   name: 'upcoming-deadlines',
   description: 'Show all overdue tasks, tasks due today, and tasks due this week',
   arguments: [],
 };
 
-export const productivityReportPrompt: Prompt = {
+const productivityReportPrompt: Prompt = {
   name: 'productivity-report',
   description: 'Comprehensive productivity report with metrics, streaks, and insights',
   arguments: [],
 };
 
-export const tagAnalysisPrompt: Prompt = {
+const tagAnalysisPrompt: Prompt = {
   name: 'tag-analysis',
   description: 'Analyze task distribution and completion rates by tags/projects',
   arguments: [],
