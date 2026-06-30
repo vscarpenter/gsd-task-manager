@@ -118,11 +118,16 @@ jobs:
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
         run: |
-          RESULT=$(node src/post-to-x.mjs --post-file post.txt)
-          echo "$RESULT"
-          POST_URL=$(node -e "process.stdout.write((JSON.parse(process.argv[1]).post_url)||'')" "$RESULT")
-          {
-            echo "## Published to @GSDTaskManager"
-            echo ""
-            echo "- Post URL: ${POST_URL}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          # TEMP DIAGNOSTIC (debug/social-x-auth-probe only): prints credential
+          # lengths/shape (never the values — GitHub still masks those) and does a
+          # read-only v2.me() auth check to distinguish bad values from app config.
+          # Does NOT post. Revert before merging.
+          node -e '
+          import("twitter-api-v2").then(async ({TwitterApi}) => {
+            const need=["X_API_KEY","X_API_SECRET","X_ACCESS_TOKEN","X_ACCESS_TOKEN_SECRET"];
+            for (const k of need){const v=process.env[k]||""; console.log(k,"len="+v.length,"trimmed_len="+v.trim().length);}
+            console.log("access_token_shape_ok:", /^[0-9]+-/.test(process.env.X_ACCESS_TOKEN||""));
+            const c=new TwitterApi({appKey:process.env.X_API_KEY,appSecret:process.env.X_API_SECRET,accessToken:process.env.X_ACCESS_TOKEN,accessSecret:process.env.X_ACCESS_TOKEN_SECRET});
+            try{const me=await c.v2.me(); console.log("AUTH_OK as @"+me.data.username);}
+            catch(e){console.log("AUTH_FAIL code="+(e.code||e.status)); console.log("X_SAYS:", JSON.stringify(e.data||e.message));}
+          });'
