@@ -10,7 +10,7 @@ import { getSyncQueue } from './queue';
 import { taskRecordToPocketBase } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
-import { sanitizeSyncError, isTransientSyncFailure } from './error-categorizer';
+import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import type { SyncQueueItem, RemoteTaskIndexEntry } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -41,6 +41,8 @@ export interface PushResult {
   failedCount: number;
   lastError: string | null;
   authenticated: boolean;
+  /** Server-requested backoff (ms) parsed from a 429 Retry-After, if any. */
+  retryAfterMs?: number | null;
 }
 
 /**
@@ -195,6 +197,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
   let failedCount = 0;
   let skippedCount = 0;
   let lastError: string | null = null;
+  let retryAfterMs: number | null = null;
 
   for (const item of pending) {
     try {
@@ -237,10 +240,13 @@ export async function pushLocalChanges(): Promise<PushResult> {
       // we don't hammer it through the remaining queue items at 100ms
       // throttle and amplify the rate-limit response.
       if (isRateLimitError(error)) {
+        // Honor the server's Retry-After (if it sent one) for the next backoff.
+        retryAfterMs = extractRetryAfterMs(error);
         logger.warn('Aborting push loop due to rate limit (429)', {
           pushedCount,
           failedCount,
           skippedCount,
+          retryAfterMs,
           remaining: pending.length - (pushedCount + failedCount + skippedCount),
         });
         break;
@@ -249,5 +255,5 @@ export async function pushLocalChanges(): Promise<PushResult> {
   }
 
   logger.debug('Push completed', { pushedCount, failedCount, skippedCount, total: pending.length });
-  return { pushedCount, failedCount, lastError, authenticated: true };
+  return { pushedCount, failedCount, lastError, authenticated: true, retryAfterMs };
 }

@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "9.12.5",
+	"version": "9.12.6",
 	"private": true,
 	"type": "module",
 	"scripts": {

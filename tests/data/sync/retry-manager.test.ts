@@ -74,9 +74,25 @@ describe('RetryManager', () => {
       expect(updateSyncConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           consecutiveFailures: 1,
-          lastFailureReason: 'Network error',
+          // Persisted reason is a stable code, not the raw message.
+          lastFailureReason: 'network_error',
         }),
       );
+    });
+
+    it('persists a sanitized error code, never raw PB validation content', async () => {
+      // PocketBase 4xx bodies can echo submitted field values (task titles).
+      // recordFailure must reduce the error to a stable code before it lands
+      // in IndexedDB sync metadata, so task content never leaks.
+      const { updateSyncConfig } = await import('@/lib/sync/config');
+      const leakedTitle = 'Confidential: acquire MegaCorp';
+      await manager.recordFailure(
+        new Error(`422 Unprocessable: title "${leakedTitle}" failed to validate`),
+      );
+
+      const call = vi.mocked(updateSyncConfig).mock.lastCall![0] as { lastFailureReason: string };
+      expect(call.lastFailureReason).toBe('validation_failed');
+      expect(JSON.stringify(call)).not.toContain(leakedTitle);
     });
 
     it('should set nextRetryAt with exponential backoff', async () => {
@@ -86,6 +102,37 @@ describe('RetryManager', () => {
 
       const call = vi.mocked(updateSyncConfig).mock.lastCall![0] as { nextRetryAt: number };
       expect(call.nextRetryAt).toBeGreaterThanOrEqual(before + 5000);
+    });
+
+    it('honors a server Retry-After hint over the exponential schedule', async () => {
+      // First failure would normally back off 5s; a 45s Retry-After must win.
+      const { updateSyncConfig } = await import('@/lib/sync/config');
+      const before = Date.now();
+      await manager.recordFailure(new Error('429 too many requests'), { retryAfterMs: 45_000 });
+
+      const call = vi.mocked(updateSyncConfig).mock.lastCall![0] as { nextRetryAt: number };
+      expect(call.nextRetryAt).toBeGreaterThanOrEqual(before + 45_000);
+      expect(call.nextRetryAt).toBeLessThan(before + 60_000);
+    });
+
+    it('clamps an excessive Retry-After hint to the max backoff', async () => {
+      // A hostile/bogus header must not freeze sync for hours.
+      const { updateSyncConfig } = await import('@/lib/sync/config');
+      const before = Date.now();
+      await manager.recordFailure(new Error('429'), { retryAfterMs: 9_999_999_999 });
+
+      const call = vi.mocked(updateSyncConfig).mock.lastCall![0] as { nextRetryAt: number };
+      expect(call.nextRetryAt).toBeLessThanOrEqual(before + 5 * 60 * 1000 + 50);
+    });
+
+    it('falls back to exponential backoff when no Retry-After hint is given', async () => {
+      const { updateSyncConfig } = await import('@/lib/sync/config');
+      const before = Date.now();
+      await manager.recordFailure(new Error('500 server error'), { retryAfterMs: null });
+
+      const call = vi.mocked(updateSyncConfig).mock.lastCall![0] as { nextRetryAt: number };
+      expect(call.nextRetryAt).toBeGreaterThanOrEqual(before + 5000);
+      expect(call.nextRetryAt).toBeLessThan(before + 10_000);
     });
   });
 

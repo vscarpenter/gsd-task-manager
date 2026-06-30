@@ -6,16 +6,23 @@
 import { getSyncConfig, updateSyncConfig } from './config';
 import { createLogger } from '@/lib/logger';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
+import { sanitizeSyncError } from './error-categorizer';
 
 const logger = createLogger('SYNC_RETRY');
 
-const { MAX_RETRIES, RETRY_DELAYS } = SYNC_CONFIG;
+const { MAX_RETRIES, RETRY_DELAYS, MAX_RETRY_AFTER_MS } = SYNC_CONFIG;
+
+/** Optional hints a caller can attach to a recorded failure. */
+export interface RecordFailureOptions {
+  /** Server-provided Retry-After delay (ms); overrides exponential backoff. */
+  retryAfterMs?: number | null;
+}
 
 export class RetryManager {
   /**
    * Record a sync failure and update retry metadata
    */
-  async recordFailure(error: Error): Promise<void> {
+  async recordFailure(error: Error, options?: RecordFailureOptions): Promise<void> {
     const config = await getSyncConfig();
     if (!config) {
       logger.error('Cannot record failure: sync config not found');
@@ -23,22 +30,40 @@ export class RetryManager {
     }
 
     const consecutiveFailures = config.consecutiveFailures + 1;
-    const nextRetryDelay = this.getNextRetryDelay(consecutiveFailures);
+    const retryAfterMs = options?.retryAfterMs ?? null;
+    const nextRetryDelay = this.resolveRetryDelay(consecutiveFailures, retryAfterMs);
     const nextRetryAt = Date.now() + nextRetryDelay;
+    // PocketBase 4xx bodies can echo submitted field values (task titles), so
+    // persist only a stable code — the raw message stays in the diagnostic log.
+    const failureReason = sanitizeSyncError(error);
 
     logger.info('Recording sync failure', {
       consecutiveFailures,
+      failureReason,
       errorMessage: error.message,
       nextRetryDelay: `${nextRetryDelay / 1000}s`,
+      honoredRetryAfter: retryAfterMs !== null,
       nextRetryAt: new Date(nextRetryAt).toISOString(),
     });
 
     await updateSyncConfig({
       consecutiveFailures,
       lastFailureAt: Date.now(),
-      lastFailureReason: error.message,
+      lastFailureReason: failureReason,
       nextRetryAt,
     });
+  }
+
+  /**
+   * Pick the backoff delay. A server-provided Retry-After wins over the
+   * exponential schedule (honor the backend's explicit pacing), but is clamped
+   * to MAX_RETRY_AFTER_MS so a bogus/hostile header can't freeze sync.
+   */
+  private resolveRetryDelay(consecutiveFailures: number, retryAfterMs: number | null): number {
+    if (retryAfterMs !== null && retryAfterMs >= 0) {
+      return Math.min(retryAfterMs, MAX_RETRY_AFTER_MS);
+    }
+    return this.getNextRetryDelay(consecutiveFailures);
   }
 
   /**

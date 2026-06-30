@@ -58,7 +58,8 @@ describe("RetryManager", () => {
       expect(mockUpdateSyncConfig).toHaveBeenCalledWith(
         expect.objectContaining({
           consecutiveFailures: 3,
-          lastFailureReason: "network fail",
+          // Persisted reason is a sanitized stable code, not the raw message.
+          lastFailureReason: "network_error",
         })
       );
     });

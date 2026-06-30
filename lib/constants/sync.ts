@@ -41,6 +41,12 @@ export const SYNC_CONFIG = {
 
   /** Exponential backoff delays for sync retries: 5s, 10s, 30s, 60s, 300s */
   RETRY_DELAYS: [5000, 10000, 30000, 60000, 300000] as readonly number[],
+
+  /**
+   * Ceiling applied to a server-provided Retry-After before honoring it (5 min).
+   * Bounds the wait so a bogus or hostile header can't freeze sync indefinitely.
+   */
+  MAX_RETRY_AFTER_MS: 5 * 60 * 1000,
 } as const;
 
 /**

@@ -31,6 +31,12 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   isAuthenticated: vi.fn(() => mockIsAuthenticated),
 }));
 
+// checkAuth attempts a silent refresh before flagging token_expired. Default
+// to "could not refresh" so existing expired-token assertions still hold.
+vi.mock('@/lib/sync/pb-auth', () => ({
+  ensureValidAuth: vi.fn(async () => mockEnsureValidAuth),
+}));
+
 // Import the mocked function so we can change its return value per-test
 import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 
@@ -42,6 +48,8 @@ const mockQueue = {
 
 // Default: user is authenticated
 let mockIsAuthenticated = true;
+// Default: a lapsed token cannot be silently refreshed.
+let mockEnsureValidAuth = false;
 
 describe('HealthMonitor', () => {
   let monitor: HealthMonitor;
@@ -65,6 +73,7 @@ describe('HealthMonitor', () => {
     mockQueue.getFailed.mockResolvedValue([]);
     mockHealthCheck.mockResolvedValue({});
     mockIsAuthenticated = true;
+    mockEnsureValidAuth = false;
     // Re-set the mock return value after clearAllMocks
     vi.mocked(isAuthenticated).mockImplementation(() => mockIsAuthenticated);
   });
