@@ -377,6 +377,55 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(1);
   });
 
+  it('aborts the push loop after a 429 without hammering remaining queued items', async () => {
+    const firstPayload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    const secondPayload = makeTask('t2', '2026-05-18T12:05:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', firstPayload);
+    await getSyncQueue().enqueue('update', 't2', secondPayload);
+
+    const pending = await getDb().syncQueue.toArray();
+    const firstItem = pending.find((item) => item.taskId === 't1')!;
+    const secondItem = pending.find((item) => item.taskId === 't2')!;
+    await getDb().syncQueue.update(firstItem.id, { timestamp: 1 });
+    await getDb().syncQueue.update(secondItem.id, { timestamp: 2 });
+
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+        ['t2', { pbRecordId: 'rec-2', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const rateLimited = Object.assign(new Error('429 too many requests'), {
+      status: 429,
+      response: { retryAfterMs: 30_000 },
+    });
+    const updateSpy = vi.fn(async (recordId: string) => {
+      if (recordId === 'rec-1') {
+        throw rateLimited;
+      }
+      return { id: recordId };
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(updateSpy).toHaveBeenCalledWith('rec-1', expect.any(Object));
+    expect(result.pushedCount).toBe(0);
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('rate_limited');
+    expect(result.retryAfterMs).toBe(30_000);
+    expect(await getSyncQueue().getPendingCount()).toBe(2);
+
+    const queued = await getDb().syncQueue.toArray();
+    expect(queued.find((item) => item.taskId === 't1')?.lastError).toBe('rate_limited');
+    expect(queued.find((item) => item.taskId === 't2')?.retryCount).toBe(0);
+  });
+
   it('reports a null Retry-After when a 429 carries no header', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     await getSyncQueue().enqueue('update', 't1', payload);
