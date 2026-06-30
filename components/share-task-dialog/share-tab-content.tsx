@@ -80,6 +80,7 @@ interface ShareTabContentProps {
   taskDetails: string;
   recipientEmail: string;
   onRecipientEmailChange: (email: string) => void;
+  emailError?: string | null;
 }
 
 export function ShareTabContent({
@@ -87,6 +88,7 @@ export function ShareTabContent({
   taskDetails,
   recipientEmail,
   onRecipientEmailChange,
+  emailError,
 }: ShareTabContentProps) {
   if (activeTab === "native") {
     return (
@@ -112,7 +114,14 @@ export function ShareTabContent({
             placeholder="Enter email address…"
             value={recipientEmail}
             onChange={(e) => onRecipientEmailChange(e.target.value)}
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? "recipient-email-error" : undefined}
           />
+          {emailError && (
+            <p id="recipient-email-error" role="alert" className="text-xs text-red-600">
+              {emailError}
+            </p>
+          )}
         </div>
         <TaskDetailsPreview label="Email Preview" taskDetails={taskDetails} />
       </div>
