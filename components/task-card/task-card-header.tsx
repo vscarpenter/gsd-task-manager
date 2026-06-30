@@ -34,7 +34,10 @@ export function TaskCardHeader({
 
   // Pop the check only on the complete *moment* (false→true), never on mount —
   // a page load showing already-done tasks is not a completion moment, and the
-  // brand reserves motion for moments, not page loads.
+  // brand reserves motion for moments, not page loads. This transition-gated
+  // animation must read the previous value during render so the class commits
+  // on the transition render (a derived/discarded value or an effect-driven
+  // setState would either never paint or be flagged as adjust-state-on-prop).
   const wasCompleted = useRef(task.completed);
   const justCompleted = task.completed && !wasCompleted.current;
   useEffect(() => {

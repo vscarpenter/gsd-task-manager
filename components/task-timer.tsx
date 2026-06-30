@@ -83,14 +83,18 @@ export function TaskTimer({
 
   const handleToggle = async () => {
     setIsLoading(true);
+    // No `finally`: the React Compiler can't yet optimize a component with a
+    // try/finally, so the loading reset is duplicated across both paths.
     try {
       if (isRunning) {
         await onStopTimer(task.id);
       } else {
         await onStartTimer(task.id);
       }
-    } finally {
       setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
     }
   };
 

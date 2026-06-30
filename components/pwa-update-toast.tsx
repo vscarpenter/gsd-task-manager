@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createLogger } from "@/lib/logger";
@@ -9,7 +9,9 @@ const logger = createLogger('PWA');
 
 export function PwaUpdateToast() {
   const [showUpdate, setShowUpdate] = useState(false);
-  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  // The waiting worker is only read inside the update handler, never rendered,
+  // so it lives in a ref instead of state (no re-render on assignment).
+  const waitingWorkerRef = useRef<ServiceWorker | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
@@ -19,7 +21,7 @@ export function PwaUpdateToast() {
     // Listen for custom event from PwaRegister
     const handleUpdateAvailable = (event: Event) => {
       const customEvent = event as CustomEvent<ServiceWorker>;
-      setWaitingWorker(customEvent.detail);
+      waitingWorkerRef.current = customEvent.detail;
       setShowUpdate(true);
     };
 
@@ -31,6 +33,7 @@ export function PwaUpdateToast() {
   }, []);
 
   const handleUpdate = () => {
+    const waitingWorker = waitingWorkerRef.current;
     if (!waitingWorker) {
       // Fallback: just reload if we don't have a waiting worker reference
       logger.warn('No waiting worker, forcing reload');

@@ -31,7 +31,13 @@ export function useTaskHighlight(
   const clearHighlightTimerRef = useRef<number | null>(null);
 
   // Lazily initialize the ref map so a fresh Map isn't allocated on every render.
-  const getTaskRefs = () => (taskRefsRef.current ??= new Map<string, HTMLElement>());
+  // (Plain if-assignment rather than `??=`, which the React Compiler can't lower.)
+  const getTaskRefs = () => {
+    if (!taskRefsRef.current) {
+      taskRefsRef.current = new Map<string, HTMLElement>();
+    }
+    return taskRefsRef.current;
+  };
 
   const handleTaskRef = (taskId: string, element: HTMLElement | null) => {
     const taskRefs = getTaskRefs();

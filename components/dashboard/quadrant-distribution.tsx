@@ -3,10 +3,6 @@
 import type { QuadrantId } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
 
-/** 1x1 transparent pixel so the accessible bar summary lives on a real <img alt>. */
-const TRANSPARENT_PIXEL =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-
 interface QuadrantDistributionProps {
   distribution: Record<QuadrantId, number>;
 }
@@ -68,12 +64,10 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
         </div>
       ) : (
         <div className="mt-6 space-y-5">
-          {/* Accessible summary as a real <img>; the segmented bar below is decorative. */}
-          <img
-            src={TRANSPARENT_PIXEL}
-            alt={`${total} active tasks across ${segments.length} quadrants`}
-            className="sr-only"
-          />
+          {/* Screen-reader summary; the segmented bar below is decorative. */}
+          <p className="sr-only">
+            {`${total} active tasks across ${segments.length} quadrants`}
+          </p>
           <div className="flex h-3 overflow-hidden rounded-full" aria-hidden>
             {segments.map((segment) => {
               const pct = (segment.value / total) * 100;

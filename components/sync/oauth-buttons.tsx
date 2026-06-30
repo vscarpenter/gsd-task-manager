@@ -22,6 +22,8 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
   const mounted = useRef(true);
 
   useEffect(() => {
+    // On unmount, cancel whatever OAuth login is currently in flight. Reading
+    // the latest ref values at cleanup time is the intended behavior here.
     return () => {
       mounted.current = false;
       if (activeRequestKey.current) {
@@ -45,24 +47,29 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
     requestKey: string,
     popupWindow: Window | null
   ) => {
-    try {
-      const loginFn = provider === "google" ? loginWithGoogle : loginWithGithub;
-      const authState = await loginFn({ requestKey, popupWindow });
-      if (mounted.current) {
-        await onSuccess?.(authState);
-      }
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      if (mounted.current) {
-        onError?.(err);
-      }
-    } finally {
+    // No `finally`: the React Compiler can't yet optimize a component with a
+    // try/finally, so the shared cleanup runs from both paths via `finish()`.
+    const finish = () => {
       if (activeRequestKey.current === requestKey) {
         activeRequestKey.current = null;
       }
       if (mounted.current) {
         setLoading(null);
       }
+    };
+    try {
+      const loginFn = provider === "google" ? loginWithGoogle : loginWithGithub;
+      const authState = await loginFn({ requestKey, popupWindow });
+      if (mounted.current) {
+        await onSuccess?.(authState);
+      }
+      finish();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (mounted.current) {
+        onError?.(err);
+      }
+      finish();
     }
   };
 

@@ -69,6 +69,8 @@ export function SettingsBody({
   // export failed.
   const handleExport = async (): Promise<boolean> => {
     setIsExporting(true);
+    // No `finally`: the React Compiler can't yet optimize a component with a
+    // try/finally, so the exporting reset is duplicated across both paths.
     try {
       const { json, skippedCount } = await exportToJsonWithReport();
       const blob = new Blob([json], { type: "application/json" });
@@ -86,13 +88,13 @@ export function SettingsBody({
       } else {
         toast.success("Tasks exported");
       }
+      setIsExporting(false);
       return true;
     } catch (error) {
       logger.error("Export failed", error instanceof Error ? error : undefined);
       toast.error("Failed to export tasks");
-      return false;
-    } finally {
       setIsExporting(false);
+      return false;
     }
   };
 

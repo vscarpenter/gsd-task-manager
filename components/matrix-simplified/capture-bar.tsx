@@ -52,9 +52,12 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     onMoreOptionsRef.current = onMoreOptions;
   }, [text, override, onMoreOptions]);
 
-  useEffect(() => {
-    if (externalRef) externalRef.current = internalRef.current;
-  }, [externalRef]);
+  // Merge the internal and (optional) external refs via a ref callback so the
+  // parent's ref points at the input without a syncing effect.
+  const setInputRef = (node: HTMLInputElement | null) => {
+    internalRef.current = node;
+    if (externalRef) externalRef.current = node;
+  };
 
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
@@ -141,7 +144,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       />
       <input
         data-testid="capture-input"
-        ref={internalRef}
+        ref={setInputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onInputKey}

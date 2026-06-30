@@ -101,6 +101,33 @@ function overlayReducer(state: OverlayState, action: OverlayAction): OverlayStat
   }
 }
 
+// Pure capture/toggle handlers — they close over no component state, so they
+// live at module scope (stable identity for memoized children).
+async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<void> {
+  try {
+    const { cleanTitle, urls } = extractUrlsFromTitle(title);
+    await createTask({
+      title: cleanTitle,
+      description: buildDescription("", urls),
+      urgent,
+      important,
+      tags: tags.length > 0 ? tags : undefined,
+    });
+    toast.success("Task added", { duration: TOAST_DURATION.SHORT });
+  } catch {
+    toast.error("Failed to create task", { duration: TOAST_DURATION.LONG });
+  }
+}
+
+async function handleToggle(task: TaskRecord, completedNext: boolean): Promise<void> {
+  try {
+    await toggleCompleted(task.id, completedNext);
+    if (completedNext) celebrateCompletion();
+  } catch {
+    toast.error("Failed to update task", { duration: TOAST_DURATION.LONG });
+  }
+}
+
 export function MatrixSimplified() {
   const { all } = useTasks();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
@@ -135,37 +162,12 @@ export function MatrixSimplified() {
     clearSearch
   );
 
-  const handleCapture = async ({ title, urgent, important, tags }: CapturePayload) => {
-    try {
-      const { cleanTitle, urls } = extractUrlsFromTitle(title);
-      await createTask({
-        title: cleanTitle,
-        description: buildDescription("", urls),
-        urgent,
-        important,
-        tags: tags.length > 0 ? tags : undefined,
-      });
-      toast.success("Task added", { duration: TOAST_DURATION.SHORT });
-    } catch {
-      toast.error("Failed to create task", { duration: TOAST_DURATION.LONG });
-    }
-  };
-
   const handleAddInQuadrant = (key: RedesignQuadrantKey) => {
     const meta = quadrantByRdKey(key);
     dispatchOverlay({
       type: "openCreate",
       initial: { title: "", urgent: meta.urgent, important: meta.important, tags: [] },
     });
-  };
-
-  const handleToggle = async (task: TaskRecord, completedNext: boolean) => {
-    try {
-      await toggleCompleted(task.id, completedNext);
-      if (completedNext) celebrateCompletion();
-    } catch {
-      toast.error("Failed to update task", { duration: TOAST_DURATION.LONG });
-    }
   };
 
   const handleDelete = async (task: TaskRecord) => {

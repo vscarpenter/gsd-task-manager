@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronRightIcon, ArchiveIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { getArchiveSettings, updateArchiveSettings, archiveOldTasks, getArchivedCount } from "@/lib/archive";
-import type { ArchiveSettings as ArchiveSettingsType } from "@/lib/types";
 import { toast } from "sonner";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
 
@@ -18,33 +18,30 @@ const ARCHIVE_DAYS_OPTIONS = [
 	{ value: "90", label: "90 days" },
 ];
 
+// Pure handler (no component state) — kept at module scope.
+async function handleDaysChange(value: string): Promise<void> {
+	const days = Number.parseInt(value, 10) as 30 | 60 | 90;
+	await updateArchiveSettings({ archiveAfterDays: days });
+	toast.success(`Archive period set to ${days} days`);
+}
+
 /**
  * iOS-style archive settings
  */
 export function ArchiveSettings({
 	onViewArchive,
 }: ArchiveSettingsProps) {
-	const [settings, setSettings] = useState<ArchiveSettingsType | null>(null);
-	const [archivedCount, setArchivedCount] = useState(0);
+	// Live Dexie queries auto-refresh when the underlying tables change, so no
+	// load-on-mount effect or manual reload is needed after mutations.
+	const settings = useLiveQuery(() => getArchiveSettings());
+	const archivedCount = useLiveQuery(() => getArchivedCount()) ?? 0;
 	const [isArchiving, setIsArchiving] = useState(false);
-
-	const loadSettings = async () => {
-		const archiveSettings = await getArchiveSettings();
-		setSettings(archiveSettings);
-		const count = await getArchivedCount();
-		setArchivedCount(count);
-	};
-
-	useEffect(() => {
-		loadSettings();
-	}, []);
 
 	const handleToggleEnabled = async () => {
 		if (!settings) return;
 
 		const newEnabled = !settings.enabled;
 		await updateArchiveSettings({ enabled: newEnabled });
-		await loadSettings();
 
 		toast.success(
 			newEnabled
@@ -53,26 +50,20 @@ export function ArchiveSettings({
 		);
 	};
 
-	const handleDaysChange = async (value: string) => {
-		const days = Number.parseInt(value, 10) as 30 | 60 | 90;
-		await updateArchiveSettings({ archiveAfterDays: days });
-		await loadSettings();
-		toast.success(`Archive period set to ${days} days`);
-	};
-
 	const handleArchiveNow = async () => {
 		if (!settings) return;
 
+		// No `finally`: the React Compiler can't yet optimize a component with a
+		// try/finally, so the archiving reset is duplicated across both paths.
 		setIsArchiving(true);
 		try {
 			const count = await archiveOldTasks(settings.archiveAfterDays);
-			await loadSettings();
 			toast.success(`Archived ${count} task${count !== 1 ? 's' : ''}`);
+			setIsArchiving(false);
 		} catch (err) {
 			const errorMsg =
 				err instanceof Error ? err.message : "Failed to archive tasks";
 			toast.error(errorMsg);
-		} finally {
 			setIsArchiving(false);
 		}
 	};
@@ -126,6 +117,7 @@ export function ArchiveSettings({
 			{/* View Archive Link */}
 			{archivedCount > 0 && (
 				<button
+					type="button"
 					onClick={onViewArchive}
 					className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
 					           text-left hover:bg-background-muted/50 transition-colors"
@@ -171,6 +163,7 @@ function ActionRow({
 				)}
 			</div>
 			<button
+				type="button"
 				onClick={onClick}
 				disabled={disabled}
 				className="px-3 py-1.5 text-xs font-medium text-accent bg-accent/10

@@ -58,14 +58,16 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
     if (!fileContents) return;
 
     setIsImporting(true);
+    // No `finally`: the React Compiler can't yet optimize a component with a
+    // try/finally, so the importing reset is duplicated across both paths.
     try {
       await importFromJson(fileContents, mode);
       onImportComplete();
       onOpenChange(false);
+      setIsImporting(false);
     } catch (error) {
       logger.error("Import failed", error instanceof Error ? error : new Error(String(error)));
       toast.error("Import failed. Ensure you selected a valid export file.");
-    } finally {
       setIsImporting(false);
     }
   };
