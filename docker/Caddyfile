@@ -47,14 +47,30 @@
 	}
 
 	# ---- PocketBase reverse proxy ----
-	# API endpoints
+	# Block administrative PocketBase API routes at the public origin. Superuser
+	# auth lives under /api/collections/_superusers/* (PB v0.23+); /api/admins/*
+	# is the legacy path. The browser app never needs either — it authenticates
+	# via OAuth against the users collection — so keeping admin auth off the
+	# public origin matches the "admin is not exposed" boundary that the /_/*
+	# rule already enforces. handle blocks match most-specific-first, so these
+	# deny rules take precedence over the broad /api/* proxy below.
+	handle /api/collections/_superusers/* {
+		respond "PocketBase admin API is not exposed through this origin." 404
+	}
+	handle /api/admins/* {
+		respond "PocketBase admin API is not exposed through this origin." 404
+	}
+
+	# App-facing API endpoints
 	handle /api/* {
 		reverse_proxy localhost:8090
 	}
 
-	# PocketBase admin is intentionally not exposed on the public app origin.
-	# For setup, either use scripts/setup-pocketbase-collections.sh through
-	# /api/* or publish 127.0.0.1:8090 from docker-compose temporarily.
+	# PocketBase admin UI is intentionally not exposed on the public app origin.
+	# Run admin/setup scripts (scripts/setup-pocketbase-collections.sh) against
+	# the PocketBase port directly — set PB_URL=http://127.0.0.1:8090 on the host,
+	# or publish 127.0.0.1:8090 from docker-compose temporarily. Superuser auth is
+	# no longer reachable through /api/* on this origin (see the deny rules above).
 	handle /_/* {
 		respond "PocketBase admin is not exposed through this origin." 404
 	}

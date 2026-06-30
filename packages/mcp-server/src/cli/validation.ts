@@ -5,6 +5,7 @@
 
 import type { GsdConfig, SyncStatus } from '../tools.js';
 import { getSyncStatus, listDevices, listTasks } from '../tools.js';
+import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/config.js';
 
 /**
  * Validation check result
@@ -188,6 +189,15 @@ export async function runValidation(): Promise<void> {
 
   // Step 1: Environment variables
   const { pbUrl, authToken } = validateEnvironmentVariables();
+
+  // Gate the destination through the shared policy before any request so a
+  // misconfigured GSD_POCKETBASE_URL can never receive the auth token.
+  if (!isSafePocketBaseUrl(pbUrl)) {
+    console.log('✗ Configuration Error\n');
+    console.log(UNSAFE_POCKETBASE_URL_MESSAGE);
+    console.log(`\nGSD_POCKETBASE_URL is currently: ${pbUrl}`);
+    process.exit(1);
+  }
 
   checks.push({
     name: 'Environment Variables',

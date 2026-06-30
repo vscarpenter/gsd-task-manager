@@ -6,6 +6,7 @@
 import { writeFileSync, chmodSync } from 'node:fs';
 import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
+import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/config.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
 import { getSetupArtifactPath, removeSetupArtifact } from './setup-artifact.js';
 
@@ -189,6 +190,13 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
     // Step 1: PocketBase URL
     console.log('Step 1/4: PocketBase URL');
     const pbUrl = await prompt('Enter your PocketBase URL', DEFAULT_POCKETBASE_URL);
+    // Gate the destination through the shared policy BEFORE any request — the
+    // connectivity probe and (later) the token-bearing sync check must never
+    // reach an unvalidated host.
+    if (!isSafePocketBaseUrl(pbUrl)) {
+      console.log(`✗ ${UNSAFE_POCKETBASE_URL_MESSAGE}`);
+      process.exit(1);
+    }
     await validateConnectivity(pbUrl);
     console.log();
 

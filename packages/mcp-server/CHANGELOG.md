@@ -5,6 +5,21 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-06-30 🔒
+
+Security hardening. Closes a gap left by 1.1.4: the exact-match `pocketBaseUrl`
+policy lived only in `configSchema`, but the setup wizard and validator built
+configs straight from prompts/env and reached token-bearing PocketBase calls
+without applying it.
+
+### Security
+- **Setup wizard and `--validate` now gate the PocketBase URL through the shared
+  HTTPS-or-loopback policy before any network request.** `isSafePocketBaseUrl`
+  is exported from `server/config` and both CLIs reject an unsafe
+  `GSD_POCKETBASE_URL` (plain HTTP to a non-loopback host, `localhost`-subdomain
+  and userinfo bypasses, unparseable input) and exit before `GSD_AUTH_TOKEN`
+  can be attached to a connectivity probe or sync-status check.
+
 ## [1.1.4] - 2026-05-12 🔒
 
 Security hardening release. Addresses the MCP server findings from the May 2026
