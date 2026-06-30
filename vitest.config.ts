@@ -22,6 +22,7 @@ export default defineConfig({
       provider: "v8",
       include: [
         "lib/**/*.ts",
+        "components/**/*.ts",
         "components/**/*.tsx",
         "app/**/*.ts",
         "app/**/*.tsx",
@@ -33,7 +34,11 @@ export default defineConfig({
         "**/*.test.tsx",
         "**/*.config.ts",
         "**/types.ts",
-        "**/index.ts",          // re-export barrels (no logic)
+        // NOTE: do NOT use a broad "**/index.ts" exclude — the v8 provider's
+        // matcher also catches "index.tsx", which silently dropped the
+        // logic-bearing component shells (matrix-simplified, settings-page,
+        // command-palette) from coverage. Pure re-export barrels have no
+        // executable lines, so they cost nothing by being included.
         "lib/sync/config.ts",   // re-export barrel
         "lib/tasks/crud.ts",    // re-export barrel
         "components/ui/**",     // shadcn/ui wrappers (third-party abstractions)

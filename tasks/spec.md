@@ -51,6 +51,28 @@ lint findings). knip.json declares genuine entry points (SW, CloudFront, PB hook
 
 ## Acceptance criteria
 - [x] `react-doctor --json` => totalDiagnosticCount 0 (verified locally; score API host blocked)
-- [x] `bun run test` passes (2115 passed, 1 skipped)
+- [x] `bun run test` passes (2146 passed, 1 skipped)
 - [x] `bun typecheck` passes
 - [x] `bun lint` passes (0 errors)
+
+## SonarCloud new-code coverage gate (follow-up)
+
+The Quality Gate failed on new-code coverage (56.5%, required ≥80%). Root cause was
+a coverage-instrumentation gap, not missing tests:
+- The vitest coverage `include` listed only `components/**/*.tsx`, so the `.ts` hooks
+  the v9/settings refactors extracted under `components/` (use-task-highlight,
+  use-settings-data, use-active-section, etc.) were never instrumented — they had
+  tests but produced no lcov data, so SonarCloud counted every changed line as
+  uncovered. Fixed by adding `components/**/*.ts` to the include.
+- The `**/index.ts` coverage exclude (intended for re-export barrels) also matched
+  `index.tsx` in the v8 provider, silently dropping the logic-bearing component
+  shells (matrix-simplified, settings-page, command-palette). Removed the over-broad
+  glob; genuine barrels have no executable lines.
+- Added `sonar.coverage.exclusions` mirroring vitest's documented exclusions
+  (`components/ui/**` shadcn wrappers, type/barrel/config/test-helper files) so both
+  tools apply the same coverage policy.
+- Added focused tests for the extracted settings-page logic (`use-settings-data`,
+  `settings-body`) and the shell command handlers (`use-shell-command-handlers`).
+
+Measured new-code coverage after the fix: ~87% (conservative estimate ~86.7% with
+no-lcov residuals counted as uncovered), clearing the 80% gate.
