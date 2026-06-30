@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { getDescriptionSegments } from "@/lib/task-links";
 import { cn } from "@/lib/utils";
 
@@ -8,18 +7,25 @@ interface TaskDescriptionProps {
 }
 
 export function TaskDescription({ description, className }: TaskDescriptionProps) {
-  const segments = useMemo(() => getDescriptionSegments(description), [description]);
+  const segments = getDescriptionSegments(description);
+
+  // Segments partition the description left-to-right and never reorder, so the
+  // cumulative character offset of each segment is a stable, content-derived key.
+  let offset = 0;
 
   return (
     <span className={cn("break-words", className)}>
-      {segments.map((segment, index) => {
+      {segments.map((segment) => {
+        const key = `${offset}-${segment.type}`;
+        offset += segment.text.length;
+
         if (segment.type === "text") {
-          return <span key={index}>{segment.text}</span>;
+          return <span key={key}>{segment.text}</span>;
         }
 
         return (
           <a
-            key={index}
+            key={key}
             href={segment.href}
             target="_blank"
             rel="noopener noreferrer"

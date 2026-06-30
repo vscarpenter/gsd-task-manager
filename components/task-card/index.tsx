@@ -1,18 +1,17 @@
 "use client";
 
-import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { AlertTriangleIcon } from "lucide-react";
 import { cn, isOverdue, isDueToday, daysOverdue } from "@/lib/utils";
 import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
 import { quadrantForTask, QUADRANT_ACCENT } from "@/lib/quadrants";
-import { areTaskCardPropsEqual, type TaskCardProps } from "@/lib/task-card-memo";
+import { type TaskCardProps } from "@/lib/task-card-memo";
 import { TaskCardHeader } from "@/components/task-card/task-card-header";
 import { TaskCardMetadata } from "@/components/task-card/task-card-metadata";
 import { TaskCardActions } from "@/components/task-card/task-card-actions";
 
-function TaskCardComponent({
+export function TaskCard({
   task,
   allTasks,
   onEdit,
@@ -139,7 +138,3 @@ function TaskCardComponent({
     </article>
   );
 }
-
-// Memoize the component to prevent unnecessary re-renders
-// Comparison function imported from @/lib/task-card-memo
-export const TaskCard = memo(TaskCardComponent, areTaskCardPropsEqual);

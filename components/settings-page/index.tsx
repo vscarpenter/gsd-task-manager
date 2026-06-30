@@ -36,12 +36,12 @@ import { ArchiveSettings } from "@/components/settings/archive-settings";
 import { DataManagement } from "@/components/settings/data-management";
 import { AboutSection } from "@/components/settings/about-section";
 
+import { SettingsSidebar } from "./settings-sidebar";
 import {
-  SettingsSidebar,
   SETTINGS_SECTIONS,
   SETTINGS_SECTION_IDS,
   type SettingsSectionId,
-} from "./settings-sidebar";
+} from "./settings-sidebar-data";
 import { SectionCard } from "./section-card";
 
 const ImportDialog = lazy(() =>

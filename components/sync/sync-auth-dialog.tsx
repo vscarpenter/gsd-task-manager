@@ -88,6 +88,7 @@ function DialogHeader({ syncStatus, sessionExpired, onClose }: DialogHeaderProps
         </div>
       </div>
       <button
+        type="button"
         onClick={onClose}
         className="rounded-md p-1 text-foreground-muted hover:bg-background-muted hover:text-foreground"
         aria-label="Close"

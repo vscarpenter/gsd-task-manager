@@ -40,7 +40,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           <div>
             <div
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: 0.12,
                 textTransform: "uppercase",
                 color: "var(--ink-3)",
@@ -172,7 +172,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
       <h3
         style={{
           margin: 0,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
           letterSpacing: 0.12,
           textTransform: "uppercase",

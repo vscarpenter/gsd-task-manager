@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import type { CommandAction } from "@/lib/command-actions";
 import type { TaskRecord } from "@/lib/types";
 import { applyFilters } from "@/lib/filters";
@@ -20,7 +20,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
   const [search, setSearch] = useState('');
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
 
-  const setOpen = useCallback((next: boolean | ((previous: boolean) => boolean)) => {
+  const setOpen = (next: boolean | ((previous: boolean) => boolean)) => {
     setOpenState((previous) => {
       const resolved = typeof next === 'function' ? next(previous) : next;
       if (!resolved) {
@@ -29,7 +29,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
       }
       return resolved;
     });
-  }, []);
+  };
 
   // Open/close with ⌘K / Ctrl+K
   useEffect(() => {
@@ -56,7 +56,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
   }, [setOpen]);
 
   // Filter actions by search query
-  const filteredActions = useMemo(() => {
+  const filteredActions = (() => {
     if (!search || search.length < 2) {
       // Show all actions when no search
       return actions.filter(action => !action.condition || action.condition());
@@ -74,10 +74,10 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
       // Check keywords
       return action.keywords.some(kw => kw.includes(searchLower));
     });
-  }, [search, actions]);
+  })();
 
   // Filter tasks by search query (only show if search is 2+ chars)
-  const matchingTasks = useMemo(() => {
+  const matchingTasks = (() => {
     if (!search || search.length < 2) return [];
 
     // Use the existing filter system to search tasks
@@ -88,16 +88,16 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
 
     // Limit to top matches
     return results.slice(0, SEARCH_CONFIG.MAX_COMMAND_PALETTE_RESULTS);
-  }, [search, tasks]);
+  })();
 
   // Execute an action and close palette
-  const executeAction = useCallback((action: CommandAction) => {
+  const executeAction = (action: CommandAction) => {
     action.onExecute();
     setOpen(false);
-  }, [setOpen]);
+  };
 
   // Handle task selection (navigate to matrix and highlight)
-  const selectTask = useCallback((taskId: string) => {
+  const selectTask = (taskId: string) => {
     if (onSelectTask) {
       onSelectTask(taskId);
       setOpen(false);
@@ -110,7 +110,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
     }));
 
     setOpen(false);
-  }, [onSelectTask, setOpen]);
+  };
 
   return {
     open,

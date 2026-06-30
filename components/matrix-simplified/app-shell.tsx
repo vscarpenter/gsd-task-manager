@@ -17,6 +17,10 @@ import {
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
 import { useShellCommandHandlers } from "@/lib/use-shell-command-handlers";
 
+function openCommandPalette() {
+  window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
+}
+
 interface AppShellProps {
   title: string;
   caption?: ReactNode;
@@ -74,10 +78,6 @@ export function AppShell({
       window.removeEventListener(APP_PREFERENCES_EVENT, onPreferencesChange);
     };
   }, []);
-
-  const openCommandPalette = () => {
-    window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
-  };
 
   return (
     <div className="flex min-h-screen bg-background">

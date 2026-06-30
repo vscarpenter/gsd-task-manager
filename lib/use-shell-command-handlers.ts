@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import type { CommandActionHandlers } from "@/lib/command-actions";
@@ -19,7 +18,7 @@ export const APPLY_SMART_VIEW_EVENT = "gsd:apply-smart-view";
  * Window event dispatched by the command palette when the user picks
  * "Open user guide". The AppShell already subscribes via HelpDrawer.
  */
-export const OPEN_HELP_EVENT = "gsd:open-help";
+const OPEN_HELP_EVENT = "gsd:open-help";
 
 export interface ApplySmartViewEventDetail {
   viewId: string;
@@ -48,67 +47,65 @@ export function useShellCommandHandlers(): ShellCommandResult {
   const router = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
 
-  return useMemo(() => {
-    const onSelectTask = (taskId: string) => {
+  const onSelectTask = (taskId: string) => {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/") {
+      window.dispatchEvent(
+        new CustomEvent(HIGHLIGHT_TASK_EVENT, { detail: { taskId } })
+      );
+    } else {
+      router.push(`/?highlight=${encodeURIComponent(taskId)}`);
+    }
+  };
+
+  const handlers: CommandActionHandlers = {
+    onNewTask: () => {
+      if (typeof window === "undefined") return;
+      if (window.location.pathname === "/") {
+        window.dispatchEvent(new CustomEvent(NEW_TASK_EVENT));
+      } else {
+        router.push("/?action=new-task");
+      }
+    },
+    onToggleTheme: () => {
+      const current = theme === "system" ? resolvedTheme : theme;
+      setTheme(current === "dark" ? "light" : "dark");
+    },
+    onExportTasks: async () => {
+      router.push("/settings");
+    },
+    onImportTasks: () => {
+      router.push("/settings");
+    },
+    onOpenSettings: () => router.push("/settings"),
+    onOpenHelp: () => {
+      if (typeof window === "undefined") return;
+      window.dispatchEvent(new CustomEvent(OPEN_HELP_EVENT));
+    },
+    onViewDashboard: () => router.push("/dashboard"),
+    onViewMatrix: () => router.push("/"),
+    onViewArchive: () => router.push("/archive"),
+    onApplySmartView: (criteria, viewId) => {
       if (typeof window === "undefined") return;
       if (window.location.pathname === "/") {
         window.dispatchEvent(
-          new CustomEvent(HIGHLIGHT_TASK_EVENT, { detail: { taskId } })
+          new CustomEvent<ApplySmartViewEventDetail>(APPLY_SMART_VIEW_EVENT, {
+            detail: { viewId, criteria },
+          })
         );
       } else {
-        router.push(`/?highlight=${encodeURIComponent(taskId)}`);
+        router.push(`/?smartView=${encodeURIComponent(viewId)}`);
       }
-    };
+    },
+  };
 
-    const handlers: CommandActionHandlers = {
-      onNewTask: () => {
-        if (typeof window === "undefined") return;
-        if (window.location.pathname === "/") {
-          window.dispatchEvent(new CustomEvent(NEW_TASK_EVENT));
-        } else {
-          router.push("/?action=new-task");
-        }
-      },
-      onToggleTheme: () => {
-        const current = theme === "system" ? resolvedTheme : theme;
-        setTheme(current === "dark" ? "light" : "dark");
-      },
-      onExportTasks: async () => {
-        router.push("/settings");
-      },
-      onImportTasks: () => {
-        router.push("/settings");
-      },
-      onOpenSettings: () => router.push("/settings"),
-      onOpenHelp: () => {
-        if (typeof window === "undefined") return;
-        window.dispatchEvent(new CustomEvent(OPEN_HELP_EVENT));
-      },
-      onViewDashboard: () => router.push("/dashboard"),
-      onViewMatrix: () => router.push("/"),
-      onViewArchive: () => router.push("/archive"),
-      onApplySmartView: (criteria, viewId) => {
-        if (typeof window === "undefined") return;
-        if (window.location.pathname === "/") {
-          window.dispatchEvent(
-            new CustomEvent<ApplySmartViewEventDetail>(APPLY_SMART_VIEW_EVENT, {
-              detail: { viewId, criteria },
-            })
-          );
-        } else {
-          router.push(`/?smartView=${encodeURIComponent(viewId)}`);
-        }
-      },
-    };
-
-    return {
-      handlers,
-      onSelectTask,
-      conditions: {
-        isSyncEnabled: false,
-        selectionMode: false,
-        hasSelection: false,
-      },
-    };
-  }, [router, theme, resolvedTheme, setTheme]);
+  return {
+    handlers,
+    onSelectTask,
+    conditions: {
+      isSyncEnabled: false,
+      selectionMode: false,
+      hasSelection: false,
+    },
+  };
 }

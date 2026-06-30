@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CalendarIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
@@ -63,13 +64,15 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
 
 // ─── DueDateField ───────────────────────────────────────────────────────────
 
+const chipDateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
 function formatChipDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+  return chipDateFormatter.format(date);
 }
 
 interface DueDateFieldProps {
@@ -126,13 +129,9 @@ export function DueDateField({
             </button>
           </span>
         ) : showCustomDateInput ? (
-          <input
-            type="date"
-            autoFocus
-            onChange={(e) => { if (e.target.value) { onCustomDateChange(e.target.value); onToggleCustomInput(false); } }}
-            onBlur={() => onToggleCustomInput(false)}
-            className="rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted"
-            aria-label="Pick a custom due date"
+          <CustomDateInput
+            onCustomDateChange={onCustomDateChange}
+            onToggleCustomInput={onToggleCustomInput}
           />
         ) : (
           <button
@@ -146,6 +145,36 @@ export function DueDateField({
         )}
       </div>
     </Field>
+  );
+}
+
+/**
+ * Custom date picker input. Mounts only when the user clicks "Pick a date…",
+ * so focusing it on mount (via ref + effect) is the intended UX. Using a ref
+ * instead of the `autoFocus` prop keeps the focus behavior accessible.
+ */
+function CustomDateInput({
+  onCustomDateChange,
+  onToggleCustomInput,
+}: {
+  onCustomDateChange: (date: string | undefined) => void;
+  onToggleCustomInput: (show: boolean) => void;
+}): React.ReactElement {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      type="date"
+      onChange={(e) => { if (e.target.value) { onCustomDateChange(e.target.value); onToggleCustomInput(false); } }}
+      onBlur={() => onToggleCustomInput(false)}
+      className="rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted"
+      aria-label="Pick a custom due date"
+    />
   );
 }
 
@@ -187,6 +216,7 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           onKeyDown={onTagKeyDown}
           onBlur={onAddTag}
           placeholder={tags.length ? "" : "Add a tag…"}
+          aria-label="Add a tag"
           className="min-w-[80px] flex-1 border-0 bg-transparent text-[13px] text-foreground outline-none"
         />
       </div>

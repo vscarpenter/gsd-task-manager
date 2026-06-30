@@ -50,7 +50,7 @@ export function formatTaskSubtasks(task: TaskRecord): string[] {
   return lines;
 }
 
-export function formatTaskFooter(task: TaskRecord): string[] {
+function formatTaskFooter(task: TaskRecord): string[] {
   return [
     "",
     `Created: ${new Date(task.createdAt).toLocaleDateString()}`,
