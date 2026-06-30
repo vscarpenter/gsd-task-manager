@@ -1,0 +1,15 @@
+{
+  "name": "gsd-social-publisher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phase 1 X publishing for GSD Task Manager (isolated, not a workspace member).",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test",
+    "compose:dry-run": "node src/compose-post.mjs"
+  },
+  "dependencies": {
+    "twitter-api-v2": "^1.29.0"
+  }
+}
