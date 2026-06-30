@@ -35,7 +35,7 @@ function isSafePocketBaseUrl(url: string): boolean {
  * Configuration schema for GSD MCP Server (PocketBase)
  */
 export const configSchema = z.object({
-  pocketBaseUrl: z.string().url().refine(isSafePocketBaseUrl, {
+  pocketBaseUrl: z.url().refine(isSafePocketBaseUrl, {
     message:
       'PocketBase URL must use HTTPS (or http://localhost / http://127.0.0.1 / http://[::1] for local development)',
   }),
@@ -59,31 +59,4 @@ export function loadConfig(): GsdConfig {
     logger.info('Run setup wizard with: npx gsd-mcp-server --setup');
     throw error;
   }
-}
-
-/**
- * Check if configuration is valid without throwing
- */
-export function isConfigValid(): boolean {
-  try {
-    loadConfig();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get configuration status for diagnostics
- */
-export function getConfigStatus(): {
-  hasPocketBaseUrl: boolean;
-  hasAuthToken: boolean;
-  isValid: boolean;
-} {
-  return {
-    hasPocketBaseUrl: !!process.env.GSD_POCKETBASE_URL,
-    hasAuthToken: !!process.env.GSD_AUTH_TOKEN,
-    isValid: isConfigValid(),
-  };
 }

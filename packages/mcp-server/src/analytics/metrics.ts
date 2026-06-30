@@ -164,7 +164,7 @@ function calculateDueDateMetrics(active: Task[], today: Date) {
 /**
  * Calculate tag statistics
  */
-export function calculateTagStatistics(tasks: Task[]): TagStatistic[] {
+function calculateTagStatistics(tasks: Task[]): TagStatistic[] {
   const tagMap = buildTagMap(tasks);
   const stats = convertTagMapToStats(tagMap);
   return stats.sort((a, b) => b.count - a.count);

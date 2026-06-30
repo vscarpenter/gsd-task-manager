@@ -2,9 +2,8 @@
 
 import {
   createContext,
-  useContext,
-  useState,
-  useCallback,
+  use,
+  useReducer,
   useEffect,
   type ReactNode,
 } from 'react';
@@ -40,6 +39,97 @@ export interface SyncState {
 
 const SyncContext = createContext<SyncState | null>(null);
 
+/** Internal reducer state — mirrors the readable fields of SyncState. */
+interface SyncReducerState {
+  isSyncing: boolean;
+  lastResult: PBSyncResult | null;
+  status: 'idle' | 'syncing' | 'success' | 'error';
+  error: string | null;
+  isEnabled: boolean;
+  pendingRequests: number;
+  nextRetryAt: number | null;
+  retryCount: number;
+  autoSyncEnabled: boolean;
+  autoSyncInterval: number;
+  lastSuccessfulSyncAt: string | null;
+}
+
+const initialSyncState: SyncReducerState = {
+  isSyncing: false,
+  lastResult: null,
+  status: 'idle',
+  error: null,
+  isEnabled: false,
+  pendingRequests: 0,
+  nextRetryAt: null,
+  retryCount: 0,
+  autoSyncEnabled: true,
+  autoSyncInterval: 2,
+  lastSuccessfulSyncAt: null,
+};
+
+type SyncAction =
+  | { type: 'SET_ENABLED'; isEnabled: boolean }
+  | {
+      type: 'SET_COORDINATOR_STATUS';
+      isSyncing: boolean;
+      pendingRequests: number;
+      nextRetryAt: number | null;
+      retryCount: number;
+      lastSuccessfulSyncAt: string | null;
+    }
+  | { type: 'SET_AUTO_SYNC'; autoSyncEnabled: boolean; autoSyncInterval: number }
+  | { type: 'SET_LAST_RESULT'; lastResult: PBSyncResult }
+  | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'SET_STATUS'; status: SyncReducerState['status'] }
+  | { type: 'SYNC_START' }
+  | { type: 'SYNC_SUCCESS'; lastResult: PBSyncResult }
+  | { type: 'SYNC_IDLE'; lastResult: PBSyncResult }
+  | { type: 'SYNC_ERROR'; error: string; lastResult: PBSyncResult };
+
+function syncReducer(state: SyncReducerState, action: SyncAction): SyncReducerState {
+  switch (action.type) {
+    case 'SET_ENABLED':
+      return { ...state, isEnabled: action.isEnabled };
+    case 'SET_COORDINATOR_STATUS':
+      return {
+        ...state,
+        isSyncing: action.isSyncing,
+        pendingRequests: action.pendingRequests,
+        nextRetryAt: action.nextRetryAt,
+        retryCount: action.retryCount,
+        lastSuccessfulSyncAt: action.lastSuccessfulSyncAt,
+      };
+    case 'SET_AUTO_SYNC':
+      return {
+        ...state,
+        autoSyncEnabled: action.autoSyncEnabled,
+        autoSyncInterval: action.autoSyncInterval,
+      };
+    case 'SET_LAST_RESULT':
+      return { ...state, lastResult: action.lastResult };
+    case 'SET_ERROR':
+      return { ...state, error: action.error };
+    case 'SET_STATUS':
+      return { ...state, status: action.status };
+    case 'SYNC_START':
+      return { ...state, status: 'syncing', error: null };
+    case 'SYNC_SUCCESS':
+      return { ...state, status: 'success', lastResult: action.lastResult };
+    case 'SYNC_IDLE':
+      return { ...state, status: 'idle', lastResult: action.lastResult };
+    case 'SYNC_ERROR':
+      return {
+        ...state,
+        status: 'error',
+        error: action.error,
+        lastResult: action.lastResult,
+      };
+    default:
+      return state;
+  }
+}
+
 /**
  * App-level provider that owns all sync lifecycle management.
  *
@@ -49,17 +139,8 @@ const SyncContext = createContext<SyncState | null>(null);
  * background-sync starts/stops.
  */
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastResult, setLastResult] = useState<PBSyncResult | null>(null);
-  const [status, setStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState(0);
-  const [nextRetryAt, setNextRetryAt] = useState<number | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
-  const [autoSyncInterval, setAutoSyncInterval] = useState(2);
-  const [lastSuccessfulSyncAt, setLastSuccessfulSyncAt] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(syncReducer, initialSyncState);
+  const { isEnabled } = state;
 
   // Single lifecycle owner for health monitor and background sync
   useEffect(() => {
@@ -68,7 +149,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const db = getDb();
       const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
       const enabled = pbAuthenticated && !!config?.enabled;
-      setIsEnabled(enabled);
+      dispatch({ type: 'SET_ENABLED', isEnabled: enabled });
 
       // Start or stop health monitor based on sync state
       const healthMonitor = getHealthMonitor();
@@ -111,22 +192,28 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const coordinator = getSyncCoordinator();
       const coordStatus = await coordinator.getStatus();
 
-      setIsSyncing(coordStatus.isRunning);
-      setPendingRequests(coordStatus.pendingRequests);
-      setNextRetryAt(coordStatus.nextRetryAt);
-      setRetryCount(coordStatus.retryCount);
-      setLastSuccessfulSyncAt(coordStatus.lastSuccessfulSyncAt);
+      dispatch({
+        type: 'SET_COORDINATOR_STATUS',
+        isSyncing: coordStatus.isRunning,
+        pendingRequests: coordStatus.pendingRequests,
+        nextRetryAt: coordStatus.nextRetryAt,
+        retryCount: coordStatus.retryCount,
+        lastSuccessfulSyncAt: coordStatus.lastSuccessfulSyncAt,
+      });
 
       const autoConfig = await getAutoSyncConfig();
-      setAutoSyncEnabled(autoConfig.enabled);
-      setAutoSyncInterval(autoConfig.intervalMinutes);
+      dispatch({
+        type: 'SET_AUTO_SYNC',
+        autoSyncEnabled: autoConfig.enabled,
+        autoSyncInterval: autoConfig.intervalMinutes,
+      });
 
       if (coordStatus.lastResult) {
-        setLastResult(coordStatus.lastResult);
+        dispatch({ type: 'SET_LAST_RESULT', lastResult: coordStatus.lastResult });
       }
 
       if (coordStatus.lastError) {
-        setError(coordStatus.lastError);
+        dispatch({ type: 'SET_ERROR', error: coordStatus.lastError });
       }
     };
 
@@ -169,9 +256,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, [isEnabled]);
 
-  const sync = useCallback(async (): Promise<PBSyncResult> => {
-    setStatus('syncing');
-    setError(null);
+  const sync = async (): Promise<PBSyncResult> => {
+    dispatch({ type: 'SYNC_START' });
 
     try {
       const coordinator = getSyncCoordinator();
@@ -182,59 +268,42 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
       if (coordStatus.lastResult) {
         result = coordStatus.lastResult;
-        setLastResult(result);
 
         if (result.status === 'success') {
-          setStatus('success');
-          setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_SUCCESS_MS);
+          dispatch({ type: 'SYNC_SUCCESS', lastResult: result });
+          setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_SUCCESS_MS);
         } else if (result.status === 'already_running') {
           // Dedup signal -- not an error, just go back to idle
-          setStatus('idle');
+          dispatch({ type: 'SYNC_IDLE', lastResult: result });
         } else {
           // 'error' or 'partial' -- both are error-like states
-          setStatus('error');
-          setError(result.error || 'Sync failed');
-          setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_ERROR_MS);
+          dispatch({ type: 'SYNC_ERROR', error: result.error || 'Sync failed', lastResult: result });
+          setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_ERROR_MS);
         }
       } else if (coordStatus.lastError) {
         result = { status: 'error', error: coordStatus.lastError };
-        setStatus('error');
-        setError(coordStatus.lastError);
-        setLastResult(result);
-        setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_ERROR_MS);
+        dispatch({ type: 'SYNC_ERROR', error: coordStatus.lastError, lastResult: result });
+        setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_ERROR_MS);
       } else {
         result = { status: 'success' };
-        setStatus('success');
-        setLastResult(result);
-        setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_SUCCESS_MS);
+        dispatch({ type: 'SYNC_SUCCESS', lastResult: result });
+        setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_SUCCESS_MS);
       }
 
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed';
       const result: PBSyncResult = { status: 'error', error: errorMessage };
-      setStatus('error');
-      setError(errorMessage);
-      setLastResult(result);
+      dispatch({ type: 'SYNC_ERROR', error: errorMessage, lastResult: result });
 
-      setTimeout(() => setStatus('idle'), UI_TIMING.AUTO_RESET_ERROR_MS);
+      setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_ERROR_MS);
       return result;
     }
-  }, []);
+  };
 
   const value: SyncState = {
     sync,
-    isSyncing,
-    lastResult,
-    status,
-    error,
-    isEnabled,
-    pendingRequests,
-    nextRetryAt,
-    retryCount,
-    autoSyncEnabled,
-    autoSyncInterval,
-    lastSuccessfulSyncAt,
+    ...state,
   };
 
   return (
@@ -249,7 +318,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
  * Must be used within a SyncProvider.
  */
 export function useSyncContext(): SyncState {
-  const context = useContext(SyncContext);
+  const context = use(SyncContext);
   if (!context) {
     throw new Error('useSyncContext must be used within a SyncProvider');
   }

@@ -141,6 +141,7 @@ export default function ArchivePage() {
 
   const rowCount = Math.ceil(archivedTasks.length / columnCount);
 
+  // react-doctor-disable-next-line react-hooks-js/incompatible-library -- @tanstack/react-virtual; React Compiler skips by design
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollContainerRef.current,

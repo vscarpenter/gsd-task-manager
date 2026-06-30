@@ -156,16 +156,18 @@ export class SyncQueue {
 
     if (tasks.length === 0) return 0;
 
-    let count = 0;
-    for (const task of tasks) {
-      const existing = await this.getForTask(task.id);
-      if (existing.length === 0) {
-        await this.enqueue('create', task.id, task);
-        count++;
-      }
-    }
+    const enqueued = await Promise.all(
+      tasks.map(async (task) => {
+        const existing = await this.getForTask(task.id);
+        if (existing.length === 0) {
+          await this.enqueue('create', task.id, task);
+          return 1;
+        }
+        return 0;
+      })
+    );
 
-    return count;
+    return enqueued.reduce((sum: number, n) => sum + n, 0);
   }
 
 }

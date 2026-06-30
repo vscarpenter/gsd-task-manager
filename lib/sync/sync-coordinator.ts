@@ -94,8 +94,10 @@ export class SyncCoordinator {
   }
 
   async getStatus(): Promise<SyncStatus> {
-    const config = await this.getSyncConfig();
-    const retryCount = await this.retryManager.getRetryCount();
+    const [config, retryCount] = await Promise.all([
+      this.getSyncConfig(),
+      this.retryManager.getRetryCount(),
+    ]);
 
     return {
       isRunning: this.isRunning,
@@ -168,6 +170,7 @@ export class SyncCoordinator {
       const next = this.pendingRequests.shift();
       if (!next) break;
       logger.debug('Processing queued sync request', { priority: next.priority });
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       await this.runRequest(next.priority);
     }
   }

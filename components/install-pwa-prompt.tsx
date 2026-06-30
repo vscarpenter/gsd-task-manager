@@ -25,9 +25,37 @@ function detectBrowserType(): "chrome" | "safari" | "other" {
   return "other";
 }
 
+/**
+ * Whether the prompt is still within the 7-day cooldown after the user
+ * dismissed it. Reads the stored timestamp once.
+ */
+function isWithinDismissalCooldown(): boolean {
+  const dismissed = localStorage.getItem("gsd-pwa-dismissed");
+  if (!dismissed) {
+    return false;
+  }
+  const dismissedTime = Number.parseInt(dismissed, 10);
+  const daysSinceDismissed = (Date.now() - dismissedTime) / TIME_MS.DAY;
+  return daysSinceDismissed < 7;
+}
+
+function navigateToInstall() {
+  window.location.href = ROUTES.INSTALL;
+}
+
+interface PromptState {
+  deferredPrompt: BeforeInstallPromptEvent | null;
+  showPrompt: boolean;
+}
+
+const INITIAL_PROMPT_STATE: PromptState = {
+  deferredPrompt: null,
+  showPrompt: false,
+};
+
 export function InstallPwaPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [{ deferredPrompt, showPrompt }, setPromptState] =
+    useState<PromptState>(INITIAL_PROMPT_STATE);
   const [browserType] = useState<"chrome" | "safari" | "other">(detectBrowserType);
 
   useEffect(() => {
@@ -44,15 +72,8 @@ export function InstallPwaPrompt() {
     }
 
     // Check if user has dismissed the prompt before
-    const dismissed = localStorage.getItem("gsd-pwa-dismissed");
-    if (dismissed) {
-      const dismissedTime = Number.parseInt(dismissed, 10);
-      const daysSinceDismissed = (Date.now() - dismissedTime) / TIME_MS.DAY;
-
-      // Show again after 7 days
-      if (daysSinceDismissed < 7) {
-        return;
-      }
+    if (isWithinDismissalCooldown()) {
+      return;
     }
 
     // Listen for the beforeinstallprompt event.
@@ -60,16 +81,13 @@ export function InstallPwaPrompt() {
     // dismissal state each time the event fires — not just on mount.
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      const currentDismissed = localStorage.getItem("gsd-pwa-dismissed");
-      if (currentDismissed) {
-        const dismissedTime = Number.parseInt(currentDismissed, 10);
-        const daysSinceDismissed = (Date.now() - dismissedTime) / TIME_MS.DAY;
-        if (daysSinceDismissed < 7) {
-          return;
-        }
+      if (isWithinDismissalCooldown()) {
+        return;
       }
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowPrompt(true);
+      setPromptState({
+        deferredPrompt: e as BeforeInstallPromptEvent,
+        showPrompt: true,
+      });
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -77,7 +95,7 @@ export function InstallPwaPrompt() {
     // For Safari/iOS, show prompt after a delay
     if (browserType === "safari" && !isInstalled) {
       const timer = setTimeout(() => {
-        setShowPrompt(true);
+        setPromptState((prev) => ({ ...prev, showPrompt: true }));
       }, 3000); // Show after 3 seconds
 
       return () => {
@@ -94,7 +112,7 @@ export function InstallPwaPrompt() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       // If no install prompt (e.g., Safari), redirect to instructions
-      window.location.href = ROUTES.INSTALL;
+      navigateToInstall();
       return;
     }
 
@@ -103,8 +121,7 @@ export function InstallPwaPrompt() {
       const { outcome } = await deferredPrompt.userChoice;
 
       if (outcome === "accepted") {
-        setShowPrompt(false);
-        setDeferredPrompt(null);
+        setPromptState(INITIAL_PROMPT_STATE);
       }
     } catch (error) {
       logger.error("Install prompt error", error instanceof Error ? error : new Error(String(error)));
@@ -112,12 +129,8 @@ export function InstallPwaPrompt() {
   };
 
   const handleDismiss = () => {
-    setShowPrompt(false);
+    setPromptState((prev) => ({ ...prev, showPrompt: false }));
     localStorage.setItem("gsd-pwa-dismissed", Date.now().toString());
-  };
-
-  const handleLearnMore = () => {
-    window.location.href = ROUTES.INSTALL;
   };
 
   if (!showPrompt) {
@@ -160,7 +173,7 @@ export function InstallPwaPrompt() {
               <Button
                 type="button"
                 variant="subtle"
-                onClick={handleLearnMore}
+                onClick={navigateToInstall}
                 className="h-8 gap-1 px-3 py-1 text-xs"
               >
                 <Info className="h-3 w-3" aria-hidden="true" />

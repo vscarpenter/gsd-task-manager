@@ -147,6 +147,7 @@ export default function SyncHistoryPage(): React.ReactElement {
 		});
 	};
 
+	// react-doctor-disable-next-line react-hooks-js/incompatible-library -- @tanstack/react-virtual; React Compiler skips by design
 	const virtualizer = useVirtualizer({
 		count: history.length,
 		getScrollElement: () => scrollContainerRef.current,

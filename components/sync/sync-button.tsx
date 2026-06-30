@@ -19,6 +19,27 @@ import {
   ClockIcon,
 } from 'lucide-react';
 
+function getIconComponent(type: IconType) {
+  switch (type) {
+    case 'cloud-off':
+      return <CloudOffIcon className="h-5 w-5" />;
+    case 'alert-auth':
+      return <AlertCircleIcon className="h-5 w-5 text-red-600 animate-pulse" />;
+    case 'clock':
+      return <ClockIcon className="h-5 w-5 text-orange-500" />;
+    case 'cloud-syncing':
+      return <CloudIcon className="h-5 w-5 animate-pulse" />;
+    case 'check-success':
+      return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+    case 'x-error':
+      return <XCircleIcon className="h-5 w-5 text-red-500" />;
+    case 'alert-conflict':
+      return <AlertCircleIcon className="h-5 w-5 text-yellow-500" />;
+    case 'cloud-idle':
+      return <CloudIcon className="h-5 w-5" />;
+  }
+}
+
 export function SyncButton() {
   const { sync, isSyncing, status, error, isEnabled, nextRetryAt } = useSync();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -76,27 +97,6 @@ export function SyncButton() {
 
   function handleAuthSuccess() {
     setAuthDialogOpen(false);
-  }
-
-  function getIconComponent(type: IconType) {
-    switch (type) {
-      case 'cloud-off':
-        return <CloudOffIcon className="h-5 w-5" />;
-      case 'alert-auth':
-        return <AlertCircleIcon className="h-5 w-5 text-red-600 animate-pulse" />;
-      case 'clock':
-        return <ClockIcon className="h-5 w-5 text-orange-500" />;
-      case 'cloud-syncing':
-        return <CloudIcon className="h-5 w-5 animate-pulse" />;
-      case 'check-success':
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case 'x-error':
-        return <XCircleIcon className="h-5 w-5 text-red-500" />;
-      case 'alert-conflict':
-        return <AlertCircleIcon className="h-5 w-5 text-yellow-500" />;
-      case 'cloud-idle':
-        return <CloudIcon className="h-5 w-5" />;
-    }
   }
 
   return (

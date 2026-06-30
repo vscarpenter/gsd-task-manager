@@ -83,7 +83,8 @@ export function taskRecordToPocketBase(
 
 /**
  * Zod schema for validating PocketBase task records at the sync boundary.
- * Uses .strip() to discard unknown fields from the remote response.
+ * Unknown fields in the remote response are discarded (Zod object schemas
+ * strip unrecognized keys by default).
  *
  * Length and count limits mirror SCHEMA_LIMITS so oversized remote data is
  * rejected at the pull boundary instead of being persisted to IndexedDB.
@@ -112,7 +113,7 @@ const pbTaskRecordSchema = z.object({
   time_spent: z.number().int().min(0).default(0),
   time_entries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
   snoozed_until: z.string().default(''),
-}).strip();
+});
 
 /**
  * Convert a PocketBase record to local TaskRecord format.

@@ -1,48 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-  PaletteIcon,
-  BellIcon,
-  CloudIcon,
-  ArchiveIcon,
-  DatabaseIcon,
-  InfoIcon,
-  SlidersHorizontalIcon,
-  type LucideIcon,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type SettingsSectionId =
-  | "appearance"
-  | "features"
-  | "notifications"
-  | "sync"
-  | "archive"
-  | "data"
-  | "about";
-
-export type SectionGroup = "Preferences" | "Data" | "Info";
-
-export interface SectionMeta {
-  id: SettingsSectionId;
-  label: string;
-  icon: LucideIcon;
-  description: string;
-  group: SectionGroup;
-}
-
-export const SETTINGS_SECTIONS: SectionMeta[] = [
-  { id: "appearance", label: "Appearance", icon: PaletteIcon, description: "Theme and display preferences", group: "Preferences" },
-  { id: "features", label: "Features", icon: SlidersHorizontalIcon, description: "Optional workspace capabilities", group: "Preferences" },
-  { id: "notifications", label: "Notifications", icon: BellIcon, description: "Reminders and alerts", group: "Preferences" },
-  { id: "sync", label: "Cloud Sync", icon: CloudIcon, description: "Multi-device synchronization", group: "Preferences" },
-  { id: "archive", label: "Archive", icon: ArchiveIcon, description: "Auto-archive completed tasks", group: "Data" },
-  { id: "data", label: "Data & Storage", icon: DatabaseIcon, description: "Backup, import, and reset", group: "Data" },
-  { id: "about", label: "About", icon: InfoIcon, description: "Version and project info", group: "Info" },
-];
-
-export const SETTINGS_SECTION_IDS = SETTINGS_SECTIONS.map((s) => s.id);
+import {
+  SETTINGS_SECTIONS,
+  type SectionGroup,
+  type SectionMeta,
+  type SettingsSectionId,
+} from "./settings-sidebar-data";
 
 interface SettingsSidebarProps {
   activeId: SettingsSectionId;
@@ -56,12 +20,9 @@ interface SettingsSidebarProps {
  * vertical bar and tinted pill. Collapses into a horizontal scroller on mobile.
  */
 export function SettingsSidebar({ activeId, onSelect, visibleSections }: SettingsSidebarProps) {
-  const visibleSectionSet = useMemo(() => new Set(visibleSections), [visibleSections]);
-  const sections = useMemo(
-    () => SETTINGS_SECTIONS.filter((s) => visibleSectionSet.has(s.id)),
-    [visibleSectionSet]
-  );
-  const groups = useMemo(() => groupByGroup(sections), [sections]);
+  const visibleSectionSet = new Set(visibleSections);
+  const sections = SETTINGS_SECTIONS.filter((s) => visibleSectionSet.has(s.id));
+  const groups = groupByGroup(sections);
 
   return (
     <>
@@ -166,7 +127,12 @@ function SidebarItem({ section, isActive, onSelect }: SidebarItemProps) {
 
 function groupByGroup(sections: SectionMeta[]): { group: SectionGroup; items: SectionMeta[] }[] {
   const order: SectionGroup[] = ["Preferences", "Data", "Info"];
-  return order
-    .map((group) => ({ group, items: sections.filter((s) => s.group === group) }))
-    .filter(({ items }) => items.length > 0);
+  const result: { group: SectionGroup; items: SectionMeta[] }[] = [];
+  for (const group of order) {
+    const items = sections.filter((s) => s.group === group);
+    if (items.length > 0) {
+      result.push({ group, items });
+    }
+  }
+  return result;
 }

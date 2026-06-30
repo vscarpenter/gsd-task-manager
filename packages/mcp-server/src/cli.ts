@@ -10,7 +10,6 @@ export {
   parseCLIArgs,
   showHelp,
   getClaudeConfigPath,
-  createReadline,
   prompt,
   promptPassword,
 } from './cli/index.js';

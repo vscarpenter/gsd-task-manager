@@ -84,6 +84,7 @@ export async function deleteRemoteAccountAndTasks(
   // account intact, so a retry re-fetches only the survivors and continues.
   try {
     for (const entry of index.values()) {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       await pb.collection("tasks").delete(entry.pbRecordId);
       if (throttleMs > 0) await sleep(throttleMs);
     }

@@ -79,6 +79,7 @@ function ThemeOption({
 }) {
 	return (
 		<button
+			type="button"
 			onClick={onClick}
 			className={`
 				relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium

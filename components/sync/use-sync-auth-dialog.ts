@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { getOAuthErrorMessage, type AuthState, refreshAuth } from "@/lib/sync/pb-auth";
 import { clearPocketBase, isAuthenticated } from "@/lib/sync/pocketbase-client";
 import { getSyncStatus, disableSync } from "@/lib/sync/config";
@@ -24,32 +24,52 @@ interface CancellationToken {
   cancelled: boolean;
 }
 
+/**
+ * Hydration gate for client-only rendering. `getServerSnapshot` returns false
+ * (server / first client render), `getSnapshot` returns true (post-hydration),
+ * so React re-renders once mounted without a setState-in-effect.
+ */
+const subscribeMounted = (): (() => void) => () => {};
+const getMountedSnapshot = (): boolean => true;
+const getMountedServerSnapshot = (): boolean => false;
+
 export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatusInfo | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    subscribeMounted,
+    getMountedSnapshot,
+    getMountedServerSnapshot
+  );
 
-  useEffect(() => {
-    const cancellation: CancellationToken = { cancelled: false };
-
+  // Reset transient dialog state when the dialog transitions open. Done during
+  // render via React's documented "previous prop in state" pattern rather than
+  // in an effect, so we never adjust state on a prop change inside useEffect.
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setShowLogoutConfirm(false);
       setSessionExpired(false);
-      loadSyncStatus(cancellation, {
-        setIsRefreshing,
-        setSessionExpired,
-        setSyncStatus,
-      });
     }
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const cancellation: CancellationToken = { cancelled: false };
+
+    loadSyncStatus(cancellation, {
+      setIsRefreshing,
+      setSessionExpired,
+      setSyncStatus,
+    });
 
     return () => {
       cancellation.cancelled = true;
@@ -114,9 +134,9 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
       setShowLogoutConfirm(false);
       toast.success("Logged out successfully");
       onSuccess?.();
+      setIsLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Logout failed");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -153,8 +173,10 @@ async function loadSyncStatus(
   }
 ) {
   const db = getDb();
-  const config = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
 
+  if (cancellation.cancelled) return;
+  // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
+  const config = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
   if (cancellation.cancelled) return;
 
   if (!config?.enabled) {
@@ -163,6 +185,8 @@ async function loadSyncStatus(
     return;
   }
 
+  if (cancellation.cancelled) return;
+  // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
   await validateTokenAndRefresh(cancellation, setters);
   if (cancellation.cancelled) return;
 
@@ -190,6 +214,8 @@ async function validateTokenAndRefresh(
 
   // Token expired — attempt silent refresh
   setters.setIsRefreshing(true);
+  if (cancellation.cancelled) return;
+  // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
   const refreshed = await refreshAuth();
   if (cancellation.cancelled) return;
   setters.setIsRefreshing(false);

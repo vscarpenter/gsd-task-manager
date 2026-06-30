@@ -129,9 +129,11 @@ function remapTaskReferences(
 
 /** Resolve sync modules outside transaction to avoid detaching Dexie context */
 async function resolveSyncDeps(): Promise<{ syncEnabled: boolean; queue: SyncQueue; scheduleSyncAfterChange: () => void }> {
-  const { getSyncConfig } = await import("@/lib/sync/config");
-  const { getSyncQueue } = await import("@/lib/sync/queue");
-  const { scheduleSyncAfterChange } = await import("@/lib/tasks/crud/helpers");
+  const [{ getSyncConfig }, { getSyncQueue }, { scheduleSyncAfterChange }] = await Promise.all([
+    import("@/lib/sync/config"),
+    import("@/lib/sync/queue"),
+    import("@/lib/tasks/crud/helpers"),
+  ]);
   const syncConfig = await getSyncConfig();
   return {
     syncEnabled: !!syncConfig?.enabled,
@@ -181,12 +183,10 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
     }
 
     if (syncEnabled) {
-      for (const id of taskIdsToDelete) {
-        await queue.enqueue('delete', id, null);
-      }
-      for (const task of tasksToCreate) {
-        await queue.enqueue('create', task.id, task);
-      }
+      await Promise.all([
+        ...taskIdsToDelete.map((id) => queue.enqueue('delete', id, null)),
+        ...tasksToCreate.map((task) => queue.enqueue('create', task.id, task)),
+      ]);
     }
   });
 

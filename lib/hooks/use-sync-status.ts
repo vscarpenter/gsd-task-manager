@@ -26,6 +26,17 @@ function formatRelativeTime(timestamp: string | null): string {
   return `${days} day${days !== 1 ? "s" : ""} ago`;
 }
 
+/**
+ * Read the last successful sync time from the coordinator. Kept at module
+ * scope (not inside the hook) so the dynamic `import()` stays out of the
+ * React-Compiler-compiled hook body, which it cannot yet lower.
+ */
+async function fetchLastSuccessfulSyncAt(): Promise<string | null> {
+  const { getSyncCoordinator } = await import("@/lib/sync/sync-coordinator");
+  const status = await getSyncCoordinator().getStatus();
+  return status.lastSuccessfulSyncAt;
+}
+
 interface SyncStatusResult {
   isEnabled: boolean;
   retryCount: number;
@@ -53,13 +64,7 @@ export function useSyncStatus(): SyncStatusResult {
         setLastSyncTime(null);
         return;
       }
-
-      const { getSyncCoordinator } = await import(
-        "@/lib/sync/sync-coordinator"
-      );
-      const coordinator = getSyncCoordinator();
-      const status = await coordinator.getStatus();
-      setLastSyncTime(status.lastSuccessfulSyncAt);
+      setLastSyncTime(await fetchLastSuccessfulSyncAt());
     };
 
     updateLastSync();

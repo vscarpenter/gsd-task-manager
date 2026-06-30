@@ -3,8 +3,8 @@
  * Consolidated from the former gap-closing.test.tsx and more-function-coverage.test.tsx
  * padding files (finding F2.1).
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMockTask } from "@/tests/fixtures";
 
@@ -146,5 +146,80 @@ describe("TaskTimer", () => {
 
     await user.click(screen.getByLabelText(/stop timer/i));
     expect(onStopTimer).toHaveBeenCalledWith("test-task-1");
+  });
+
+  describe("elapsed time display", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("derives the running elapsed time from the started-at timestamp", async () => {
+      const baseNow = new Date("2026-06-30T12:00:00.000Z").getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(baseNow);
+
+      const startedAt = new Date(baseNow - 90 * 1000).toISOString(); // 1:30 ago
+      mockHasRunningTimer.mockReturnValue(true);
+      mockGetRunningEntry.mockReturnValue({ id: "entry-1", startedAt });
+
+      const { TaskTimer } = await import("@/components/task-timer");
+
+      render(
+        <TaskTimer
+          task={createMockTask({
+            timeSpent: 0,
+            timeEntries: [{ id: "entry-1", startedAt }],
+          })}
+          {...noopHandlers}
+        />
+      );
+
+      // 90 seconds elapsed renders as mm:ss.
+      expect(screen.getByText("01:30")).toBeInTheDocument();
+    });
+
+    it("advances the elapsed display as the clock ticks", async () => {
+      const baseNow = new Date("2026-06-30T12:00:00.000Z").getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(baseNow);
+
+      const startedAt = new Date(baseNow - 5 * 1000).toISOString(); // 0:05 ago
+      mockHasRunningTimer.mockReturnValue(true);
+      mockGetRunningEntry.mockReturnValue({ id: "entry-1", startedAt });
+
+      const { TaskTimer } = await import("@/components/task-timer");
+
+      render(
+        <TaskTimer
+          task={createMockTask({
+            timeSpent: 0,
+            timeEntries: [{ id: "entry-1", startedAt }],
+          })}
+          {...noopHandlers}
+        />
+      );
+
+      expect(screen.getByText("00:05")).toBeInTheDocument();
+
+      // Advancing fake timers also advances the fake system clock, so each
+      // interval tick reads a later Date.now() and the derived elapsed grows.
+      act(() => {
+        vi.advanceTimersByTime(3 * 1000);
+      });
+
+      expect(screen.getByText("00:08")).toBeInTheDocument();
+    });
+
+    it("shows no running elapsed display when the timer is stopped", async () => {
+      mockHasRunningTimer.mockReturnValue(false);
+      mockGetRunningEntry.mockReturnValue(undefined);
+
+      const { TaskTimer } = await import("@/components/task-timer");
+
+      render(<TaskTimer task={createMockTask({ timeSpent: 0 })} {...noopHandlers} />);
+
+      // The mm:ss running clock should not be present when stopped.
+      expect(screen.queryByText(/^\d{2}:\d{2}$/)).not.toBeInTheDocument();
+    });
   });
 });
