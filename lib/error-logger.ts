@@ -8,6 +8,7 @@
  */
 
 import { captureException } from '@/lib/sentry';
+import { filterSentryMetadata } from '@/lib/logger';
 
 export interface ErrorContext {
   action: string;
@@ -56,7 +57,14 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
     });
   }
 
-  captureException(error, { ...loggedError });
+  // Apply the same allowlist as lib/logger.ts so only safe diagnostic keys
+  // reach Sentry. Flatten `metadata` first so allowlisted keys inside it
+  // (operation, correlationId) survive while task content / raw input are
+  // stripped.
+  captureException(
+    error,
+    filterSentryMetadata({ ...loggedError, ...loggedError.metadata })
+  );
 
   return loggedError;
 }

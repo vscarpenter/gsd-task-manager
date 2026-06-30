@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { PlayIcon, PauseIcon, ClockIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskRecord } from "@/lib/types";
@@ -53,38 +53,48 @@ export function TaskTimer({
 }: TaskTimerProps) {
   const isRunning = hasRunningTimer(task);
   const runningEntry = getRunningEntry(task);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  // The current wall-clock time, kept in state because Date.now() is impure and
+  // cannot be read during render. The interval below advances it once per second
+  // while a timer runs — a clock subscription, not prop->state sync.
+  const [now, setNow] = useState(() => Date.now());
 
-  // Update elapsed time every second when timer is running
+  const startMs =
+    isRunning && runningEntry
+      ? new Date(runningEntry.startedAt).getTime()
+      : null;
+  // Derive elapsed seconds during render from the clock state. Zero when no
+  // timer is running, so it resets automatically when the running prop clears.
+  const elapsedSeconds =
+    startMs !== null ? Math.max(0, Math.floor((now - startMs) / 1000)) : 0;
+
+  // Advance the clock once per second while a timer is running so the derived
+  // elapsed time re-renders. This subscribes to an external clock; it does not
+  // synchronize prop-derived values into state.
   useEffect(() => {
-    if (!isRunning || !runningEntry) {
-      setElapsedSeconds(0);
-      return;
-    }
+    if (startMs === null) return;
 
-    // Initialize with current elapsed time
-    const start = new Date(runningEntry.startedAt).getTime();
-    setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
-
-    // Update every second
     const interval = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
+      setNow(Date.now());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, runningEntry]);
+  }, [startMs]);
 
   const handleToggle = async () => {
     setIsLoading(true);
+    // No `finally`: the React Compiler can't yet optimize a component with a
+    // try/finally, so the loading reset is duplicated across both paths.
     try {
       if (isRunning) {
         await onStopTimer(task.id);
       } else {
         await onStartTimer(task.id);
       }
-    } finally {
       setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
     }
   };
 
@@ -95,13 +105,13 @@ export function TaskTimer({
   const isOverEstimate = estimatedMinutes !== undefined && estimatedMinutes > 0 && totalTimeSpent > estimatedMinutes;
 
   // Dynamic ARIA label including elapsed time for screen readers (fixes Issue #7)
-  const ariaLabel = useMemo(() => {
+  const ariaLabel = (() => {
     if (isRunning) {
       return `Stop timer. Elapsed: ${formatElapsedTime(elapsedSeconds)}. Total tracked: ${formatTimeSpent(totalTimeSpent)}`;
     }
     const tracked = task.timeSpent ? formatTimeSpent(task.timeSpent) : "no time tracked";
     return `Start timer. ${tracked}`;
-  }, [isRunning, elapsedSeconds, totalTimeSpent, task.timeSpent]);
+  })();
 
   if (compact) {
     return (

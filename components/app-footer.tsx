@@ -7,7 +7,6 @@ export function AppFooter() {
   return (
     <footer
       className="border-t border-border/70 bg-background px-4 py-3 text-xs text-foreground-muted sm:px-9"
-      role="contentinfo"
     >
       <p className="text-center">
         Created by{" "}

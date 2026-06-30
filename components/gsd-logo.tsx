@@ -31,17 +31,3 @@ export function GsdLogo({ className, size = 28 }: GsdLogoProps) {
     </svg>
   );
 }
-
-export function GsdLogoLockup({ className }: { className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>
-      <GsdLogo size={28} />
-      <span
-        className="font-semibold text-foreground"
-        style={{ letterSpacing: "-0.02em" }}
-      >
-        GSD
-      </span>
-    </span>
-  );
-}

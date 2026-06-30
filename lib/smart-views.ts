@@ -162,8 +162,10 @@ export async function updateAppPreferences(updates: Partial<Omit<AppPreferences,
  * Get pinned smart views in order
  */
 export async function getPinnedSmartViews(): Promise<SmartView[]> {
-  const prefs = await getAppPreferences();
-  const allViews = await getSmartViews();
+  const [prefs, allViews] = await Promise.all([
+    getAppPreferences(),
+    getSmartViews(),
+  ]);
 
   // Return views in the order they appear in pinnedSmartViewIds
   return prefs.pinnedSmartViewIds

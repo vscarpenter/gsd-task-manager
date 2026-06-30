@@ -65,9 +65,11 @@ class NotificationChecker {
 			(task) => task.dueDate && task.notificationEnabled !== false,
 		);
 
-		for (const task of tasksWithDueDates) {
-			await this.checkTask(task, now, settings.defaultReminder);
-		}
+		await Promise.all(
+			tasksWithDueDates.map((task) =>
+				this.checkTask(task, now, settings.defaultReminder),
+			),
+		);
 
 		await this.updateBadge();
 	}

@@ -237,6 +237,22 @@ describe('stopTimeTracking', () => {
     );
   });
 
+  it('rejects notes longer than TIME_ENTRY_NOTES_MAX_LENGTH without persisting', async () => {
+    const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
+    const { SCHEMA_LIMITS } = await import('@/lib/constants/schema');
+
+    const task = createBaseTask({
+      timeEntries: [{ id: 'entry-1', startedAt: '2025-06-01T12:00:00.000Z' }],
+    });
+    mockGet.mockResolvedValue(task);
+    mockPut.mockResolvedValue(undefined);
+
+    await expect(
+      stopTimeTracking('task-1', 'a'.repeat(SCHEMA_LIMITS.TIME_ENTRY_NOTES_MAX_LENGTH + 1))
+    ).rejects.toThrow(/notes/i);
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
   it('throws when task not found', async () => {
     const { stopTimeTracking } = await import('@/lib/tasks/crud/time-tracking');
 

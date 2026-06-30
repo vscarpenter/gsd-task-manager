@@ -11,7 +11,8 @@ import { createLogger } from '@/lib/logger';
 import { getRetryManager } from './retry-manager';
 import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/sync-history';
 import { notifySyncSuccess, notifySyncError } from './notifications';
-import { isTransientSyncFailure, sanitizeSyncError } from './error-categorizer';
+import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
+import { ensureValidAuth } from './pb-auth';
 import { getDeviceId } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
@@ -111,6 +112,12 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     const db = getDb();
     const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
 
+    // A merely-expired JWT can still be refreshed from the server session.
+    // Attempt that silently here; if it fails, push/pull report the auth
+    // failure cleanly via the unauthenticated path below.
+    // react-doctor-disable-next-line react-doctor/async-parallel -- auth->push->pull ordering is required; not independent
+    await ensureValidAuth();
+
     const pushResult = await pushLocalChanges();
     const pullResult = await pullRemoteChanges(resolveServerCursor(config));
 
@@ -165,7 +172,7 @@ async function updateSyncCursor(config: PBSyncConfig | undefined, maxTimestamp: 
 }
 
 async function reportPartialFailure(
-  pushResult: { pushedCount: number; failedCount: number; lastError: string | null },
+  pushResult: { pushedCount: number; failedCount: number; lastError: string | null; retryAfterMs?: number | null },
   pullResult: { pulledCount: number },
   retryManager: ReturnType<typeof getRetryManager>,
   deviceId: string,
@@ -173,7 +180,7 @@ async function reportPartialFailure(
   duration: number,
 ): Promise<PBSyncResult> {
   const errorMsg = `${pushResult.failedCount} item(s) failed to sync: ${pushResult.lastError}`;
-  await retryManager.recordFailure(new Error(errorMsg));
+  await retryManager.recordFailure(new Error(errorMsg), { retryAfterMs: pushResult.retryAfterMs ?? null });
   await recordSyncPartial({
     pushedCount: pushResult.pushedCount,
     pulledCount: pullResult.pulledCount,
@@ -204,7 +211,8 @@ async function reportSyncError(
   // PB 4xx bodies can echo submitted field values (task titles), so persist
   // and surface only the stable code; keep the raw Error for diagnostics.
   const errorCode = sanitizeSyncError(errorObj);
-  await retryManager.recordFailure(errorObj);
+  // A directly-thrown 429 (e.g. from pull) may carry a Retry-After hint.
+  await retryManager.recordFailure(errorObj, { retryAfterMs: extractRetryAfterMs(errorObj) });
   await recordSyncError(errorCode, deviceId, triggeredBy, Date.now() - startTime);
   notifySyncError(errorCode, false);
   if (isTransientSyncFailure(errorObj)) {

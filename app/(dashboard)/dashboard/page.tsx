@@ -1,7 +1,7 @@
 "use client";
 
 import type { Route } from "next";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2Icon,
@@ -46,19 +46,16 @@ export default function DashboardPage(): React.ReactElement {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const data = useDashboardData(tasks, trendPeriod);
 
-  const openMatrixAction = useCallback((params?: URLSearchParams) => {
+  const openMatrixAction = (params?: URLSearchParams) => {
     const query = params?.toString();
     router.push(query ? (`/?${query}` as Route) : ROUTES.HOME);
-  }, [router]);
+  };
 
-  const handleDeadlineTaskClick = useCallback(
-    (task: { id: string }) => {
-      const params = new URLSearchParams();
-      params.set("highlight", task.id);
-      openMatrixAction(params);
-    },
-    [openMatrixAction]
-  );
+  const handleDeadlineTaskClick = (task: { id: string }) => {
+    const params = new URLSearchParams();
+    params.set("highlight", task.id);
+    openMatrixAction(params);
+  };
 
   useKeyboardShortcuts(
     {

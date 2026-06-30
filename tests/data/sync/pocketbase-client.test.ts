@@ -9,6 +9,8 @@ const mockPb = {
   autoCancellation: vi.fn(),
   authStore: mockAuthStore,
   collection: vi.fn(),
+  // Assigned by getPocketBase(); the SDK invokes it after every response.
+  afterSend: undefined as ((response: Response, data: unknown) => unknown) | undefined,
 };
 
 // vi.fn() with a function body that returns mockPb acts as a constructor
@@ -90,5 +92,30 @@ describe('PocketBase Client', () => {
     mockAuthStore.record = { id: 'user-abc-123' };
 
     expect(getCurrentUserId()).toBe('user-abc-123');
+  });
+
+  it('captures a 429 Retry-After header into the response body via afterSend', async () => {
+    const { getPocketBase } = await import('@/lib/sync/pocketbase-client');
+    getPocketBase();
+
+    expect(typeof mockPb.afterSend).toBe('function');
+    const response = {
+      status: 429,
+      headers: { get: (h: string) => (h.toLowerCase() === 'retry-after' ? '30' : null) },
+    } as unknown as Response;
+
+    const result = mockPb.afterSend!(response, { code: 429, message: 'rate limited' }) as {
+      retryAfterMs?: number;
+    };
+    expect(result.retryAfterMs).toBe(30_000);
+  });
+
+  it('leaves the body unchanged for non-429 responses', async () => {
+    const { getPocketBase } = await import('@/lib/sync/pocketbase-client');
+    getPocketBase();
+
+    const response = { status: 200, headers: { get: () => null } } as unknown as Response;
+    const result = mockPb.afterSend!(response, { ok: true });
+    expect(result).toEqual({ ok: true });
   });
 });

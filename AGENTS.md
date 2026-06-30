@@ -48,3 +48,11 @@ change is intentional.
 **Verifying frontend changes.** The PWA service worker can serve stale JS chunks
 and data surfaces render empty on a fresh load — use the `verify-frontend-change`
 skill rather than a naive screenshot (see `CLAUDE.md`).
+
+## Security review surfaces
+
+The security-relevant trust boundaries (PocketBase sync owner-scoping, the MCP
+write-ops, service-worker cache exclusions, import/export validation, the
+PocketBase encryption hooks) and the controls that already bound them are mapped
+in `.blume/insights/security-trust-boundaries.md` — read it before auditing or
+threat-modeling those subsystems.

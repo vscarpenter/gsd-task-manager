@@ -19,6 +19,10 @@ vi.mock("@/lib/logger", () => ({
   }),
 }));
 
+// Fixed base timestamp so rendered task dates are deterministic (no `new Date()`
+// "now" reaching JSX, which react-doctor flags as a hydration nondeterminism).
+const NOW = new Date("2026-01-15T12:00:00Z");
+
 // ---------------------------------------------------------------------------
 
 describe("TaskCardHeader", () => {
@@ -37,8 +41,8 @@ describe("TaskCardHeader", () => {
           important: true,
           quadrant: "urgent-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: [],
           subtasks: [],
@@ -73,8 +77,8 @@ describe("TaskCardHeader", () => {
           important: false,
           quadrant: "not-urgent-not-important",
           completed: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: [],
           subtasks: [],
@@ -115,8 +119,8 @@ describe("TaskCardMetadata", () => {
           important: true,
           quadrant: "urgent-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: ["frontend", "urgent"],
           subtasks: [],
@@ -152,8 +156,8 @@ describe("TaskCardMetadata", () => {
           important: true,
           quadrant: "urgent-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: [],
           subtasks: [
@@ -210,8 +214,8 @@ describe("TaskCardActions", () => {
           important: true,
           quadrant: "urgent-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: [],
           subtasks: [],
@@ -246,8 +250,8 @@ describe("TaskCardActions", () => {
           important: false,
           quadrant: "not-urgent-not-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: [],
           subtasks: [],
@@ -283,8 +287,8 @@ describe("TaskCardActions", () => {
           important: true,
           quadrant: "urgent-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "none",
           tags: [],
           subtasks: [],
@@ -319,8 +323,8 @@ describe("TaskCardActions", () => {
           important: true,
           quadrant: "not-urgent-important",
           completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
           recurrence: "daily",
           tags: [],
           subtasks: [],

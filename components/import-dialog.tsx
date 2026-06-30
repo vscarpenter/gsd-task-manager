@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertTriangleIcon, PlusCircleIcon, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -9,6 +9,35 @@ import { importFromJson } from "@/lib/tasks";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("IMPORT");
+
+/**
+ * Determine the number of tasks an export payload will import.
+ *
+ * We only need the count for the dialog copy ("Importing 5 tasks") — the
+ * real validation runs later in `importFromJson` via `importPayloadSchema`.
+ * Tri-state result:
+ *   number  — known count (valid array, or valid JSON without tasks key → 0)
+ *   null    — couldn't determine (no contents, parse error, or `tasks` is the wrong type)
+ * Avoids a misleading count for malformed payloads like `{ "tasks": "AAAA" }`
+ * where a naive `parsed.tasks?.length ?? 0` would have reported `4`.
+ */
+function parseImportTaskCount(fileContents: string | null): number | null {
+  if (!fileContents) return null;
+  try {
+    const parsed: unknown = JSON.parse(fileContents);
+    if (parsed === null || typeof parsed !== "object") return null;
+    const tasks = (parsed as { tasks?: unknown }).tasks;
+    if (tasks === undefined) {
+      // Valid JSON, no tasks key — definitively 0 tasks to import.
+      return 0;
+    }
+    if (Array.isArray(tasks)) return tasks.length;
+    // Malformed: tasks key present but not an array.
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 interface ImportDialogProps {
   open: boolean;
@@ -20,55 +49,25 @@ interface ImportDialogProps {
 
 export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCount, onImportComplete }: ImportDialogProps) {
   const [isImporting, setIsImporting] = useState(false);
-  const [importTaskCount, setImportTaskCount] = useState<number | null>(null);
 
-  // Parse the file to get task count when fileContents changes.
-  //
-  // We only need the count for the dialog copy ("Importing 5 tasks") — the
-  // real validation runs later in `importFromJson` via `importPayloadSchema`.
-  // Tri-state result:
-  //   number  — known count (valid array, or valid JSON without tasks key → 0)
-  //   null    — couldn't determine (parse error, or `tasks` is the wrong type)
-  // Avoids a misleading count for malformed payloads like `{ "tasks": "AAAA" }`
-  // where the old `parsed.tasks?.length ?? 0` would have reported `4`.
-  useEffect(() => {
-    if (!fileContents) {
-      setImportTaskCount(null);
-      return;
-    }
-    try {
-      const parsed: unknown = JSON.parse(fileContents);
-      if (parsed === null || typeof parsed !== 'object') {
-        setImportTaskCount(null);
-        return;
-      }
-      const tasks = (parsed as { tasks?: unknown }).tasks;
-      if (tasks === undefined) {
-        // Valid JSON, no tasks key — definitively 0 tasks to import.
-        setImportTaskCount(0);
-      } else if (Array.isArray(tasks)) {
-        setImportTaskCount(tasks.length);
-      } else {
-        // Malformed: tasks key present but not an array.
-        setImportTaskCount(null);
-      }
-    } catch {
-      setImportTaskCount(null);
-    }
-  }, [fileContents]);
+  // Derived during render — the count is a pure function of `fileContents`.
+  // The React Compiler memoizes this, so no `useMemo` is needed.
+  const importTaskCount = parseImportTaskCount(fileContents);
 
   const handleImport = async (mode: "replace" | "merge") => {
     if (!fileContents) return;
 
     setIsImporting(true);
+    // No `finally`: the React Compiler can't yet optimize a component with a
+    // try/finally, so the importing reset is duplicated across both paths.
     try {
       await importFromJson(fileContents, mode);
       onImportComplete();
       onOpenChange(false);
+      setIsImporting(false);
     } catch (error) {
       logger.error("Import failed", error instanceof Error ? error : new Error(String(error)));
       toast.error("Import failed. Ensure you selected a valid export file.");
-    } finally {
       setIsImporting(false);
     }
   };
@@ -98,6 +97,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
 
           {/* Merge option */}
           <button
+            type="button"
             onClick={() => handleImport("merge")}
             disabled={isImporting}
             className="w-full rounded-lg border-2 border-olive/30 bg-olive-tint p-4 text-left transition-all hover:border-olive/50 hover:bg-status-success-muted disabled:cursor-not-allowed disabled:opacity-50"
@@ -120,6 +120,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
 
           {/* Replace option */}
           <button
+            type="button"
             onClick={() => handleImport("replace")}
             disabled={isImporting}
             className="w-full rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-left transition-all hover:border-rust/50 hover:bg-status-overdue-muted disabled:cursor-not-allowed disabled:opacity-50"

@@ -44,10 +44,21 @@ export function SyncSettings({
 	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
-		loadConfig();
+		void (async () => {
+			try {
+				const config = await getAutoSyncConfig();
+				setAutoSyncEnabled(config.enabled);
+				setSyncInterval(config.intervalMinutes);
+			} catch (error) {
+				logger.error("Failed to load sync config", error instanceof Error ? error : undefined);
+			}
+		})();
 	}, []);
 
+	// react-doctor-disable-next-line react-doctor/exhaustive-deps -- cleanup intentionally reads the latest ref value at unmount
 	useEffect(() => {
+		// Clear any pending debounced interval update on unmount. Reading the
+		// latest timeout id at cleanup time is the intended behavior here.
 		return () => {
 			if (updateTimeoutRef.current) {
 				clearTimeout(updateTimeoutRef.current);
@@ -55,26 +66,18 @@ export function SyncSettings({
 		};
 	}, []);
 
-	const loadConfig = async () => {
-		try {
-			const config = await getAutoSyncConfig();
-			setAutoSyncEnabled(config.enabled);
-			setSyncInterval(config.intervalMinutes);
-		} catch (error) {
-			logger.error("Failed to load sync config", error instanceof Error ? error : undefined);
-		}
-	};
-
 	const handleAutoSyncToggle = async (checked: boolean) => {
+		// No `finally`: the React Compiler can't yet optimize a component with a
+		// try/finally, so the loading reset is duplicated across both paths.
 		setIsLoading(true);
 		try {
 			await updateAutoSyncConfig(checked, syncInterval);
 			setAutoSyncEnabled(checked);
 			toast.success(checked ? 'Auto-sync enabled' : 'Auto-sync disabled');
+			setIsLoading(false);
 		} catch (error) {
 			logger.error("Failed to toggle auto-sync", error instanceof Error ? error : undefined);
 			toast.error('Failed to update auto-sync settings');
-		} finally {
 			setIsLoading(false);
 		}
 	};
@@ -146,6 +149,7 @@ export function SyncSettings({
 
 			{/* View History */}
 			<button
+				type="button"
 				onClick={onViewHistory}
 				className="w-full flex items-center gap-3 px-4 py-3.5 min-h-[52px]
 				           text-left hover:bg-background-muted/50 transition-colors"

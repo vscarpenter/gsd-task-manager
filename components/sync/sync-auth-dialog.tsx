@@ -34,6 +34,7 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
       <div
         className="fixed inset-0 z-50 flex min-h-screen items-center justify-center overflow-y-auto p-4"
         onClick={onClose}
+        role="presentation"
       >
         <div
           className="relative my-8 w-full max-w-md rounded-lg border border-card-border bg-card p-6 shadow-xl"
@@ -88,6 +89,7 @@ function DialogHeader({ syncStatus, sessionExpired, onClose }: DialogHeaderProps
         </div>
       </div>
       <button
+        type="button"
         onClick={onClose}
         className="rounded-md p-1 text-foreground-muted hover:bg-background-muted hover:text-foreground"
         aria-label="Close"

@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
+import { timeEntrySchema } from "@/lib/schema";
 import type { TaskRecord, TimeEntry } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { enqueueSyncOperation, getSyncContext } from "./helpers";
@@ -100,6 +101,11 @@ export async function stopTimeTracking(
   if (runningEntryIndex === undefined || runningEntryIndex === -1) {
     logger.warn("No running timer to stop", { taskId });
     throw new Error("No running timer found for this task");
+  }
+
+  const notesValidation = timeEntrySchema.shape.notes.safeParse(notes);
+  if (!notesValidation.success) {
+    throw new Error(`Invalid time entry notes: ${notesValidation.error.issues.map((i) => i.message).join(", ")}`);
   }
 
   const { syncConfig } = await getSyncContext();

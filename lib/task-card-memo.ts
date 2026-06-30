@@ -38,7 +38,7 @@ export interface TaskCardProps {
 function getRelatedDependencyIds(task: TaskRecord, allTasks: TaskRecord[]): Set<string> {
   return new Set([
     ...task.dependencies,
-    ...allTasks.filter(t => t.dependencies.includes(task.id)).map(t => t.id)
+    ...allTasks.flatMap(t => t.dependencies.includes(task.id) ? [t.id] : [])
   ]);
 }
 
@@ -49,9 +49,11 @@ function haveDependenciesChanged(prevProps: TaskCardProps, nextProps: TaskCardPr
 
   if (prevIds.size !== nextIds.size) return true;
 
+  const prevById = new Map(prevProps.allTasks.map(t => [t.id, t]));
+  const nextById = new Map(nextProps.allTasks.map(t => [t.id, t]));
   for (const depId of prevIds) {
-    const prevTask = prevProps.allTasks.find(t => t.id === depId);
-    const nextTask = nextProps.allTasks.find(t => t.id === depId);
+    const prevTask = prevById.get(depId);
+    const nextTask = nextById.get(depId);
     if (!prevTask || !nextTask) return true;
     if (prevTask.completed !== nextTask.completed || prevTask.title !== nextTask.title) return true;
   }

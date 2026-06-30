@@ -7,6 +7,7 @@ import {
   isPermanentError,
   sanitizeSyncError,
   parseRetryAfterMs,
+  extractRetryAfterMs,
 } from '@/lib/sync/error-categorizer';
 
 describe('error-categorizer', () => {
@@ -260,6 +261,36 @@ describe('error-categorizer', () => {
 
     it('clamps negative numeric values to 0', () => {
       expect(parseRetryAfterMs('-5')).toBe(0);
+    });
+  });
+
+  describe('extractRetryAfterMs', () => {
+    it('reads a pre-parsed retryAfterMs folded into the error response body', () => {
+      const error = Object.assign(new Error('429 too many requests'), {
+        status: 429,
+        response: { retryAfterMs: 45_000 },
+      });
+      expect(extractRetryAfterMs(error)).toBe(45_000);
+    });
+
+    it('accepts a zero-delay hint', () => {
+      const error = { status: 429, response: { retryAfterMs: 0 } };
+      expect(extractRetryAfterMs(error)).toBe(0);
+    });
+
+    it('returns null when no retryAfterMs is present', () => {
+      const error = Object.assign(new Error('429 too many requests'), {
+        status: 429,
+        response: { message: 'rate limited' },
+      });
+      expect(extractRetryAfterMs(error)).toBeNull();
+    });
+
+    it('returns null for non-object / missing / non-numeric values', () => {
+      expect(extractRetryAfterMs(null)).toBeNull();
+      expect(extractRetryAfterMs('429')).toBeNull();
+      expect(extractRetryAfterMs({ response: { retryAfterMs: 'soon' } })).toBeNull();
+      expect(extractRetryAfterMs({ response: { retryAfterMs: NaN } })).toBeNull();
     });
   });
 });

@@ -1,6 +1,6 @@
 // Cache version — updated at build time by scripts/update-sw-version.cjs
 // Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '9.12.2';
+const CACHE_VERSION = '10.0.1';
 const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 
@@ -176,8 +176,10 @@ self.addEventListener("notificationclick", (event) => {
 			.matchAll({ type: "window", includeUncontrolled: true })
 			.then((clientList) => {
 				for (const client of clientList) {
+					// The SW scope is a URL prefix, so startsWith is the precise
+					// containment check (and is not an array-membership lookup).
 					if (
-						client.url.includes(self.registration.scope) &&
+						client.url.startsWith(self.registration.scope) &&
 						"focus" in client
 					) {
 						return client.focus();

@@ -69,6 +69,12 @@ vi.mock('@/lib/sync/retry-manager', () => ({
   getRetryManager: vi.fn(() => mockRetryManager),
 }));
 
+// fullSync attempts a silent token refresh before push/pull; keep it a no-op
+// here so these engine tests don't exercise the real auth path.
+vi.mock('@/lib/sync/pb-auth', () => ({
+  ensureValidAuth: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock('@/lib/sync-history', () => ({
   recordSyncSuccess: vi.fn(),
   recordSyncError: vi.fn(),

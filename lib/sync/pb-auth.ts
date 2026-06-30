@@ -215,3 +215,22 @@ export async function refreshAuth(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Ensure there's a usable auth session for a background operation.
+ *
+ * Background sync, the health monitor, and fullSync historically only checked
+ * `authStore.isValid`, which flips false the instant the JWT's exp passes —
+ * even though PocketBase can still mint a fresh token from the server session.
+ * This attempts that silent refresh so a merely-expired token doesn't surface
+ * as "not authenticated" until the user manually re-auths.
+ *
+ * Checks `isValid` first so a healthy session never triggers a redundant
+ * network refresh. Returns true when the session is (or becomes) valid.
+ */
+export async function ensureValidAuth(): Promise<boolean> {
+  const pb = getPocketBase();
+  if (pb.authStore.isValid) return true;
+  if (!pb.authStore.token) return false;
+  return refreshAuth();
+}

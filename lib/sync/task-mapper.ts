@@ -10,6 +10,7 @@ import type { TaskRecord, Subtask, TimeEntry } from '@/lib/types';
 import type { RecordModel } from 'pocketbase';
 import { z } from 'zod';
 import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('SYNC_PULL');
@@ -82,12 +83,16 @@ export function taskRecordToPocketBase(
 
 /**
  * Zod schema for validating PocketBase task records at the sync boundary.
- * Uses .strip() to discard unknown fields from the remote response.
+ * Unknown fields in the remote response are discarded (Zod object schemas
+ * strip unrecognized keys by default).
+ *
+ * Length and count limits mirror SCHEMA_LIMITS so oversized remote data is
+ * rejected at the pull boundary instead of being persisted to IndexedDB.
  */
 const pbTaskRecordSchema = z.object({
   task_id: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().default(''),
+  title: z.string().min(1).max(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH),
+  description: z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH).default(''),
   urgent: z.boolean(),
   important: z.boolean(),
   quadrant: quadrantIdSchema,
@@ -97,18 +102,18 @@ const pbTaskRecordSchema = z.object({
   client_created_at: z.string(),
   client_updated_at: z.string(),
   recurrence: recurrenceTypeSchema.default('none'),
-  tags: z.array(z.string()).default([]),
-  subtasks: z.array(subtaskSchema).default([]),
-  dependencies: z.array(z.string()).default([]),
+  tags: z.array(z.string().max(SCHEMA_LIMITS.TAG_MAX_LENGTH)).max(SCHEMA_LIMITS.MAX_TAGS).default([]),
+  subtasks: z.array(subtaskSchema).max(SCHEMA_LIMITS.MAX_SUBTASKS).default([]),
+  dependencies: z.array(z.string()).max(SCHEMA_LIMITS.MAX_DEPENDENCIES).default([]),
   notification_enabled: z.boolean().default(true),
   notification_sent: z.boolean().default(false),
   notify_before: z.number().int().min(0).nullable().default(null),
   last_notification_at: z.string().default(''),
   estimated_minutes: z.number().int().min(0).nullable().default(null),
   time_spent: z.number().int().min(0).default(0),
-  time_entries: z.array(timeEntrySchema).default([]),
+  time_entries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
   snoozed_until: z.string().default(''),
-}).strip();
+});
 
 /**
  * Convert a PocketBase record to local TaskRecord format.

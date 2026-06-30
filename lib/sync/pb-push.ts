@@ -10,7 +10,7 @@ import { getSyncQueue } from './queue';
 import { taskRecordToPocketBase } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
-import { sanitizeSyncError, isTransientSyncFailure } from './error-categorizer';
+import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import type { SyncQueueItem, RemoteTaskIndexEntry } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -41,6 +41,8 @@ export interface PushResult {
   failedCount: number;
   lastError: string | null;
   authenticated: boolean;
+  /** Server-requested backoff (ms) parsed from a 429 Retry-After, if any. */
+  retryAfterMs?: number | null;
 }
 
 /**
@@ -189,15 +191,19 @@ export async function pushLocalChanges(): Promise<PushResult> {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
 
-  const deviceId = await getDeviceId();
-  const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
+  const [deviceId, { index: remoteIndex, fetchSucceeded }] = await Promise.all([
+    getDeviceId(),
+    fetchRemoteTaskIndex(ownerId),
+  ]);
   let pushedCount = 0;
   let failedCount = 0;
   let skippedCount = 0;
   let lastError: string | null = null;
+  let retryAfterMs: number | null = null;
 
   for (const item of pending) {
     try {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       const outcome = await pushSingleItem(item, remoteIndex, fetchSucceeded, ownerId, deviceId);
       if (outcome === 'pushed') {
         pushedCount++;
@@ -231,16 +237,20 @@ export async function pushLocalChanges(): Promise<PushResult> {
           errorCode,
         });
       }
+      // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
       await queue.recordAttemptFailure(item.id, errorCode);
 
       // 429 means the server is under load. Abort the push loop early so
       // we don't hammer it through the remaining queue items at 100ms
       // throttle and amplify the rate-limit response.
       if (isRateLimitError(error)) {
+        // Honor the server's Retry-After (if it sent one) for the next backoff.
+        retryAfterMs = extractRetryAfterMs(error);
         logger.warn('Aborting push loop due to rate limit (429)', {
           pushedCount,
           failedCount,
           skippedCount,
+          retryAfterMs,
           remaining: pending.length - (pushedCount + failedCount + skippedCount),
         });
         break;
@@ -249,5 +259,5 @@ export async function pushLocalChanges(): Promise<PushResult> {
   }
 
   logger.debug('Push completed', { pushedCount, failedCount, skippedCount, total: pending.length });
-  return { pushedCount, failedCount, lastError, authenticated: true };
+  return { pushedCount, failedCount, lastError, authenticated: true, retryAfterMs };
 }

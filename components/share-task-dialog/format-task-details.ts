@@ -5,6 +5,15 @@ export function canUseWebShare(): boolean {
   return typeof navigator !== "undefined" && typeof navigator.share === "function";
 }
 
+// Deliberately a loose format check, NOT full RFC 5322 validation. It only needs
+// to catch obvious typos before building a mailto: link; the recipient is also
+// percent-encoded at the call site to guard against header injection.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidEmail(email: string): boolean {
+  return EMAIL_PATTERN.test(email);
+}
+
 export function formatTaskHeader(task: TaskRecord): string[] {
   return [`Task: ${task.title}`, ""];
 }
@@ -41,7 +50,7 @@ export function formatTaskSubtasks(task: TaskRecord): string[] {
   return lines;
 }
 
-export function formatTaskFooter(task: TaskRecord): string[] {
+function formatTaskFooter(task: TaskRecord): string[] {
   return [
     "",
     `Created: ${new Date(task.createdAt).toLocaleDateString()}`,

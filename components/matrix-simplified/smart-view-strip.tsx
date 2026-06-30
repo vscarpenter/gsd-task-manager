@@ -81,27 +81,32 @@ export function SmartViewStrip({
  * [lead, ...views, more]. The `overflow-hidden` wrapper clips the (often
  * wider-than-container) row so it can't trigger a horizontal page scrollbar.
  */
-const SmartViewGhost = React.forwardRef<HTMLDivElement, { views: SmartView[] }>(
-  function SmartViewGhost({ views }, ref) {
-    return (
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div ref={ref} inert className="invisible flex w-max flex-nowrap gap-2">
-          <SmartViewButton active={false} label="All tasks" onClick={noop} />
-          {views.map((view) => (
-            <SmartViewButton
-              key={view.id}
-              active={false}
-              label={view.name}
-              icon={view.icon}
-              onClick={noop}
-            />
-          ))}
-          <MoreButton count={views.length} />
-        </div>
+function SmartViewGhost({
+  views,
+  ref,
+}: {
+  views: SmartView[];
+  ref?: React.Ref<HTMLDivElement>;
+}) {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div ref={ref} inert className="invisible flex w-max flex-nowrap gap-2">
+        <SmartViewButton active={false} label="All tasks" onClick={noop} />
+        {views.map((view) => (
+          <SmartViewButton
+            key={view.id}
+            active={false}
+            label={view.name}
+            icon={view.icon}
+            onClick={noop}
+          />
+        ))}
+        <MoreButton count={views.length} />
       </div>
-    );
-  }
-);
+    </div>
+  );
+}
+SmartViewGhost.displayName = "SmartViewGhost";
 
 function SmartViewButton({
   active,
@@ -128,10 +133,13 @@ function SmartViewButton({
 }
 
 /** The "More" pill — used both as the menu trigger and inside the ghost. */
-const MoreButton = React.forwardRef<
-  HTMLButtonElement,
-  { count: number; activeLabel?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>
->(function MoreButton({ count, activeLabel, className, ...props }, ref) {
+function MoreButton({
+  count,
+  activeLabel,
+  className,
+  ref,
+  ...props
+}: { count: number; activeLabel?: string } & React.ComponentPropsWithRef<"button">) {
   const label = activeLabel
     ? `More smart views (${count}), ${activeLabel} active`
     : `More smart views (${count})`;
@@ -147,7 +155,8 @@ const MoreButton = React.forwardRef<
       <ChevronDownIcon className="h-3.5 w-3.5" aria-hidden />
     </button>
   );
-});
+}
+MoreButton.displayName = "MoreButton";
 
 export function SmartViewOverflowMenu({
   views,

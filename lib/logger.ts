@@ -122,6 +122,10 @@ function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
   return levelIndex >= minLevelIndex;
 }
 
+// Case-insensitive match on key substrings that indicate sensitive data.
+const SENSITIVE_KEY_PATTERN =
+  /token|password|secret|apikey|authorization|passphrase|email|credential|cookie|session|jwt|refresh|access|bearer/i;
+
 /**
  * Sanitize sensitive data from log metadata
  * Removes tokens, passwords, and other secrets
@@ -136,15 +140,9 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
     sanitized.url = maskSensitiveString(sanitized.url);
   }
 
-  // Remove sensitive fields (case-insensitive match on key substrings)
-  const sensitivePatterns = [
-    'token', 'password', 'secret', 'apikey', 'authorization',
-    'passphrase', 'email', 'credential', 'cookie', 'session',
-    'jwt', 'refresh', 'access', 'bearer',
-  ];
+  // Remove sensitive fields
   for (const key of Object.keys(sanitized)) {
-    const lower = key.toLowerCase();
-    if (sensitivePatterns.some(pattern => lower.includes(pattern))) {
+    if (SENSITIVE_KEY_PATTERN.test(key)) {
       sanitized[key] = '***';
     } else {
       sanitized[key] = sanitizeValue(sanitized[key]);
@@ -211,9 +209,26 @@ function maskError(error: Error): Error {
  */
 const SENTRY_SAFE_METADATA_KEYS: ReadonlySet<string> = new Set([
   'correlationId', 'userId', 'taskId', 'deviceId', 'phase', 'operation',
-  'trigger', 'triggeredBy', 'validationErrors', 'componentStack', 'count',
-  'attempt', 'status', 'statusCode', 'type', 'url', 'timestamp',
+  'action', 'trigger', 'triggeredBy', 'validationErrors', 'componentStack',
+  'count', 'attempt', 'status', 'statusCode', 'type', 'url', 'timestamp',
 ]);
+
+/**
+ * Keep only allowlisted, secret-masked diagnostic metadata. This is the single
+ * gate that decides what leaves the device for Sentry; anything not listed —
+ * task `input`, PocketBase `record`, etc. — is dropped. Exported so other Sentry
+ * entry points (e.g. error-logger.ts) reuse this allowlist rather than
+ * duplicating the key set.
+ */
+export function filterSentryMetadata(metadata?: LogMetadata): LogMetadata {
+  const allowed: LogMetadata = {};
+  for (const key of Object.keys(metadata ?? {})) {
+    if (SENTRY_SAFE_METADATA_KEYS.has(key)) {
+      allowed[key] = metadata![key];
+    }
+  }
+  return sanitizeMetadata(allowed) ?? {};
+}
 
 /**
  * Build the Sentry context: the logger context name plus only the allowlisted,
@@ -223,13 +238,7 @@ function buildSentryContext(
   context: LogContext,
   metadata?: LogMetadata
 ): Record<string, unknown> {
-  const allowed: LogMetadata = {};
-  for (const key of Object.keys(metadata ?? {})) {
-    if (SENTRY_SAFE_METADATA_KEYS.has(key)) {
-      allowed[key] = metadata![key];
-    }
-  }
-  return { context, ...(sanitizeMetadata(allowed) ?? {}) };
+  return { context, ...filterSentryMetadata(metadata) };
 }
 
 /**

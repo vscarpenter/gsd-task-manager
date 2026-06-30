@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
 import { QuadrantPane } from "./quadrant-pane";
@@ -28,7 +27,7 @@ export function MatrixGrid({
   highlightedTaskId,
   onTaskRef,
 }: MatrixGridProps) {
-  const grouped = useMemo(() => {
+  const grouped = (() => {
     const out: Record<RedesignQuadrantKey, TaskRecord[]> = { q1: [], q2: [], q3: [], q4: [] };
     for (const t of tasks) {
       if (t.urgent && t.important) out.q1.push(t);
@@ -46,7 +45,7 @@ export function MatrixGrid({
       });
     }
     return out;
-  }, [tasks]);
+  })();
 
   return (
     <div data-testid="matrix-grid" className="grid grid-cols-1 gap-8 md:grid-cols-2 md:grid-rows-2 md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-card md:shadow-sm">

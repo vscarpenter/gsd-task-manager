@@ -65,11 +65,12 @@ function calculateCurrentStreak(uniqueDates: string[]): number {
   let currentStreak = 0;
   const today = new Date().toISOString().split('T')[0];
   let checkDate = new Date(today);
+  const uniqueDateSet = new Set(uniqueDates);
 
   for (let i = 0; i < uniqueDates.length; i++) {
     const dateStr = checkDate.toISOString().split('T')[0];
 
-    if (uniqueDates.includes(dateStr)) {
+    if (uniqueDateSet.has(dateStr)) {
       currentStreak++;
       checkDate = subDays(checkDate, 1);
     } else {

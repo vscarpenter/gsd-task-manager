@@ -34,12 +34,19 @@ export function TaskCardHeader({
 
   // Pop the check only on the complete *moment* (false→true), never on mount —
   // a page load showing already-done tasks is not a completion moment, and the
-  // brand reserves motion for moments, not page loads.
+  // brand reserves motion for moments, not page loads. This transition-gated
+  // animation must read the previous value during render so the class commits
+  // on the transition render (a derived/discarded value or an effect-driven
+  // setState would either never paint or be flagged as adjust-state-on-prop).
   const wasCompleted = useRef(task.completed);
+  // react-doctor-disable-next-line react-hooks-js/refs -- previous-value read for a transition-gated animation that must commit
   const justCompleted = task.completed && !wasCompleted.current;
   useEffect(() => {
     wasCompleted.current = task.completed;
   }, [task.completed]);
+
+  // react-doctor-disable-next-line react-hooks-js/refs -- previous-value read for a transition-gated animation that must commit
+  const checkIconClassName = cn("h-4 w-4 shrink-0", justCompleted && "animate-check-pop");
 
   return (
     <div className="flex items-start justify-between gap-2">
@@ -101,7 +108,7 @@ export function TaskCardHeader({
               // color: inherit) would neutralize a text-color class on the button.
               <CheckIcon
                 style={{ color: "var(--ivory)" }}
-                className={cn("h-4 w-4 shrink-0", justCompleted && "animate-check-pop")}
+                className={checkIconClassName}
               />
             ) : (
               <>

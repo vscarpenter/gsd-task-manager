@@ -343,4 +343,63 @@ describe('pushLocalChanges LWW guard', () => {
     expect(result.pushedCount).toBe(1);
     expect(await getSyncQueue().getPendingCount()).toBe(0);
   });
+
+  it('surfaces the server Retry-After (ms) from a 429 so the caller can back off', async () => {
+    const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', payload);
+
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    // pocketbase-client's afterSend hook folds the parsed Retry-After header
+    // into error.response.retryAfterMs; the push path reads it back here.
+    const rateLimited = Object.assign(new Error('429 too many requests'), {
+      status: 429,
+      response: { retryAfterMs: 30_000 },
+    });
+    const updateSpy = vi.fn(async () => {
+      throw rateLimited;
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('rate_limited');
+    expect(result.retryAfterMs).toBe(30_000);
+    // Item stays queued for the (delayed) retry.
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
+  });
+
+  it('reports a null Retry-After when a 429 carries no header', async () => {
+    const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', payload);
+
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const rateLimited = Object.assign(new Error('429 too many requests'), { status: 429 });
+    const updateSpy = vi.fn(async () => {
+      throw rateLimited;
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('rate_limited');
+    expect(result.retryAfterMs).toBeNull();
+  });
 });

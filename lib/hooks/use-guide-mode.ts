@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 
 export type GuideMode = "wizard" | "accordion";
 
@@ -20,9 +20,9 @@ interface UseGuideModeReturn {
 export function useGuideMode(defaultMode: GuideMode = "wizard"): UseGuideModeReturn {
   const [mode, setMode] = useState<GuideMode>(defaultMode);
 
-  const toggleMode = useCallback(() => {
+  const toggleMode = () => {
     setMode((prev) => (prev === "wizard" ? "accordion" : "wizard"));
-  }, []);
+  };
 
   return {
     mode,

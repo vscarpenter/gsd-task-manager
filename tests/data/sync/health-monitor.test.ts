@@ -30,6 +30,13 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   isAuthenticated: () => mockIsAuthenticated(),
 }));
 
+// Silent token refresh — defaults to "could not refresh" so existing
+// token_expired assertions hold; tests opt in to a successful refresh.
+const mockEnsureValidAuth = vi.fn().mockResolvedValue(false);
+vi.mock('@/lib/sync/pb-auth', () => ({
+  ensureValidAuth: () => mockEnsureValidAuth(),
+}));
+
 // Mock database
 const mockDb = {
   syncMetadata: {
@@ -51,6 +58,7 @@ describe('HealthMonitor', () => {
     mockQueue.getPending.mockResolvedValue([]);
     mockQueue.getFailed.mockResolvedValue([]);
     mockPb.health.check.mockResolvedValue({ code: 200 });
+    mockEnsureValidAuth.mockResolvedValue(false);
   });
 
   describe('start/stop', () => {
@@ -124,6 +132,24 @@ describe('HealthMonitor', () => {
       const authIssue = report.issues.find(i => i.type === 'token_expired');
       expect(authIssue).toBeDefined();
       expect(authIssue!.severity).toBe('error');
+    });
+
+    it('does not flag token_expired when a silent refresh succeeds', async () => {
+      // Token's JWT has lapsed (isAuthenticated false), but the server session
+      // is still good, so ensureValidAuth refreshes it. No scary issue surfaces.
+      mockIsAuthenticated.mockReturnValue(false);
+      mockEnsureValidAuth.mockResolvedValue(true);
+
+      const report = await monitor.check();
+      const authIssue = report.issues.find(i => i.type === 'token_expired');
+      expect(authIssue).toBeUndefined();
+    });
+
+    it('does not attempt a refresh when the token is already valid', async () => {
+      mockIsAuthenticated.mockReturnValue(true);
+
+      await monitor.check();
+      expect(mockEnsureValidAuth).not.toHaveBeenCalled();
     });
 
     it('should detect unreachable server', async () => {

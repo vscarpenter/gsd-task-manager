@@ -17,6 +17,7 @@ import { createLogger } from "@/lib/logger";
 import {
   canUseWebShare,
   formatTaskDetails,
+  isValidEmail,
 } from "@/components/share-task-dialog/format-task-details";
 import {
   ShareTabButtons,
@@ -37,6 +38,7 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
     canUseWebShare() ? "native" : "email"
   );
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   if (!task) return null;
 
@@ -44,10 +46,22 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
   const emailSubject = `Task: ${task.title}`;
   const emailBody = encodeURIComponent(taskDetails);
 
+  const handleRecipientEmailChange = (email: string) => {
+    setRecipientEmail(email);
+    setEmailError(null);
+  };
+
   const handleOpenEmailClient = () => {
-    const mailto = recipientEmail
-      ? `mailto:${recipientEmail}?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`
-      : `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
+    const trimmedEmail = recipientEmail.trim();
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+      setEmailError("Enter a valid email address, or leave it blank to pick a recipient in your mail app.");
+      return;
+    }
+
+    // Percent-encode the recipient so a value like "a?cc=x@b.com" can't smuggle
+    // extra mailto headers; a validated address still round-trips correctly.
+    const recipient = trimmedEmail ? encodeURIComponent(trimmedEmail) : "";
+    const mailto = `mailto:${recipient}?subject=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
 
     const anchor = document.createElement("a");
     anchor.href = mailto;
@@ -111,7 +125,8 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
             activeTab={activeTab}
             taskDetails={taskDetails}
             recipientEmail={recipientEmail}
-            onRecipientEmailChange={setRecipientEmail}
+            onRecipientEmailChange={handleRecipientEmailChange}
+            emailError={emailError}
           />
 
           <div className="flex items-center justify-end gap-2 pt-2">
