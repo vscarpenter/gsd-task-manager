@@ -64,8 +64,13 @@ export const taskRecordSchema = taskDraftSchema
 	})
 	.strict();
 
-/** Lenient task schema for importing legacy exports (strips unknown fields like vectorClock) */
-const taskRecordImportSchema = taskDraftSchema
+/**
+ * Lenient task-record schema that strips unknown fields (e.g. vectorClock from the
+ * old Cloudflare sync system) instead of rejecting them. Used both for importing
+ * legacy exports and for validating records read back from IndexedDB, so a record
+ * carrying a harmless extra field is kept rather than quarantined as corrupt.
+ */
+export const storedTaskRecordSchema = taskDraftSchema
 	.extend({
 		id: z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH),
 		quadrant: quadrantIdSchema,
@@ -83,7 +88,7 @@ const taskRecordImportSchema = taskDraftSchema
 	.strip();
 
 export const importPayloadSchema = z.object({
-	tasks: z.array(taskRecordImportSchema),
+	tasks: z.array(storedTaskRecordSchema),
 	exportedAt: z.string().datetime({ offset: true }),
 	version: z.string(),
 });
