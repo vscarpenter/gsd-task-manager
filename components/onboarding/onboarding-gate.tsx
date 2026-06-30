@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Onboarding } from "./onboarding";
 
@@ -12,11 +12,14 @@ export const REPLAY_ONBOARDING_EVENT = "gsd:replay-onboarding";
 // Marketing / utility surfaces where the tour should not auto-open.
 const SUPPRESS_PREFIXES = ["/about", "/install"];
 
-/** Synchronously decide whether the tour should auto-open for this pathname. */
-function shouldAutoOpen(pathname: string | null): boolean {
-  if (SUPPRESS_PREFIXES.some((p) => pathname?.startsWith(p))) return false;
-  return !localStorage.getItem(ONBOARDING_SEEN_KEY);
-}
+const noopSubscribe = () => () => {};
+/** Client snapshot: has the user already seen the welcome tour? */
+const getSeenSnapshot = () => !!localStorage.getItem(ONBOARDING_SEEN_KEY);
+/**
+ * Server/prerender snapshot: treat the tour as already seen so it never
+ * auto-opens during static prerendering (where localStorage is unavailable).
+ */
+const getSeenServerSnapshot = () => true;
 
 /**
  * Decides when the welcome tour appears: once for first-time visitors on the app
@@ -32,6 +35,7 @@ export function OnboardingGate() {
   const pathname = usePathname();
   const router = useRouter();
   const [forceOpen, setForceOpen] = useState(false);
+  const seen = useSyncExternalStore(noopSubscribe, getSeenSnapshot, getSeenServerSnapshot);
 
   useEffect(() => {
     const replay = () => setForceOpen(true);
@@ -39,7 +43,8 @@ export function OnboardingGate() {
     return () => window.removeEventListener(REPLAY_ONBOARDING_EVENT, replay);
   }, []);
 
-  const open = forceOpen || shouldAutoOpen(pathname);
+  const suppressed = SUPPRESS_PREFIXES.some((p) => pathname?.startsWith(p));
+  const open = forceOpen || (!suppressed && !seen);
 
   const close = () => {
     localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
