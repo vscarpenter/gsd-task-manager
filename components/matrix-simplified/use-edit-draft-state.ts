@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 import type { TaskRecord } from "@/lib/types";
 import { resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
@@ -50,54 +50,39 @@ export interface EditDraftState {
 }
 
 /**
- * Owns all form-field state for EditDrawer and rehydrates when the drawer
- * opens or the selected task changes.
+ * Owns all form-field state for EditDrawer. Field values are seeded once from
+ * the task (edit mode) or initialDraft (create mode) via lazy useState
+ * initializers. EditDrawer remounts this hook (via a `key` on the task id) when
+ * the selected task changes, so no effect is needed to re-sync from props.
  */
 export function useEditDraftState(
-  open: boolean,
   task: TaskRecord | null | undefined,
   initialDraft: Partial<EditDraft> | undefined,
   titleRef: RefObject<HTMLInputElement | null>
 ): EditDraftState {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [urgent, setUrgent] = useState(false);
-  const [important, setImportant] = useState(false);
-  const [duePreset, setDuePreset] = useState<DuePreset>("none");
-  const [customDate, setCustomDate] = useState<string | undefined>(undefined);
+  const [title, setTitle] = useState(() => (task ? task.title : initialDraft?.title ?? ""));
+  const [description, setDescription] = useState(() =>
+    task ? task.description ?? "" : initialDraft?.description ?? ""
+  );
+  const [urgent, setUrgent] = useState(() => (task ? task.urgent : initialDraft?.urgent ?? false));
+  const [important, setImportant] = useState(() =>
+    task ? task.important : initialDraft?.important ?? false
+  );
+  const [duePreset, setDuePreset] = useState<DuePreset>(() =>
+    task ? classifyExistingDate(task.dueDate) : "none"
+  );
+  const [customDate, setCustomDate] = useState<string | undefined>(() =>
+    task ? classifyExistingCustomDate(task.dueDate) : undefined
+  );
   const [showCustomDateInput, setShowCustomDateInput] = useState(false);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(() => (task ? task.tags ?? [] : initialDraft?.tags ?? []));
   const [tagInput, setTagInput] = useState("");
 
-  // Rehydrate all draft fields whenever the drawer opens or the selected task changes.
-  // Calling multiple setters inside a useEffect is intentional here — each setter maps
-  // directly to one form field, and batching them into a reducer would add indirection
-  // without improving clarity. React 18 batches these updates automatically.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  // Move focus to the title field shortly after the drawer mounts.
   useEffect(() => {
-    if (!open) return;
-    if (task) {
-      setTitle(task.title);
-      setDescription(task.description ?? "");
-      setUrgent(task.urgent);
-      setImportant(task.important);
-      setDuePreset(classifyExistingDate(task.dueDate));
-      setCustomDate(classifyExistingCustomDate(task.dueDate));
-      setTags(task.tags ?? []);
-    } else {
-      setTitle(initialDraft?.title ?? "");
-      setDescription(initialDraft?.description ?? "");
-      setUrgent(initialDraft?.urgent ?? false);
-      setImportant(initialDraft?.important ?? false);
-      setDuePreset("none");
-      setCustomDate(undefined);
-      setTags(initialDraft?.tags ?? []);
-    }
-    setShowCustomDateInput(false);
-    setTagInput("");
-    setTimeout(() => titleRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
-  }, [open, task, initialDraft, titleRef]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    const timer = setTimeout(() => titleRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [titleRef]);
 
   const addTag = (): void => {
     const v = tagInput.trim().toLowerCase().replace(/^#/, "");
