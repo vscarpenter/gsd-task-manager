@@ -25,6 +25,7 @@ export function FirstTimeRedirect() {
     localStorage.setItem(STORAGE_KEY, "true");
 
     if (pathname !== "/about") {
+      // react-doctor-disable-next-line react-doctor/nextjs-no-client-side-redirect -- client-gated SPA redirect; renders null, no flash
       router.replace("/about");
     }
   }, [pathname, router]);

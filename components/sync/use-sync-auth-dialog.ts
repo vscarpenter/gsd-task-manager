@@ -175,6 +175,7 @@ async function loadSyncStatus(
   const db = getDb();
 
   if (cancellation.cancelled) return;
+  // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
   const config = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
   if (cancellation.cancelled) return;
 
@@ -185,6 +186,7 @@ async function loadSyncStatus(
   }
 
   if (cancellation.cancelled) return;
+  // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
   await validateTokenAndRefresh(cancellation, setters);
   if (cancellation.cancelled) return;
 
@@ -213,6 +215,7 @@ async function validateTokenAndRefresh(
   // Token expired — attempt silent refresh
   setters.setIsRefreshing(true);
   if (cancellation.cancelled) return;
+  // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
   const refreshed = await refreshAuth();
   if (cancellation.cancelled) return;
   setters.setIsRefreshing(false);

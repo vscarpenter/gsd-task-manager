@@ -1,5 +1,6 @@
 "use client";
 
+// react-doctor-disable-next-line react-doctor/prefer-dynamic-import -- recharts is already route-split to /dashboard
 import {
   ComposedChart,
   Area,

@@ -170,6 +170,7 @@ export class SyncCoordinator {
       const next = this.pendingRequests.shift();
       if (!next) break;
       logger.debug('Processing queued sync request', { priority: next.priority });
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       await this.runRequest(next.priority);
     }
   }

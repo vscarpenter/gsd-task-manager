@@ -21,6 +21,7 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
   const activeRequestKey = useRef<string | null>(null);
   const mounted = useRef(true);
 
+  // react-doctor-disable-next-line react-doctor/exhaustive-deps -- cleanup intentionally reads the latest ref value at unmount
   useEffect(() => {
     // On unmount, cancel whatever OAuth login is currently in flight. Reading
     // the latest ref values at cleanup time is the intended behavior here.

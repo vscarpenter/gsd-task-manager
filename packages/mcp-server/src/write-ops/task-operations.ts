@@ -345,6 +345,7 @@ export async function deleteTask(
           dependencies: affected.dependencies.filter((dep) => dep !== taskId),
           updatedAt: now,
         };
+        // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
         await updateTaskInPB(config, cleaned, ownerId, deviceId);
         dependenciesCleaned++;
       } catch (error) {

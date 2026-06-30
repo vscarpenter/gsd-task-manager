@@ -55,6 +55,7 @@ export function SyncSettings({
 		})();
 	}, []);
 
+	// react-doctor-disable-next-line react-doctor/exhaustive-deps -- cleanup intentionally reads the latest ref value at unmount
 	useEffect(() => {
 		// Clear any pending debounced interval update on unmount. Reading the
 		// latest timeout id at cleanup time is the intended behavior here.

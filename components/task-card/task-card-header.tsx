@@ -39,10 +39,14 @@ export function TaskCardHeader({
   // on the transition render (a derived/discarded value or an effect-driven
   // setState would either never paint or be flagged as adjust-state-on-prop).
   const wasCompleted = useRef(task.completed);
+  // react-doctor-disable-next-line react-hooks-js/refs -- previous-value read for a transition-gated animation that must commit
   const justCompleted = task.completed && !wasCompleted.current;
   useEffect(() => {
     wasCompleted.current = task.completed;
   }, [task.completed]);
+
+  // react-doctor-disable-next-line react-hooks-js/refs -- previous-value read for a transition-gated animation that must commit
+  const checkIconClassName = cn("h-4 w-4 shrink-0", justCompleted && "animate-check-pop");
 
   return (
     <div className="flex items-start justify-between gap-2">
@@ -104,7 +108,7 @@ export function TaskCardHeader({
               // color: inherit) would neutralize a text-color class on the button.
               <CheckIcon
                 style={{ color: "var(--ivory)" }}
-                className={cn("h-4 w-4 shrink-0", justCompleted && "animate-check-pop")}
+                className={checkIconClassName}
               />
             ) : (
               <>

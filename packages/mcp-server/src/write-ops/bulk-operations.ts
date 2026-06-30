@@ -195,6 +195,7 @@ export async function bulkUpdateTasks(
       // against the snapshot taken at the start of the batch. If the record
       // changed underneath us, surface the id in `conflicts` and skip the
       // write — bulk operations are continue-on-conflict, not abort-on-first.
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       const preflight = await fetchSinglePBTaskFresh(config, task.id);
       if (!preflight) {
         conflicts.push(task.id);

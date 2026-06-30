@@ -1,80 +1,38 @@
 {
   // React Doctor configuration.
   //
-  // `ignore.overrides` suppresses CONFIRMED false positives, scoped to a
-  // specific file + rule, each with the justification recorded below. Every
-  // entry was verified against the file before being added (see tasks/spec.md).
-  // The oxlint lint pass is unaffected — only the listed rule/file pairs are
-  // exempted. No rule is globally disabled.
+  // Confirmed false positives are suppressed at the exact code site via inline
+  // `// react-doctor-disable-next-line <rule> -- <reason>` comments wherever
+  // that is syntactically possible (see the many annotations across lib/sync,
+  // packages/mcp-server, components/*, docker/, public/sw.js, etc.).
+  //
+  // The entries below are the ONLY ones that cannot be annotated inline:
+  //   - findings anchored to an attribute line inside a multi-line JSX opening
+  //     tag (no valid position for a preceding comment between attributes), and
+  //   - non-JS files (a YAML workflow and a static HTML report) whose comment
+  //     syntax React Doctor's disable directive does not recognize.
+  // Each is a documented false positive; the oxlint pass remains fully active.
   "ignore": {
     "overrides": [
-      // PocketBase server hooks run in PB's isolated JS VM, where
-      // `require(`${__hooks}/...`)` is the documented module-loading idiom.
-      { "files": ["docker/**"], "rules": ["react-doctor/no-dynamic-import-path"] },
-      // Codebase-analysis report is intentional product content linked from the About page.
-      { "files": ["public/docs/**"], "rules": ["react-doctor/public-debug-artifact"] },
-
-      // Intentionally sequential / throttled network I/O: parallelizing would
-      // defeat the PocketBase rate-limit throttle (sleep/delay between calls),
-      // the retry backoff, or the required push-before-pull ordering.
-      { "files": ["packages/mcp-server/src/api/retry.ts"], "rules": ["react-doctor/async-await-in-loop"] },
-      { "files": ["packages/mcp-server/src/write-ops/bulk-operations.ts"], "rules": ["react-doctor/async-await-in-loop"] },
-      { "files": ["packages/mcp-server/src/write-ops/task-operations.ts"], "rules": ["react-doctor/async-await-in-loop"] },
-      { "files": ["lib/sync/pb-account-deletion.ts"], "rules": ["react-doctor/async-await-in-loop"] },
-      { "files": ["lib/sync/pb-push.ts"], "rules": ["react-doctor/async-await-in-loop", "react-doctor/async-defer-await"] },
-      { "files": ["lib/sync/sync-coordinator.ts"], "rules": ["react-doctor/async-await-in-loop"] },
-      { "files": ["lib/sync/pb-sync-engine.ts"], "rules": ["react-doctor/async-parallel"] },
-      // Cancellation token can flip to cancelled DURING each await, so the
-      // post-await guard is intentional and the await cannot move below it.
-      { "files": ["components/sync/use-sync-auth-dialog.ts"], "rules": ["react-doctor/async-defer-await"] },
-
-      // @tanstack/react-virtual returns non-memoizable functions, so the React
-      // Compiler intentionally skips these components (documented behavior).
-      // (Route-group segment matched with `*` to avoid the literal parens.)
-      { "files": ["app/*/archive/page.tsx", "app/*/sync-history/page.tsx"], "rules": ["react-hooks-js/incompatible-library"] },
-
-      // Unmount cleanup intentionally reads the latest ref value (pending
-      // debounce timeout / in-flight OAuth request); capturing at effect-run
-      // time would clear the wrong (initial) value.
-      { "files": ["components/settings/sync-settings.tsx", "components/sync/oauth-buttons.tsx"], "rules": ["react-doctor/exhaustive-deps"] },
-
-      // Transition-gated check-pop animation must read the previous `completed`
-      // value during render so the class commits on the transition frame (a
-      // derived value is discarded; an effect-set value trips adjust-state).
-      { "files": ["components/task-card/task-card-header.tsx"], "rules": ["react-hooks-js/refs"] },
-
-      // Hand-rolled modals (ADR/CLAUDE.md design intent): they provide the a11y
-      // contract via role="dialog" + aria-modal + managed focus trap + Escape.
-      // A native <dialog> migration is a separate behavior-changing effort.
+      // Hand-rolled modals (CLAUDE.md design intent): role="dialog" + aria-modal
+      // + managed focus/Escape already meet the a11y contract; a native <dialog>
+      // migration is separate behavior-changing work. Findings sit on JSX
+      // attribute lines, so they can't be inline-annotated.
+      { "files": ["components/install-pwa-prompt.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
       { "files": ["components/matrix-simplified/edit-drawer.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/no-noninteractive-element-interactions"] },
       { "files": ["components/onboarding/onboarding.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
-      { "files": ["components/install-pwa-prompt.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
-
-      // role="group" with aria-label is correct for a toolbar of filter pills;
-      // the suggested <address> element is for contact info.
+      // role="group" + aria-label is the correct ARIA for a toolbar of filter
+      // pills; the rule's suggested <address> is for contact info.
       { "files": ["components/matrix-simplified/smart-view-strip.tsx"], "rules": ["react-doctor/prefer-tag-over-role"] },
-      // Generic shadcn <label> primitive: callers pass htmlFor via spread props,
-      // which the rule cannot see statically.
+      // Generic shadcn <label> primitive: callers pass htmlFor via spread props.
       { "files": ["components/ui/label.tsx"], "rules": ["react-doctor/label-has-associated-control"] },
-      // Client-only first-run redirect in a static-export SPA: gated on
-      // localStorage, renders null until decided, so it never flashes a page.
-      { "files": ["components/first-time-redirect.tsx"], "rules": ["react-doctor/nextjs-no-client-side-redirect"] },
       // Links a static .html asset (not an App Router route); next/link would break it.
       { "files": ["components/settings/about-section.tsx"], "rules": ["react-doctor/nextjs-no-a-element"] },
-      // rAF count-up animation runs on mount (no triggering event to move it to).
-      { "files": ["lib/use-count-up.ts"], "rules": ["react-doctor/no-event-handler"] },
-      // One-shot auth-error toast on a transition detected from external hook
-      // state; there is no local event source to trigger it from instead.
-      { "files": ["components/sync/use-sync-status.ts"], "rules": ["react-doctor/no-pass-data-to-parent"] },
-      // String.prototype.includes substring check (single client URL vs scope),
-      // not array membership — a Set does not apply.
-      { "files": ["public/sw.js"], "rules": ["react-doctor/js-set-map-lookups"] },
-      // recharts is already route-split (only /dashboard loads it); a further
-      // next/dynamic boundary isn't worth orphaning the chart from its test.
-      { "files": ["components/dashboard/completion-chart.tsx"], "rules": ["react-doctor/prefer-dynamic-import"] },
-      // NPM_TOKEN is scoped to the publish step; the install step runs without
-      // the secret in its environment.
-      { "files": [".github/workflows/publish-mcp-server.yml"], "rules": ["react-doctor/build-pipeline-secret-boundary"] }
+      // YAML workflow: NPM_TOKEN is scoped to the publish step, so the install
+      // step runs without the secret in its environment.
+      { "files": [".github/workflows/publish-mcp-server.yml"], "rules": ["react-doctor/build-pipeline-secret-boundary"] },
+      // Static HTML report intentionally linked from the About page.
+      { "files": ["public/docs/**"], "rules": ["react-doctor/public-debug-artifact"] }
     ]
   }
 }

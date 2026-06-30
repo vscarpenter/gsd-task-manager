@@ -1,6 +1,6 @@
 // Cache version — updated at build time by scripts/update-sw-version.cjs
 // Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '10.0.0';
+const CACHE_VERSION = '10.0.1';
 const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 
@@ -177,6 +177,7 @@ self.addEventListener("notificationclick", (event) => {
 			.then((clientList) => {
 				for (const client of clientList) {
 					if (
+						// react-doctor-disable-next-line react-doctor/js-set-map-lookups -- String.includes substring check, not array membership
 						client.url.includes(self.registration.scope) &&
 						"focus" in client
 					) {

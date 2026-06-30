@@ -28,6 +28,7 @@ export function useCountUp(target: number | string, duration = 500): string {
 
     function update(now: number) {
       const elapsed = now - startTime;
+      // react-doctor-disable-next-line react-doctor/no-event-handler -- requestAnimationFrame mount animation; no triggering event
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       setCurrent(Math.round(eased * numericTarget));

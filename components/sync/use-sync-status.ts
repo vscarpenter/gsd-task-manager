@@ -98,6 +98,7 @@ export function useSyncStatus({
   // Trigger callback once when we transition into an auth error state
   useEffect(() => {
     if (authErrorDetected && !previousAuthErrorRef.current && error) {
+      // react-doctor-disable-next-line react-doctor/no-pass-data-to-parent -- one-shot toast on an external-state transition; no event source
       onAuthError(error, undefined, SYNC_TOAST_DURATION.LONG);
     }
     previousAuthErrorRef.current = authErrorDetected;
