@@ -106,6 +106,12 @@ describe('error-categorizer', () => {
       expect(sanitizeSyncError(new Error('429 Too Many Requests'))).toBe('rate_limited');
     });
 
+    it('returns rate_limited for too-many-requests text without a status code', () => {
+      expect(sanitizeSyncError(new Error('Too many requests, slow down'))).toBe(
+        'rate_limited'
+      );
+    });
+
     it('returns unauthorized for 401/403/auth errors', () => {
       expect(sanitizeSyncError(new Error('401 Unauthorized'))).toBe('unauthorized');
       expect(sanitizeSyncError(new Error('403 Forbidden'))).toBe('unauthorized');
@@ -240,6 +246,10 @@ describe('error-categorizer', () => {
       expect(parseRetryAfterMs('1')).toBe(1_000);
     });
 
+    it('trims whitespace around numeric Retry-After values', () => {
+      expect(parseRetryAfterMs(' 30 ')).toBe(30_000);
+    });
+
     it('parses an HTTP-date Retry-After value into ms from now', () => {
       const futureMs = Date.now() + 60_000;
       const httpDate = new Date(futureMs).toUTCString();
@@ -261,6 +271,11 @@ describe('error-categorizer', () => {
 
     it('clamps negative numeric values to 0', () => {
       expect(parseRetryAfterMs('-5')).toBe(0);
+    });
+
+    it('clamps past HTTP-date values to 0', () => {
+      const pastDate = new Date('2026-01-01T00:00:00.000Z').toUTCString();
+      expect(parseRetryAfterMs(pastDate)).toBe(0);
     });
   });
 
@@ -291,6 +306,10 @@ describe('error-categorizer', () => {
       expect(extractRetryAfterMs('429')).toBeNull();
       expect(extractRetryAfterMs({ response: { retryAfterMs: 'soon' } })).toBeNull();
       expect(extractRetryAfterMs({ response: { retryAfterMs: NaN } })).toBeNull();
+    });
+
+    it('rejects negative retryAfterMs values from error responses', () => {
+      expect(extractRetryAfterMs({ response: { retryAfterMs: -1 } })).toBeNull();
     });
   });
 });

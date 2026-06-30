@@ -46,6 +46,36 @@ describe("ShareTaskDialog email flow", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("trims recipient whitespace before validating and encoding the mailto link", async () => {
+    const user = userEvent.setup();
+    render(<ShareTaskDialog task={createMockTask()} open onOpenChange={vi.fn()} />);
+
+    await user.type(screen.getByLabelText(/recipient email/i), "  alice@example.com  ");
+    await user.click(screen.getByRole("button", { name: /open email client/i }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(capturedHref).toMatch(/^mailto:alice%40example\.com\?subject=/);
+    expect(capturedHref).not.toContain("%20alice");
+  });
+
+  it("encodes recipient characters that could otherwise smuggle mailto headers", async () => {
+    const user = userEvent.setup();
+    render(<ShareTaskDialog task={createMockTask()} open onOpenChange={vi.fn()} />);
+
+    await user.type(
+      screen.getByLabelText(/recipient email/i),
+      "alice?cc=bob@example.com"
+    );
+    await user.click(screen.getByRole("button", { name: /open email client/i }));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(capturedHref).toMatch(
+      /^mailto:alice%3Fcc%3Dbob%40example\.com\?subject=/
+    );
+    expect(capturedHref).not.toContain("?cc=");
+    expect(capturedHref).not.toContain("&cc=");
+  });
+
   it("shows an inline error and does not open the link for an invalid email", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
