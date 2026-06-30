@@ -64,6 +64,11 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'none'",
   "object-src 'none'",
+  // Browsers IGNORE frame-ancestors when it's delivered via a <meta> tag — it is
+  // only enforced from an HTTP response header (set at the CloudFront/Caddy edge).
+  // It's declared here for defense-in-depth parity and to document clickjacking
+  // intent for tooling that parses the meta CSP; the meta tag does not enforce it.
+  "frame-ancestors 'none'",
   "form-action 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

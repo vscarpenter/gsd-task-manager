@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { taskRecordToPocketBase, pocketBaseToTaskRecord } from '@/lib/sync/task-mapper';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import type { TaskRecord } from '@/lib/types';
 
 // Mock logger to avoid side effects
@@ -216,6 +217,62 @@ describe('task-mapper', () => {
       const result = pocketBaseToTaskRecord(pb);
       expect(result).not.toBeNull();
       expect(result!.id).toBe('task-123');
+    });
+
+    describe('length and count constraints (defense-in-depth)', () => {
+      it('should skip a record whose title exceeds TASK_TITLE_MAX_LENGTH', () => {
+        const pb = buildPBRecord({ title: 'a'.repeat(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH + 1) });
+        expect(pocketBaseToTaskRecord(pb)).toBeNull();
+      });
+
+      it('should skip a record whose description exceeds TASK_DESCRIPTION_MAX_LENGTH', () => {
+        const pb = buildPBRecord({ description: 'a'.repeat(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH + 1) });
+        expect(pocketBaseToTaskRecord(pb)).toBeNull();
+      });
+
+      it('should skip a record with more than MAX_TAGS tags', () => {
+        const pb = buildPBRecord({
+          tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, i) => `tag${i}`),
+        });
+        expect(pocketBaseToTaskRecord(pb)).toBeNull();
+      });
+
+      it('should skip a record with a single tag longer than TAG_MAX_LENGTH', () => {
+        const pb = buildPBRecord({ tags: ['a'.repeat(SCHEMA_LIMITS.TAG_MAX_LENGTH + 1)] });
+        expect(pocketBaseToTaskRecord(pb)).toBeNull();
+      });
+
+      it('should skip a record with more than MAX_SUBTASKS subtasks', () => {
+        const pb = buildPBRecord({
+          subtasks: Array.from({ length: SCHEMA_LIMITS.MAX_SUBTASKS + 1 }, (_, i) => ({
+            id: `sub-${i}`,
+            title: `Subtask ${i}`,
+            completed: false,
+          })),
+        });
+        expect(pocketBaseToTaskRecord(pb)).toBeNull();
+      });
+
+      it('should skip a record with a subtask title longer than SUBTASK_TITLE_MAX_LENGTH', () => {
+        const pb = buildPBRecord({
+          subtasks: [{ id: 'sub-1', title: 'a'.repeat(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH + 1), completed: false }],
+        });
+        expect(pocketBaseToTaskRecord(pb)).toBeNull();
+      });
+
+      it('should accept a record sized exactly at the limits', () => {
+        const pb = buildPBRecord({
+          title: 'a'.repeat(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH),
+          description: 'a'.repeat(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH),
+          tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS }, (_, i) => `tag${i}`),
+          subtasks: Array.from({ length: SCHEMA_LIMITS.MAX_SUBTASKS }, (_, i) => ({
+            id: `sub-${i}`,
+            title: 'Subtask',
+            completed: false,
+          })),
+        });
+        expect(pocketBaseToTaskRecord(pb)).not.toBeNull();
+      });
     });
 
     it('should apply defaults for missing optional fields', () => {

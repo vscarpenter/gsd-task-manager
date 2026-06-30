@@ -7,6 +7,7 @@ import {
 import { getDb } from '@/lib/db';
 import { getSyncConfig } from '@/lib/sync/config';
 import { getSyncQueue } from '@/lib/sync/queue';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import type { TaskRecord } from '@/lib/types';
 
 // Mock dependencies
@@ -256,6 +257,39 @@ describe('Task Subtask Operations', () => {
 
       expect(result.subtasks).toHaveLength(1);
       expect(result.subtasks[0].title).toBe('First Subtask');
+    });
+
+    it('should reject a title longer than SUBTASK_TITLE_MAX_LENGTH without persisting', async () => {
+      mockDb.tasks.get.mockResolvedValue(baseTask);
+
+      await expect(
+        addSubtask('task-1', 'a'.repeat(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH + 1))
+      ).rejects.toThrow(/subtask/i);
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
+    });
+
+    it('should reject an empty title without persisting', async () => {
+      mockDb.tasks.get.mockResolvedValue(baseTask);
+
+      await expect(addSubtask('task-1', '')).rejects.toThrow(/subtask/i);
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
+    });
+
+    it('should reject adding a subtask beyond MAX_SUBTASKS without persisting', async () => {
+      const fullTask = {
+        ...baseTask,
+        subtasks: Array.from({ length: SCHEMA_LIMITS.MAX_SUBTASKS }, (_, i) => ({
+          id: `sub-${i}`,
+          title: `Subtask ${i}`,
+          completed: false,
+        })),
+      };
+      mockDb.tasks.get.mockResolvedValue(fullTask);
+
+      await expect(addSubtask('task-1', 'One too many')).rejects.toThrow(
+        new RegExp(`${SCHEMA_LIMITS.MAX_SUBTASKS}`)
+      );
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
   });
 

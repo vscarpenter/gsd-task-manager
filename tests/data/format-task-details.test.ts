@@ -6,6 +6,7 @@ import {
   formatTaskHeader,
   formatTaskMetadata,
   formatTaskSubtasks,
+  isValidEmail,
 } from "@/components/share-task-dialog/format-task-details";
 import { createMockTask } from "@/tests/fixtures";
 
@@ -119,5 +120,18 @@ describe("format-task-details", () => {
       });
       expect(canUseWebShare()).toBe(true);
     });
+  });
+
+  describe("isValidEmail", () => {
+    it("accepts a well-formed address", () => {
+      expect(isValidEmail("alice@example.com")).toBe(true);
+    });
+
+    it.each(["", "no-at-sign", "missing@domain", "missing.tld@", "a b@c.com"])(
+      "rejects the malformed value %j",
+      (value) => {
+        expect(isValidEmail(value)).toBe(false);
+      }
+    );
   });
 });

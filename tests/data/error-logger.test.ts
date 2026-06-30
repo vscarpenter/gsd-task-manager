@@ -206,6 +206,34 @@ describe("Error Logger module", () => {
 			);
 		});
 
+		it("should send only allowlisted metadata to Sentry, stripping task content", async () => {
+			const { captureException: mockCapture } = vi.mocked(
+				await import("@/lib/sentry")
+			);
+			mockCapture.mockClear();
+
+			const error = new Error("boom");
+			const context: ErrorContext = {
+				action: ErrorActions.CREATE_TASK,
+				userId: "user-1",
+				timestamp: "2025-01-15T12:00:00Z",
+				userMessage: "Failed to create task",
+				metadata: { title: "secret task content", operation: "createTask" },
+			};
+
+			logError(error, context);
+
+			const sentryContext = mockCapture.mock.calls[0][1] as Record<
+				string,
+				unknown
+			>;
+			// Non-allowlisted content must never reach Sentry, even nested.
+			expect(JSON.stringify(sentryContext)).not.toContain("secret task content");
+			// Allowlisted diagnostic keys still pass through.
+			expect(sentryContext.userId).toBe("user-1");
+			expect(sentryContext.operation).toBe("createTask");
+		});
+
 		it("should return complete LoggedError object", () => {
 			const error = new Error("Test error");
 			const context: ErrorContext = {

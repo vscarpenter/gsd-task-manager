@@ -1,3 +1,4 @@
+import { buildDescription, extractUrlsFromTitle } from "@/lib/capture-parser";
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { resolveQuadrantId } from "@/lib/quadrants";
@@ -25,6 +26,12 @@ export async function updateTask(
     }
 
     const nextDraft = mergeTaskUpdates(existing, updates);
+    // Extract URLs from the title into the description, mirroring createTask so
+    // edits and creates handle links identically (idempotent on already-clean titles).
+    const { cleanTitle, urls } = extractUrlsFromTitle(nextDraft.title);
+    nextDraft.title = cleanTitle;
+    nextDraft.description = buildDescription(nextDraft.description, urls);
+
     const result = taskDraftSchema.safeParse(nextDraft);
     if (!result.success) {
       const fields = result.error.issues.map((i) => i.path.join('.')).join(', ');
