@@ -7,12 +7,24 @@ const logger = createMcpLogger('CONFIG');
 const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 
 /**
+ * Human-readable explanation of the PocketBase URL policy, shared by the zod
+ * schema and the setup/validation CLIs so every entry point reports the same
+ * rule.
+ */
+export const UNSAFE_POCKETBASE_URL_MESSAGE =
+  'PocketBase URL must use HTTPS (or http://localhost / http://127.0.0.1 / http://[::1] for local development)';
+
+/**
  * Validate that a URL either uses HTTPS, or uses HTTP only when targeting a
  * loopback hostname. Uses exact hostname matching after parsing so that
  * `http://localhost.attacker.com` and `http://localhost@attacker.com` are
  * correctly rejected (a `startsWith` check is bypassable).
+ *
+ * Exported so the CLIs (setup wizard, validator) gate the same way before
+ * attaching `GSD_AUTH_TOKEN` to any request — they build configs from raw
+ * prompts/env and never reach `configSchema.parse`.
  */
-function isSafePocketBaseUrl(url: string): boolean {
+export function isSafePocketBaseUrl(url: string): boolean {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -36,8 +48,7 @@ function isSafePocketBaseUrl(url: string): boolean {
  */
 export const configSchema = z.object({
   pocketBaseUrl: z.url().refine(isSafePocketBaseUrl, {
-    message:
-      'PocketBase URL must use HTTPS (or http://localhost / http://127.0.0.1 / http://[::1] for local development)',
+    message: UNSAFE_POCKETBASE_URL_MESSAGE,
   }),
   authToken: z.string().min(1),
 });
