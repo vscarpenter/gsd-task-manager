@@ -95,7 +95,9 @@ export function TaskCardHeader({
             // contrasts the pigment in both light and dark themes.
             style={task.completed ? { backgroundColor: accentVar, borderColor: accentVar } : undefined}
             className={cn(
-              "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 sm:h-9 sm:w-9",
+              // active:scale-95 gives the completion toggle — the card's key
+              // moment — a tactile down-press to pair with the check-pop on release.
+              "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 active:scale-95 sm:h-9 sm:w-9",
               task.completed
                 ? "shadow-sm"
                 : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"

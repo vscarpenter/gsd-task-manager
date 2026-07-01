@@ -72,7 +72,9 @@ export function TaskCard({
       tabIndex={-1}
       style={style}
       className={cn(
-        "group relative flex flex-col gap-2 rounded-lg border bg-card p-3 transition-all duration-200 animate-slide-in-card",
+        // Explicit property list (not transition-all): only these change on the
+        // card, and `all` would also transition the dnd-kit drag transform.
+        "group relative flex flex-col gap-2 rounded-lg border bg-card p-3 transition-[transform,border-color,box-shadow,opacity] duration-200 ease-out animate-slide-in-card",
         // Clear the sticky topbar + capture bar (plus ~12pt) when scrolled to.
         "scroll-mt-24",
         "border-card-border",

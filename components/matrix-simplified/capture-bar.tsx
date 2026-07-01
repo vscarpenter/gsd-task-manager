@@ -39,6 +39,8 @@ function isEditable(el: Element | null): boolean {
 export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: CaptureBarProps) {
   const [text, setText] = useState("");
   const [override, setOverride] = useState<RedesignQuadrantKey | null>(null);
+  // Fires the lightning-glyph pop on a real capture; self-clears on animation end.
+  const [justCaptured, setJustCaptured] = useState(false);
   const internalRef = useRef<HTMLInputElement | null>(null);
 
   // Stable refs so the global keydown handler does not re-register on every keystroke.
@@ -113,6 +115,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     });
     setText("");
     setOverride(null);
+    setJustCaptured(true);
   };
 
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -139,7 +142,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     >
       <ZapIcon
         aria-hidden
-        className="h-4 w-4 shrink-0 transition-colors"
+        onAnimationEnd={() => setJustCaptured(false)}
+        className={cn("h-4 w-4 shrink-0 transition-colors", justCaptured && "animate-capture-pop")}
         style={{ color: text.trim() ? accent : "color-mix(in srgb, var(--gray-500) 70%, transparent)" }}
       />
       <input
@@ -187,7 +191,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
               }}
               title="Open full form (Shift+N)"
               aria-label="Open full task form"
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-foreground-muted hover:bg-background-muted hover:text-foreground"
+              // Enters just behind the quadrant pill (40ms) so the trailing controls
+              // arrive as one coherent cluster instead of the pill animating alone.
+              style={{ animationDelay: "40ms" }}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground animate-quadrant-pill-in"
             >
               Details ↗
             </button>
@@ -203,9 +210,9 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         type="submit"
         aria-disabled={!parsed.title}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-colors duration-[120ms]",
+          "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-[background-color,color,transform] duration-[120ms]",
           parsed.title
-            ? "bg-accent text-card hover:bg-accent-hover"
+            ? "bg-accent text-card hover:bg-accent-hover active:scale-[0.97]"
             : "bg-accent/15 text-accent hover:bg-accent/20"
         )}
       >
