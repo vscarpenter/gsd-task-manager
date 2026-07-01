@@ -87,4 +87,20 @@ describe("<CaptureBar>", () => {
     fireEvent.keyDown(window, { key: "N", shiftKey: true });
     expect(onMoreOptions).toHaveBeenCalledWith({ title: "", urgent: false, important: false, tags: [] });
   });
+
+  it("pulses the capture icon on a successful submit (delight in the moment)", async () => {
+    const { container } = render(<CaptureBar onSubmit={vi.fn()} />);
+    const input = screen.getByLabelText("Capture a task");
+    expect(container.querySelector(".animate-capture-pop")).toBeNull();
+    await userEvent.type(input, "buy milk{Enter}");
+    expect(container.querySelector(".animate-capture-pop")).not.toBeNull();
+  });
+
+  it("does not pulse the capture icon when opening the full form via Details", async () => {
+    const { container } = render(<CaptureBar onSubmit={vi.fn()} onMoreOptions={vi.fn()} />);
+    const input = screen.getByLabelText("Capture a task");
+    await userEvent.type(input, "ship it");
+    await userEvent.click(screen.getByRole("button", { name: /open full task form/i }));
+    expect(container.querySelector(".animate-capture-pop")).toBeNull();
+  });
 });

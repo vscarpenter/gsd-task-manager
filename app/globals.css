@@ -517,6 +517,20 @@ main {
     animation: check-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
+  /* Capture delight: the lightning glyph fires a quick scale pop the instant a
+     task is captured — the one acknowledgment the capture bar was missing.
+     Fires only on a real submit, never on mount (Inkwell "delight in moments"). */
+  @keyframes capture-pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  .animate-capture-pop {
+    /* Literal cubic-bezier (value of --ease-pop), NOT var() — see check-pop. */
+    animation: capture-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
   @keyframes new-task-glow {
     0%, 100% {
       box-shadow: 0 0 0 0 var(--accent-focus-ring);
