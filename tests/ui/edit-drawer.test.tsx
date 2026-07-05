@@ -294,5 +294,24 @@ describe("<EditDrawer>", () => {
       expect(screen.getByLabelText(/search tasks/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/^title$/i)).toBeInTheDocument();
     });
+
+    it("should_close_suggestions_on_escape_without_closing_the_drawer", async () => {
+      const onClose = vi.fn();
+      render(
+        <EditDrawer open task={mockTask} allTasks={[mockTask, otherTask]} onClose={onClose} onSubmit={vi.fn()} />
+      );
+      await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+      await user.type(screen.getByLabelText(/search tasks/i), "other");
+      expect(screen.getByTestId("dep-suggestion")).toBeInTheDocument();
+
+      // First Escape only dismisses the suggestion popup.
+      await user.keyboard("{Escape}");
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("dep-suggestion")).not.toBeInTheDocument();
+
+      // Second Escape (popup closed) closes the drawer as before.
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 });

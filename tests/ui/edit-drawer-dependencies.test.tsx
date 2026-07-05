@@ -180,6 +180,44 @@ describe("<DependenciesField>", () => {
     await user.type(screen.getByLabelText(/search tasks/i), "anything");
     expect(screen.getByText(/no matching tasks/i)).toBeInTheDocument();
   });
+
+  it("should_return_focus_to_search_input_after_picking_a_suggestion", async () => {
+    const user = userEvent.setup();
+    render(
+      <DependenciesField
+        dependencies={[]}
+        allTasks={[makeTask({ id: "a", title: "Alpha" })]}
+        onChange={vi.fn()}
+      />
+    );
+    const input = screen.getByLabelText(/search tasks/i);
+    await user.type(input, "alp");
+    await user.click(screen.getByTestId("dep-suggestion"));
+    expect(input).toHaveFocus();
+  });
+
+  it("should_describe_disabled_input_with_limit_caption_at_max", () => {
+    const deps = Array.from({ length: 50 }, (_, i) => `d${i}`);
+    render(<DependenciesField taskId="z" dependencies={deps} allTasks={[]} onChange={vi.fn()} />);
+    expect(screen.getByLabelText(/search tasks/i)).toHaveAccessibleDescription(
+      /dependency limit reached/i
+    );
+  });
+
+  it("should_mark_input_invalid_and_describe_it_with_error_text", () => {
+    render(
+      <DependenciesField
+        taskId="z"
+        dependencies={[]}
+        allTasks={[]}
+        onChange={vi.fn()}
+        error="Circular dependency: nope."
+      />
+    );
+    const input = screen.getByLabelText(/search tasks/i);
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(/circular dependency/i);
+  });
 });
 
 describe("findDependencyCycleError", () => {

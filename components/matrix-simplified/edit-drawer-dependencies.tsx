@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { XIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { wouldCreateCircularDependency } from "@/lib/dependencies";
@@ -48,12 +48,18 @@ export function DependenciesField({
 }: DependenciesFieldProps): React.ReactElement {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const limitNoteId = useId();
+  const errorId = useId();
 
   // Ghost IDs (no local record) render no chip but stay in `dependencies`.
   const chips = dependencies
     .map((id) => allTasks.find((t) => t.id === id))
     .filter((t): t is TaskRecord => t !== undefined);
   const atLimit = dependencies.length >= SCHEMA_LIMITS.MAX_DEPENDENCIES;
+  const suggestionsVisible = open && query.trim().length > 0;
+  const describedBy =
+    [atLimit ? limitNoteId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined;
 
   return (
     <Field label="Depends on">
@@ -82,6 +88,7 @@ export function DependenciesField({
             </span>
           ))}
           <input
+            ref={inputRef}
             value={query}
             disabled={atLimit}
             onChange={(e) => {
@@ -91,9 +98,17 @@ export function DependenciesField({
             onFocus={() => setOpen(true)}
             onKeyDown={(e) => {
               if (e.key === "Enter") e.preventDefault();
+              // Escape dismisses the suggestion popup only; a second Escape
+              // (popup closed) bubbles to the drawer's window listener as usual.
+              if (e.key === "Escape" && suggestionsVisible) {
+                e.stopPropagation();
+                setOpen(false);
+              }
             }}
             placeholder={chips.length ? "" : "Search tasks this one depends on…"}
             aria-label="Search tasks to add as a dependency"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
             className="min-w-[80px] flex-1 border-0 bg-transparent text-[13px] text-foreground outline-none disabled:cursor-not-allowed"
           />
         </div>
@@ -107,16 +122,19 @@ export function DependenciesField({
             onChange([...dependencies, id]);
             setQuery("");
             setOpen(false);
+            // Picking removes the focused suggestion button from the DOM;
+            // return focus to the input so keyboard users keep their place.
+            inputRef.current?.focus();
           }}
         />
       </div>
       {atLimit ? (
-        <p className="text-[11.5px] text-foreground-muted">
+        <p id={limitNoteId} className="text-[11.5px] text-foreground-muted">
           Dependency limit reached ({SCHEMA_LIMITS.MAX_DEPENDENCIES}).
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="text-xs text-red-400">
+        <p id={errorId} role="alert" className="text-xs text-rust">
           {error}
         </p>
       ) : null}
