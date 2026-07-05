@@ -46,6 +46,8 @@ export interface EditDraftState {
   tagInput: string;
   setTagInput: (v: string) => void;
   addTag: () => void;
+  dependencies: string[];
+  setDependencies: (v: string[]) => void;
   toDraft: () => EditDraft;
 }
 
@@ -77,6 +79,9 @@ export function useEditDraftState(
   const [showCustomDateInput, setShowCustomDateInput] = useState(false);
   const [tags, setTags] = useState<string[]>(() => (task ? task.tags ?? [] : initialDraft?.tags ?? []));
   const [tagInput, setTagInput] = useState("");
+  const [dependencies, setDependencies] = useState<string[]>(() =>
+    task ? task.dependencies ?? [] : initialDraft?.dependencies ?? []
+  );
 
   // Move focus to the title field shortly after the drawer mounts.
   useEffect(() => {
@@ -104,6 +109,7 @@ export function useEditDraftState(
       important,
       dueDate,
       tags,
+      dependencies,
     };
   };
 
@@ -118,6 +124,7 @@ export function useEditDraftState(
     tags, setTags,
     tagInput, setTagInput,
     addTag,
+    dependencies, setDependencies,
     toDraft,
   };
 }
