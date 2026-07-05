@@ -69,3 +69,14 @@ UI padding files (different from data files — these were the *sole* tests for 
 - Pinned `canvas-confetti` from `^1.9.4` to exact `1.9.4`.
 - Migrated `.parse()` to `.safeParse()` in user-input paths (import, create).
 - Refactored `clearIndexedDB()` and `checkAndNotify()` for function length compliance.
+
+## 2026-07-05 — Edit-drawer autofocus is a test trap (unit AND e2e)
+
+`EditDrawerForm` moves focus to the title input ~100ms after mount
+(`UI_TIMING.FOCUS_DELAY_MS`). Any test (jsdom or Playwright) that interacts
+with a *later* drawer field immediately after opening loses focus mid-action —
+which also closes the dependency-suggestion popup via its container onBlur.
+Fix pattern: wait for the title to be focused before touching other fields
+(unit: `waitFor(() => expect(title).toHaveFocus())`; e2e:
+`locator("[data-testid='edit-title']:focus").waitFor()` — now baked into
+`MatrixPage.openEditDrawer`). Same root cause bit both layers in one session.
