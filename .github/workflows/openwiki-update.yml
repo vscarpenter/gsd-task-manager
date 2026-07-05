@@ -13,9 +13,9 @@ name: OpenWiki Update
 # push -> CI -> push loop on a protected branch.
 #
 # ─── Required repository configuration ──────────────────────────────────────────
-#   Secret:  OPENWIKI_API_KEY   -> model API key used by the OpenWiki CLI
-#                                  (set this to your Anthropic/OpenAI key, whichever
-#                                   your OpenWiki install expects).
+#   Secret:  OPENWIKI_API_KEY   -> OpenRouter API key (sk-or-...). The CLI only
+#                                  reads OPENROUTER_API_KEY in non-interactive
+#                                  runs, so the secret is exported under that name.
 #   Setting: Allow GitHub Actions to create and approve pull requests
 #            (Settings -> Actions -> General -> Workflow permissions).
 # ────────────────────────────────────────────────────────────────────────────────
@@ -83,10 +83,9 @@ jobs:
 
       - name: Run OpenWiki update
         env:
-          # OpenWiki reads whichever of these your install expects; we export the
-          # single configured secret under the common names so it "just works".
-          OPENWIKI_API_KEY: ${{ secrets.OPENWIKI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.OPENWIKI_API_KEY }}
+          # The CLI hard-requires OPENROUTER_API_KEY when running non-interactively;
+          # OPENWIKI_API_KEY / ANTHROPIC_API_KEY are never read in CI.
+          OPENROUTER_API_KEY: ${{ secrets.OPENWIKI_API_KEY }}
           # Non-interactive so the CLI never blocks waiting for input in CI.
           CI: "true"
         run: |
