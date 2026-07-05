@@ -208,6 +208,28 @@ describe("<MatrixSimplified>", () => {
     expect(await screen.findByRole("heading", { name: /new task/i })).toBeInTheDocument();
   });
 
+  it("passes drawer-selected dependencies to createTask on the create path", async () => {
+    const user = userEvent.setup();
+    tasksFixture.current = [makeTask({ id: "dep-1", title: "Prepare deck" })];
+    render(<MatrixSimplified />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent("gsd:new-task"));
+    });
+    await screen.findByRole("heading", { name: /new task/i });
+
+    await user.type(screen.getByLabelText(/^title$/i), "Present deck");
+    await user.type(screen.getByLabelText(/search tasks/i), "prepare");
+    await user.click(screen.getByTestId("dep-suggestion"));
+    await user.click(screen.getByRole("button", { name: /create task/i }));
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Present deck", dependencies: ["dep-1"] })
+      )
+    );
+  });
+
   it("highlights a task when the shell highlight event fires", async () => {
     tasksFixture.current = [makeTask({ id: "target", title: "Target task" })];
     render(<MatrixSimplified />);
