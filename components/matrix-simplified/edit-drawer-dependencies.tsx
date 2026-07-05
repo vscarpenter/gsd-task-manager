@@ -88,6 +88,7 @@ export function DependenciesField({
             </span>
           ))}
           <input
+            data-testid="dep-search"
             ref={inputRef}
             value={query}
             disabled={atLimit}

@@ -85,6 +85,12 @@ export class MatrixPage {
     await taskCard.hover();
     await taskCard.locator("[data-testid='edit-task']").first().click();
     await this.page.locator("[data-testid='edit-drawer']").waitFor({ state: "visible" });
+    // The drawer autofocuses the title ~100ms after mount. Interacting with a
+    // later field before that fires loses focus mid-action (it also dismisses
+    // the dependency-suggestion popup), so wait for the autofocus to land.
+    await this.page
+      .locator("[data-testid='edit-title']:focus")
+      .waitFor({ state: "visible" });
   }
 
   /**
@@ -108,6 +114,35 @@ export class MatrixPage {
     }
     await drawer.locator("[data-testid='save-task']").click();
     await drawer.waitFor({ state: "hidden" });
+  }
+
+  /**
+   * In the open edit drawer, searches the "Depends on" field and picks the
+   * suggestion whose title matches. Requires the drawer to be open.
+   */
+  async addDependencyInDrawer(query: string, suggestionTitle: string): Promise<void> {
+    const drawer = this.page.locator("[data-testid='edit-drawer']");
+    await drawer.locator("[data-testid='dep-search']").fill(query);
+    await drawer
+      .locator("[data-testid='dep-suggestion']")
+      .filter({ hasText: suggestionTitle })
+      .click();
+    await drawer
+      .locator("[data-testid='dep-chip']")
+      .filter({ hasText: suggestionTitle })
+      .waitFor({ state: "visible" });
+  }
+
+  /**
+   * In the open edit drawer, removes the dependency chip for the given title.
+   */
+  async removeDependencyInDrawer(title: string): Promise<void> {
+    const drawer = this.page.locator("[data-testid='edit-drawer']");
+    await drawer.locator(`button[aria-label='Remove dependency ${title}']`).click();
+    await drawer
+      .locator("[data-testid='dep-chip']")
+      .filter({ hasText: title })
+      .waitFor({ state: "hidden" });
   }
 
   async search(query: string): Promise<void> {
