@@ -120,5 +120,12 @@ describe('About Components', () => {
       expect(screen.getByText('GSD')).toBeInTheDocument();
       expect(screen.getByText('Open App')).toBeInTheDocument();
     });
+
+    it('renders the four-quadrant logo mark inline instead of a raster image', () => {
+      const { container } = render(<AboutNav />);
+
+      expect(container.querySelector('svg')).toBeInTheDocument();
+      expect(container.querySelector('img')).not.toBeInTheDocument();
+    });
   });
 });
