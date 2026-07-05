@@ -87,10 +87,6 @@ vi.mock('@/components/matrix-simplified/app-shell', () => ({
 }));
 
 // About page mocks
-vi.mock('@/components/about/about-nav', () => ({
-  AboutNav: () => <nav data-testid="about-nav">Nav</nav>,
-}));
-
 vi.mock('@/components/about/hero-section', () => ({
   HeroSection: () => <section data-testid="hero-section">Hero</section>,
 }));

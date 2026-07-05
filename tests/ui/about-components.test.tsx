@@ -7,16 +7,11 @@ import { MatrixSection } from '@/components/about/matrix-section';
 import { PrivacySection } from '@/components/about/privacy-section';
 import { McpSection } from '@/components/about/mcp-section';
 import { FooterCta } from '@/components/about/footer-cta';
-import { AboutNav } from '@/components/about/about-nav';
 
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
-}));
-
-vi.mock('next/image', () => ({
-  default: (props: Record<string, unknown>) => <img alt="" {...props} />,
 }));
 
 vi.mock('@/components/about/scroll-reveal', () => ({
@@ -113,19 +108,4 @@ describe('About Components', () => {
     });
   });
 
-  describe('AboutNav', () => {
-    it('renders logo text and Open App link', () => {
-      render(<AboutNav />);
-
-      expect(screen.getByText('GSD')).toBeInTheDocument();
-      expect(screen.getByText('Open App')).toBeInTheDocument();
-    });
-
-    it('renders the four-quadrant logo mark inline instead of a raster image', () => {
-      const { container } = render(<AboutNav />);
-
-      expect(container.querySelector('svg')).toBeInTheDocument();
-      expect(container.querySelector('img')).not.toBeInTheDocument();
-    });
-  });
 });
