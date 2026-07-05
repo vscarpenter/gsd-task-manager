@@ -76,3 +76,190 @@ a coverage-instrumentation gap, not missing tests:
 
 Measured new-code coverage after the fix: ~87% (conservative estimate ~86.7% with
 no-lcov residuals counted as uncovered), clearing the 80% gate.
+
+---
+
+# Spec: Restore dependency-linking ("Depends on") UI in the v9 edit drawer
+
+**Date:** 2026-07-05 · **Status:** Awaiting approval · **Tier:** Non-trivial (new UI surface, multi-file, behavioral)
+
+## Goal
+
+Restore the ability to link tasks together in the web app — removed with the v8 task
+form in PR #238 — by adding a "Depends on" field to the v9 edit drawer, so users can
+declare which tasks must finish first and the existing "Blocked by / Blocking" card
+badges and "Ready to work" smart view become reachable again without Claude Desktop
+or JSON import.
+
+## Inputs / Outputs
+
+**Data model (unchanged — no schema or migration work):**
+- `TaskRecord.dependencies: string[]` (`lib/types.ts:36`) — IDs of tasks that must
+  complete first. Validated by `taskDraftSchema` (`lib/schema.ts:40`): array of
+  nanoid strings, max `SCHEMA_LIMITS.MAX_DEPENDENCIES` (50), default `[]`.
+- Persistence already flows: `updateTask` merges `updates.dependencies`
+  (`lib/tasks/crud/update.ts:82`); `createTask` defaults to `[]`
+  (`lib/tasks/crud/create.ts:84`); both enqueue sync ops. PocketBase `task-mapper`
+  already round-trips the field.
+
+**UI contract changes:**
+- `EditDraft` (components/matrix-simplified/edit-drawer.tsx) gains
+  `dependencies: string[]`.
+- `EditDrawer` gains prop `allTasks?: TaskRecord[]` (default `[]`) — candidate pool
+  for the picker. `components/matrix-simplified/index.tsx` already holds this via
+  `const { all } = useTasks()` (line 132) and passes it to both drawer instances.
+  Prop injection (not `useTasks()` inside the field) keeps the component pure and
+  unit-testable without Dexie.
+- New file `components/matrix-simplified/edit-drawer-dependencies.tsx` exporting
+  `DependenciesField` — controlled component:
+  `{ taskId?: string; dependencies: string[]; allTasks: TaskRecord[]; onChange: (ids: string[]) => void }`.
+- `useEditDraftState` gains `dependencies` / `setDependencies`, seeded from
+  `task.dependencies ?? []` (edit) or `initialDraft?.dependencies ?? []` (create),
+  emitted by `toDraft()`.
+- Create path: `handleEditSubmit` in `index.tsx` passes
+  `dependencies: draft.dependencies.length > 0 ? draft.dependencies : undefined`
+  to `createTask` (mirrors existing `tags` handling).
+
+**Behavior (reuses `lib/dependencies.ts` — no new graph logic):**
+- Field label "Depends on" using the existing `Field` primitive; selected
+  dependencies render as chips (task title + labeled remove button), matching the
+  tags-field chip idiom.
+- Search input filters candidates by case-insensitive title substring; shows at
+  most 8 suggestions; selecting one appends its ID and clears the query.
+- Candidates exclude: the task being edited, already-selected IDs, completed
+  tasks, and (edit mode) any task failing `wouldCreateCircularDependency`.
+- Submit guard: on save (edit mode), run a cycle-only check against the live task
+  list (`findDependencyCycleError`, wrapping `wouldCreateCircularDependency`); if a
+  cycle is found (e.g. realtime sync changed the graph after selection), block
+  submit and show an inline error instead of calling `onSubmit`. The guard must
+  NOT reuse lib's `validateDependencies` wholesale: its "all tasks must exist"
+  clause would reject ghost IDs that edge case 4 requires preserving.
+
+## Constraints
+
+- **Local-first / privacy:** all reads from the in-memory `allTasks` prop (live
+  Dexie data); no network calls; no task content in logs.
+- **Sync compatibility:** field-level only — the record-level `updateTask` +
+  `enqueueSyncOperation` path is untouched, so PocketBase sync behavior is
+  unchanged. Never silently drop dependency IDs that don't resolve locally
+  (they may reference tasks not yet synced to this device).
+- **File/function limits:** new field component in its own file (edit-drawer-fields.tsx
+  is at 225 lines; adding ~150 would crowd the 350 cap). All files stay ≤350 lines,
+  functions ≤30 lines, nesting ≤3.
+- **Bundle:** zero new dependencies; icons from `lucide-react` already in use.
+- **Design (PRODUCT.md / Inkwell):** calm and low-noise — same `Field` label
+  treatment, chip styling consistent with tags, no new colors; circular-dependency
+  message uses existing muted/error text idiom, not an alert box.
+- **React Compiler is ON:** no manual memoization; follow existing drawer patterns
+  (lazy `useState` seeding, remount-by-key).
+- **A11y (WCAG-AA):** search input labeled; suggestions are real buttons (tabbable,
+  Enter-activatable); remove buttons labeled "Remove dependency {title}"; Enter in
+  the search input must NOT submit the surrounding form.
+- **TDD:** red/green/refactor per AC; coverage for changed files ≥80%.
+
+## Edge Cases
+
+1. **No other tasks exist** (or all filtered out): typing shows a "No matching
+   tasks" empty state, not a broken dropdown.
+2. **Create mode:** no `taskId`, so no cycle risk — cycle filtering and submit
+   guard are skipped; picker otherwise fully functional.
+3. **Circular graphs:** direct (A→B, B→A) and transitive (A→B→C, C→A) cycles are
+   excluded from candidates; a cycle that appears between selection and save (e.g.
+   via realtime sync) is caught by the submit guard.
+4. **Ghost dependencies:** IDs referencing tasks absent locally (deleted, or not
+   yet synced from another device) render no chip but survive the edit round-trip
+   unchanged — removing chip X must not drop ghost ID Y.
+5. **Dependency on a completed task:** allowed to remain (it no longer blocks);
+   completed tasks just can't be newly added. Chips for completed dependencies
+   still render (with their title) so they can be removed.
+6. **50-dependency limit:** at `MAX_DEPENDENCIES`, the search input is disabled
+   with a short caption; schema validation can then never reject on count.
+7. **Offline:** identical behavior — everything is IndexedDB-local; sync queue
+   picks up the change when connectivity returns (existing behavior).
+8. **Concurrent multi-device edits:** last-writer-wins at the record level (existing
+   sync semantics); a cycle formed by merging two devices' edits is tolerated by
+   display logic (BFS visited-set in `wouldCreateCircularDependency` prevents
+   infinite loops) and can be broken by removing a chip.
+9. **Escape key:** existing drawer behavior (Escape closes the drawer) is
+   unchanged; suggestion list closes on blur/selection.
+10. **Schema migration:** none — `dependencies` has existed since the field was
+    introduced; Dexie stays at v14.
+
+## Out of Scope
+
+- Restoring **subtask editing** in the v9 drawer (also lost in #238) — separate task.
+- Fixing `restoreTask` not re-creating inbound dependency edges after delete/undo
+  (known deferred item in tasks/todo.md) — separate task.
+- Editing the **reverse** direction ("Blocking") from the drawer; card badges
+  already display it.
+- Dependency syntax in the capture bar (e.g. "after:task").
+- MCP server, schema, Dexie, or PocketBase changes of any kind.
+- Command-palette integration (palette is not wired into v9).
+- Redesign of the "Blocked by / Blocking" card badges.
+
+## Acceptance Criteria
+
+- **AC1** — Edit drawer for a task with dependencies shows a "Depends on" field
+  with one chip per resolvable dependency, labeled with that task's title.
+- **AC2** — Typing in the search input lists matching candidates (≤8,
+  case-insensitive title match); clicking a suggestion adds a chip, clears the
+  query, and the submitted draft includes the new ID.
+- **AC3** — Suggestions never include: the task being edited, already-selected
+  dependencies, completed tasks, or tasks that would create a circular dependency
+  (direct or transitive).
+- **AC4** — Each chip has a remove button with accessible name
+  "Remove dependency {title}"; after removal the submitted draft excludes that ID
+  while keeping all others (including unresolvable ghost IDs).
+- **AC5** — Pressing Enter in the dependency search input does not submit the form
+  and does not close the drawer.
+- **AC6** — In create mode the field works without a `taskId`, and
+  `handleEditSubmit` passes the selected IDs to `createTask` (`undefined` when
+  empty, mirroring tags).
+- **AC7** — If the draft's dependencies would create a cycle at submit time (edit
+  mode), `onSubmit` is not called and an inline error message is shown; ghost IDs
+  never trigger the guard.
+- **AC8** — With 50 dependencies selected, the search input is disabled and a
+  caption explains the limit.
+- **AC9** — A task list where no candidates match shows a "No matching tasks"
+  message; when `allTasks` is empty/absent the field still renders (empty state,
+  no crash) — existing `EditDrawer` tests stay green without passing the new prop.
+
+## Test Stubs
+
+`tests/ui/edit-drawer-dependencies.test.tsx` (new — field component, prop-driven, no Dexie):
+
+```ts
+describe("<DependenciesField>", () => {
+  it("should_render_chip_with_task_title_for_each_resolvable_dependency", () => {});      // AC1
+  it("should_not_render_chip_for_ghost_dependency_id", () => {});                          // AC1, AC4
+  it("should_list_matching_candidates_when_typing_and_cap_at_eight", () => {});            // AC2
+  it("should_add_chip_and_clear_query_when_suggestion_clicked", () => {});                 // AC2
+  it("should_exclude_self_selected_completed_and_circular_candidates", () => {});          // AC3
+  it("should_exclude_transitively_circular_candidate", () => {});                          // AC3
+  it("should_remove_only_targeted_id_and_preserve_ghost_ids_on_remove", () => {});         // AC4
+  it("should_not_submit_enclosing_form_when_enter_pressed_in_search", () => {});           // AC5
+  it("should_allow_adding_candidates_in_create_mode_without_task_id", () => {});           // AC6
+  it("should_disable_search_input_with_caption_at_max_dependencies", () => {});            // AC8
+  it("should_show_no_matching_tasks_message_when_query_has_no_candidates", () => {});      // AC9
+});
+```
+
+`tests/ui/edit-drawer.test.tsx` (additions — drawer integration):
+
+```ts
+describe("<EditDrawer> dependencies", () => {
+  it("should_include_added_dependency_id_in_submitted_draft", () => {});                   // AC2
+  it("should_exclude_removed_dependency_id_from_submitted_draft", () => {});               // AC4
+  it("should_block_submit_and_show_inline_error_when_dependencies_invalid_at_save", () => {}); // AC7
+  it("should_submit_dependencies_without_task_id_in_create_mode", () => {});               // AC6
+  it("should_render_without_all_tasks_prop_and_keep_existing_fields_working", () => {});   // AC9
+});
+```
+
+`tests/ui/matrix-simplified-shell.test.tsx` or existing shell test home (addition — create wiring):
+
+```ts
+describe("handleEditSubmit create path", () => {
+  it("should_pass_dependencies_to_create_task_when_present_and_undefined_when_empty", () => {}); // AC6
+});
+```
