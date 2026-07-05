@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { GsdLogo } from "@/components/gsd-logo";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,13 +17,7 @@ export function AboutNav() {
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <span className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
-          <Image
-            src="/icons/about-logo.png"
-            alt="GSD logo"
-            width={42}
-            height={42}
-            className="rounded-lg"
-          />
+          <GsdLogo size={32} />
           <span className="text-accent">GSD</span>
         </span>
 
