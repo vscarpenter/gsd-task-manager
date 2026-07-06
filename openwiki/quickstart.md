@@ -110,6 +110,10 @@ onboarding "Open App" CTA. No backend is required for basic task CRUD. See
   Docker self-hosting, AWS S3/CloudFront deploy, CI workflows, security posture.
 - **[Testing guide](testing/testing-guide.md)** — Vitest/RTL unit tests, Playwright e2e,
   TDD workflow, coverage thresholds, and gotchas.
+- **[Glossary](reference/glossary.md)** — shared vocabulary (BFS, LWW, quadrants, smart
+  views, MCP, …).
+- **[Tech debt & roadmap](reference/tech-debt-and-roadmap.md)** — known debt, planned
+  migrations, and potential roadmap items (human-maintained).
 
 Deeper background lives in the **Architecture Decision Records** at `/docs/adr/0001`–`0012`.
 
@@ -119,9 +123,9 @@ Deeper background lives in the **Architecture Decision Records** at `/docs/adr/0
 
 These are grounded in current source; some root docs lag behind.
 
-- **Version drift in prose docs.** `/README.md` header ("7.8.1") and `/ARCHITECTURE.md`
-  ("7.2.4") lag `/package.json` (**10.1.0**). Treat `package.json` + `CLAUDE.md` + the ADRs
-  as the source of truth for current state.
+- **Version drift in prose docs.** The `/README.md` header lags `/package.json`; treat
+  `package.json` + `CLAUDE.md` + the ADRs as the source of truth for current state. (The old
+  long-form `/ARCHITECTURE.md` has been replaced by a pointer into this wiki.)
 - **`bun run test`, not `bun test`.** `bun test` invokes Bun's built-in runner; only
   `bun run test` delegates to Vitest.
 - **v9 single-matrix refactor** (ADR-0011) removed several older UI surfaces. The

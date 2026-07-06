@@ -80,6 +80,13 @@ dependency must not create a cycle.
 - Mutations live in `/lib/tasks/dependencies.ts`
   (`addDependency`, `removeDependency`, `removeDependencyReferences`). Deleting a task purges
   inbound dependency edges first.
+- **Editing surface:** the v9 edit drawer's "Depends on" field
+  (`/components/matrix-simplified/edit-drawer-dependencies.tsx`) is the in-app way to link
+  dependencies. It reuses `wouldCreateCircularDependency` via a save-time guard
+  (`findDependencyCycleError`) that blocks saves creating a cycle but **preserves ghost IDs**
+  (dependencies referencing tasks not yet synced to this device) instead of dropping them.
+  This field was restored in v10.2.0 after the v8 task-form removal left the system
+  write-only via MCP/import (ADR-0011 addendum).
 
 ---
 

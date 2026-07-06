@@ -5,9 +5,9 @@ the app is a static bundle served from a CDN, and all data is stored in the brow
 IndexedDB. Optional layers (PocketBase sync, MCP server) attach on top without changing the
 local-first core.
 
-See also: `/ARCHITECTURE.md` (long-form, but version header is stale — see
-[quickstart gotchas](../quickstart.md#important-gotchas-read-before-changing-code)), and
-ADRs `/docs/adr/0001`–`0012`.
+See also: the [Glossary](../reference/glossary.md),
+[Tech debt & roadmap](../reference/tech-debt-and-roadmap.md), and ADRs
+`/docs/adr/0001`–`0012`. (The root `/ARCHITECTURE.md` is now just a pointer into this wiki.)
 
 ---
 
