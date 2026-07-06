@@ -122,7 +122,7 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
 }));
 
 import { MatrixSimplified } from "@/components/matrix-simplified";
-import { createTask, toggleCompleted, deleteTask, restoreTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 
 describe("<MatrixSimplified>", () => {
@@ -206,6 +206,48 @@ describe("<MatrixSimplified>", () => {
     });
 
     expect(await screen.findByRole("heading", { name: /new task/i })).toBeInTheDocument();
+  });
+
+  it("passes drawer-selected dependencies to createTask on the create path", async () => {
+    const user = userEvent.setup();
+    tasksFixture.current = [makeTask({ id: "dep-1", title: "Prepare deck" })];
+    render(<MatrixSimplified />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent("gsd:new-task"));
+    });
+    await screen.findByRole("heading", { name: /new task/i });
+
+    await user.type(screen.getByLabelText(/^title$/i), "Present deck");
+    await user.type(screen.getByLabelText(/search tasks/i), "prepare");
+    await user.click(screen.getByTestId("dep-suggestion"));
+    await user.click(screen.getByRole("button", { name: /create task/i }));
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Present deck", dependencies: ["dep-1"] })
+      )
+    );
+  });
+
+  it("forwards ghost dependency ids untouched through the edit save path", async () => {
+    const user = userEvent.setup();
+    // "dep-ghost" has no local record (e.g. not yet synced) — it must survive
+    // an unrelated edit round-trip without being dropped.
+    tasksFixture.current = [makeTask({ id: "e1", title: "Editable", dependencies: ["dep-ghost"] })];
+    render(<MatrixSimplified />);
+
+    // Task cards render two "Edit task" buttons (desktop row + compact menu).
+    await user.click(screen.getAllByRole("button", { name: /^edit task$/i })[0]);
+    await screen.findByRole("heading", { name: /edit task/i });
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(updateTask).toHaveBeenCalledWith(
+        "e1",
+        expect.objectContaining({ dependencies: ["dep-ghost"] })
+      )
+    );
   });
 
   it("highlights a task when the shell highlight event fires", async () => {

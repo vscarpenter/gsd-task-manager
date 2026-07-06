@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
@@ -9,6 +9,7 @@ import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField } from "./edit-drawer-fields";
+import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
 
 export interface EditDraft {
   title: string;
@@ -17,6 +18,7 @@ export interface EditDraft {
   important: boolean;
   dueDate?: string;
   tags: string[];
+  dependencies: string[];
 }
 
 interface EditDrawerProps {
@@ -24,13 +26,15 @@ interface EditDrawerProps {
   task?: TaskRecord | null;
   /** Pre-fill fields when opening in create mode (task is null/absent). */
   initialDraft?: Partial<EditDraft>;
+  /** Full live task list — candidate pool for the dependency picker. */
+  allTasks?: TaskRecord[];
   onClose: () => void;
   onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
 }
 
 type EditDrawerFormProps = Omit<EditDrawerProps, "open">;
 
-export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: EditDrawerProps): React.ReactElement | null {
+export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubmit }: EditDrawerProps): React.ReactElement | null {
   if (!open) return null;
   // Remount the form when the selected task changes so its field state is
   // seeded fresh from props — no effect-based rehydration needed.
@@ -39,17 +43,24 @@ export function EditDrawer({ open, task, initialDraft, onClose, onSubmit }: Edit
       key={task?.id ?? "__create__"}
       task={task}
       initialDraft={initialDraft}
+      allTasks={allTasks}
       onClose={onClose}
       onSubmit={onSubmit}
     />
   );
 }
 
-function EditDrawerForm({ task, initialDraft, onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
+function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLFormElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
   const trapKeyDown = useDialogFocus(true, drawerRef);
+  const [dependencyError, setDependencyError] = useState<string | null>(null);
+
+  const handleDependenciesChange = (ids: string[]): void => {
+    setDependencyError(null);
+    draft.setDependencies(ids);
+  };
 
   // `onClose` may change identity between renders; useEffectEvent keeps the
   // keydown listener subscribed once while always calling the latest handler.
@@ -67,6 +78,13 @@ function EditDrawerForm({ task, initialDraft, onClose, onSubmit }: EditDrawerFor
   const submit = (e?: FormEvent): void => {
     e?.preventDefault();
     if (!draft.title.trim()) return;
+    const cycleError = task
+      ? findDependencyCycleError(task.id, draft.dependencies, allTasks)
+      : null;
+    if (cycleError) {
+      setDependencyError(cycleError);
+      return;
+    }
     void onSubmit(draft.toDraft(), task?.id);
   };
 
@@ -155,6 +173,14 @@ function EditDrawerForm({ task, initialDraft, onClose, onSubmit }: EditDrawerFor
                 draft.setTags(draft.tags.slice(0, -1));
               }
             }}
+          />
+
+          <DependenciesField
+            taskId={task?.id}
+            dependencies={draft.dependencies}
+            allTasks={allTasks}
+            onChange={handleDependenciesChange}
+            error={dependencyError}
           />
         </div>
 

@@ -528,3 +528,25 @@ None currently.
 - [ ] Pre-existing `findPBRecordId` in `helpers.ts` has the same silent-error-swallowing flaw fixed in PR5 for `fetchSinglePBTaskFresh`. Apply the same `status === 404` discrimination there.
 - [ ] Add lessons.md entry: MCP write-path test fixtures didn't catch the original stale-spread bug because mocks never went stale between calls. Future tests should exercise the read→write timeline, not just data shapes.
 
+
+---
+
+## 2026-07-05 — Depends on field restored in v9 edit drawer (v10.2.0)
+
+Spec: tasks/spec.md § 2026-07-05 · Plan: docs/superpowers/plans/2026-07-05-edit-drawer-dependencies.md
+Branch: feat/edit-drawer-dependencies
+
+- [x] DependenciesField component (chips, search ≤8 suggestions, self/selected/completed/cycle exclusions, 50-cap, ghost-ID preservation)
+- [x] Drawer wiring (EditDraft.dependencies, allTasks prop, save-time cycle guard + inline error)
+- [x] Shell wiring (allTasks to both drawers, create-path dependencies passthrough)
+- [x] a11y hardening per a11y-reviewer (focus return after pick, Escape closes popup before drawer, text-rust contrast, aria-describedby/invalid)
+- [x] pb-sync-reviewer: 0 blocking (ghost round-trip + cycle guard verified; diff UI-only for sync)
+- [x] Live-verified in Chrome (SW-busted, seeded): link → Blocked by 1/Blocking 1 badges → IndexedDB round-trip → unlink; create-mode linking; console clean
+- [x] e2e: tests/e2e/task-dependencies.spec.ts (chromium green; openEditDrawer now waits for title autofocus to settle)
+
+**Resuming From Here / deferred follow-ups:**
+- Full WAI-ARIA combobox semantics for the dependency picker (role/aria-expanded/aria-activedescendant + arrow keys) — a11y-reviewer finding #1; partial roles are worse than the current labeled tabbable buttons.
+- Systemic danger-color token: text-red-400-on-white fails AA in sync-button.tsx:148 and sync-auth-dialog-sections.tsx:212 too — a shared token fix covers all.
+- restoreTask does not re-create inbound dependency edges after delete/undo (pre-existing, noted above).
+- Subtask editing still drawer-less (also lost in #238).
+- Pre-existing on main: scripts/build-openwiki-site.cjs has 2 ESLint errors (no-require-imports) from the OpenWiki commit 907360d — repo-wide `bun lint` exits 1 through no fault of this branch.

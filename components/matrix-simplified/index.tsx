@@ -230,6 +230,7 @@ export function MatrixSimplified() {
           important: draft.important,
           dueDate: draft.dueDate,
           tags: draft.tags.length > 0 ? draft.tags : undefined,
+          dependencies: draft.dependencies.length > 0 ? draft.dependencies : undefined,
         });
         toast.success("Task added", { duration: TOAST_DURATION.SHORT });
         dispatchOverlay({ type: "closeCreate" });
@@ -304,6 +305,7 @@ export function MatrixSimplified() {
       <EditDrawer
         open={Boolean(editingTask)}
         task={editingTask}
+        allTasks={all}
         onClose={handleEditClose}
         onSubmit={handleEditSubmit}
       />
@@ -311,6 +313,7 @@ export function MatrixSimplified() {
         open={createDrawerOpen}
         task={null}
         initialDraft={createInitial}
+        allTasks={all}
         onClose={handleCreateClose}
         onSubmit={handleEditSubmit}
       />

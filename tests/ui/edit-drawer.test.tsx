@@ -227,4 +227,91 @@ describe("<EditDrawer>", () => {
       await waitFor(() => expect(trigger).toHaveFocus());
     });
   });
+
+  describe("dependencies field", () => {
+    const otherTask: TaskRecord = { ...mockTask, id: "t2", title: "Other task", dependencies: [] };
+
+    it("should_include_added_dependency_id_in_submitted_draft", async () => {
+      const onSubmit = vi.fn();
+      render(
+        <EditDrawer open task={mockTask} allTasks={[mockTask, otherTask]} onClose={vi.fn()} onSubmit={onSubmit} />
+      );
+      // Let the drawer's delayed title autofocus fire first — it blurs the
+      // dependency search, which (correctly) closes the suggestion list.
+      await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+      await user.type(screen.getByLabelText(/search tasks/i), "other");
+      await user.click(screen.getByTestId("dep-suggestion"));
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dependencies: ["t2"] }),
+        "t1"
+      );
+    });
+
+    it("should_exclude_removed_dependency_id_from_submitted_draft", async () => {
+      const onSubmit = vi.fn();
+      const taskWithDep: TaskRecord = { ...mockTask, dependencies: ["t2"] };
+      render(
+        <EditDrawer open task={taskWithDep} allTasks={[taskWithDep, otherTask]} onClose={vi.fn()} onSubmit={onSubmit} />
+      );
+      await user.click(screen.getByRole("button", { name: "Remove dependency Other task" }));
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dependencies: [] }),
+        "t1"
+      );
+    });
+
+    it("should_block_submit_and_show_inline_error_when_dependencies_would_cycle_at_save", async () => {
+      // Simulates a cycle that arrived via realtime sync after the drawer opened:
+      // t1 → t2 (this draft) while t2 → t1 (already in the store).
+      const onSubmit = vi.fn();
+      const blocker: TaskRecord = { ...otherTask, dependencies: ["t1"] };
+      const taskWithCycle: TaskRecord = { ...mockTask, dependencies: ["t2"] };
+      render(
+        <EditDrawer open task={taskWithCycle} allTasks={[taskWithCycle, blocker]} onClose={vi.fn()} onSubmit={onSubmit} />
+      );
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent(/circular dependency/i);
+    });
+
+    it("should_submit_dependencies_without_task_id_in_create_mode", async () => {
+      const onSubmit = vi.fn();
+      render(<EditDrawer open task={null} allTasks={[otherTask]} onClose={vi.fn()} onSubmit={onSubmit} />);
+      await user.type(screen.getByLabelText(/^title$/i), "Brand new task");
+      await user.type(screen.getByLabelText(/search tasks/i), "other");
+      await user.click(screen.getByTestId("dep-suggestion"));
+      await user.click(screen.getByRole("button", { name: /create task/i }));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dependencies: ["t2"] }),
+        undefined
+      );
+    });
+
+    it("should_render_without_all_tasks_prop_and_keep_existing_fields_working", () => {
+      render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      expect(screen.getByLabelText(/search tasks/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^title$/i)).toBeInTheDocument();
+    });
+
+    it("should_close_suggestions_on_escape_without_closing_the_drawer", async () => {
+      const onClose = vi.fn();
+      render(
+        <EditDrawer open task={mockTask} allTasks={[mockTask, otherTask]} onClose={onClose} onSubmit={vi.fn()} />
+      );
+      await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+      await user.type(screen.getByLabelText(/search tasks/i), "other");
+      expect(screen.getByTestId("dep-suggestion")).toBeInTheDocument();
+
+      // First Escape only dismisses the suggestion popup.
+      await user.keyboard("{Escape}");
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("dep-suggestion")).not.toBeInTheDocument();
+
+      // Second Escape (popup closed) closes the drawer as before.
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });

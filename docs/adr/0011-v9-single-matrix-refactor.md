@@ -61,3 +61,16 @@ Adopt v9 as the single supported UI. Delete the v8 surface that was definitively
 1. **Feature-flag both surfaces.** Rejected — the v9 work has been live since `cc5c85e` and no rollback path is needed. A flag would add maintenance cost without value.
 2. **Keep v8 code "for reference."** Rejected — that's what git history is for. Dead code in `main` invites accidental re-use, accumulates lint/audit noise, and inflates bundle size.
 3. **Delete the command palette too.** Rejected for now — the `⌘K` shortcut is a frequently-cited feature in user-facing docs and the source is tested; preserving it cheaply keeps the resurrection option open.
+
+## Addendum (2026-07-05): dependency editing restored
+
+The v8 removal (PR #238) dropped `task-form-dependencies.tsx` with the rest of
+the modular task form, leaving the dependency system write-only via MCP/import
+while task cards still displayed Blocked by/Blocking badges. A "Depends on"
+field was restored inside the v9 edit drawer
+(`components/matrix-simplified/edit-drawer-dependencies.tsx`), reusing the
+`lib/dependencies.ts` cycle detection plus a save-time cycle guard that
+preserves dependency IDs not resolvable locally (not-yet-synced tasks).
+Subtask editing remains drawer-less; `restoreTask` still does not restore
+inbound dependency edges; full WAI-ARIA combobox semantics for the picker are
+a tracked follow-up (see tasks/todo.md).
