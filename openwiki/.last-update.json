@@ -1,15 +1,6 @@
 {
-  "updatedAt": "2026-07-04T18:25:21Z",
-  "gitHead": "96888270220ba6761b14453bf10b04385ed5ea62",
-  "mode": "init",
-  "packageVersion": "10.1.0",
-  "pages": [
-    "quickstart.md",
-    "architecture/overview.md",
-    "architecture/domain-model.md",
-    "workflows/sync-and-offline.md",
-    "workflows/mcp-server.md",
-    "operations/build-deploy-and-ops.md",
-    "testing/testing-guide.md"
-  ]
+  "updatedAt": "2026-07-06T00:42:08.700Z",
+  "command": "update",
+  "gitHead": "b759a84dfc1cc7784c6f92f188b32ba1174badd7",
+  "model": "claude-opus-4-8"
 }

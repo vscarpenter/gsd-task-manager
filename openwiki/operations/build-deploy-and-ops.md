@@ -157,11 +157,28 @@ A scheduled workflow keeps `/openwiki/` in sync with the codebase.
   push directly to `main`, so AI-generated doc edits get a human review and cannot cause a
   push -> CI -> push loop. If nothing changed, no PR is created.
 - **Required setup (one-time):**
-  - Add repo secret **`OPENWIKI_API_KEY`** — the model API key the OpenWiki CLI needs (exported
-    to the CLI as both `OPENWIKI_API_KEY` and `ANTHROPIC_API_KEY`).
+  - Add repo secret **`OPENWIKI_API_KEY`** — an OpenRouter API key (`sk-or-...`). The CLI reads
+    `OPENROUTER_API_KEY` in non-interactive runs, so the workflow exports the secret under that
+    name.
   - Enable **Settings -> Actions -> General -> Workflow permissions -> "Allow GitHub Actions to
     create and approve pull requests"** so the job can open the PR.
 - **Notes:** the CLI is invoked with `bunx openwiki` (no need to add it as a project
   dependency); checkout uses `fetch-depth: 0` so OpenWiki can diff commits since its last run
   (`gitHead` in `openwiki/.last-update.json`). Tune the `push` path filters in the workflow to
   match which source areas should trigger a refresh.
+
+---
+
+## OpenWiki freshness check (`/.github/workflows/openwiki-freshness.yml`)
+
+A lightweight, **non-blocking** companion to the update workflow. On any pull request that
+touches documentation-relevant paths, it runs `scripts/check-openwiki-freshness.sh`, which
+compares the `gitHead` recorded in `openwiki/.last-update.json` against the PR and lists any
+doc-affecting files changed since OpenWiki last ran.
+
+- **It never fails the build.** Drift surfaces as a `::warning::` annotation only — a hard gate
+  would red-X every feature PR until the doc bot catches up. The fix is the update workflow
+  above (or `bunx openwiki --update` locally), not this check.
+- **Run it locally:** `scripts/check-openwiki-freshness.sh [ref]` (defaults to `HEAD`).
+- The check's diff excludes `openwiki/` and the site generator, so OpenWiki's own update PR
+  never trips it.
