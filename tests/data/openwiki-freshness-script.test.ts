@@ -5,9 +5,15 @@ import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 const scriptPath = join(process.cwd(), "scripts/check-openwiki-freshness.sh");
+const isolatedGitEnv = {
+  ...process.env,
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_NOSYSTEM: "1",
+  GIT_CONFIG_COUNT: "0",
+};
 
 function run(command: string, args: string[], cwd: string) {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" });
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", env: isolatedGitEnv });
 
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(" ")} failed:\n${result.stderr}\n${result.stdout}`);
@@ -31,7 +37,7 @@ function runFreshness(repo: string, githubActions = false) {
   return spawnSync("bash", [scriptPath], {
     cwd: repo,
     encoding: "utf8",
-    env: { ...process.env, GITHUB_ACTIONS: githubActions ? "true" : "" },
+    env: { ...isolatedGitEnv, GITHUB_ACTIONS: githubActions ? "true" : "" },
   });
 }
 
