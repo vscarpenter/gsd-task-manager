@@ -130,7 +130,7 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
   if (!parsed.success) {
     logger.error('PocketBase record failed validation, skipping', undefined, {
       taskId: record['task_id'] as string,
-      errors: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '),
+      validationErrors: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '),
     });
 
     return null;
