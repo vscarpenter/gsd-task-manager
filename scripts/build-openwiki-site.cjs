@@ -20,6 +20,7 @@
 
 "use strict";
 
+/* eslint-disable @typescript-eslint/no-require-imports -- This zero-dependency build helper intentionally runs as CommonJS. */
 const fs = require("fs");
 const path = require("path");
 
