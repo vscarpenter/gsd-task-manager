@@ -37,6 +37,11 @@ describe("parseRiskTier", () => {
     expect(parseRiskTier("### Risk tier\n\n### Next\n\nx")).toBeNull();
   });
 
+  it("returns null when the heading has no following value at all", () => {
+    expect(parseRiskTier("### Risk tier")).toBeNull();
+    expect(parseRiskTier("### Risk tier\n\n   \n")).toBeNull();
+  });
+
   it.each([null, undefined, "", 123 as unknown as string])(
     "returns null for non-string/empty input: %s",
     (input) => {
