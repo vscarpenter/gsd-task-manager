@@ -52,6 +52,14 @@ const config = [
         },
     },
     {
+        // .cjs files are CommonJS by definition, so require()/module.exports are
+        // the correct syntax — the TS no-require-imports rule must not apply.
+        files: ["**/*.cjs"],
+        rules: {
+            "@typescript-eslint/no-require-imports": "off",
+        },
+    },
+    {
         files: ["docker/pb_hooks/**/*.d.ts"],
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
