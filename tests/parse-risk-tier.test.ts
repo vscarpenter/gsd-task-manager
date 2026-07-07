@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRiskTier, RISK_TIERS } from "./parse-risk-tier.cjs";
+import { parseRiskTier, RISK_TIERS } from "../scripts/parse-risk-tier.cjs";
 
 const body = (value: string) =>
   `### Summary\n\nDo the thing\n\n### Risk tier\n\n${value}\n\n### Additional context\n\n_No response_`;
