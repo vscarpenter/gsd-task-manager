@@ -3,14 +3,20 @@ import { taskRecordToPocketBase, pocketBaseToTaskRecord } from '@/lib/sync/task-
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import type { TaskRecord } from '@/lib/types';
 
-// Mock logger to avoid side effects
-vi.mock('@/lib/logger', () => ({
-  createLogger: () => ({
+// Mock logger to avoid side effects. Shared spy instance so tests can assert
+// on the metadata passed to logger.error (createLogger is called once at
+// module load in task-mapper.ts, so every call must return the same object).
+const { mockLogger } = vi.hoisted(() => ({
+  mockLogger: {
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
-  }),
+  },
+}));
+
+vi.mock('@/lib/logger', () => ({
+  createLogger: () => mockLogger,
 }));
 
 function buildLocalTask(overrides?: Partial<TaskRecord>): TaskRecord {
@@ -210,6 +216,18 @@ describe('task-mapper', () => {
       const pb = buildPBRecord({ quadrant: 'invalid-quadrant' });
       const result = pocketBaseToTaskRecord(pb);
       expect(result).toBeNull();
+    });
+
+    it('should log the Zod issues under the validationErrors key so Sentry forwarding keeps them', () => {
+      mockLogger.error.mockClear();
+      const pb = buildPBRecord({ quadrant: 'invalid-quadrant' });
+      pocketBaseToTaskRecord(pb);
+
+      expect(mockLogger.error).toHaveBeenCalledTimes(1);
+      const [, , metadata] = mockLogger.error.mock.calls[0]!;
+      expect(metadata).toHaveProperty('validationErrors');
+      expect(metadata.validationErrors).toContain('quadrant');
+      expect(metadata).not.toHaveProperty('errors');
     });
 
     it('should strip unknown fields from PB record', () => {
