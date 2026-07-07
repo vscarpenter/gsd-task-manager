@@ -10,9 +10,7 @@
  * is missing (e.g. running this script standalone before a build).
  */
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path');
 
 const BUILD_INFO = path.join(__dirname, '..', '.build-info.json');
