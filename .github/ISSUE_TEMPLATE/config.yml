@@ -1,0 +1,6 @@
+# Every issue must go through the contract; no blank issues.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/vscarpenter/gsd-task-manager/security/policy
+    about: Please do not file security issues publicly — see SECURITY.md.
