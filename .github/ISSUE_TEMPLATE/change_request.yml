@@ -1,0 +1,84 @@
+name: New Change
+description: File a change as a pipeline contract — enforced spec + risk tier.
+title: "[change]: "
+labels: ["needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every change enters the pipeline through this contract. Fields marked with * are required.
+        Write it like a spec, not a sticky note — a vague contract produces a plausible plan for the wrong problem.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What needs to change and why. State the problem, not just the solution.
+      placeholder: "Today the app … which causes … . We want …"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: How we'll know it's done. Prefer a checklist of observable outcomes.
+      placeholder: |
+        - [ ] …
+        - [ ] …
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Must / must-not — performance, compatibility, security, UX. Write "None" if there are none.
+      placeholder: "Must not change the sync protocol. Must keep the bundle under budget."
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: Explicit non-goals — what this change will NOT do.
+      placeholder: "Not touching the MCP server. Not redesigning the matrix."
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback considerations
+      description: If this ships and goes wrong, how do we undo it? No rollback path, no release approval.
+      placeholder: "Revert PR and redeploy the previous tag. / Flip the feature flag off. / Migration is reversible via …"
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk tier
+      description: |
+        Drives how deep a plan the builder writes and whether it stops for human approval.
+        docs — docs/content only ·
+        chore — deps, config, tooling; no user-facing behavior change ·
+        feature — new/changed user-facing behavior ·
+        risky — touches security, auth, data, deploy/CI, or migrations
+      options:
+        - docs
+        - chore
+        - feature
+        - risky
+    validations:
+      required: true
+  - type: input
+    id: affected_areas
+    attributes:
+      label: Affected areas (optional)
+      description: Components or paths you expect to touch.
+      placeholder: "components/matrix, lib/sync, .github/workflows"
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context (optional)
+      description: Links, screenshots, prior art, related issues.
+    validations:
+      required: false
