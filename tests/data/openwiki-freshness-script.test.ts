@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
@@ -18,7 +18,7 @@ function run(command: string, args: string[], cwd: string) {
 
 function write(repo: string, path: string, content: string) {
   const filePath = join(repo, path);
-  mkdirSync(join(filePath, ".."), { recursive: true });
+  mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, content);
 }
 
