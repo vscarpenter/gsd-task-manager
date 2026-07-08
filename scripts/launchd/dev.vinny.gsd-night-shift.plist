@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd template for the GSD night shift (cycle D). Runs scripts/triage-run.sh
+  nightly at 20:00 local; the wrapper pre-checks and exits when there is no
+  failing claude/* PR, so idle nights are cheap.
+
+  Install:
+    cp scripts/launchd/dev.vinny.gsd-night-shift.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vinny.gsd-night-shift.plist
+  Halt without uninstalling: add the `triage:paused` label to the Night Shift
+  Control issue (the wrapper exits on it).
+  Uninstall:
+    launchctl bootout gui/$(id -u)/dev.vinny.gsd-night-shift
+    rm ~/Library/LaunchAgents/dev.vinny.gsd-night-shift.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.vinny.gsd-night-shift</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/vinnycarpenter/Projects/gsd-taskmanager/scripts/triage-run.sh</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>20</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/vinnycarpenter/.gsd-night-shift/launchd.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/vinnycarpenter/.gsd-night-shift/launchd.err.log</string>
+</dict>
+</plist>
