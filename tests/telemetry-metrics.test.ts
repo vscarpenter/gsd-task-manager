@@ -16,7 +16,18 @@ describe("computeMetrics", () => {
     expect(m.cycleTime).toEqual({ medianHours: null, p90Hours: null, count: 0 });
     expect(m.planRevisionRate).toEqual({ rate: null, revised: 0, total: 0 });
     expect(m.reviewFindingsPerPR).toEqual({ mean: null, count: 0 });
-    expect(m.tokensPerPR).toBeNull();
+    expect(m.tokensPerPR).toEqual({ mean: null, count: 0 });
+  });
+
+  it("averages tokens over merged PRs that have token data", () => {
+    const m = computeMetrics({
+      prs: [
+        { number: 1, mergedAt: day(2), tokens: 1000 },
+        { number: 2, mergedAt: day(2), tokens: 3000 },
+        { number: 3, mergedAt: day(2) }, // no token data -> excluded from the mean
+      ],
+    });
+    expect(m.tokensPerPR).toEqual({ mean: 2000, count: 2 });
   });
 
   it("computes cycle time in hours from issueCreatedAt to prodDeployedAt", () => {

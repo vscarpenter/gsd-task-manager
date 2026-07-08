@@ -71,8 +71,18 @@ jobs:
                 );
                 reviewFindings = g?.repository?.pullRequest?.reviewThreads?.totalCount ?? 0;
               } catch (e) { core.warning(`review threads for PR #${p.number} failed (findings may be understated): ${e.message}`); }
+              // Tokens: sum the builder's gsd-tokens markers on this PR (null if none).
+              let tokens = null;
+              try {
+                const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: p.number, per_page: 100 });
+                const marks = comments
+                  .map((c) => /<!--\s*gsd-tokens tokens=(\d+)\s*-->/.exec(c.body || ""))
+                  .filter(Boolean)
+                  .map((mm) => Number(mm[1]));
+                if (marks.length) tokens = marks.reduce((a, b) => a + b, 0);
+              } catch (e) { core.warning(`token markers for PR #${p.number} failed: ${e.message}`); }
               // Cycle-time end ≈ merge time until deploy↔PR correlation is added (v1 approximation).
-              prs.push({ number: p.number, mergedAt: p.merged_at, issueCreatedAt, prodDeployedAt: p.merged_at, reviewFindings });
+              prs.push({ number: p.number, mergedAt: p.merged_at, issueCreatedAt, prodDeployedAt: p.merged_at, reviewFindings, tokens });
             }
 
             // 3. Plans: issues that reached plan:pending in-window, and whether plan:revise was ever applied.
@@ -103,7 +113,7 @@ jobs:
               owner, repo, state: "open", per_page: 100,
             });
             const dash = openIssues.find((i) => !i.pull_request && i.title === "Pipeline Telemetry");
-            const ct = metrics.cycleTime, pr = metrics.planRevisionRate, rf = metrics.reviewFindingsPerPR;
+            const ct = metrics.cycleTime, pr = metrics.planRevisionRate, rf = metrics.reviewFindingsPerPR, tk = metrics.tokensPerPR;
             const body = [
               "<!-- pipeline-telemetry -->",
               `_Updated ${generatedAt} · window ${windowDays}d · ${prs.length} merged PRs._`,
@@ -113,7 +123,7 @@ jobs:
               `| Cycle time (issue→prod) median / p90 | ${ct.medianHours ?? "—"}h / ${ct.p90Hours ?? "—"}h (n=${ct.count}) |`,
               `| Plan revision rate | ${pr.rate ?? "—"} (${pr.revised}/${pr.total}) |`,
               `| Review findings / PR (mean) | ${rf.mean ?? "—"} (n=${rf.count}) |`,
-              `| Tokens / merged PR | _pending run instrumentation_ |`,
+              `| Tokens / merged PR (mean) | ${tk.mean ?? "— (no markers yet)"} (n=${tk.count}) |`,
               "",
               "Snapshots: the `telemetry` branch (`docs/ops/telemetry/`). Audit process: `docs/ops/pipeline-audit.md`.",
             ].join("\n");

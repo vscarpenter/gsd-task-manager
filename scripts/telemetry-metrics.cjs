@@ -46,6 +46,9 @@ function computeMetrics(input) {
   const merged = prs.filter((pr) => pr && pr.mergedAt);
   const findingsSum = merged.reduce((s, pr) => s + (Number(pr.reviewFindings) || 0), 0);
 
+  const withTokens = merged.filter((pr) => typeof pr.tokens === "number");
+  const tokensSum = withTokens.reduce((s, pr) => s + pr.tokens, 0);
+
   return {
     cycleTime: {
       medianHours: round(percentile(durations, 50), 1),
@@ -61,7 +64,10 @@ function computeMetrics(input) {
       mean: merged.length ? round(findingsSum / merged.length, 1) : null,
       count: merged.length,
     },
-    tokensPerPR: null,
+    tokensPerPR: {
+      mean: withTokens.length ? round(tokensSum / withTokens.length, 0) : null,
+      count: withTokens.length,
+    },
   };
 }
 
