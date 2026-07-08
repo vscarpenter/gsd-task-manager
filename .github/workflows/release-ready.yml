@@ -1,0 +1,80 @@
+name: Release ready
+
+# Marks a PR `release-ready` once CI is green, the reviewer has run, and there
+# are no unresolved review threads. Deterministic and separate from the reviewer
+# (the reviewer stays advisory; it never sets the release state itself).
+on:
+  workflow_run:
+    workflows: [CI, "Claude Code Review"]
+    types: [completed]
+  pull_request:
+    types: [synchronize, ready_for_review, reopened]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  checks: read
+  pull-requests: write
+
+concurrency:
+  group: release-ready-${{ github.event.pull_request.number || github.event.workflow_run.head_sha || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const REQUIRED = ["lint", "typecheck", "test", "build"];
+            const MARKER = "<!-- release-ready-bot -->";
+
+            async function prNumbers() {
+              const e = context.eventName;
+              if (e === "pull_request" || e === "pull_request_review") return [context.payload.pull_request.number];
+              if (e === "workflow_run") {
+                const wr = context.payload.workflow_run;
+                if (wr.pull_requests?.length) return wr.pull_requests.map((p) => p.number);
+                const { data: prs } = await github.rest.pulls.list({ ...context.repo, state: "open" });
+                return prs.filter((p) => p.head.sha === wr.head_sha).map((p) => p.number);
+              }
+              return [];
+            }
+
+            for (const number of await prNumbers()) {
+              const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: number });
+              if (pr.state !== "open" || pr.draft) continue;
+
+              const { data: checks } = await github.rest.checks.listForRef({ ...context.repo, ref: pr.head.sha, per_page: 100 });
+              const byName = {};
+              for (const c of checks.check_runs) byName[c.name] = c;
+              const ciGreen = REQUIRED.every((n) => byName[n]?.conclusion === "success");
+              const reviewerRan = Object.entries(byName).some(([n, c]) => /claude.?review/i.test(n) && c.status === "completed");
+
+              const g = await github.graphql(
+                `query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$num){reviewThreads(first:100){nodes{isResolved}}}}}`,
+                { owner: context.repo.owner, repo: context.repo.repo, num: number }
+              );
+              const openThreads = g.repository.pullRequest.reviewThreads.nodes.filter((t) => !t.isResolved).length;
+
+              const ready = ciGreen && reviewerRan && openThreads === 0;
+              const hasLabel = pr.labels.some((l) => l.name === "release-ready");
+              core.info(`PR #${number}: ciGreen=${ciGreen} reviewerRan=${reviewerRan} openThreads=${openThreads} -> ready=${ready}`);
+
+              if (ready && !hasLabel) {
+                await github.rest.issues.addLabels({ ...context.repo, issue_number: number, labels: ["release-ready"] });
+              } else if (!ready && hasLabel) {
+                await github.rest.issues.removeLabel({ ...context.repo, issue_number: number, name: "release-ready" }).catch(() => {});
+              }
+
+              if (ready) {
+                const body = `${MARKER}\n✅ **Release-ready** — CI green, reviewer clean, no open threads.\n\nNext: **merge** → the dev environment auto-deploys this build → **test the dev URL** → \`/release\` to cut the tag → approve **Gate 2** (production).\n\nRollback after deploy: redeploy the previous release tag — the deploy-prod evidence job prints the exact command.`;
+                const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: number, per_page: 100 });
+                const existing = comments.find((c) => c.body?.includes(MARKER));
+                if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+                else await github.rest.issues.createComment({ ...context.repo, issue_number: number, body });
+              }
+            }
