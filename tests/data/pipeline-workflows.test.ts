@@ -70,15 +70,15 @@ describe("pipeline workflows", () => {
       "riskLabels.length === 1 && riskLabels[0] === target",
       currentRiskLabelsIndex
     );
-    const removeStaleIndex = workflow.indexOf(
-      "issues\n                  .removeLabel",
-      alreadyCorrectIndex
+    const reconciliationBlock = workflow.slice(alreadyCorrectIndex);
+    const removeStaleIndex = reconciliationBlock.search(
+      /issues\s*\.\s*removeLabel/
     );
-    const ignoreMissingIndex = workflow.indexOf(
+    const ignoreMissingIndex = reconciliationBlock.indexOf(
       "if (e.status !== 404) throw e;",
       removeStaleIndex
     );
-    const addTargetIndex = workflow.indexOf(
+    const addTargetIndex = reconciliationBlock.indexOf(
       "issues.addLabels",
       ignoreMissingIndex
     );
@@ -88,7 +88,7 @@ describe("pipeline workflows", () => {
     expect(listLabelsIndex).toBeGreaterThan(returnIndex);
     expect(currentRiskLabelsIndex).toBeGreaterThan(listLabelsIndex);
     expect(alreadyCorrectIndex).toBeGreaterThan(currentRiskLabelsIndex);
-    expect(removeStaleIndex).toBeGreaterThan(alreadyCorrectIndex);
+    expect(removeStaleIndex).toBeGreaterThan(-1);
     expect(ignoreMissingIndex).toBeGreaterThan(removeStaleIndex);
     expect(addTargetIndex).toBeGreaterThan(ignoreMissingIndex);
   });
