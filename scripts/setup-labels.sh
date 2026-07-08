@@ -19,6 +19,7 @@ create "risk:risky"   "b60205" "Touches security, auth, data, deploy/CI, or migr
 
 # Cycle B — builder state machine + Gate 1.
 create "plan:pending"    "fbca04" "Plan posted, awaiting Gate 1 approval"
+create "plan:revise"     "d876e3" "Human requested plan changes; builder re-plans"
 create "plan:approved"   "0e8a16" "Human approved the plan; build may proceed"
 create "agent:building"  "5319e7" "Builder is actively building (claim-lock)"
 create "builder:paused"  "b60205" "Kill switch — halts all builder runs"

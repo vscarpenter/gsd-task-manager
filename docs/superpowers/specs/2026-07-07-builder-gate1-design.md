@@ -12,7 +12,7 @@ A **local, scheduled** Claude Code routine that claims a fully-specified issue, 
 ## Scope & non-goals
 
 **In scope:**
-- Label state machine extending the existing AFK-agent labels (`ready-for-agent`, `ready-for-human`) with planning states (`plan:pending`, `plan:approved`, `agent:building`) and a kill switch (`builder:paused`).
+- Label state machine extending the existing AFK-agent labels (`ready-for-agent`, `ready-for-human`) with planning states (`plan:pending`, `plan:revise`, `plan:approved`, `agent:building`) and a kill switch (`builder:paused`).
 - A local launchd job + wrapper script (`scripts/builder-run.sh`) that pre-checks cheaply and invokes the builder only when there is work.
 - The builder's versioned instructions: a slash command (`.claude/commands/build-next.md`) + an operating spec (`docs/agents/builder.md`).
 - Risk-scaled behavior keyed off cycle A's `risk:*` labels: `docs`/`chore` auto-approved; `feature`/`risky` go through Gate 1.
@@ -32,7 +32,7 @@ The gap: nothing autonomously turns a `ready-for-agent` contract into a reviewed
 
 ## Decision
 
-A **local scheduled routine**, not a GitHub Action, per the blog's model. It is **non-blocking and stateless across runs**; a label state machine is its memory. Gate 1 approval is a **label swap** (`plan:pending` → `plan:approved`) done from GitHub mobile; `/revise <notes>` requests changes.
+A **local scheduled routine**, not a GitHub Action, per the blog's model. It is **non-blocking and stateless across runs**; a label state machine is its memory. Gate 1 approval is a **label swap** (`plan:pending` → `plan:approved`) done from GitHub mobile; requesting changes is also a label swap (`plan:pending` → `plan:revise`) plus a `/revise <notes>` comment. Both signals are labels because the wrapper's cheap pre-check counts labels and cannot see comments.
 
 Why local over an Action: chosen explicitly (blog-faithful). Why non-blocking: a local process must not block for hours — a sleeping laptop would orphan the run; labels survive sleep. Why label-swap Gate 1: two-tap mobile approval, clean state machine, reuses the existing label framework.
 
@@ -46,9 +46,9 @@ needs-triage + risk:*        (cycle A output)
       ▼
 ready-for-agent ──run 1 (plan)──▶ plan:pending ──YOU: swap──▶ plan:approved ──run 2 (build)──▶ [PR opened]
       │                               │                                            │
-      │ risk:docs|chore               │ /revise <notes>                            │ agent:building (claim-lock,
-      │ (auto-approve: plan+build      ▼   (next run re-plans)                      │  removed when PR opened)
-      │  in one pass, logged)     plan:pending
+      │ risk:docs|chore               │ YOU: swap + /revise <notes>                │ agent:building (claim-lock,
+      │ (auto-approve: plan+build      ▼                                           │  removed when PR opened)
+      │  in one pass, logged)     plan:revise ──run: re-plan──▶ plan:pending
       │
       └── cannot proceed / needs judgment ──▶ ready-for-human + written reason (comment)
 ```
@@ -58,6 +58,7 @@ New labels (added to `scripts/setup-labels.sh`):
 | Label | Meaning | Color |
 |---|---|---|
 | `plan:pending` | Plan posted, awaiting Gate 1 approval | `#fbca04` (yellow) |
+| `plan:revise` | Human requested plan changes; builder re-plans (cheap-poll signal — see §3) | `#d876e3` (magenta) |
 | `plan:approved` | Human approved the plan; build may proceed | `#0e8a16` (green) |
 | `agent:building` | Builder is actively building (claim-lock) | `#5319e7` (purple) |
 | `builder:paused` | Kill switch — on the Builder Control issue, halts all runs | `#b60205` (red) |
@@ -68,7 +69,7 @@ Reused (unchanged): `ready-for-agent`, `ready-for-human`, `needs-triage`, `risk:
 
 Responsibilities, in order:
 1. **Kill switch:** if any open issue has `builder:paused`, log one line and exit 0.
-2. **Cheap work check:** `gh issue list` for `ready-for-agent` (unplanned) or `plan:approved` (ready to build). If none, exit 0 without invoking Claude (most wake-ups cost zero tokens).
+2. **Cheap work check:** `gh issue list` for `ready-for-agent` (unplanned), `plan:approved` (ready to build), or `plan:revise` (re-plan requested). If none, exit 0 without invoking Claude (most wake-ups cost zero tokens). A `gh` failure is logged to `gh-errors.log` and treated as zero (fail-safe), so a persistent outage is discoverable, not a silent permanent idle.
 3. **Isolation:** create/refresh a dedicated git worktree (`$BUILDER_WORKTREE`, default `~/.gsd-builder/worktree`) off latest `origin/main` — never the user's active checkout.
 4. **Invoke:** `claude -p "/build-next"` in the worktree with a scoped permission profile (git, `gh`, bun/test, in-repo edits; see §5). Timeout-bounded.
 5. **Log:** append run output to `docs/ops/builder-logs/` (or a configured dir) with a UTC-less run id.
@@ -83,7 +84,7 @@ Invoked headlessly. Instructs Claude to, in one run, process **at most one** iss
   - `risk:docs`/`risk:chore` → lightweight plan; **auto-approve**: post the plan as a comment noting "auto-approved (risk:<tier>)", then proceed straight to the build pass in the same run.
   - `risk:feature`/`risk:risky` → full plan (approach, files, test strategy, open questions, following the `docs/superpowers/` plan format). Post as a comment, swap `ready-for-agent` → `plan:pending`, and **stop**.
 - **Build pass:** pick the oldest `plan:approved` issue (or the just-auto-approved one). Claim it (`plan:approved`/`ready-for-agent` → `agent:building`). Build to `coding-standards.md` (TDD, tests, docs). Commit to `claude/issue-<n>-<slug>`, push, open a PR (cycle A PR template; `Closes #<n>`; carry `risk:*`; rollback from the contract). Remove `agent:building`. Comment the PR link on the issue.
-- **Revise:** if a `plan:pending` issue has a newer `/revise <notes>` comment, re-plan addressing the notes; re-post; keep `plan:pending`.
+- **Revise:** a `plan:revise` issue → re-plan addressing the newest `/revise <notes>` comment, re-post, and swap `plan:revise` → `plan:pending` for another approval round. Decision priority per run: `plan:approved` (build) → `plan:revise` (re-plan) → `ready-for-agent` (plan) → stop. A bare `plan:pending` issue is never acted on (it waits for the human).
 - **Escalate:** if the contract is ambiguous, the change needs judgment, or a hard limit is hit → add `ready-for-human`, remove agent labels, and comment a written reason (never guess).
 
 ### 4. `docs/agents/builder.md` — operating spec

@@ -22,7 +22,18 @@ done
 
 # Count open issues carrying a label. Fail-safe to 0 so a gh hiccup never makes
 # the pre-check think there is work (and burn a Claude run) — it just idles.
-count() { gh issue list --repo "$REPO" --label "$1" --state open --json number --jq 'length' 2>/dev/null || echo 0; }
+# A failure is logged (not silently swallowed) so a persistent gh/auth outage is
+# discoverable rather than an invisible permanent idle.
+count() {
+  local out
+  if out=$(gh issue list --repo "$REPO" --label "$1" --state open --json number --jq 'length' 2>/dev/null); then
+    printf '%s\n' "$out"
+  else
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
+    printf '%s gh count failed for label %q\n' "$(date -u +%FT%TZ)" "$1" >> "$LOG_DIR/gh-errors.log" 2>/dev/null || true
+    echo 0
+  fi
+}
 
 # 1. Kill switch — checked first, before any work is considered.
 if [ "$(count "builder:paused")" != "0" ]; then
@@ -30,14 +41,17 @@ if [ "$(count "builder:paused")" != "0" ]; then
   exit 0
 fi
 
-# 2. Cheap work check.
+# 2. Cheap work check. plan:revise is included so a human /revise request on a
+#    pending plan actually wakes the builder (label counts can't see comments,
+#    so "request changes" is a label swap: plan:pending -> plan:revise).
 to_plan="$(count "ready-for-agent")"
 to_build="$(count "plan:approved")"
-if [ "$to_plan" = "0" ] && [ "$to_build" = "0" ]; then
-  echo "NO_WORK: no ready-for-agent or plan:approved issues — exiting."
+to_revise="$(count "plan:revise")"
+if [ "$to_plan" = "0" ] && [ "$to_build" = "0" ] && [ "$to_revise" = "0" ]; then
+  echo "NO_WORK: no ready-for-agent, plan:approved, or plan:revise issues — exiting."
   exit 0
 fi
-echo "WORK: ready-for-agent=$to_plan plan:approved=$to_build"
+echo "WORK: ready-for-agent=$to_plan plan:approved=$to_build plan:revise=$to_revise"
 
 if [ "$MODE" = "check" ]; then exit 0; fi
 if [ "$MODE" = "dry-run" ]; then

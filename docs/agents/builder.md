@@ -14,9 +14,9 @@ needs-triage + risk:*            (a filed contract, cycle A)
       ▼
 ready-for-agent ──run 1 (plan)──▶ plan:pending ──human swaps──▶ plan:approved ──run 2 (build)──▶ [PR opened]
       │                               │                                            │
-      │ risk:docs | risk:chore        │ /revise <notes>                            │ agent:building
-      │ auto-approve (plan+build       ▼   (next run re-plans)                      │  (claim-lock, removed
-      │  in one pass, logged)     plan:pending                                     │  when the PR is opened)
+      │ risk:docs | risk:chore        │ human swaps + /revise <notes>              │ agent:building
+      │ auto-approve (plan+build       ▼                                           │  (claim-lock, removed
+      │  in one pass, logged)     plan:revise ──run (re-plan)──▶ plan:pending      │  when the PR is opened)
       │
       └── ambiguous / needs judgment / hard limit hit ──▶ ready-for-human + written reason
 ```
@@ -41,8 +41,12 @@ If an issue has no `risk:*` label, treat it as `risk:feature` (require Gate 1) a
 1. Write the plan and post it as an issue comment.
 2. Move labels: remove `ready-for-agent`, add `plan:pending`.
 3. **Stop.** Do not build.
-4. The human approves by swapping `plan:pending` → `plan:approved` (from the GitHub mobile app), or requests changes with a `/revise <notes>` comment.
-5. On the next run: a `plan:approved` issue proceeds to build; a `plan:pending` issue with a newer `/revise` comment gets re-planned (address the notes, re-post, keep `plan:pending`).
+4. The human either:
+   - **approves** — swaps `plan:pending` → `plan:approved` (two taps on the GitHub mobile app); or
+   - **requests changes** — swaps `plan:pending` → `plan:revise` and comments `/revise <notes>`.
+5. On the next run: a `plan:approved` issue proceeds to build; a `plan:revise` issue is re-planned (address the notes, post the updated plan, then swap back to `plan:pending` for another approval round). A bare `plan:pending` issue is left alone — it is waiting on the human.
+
+Why "request changes" is a label swap and not just a comment: the scheduler's cheap pre-check counts labels and cannot see comments without an expensive query. Signalling a revise with the `plan:revise` label lets the builder wake for it without polling every pending plan on every run.
 
 ## Build
 
