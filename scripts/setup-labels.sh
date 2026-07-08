@@ -24,4 +24,7 @@ create "plan:approved"   "0e8a16" "Human approved the plan; build may proceed"
 create "agent:building"  "5319e7" "Builder is actively building (claim-lock)"
 create "builder:paused"  "b60205" "Kill switch — halts all builder runs"
 
+# Cycle C — review + Gate 2.
+create "release-ready"   "1d76db" "Reviewed + CI green + no open threads — ready to merge, test, and release"
+
 echo "pipeline labels created/updated."
