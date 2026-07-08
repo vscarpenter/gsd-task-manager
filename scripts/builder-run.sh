@@ -5,6 +5,12 @@
 # durable state across runs. See docs/agents/builder.md.
 set -euo pipefail
 
+# launchd starts jobs with a minimal PATH (/usr/bin:/bin:...), so the toolchain
+# (gh/git in Homebrew, node/claude in ~/.local/bin, bun in ~/.bun/bin) isn't
+# found and gh silently fails the pre-check. Append (don't prepend) the tool
+# dirs so an existing gh on PATH — e.g. a test stub — still wins.
+export PATH="$PATH:/opt/homebrew/bin:$HOME/.local/bin:$HOME/.bun/bin"
+
 REPO="${GSD_BUILDER_REPO:-vscarpenter/gsd-task-manager}"
 WORKTREE="${GSD_BUILDER_WORKTREE:-$HOME/.gsd-builder/worktree}"
 SOURCE="${GSD_BUILDER_SOURCE:-$HOME/Projects/gsd-taskmanager}"
