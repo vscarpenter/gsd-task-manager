@@ -49,8 +49,13 @@ jobs:
               if (pr.state !== "open" || pr.draft) continue;
 
               const { data: checks } = await github.rest.checks.listForRef({ ...context.repo, ref: pr.head.sha, per_page: 100 });
+              // Keep the LATEST check run per name. Re-runs produce multiple runs
+              // with the same name and listForRef order isn't guaranteed, so pick
+              // the highest id (monotonic → most recent) rather than last-seen.
               const byName = {};
-              for (const c of checks.check_runs) byName[c.name] = c;
+              for (const c of checks.check_runs) {
+                if (!byName[c.name] || c.id > byName[c.name].id) byName[c.name] = c;
+              }
               const ciGreen = REQUIRED.every((n) => byName[n]?.conclusion === "success");
               const reviewerRan = Object.entries(byName).some(([n, c]) => /claude.?review/i.test(n) && c.status === "completed");
 
@@ -70,11 +75,17 @@ jobs:
                 await github.rest.issues.removeLabel({ ...context.repo, issue_number: number, name: "release-ready" }).catch(() => {});
               }
 
-              if (ready) {
-                const body = `${MARKER}\n✅ **Release-ready** — CI green, reviewer clean, no open threads.\n\nNext: **merge** → the dev environment auto-deploys this build → **test the dev URL** → \`/release\` to cut the tag → approve **Gate 2** (production).\n\nRollback after deploy: redeploy the previous release tag — the deploy-prod evidence job prints the exact command.`;
-                const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: number, per_page: 100 });
-                const existing = comments.find((c) => c.body?.includes(MARKER));
-                if (existing) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
-                else await github.rest.issues.createComment({ ...context.repo, issue_number: number, body });
+              // Keep the marker comment in sync with the CURRENT state so a stale
+              // "release-ready" note can't linger after the PR regresses. When not
+              // ready and no marker exists yet, stay silent (no noise).
+              const body = ready
+                ? `${MARKER}\n✅ **Release-ready** — CI green, reviewer clean, no open threads.\n\nNext: **merge** → the dev environment auto-deploys this build → **test the dev URL** → \`/release\` to cut the tag → approve **Gate 2** (production).\n\nRollback after deploy: redeploy the previous release tag — the deploy-prod evidence job prints the exact command.`
+                : `${MARKER}\n⏳ **Not release-ready yet** — needs CI green, the reviewer to have run, and all review threads resolved. Updates automatically as those change.`;
+              const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: number, per_page: 100 });
+              const existing = comments.find((c) => c.body?.includes(MARKER));
+              if (existing) {
+                if (existing.body !== body) await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+              } else if (ready) {
+                await github.rest.issues.createComment({ ...context.repo, issue_number: number, body });
               }
             }
