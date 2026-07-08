@@ -1,12 +1,34 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { parseRiskTier, RISK_TIERS } from "../scripts/parse-risk-tier.cjs";
 
 const body = (value: string) =>
   `### Summary\n\nDo the thing\n\n### Risk tier\n\n${value}\n\n### Additional context\n\n_No response_`;
 
+function riskDropdownOptions(): string[] {
+  const template = readFileSync(
+    ".github/ISSUE_TEMPLATE/change_request.yml",
+    "utf8"
+  );
+  const riskField = template.match(
+    /id: risk[\s\S]*?options:\n(?<options>(?:\s{8}- .+\n)+)/
+  );
+
+  expect(riskField?.groups?.options).toBeDefined();
+
+  return riskField!.groups!.options
+    .trim()
+    .split("\n")
+    .map((line) => line.replace(/^\s*-\s*/, "").trim());
+}
+
 describe("parseRiskTier", () => {
   it("exposes the four canonical tiers", () => {
     expect(RISK_TIERS).toEqual(["docs", "chore", "feature", "risky"]);
+  });
+
+  it("stays in lockstep with the change request risk dropdown", () => {
+    expect(riskDropdownOptions()).toEqual(RISK_TIERS);
   });
 
   it.each(RISK_TIERS)("parses a valid tier: %s", (tier) => {
