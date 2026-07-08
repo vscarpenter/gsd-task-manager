@@ -9,6 +9,7 @@ REPO="${GSD_BUILDER_REPO:-vscarpenter/gsd-task-manager}"
 WORKTREE="${GSD_BUILDER_WORKTREE:-$HOME/.gsd-builder/worktree}"
 SOURCE="${GSD_BUILDER_SOURCE:-$HOME/Projects/gsd-taskmanager}"
 LOG_DIR="${GSD_BUILDER_LOG_DIR:-$SOURCE/docs/ops/builder-logs}"
+TOKENS_HELPER="${GSD_BUILDER_TOKENS_HELPER:-$SOURCE/scripts/extract-run-tokens.cjs}"
 
 MODE="run"
 for arg in "$@"; do
@@ -71,11 +72,23 @@ fi
 
 # 4. Invoke the builder with a scoped tool allow-list (never the full
 #    --dangerously-skip-permissions), bounded to git/gh/bun + in-repo edits.
-# 5. Log the run for audit.
+#    --output-format json so the run's token usage + OPENED_PR can be recorded.
+# 5. Log the run for audit (JSON to the run log, stderr alongside).
 run_id="builder-$(git -C "$SOURCE" rev-parse --short origin/main)-$$"
+run_log="$LOG_DIR/$run_id.json"
 echo "RUN: $run_id"
 (
   cd "$WORKTREE" &&
-  claude -p "/build-next" \
+  claude -p "/build-next" --output-format json \
     --allowedTools "Bash(git*),Bash(gh*),Bash(bun*),Edit,Write,Read"
-) 2>&1 | tee "$LOG_DIR/$run_id.log"
+) > "$run_log" 2> "$run_log.err" || true
+
+# 6. Record the run's token cost against the PR it opened (best-effort; a
+#    failure here never fails the run). The builder ends its output with
+#    OPENED_PR=<n>; extract-run-tokens.cjs pairs it with the usage total.
+read -r tokens pr < <(node "$TOKENS_HELPER" < "$run_log" 2>/dev/null || echo "0 none")
+if [ "$pr" != "none" ] && [ "$tokens" != "0" ]; then
+  gh pr comment "$pr" --repo "$REPO" --body "<!-- gsd-tokens tokens=$tokens -->" 2>/dev/null \
+    && echo "RECORDED: $tokens tokens on PR #$pr" \
+    || echo "WARN: could not post token marker on PR #$pr"
+fi

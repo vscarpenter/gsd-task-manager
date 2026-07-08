@@ -1,0 +1,157 @@
+name: Telemetry
+
+# Weekly pipeline telemetry: computes cycle time, plan-revision rate, and review
+# findings/PR from the GitHub API, updates the pinned "Pipeline Telemetry" issue,
+# and archives a JSON snapshot to the `telemetry` branch (the main-protection
+# ruleset forbids pushing to main, by design). tokensPerPR is stubbed until the
+# builder/night-shift wrappers emit token records.
+on:
+  schedule:
+    - cron: "0 13 * * 1" # Mondays 13:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # create the telemetry ref + put the snapshot file
+  issues: write # update the dashboard issue
+  pull-requests: read
+
+concurrency:
+  group: telemetry
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { computeMetrics } = require(`${process.env.GITHUB_WORKSPACE}/scripts/telemetry-metrics.cjs`);
+            const { owner, repo } = context.repo;
+            const windowDays = 30;
+            const since = new Date(Date.now() - windowDays * 86400000).toISOString();
+
+            // 1. Merged PRs in the window. Short-circuit pagination: results are
+            //    sorted by updated desc and a merge is an update, so once a PR was
+            //    updated before the window, every older-updated PR after it is out
+            //    of window too — no need to page through all closed-PR history.
+            const merged = await github.paginate(
+              github.rest.pulls.list,
+              { owner, repo, state: "closed", per_page: 100, sort: "updated", direction: "desc" },
+              (response, done) => {
+                const page = [];
+                for (const p of response.data) {
+                  if (p.updated_at < since) { done(); break; }
+                  if (p.merged_at && p.merged_at >= since) page.push(p);
+                }
+                return page;
+              }
+            );
+
+            // 2. Per PR: linked issue created_at + reviewer thread count.
+            const prs = [];
+            for (const p of merged) {
+              const m = /(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/i.exec(p.body || "");
+              let issueCreatedAt = null;
+              if (m) {
+                try {
+                  const iss = await github.rest.issues.get({ owner, repo, issue_number: Number(m[1]) });
+                  if (!iss.data.pull_request) issueCreatedAt = iss.data.created_at;
+                } catch (e) { core.warning(`linked issue #${m[1]} fetch failed (cycle time may be understated): ${e.message}`); }
+              }
+              let reviewFindings = 0;
+              try {
+                const g = await github.graphql(
+                  `query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:1){totalCount}}}}`,
+                  { o: owner, r: repo, n: p.number }
+                );
+                reviewFindings = g?.repository?.pullRequest?.reviewThreads?.totalCount ?? 0;
+              } catch (e) { core.warning(`review threads for PR #${p.number} failed (findings may be understated): ${e.message}`); }
+              // Tokens: sum the builder's gsd-tokens markers on this PR (null if none).
+              let tokens = null;
+              try {
+                const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: p.number, per_page: 100 });
+                const marks = comments
+                  .map((c) => /<!--\s*gsd-tokens tokens=(\d+)\s*-->/.exec(c.body || ""))
+                  .filter(Boolean)
+                  .map((mm) => Number(mm[1]));
+                if (marks.length) tokens = marks.reduce((a, b) => a + b, 0);
+              } catch (e) { core.warning(`token markers for PR #${p.number} failed: ${e.message}`); }
+              // Cycle-time end ≈ merge time until deploy↔PR correlation is added (v1 approximation).
+              prs.push({ number: p.number, mergedAt: p.merged_at, issueCreatedAt, prodDeployedAt: p.merged_at, reviewFindings, tokens });
+            }
+
+            // 3. Plans: issues that reached plan:pending in-window, and whether plan:revise was ever applied.
+            const plannedIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: "all", labels: "plan:pending", per_page: 100, since,
+            });
+            const plans = [];
+            for (const iss of plannedIssues) {
+              if (iss.pull_request) continue;
+              let revised = false;
+              try {
+                const events = await github.paginate(github.rest.issues.listEventsForTimeline, {
+                  owner, repo, issue_number: iss.number, per_page: 100,
+                });
+                revised = events.some((ev) => ev.event === "labeled" && ev.label?.name === "plan:revise");
+              } catch (e) { core.warning(`timeline for issue #${iss.number} failed (revision rate may be understated): ${e.message}`); }
+              plans.push({ issue: iss.number, revised });
+            }
+
+            // 4. Compute.
+            const metrics = computeMetrics({ prs, plans });
+            const generatedAt = new Date().toISOString();
+            const snapshot = { generatedAt, windowDays, prCount: prs.length, ...metrics };
+            core.info(`telemetry: ${JSON.stringify(snapshot)}`);
+
+            // 5. Dashboard — update the open "Pipeline Telemetry" issue.
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: "open", per_page: 100,
+            });
+            const dash = openIssues.find((i) => !i.pull_request && i.title === "Pipeline Telemetry");
+            const ct = metrics.cycleTime, pr = metrics.planRevisionRate, rf = metrics.reviewFindingsPerPR, tk = metrics.tokensPerPR;
+            const body = [
+              "<!-- pipeline-telemetry -->",
+              `_Updated ${generatedAt} · window ${windowDays}d · ${prs.length} merged PRs._`,
+              "",
+              "| Metric | Value |",
+              "|---|---|",
+              `| Cycle time (issue→prod) median / p90 | ${ct.medianHours ?? "—"}h / ${ct.p90Hours ?? "—"}h (n=${ct.count}) |`,
+              `| Plan revision rate | ${pr.rate ?? "—"} (${pr.revised}/${pr.total}) |`,
+              `| Review findings / PR (mean) | ${rf.mean ?? "—"} (n=${rf.count}) |`,
+              `| Tokens / merged PR (mean) | ${tk.mean ?? "— (no markers yet)"} (n=${tk.count}) |`,
+              "",
+              "Snapshots: the `telemetry` branch (`docs/ops/telemetry/`). Audit process: `docs/ops/pipeline-audit.md`.",
+            ].join("\n");
+            if (dash) {
+              await github.rest.issues.update({ owner, repo, issue_number: dash.number, body });
+              core.info(`Updated dashboard issue #${dash.number}.`);
+            } else {
+              core.info('No open "Pipeline Telemetry" issue found; skipping dashboard update.');
+            }
+
+            // 6. Snapshot — commit to the telemetry branch via the Contents API.
+            const date = generatedAt.slice(0, 10);
+            const path = `docs/ops/telemetry/${date}.json`;
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: "heads/telemetry" });
+            } catch {
+              const main = await github.rest.git.getRef({ owner, repo, ref: "heads/main" });
+              await github.rest.git.createRef({ owner, repo, ref: "refs/heads/telemetry", sha: main.data.object.sha });
+              core.info("Created telemetry branch.");
+            }
+            let existingSha;
+            try {
+              existingSha = (await github.rest.repos.getContent({ owner, repo, path, ref: "telemetry" })).data.sha;
+            } catch (e) { core.debug(`no existing snapshot at ${path} (expected for a new day): ${e.message}`); }
+            await github.rest.repos.createOrUpdateFileContents({
+              owner, repo, path, branch: "telemetry",
+              message: `chore(telemetry): snapshot ${date}`,
+              content: Buffer.from(JSON.stringify(snapshot, null, 2)).toString("base64"),
+              sha: existingSha,
+            });
+            core.info(`Snapshot written to telemetry:${path}`);

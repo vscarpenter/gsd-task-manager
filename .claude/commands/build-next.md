@@ -45,3 +45,10 @@ Note: a bare `plan:pending` issue (no `plan:revise`) is waiting on the human —
 ## Escalate (never guess)
 
 If the contract is ambiguous, the change needs human judgment, or a required step hits a hard limit: `gh issue edit <n> --add-label ready-for-human --remove-label agent:building,plan:pending,plan:approved,plan:revise` and comment a written reason stating exactly what is blocked and what input you need.
+
+## Report (required — last line of your output)
+
+End your final message with a machine-readable line so the run's token cost is recorded against the right PR (telemetry reads it):
+
+- If you opened a PR this run: `OPENED_PR=<number>`
+- Otherwise (planned and stopped, revised, escalated, or nothing to do): `OPENED_PR=none`
