@@ -14,8 +14,51 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Ungated pre-gate job: surfaces release evidence (version + rollback command)
+  # to the Gate 2 approver via the run summary. Runs before the gated deploy job,
+  # holds no secrets and no deploy powers — it only reads and summarizes.
+  evidence:
+    name: Gate 2 evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute release evidence
+        env:
+          TAG_REF: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          DEV_URL: ${{ vars.DEV_SITE_URL }}
+        run: |
+          if [ "$EVENT" = "push" ]; then VERSION="${TAG_REF#v}"; else VERSION="$(node -p "require('./package.json').version")"; fi
+          git fetch --tags --quiet || true
+          TAGS="$(git tag -l 'v*.*.*' | tr '\n' ' ')"
+          PREV="$(node -e 'const {prevReleaseTag}=require("./scripts/prev-release-tag.cjs"); const p=prevReleaseTag(process.argv[1], process.argv[2].split(/\s+/).filter(Boolean)); process.stdout.write(p||"")' "$VERSION" "$TAGS")"
+          {
+            echo "## Gate 2 — release evidence"
+            echo ""
+            echo "**Deploying:** \`v$VERSION\`"
+            if [ -n "$PREV" ]; then
+              echo "**Previous prod:** \`$PREV\`"
+              echo ""
+              echo "**Rollback** (if this deploy misbehaves) — redeploys the previous release through this same gated path:"
+              echo '```'
+              echo "gh workflow run deploy-prod.yml --ref $PREV"
+              echo '```'
+            else
+              echo "**Previous prod:** none found (first release) — roll back by redeploying an earlier good commit."
+            fi
+            echo ""
+            echo "**Preview:** ${DEV_URL:-the dev environment} (test before approving; it already has this build after merge)."
+            echo "**Post-deploy:** \`smoke-test.sh\` runs automatically after the invalidation completes."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
     name: Deploy to production
+    needs: evidence
     runs-on: ubuntu-latest
     timeout-minutes: 25
     # The `production` environment carries the required-reviewer gate
