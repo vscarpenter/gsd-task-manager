@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd template for the GSD Task Manager builder (cycle B).
+  Runs scripts/builder-run.sh every 30 minutes; the wrapper pre-checks and
+  exits immediately when there is no work, so empty wake-ups are cheap.
+
+  Install:
+    cp scripts/launchd/dev.vinny.gsd-builder.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vinny.gsd-builder.plist
+  Halt without uninstalling: add the `builder:paused` label to the Builder
+  Control issue (the wrapper exits on it).
+  Uninstall:
+    launchctl bootout gui/$(id -u)/dev.vinny.gsd-builder
+    rm ~/Library/LaunchAgents/dev.vinny.gsd-builder.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.vinny.gsd-builder</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/vinnycarpenter/Projects/gsd-taskmanager/scripts/builder-run.sh</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>1800</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/vinnycarpenter/.gsd-builder/launchd.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/vinnycarpenter/.gsd-builder/launchd.err.log</string>
+</dict>
+</plist>
