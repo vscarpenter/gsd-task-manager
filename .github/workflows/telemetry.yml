@@ -35,11 +35,22 @@ jobs:
             const windowDays = 30;
             const since = new Date(Date.now() - windowDays * 86400000).toISOString();
 
-            // 1. Merged PRs in the window.
-            const closed = await github.paginate(github.rest.pulls.list, {
-              owner, repo, state: "closed", per_page: 100, sort: "updated", direction: "desc",
-            });
-            const merged = closed.filter((p) => p.merged_at && p.merged_at >= since);
+            // 1. Merged PRs in the window. Short-circuit pagination: results are
+            //    sorted by updated desc and a merge is an update, so once a PR was
+            //    updated before the window, every older-updated PR after it is out
+            //    of window too — no need to page through all closed-PR history.
+            const merged = await github.paginate(
+              github.rest.pulls.list,
+              { owner, repo, state: "closed", per_page: 100, sort: "updated", direction: "desc" },
+              (response, done) => {
+                const page = [];
+                for (const p of response.data) {
+                  if (p.updated_at < since) { done(); break; }
+                  if (p.merged_at && p.merged_at >= since) page.push(p);
+                }
+                return page;
+              }
+            );
 
             // 2. Per PR: linked issue created_at + reviewer thread count.
             const prs = [];
@@ -50,7 +61,7 @@ jobs:
                 try {
                   const iss = await github.rest.issues.get({ owner, repo, issue_number: Number(m[1]) });
                   if (!iss.data.pull_request) issueCreatedAt = iss.data.created_at;
-                } catch { /* linked issue gone */ }
+                } catch (e) { core.warning(`linked issue #${m[1]} fetch failed (cycle time may be understated): ${e.message}`); }
               }
               let reviewFindings = 0;
               try {
@@ -59,7 +70,7 @@ jobs:
                   { o: owner, r: repo, n: p.number }
                 );
                 reviewFindings = g?.repository?.pullRequest?.reviewThreads?.totalCount ?? 0;
-              } catch { /* leave 0 */ }
+              } catch (e) { core.warning(`review threads for PR #${p.number} failed (findings may be understated): ${e.message}`); }
               // Cycle-time end ≈ merge time until deploy↔PR correlation is added (v1 approximation).
               prs.push({ number: p.number, mergedAt: p.merged_at, issueCreatedAt, prodDeployedAt: p.merged_at, reviewFindings });
             }
@@ -76,8 +87,8 @@ jobs:
                 const events = await github.paginate(github.rest.issues.listEventsForTimeline, {
                   owner, repo, issue_number: iss.number, per_page: 100,
                 });
-                revised = events.some((e) => e.event === "labeled" && e.label?.name === "plan:revise");
-              } catch { /* leave false */ }
+                revised = events.some((ev) => ev.event === "labeled" && ev.label?.name === "plan:revise");
+              } catch (e) { core.warning(`timeline for issue #${iss.number} failed (revision rate may be understated): ${e.message}`); }
               plans.push({ issue: iss.number, revised });
             }
 
@@ -126,7 +137,7 @@ jobs:
             let existingSha;
             try {
               existingSha = (await github.rest.repos.getContent({ owner, repo, path, ref: "telemetry" })).data.sha;
-            } catch { /* new file */ }
+            } catch (e) { core.debug(`no existing snapshot at ${path} (expected for a new day): ${e.message}`); }
             await github.rest.repos.createOrUpdateFileContents({
               owner, repo, path, branch: "telemetry",
               message: `chore(telemetry): snapshot ${date}`,
