@@ -6,6 +6,14 @@ import { join } from "node:path";
 
 const SCRIPT = join(__dirname, "..", "scripts", "builder-run.sh");
 
+function expectLaunchdPath(capturedPath: string, ghDir: string, homeDir: string): void {
+  const parts = capturedPath.split(":");
+  expect(parts.slice(0, 3)).toEqual([ghDir, "/usr/bin", "/bin"]);
+  expect(parts).toContain("/opt/homebrew/bin");
+  expect(parts).toContain(join(homeDir, ".local/bin"));
+  expect(parts).toContain(join(homeDir, ".bun/bin"));
+}
+
 // Build a fake `gh` on PATH that returns a canned open-issue count per label.
 function stubGh(counts: Record<string, number>): string {
   const dir = mkdtempSync(join(tmpdir(), "ghstub-"));
@@ -22,6 +30,14 @@ ${cases}
 esac
 `;
   writeFileSync(bin, script);
+  chmodSync(bin, 0o755);
+  return dir;
+}
+
+function pathCapturingGh(pathFile: string): string {
+  const dir = mkdtempSync(join(tmpdir(), "ghpath-"));
+  const bin = join(dir, "gh");
+  writeFileSync(bin, `#!/usr/bin/env bash\nprintf '%s' "$PATH" > "${pathFile}"\necho 1\n`);
   chmodSync(bin, 0o755);
   return dir;
 }
@@ -49,6 +65,15 @@ function runWith(mode: string, ghDir: string, extraEnv: Record<string, string> =
 describe("builder-run.sh pre-check", () => {
   it("exits PAUSED when builder:paused is set (before any work check)", () => {
     expect(run("--check", { "builder:paused": 1, "ready-for-agent": 5 })).toContain("PAUSED");
+  });
+
+  it("appends launchd tool dirs without shadowing an existing gh", () => {
+    const homeDir = mkdtempSync(join(tmpdir(), "builder-home-"));
+    const pathFile = join(homeDir, "captured-path.txt");
+    const ghDir = pathCapturingGh(pathFile);
+
+    expect(runWith("--check", ghDir, { HOME: homeDir, PATH: `${ghDir}:/usr/bin:/bin` })).toContain("PAUSED");
+    expectLaunchdPath(readFileSync(pathFile, "utf8"), ghDir, homeDir);
   });
 
   it("exits NO_WORK when nothing is actionable", () => {
