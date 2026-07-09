@@ -6,6 +6,9 @@ const buildNumber = process.env.NEXT_PUBLIC_BUILD_NUMBER ?? pkg.version;
 
 const nextConfig: NextConfig = {
   output: "export",
+  // Pin the workspace root so Turbopack stops inferring it from stray lockfiles
+  // (e.g. ~/bun.lock) higher up the tree.
+  turbopack: { root: __dirname },
   trailingSlash: true,
   images: {
     unoptimized: true
