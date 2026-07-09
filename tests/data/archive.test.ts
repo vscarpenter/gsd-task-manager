@@ -208,6 +208,35 @@ describe("archive", () => {
       expect(archivedCount).toBe(0);
     });
 
+    it("should_not_throw_or_duplicate_when_called_concurrently", async () => {
+      // Regression test for a production BulkError: two overlapping calls to
+      // archiveOldTasks() (e.g. two open tabs, or the hourly auto-archive
+      // racing a manual "Archive now" click) both read the same eligible
+      // tasks before either had committed its bulkDelete, so the second
+      // call's bulkAdd collided with keys the first call had just inserted.
+      const db = getDb();
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+
+      const tasks = Array.from({ length: 5 }, (_, i) =>
+        createMockTask({
+          id: `concurrent-task-${i}`,
+          completed: true,
+          completedAt: oldDate.toISOString(),
+        })
+      );
+      await db.tasks.bulkAdd(tasks);
+
+      const [countA, countB] = await Promise.all([
+        archiveOldTasks(30),
+        archiveOldTasks(30),
+      ]);
+
+      expect(countA + countB).toBe(5);
+      expect(await db.tasks.count()).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(5);
+    });
+
     it("should_set_archivedAt_on_archived_tasks", async () => {
       const db = getDb();
       const oldDate = new Date();

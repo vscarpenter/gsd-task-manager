@@ -43,6 +43,15 @@ export async function updateArchiveSettings(
 /**
  * Archive completed tasks older than specified days
  * Returns count of archived tasks
+ *
+ * The read (find eligible tasks), bulkAdd, and bulkDelete all run inside a
+ * single Dexie transaction. Without this, two overlapping calls (e.g. two
+ * open tabs, or the hourly auto-archive racing a manual "Archive now" click)
+ * can both read the same eligible tasks before either commits its
+ * bulkDelete, so the second call's bulkAdd collides with keys the first
+ * call already inserted. IndexedDB serializes transactions with overlapping
+ * table scope, so the second call now re-reads tasks after the first has
+ * already removed them.
  */
 export async function archiveOldTasks(
   daysOld: number
@@ -51,41 +60,48 @@ export async function archiveOldTasks(
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysOld);
   const cutoffIso = cutoffDate.toISOString();
-
-  // Find completed tasks older than cutoff
-  const allTasks = await db.tasks.toArray();
-  const tasksToArchive = allTasks.filter((task) => {
-    if (!task.completed || !task.completedAt) return false;
-    return task.completedAt < cutoffIso;
-  });
-
-  if (tasksToArchive.length === 0) {
-    return 0;
-  }
-
   const now = new Date().toISOString();
 
-  // Enqueue delete operations for sync (only if sync is enabled)
   const { getSyncConfig } = await import("@/lib/sync/config");
   const syncConfig = await getSyncConfig();
-  if (syncConfig?.enabled) {
-    const queue = getSyncQueue();
-    await Promise.all(
-      tasksToArchive.map((task) => queue.enqueue('delete', task.id, task))
-    );
-  }
+  const queue = getSyncQueue();
 
-  // Move tasks to archive table
-  const archivedTasks: TaskRecord[] = tasksToArchive.map((task) => ({
-    ...task,
-    archivedAt: now
-  }));
+  const tasksToArchive = await db.transaction(
+    "rw",
+    [db.tasks, db.archivedTasks, db.syncQueue],
+    async () => {
+      // Find completed tasks older than cutoff
+      const allTasks = await db.tasks.toArray();
+      const eligible = allTasks.filter((task) => {
+        if (!task.completed || !task.completedAt) return false;
+        return task.completedAt < cutoffIso;
+      });
 
-  await db.archivedTasks.bulkAdd(archivedTasks);
+      if (eligible.length === 0) {
+        return eligible;
+      }
 
-  // Remove from main tasks table
-  const taskIds = tasksToArchive.map((task) => task.id);
-  await db.tasks.bulkDelete(taskIds);
+      // Move tasks to archive table
+      const archivedTasks: TaskRecord[] = eligible.map((task) => ({
+        ...task,
+        archivedAt: now
+      }));
+
+      await db.archivedTasks.bulkAdd(archivedTasks);
+
+      // Remove from main tasks table
+      await db.tasks.bulkDelete(eligible.map((task) => task.id));
+
+      // Enqueue delete operations for sync (only if sync is enabled)
+      if (syncConfig?.enabled) {
+        await Promise.all(
+          eligible.map((task) => queue.enqueue('delete', task.id, task))
+        );
+      }
+
+      return eligible;
+    }
+  );
 
   return tasksToArchive.length;
 }
