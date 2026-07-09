@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="An autonomous delivery pipeline for GSD Task Manager — three loops, two gates, four separated-duty agents.">
+<title>Two Gates &amp; a Night Shift — GSD Delivery Pipeline</title>
+<style>
+  :root {
+    --ground:#EEF0F5; --surface:#FFFFFF; --surface-2:#F7F8FB;
+    --ink:#14171F; --ink-2:#3A4150; --muted:#6B7484; --line:#DCE0EA; --line-2:#E7EAF1;
+    --accent:#4B5BD6; --accent-2:#3646B8; --accent-soft:#E7E9FA;
+    --gate:#B9770E; --gate-bg:#FBEFD6; --gate-line:#E9C77E;
+    --pass:#1F8A4C; --pass-bg:#DEF3E5;
+    --stop:#C0392B; --stop-bg:#FADDD9;
+    --shadow:0 1px 2px rgba(20,23,31,.06), 0 8px 24px -12px rgba(20,23,31,.14);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --maxw:56rem;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#0C0E14; --surface:#14171F; --surface-2:#1A1E28;
+      --ink:#E7E9F0; --ink-2:#B4BCCC; --muted:#7C8698; --line:#262B37; --line-2:#20242F;
+      --accent:#8A97F5; --accent-2:#A6B0F8; --accent-soft:#1E2440;
+      --gate:#E0A94A; --gate-bg:#2A2314; --gate-line:#4A3B1C;
+      --pass:#4FC27E; --pass-bg:#15281D;
+      --stop:#E5695C; --stop-bg:#2C1815;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0C0E14; --surface:#14171F; --surface-2:#1A1E28;
+    --ink:#E7E9F0; --ink-2:#B4BCCC; --muted:#7C8698; --line:#262B37; --line-2:#20242F;
+    --accent:#8A97F5; --accent-2:#A6B0F8; --accent-soft:#1E2440;
+    --gate:#E0A94A; --gate-bg:#2A2314; --gate-line:#4A3B1C;
+    --pass:#4FC27E; --pass-bg:#15281D; --stop:#E5695C; --stop-bg:#2C1815;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"]{
+    --ground:#EEF0F5; --surface:#FFFFFF; --surface-2:#F7F8FB;
+    --ink:#14171F; --ink-2:#3A4150; --muted:#6B7484; --line:#DCE0EA; --line-2:#E7EAF1;
+    --accent:#4B5BD6; --accent-2:#3646B8; --accent-soft:#E7E9FA;
+    --gate:#B9770E; --gate-bg:#FBEFD6; --gate-line:#E9C77E;
+    --pass:#1F8A4C; --pass-bg:#DEF3E5; --stop:#C0392B; --stop-bg:#FADDD9;
+    --shadow:0 1px 2px rgba(20,23,31,.06), 0 8px 24px -12px rgba(20,23,31,.14);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--ground); color:var(--ink); font-family:var(--sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; margin:0;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 1.4rem;}
+  h1,h2,h3{text-wrap:balance; line-height:1.15; margin:0;}
+  p{margin:0;}
+  a{color:var(--accent-2); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%, transparent);}
+  a:hover{border-bottom-color:var(--accent);}
+  code{font-family:var(--mono); font-size:.86em; background:var(--surface-2); border:1px solid var(--line-2); border-radius:5px; padding:.06em .38em;}
+  .eyebrow{font-family:var(--mono); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600;}
+
+  /* header */
+  header.hero{border-bottom:1px solid var(--line); background:
+     radial-gradient(120% 100% at 100% 0%, color-mix(in srgb,var(--accent) 9%, transparent), transparent 55%),
+     var(--surface);}
+  .hero-in{max-width:var(--maxw); margin:0 auto; padding:3.2rem 1.4rem 2.4rem;}
+  .kicker{display:flex; align-items:center; gap:.6rem; margin-bottom:1.1rem;}
+  .kicker .dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);}
+  h1{font-size:clamp(1.9rem,5vw,3rem); font-weight:800; letter-spacing:-.02em;}
+  .hero .lede{margin-top:.9rem; font-size:1.12rem; color:var(--ink-2); max-width:44ch;}
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:.7rem; margin-top:2rem;}
+  .stat{background:var(--surface-2); border:1px solid var(--line-2); border-radius:12px; padding:.85rem .9rem;}
+  .stat .n{font-family:var(--mono); font-size:1.5rem; font-weight:700; color:var(--accent-2); font-variant-numeric:tabular-nums; line-height:1;}
+  .stat .k{font-size:.74rem; color:var(--muted); margin-top:.4rem; text-transform:uppercase; letter-spacing:.06em;}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr);}}
+
+  section{padding:2.6rem 0; border-bottom:1px solid var(--line-2);}
+  section:last-of-type{border-bottom:0;}
+  .sec-head{margin-bottom:1.4rem;}
+  .sec-head h2{font-size:1.5rem; font-weight:750; letter-spacing:-.01em; margin-top:.35rem;}
+  .prose{color:var(--ink-2); max-width:64ch; display:flex; flex-direction:column; gap:.85rem;}
+  .prose strong{color:var(--ink); font-weight:650;}
+
+  /* generic panel + node primitives */
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);}
+  .scroll{overflow-x:auto; padding-bottom:.4rem;}
+  .node{background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:.7rem .8rem; min-width:9.5rem;}
+  .node .t{font-family:var(--mono); font-size:.72rem; letter-spacing:.02em; color:var(--muted); text-transform:uppercase;}
+  .node .l{font-weight:650; font-size:.94rem; margin-top:.18rem; color:var(--ink); line-height:1.25;}
+  .node .s{font-size:.8rem; color:var(--muted); margin-top:.22rem;}
+  .chev{color:var(--muted); flex:0 0 auto; align-self:center; font-size:1.2rem;}
+  .accent-node{border-color:color-mix(in srgb,var(--accent) 45%,var(--line)); background:color-mix(in srgb,var(--accent-soft) 55%,var(--surface));}
+  .accent-node .t{color:var(--accent-2);}
+
+  /* gate node */
+  .gate{background:var(--gate-bg); border:1.5px solid var(--gate-line); border-radius:11px; padding:.7rem .85rem; min-width:9.5rem;}
+  .gate .t{font-family:var(--mono); font-size:.72rem; letter-spacing:.03em; color:var(--gate); text-transform:uppercase; font-weight:700; display:flex; gap:.35rem; align-items:center;}
+  .gate .l{font-weight:700; font-size:.94rem; margin-top:.2rem; color:var(--ink);}
+  .gate .s{font-size:.8rem; color:var(--gate); margin-top:.2rem; opacity:.9;}
+
+  /* label pills (GitHub-style) */
+  .pill{display:inline-flex; align-items:center; gap:.4rem; font-family:var(--mono); font-size:.78rem; font-weight:600; padding:.28rem .6rem; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--ink); white-space:nowrap;}
+  .pill .d{width:.6rem;height:.6rem;border-radius:50%; background:var(--c);}
+  .pill.solid{background:color-mix(in srgb,var(--c) 16%, var(--surface)); border-color:color-mix(in srgb,var(--c) 45%, var(--line)); color:var(--ink);}
+
+  ul.clean{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:.6rem;}
+  ul.clean li{padding-left:1.3rem; position:relative; color:var(--ink-2);}
+  ul.clean li::before{content:"›"; position:absolute; left:.2rem; color:var(--accent); font-weight:700;}
+
+  .cap{font-size:.78rem; color:var(--muted); margin-top:.7rem; font-family:var(--mono);}
+  .footer{padding:2.4rem 0 3rem; color:var(--muted); font-size:.85rem;}
+  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto;}}
+</style>
+
+</head>
+<body>
+<button id="themeToggle" type="button" aria-label="Toggle light or dark theme" style="position:fixed; top:.9rem; right:.9rem; z-index:20; font-family:var(--mono); font-size:.74rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:.4rem .7rem; cursor:pointer; box-shadow:var(--shadow);">◐ Theme</button>
+<header class="hero">
+  <div class="hero-in">
+    <div class="kicker"><span class="dot"></span><span class="eyebrow">GSD Task Manager · Agentic SDLC</span></div>
+    <h1>Two Gates &amp; a Night Shift</h1>
+    <p class="lede">An autonomous delivery pipeline where three Claude agents do the work, two human approvals guard it, and a scheduled night shift keeps it unclogged — built and running for the GSD Task Manager repo.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">3</div><div class="k">Nested loops</div></div>
+      <div class="stat"><div class="n">2</div><div class="k">Human gates</div></div>
+      <div class="stat"><div class="n">4</div><div class="k">Separated actors</div></div>
+      <div class="stat"><div class="n">5</div><div class="k">Build cycles</div></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">The idea</span><h2>Everything between the gates is automated. Everything at the gates is judgment.</h2></div>
+    <div class="prose">
+      <p>A change starts as a <strong>GitHub issue written like a spec</strong>. A builder agent claims it, drafts a plan sized to its risk, and stops for approval. On your nod it builds to versioned coding standards, opens a pull request, and a reviewer agent checks it alongside CI. When it's clean you approve the release after testing the running software. A third agent works nights, repairing the mechanical failures that pile up on open PRs. The two approvals are the only human footprint — and they sit exactly where a caught mistake is cheapest.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Structure</span><h2>Three nested loops, each protecting the ones it wraps</h2></div>
+    <div class="panel" style="padding:1.4rem; margin-bottom:1.1rem;">
+      <div style="border:1.5px dashed color-mix(in srgb,var(--accent) 40%,var(--line)); border-radius:14px; padding:1rem 1rem 1.1rem;">
+        <div class="eyebrow" style="color:var(--accent-2)">Learning loop · continuous</div>
+        <p class="node-s" style="font-size:.84rem;color:var(--muted);margin:.15rem 0 .9rem;">Telemetry + audits feed mistakes back into the standards.</p>
+        <div style="border:1.5px solid var(--gate-line); background:color-mix(in srgb,var(--gate-bg) 40%,transparent); border-radius:12px; padding:1rem;">
+          <div class="eyebrow" style="color:var(--gate)">Maintenance loop · nightly</div>
+          <p style="font-size:.84rem;color:var(--muted);margin:.15rem 0 .9rem;">The night shift clears mechanical failures before they cost attention.</p>
+          <div style="border:1.5px solid color-mix(in srgb,var(--pass) 45%,var(--line)); background:color-mix(in srgb,var(--pass-bg) 55%,transparent); border-radius:10px; padding:1rem;">
+            <div class="eyebrow" style="color:var(--pass)">Delivery loop · per change</div>
+            <p style="font-size:.84rem;color:var(--ink-2);margin:.15rem 0 0;">Moves one issue from contract to production, through both gates.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="prose"><span>The delivery loop ships changes. The maintenance loop keeps the delivery loop unclogged. The learning loop keeps both honest — and the coding standards sit at the center of all three.</span></p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">The delivery loop</span><h2>From a written contract to production, through two gates</h2></div>
+    <div class="panel scroll" style="padding:1.3rem;">
+      <div style="display:flex; align-items:stretch; gap:.55rem; min-width:60rem;">
+        <div class="node"><div class="t">Contract</div><div class="l">GitHub issue</div><div class="s">acceptance criteria · risk tier</div></div>
+        <div class="chev">→</div>
+        <div class="node accent-node"><div class="t">Agent · Builder</div><div class="l">Risk-scaled plan</div><div class="s">depth follows risk</div></div>
+        <div class="chev">→</div>
+        <div class="gate"><div class="t">◆ Gate 1</div><div class="l">Plan approval</div><div class="s">you approve · phone</div></div>
+        <div class="chev">→</div>
+        <div class="node accent-node"><div class="t">Agent · Builder</div><div class="l">Build to standards</div><div class="s">TDD · commit · PR</div></div>
+        <div class="chev">→</div>
+        <div class="node accent-node"><div class="t">Agent · Reviewer + CI</div><div class="l">Review the PR</div><div class="s">clean → release-ready</div></div>
+        <div class="chev">→</div>
+        <div class="gate"><div class="t">◆ Gate 2</div><div class="l">Release approval</div><div class="s">test preview · rollback ready</div></div>
+        <div class="chev">→</div>
+        <div class="node"><div class="t">Ship</div><div class="l">Production</div><div class="s">deploy → smoke test</div></div>
+      </div>
+    </div>
+    <ul class="clean" style="margin-top:1.1rem;">
+      <li><strong>Risk tiers scale the work.</strong> A <code>docs</code> or <code>chore</code> change is auto-approved past Gate 1 and built in one pass; a <code>feature</code> or <code>risky</code> change gets the full plan and a mandatory human stop.</li>
+      <li><strong>Issues route back to the builder.</strong> If the reviewer or CI finds a problem, unresolved threads block <code>release-ready</code> and the merge until they're addressed.</li>
+      <li><strong>The builder never merges.</strong> It opens a PR and stops; the pipeline lands it only after Gate 2.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Builder state machine</span><h2>Labels are the durable memory between non-blocking runs</h2></div>
+    <div class="panel" style="padding:1.4rem;">
+      <div class="scroll">
+        <div style="display:flex; align-items:center; gap:.5rem; min-width:44rem; flex-wrap:nowrap;">
+          <span class="pill solid" style="--c:#FBCA04"><span class="d"></span>needs-triage</span>
+          <span class="chev">→</span>
+          <span class="pill solid" style="--c:#0E8A16"><span class="d"></span>ready-for-agent</span>
+          <span class="chev">→</span>
+          <span class="pill solid" style="--c:#FBCA04"><span class="d"></span>plan:pending</span>
+          <span class="chev">→</span>
+          <span class="pill solid" style="--c:#0E8A16"><span class="d"></span>plan:approved</span>
+          <span class="chev">→</span>
+          <span class="pill solid" style="--c:#5319E7"><span class="d"></span>agent:building</span>
+          <span class="chev">→</span>
+          <span class="node" style="min-width:auto;padding:.4rem .7rem;"><span class="l" style="font-size:.86rem;">PR opened</span></span>
+        </div>
+      </div>
+      <div style="display:flex; gap:1.4rem; flex-wrap:wrap; margin-top:1.2rem; padding-top:1.1rem; border-top:1px solid var(--line-2);">
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <span class="pill solid" style="--c:#D876E3"><span class="d"></span>plan:revise</span>
+          <span style="font-size:.84rem;color:var(--muted);">you request changes → re-plan → back to <code>plan:pending</code></span>
+        </div>
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <span class="pill solid" style="--c:#1D76DB"><span class="d"></span>ready-for-human</span>
+          <span style="font-size:.84rem;color:var(--muted);">ambiguous / needs judgment → escalate with a written reason</span>
+        </div>
+      </div>
+    </div>
+    <p class="cap">Approve or request changes are both label swaps — two taps on the GitHub mobile app. The runner is stateless; the laptop can sleep between runs without losing a thing.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">The maintenance loop</span><h2>A night shift that triages failing checks, unattended</h2></div>
+    <div class="panel scroll" style="padding:1.3rem;">
+      <div style="display:flex; align-items:center; gap:.55rem; min-width:52rem;">
+        <div class="node"><div class="t">20:00 nightly</div><div class="l">Scan open PRs</div><div class="s">only <code>claude/*</code> branches</div></div>
+        <div class="chev">→</div>
+        <div class="node"><div class="t">Per failing check</div><div class="l">Reproduce locally</div><div class="s">then sort into one of three</div></div>
+        <div class="chev">→</div>
+        <div style="display:flex; flex-direction:column; gap:.5rem;">
+          <div class="node" style="border-color:color-mix(in srgb,var(--pass) 45%,var(--line));"><div class="t" style="color:var(--pass)">Fix</div><div class="l">Repair → fix PR</div><div class="s">lint · format · lockfile · rebase · simple types</div></div>
+          <div class="node" style="border-color:var(--gate-line);"><div class="t" style="color:var(--gate)">Escalate</div><div class="l">ready-for-human</div><div class="s">tests · security · ambiguity</div></div>
+          <div class="node"><div class="t" style="color:var(--muted)">Skip</div><div class="l">Log &amp; move on</div><div class="s">flaky · can't reproduce</div></div>
+        </div>
+      </div>
+    </div>
+    <ul class="clean" style="margin-top:1.1rem;">
+      <li><strong>Verify before submit.</strong> A fix is only offered if it makes the failing check actually pass locally — a plausible-but-wrong fix never leaves the machine.</li>
+      <li><strong>Fixes re-enter the same gate.</strong> Every repair is a fresh PR that faces CI and review; the night shift never merges and never touches a branch it didn't create.</li>
+      <li><strong>It files its own incident report</strong> to a control issue each run — what it fixed, escalated, or skipped, plus any anomaly it noticed about itself.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Separation of duties, for agents</span><h2>Each actor holds exactly one kind of power</h2></div>
+    <div class="panel scroll" style="padding:.4rem;">
+      <table class="matrix">
+        <thead>
+          <tr><th>Actor</th><th>Write code</th><th>Open PR</th><th>Review / block</th><th>Merge</th><th>Deploy</th><th>Edit CI / security</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Builder</th><td class="y">✓</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
+          <tr><th>Reviewer</th><td class="n">✗</td><td class="n">✗</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
+          <tr><th>Night shift</th><td class="y">✓</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
+          <tr><th>You (human)</th><td class="dash">—</td><td class="dash">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose" style="margin-top:1.1rem;">No single actor can move a change from idea to production alone. The builder that writes the code can never approve it; the reviewer can't deploy; the night shift can do neither. That control is borrowed from decades of enterprise thinking — for a solo developer it can't mean separate people, so it means <strong>separate powers</strong>.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Why the gates sit where they do</span><h2>Placed on the cost curve of catching a mistake</h2></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div class="panel" style="padding:1.2rem; border-top:3px solid var(--gate);">
+        <div class="gate" style="display:inline-block; min-width:auto; margin-bottom:.7rem;"><div class="t">◆ Gate 1 · Plan</div></div>
+        <p style="color:var(--ink-2); font-size:.94rem;">A bad plan caught here costs minutes. The same plan caught after implementation costs hours of agent work, a review cycle, and tests that faithfully verify the wrong behavior. <strong>Plan review is the cheapest quality control in the pipeline</strong> — so meaningful changes get a mandatory stop, and risk tiers keep it from drowning in dependency bumps.</p>
+      </div>
+      <div class="panel" style="padding:1.2rem; border-top:3px solid var(--gate);">
+        <div class="gate" style="display:inline-block; min-width:auto; margin-bottom:.7rem;"><div class="t">◆ Gate 2 · Release</div></div>
+        <p style="color:var(--ink-2); font-size:.94rem;">By now the plan was approved, the standards held, a reviewer signed off, and CI passed. The final check is upgraded <strong>from trust to evidence</strong> — you approve software you watched run, not a diff you skimmed. The rule is absolute: <strong>no rollback path, no approval.</strong> The deploy is then proven with smoke tests, not assumed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">The learning loop</span><h2>Telemetry keeps it honest; the standards are the interface</h2></div>
+    <div class="prose" style="margin-bottom:1.2rem;">
+      <p>When an agent makes a category of mistake, the fix goes into the <strong>versioned coding standards</strong>, not just the code — so every future build inherits the correction and each failure is paid down once. A weekly job measures where the pipeline drags, and audit findings flow back into the standards the same way.</p>
+    </div>
+    <div class="scroll">
+      <div style="display:grid; grid-template-columns:repeat(4,minmax(9rem,1fr)); gap:.7rem; min-width:40rem;">
+        <div class="node"><div class="t">Metric</div><div class="l">Cycle time</div><div class="s">issue → production</div></div>
+        <div class="node"><div class="t">Metric</div><div class="l">Plan-revision rate</div><div class="s">clarity of the ask</div></div>
+        <div class="node"><div class="t">Metric</div><div class="l">Findings / PR</div><div class="s">reviewer signal</div></div>
+        <div class="node"><div class="t">Metric</div><div class="l">Tokens / merged PR</div><div class="s">cost of a change</div></div>
+      </div>
+    </div>
+    <p class="cap">The point is not to admire the dashboard — it's to find the next weak gate before it becomes the next escaped defect.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Safety</span><h2>Every autonomous loop has a one-tap kill switch</h2></div>
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+      <span class="pill solid" style="--c:#B60205"><span class="d"></span>builder:paused</span>
+      <span class="pill solid" style="--c:#B60205"><span class="d"></span>triage:paused</span>
+      <span style="color:var(--ink-2); font-size:.94rem; flex:1; min-width:15rem;">Add the label to the relevant control issue and the next run posts one line and exits — no code change, no SSH. A standing audit spot-checks roughly one in ten merged PRs by hand; each agent keeps its autonomy only while those stay clean.</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">How it was built</span><h2>Five cycles, each spec → plan → tested build → PR</h2></div>
+    <ol class="timeline">
+      <li><span class="tn">A</span><div><div class="tt">The Contract</div><div class="td">An enforced GitHub issue form + <code>risk:*</code> labels, with an auto-labeler. Raises the floor before any agent sees the work.</div></div></li>
+      <li><span class="tn">B</span><div><div class="tt">Builder + Gate 1</div><div class="td">A local scheduled routine that claims a contract, writes a risk-scaled plan, stops for a label-swap approval, then builds and opens a PR.</div></div></li>
+      <li><span class="tn">C</span><div><div class="tt">Review + Gate 2</div><div class="td">A deterministic <code>release-ready</code> signal and an evidence job that hands the approver a preview link and a real rollback command. CI was also made a <em>required</em> check.</div></div></li>
+      <li><span class="tn">D</span><div><div class="tt">The Night Shift</div><div class="td">A nightly routine that triages failing checks on the fleet's own PRs — fixing the mechanical, escalating the rest, never merging.</div></div></li>
+      <li><span class="tn">E</span><div><div class="tt">Telemetry + standards loop</div><div class="td">A weekly collector for the four metrics, a living dashboard issue, and the bridge that turns audit findings into standards rules.</div></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="proof">
+      <div class="eyebrow" style="color:var(--pass);">Proven live</div>
+      <h3 style="font-size:1.25rem; font-weight:750; margin:.4rem 0 .6rem;">The pipeline shipped its own first change, unattended.</h3>
+      <p style="color:var(--ink-2); max-width:60ch;">A <code>risk:chore</code> contract was filed and auto-labeled. With no further input, the builder claimed it, auto-approved the plan, built the file to spec on a <code>claude/*</code> branch, and opened a pull request — which then flowed through CI, the reviewer, and <code>release-ready</code> before it could land. The first live run also surfaced and fixed a real deployment bug (a stripped launchd <code>PATH</code>), caught in seconds because the wrappers log their errors instead of swallowing them.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Key components</span><h2>Where each piece lives in the repo</h2></div>
+    <div class="grid-files">
+      <div class="frow"><code>coding-standards.md</code><span>The versioned definition of done every agent builds against</span></div>
+      <div class="frow"><code>ISSUE_TEMPLATE/change_request.yml</code><span>The enforced contract + <code>apply-risk-label.yml</code></span></div>
+      <div class="frow"><code>scripts/builder-run.sh</code> · <code>/build-next</code><span>The builder wrapper + its operating command</span></div>
+      <div class="frow"><code>deploy-prod.yml</code><span>Gate 2 — the <code>production</code> Environment reviewer + smoke test</span></div>
+      <div class="frow"><code>scripts/triage-run.sh</code> · <code>/triage-prs</code><span>The night shift wrapper + its triage command</span></div>
+      <div class="frow"><code>telemetry.yml</code><span>The weekly metrics collector + Pipeline Telemetry issue</span></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <div style="border-top:1px solid var(--line); padding-top:1.4rem;">
+      Built for <strong style="color:var(--ink-2);">GSD Task Manager</strong> — an implementation of the essay <em>“Two Gates and a Night Shift.”</em> Three loops, two gates, four separated-duty actors, and a set of durable artifacts — the issues, the spec, and the standards — that the code is downstream of.
+    </div>
+  </div>
+</main>
+
+<style>
+  @media(max-width:640px){ section > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important;} }
+  .timeline{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.2rem;}
+  .timeline li{display:flex; gap:1rem; padding:1rem 0; border-bottom:1px solid var(--line-2); align-items:flex-start;}
+  .timeline li:last-child{border-bottom:0;}
+  .timeline .tn{flex:0 0 auto; width:2rem; height:2rem; border-radius:8px; display:grid; place-items:center; font-family:var(--mono); font-weight:700; font-size:.95rem; color:var(--accent-2); background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));}
+  .timeline .tt{font-weight:700; color:var(--ink); font-size:1.02rem;}
+  .timeline .td{color:var(--ink-2); font-size:.92rem; margin-top:.2rem; max-width:62ch;}
+  .proof{background:linear-gradient(180deg, color-mix(in srgb,var(--pass-bg) 60%,var(--surface)), var(--surface)); border:1px solid color-mix(in srgb,var(--pass) 35%,var(--line)); border-left:4px solid var(--pass); border-radius:14px; padding:1.5rem; box-shadow:var(--shadow);}
+  .grid-files{display:grid; grid-template-columns:1fr 1fr; gap:.7rem;}
+  .frow{background:var(--surface); border:1px solid var(--line-2); border-radius:10px; padding:.8rem .9rem; display:flex; flex-direction:column; gap:.35rem;}
+  .frow code{align-self:flex-start; background:var(--accent-soft); border-color:color-mix(in srgb,var(--accent) 25%,var(--line)); color:var(--accent-2); font-size:.78rem;}
+  .frow span{font-size:.85rem; color:var(--muted);}
+  @media(max-width:640px){ .grid-files{grid-template-columns:1fr;} }
+  #themeToggle:hover{color:var(--ink); border-color:var(--accent);}
+  #themeToggle:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+</style>
+<script>
+  (function () {
+    var btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      var root = document.documentElement;
+      var current = root.getAttribute("data-theme");
+      if (!current) {
+        current = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      root.setAttribute("data-theme", current === "dark" ? "light" : "dark");
+    });
+  })();
+</script>
+<style>
+  .matrix{border-collapse:collapse; width:100%; min-width:44rem; font-size:.9rem;}
+  .matrix th, .matrix td{padding:.7rem .8rem; text-align:center; border-bottom:1px solid var(--line-2);}
+  .matrix thead th{font-family:var(--mono); font-size:.72rem; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); font-weight:600; border-bottom:1px solid var(--line);}
+  .matrix tbody th{text-align:left; font-weight:650; color:var(--ink); white-space:nowrap;}
+  .matrix td{font-weight:700; font-variant-numeric:tabular-nums;}
+  .matrix td.y{color:var(--pass);}
+  .matrix td.n{color:var(--muted); opacity:.55; font-weight:600;}
+  .matrix td.dash{color:var(--muted); opacity:.4;}
+  .matrix tbody tr:last-child td, .matrix tbody tr:last-child th{border-bottom:0;}
+  .matrix tbody tr:last-child{background:color-mix(in srgb,var(--accent-soft) 40%,transparent);}
+</style>
+</body>
+</html>

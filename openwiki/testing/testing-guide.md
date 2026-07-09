@@ -95,3 +95,7 @@ logic change, and docs-only changes.
 - Sync changes (`/lib/sync/`) → `tests/sync/` + `tests/data/sync/`.
 - UI changes (`/components/`, `/app/`) → `tests/ui/` and relevant `tests/e2e/` specs.
 - MCP server (`/packages/mcp-server/`) → its own suite from within that package.
+- Agent-pipeline scripts/workflows (`/scripts/*.cjs`, `/scripts/{builder,triage}-run.sh`,
+  release workflows) → `tests/data/pipeline-workflows.test.ts` plus the matching root-level
+  specs (`tests/{builder-run,triage-run,failing-agent-prs,telemetry-metrics,extract-run-tokens,prev-release-tag,parse-risk-tier}.test.ts`).
+  See [Agent pipeline](../operations/agent-pipeline.md).

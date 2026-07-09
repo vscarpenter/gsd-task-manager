@@ -100,6 +100,9 @@ Hub (if secrets set).
   package.
 - `sonarcloud.yml`, `security-audit.yml`, `claude.yml`, `claude-code-review.yml` — quality,
   security audit, and Claude automation.
+- `apply-risk-label.yml`, `release-ready.yml`, `telemetry.yml` — the autonomous delivery
+  pipeline (issue risk labeling, release-ready computation, weekly metrics). See
+  [Agent pipeline](agent-pipeline.md).
 
 ---
 

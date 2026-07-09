@@ -1,682 +1,842 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GSD Task Manager — Codebase Quality Analysis (v2)</title>
-<style>
-  :root {
-    --bg: #f7f8fa; --surface: #ffffff; --ink: #1a1d24; --ink-soft: #4a5160; --line: #e2e5eb;
-    --indigo: #3b4cca; --indigo-soft: #eef0fb;
-    --crit: #b00020; --high: #e8590c; --med: #f08c00; --low: #1c7ed6; --good: #2f9e44;
-    --crit-bg: #fce8ec; --high-bg: #fdeee2; --med-bg: #fdf4e0; --low-bg: #e7f1fb; --good-bg: #e6f4ea;
-    --shadow: 0 1px 3px rgba(20,25,40,.06), 0 1px 2px rgba(20,25,40,.04);
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-  a { color: var(--indigo); text-decoration: none; } a:hover { text-decoration: underline; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px 80px; }
-  nav.top { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 10px 0; }
-  nav.top .inner { max-width: 1080px; margin: 0 auto; padding: 0 20px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
-  nav.top strong { color: var(--indigo); margin-right: 8px; font-size: 13px; letter-spacing: .02em; }
-  nav.top a { font-size: 13px; color: var(--ink-soft); } nav.top a:hover { color: var(--indigo); }
-  header.hero { background: linear-gradient(135deg, #2b2f6b 0%, #3b4cca 100%); color: #fff; padding: 38px 0 30px; margin-bottom: 28px; }
-  header.hero .inner { max-width: 1080px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
-  header.hero h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.01em; }
-  header.hero p { margin: 2px 0; opacity: .85; font-size: 14px; }
-  .score-badge { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 14px; padding: 14px 22px; text-align: center; min-width: 150px; }
-  .score-badge .num { font-size: 44px; font-weight: 700; line-height: 1; }
-  .score-badge .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .85; margin-top: 4px; }
-  section { margin: 36px 0; }
-  h2 { font-size: 21px; border-bottom: 2px solid var(--indigo); padding-bottom: 6px; margin: 0 0 18px; }
-  h3 { font-size: 16px; margin: 26px 0 10px; color: var(--ink); }
-  h4 { font-size: 14px; margin: 16px 0 8px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); }
-  .grid { display: grid; gap: 16px; }
-  .grid.c2 { grid-template-columns: 1fr 1fr; } .grid.c3 { grid-template-columns: repeat(3, 1fr); } .grid.c4 { grid-template-columns: repeat(4, 1fr); }
-  @media (max-width: 760px){ .grid.c2,.grid.c3,.grid.c4 { grid-template-columns: 1fr; } header.hero .inner{ flex-direction: column; align-items: flex-start; } }
-  .metric { text-align: center; padding: 16px 10px; }
-  .metric .v { font-size: 28px; font-weight: 700; color: var(--indigo); line-height: 1; }
-  .metric .v.good { color: var(--good); } .metric .v.warn { color: var(--med); } .metric .v.bad { color: var(--high); }
-  .metric .k { font-size: 12px; color: var(--ink-soft); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em; }
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--surface); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
-  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); }
-  th { background: var(--indigo-soft); color: var(--ink); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
-  tr:last-child td { border-bottom: none; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .b { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: .03em; white-space: nowrap; }
-  .b.crit { background: var(--crit-bg); color: var(--crit); } .b.high { background: var(--high-bg); color: var(--high); }
-  .b.med { background: var(--med-bg); color: var(--med); } .b.low { background: var(--low-bg); color: var(--low); } .b.good { background: var(--good-bg); color: var(--good); }
-  .b.conf { background: #eef0f3; color: #555; } .b.eff { background: #f0ecf9; color: #6741d9; }
-  .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:12px; font-weight:600; }
-  .pill.pass{background:var(--good-bg);color:var(--good);} .pill.fail{background:var(--crit-bg);color:var(--crit);}
-  details.dim { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; box-shadow: var(--shadow); overflow: hidden; }
-  details.dim > summary { cursor: pointer; padding: 14px 18px; font-weight: 600; font-size: 15.5px; list-style: none; display: flex; align-items: center; gap: 10px; }
-  details.dim > summary::-webkit-details-marker { display: none; }
-  details.dim > summary::before { content: "▸"; color: var(--indigo); transition: transform .15s; }
-  details.dim[open] > summary::before { transform: rotate(90deg); }
-  details.dim > summary:hover { background: var(--indigo-soft); }
-  .dim-body { padding: 4px 18px 18px; }
-  .summary-counts { margin-left: auto; display: flex; gap: 5px; }
-  .finding { border-left: 4px solid var(--line); padding: 10px 0 10px 14px; margin: 14px 0; }
-  .finding.crit { border-color: var(--crit); } .finding.high { border-color: var(--high); } .finding.med { border-color: var(--med); } .finding.low { border-color: var(--low); } .finding.good { border-color: var(--good); }
-  .finding .ftitle { font-weight: 600; margin: 2px 0 6px; }
-  .finding .meta { margin-bottom: 7px; display: flex; gap: 6px; flex-wrap: wrap; }
-  .finding .loc { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: #f3f4f7; padding: 1px 6px; border-radius: 5px; color: #444; }
-  .finding p { margin: 5px 0; } .finding .rec { font-size: 13.5px; } .finding .rec b { color: var(--good); }
-  .finding .fals { font-size: 12.5px; color: var(--ink-soft); font-style: italic; margin-top: 4px; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: #f3f4f7; padding: 1px 5px; border-radius: 5px; }
-  .callout { border-radius: 10px; padding: 13px 16px; margin: 14px 0; font-size: 13.5px; }
-  .callout.warn { background: var(--med-bg); border: 1px solid #f5d78a; } .callout.info { background: var(--low-bg); border: 1px solid #b8d8f5; } .callout.good { background: var(--good-bg); border: 1px solid #a8dab7; }
-  .road { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
-  @media (max-width: 760px){ .road { grid-template-columns: 1fr; } }
-  .road .col { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
-  .road .col h3 { margin: 0; padding: 12px 16px; color: #fff; font-size: 15px; }
-  .road .col.d30 h3 { background: var(--high); } .road .col.d60 h3 { background: var(--med); } .road .col.d90 h3 { background: var(--low); }
-  .road ul { margin: 0; padding: 12px 16px 16px 32px; font-size: 13.5px; } .road li { margin: 8px 0; }
-  footer { color: var(--ink-soft); font-size: 12.5px; text-align: center; padding: 30px 0 0; border-top: 1px solid var(--line); margin-top: 50px; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin: 8px 0 0; }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  @media print {
-    nav.top { display: none; } header.hero { background: #2b2f6b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    details.dim { break-inside: avoid; } details.dim[open] > summary::before { content: "▾"; }
-    details.dim:not([open]) { display: none; } /* expand-all recommended before printing */
-    .card, .finding, table { break-inside: avoid; } body { background: #fff; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSD Task Manager — Codebase Analysis Report</title>
+  <style>
+    :root {
+      --ivory: #F9F8F4;
+      --paper: #FFFFFF;
+      --slate: #2D2D2D;
+      --gray-100: #F5F4F0;
+      --gray-200: #E8E6E0;
+      --gray-300: #D4D2CC;
+      --gray-400: #A8A69C;
+      --gray-500: #7A7870;
+      --accent: #3B4A8C;
+      --accent-d: #5A6BC0;
+      --accent-tint: #E8EAF5;
+      --rust: #C45A4A;
+      --olive: #5B7C5B;
+      --border: 1.5px solid var(--gray-300);
+      --serif: Iowan Old Style, Palatino, Source Serif Pro, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--ivory); color: var(--slate); line-height: 1.6; font-size: 15px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+    header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: var(--border); }
+    .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+    h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.3px; color: var(--slate); }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 { font-size: 24px; margin: 40px 0 20px; padding-bottom: 12px; border-bottom: var(--border); }
+    h3 { font-size: 19px; margin: 28px 0 12px; }
+    h4 { font-size: 16px; margin: 18px 0 8px; }
+    p { margin-bottom: 12px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { color: var(--gray-500); font-size: 14px; font-family: var(--mono); }
+    .card { background: var(--paper); border: var(--border); border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+    .score-card { display: flex; align-items: center; gap: 32px; }
+    .score-circle { width: 120px; height: 120px; border-radius: 50%; border: 1.5px solid var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; background: var(--accent-tint); }
+    .score-number { font-family: var(--serif); font-size: 48px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .score-label { font-family: var(--mono); font-size: 12px; color: var(--gray-500); text-transform: uppercase; margin-top: 4px; }
+    .risk-list, .strength-list, .priority-list { list-style: none; margin: 0; padding: 0; }
+    .risk-list li, .strength-list li, .priority-list li { padding: 10px 0; border-bottom: var(--border); display: flex; gap: 12px; }
+    .risk-list li:last-child, .strength-list li:last-child, .priority-list li:last-child { border-bottom: none; }
+    .number { font-family: var(--serif); font-weight: 600; color: var(--accent); min-width: 24px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; background: var(--paper); border: var(--border); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: var(--border); }
+    th { font-family: var(--serif); font-weight: 600; background: var(--gray-100); font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-family: var(--mono); font-weight: 500; white-space: nowrap; }
+    .badge-critical { background: #FDE8E6; color: #9E2A22; }
+    .badge-high { background: #FFF4E6; color: #8B4513; }
+    .badge-medium { background: #FFF9E6; color: #7A5C00; }
+    .badge-low { background: #E8F0E8; color: #2E5A2E; }
+    .badge-pass { background: #E8F0E8; color: #2E5A2E; }
+    .badge-fail { background: #FDE8E6; color: #9E2A22; }
+    .badge-warn { background: #FFF4E6; color: #8B4513; }
+    .badge-info { background: var(--accent-tint); color: var(--accent); }
+    .finding { background: var(--paper); border: var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .finding-header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .finding-title { font-family: var(--serif); font-size: 17px; font-weight: 600; flex: 1 1 auto; }
+    .finding-meta { color: var(--gray-500); font-size: 13px; font-family: var(--mono); margin-bottom: 12px; }
+    .finding-meta strong { color: var(--slate); }
+    .finding-body p { margin-bottom: 8px; }
+    .recommendation { background: var(--gray-100); border-left: 3px solid var(--accent); padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+    .recommendation-title { font-family: var(--serif); font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+    code, .mono { font-family: var(--mono); font-size: 13px; }
+    pre { background: var(--slate); color: var(--ivory); padding: 16px; border-radius: 6px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; margin: 12px 0; }
+    .toc { background: var(--paper); border: var(--border); border-radius: 8px; padding: 20px; margin-bottom: 32px; }
+    .toc ul { list-style: none; columns: 2; column-gap: 24px; }
+    .toc li { padding: 4px 0; break-inside: avoid; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 20px 0; }
+    .metric-box { background: var(--paper); border: var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+    .metric-value { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--accent); }
+    .metric-label { font-family: var(--mono); font-size: 12px; color: var(--gray-500); text-transform: uppercase; margin-top: 4px; }
+    .section-note { font-size: 14px; color: var(--gray-500); font-style: italic; margin-bottom: 16px; }
+    .collapsible { border: var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px; background: var(--paper); }
+    .collapsible summary { cursor: pointer; padding: 16px 20px; font-family: var(--serif); font-weight: 600; font-size: 16px; background: var(--gray-100); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    .collapsible summary::-webkit-details-marker { display: none; }
+    .collapsible summary::after { content: "+"; font-family: var(--mono); font-size: 18px; color: var(--accent); }
+    .collapsible[open] summary::after { content: "−"; }
+    .collapsible-content { padding: 20px; }
+    .methodology-list { list-style: disc; padding-left: 24px; }
+    .methodology-list li { margin-bottom: 8px; }
+    footer { margin-top: 48px; padding-top: 24px; border-top: var(--border); color: var(--gray-500); font-size: 13px; font-family: var(--mono); }
+    @media (max-width: 768px) {
+      .container { padding: 24px 16px; }
+      .score-card { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .toc ul { columns: 1; }
+      .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <header>
+      <div class="eyebrow">Codebase Analysis</div>
+      <h1>GSD Task Manager — Quality & Security Audit</h1>
+      <div class="meta">Generated 2026-07-06 · Static-export Next.js PWA · Bun workspaces</div>
+    </header>
 
-<nav class="top"><div class="inner">
-  <strong>JUMP TO</strong>
-  <a href="#summary">Executive Summary</a>
-  <a href="#metrics">Metrics</a>
-  <a href="#findings">Findings</a>
-  <a href="#roadmap">Roadmap</a>
-  <a href="#method">Methodology</a>
-</div></nav>
-
-<header class="hero"><div class="inner">
-  <div>
-    <h1>Codebase Quality Analysis — GSD Task Manager</h1>
-    <p><strong>Repository:</strong> gsd-taskmanager &nbsp;·&nbsp; <strong>Commit:</strong> 5f677a9 &nbsp;·&nbsp; <strong>Version:</strong> 9.12.1 &nbsp;·&nbsp; <strong>Branch:</strong> main</p>
-    <p><strong>Generated:</strong> 2026-06-24 &nbsp;·&nbsp; <strong>Rubric:</strong> coding-standards.md v16.1 &nbsp;·&nbsp; <strong>Prompt:</strong> codebase-quality-review v2</p>
-    <p><strong>Stack:</strong> Next.js 16 · React 19 · TypeScript (strict) · Dexie/IndexedDB · PocketBase sync · PWA</p>
-  </div>
-  <div class="score-badge"><div class="num">8.0</div><div class="lbl">Health / 10</div></div>
-</div></header>
-
-<div class="wrap">
-
-<section id="summary">
-  <h2>1 · Executive Summary</h2>
-  <div class="card">
-    <p style="margin-top:0">GSD Task Manager is a <strong>well-engineered, standards-compliant codebase in strong health</strong>. The data layer is rigorously tested (88% line coverage, 2,042 passing unit tests), the architecture is clean (zero circular dependencies, no source file over the 400-line ceiling), dependencies are near-perfectly current (only 3 packages a single patch behind), security is defense-in-depth (owner-scoped sync, allowlist-gated telemetry that verifiably strips task PII, no XSS/injection sinks), and standards discipline is excellent (TypeScript <code>strict</code>, every type-escape justified, 12 ADRs, zero TODO/FIXME).</p>
-    <p>Debt is <strong>narrow, concentrated, and low-effort</strong>, with <strong>no Critical findings</strong>. The real risks are a compounding client-side render cost on the matrix (O(N²) dependency math), an untested multi-select bulk-operations path, and timing-based E2E flakiness. A counter-view pass also surfaced a pocket of <strong>dead code left from the v9/ADR-0011 simplification</strong> that was never garbage-collected — cleanup, not redesign.</p>
-  </div>
-
-  <div class="callout info" style="margin-top:16px">
-    <strong>Health-score rubric (anchored).</strong> <strong>9–10</strong> = exemplary; no High findings, full automated gating. <strong>7–8</strong> = production-healthy; debt concentrated, addressable, no Critical. <strong>5–6</strong> = shippable but with systemic gaps (e.g. weak coverage or a structural risk). <strong>3–4</strong> = material risk to correctness/security. <strong>1–2</strong> = not production-ready. <strong>This codebase scores 8.0</strong>: zero Critical, strong coverage and architecture, near-perfect dependency currency — held below 9 by three High findings (matrix render cost, untested bulk-ops, E2E flakiness) and the absence of E2E from CI.
-  </div>
-
-  <div class="grid c2" style="margin-top:18px">
-    <div class="card">
-      <h4 style="margin-top:0; color:var(--high)">Top 5 Risks</h4>
-      <ol style="margin:0; padding-left:20px">
-        <li><strong>O(N²) dependency computation on every matrix render</strong> — each card re-scans the full task array; compounds with an unvirtualized list. <span class="b high">HIGH</span></li>
-        <li><strong>Bulk operations (multi-select) untested at every level</strong> — <code>lib/bulk-operations.ts</code> has no unit or E2E test. <span class="b high">HIGH</span></li>
-        <li><strong>E2E timing flakiness</strong> — 56 blind <code>waitForTimeout</code> sleeps → 12 of 13 failures are 30s timeouts, concentrated in Firefox. <span class="b high">HIGH</span></li>
-        <li><strong>Stale dependency overrides</strong> — <code>undici</code>/<code>hono</code> override floors sit below the patched versions, so the fixes never land. <span class="b med">MEDIUM</span></li>
-        <li><strong>E2E absent from CI + no coverage gate</strong> — cross-layer regressions can merge undetected. <span class="b med">MEDIUM</span></li>
-      </ol>
-    </div>
-    <div class="card">
-      <h4 style="margin-top:0; color:var(--good)">Top 3 Strengths</h4>
-      <ul style="margin:0; padding-left:20px">
-        <li><strong>Verified PII-safe observability</strong> — <code>lib/logger.ts</code> allowlists Sentry context keys; task titles/notes/records are stripped before egress (confirmed by reading <code>buildSentryContext</code>).</li>
-        <li><strong>Clean, lean, acyclic architecture</strong> — zero circular deps; every file under the ceiling; a counter-view pass confirmed the codebase trends lean, not over-engineered.</li>
-        <li><strong>Excellent supply-chain hygiene</strong> — 3 deps one patch behind, none deprecated; 20 deliberate transitive overrides; daily <code>bun audit</code> in CI; disciplined boundary-correct test suite.</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:18px">
-    <h4 style="margin-top:0; color:var(--indigo)">Top 3 Priorities for Next Sprint (ranked by impact ÷ effort)</h4>
-    <ol style="margin:0; padding-left:20px">
-      <li><strong>Add E2E to CI + tests for bulk operations</strong> <span class="b eff">Small</span> — highest leverage: closes the biggest coverage gap and stops flakiness from hiding, for little cost.</li>
-      <li><strong>Replace the 56 <code>waitForTimeout</code> sleeps with auto-retrying web-assertions</strong> <span class="b eff">Medium</span> — directly removes the 12 timeout failures and speeds the suite.</li>
-      <li><strong>Lift dependency-graph math out of the per-card render path</strong> <span class="b eff">Medium</span> — removes the one genuine algorithmic risk; pairs with the trivial <code>undici</code>/<code>hono</code> override bump <span class="b eff">Small</span>.</li>
-    </ol>
-  </div>
-</section>
-
-<section id="metrics">
-  <h2>2 · Metrics Dashboard</h2>
-
-  <h3>Test &amp; Coverage</h3>
-  <div class="grid c4">
-    <div class="card metric"><div class="v good">88.0%</div><div class="k">Line Coverage</div></div>
-    <div class="card metric"><div class="v good">86.9%</div><div class="k">Statement Cov.</div></div>
-    <div class="card metric"><div class="v good">83.8%</div><div class="k">Function Cov.</div></div>
-    <div class="card metric"><div class="v warn">79.9%</div><div class="k">Branch Cov.</div></div>
-  </div>
-  <div class="grid c4" style="margin-top:16px">
-    <div class="card metric"><div class="v good">2042</div><div class="k">Unit Tests Pass</div></div>
-    <div class="card metric"><div class="v">140</div><div class="k">Unit Test Files</div></div>
-    <div class="card metric"><div class="v good">0</div><div class="k">Unit Failures</div></div>
-    <div class="card metric"><div class="v">12.7s</div><div class="k">Unit Duration</div></div>
-  </div>
-  <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px">Thresholds (project): 80% stmts/lines/funcs, 75% branches — <span class="b good">ALL MET</span>. 1 unit test skipped.</p>
-
-  <h3>Bundle Size <span style="font-size:12px;font-weight:400;color:var(--ink-soft)">(measured from static export, <code>out/_next/static</code>)</span></h3>
-  <div class="grid c4">
-    <div class="card metric"><div class="v warn">777 KB</div><div class="k">Total JS (gzipped)</div></div>
-    <div class="card metric"><div class="v">123 KB</div><div class="k">Largest chunk (gz)</div></div>
-    <div class="card metric"><div class="v">42</div><div class="k">JS chunks (code-split)</div></div>
-    <div class="card metric"><div class="v good">136 KB</div><div class="k">CSS (raw)</div></div>
-  </div>
-  <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px">3.0 MB raw / 777 KB gz total across all routes (not all loads on first paint — Next.js code-splits per route). The largest chunk (123 KB gz) and the dashboard's <code>recharts</code> dominate. Moderate for a feature-rich PWA; cached after first load.</p>
-
-  <h3>Playwright E2E — by Browser Project</h3>
-  <div class="callout info">Run locally against the dev server with <code>workers: undefined</code> (parallel) and <code>retries: 0</code> — a stricter flakiness probe than CI (<code>workers: 1, retries: 2</code>), which masks transient timeouts via retries. The first attempt reported 0/216 because Playwright browser binaries were not installed; figures below are the re-run after <code>npx playwright install</code>.</div>
-  <table>
-    <thead><tr><th>Browser project</th><th class="num">Pass</th><th class="num">Fail</th><th class="num">Flaky</th><th class="num">Pass rate</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>chromium</td><td class="num">72</td><td class="num">0</td><td class="num">0</td><td class="num">100.0%</td><td><span class="pill pass">green</span></td></tr>
-      <tr><td>webkit</td><td class="num">70</td><td class="num">2</td><td class="num">0</td><td class="num">97.2%</td><td><span class="pill pass">green</span></td></tr>
-      <tr><td>firefox</td><td class="num">61</td><td class="num">11</td><td class="num">0</td><td class="num">84.7%</td><td><span class="pill fail">flaky</span></td></tr>
-      <tr style="font-weight:700"><td>TOTAL</td><td class="num">203</td><td class="num">13</td><td class="num">0</td><td class="num">94.0%</td><td>250.5s</td></tr>
-    </tbody>
-  </table>
-  <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px"><strong>12 of 13 failures are <code>Test timeout of 30000ms exceeded</code></strong> (timing, not logic) — 85% in Firefox. The lone real assertion failure is a WebKit navigation expecting <code>/dashboard</code> but receiving <code>/</code>. Per-spec breakdown: failures cluster in drag-and-drop (3), recurring-tasks (4), settings-sections (2), sync-states (2), with 1 each in matrix-navigation &amp; sync-auth.</p>
-
-  <h3>Code, Dependencies &amp; Debt</h3>
-  <div class="grid c4">
-    <div class="card metric"><div class="v">~32k</div><div class="k">Source LOC</div></div>
-    <div class="card metric"><div class="v good">0</div><div class="k">Files &gt; 400 lines</div></div>
-    <div class="card metric"><div class="v good">0</div><div class="k">Circular Deps</div></div>
-    <div class="card metric"><div class="v good">0</div><div class="k">TODO / FIXME</div></div>
-  </div>
-  <div class="grid c4" style="margin-top:16px">
-    <div class="card metric"><div class="v good">3</div><div class="k">Deps Outdated (patch only)</div></div>
-    <div class="card metric"><div class="v">20</div><div class="k">Transitive Overrides</div></div>
-    <div class="card metric"><div class="v good">3</div><div class="k">Prod <code>any</code> (all justified)</div></div>
-    <div class="card metric"><div class="v">12</div><div class="k">ADRs</div></div>
-  </div>
-
-  <h3>Security Findings by Severity</h3>
-  <div class="grid c4">
-    <div class="card metric"><div class="v good">0</div><div class="k">Critical</div></div>
-    <div class="card metric"><div class="v good">0</div><div class="k">High (prod-reachable)</div></div>
-    <div class="card metric"><div class="v warn">1</div><div class="k">Medium</div></div>
-    <div class="card metric"><div class="v">2</div><div class="k">Low</div></div>
-  </div>
-  <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px"><code>bun audit</code>: 16 advisories (5 high, 8 moderate, 3 low) — <strong>all in the dev/test/MCP-runtime chain</strong> (undici via jsdom, vite dev-server, hono via MCP SDK), <strong>none in the production browser bundle</strong>. <code>npx audit-ci --high</code> could not run (pre-existing <code>EOVERRIDE</code> on <code>postcss</code>).</p>
-
-  <h3>Coverage by Area (selected)</h3>
-  <table>
-    <thead><tr><th>Area</th><th class="num">Line %</th><th>Assessment</th></tr></thead>
-    <tbody>
-      <tr><td><code>lib/analytics</code>, <code>lib/quadrants</code>, <code>lib/schema</code>, <code>lib/tasks</code></td><td class="num">100 / 100 / 100 / 99.8</td><td><span class="b good">EXCELLENT</span> core domain logic</td></tr>
-      <tr><td><code>lib/sync</code></td><td class="num">93.5</td><td><span class="b good">STRONG</span> riskiest subsystem well-covered</td></tr>
-      <tr><td><code>lib/db.ts</code></td><td class="num">95.1</td><td><span class="b good">STRONG</span></td></tr>
-      <tr><td><code>components/matrix-simplified</code></td><td class="num">83.8</td><td><span class="b good">GOOD</span></td></tr>
-      <tr><td><code>app/(dashboard)</code> + <code>use-dashboard-data.ts</code></td><td class="num">0.0</td><td><span class="b med">GAP</span> real untested logic (not a shim)</td></tr>
-      <tr><td><code>components/pwa-register</code>, <code>pwa-update-toast</code></td><td class="num">43 / 40</td><td><span class="b low">PARTIAL</span> PWA glue, hard to unit-test</td></tr>
-    </tbody>
-  </table>
-  <div class="legend">
-    <span><span class="dot" style="background:var(--crit)"></span>Critical</span>
-    <span><span class="dot" style="background:var(--high)"></span>High</span>
-    <span><span class="dot" style="background:var(--med)"></span>Medium</span>
-    <span><span class="dot" style="background:var(--low)"></span>Low</span>
-    <span><span class="dot" style="background:var(--good)"></span>Strength / Pass</span>
-  </div>
-</section>
-<section id="findings">
-  <h2>3 · Detailed Findings by Dimension</h2>
-  <p style="font-size:13.5px;color:var(--ink-soft)">Each finding is tagged <strong>[Severity · Confidence · Effort]</strong> with a single <strong>primary dimension</strong> (cross-referenced, not repeated, where it spans dimensions). High/Critical findings carry a <em>falsification</em> note — what would prove them wrong. Every claim was verified by opening the cited file unless marked <em>ASSUMPTION</em>.</p>
-
-  <details class="dim">
-    <summary>Dimension 1 — Standards Compliance
-      <span class="summary-counts"><span class="b med">2 MED</span><span class="b low">1 LOW</span><span class="b good">3 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding med">
-        <div class="ftitle">tsconfig excludes <code>packages/</code> and <code>tests/</code> from typecheck</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">tsconfig.json:42-51</span> · violates <em>Part 2 → "Run static analysis and type checking as part of the verification workflow"</em></p>
-        <p>Root <code>bun typecheck</code> skips the MCP server and every test file, so MCP type regressions and test-file type errors never surface in the <code>typecheck</code> CI job.</p>
-        <p class="rec"><b>Fix:</b> Confirm the MCP workspace runs its own <code>tsc</code> in CI; add a test-scoped tsconfig so <code>tests/</code> is type-gated.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Hardcoded stale version fallback in About page</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">components/settings/about-section.tsx:11</span> · violates <em>Part 2 → "Configuration over duplication" / "No magic values"</em></p>
-        <p>When <code>NEXT_PUBLIC_BUILD_NUMBER</code> is unset (local dev), the About page renders <code>"6.1.1"</code> — three major versions behind <code>package.json</code> (9.12.1). The footer uses a saner <code>"dev"</code> fallback for the same variable.</p>
-        <p class="rec"><b>Fix:</b> Use a <code>"dev build"</code> fallback or read the version from <code>package.json</code> at build time.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Two lint warnings on unused bindings</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/archive.ts:113</span> · <span class="loc">docker/pb_migrations/1781000000_encrypt_existing_tasks.js:29</span></p>
-        <p>An underscore-prefixed <code>_archivedAt</code> is still flagged; the encryption migration's no-op down-handler has an unused <code>app</code> param. Minor noise in an otherwise-clean run (21 warnings, 0 errors).</p>
-        <p class="rec"><b>Fix:</b> Remove the unused binding / omit the param.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths:</strong> TypeScript <code>strict: true</code>, no loosened flags (only conventional <code>skipLibCheck</code>); all 3 production <code>any</code> and all 4 production <code>eslint-disable</code>s carry justification comments; no file exceeds the 400-line ceiling. <code>bun typecheck</code> and <code>bun lint</code> both pass (the ESLint-10 crash from prior notes no longer reproduces — fixed by #373/#380).</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 2 — Test Quality &amp; Coverage
-      <span class="summary-counts"><span class="b high">1 HIGH</span><span class="b med">1 MED</span><span class="b low">1 LOW</span><span class="b good">5 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding high">
-        <div class="ftitle"><code>lib/bulk-operations.ts</code> (multi-select) has no unit OR E2E test</div>
-        <div class="meta"><span class="b high">HIGH</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/bulk-operations.ts</span> — only the MCP server's separate <span class="loc">write-ops/bulk-operations.test.ts</span> exists (a different module on a different store)</p>
-        <p>CLAUDE.md lists batch multi-select as a core feature, yet the app-level path is untested at every level.</p>
-        <p class="fals">Falsification: a test importing <code>lib/bulk-operations</code> would disprove this — <code>grep</code> across <code>tests/</code> finds none, and no <code>tests/data/bulk-operations*</code> file exists.</p>
-        <p class="rec"><b>Fix:</b> Add <code>tests/data/bulk-operations.test.ts</code> (boundary: <code>fake-indexeddb</code>) plus a multi-select E2E happy path.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Recurring-task E2E assertions too weak to catch the regression they target</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">tests/e2e/recurring-tasks.spec.ts:138-139</span></p>
-        <p>After completing a recurring task the test asserts <code>count &gt;= 1</code>. Because the original card can remain visible mid-transition, this passes even if the next instance was never created — the exact behavior under test.</p>
-        <p class="rec"><b>Fix:</b> Assert the post-completion count equals the expected new-instance count and that the completed card is gone.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Thin POM partially bypassed by a duplicate helper layer</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">tests/e2e/pages/matrix-page.ts</span> (only POM) vs <span class="loc">tests/e2e/helpers/test-helpers.ts</span></p>
-        <p>Two parallel helper layers implement the same actions with a <em>different</em> delete flow (menu vs hover-reveal), inviting drift. <em>See also Dim 13 (over-testing).</em></p>
-        <p class="rec"><b>Fix:</b> Consolidate on the POM; delete the duplicate free functions.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths:</strong> boundary-correct mocking (real <code>fake-indexeddb</code>, PocketBase mocked at the <em>own wrapper</em> not the SDK); behavior-based naming (57% of blocks start with <code>should</code>); zero snapshot tests; reliable per-test IndexedDB teardown; healthy ~10:1 unit-to-E2E pyramid.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 3 — Security &amp; Supply Chain
-      <span class="summary-counts"><span class="b med">1 MED</span><span class="b low">2 LOW</span><span class="b good">6 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding med">
-        <div class="ftitle">Stale <code>overrides</code> leave <code>undici</code> and <code>hono</code> on vulnerable versions</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">package.json overrides (hono "&gt;=4.12.21", undici "&gt;=7.24.0")</span></p>
-        <p>The override floors sit below the patched versions: undici advisories require <code>&lt;7.28.0</code>, hono's CORS-credentials-reflection (high) requires <code>&lt;4.12.25</code>. Both stay vulnerable. <code>hono</code> is a runtime dep of the published MCP server; <code>undici</code> is test-only (via jsdom). <em>Primary owner of the dependency-currency story; see Dim 6.</em></p>
-        <p class="rec"><b>Fix:</b> Bump <code>undici "&gt;=7.28.0"</code> and <code>hono "&gt;=4.12.25"</code>, then <code>bun update</code> and re-run <code>bun audit</code>.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">CSP allows <code>script-src 'unsafe-inline'</code></div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">docker/Caddyfile:42</span></p>
-        <p>Inline script execution is permitted, weakening the XSS backstop. Mitigating: zero <code>dangerouslySetInnerHTML</code>/<code>eval</code>/<code>innerHTML</code> sinks exist (grep-verified) and React JSX auto-escapes, so exploitability is low.</p>
-        <p class="rec"><b>Fix:</b> Move to nonce/hash-based <code>script-src</code> if the static export permits; at minimum drop <code>'unsafe-inline'</code> from <code>script-src</code>.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Dev/test-chain CVEs not reaching production</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: Medium</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">package.json devDeps</span> · <span class="loc">packages/mcp-server (@sentry/node → @opentelemetry)</span></p>
-        <p>5 of the high-severity audit hits trace to test/build tooling (vite <code>server.fs.deny</code> bypass is Windows + dev-server only; undici via jsdom). No production data-plane exposure.</p>
-        <p class="rec"><b>Fix:</b> Track but do not block release; bump on the next routine sweep.</p>
-      </div>
-      <div class="callout good"><strong>Verified clean:</strong> no hardcoded secrets (all grep hits are redaction logic); CI uses AWS OIDC, no long-lived keys; Docker AES key injected via fail-closed <code>${GSD_TASKS_ENC_KEY:?}</code>. Owner-scoping correct — PB rules enforce <code>owner = @request.auth.id</code> and block owner reassignment (<em>ASSUMPTION: live-server rules match the setup script</em>). No filter injection (<code>escapeFilterValue</code> + <code>assertSafeRecordId</code>). No XSS surface — task links protocol-allowlisted, credential-stripped. Zod-validated imports. Licenses MIT/Apache-2.0.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 4 — Architecture
-      <span class="summary-counts"><span class="b med">2 MED</span><span class="b low">3 LOW</span><span class="b good">2 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding med">
-        <div class="ftitle"><code>updateTask</code> is 125 lines — clearest function-length violation</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">packages/mcp-server/src/write-ops/task-operations.ts:147-272</span> · violates <em>Part 2 → "Functions ≤ 40 lines"</em></p>
-        <p>Sequential blocks (fresh-read guard, dependency validation, ~10 inline change comparisons, a 16-line spread, four mutation blocks, LWW preflight) — 3×+ the limit. <code>createTask</code> (~82) and <code>deleteTask</code> (~62) also exceed it.</p>
-        <p class="rec"><b>Fix:</b> Extract <code>computeTaskChanges()</code> and <code>mergeTaskUpdate()</code> — shortens the function and makes the change-diff testable in isolation.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Duplicated quadrant-derivation logic (rule-of-three breach)</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/quadrants.ts:157</span> vs inline re-impls at <span class="loc">capture-bar.tsx:26</span>, <span class="loc">matrix-grid.tsx:34-37</span>, <span class="loc">share-task-dialog/format-task-details.ts:21</span> · violates <em>Part 2 → "DRY at the third occurrence"</em></p>
-        <p>The boolean(urgent,important)→quadrant mapping is canonical in <code>lib/quadrants.ts</code> but hand-rolled in 3+ UI sites. A future rule change must touch four places.</p>
-        <p class="rec"><b>Fix:</b> Route all derivations through <code>resolveQuadrantId</code> + a thin <code>quadrantByRdKey</code> adapter.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">4-level nesting in two sync/write paths</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">task-operations.ts:338-360</span> · <span class="loc">pb-push.ts:214-248</span> · violates <em>Part 2 → "Maximum 3 levels of nesting"</em></p>
-        <p>Both error/cleanup loops exceed the max-3 nesting rule.</p>
-        <p class="rec"><b>Fix:</b> Extract the loop body into a named helper to flatten one level.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Two UI surfaces reach directly into Dexie (layering leak)</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: Medium</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">components/sync/use-sync-auth-dialog.ts:9,155,202</span> · <span class="loc">app/(archive)/archive/page.tsx:14,91,120</span></p>
-        <p>Most components go through <code>lib/tasks/*</code>, but these call <code>getDb()</code> directly; the archive page does raw <code>db.table</code> work that belongs in <code>lib/</code>.</p>
-        <p class="rec"><b>Fix:</b> Move the raw Dexie operations behind named functions in <code>lib/</code> (an archive-repository module).</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Two parallel quadrant vocabularies + scattered date helpers</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/quadrants.ts (RedesignQuadrantKey "q1-q4" vs QuadrantId)</span> · <span class="loc">upcoming-deadlines.tsx:177</span> shadows <span class="loc">lib/utils.ts:21</span></p>
-        <p>Dual ID systems for the same concept (bridged by <code>quadrantByRdKey</code>) and a private <code>formatDueDate</code> that shadows the shared one increase cognitive load.</p>
-        <p class="rec"><b>Fix:</b> Document the bridge (or collapse to one vocabulary); consolidate date formatting in <code>lib/utils.ts</code>.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths:</strong> <strong>zero circular dependencies</strong> — <code>lib/sync/</code> is a clean DAG (<code>sync-coordinator → pb-sync-engine → {pb-pull, pb-push} → {task-mapper, pocketbase-client}</code>). <code>lib/db.ts</code> (388 lines) is an idiomatic append-only migration ledger. Barrels are intentional backward-compat layers with no cycles. MCP CRUD is a distinct PocketBase implementation, not duplication.</div>
-    </div>
-  </details>
-  <details class="dim">
-    <summary>Dimension 5 — Maintainability
-      <span class="summary-counts"><span class="b low">1 LOW</span><span class="b good">2 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <p>Function-size, duplication, and nesting findings are owned by Dimension 4. Dead code is owned by Dimension 13 (counter-view).</p>
-      <div class="finding low">
-        <div class="ftitle">Residual dead code from the v9 / ADR-0011 simplification</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/smart-views.ts:58-127,164-216</span> · <span class="loc">lib/sync/error-categorizer.ts</span> — <em>full detail in Dim 13</em></p>
-        <p>The v9 refactor removed smart-view custom CRUD and pinning, but the functions were never garbage-collected; a parallel error-categorization API also has no callers. Verified unused by grep.</p>
-        <p class="rec"><b>Fix:</b> Delete the unused exports and their tests (see Dimension 13).</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths:</strong> 0 TODO/FIXME/HACK comments and 0 commented-out code blocks; largest 5 files all under the ceiling (<code>lib/db.ts</code> 388, <code>task-operations.ts</code> 371, <code>settings-page/index.tsx</code> 363, <code>logger.ts</code> 354, <code>write-tools.ts</code> 311). The only real maintainability hotspot is the 125-line <code>updateTask</code> (Dim 4).</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 6 — Dependencies
-      <span class="summary-counts"><span class="b med">1 MED↗</span><span class="b low">1 LOW</span><span class="b good">2 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <p>The primary finding (stale <code>undici</code>/<code>hono</code> override floors) is owned by Dimension 3.</p>
-      <div class="finding low">
-        <div class="ftitle">16 audit advisories, all dev/test/MCP-runtime chain</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">bun audit: 5 high / 8 moderate / 3 low</span></p>
-        <p>undici (jsdom/test), vite (Windows dev-server), hono (MCP SDK), @opentelemetry (@sentry/node), @babel/core, launch-editor. None in the production browser bundle.</p>
-        <p class="rec"><b>Fix:</b> Refresh overrides (Dim 3) and sweep on the next routine bump. Restore <code>npx audit-ci --high</code> by resolving the <code>postcss</code> <code>EOVERRIDE</code>.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths (a standout):</strong> <code>bun outdated</code> shows only <strong>3 packages a single patch behind</strong> (<code>@radix-ui/react-dialog</code> — pinned by override, <code>nanoid</code>, <code>typescript-eslint</code>) — no major-versions-behind, no deprecated packages. All direct versions pinned; 20 deliberate transitive <code>overrides</code>; <code>security-audit.yml</code> runs <code>bun audit</code> on PR, push, and daily cron.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 7 — Performance
-      <span class="summary-counts"><span class="b high">1 HIGH</span><span class="b med">3 MED</span><span class="b low">1 LOW</span><span class="b good">1 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding high">
-        <div class="ftitle">O(N²) dependency computation across the matrix render</div>
-        <div class="meta"><span class="b high">HIGH</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">components/task-card/index.tsx:38-39</span> → <span class="loc">lib/dependencies.ts:80-101</span></p>
-        <p>Every <code>TaskCard</code> calls <code>getUncompletedBlockingTasks(task, allTasks)</code> (builds a fresh Map over all tasks) and <code>getBlockedTasks(taskId, allTasks)</code> (full <code>allTasks.filter</code>). With N cards each scanning N tasks, the matrix is O(N²) per render — an in-memory N+1 over the task array.</p>
-        <p class="fals">Falsification: would be wrong if the result were memoized once upstream or the array pre-sliced — but the call sits in each card's render body, invoked per instance, so the React compiler cannot dedupe it across cards. Confirmed by reading both files.</p>
-        <p class="rec"><b>Fix:</b> Compute blocking/blocked maps once in <code>MatrixGrid</code>/<code>useTasks</code> (single pass → <code>Map&lt;taskId, blockers[]&gt;</code>) and pass per-card slices down.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Bundle: 777 KB gz total JS, largest chunk 123 KB gz</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">out/_next/static (measured)</span> — heavy deps: <code>recharts</code> (dashboard), <code>canvas-confetti</code>, <code>@dnd-kit/*</code>, <code>@radix-ui/*</code></p>
-        <p>Moderate for a feature-rich offline PWA, and code-split across 42 chunks (cached after first load), but the single 123 KB-gz chunk is large for first paint.</p>
-        <p class="rec"><b>Fix:</b> Confirm <code>recharts</code> (dashboard-only) and <code>canvas-confetti</code> are lazy-loaded (<code>next/dynamic</code>) so they don't sit in the matrix's first-load path.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Memo comparator re-scans <code>allTasks</code> per card</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">lib/task-card-memo.ts:38-59</span></p>
-        <p><code>areTaskCardPropsEqual → haveDependenciesChanged → getRelatedDependencyIds</code> runs <code>allTasks.filter</code> + per-id <code>find</code> for each card on every comparison — the memo's comparison is itself O(allTasks) per card. <code>hasUIStateChanged</code> only compares <code>allTasks.length</code>, so correctness rests on that expensive scan.</p>
-        <p class="rec"><b>Fix:</b> Precompute a per-task related-deps signature upstream and compare scalars. Reconsider whether the manual comparator is needed given <code>babel-plugin-react-compiler</code> is enabled.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Matrix renders all task cards unvirtualized</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">matrix-simplified/matrix-grid.tsx:51-68</span> · <span class="loc">quadrant-pane.tsx:183-195</span></p>
-        <p><code>@tanstack/react-virtual</code> is used in archive and sync-history but NOT the main matrix — every card mounts to the DOM. Combined with the two O(N) costs above, large task counts pay N² JS plus N DOM nodes per live-query tick.</p>
-        <p class="rec"><b>Fix:</b> Virtualize the per-quadrant <code>SortableContext</code> lists — but fix the algorithmic costs first.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle"><code>useTasks</code> loads the full table and re-buckets in JS on every change</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: Medium</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/use-tasks.ts:13-34</span></p>
-        <p><code>db.tasks.toArray()</code> then in-JS sort + bucket on every <code>useLiveQuery</code> fire. O(N), acceptable for a local-first app; noted as the input feeding the costlier renders.</p>
-        <p class="rec"><b>Fix:</b> Fine to leave; push the sort into a Dexie index if counts grow large.</p>
-      </div>
-      <div class="callout good"><strong>Verified strength:</strong> sync I/O is well-engineered and off the hot path — push pre-fetches a single remote index, throttles 100ms, aborts early on 429; pull bulk-fetches via <code>bulkGet</code>; exponential backoff (5/10/30/60/300s) is wired; SSE realtime and all intervals/listeners clean up properly.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 8 — Error Handling &amp; Observability
-      <span class="summary-counts"><span class="b low">2 LOW</span><span class="b good">3 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding low">
-        <div class="ftitle">Two <code>console.error</code> calls bypass the structured logger</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/error-logger.ts:44,51</span></p>
-        <p><code>logError()</code> writes directly to <code>console.error</code> in both dev and prod branches instead of routing through <code>lib/logger.ts</code>, bypassing level filtering and the dual-sanitize path. It still calls <code>captureException</code>, so it is not a leak — just an inconsistent second path.</p>
-        <p class="rec"><b>Fix:</b> Route through <code>createLogger</code>, or delete <code>error-logger.ts</code> if <code>logger.ts</code> supersedes it (they overlap heavily).</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Redundant <code>error-logger.ts</code> overlapping <code>logger.ts</code></div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: Medium</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/error-logger.ts</span> vs <span class="loc">lib/logger.ts</span></p>
-        <p>Two error-reporting modules with overlapping responsibility invite divergence in sanitization behavior.</p>
-        <p class="rec"><b>Fix:</b> Consolidate into one logging surface.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths (standout dimension):</strong> PII handling is excellent — <code>lib/logger.ts:212-233</code> allowlists Sentry context via <code>SENTRY_SAFE_METADATA_KEYS</code>; task <code>input</code>/<code>title</code>/PB <code>record</code> are stripped before egress (confirmed by reading <code>buildSentryContext</code>). Errors masked via a copy; telemetry wrapped so it can never throw into the app path. <code>ErrorBoundary</code> at <code>app/layout.tsx:132</code>, <code>global-error.tsx</code> present, unhandled rejections caught with toast throttling. <strong>No genuinely swallowed exceptions.</strong></div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 9 — Documentation &amp; Onboarding (incl. drift)
-      <span class="summary-counts"><span class="b med">2 MED</span><span class="b low">2 LOW</span><span class="b good">1 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="finding med">
-        <div class="ftitle">Doc drift: CLAUDE.md command-palette claimed "not wired into v9 shell" — it IS wired</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">CLAUDE.md (Key Features + Component Structure)</span> vs <span class="loc">components/matrix-simplified/app-shell.tsx:9,78,120</span></p>
-        <p><code>app-shell.tsx</code> imports, handles, and renders <code>&lt;CommandPalette&gt;</code> (git: PR #298, #339). The doc is actively misleading, and a coverage false-signal (the folder is 100% covered; only the re-export shim shows 0%).</p>
-        <p class="rec"><b>Fix:</b> Update both CLAUDE.md mentions to reflect that the palette is live in v9.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Doc drift: CLAUDE.md says <code>smartViews</code> "has no UI surface" — built-in views DO render</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">CLAUDE.md (Navigation &amp; UI)</span> vs <span class="loc">components/.../smart-view-strip.tsx</span> + <span class="loc">lib/smart-views.ts (getSmartViews)</span></p>
-        <p>The blanket "retained for data continuity but has no UI surface" claim is half-stale: the built-in-view <em>read</em> path renders in v9; only the custom-view <em>write</em> CRUD and pinning are dead (see Dim 13). The doc conflates "no write UI" with "no UI."</p>
-        <p class="rec"><b>Fix:</b> Correct the claim to "built-in views render; custom-view CRUD and pinning are removed (dead code pending cleanup)."</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">No CONTRIBUTING; README omits the bun-not-npm gotcha</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">README.md:440-447</span> (no <code>CONTRIBUTING.md</code>)</p>
-        <p>The most-repeated project gotcha — <code>bun run test</code> vs <code>bun test</code> (flagged CRITICAL in CLAUDE.md) — is absent from the README, as is the Playwright-browser-install step needed before E2E runs (this audit hit a 0/216 false failure because of it).</p>
-        <p class="rec"><b>Fix:</b> Add the <code>bun test</code> warning and <code>npx playwright install</code> step to README; align contributing steps with the real PR/version-bump workflow.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Deferred at-rest encryption is undocumented parked code</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: Medium</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">docker/pb_migrations/1781000000_encrypt_existing_tasks.js</span> · <span class="loc">lib/db.ts:323-324</span></p>
-        <p>A complete encrypt-backfill migration (gated on <code>GSD_TASKS_ENC_KEY</code>) sits in the repo but is intentionally not deployed — task content is plaintext at rest. No ADR distinguishes parked-debt from active feature.</p>
-        <p class="rec"><b>Fix:</b> Add an ADR (or note in 0002) documenting the deferred decision, owner, and revive criteria.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths:</strong> 12 current, well-maintained ADRs (0001–0012); README dev setup is otherwise solid; path-scoped <code>.claude/rules/*.md</code> capture subsystem gotchas.</div>
-    </div>
-  </details>
-  <details class="dim">
-    <summary>Dimension 10 — Tech Debt
-      <span class="summary-counts"><span class="b low">1 LOW</span><span class="b good">1 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <p>The deferred at-rest encryption (parked code) is owned by Dimension 9; the v9-leftover dead code by Dimension 13.</p>
-      <div class="callout good"><strong>Verified strengths:</strong> <strong>zero</strong> TODO/FIXME/HACK/XXX markers in production source; no commented-out code blocks. The only informal debt is the consciously-deferred encryption feature (parked-and-inert) and the v9-leftover dead code (Dim 13) — both cleanup, not half-built systems.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 11 — Configuration &amp; Type Safety
-      <span class="summary-counts"><span class="b med">1 MED↗</span><span class="b good">2 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <p>The hardcoded stale version fallback (<code>about-section.tsx:11</code>) and the tsconfig typecheck blind spot are owned by Dimension 1.</p>
-      <div class="callout good"><strong>Verified strengths:</strong> configuration is genuinely centralized — <code>lib/env-config.ts</code> and <code>lib/constants/{sync,ui,schema}.ts</code> hold named constants; no scattered magic numbers or hardcoded URLs in business logic (the public <code>https://api.vinny.io</code> lives in config). <code>strict: true</code> throughout; new optional fields have sensible defaults.</div>
-      <div class="callout info"><strong>Feature-flag hygiene:</strong> few runtime flags. The one conditionally-enabled feature (at-rest encryption, gated on an env key) lacks the standards-required named owner + removal/revive date — tracked as the Dim 9 documentation item.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 12 — E2E Test Health
-      <span class="summary-counts"><span class="b high">1 HIGH</span><span class="b med">2 MED</span><span class="b good">2 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="callout warn"><strong>Toolchain caveat (resolved during this audit):</strong> the first E2E attempt reported <strong>0/216 passing</strong> — Playwright browser binaries were not installed (<code>browserType.launch: Executable doesn't exist</code>). After <code>npx playwright install</code>, the re-run gave <strong>203/216 (94%)</strong>. A fresh checkout cannot run E2E without this undocumented step.</div>
-      <div class="finding high">
-        <div class="ftitle">56 <code>waitForTimeout</code> sleeps drive timing flakiness (12 of 13 failures are 30s timeouts)</div>
-        <div class="meta"><span class="b high">HIGH</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">tests/e2e/pages/matrix-page.ts:40,47</span> · <span class="loc">helpers/test-helpers.ts:11</span> · 56 total across specs</p>
-        <p>Every <code>goto()</code> does a blind <code>waitForTimeout(2000)</code>; mutations sleep 300–1000ms instead of waiting on DOM state. This races on slower engines — <strong>11 of 13 failures are Firefox</strong>.</p>
-        <p class="fals">Falsification: would be wrong if the failures were a real app bug — but 12/13 are pure timeouts (not assertions), concentrated in the slowest engine, and the assertions that do run pass. That signature is timing, not logic.</p>
-        <p class="rec"><b>Fix:</b> Replace fixed sleeps with auto-retrying <code>expect(locator).toBeVisible()</code>/<code>toHaveCount()</code>; drop the <code>waitForTimeout(2000)</code> in <code>goto()</code>.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">Missing critical-path coverage: real sync round-trip &amp; bulk operations</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Medium</span></div>
-        <p><span class="loc">tests/e2e/sync-auth.spec.ts</span>, <span class="loc">sync-states.spec.ts</span> assert dialog/overlay state only — no push→pull→reconcile. No multi-select bulk-ops E2E exists.</p>
-        <p class="rec"><b>Fix:</b> Document the sync gap (OAuth can't run in CI); add a mock-PB integration test for push/pull reconcile, and a bulk-ops happy path.</p>
-      </div>
-      <div class="finding med">
-        <div class="ftitle">One genuine assertion failure: WebKit <code>/dashboard</code> navigation</div>
-        <div class="meta"><span class="b med">MEDIUM</span><span class="b conf">CONF: Medium</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">tests/e2e/matrix-navigation.spec.ts (webkit)</span></p>
-        <p>Expected URL to contain <code>/dashboard</code> but received <code>/</code> — the only non-timeout failure. Either a WebKit nav race or a real routing edge; worth reproducing before dismissing as flake.</p>
-        <p class="rec"><b>Fix:</b> Reproduce in WebKit headed mode; assert on a post-navigation DOM anchor instead of a bare URL substring.</p>
-      </div>
-      <div class="callout good"><strong>Verified strengths:</strong> selector resilience is excellent — <strong>156 <code>data-testid</code> references, zero fragile CSS class/id selectors</strong>, 31 <code>getByRole</code>. Reliable per-test IndexedDB isolation. 13 of 14 critical workflows have an E2E spec.</div>
-    </div>
-  </details>
-
-  <details class="dim">
-    <summary>Dimension 13 — Counter-View: Over-Engineering &amp; Dead Code <span style="font-size:11px;font-weight:400;color:var(--good)">(NEW in v2)</span>
-      <span class="summary-counts"><span class="b low">5 LOW</span><span class="b good">1 ✓</span></span>
-    </summary>
-    <div class="dim-body">
-      <div class="callout info">This pass deliberately looks for where the code does <em>too much</em> (YAGNI / over-abstraction / over-testing per <em>Part 0 &amp; Part 2</em>) — the opposite bias of the other dimensions. Notably it overturned the broad architecture pass's "dead code is essentially nonexistent": a focused look found real dead code the wide sweep missed.</div>
-      <div class="finding low">
-        <div class="ftitle">Dead custom-smart-view write CRUD (v9 removed the feature)</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/smart-views.ts:58-127</span> (<code>createSmartView</code>, <code>updateSmartView</code>, <code>deleteSmartView</code>, <code>clearCustomSmartViews</code>)</p>
-        <p>The built-in-view read path is live, but the custom-view write path has zero non-test callers. Verified by grep.</p>
-        <p class="rec"><b>Fix:</b> Delete the four write functions and their <code>db.test.ts</code> coverage; keep <code>getSmartViews</code>/<code>getSmartView</code>.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Dead pinning machinery (ADR 0011 removed pinning)</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/smart-views.ts:164-216</span> (<code>getPinnedSmartViews</code>, <code>pinSmartView</code>, <code>unpinSmartView</code>) + <code>pinnedSmartViewIds</code>/<code>maxPinnedViews</code> prefs</p>
-        <p>Zero non-test consumers; ADR 0011 removed pinning from v9 but left the functions and preference fields maintained.</p>
-        <p class="rec"><b>Fix:</b> Delete the three functions; keep the Dexie pref fields only if migration cost outweighs removal.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Dead exports in the sync error-categorizer</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">lib/sync/error-categorizer.ts:10,19,88,195</span> (<code>categorizeError</code>, <code>isTransientError</code>, <code>isPermanentError</code>, <code>parseRetryAfterMs</code>) + <code>ErrorCategory</code>/<code>SyncErrorCode</code> types</p>
-        <p>Five exports with no non-self, non-test references — a parallel categorization API nobody calls. The live surface is only <code>isTransientSyncFailure</code>, <code>sanitizeSyncError</code>, <code>isAuthError</code>.</p>
-        <p class="rec"><b>Fix:</b> Delete the five unused exports and any tests that only exercise them.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Framework-behavior tests assert Dexie's own guarantees</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">tests/data/db.test.ts:920-1027</span> ("Transaction Support", "Error Handling")</p>
-        <p>These assert IndexedDB/Dexie guarantees (transaction rollback on throw, duplicate-key rejection, <code>get('non-existent')→undefined</code>) — they test the database engine, not app logic, and add maintenance weight without protecting app behavior.</p>
-        <p class="rec"><b>Fix:</b> Delete these two blocks; trust Dexie's own test suite.</p>
-      </div>
-      <div class="finding low">
-        <div class="ftitle">Task fixture inlined 34× despite an existing factory</div>
-        <div class="meta"><span class="b low">LOW</span><span class="b conf">CONF: High</span><span class="b eff">EFFORT: Small</span></div>
-        <p><span class="loc">tests/data/db.test.ts</span> vs <span class="loc">tests/fixtures/index.ts</span></p>
-        <p>A shared fixture factory exists and is used elsewhere, but <code>db.test.ts</code> hand-rolls the full <code>TaskRecord</code> literal in every case. Any field addition forces 34 edits.</p>
-        <p class="rec"><b>Fix:</b> Replace inline literals with the existing <code>tests/fixtures</code> factory.</p>
-      </div>
-      <div class="callout good"><strong>Counter-view conclusion:</strong> the codebase trends <strong>appropriately lean</strong>, not over-engineered. Things that <em>look</em> heavy are justified — the <code>lib/sync/config/</code> 5-file split, <code>retry-manager</code> backoff (a real network boundary), the backward-compat barrels, and the <code>task-card-memo</code> extraction. The only genuine over-engineering is narrow: leftover dead code from the v9/ADR-0011 simplification plus a pocket of framework-testing/fixture duplication in one test file. All Low severity, all Small effort.</div>
-    </div>
-  </details>
-</section>
-
-<section id="roadmap">
-  <h2>4 · Prioritized Remediation Roadmap</h2>
-  <div class="road">
-    <div class="col d30">
-      <h3>0–30 Days · Stabilize &amp; De-risk</h3>
+    <nav class="toc">
+      <div class="eyebrow" style="margin-bottom: 12px;">Contents</div>
       <ul>
-        <li><strong>Add E2E to CI</strong> (chromium + webkit gating; firefox non-blocking) with <code>npx playwright install</code> in the workflow. <span class="b eff">Small</span></li>
-        <li><strong>Add <code>tests/data/bulk-operations.test.ts</code></strong> for the multi-select path. <span class="b eff">Small</span></li>
-        <li><strong>Bump <code>undici</code> (≥7.28.0) &amp; <code>hono</code> (≥4.12.25) override floors</strong>; re-run <code>bun audit</code>. <span class="b eff">Small</span></li>
-        <li><strong>Fix the two doc-drift items</strong> (command-palette, smartViews) &amp; the <code>6.1.1</code> version fallback. <span class="b eff">Small</span></li>
-        <li><strong>Document <code>npx playwright install</code> + the <code>bun test</code> gotcha</strong> in README. <span class="b eff">Small</span></li>
+        <li><a href="#executive-summary">1. Executive Summary</a></li>
+        <li><a href="#metrics-dashboard">2. Metrics Dashboard</a></li>
+        <li><a href="#findings">3. Detailed Findings</a></li>
+        <li><a href="#dimension-1">3.1 Standards Compliance</a></li>
+        <li><a href="#dimension-2">3.2 Test Quality & Coverage</a></li>
+        <li><a href="#dimension-3">3.3 Security & Supply Chain</a></li>
+        <li><a href="#dimension-4">3.4 Architecture</a></li>
+        <li><a href="#dimension-5">3.5 Maintainability</a></li>
+        <li><a href="#dimension-6">3.6 Dependencies</a></li>
+        <li><a href="#dimension-7">3.7 Performance</a></li>
+        <li><a href="#dimension-8">3.8 Error Handling & Observability</a></li>
+        <li><a href="#dimension-9">3.9 Documentation</a></li>
+        <li><a href="#dimension-10">3.10 Tech Debt</a></li>
+        <li><a href="#dimension-11">3.11 Configuration & Type Safety</a></li>
+        <li><a href="#dimension-12">3.12 E2E Test Health</a></li>
+        <li><a href="#roadmap">4. Remediation Roadmap</a></li>
+        <li><a href="#methodology">5. Methodology & Limitations</a></li>
       </ul>
-    </div>
-    <div class="col d60">
-      <h3>30–60 Days · Robustness</h3>
-      <ul>
-        <li><strong>Replace the 56 <code>waitForTimeout</code> sleeps</strong> with auto-retrying web-assertions; reproduce/fix the WebKit <code>/dashboard</code> case. <span class="b eff">Medium</span></li>
-        <li><strong>Lift O(N²) dependency math out of the per-card render</strong> — compute blocking/blocked maps once in <code>MatrixGrid</code>. <span class="b eff">Medium</span></li>
-        <li><strong>Delete the v9-leftover dead code</strong> (smart-view CRUD, pinning, error-categorizer exports) &amp; the framework tests. <span class="b eff">Small</span></li>
-        <li><strong>Tighten the recurring-task E2E assertion</strong>; add a typecheck pass over <code>tests/</code>. <span class="b eff">Small</span></li>
-        <li><strong>ADR for deferred at-rest encryption.</strong> <span class="b eff">Small</span></li>
-      </ul>
-    </div>
-    <div class="col d90">
-      <h3>60–90 Days · Polish &amp; Scale</h3>
-      <ul>
-        <li><strong>Refactor the 125-line <code>updateTask</code></strong>; flatten the two 4-level-nested write paths. <span class="b eff">Medium</span></li>
-        <li><strong>Consolidate quadrant-derivation</strong> through one helper. <span class="b eff">Small</span></li>
-        <li><strong>Lazy-load <code>recharts</code>/<code>canvas-confetti</code></strong>, then virtualize the matrix quadrant lists. <span class="b eff">Medium</span></li>
-        <li><strong>Consolidate <code>error-logger.ts</code> into <code>logger.ts</code></strong>. <span class="b eff">Small</span></li>
-        <li><strong>Restore <code>audit-ci</code></strong>; add a mock-PB sync round-trip test; harden CSP. <span class="b eff">Medium</span></li>
-      </ul>
-    </div>
+    </nav>
+
+    <section id="executive-summary">
+      <h2>1. Executive Summary</h2>
+      <div class="card score-card">
+        <div class="score-circle">
+          <div class="score-number">6</div>
+          <div class="score-label">out of 10</div>
+        </div>
+        <div>
+          <p><strong>Overall health is solid but not green.</strong> The codebase demonstrates excellent unit-test coverage, strict TypeScript discipline, and thoughtful modular architecture. However, the E2E suite is unstable on Firefox, dependency audits expose five high-severity CVEs, and several high-impact user workflows lack end-to-end coverage. The build also carries two ESLint errors that block a clean lint run.</p>
+          <p>The score follows the project's rubric: coverage exceeds 80%, but there are multiple high-severity dependency vulnerabilities and several high-severity quality gaps. No critical data-loss or security exploit was identified in the application code itself.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Top 5 Risks</h3>
+        <ol class="risk-list">
+          <li><span class="number">1</span><span><strong>Dependency CVEs (5 high)</strong> — undici, vite, and hono carry known high-severity vulnerabilities affecting the test runner, build tooling, and MCP server package.</span></li>
+          <li><span class="number">2</span><span><strong>Firefox E2E instability</strong> — 10 of 12 failing E2E tests are page.reload()/page.goto() timeouts on Firefox, masking real regression signal.</span></li>
+          <li><span class="number">3</span><span><strong>Incomplete E2E Page Object Model</strong> — only one POM class exists for 16 spec files; text-based selectors dominate.</span></li>
+          <li><span class="number">4</span><span><strong>Security-header deployment drift</strong> — CSP/HSTS are authored in CloudFront JSON and Caddyfile, but there is no automated validation that the deployed policy matches the source.</span></li>
+          <li><span class="number">5</span><span><strong>Missing critical-path E2E coverage</strong> — bulk operations, dashboard metrics, offline PWA behaviour, and real sync flows have no end-to-end coverage.</span></li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>Top 3 Strengths</h3>
+        <ol class="strength-list">
+          <li><span class="number">1</span><span><strong>Strong unit-test discipline</strong> — 89.5% statement coverage, 90.6% line coverage, 2,181 passing tests, and Zod-validated schemas on every data boundary.</span></li>
+          <li><span class="number">2</span><span><strong>Modular, layer-respecting architecture</strong> — clean separation between lib/tasks/, lib/sync/, lib/analytics/, and lib/notifications/; no circular dependencies detected.</span></li>
+          <li><span class="number">3</span><span><strong>Security-conscious code</strong> — input validation via Zod, secret masking in logger and Sentry, CSP meta tag in layout, no eval() or dangerouslySetInnerHTML, and admin API routes blocked.</span></li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>Top 3 Priorities for the Next Sprint</h3>
+        <ol class="priority-list">
+          <li><span class="number">1</span><span><strong>Stabilize Firefox E2E</strong> — replace hash-reload patterns, add missing page objects, and reduce hardcoded waitForTimeout usage.</span></li>
+          <li><span class="number">2</span><span><strong>Patch or mitigate dependency CVEs</strong> — update undici, vite, and hono to non-vulnerable versions; verify MCP server package separately.</span></li>
+          <li><span class="number">3</span><span><strong>Close critical-path E2E gaps</strong> — add specs for bulk operations, dashboard analytics, and offline PWA behaviour.</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="metrics-dashboard">
+      <h2>2. Metrics Dashboard</h2>
+      <div class="metric-grid">
+        <div class="metric-box"><div class="metric-value">89.5%</div><div class="metric-label">Stmt Coverage</div></div>
+        <div class="metric-box"><div class="metric-value">90.6%</div><div class="metric-label">Line Coverage</div></div>
+        <div class="metric-box"><div class="metric-value">87.9%</div><div class="metric-label">Function Coverage</div></div>
+        <div class="metric-box"><div class="metric-value">81.8%</div><div class="metric-label">Branch Coverage</div></div>
+        <div class="metric-box"><div class="metric-value">2,181</div><div class="metric-label">Unit Tests Passed</div></div>
+        <div class="metric-box"><div class="metric-value">94.7%</div><div class="metric-label">E2E Pass Rate</div></div>
+        <div class="metric-box"><div class="metric-value">459</div><div class="metric-label">Source Files</div></div>
+        <div class="metric-box"><div class="metric-value">141,580</div><div class="metric-label">Project Lines</div></div>
+      </div>
+
+      <h3>Verification Results</h3>
+      <table>
+        <thead><tr><th>Gate</th><th>Command</th><th>Result</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Type check</td><td class="mono">bun typecheck</td><td><span class="badge badge-pass">PASS</span></td><td class="mono">tsc --noEmit</td></tr>
+          <tr><td>Lint</td><td class="mono">bun lint</td><td><span class="badge badge-fail">2 errors, 10 warnings</span></td><td>Errors in scripts/build-openwiki-site.cjs (require); warnings in task-card-header, pb_migrations, archive.ts</td></tr>
+          <tr><td>Unit tests</td><td class="mono">bun run test -- --coverage</td><td><span class="badge badge-pass">150 passed, 1 skipped</span></td><td>2,181 tests passed, 1 skipped; coverage above thresholds</td></tr>
+          <tr><td>E2E tests</td><td class="mono">PLAYWRIGHT_JSON_OUTPUT_NAME=... bun run test:e2e</td><td><span class="badge badge-warn">216 passed, 12 failed</span></td><td>4.4m duration; Chromium 76/76, Firefox 66/76, WebKit 75/76</td></tr>
+          <tr><td>Dependency audit</td><td class="mono">bun audit</td><td><span class="badge badge-fail">16 vulns</span></td><td>5 high, 8 moderate, 3 low</td></tr>
+        </tbody>
+      </table>
+
+      <h3>E2E Results by Browser Project</h3>
+      <table>
+        <thead><tr><th>Project</th><th>Passed</th><th>Failed</th><th>Pass Rate</th></tr></thead>
+        <tbody>
+          <tr><td>Chromium</td><td>76</td><td>0</td><td><span class="badge badge-pass">100%</span></td></tr>
+          <tr><td>Firefox</td><td>66</td><td>10</td><td><span class="badge badge-warn">86.8%</span></td></tr>
+          <tr><td>WebKit</td><td>75</td><td>1</td><td><span class="badge badge-warn">98.7%</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3>E2E Results by Spec File</h3>
+      <p class="section-note">Counts are per spec file across all three browser projects. Failure messages are summarized in Dimension 12.</p>
+      <table>
+        <thead><tr><th>Spec File</th><th>Total</th><th>Passed</th><th>Failed</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">about-install.spec.ts</td><td>9</td><td>9</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">data-management.spec.ts</td><td>21</td><td>21</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">drag-and-drop.spec.ts</td><td>12</td><td>9</td><td>3</td><td><span class="badge badge-fail">Firefox reload timeouts</span></td></tr>
+          <tr><td class="mono">first-time-redirect.spec.ts</td><td>3</td><td>3</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">matrix-navigation.spec.ts</td><td>15</td><td>15</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">pwa-install.spec.ts</td><td>15</td><td>15</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">quadrant-classification.spec.ts</td><td>21</td><td>21</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">recurring-tasks.spec.ts</td><td>15</td><td>11</td><td>4</td><td><span class="badge badge-fail">Firefox reload timeouts</span></td></tr>
+          <tr><td class="mono">search.spec.ts</td><td>24</td><td>24</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">settings-navigation.spec.ts</td><td>18</td><td>18</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">settings-sections.spec.ts</td><td>24</td><td>22</td><td>2</td><td><span class="badge badge-fail">Firefox goto timeouts</span></td></tr>
+          <tr><td class="mono">share-task-dialog.spec.ts</td><td>9</td><td>9</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">sync-auth.spec.ts</td><td>18</td><td>18</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">sync-states.spec.ts</td><td>9</td><td>7</td><td>2</td><td><span class="badge badge-fail">Firefox goto timeouts</span></td></tr>
+          <tr><td class="mono">task-crud.spec.ts</td><td>18</td><td>18</td><td>0</td><td><span class="badge badge-pass">Pass</span></td></tr>
+          <tr><td class="mono">task-dependencies.spec.ts</td><td>3</td><td>2</td><td>1</td><td><span class="badge badge-fail">WebKit dep-chip timeout</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Security Findings by Severity</h3>
+      <table>
+        <thead><tr><th>Severity</th><th>Count</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Critical</td><td>0</td><td>Application code</td></tr>
+          <tr><td>High</td><td>5</td><td>Dependency CVEs (undici, vite, hono)</td></tr>
+          <tr><td>Medium</td><td>8</td><td>Dependency CVEs + 2 process findings</td></tr>
+          <tr><td>Low</td><td>3 + 10</td><td>3 dependency CVEs + 10 lint warnings</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Debt Counts</h3>
+      <table>
+        <thead><tr><th>Category</th><th>Count</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>TODO/FIXME/HACK in project code</td><td>0</td><td>Clean across lib/, components/, app/, tests/, packages/</td></tr>
+          <tr><td>Files over 400 lines (project code)</td><td>0</td><td>All production files under the threshold</td></tr>
+          <tr><td>Functions over 40 lines</td><td>~4</td><td>Mostly orchestration functions</td></tr>
+          <tr><td>ESLint errors</td><td>2</td><td>scripts/build-openwiki-site.cjs</td></tr>
+          <tr><td>ESLint warnings</td><td>10</td><td>React refs in task-card-header, unused vars</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="findings">
+      <h2>3. Detailed Findings</h2>
+      <p class="section-note">Findings are grouped by the 12 requested dimensions and sorted by severity within each group. Severity is absolute; confidence reflects how much the finding was verified against the current code rather than inferred.</p>
+
+      <section id="dimension-1">
+        <h3>3.1 Standards Compliance</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Lint errors block clean verification</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">scripts/build-openwiki-site.cjs:23-24</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>A <code class="mono">.cjs</code> build script uses <code class="mono">require()</code> for <code class="mono">gray-matter</code> and <code class="mono">marked</code>, triggering <code class="mono">@typescript-eslint/no-require-imports</code> errors. The ESLint config does not exclude build scripts from this rule, so <code class="mono">bun lint</code> fails in CI.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Add the script to the ESLint ignore list or add a targeted override for <code class="mono">scripts/*.cjs</code> that allows CommonJS <code class="mono">require</code> because the file is intentionally CJS.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">React ref warnings suppressed with doctor comments</span>
+            <span class="badge badge-low">Low</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">components/task-card/task-card-header.tsx:42-49</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>The component reads <code class="mono">ref.current</code> during render to detect a just-completed transition and applies an animation class. ESLint flags it as a rule-of-hooks violation. The inline disable comment explains the intent, but the pattern is fragile under React Compiler or concurrent rendering.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Move the "just completed" detection into an effect or derive it from a transition timestamp; encapsulate the animation trigger in a custom hook so the justification is centralized.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Production files approach the 400-line threshold</span>
+            <span class="badge badge-low">Low</span>
+            <span class="badge badge-info">Medium confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">components/matrix-simplified/index.tsx</code> (336), <code class="mono">packages/mcp-server/src/write-ops/task-operations.ts</code> (372), <code class="mono">lib/db.ts</code> (390) · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>None exceed the 400-line guideline, but three files are within 10–15% of the limit. The matrix-simplified index orchestrates many concerns (capture, edit drawer, dnd, search, smart views, command palette, hotkeys); the MCP task-operations file bundles create/update/complete/delete operations.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Extract the overlay reducer and window-event handlers from the matrix index into separate hooks; split MCP task-operations into per-operation files under <code class="mono">write-ops/operations/</code>.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-2">
+        <h3>3.2 Test Quality & Coverage</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">E2E Page Object Model is incomplete</span>
+            <span class="badge badge-high">High</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">tests/e2e/pages/matrix-page.ts</code> (only POM) · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>Only one page object exists, yet specs navigate to settings, dashboard, archive, about, install, and sync-history. Settings and dashboard tests rely on raw <code class="mono">page.locator()</code> and <code class="mono">getByRole()</code> calls, duplicating locator logic and making UI changes expensive.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Add <code class="mono">SettingsPage</code>, <code class="mono">DashboardPage</code>, <code class="mono">ArchivePage</code>, and <code class="mono">AboutPage</code> POMs. Move repeated selectors (e.g., sidebar sections, chart containers) out of spec files.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Heavy reliance on text-based selectors</span>
+            <span class="badge badge-high">High</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">tests/e2e/task-crud.spec.ts</code>, <code class="mono">recurring-tasks.spec.ts</code>, <code class="mono">drag-and-drop.spec.ts</code>, <code class="mono">search.spec.ts</code> · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>Task cards are repeatedly located with <code class="mono">page.locator("[data-testid='task-card']").filter({ hasText: title })</code>. This couples tests to copy, breaks on whitespace/HTML entities, and is incompatible with future i18n.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Seed tasks via IndexedDB and capture generated IDs in test helpers, then use per-task <code class="mono">data-testid</code> attributes such as <code class="mono">data-testid="task-card-${id}"</code>. Alternatively, filter by a stable child <code class="mono">data-testid='task-title'</code> rather than free text.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Missing E2E coverage for critical workflows</span>
+            <span class="badge badge-high">High</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> missing <code class="mono">tests/e2e/bulk-operations.spec.ts</code>, <code class="mono">tests/e2e/dashboard.spec.ts</code>, offline PWA tests · <strong>Effort:</strong> Large
+          </div>
+          <div class="finding-body">
+            <p>The app ships bulk operations (multi-select, complete, move, tag, delete), dashboard analytics, and offline PWA behaviour, but none are exercised end-to-end. The existing dashboard test only verifies navigation, not rendered metrics or charts.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Add <code class="mono">bulk-operations.spec.ts</code> covering selection, bulk delete, and bulk move. Add <code class="mono">dashboard.spec.ts</code> that seeds completed tasks and asserts chart visibility and metric values. Extend <code class="mono">pwa-install.spec.ts</code> with <code class="mono">context.setOffline(true)</code> and a cache reload.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Hardcoded waitForTimeout is pervasive</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">tests/e2e/pages/matrix-page.ts</code>, <code class="mono">tests/e2e/helpers/test-helpers.ts</code>, multiple specs (~56 occurrences) · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>Specs and helpers wait fixed durations for rendering, animations, and post-click settling. These waits slow the suite and introduce flakiness when CI machines are slower than the local dev environment.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Replace fixed waits with <code class="mono">expect(...).toBeVisible()</code>, <code class="mono">waitForLoadState("networkidle")</code>, or component-specific animation-end signals.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Hardcoded IndexedDB schema version in E2E helpers</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">tests/e2e/recurring-tasks.spec.ts:29</code>, <code class="mono">tests/e2e/drag-and-drop.spec.ts:79</code>, <code class="mono">:138</code>, <code class="mono">:194</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>Tests open IndexedDB with <code class="mono">DB_VERSION = 140</code>, while the actual Dexie schema version in <code class="mono">lib/db.ts</code> is 14. The hardcoded value will cause silent breakage when the schema is bumped.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Export the schema version from <code class="mono">lib/db.ts</code> and import it in E2E helpers, or read the version from the Dexie instance directly.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Excellent unit-test coverage and structure</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">tests/data/</code>, <code class="mono">tests/ui/</code>, <code class="mono">tests/sync/</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>Unit and integration tests follow AAA structure, use realistic fixtures, and cover sync engine, queue, auth, CRUD, import/export, and analytics. Coverage exceeds the 80% floor across all dimensions and reaches 100% in several analytics modules.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-3">
+        <h3>3.3 Security & Supply Chain</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Multiple high-severity dependency CVEs</span>
+            <span class="badge badge-high">High</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">package.json</code>, <code class="mono">packages/mcp-server/package.json</code> · <strong>Effort:</strong> Small–Medium
+          </div>
+          <div class="finding-body">
+            <p><code class="mono">bun audit</code> reports 16 vulnerabilities, including 5 high: <code class="mono">undici</code> (TLS validation bypass, DoS, SOCKS5 proxy reuse), <code class="mono">vite</code> (<code class="mono">server.fs.deny</code> bypass on Windows), and <code class="mono">hono</code> (CORS wildcard reflection, body-limit bypass). These affect dev tooling, test runtime (jsdom), and the MCP server package.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Update <code class="mono">vite</code> to a patched 8.x release, bump <code class="mono">jsdom</code> (pulls newer undici), and bump the MCP server <code class="mono">@modelcontextprotocol/sdk</code> dependency to a version that pulls a patched <code class="mono">hono</code>. Re-run <code class="mono">bun audit</code> before committing.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Security headers exist in code but deployment validation is manual</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">cloudfront/response-headers-policy.json</code>, <code class="mono">docker/Caddyfile</code>, <code class="mono">app/layout.tsx</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>Production CSP/HSTS/COOP/Permissions-Policy are authored in CloudFront JSON and the Caddyfile, and a CSP meta tag is rendered in layout. However, there is no automated test or CI step that verifies the deployed headers match the source. The May 2026 security review found the Caddyfile missing CSP; that has since been fixed, but drift risk remains.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Add a post-deploy smoke test or CI lint step that parses <code class="mono">cloudfront/response-headers-policy.json</code> and asserts the required directives are present and that <code class="mono">unsafe-eval</code> is absent in production.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Security controls are well-implemented in code</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">lib/capture-parser.ts</code>, <code class="mono">lib/task-links.ts</code>, <code class="mono">lib/share-capture.ts</code>, <code class="mono">lib/logger.ts</code>, <code class="mono">lib/sentry.ts</code>, <code class="mono">docker/Caddyfile</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>No <code class="mono">eval()</code>, <code class="mono">Function()</code>, or <code class="mono">dangerouslySetInnerHTML</code> exists in project code. URLs are validated with allow-lists and reject userinfo/password. Logger and Sentry sanitize tokens, passwords, and auth headers. The Caddyfile blocks <code class="mono">/api/collections/_superusers/*</code> and <code class="mono">/api/admins/*</code>. The previously reported hard-coded <code class="mono">api.vinny.io</code> fallback has been removed: <code class="mono">lib/env-config.ts</code> now falls back to <code class="mono">window.location.origin</code> for unknown hostnames.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-4">
+        <h3>3.4 Architecture</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Matrix shell component orchestrates too many concerns</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">components/matrix-simplified/index.tsx</code> (336 lines) · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>The component imports <code class="mono">lib/tasks</code>, <code class="mono">use-tasks</code>, <code class="mono">use-drag-and-drop</code>, <code class="mono">use-auto-archive</code>, <code class="mono">use-notification-checker</code>, and manages overlay state, search, smart views, and window events. It functions as a god component for the v9 shell.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Extract the overlay reducer and pure window-event handlers into separate hooks/files, leaving the index component focused on composition. The existing hooks (e.g., <code class="mono">use-task-highlight</code>) are a good model.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Smart-views surface has dead code paths</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">Medium confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">lib/smart-views/</code>, <code class="mono">components/matrix-simplified/use-smart-views.ts</code>, <code class="mono">smart-view-strip.tsx</code> · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>ADR 0011 and <code class="mono">tasks/todo.md</code> state that smart-view shortcuts and pinning were removed in v9, but the Dexie table is retained for data continuity. The code still contains smart-view hooks and a strip component; some may be unused or only partially wired.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Audit imports and delete genuinely dead smart-view UI code. Retain the Dexie table and data migration path only.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Clean modular architecture with no circular dependencies</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">lib/tasks/</code>, <code class="mono">lib/sync/</code>, <code class="mono">lib/analytics/</code>, <code class="mono">lib/notifications/</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>The codebase is organized into well-bounded modules. Dependency graph analysis shows unidirectional imports. Re-export layers preserve backward compatibility without exposing internals.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-5">
+        <h3>3.5 Maintainability</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Notification checker mixes several responsibilities</span>
+            <span class="badge badge-low">Low</span>
+            <span class="badge badge-info">Medium confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">lib/notification-checker.ts</code> (298 lines) · <strong>Effort:</strong> Medium
+          </div>
+          <div class="finding-body">
+            <p>The file handles notification scheduling, badge updates, snoozing, and reset logic. <code class="mono">checkTask()</code> is ~41 lines and combines validation, timing, and notification construction.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Split badge logic into <code class="mono">lib/notifications/badge.ts</code> and keep the checker focused on scheduling and firing. Snooze logic already exists in <code class="mono">lib/tasks/crud/snooze.ts</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">No TODO/FIXME/HACK in project code</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Scope:</strong> <code class="mono">lib/</code>, <code class="mono">components/</code>, <code class="mono">app/</code>, <code class="mono">tests/</code>, <code class="mono">packages/</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>A grep across project directories found zero <code class="mono">TODO</code>, <code class="mono">FIXME</code>, <code class="mono">HACK</code>, or <code class="mono">XXX</code> markers. The team resolves issues rather than leaving breadcrumbs.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-6">
+        <h3>3.6 Dependencies</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Direct dependencies are pinned</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">package.json</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>All production dependencies use exact versions, and the lockfile is committed. This matches the coding standard that discourages floating ranges and reduces surprise upgrades.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-7">
+        <h3>3.7 Performance</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Import size and count limits are enforced</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">lib/tasks/import-export.ts:10-13</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>The import path rejects files larger than 10 MB and more than 10,000 tasks, preventing storage DoS. Export uses <code class="mono">safeParse</code> and skips corrupt records rather than aborting the entire backup.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-8">
+        <h3>3.8 Error Handling & Observability</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Structured logging with secret sanitization</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">lib/logger.ts</code>, <code class="mono">lib/sentry.ts</code>, <code class="mono">lib/error-logger.ts</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>Logs are context-prefixed, carry typed metadata, and pass through secret sanitization for URLs, bearer tokens, and sensitive keys. Sentry contexts are allowlisted. Error objects are cloned before masking so the original is never mutated.</p>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Some catch blocks are effectively silent</span>
+            <span class="badge badge-low">Low</span>
+            <span class="badge badge-info">Medium confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">components/matrix-simplified/index.tsx:117-118</code>, <code class="mono">:126-127</code>, <code class="mono">lib/sync/pb-auth.ts:76-81</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>User-facing handlers catch errors and show toasts, but they do not log the original error to the structured logger. A debug-only log in <code class="mono">pb-auth.ts</code> swallows an expected mobile-browser limitation but could also swallow unexpected errors.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Send caught errors to the logger even when a toast is shown, so production issues can be traced. In <code class="mono">pb-auth.ts</code>, narrow the catch to the specific known exception type.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-9">
+        <h3>3.9 Documentation</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">CONTRIBUTING.md is referenced but missing</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> referenced in <code class="mono">coding-standards.md</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p><code class="mono">coding-standards.md</code> instructs agents to read <code class="mono">README.md</code>, <code class="mono">CLAUDE.md</code>, and <code class="mono">CONTRIBUTING.md</code>, but the repository has no <code class="mono">CONTRIBUTING.md</code>. New contributors lack a PR checklist, branch naming guide, and issue-triage flow.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Create a concise <code class="mono">CONTRIBUTING.md</code> covering setup, branch format (<code class="mono">type/short-desc</code>), the TDD workflow, and verification commands.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">CLAUDE.md command-palette status is outdated</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">CLAUDE.md:15</code>, <code class="mono">components/matrix-simplified/app-shell.tsx:9</code>, <code class="mono">:120-125</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p><code class="mono">CLAUDE.md</code> states the command palette is "not wired into the v9 app shell" and resurrection is "planned". In the current code, <code class="mono">app-shell.tsx</code> imports and renders <code class="mono">CommandPalette</code> with handlers, so the documentation is out of date.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Update <code class="mono">CLAUDE.md</code> to reflect that the command palette is active in v9, and remove the resurrection note from <code class="mono">tasks/todo.md</code> if it has been completed.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">ADRs cover major architectural decisions</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">docs/adr/0001</code> through <code class="mono">0012</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p>Twelve ADRs document IndexedDB, PocketBase sync, conflict resolution, PWA, MCP server, analytics, notifications, circular-dependency detection, smart views, agent discovery, v9 single-matrix refactor, and service-worker caching. They provide clear decision history.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-10">
+        <h3>3.10 Tech Debt</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Command palette is implemented but may be partially dead</span>
+            <span class="badge badge-low">Low</span>
+            <span class="badge badge-info">Medium confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">components/command-palette/</code>, <code class="mono">lib/use-command-palette.ts</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>The command palette is imported into the app shell, but its discoverability and keyboard wiring should be verified against the README claim that <code class="mono">⌘K / Ctrl+K</code> opens it. If it is fully live, add a comment documenting its status; if not, remove dead code or finish wiring.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Confirm the command palette opens and executes actions in the running app. Add an E2E test or remove the component if it is not yet functional.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-11">
+        <h3>3.11 Configuration & Type Safety</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">TypeScript strict mode passes and schemas are rigorous</span>
+            <span class="badge badge-pass">Strength</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">lib/schema.ts</code>, <code class="mono">lib/constants/schema.ts</code> · <strong>Effort:</strong> N/A
+          </div>
+          <div class="finding-body">
+            <p><code class="mono">bun typecheck</code> passes. Zod schemas define limits for title length, description length, tag counts, subtask counts, dependencies, and time entries. Import uses the lenient <code class="mono">.strip()</code> schema for backward compatibility while export uses <code class="mono">.strict()</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="dimension-12">
+        <h3>3.12 E2E Test Health</h3>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">Firefox reload/goto timeouts are the dominant failure mode</span>
+            <span class="badge badge-high">High</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>Files:</strong> <code class="mono">tests/e2e/recurring-tasks.spec.ts</code>, <code class="mono">drag-and-drop.spec.ts</code>, <code class="mono">settings-sections.spec.ts</code>, <code class="mono">sync-states.spec.ts</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>All 10 Firefox failures are <code class="mono">Test timeout of 30000ms exceeded</code> on <code class="mono">page.reload()</code> or <code class="mono">page.goto()</code>. The console shows <code class="mono">ChunkLoadError</code> warnings during the run, suggesting the dev server or service worker is serving stale chunks. This is likely an environment/test-setup issue rather than application bugs, but it makes the Firefox project unusable as a regression gate.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Clear service-worker caches before each test, avoid <code class="mono">page.reload()</code> on Firefox (use <code class="mono">page.goto()</code> with the cleaned URL), and consider a dedicated test build (<code class="mono">bun run build</code> + static server) instead of the dev server for E2E to eliminate chunk-load races.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding">
+          <div class="finding-header">
+            <span class="finding-title">WebKit dependency chip timeout</span>
+            <span class="badge badge-medium">Medium</span>
+            <span class="badge badge-info">High confidence</span>
+          </div>
+          <div class="finding-meta">
+            <strong>File:</strong> <code class="mono">tests/e2e/task-dependencies.spec.ts:17</code> · <strong>Effort:</strong> Small
+          </div>
+          <div class="finding-body">
+            <p>The single WebKit failure waits for a dependency chip to become visible after selecting a suggestion. This may be a timing/animation issue specific to WebKit or a selector that is too strict.</p>
+            <div class="recommendation">
+              <div class="recommendation-title">Recommendation</div>
+              <p>Add an explicit wait for the suggestion list to close before asserting the chip, and use <code class="mono">expect(...).toBeVisible()</code> with a longer timeout rather than a raw <code class="mono">waitFor</code>.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="roadmap">
+      <h2>4. Prioritized Remediation Roadmap</h2>
+
+      <div class="card">
+        <h3>30 Days</h3>
+        <ul class="methodology-list">
+          <li><strong>Stabilize Firefox E2E</strong> — replace <code class="mono">page.reload()</code> with <code class="mono">page.goto()</code> (stripping hashes), clear service-worker caches in the fixture, and add a pre-test build step.</li>
+          <li><strong>Fix lint errors</strong> — add <code class="mono">scripts/build-openwiki-site.cjs</code> to the ESLint ignore list or create a CJS-specific override.</li>
+          <li><strong>Patch dependency CVEs</strong> — update vite, jsdom/undici, and MCP SDK/hono to patched versions; verify with <code class="mono">bun audit</code>.</li>
+          <li><strong>Export IndexedDB schema version</strong> — remove hardcoded <code class="mono">140</code> from E2E helpers and import from <code class="mono">lib/db.ts</code>.</li>
+          <li><strong>Fix WebKit dependency chip timeout</strong> — add explicit wait before asserting the chip.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>60 Days</h3>
+        <ul class="methodology-list">
+          <li><strong>Expand the E2E Page Object Model</strong> — create <code class="mono">SettingsPage</code>, <code class="mono">DashboardPage</code>, <code class="mono">ArchivePage</code>, and <code class="mono">AboutPage</code>; move duplicated selectors out of specs.</li>
+          <li><strong>Replace text-based selectors</strong> — refactor <code class="mono">filter({ hasText: ... })</code> to use per-task <code class="mono">data-testid</code> or child <code class="mono">data-testid='task-title'</code> filters.</li>
+          <li><strong>Reduce hardcoded waitForTimeout</strong> — replace fixed waits with explicit assertions and animation-end signals.</li>
+          <li><strong>Add dashboard E2E coverage</strong> — seed completed tasks and assert rendered charts/metrics.</li>
+          <li><strong>Document command palette status</strong> — update <code class="mono">CLAUDE.md</code> and add or remove the planned-resurrection note.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>90 Days</h3>
+        <ul class="methodology-list">
+          <li><strong>Add bulk-operations E2E spec</strong> — multi-select, bulk delete, bulk move, and bulk tag assignment.</li>
+          <li><strong>Add offline PWA E2E spec</strong> — service-worker registration, cache reload, and functionality under <code class="mono">context.setOffline(true)</code>.</li>
+          <li><strong>Automate security-header validation</strong> — add a CI step or post-deploy test that parses the CloudFront JSON policy and rejects <code class="mono">unsafe-eval</code>.</li>
+          <li><strong>Audit smart-views dead code</strong> — remove unused smart-view UI code while preserving the Dexie table for data continuity.</li>
+          <li><strong>Decompose matrix-simplified/index.tsx</strong> — extract overlay reducer and window-event handlers into dedicated hooks.</li>
+          <li><strong>Create CONTRIBUTING.md</strong> — setup, branch naming, TDD workflow, and verification commands.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="methodology">
+      <h2>5. Methodology & Limitations</h2>
+      <div class="card">
+        <h3>What was inspected</h3>
+        <ul class="methodology-list">
+          <li><strong>Static analysis:</strong> source files in <code class="mono">app/</code>, <code class="mono">components/</code>, <code class="mono">lib/</code>, <code class="mono">tests/</code>, <code class="mono">packages/mcp-server/</code>, <code class="mono">scripts/</code>, <code class="mono">docker/</code>, and configuration files.</li>
+          <li><strong>Verification:</strong> <code class="mono">bun typecheck</code>, <code class="mono">bun lint</code>, <code class="mono">bun run test -- --coverage</code>, <code class="mono">bun audit</code>, and a full Playwright E2E run against Chromium, Firefox, and WebKit.</li>
+          <li><strong>Design system:</strong> Inkwell 3.0.1 instructions were fetched from <code class="mono">raw.githubusercontent.com/vscarpenter/inkwell/main/agent-instructions.md</code> and applied to the report stylesheet (system fonts, 1.5px borders, single indigo accent, ivory background).</li>
+          <li><strong>Excluded:</strong> <code class="mono">node_modules</code>, lockfiles, build artifacts (<code class="mono">.next</code>, <code class="mono">out</code>), generated coverage/test-results, and editor/agent configuration directories.</li>
+        </ul>
+
+        <h3>Limitations</h3>
+        <ul class="methodology-list">
+          <li><strong>Single E2E data point:</strong> pass/fail counts reflect one local run. No historical CI trend was available, so flakiness is inferred from failure patterns rather than measured.</li>
+          <li><strong>Runtime profiling was not performed:</strong> performance findings are based on code inspection and test coverage, not on bundle-size budgets or production traces.</li>
+          <li><strong>Cloud-hosted infrastructure was not tested:</strong> security headers were inspected in source files but not validated against a live CloudFront distribution or deployed Caddy instance.</li>
+          <li><strong>Dependency exploitability:</strong> CVEs are reported from <code class="mono">bun audit</code>; whether each vulnerability is reachable in the app's actual runtime paths was not verified by hand.</li>
+          <li><strong>Excluded generated files:</strong> the report excludes coverage JSON and Playwright JSON output files because they are gitignored and therefore not directly readable by the analysis tooling.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer>
+      Report generated by automated codebase analysis following the instructions in <code class="mono">docs/archive/codebase-analysis-prompt.md</code>. All findings are read-only; no source files were modified.
+    </footer>
   </div>
-</section>
-
-<section id="method">
-  <h2>5 · Methodology &amp; Limitations</h2>
-  <div class="card">
-    <h4 style="margin-top:0">Commands run (every dashboard metric maps to one)</h4>
-    <ul>
-      <li><strong>Coverage / unit:</strong> <code>bun run test -- --coverage</code> → 2,042 pass / 1 skip / 0 fail; parsed <code>coverage/coverage-summary.json</code>. Re-run this session at commit 5f677a9; identical to the prior run.</li>
-      <li><strong>E2E:</strong> <code>bun run test:e2e --reporter=json</code> across chromium/firefox/webkit after <code>npx playwright install</code> → 203/216. JSON parsed per spec &amp; project.</li>
-      <li><strong>Bundle size:</strong> <code>bun run build</code> then measured <code>out/_next/static</code> on disk (gzip per chunk). The build mutates a tracked file (<code>public/sw.js</code> cache version); it was restored with <code>git checkout</code> afterward — working tree left clean.</li>
-      <li><strong>Dependencies:</strong> <code>bun audit</code> (advisories by severity, prod-vs-dev chain) and <code>bun outdated</code> (currency).</li>
-      <li><strong>Type/lint:</strong> <code>bun typecheck</code> (clean), <code>bun lint</code> (21 warnings, 0 errors).</li>
-      <li><strong>Static metrics:</strong> file/function size scans, nesting depth, grep counts for TODO/<code>any</code>/escape-hatches; import-graph inspection for cycles.</li>
-      <li><strong>Manual + 6 parallel read-only subagents</strong> (security, architecture, perf/observability, test-quality, standards/config/docs, and the over-engineering counter-view), each required to open and cite files before asserting; findings cross-checked against direct metric collection.</li>
-    </ul>
-    <h4>What was NOT inspected (limitations)</h4>
-    <ul>
-      <li><strong>Live PocketBase server rules.</strong> Owner-scoping verified against <code>scripts/setup-pocketbase-collections.sh</code>, not the running <code>api.vinny.io</code>. Marked ASSUMPTION where relevant.</li>
-      <li><strong>Runtime profiling.</strong> Performance findings are from code inspection (algorithmic complexity) and a static bundle measurement — not a browser profiler trace. Per-route first-load JS was not isolated (Next.js 16's build table omitted per-route sizes here); the 777 KB-gz figure is the full multi-route payload, not a single page's first load.</li>
-      <li><strong>E2E environment.</strong> Run locally (macOS, <code>workers: undefined</code>, <code>retries: 0</code>) against the dev server — not the production static export, and harsher than CI's serial+retry config, which would mask the timeouts.</li>
-      <li><strong>OAuth-gated flows &amp; real sync round-trips.</strong> Cannot execute Google/GitHub OAuth headlessly.</li>
-      <li><strong>The MCP server's own test suite</strong> was reviewed but not executed (only the root Vitest suite ran).</li>
-      <li><strong>Coverage 0% false-signals.</strong> Re-export barrels report 0% because tests import the underlying modules; verified as shims, not gaps.</li>
-    </ul>
-    <h4>Confidence calibration</h4>
-    <p style="margin-bottom:0">Findings citing a verified <code>file:line</code> are <strong>High confidence</strong>; those resting on an unobservable (server rules, runtime-under-load) are marked <em>ASSUMPTION</em> and rated Medium/Low. Each High finding carries a <em>falsification</em> note stating what would disprove it. The 8.0 score follows the anchored rubric in §1: zero Critical + strong coverage/architecture/dependency-currency, held below 9 by three High findings and the E2E-CI gap.</p>
-  </div>
-</section>
-
-<footer>
-  <p>Generated 2026-06-24 · GSD Task Manager v9.12.1 @ <code>5f677a9</code> · Rubric: coding-standards.md v16.1 · Prompt: codebase-quality-review v2<br>
-  Evidence: Vitest coverage + Playwright E2E (3 browsers) + production build (bundle) + <code>bun audit</code>/<code>outdated</code> + 6-agent parallel review. Self-contained, offline-capable, print-friendly.</p>
-</footer>
-
-</div>
 </body>
 </html>

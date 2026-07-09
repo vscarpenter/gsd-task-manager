@@ -64,10 +64,11 @@ For product framing and feature rationale, read the root docs: `/README.md`, `/P
 | `/lib/tasks/` | Task CRUD, subtasks, dependencies, recurrence, time tracking. |
 | `/packages/mcp-server/` | Standalone `gsd-mcp-server` npm package (MCP integration). |
 | `/docker/` | Self-hosting stack (Caddy + PocketBase + static PWA in one container). |
-| `/scripts/` | Build, deploy (S3/CloudFront), PocketBase ops, smoke tests. |
-| `/.github/workflows/` | CI, dev/prod deploy, CloudFront infra, Docker/MCP publish. |
+| `/scripts/` | Build, deploy (S3/CloudFront), PocketBase ops, smoke tests, and the agent-pipeline scripts/launchd plists. |
+| `/.github/workflows/` | CI, dev/prod deploy, CloudFront infra, Docker/MCP publish, and pipeline workflows (risk labeling, release-ready, telemetry). |
+| `/.claude/commands/` | Executable summaries for the autonomous builder/triage routines (`build-next.md`, `triage-prs.md`). |
 | `/tests/` | Vitest (`ui/`, `data/`, `sync/`, `pb/`) + Playwright (`e2e/`). |
-| `/docs/` | ADRs (`docs/adr/`), HTML explainers, UML diagrams, ops docs. |
+| `/docs/` | ADRs (`docs/adr/`), agent operating specs (`docs/agents/`), pipeline runbooks (`docs/ops/`), HTML explainers, UML diagrams. |
 | Root docs | `README.md`, `ARCHITECTURE.md`, `PRODUCT.md`, `DESIGN.md`, `SECURITY.md`, `coding-standards.md`, `CLAUDE.md`, `AGENTS.md`. |
 
 ---
@@ -108,6 +109,9 @@ onboarding "Open App" CTA. No backend is required for basic task CRUD. See
   dry-run writes, caching, auth.
 - **[Build, deploy & ops](operations/build-deploy-and-ops.md)** — dev/build/test commands,
   Docker self-hosting, AWS S3/CloudFront deploy, CI workflows, security posture.
+- **[Agent pipeline](operations/agent-pipeline.md)** — the autonomous AI-agent delivery
+  pipeline (Contract → Builder + Gate 1 → Review + Gate 2 → Night Shift → Telemetry), driven
+  by GitHub labels as durable state.
 - **[Testing guide](testing/testing-guide.md)** — Vitest/RTL unit tests, Playwright e2e,
   TDD workflow, coverage thresholds, and gotchas.
 - **[Glossary](reference/glossary.md)** — shared vocabulary (BFS, LWW, quadrants, smart
