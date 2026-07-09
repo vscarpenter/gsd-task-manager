@@ -58,15 +58,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun typecheck 2>&1 | tail -10",
-            "timeout": 60,
-            "statusMessage": "Type-check verification gate..."
+            "command": "out=$(bun typecheck 2>&1) || { printf '%s\\n' \"$out\" | tail -40; exit 2; }",
+            "timeout": 120,
+            "asyncRewake": true,
+            "rewakeSummary": "Type-check failed",
+            "statusMessage": "Type-check (async)..."
           },
           {
             "type": "command",
-            "command": "bun lint 2>&1 | tail -10",
-            "timeout": 60,
-            "statusMessage": "Lint verification gate..."
+            "command": "files=$(git diff --name-only --diff-filter=ACMR HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' 2>/dev/null; git ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' 2>/dev/null); [ -z \"$files\" ] && exit 0; out=$(printf '%s\\n' \"$files\" | sort -u | xargs bun x eslint 2>&1) || { printf '%s\\n' \"$out\" | tail -40; exit 2; }",
+            "timeout": 120,
+            "asyncRewake": true,
+            "rewakeSummary": "Lint failed on changed files",
+            "statusMessage": "Lint changed files (async)..."
           }
         ]
       }
