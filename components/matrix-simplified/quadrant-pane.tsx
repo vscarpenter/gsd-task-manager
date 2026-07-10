@@ -32,14 +32,14 @@ const HEADER_CLASS: Record<RedesignQuadrantKey, string> = {
 
 export type QuadrantPosition = "tl" | "tr" | "bl" | "br";
 
-// On md+, the outer container in <MatrixGrid> owns the perimeter border + radius.
+// On lg+, the outer container in <MatrixGrid> owns the perimeter border + radius.
 // Each pane only contributes the rules between cells: a left rule for right-column
 // panes and a top rule for bottom-row panes.
 const POSITION_RULES: Record<QuadrantPosition, string> = {
   tl: "",
-  tr: "md:border-l md:border-border",
-  bl: "md:border-t md:border-border",
-  br: "md:border-l md:border-t md:border-border",
+  tr: "lg:border-l lg:border-border",
+  bl: "lg:border-t lg:border-border",
+  br: "lg:border-l lg:border-t lg:border-border",
 };
 
 interface QuadrantPaneProps {
@@ -81,7 +81,7 @@ export function QuadrantPane({
       className={cn(
         "relative flex min-h-[280px] flex-col rounded-xl border border-border p-5 transition-colors",
         WASH_CLASS[meta.rdKey],
-        "md:rounded-none md:border-0",
+        "lg:rounded-none lg:border-0",
         POSITION_RULES[position],
         isOver && "ring-2 ring-inset"
       )}
@@ -92,7 +92,7 @@ export function QuadrantPane({
           four-quadrant argument reads on the merged desktop grid. Thickens via
           scaleY (no reflow) to acknowledge an active drop target. Top corners
           `inherit` the pane radius so the bar follows the rounded corners on
-          mobile (20px) and stays square on the md:rounded-none grid — no
+          mobile/tablet and stays square on the lg:rounded-none grid — no
           overflow-hidden, which would clip card action menus near pane edges. */}
       <span
         aria-hidden

@@ -59,4 +59,13 @@ describe("IconRail", () => {
     expect(aside.className).not.toContain("focus-within:w-");
     expect(aside.className).not.toContain("transition-delay:500ms");
   });
+
+  it("gives every mobile navigation action a coarse-pointer touch target", () => {
+    render(<IconRail onHelp={vi.fn()} />);
+    const mobileNav = screen.getByRole("navigation", { name: /mobile/i });
+
+    for (const button of mobileNav.querySelectorAll("button")) {
+      expect(button).toHaveClass("touch-target");
+    }
+  });
 });

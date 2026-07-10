@@ -1,8 +1,27 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/lib/db";
+import { createTask, deleteTask, toggleCompleted, updateTask } from "@/lib/tasks";
 import { snoozeTask, clearSnooze } from "@/lib/tasks/crud/snooze";
 import { startTimeTracking, stopTimeTracking } from "@/lib/tasks/crud/time-tracking";
 import { createMockTask } from "@/tests/fixtures";
+
+async function enableSync(): Promise<void> {
+  await getDb().syncMetadata.put({
+    key: "sync_config",
+    enabled: true,
+    userId: "user-1",
+    deviceId: "device-1",
+    deviceName: "Test device",
+    email: "test@example.com",
+    provider: "test",
+    lastSyncAt: null,
+    lastSuccessfulSyncAt: null,
+    consecutiveFailures: 0,
+    lastFailureAt: null,
+    lastFailureReason: null,
+    nextRetryAt: null,
+  });
+}
 
 // Real fake-indexeddb integration tests (no db/helpers mocks). Migrated from the
 // former function-coverage-final / last-function-push padding files (finding
@@ -15,6 +34,76 @@ describe("task crud side effects (real DB)", () => {
     await db.tasks.clear();
     await db.syncQueue.clear();
     await db.syncMetadata.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("atomic task and sync-queue writes", () => {
+    it("rolls back create when the sync queue write fails", async () => {
+      const db = getDb();
+      await enableSync();
+      vi.spyOn(db.syncQueue, "add").mockRejectedValueOnce(new Error("queue full"));
+
+      await expect(createTask({
+        title: "Atomic create",
+        description: "",
+        urgent: true,
+        important: true,
+        recurrence: "none",
+        tags: [],
+        subtasks: [],
+        dependencies: [],
+      })).rejects.toThrow(/queue full/i);
+
+      expect(await db.tasks.count()).toBe(0);
+    });
+
+    it("rolls back update when the sync queue write fails", async () => {
+      const db = getDb();
+      await db.tasks.put(createMockTask({ id: "update-1", title: "Before" }));
+      await enableSync();
+      vi.spyOn(db.syncQueue, "add").mockRejectedValueOnce(new Error("queue full"));
+
+      await expect(updateTask("update-1", { title: "After" })).rejects.toThrow(/queue full/i);
+
+      expect((await db.tasks.get("update-1"))?.title).toBe("Before");
+    });
+
+    it("rolls back dependency cleanup and delete when queueing fails", async () => {
+      const db = getDb();
+      await db.tasks.bulkPut([
+        createMockTask({ id: "target" }),
+        createMockTask({ id: "dependent", dependencies: ["target"] }),
+      ]);
+      await enableSync();
+      vi.spyOn(db.syncQueue, "add").mockRejectedValueOnce(new Error("queue full"));
+
+      await expect(deleteTask("target")).rejects.toThrow(/queue full/i);
+
+      expect(await db.tasks.get("target")).toBeDefined();
+      expect((await db.tasks.get("dependent"))?.dependencies).toEqual(["target"]);
+    });
+  });
+
+  it("creates one next instance for concurrent recurring completions", async () => {
+    const db = getDb();
+    await db.tasks.put(createMockTask({
+      id: "recurring-1",
+      recurrence: "daily",
+      dueDate: "2026-07-10T12:00:00.000Z",
+    }));
+
+    await Promise.all([
+      toggleCompleted("recurring-1", true),
+      toggleCompleted("recurring-1", true),
+    ]);
+
+    const instances = await db.tasks
+      .filter((task) => task.parentTaskId === "recurring-1")
+      .toArray();
+    expect(instances).toHaveLength(1);
   });
 
   describe("snoozeTask", () => {

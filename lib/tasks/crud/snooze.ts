@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TASK_CRUD");
@@ -35,30 +35,23 @@ export async function snoozeTask(
 
   try {
     const db = getDb();
-    const existing = await db.tasks.get(id);
-
-    if (!existing) {
-      logger.warn("Task not found for snooze", { taskId: id });
-      throw new Error(`Task ${id} not found`);
-    }
-
-    const { syncConfig } = await getSyncContext();
-    const nextRecord = buildSnoozedRecord(existing, minutes);
-
-    await db.tasks.put(nextRecord);
+    const nextRecord = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      const existing = await db.tasks.get(id);
+      if (!existing) {
+        logger.warn("Task not found for snooze", { taskId: id });
+        throw new Error(`Task ${id} not found`);
+      }
+      const record = buildSnoozedRecord(existing, minutes);
+      await db.tasks.put(record);
+      if (syncEnabled) await enqueue("update", id, record);
+      return record;
+    });
 
     logger.info("Task snoozed", {
       taskId: id,
       title: nextRecord.title,
       snoozedUntil: nextRecord.snoozedUntil ?? "cleared"
     });
-
-    await enqueueSyncOperation(
-      "update",
-      id,
-      nextRecord,
-      syncConfig?.enabled ?? false
-    );
 
     return nextRecord;
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -15,7 +15,7 @@ export interface TaskCardHeaderProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
-  onToggleComplete: (task: TaskRecord, completed: boolean) => void;
+  onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   sortableAttributes: SortableAttributes;
   sortableListeners: SortableListeners;
 }
@@ -31,6 +31,18 @@ export function TaskCardHeader({
   sortableListeners,
 }: TaskCardHeaderProps) {
   const completionLabel = task.completed ? "Mark as incomplete" : "Mark as complete";
+  const [isTogglingComplete, setIsTogglingComplete] = useState(false);
+
+  const handleToggleComplete = async () => {
+    if (isTogglingComplete) return;
+
+    setIsTogglingComplete(true);
+    try {
+      await onToggleComplete(task, !task.completed);
+    } finally {
+      setIsTogglingComplete(false);
+    }
+  };
 
   // Pop the check only on the complete *moment* (false→true), never on mount —
   // a page load showing already-done tasks is not a completion moment, and the
@@ -62,7 +74,7 @@ export function TaskCardHeader({
         ) : (
           <button
             type="button"
-            className="cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-background-muted"
+            className="touch-target cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-background-muted"
             aria-label="Drag to move task"
             {...sortableAttributes}
             {...sortableListeners}
@@ -89,7 +101,8 @@ export function TaskCardHeader({
           <button
             data-testid="complete-task"
             type="button"
-            onClick={() => onToggleComplete(task, !task.completed)}
+            onClick={handleToggleComplete}
+            disabled={isTogglingComplete}
             // Completed disc fills with the task's quadrant pigment (reference §06),
             // applied inline because the var is per-quadrant; the paper-colored check
             // contrasts the pigment in both light and dark themes.
@@ -103,6 +116,7 @@ export function TaskCardHeader({
                 : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"
             )}
             aria-pressed={task.completed}
+            aria-busy={isTogglingComplete}
             aria-label={completionLabel}
           >
             {task.completed ? (

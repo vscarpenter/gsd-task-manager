@@ -6,7 +6,7 @@ import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -39,21 +39,14 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
   }
 
   try {
-    const { syncConfig } = await getSyncContext();
     const record = buildTaskRecord(result.data);
-
     const db = getDb();
-    await db.tasks.add(record);
+    await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      await db.tasks.add(record);
+      if (syncEnabled) await enqueue("create", record.id, record);
+    });
 
     logger.info("Task created", { taskId: record.id, title: record.title });
-
-    await enqueueSyncOperation(
-      "create",
-      record.id,
-      record,
-      syncConfig?.enabled ?? false
-    );
-
     return record;
   } catch (error) {
     // Log only the operation, never the raw input — it holds the task

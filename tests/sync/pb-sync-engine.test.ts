@@ -8,6 +8,7 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
 
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(),
+  isPendingSyncQueueItem: vi.fn((item) => (item.status ?? 'pending') === 'pending'),
 }));
 
 vi.mock('@/lib/sync/task-mapper', () => ({

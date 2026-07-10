@@ -4,7 +4,7 @@ import { createLogger } from "@/lib/logger";
 import { timeEntrySchema } from "@/lib/schema";
 import type { TaskRecord, TimeEntry } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TIME_TRACKING");
@@ -27,43 +27,28 @@ function calculateTimeSpent(entries: TimeEntry[]): number {
  */
 export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
   const db = getDb();
-  const existing = await db.tasks.get(taskId);
-
-  if (!existing) {
-    throw new Error(`Task ${taskId} not found`);
-  }
-
-  const runningEntry = existing.timeEntries?.find((e) => !e.endedAt);
-  if (runningEntry) {
-    logger.warn("Task already has running timer", { taskId });
-    throw new Error("Task already has a running timer");
-  }
-
-  const { syncConfig } = await getSyncContext();
-
   const newEntry: TimeEntry = {
     id: nanoid(8),
     startedAt: isoNow(),
   };
-
-  const updatedEntries = [...(existing.timeEntries || []), newEntry];
-
-  const nextRecord: TaskRecord = {
-    ...existing,
-    timeEntries: updatedEntries,
-    updatedAt: isoNow(),
-  };
-
-  await db.tasks.put(nextRecord);
+  const nextRecord = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+    const existing = await db.tasks.get(taskId);
+    if (!existing) throw new Error(`Task ${taskId} not found`);
+    if (existing.timeEntries?.some((entry) => !entry.endedAt)) {
+      logger.warn("Task already has running timer", { taskId });
+      throw new Error("Task already has a running timer");
+    }
+    const record: TaskRecord = {
+      ...existing,
+      timeEntries: [...(existing.timeEntries || []), newEntry],
+      updatedAt: isoNow(),
+    };
+    await db.tasks.put(record);
+    if (syncEnabled) await enqueue("update", taskId, record);
+    return record;
+  });
 
   logger.info("Time tracking started", { taskId, entryId: newEntry.id });
-
-  await enqueueSyncOperation(
-    "update",
-    taskId,
-    nextRecord,
-    syncConfig?.enabled ?? false
-  );
 
   return nextRecord;
 }
@@ -91,46 +76,40 @@ export async function stopTimeTracking(
   notes?: string
 ): Promise<TaskRecord> {
   const db = getDb();
-  const existing = await db.tasks.get(taskId);
-
-  if (!existing) {
-    throw new Error(`Task ${taskId} not found`);
-  }
-
-  const runningEntryIndex = existing.timeEntries?.findIndex((e) => !e.endedAt);
-  if (runningEntryIndex === undefined || runningEntryIndex === -1) {
-    logger.warn("No running timer to stop", { taskId });
-    throw new Error("No running timer found for this task");
-  }
-
   const notesValidation = timeEntrySchema.shape.notes.safeParse(notes);
   if (!notesValidation.success) {
     throw new Error(`Invalid time entry notes: ${notesValidation.error.issues.map((i) => i.message).join(", ")}`);
   }
 
-  const { syncConfig } = await getSyncContext();
-  const { updatedEntries, timeSpent } = closeRunningEntry(
-    existing.timeEntries || [],
-    runningEntryIndex,
-    notes
-  );
-
-  const nextRecord: TaskRecord = {
-    ...existing,
-    timeEntries: updatedEntries,
-    timeSpent,
-    updatedAt: isoNow(),
-  };
-
-  await db.tasks.put(nextRecord);
+  let entryId = "";
+  let duration = 0;
+  const nextRecord = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+    const existing = await db.tasks.get(taskId);
+    if (!existing) throw new Error(`Task ${taskId} not found`);
+    const runningIndex = existing.timeEntries?.findIndex((entry) => !entry.endedAt);
+    if (runningIndex === undefined || runningIndex === -1) {
+      logger.warn("No running timer to stop", { taskId });
+      throw new Error("No running timer found for this task");
+    }
+    const closed = closeRunningEntry(existing.timeEntries || [], runningIndex, notes);
+    const record: TaskRecord = {
+      ...existing,
+      timeEntries: closed.updatedEntries,
+      timeSpent: closed.timeSpent,
+      updatedAt: isoNow(),
+    };
+    entryId = closed.updatedEntries[runningIndex].id;
+    duration = closed.timeSpent - (existing.timeSpent || 0);
+    await db.tasks.put(record);
+    if (syncEnabled) await enqueue("update", taskId, record);
+    return record;
+  });
 
   logger.info("Time tracking stopped", {
     taskId,
-    entryId: updatedEntries[runningEntryIndex].id,
-    duration: timeSpent - (existing.timeSpent || 0),
+    entryId,
+    duration,
   });
-
-  await enqueueSyncOperation("update", taskId, nextRecord, syncConfig?.enabled ?? false);
 
   return nextRecord;
 }
@@ -163,4 +142,3 @@ export function formatTimeSpent(minutes: number): string {
   if (remainingMinutes === 0) return `${hours}h`;
   return `${hours}h ${remainingMinutes}m`;
 }
-

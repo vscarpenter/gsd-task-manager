@@ -3,7 +3,7 @@ import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -13,23 +13,14 @@ const logger = createLogger("TASK_CRUD");
 export async function duplicateTask(id: string): Promise<TaskRecord> {
   try {
     const db = getDb();
-    const original = await db.tasks.get(id);
-
-    if (!original) {
-      throw new Error(`Task with id ${id} not found`);
-    }
-
-    const { syncConfig } = await getSyncContext();
-    const duplicate = buildDuplicateRecord(original);
-
-    await db.tasks.add(duplicate);
-
-    await enqueueSyncOperation(
-      "create",
-      duplicate.id,
-      duplicate,
-      syncConfig?.enabled ?? false
-    );
+    const duplicate = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      const original = await db.tasks.get(id);
+      if (!original) throw new Error(`Task with id ${id} not found`);
+      const record = buildDuplicateRecord(original);
+      await db.tasks.add(record);
+      if (syncEnabled) await enqueue("create", record.id, record);
+      return record;
+    });
 
     logger.info("Task duplicated", { originalId: id, newId: duplicate.id });
     return duplicate;

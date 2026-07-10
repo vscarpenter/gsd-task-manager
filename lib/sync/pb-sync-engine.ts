@@ -16,6 +16,7 @@ import { ensureValidAuth } from './pb-auth';
 import { getDeviceId } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
+import { isPendingSyncQueueItem } from './queue';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import type { RecordModel } from 'pocketbase';
 
@@ -43,7 +44,7 @@ export async function applyRemoteChange(
     // recreate the remote record, so deleting locally now would just lose the
     // unsynced edit until the next pull round-trips.
     const queuedOps = await db.syncQueue.toArray();
-    if (queuedOps.some((op) => op.taskId === taskId)) {
+    if (queuedOps.some((op) => op.taskId === taskId && isPendingSyncQueueItem(op))) {
       logger.debug('Realtime delete skipped: local change pending', { taskId });
       return;
     }

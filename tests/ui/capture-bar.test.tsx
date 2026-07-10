@@ -34,6 +34,13 @@ describe("<CaptureBar>", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("gives the capture input and submit action coarse-pointer touch targets", () => {
+    render(<CaptureBar onSubmit={vi.fn()} />);
+
+    expect(screen.getByLabelText("Capture a task")).toHaveClass("touch-target");
+    expect(screen.getByRole("button", { name: /add/i })).toHaveClass("touch-target");
+  });
+
   it("Tab cycles destination quadrant override (override to q1 → submits as urgent+important)", async () => {
     const onSubmit = vi.fn();
     render(<CaptureBar onSubmit={onSubmit} />);

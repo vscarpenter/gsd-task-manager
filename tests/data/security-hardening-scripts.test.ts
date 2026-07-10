@@ -126,9 +126,14 @@ describe('security hardening scripts and workflows', () => {
     const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.6');
-    expect(rootPackage.overrides.hono).toBe('>=4.12.21');
+    expect(rootPackage.overrides.hono).toBe('>=4.12.29');
+    expect(rootPackage.overrides.undici).toBe('>=7.28.0');
+    expect(rootPackage.overrides.vite).toBe('>=8.1.4');
+    expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.1');
+    expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
     expect(rootPackage.overrides.qs).toBe('>=6.15.2');
-    expect(mcpPackage.devDependencies.vitest).toBe('4.1.2');
-    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.2');
+    expect(mcpPackage.dependencies['@sentry/node']).toBe('10.65.0');
+    expect(mcpPackage.devDependencies.vitest).toBe('4.1.10');
+    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.10');
   });
 });

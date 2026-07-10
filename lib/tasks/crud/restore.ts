@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { formatErrorMessage } from "@/lib/utils";
 import type { TaskRecord } from "@/lib/types";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -20,12 +20,12 @@ const logger = createLogger("TASK_CRUD");
 export async function restoreTask(task: TaskRecord): Promise<void> {
   try {
     const db = getDb();
-    await db.tasks.add(task);
+    await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      await db.tasks.add(task);
+      if (syncEnabled) await enqueue("create", task.id, task);
+    });
 
     logger.info("Task restored", { taskId: task.id, title: task.title });
-
-    const { syncConfig } = await getSyncContext();
-    await enqueueSyncOperation("create", task.id, task, syncConfig?.enabled ?? false);
   } catch (error) {
     logger.error("Failed to restore task", error instanceof Error ? error : undefined, {
       taskId: task.id,

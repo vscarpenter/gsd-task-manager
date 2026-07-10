@@ -154,7 +154,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         onKeyDown={onInputKey}
         placeholder="Capture a task..."
         aria-label="Capture a task"
-        className="min-w-0 flex-1 border-0 bg-transparent text-[15px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
+        className="touch-target min-w-0 flex-1 border-0 bg-transparent text-[15px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
       />
       {text.trim() ? (
         <>
@@ -210,7 +210,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         type="submit"
         aria-disabled={!parsed.title}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-[background-color,color,transform] duration-[120ms]",
+          "touch-target inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-[background-color,color,transform] duration-[120ms]",
           parsed.title
             ? "bg-accent text-card hover:bg-accent-hover active:scale-[0.97]"
             : "bg-accent/15 text-accent hover:bg-accent/20"

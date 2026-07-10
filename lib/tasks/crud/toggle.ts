@@ -3,9 +3,32 @@ import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import {
+  runTaskSyncTransaction,
+  type TransactionalSyncEnqueue,
+} from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
+const completionLocks = new Map<string, Promise<void>>();
+
+async function withCompletionLock<T>(
+  taskId: string,
+  mutation: () => Promise<T>
+): Promise<T> {
+  const previous = completionLocks.get(taskId) ?? Promise.resolve();
+  let release = (): void => {};
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  completionLocks.set(taskId, current);
+  await previous;
+  try {
+    return await mutation();
+  } finally {
+    release();
+    if (completionLocks.get(taskId) === current) completionLocks.delete(taskId);
+  }
+}
 
 /**
  * Toggle task completion status, handling recurring task creation
@@ -14,40 +37,49 @@ export async function toggleCompleted(
   id: string,
   completed: boolean
 ): Promise<TaskRecord> {
+  return withCompletionLock(id, () => toggleCompletedTransaction(id, completed));
+}
+
+async function toggleCompletedTransaction(
+  id: string,
+  completed: boolean
+): Promise<TaskRecord> {
   try {
     const db = getDb();
-    const existing = await db.tasks.get(id);
+    const result = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      const existing = await db.tasks.get(id);
+      if (!existing) {
+        logger.warn("Task not found for completion toggle", { taskId: id });
+        throw new Error(`Task ${id} not found`);
+      }
+      let recurringInstance: TaskRecord | null = null;
+      if (completed && !existing.completed && existing.recurrence !== "none") {
+        recurringInstance = await createAndQueueRecurringInstance(
+          existing,
+          enqueue,
+          syncEnabled
+        );
+      }
+      const record = buildCompletedRecord(existing, completed);
+      await db.tasks.put(record);
+      if (syncEnabled) await enqueue("update", id, record);
+      return { record, recurringInstance };
+    });
+    const { record: nextRecord, recurringInstance } = result;
 
-    if (!existing) {
-      logger.warn("Task not found for completion toggle", { taskId: id });
-      throw new Error(`Task ${id} not found`);
+    if (recurringInstance) {
+      logger.info("Created recurring task instance", {
+        originalTaskId: id,
+        newTaskId: recurringInstance.id,
+        recurrence: nextRecord.recurrence,
+      });
     }
-
-    const { syncConfig } = await getSyncContext();
-
-    // Handle recurring task instance creation
-    if (completed && existing.recurrence !== "none") {
-      await createAndQueueRecurringInstance(existing, syncConfig?.enabled ?? false);
-    }
-
-    // Update the original task
-    const nextRecord = buildCompletedRecord(existing, completed);
-
-    await db.tasks.put(nextRecord);
 
     logger.info("Task completion toggled", {
       taskId: id,
       completed,
-      title: existing.title,
+      title: nextRecord.title,
     });
-
-    await enqueueSyncOperation(
-      "update",
-      id,
-      nextRecord,
-      syncConfig?.enabled ?? false
-    );
-
     return nextRecord;
   } catch (error) {
     logger.error(
@@ -80,19 +112,14 @@ function buildCompletedRecord(
  */
 async function createAndQueueRecurringInstance(
   existing: TaskRecord,
+  enqueue: TransactionalSyncEnqueue,
   syncEnabled: boolean
-): Promise<void> {
+): Promise<TaskRecord> {
   const newInstance = buildRecurringInstance(existing);
   const db = getDb();
   await db.tasks.add(newInstance);
-
-  logger.info("Created recurring task instance", {
-    originalTaskId: existing.id,
-    newTaskId: newInstance.id,
-    recurrence: existing.recurrence,
-  });
-
-  await enqueueSyncOperation("create", newInstance.id, newInstance, syncEnabled);
+  if (syncEnabled) await enqueue("create", newInstance.id, newInstance);
+  return newInstance;
 }
 
 /**

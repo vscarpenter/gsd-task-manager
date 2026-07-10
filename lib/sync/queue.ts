@@ -20,7 +20,7 @@ function truncateError(message: string): string {
     : message.slice(0, MAX_LAST_ERROR_LENGTH);
 }
 
-function isPending(item: SyncQueueItem): boolean {
+export function isPendingSyncQueueItem(item: SyncQueueItem): boolean {
   // Items predating v14 may have undefined status — treat as pending.
   return (item.status ?? 'pending') === 'pending';
 }
@@ -55,7 +55,7 @@ export class SyncQueue {
   async getPending(): Promise<SyncQueueItem[]> {
     const db = getDb();
     const all = await db.syncQueue.orderBy('timestamp').toArray();
-    return all.filter(isPending);
+    return all.filter(isPendingSyncQueueItem);
   }
 
   /**
@@ -64,7 +64,7 @@ export class SyncQueue {
   async getPendingCount(): Promise<number> {
     const db = getDb();
     const all = await db.syncQueue.toArray();
-    return all.filter(isPending).length;
+    return all.filter(isPendingSyncQueueItem).length;
   }
 
   /**

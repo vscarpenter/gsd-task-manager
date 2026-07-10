@@ -15,6 +15,15 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/tasks/crud/helpers", () => ({
   getSyncContext: mockGetSyncContext,
   enqueueSyncOperation: mockEnqueue,
+  runTaskSyncTransaction: (mutation: (context: {
+    syncEnabled: boolean;
+    enqueue: (...args: unknown[]) => Promise<void>;
+  }) => Promise<unknown>) => mutation({
+    syncEnabled: false,
+    enqueue: async (...args: unknown[]) => {
+      await mockEnqueue(...args);
+    },
+  }),
 }));
 
 /**
