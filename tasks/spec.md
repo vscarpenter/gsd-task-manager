@@ -1,3 +1,74 @@
+# Spec: Resolve 2026-07-10 application audit findings
+
+**Date:** 2026-07-10 · **Status:** Approved · **Tier:** Non-trivial
+
+## Goal
+
+Resolve every High, Medium, and Low item in the
+[2026-07-10 application audit](../docs/audits/AUDIT-2026-07-10.md), with regression
+tests at the real failure seams and live browser verification for the UI fixes.
+
+## Inputs / outputs
+
+- Input: the ten findings in the approved audit report.
+- Output: dismissible and accessible onboarding; atomic and idempotent task/sync
+  mutations; status-aware deletion reconciliation; redacted MCP status output;
+  valid Settings semantics; 44px coarse-pointer targets; a readable tablet matrix;
+  and a lockfile with the reported advisories removed.
+
+## Constraints
+
+- Preserve the local-first architecture and optional PocketBase behavior.
+- Use the existing Radix dialog and Inkwell token/component system.
+- Use one Dexie transaction for each task mutation plus its sync-queue writes;
+  schedule background sync only after the transaction commits.
+- TDD each behavioral fix and confirm each red test fails for the audited reason.
+- Keep the pre-existing `public/sw.js` change out of implementation commits.
+- Do not add a new runtime dependency; dependency work updates existing packages only.
+
+## Edge cases
+
+- First-run dismissal must work without navigation or reload; replay must restore
+  focus to the invoking Settings control.
+- Two concurrent completions of one recurring task must create one next instance.
+- A queue-write failure must roll back the corresponding task/dependency changes.
+- Failed queue rows must not protect local tasks from a confirmed remote deletion;
+  genuinely pending rows must continue to protect them.
+- MCP URLs may contain credentials, queries, or fragments and must not expose them.
+- Tablet and touch fixes must preserve desktop density and mobile navigation.
+
+## Out of scope
+
+- New product features, sync-conflict UX redesign, schema migrations, or a visual
+  redesign beyond the audited responsive/accessibility corrections.
+- Publishing, deploying, or merging the branch.
+
+## Acceptance criteria
+
+- [ ] First-run Skip, Escape, and Start actions dismiss onboarding immediately.
+- [ ] Onboarding traps focus, makes the background inert, and restores focus.
+- [ ] Recurring completion is transactionally idempotent and guarded while pending.
+- [ ] CRUD task writes and sync-queue writes commit or roll back together.
+- [ ] Failed queue rows no longer block realtime or pull deletion reconciliation.
+- [ ] `get_sync_status` returns only a redacted endpoint; unsafe URL material is rejected.
+- [ ] Settings has one main landmark and one page-level heading.
+- [ ] Audited mobile controls receive the existing 44px coarse-pointer contract.
+- [ ] The matrix remains single-column at portrait-tablet widths.
+- [ ] `bun audit` no longer reports the audited dependency advisories.
+- [ ] Targeted tests, full tests, coverage, typecheck, lint, build, and browser checks pass.
+
+## Test stubs
+
+- `tests/ui/onboarding-gate.test.tsx`: automatic close actions unmount immediately.
+- `tests/ui/onboarding.test.tsx`: focus wrap and replay-trigger restoration.
+- `tests/data/tasks/crud.test.ts`: queue-failure rollback and concurrent recurrence.
+- `tests/data/sync/pb-sync-engine.test.ts` and sync pull tests: pending vs failed rows.
+- MCP handler/config tests: endpoint redaction and credential/query rejection.
+- Settings/matrix component tests: landmarks, headings, touch classes, breakpoint classes.
+- `bun audit`: dependency-advisory regression gate.
+
+---
+
 # Spec: react-doctor score 100 (drive diagnostics to zero)
 
 ## Goal
