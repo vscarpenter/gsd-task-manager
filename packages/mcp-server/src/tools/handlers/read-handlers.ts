@@ -9,6 +9,7 @@ import {
 } from '../../tools.js';
 import { getPocketBase } from '../../pocketbase-client.js';
 import { getTokenStatus } from '../../auth/token-status.js';
+import { redactPocketBaseHost } from '../../api/client.js';
 import type { McpToolResponse } from './types.js';
 
 /**
@@ -22,7 +23,7 @@ export async function handleGetSyncStatus(config: GsdConfig): Promise<McpToolRes
   const result = {
     ...status,
     authenticated: pb.authStore.isValid,
-    pocketBaseUrl: config.pocketBaseUrl,
+    pocketBaseUrl: redactPocketBaseHost(config.pocketBaseUrl),
   };
 
   return {

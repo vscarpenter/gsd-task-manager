@@ -30,6 +30,14 @@ describe('isSafePocketBaseUrl', () => {
     expect(isSafePocketBaseUrl('https://api.example.com')).toBe(true);
   });
 
+  it.each([
+    'https://user:password@api.example.com',
+    'https://api.example.com?token=secret',
+    'https://api.example.com#private-fragment',
+  ])('rejects HTTPS URLs containing secret-bearing components: %s', (url) => {
+    expect(isSafePocketBaseUrl(url)).toBe(false);
+  });
+
   it('accepts http loopback URLs', () => {
     expect(isSafePocketBaseUrl('http://127.0.0.1:8090')).toBe(true);
   });

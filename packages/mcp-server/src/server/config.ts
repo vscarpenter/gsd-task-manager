@@ -32,6 +32,13 @@ export function isSafePocketBaseUrl(url: string): boolean {
     return false;
   }
 
+  // Base URLs are configuration, not credential or request containers. Keeping
+  // userinfo, query strings, and fragments out prevents accidental disclosure
+  // in diagnostics and avoids ambiguous endpoint composition.
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    return false;
+  }
+
   if (parsed.protocol === 'https:') {
     return true;
   }
