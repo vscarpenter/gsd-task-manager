@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
+import { useState } from "react";
 import { XIcon, ZapIcon } from "lucide-react";
 import { GsdLogo } from "@/components/gsd-logo";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface OnboardingProps {
@@ -96,113 +102,88 @@ const SCREENS: Screen[] = [
 ];
 
 export function Onboarding({ open, onClose, onSignIn }: OnboardingProps) {
-  if (!open) return null;
-  // Mounting the dialog only while `open` means it starts fresh on the welcome
-  // screen every time the flow opens — no reset-on-prop-change effect needed.
-  return <OnboardingDialog onClose={onClose} onSignIn={onSignIn} />;
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) onClose();
+    }}>
+      {open ? <OnboardingDialog onClose={onClose} onSignIn={onSignIn} /> : null}
+    </Dialog>
+  );
 }
 
 function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) {
   const [index, setIndex] = useState(0);
-  const titleId = useId();
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  // Escape dismisses the flow. useEffectEvent keeps the latest onClose without
-  // re-subscribing the keydown listener when the prop identity changes.
-  const onEscape = useEffectEvent(() => onClose());
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onEscape();
-    };
-    window.addEventListener("keydown", onKey);
-    closeRef.current?.focus();
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   const screen = SCREENS[index];
   const isLast = index === SCREENS.length - 1;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ backgroundColor: "var(--backdrop)" }}
+    <DialogContent
+      showCloseButton={false}
+      className="inset-auto left-1/2 top-1/2 bottom-auto flex max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-2xl border border-border bg-card px-6 pb-6 pt-12 text-center shadow-[var(--shadow-lg)]"
     >
-      {/* Intentionally a hand-rolled modal (aria-modal + manual focus/Escape)
-          rather than a native <dialog>: the app owns its focus and backdrop
-          behavior here. See CLAUDE.md design notes. */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="relative flex w-full max-w-md flex-col items-center rounded-2xl border border-border bg-card px-6 pb-6 pt-12 text-center shadow-[var(--shadow-lg)]"
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Skip"
+        className="touch-target absolute right-4 top-4 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground"
       >
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Skip"
-          className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground"
-        >
-          Skip
-          <XIcon className="h-3.5 w-3.5" />
-        </button>
+        Skip
+        <XIcon className="h-3.5 w-3.5" aria-hidden />
+      </button>
 
-        <div className="flex min-h-[140px] items-center justify-center">{screen.visual}</div>
+      <div className="flex min-h-[140px] items-center justify-center">{screen.visual}</div>
 
-        <h2 id={titleId} className="rd-serif mt-6 text-[26px] leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
-          {screen.title}
-        </h2>
-        <p className="mt-3 max-w-[44ch] text-[15px] leading-relaxed text-foreground-muted">
-          {screen.body}
-        </p>
+      <DialogTitle className="rd-serif mt-6 text-[26px] font-normal leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
+        {screen.title}
+      </DialogTitle>
+      <DialogDescription className="mt-3 max-w-[44ch] text-[15px] leading-relaxed text-foreground-muted">
+        {screen.body}
+      </DialogDescription>
 
-        {/* Page dots */}
-        <div className="mt-6 flex items-center gap-2" aria-hidden>
-          {SCREENS.map((s, i) => (
-            <span
-              key={s.key}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                i === index ? "w-5 bg-accent" : "w-1.5 bg-border"
-              )}
-            />
-          ))}
-        </div>
+      <div className="mt-6 flex items-center gap-2" aria-hidden>
+        {SCREENS.map((s, i) => (
+          <span
+            key={s.key}
+            className={cn(
+              "h-1.5 rounded-full transition-[width,background-color]",
+              i === index ? "w-5 bg-accent" : "w-1.5 bg-border"
+            )}
+          />
+        ))}
+      </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex w-full flex-col items-center gap-2">
-          {isLast ? (
-            <>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-card transition-colors hover:bg-accent-hover"
-                style={{ color: "var(--ivory)" }}
-              >
-                Start using GSD
-              </button>
-              {onSignIn ? (
-                <button
-                  type="button"
-                  onClick={onSignIn}
-                  className="text-[13px] font-medium text-foreground-muted transition-colors hover:text-foreground"
-                >
-                  Sign in to sync
-                </button>
-              ) : null}
-            </>
-          ) : (
+      <div className="mt-6 flex w-full flex-col items-center gap-2">
+        {isLast ? (
+          <>
             <button
               type="button"
-              onClick={() => setIndex((i) => Math.min(i + 1, SCREENS.length - 1))}
-              className="w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold transition-colors hover:bg-accent-hover"
+              onClick={onClose}
+              className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-card transition-colors hover:bg-accent-hover"
               style={{ color: "var(--ivory)" }}
             >
-              Next
+              Start using GSD
             </button>
-          )}
-        </div>
+            {onSignIn ? (
+              <button
+                type="button"
+                onClick={onSignIn}
+                className="touch-target text-[13px] font-medium text-foreground-muted transition-colors hover:text-foreground"
+              >
+                Sign in to sync
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIndex((i) => Math.min(i + 1, SCREENS.length - 1))}
+            className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold transition-colors hover:bg-accent-hover"
+            style={{ color: "var(--ivory)" }}
+          >
+            Next
+          </button>
+        )}
       </div>
-    </div>
+    </DialogContent>
   );
 }

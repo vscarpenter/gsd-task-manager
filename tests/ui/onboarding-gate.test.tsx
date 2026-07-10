@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { OnboardingGate, REPLAY_ONBOARDING_EVENT, ONBOARDING_SEEN_KEY } from "@/components/onboarding/onboarding-gate";
 
 const pushMock = vi.fn();
@@ -42,5 +43,58 @@ describe("OnboardingGate", () => {
       window.dispatchEvent(new Event(REPLAY_ONBOARDING_EVENT));
     });
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("dismisses an automatic first-run tour immediately when Skip is pressed", async () => {
+    const user = userEvent.setup();
+    render(<OnboardingGate />);
+
+    await user.click(screen.getByRole("button", { name: /skip/i }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(localStorage.getItem(ONBOARDING_SEEN_KEY)).toBe("true");
+  });
+
+  it("dismisses an automatic first-run tour immediately with Escape", async () => {
+    const user = userEvent.setup();
+    render(<OnboardingGate />);
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("dismisses the final screen immediately when Start using GSD is pressed", async () => {
+    const user = userEvent.setup();
+    render(<OnboardingGate />);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await user.click(screen.getByRole("button", { name: /start using gsd/i }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("restores focus to the control that requested a replay", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
+    render(
+      <>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(REPLAY_ONBOARDING_EVENT))}
+        >
+          Replay welcome tour
+        </button>
+        <OnboardingGate />
+      </>
+    );
+    const trigger = screen.getByRole("button", { name: /replay welcome tour/i });
+
+    await user.click(trigger);
+    await user.click(screen.getByRole("button", { name: /skip/i }));
+
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

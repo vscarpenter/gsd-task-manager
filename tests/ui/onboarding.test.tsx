@@ -63,4 +63,19 @@ describe("Onboarding", () => {
     await user.click(screen.getByRole("button", { name: /sign in to sync/i }));
     expect(onSignIn).toHaveBeenCalled();
   });
+
+  it("traps focus within the onboarding dialog", async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+    const skip = screen.getByRole("button", { name: /skip/i });
+    const next = screen.getByRole("button", { name: /next/i });
+
+    next.focus();
+    await user.tab();
+    expect(skip).toHaveFocus();
+
+    await user.tab({ shift: true });
+    expect(next).toHaveFocus();
+  });
+
 });

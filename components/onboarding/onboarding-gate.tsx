@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Onboarding } from "./onboarding";
 
@@ -12,7 +12,25 @@ export const REPLAY_ONBOARDING_EVENT = "gsd:replay-onboarding";
 // Marketing / utility surfaces where the tour should not auto-open.
 const SUPPRESS_PREFIXES = ["/about", "/install"];
 
-const noopSubscribe = () => () => {};
+const seenListeners = new Set<() => void>();
+
+function subscribeToSeenFlag(onChange: () => void): () => void {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === ONBOARDING_SEEN_KEY) onChange();
+  };
+  seenListeners.add(onChange);
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    seenListeners.delete(onChange);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
+
+function markOnboardingSeen(): void {
+  localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
+  seenListeners.forEach((listener) => listener());
+}
+
 /** Client snapshot: has the user already seen the welcome tour? */
 const getSeenSnapshot = () => !!localStorage.getItem(ONBOARDING_SEEN_KEY);
 /**
@@ -35,10 +53,18 @@ export function OnboardingGate() {
   const pathname = usePathname();
   const router = useRouter();
   const [forceOpen, setForceOpen] = useState(false);
-  const seen = useSyncExternalStore(noopSubscribe, getSeenSnapshot, getSeenServerSnapshot);
+  const replayTriggerRef = useRef<HTMLElement | null>(null);
+  const seen = useSyncExternalStore(
+    subscribeToSeenFlag,
+    getSeenSnapshot,
+    getSeenServerSnapshot
+  );
 
   useEffect(() => {
-    const replay = () => setForceOpen(true);
+    const replay = () => {
+      replayTriggerRef.current = document.activeElement as HTMLElement | null;
+      setForceOpen(true);
+    };
     window.addEventListener(REPLAY_ONBOARDING_EVENT, replay);
     return () => window.removeEventListener(REPLAY_ONBOARDING_EVENT, replay);
   }, []);
@@ -47,8 +73,13 @@ export function OnboardingGate() {
   const open = forceOpen || (!suppressed && !seen);
 
   const close = () => {
-    localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
+    const replayTrigger = replayTriggerRef.current;
+    markOnboardingSeen();
     setForceOpen(false);
+    replayTriggerRef.current = null;
+    if (replayTrigger?.isConnected) {
+      window.setTimeout(() => replayTrigger.focus(), 0);
+    }
   };
 
   const signIn = () => {

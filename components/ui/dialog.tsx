@@ -28,8 +28,11 @@ export function DialogContent({
   className,
   children,
   ref,
+  showCloseButton = true,
   ...props
-}: React.ComponentPropsWithRef<typeof DialogPrimitive.Content>) {
+}: React.ComponentPropsWithRef<typeof DialogPrimitive.Content> & {
+  showCloseButton?: boolean;
+}) {
   return (
   <DialogPortal>
     <DialogOverlay />
@@ -50,12 +53,14 @@ export function DialogContent({
       {...props}
     >
       {children}
-      <DialogPrimitive.Close
-        className="button-reset absolute right-4 top-4 rounded-full p-2 text-foreground-muted transition hover:text-foreground touch-manipulation"
-        aria-label="Close"
-      >
-        <Cross2Icon className="h-5 w-5 sm:h-4 sm:w-4" />
-      </DialogPrimitive.Close>
+      {showCloseButton ? (
+        <DialogPrimitive.Close
+          className="button-reset touch-target absolute right-4 top-4 rounded-full p-2 text-foreground-muted transition-colors hover:text-foreground touch-manipulation"
+          aria-label="Close"
+        >
+          <Cross2Icon className="h-5 w-5 sm:h-4 sm:w-4" />
+        </DialogPrimitive.Close>
+      ) : null}
     </DialogPrimitive.Content>
   </DialogPortal>
   );
