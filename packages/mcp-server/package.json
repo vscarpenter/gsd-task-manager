@@ -76,15 +76,15 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
-    "@sentry/node": "10.54.0",
+    "@sentry/node": "10.65.0",
     "pocketbase": "0.26.8",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "25.3.3",
-    "@vitest/ui": "4.1.2",
+    "@vitest/ui": "4.1.10",
     "typescript": "5.9.3",
-    "vitest": "4.1.2"
+    "vitest": "4.1.10"
   },
   "engines": {
     "node": ">=18.0.0"
