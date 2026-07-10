@@ -48,7 +48,7 @@ export function MatrixGrid({
   })();
 
   return (
-    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-8 md:grid-cols-2 md:grid-rows-2 md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-card md:shadow-sm">
+    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:grid-rows-2 lg:gap-0 lg:overflow-hidden lg:rounded-xl lg:border lg:border-border lg:bg-card lg:shadow-sm">
       {quadrants.map((meta, index) => (
         <QuadrantPane
           key={meta.id}

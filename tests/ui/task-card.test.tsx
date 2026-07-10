@@ -61,6 +61,12 @@ describe("TaskCard", () => {
     expect(screen.getByText("Test description")).toBeInTheDocument();
   });
 
+  it("gives the drag handle a coarse-pointer touch target", () => {
+    render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);
+
+    expect(screen.getByRole("button", { name: /drag to move task/i })).toHaveClass("touch-target");
+  });
+
   it("renders safe http and https URLs in descriptions as external links", () => {
     const taskWithUrl = {
       ...mockTask,

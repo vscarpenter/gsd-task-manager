@@ -24,9 +24,9 @@ export function SettingsPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
             Preferences & Data
           </p>
-          <h1 className="rd-serif mt-2 text-h1 text-foreground sm:text-display">
+          <h2 className="rd-serif mt-2 text-h1 text-foreground sm:text-display">
             Settings
-          </h1>
+          </h2>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground-muted">
             Personalize the workspace, tune reminders, and manage local data without losing the calm, editorial tone of the main app.
           </p>

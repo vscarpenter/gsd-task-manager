@@ -124,7 +124,7 @@ export function SettingsBody({
   };
 
   return (
-    <main className="min-w-0 flex-1">
+    <div className="min-w-0 flex-1">
       <SectionCard
         eyebrow={activeMeta.group}
         title={activeMeta.label}
@@ -191,6 +191,6 @@ export function SettingsBody({
           />
         </Suspense>
       )}
-    </main>
+    </div>
   );
 }

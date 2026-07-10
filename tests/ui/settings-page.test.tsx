@@ -131,6 +131,15 @@ describe("SettingsPage", () => {
     }
   });
 
+  it("leaves page-level main and h1 semantics to the application shell", async () => {
+    const { container } = render(<SettingsPage />);
+    await screen.findAllByText("Appearance");
+
+    expect(container.querySelector("main")).toBeNull();
+    expect(container.querySelector("h1")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: "Settings" })).toBeInTheDocument();
+  });
+
   it("defaults to the appearance section", async () => {
     await renderPage();
     expect(screen.getByTestId("section-appearance")).toBeInTheDocument();

@@ -142,6 +142,14 @@ describe("<MatrixSimplified>", () => {
     handleSuccessSpy.mockClear();
   });
 
+  it("keeps the matrix single-column at tablet widths and merges it at large widths", () => {
+    render(<MatrixSimplified />);
+    const grid = screen.getByTestId("matrix-grid");
+
+    expect(grid).toHaveClass("grid-cols-1", "lg:grid-cols-2", "lg:grid-rows-2");
+    expect(grid).not.toHaveClass("md:grid-cols-2", "md:grid-rows-2");
+  });
+
   describe("completion celebration", () => {
     it("fires confetti when a task is marked complete", async () => {
       const user = userEvent.setup();

@@ -153,7 +153,7 @@ function RailButton({
         aria-label={label}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
+          "touch-target group relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
           active
             ? "bg-background-muted text-foreground"
