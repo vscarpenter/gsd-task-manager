@@ -2,21 +2,28 @@
 
 ---
 
-## In progress — 2026-07-10: Resolve all application-audit findings
+## Done — 2026-07-10: Resolve all application-audit findings
 
 **Branch:** `codex/fix-audit-findings` · **Tier:** Non-trivial · **Contract:**
 `docs/audits/AUDIT-2026-07-10.md` plus the approved spec in `tasks/spec.md`.
 
-- [ ] C1 — onboarding dismissal state regression tests and fix
-- [ ] C2 — accessible Radix onboarding modal with focus restoration tests
-- [ ] C3 — transactional/idempotent recurring completion and pending UI guard
-- [ ] C4 — atomic task/dependency plus sync-queue mutation paths
-- [ ] C5 — status-aware failed-queue deletion reconciliation
-- [ ] C6 — MCP endpoint redaction and URL validation
-- [ ] C7 — Settings landmark/heading semantics
-- [ ] C8 — coarse-pointer touch targets and tablet matrix breakpoint
-- [ ] C9 — dependency updates and clean `bun audit`
-- [ ] C10 — full unit, coverage, typecheck, lint, build, and browser verification
+- [x] C1 — onboarding dismissal state regression tests and fix
+- [x] C2 — accessible Radix onboarding modal with focus restoration tests
+- [x] C3 — transactional/idempotent recurring completion and pending UI guard
+- [x] C4 — atomic task/dependency plus sync-queue mutation paths
+- [x] C5 — status-aware failed-queue deletion reconciliation
+- [x] C6 — MCP endpoint redaction and URL validation
+- [x] C7 — Settings landmark/heading semantics
+- [x] C8 — coarse-pointer touch targets and tablet matrix breakpoint
+- [x] C9 — dependency updates and clean `bun audit`
+- [x] C10 — full unit, coverage, typecheck, lint, build, and browser verification
+
+**Verification:** root tests 2,285 passed / 1 skipped; coverage 85.87% statements,
+79.45% branches, 86.61% functions, 86.85% lines; MCP tests 157 passed under
+Vitest 4.1.10; typecheck, lint (0 errors), static build, and `bun audit` passed.
+Live static-build checks confirmed immediate onboarding dismissal, forward/reverse
+focus containment, replay focus restoration, one-column 768px layout, two-column
+1024px layout, and 44px coarse-pointer targets with no browser console errors.
 
 **Dirty-tree guard:** `public/sw.js` was modified before this implementation and must
 remain outside scoped commits. The audit report is the implementation source artifact.

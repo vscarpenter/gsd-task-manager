@@ -1,6 +1,6 @@
 # Spec: Resolve 2026-07-10 application audit findings
 
-**Date:** 2026-07-10 · **Status:** Approved · **Tier:** Non-trivial
+**Date:** 2026-07-10 · **Status:** Complete · **Tier:** Non-trivial
 
 ## Goal
 
@@ -45,17 +45,17 @@ tests at the real failure seams and live browser verification for the UI fixes.
 
 ## Acceptance criteria
 
-- [ ] First-run Skip, Escape, and Start actions dismiss onboarding immediately.
-- [ ] Onboarding traps focus, makes the background inert, and restores focus.
-- [ ] Recurring completion is transactionally idempotent and guarded while pending.
-- [ ] CRUD task writes and sync-queue writes commit or roll back together.
-- [ ] Failed queue rows no longer block realtime or pull deletion reconciliation.
-- [ ] `get_sync_status` returns only a redacted endpoint; unsafe URL material is rejected.
-- [ ] Settings has one main landmark and one page-level heading.
-- [ ] Audited mobile controls receive the existing 44px coarse-pointer contract.
-- [ ] The matrix remains single-column at portrait-tablet widths.
-- [ ] `bun audit` no longer reports the audited dependency advisories.
-- [ ] Targeted tests, full tests, coverage, typecheck, lint, build, and browser checks pass.
+- [x] First-run Skip, Escape, and Start actions dismiss onboarding immediately.
+- [x] Onboarding traps focus, makes the background inert, and restores focus.
+- [x] Recurring completion is transactionally idempotent and guarded while pending.
+- [x] CRUD task writes and sync-queue writes commit or roll back together.
+- [x] Failed queue rows no longer block realtime or pull deletion reconciliation.
+- [x] `get_sync_status` returns only a redacted endpoint; unsafe URL material is rejected.
+- [x] Settings has one main landmark and one page-level heading.
+- [x] Audited mobile controls receive the existing 44px coarse-pointer contract.
+- [x] The matrix remains single-column at portrait-tablet widths.
+- [x] `bun audit` no longer reports the audited dependency advisories.
+- [x] Targeted tests, full tests, coverage, typecheck, lint, build, and browser checks pass.
 
 ## Test stubs
 
