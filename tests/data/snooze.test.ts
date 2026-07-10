@@ -14,6 +14,8 @@ vi.mock('@/lib/db', () => ({
       get: mockGet,
       put: mockPut,
     },
+    syncQueue: {},
+    transaction: vi.fn(async (_mode, _tables, callback) => callback()),
   })),
 }));
 

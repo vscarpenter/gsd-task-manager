@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
@@ -95,6 +95,34 @@ describe("TaskCard", () => {
     await user.click(checkbox);
 
     expect(mockHandlers.onToggleComplete).toHaveBeenCalledWith(mockTask, true);
+  });
+
+  it("prevents duplicate completion requests while a toggle is pending", async () => {
+    const user = userEvent.setup();
+    let resolveToggle!: () => void;
+    const onToggleComplete = vi.fn(() => new Promise<void>((resolve) => {
+      resolveToggle = resolve;
+    }));
+
+    render(
+      <TaskCard
+        task={mockTask}
+        allTasks={[mockTask]}
+        {...mockHandlers}
+        onToggleComplete={onToggleComplete}
+      />
+    );
+
+    const checkbox = screen.getByRole("button", { name: /mark as complete/i });
+    await user.click(checkbox);
+
+    expect(checkbox).toBeDisabled();
+    expect(checkbox).toHaveAttribute("aria-busy", "true");
+    await user.click(checkbox);
+    expect(onToggleComplete).toHaveBeenCalledTimes(1);
+
+    await act(async () => resolveToggle());
+    expect(checkbox).toBeEnabled();
   });
 
   it("calls onEdit when edit button is clicked", async () => {

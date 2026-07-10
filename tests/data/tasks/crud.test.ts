@@ -23,6 +23,7 @@ const mockIsRunning = vi.fn(() => false);
 vi.mock('@/lib/db');
 vi.mock('@/lib/tasks/dependencies', () => ({
   removeDependencyReferences: mockRemoveDependencyReferences,
+  removeDependencyReferencesInTransaction: mockRemoveDependencyReferences,
 }));
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(() => ({
@@ -100,6 +101,8 @@ describe('Task CRUD Operations', () => {
         clear: vi.fn(),
         count: vi.fn(),
       },
+      syncQueue: {},
+      transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     };
 
     (getDb as ReturnType<typeof vi.fn>).mockReturnValue(mockDb);
@@ -517,7 +520,11 @@ describe('Task CRUD Operations', () => {
 
       await deleteTask('task-1');
 
-      expect(mockRemoveDependencyReferences).toHaveBeenCalledWith('task-1');
+      expect(mockRemoveDependencyReferences).toHaveBeenCalledWith(
+        'task-1',
+        expect.any(Function),
+        false
+      );
       expect(mockRemoveDependencyReferences.mock.invocationCallOrder[0]).toBeLessThan(
         mockDb.tasks.delete.mock.invocationCallOrder[0]
       );

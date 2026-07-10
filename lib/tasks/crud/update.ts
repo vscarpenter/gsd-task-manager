@@ -5,7 +5,7 @@ import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -18,41 +18,20 @@ export async function updateTask(
 ): Promise<TaskRecord> {
   try {
     const db = getDb();
-    const existing = await db.tasks.get(id);
-
-    if (!existing) {
-      logger.warn("Task not found for update", { taskId: id });
-      throw new Error(`Task ${id} not found`);
-    }
-
-    const nextDraft = mergeTaskUpdates(existing, updates);
-    // Extract URLs from the title into the description, mirroring createTask so
-    // edits and creates handle links identically (idempotent on already-clean titles).
-    const { cleanTitle, urls } = extractUrlsFromTitle(nextDraft.title);
-    nextDraft.title = cleanTitle;
-    nextDraft.description = buildDescription(nextDraft.description, urls);
-
-    const result = taskDraftSchema.safeParse(nextDraft);
-    if (!result.success) {
-      const fields = result.error.issues.map((i) => i.path.join('.')).join(', ');
-      throw new Error(`Task validation failed: invalid fields — ${fields}`);
-    }
-    const validated = result.data;
-
-    const { syncConfig } = await getSyncContext();
-    const nextRecord = buildUpdatedRecord(existing, validated, updates);
-
-    await db.tasks.put(nextRecord);
+    const nextRecord = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      const existing = await db.tasks.get(id);
+      if (!existing) {
+        logger.warn("Task not found for update", { taskId: id });
+        throw new Error(`Task ${id} not found`);
+      }
+      const validated = validateUpdatedDraft(existing, updates);
+      const record = buildUpdatedRecord(existing, validated, updates);
+      await db.tasks.put(record);
+      if (syncEnabled) await enqueue("update", id, record);
+      return record;
+    });
 
     logger.info("Task updated", { taskId: id, title: nextRecord.title });
-
-    await enqueueSyncOperation(
-      "update",
-      id,
-      nextRecord,
-      syncConfig?.enabled ?? false
-    );
-
     return nextRecord;
   } catch (error) {
     logger.error("Failed to update task", error instanceof Error ? error : undefined, {
@@ -61,6 +40,22 @@ export async function updateTask(
     });
     throw new Error(`Failed to update task: ${formatErrorMessage(error)}`);
   }
+}
+
+function validateUpdatedDraft(
+  existing: TaskRecord,
+  updates: Partial<TaskDraft>
+): TaskDraft {
+  const nextDraft = mergeTaskUpdates(existing, updates);
+  const { cleanTitle, urls } = extractUrlsFromTitle(nextDraft.title);
+  nextDraft.title = cleanTitle;
+  nextDraft.description = buildDescription(nextDraft.description, urls);
+  const result = taskDraftSchema.safeParse(nextDraft);
+  if (!result.success) {
+    const fields = result.error.issues.map((issue) => issue.path.join(".")).join(", ");
+    throw new Error(`Task validation failed: invalid fields — ${fields}`);
+  }
+  return result.data;
 }
 
 /**

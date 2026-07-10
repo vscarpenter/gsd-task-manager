@@ -191,6 +191,23 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     await expect(db.tasks.get(unsyncedTask.id)).resolves.toEqual(unsyncedTask);
   });
 
+  it('deletes a remote-absent local task when its only queued operation has failed', async () => {
+    const db = getDb();
+    const staleTask = makeTask('failed-local-edit');
+    await db.tasks.add(staleTask);
+    await getSyncQueue().enqueue('update', staleTask.id, staleTask);
+    const [queuedItem] = await db.syncQueue.toArray();
+    await db.syncQueue.update(queuedItem.id, { status: 'failed' });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map(),
+      fetchSucceeded: true,
+    });
+
+    await pullRemoteChanges(null);
+
+    await expect(db.tasks.get(staleTask.id)).resolves.toBeUndefined();
+  });
+
   it('skips local deletion when the remote index cannot be fetched', async () => {
     const db = getDb();
     await db.tasks.add(makeTask('local-copy'));

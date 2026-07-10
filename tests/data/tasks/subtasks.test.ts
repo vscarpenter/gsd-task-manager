@@ -83,6 +83,8 @@ describe('Task Subtask Operations', () => {
         get: vi.fn(),
         put: vi.fn(),
       },
+      syncQueue: {},
+      transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     };
 
     (getDb as ReturnType<typeof vi.fn>).mockReturnValue(mockDb);

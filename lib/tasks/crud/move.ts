@@ -3,7 +3,7 @@ import { createLogger } from "@/lib/logger";
 import { parseQuadrantFlags } from "@/lib/quadrants";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
-import { enqueueSyncOperation, getSyncContext } from "./helpers";
+import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -17,40 +17,30 @@ export async function moveTaskToQuadrant(
 ): Promise<TaskRecord> {
   try {
     const db = getDb();
-    const existing = await db.tasks.get(id);
-
-    if (!existing) {
-      logger.warn("Task not found for quadrant move", { taskId: id });
-      throw new Error(`Task ${id} not found`);
-    }
-
     const { urgent, important } = parseQuadrantFlags(targetQuadrant);
-    const { syncConfig } = await getSyncContext();
-
-    const nextRecord: TaskRecord = {
-      ...existing,
-      urgent,
-      important,
-      quadrant: targetQuadrant,
-      updatedAt: isoNow(),
-    };
-
-    await db.tasks.put(nextRecord);
+    const nextRecord = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
+      const existing = await db.tasks.get(id);
+      if (!existing) {
+        logger.warn("Task not found for quadrant move", { taskId: id });
+        throw new Error(`Task ${id} not found`);
+      }
+      const record: TaskRecord = {
+        ...existing,
+        urgent,
+        important,
+        quadrant: targetQuadrant,
+        updatedAt: isoNow(),
+      };
+      await db.tasks.put(record);
+      if (syncEnabled) await enqueue("update", id, record);
+      return record;
+    });
 
     logger.info("Task moved to quadrant", {
       taskId: id,
-      title: existing.title,
-      fromQuadrant: existing.quadrant,
+      title: nextRecord.title,
       toQuadrant: targetQuadrant,
     });
-
-    await enqueueSyncOperation(
-      "update",
-      id,
-      nextRecord,
-      syncConfig?.enabled ?? false
-    );
-
     return nextRecord;
   } catch (error) {
     logger.error(

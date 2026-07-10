@@ -11,6 +11,7 @@ import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
+import { isPendingSyncQueueItem } from './queue';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -175,7 +176,9 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   const remoteTaskIds = new Set(remoteIndex.keys());
 
   const allPendingOps = await db.syncQueue.toArray();
-  const pendingTaskIds = new Set(allPendingOps.map(op => op.taskId));
+  const pendingTaskIds = new Set(
+    allPendingOps.filter(isPendingSyncQueueItem).map(op => op.taskId)
+  );
 
   const toDelete = localTasks.filter(
     local => !remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)

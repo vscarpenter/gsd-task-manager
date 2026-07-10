@@ -81,6 +81,8 @@ describe('Task Dependency Operations', () => {
         put: vi.fn(),
         toArray: vi.fn(),
       },
+      syncQueue: {},
+      transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     };
 
     (getDb as ReturnType<typeof vi.fn>).mockReturnValue(mockDb);

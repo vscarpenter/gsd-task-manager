@@ -34,6 +34,15 @@ vi.mock('@/lib/tasks/crud/helpers', () => ({
     deviceId: 'test-device',
   })),
   enqueueSyncOperation: (...args: unknown[]) => mockEnqueue(...args),
+  runTaskSyncTransaction: (mutation: (context: {
+    syncEnabled: boolean;
+    enqueue: (...args: unknown[]) => Promise<void>;
+  }) => Promise<unknown>) => mutation({
+    syncEnabled: false,
+    enqueue: async (...args: unknown[]) => {
+      await mockEnqueue(...args);
+    },
+  }),
 }));
 
 vi.mock('nanoid', () => ({
