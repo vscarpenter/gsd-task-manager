@@ -77,11 +77,11 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
     "@sentry/node": "10.65.0",
-    "pocketbase": "0.26.8",
-    "zod": "4.3.6"
+    "pocketbase": "0.27.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "25.3.3",
+    "@types/node": "26.1.1",
     "@vitest/ui": "4.1.10",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
