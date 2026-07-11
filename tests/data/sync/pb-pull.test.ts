@@ -191,6 +191,28 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     await expect(db.tasks.get(unsyncedTask.id)).resolves.toEqual(unsyncedTask);
   });
 
+  it('preserves a remote-absent local task when its legacy queue row has no status', async () => {
+    const db = getDb();
+    const legacyUnsyncedTask = makeTask('legacy-pending-local-edit');
+    await db.tasks.add(legacyUnsyncedTask);
+    await db.syncQueue.add({
+      id: 'legacy-queue-row',
+      taskId: legacyUnsyncedTask.id,
+      operation: 'update',
+      timestamp: Date.now(),
+      retryCount: 0,
+      payload: legacyUnsyncedTask,
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map(),
+      fetchSucceeded: true,
+    });
+
+    await pullRemoteChanges(null);
+
+    await expect(db.tasks.get(legacyUnsyncedTask.id)).resolves.toEqual(legacyUnsyncedTask);
+  });
+
   it('deletes a remote-absent local task when its only queued operation has failed', async () => {
     const db = getDb();
     const staleTask = makeTask('failed-local-edit');
