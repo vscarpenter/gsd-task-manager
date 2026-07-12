@@ -70,11 +70,15 @@ export function useViewTransition() {
 
     // Wrapping router.push in startTransition ensures React can batch updates
     // during the transition, preventing UI flickering and improving performance.
-    doc.startViewTransition(() => {
+    const transition = doc.startViewTransition(() => {
       startTransition(() => {
         router.push(normalizedHref);
       });
     });
+
+    // A view transition is progressive enhancement: setup failures must not turn
+    // successful navigation into an unhandled rejection reported as an app error.
+    void transition.ready.catch(() => undefined);
   };
 
   return { navigateWithTransition, isPending };

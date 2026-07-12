@@ -79,6 +79,30 @@ describe("useViewTransition", () => {
     expect(mockPush).toHaveBeenCalledWith("/dashboard/");
   });
 
+  it("handles transition readiness failures without interrupting navigation", () => {
+    const readyCatch = vi.fn().mockReturnValue(Promise.resolve());
+    const mockStartViewTransition = vi.fn((callback: () => void) => {
+      callback();
+      return {
+        finished: Promise.resolve(),
+        ready: { catch: readyCatch } as unknown as Promise<void>,
+        updateCallbackDone: Promise.resolve(),
+      };
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (document as any).startViewTransition = mockStartViewTransition;
+
+    const { result } = renderHook(() => useViewTransition());
+
+    act(() => {
+      result.current.navigateWithTransition("/about");
+    });
+
+    expect(readyCatch).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockPush).toHaveBeenCalledWith("/about/");
+  });
+
   it("normalizes routes by adding trailing slash", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (document as any).startViewTransition;
