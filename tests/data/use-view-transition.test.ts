@@ -79,13 +79,15 @@ describe("useViewTransition", () => {
     expect(mockPush).toHaveBeenCalledWith("/dashboard/");
   });
 
-  it("handles transition readiness failures without interrupting navigation", () => {
-    const readyCatch = vi.fn().mockReturnValue(Promise.resolve());
+  it("handles transition readiness failures without interrupting navigation", async () => {
+    // Real rejecting promise, matching a browser skipping the transition
+    const ready = Promise.reject<void>(new Error("transition skipped before setup"));
+    const catchSpy = vi.spyOn(ready, "catch");
     const mockStartViewTransition = vi.fn((callback: () => void) => {
       callback();
       return {
         finished: Promise.resolve(),
-        ready: { catch: readyCatch } as unknown as Promise<void>,
+        ready,
         updateCallbackDone: Promise.resolve(),
       };
     });
@@ -99,8 +101,14 @@ describe("useViewTransition", () => {
       result.current.navigateWithTransition("/about");
     });
 
-    expect(readyCatch).toHaveBeenCalledWith(expect.any(Function));
+    // The hook must consume the rejection synchronously during navigation,
+    // before the microtask queue can surface it as an unhandled rejection.
+    expect(catchSpy).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith("/about/");
+
+    // The attached handler must swallow the rejection, not rethrow it.
+    const [handler] = catchSpy.mock.calls[0];
+    await expect(ready.catch(handler)).resolves.toBeUndefined();
   });
 
   it("normalizes routes by adding trailing slash", () => {
