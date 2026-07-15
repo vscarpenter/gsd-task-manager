@@ -2,6 +2,30 @@
 
 ---
 
+## Done — 2026-07-12: Handle failed view transitions without duplicate Sentry events
+
+**Branch:** `fix/view-transition-rejection-telemetry` · **Tier:** Standard (two bounded frontend error-handling changes; no visual or public contract change).
+
+**Plan (TDD):**
+- [x] RED: prove rejected `ViewTransition.ready` promises are consumed while navigation still runs.
+- [x] RED: prove the global rejection listener does not manually capture an event already owned by Sentry's browser integration.
+- [x] GREEN: handle the transition readiness promise as progressive enhancement and keep the listener toast-only.
+- [x] Verify targeted tests, typecheck, lint, full tests, build, and clean browser navigation including a forced invalid transition.
+
+**Out of scope:** changing page-transition visuals, suppressing all `InvalidStateError` events globally, or modifying unrelated generated/version files.
+
+**Verification:** targeted tests 16 passed; full suite 2,291 passed / 1 skipped;
+typecheck and lint passed (11 pre-existing warnings); static build passed. Mobile
+browser checks for normal navigation, forced invalid transition setup, and a
+synchronous double-click all reached `/about/` with no page error or unexpected
+error toast. The forced failure also passed against the built static export.
+
+**Resuming From Here:** implementation is complete and scoped for commit. The
+pre-existing `package.json` and `public/sw.js` version edits remain untouched and
+outside this change.
+
+---
+
 ## Done — 2026-07-10: Resolve all application-audit findings
 
 **Branch:** `codex/fix-audit-findings` · **Tier:** Non-trivial · **Contract:**

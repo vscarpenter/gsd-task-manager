@@ -2,27 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { GlobalErrorListener } from "@/components/global-error-listener";
 
-const mockLogger = vi.hoisted(() => ({
-  error: vi.fn(),
-  warn: vi.fn(),
-  info: vi.fn(),
-  debug: vi.fn(),
-}));
-
 const mockToast = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
-vi.mock("@/lib/logger", () => ({
-  createLogger: vi.fn(() => mockLogger),
-}));
+const mockCaptureException = vi.hoisted(() => vi.fn());
 
 vi.mock("sonner", () => ({
   toast: mockToast,
 }));
 
 vi.mock("@/lib/sentry", () => ({
-  captureException: vi.fn(),
+  captureException: mockCaptureException,
+  captureMessage: vi.fn(),
 }));
 
 describe("GlobalErrorListener", () => {
@@ -63,7 +55,7 @@ describe("GlobalErrorListener", () => {
     );
   });
 
-  it("should log error details for Error rejection", () => {
+  it("should not manually capture a rejection already owned by Sentry", () => {
     render(<GlobalErrorListener />);
 
     const handler = addEventSpy.mock.calls.find(
@@ -76,11 +68,7 @@ describe("GlobalErrorListener", () => {
     });
     handler(event);
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      "Unhandled promise rejection",
-      expect.any(Error),
-      expect.any(Object)
-    );
+    expect(mockCaptureException).not.toHaveBeenCalled();
   });
 
   it("should show toast for unhandled rejection", () => {
@@ -112,7 +100,8 @@ describe("GlobalErrorListener", () => {
     });
     handler(event);
 
-    expect(mockLogger.error).toHaveBeenCalled();
+    expect(mockToast.error).toHaveBeenCalledWith("An unexpected error occurred");
+    expect(mockCaptureException).not.toHaveBeenCalled();
   });
 
   it("should throttle rapid successive rejections", () => {
