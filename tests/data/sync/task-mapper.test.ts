@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { taskRecordToPocketBase, pocketBaseToTaskRecord } from '@/lib/sync/task-mapper';
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import type { TaskRecord } from '@/lib/types';
@@ -307,6 +307,41 @@ describe('task-mapper', () => {
       expect(result!.subtasks).toEqual([]);
       expect(result!.dependencies).toEqual([]);
       expect(result!.timeEntries).toEqual([]);
+    });
+  });
+
+  describe('client_updated_at clamping (LWW poisoning guard)', () => {
+    // `client_updated_at` is the LWW authority and comes from the writing
+    // device's own (unverifiable) clock. A skewed/forged far-future value would
+    // permanently win every comparison and lock the task from other devices, so
+    // the mapper caps it to now + a small skew window at the ingestion boundary.
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-07-17T12:00:00.000Z'));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should_clamp_a_far_future_client_updated_at_to_now_plus_skew_window', () => {
+      const pb = buildPBRecord({ client_updated_at: '2099-01-01T00:00:00.000Z' });
+      const result = pocketBaseToTaskRecord(pb);
+      expect(result).not.toBeNull();
+      // now (12:00:00) + 5 min skew ceiling
+      expect(result!.updatedAt).toBe('2026-07-17T12:05:00.000Z');
+    });
+
+    it('should_leave_a_normal_past_client_updated_at_unchanged', () => {
+      const pb = buildPBRecord({ client_updated_at: '2026-07-10T09:00:00.000Z' });
+      const result = pocketBaseToTaskRecord(pb);
+      expect(result!.updatedAt).toBe('2026-07-10T09:00:00.000Z');
+    });
+
+    it('should_leave_a_near_now_client_updated_at_within_the_skew_window_unchanged', () => {
+      // 2 minutes ahead — within tolerated inter-device skew, must not be clamped.
+      const pb = buildPBRecord({ client_updated_at: '2026-07-17T12:02:00.000Z' });
+      const result = pocketBaseToTaskRecord(pb);
+      expect(result!.updatedAt).toBe('2026-07-17T12:02:00.000Z');
     });
   });
 

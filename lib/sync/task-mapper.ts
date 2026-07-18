@@ -11,9 +11,28 @@ import type { RecordModel } from 'pocketbase';
 import { z } from 'zod';
 import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('SYNC_PULL');
+
+/**
+ * Cap a client-stamped timestamp that is implausibly far in the future.
+ *
+ * `client_updated_at` is the last-write-wins authority and originates from the
+ * writing device's own clock, which the app cannot verify. A skewed clock — or a
+ * value forged via a direct API write — could stamp a time years ahead, winning
+ * every future LWW comparison and locking the task from all other devices. Values
+ * beyond `now + MAX_CLIENT_CLOCK_SKEW_MS` are treated as untrustworthy and capped
+ * to that bound; unparseable input is returned unchanged so Zod/NaN handling stays
+ * with the caller.
+ */
+export function clampClientTimestamp(iso: string, nowMs: number = Date.now()): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return iso;
+  const ceiling = nowMs + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS;
+  return t > ceiling ? new Date(ceiling).toISOString() : iso;
+}
 
 /** Shape of a task as stored in the PocketBase `tasks` collection */
 export interface PBTaskRecord {
@@ -148,7 +167,7 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     completed: r.completed,
     completedAt: r.completed_at || undefined,
     createdAt: r.client_created_at,
-    updatedAt: r.client_updated_at,
+    updatedAt: clampClientTimestamp(r.client_updated_at),
     recurrence: r.recurrence,
     tags: r.tags,
     subtasks: r.subtasks,

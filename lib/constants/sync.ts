@@ -47,6 +47,14 @@ export const SYNC_CONFIG = {
    * Bounds the wait so a bogus or hostile header can't freeze sync indefinitely.
    */
   MAX_RETRY_AFTER_MS: 5 * 60 * 1000,
+
+  /**
+   * Tolerated forward skew for a client-stamped `client_updated_at` (5 min).
+   * `client_updated_at` is the LWW authority and comes from the writing device's
+   * own unverifiable clock; a value beyond `now + this` is treated as untrustworthy
+   * so a skewed/forged far-future timestamp can't permanently win LWW and lock a task.
+   */
+  MAX_CLIENT_CLOCK_SKEW_MS: 5 * 60 * 1000,
 } as const;
 
 /**
