@@ -134,6 +134,33 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(0);
   });
 
+  it('pushes a legitimate local edit even when the remote client_updated_at is implausibly far in the future', async () => {
+    // A skewed/forged remote timestamp must not permanently block a real local
+    // write — otherwise a poisoned record could never be healed. The local edit
+    // is a plausible "just now"; the remote is years ahead and untrustworthy.
+    const localUpdatedAt = new Date(Date.now() - 60_000).toISOString();
+    const freshPayload = makeTask('t1', localUpdatedAt);
+    await getSyncQueue().enqueue('update', 't1', freshPayload);
+
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2099-01-01T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(result.pushedCount).toBe(1);
+    expect(await getSyncQueue().getPendingCount()).toBe(0);
+  });
+
   it('does not push an upsert when the remote index fetch failed (LWW unverifiable)', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     await getSyncQueue().enqueue('update', 't1', payload);

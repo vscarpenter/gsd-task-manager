@@ -11,6 +11,7 @@ import { taskRecordToPocketBase } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { SyncQueueItem, RemoteTaskIndexEntry } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -167,11 +168,17 @@ async function pushSingleItem(
 /**
  * Compare two ISO timestamps. Returns true iff remote is strictly newer than local.
  * Returns false for any NaN/invalid input — never skip a write because of bad data.
+ *
+ * A remote `client_updated_at` beyond `now + MAX_CLIENT_CLOCK_SKEW_MS` is treated
+ * as untrustworthy (skewed clock or forged value) and never considered newer, so a
+ * legitimate local edit can overwrite — and thereby heal — a poisoned remote record
+ * instead of being blocked by it forever.
  */
-function isRemoteNewer(remoteIso: string, localIso: string): boolean {
+function isRemoteNewer(remoteIso: string, localIso: string, nowMs: number = Date.now()): boolean {
   const r = new Date(remoteIso).getTime();
   const l = new Date(localIso).getTime();
   if (Number.isNaN(r) || Number.isNaN(l)) return false;
+  if (r > nowMs + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS) return false;
   return r > l;
 }
 
