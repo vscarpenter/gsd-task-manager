@@ -60,17 +60,17 @@
             "type": "command",
             "command": "out=$(bun typecheck 2>&1) || { printf '%s\\n' \"$out\" | tail -40; exit 2; }",
             "timeout": 120,
+            "statusMessage": "Type-check (async)...",
             "asyncRewake": true,
-            "rewakeSummary": "Type-check failed",
-            "statusMessage": "Type-check (async)..."
+            "rewakeSummary": "Type-check failed"
           },
           {
             "type": "command",
             "command": "files=$(git diff --name-only --diff-filter=ACMR HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' 2>/dev/null; git ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' 2>/dev/null); [ -z \"$files\" ] && exit 0; out=$(printf '%s\\n' \"$files\" | sort -u | xargs bun x eslint 2>&1) || { printf '%s\\n' \"$out\" | tail -40; exit 2; }",
             "timeout": 120,
+            "statusMessage": "Lint changed files (async)...",
             "asyncRewake": true,
-            "rewakeSummary": "Lint failed on changed files",
-            "statusMessage": "Lint changed files (async)..."
+            "rewakeSummary": "Lint failed on changed files"
           }
         ]
       }

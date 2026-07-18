@@ -196,21 +196,6 @@ When testing Sentry capture after a DSN change or deploy:
 ### Testing
 Detail moved to `.claude/rules/testing.md` — auto-loads when editing `tests/**` or test setup. TL;DR: use `bun run test` (not `bun test`), `fake-indexeddb` is auto-imported, `localStorage.clear()` doesn't work in jsdom-under-Bun.
 
-## Modular Architecture
-
-The codebase follows coding standards (<350 lines per file, <30 lines per function). Key modular areas:
-
-- **lib/analytics/**: metrics, streaks, tags, trends
-- **lib/notifications/**: display, permissions, settings, badge
-- **lib/sync/**: pocketbase-client, pb-sync-engine, pb-realtime, pb-auth, task-mapper, sync-coordinator, health-monitor, queue, config
-- **components/matrix-simplified/**: v9 single-matrix shell, capture-bar, edit-drawer, help-drawer
-- **components/settings/**: appearance, notification, sync, archive, data-management sections
-- **components/settings-page/**: full-page settings shell + sidebar
-- **packages/mcp-server/src/tools/**: handlers/, schemas/, individual tool files
-- **packages/mcp-server/src/write-ops/**: task-operations, bulk-operations with dry-run support
-
-All modules maintain backward compatibility through re-export layers.
-
 ## Git Workflow
 
 **Default commit flow**: when the user says "commit and push", "commit, push, create a PR", or any close variant, invoke the `commit-commands:commit-push-pr` skill — don't manually compose the steps. Write a descriptive conventional commit message, bump the version if appropriate, create a PR unless told otherwise.
