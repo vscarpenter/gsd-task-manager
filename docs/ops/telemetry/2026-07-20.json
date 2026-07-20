@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-07-20T15:17:41.183Z",
+  "windowDays": 30,
+  "prCount": 58,
+  "cycleTime": {
+    "medianHours": 3.8,
+    "p90Hours": 3.8,
+    "count": 5
+  },
+  "planRevisionRate": {
+    "rate": null,
+    "revised": 0,
+    "total": 0
+  },
+  "reviewFindingsPerPR": {
+    "mean": 0.6,
+    "count": 58
+  },
+  "tokensPerPR": {
+    "mean": null,
+    "count": 0
+  }
+}
