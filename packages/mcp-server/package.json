@@ -1,6 +1,6 @@
 {
   "name": "gsd-mcp-server",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "MCP server for GSD Task Manager — 20 tools for task CRUD, analytics, and diagnostics over PocketBase. Validated inputs, dry-run support, JWT-aware token health, and dependency-safe deletes.",
   "type": "module",
   "main": "dist/index.js",
@@ -76,7 +76,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
-    "@sentry/node": "10.65.0",
+    "@sentry/node": "10.67.0",
     "pocketbase": "0.27.0",
     "zod": "4.4.3"
   },
