@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -7,6 +8,7 @@ const requireFromRepo = createRequire(resolve(process.cwd(), "package.json"));
 
 interface PackageJson {
   devDependencies?: Record<string, string>;
+  scripts?: Record<string, string>;
 }
 
 interface TypeScriptModule {
@@ -20,15 +22,27 @@ function firstNumericMajor(versionRange: string): number | null {
 }
 
 describe("build configuration", () => {
-  it("keeps TypeScript on a package that exposes the JS compiler API", () => {
+  it("runs TypeScript 7 alongside the TypeScript 6 compiler API", () => {
     const packageJson = requireFromRepo("./package.json") as PackageJson;
-    const typescript = requireFromRepo("typescript") as TypeScriptModule;
-    const declaredVersion = packageJson.devDependencies?.typescript;
+    const nativeVersion = packageJson.devDependencies?.["@typescript/native"];
+    const compatibilityVersion = packageJson.devDependencies?.typescript;
 
-    expect(declaredVersion).toBeDefined();
-    expect(firstNumericMajor(declaredVersion!)).toBeLessThan(7);
+    expect(nativeVersion).toBeDefined();
+    expect(compatibilityVersion).toBeDefined();
+    expect(firstNumericMajor(nativeVersion!)).toBe(7);
+    expect(firstNumericMajor(compatibilityVersion!)).toBe(6);
+    expect(packageJson.scripts?.typecheck).toContain("@typescript/native");
+
+    const typescript = requireFromRepo("typescript") as TypeScriptModule;
+    const cliVersion = execFileSync(
+      resolve(process.cwd(), "node_modules/@typescript/native/bin/tsc"),
+      ["--version"],
+      { encoding: "utf8" },
+    ).trim();
+
     expect(firstNumericMajor(typescript.version ?? "")).toBeLessThan(7);
     expect(typeof typescript.createProgram).toBe("function");
+    expect(cliVersion).toMatch(/^Version 7\./);
   });
 
   it("pins Turbopack root to the project config directory", () => {

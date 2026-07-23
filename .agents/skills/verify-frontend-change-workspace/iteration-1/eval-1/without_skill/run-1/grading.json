@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+      "passed": true,
+      "evidence": "Has a 'Service Worker stale-cache risk' section and lists manual unregister + delete-gsd-*-caches steps (lines 91-108). (Prompt itself flagged the stale-build pain, which primed this.)"
+    },
+    {
+      "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+      "passed": true,
+      "evidence": "Inspected the Turbopack dev-compiled chunk and the built CSS chunk for the new class (lines 48-56, 81-98)."
+    },
+    {
+      "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+      "passed": false,
+      "evidence": "Verdict is an unqualified 'PASS'; concludes the trap is 'self-healing' via Turbopack content-hashing and does NOT defer the live visual (lines 98, 114)."
+    },
+    {
+      "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+      "passed": false,
+      "evidence": "Gives DevTools Elements-inspection steps but never addresses console errors as a dimension."
+    },
+    {
+      "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+      "passed": false,
+      "evidence": "No seeding; verifies via compiled chunks / source only."
+    }
+  ],
+  "summary": { "passed": 2, "failed": 3, "total": 5, "pass_rate": 0.4 },
+  "execution_metrics": { "total_tool_calls": 72, "errors_encountered": 0 }
+}

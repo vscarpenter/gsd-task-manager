@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+      "passed": true,
+      "evidence": "'Data-Dependent Surface: Seeder Fit Assessment' table + step 'run gsdSeed.dashboard() before navigating to /dashboard' (lines 134-143)."
+    },
+    {
+      "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+      "passed": true,
+      "evidence": "'analytics/streaks.ts buckets by updatedAt (confirmed in source), which matches the seeder's design' (line 75)."
+    },
+    {
+      "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+      "passed": true,
+      "evidence": "Step: 'Paste scripts/reset-app-state.js into the console; hard-reload (busts SW cache)' (line 113)."
+    },
+    {
+      "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+      "passed": true,
+      "evidence": "'Console / Network: DEFERRED (no live browser)' with a concrete plan to check console for var(--...) paint errors (lines 102-116)."
+    },
+    {
+      "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+      "passed": true,
+      "evidence": "Verdict: 'DEFERRED — runtime browser check pending; static analysis is PASS' (line 165)."
+    }
+  ],
+  "summary": { "passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0 },
+  "execution_metrics": { "total_tool_calls": 74, "errors_encountered": 0 }
+}

@@ -1,0 +1,6 @@
+{
+  "eval_id": 1,
+  "eval_name": "matrix-stale-build-trap",
+  "prompt": "I changed the overdue indicator on task cards from a left border-stripe to a full border (border-l-4 -> border). Verify it's actually showing up in the matrix. Last time I 'verified' a CSS change like this it turned out I'd been looking at a stale build the whole time.",
+  "assertions": []
+}

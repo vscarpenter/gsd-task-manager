@@ -1,0 +1,323 @@
+{
+  "metadata": {
+    "skill_name": "verify-frontend-change",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-06-03T03:22:54Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 579.5,
+        "tokens": 67336,
+        "tool_calls": 74,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+          "passed": true,
+          "evidence": "'Data-Dependent Surface: Seeder Fit Assessment' table + step 'run gsdSeed.dashboard() before navigating to /dashboard' (lines 134-143)."
+        },
+        {
+          "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+          "passed": true,
+          "evidence": "'analytics/streaks.ts buckets by updatedAt (confirmed in source), which matches the seeder's design' (line 75)."
+        },
+        {
+          "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+          "passed": true,
+          "evidence": "Step: 'Paste scripts/reset-app-state.js into the console; hard-reload (busts SW cache)' (line 113)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": true,
+          "evidence": "'Console / Network: DEFERRED (no live browser)' with a concrete plan to check console for var(--...) paint errors (lines 102-116)."
+        },
+        {
+          "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+          "passed": true,
+          "evidence": "Verdict: 'DEFERRED \u2014 runtime browser check pending; static analysis is PASS' (line 165)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 337.0,
+        "tokens": 59178,
+        "tool_calls": 90,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+          "passed": true,
+          "evidence": "'Stale Build Trap Assessment' keeps the SW risk live and prescribes scripts/reset-app-state.js before a screenshot (lines 109-121, 157-161)."
+        },
+        {
+          "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+          "passed": true,
+          "evidence": "Downloaded the served CSS chunk from :3001; confirmed .border-status-overdue present and .overdue-task / border-l-[3px] absent (lines 57-81)."
+        },
+        {
+          "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+          "passed": true,
+          "evidence": "Verdict 'PASS (static + partial runtime) \u2014 live visual confirmation DEFERRED' (line 149)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": true,
+          "evidence": "'Console/network errors: DEFERRED \u2014 No live browser available to read console output' (line 104)."
+        },
+        {
+          "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+          "passed": false,
+          "evidence": "Verifies via served CSS/source; never seeds an overdue task or prescribes seeding so the indicator can actually be observed rendering."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 1240.8,
+        "tokens": 77970,
+        "tool_calls": 101,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Verifies the functional export outcome (download/file produced), not just that the code exists",
+          "passed": true,
+          "evidence": "Traces handleExport -> exportToJson -> exportTasks -> Blob/anchor/click with filename matching the e2e regex (lines 12-26, 38)."
+        },
+        {
+          "text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+          "passed": true,
+          "evidence": "'Console/network errors \u2014 PASS (static + unit)': logger.error routes through structured logger not raw console; no fetch calls (lines 46-52)."
+        },
+        {
+          "text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+          "passed": true,
+          "evidence": "Attempted 'npx playwright test settings-navigation.spec.ts' (hit a process collision) and prescribes re-running it in a clean terminal (lines 54-67, 96)."
+        },
+        {
+          "text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+          "passed": true,
+          "evidence": "Verdict 'PASS (with deferred e2e confirmation)' (line 94)."
+        },
+        {
+          "text": "Correctly identifies the refactor scope to focus the verification",
+          "passed": true,
+          "evidence": "Identifies commit 78311c1 extracted resolveSyncDeps() inside importTasks() and did NOT touch the export path (line 10)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4,
+        "passed": 2,
+        "failed": 3,
+        "total": 5,
+        "time_seconds": 138.9,
+        "tokens": 63968,
+        "tool_calls": 35,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+          "passed": true,
+          "evidence": "References the seed script and steps: paste .../seed-tasks.js, run gsdSeed.dashboard(), reload (lines 89-103). NOTE: discovered the skill's own bundled script by exploring the repo (contamination \u2014 the skill artifacts are in-tree)."
+        },
+        {
+          "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+          "passed": false,
+          "evidence": "Describes 'completions spread across days 0-3' (line 103) but never articulates the updatedAt-bucketing nuance; relies on the discovered script without stating why it works."
+        },
+        {
+          "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+          "passed": false,
+          "evidence": "No mention of busting the service worker or reset-app-state.js anywhere in the report; the SW stale-chunk risk is not addressed."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": false,
+          "evidence": "Defers 'live browser / real data render' (line 123) but never names console-error checking as a dimension."
+        },
+        {
+          "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+          "passed": true,
+          "evidence": "Verdict 'PASS with one deferred item'; defers the live render rather than claiming it (lines 125-127)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4,
+        "passed": 2,
+        "failed": 3,
+        "total": 5,
+        "time_seconds": 304.5,
+        "tokens": 57049,
+        "tool_calls": 72,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+          "passed": true,
+          "evidence": "Has a 'Service Worker stale-cache risk' section and lists manual unregister + delete-gsd-*-caches steps (lines 91-108). (Prompt itself flagged the stale-build pain, which primed this.)"
+        },
+        {
+          "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+          "passed": true,
+          "evidence": "Inspected the Turbopack dev-compiled chunk and the built CSS chunk for the new class (lines 48-56, 81-98)."
+        },
+        {
+          "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+          "passed": false,
+          "evidence": "Verdict is an unqualified 'PASS'; concludes the trap is 'self-healing' via Turbopack content-hashing and does NOT defer the live visual (lines 98, 114)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": false,
+          "evidence": "Gives DevTools Elements-inspection steps but never addresses console errors as a dimension."
+        },
+        {
+          "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+          "passed": false,
+          "evidence": "No seeding; verifies via compiled chunks / source only."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4,
+        "passed": 2,
+        "failed": 3,
+        "total": 5,
+        "time_seconds": 181.6,
+        "tokens": 66243,
+        "tool_calls": 45,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Verifies the functional export outcome (download/file produced), not just that the code exists",
+          "passed": true,
+          "evidence": "Traces DataManagement -> handleExport -> exportToJson -> exportTasks -> Blob/anchor download (lines 36-51)."
+        },
+        {
+          "text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+          "passed": true,
+          "evidence": "Covers error handling substantively (try/catch, logger.error, safeParse) addressing console-error risk (lines 56-63). Framed as 'Error Handling' rather than a console dimension, but substantive."
+        },
+        {
+          "text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+          "passed": false,
+          "evidence": "Reviews the e2e spec but does NOT run it ('not re-run, but reviewed', line 101) and gives no next-step to close the runtime gap."
+        },
+        {
+          "text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+          "passed": false,
+          "evidence": "Verdict is an unqualified 'PASS' (line 133) for a 'works at runtime + no console errors' question, with no runtime check and no deferral."
+        },
+        {
+          "text": "Correctly identifies the refactor scope to focus the verification",
+          "passed": false,
+          "evidence": "Assumes 'Refactored export handler' and verifies the export path, but does not identify that the actual refactor (importTasks helper extraction) left the export path untouched."
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.9333,
+        "stddev": 0.1155,
+        "min": 0.8,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 719.1,
+        "stddev": 467.7924,
+        "min": 337.0,
+        "max": 1240.8
+      },
+      "tokens": {
+        "mean": 68161.3333,
+        "stddev": 9423.1469,
+        "min": 59178,
+        "max": 77970
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.4,
+        "stddev": 0.0,
+        "min": 0.4,
+        "max": 0.4
+      },
+      "time_seconds": {
+        "mean": 208.3333,
+        "stddev": 85.9758,
+        "min": 138.9,
+        "max": 304.5
+      },
+      "tokens": {
+        "mean": 62420.0,
+        "stddev": 4788.4901,
+        "min": 57049,
+        "max": 66243
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.53",
+      "time_seconds": "+510.8",
+      "tokens": "+5741"
+    }
+  },
+  "notes": []
+}

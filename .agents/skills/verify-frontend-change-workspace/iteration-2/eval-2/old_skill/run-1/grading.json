@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Verifies the functional export outcome (download/file produced), not just that the code exists",
+      "passed": true,
+      "evidence": "Traces handleExport -> exportToJson -> exportTasks -> Blob/anchor/click with filename matching the e2e regex (lines 12-26, 38)."
+    },
+    {
+      "text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+      "passed": true,
+      "evidence": "'Console/network errors — PASS (static + unit)': logger.error routes through structured logger not raw console; no fetch calls (lines 46-52)."
+    },
+    {
+      "text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+      "passed": true,
+      "evidence": "Attempted 'npx playwright test settings-navigation.spec.ts' (hit a process collision) and prescribes re-running it in a clean terminal (lines 54-67, 96)."
+    },
+    {
+      "text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+      "passed": true,
+      "evidence": "Verdict 'PASS (with deferred e2e confirmation)' (line 94)."
+    },
+    {
+      "text": "Correctly identifies the refactor scope to focus the verification",
+      "passed": true,
+      "evidence": "Identifies commit 78311c1 extracted resolveSyncDeps() inside importTasks() and did NOT touch the export path (line 10)."
+    }
+  ],
+  "summary": { "passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0 },
+  "execution_metrics": { "total_tool_calls": 101, "errors_encountered": 0 }
+}

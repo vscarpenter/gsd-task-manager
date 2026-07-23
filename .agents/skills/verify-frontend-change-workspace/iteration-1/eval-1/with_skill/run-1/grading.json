@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+      "passed": true,
+      "evidence": "'Stale Build Trap Assessment' keeps the SW risk live and prescribes scripts/reset-app-state.js before a screenshot (lines 109-121, 157-161)."
+    },
+    {
+      "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+      "passed": true,
+      "evidence": "Downloaded the served CSS chunk from :3001; confirmed .border-status-overdue present and .overdue-task / border-l-[3px] absent (lines 57-81)."
+    },
+    {
+      "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+      "passed": true,
+      "evidence": "Verdict 'PASS (static + partial runtime) — live visual confirmation DEFERRED' (line 149)."
+    },
+    {
+      "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+      "passed": true,
+      "evidence": "'Console/network errors: DEFERRED — No live browser available to read console output' (line 104)."
+    },
+    {
+      "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+      "passed": false,
+      "evidence": "Verifies via served CSS/source; never seeds an overdue task or prescribes seeding so the indicator can actually be observed rendering."
+    }
+  ],
+  "summary": { "passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8 },
+  "execution_metrics": { "total_tool_calls": 90, "errors_encountered": 0 }
+}

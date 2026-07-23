@@ -27,12 +27,17 @@ PocketBase instance is reachable (`NEXT_PUBLIC_POCKETBASE_URL`, defaults to
 `http://127.0.0.1:8090` on localhost). The core product runs and is testable
 fully local-only without it.
 
-**Lint compatibility.** `bun lint` is expected to run. Keep ESLint on the
-latest supported 9.x line until the full Next/React lint stack supports ESLint
-10; `eslint-plugin-react@7.37.5` still peers on ESLint `^9.7`, while
-`typescript-eslint@8.61.1` is pinned/overridden for TypeScript 6 compatibility.
-Do not "fix" this by bumping ESLint back to 10 unless the React plugin and
-Next config have compatible releases.
+**Lint and TypeScript compatibility.** `bun lint` is expected to run. The root
+workspace deliberately installs the TypeScript 7 CLI as `@typescript/native`
+while keeping `typescript@6.0.3` for the compiler API. The `bun typecheck`
+script explicitly invokes the native alias; Next.js and `typescript-eslint`
+continue to import TypeScript 6. Keep both packages until those tools support
+the new TypeScript API. ESLint 10 also relies on the explicit React version in
+`eslint.config.mjs` because `eslint-plugin-react@7.37.5` still calls an API
+ESLint 10 removed. The standalone MCP workspace has no compiler-API consumer
+and uses TypeScript 7 directly. A blanket `bun update --latest` will try to
+replace the root TypeScript 6 API package; use the interactive updater and leave
+that package pinned. The build-config regression test enforces this split.
 
 **Build is self-contained.** `bun run build` first runs
 `scripts/generate-build-info.cjs`, which generates the gitignored `.build-env.sh`

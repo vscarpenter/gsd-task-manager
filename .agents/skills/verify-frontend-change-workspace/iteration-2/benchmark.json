@@ -1,0 +1,323 @@
+{
+  "metadata": {
+    "skill_name": "verify-frontend-change",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-06-03T11:29:47Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "new_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 196.2,
+        "tokens": 52650,
+        "tool_calls": 44,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+          "passed": true,
+          "evidence": "'How to complete the deferred check' prescribes scripts/seed-tasks.js + gsdSeed.dashboard(), and the 'Data-driven rendering with seeded tasks' note (lines 74, 83-86)."
+        },
+        {
+          "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+          "passed": true,
+          "evidence": "'seeds 8 tasks with a 4-day completion history spread across updatedAt dates, which would light up the streak, trend chart, and activity dots' (line 74)."
+        },
+        {
+          "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+          "passed": true,
+          "evidence": "Served-chunk artifact check rules out stale code (lines 44-66), and the deferred-step recipe says 'Paste scripts/reset-app-state.js in the console, hard-reload' (line 83)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": true,
+          "evidence": "'Console/network errors at runtime \u2014 cannot observe without a live browser session' deferred (line 73); step 6 'Check console for errors' (line 87)."
+        },
+        {
+          "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+          "passed": true,
+          "evidence": "Verdict 'PASS with deferred visual confirmation'; visual/runtime explicitly deferred (lines 70-74, 104)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "new_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 202.2,
+        "tokens": 49095,
+        "tool_calls": 57,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+          "passed": true,
+          "evidence": "Defeats the trap via the served-artifact rung: fetched the served JS+CSS chunks and confirmed new class present + old classes absent \u2014 'The dev server is serving the updated code, not a stale build. The stale-chunk trap is ruled out' (lines 39-57)."
+        },
+        {
+          "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+          "passed": true,
+          "evidence": "Fetched Projects_gsd-taskmanager_011mdy8._.js and the served globals CSS, grepped for new/old class names (lines 40-57)."
+        },
+        {
+          "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+          "passed": true,
+          "evidence": "Verdict 'PASS (with one deferred dimension)'; live-browser console/visual explicitly deferred (lines 67, 85-87)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": true,
+          "evidence": "'Console/network: NOT CHECKED \u2014 no browser session available; this dimension is deferred' (line 67)."
+        },
+        {
+          "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+          "passed": false,
+          "evidence": "'Seeded: no' (line 5); defeats the trap via served-artifact + unit test but does not seed an overdue task or prescribe seeding for the deferred visual. Reasonable under no-browser, but the assertion is unmet."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "new_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 234.0,
+        "tokens": 68752,
+        "tool_calls": 59,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Verifies the functional export outcome (download/file produced), not just that the code exists",
+          "passed": true,
+          "evidence": "Traces handler to Blob/createObjectURL/anchor.click()/gsd-tasks-<ISO>.json + served-artifact confirms createObjectURL/revokeObjectURL/filename prefix present (lines 18, 59-69)."
+        },
+        {
+          "text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+          "passed": true,
+          "evidence": "'Console/network errors \u2014 PARTIAL' row: no browser to observe runtime console, but typecheck clean and no obvious throw paths (line 83)."
+        },
+        {
+          "text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+          "passed": true,
+          "evidence": "Prescribes the exact targeted command: 'bun run test:e2e -- --project=chromium tests/e2e/settings-navigation.spec.ts' (line 107); did not run the full suite per right-sizing."
+        },
+        {
+          "text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+          "passed": true,
+          "evidence": "Verdict 'PASS (with browser runtime deferred)'; functional-browser dimension marked DEFERRED (lines 82, 105)."
+        },
+        {
+          "text": "Correctly identifies the refactor scope to focus the verification",
+          "passed": true,
+          "evidence": "Identifies commit 78311c1 split oversized functions in import-export.ts and that settings-page handler had no uncommitted changes (lines 20-21)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "old_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 579.5,
+        "tokens": 67336,
+        "tool_calls": 74,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+          "passed": true,
+          "evidence": "'Data-Dependent Surface: Seeder Fit Assessment' table + step 'run gsdSeed.dashboard() before navigating to /dashboard' (lines 134-143)."
+        },
+        {
+          "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+          "passed": true,
+          "evidence": "'analytics/streaks.ts buckets by updatedAt (confirmed in source), which matches the seeder's design' (line 75)."
+        },
+        {
+          "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+          "passed": true,
+          "evidence": "Step: 'Paste scripts/reset-app-state.js into the console; hard-reload (busts SW cache)' (line 113)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": true,
+          "evidence": "'Console / Network: DEFERRED (no live browser)' with a concrete plan to check console for var(--...) paint errors (lines 102-116)."
+        },
+        {
+          "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+          "passed": true,
+          "evidence": "Verdict: 'DEFERRED \u2014 runtime browser check pending; static analysis is PASS' (line 165)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "old_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 337.0,
+        "tokens": 59178,
+        "tool_calls": 90,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+          "passed": true,
+          "evidence": "'Stale Build Trap Assessment' keeps the SW risk live and prescribes scripts/reset-app-state.js before a screenshot (lines 109-121, 157-161)."
+        },
+        {
+          "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+          "passed": true,
+          "evidence": "Downloaded the served CSS chunk from :3001; confirmed .border-status-overdue present and .overdue-task / border-l-[3px] absent (lines 57-81)."
+        },
+        {
+          "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+          "passed": true,
+          "evidence": "Verdict 'PASS (static + partial runtime) \u2014 live visual confirmation DEFERRED' (line 149)."
+        },
+        {
+          "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+          "passed": true,
+          "evidence": "'Console/network errors: DEFERRED \u2014 No live browser available to read console output' (line 104)."
+        },
+        {
+          "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+          "passed": false,
+          "evidence": "Verifies via served CSS/source; never seeds an overdue task or prescribes seeding so the indicator can actually be observed rendering."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "old_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 1240.8,
+        "tokens": 77970,
+        "tool_calls": 101,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Verifies the functional export outcome (download/file produced), not just that the code exists",
+          "passed": true,
+          "evidence": "Traces handleExport -> exportToJson -> exportTasks -> Blob/anchor/click with filename matching the e2e regex (lines 12-26, 38)."
+        },
+        {
+          "text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+          "passed": true,
+          "evidence": "'Console/network errors \u2014 PASS (static + unit)': logger.error routes through structured logger not raw console; no fetch calls (lines 46-52)."
+        },
+        {
+          "text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+          "passed": true,
+          "evidence": "Attempted 'npx playwright test settings-navigation.spec.ts' (hit a process collision) and prescribes re-running it in a clean terminal (lines 54-67, 96)."
+        },
+        {
+          "text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+          "passed": true,
+          "evidence": "Verdict 'PASS (with deferred e2e confirmation)' (line 94)."
+        },
+        {
+          "text": "Correctly identifies the refactor scope to focus the verification",
+          "passed": true,
+          "evidence": "Identifies commit 78311c1 extracted resolveSyncDeps() inside importTasks() and did NOT touch the export path (line 10)."
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "new_skill": {
+      "pass_rate": {
+        "mean": 0.9333,
+        "stddev": 0.1155,
+        "min": 0.8,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 210.8,
+        "stddev": 20.3145,
+        "min": 196.2,
+        "max": 234.0
+      },
+      "tokens": {
+        "mean": 56832.3333,
+        "stddev": 10474.6526,
+        "min": 49095,
+        "max": 68752
+      }
+    },
+    "old_skill": {
+      "pass_rate": {
+        "mean": 0.9333,
+        "stddev": 0.1155,
+        "min": 0.8,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 719.1,
+        "stddev": 467.7924,
+        "min": 337.0,
+        "max": 1240.8
+      },
+      "tokens": {
+        "mean": 68161.3333,
+        "stddev": 9423.1469,
+        "min": 59178,
+        "max": 77970
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.00",
+      "time_seconds": "-508.3",
+      "tokens": "-11329"
+    }
+  },
+  "notes": []
+}

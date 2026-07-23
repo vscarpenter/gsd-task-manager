@@ -1,0 +1,6 @@
+{
+  "eval_id": 0,
+  "eval_name": "dashboard-data-dependent",
+  "prompt": "I just adjusted the spacing on the dashboard's completion-trend chart and the streak indicator. Can you verify the dashboard still renders correctly before I push? I want to actually see the charts with real data, not an empty state.",
+  "assertions": []
+}

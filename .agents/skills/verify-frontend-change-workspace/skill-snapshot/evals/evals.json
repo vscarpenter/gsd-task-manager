@@ -1,0 +1,47 @@
+{
+  "skill_name": "verify-frontend-change",
+  "evals": [
+    {
+      "id": 0,
+      "name": "dashboard-data-dependent",
+      "prompt": "I just adjusted the spacing on the dashboard's completion-trend chart and the streak indicator. Can you verify the dashboard still renders correctly before I push? I want to actually see the charts with real data, not an empty state.",
+      "expected_output": "Recognizes the dashboard is data-dependent and seeds tasks (with completed history keyed off updatedAt) before verifying; busts/flags the SW cache; checks the charts render and console is clean; gives an evidence-backed PASS/FAIL/DEFERRED, not an empty-dashboard false PASS.",
+      "assertions": [
+        "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+        "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+        "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+        "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+        "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly"
+      ],
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "matrix-stale-build-trap",
+      "prompt": "I changed the overdue indicator on task cards from a left border-stripe to a full border (border-l-4 -> border). Verify it's actually showing up in the matrix. Last time I 'verified' a CSS change like this it turned out I'd been looking at a stale build the whole time.",
+      "expected_output": "Explicitly addresses the stale-chunk/service-worker risk (busts the SW + clears gsd-* caches before trusting the render); seeds matrix tasks so cards exist (incl. an overdue one); confirms the border style on a fresh load; refuses to PASS on a possibly-stale screenshot.",
+      "assertions": [
+        "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+        "Verifies the change in the actually-served/compiled artifact, not only the source file",
+        "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+        "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+        "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "settings-export-console",
+      "prompt": "Before I open a PR: confirm the Export Data button in Settings still works and doesn't throw any console errors. I refactored the export handler.",
+      "expected_output": "Drives to Settings, clicks Export Data, confirms the functional outcome (download/file), and explicitly checks the console (and network) for errors introduced by the refactor; evidence-backed verdict.",
+      "assertions": [
+        "Verifies the functional export outcome (download/file produced), not just that the code exists",
+        "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+        "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+        "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+        "Correctly identifies the refactor scope to focus the verification"
+      ],
+      "files": []
+    }
+  ]
+}

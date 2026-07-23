@@ -1,0 +1,6 @@
+{
+  "eval_id": 2,
+  "eval_name": "settings-export-console",
+  "prompt": "Before I open a PR: confirm the Export Data button in Settings still works and doesn't throw any console errors. I refactored the export handler.",
+  "assertions": []
+}

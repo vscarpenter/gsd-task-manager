@@ -1,0 +1,1390 @@
+{
+  "exit_reason": "max_iterations (5)",
+  "original_description": "Verify a frontend change actually works in the GSD Task Manager app before trusting it. Drives the running app browser-first \u2014 seeds IndexedDB, busts the PWA service-worker cache, then observes real behavior plus console/network errors \u2014 and codifies regression-worthy behavior as a Playwright spec. Use whenever you've edited a component, page, or any matrix/dashboard/settings/.tsx surface and need to confirm it renders and behaves correctly, especially before pushing or opening a PR. Critical for this repo: the service worker serves stale cached JS chunks and data surfaces render empty on a fresh load, so a naive screenshot produces false PASSes \u2014 use this skill to verify for real.",
+  "best_description": "Verify a frontend change actually works in the GSD Task Manager app before trusting it. Drives the running app browser-first \u2014 seeds IndexedDB, busts the PWA service-worker cache, then observes real behavior plus console/network errors \u2014 and codifies regression-worthy behavior as a Playwright spec. Use whenever you've edited a component, page, or any matrix/dashboard/settings/.tsx surface and need to confirm it renders and behaves correctly, especially before pushing or opening a PR. Critical for this repo: the service worker serves stale cached JS chunks and data surfaces render empty on a fresh load, so a naive screenshot produces false PASSes \u2014 use this skill to verify for real.",
+  "best_score": "4/8",
+  "best_train_score": "6/12",
+  "best_test_score": "4/8",
+  "final_description": "Use right after editing anything a user sees or clicks in the GSD Task Manager, to confirm the change actually renders and works in the running app rather than inferring it from the code. Trigger when someone has just tweaked a task card, the matrix, the dashboard donut or streak widgets, the capture bar, settings, or visual styling (spacing, borders, color, light/dark mode) and now wants to watch it render correctly, see it with real seeded tasks instead of an empty dashboard, confirm a control still works with no console errors, or prove it before pushing or opening a PR so they're not trusting a stale build. It drives the live app with seeded data, beats the stale-cache and empty-state traps that make screenshots lie, and can pin behavior in a Playwright spec. Skip backend or sync logic, pure refactors or renames, styling you won't view in-app, and merely starting or explaining the app.",
+  "iterations_run": 5,
+  "holdout": 0.4,
+  "train_size": 12,
+  "test_size": 8,
+  "history": [
+    {
+      "iteration": 1,
+      "description": "Verify a frontend change actually works in the GSD Task Manager app before trusting it. Drives the running app browser-first \u2014 seeds IndexedDB, busts the PWA service-worker cache, then observes real behavior plus console/network errors \u2014 and codifies regression-worthy behavior as a Playwright spec. Use whenever you've edited a component, page, or any matrix/dashboard/settings/.tsx surface and need to confirm it renders and behaves correctly, especially before pushing or opening a PR. Critical for this repo: the service worker serves stale cached JS chunks and data surfaces render empty on a fresh load, so a naive screenshot produces false PASSes \u2014 use this skill to verify for real.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "I refactored the edit-drawer in components/matrix-simplified/. confirm it still opens, edits, and saves a task correctly in the running app before I merge",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the matrix still drops tasks into the right quadrants after my edit to the capture-parser \u2014 Q1 through Q4 should all place correctly",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "does the new dependency badge actually render on blocked task cards? I added it to the card metadata component but I haven't seen it live yet",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I think my change to lib/analytics/trends.ts broke the completion-trend chart on the dashboard. confirm whether it still renders before I ship",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "write a failing test first for the new monthly-recurrence logic in lib/tasks.ts, then implement it red-green-refactor",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "do a full WCAG AA accessibility audit of the settings page \u2014 keyboard nav, labels, contrast, the works",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "verify the production deploy actually went out \u2014 check the CloudFront distribution and confirm the new build is live at the real gsd URL",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "run the full vitest unit suite and tell me if anything is failing on main right now",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "description": "Use after editing any UI in the GSD Task Manager \u2014 a component, page, task card, the matrix, dashboard, capture bar, or settings \u2014 to confirm the change actually renders and behaves correctly in the running app instead of guessing from the code. Matches intents like: \"does this look right / render the way I expect,\" \"show it with real seeded data, not an empty dashboard,\" \"make sure both light and dark mode look correct,\" \"check the button still works without console errors,\" or \"before I push or open a PR, prove I'm not staring at a stale build.\" It drives the live app with seeded data, defeats the stale-chunk and empty-state traps that make naive screenshots lie, watches console/network, and can pin the behavior in a Playwright spec. Skip for backend/sync-only logic, pure refactors or renames, and styling/token work you're only applying (not verifying in the app).",
+      "train_passed": 7,
+      "train_failed": 5,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.6666666666666666,
+          "triggers": 2,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "does the new dependency badge actually render on blocked task cards? I added it to the card metadata component but I haven't seen it live yet",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I refactored the edit-drawer in components/matrix-simplified/. confirm it still opens, edits, and saves a task correctly in the running app before I merge",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the matrix still drops tasks into the right quadrants after my edit to the capture-parser \u2014 Q1 through Q4 should all place correctly",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I think my change to lib/analytics/trends.ts broke the completion-trend chart on the dashboard. confirm whether it still renders before I ship",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "do a full WCAG AA accessibility audit of the settings page \u2014 keyboard nav, labels, contrast, the works",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "write a failing test first for the new monthly-recurrence logic in lib/tasks.ts, then implement it red-green-refactor",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "verify the production deploy actually went out \u2014 check the CloudFront distribution and confirm the new build is live at the real gsd URL",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "run the full vitest unit suite and tell me if anything is failing on main right now",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 7,
+      "failed": 5,
+      "total": 12,
+      "results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.6666666666666666,
+          "triggers": 2,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 3,
+      "description": "Use when you've changed anything a user sees or clicks in the GSD Task Manager \u2014 a component, page, task card, the matrix, dashboard, capture bar, settings, or its visual styling (spacing, color, borders, light/dark tokens) \u2014 and want to confirm the change actually renders and behaves correctly in the running app instead of guessing from the code. Reach for it whenever the goal is to see a UI edit \"look right,\" \"render the way I expect,\" \"show up with real seeded data instead of an empty dashboard,\" \"work without console errors,\" or be proven \"before I push or open a PR\" so nobody's staring at a stale build. It drives the live app with seeded data, defeats the stale-cache and empty-state traps that make screenshots lie, and can pin the behavior in a Playwright spec. Don't use it for backend or sync-only logic, pure refactors or renames, or merely explaining or starting the app.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "does the new dependency badge actually render on blocked task cards? I added it to the card metadata component but I haven't seen it live yet",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I refactored the edit-drawer in components/matrix-simplified/. confirm it still opens, edits, and saves a task correctly in the running app before I merge",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the matrix still drops tasks into the right quadrants after my edit to the capture-parser \u2014 Q1 through Q4 should all place correctly",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I think my change to lib/analytics/trends.ts broke the completion-trend chart on the dashboard. confirm whether it still renders before I ship",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "write a failing test first for the new monthly-recurrence logic in lib/tasks.ts, then implement it red-green-refactor",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "do a full WCAG AA accessibility audit of the settings page \u2014 keyboard nav, labels, contrast, the works",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "verify the production deploy actually went out \u2014 check the CloudFront distribution and confirm the new build is live at the real gsd URL",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "run the full vitest unit suite and tell me if anything is failing on main right now",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 4,
+      "description": "Use when you've edited the GSD Task Manager's UI and want to SEE the change render and behave correctly in the running app \u2014 not infer it from code. The go-to whenever the user wants a visible edit confirmed to \"look right,\" \"render the way I expect,\" \"show up with real seeded tasks, not an empty dashboard,\" \"still work with no console errors,\" or hold up \"before I push / open a PR\" so they're \"not on a stale build\" again. Covers any user-facing surface \u2014 task cards, matrix, dashboard donut and streak widgets, capture bar, settings \u2014 and visual styling: spacing, borders, color, light/dark mode. It drives the live app with seeded data, beats the stale-cache and empty-state traps that make screenshots lie, and can pin behavior in a Playwright spec. Skip for backend/sync logic, pure refactors or renames, applying styling you won't verify in-app, or just starting or explaining the app.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "does the new dependency badge actually render on blocked task cards? I added it to the card metadata component but I haven't seen it live yet",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I refactored the edit-drawer in components/matrix-simplified/. confirm it still opens, edits, and saves a task correctly in the running app before I merge",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the matrix still drops tasks into the right quadrants after my edit to the capture-parser \u2014 Q1 through Q4 should all place correctly",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I think my change to lib/analytics/trends.ts broke the completion-trend chart on the dashboard. confirm whether it still renders before I ship",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the production deploy actually went out \u2014 check the CloudFront distribution and confirm the new build is live at the real gsd URL",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "write a failing test first for the new monthly-recurrence logic in lib/tasks.ts, then implement it red-green-refactor",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "do a full WCAG AA accessibility audit of the settings page \u2014 keyboard nav, labels, contrast, the works",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "run the full vitest unit suite and tell me if anything is failing on main right now",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 5,
+      "description": "Use right after editing anything a user sees or clicks in the GSD Task Manager, to confirm the change actually renders and works in the running app rather than inferring it from the code. Trigger when someone has just tweaked a task card, the matrix, the dashboard donut or streak widgets, the capture bar, settings, or visual styling (spacing, borders, color, light/dark mode) and now wants to watch it render correctly, see it with real seeded tasks instead of an empty dashboard, confirm a control still works with no console errors, or prove it before pushing or opening a PR so they're not trusting a stale build. It drives the live app with seeded data, beats the stale-cache and empty-state traps that make screenshots lie, and can pin behavior in a Playwright spec. Skip backend or sync logic, pure refactors or renames, styling you won't view in-app, and merely starting or explaining the app.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "does the new dependency badge actually render on blocked task cards? I added it to the card metadata component but I haven't seen it live yet",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I refactored the edit-drawer in components/matrix-simplified/. confirm it still opens, edits, and saves a task correctly in the running app before I merge",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I think my change to lib/analytics/trends.ts broke the completion-trend chart on the dashboard. confirm whether it still renders before I ship",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the matrix still drops tasks into the right quadrants after my edit to the capture-parser \u2014 Q1 through Q4 should all place correctly",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "verify the production deploy actually went out \u2014 check the CloudFront distribution and confirm the new build is live at the real gsd URL",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "write a failing test first for the new monthly-recurrence logic in lib/tasks.ts, then implement it red-green-refactor",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "do a full WCAG AA accessibility audit of the settings page \u2014 keyboard nav, labels, contrast, the works",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "run the full vitest unit suite and tell me if anything is failing on main right now",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "updated the dark-mode tokens on the capture bar \u2014 need to confirm both light and dark look correct in the real app, not just in my head",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "just finished tweaking the streak card on the dashboard \u2014 can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "my PocketBase sync keeps dropping tasks on my second device \u2014 help me debug why the realtime SSE subscription isn't echoing changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "explain how the service worker cache layers work in this app \u2014 what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

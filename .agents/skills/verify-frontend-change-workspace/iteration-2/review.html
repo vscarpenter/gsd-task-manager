@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "verify-frontend-change", "runs": [{"id": "eval-0-new_skill-run-1", "prompt": "(No prompt found)", "eval_id": null, "outputs": [{"name": "verification-report.md", "type": "text", "content": "## Verification: Dashboard completion-trend chart + streak indicator spacing changes\n\nLoop: dev (localhost:3001 confirmed reachable) \u00b7 Evidence rung: served-artifact + unit tests\nSW cache busted: n/a (no interactive browser available) \u00b7 Seeded: no (runtime browser step deferred)\n\n---\n\n### What changed\n\nThe user's recent commit series (#347\u2013#349) touched `components/dashboard/completion-chart.tsx` and `components/dashboard/streak-indicator.tsx`. The streak card saw the most structural change: the gamified design (flame icon, trophy badges, `bg-warning` dots, cheerleading copy) was replaced with a calm, stat-card-aligned layout. The spacing changes specifically are:\n\n**streak-indicator.tsx**\n- Card border: `rounded-2xl border-2 border-border/80` \u2192 `rounded-lg border-hair border-border`\n- Hero number container: `flex items-center gap-2` \u2192 `mt-3 flex items-baseline gap-2` (added top margin, baseline alignment)\n- Activity strip wrapper: `mt-4` with an inner `flex` div \u2192 flattened to `mt-4 flex items-center gap-1.5` directly\n- Day label size: `text-[9px] text-foreground-muted/60` \u2192 `text-[10px] text-foreground-muted`\n- Bottom: removed `mt-3 flex items-center justify-between` wrapper, replaced with `mt-4 text-xs text-foreground-muted`\n\n**completion-chart.tsx**\n- Card border: `rounded-3xl border border-border/70` \u2192 `rounded-lg border-hair border-border` (consistent with streak card and other dashboard cards)\n\n---\n\n### Verification dimensions checked\n\n#### 1. Static code inspection \u2014 PASS\n\nRead both component files at HEAD. All spacing tokens, class names, and structural layout match the commit description exactly. No stale code remnants from the old gamified design were found in either file.\n\n#### 2. Unit tests \u2014 PASS (61/61)\n\n`bun run test -- tests/ui/dashboard-components.test.tsx`\n\nAll 61 dashboard tests pass, including:\n- StreakIndicator: 7 tests \u2713 (current streak, longest streak \"Best\" label, zero-streak \"No streak yet\", icon label, 7-day activity dots, milestone badge absence, singular \"day\" form)\n- CompletionChart: 4 tests \u2713 (empty data, area chart renders, multiple data points, legend labels)\n\nThe `should not render gamified milestone badges` test explicitly asserts the removed trophy/milestone content is gone, confirming the structural changes are test-covered.\n\n#### 3. TypeScript typecheck \u2014 PASS\n\n`bun typecheck` exits clean with no errors. No type regressions from the `CalendarCheckIcon` import swap or structural JSX changes.\n\n#### 4. Served-chunk artifact check \u2014 PASS\n\nDev server at `http://localhost:3001` is reachable and serving a 200 for `/dashboard`. The Turbopack-compiled app chunk (`Projects_gsd-taskmanager_0jrzhs6._.js`, 769 KB) was fetched and grepped for:\n\n**New code present in served chunk:**\n- `rounded-lg border-hair border-border bg-card p-6` \u2014 3 occurrences (streak card, completion chart, and other cards sharing the token) \u2713\n- `CalendarCheckIcon` \u2014 4 occurrences \u2713\n- `No streak yet` \u2014 1 occurrence \u2713\n- `bg-status-success` (olive activity dots) \u2014 6 occurrences \u2713\n- `Completion Trend` \u2014 1 occurrence \u2713\n- `mt-3 flex items-baseline gap-2` \u2014 1 occurrence \u2713\n- `mt-4 flex items-center gap-1.5` \u2014 1 occurrence \u2713\n- `mt-4 text-xs text-foreground-muted` \u2014 1 occurrence \u2713\n- `text-[48px] leading-none` \u2014 2 occurrences \u2713\n\n**Old stale code absent from served chunk:**\n- `FlameIcon`, `TrophyIcon` \u2014 0 occurrences \u2713\n- `On fire! Keep going` \u2014 0 occurrences \u2713\n- `bg-warning shadow-sm shadow-warning-tint` \u2014 0 occurrences \u2713\n- `rounded-2xl border-2 border-border` (old streak card border) \u2014 0 occurrences \u2713\n- `rounded-3xl border border-border` (old chart card border) \u2014 0 occurrences \u2713\n\nCSS chunk (`globals.css`, 157 KB) confirms Inkwell tokens `border-hair` and `bg-status-success` are defined and will resolve at runtime.\n\n---\n\n### Dimensions not covered\n\n- **Live browser / visual observation** \u2014 no interactive browser available (shared Chrome in use). This is the deferred dimension. The served-artifact check confirms the new code is what the browser will execute, but the actual rendered card layout (hero number height, activity strip spacing, card border radius change from `rounded-3xl` \u2192 `rounded-lg`) has not been visually confirmed.\n- **Console/network errors at runtime** \u2014 cannot observe without a live browser session.\n- **Data-driven rendering with seeded tasks** \u2014 `gsdSeed.dashboard()` would be the right scenario to run. It seeds 8 tasks with a 4-day completion history spread across `updatedAt` dates, which would light up the streak, trend chart, and activity dots. This is deferred.\n\n---\n\n### How to complete the deferred check\n\nWhen a browser is available:\n\n1. Navigate to `http://localhost:3001/dashboard`\n2. Paste `scripts/reset-app-state.js` in the console, hard-reload\n3. Paste `scripts/seed-tasks.js` in the console, call `gsdSeed.dashboard()`\n4. Hard-reload and navigate to `/dashboard`\n5. Confirm: streak card shows \"4 days\" (or similar), activity dots are olive for recent days, chart has two lines (Completed/Created), no flame icon, no trophy badge, \"Best N days\" or \"No streak yet\" at bottom of streak card\n6. Check console for errors \u2014 filter to app logs\n\n---\n\n### Evidence\n\n- Chunk grep results above (all positive/negative assertions confirmed)\n- Test run: 61/61 passing, including `should not render gamified milestone badges`\n- Typecheck: clean exit\n- No stale code signatures in the live-served JS\n\n### Codified\n\nBehavior is already test-covered in `tests/ui/dashboard-components.test.tsx`. No new Playwright spec required for this change \u2014 the structural/spacing change does not represent a new regression-worthy interaction.\n\n---\n\n**Verdict: PASS with deferred visual confirmation**\n\nStatic checks, unit tests, typecheck, and served-chunk artifact verification all pass. The new code is confirmed live on the running dev server \u2014 the old gamified markup is completely absent. Visual/runtime dimensions (rendered spacing, chart with real data, console cleanliness) cannot be checked without a browser and are explicitly deferred. Based on the evidence available, there are no blockers to pushing.\n"}], "grading": {"expectations": [{"text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state", "passed": true, "evidence": "'How to complete the deferred check' prescribes scripts/seed-tasks.js + gsdSeed.dashboard(), and the 'Data-driven rendering with seeded tasks' note (lines 74, 83-86)."}, {"text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding", "passed": true, "evidence": "'seeds 8 tasks with a 4-day completion history spread across updatedAt dates, which would light up the streak, trend chart, and activity dots' (line 74)."}, {"text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render", "passed": true, "evidence": "Served-chunk artifact check rules out stale code (lines 44-66), and the deferred-step recipe says 'Paste scripts/reset-app-state.js in the console, hard-reload' (line 83)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console/network errors at runtime \u2014 cannot observe without a live browser session' deferred (line 73); step 6 'Check console for errors' (line 87)."}, {"text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly", "passed": true, "evidence": "Verdict 'PASS with deferred visual confirmation'; visual/runtime explicitly deferred (lines 70-74, 104)."}], "summary": {"passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0}, "execution_metrics": {"total_tool_calls": 44, "errors_encountered": 0}}}, {"id": "eval-0-old_skill-run-1", "prompt": "(No prompt found)", "eval_id": null, "outputs": [{"name": "verification-report.md", "type": "text", "content": "# Verification Report: Dashboard spacing \u2014 completion-trend chart & streak indicator\n\n**Date:** 2026-06-02\n**Branch:** main (working tree \u2014 changes not yet committed)\n**Files changed:** `components/dashboard/completion-chart.tsx`, `components/dashboard/streak-indicator.tsx`\n\n---\n\n## What Was Asked\n\n> \"I just adjusted the spacing on the dashboard's completion-trend chart and the streak indicator. Can you verify the dashboard still renders correctly before I push? I want to actually see the charts with real data, not an empty state.\"\n\n---\n\n## What the Changes Actually Are\n\nThe description says \"adjusted spacing,\" but the diff (HEAD~3..HEAD across `4a8e3da` and `7335e0e`) is substantially more than a spacing tweak:\n\n### `completion-chart.tsx`\n- Card wrapper: `rounded-3xl border border-border/70` \u2192 `rounded-lg border-hair border-border`\n- Interior padding and content layout unchanged\n- This is a card vocabulary fix (radius + border-weight), not merely spacing\n\n### `streak-indicator.tsx`\nThe changes are more significant \u2014 this is the full de-gamification refactor from the impeccable critique:\n- Container: `rounded-2xl border-2 border-border/80` \u2192 `rounded-lg border-hair border-border`\n- Icon: `FlameIcon` + `TrophyIcon` removed; `CalendarCheckIcon` imported\n- Header layout rearranged from icon-left to stat-left / icon-right (matching `StatsCard` structure)\n- Count typography: `text-4xl font-bold` \u2192 `rd-serif text-[48px] leading-none` (Inkwell serif, 48 px)\n- Label eyebrow: `text-eyebrow` \u2192 `text-label font-semibold uppercase`\n- Icon container: `rounded-full bg-warning-tint` \u2192 `rounded-lg bg-accent/10`\n- Activity dots: `bg-warning shadow-sm shadow-warning-tint` (amber) \u2192 `bg-status-success` (olive)\n- Day label font: `text-[9px]` \u2192 `text-[10px]`\n- Bottom section: `getStreakMessage()`, milestone badges (`getMilestone()`, `TrophyIcon`) removed\n- Personal best: now always rendered as `\"Best N days\"` / `\"No streak yet\"` \u2014 no conditional trophy\n\n---\n\n## Verification Loop\n\n**Loop:** Inspection + unit test suite (rung 3 / rung 2 hybrid)\n**Browser:** No interactive browser used (constrained by task). Dev server is running at `http://localhost:3001` (confirmed via `curl -I`). Playwright background jobs were launched but did not complete within the session window.\n**SW cache busted:** N/A \u2014 no browser-level observation performed\n**Seeded:** N/A \u2014 no live browser driven. Seeder script reviewed for correctness against the data shapes consumed by these components.\n\n---\n\n## Dimension Results\n\n### Functional: PASS (static + unit tests)\n\n**TypeScript:** `bun typecheck` passes with zero errors.\n\n**Unit tests \u2014 dashboard-components.test.tsx (61 tests, all passing):**\n\nThe StreakIndicator test suite was updated to match the new component structure. Tests explicitly cover:\n- `should render current streak count` \u2014 checks `{current}` and `streak` label\n- `should render longest streak as \"Best\" label` \u2014 checks `/best.*15/i`\n- `should handle zero streak with zero longest` \u2014 checks `\"No streak yet\"`, absence of `/best/i`\n- `should not render gamified milestone badges` \u2014 explicitly asserts `screen.queryByText('100 days')` is absent for a `current: 100` input, confirming the trophy/badge system was removed\n- `should show singular \"day\" for streak of 1`\n- `should render 7-day activity dots with labels` \u2014 confirms `\"Today\"`, `\"6d\"`, `\"1d\"` labels render\n\nCompletionChart tests confirm:\n- Renders with empty data (`[]` \u2192 shows \"Completion Trend\" heading)\n- Renders with multi-point data\n- Renders legend labels (\"Completed\", \"Created\")\n\n**Full test suite: 1930 tests, all passing** (125 files + 1 skipped). No regressions introduced.\n\n**Analytics data flow review:**\n\nThe seeder script (`gsdSeed.dashboard()`) seeds:\n- 4 completed tasks with `daysAgo: 0, 1, 2, 3` \u2014 these create a 4-day streak and light up 4 of the 7 activity dots when seeded and viewed\n- `analytics/streaks.ts` buckets by `updatedAt` (confirmed in source), which matches the seeder's design\n- `analytics/trends.ts` `getCompletionTrend()` filters `completed` tasks by `updatedAt` range per day \u2014 seeded tasks with `daysAgo: 0\u20133` and `completed: true` will populate the completion trend line for those days\n- `getStreakData()` returns `{ current, longest, last7Days: boolean[7] }` \u2014 exactly the shape `StreakIndicator` destructures\n\n**Token validity (all used tokens confirmed defined):**\n\n| Token | Location |\n|---|---|\n| `border-hair` | `app/css/inkwell-theme.css` \u2014 `@utility border-hair { border-width: 1.5px }` |\n| `border-border` | `app/globals.css` + inkwell-tokens \u2014 CSS custom property |\n| `rounded-lg` | Standard Tailwind (14px radius, matches Inkwell card spec) |\n| `bg-status-success` | `app/globals.css:212` \u2014 `--color-status-success: var(--status-success)` \u2192 olive |\n| `bg-accent/10` | Used on `stats-card.tsx:71` \u2014 same icon-container pattern, consistent |\n| `text-accent` | Standard, maps to `--accent` (#3B4A8C / periwinkle in dark) |\n| `text-label` | `app/globals.css:219` \u2014 `--text-label: 11px` |\n| `rd-serif` | `app/globals.css:651` \u2014 canonical serif utility, not deprecated |\n| `CalendarCheckIcon` | lucide-react \u2014 confirmed import |\n\n**Consistency check (card vocabulary across dashboard):**\nAfter the change, both `completion-chart.tsx` and `streak-indicator.tsx` use `rounded-lg border-hair border-border` \u2014 matching `stats-card.tsx`, `quadrant-distribution.tsx`, `tag-analytics.tsx`, `time-analytics.tsx`, `upcoming-deadlines.tsx`, and `dashboard-skeleton.tsx`. The card vocabulary is now unified across all 7 dashboard panels.\n\n**Removed code verified clean:**\n- `FlameIcon`, `TrophyIcon` \u2014 no longer imported or referenced\n- `getStreakMessage()` \u2014 removed\n- `getMilestone()` \u2014 removed\n- `bg-warning-tint`, `text-warning`, `shadow-warning-tint` \u2014 removed from this component (still used in `upcoming-deadlines.tsx` for deadlines, which is correct)\n\n### Console / Network: DEFERRED (no live browser)\n\nWithout a browser session, console errors and network requests cannot be observed directly. The following mitigating factors apply:\n\n- No new network calls introduced (the component is purely presentational, props-fed)\n- No new React hooks or async operations added\n- TypeScript passes \u2014 no undefined property accesses\n- The only structural risk would be a missing CSS custom property causing a silent paint failure (no JS error), which is mitigated by the token audit above\n\n**To complete this dimension before pushing:**\n1. Navigate to `http://localhost:3001/dashboard` in a browser\n2. Paste `scripts/reset-app-state.js` into the console; hard-reload (busts SW cache)\n3. Paste `scripts/seed-tasks.js`; call `gsdSeed.dashboard()`; reload\n4. Confirm in DevTools Console: zero errors, no \"var(--...) is not defined\" paint warnings\n5. Observe: StreakIndicator shows `4` with `days` suffix, 4 lit activity dots (olive), `Best 4 days` footer; CompletionChart shows completed line rising over days 0-3\n\n### Accessibility: NOT ESCALATED\n\nThe change does reduce a risk: day-label `text-[9px]` \u2192 `text-[10px]` (size increase, not a regression). The `aria-hidden` attribute on `CalendarCheckIcon` is correctly set. Full a11y audit not performed.\n\n### Visual / Inkwell fidelity: PARTIAL (static inspection)\n\nThe changes move *toward* Inkwell compliance, not away from it:\n- Amber (`--warning`) activity dots replaced with olive (`--status-success`) \u2014 eliminates the noted \"semantic cross-wire\" (amber = Q4/Eliminate quadrant)\n- `border-2` \u2192 `border-hair` \u2014 corrects border weight to the 1.5px system hairline\n- `rounded-2xl` \u2192 `rounded-lg` \u2014 corrects radius to the documented 14px card spec\n- Card vocabulary now matches siblings\n\nLight/dark mode not observed live; however, `bg-status-success` and `bg-accent/10` both use CSS custom properties that lift correctly in dark mode (verified in `inkwell-tokens.css`).\n\n---\n\n## Data-Dependent Surface: Seeder Fit Assessment\n\nThe `gsdSeed.dashboard()` scenario produces data that will exercise both changed components in a populated state:\n\n| Component | What seeds it | Expected render |\n|---|---|---|\n| `StreakIndicator` | 4 tasks with `completed: true`, `daysAgo: 0\u20133` | current: 4, last7Days: 4 filled dots (olive), footer: \"Best 4 days\" |\n| `CompletionChart` | Same 4 completed tasks + 1 running (created today) | 30-day trend: flat then a bump at days 0-3; created line shows 1 today |\n\nTo see real data (not an empty state), run `gsdSeed.dashboard()` before navigating to `/dashboard`.\n\n---\n\n## Evidence\n\n| Evidence type | Status |\n|---|---|\n| TypeScript typecheck | PASS \u2014 `bun typecheck` clean |\n| Unit test suite (1930 tests) | PASS \u2014 `bun run test` all green |\n| Dashboard component tests (61 tests) | PASS \u2014 all assertions matched, including \"no milestone badge\" regression guard |\n| Token audit (7 CSS custom properties) | PASS \u2014 all resolve to defined values |\n| Card vocabulary consistency | PASS \u2014 all 7 dashboard panels now use `rounded-lg border-hair border-border` |\n| Live browser observation | DEFERRED \u2014 dev server at :3001 is up; browser step pending |\n| Console/network errors | DEFERRED \u2014 requires live browser |\n\n**Codified:** The gamification removal is regression-guarded by `should not render gamified milestone badges` in `tests/ui/dashboard-components.test.tsx:139`. No new spec needed.\n\n---\n\n## Verdict\n\n**DEFERRED \u2014 runtime browser check pending; static analysis is PASS**\n\nThe change is structurally sound: TypeScript clean, all 1930 tests pass including explicit regression guards for the removed gamification, all CSS tokens resolve to defined values, and card vocabulary is now consistent across all 7 dashboard panels. The change is a genuine improvement to Inkwell compliance and product-register fitness.\n\nThe one gap is live browser observation to confirm no console errors and that the seeded data renders visually as expected. The dev server at `http://localhost:3001` is running. To close the gap, run the seeder (`gsdSeed.dashboard()`) and visually confirm both components before pushing.\n\n**Risk of the deferred step being a blocker: LOW.** No runtime logic was changed \u2014 only CSS classes and removed conditional rendering branches. The components consume the same `StreakData` and `TrendDataPoint[]` props they did before; the analytics layer is untouched.\n"}], "grading": {"expectations": [{"text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state", "passed": true, "evidence": "'Data-Dependent Surface: Seeder Fit Assessment' table + step 'run gsdSeed.dashboard() before navigating to /dashboard' (lines 134-143)."}, {"text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding", "passed": true, "evidence": "'analytics/streaks.ts buckets by updatedAt (confirmed in source), which matches the seeder's design' (line 75)."}, {"text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render", "passed": true, "evidence": "Step: 'Paste scripts/reset-app-state.js into the console; hard-reload (busts SW cache)' (line 113)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console / Network: DEFERRED (no live browser)' with a concrete plan to check console for var(--...) paint errors (lines 102-116)."}, {"text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly", "passed": true, "evidence": "Verdict: 'DEFERRED \u2014 runtime browser check pending; static analysis is PASS' (line 165)."}], "summary": {"passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0}, "execution_metrics": {"total_tool_calls": 74, "errors_encountered": 0}}}, {"id": "eval-1-new_skill-run-1", "prompt": "(No prompt found)", "eval_id": null, "outputs": [{"name": "verification-report.md", "type": "text", "content": "## Verification: overdue indicator changed from border-l-4 (left stripe) to full border on task cards\n\nLoop: dev (localhost:3001 already running) \u00b7 Evidence rung: served-artifact + unit test\nSW cache busted: n/a (no browser session; artifact fetched directly from dev server)\nSeeded: no (unit tests use in-memory rendering; artifact check is structural, not data-dependent)\n\n---\n\n### What changed\n\nIn `components/task-card/index.tsx` (commit `8dd0f82`), the overdue styling on task cards was changed from a left-only border stripe to a full border:\n\n| Before | After |\n|--------|-------|\n| `taskIsOverdue && \"overdue-task border-l-[3px] border-l-status-overdue\"` | `taskIsOverdue && \"border-status-overdue\"` |\n\nThe base `border` class was already present on line 66 (`\"group relative flex flex-col gap-2 rounded-xl border bg-card p-3 ...\"`), meaning `border-status-overdue` adds a rust-colored border on all four sides by setting `border-color`, while the pre-existing `border` class provides `border-width: 1px` all around. The old implementation applied a 3px left-only stripe.\n\n---\n\n### Verification steps performed\n\n#### 1. Source code inspection\n- Read `components/task-card/index.tsx` \u2014 confirmed `border-status-overdue` is present on line 71, `border` base class is on line 66.\n- Confirmed no `border-l-[3px]`, `border-l-status-overdue`, or `overdue-task` anywhere in the component tree (`grep` across all `.tsx`/`.css`).\n- Confirmed the `--color-status-overdue` token resolves to `var(--rust)` (warm rust color) in `app/globals.css`.\n\n#### 2. Unit test run\nRan the targeted test suite:\n```\nbun run test -- --reporter=verbose tests/ui/task-card.test.tsx\n```\nResult: **17/17 PASS** \u2014 including both:\n- `\"applies overdue border styling for overdue tasks\"` \u2014 asserts `expect(article).toHaveClass(\"border-status-overdue\")` \u2713\n- `\"does not show overdue warning for completed tasks\"` \u2014 confirms the guard `!task.completed` prevents false positives \u2713\n\nThe test comment is explicit: *\"Overdue cards get a full rust hairline border (replaces the banned side-stripe).\"*\n\n#### 3. Served-artifact check (stale-chunk defense)\nDev server was running at `http://localhost:3001`. Fetched the served JS chunk that contains the task card component (`Projects_gsd-taskmanager_011mdy8._.js`):\n\n```\ncurl -s \"http://localhost:3001/_next/static/chunks/Projects_gsd-taskmanager_011mdy8._.js\" \\\n  | grep -o \"border-status-overdue|border-l-\\[3px\\]|border-l-status-overdue|overdue-task\"\n```\n\n- `border-status-overdue` \u2014 **found (1 occurrence)** \u2713\n- `border-l-[3px]` \u2014 **absent** \u2713\n- `border-l-status-overdue` \u2014 **absent** \u2713\n- `overdue-task` \u2014 **absent** \u2713\n\nAlso fetched the served CSS chunk (`Projects_gsd-taskmanager_app_globals_0xmbyqa.css`):\n- `.border-status-overdue { border-color: var(--color-status-overdue); }` \u2014 **present** \u2713\n- `--color-status-overdue: var(--status-overdue)` \u2014 **defined** \u2713\n- No `border-l` overrides or `overdue-task` rules \u2014 **confirmed absent** \u2713\n\nThe dev server is serving the updated code, not a stale build. The stale-chunk trap is ruled out.\n\n#### 4. CSS semantics check\nThe `.border-status-overdue` rule sets only `border-color`. The actual border visibility depends on the base `border` class being applied first. Confirmed the base `border` is on line 66 (always present on every task card). Therefore, when `taskIsOverdue` is true, all four sides of the card get the rust `border-color`, producing a full-perimeter border callout \u2014 not a left stripe.\n\n---\n\n### Dimensions covered\n\n- **Functional** (structural): PASS \u2014 class is present in source, present in served chunk, and asserted in passing unit test.\n- **Console/network**: NOT CHECKED \u2014 no browser session available; this dimension is deferred.\n- **Accessibility**: NOT ESCALATED \u2014 the change is a visual border treatment, not an interactive element; no a11y escalation warranted.\n- **Visual / Inkwell fidelity**: PARTIALLY CHECKED \u2014 token resolves correctly to the rust color; full light/dark mode visual check deferred (requires browser).\n\n---\n\n### Evidence\n\n- Source file: `components/task-card/index.tsx` line 66 (`border`), line 71 (`border-status-overdue`)\n- Commit: `8dd0f82` \u2014 diff shows exact `border-l-[3px] border-l-status-overdue` \u2192 `border-status-overdue` change\n- Test run: `tests/ui/task-card.test.tsx` \u2014 17/17 PASS including `\"applies overdue border styling for overdue tasks\"`\n- Served chunk `Projects_gsd-taskmanager_011mdy8._.js` \u2014 `border-status-overdue` present, old classes absent\n- Served CSS `Projects_gsd-taskmanager_app_globals_0xmbyqa.css` \u2014 `.border-status-overdue { border-color: var(--color-status-overdue); }` confirmed; `--color-status-overdue: var(--status-overdue)` confirmed\n\nCodified: `tests/ui/task-card.test.tsx` \u2014 test `\"applies overdue border styling for overdue tasks\"` at line 179 already defends this behavior.\n\n---\n\n**Verdict: PASS** (with one deferred dimension)\n\nThe change is live in the served code \u2014 not stale. The old left-stripe classes are gone. The new full-border approach works correctly: the base `border` class provides width on all sides, and `border-status-overdue` applies the rust color. Unit test confirms the behavior. The only unchecked dimension is a live-browser console/network check and a visual dark-mode inspection, which require a browser session.\n"}], "grading": {"expectations": [{"text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render", "passed": true, "evidence": "Defeats the trap via the served-artifact rung: fetched the served JS+CSS chunks and confirmed new class present + old classes absent \u2014 'The dev server is serving the updated code, not a stale build. The stale-chunk trap is ruled out' (lines 39-57)."}, {"text": "Verifies the change in the actually-served/compiled artifact, not only the source file", "passed": true, "evidence": "Fetched Projects_gsd-taskmanager_011mdy8._.js and the served globals CSS, grepped for new/old class names (lines 40-57)."}, {"text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation", "passed": true, "evidence": "Verdict 'PASS (with one deferred dimension)'; live-browser console/visual explicitly deferred (lines 67, 85-87)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console/network: NOT CHECKED \u2014 no browser session available; this dimension is deferred' (line 67)."}, {"text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check", "passed": false, "evidence": "'Seeded: no' (line 5); defeats the trap via served-artifact + unit test but does not seed an overdue task or prescribe seeding for the deferred visual. Reasonable under no-browser, but the assertion is unmet."}], "summary": {"passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8}, "execution_metrics": {"total_tool_calls": 57, "errors_encountered": 0}}}, {"id": "eval-1-old_skill-run-1", "prompt": "(No prompt found)", "eval_id": null, "outputs": [{"name": "verification-report.md", "type": "text", "content": "# Verification: Overdue indicator changed from left border-stripe to full border\n\nLoop: dev (localhost:3001) \u00b7 Browser: inspection-only (shared Chrome unavailable per constraints)\nSW cache busted: N/A (no interactive browser; dev server runtime CSS confirmed independently)\nSeeded: N/A (static analysis; no browser to inject IndexedDB)\n\n---\n\n## What I Did\n\n### 1. Scoped the change\n\nRead the skill first, then located the changed source. The change is in\n`components/task-card/index.tsx` line 71.\n\n**Before (commit prior to 8dd0f82):**\n```\ntaskIsOverdue && \"overdue-task border-l-[3px] border-l-status-overdue\",\n```\n**After (current HEAD \u2014 commit 8dd0f82):**\n```\ntaskIsOverdue && \"border-status-overdue\",\n```\n\nAcceptance criterion: overdue task cards should show a full all-sides 1.5px rust\nborder (`#B04A3F` light / `#D27468` dark) rather than a 3px left-only stripe.\n\n### 2. Git/source verification\n\n- Confirmed via `git diff HEAD -- components/task-card/index.tsx` that the file has\n  **no pending local changes** \u2014 the change is cleanly committed.\n- Confirmed `overdue-task` CSS class was removed from `app/globals.css` (grep finds\n  zero occurrences). The old custom CSS rule is fully dead.\n- Confirmed `border-l-status-overdue` appears in no source `.tsx`/`.ts`/`.css` file \u2014\n  the old class is not applied anywhere in the component tree.\n\n### 3. Token chain verification\n\nTraced `border-status-overdue` \u2192 `--color-status-overdue` \u2192 `--status-overdue` \u2192\n`--rust` \u2192 `#B04A3F` (light) / `#D27468` (dark) through:\n- `app/globals.css` `@theme` block (line 206): `--color-status-overdue: var(--status-overdue)`\n- `app/globals.css` (line 139): `--status-overdue: var(--rust)`\n- `app/css/inkwell-tokens.css` (line 41): `--rust: #B04A3F` / dark override `#D27468`\n\nThis is a fully resolved, visible rust/red color \u2014 not transparent, not inheriting.\n\n### 4. Border composition check\n\nThe `<article>` element in `TaskCardComponent` always has the `border` class (line 66,\nunconditional). The `@utility border` override in `globals.css` (line 230) sets\n`border-width: 1.5px`. The `border-status-overdue` class only sets `border-color`.\n`twMerge` (used by `cn()`) treats `border` (width) and `border-status-overdue` (color)\nas non-conflicting \u2014 both survive. `border-card-border` (also a color utility) **is**\noverridden by `border-status-overdue` since they're in the same tailwind-merge group \u2014\nwhich is the intended behavior.\n\n### 5. Live CSS from running dev server (partial runtime check)\n\nDownloaded the generated CSS chunk served by the running dev server at `localhost:3001`:\n`/_next/static/chunks/Projects_gsd-taskmanager_app_globals_0xmbyqa.css` (157,620 bytes).\n\nConfirmed directly in the served CSS:\n\n```css\n/* Present \u2014 new behavior */\n.border-status-overdue {\n  border-color: var(--color-status-overdue);\n}\n\n/* Present \u2014 border override is in effect */\n.border, .border-hair {\n  border-width: 1.5px;\n}\n```\n\n**Not present** in served CSS:\n- `overdue-task` \u2014 no rule exists (confirmed: grep returns zero results)\n- `border-l-[3px]` \u2014 no rule exists\n\nThe dev server is serving fresh code with the correct CSS. No stale build artifact\nwas found.\n\n### 6. Unit test suite\n\nRan `bun run test -- tests/ui/task-card.test.tsx` \u2014 **17/17 tests pass**, including:\n\n```\n\u2713  applies overdue border styling for overdue tasks\n```\n\nThe test explicitly asserts `expect(article).toHaveClass(\"border-status-overdue\")` and\nincludes the comment \"Overdue cards get a full rust hairline border (replaces the banned\nside-stripe)\". This test was written alongside the change in commit 8dd0f82 (TDD \u2014 test\nwritten with implementation).\n\n---\n\n## Verification Dimensions\n\n- **Functional (static):** PASS \u2014 Source is correct. `border-l-[3px] border-l-status-overdue overdue-task` is gone; `border-status-overdue` is the sole overdue class applied to the `<article>`. The base `border` (1.5px) utility is unconditional and never stripped.\n- **CSS token chain:** PASS \u2014 `border-status-overdue` resolves to `#B04A3F` (light) / `#D27468` (dark) with no broken variable references.\n- **Stale build check:** PASS \u2014 The dev server at localhost:3001 is serving a generated CSS file that contains `.border-status-overdue` and does NOT contain `.overdue-task` or `border-l-[3px]`. The `@utility border { border-width: 1.5px }` override is active.\n- **Unit tests:** PASS \u2014 17/17, including explicit `border-status-overdue` class assertion.\n- **Console/network errors:** DEFERRED \u2014 No live browser available to read console output.\n- **Visual (live screenshot):** DEFERRED \u2014 No interactive browser available per session constraints.\n\n---\n\n## Stale Build Trap Assessment\n\nThe user's concern is specifically about the stale-SW-chunk trap documented in the skill.\nKey findings:\n\n1. **No stale source:** The source file (`components/task-card/index.tsx`) has zero\n   uncommitted changes. The change is in git.\n2. **Dev server CSS is fresh:** The CSS chunk served by localhost:3001 already has\n   `.border-status-overdue` and no remnants of the old stripe pattern.\n3. **SW cache risk still exists for a real browser visit:** The service worker would need\n   to be busted before a browser screenshot would be trustworthy. The skill's\n   `scripts/reset-app-state.js` procedure must be run in the browser console before\n   taking a live screenshot.\n\n---\n\n## Evidence\n\n- Source: `/Users/vinnycarpenter/Projects/gsd-taskmanager/components/task-card/index.tsx` line 66\u201374\n- CSS tokens: `/Users/vinnycarpenter/Projects/gsd-taskmanager/app/globals.css` lines 206\u2013207, 230\u2013232\n- Token values: `/Users/vinnycarpenter/Projects/gsd-taskmanager/app/css/inkwell-tokens.css` line 41\n- Served CSS (downloaded): `http://localhost:3001/_next/static/chunks/Projects_gsd-taskmanager_app_globals_0xmbyqa.css`\n- Unit test: `/Users/vinnycarpenter/Projects/gsd-taskmanager/tests/ui/task-card.test.tsx` line 179\u2013188\n- Git commit: `8dd0f82` \u2014 \"fix(matrix): keyboard drag-and-drop, Inkwell palette alignment, overdue de-clutter\"\n\n## Codified\n\nNo new E2E spec for overdue border styling currently exists in `tests/e2e/`.\nThis behavior is regression-worthy \u2014 a visual CSS regression would be silent in unit\ntests if the class name changed without a test update.\n\n**Recommended follow-up (not blocking this verification):** Add an E2E spec using\n`tests/e2e/pages/matrix-page.ts` that creates an overdue task and asserts\n`article[data-testid=\"task-card\"].border-status-overdue` is present in the DOM.\nThis would catch future class-name regressions.\n\n---\n\n## Verdict\n\n**PASS (static + partial runtime) \u2014 live visual confirmation DEFERRED**\n\nThe change is correct in source and in the live dev server's generated CSS. The old\nleft-stripe (`border-l-[3px] border-l-status-overdue overdue-task`) is completely\nremoved from source and from the served CSS. The new full-border (`border` + conditional\n`border-status-overdue`) resolves to a visible 1.5px rust hairline on all four sides.\nUnit tests confirm the class is applied.\n\n**Before trusting a screenshot as proof, run `scripts/reset-app-state.js` in the browser\nconsole and hard-reload** \u2014 the service worker will otherwise serve stale JS chunks, which\nis exactly the trap the user flagged. The static evidence here is strong, but a visual\nconfirmation with SW cache busted is the final verification step for the \"does it show\nup in the matrix\" question.\n"}], "grading": {"expectations": [{"text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render", "passed": true, "evidence": "'Stale Build Trap Assessment' keeps the SW risk live and prescribes scripts/reset-app-state.js before a screenshot (lines 109-121, 157-161)."}, {"text": "Verifies the change in the actually-served/compiled artifact, not only the source file", "passed": true, "evidence": "Downloaded the served CSS chunk from :3001; confirmed .border-status-overdue present and .overdue-task / border-l-[3px] absent (lines 57-81)."}, {"text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation", "passed": true, "evidence": "Verdict 'PASS (static + partial runtime) \u2014 live visual confirmation DEFERRED' (line 149)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console/network errors: DEFERRED \u2014 No live browser available to read console output' (line 104)."}, {"text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check", "passed": false, "evidence": "Verifies via served CSS/source; never seeds an overdue task or prescribes seeding so the indicator can actually be observed rendering."}], "summary": {"passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8}, "execution_metrics": {"total_tool_calls": 90, "errors_encountered": 0}}}, {"id": "eval-2-new_skill-run-1", "prompt": "(No prompt found)", "eval_id": null, "outputs": [{"name": "verification-report.md", "type": "text", "content": "# Verification: Export Data button in Settings \u2014 refactored export handler\n\nLoop: dev (reused, port 3001) \u00b7 Evidence rung: served-artifact + unit suite (rung 2)\nSW cache busted: n/a (no browser) \u00b7 Seeded: n/a\n\n---\n\n## What I did\n\n### 1. Scoped the change\n\nThe user said they refactored the export handler. The relevant code lives in two files:\n\n- **`lib/tasks/import-export.ts`** \u2014 `exportToJson()` and `exportTasks()` (the data layer)\n- **`components/settings-page/index.tsx`** \u2014 `handleExport` callback (the UI wiring)\n- **`components/settings/data-management.tsx`** \u2014 `DataManagement` component with the `onExport` prop and \"Export tasks\" `ActionRow`\n\nThe current HEAD code shows the handler uses `exportToJson()` from the lib, creates a `Blob`, generates a `gsd-tasks-<ISO>.json` download link, calls `.click()`, revokes the URL, shows `toast.success(\"Tasks exported\")` on success, and `toast.error(\"Failed to export tasks\")` on error \u2014 with `isExporting` loading state protecting against double-clicks.\n\nThe git log confirmed the most recent refactor to `import-export.ts` was commit `78311c1` (\"coding standards compliance improvements\") which split oversized functions in `import-export.ts`. The handler in `settings-page/index.tsx` had no uncommitted working-tree changes.\n\n### 2. Unit tests \u2014 full pass\n\nRan the dedicated unit test suite for the refactored module:\n\n```\nbun run test -- tests/data/tasks/import-export.test.ts --reporter=verbose\n```\n\n**Result: 25/25 tests passed.** Coverage includes:\n\n- `exportTasks`: exports correct structure, validates with schema, includes `exportedAt` timestamp, handles empty list, throws on corrupt task data\n- `exportToJson`: returns a parseable formatted string, includes all task fields\n- Round-trip export \u2192 import preserves all task data\n- Error paths: invalid JSON, schema validation failure, size limit enforcement\n\nAlso ran the settings-component unit tests:\n\n```\nbun run test -- tests/ui/settings-components.test.tsx --reporter=verbose\n```\n\n**Result: 43/43 tests passed.** Specifically covers:\n- `DataManagement > clicking Export tasks calls onExport` \u2014 confirms the button wires to the prop\n- `DataManagement > buttons are disabled when isLoading is true` \u2014 confirms loading-state guard\n\n### 3. TypeScript check \u2014 clean\n\n```\nbun typecheck\n```\n\n**Result: no errors.** No type regressions in the export handler or its callers.\n\n### 4. Served-artifact check against live dev server\n\nDev server reachable at `http://localhost:3001`. Fetched the settings page chunk (`Projects_gsd-taskmanager_17aoo7n._.js`) \u2014 the chunk currently served to browsers \u2014 and grepped for the key handler tokens:\n\n| Token | Found in live chunk |\n|---|---|\n| `exportToJson` | \u2713 (9 occurrences) |\n| `createObjectURL` | \u2713 |\n| `revokeObjectURL` | \u2713 |\n| `gsd-tasks-` | \u2713 (download filename prefix) |\n| `Tasks exported` | \u2713 (success toast) |\n| `Export failed` | \u2713 (error toast) |\n| `isExporting` / `setIsExporting` | \u2713 (loading state) |\n\nThe live chunk is not serving stale code \u2014 the refactored handler is present in what the browser would receive.\n\n### 5. E2E spec exists (not run \u2014 constraint)\n\nA Playwright spec at `tests/e2e/settings-navigation.spec.ts` (line 99) already covers the export button end-to-end: it creates a task, navigates to Data & Storage in Settings, clicks \"Export tasks\", and asserts the download filename matches `/^gsd-tasks-.*\\.json$/`. This spec was **not run** per the task constraints (no full e2e suite). It represents the strongest available evidence if a browser run is needed.\n\n---\n\n## Dimensions covered\n\n| Dimension | Status | Notes |\n|---|---|---|\n| Functional (unit) | PASS | 25/25 import-export tests, 43/43 settings component tests |\n| Functional (browser) | DEFERRED | No browser available; unit + artifact evidence is strong but not equivalent |\n| Console/network errors | PARTIAL | No browser to observe runtime console; TypeScript is clean, no obvious throw paths |\n| Served-artifact | PASS | Live chunk contains all refactored handler tokens |\n| TypeScript | PASS | `bun typecheck` clean |\n| Accessibility | Not escalated | No interactive element changes in this refactor |\n| Visual / Inkwell fidelity | Not escalated | No visual changes in this refactor |\n\n---\n\n## Evidence\n\n- Unit test run: `bun run test -- tests/data/tasks/import-export.test.ts` \u2192 25 passed\n- Unit test run: `bun run test -- tests/ui/settings-components.test.tsx` \u2192 43 passed\n- Typecheck: `bun typecheck` \u2192 no errors\n- Live chunk grep: `Projects_gsd-taskmanager_17aoo7n._.js` at `http://localhost:3001` \u2014 all key export handler tokens confirmed present\n- E2E spec (not run): `tests/e2e/settings-navigation.spec.ts:99` \u2014 \"should trigger export download\"\n\nCodified: `tests/e2e/settings-navigation.spec.ts` already covers this \u2014 no new spec needed.\n\n---\n\n## Verdict\n\n**PASS (with browser runtime deferred)**\n\nAll static evidence is clean: 68 unit tests pass, TypeScript compiles without errors, and the live dev server is serving a chunk that contains every functional piece of the refactored handler (`exportToJson`, blob creation, URL management, success/error toasts, loading state). The one gap is that runtime console observation requires a browser \u2014 to close that gap, run `tests/e2e/settings-navigation.spec.ts` with `bun run test:e2e -- --project=chromium tests/e2e/settings-navigation.spec.ts`. The existing e2e spec exercises the full click-to-download flow including filename validation.\n"}], "grading": {"expectations": [{"text": "Verifies the functional export outcome (download/file produced), not just that the code exists", "passed": true, "evidence": "Traces handler to Blob/createObjectURL/anchor.click()/gsd-tasks-<ISO>.json + served-artifact confirms createObjectURL/revokeObjectURL/filename prefix present (lines 18, 59-69)."}, {"text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)", "passed": true, "evidence": "'Console/network errors \u2014 PARTIAL' row: no browser to observe runtime console, but typecheck clean and no obvious throw paths (line 83)."}, {"text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it", "passed": true, "evidence": "Prescribes the exact targeted command: 'bun run test:e2e -- --project=chromium tests/e2e/settings-navigation.spec.ts' (line 107); did not run the full suite per right-sizing."}, {"text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly", "passed": true, "evidence": "Verdict 'PASS (with browser runtime deferred)'; functional-browser dimension marked DEFERRED (lines 82, 105)."}, {"text": "Correctly identifies the refactor scope to focus the verification", "passed": true, "evidence": "Identifies commit 78311c1 split oversized functions in import-export.ts and that settings-page handler had no uncommitted changes (lines 20-21)."}], "summary": {"passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0}, "execution_metrics": {"total_tool_calls": 59, "errors_encountered": 0}}}, {"id": "eval-2-old_skill-run-1", "prompt": "(No prompt found)", "eval_id": null, "outputs": [{"name": "verification-report.md", "type": "text", "content": "# Verification: Export Data button in Settings after handler refactor\n\nLoop: dev (port 3001 already running; Playwright spins up own server on 3000) \u00b7 Browser: playwright (queued/contended) + inspection  \nSW cache busted: n/a (no interactive browser available) \u00b7 Seeded: n/a (export works on empty task list)\n\n---\n\n## What was refactored\n\nCommit `78311c1` (fix: coding standards compliance improvements, merged ~May 26 2026) extracted a private `resolveSyncDeps()` function out of the `importTasks()` body in `lib/tasks/import-export.ts`. The refactor did **not** touch the export path (`exportTasks`, `exportToJson`) or the `handleExport` callback in `components/settings-page/index.tsx`. The change was a code-organization improvement to `importTasks` only.\n\nThe export handler call chain is:\n\n```\nSettings page (components/settings-page/index.tsx)\n  handleExport() [lines 169\u2013187]\n    \u2192 exportToJson() from @/lib/tasks (barrel re-export)\n    \u2192 lib/tasks/import-export.ts: exportToJson()\n        \u2192 exportTasks(): reads db.tasks.toArray(), validates each record with taskRecordSchema.safeParse()\n        \u2192 returns JSON.stringify(payload, null, 2)\n    \u2192 Blob + URL.createObjectURL \u2192 <a> element with link.download \u2192 link.click()\n    \u2192 URL.revokeObjectURL(url)\n    \u2192 toast.success(\"Tasks exported\")\n  catch: logger.error + toast.error(\"Failed to export tasks\")\n  finally: setIsExporting(false)\n```\n\n---\n\n## Verification dimensions checked\n\n### Functional behavior \u2014 PASS (static + unit)\n\n- **Export call chain is intact.** `exportToJson` is correctly imported from `@/lib/tasks`, which re-exports it from `lib/tasks/import-export.ts`. The function reads all tasks, validates them through `taskRecordSchema.safeParse()` (silently skips corrupt rows), and returns a well-formed `ImportPayload` JSON string.\n- **Dexie transaction correctness preserved.** The refactored `resolveSyncDeps()` is called *before* `db.transaction(\"rw\", ...)` opens (line 137 vs line 142 in import-export.ts). The original comment stated this ordering was required to avoid detaching the Dexie transaction context \u2014 the refactor preserves it.\n- **Button wiring is correct.** `DataManagement.onExport` receives `handleExport`, which is typed `() => Promise<void>`. `ActionRow.onClick` is typed `() => void` \u2014 TypeScript allows `Promise<void>` to satisfy `void` return. `handleExport` has its own try/catch so no unhandled promise rejection can escape to the browser console.\n- **Loading state correctly gates the button.** `isExporting` state is set to `true` before the async operation and cleared in `finally`. It is passed as `isLoading={isExporting || tasksLoading}` to `DataManagement`, which disables all action buttons.\n- **Download filename format.** `gsd-tasks-${new Date().toISOString()}.json` \u2014 this is what the e2e spec asserts with regex `/^gsd-tasks-.*\\.json$/`.\n- **Unit test coverage.** `tests/ui/settings-components.test.tsx` > `DataManagement`:\n  - \u2705 `renders export and import action rows`\n  - \u2705 `clicking Export tasks calls onExport`\n  - \u2705 `buttons are disabled when isLoading is true`\n  \n  All 45 settings component tests pass.\n\n### Console/network errors \u2014 PASS (static + unit)\n\n- `exportTasks()` uses `safeParse()`, not `parse()` \u2014 schema validation failures are logged as warnings and silently skipped, not thrown to the caller.\n- `exportToJson()` has no network calls; it only reads IndexedDB (fully local, no fetch).\n- `handleExport`'s catch block calls `logger.error(\"Export failed\", ...)` which routes through the project's structured logger (not a raw `console.error`) and shows `toast.error(\"Failed to export tasks\")`. No raw error objects are emitted to the browser console on a clean export.\n- TypeScript compiles clean (`bun typecheck`: no errors).\n- ESLint: pre-existing incompatibility between ESLint 10 and the TypeScript ESLint utils \u2014 the `bun lint` command fails with `TypeError: Class extends value undefined is not a constructor or null`. **This is a pre-existing, unrelated issue**, not introduced by the export refactor.\n\n### E2E test status \u2014 DEFERRED (runtime)\n\n**Attempted:** `npx playwright test tests/e2e/settings-navigation.spec.ts --project=chromium`\n\nThe relevant spec is `should trigger export download` (settings-navigation.spec.ts:99\u2013112). It:\n1. Creates a task via the capture bar\n2. Navigates to Settings \u2192 Data & Storage\n3. Calls `page.waitForEvent(\"download\")`\n4. Clicks the \"Export tasks\" button\n5. Asserts `download.suggestedFilename()` matches `/^gsd-tasks-.*\\.json$/`\n\n**Result:** Multiple Playwright processes competed for the same test infrastructure (dev server on port 3000 was already being used by other sessions). Three concurrent `playwright test settings-navigation.spec.ts` processes ran (PIDs 46578, 54724, 56160) but all remained alive after 15+ minutes with no output flushed to any capture file. The tests appear to be queued inside Playwright's worker pool, not timed out or failing.\n\n**Could not confirm e2e result in this session.** The test itself exists, is correctly structured, and was green as of the last playwright-report/index.html (June 1, 2026 \u2014 before the refactor commit). Nothing in the refactor touches the code paths exercised by this test.\n\n---\n\n## Static analysis notes (no bugs found)\n\n| Area | Finding |\n|---|---|\n| `link.click()` without `appendChild` | Not appended to DOM before click. This is safe in Chromium (confirmed by existing e2e test passing on June 1) but can be fragile in older Firefox. Not a regression \u2014 this pattern was present before the refactor. |\n| `URL.revokeObjectURL` placement | Called immediately after `link.click()` \u2014 synchronous. The click triggers a download queue entry before the URL is revoked; browser downloads are initiated asynchronously from the user gesture, so revocation here is correct. |\n| `resolveSyncDeps()` scope | Only called from `importTasks()`, not `exportTasks()`. Export has no sync-queue side effects, which is correct. |\n\n---\n\n## Evidence\n\n- Static code review: `lib/tasks/import-export.ts`, `components/settings-page/index.tsx`, `components/settings/data-management.tsx`, `lib/tasks.ts` (barrel), `lib/schema.ts`\n- Unit test run: `bun run test -- tests/data/import-export-sync.test.ts tests/ui/settings-components.test.tsx` \u2192 **45 passed, 0 failed**\n- Full data layer test run: `bun run test -- tests/data/` \u2192 **1372 passed, 1 skipped, 0 failed**\n- TypeScript: `bun typecheck` \u2192 **clean (no errors)**\n- Git history: confirmed refactor scope (`78311c1`) touched only `importTasks` helper extraction, not export path\n- E2E: `playwright test settings-navigation.spec.ts --project=chromium` \u2014 **still running** (contended)\n\nCodified: existing spec at `tests/e2e/settings-navigation.spec.ts:99` covers the export download \u2014 not regression-worthy to add a new spec.\n\n---\n\n## Verdict: PASS (with deferred e2e confirmation)\n\nThe export handler itself was **not changed** by the refactor \u2014 the commit only extracted `resolveSyncDeps()` inside `importTasks()`. The export call chain (`handleExport \u2192 exportToJson \u2192 exportTasks`) is fully intact, type-safe, error-handled, and covered by unit tests that all pass. A full runtime confirmation via the existing e2e spec (`should trigger export download`) was attempted but could not complete due to competing Playwright sessions. **Run `npx playwright test tests/e2e/settings-navigation.spec.ts --project=chromium` in a clean terminal to confirm** \u2014 the test has been green and nothing in the export path changed.\n"}], "grading": {"expectations": [{"text": "Verifies the functional export outcome (download/file produced), not just that the code exists", "passed": true, "evidence": "Traces handleExport -> exportToJson -> exportTasks -> Blob/anchor/click with filename matching the e2e regex (lines 12-26, 38)."}, {"text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)", "passed": true, "evidence": "'Console/network errors \u2014 PASS (static + unit)': logger.error routes through structured logger not raw console; no fetch calls (lines 46-52)."}, {"text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it", "passed": true, "evidence": "Attempted 'npx playwright test settings-navigation.spec.ts' (hit a process collision) and prescribes re-running it in a clean terminal (lines 54-67, 96)."}, {"text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly", "passed": true, "evidence": "Verdict 'PASS (with deferred e2e confirmation)' (line 94)."}, {"text": "Correctly identifies the refactor scope to focus the verification", "passed": true, "evidence": "Identifies commit 78311c1 extracted resolveSyncDeps() inside importTasks() and did NOT touch the export path (line 10)."}], "summary": {"passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0}, "execution_metrics": {"total_tool_calls": 101, "errors_encountered": 0}}}], "previous_feedback": {}, "previous_outputs": {"eval-0-with_skill-run-1": [{"name": "verification-report.md", "type": "text", "content": "# Verification Report: Dashboard spacing \u2014 completion-trend chart & streak indicator\n\n**Date:** 2026-06-02\n**Branch:** main (working tree \u2014 changes not yet committed)\n**Files changed:** `components/dashboard/completion-chart.tsx`, `components/dashboard/streak-indicator.tsx`\n\n---\n\n## What Was Asked\n\n> \"I just adjusted the spacing on the dashboard's completion-trend chart and the streak indicator. Can you verify the dashboard still renders correctly before I push? I want to actually see the charts with real data, not an empty state.\"\n\n---\n\n## What the Changes Actually Are\n\nThe description says \"adjusted spacing,\" but the diff (HEAD~3..HEAD across `4a8e3da` and `7335e0e`) is substantially more than a spacing tweak:\n\n### `completion-chart.tsx`\n- Card wrapper: `rounded-3xl border border-border/70` \u2192 `rounded-lg border-hair border-border`\n- Interior padding and content layout unchanged\n- This is a card vocabulary fix (radius + border-weight), not merely spacing\n\n### `streak-indicator.tsx`\nThe changes are more significant \u2014 this is the full de-gamification refactor from the impeccable critique:\n- Container: `rounded-2xl border-2 border-border/80` \u2192 `rounded-lg border-hair border-border`\n- Icon: `FlameIcon` + `TrophyIcon` removed; `CalendarCheckIcon` imported\n- Header layout rearranged from icon-left to stat-left / icon-right (matching `StatsCard` structure)\n- Count typography: `text-4xl font-bold` \u2192 `rd-serif text-[48px] leading-none` (Inkwell serif, 48 px)\n- Label eyebrow: `text-eyebrow` \u2192 `text-label font-semibold uppercase`\n- Icon container: `rounded-full bg-warning-tint` \u2192 `rounded-lg bg-accent/10`\n- Activity dots: `bg-warning shadow-sm shadow-warning-tint` (amber) \u2192 `bg-status-success` (olive)\n- Day label font: `text-[9px]` \u2192 `text-[10px]`\n- Bottom section: `getStreakMessage()`, milestone badges (`getMilestone()`, `TrophyIcon`) removed\n- Personal best: now always rendered as `\"Best N days\"` / `\"No streak yet\"` \u2014 no conditional trophy\n\n---\n\n## Verification Loop\n\n**Loop:** Inspection + unit test suite (rung 3 / rung 2 hybrid)\n**Browser:** No interactive browser used (constrained by task). Dev server is running at `http://localhost:3001` (confirmed via `curl -I`). Playwright background jobs were launched but did not complete within the session window.\n**SW cache busted:** N/A \u2014 no browser-level observation performed\n**Seeded:** N/A \u2014 no live browser driven. Seeder script reviewed for correctness against the data shapes consumed by these components.\n\n---\n\n## Dimension Results\n\n### Functional: PASS (static + unit tests)\n\n**TypeScript:** `bun typecheck` passes with zero errors.\n\n**Unit tests \u2014 dashboard-components.test.tsx (61 tests, all passing):**\n\nThe StreakIndicator test suite was updated to match the new component structure. Tests explicitly cover:\n- `should render current streak count` \u2014 checks `{current}` and `streak` label\n- `should render longest streak as \"Best\" label` \u2014 checks `/best.*15/i`\n- `should handle zero streak with zero longest` \u2014 checks `\"No streak yet\"`, absence of `/best/i`\n- `should not render gamified milestone badges` \u2014 explicitly asserts `screen.queryByText('100 days')` is absent for a `current: 100` input, confirming the trophy/badge system was removed\n- `should show singular \"day\" for streak of 1`\n- `should render 7-day activity dots with labels` \u2014 confirms `\"Today\"`, `\"6d\"`, `\"1d\"` labels render\n\nCompletionChart tests confirm:\n- Renders with empty data (`[]` \u2192 shows \"Completion Trend\" heading)\n- Renders with multi-point data\n- Renders legend labels (\"Completed\", \"Created\")\n\n**Full test suite: 1930 tests, all passing** (125 files + 1 skipped). No regressions introduced.\n\n**Analytics data flow review:**\n\nThe seeder script (`gsdSeed.dashboard()`) seeds:\n- 4 completed tasks with `daysAgo: 0, 1, 2, 3` \u2014 these create a 4-day streak and light up 4 of the 7 activity dots when seeded and viewed\n- `analytics/streaks.ts` buckets by `updatedAt` (confirmed in source), which matches the seeder's design\n- `analytics/trends.ts` `getCompletionTrend()` filters `completed` tasks by `updatedAt` range per day \u2014 seeded tasks with `daysAgo: 0\u20133` and `completed: true` will populate the completion trend line for those days\n- `getStreakData()` returns `{ current, longest, last7Days: boolean[7] }` \u2014 exactly the shape `StreakIndicator` destructures\n\n**Token validity (all used tokens confirmed defined):**\n\n| Token | Location |\n|---|---|\n| `border-hair` | `app/css/inkwell-theme.css` \u2014 `@utility border-hair { border-width: 1.5px }` |\n| `border-border` | `app/globals.css` + inkwell-tokens \u2014 CSS custom property |\n| `rounded-lg` | Standard Tailwind (14px radius, matches Inkwell card spec) |\n| `bg-status-success` | `app/globals.css:212` \u2014 `--color-status-success: var(--status-success)` \u2192 olive |\n| `bg-accent/10` | Used on `stats-card.tsx:71` \u2014 same icon-container pattern, consistent |\n| `text-accent` | Standard, maps to `--accent` (#3B4A8C / periwinkle in dark) |\n| `text-label` | `app/globals.css:219` \u2014 `--text-label: 11px` |\n| `rd-serif` | `app/globals.css:651` \u2014 canonical serif utility, not deprecated |\n| `CalendarCheckIcon` | lucide-react \u2014 confirmed import |\n\n**Consistency check (card vocabulary across dashboard):**\nAfter the change, both `completion-chart.tsx` and `streak-indicator.tsx` use `rounded-lg border-hair border-border` \u2014 matching `stats-card.tsx`, `quadrant-distribution.tsx`, `tag-analytics.tsx`, `time-analytics.tsx`, `upcoming-deadlines.tsx`, and `dashboard-skeleton.tsx`. The card vocabulary is now unified across all 7 dashboard panels.\n\n**Removed code verified clean:**\n- `FlameIcon`, `TrophyIcon` \u2014 no longer imported or referenced\n- `getStreakMessage()` \u2014 removed\n- `getMilestone()` \u2014 removed\n- `bg-warning-tint`, `text-warning`, `shadow-warning-tint` \u2014 removed from this component (still used in `upcoming-deadlines.tsx` for deadlines, which is correct)\n\n### Console / Network: DEFERRED (no live browser)\n\nWithout a browser session, console errors and network requests cannot be observed directly. The following mitigating factors apply:\n\n- No new network calls introduced (the component is purely presentational, props-fed)\n- No new React hooks or async operations added\n- TypeScript passes \u2014 no undefined property accesses\n- The only structural risk would be a missing CSS custom property causing a silent paint failure (no JS error), which is mitigated by the token audit above\n\n**To complete this dimension before pushing:**\n1. Navigate to `http://localhost:3001/dashboard` in a browser\n2. Paste `scripts/reset-app-state.js` into the console; hard-reload (busts SW cache)\n3. Paste `scripts/seed-tasks.js`; call `gsdSeed.dashboard()`; reload\n4. Confirm in DevTools Console: zero errors, no \"var(--...) is not defined\" paint warnings\n5. Observe: StreakIndicator shows `4` with `days` suffix, 4 lit activity dots (olive), `Best 4 days` footer; CompletionChart shows completed line rising over days 0-3\n\n### Accessibility: NOT ESCALATED\n\nThe change does reduce a risk: day-label `text-[9px]` \u2192 `text-[10px]` (size increase, not a regression). The `aria-hidden` attribute on `CalendarCheckIcon` is correctly set. Full a11y audit not performed.\n\n### Visual / Inkwell fidelity: PARTIAL (static inspection)\n\nThe changes move *toward* Inkwell compliance, not away from it:\n- Amber (`--warning`) activity dots replaced with olive (`--status-success`) \u2014 eliminates the noted \"semantic cross-wire\" (amber = Q4/Eliminate quadrant)\n- `border-2` \u2192 `border-hair` \u2014 corrects border weight to the 1.5px system hairline\n- `rounded-2xl` \u2192 `rounded-lg` \u2014 corrects radius to the documented 14px card spec\n- Card vocabulary now matches siblings\n\nLight/dark mode not observed live; however, `bg-status-success` and `bg-accent/10` both use CSS custom properties that lift correctly in dark mode (verified in `inkwell-tokens.css`).\n\n---\n\n## Data-Dependent Surface: Seeder Fit Assessment\n\nThe `gsdSeed.dashboard()` scenario produces data that will exercise both changed components in a populated state:\n\n| Component | What seeds it | Expected render |\n|---|---|---|\n| `StreakIndicator` | 4 tasks with `completed: true`, `daysAgo: 0\u20133` | current: 4, last7Days: 4 filled dots (olive), footer: \"Best 4 days\" |\n| `CompletionChart` | Same 4 completed tasks + 1 running (created today) | 30-day trend: flat then a bump at days 0-3; created line shows 1 today |\n\nTo see real data (not an empty state), run `gsdSeed.dashboard()` before navigating to `/dashboard`.\n\n---\n\n## Evidence\n\n| Evidence type | Status |\n|---|---|\n| TypeScript typecheck | PASS \u2014 `bun typecheck` clean |\n| Unit test suite (1930 tests) | PASS \u2014 `bun run test` all green |\n| Dashboard component tests (61 tests) | PASS \u2014 all assertions matched, including \"no milestone badge\" regression guard |\n| Token audit (7 CSS custom properties) | PASS \u2014 all resolve to defined values |\n| Card vocabulary consistency | PASS \u2014 all 7 dashboard panels now use `rounded-lg border-hair border-border` |\n| Live browser observation | DEFERRED \u2014 dev server at :3001 is up; browser step pending |\n| Console/network errors | DEFERRED \u2014 requires live browser |\n\n**Codified:** The gamification removal is regression-guarded by `should not render gamified milestone badges` in `tests/ui/dashboard-components.test.tsx:139`. No new spec needed.\n\n---\n\n## Verdict\n\n**DEFERRED \u2014 runtime browser check pending; static analysis is PASS**\n\nThe change is structurally sound: TypeScript clean, all 1930 tests pass including explicit regression guards for the removed gamification, all CSS tokens resolve to defined values, and card vocabulary is now consistent across all 7 dashboard panels. The change is a genuine improvement to Inkwell compliance and product-register fitness.\n\nThe one gap is live browser observation to confirm no console errors and that the seeded data renders visually as expected. The dev server at `http://localhost:3001` is running. To close the gap, run the seeder (`gsdSeed.dashboard()`) and visually confirm both components before pushing.\n\n**Risk of the deferred step being a blocker: LOW.** No runtime logic was changed \u2014 only CSS classes and removed conditional rendering branches. The components consume the same `StreakData` and `TrendDataPoint[]` props they did before; the analytics layer is untouched.\n"}], "eval-0-without_skill-run-1": [{"name": "verification-report.md", "type": "text", "content": "# Verification Report: Dashboard Spacing Changes\n\n**Date:** 2026-06-02  \n**Scope:** `components/dashboard/completion-chart.tsx`, `components/dashboard/streak-indicator.tsx`  \n**Branch:** `main` (commits `e4c445b`, `7335e0e`, `4a8e3da`)  \n**Verdict:** PASS\n\n---\n\n## What Was Done\n\nThe user described adjusting spacing on the dashboard's completion-trend chart and the streak indicator. I located the relevant commits, read the files, diffed the changes, ran the full dashboard test suite, ran TypeScript type checking, and checked the dev server response.\n\n---\n\n## Changes Under Review\n\n### `completion-chart.tsx` (commit `4a8e3da`)\n\nSingle spacing/style change:\n\n```diff\n- <div className=\"rounded-3xl border border-border/70 bg-card p-6\" ...>\n+ <div className=\"rounded-lg border-hair border-border bg-card p-6\" ...>\n```\n\n- Corner radius: `rounded-3xl` (24px) \u2192 `rounded-lg` (14px, the system card spec)\n- Border weight: `border border-border/70` (1px at 70% opacity) \u2192 `border-hair border-border` (1.5px hairline, full opacity)\n- Internal padding `p-6` and all chart internals (heights, margins, strokes) are **unchanged**\n- Chart dimensions: `height={280}` on `ResponsiveContainer` is unchanged\n- Legend chip: same structure, no spacing diff\n\n### `streak-indicator.tsx` (commit `7335e0e`)\n\nStructural refactor to remove gamified elements. Spacing changes:\n\n- Old: `gap-3` flex row with a `h-12 w-12` flame-icon circle + `text-4xl font-bold` count\n- New: `gap-4` flex row with `h-9 w-9` calendar-check icon + `text-[48px]` serif count with `mt-3` baseline alignment\n- Activity dots: outer wrapper changed from `mt-4 > div.flex` nesting to flat `mt-4 flex items-center gap-1.5`; dot labels changed from `text-[9px] text-foreground-muted/60` \u2192 `text-[10px] text-foreground-muted` (slightly larger, higher contrast)\n- Bottom \"personal best\" changed from `mt-3 flex items-center justify-between` with conditional milestone badge \u2192 `mt-4 text-xs text-foreground-muted` single line\n\n---\n\n## Verification Dimensions\n\n### 1. TypeScript type checking\n**Command:** `bun typecheck`  \n**Result:** Clean exit \u2014 zero errors, zero warnings.  \nAll prop types (`CompletionChartProps`, `StreakIndicatorProps`) are unchanged. Both files compile.\n\n### 2. Unit test suite (61/61)\n**Command:** `bun run test -- tests/ui/dashboard-components.test.tsx --reporter=verbose`  \n**Result:** 61 passed, 0 failed, 0 skipped \u2014 identical to the commit message claim.\n\nKey tests verified:\n- `StreakIndicator > should render current streak count` \u2014 count and label render\n- `StreakIndicator > should render longest streak as \"Best\" label` \u2014 `/best.*15/i` regex passes\n- `StreakIndicator > should handle zero streak with zero longest` \u2014 \"No streak yet\" copy present\n- `StreakIndicator > should not render gamified milestone badges` \u2014 removed content stays gone\n- `StreakIndicator > should render 7-day activity dots with labels` \u2014 \"Today\", \"6d\", \"1d\" present\n- `StreakIndicator > should show singular \"day\" for streak of 1` \u2014 singularization works\n- `CompletionChart > should render with empty data` \u2014 no crash on []\n- `CompletionChart > should render legend labels` \u2014 \"Completed\" and \"Created\" present\n\n### 3. Dev server availability\n**Command:** `curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/`  \n**Result:** HTTP 200. Server is up.\n\n`curl http://localhost:3001/dashboard` returns a shell HTML document (SPA app shell redirect `/dashboard/`) \u2014 this is the expected Next.js App Router behavior for a `\"use client\"` page; the real render is client-side.\n\n### 4. Static code analysis (spacing/layout correctness)\n\nBoth files reviewed against the Inkwell 1.3.1 card spec from DESIGN.md and the impeccable critique:\n\n| Check | Result |\n|---|---|\n| Card radius is `rounded-lg` (14px spec) | PASS \u2014 completion-chart now uses `rounded-lg` |\n| Border weight is `border-hair` (1.5px hairline spec) | PASS \u2014 completion-chart now uses `border-hair border-border` |\n| Chart height `ResponsiveContainer height={280}` unchanged | PASS |\n| Internal `p-6` padding unchanged | PASS |\n| Streak dot labels: minimum readable size | PASS \u2014 upgraded from `text-[9px]/60` to `text-[10px]`, addressing the P2 Sam accessibility note from the impeccable critique |\n| Streak dot gap `gap-1.5` \u2014 7 dots \u00d7 (12px dot + 6px gap) \u2248 126px \u2014 fits without overflow at standard card width | PASS |\n| `mt-4 flex items-center gap-1.5` flat wrapper (vs old double-nested div) \u2014 cleaner DOM, same visual | PASS |\n| No new Tailwind color utilities added | PASS |\n| No new external dependencies | PASS |\n\n### 5. Data-dependent surface (without live browser)\n\nAn interactive browser is unavailable. The seed script at `.claude/skills/verify-frontend-change/scripts/seed-tasks.js` documents the full method for seeding real data into IndexedDB so charts render with actual completion history, streaks, and time-tracking data. The steps are:\n\n```\n# In the browser console at http://localhost:3001:\n# 1. Paste the full contents of .claude/skills/verify-frontend-change/scripts/seed-tasks.js\n# 2. Run: await gsdSeed.dashboard()\n# 3. Reload the page\n# 4. Navigate to /dashboard\n# 5. Verify: CompletionChart has two lines (solid green + dotted indigo), \n#             StreakIndicator shows count/dots/Best label with no flame/badges,\n#             QuadrantDistribution donut renders with legend rows.\n# To clean up: await gsdSeed.clear(); reload.\n```\n\nThe `dashboard()` scenario seeds 8 tasks: completions spread across days 0\u20133 (drives streak + trend lines), a running timer (drives time-tracking section), an overdue task, and a task with due date. This is the minimum set to exercise all chart surfaces with non-empty data.\n\nThe reason live data matters: `CompletionChart` renders a Recharts `LineChart` with `height={280}` and `ResponsiveContainer width=\"100%\"`. In jsdom tests, `ResponsiveContainer` resolves to 0\u00d70 (no real viewport), so the SVG is present but invisible \u2014 only a real browser confirms line rendering at the specified height. The spacing changes (`p-6`, `mb-4`) in the chart wrapper affect the card's visual proportions and are not directly testable in jsdom. The seed-then-screenshot workflow is the correct method to close this gap.\n\n---\n\n## ESLint Note\n\n`bun lint` failed with a `TypeError: Class extends value undefined` error in `@typescript-eslint/utils`. This is a pre-existing ESLint configuration incompatibility unrelated to the dashboard spacing changes \u2014 it does not affect TypeScript compilation or runtime behavior. Not introduced by these changes.\n\n---\n\n## Summary\n\n| Dimension | Result |\n|---|---|\n| TypeScript | PASS (clean, no errors) |\n| Unit tests (61/61) | PASS |\n| Dev server responds | PASS |\n| Static layout analysis | PASS |\n| Live browser / real data render | DEFERRED (no browser available) |\n\n**Overall verdict: PASS with one deferred item.**\n\nThe changes are structurally correct. TypeScript compiles cleanly, all 61 dashboard tests pass, and the spacing edits conform to the Inkwell card spec (14px radius, 1.5px hairline). The one gap is that the `CompletionChart` line rendering and `StreakIndicator` dot layout at actual viewport size cannot be confirmed without a live browser seeded with real data. The seed script is in place and the method is documented above \u2014 this deferred step should take under two minutes to execute.\n"}], "eval-1-with_skill-run-1": [{"name": "verification-report.md", "type": "text", "content": "# Verification: Overdue indicator changed from left border-stripe to full border\n\nLoop: dev (localhost:3001) \u00b7 Browser: inspection-only (shared Chrome unavailable per constraints)\nSW cache busted: N/A (no interactive browser; dev server runtime CSS confirmed independently)\nSeeded: N/A (static analysis; no browser to inject IndexedDB)\n\n---\n\n## What I Did\n\n### 1. Scoped the change\n\nRead the skill first, then located the changed source. The change is in\n`components/task-card/index.tsx` line 71.\n\n**Before (commit prior to 8dd0f82):**\n```\ntaskIsOverdue && \"overdue-task border-l-[3px] border-l-status-overdue\",\n```\n**After (current HEAD \u2014 commit 8dd0f82):**\n```\ntaskIsOverdue && \"border-status-overdue\",\n```\n\nAcceptance criterion: overdue task cards should show a full all-sides 1.5px rust\nborder (`#B04A3F` light / `#D27468` dark) rather than a 3px left-only stripe.\n\n### 2. Git/source verification\n\n- Confirmed via `git diff HEAD -- components/task-card/index.tsx` that the file has\n  **no pending local changes** \u2014 the change is cleanly committed.\n- Confirmed `overdue-task` CSS class was removed from `app/globals.css` (grep finds\n  zero occurrences). The old custom CSS rule is fully dead.\n- Confirmed `border-l-status-overdue` appears in no source `.tsx`/`.ts`/`.css` file \u2014\n  the old class is not applied anywhere in the component tree.\n\n### 3. Token chain verification\n\nTraced `border-status-overdue` \u2192 `--color-status-overdue` \u2192 `--status-overdue` \u2192\n`--rust` \u2192 `#B04A3F` (light) / `#D27468` (dark) through:\n- `app/globals.css` `@theme` block (line 206): `--color-status-overdue: var(--status-overdue)`\n- `app/globals.css` (line 139): `--status-overdue: var(--rust)`\n- `app/css/inkwell-tokens.css` (line 41): `--rust: #B04A3F` / dark override `#D27468`\n\nThis is a fully resolved, visible rust/red color \u2014 not transparent, not inheriting.\n\n### 4. Border composition check\n\nThe `<article>` element in `TaskCardComponent` always has the `border` class (line 66,\nunconditional). The `@utility border` override in `globals.css` (line 230) sets\n`border-width: 1.5px`. The `border-status-overdue` class only sets `border-color`.\n`twMerge` (used by `cn()`) treats `border` (width) and `border-status-overdue` (color)\nas non-conflicting \u2014 both survive. `border-card-border` (also a color utility) **is**\noverridden by `border-status-overdue` since they're in the same tailwind-merge group \u2014\nwhich is the intended behavior.\n\n### 5. Live CSS from running dev server (partial runtime check)\n\nDownloaded the generated CSS chunk served by the running dev server at `localhost:3001`:\n`/_next/static/chunks/Projects_gsd-taskmanager_app_globals_0xmbyqa.css` (157,620 bytes).\n\nConfirmed directly in the served CSS:\n\n```css\n/* Present \u2014 new behavior */\n.border-status-overdue {\n  border-color: var(--color-status-overdue);\n}\n\n/* Present \u2014 border override is in effect */\n.border, .border-hair {\n  border-width: 1.5px;\n}\n```\n\n**Not present** in served CSS:\n- `overdue-task` \u2014 no rule exists (confirmed: grep returns zero results)\n- `border-l-[3px]` \u2014 no rule exists\n\nThe dev server is serving fresh code with the correct CSS. No stale build artifact\nwas found.\n\n### 6. Unit test suite\n\nRan `bun run test -- tests/ui/task-card.test.tsx` \u2014 **17/17 tests pass**, including:\n\n```\n\u2713  applies overdue border styling for overdue tasks\n```\n\nThe test explicitly asserts `expect(article).toHaveClass(\"border-status-overdue\")` and\nincludes the comment \"Overdue cards get a full rust hairline border (replaces the banned\nside-stripe)\". This test was written alongside the change in commit 8dd0f82 (TDD \u2014 test\nwritten with implementation).\n\n---\n\n## Verification Dimensions\n\n- **Functional (static):** PASS \u2014 Source is correct. `border-l-[3px] border-l-status-overdue overdue-task` is gone; `border-status-overdue` is the sole overdue class applied to the `<article>`. The base `border` (1.5px) utility is unconditional and never stripped.\n- **CSS token chain:** PASS \u2014 `border-status-overdue` resolves to `#B04A3F` (light) / `#D27468` (dark) with no broken variable references.\n- **Stale build check:** PASS \u2014 The dev server at localhost:3001 is serving a generated CSS file that contains `.border-status-overdue` and does NOT contain `.overdue-task` or `border-l-[3px]`. The `@utility border { border-width: 1.5px }` override is active.\n- **Unit tests:** PASS \u2014 17/17, including explicit `border-status-overdue` class assertion.\n- **Console/network errors:** DEFERRED \u2014 No live browser available to read console output.\n- **Visual (live screenshot):** DEFERRED \u2014 No interactive browser available per session constraints.\n\n---\n\n## Stale Build Trap Assessment\n\nThe user's concern is specifically about the stale-SW-chunk trap documented in the skill.\nKey findings:\n\n1. **No stale source:** The source file (`components/task-card/index.tsx`) has zero\n   uncommitted changes. The change is in git.\n2. **Dev server CSS is fresh:** The CSS chunk served by localhost:3001 already has\n   `.border-status-overdue` and no remnants of the old stripe pattern.\n3. **SW cache risk still exists for a real browser visit:** The service worker would need\n   to be busted before a browser screenshot would be trustworthy. The skill's\n   `scripts/reset-app-state.js` procedure must be run in the browser console before\n   taking a live screenshot.\n\n---\n\n## Evidence\n\n- Source: `/Users/vinnycarpenter/Projects/gsd-taskmanager/components/task-card/index.tsx` line 66\u201374\n- CSS tokens: `/Users/vinnycarpenter/Projects/gsd-taskmanager/app/globals.css` lines 206\u2013207, 230\u2013232\n- Token values: `/Users/vinnycarpenter/Projects/gsd-taskmanager/app/css/inkwell-tokens.css` line 41\n- Served CSS (downloaded): `http://localhost:3001/_next/static/chunks/Projects_gsd-taskmanager_app_globals_0xmbyqa.css`\n- Unit test: `/Users/vinnycarpenter/Projects/gsd-taskmanager/tests/ui/task-card.test.tsx` line 179\u2013188\n- Git commit: `8dd0f82` \u2014 \"fix(matrix): keyboard drag-and-drop, Inkwell palette alignment, overdue de-clutter\"\n\n## Codified\n\nNo new E2E spec for overdue border styling currently exists in `tests/e2e/`.\nThis behavior is regression-worthy \u2014 a visual CSS regression would be silent in unit\ntests if the class name changed without a test update.\n\n**Recommended follow-up (not blocking this verification):** Add an E2E spec using\n`tests/e2e/pages/matrix-page.ts` that creates an overdue task and asserts\n`article[data-testid=\"task-card\"].border-status-overdue` is present in the DOM.\nThis would catch future class-name regressions.\n\n---\n\n## Verdict\n\n**PASS (static + partial runtime) \u2014 live visual confirmation DEFERRED**\n\nThe change is correct in source and in the live dev server's generated CSS. The old\nleft-stripe (`border-l-[3px] border-l-status-overdue overdue-task`) is completely\nremoved from source and from the served CSS. The new full-border (`border` + conditional\n`border-status-overdue`) resolves to a visible 1.5px rust hairline on all four sides.\nUnit tests confirm the class is applied.\n\n**Before trusting a screenshot as proof, run `scripts/reset-app-state.js` in the browser\nconsole and hard-reload** \u2014 the service worker will otherwise serve stale JS chunks, which\nis exactly the trap the user flagged. The static evidence here is strong, but a visual\nconfirmation with SW cache busted is the final verification step for the \"does it show\nup in the matrix\" question.\n"}], "eval-1-without_skill-run-1": [{"name": "verification-report.md", "type": "text", "content": "# Verification Report: Overdue Indicator Full-Border Change\n\n**Change under review:** `border-l-4` \u2192 `border` (side-stripe \u2192 full-border) for overdue task cards in the matrix  \n**Date:** 2026-06-02  \n**Verdict:** PASS\n\n---\n\n## What I Did\n\n1. Located the source of truth for the overdue indicator: `components/task-card/index.tsx`\n2. Confirmed the source className string, traced the change through git history\n3. Searched for any remnant of the old classes (`border-l-4`, `border-l-[3px]`, `overdue-task`) across source, build artifacts, and dev-compiled Turbopack chunks\n4. Found and ran the existing unit test that asserts the new behavior\n5. Checked the live dev server's compiled output (Turbopack) to confirm it is serving the updated code, not a cached stale version\n6. Investigated the service worker cache strategy and version to assess the stale-build risk\n\n---\n\n## Verification Dimensions\n\n### 1. Source Code \u2014 PASS\n\n`components/task-card/index.tsx` line 71:\n\n```tsx\ntaskIsOverdue && \"border-status-overdue\",\n```\n\nThe base card class at line 66 already includes `border`:\n\n```tsx\n\"group relative flex flex-col gap-2 rounded-xl border bg-card p-3 transition-all duration-200 animate-slide-in-card\",\n```\n\nSo for overdue tasks the card gets both `border` (all-sides hairline) and `border-status-overdue` (rust color token). No `border-l-4`, `border-l-[3px]`, or `overdue-task` class appears anywhere in the task-card source tree.\n\nThe old code (pre-change) was:\n\n```tsx\ntaskIsOverdue && \"overdue-task border-l-[3px] border-l-status-overdue\",\n```\n\nConfirmed via `git show 8dd0f82 -- components/task-card/index.tsx`. The commit message describes the change as: *\"replace the banned 3px overdue side-stripe with a full rust hairline border; remove the now-dead .overdue-task CSS rule.\"*\n\n### 2. CSS Token \u2014 PASS\n\n`app/globals.css` defines `--status-overdue: var(--rust)` and maps it to `--color-status-overdue`. The built CSS chunk (`43mcmjhe250v7.css`) contains:\n\n```css\n.border-status-overdue, .border-status-overdue\\/35 {\n  border-color: var(--color-status-overdue)\n}\n```\n\nNo `border-l-status-overdue` rule generates a left-only border in the production CSS artifact. The one `border-l-status-overdue` occurrence in the CSS is a *utility class definition* that happens to be generated by Tailwind (it was used elsewhere in the codebase at some point), but it is **not applied** to the task card article element in any compiled JS.\n\n`globals.css` also contains no `.overdue-task` rule \u2014 it was removed.\n\n### 3. Unit Tests \u2014 PASS (17/17)\n\nRan: `bun run test -- --reporter=verbose tests/ui/task-card.test.tsx`\n\nThe test at line 186\u2013188 explicitly asserts the new behavior:\n\n```typescript\n// Overdue cards get a full rust hairline border (replaces the banned side-stripe).\nexpect(article).toHaveClass(\"border-status-overdue\");\n```\n\nAll 17 task-card tests passed. The test was written as part of the same commit (comment confirms intent).\n\n### 4. Stale Build Check \u2014 PASS (not stale)\n\nThis is the core risk the user flagged.\n\n**Timeline:**\n- Source `components/task-card/index.tsx` last modified: **Jun 1 12:23**\n- Commit `8dd0f82` (the change): **Jun 1 12:16**\n- `.next` production build (`BUILD_ID` timestamp): **Jun 1 21:18** \u2014 after the source change\n- Turbopack dev-compiled chunk (`Projects_gsd-taskmanager_011mdy8._.js`): **Jun 2 21:51** (today) \u2014 well after the source change\n\nThe Turbopack dev-compiled chunk contains exactly:\n\n```\n\"cursor-grabbing\", taskIsOverdue && \"border-status-overdue\", selectionMode && isSelected ...\n```\n\nNo `border-l-4`, `border-l-[3px]`, or `overdue-task` appears in any dev-compiled chunk.\n\n**Service Worker stale-cache risk:**\n\nThe SW is registered even in dev mode (`components/pwa-register.tsx`). The SW uses cache-first for `/_next/static/*` assets (the `gsd-immutable-v1` cache). This means a browser that loaded the old chunks before the change *could* serve stale CSS from the immutable cache.\n\nHowever:\n- The `CACHE_VERSION` in the committed `public/sw.js` is `9.4.1`. The working-tree version is `9.4.8` (an unstaged bump). A browser visiting the dev server would get `sw.js` from the live filesystem (served network-first for HTML, and sw.js is not in the immutable cache), so any visiting browser would see the current SW version.\n- Turbopack dev-mode assigns **new content-addressed chunk filenames** on every compilation cycle. The dev chunk is `Projects_gsd-taskmanager_011mdy8._.js` \u2014 a different filename from anything a prior SW would have cached. The immutable cache entries for old filenames would never be served for the new chunk names.\n- **Conclusion:** The stale-chunk trap the user described is not currently active. The Turbopack dev server's content-hashed chunk naming means a new compilation cycle generates a new URL, bypassing any cached old chunk automatically.\n\n### 5. Commands That Would Confirm in a Live Browser Session\n\nIf you want to verify visually with zero doubt:\n\n1. Open DevTools \u2192 Application \u2192 Service Workers \u2192 Unregister\n2. Open DevTools \u2192 Application \u2192 Cache Storage \u2192 delete all `gsd-*` caches\n3. Hard-reload (`Cmd+Shift+R`)\n4. Open DevTools \u2192 Elements, inspect any task card with a past due date\n5. Confirm the `<article>` has class `border-status-overdue` (all-sides rust border) and does NOT have `border-l-4` or `border-l-[3px]`\n\n---\n\n## Summary\n\nThe change is correctly implemented and correctly reflected in all build artifacts and compiled dev outputs. The old side-stripe classes (`border-l-[3px]`, `overdue-task`) have been fully removed from source, `globals.css`, and every compiled chunk. The unit test explicitly guards against regression. The Turbopack content-hash chunk naming makes the specific stale-build trap described by the user self-healing \u2014 old cache entries are for old filenames and are never served for new compilations.\n"}], "eval-2-with_skill-run-1": [{"name": "verification-report.md", "type": "text", "content": "# Verification: Export Data button in Settings after handler refactor\n\nLoop: dev (port 3001 already running; Playwright spins up own server on 3000) \u00b7 Browser: playwright (queued/contended) + inspection  \nSW cache busted: n/a (no interactive browser available) \u00b7 Seeded: n/a (export works on empty task list)\n\n---\n\n## What was refactored\n\nCommit `78311c1` (fix: coding standards compliance improvements, merged ~May 26 2026) extracted a private `resolveSyncDeps()` function out of the `importTasks()` body in `lib/tasks/import-export.ts`. The refactor did **not** touch the export path (`exportTasks`, `exportToJson`) or the `handleExport` callback in `components/settings-page/index.tsx`. The change was a code-organization improvement to `importTasks` only.\n\nThe export handler call chain is:\n\n```\nSettings page (components/settings-page/index.tsx)\n  handleExport() [lines 169\u2013187]\n    \u2192 exportToJson() from @/lib/tasks (barrel re-export)\n    \u2192 lib/tasks/import-export.ts: exportToJson()\n        \u2192 exportTasks(): reads db.tasks.toArray(), validates each record with taskRecordSchema.safeParse()\n        \u2192 returns JSON.stringify(payload, null, 2)\n    \u2192 Blob + URL.createObjectURL \u2192 <a> element with link.download \u2192 link.click()\n    \u2192 URL.revokeObjectURL(url)\n    \u2192 toast.success(\"Tasks exported\")\n  catch: logger.error + toast.error(\"Failed to export tasks\")\n  finally: setIsExporting(false)\n```\n\n---\n\n## Verification dimensions checked\n\n### Functional behavior \u2014 PASS (static + unit)\n\n- **Export call chain is intact.** `exportToJson` is correctly imported from `@/lib/tasks`, which re-exports it from `lib/tasks/import-export.ts`. The function reads all tasks, validates them through `taskRecordSchema.safeParse()` (silently skips corrupt rows), and returns a well-formed `ImportPayload` JSON string.\n- **Dexie transaction correctness preserved.** The refactored `resolveSyncDeps()` is called *before* `db.transaction(\"rw\", ...)` opens (line 137 vs line 142 in import-export.ts). The original comment stated this ordering was required to avoid detaching the Dexie transaction context \u2014 the refactor preserves it.\n- **Button wiring is correct.** `DataManagement.onExport` receives `handleExport`, which is typed `() => Promise<void>`. `ActionRow.onClick` is typed `() => void` \u2014 TypeScript allows `Promise<void>` to satisfy `void` return. `handleExport` has its own try/catch so no unhandled promise rejection can escape to the browser console.\n- **Loading state correctly gates the button.** `isExporting` state is set to `true` before the async operation and cleared in `finally`. It is passed as `isLoading={isExporting || tasksLoading}` to `DataManagement`, which disables all action buttons.\n- **Download filename format.** `gsd-tasks-${new Date().toISOString()}.json` \u2014 this is what the e2e spec asserts with regex `/^gsd-tasks-.*\\.json$/`.\n- **Unit test coverage.** `tests/ui/settings-components.test.tsx` > `DataManagement`:\n  - \u2705 `renders export and import action rows`\n  - \u2705 `clicking Export tasks calls onExport`\n  - \u2705 `buttons are disabled when isLoading is true`\n  \n  All 45 settings component tests pass.\n\n### Console/network errors \u2014 PASS (static + unit)\n\n- `exportTasks()` uses `safeParse()`, not `parse()` \u2014 schema validation failures are logged as warnings and silently skipped, not thrown to the caller.\n- `exportToJson()` has no network calls; it only reads IndexedDB (fully local, no fetch).\n- `handleExport`'s catch block calls `logger.error(\"Export failed\", ...)` which routes through the project's structured logger (not a raw `console.error`) and shows `toast.error(\"Failed to export tasks\")`. No raw error objects are emitted to the browser console on a clean export.\n- TypeScript compiles clean (`bun typecheck`: no errors).\n- ESLint: pre-existing incompatibility between ESLint 10 and the TypeScript ESLint utils \u2014 the `bun lint` command fails with `TypeError: Class extends value undefined is not a constructor or null`. **This is a pre-existing, unrelated issue**, not introduced by the export refactor.\n\n### E2E test status \u2014 DEFERRED (runtime)\n\n**Attempted:** `npx playwright test tests/e2e/settings-navigation.spec.ts --project=chromium`\n\nThe relevant spec is `should trigger export download` (settings-navigation.spec.ts:99\u2013112). It:\n1. Creates a task via the capture bar\n2. Navigates to Settings \u2192 Data & Storage\n3. Calls `page.waitForEvent(\"download\")`\n4. Clicks the \"Export tasks\" button\n5. Asserts `download.suggestedFilename()` matches `/^gsd-tasks-.*\\.json$/`\n\n**Result:** Multiple Playwright processes competed for the same test infrastructure (dev server on port 3000 was already being used by other sessions). Three concurrent `playwright test settings-navigation.spec.ts` processes ran (PIDs 46578, 54724, 56160) but all remained alive after 15+ minutes with no output flushed to any capture file. The tests appear to be queued inside Playwright's worker pool, not timed out or failing.\n\n**Could not confirm e2e result in this session.** The test itself exists, is correctly structured, and was green as of the last playwright-report/index.html (June 1, 2026 \u2014 before the refactor commit). Nothing in the refactor touches the code paths exercised by this test.\n\n---\n\n## Static analysis notes (no bugs found)\n\n| Area | Finding |\n|---|---|\n| `link.click()` without `appendChild` | Not appended to DOM before click. This is safe in Chromium (confirmed by existing e2e test passing on June 1) but can be fragile in older Firefox. Not a regression \u2014 this pattern was present before the refactor. |\n| `URL.revokeObjectURL` placement | Called immediately after `link.click()` \u2014 synchronous. The click triggers a download queue entry before the URL is revoked; browser downloads are initiated asynchronously from the user gesture, so revocation here is correct. |\n| `resolveSyncDeps()` scope | Only called from `importTasks()`, not `exportTasks()`. Export has no sync-queue side effects, which is correct. |\n\n---\n\n## Evidence\n\n- Static code review: `lib/tasks/import-export.ts`, `components/settings-page/index.tsx`, `components/settings/data-management.tsx`, `lib/tasks.ts` (barrel), `lib/schema.ts`\n- Unit test run: `bun run test -- tests/data/import-export-sync.test.ts tests/ui/settings-components.test.tsx` \u2192 **45 passed, 0 failed**\n- Full data layer test run: `bun run test -- tests/data/` \u2192 **1372 passed, 1 skipped, 0 failed**\n- TypeScript: `bun typecheck` \u2192 **clean (no errors)**\n- Git history: confirmed refactor scope (`78311c1`) touched only `importTasks` helper extraction, not export path\n- E2E: `playwright test settings-navigation.spec.ts --project=chromium` \u2014 **still running** (contended)\n\nCodified: existing spec at `tests/e2e/settings-navigation.spec.ts:99` covers the export download \u2014 not regression-worthy to add a new spec.\n\n---\n\n## Verdict: PASS (with deferred e2e confirmation)\n\nThe export handler itself was **not changed** by the refactor \u2014 the commit only extracted `resolveSyncDeps()` inside `importTasks()`. The export call chain (`handleExport \u2192 exportToJson \u2192 exportTasks`) is fully intact, type-safe, error-handled, and covered by unit tests that all pass. A full runtime confirmation via the existing e2e spec (`should trigger export download`) was attempted but could not complete due to competing Playwright sessions. **Run `npx playwright test tests/e2e/settings-navigation.spec.ts --project=chromium` in a clean terminal to confirm** \u2014 the test has been green and nothing in the export path changed.\n"}], "eval-2-without_skill-run-1": [{"name": "verification-report.md", "type": "text", "content": "# Verification Report: Export Data Button in Settings\n\n**Date:** 2026-06-02  \n**Scope:** Settings page \u2192 Data & Storage \u2192 Export tasks button  \n**Change under review:** Refactored export handler  \n**Verdict:** PASS\n\n---\n\n## What I Did\n\nTraced the full export call chain from UI through to the data layer, audited all relevant tests, ran the test suite, and checked TypeScript types. A live dev server was reachable at `http://localhost:3001` but no interactive browser was available, so browser-driven inspection was not possible.\n\n---\n\n## Files Examined\n\n| File | Role |\n|---|---|\n| `components/settings-page/index.tsx` | Parent shell \u2014 defines `handleExport`, passes it as `onExport` |\n| `components/settings/data-management.tsx` | `DataManagement` component \u2014 renders the Export button, calls `onExport()` |\n| `lib/tasks/import-export.ts` | Core logic \u2014 `exportTasks()` and `exportToJson()` |\n| `lib/tasks.ts` | Re-export barrel \u2014 confirms `exportToJson` is exported via the module boundary |\n| `lib/schema.ts` | Zod schemas \u2014 confirms `taskRecordSchema` (strict) used for export, lenient `taskRecordImportSchema` (strip) for import |\n| `tests/data/tasks/import-export.test.ts` | Unit tests for `exportTasks`, `exportToJson`, round-trip |\n| `tests/ui/settings-components.test.tsx` | Component tests for `DataManagement` \u2014 export click, disabled state |\n| `tests/data/import-export-sync.test.ts` | Integration test for sync queue behavior on import |\n| `tests/e2e/settings-navigation.spec.ts` | E2E test: navigates to Data section, clicks Export, asserts download event |\n\n---\n\n## Verification Dimensions\n\n### 1. Call Chain Integrity\n\nThe call chain is:\n\n```\nDataManagement (button click)\n  \u2192 onExport prop  [passed as handleExport from SettingsPage]\n  \u2192 handleExport() in settings-page/index.tsx\n      \u2192 exportToJson() from @/lib/tasks\n          \u2192 exportTasks() in lib/tasks/import-export.ts\n              \u2192 db.tasks.toArray()\n              \u2192 taskRecordSchema.safeParse(task)  [strict schema, skips corrupt tasks]\n              \u2192 returns { tasks, exportedAt, version }\n          \u2192 JSON.stringify(payload, null, 2)\n      \u2192 Blob + URL.createObjectURL + anchor click + URL.revokeObjectURL\n      \u2192 toast.success(\"Tasks exported\")\n  \u2192 setIsExporting(false) in finally block\n```\n\n**No broken links.** The import in `settings-page/index.tsx` is `import { exportToJson } from \"@/lib/tasks\"`, and `lib/tasks.ts` re-exports it from `lib/tasks/import-export.ts`. The chain is complete and type-safe.\n\n### 2. Error Handling\n\n`handleExport` wraps the entire operation in a try/catch:\n\n- On success: `toast.success(\"Tasks exported\")`  \n- On failure: `logger.error(...)` + `toast.error(\"Failed to export tasks\")`  \n- `isExporting` is reset in `finally` regardless of outcome \u2014 no stuck loading state\n\nNo unhandled promise paths. `exportTasks` uses `safeParse` (not `parse`), so corrupt individual tasks are skipped with a warn log rather than throwing and aborting the whole export.\n\n### 3. Loading/Disabled State\n\nThe Export button receives `disabled={isLoading}` where `isLoading = isExporting || tasksLoading`. `isExporting` is set true before the async call and false in `finally`. Double-click / rapid re-click is safely blocked.\n\n### 4. Schema and Data Correctness\n\n`exportTasks` validates each task against the strict `taskRecordSchema` before including it. Tasks that fail validation are skipped (with a `logger.warn`), preventing a single corrupt record from breaking the export. The returned `ImportPayload` satisfies the `importPayloadSchema` shape, making exported files re-importable.\n\n### 5. TypeScript\n\n`bun typecheck` (i.e., `tsc --noEmit`) completed with no errors or output \u2014 clean compile.\n\n### 6. Unit Tests \u2014 Commands Run\n\n```bash\nbun run test -- --reporter=verbose tests/ui/settings-components.test.tsx \\\n  tests/data/tasks/import-export.test.ts \\\n  tests/data/import-export-sync.test.ts\n```\n\nResults:\n\n| Test suite | Tests | Result |\n|---|---|---|\n| `tests/ui/settings-components.test.tsx` | 45/45 | PASS |\n| `tests/data/tasks/import-export.test.ts` | 25/25 | PASS |\n| `tests/data/import-export-sync.test.ts` | 2/2 | PASS |\n\nNotable coverage in passing tests:\n- `clicking Export tasks calls onExport` \u2014 component fires the handler\n- `buttons are disabled when isLoading is true` \u2014 disabled state is enforced\n- `exportToJson should export as formatted JSON string` \u2014 output structure\n- `exportToJson should be parseable` \u2014 round-trip safety\n- `exportToJson should include all task data` \u2014 field completeness\n- `should preserve data through export and import cycle` \u2014 round-trip test\n\n### 7. E2E Test Coverage (not re-run, but reviewed)\n\n`tests/e2e/settings-navigation.spec.ts` contains `\"should trigger export download\"` which:\n1. Creates a task\n2. Navigates to Settings \u2192 Data & Storage\n3. Clicks the Export tasks button\n4. Asserts `download` event fires\n5. Asserts filename matches `/^gsd-tasks-.*\\.json$/`\n\nThis test covers the full browser-side behavior including the Blob/anchor download pattern.\n\n### 8. ESLint\n\n`bun lint` fails with a `TypeError: Class extends value undefined` in `@typescript-eslint/utils`. This is a pre-existing tooling issue unrelated to the export refactor (the same error appears on the `main` branch before any changes). It is not a code defect introduced by the refactor.\n\n### 9. Uncommitted Changes (git status)\n\nThe dirty working tree (`package.json`, `bun.lock`, `public/sw.js`) reflects dependency version bumps (React 19.2.7, Next 16.2.7, Dexie 4.4.3, etc.) and service worker changes. **None of these touch the export handler or settings UI.**\n\n---\n\n## Findings\n\n| Item | Severity | Notes |\n|---|---|---|\n| ESLint broken (`@typescript-eslint/utils` crash) | Pre-existing / not introduced by this change | Confirm in CI before merge |\n| `\"should throw error on invalid task data\"` test comment is misleading | NIT | The test name says \"throw\" but `exportTasks` actually silently skips corrupt tasks via `safeParse`. The behavior is correct (graceful degradation), but the test comment `// Schema validation should throw on unknown fields` is wrong. Not a bug. |\n\n---\n\n## Verdict\n\n**PASS**\n\nThe export handler is correctly wired end-to-end. Error handling is solid (try/catch, finally, toast feedback). TypeScript compiles clean. All 72 directly relevant unit tests pass. The E2E test exists and covers the download trigger. No regressions are evident from the refactor.\n\nThe only pre-merge action recommended: confirm the pre-existing ESLint crash is handled in CI (it predates this change).\n"}]}, "benchmark": {"metadata": {"skill_name": "verify-frontend-change", "skill_path": "<path/to/skill>", "executor_model": "<model-name>", "analyzer_model": "<model-name>", "timestamp": "2026-06-03T11:29:47Z", "evals_run": [0, 1, 2], "runs_per_configuration": 3}, "runs": [{"eval_id": 0, "configuration": "new_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 196.2, "tokens": 52650, "tool_calls": 44, "errors": 0}, "expectations": [{"text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state", "passed": true, "evidence": "'How to complete the deferred check' prescribes scripts/seed-tasks.js + gsdSeed.dashboard(), and the 'Data-driven rendering with seeded tasks' note (lines 74, 83-86)."}, {"text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding", "passed": true, "evidence": "'seeds 8 tasks with a 4-day completion history spread across updatedAt dates, which would light up the streak, trend chart, and activity dots' (line 74)."}, {"text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render", "passed": true, "evidence": "Served-chunk artifact check rules out stale code (lines 44-66), and the deferred-step recipe says 'Paste scripts/reset-app-state.js in the console, hard-reload' (line 83)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console/network errors at runtime \u2014 cannot observe without a live browser session' deferred (line 73); step 6 'Check console for errors' (line 87)."}, {"text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly", "passed": true, "evidence": "Verdict 'PASS with deferred visual confirmation'; visual/runtime explicitly deferred (lines 70-74, 104)."}], "notes": []}, {"eval_id": 1, "configuration": "new_skill", "run_number": 1, "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 202.2, "tokens": 49095, "tool_calls": 57, "errors": 0}, "expectations": [{"text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render", "passed": true, "evidence": "Defeats the trap via the served-artifact rung: fetched the served JS+CSS chunks and confirmed new class present + old classes absent \u2014 'The dev server is serving the updated code, not a stale build. The stale-chunk trap is ruled out' (lines 39-57)."}, {"text": "Verifies the change in the actually-served/compiled artifact, not only the source file", "passed": true, "evidence": "Fetched Projects_gsd-taskmanager_011mdy8._.js and the served globals CSS, grepped for new/old class names (lines 40-57)."}, {"text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation", "passed": true, "evidence": "Verdict 'PASS (with one deferred dimension)'; live-browser console/visual explicitly deferred (lines 67, 85-87)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console/network: NOT CHECKED \u2014 no browser session available; this dimension is deferred' (line 67)."}, {"text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check", "passed": false, "evidence": "'Seeded: no' (line 5); defeats the trap via served-artifact + unit test but does not seed an overdue task or prescribe seeding for the deferred visual. Reasonable under no-browser, but the assertion is unmet."}], "notes": []}, {"eval_id": 2, "configuration": "new_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 234.0, "tokens": 68752, "tool_calls": 59, "errors": 0}, "expectations": [{"text": "Verifies the functional export outcome (download/file produced), not just that the code exists", "passed": true, "evidence": "Traces handler to Blob/createObjectURL/anchor.click()/gsd-tasks-<ISO>.json + served-artifact confirms createObjectURL/revokeObjectURL/filename prefix present (lines 18, 59-69)."}, {"text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)", "passed": true, "evidence": "'Console/network errors \u2014 PARTIAL' row: no browser to observe runtime console, but typecheck clean and no obvious throw paths (line 83)."}, {"text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it", "passed": true, "evidence": "Prescribes the exact targeted command: 'bun run test:e2e -- --project=chromium tests/e2e/settings-navigation.spec.ts' (line 107); did not run the full suite per right-sizing."}, {"text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly", "passed": true, "evidence": "Verdict 'PASS (with browser runtime deferred)'; functional-browser dimension marked DEFERRED (lines 82, 105)."}, {"text": "Correctly identifies the refactor scope to focus the verification", "passed": true, "evidence": "Identifies commit 78311c1 split oversized functions in import-export.ts and that settings-page handler had no uncommitted changes (lines 20-21)."}], "notes": []}, {"eval_id": 0, "configuration": "old_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 579.5, "tokens": 67336, "tool_calls": 74, "errors": 0}, "expectations": [{"text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state", "passed": true, "evidence": "'Data-Dependent Surface: Seeder Fit Assessment' table + step 'run gsdSeed.dashboard() before navigating to /dashboard' (lines 134-143)."}, {"text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding", "passed": true, "evidence": "'analytics/streaks.ts buckets by updatedAt (confirmed in source), which matches the seeder's design' (line 75)."}, {"text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render", "passed": true, "evidence": "Step: 'Paste scripts/reset-app-state.js into the console; hard-reload (busts SW cache)' (line 113)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console / Network: DEFERRED (no live browser)' with a concrete plan to check console for var(--...) paint errors (lines 102-116)."}, {"text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly", "passed": true, "evidence": "Verdict: 'DEFERRED \u2014 runtime browser check pending; static analysis is PASS' (line 165)."}], "notes": []}, {"eval_id": 1, "configuration": "old_skill", "run_number": 1, "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 337.0, "tokens": 59178, "tool_calls": 90, "errors": 0}, "expectations": [{"text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render", "passed": true, "evidence": "'Stale Build Trap Assessment' keeps the SW risk live and prescribes scripts/reset-app-state.js before a screenshot (lines 109-121, 157-161)."}, {"text": "Verifies the change in the actually-served/compiled artifact, not only the source file", "passed": true, "evidence": "Downloaded the served CSS chunk from :3001; confirmed .border-status-overdue present and .overdue-task / border-l-[3px] absent (lines 57-81)."}, {"text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation", "passed": true, "evidence": "Verdict 'PASS (static + partial runtime) \u2014 live visual confirmation DEFERRED' (line 149)."}, {"text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)", "passed": true, "evidence": "'Console/network errors: DEFERRED \u2014 No live browser available to read console output' (line 104)."}, {"text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check", "passed": false, "evidence": "Verifies via served CSS/source; never seeds an overdue task or prescribes seeding so the indicator can actually be observed rendering."}], "notes": []}, {"eval_id": 2, "configuration": "old_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 1240.8, "tokens": 77970, "tool_calls": 101, "errors": 0}, "expectations": [{"text": "Verifies the functional export outcome (download/file produced), not just that the code exists", "passed": true, "evidence": "Traces handleExport -> exportToJson -> exportTasks -> Blob/anchor/click with filename matching the e2e regex (lines 12-26, 38)."}, {"text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)", "passed": true, "evidence": "'Console/network errors \u2014 PASS (static + unit)': logger.error routes through structured logger not raw console; no fetch calls (lines 46-52)."}, {"text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it", "passed": true, "evidence": "Attempted 'npx playwright test settings-navigation.spec.ts' (hit a process collision) and prescribes re-running it in a clean terminal (lines 54-67, 96)."}, {"text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly", "passed": true, "evidence": "Verdict 'PASS (with deferred e2e confirmation)' (line 94)."}, {"text": "Correctly identifies the refactor scope to focus the verification", "passed": true, "evidence": "Identifies commit 78311c1 extracted resolveSyncDeps() inside importTasks() and did NOT touch the export path (line 10)."}], "notes": []}], "run_summary": {"new_skill": {"pass_rate": {"mean": 0.9333, "stddev": 0.1155, "min": 0.8, "max": 1.0}, "time_seconds": {"mean": 210.8, "stddev": 20.3145, "min": 196.2, "max": 234.0}, "tokens": {"mean": 56832.3333, "stddev": 10474.6526, "min": 49095, "max": 68752}}, "old_skill": {"pass_rate": {"mean": 0.9333, "stddev": 0.1155, "min": 0.8, "max": 1.0}, "time_seconds": {"mean": 719.1, "stddev": 467.7924, "min": 337.0, "max": 1240.8}, "tokens": {"mean": 68161.3333, "stddev": 9423.1469, "min": 59178, "max": 77970}}, "delta": {"pass_rate": "+0.00", "time_seconds": "-508.3", "tokens": "-11329"}}, "notes": []}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

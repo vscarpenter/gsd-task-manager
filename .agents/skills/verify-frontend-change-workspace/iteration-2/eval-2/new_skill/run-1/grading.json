@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Verifies the functional export outcome (download/file produced), not just that the code exists",
+      "passed": true,
+      "evidence": "Traces handler to Blob/createObjectURL/anchor.click()/gsd-tasks-<ISO>.json + served-artifact confirms createObjectURL/revokeObjectURL/filename prefix present (lines 18, 59-69)."
+    },
+    {
+      "text": "Explicitly checks for console errors / network issues introduced by the refactor (the user's stated concern)",
+      "passed": true,
+      "evidence": "'Console/network errors — PARTIAL' row: no browser to observe runtime console, but typecheck clean and no obvious throw paths (line 83)."
+    },
+    {
+      "text": "Attempts a runtime/e2e confirmation or precisely prescribes how to run it",
+      "passed": true,
+      "evidence": "Prescribes the exact targeted command: 'bun run test:e2e -- --project=chromium tests/e2e/settings-navigation.spec.ts' (line 107); did not run the full suite per right-sizing."
+    },
+    {
+      "text": "Avoids a false PASS: backs the verdict with evidence and defers the runtime confirmation honestly",
+      "passed": true,
+      "evidence": "Verdict 'PASS (with browser runtime deferred)'; functional-browser dimension marked DEFERRED (lines 82, 105)."
+    },
+    {
+      "text": "Correctly identifies the refactor scope to focus the verification",
+      "passed": true,
+      "evidence": "Identifies commit 78311c1 split oversized functions in import-export.ts and that settings-page handler had no uncommitted changes (lines 20-21)."
+    }
+  ],
+  "summary": { "passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0 },
+  "execution_metrics": { "total_tool_calls": 59, "errors_encountered": 0 }
+}

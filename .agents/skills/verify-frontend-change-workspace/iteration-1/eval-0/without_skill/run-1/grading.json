@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+      "passed": true,
+      "evidence": "References the seed script and steps: paste .../seed-tasks.js, run gsdSeed.dashboard(), reload (lines 89-103). NOTE: discovered the skill's own bundled script by exploring the repo (contamination — the skill artifacts are in-tree)."
+    },
+    {
+      "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+      "passed": false,
+      "evidence": "Describes 'completions spread across days 0-3' (line 103) but never articulates the updatedAt-bucketing nuance; relies on the discovered script without stating why it works."
+    },
+    {
+      "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+      "passed": false,
+      "evidence": "No mention of busting the service worker or reset-app-state.js anywhere in the report; the SW stale-chunk risk is not addressed."
+    },
+    {
+      "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+      "passed": false,
+      "evidence": "Defers 'live browser / real data render' (line 123) but never names console-error checking as a dimension."
+    },
+    {
+      "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+      "passed": true,
+      "evidence": "Verdict 'PASS with one deferred item'; defers the live render rather than claiming it (lines 125-127)."
+    }
+  ],
+  "summary": { "passed": 2, "failed": 3, "total": 5, "pass_rate": 0.4 },
+  "execution_metrics": { "total_tool_calls": 35, "errors_encountered": 0 }
+}

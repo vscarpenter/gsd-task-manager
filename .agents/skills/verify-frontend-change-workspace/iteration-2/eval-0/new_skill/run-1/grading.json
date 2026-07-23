@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Seeds the data-dependent dashboard (or prescribes seeding) so charts render with real data, not an empty state",
+      "passed": true,
+      "evidence": "'How to complete the deferred check' prescribes scripts/seed-tasks.js + gsdSeed.dashboard(), and the 'Data-driven rendering with seeded tasks' note (lines 74, 83-86)."
+    },
+    {
+      "text": "Notes that dashboard analytics bucket by updatedAt (not completedAt) when seeding",
+      "passed": true,
+      "evidence": "'seeds 8 tasks with a 4-day completion history spread across updatedAt dates, which would light up the streak, trend chart, and activity dots' (line 74)."
+    },
+    {
+      "text": "Prescribes busting the service worker / clearing gsd-* caches before trusting a browser render",
+      "passed": true,
+      "evidence": "Served-chunk artifact check rules out stale code (lines 44-66), and the deferred-step recipe says 'Paste scripts/reset-app-state.js in the console, hard-reload' (line 83)."
+    },
+    {
+      "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+      "passed": true,
+      "evidence": "'Console/network errors at runtime — cannot observe without a live browser session' deferred (line 73); step 6 'Check console for errors' (line 87)."
+    },
+    {
+      "text": "Avoids a false PASS: does not claim a visually-verified result without a live browser; defers honestly",
+      "passed": true,
+      "evidence": "Verdict 'PASS with deferred visual confirmation'; visual/runtime explicitly deferred (lines 70-74, 104)."
+    }
+  ],
+  "summary": { "passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0 },
+  "execution_metrics": { "total_tool_calls": 44, "errors_encountered": 0 }
+}

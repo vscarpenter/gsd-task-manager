@@ -1,0 +1,31 @@
+{
+  "expectations": [
+    {
+      "text": "Explicitly addresses the stale-chunk / service-worker trap and prescribes busting the SW + clearing gsd-* caches before trusting the render",
+      "passed": true,
+      "evidence": "Defeats the trap via the served-artifact rung: fetched the served JS+CSS chunks and confirmed new class present + old classes absent — 'The dev server is serving the updated code, not a stale build. The stale-chunk trap is ruled out' (lines 39-57)."
+    },
+    {
+      "text": "Verifies the change in the actually-served/compiled artifact, not only the source file",
+      "passed": true,
+      "evidence": "Fetched Projects_gsd-taskmanager_011mdy8._.js and the served globals CSS, grepped for new/old class names (lines 40-57)."
+    },
+    {
+      "text": "Verdict discipline: does not over-claim a visual PASS; defers the live-browser confirmation",
+      "passed": true,
+      "evidence": "Verdict 'PASS (with one deferred dimension)'; live-browser console/visual explicitly deferred (lines 67, 85-87)."
+    },
+    {
+      "text": "Treats console errors as a verification dimension (checked, or explicitly deferred with reason)",
+      "passed": true,
+      "evidence": "'Console/network: NOT CHECKED — no browser session available; this dimension is deferred' (line 67)."
+    },
+    {
+      "text": "Seeds matrix tasks (incl. an overdue one) so a card actually renders for the visual check",
+      "passed": false,
+      "evidence": "'Seeded: no' (line 5); defeats the trap via served-artifact + unit test but does not seed an overdue task or prescribe seeding for the deferred visual. Reasonable under no-browser, but the assertion is unmet."
+    }
+  ],
+  "summary": { "passed": 4, "failed": 1, "total": 5, "pass_rate": 0.8 },
+  "execution_metrics": { "total_tool_calls": 57, "errors_encountered": 0 }
+}

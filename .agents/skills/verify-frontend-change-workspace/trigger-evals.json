@@ -1,0 +1,22 @@
+[
+  {"query": "just finished tweaking the streak card on the dashboard — can you make sure it still looks right and renders with actual data before i push? i don't want to be staring at an empty dashboard", "should_trigger": true},
+  {"query": "I changed the overdue task card from a left stripe to a full border (border-l-4 -> border). before I open the PR I want to be sure it's actually showing up in the matrix and I'm not looking at a stale build again", "should_trigger": true},
+  {"query": "verify the matrix still drops tasks into the right quadrants after my edit to the capture-parser — Q1 through Q4 should all place correctly", "should_trigger": true},
+  {"query": "I refactored the edit-drawer in components/matrix-simplified/. confirm it still opens, edits, and saves a task correctly in the running app before I merge", "should_trigger": true},
+  {"query": "can you check that the Export Data button in settings still works and doesn't throw console errors? I rewrote the export handler", "should_trigger": true},
+  {"query": "made spacing changes to the quadrant-distribution donut on the dashboard, want to see it with seeded tasks not an empty state before merging", "should_trigger": true},
+  {"query": "before I push this task-card change, drive the app and screenshot the matrix so I actually know it renders the way I think it does", "should_trigger": true},
+  {"query": "does the new dependency badge actually render on blocked task cards? I added it to the card metadata component but I haven't seen it live yet", "should_trigger": true},
+  {"query": "I think my change to lib/analytics/trends.ts broke the completion-trend chart on the dashboard. confirm whether it still renders before I ship", "should_trigger": true},
+  {"query": "updated the dark-mode tokens on the capture bar — need to confirm both light and dark look correct in the real app, not just in my head", "should_trigger": true},
+  {"query": "review my changes to lib/sync/pb-sync-engine.ts for race conditions and possible data-loss on the last-write-wins merge", "should_trigger": false},
+  {"query": "apply the Inkwell hairline border and quadrant color tokens to this standalone HTML analysis report so it matches the app's visual system", "should_trigger": false},
+  {"query": "write a failing test first for the new monthly-recurrence logic in lib/tasks.ts, then implement it red-green-refactor", "should_trigger": false},
+  {"query": "verify the production deploy actually went out — check the CloudFront distribution and confirm the new build is live at the real gsd URL", "should_trigger": false},
+  {"query": "run the full vitest unit suite and tell me if anything is failing on main right now", "should_trigger": false},
+  {"query": "do a full WCAG AA accessibility audit of the settings page — keyboard nav, labels, contrast, the works", "should_trigger": false},
+  {"query": "start the dev server and leave it running on localhost so I can poke at the app myself for a while", "should_trigger": false},
+  {"query": "my PocketBase sync keeps dropping tasks on my second device — help me debug why the realtime SSE subscription isn't echoing changes", "should_trigger": false},
+  {"query": "rename resolveQuadrantId to deriveQuadrant across the whole codebase and fix all the imports", "should_trigger": false},
+  {"query": "explain how the service worker cache layers work in this app — what's the difference between gsd-immutable, gsd-pages, and gsd-runtime?", "should_trigger": false}
+]
