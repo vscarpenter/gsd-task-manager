@@ -601,4 +601,3 @@ Branch: feat/edit-drawer-dependencies
 - Systemic danger-color token: text-red-400-on-white fails AA in sync-button.tsx:148 and sync-auth-dialog-sections.tsx:212 too — a shared token fix covers all.
 - restoreTask does not re-create inbound dependency edges after delete/undo (pre-existing, noted above).
 - Subtask editing still drawer-less (also lost in #238).
-- Pre-existing on main: scripts/build-openwiki-site.cjs has 2 ESLint errors (no-require-imports) from the OpenWiki commit 907360d — repo-wide `bun lint` exits 1 through no fault of this branch.
