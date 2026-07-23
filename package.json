@@ -12,7 +12,6 @@
 		"lint": "eslint .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"build:docs": "node scripts/build-openwiki-site.cjs",
 		"typecheck": "tsc --noEmit",
 		"export": "next export",
 		"deploy": "bash scripts/deploy-prod.sh",
