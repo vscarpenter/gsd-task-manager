@@ -6,57 +6,6 @@ function readWorkflow(path: string): string {
 }
 
 describe("pipeline workflows", () => {
-  it("evaluates release readiness from the latest check run per name", () => {
-    const workflow = readWorkflow(".github/workflows/release-ready.yml");
-    const listChecksIndex = workflow.indexOf("checks.listForRef");
-    const dedupeIndex = workflow.indexOf(
-      "if (!byName[c.name] || c.id > byName[c.name].id) byName[c.name] = c;"
-    );
-    const ciGreenIndex = workflow.indexOf(
-      'const ciGreen = REQUIRED.every((n) => byName[n]?.conclusion === "success");'
-    );
-    const reviewerRanIndex = workflow.indexOf(
-      'const reviewerRan = Object.entries(byName).some(([n, c]) => /claude.?review/i.test(n) && c.status === "completed");'
-    );
-
-    expect(listChecksIndex).toBeGreaterThan(-1);
-    expect(dedupeIndex).toBeGreaterThan(listChecksIndex);
-    expect(ciGreenIndex).toBeGreaterThan(dedupeIndex);
-    expect(reviewerRanIndex).toBeGreaterThan(dedupeIndex);
-  });
-
-  it("keeps release-ready labels and marker comments synced after regressions", () => {
-    const workflow = readWorkflow(".github/workflows/release-ready.yml");
-    const notReadyLabelIndex = workflow.indexOf("} else if (!ready && hasLabel) {");
-    const removeLabelIndex = workflow.indexOf(
-      'removeLabel({ ...context.repo, issue_number: number, name: "release-ready" })',
-      notReadyLabelIndex
-    );
-    const notReadyBodyIndex = workflow.indexOf(
-      "⏳ **Not release-ready yet**",
-      removeLabelIndex
-    );
-    const existingCommentIndex = workflow.indexOf(
-      "const existing = comments.find((c) => c.body?.includes(MARKER));",
-      notReadyBodyIndex
-    );
-    const updateCommentIndex = workflow.indexOf(
-      "issues.updateComment",
-      existingCommentIndex
-    );
-    const createReadyCommentIndex = workflow.indexOf(
-      "} else if (ready) {",
-      updateCommentIndex
-    );
-
-    expect(notReadyLabelIndex).toBeGreaterThan(-1);
-    expect(removeLabelIndex).toBeGreaterThan(notReadyLabelIndex);
-    expect(notReadyBodyIndex).toBeGreaterThan(removeLabelIndex);
-    expect(existingCommentIndex).toBeGreaterThan(notReadyBodyIndex);
-    expect(updateCommentIndex).toBeGreaterThan(existingCommentIndex);
-    expect(createReadyCommentIndex).toBeGreaterThan(updateCommentIndex);
-  });
-
   it("reconciles risk labels instead of accumulating stale tiers", () => {
     const workflow = readWorkflow(".github/workflows/apply-risk-label.yml");
     const invalidTierIndex = workflow.indexOf("if (!tier) {");

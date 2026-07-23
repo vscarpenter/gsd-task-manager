@@ -5,10 +5,6 @@ function readRepoFile(path: string): string {
   return readFileSync(path, 'utf8');
 }
 
-function countOccurrences(value: string, search: string): number {
-  return value.split(search).length - 1;
-}
-
 describe('security hardening scripts and workflows', () => {
   it('keeps PocketBase task ownership immutable in setup and schema updates', () => {
     const setupScript = readRepoFile('scripts/setup-pocketbase-collections.sh');
@@ -82,22 +78,6 @@ describe('security hardening scripts and workflows', () => {
     expect(policyScript).toContain('ResponseHeadersPolicyId');
     expect(policyScript).toContain('exit 1');
     expect(workflow).toContain('CLOUDFRONT_DISTRIBUTION_ID');
-  });
-
-  it('restricts Claude OAuth workflow invocations to trusted GitHub actors', () => {
-    const workflow = readRepoFile('.github/workflows/claude.yml');
-    const jobStart = workflow.indexOf('claude:');
-    const runsOnStart = workflow.indexOf('runs-on:', jobStart);
-    const jobCondition = workflow.slice(jobStart, runsOnStart);
-    const allowlist = 'contains(fromJSON(\'["OWNER", "MEMBER", "COLLABORATOR"]\'), ';
-
-    expect(jobStart).toBeGreaterThan(-1);
-    expect(runsOnStart).toBeGreaterThan(jobStart);
-    expect(countOccurrences(jobCondition, allowlist)).toBe(4);
-    expect(countOccurrences(jobCondition, `${allowlist}github.event.comment.author_association)`)).toBe(2);
-    expect(jobCondition).toContain(`${allowlist}github.event.review.author_association)`);
-    expect(jobCondition).toContain(`${allowlist}github.event.issue.author_association)`);
-    expect(jobCondition).not.toMatch(/\b(FIRST_TIME_CONTRIBUTOR|CONTRIBUTOR|NONE)\b/);
   });
 
   it('blocks PocketBase admin API routes before the public API reverse proxy', () => {

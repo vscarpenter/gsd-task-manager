@@ -19,19 +19,19 @@ The pipeline was built in ordered cycles; each name below matches the labels and
 | --- | --- | --- | --- |
 | A | **The Contract** | Enforced issue template + `risk:*` labels | `/.github/ISSUE_TEMPLATE/`, `/.github/workflows/apply-risk-label.yml`, `/scripts/parse-risk-tier.cjs` |
 | B | **Builder + Gate 1** | Local autonomous builder; plan-approval gate | `/docs/agents/builder.md`, `/.claude/commands/build-next.md`, `/scripts/builder-run.sh` |
-| C | **Review + Gate 2** | `release-ready` computation; release-approval gate | `/docs/ops/gate2.md`, `/.github/workflows/release-ready.yml`, `/scripts/prev-release-tag.cjs` |
+| C | **Review + Gate 2** | Required CI/review; production release-approval gate | `/docs/ops/gate2.md`, `/.github/workflows/deploy-prod.yml`, `/scripts/prev-release-tag.cjs` |
 | D | **The Night Shift** | Nightly unattended triage of failing agent PRs | `/docs/agents/night-shift.md`, `/.claude/commands/triage-prs.md`, `/scripts/triage-run.sh`, `/scripts/failing-agent-prs.cjs` |
-| E | **Telemetry + standards loop** | Weekly pipeline metrics + a learning loop | `/.github/workflows/telemetry.yml`, `/scripts/telemetry-metrics.cjs`, `/docs/ops/pipeline-audit.md` |
+| E | **Standards loop** | Manual spot-checks feed a learning loop | `/docs/ops/pipeline-audit.md`, `/coding-standards.md` |
 
 End-to-end flow:
 
 ```
 Issue (Contract, risk:*) → ready-for-agent
   → Builder: plan (Gate 1) → build → PR on claude/issue-<n>-*
-  → CI + reviewer + release-ready.yml → release-ready
-  → human merges → deploy-dev.yml (DEV) → test → /release → deploy-prod.yml (Gate 2) → PROD
+  → required CI + human review → human merges
+  → running-app validation → /release → deploy-prod.yml (Gate 2) → PROD
 Night Shift (nightly): fixes failing checks on claude/* PRs, never merges
-Telemetry (weekly): metrics → Pipeline Telemetry issue; audit → coding-standards.md
+Audit (manual): spot-checks → coding-standards.md
 ```
 
 ---
@@ -47,7 +47,6 @@ provisions them idempotently (`gh label create --force`):
 - **`plan:pending` / `plan:revise` / `plan:approved`** — Gate 1 handshake.
 - **`agent:building`** — builder claim-lock (removed when the PR opens).
 - **`ready-for-agent` / `ready-for-human`** — AFK-ready vs. escalated.
-- **`release-ready`** — CI green + reviewer ran + no unresolved threads.
 - **`builder:paused` / `triage:paused`** — kill switches.
 
 Label vocabulary and `gh` conventions the agents follow: `/docs/agents/triage-labels.md`,
@@ -62,7 +61,7 @@ Every change starts from a structured issue. The `change_request.yml` form
 Constraints, Out of scope, Rollback, and a **Risk tier** dropdown. On issue open/edit,
 `apply-risk-label.yml` parses the dropdown via `parse-risk-tier.cjs` and applies exactly one
 `risk:*` label. That workflow holds no secrets and executes no issue-supplied content, so it
-runs safely for any author (unlike the secret-bearing `claude.yml`).
+runs safely for any author.
 
 ---
 
@@ -96,17 +95,17 @@ into a reviewed PR and **never merges**. Spec: `/docs/agents/builder.md`; execut
 
 ## Cycle C — Review + Gate 2
 
-`release-ready.yml` deterministically marks a PR **`release-ready`** once the required CI
-checks (`lint`, `typecheck`, `test`, `build`) are green, the reviewer ("Claude Code Review")
-has run, and there are no unresolved review threads. It is computed by the workflow, not the
-reviewer — the reviewer stays advisory and its findings become blocking threads.
+The PR gate is now the repository's required CI checks, Code Owner/human review,
+and resolved review threads. The automated Claude reviewer and deterministic
+`release-ready` label have been retired.
 
-**Gate 2** is the release runbook (`/docs/ops/gate2.md`): you merge the PR (auto-deploys to
-**DEV** via `deploy-dev.yml`), test the dev URL, then `/release` bumps + tags `v*.*.*`. The
-tag-triggered `deploy-prod.yml` runs an ungated **evidence job** (prints the deploying version,
-previous prod version via `prev-release-tag.cjs`, and the exact rollback command) then **pauses
-at the `production` environment gate** for your approval. Policy: **no rollback path, no
-approval.** Rollback is redeploying the previous tag through the same gated path.
+**Gate 2** is the release runbook (`/docs/ops/gate2.md`): merge the PR, validate the release
+candidate in a running app, then `/release` bumps + tags `v*.*.*`. The former automatic DEV
+deployment is disabled. The tag-triggered `deploy-prod.yml` runs an ungated **evidence job**
+(prints the deploying version, previous prod version via `prev-release-tag.cjs`, and the exact
+rollback command) then **pauses at the `production` environment gate** for your approval.
+Policy: **no rollback path, no approval.** Rollback is redeploying the previous tag through
+the same gated path.
 
 See [Build, deploy & ops](build-deploy-and-ops.md) for the deploy workflows themselves.
 
@@ -131,18 +130,15 @@ failing checks on the fleet's own **`claude/*`** open PRs and **never merges**. 
 
 ---
 
-## Cycle E — Telemetry + standards loop
+## Cycle E — Standards loop
 
-`telemetry.yml` (Mondays 13:00 UTC) computes cycle time, plan-revision rate, and review
-findings/PR over a 30-day window via `/scripts/telemetry-metrics.cjs`, updates the pinned
-**Pipeline Telemetry** issue, and archives a JSON snapshot to the `telemetry` branch (main
-protection forbids pushing to `main` by design). Per-PR token cost is recorded by the builder
-wrapper via `/scripts/extract-run-tokens.cjs`.
+The scheduled telemetry collector is retired. Historical metric scripts and snapshots may
+remain as reference, but they do not update a dashboard or participate in a gate.
 
 The **standards loop** (`/docs/ops/pipeline-audit.md`) is the learning mechanism: spot-check
-~1 in 10 merged PRs (over-sampling the low-human-contact ones telemetry flags), then convert
-recurring findings into durable rules in `coding-standards.md` — which the builder, reviewer,
-and night shift all read — so each mistake is paid down once. Autonomy is earned continuously
+~1 in 10 merged PRs (over-sampling low-human-contact and high-churn changes), then convert
+recurring findings into durable rules in `coding-standards.md` — which the builder and night
+shift both read — so each mistake is paid down once. Autonomy is earned continuously
 and can be revoked if audits surface escaped defects.
 
 ---
@@ -154,10 +150,10 @@ and can be revoked if audits surface escaped defects.
 - **Change builder or night-shift behavior:** edit the operating spec in `/docs/agents/` and
   the matching `/.claude/commands/*.md` together — they must stay consistent. Wrappers:
   `/scripts/builder-run.sh`, `/scripts/triage-run.sh`.
-- **Change release/gate logic:** `/.github/workflows/release-ready.yml`, `deploy-prod.yml`,
-  and `/docs/ops/gate2.md`. Note the builder must never edit these.
-- **Change metrics:** `/scripts/telemetry-metrics.cjs` + `/.github/workflows/telemetry.yml`.
-- **Tests to run:** `/tests/data/pipeline-workflows.test.ts` (release-workflow invariants),
+- **Change release/gate logic:** `/.github/workflows/deploy-prod.yml` and
+  `/docs/ops/gate2.md`. Note the builder must never edit the production workflow.
+- **Change historical metric tooling:** `/scripts/telemetry-metrics.cjs`.
+- **Tests to run:** `/tests/data/pipeline-workflows.test.ts` (risk-workflow invariants),
   `/tests/{builder-run,triage-run,failing-agent-prs,telemetry-metrics,extract-run-tokens,prev-release-tag}.test.ts`,
   and `/tests/parse-risk-tier.test.ts`.
 

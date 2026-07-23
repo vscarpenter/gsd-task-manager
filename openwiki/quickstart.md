@@ -65,7 +65,7 @@ For product framing and feature rationale, read the root docs: `/README.md`, `/P
 | `/packages/mcp-server/` | Standalone `gsd-mcp-server` npm package (MCP integration). |
 | `/docker/` | Self-hosting stack (Caddy + PocketBase + static PWA in one container). |
 | `/scripts/` | Build, deploy (S3/CloudFront), PocketBase ops, smoke tests, and the agent-pipeline scripts/launchd plists. |
-| `/.github/workflows/` | CI, dev/prod deploy, CloudFront infra, Docker/MCP publish, and pipeline workflows (risk labeling, release-ready, telemetry). |
+| `/.github/workflows/` | CI, production deploy, disabled DEV restore path, CloudFront infra, Docker/MCP publish, risk labeling, security/quality checks, and OpenWiki automation. |
 | `/.claude/commands/` | Executable summaries for the autonomous builder/triage routines (`build-next.md`, `triage-prs.md`). |
 | `/tests/` | Vitest (`ui/`, `data/`, `sync/`, `pb/`) + Playwright (`e2e/`). |
 | `/docs/` | ADRs (`docs/adr/`), agent operating specs (`docs/agents/`), pipeline runbooks (`docs/ops/`), HTML explainers, UML diagrams. |

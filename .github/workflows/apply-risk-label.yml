@@ -3,8 +3,7 @@ name: Apply risk label
 # Reads the risk dropdown on the issue contract and applies the matching
 # risk:* label. Safe for issues from any author: it only ever applies one of
 # four fixed labels derived from the body, holds no secrets, and executes no
-# issue-supplied content — so no author_association gate is needed (unlike
-# claude.yml, which is secret-bearing).
+# issue-supplied content — so no author_association gate is needed.
 on:
   issues:
     types: [opened, edited]

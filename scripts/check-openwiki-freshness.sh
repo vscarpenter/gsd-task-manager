@@ -65,6 +65,6 @@ warn "OpenWiki docs may be stale: ${COUNT} doc-affecting file(s) changed since $
 note "Changed files:"
 printf '%s\n' "$CHANGED" | sed 's/^/  - /'
 note ""
-note "Fix: the nightly / post-merge 'OpenWiki Update' workflow will refresh these, or run"
+note "Fix: the post-merge 'OpenWiki Update' workflow will refresh these, or run"
 note "'bunx openwiki --update' locally, then 'bun run build:docs', and commit the result."
 exit 0
