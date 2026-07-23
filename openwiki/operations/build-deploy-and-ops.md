@@ -89,20 +89,18 @@ Hub (if secrets set).
 - `ci.yml` — on PR / push to main: parallel `typecheck`, `lint`, `test`, and `build` (via the
   `build-static-export` composite action; uploads a `static-export-<sha>` artifact on push to
   main).
-- `deploy-dev.yml` — triggered after CI succeeds on main; **downloads the CI artifact** (no
-  rebuild), authenticates to AWS via **OIDC**, waits for invalidation, runs the smoke test.
-  Deploys are queued, never cancelled.
+- `deploy-dev.yml` — **disabled**; retained as a restoration reference for the former
+  development environment.
 - `deploy-prod.yml` — tag-triggered (`v*.*.*`); verifies the tag commit is on `main` and the
   tag matches `package.json` version; uses a `production` environment with a
   required-reviewer gate; rebuilds deterministically.
 - `deploy-cloudfront-infra.yml` — path-filtered; gated `cloudfront-infra` environment.
 - `publish-docker.yml`, `publish-mcp-server.yml` — publish the self-host image and the MCP
   package.
-- `sonarcloud.yml`, `security-audit.yml`, `claude.yml`, `claude-code-review.yml` — quality,
-  security audit, and Claude automation.
-- `apply-risk-label.yml`, `release-ready.yml`, `telemetry.yml` — the autonomous delivery
-  pipeline (issue risk labeling, release-ready computation, weekly metrics). See
-  [Agent pipeline](agent-pipeline.md).
+- `sonarcloud.yml`, `security-audit.yml` — quality and dependency/security audit.
+- `apply-risk-label.yml` — issue risk labeling for the agent delivery pipeline. See
+  [Agent pipeline](agent-pipeline.md). The former Claude review, release-ready, and telemetry
+  workflows have been retired.
 
 ---
 
@@ -144,17 +142,17 @@ bun run build:docs          # or: node scripts/build-openwiki-site.cjs
   serve the folder statically. Because pages are self-contained (inline CSS, no external
   assets), they also work when opened directly via `file://`.
 - Re-run `bun run build:docs` after editing any `/openwiki/*.md` page to refresh the site.
-- To deploy, upload `/openwiki/site/` to any static host (e.g. an S3 prefix behind the
-  existing CloudFront distribution, or GitHub Pages).
+- To deploy, upload `/openwiki/site/` to a static host. This repository no longer publishes
+  the site through GitHub Pages.
 
 ---
 
 ## Automated OpenWiki updates (`/.github/workflows/openwiki-update.yml`)
 
-A scheduled workflow keeps `/openwiki/` in sync with the codebase.
+An event-driven workflow keeps `/openwiki/` in sync with the codebase.
 
-- **Triggers:** nightly cron (`03:17 UTC`), push to `main` that touches documentation-relevant
-  paths (post-merge), and manual `workflow_dispatch` (with an optional focus message).
+- **Triggers:** push to `main` that touches documentation-relevant paths (post-merge), and
+  manual `workflow_dispatch` (with an optional focus message). There is no scheduled run.
 - **What it does:** runs `openwiki --update`, rebuilds the HTML site (`bun run build:docs`), and
   **opens a pull request** with any changes via `peter-evans/create-pull-request`. It does not
   push directly to `main`, so AI-generated doc edits get a human review and cannot cause a

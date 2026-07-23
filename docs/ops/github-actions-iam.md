@@ -1,5 +1,9 @@
 # GitHub Actions → AWS Setup Runbook
 
+> **Current status:** the development deployment workflow is retained as a
+> restoration reference but disabled. The former DEV site and distribution are
+> not part of the active release path. Production deployment remains active.
+
 This is the one-time manual configuration required before `.github/workflows/deploy-dev.yml` (and later `deploy-prod.yml`, `deploy-cloudfront-infra.yml`) can deploy. Everything below happens in **your AWS account** and **your GitHub repo settings** — none of it is in code.
 
 Trust model: GitHub-issued OIDC tokens authenticate to AWS roles scoped to specific GitHub Environments. No long-lived AWS access keys are stored anywhere.
@@ -139,6 +143,9 @@ Add these **Environment variables** (not secrets — none of these are confident
 ---
 
 ## Step 4 — First-run sanity check
+
+Complete this step only if the development environment is intentionally restored
+and the workflow is re-enabled.
 
 1. Merge any commit to `main` (or trigger the workflow manually: Actions → Deploy to Development → Run workflow).
 2. Watch the run — `deploy` job should:

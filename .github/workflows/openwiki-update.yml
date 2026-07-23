@@ -3,7 +3,6 @@ name: OpenWiki Update
 # Keeps the /openwiki documentation in sync with the codebase.
 #
 # Triggers:
-#   - Nightly cron (03:17 UTC) — catches any drift since the last run.
 #   - Push to main (post-merge) — refreshes docs right after changes land.
 #   - Manual dispatch — run on demand, optionally with a focus message.
 #
@@ -21,9 +20,6 @@ name: OpenWiki Update
 # ────────────────────────────────────────────────────────────────────────────────
 
 on:
-  schedule:
-    # 03:17 UTC nightly. Odd minute avoids the top-of-hour scheduler stampede.
-    - cron: "17 3 * * *"
   push:
     branches: [main]
     # Only re-run when things that affect documentation actually change.
@@ -50,7 +46,7 @@ on:
         required: false
         type: string
 
-# Never run two updates at once; the newer run wins for scheduled/push events.
+# Never run two updates at once; the newer push/manual run wins.
 concurrency:
   group: openwiki-update-${{ github.ref }}
   cancel-in-progress: true

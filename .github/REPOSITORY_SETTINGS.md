@@ -158,7 +158,7 @@ Privacy-first task manager using the Eisenhower Matrix. Built with Next.js, Type
 **Website**: `https://gsd.vinny.dev`
 
 Check:
-- [x] **Use your GitHub Pages website** (if applicable)
+- [ ] **Use your GitHub Pages website** — disabled; the production website is hosted separately
 - [x] **Releases**
 - [x] **Packages**
 

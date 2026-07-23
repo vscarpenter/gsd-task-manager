@@ -7,17 +7,19 @@ Gate 2 is the second and final human approval in the delivery pipeline (cycle C)
 ## The release path
 
 ```
-PR: CI green + reviewer ran + 0 unresolved threads
-      └─▶ release-ready.yml adds `release-ready` + a summary comment
-YOU merge the PR ─▶ deploy-dev.yml auto-deploys main to the DEV environment
-YOU test the dev URL (this is the "test the running software" step)
+PR: required CI green + required human review + 0 unresolved threads
+YOU merge the PR
+YOU validate the release candidate through an appropriate running-app check
 /release ─▶ bumps version, tags v*.*.* ─▶ deploy-prod.yml runs:
    1. evidence job (ungated)  — writes version + rollback command to the run summary
    2. deploy job              — PAUSES at the `production` Environment gate   ← GATE 2
       └─▶ YOU read the evidence, approve ─▶ S3 + CloudFront ─▶ smoke-test.sh
 ```
 
-The preview you test is the **dev environment** (populated the moment you merge). There is no separate ephemeral preview by design.
+The former automatic DEV deployment is disabled. Until a replacement preview
+environment exists, record the running-app validation used for the release
+candidate in the release notes or approval record. Do not treat CI alone as
+proof of runtime behavior.
 
 ## What the evidence job shows (read this before approving)
 
@@ -26,7 +28,7 @@ When `deploy-prod` runs, the **Gate 2 — release evidence** job completes befor
 - **Deploying:** the version this deploy will ship (`vX.Y.Z`).
 - **Previous prod:** the last released version — the rollback target.
 - **Rollback command:** the exact one-liner to redeploy the previous release. Copy it somewhere before approving.
-- **Preview:** the dev URL you should already have tested.
+- **Validation:** the running-app check you completed before starting the release.
 - **Post-deploy:** `smoke-test.sh` runs automatically against the live site after the CloudFront invalidation completes, proving the deploy rather than assuming it.
 
 Then approve the `production` environment deployment (GitHub UI or mobile app). Only after approval does anything touch prod.
@@ -45,6 +47,8 @@ If there is no previous release (first-ever deploy), roll back by redeploying an
 
 ## Notes
 
-- `release-ready` is computed by `release-ready.yml`, not by the reviewer — the reviewer only posts findings (which become threads that block both `release-ready` and merge until resolved).
-- GitHub emits no event when a review thread is *resolved*, so after you resolve the last thread, `release-ready` re-evaluates on the next push / review / CI run. In practice you resolve a thread by pushing a fix, which retriggers it.
+- The automated Claude reviewer and `release-ready` workflow are retired. Branch
+  protection, required CI, Code Owners, and resolved review threads are the PR gate.
+- `deploy-dev.yml` remains in the repository as a restoration reference but is
+  disabled in GitHub Actions.
 - The builder (cycle B) never merges or deploys and never edits `deploy-prod.yml` — Gate 2 is always yours.
