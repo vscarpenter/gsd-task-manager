@@ -49,12 +49,20 @@
 	# ---- PocketBase reverse proxy ----
 	# Block administrative PocketBase API routes at the public origin. Superuser
 	# auth lives under /api/collections/_superusers/* (PB v0.23+); /api/admins/*
-	# is the legacy path. The browser app never needs either — it authenticates
-	# via OAuth against the users collection — so keeping admin auth off the
-	# public origin matches the "admin is not exposed" boundary that the /_/*
-	# rule already enforces. handle blocks match most-specific-first, so these
-	# deny rules take precedence over the broad /api/* proxy below.
+	# is the legacy path. PocketBase resolves /api/collections/{idOrName}/... by
+	# a collection's fixed system ID as well as its name, so denying the name
+	# alone is bypassable — the _superusers collection is also reachable at its
+	# ID pbc_3142635823 ("pbc_" + crc32("auth_superusers"), fixed in PB v0.23+).
+	# Both the name and the ID form are denied below. The browser app never needs
+	# any of these — it authenticates via OAuth against the users collection — so
+	# keeping admin auth off the public origin matches the "admin is not exposed"
+	# boundary that the /_/* rule already enforces. handle blocks match
+	# most-specific-first, so these deny rules take precedence over the broad
+	# /api/* proxy below.
 	handle /api/collections/_superusers/* {
+		respond "PocketBase admin API is not exposed through this origin." 404
+	}
+	handle /api/collections/pbc_3142635823/* {
 		respond "PocketBase admin API is not exposed through this origin." 404
 	}
 	handle /api/admins/* {

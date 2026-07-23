@@ -51,9 +51,17 @@ function run(mode: string, pausedCount: number, prsJson: unknown): string {
   });
 }
 
-const failingAgentPr = { headRefName: "claude/fix-a", statusCheckRollup: [{ conclusion: "FAILURE" }] };
-const passingAgentPr = { headRefName: "claude/fix-b", statusCheckRollup: [{ conclusion: "SUCCESS" }] };
+// Same-repo (isCrossRepository:false) marks these as the fleet's own PRs.
+const failingAgentPr = { headRefName: "claude/fix-a", statusCheckRollup: [{ conclusion: "FAILURE" }], isCrossRepository: false };
+const passingAgentPr = { headRefName: "claude/fix-b", statusCheckRollup: [{ conclusion: "SUCCESS" }], isCrossRepository: false };
 const failingUserPr = { headRefName: "feat/mine", statusCheckRollup: [{ conclusion: "FAILURE" }] };
+// A fork PR with a spoofed claude/ branch name — must never count as work.
+const forkAgentPr = {
+  headRefName: "claude/fix-ci",
+  statusCheckRollup: [{ conclusion: "FAILURE" }],
+  isCrossRepository: true,
+  headRepositoryOwner: { login: "attacker" },
+};
 
 describe("triage-run.sh pre-check", () => {
   it("exits PAUSED when triage:paused is set", () => {
@@ -74,6 +82,9 @@ describe("triage-run.sh pre-check", () => {
   });
   it("exits NO_WORK when no claude/* PR is failing", () => {
     expect(run("--check", 0, [passingAgentPr, failingUserPr])).toContain("NO_WORK");
+  });
+  it("exits NO_WORK for a failing fork claude/* PR (not the fleet's own)", () => {
+    expect(run("--check", 0, [forkAgentPr])).toContain("NO_WORK");
   });
   it("reports WORK when a claude/* PR is failing", () => {
     expect(run("--check", 0, [failingAgentPr, failingUserPr])).toMatch(/^WORK:/m);
