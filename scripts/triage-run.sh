@@ -44,14 +44,19 @@ if [ "$paused" != "0" ]; then
   exit 0
 fi
 
-# 2. Work check — failing claude/* PRs (filter lives in the tested helper).
+# 2. Work check — failing claude/* PRs from a trusted origin (provenance +
+# failing-check filtering live in the tested helper). Fetch headRepositoryOwner /
+# isCrossRepository so fork PRs — whose head branch name is attacker-controlled —
+# are told apart from the fleet's own same-repo branches, and pass the base-repo
+# owner so the helper can confirm same-repo provenance.
+REPO_OWNER="${REPO%%/*}"
 prs_json='[]'
-if out=$(gh pr list --repo "$REPO" --state open --json number,headRefName,statusCheckRollup 2>/dev/null); then
+if out=$(gh pr list --repo "$REPO" --state open --json number,headRefName,headRepositoryOwner,isCrossRepository,statusCheckRollup 2>/dev/null); then
   prs_json="$out"
 else
   gh_fail_log "pr list failed"
 fi
-failing="$(printf '%s' "$prs_json" | node "$HELPER" 2>/dev/null || echo 0)"
+failing="$(printf '%s' "$prs_json" | GSD_TRIAGE_REPO_OWNER="$REPO_OWNER" node "$HELPER" 2>/dev/null || echo 0)"
 if [ "$failing" = "0" ]; then
   echo "NO_WORK: no failing claude/* PRs — exiting."
   exit 0

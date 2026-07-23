@@ -11,7 +11,7 @@ You are the **night shift** for the GSD Task Manager pipeline. Run headlessly an
 
 ## Select work
 
-List open PRs whose head branch starts with `claude/` and that have at least one failing check (use `gh pr list --state open --json number,headRefName,statusCheckRollup`). Process oldest-first. Skip any PR already labeled `ready-for-human`. Stop once you have opened **3 fix PRs**.
+List open PRs whose head branch starts with `claude/`, that **originate from this repository itself** (not a fork), and that have at least one failing check (use `gh pr list --state open --json number,headRefName,headRepositoryOwner,isCrossRepository,statusCheckRollup`). A `claude/` branch name alone is **not** proof the PR is the fleet's own — a fork author picks their own branch names — so a PR only counts when `isCrossRepository` is `false` (equivalently, `headRepositoryOwner.login` equals this repo's owner). **Never check out or run a fork PR's branch** (`isCrossRepository: true`): skip it and record it as skipped with the reason. Process oldest-first. Skip any PR already labeled `ready-for-human`. Stop once you have opened **3 fix PRs**.
 
 ## For each failing check on a PR
 
