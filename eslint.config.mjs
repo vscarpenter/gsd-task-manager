@@ -9,8 +9,6 @@ const config = [
             ".agents/**",
             ".claude/skills/**",
             ".cursor/**",
-            ".entire/**",
-            ".opencode/**",
             ".pi/**",
             "out/**",
             "coverage/**",
