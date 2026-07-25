@@ -58,6 +58,8 @@ sync.md
 !.claude/skills/pb-collection/
 !.claude/skills/branch-preflight/
 !.claude/skills/verify-frontend-change/
+!.claude/skills/claude-code-primitives/
+!.claude/skills/sentry-verification/
 
 *.tsbuildinfo
 
