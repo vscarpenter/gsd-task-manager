@@ -33,37 +33,18 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 
 ### Development
 - `bun install` - Install dependencies
-- `bun dev` - Start development server at http://localhost:3000
-- `bun typecheck` - Run TypeScript type checking
 
 ### Testing & Quality
 - `bun run test` - Run Vitest tests in CI mode (`bun test` invokes bun's built-in runner, not vitest)
 - `bun run test:watch` - Run Vitest in watch mode
 - `bun run test -- --coverage` - Generate coverage report (target: ≥80%)
-- `bun lint` - Run ESLint
-- `bun run test:e2e` - Run Playwright end-to-end tests
-- `bun run test:e2e:ui` - Run Playwright tests with UI mode
-- `bun run test:e2e:debug` - Run Playwright tests in debug mode
 
 ### Build & Deployment
-- `bun run build` - Build production bundle
-- `bun run export` - Generate static export for S3/CloudFront
 - `./scripts/deploy-cloudfront-function.sh` - Deploy CloudFront Function for SPA routing
 
 **CloudFront Edge Routing**: Required because S3 doesn't auto-serve `index.html` for directory paths. Run the deploy script after adding new App Router routes.
 
 ## Architecture
-
-### Data Layer
-- **IndexedDB via Dexie** (`lib/db.ts`): `tasks`, `archivedTasks`, `smartViews`, `notificationSettings`, `appPreferences` (plus sync-internal tables) at schema v14
-- **CRUD Operations** (`lib/tasks.ts`): Task mutations, subtask/dependency management
-- **Bulk Operations** (`lib/bulk-operations.ts`): Batch operations for multi-select
-- **Live Queries** (`lib/use-tasks.ts`): `useTasks()` hook with live updates
-- **Schema Validation** (`lib/schema.ts`): Zod schemas for all data types
-- **Analytics** (`lib/analytics/`): Modular productivity metrics
-- **Notifications** (`lib/notifications/`): Modular notification system
-- **Dependencies** (`lib/dependencies.ts`): Circular dependency detection, blocking/blocked queries
-- **Structured Logging** (`lib/logger.ts`): Environment-aware logger with contexts and secret sanitization
 
 ### Quadrant System
 Tasks are classified by `urgent` and `important` boolean flags:
@@ -73,19 +54,6 @@ Tasks are classified by `urgent` and `important` boolean flags:
 - `not-urgent-not-important` - Eliminate (Q4)
 
 Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
-
-### Component Structure
-- **App Router** (`app/`): Matrix view, dashboard, archive, sync-history, install pages
-- **UI Components** (`components/ui/`): shadcn-style primitives
-- **Domain Components**:
-  - `components/matrix-simplified/` - v9 single-matrix shell (app-shell, capture-bar, edit-drawer, help-drawer, matrix-grid, topbar, icon-rail)
-  - `components/task-card/` - Task card with header/metadata/actions sub-components
-  - `components/sync/` - Sync button, auth dialog, OAuth buttons
-  - `components/settings/` - Settings sections (appearance, notifications, sync, archive, data-management, about)
-  - `components/settings-page/` - Full-page settings shell (used by `app/settings/`)
-  - `components/dashboard/` - Analytics charts and metrics
-  - `components/about/` - About page sections
-  - `components/command-palette/` - ⌘K palette implementation (currently not wired into v9 shell — resurrection planned)
 
 ### Key Patterns
 - **Client-side only**: All components use `"use client"` - no server rendering
@@ -161,13 +129,6 @@ These packages are not self-explanatory from their names alone:
 
 ### Cloud Sync, MCP Server, OAuth
 Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and `.claude/rules/mcp-server.md`. Those auto-load when you edit the relevant subtrees.
-
-### Sentry verification (recurring debugging task)
-When testing Sentry capture after a DSN change or deploy:
-1. Confirm DSN is loaded: `console.log` in `lib/sentry/init.ts` (or wherever Sentry.init runs) and grep dev console for "Sentry initialized".
-2. Trigger a test error: `Sentry.captureException(new Error("manual-test-from-claude"))` in a dev-only handler, OR throw from a component error boundary.
-3. Verify in Sentry dashboard within ~30s.
-4. Remove the test trigger before commit (it's not a regression — leave it out of source).
 
 ### Test-Driven Development (TDD)
 
