@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="An autonomous delivery pipeline for GSD Task Manager — three loops, two gates, four separated-duty agents.">
+<meta name="description" content="An autonomous delivery pipeline for GSD Task Manager — three loops, two gates, three separated-duty actors.">
 <title>Two Gates &amp; a Night Shift — GSD Delivery Pipeline</title>
 <style>
   :root {
@@ -119,31 +119,35 @@
   <div class="hero-in">
     <div class="kicker"><span class="dot"></span><span class="eyebrow">GSD Task Manager · Agentic SDLC</span></div>
     <h1>Two Gates &amp; a Night Shift</h1>
-    <p class="lede">An autonomous delivery pipeline where three Claude agents do the work, two human approvals guard it, and a scheduled night shift keeps it unclogged — built and running for the GSD Task Manager repo.</p>
+    <p class="lede">An autonomous delivery pipeline where two Claude agents do the work, two human approvals guard it, and a nightly maintenance run keeps it unclogged — built and running for the GSD Task Manager repo.</p>
     <div class="stats">
       <div class="stat"><div class="n">3</div><div class="k">Nested loops</div></div>
       <div class="stat"><div class="n">2</div><div class="k">Human gates</div></div>
-      <div class="stat"><div class="n">4</div><div class="k">Separated actors</div></div>
-      <div class="stat"><div class="n">5</div><div class="k">Build cycles</div></div>
+      <div class="stat"><div class="n">3</div><div class="k">Separated actors</div></div>
+      <div class="stat"><div class="n">6</div><div class="k">Pipeline milestones</div></div>
     </div>
   </div>
 </header>
 
 <main class="wrap">
   <section>
-    <div class="panel" style="border-color:var(--gate-line); background:var(--gate-bg);">
-      <strong>Historical pipeline snapshot.</strong>
-      This page documents the original five-cycle design. The Claude review,
-      release-ready, telemetry, and GitHub Pages workflows have since been
-      retired, and the DEV deployment is disabled. Current operations are
-      documented in <code>docs/ops/gate2.md</code> and <code>docs/agents/README.md</code>.
+    <div class="panel" style="border-color:var(--gate-line); background:var(--gate-bg); padding:1.1rem 1.3rem;">
+      <strong>Current as of 2026-07-23.</strong>
+      Three of the original build cycles are still live day to day — the Contract,
+      the Builder + Gate 1, and the Night Shift. The automated reviewer bot, its
+      <code>release-ready</code> check, and the weekly telemetry rollup shipped in
+      the first build were retired the same day as a security-hardening pass (see
+      “How it was built” below), in favor of branch protection, required Code Owner
+      review, and manual audits. Living operating detail lives in
+      <code>docs/ops/gate2.md</code> and <code>docs/agents/README.md</code>; this
+      page is the map.
     </div>
   </section>
 
   <section>
     <div class="sec-head"><span class="eyebrow">The idea</span><h2>Everything between the gates is automated. Everything at the gates is judgment.</h2></div>
     <div class="prose">
-      <p>A change starts as a <strong>GitHub issue written like a spec</strong>. A builder agent claims it, drafts a plan sized to its risk, and stops for approval. On your nod it builds to versioned coding standards, opens a pull request, and a reviewer agent checks it alongside CI. When it's clean you approve the release after testing the running software. A third agent works nights, repairing the mechanical failures that pile up on open PRs. The two approvals are the only human footprint — and they sit exactly where a caught mistake is cheapest.</p>
+      <p>A change starts as a <strong>GitHub issue written like a spec</strong>. A builder agent claims it, drafts a plan sized to its risk, and stops for your approval. On your nod it builds to versioned coding standards and opens a pull request — required CI and your mandatory Code Owner review are the only way it can merge. Once you've merged and tested the running software, you approve the release. A second agent works nights, repairing the mechanical failures that pile up on open PRs. Two approvals are the entire human footprint on the happy path — and they sit exactly where a caught mistake is cheapest.</p>
     </div>
   </section>
 
@@ -151,8 +155,8 @@
     <div class="sec-head"><span class="eyebrow">Structure</span><h2>Three nested loops, each protecting the ones it wraps</h2></div>
     <div class="panel" style="padding:1.4rem; margin-bottom:1.1rem;">
       <div style="border:1.5px dashed color-mix(in srgb,var(--accent) 40%,var(--line)); border-radius:14px; padding:1rem 1rem 1.1rem;">
-        <div class="eyebrow" style="color:var(--accent-2)">Learning loop · continuous</div>
-        <p class="node-s" style="font-size:.84rem;color:var(--muted);margin:.15rem 0 .9rem;">Telemetry + audits feed mistakes back into the standards.</p>
+        <div class="eyebrow" style="color:var(--accent-2)">Learning loop · manual audit</div>
+        <p class="node-s" style="font-size:.84rem;color:var(--muted);margin:.15rem 0 .9rem;">A standing human spot-check + versioned standards feed mistakes back — no automated collector runs anymore.</p>
         <div style="border:1.5px solid var(--gate-line); background:color-mix(in srgb,var(--gate-bg) 40%,transparent); border-radius:12px; padding:1rem;">
           <div class="eyebrow" style="color:var(--gate)">Maintenance loop · nightly</div>
           <p style="font-size:.84rem;color:var(--muted);margin:.15rem 0 .9rem;">The night shift clears mechanical failures before they cost attention.</p>
@@ -178,17 +182,18 @@
         <div class="chev">→</div>
         <div class="node accent-node"><div class="t">Agent · Builder</div><div class="l">Build to standards</div><div class="s">TDD · commit · PR</div></div>
         <div class="chev">→</div>
-        <div class="node accent-node"><div class="t">Agent · Reviewer + CI</div><div class="l">Review the PR</div><div class="s">clean → release-ready</div></div>
+        <div class="node"><div class="t">PR gate</div><div class="l">CI + Code Owner review</div><div class="s">required checks · resolved threads</div></div>
         <div class="chev">→</div>
-        <div class="gate"><div class="t">◆ Gate 2</div><div class="l">Release approval</div><div class="s">test preview · rollback ready</div></div>
+        <div class="gate"><div class="t">◆ Gate 2</div><div class="l">Release approval</div><div class="s">running-app check · rollback ready</div></div>
         <div class="chev">→</div>
         <div class="node"><div class="t">Ship</div><div class="l">Production</div><div class="s">deploy → smoke test</div></div>
       </div>
     </div>
     <ul class="clean" style="margin-top:1.1rem;">
       <li><strong>Risk tiers scale the work.</strong> A <code>docs</code> or <code>chore</code> change is auto-approved past Gate 1 and built in one pass; a <code>feature</code> or <code>risky</code> change gets the full plan and a mandatory human stop.</li>
-      <li><strong>Issues route back to the builder.</strong> If the reviewer or CI finds a problem, unresolved threads block <code>release-ready</code> and the merge until they're addressed.</li>
-      <li><strong>The builder never merges.</strong> It opens a PR and stops; the pipeline lands it only after Gate 2.</li>
+      <li><strong>The PR gate can't be talked past.</strong> If required CI fails or a review thread is unresolved, the PR simply cannot merge — branch protection enforces it, not a person remembering to check.</li>
+      <li><strong>The builder never merges.</strong> It opens a PR and stops; only you land it, and only after Gate 2.</li>
+      <li><strong>The bot reviewer retired.</strong> A dedicated Claude reviewer and its <code>release-ready</code> check ran for two weeks and were cut on 2026-07-23 as low-value — branch protection, required CI, and mandatory Code Owner review do the same job with one fewer moving part to maintain.</li>
     </ul>
   </section>
 
@@ -242,6 +247,7 @@
     <ul class="clean" style="margin-top:1.1rem;">
       <li><strong>Verify before submit.</strong> A fix is only offered if it makes the failing check actually pass locally — a plausible-but-wrong fix never leaves the machine.</li>
       <li><strong>Fixes re-enter the same gate.</strong> Every repair is a fresh PR that faces CI and review; the night shift never merges and never touches a branch it didn't create.</li>
+      <li><strong>The same-repo check is hardened.</strong> Early on, any <code>claude/*</code>-named branch was trusted as the fleet's own — but a fork picks its own branch names. A 2026-07-23 security review closed that gap: only PRs GitHub itself confirms are same-repository (<code>isCrossRepository: false</code>) are eligible; a fork PR is skipped and logged, never checked out or run.</li>
       <li><strong>It files its own incident report</strong> to a control issue each run — what it fixed, escalated, or skipped, plus any anomaly it noticed about itself.</li>
     </ul>
   </section>
@@ -255,13 +261,16 @@
         </thead>
         <tbody>
           <tr><th>Builder</th><td class="y">✓</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
-          <tr><th>Reviewer</th><td class="n">✗</td><td class="n">✗</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
           <tr><th>Night shift</th><td class="y">✓</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
+          <tr><th>CI (required checks)</th><td class="dash">—</td><td class="dash">—</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
           <tr><th>You (human)</th><td class="dash">—</td><td class="dash">—</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="prose" style="margin-top:1.1rem;">No single actor can move a change from idea to production alone. The builder that writes the code can never approve it; the reviewer can't deploy; the night shift can do neither. That control is borrowed from decades of enterprise thinking — for a solo developer it can't mean separate people, so it means <strong>separate powers</strong>.</p>
+    <p class="cap">CI has no judgment to exercise — it's listed for contrast, not as a fourth actor. Three actors carry discretion: the builder, the night shift, and you.</p>
+    <div class="prose" style="margin-top:1.1rem;">
+      <p>No single actor can move a change from idea to production alone. The builder that writes the code can never approve, merge, or deploy it; the night shift that repairs a broken PR can't merge it either. That control is borrowed from decades of enterprise thinking — for a solo developer it can't mean separate people, so it means <strong>separate powers</strong>, held by separate processes running under separate credentials.</p>
+    </div>
   </section>
 
   <section>
@@ -273,25 +282,55 @@
       </div>
       <div class="panel" style="padding:1.2rem; border-top:3px solid var(--gate);">
         <div class="gate" style="display:inline-block; min-width:auto; margin-bottom:.7rem;"><div class="t">◆ Gate 2 · Release</div></div>
-        <p style="color:var(--ink-2); font-size:.94rem;">By now the plan was approved, the standards held, a reviewer signed off, and CI passed. The final check is upgraded <strong>from trust to evidence</strong> — you approve software you watched run, not a diff you skimmed. The rule is absolute: <strong>no rollback path, no approval.</strong> The deploy is then proven with smoke tests, not assumed.</p>
+        <p style="color:var(--ink-2); font-size:.94rem;">By now the plan was approved, the standards held, required CI passed, and your Code Owner review resolved every thread. The final check is upgraded <strong>from trust to evidence</strong> — you approve software you watched run, not a diff you skimmed. The rule is absolute: <strong>no rollback path, no approval.</strong> The deploy is then proven with smoke tests, not assumed.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><span class="eyebrow">The learning loop</span><h2>Telemetry keeps it honest; the standards are the interface</h2></div>
+    <div class="sec-head"><span class="eyebrow">Distribution</span><h2>One tag, three channels — only two of them wait for Gate 2</h2></div>
     <div class="prose" style="margin-bottom:1.2rem;">
-      <p>When an agent makes a category of mistake, the fix goes into the <strong>versioned coding standards</strong>, not just the code — so every future build inherits the correction and each failure is paid down once. A weekly job measures where the pipeline drags, and audit findings flow back into the standards the same way.</p>
+      <p>Pushing a <code>vX.Y.Z</code> tag fans out to everything a release ships, but the three things it produces are not equally gated.</p>
+    </div>
+    <div class="scroll">
+      <div style="display:grid; grid-template-columns:repeat(3,minmax(14rem,1fr)); gap:.8rem; min-width:46rem;">
+        <div class="gate">
+          <div class="t">◆ Gated</div>
+          <div class="l">Production website</div>
+          <div class="s"><code>deploy-prod.yml</code> → <code>production</code> Environment, required reviewer</div>
+        </div>
+        <div class="gate">
+          <div class="t">◆ Gated</div>
+          <div class="l">MCP server package</div>
+          <div class="s"><code>publish-mcp-server.yml</code> → <code>mcp-release</code> Environment, required reviewer</div>
+        </div>
+        <div class="node">
+          <div class="t" style="color:var(--muted)">Ungated</div>
+          <div class="l">Self-hosted Docker image</div>
+          <div class="s"><code>publish-docker.yml</code> → GHCR + Docker Hub, ships the moment CI passes</div>
+        </div>
+      </div>
+    </div>
+    <p class="prose" style="margin-top:1.1rem;">Only the two channels backed by a GitHub Environment pause for a human. The Docker image is closer to publishing a library than approving a deploy — self-hosters who pull a tag are opting into whatever that tag contains, the same trust model as an npm package. Worth knowing before assuming "the release is gated" covers all three.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">The learning loop</span><h2>No collector runs anymore — a standing human audit does the same job</h2></div>
+    <div class="prose" style="margin-bottom:1.2rem;">
+      <p>When an agent makes a category of mistake, the fix goes into the <strong>versioned coding standards</strong>, not just the code — so every future build inherits the correction. The weekly telemetry rollup that used to gather this automatically was retired on 2026-07-23 alongside the bot reviewer; a spot-check now does the same job with less to maintain. Roughly <strong>1 in 10 merged PRs</strong> gets read by hand, deliberately over-sampling the merges the gates trust most: fast-lane <code>risk:docs</code>/<code>risk:chore</code> changes, night-shift fix PRs, anything Gate 1 auto-approved. A "chore" that touches auth is not a chore — the audit re-reads the diff, not the label.</p>
+    </div>
+    <div class="panel" style="padding:1.1rem 1.3rem; border-left:3px solid var(--pass); margin-bottom:1.2rem;">
+      <strong>It found a real one.</strong> The same 2026-07-23 review that audited the pipeline's own trust boundary found the night shift trusting any <code>claude/*</code>-named branch as the fleet's own — but a fork PR's branch name is attacker-controlled. Both the fix and the provenance check it introduced are now load-bearing lines in <code>docs/agents/night-shift.md</code>. The escaped defect that prompted it never gets reviewed twice.
     </div>
     <div class="scroll">
       <div style="display:grid; grid-template-columns:repeat(4,minmax(9rem,1fr)); gap:.7rem; min-width:40rem;">
-        <div class="node"><div class="t">Metric</div><div class="l">Cycle time</div><div class="s">issue → production</div></div>
-        <div class="node"><div class="t">Metric</div><div class="l">Plan-revision rate</div><div class="s">clarity of the ask</div></div>
-        <div class="node"><div class="t">Metric</div><div class="l">Findings / PR</div><div class="s">reviewer signal</div></div>
-        <div class="node"><div class="t">Metric</div><div class="l">Tokens / merged PR</div><div class="s">cost of a change</div></div>
+        <div class="node"><div class="t">Watch</div><div class="l">Cycle time</div><div class="s">issue → production</div></div>
+        <div class="node"><div class="t">Watch</div><div class="l">Plan-revision rate</div><div class="s">clarity of the ask</div></div>
+        <div class="node"><div class="t">Watch</div><div class="l">Findings / PR</div><div class="s">spot-check signal</div></div>
+        <div class="node"><div class="t">Watch</div><div class="l">Tokens / merged PR</div><div class="s">cost of a change</div></div>
       </div>
     </div>
-    <p class="cap">The point is not to admire the dashboard — it's to find the next weak gate before it becomes the next escaped defect.</p>
+    <p class="cap">The point is not to admire a dashboard — it's to find the next weak gate before it becomes the next escaped defect.</p>
   </section>
 
   <section>
@@ -301,24 +340,34 @@
       <span class="pill solid" style="--c:#B60205"><span class="d"></span>triage:paused</span>
       <span style="color:var(--ink-2); font-size:.94rem; flex:1; min-width:15rem;">Add the label to the relevant control issue and the next run posts one line and exits — no code change, no SSH. A standing audit spot-checks roughly one in ten merged PRs by hand; each agent keeps its autonomy only while those stay clean.</span>
     </div>
+    <div class="prose" style="margin-top:1.1rem;">
+      <p>Labels are the outermost guard, not the only one. Every scheduled run also gets a disposable git worktree and a scoped tool allow-list — <code>git</code>, <code>gh</code>, <code>bun</code>/<code>node</code>, and in-repo file edits, never <code>--dangerously-skip-permissions</code> — so a bad run can't wander outside its lane even before a human notices.</p>
+    </div>
   </section>
 
   <section>
-    <div class="sec-head"><span class="eyebrow">How it was built</span><h2>Five cycles, each spec → plan → tested build → PR</h2></div>
+    <div class="sec-head"><span class="eyebrow">How it was built</span><h2>Six milestones, three days of building and two weeks of hardening it earned</h2></div>
     <ol class="timeline">
-      <li><span class="tn">A</span><div><div class="tt">The Contract</div><div class="td">An enforced GitHub issue form + <code>risk:*</code> labels, with an auto-labeler. Raises the floor before any agent sees the work.</div></div></li>
-      <li><span class="tn">B</span><div><div class="tt">Builder + Gate 1</div><div class="td">A local scheduled routine that claims a contract, writes a risk-scaled plan, stops for a label-swap approval, then builds and opens a PR.</div></div></li>
-      <li><span class="tn">C</span><div><div class="tt">Review + Gate 2</div><div class="td">A deterministic <code>release-ready</code> signal and an evidence job that hands the approver a preview link and a real rollback command. CI was also made a <em>required</em> check.</div></div></li>
-      <li><span class="tn">D</span><div><div class="tt">The Night Shift</div><div class="td">A nightly routine that triages failing checks on the fleet's own PRs — fixing the mechanical, escalating the rest, never merging.</div></div></li>
-      <li><span class="tn">E</span><div><div class="tt">Telemetry + standards loop</div><div class="td">A weekly collector for the four metrics, a living dashboard issue, and the bridge that turns audit findings into standards rules.</div></div></li>
+      <li><span class="tn">A</span><div><div class="tt">The Contract <span style="font-weight:600;color:var(--muted);font-size:.78rem;font-family:var(--mono);">Jul 7</span></div><div class="td">An enforced GitHub issue form + <code>risk:*</code> labels, with an auto-labeler. Raises the floor before any agent sees the work.</div></div></li>
+      <li><span class="tn">B</span><div><div class="tt">Builder + Gate 1 <span style="font-weight:600;color:var(--muted);font-size:.78rem;font-family:var(--mono);">Jul 7</span></div><div class="td">A local scheduled routine that claims a contract, writes a risk-scaled plan, stops for a label-swap approval, then builds and opens a PR.</div></div></li>
+      <li><span class="tn">C</span><div><div class="tt">Review + Gate 2 <span style="font-weight:600;color:var(--muted);font-size:.78rem;font-family:var(--mono);">Jul 7</span></div><div class="td">A deterministic <code>release-ready</code> signal, a Claude reviewer bot, and an evidence job with a real rollback command. CI was also made a <em>required</em> check.</div></div></li>
+      <li><span class="tn">D</span><div><div class="tt">The Night Shift <span style="font-weight:600;color:var(--muted);font-size:.78rem;font-family:var(--mono);">Jul 8</span></div><div class="td">A nightly routine that triages failing checks on the fleet's own PRs — fixing the mechanical, escalating the rest, never merging.</div></div></li>
+      <li><span class="tn">E</span><div><div class="tt">Telemetry + standards loop <span style="font-weight:600;color:var(--muted);font-size:.78rem;font-family:var(--mono);">Jul 8</span></div><div class="td">A weekly collector for four pipeline metrics and a living dashboard issue.</div></div></li>
+      <li><span class="tn">F</span><div><div class="tt">Harden &amp; simplify <span style="font-weight:600;color:var(--muted);font-size:.78rem;font-family:var(--mono);">Jul 23</span></div><div class="td">A security review finds two real vulnerabilities in the pipeline's own trust boundary — a PocketBase admin-surface bypass and a fork PR able to spoof the night shift's branch check — both fixed the same day. That same day, the reviewer bot, <code>release-ready.yml</code>, and <code>telemetry.yml</code> are retired: branch protection, Code Owners, and manual audits do the job with less to maintain.</div></div></li>
     </ol>
   </section>
 
   <section>
+    <div class="sec-head"><span class="eyebrow">Proven, twice</span><h2>Once by shipping unattended, once by catching its own hole</h2></div>
+    <div class="proof" style="margin-bottom:1.1rem;">
+      <div class="eyebrow" style="color:var(--pass);">Jul 8 — proven live</div>
+      <h3 style="font-size:1.2rem; font-weight:750; margin:.4rem 0 .6rem;">The pipeline shipped its own first real change, unattended.</h3>
+      <p style="color:var(--ink-2); max-width:64ch;">Issue #432 asked for an index of the agent operating docs. Filed <code>risk:chore</code> and auto-labeled, the builder claimed it: the plan auto-approved, the file was built to spec on a <code>claude/*</code> branch, and PR #433 opened, passed required checks, and merged — created at 12:49 UTC, merged at 13:08, about twenty minutes end to end. The same day, the first live run also surfaced and fixed a real deployment bug of its own: a stripped launchd <code>PATH</code> that silently kept the wrapper scripts from finding <code>gh</code>/<code>git</code>/<code>claude</code>, caught in seconds because the wrappers log their errors instead of swallowing them.</p>
+    </div>
     <div class="proof">
-      <div class="eyebrow" style="color:var(--pass);">Proven live</div>
-      <h3 style="font-size:1.25rem; font-weight:750; margin:.4rem 0 .6rem;">The pipeline shipped its own first change, unattended.</h3>
-      <p style="color:var(--ink-2); max-width:60ch;">A <code>risk:chore</code> contract was filed and auto-labeled. With no further input, the builder claimed it, auto-approved the plan, built the file to spec on a <code>claude/*</code> branch, and opened a pull request — which then flowed through CI, the reviewer, and <code>release-ready</code> before it could land. The first live run also surfaced and fixed a real deployment bug (a stripped launchd <code>PATH</code>), caught in seconds because the wrappers log their errors instead of swallowing them.</p>
+      <div class="eyebrow" style="color:var(--pass);">Jul 23 — proven under scrutiny</div>
+      <h3 style="font-size:1.2rem; font-weight:750; margin:.4rem 0 .6rem;">Two weeks later, a security review found a real hole — in the pipeline itself.</h3>
+      <p style="color:var(--ink-2); max-width:64ch;">A review of the pipeline's own trust boundary found that the night shift's fork-PR filter trusted a <code>claude/*</code>-prefixed branch name alone to decide what got checked out and run locally — and a branch name is attacker-controlled on a fork. The fix (gate on GitHub's own <code>isCrossRepository</code> / <code>headRepositoryOwner</code> fields, fail closed on missing provenance) shipped the same day, verified by an independent reviewer plus an adversarial pass over the diff. The same day, the parts of the pipeline that weren't earning their keep — the reviewer bot, <code>release-ready.yml</code>, <code>telemetry.yml</code> — were retired.</p>
     </div>
   </section>
 
@@ -326,17 +375,19 @@
     <div class="sec-head"><span class="eyebrow">Key components</span><h2>Where each piece lives in the repo</h2></div>
     <div class="grid-files">
       <div class="frow"><code>coding-standards.md</code><span>The versioned definition of done every agent builds against</span></div>
-      <div class="frow"><code>ISSUE_TEMPLATE/change_request.yml</code><span>The enforced contract + <code>apply-risk-label.yml</code></span></div>
-      <div class="frow"><code>scripts/builder-run.sh</code> · <code>/build-next</code><span>The builder wrapper + its operating command</span></div>
+      <div class="frow"><code>ISSUE_TEMPLATE/change_request.yml</code><span>The enforced contract, labeled by <code>apply-risk-label.yml</code></span></div>
+      <div class="frow"><span><code>scripts/builder-run.sh</code> · <code>/build-next</code></span><span>The builder wrapper + its operating command</span></div>
+      <div class="frow"><span><code>CODEOWNERS</code> + branch protection</span><span>The PR gate — required CI, required review, resolved threads (<code>docs/ops/gate2.md</code>)</span></div>
       <div class="frow"><code>deploy-prod.yml</code><span>Gate 2 — the <code>production</code> Environment reviewer + smoke test</span></div>
-      <div class="frow"><code>scripts/triage-run.sh</code> · <code>/triage-prs</code><span>The night shift wrapper + its triage command</span></div>
-      <div class="frow"><code>telemetry.yml</code><span>The weekly metrics collector + Pipeline Telemetry issue</span></div>
+      <div class="frow"><span><code>scripts/triage-run.sh</code> · <code>/triage-prs</code></span><span>The night shift wrapper + its triage command</span></div>
+      <div class="frow"><code>docs/ops/pipeline-audit.md</code><span>The learning loop, now a manual spot-check discipline</span></div>
+      <div class="frow"><span><code>publish-mcp-server.yml</code> · <code>publish-docker.yml</code></span><span>The other two things a release tag ships — one gated, one not</span></div>
     </div>
   </section>
 
   <div class="footer">
     <div style="border-top:1px solid var(--line); padding-top:1.4rem;">
-      Built for <strong style="color:var(--ink-2);">GSD Task Manager</strong> — an implementation of the essay <em>“Two Gates and a Night Shift.”</em> Three loops, two gates, four separated-duty actors, and a set of durable artifacts — the issues, the spec, and the standards — that the code is downstream of.
+      Built for <strong style="color:var(--ink-2);">GSD Task Manager</strong> — an implementation of the essay <em>“Two Gates and a Night Shift.”</em> Three loops, two gates, three separated-duty actors, and a set of durable artifacts — the issues, the spec, and the standards — that the code is downstream of.
     </div>
   </div>
 </main>
@@ -347,7 +398,7 @@
   .timeline li{display:flex; gap:1rem; padding:1rem 0; border-bottom:1px solid var(--line-2); align-items:flex-start;}
   .timeline li:last-child{border-bottom:0;}
   .timeline .tn{flex:0 0 auto; width:2rem; height:2rem; border-radius:8px; display:grid; place-items:center; font-family:var(--mono); font-weight:700; font-size:.95rem; color:var(--accent-2); background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));}
-  .timeline .tt{font-weight:700; color:var(--ink); font-size:1.02rem;}
+  .timeline .tt{font-weight:700; color:var(--ink); font-size:1.02rem; display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap;}
   .timeline .td{color:var(--ink-2); font-size:.92rem; margin-top:.2rem; max-width:62ch;}
   .proof{background:linear-gradient(180deg, color-mix(in srgb,var(--pass-bg) 60%,var(--surface)), var(--surface)); border:1px solid color-mix(in srgb,var(--pass) 35%,var(--line)); border-left:4px solid var(--pass); border-radius:14px; padding:1.5rem; box-shadow:var(--shadow);}
   .grid-files{display:grid; grid-template-columns:1fr 1fr; gap:.7rem;}
