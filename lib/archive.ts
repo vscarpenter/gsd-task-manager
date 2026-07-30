@@ -165,6 +165,45 @@ export async function restoreTask(taskId: string): Promise<void> {
 }
 
 /**
+ * Move a single live task straight into the archive, regardless of its age.
+ *
+ * This is the exact inverse of restoreTask and backs the "Undo" affordance on a
+ * restore, so it carries the same guarantees: one transaction (a failure between
+ * the two writes would strand the task in both tables), and a queued remote
+ * delete so other devices drop it too — matching what archiveOldTasks does.
+ *
+ * Uses put rather than add for the same reason archiveOldTasks uses bulkPut: a
+ * stale archived row must not make the undo permanently fail.
+ */
+export async function archiveTaskNow(taskId: string): Promise<void> {
+  const db = getDb();
+
+  // Resolved before the transaction opens — see restoreTask for why awaiting a
+  // non-Dexie promise inside a Dexie transaction breaks its atomicity.
+  const { getSyncConfig } = await import("@/lib/sync/config");
+  const syncConfig = await getSyncConfig();
+  const queue = getSyncQueue();
+
+  await db.transaction(
+    "rw",
+    [db.tasks, db.archivedTasks, db.syncQueue],
+    async () => {
+      const task = await db.tasks.get(taskId);
+      if (!task) {
+        throw new Error("Task not found");
+      }
+
+      await db.archivedTasks.put({ ...task, archivedAt: new Date().toISOString() });
+      await db.tasks.delete(taskId);
+
+      if (syncConfig?.enabled) {
+        await queue.enqueue('delete', taskId, task);
+      }
+    }
+  );
+}
+
+/**
  * Permanently delete an archived task
  */
 export async function deleteArchivedTask(taskId: string): Promise<void> {

@@ -5,6 +5,7 @@ import {
   archiveOldTasks,
   listArchivedTasks,
   restoreTask,
+  archiveTaskNow,
   deleteArchivedTask,
   getArchivedCount,
 } from "@/lib/archive";
@@ -460,6 +461,72 @@ describe("archive", () => {
       expect([first.status, second.status].sort()).toEqual(["fulfilled", "rejected"]);
       expect(await db.tasks.count()).toBe(1);
       expect(await db.archivedTasks.count()).toBe(0);
+    });
+  });
+
+  describe("archiveTaskNow", () => {
+    it("should_move_a_live_task_into_the_archive", async () => {
+      const db = getDb();
+      await db.tasks.add(createMockTask({ id: "undo-me", title: "Undo Me" }));
+
+      await archiveTaskNow("undo-me");
+
+      expect(await db.tasks.count()).toBe(0);
+      const archived = await db.archivedTasks.get("undo-me");
+      expect(archived).toBeDefined();
+      expect(archived!.archivedAt).toBeTruthy();
+    });
+
+    it("should_throw_when_the_task_is_not_live", async () => {
+      await expect(archiveTaskNow("nonexistent")).rejects.toThrow("Task not found");
+    });
+
+    it("should_leave_both_tables_untouched_when_the_sync_enqueue_fails", async () => {
+      // Inverse of the restoreTask hole: without a transaction the archived row
+      // is written before the live row is removed, so a failure between them
+      // leaves the task in both tables.
+      const db = getDb();
+      vi.mocked(getSyncConfig).mockResolvedValue({ enabled: true } as never);
+      enqueueMock.mockRejectedValue(new Error("sync queue write failed"));
+      await db.tasks.add(createMockTask({ id: "atomic-undo", title: "Atomic Undo" }));
+
+      await expect(archiveTaskNow("atomic-undo")).rejects.toThrow();
+
+      expect(await db.tasks.count()).toBe(1);
+      expect(await db.archivedTasks.count()).toBe(0);
+    });
+
+    it("should_enqueue_a_delete_so_other_devices_drop_the_task", async () => {
+      const db = getDb();
+      vi.mocked(getSyncConfig).mockResolvedValue({ enabled: true } as never);
+      await db.tasks.add(createMockTask({ id: "sync-undo", title: "Sync Undo" }));
+
+      await archiveTaskNow("sync-undo");
+
+      expect(enqueueMock).toHaveBeenCalledWith(
+        "delete",
+        "sync-undo",
+        expect.objectContaining({ id: "sync-undo" })
+      );
+    });
+
+    it("should_overwrite_a_stale_archived_copy_instead_of_colliding", async () => {
+      // Same reasoning as archiveOldTasks' bulkPut: re-archiving must be
+      // idempotent, or a lingering archived row makes undo permanently fail.
+      const db = getDb();
+      const task = createMockTask({ id: "already-archived", title: "Newer Title" });
+      await db.archivedTasks.add({
+        ...createMockTask({ id: "already-archived", title: "Stale Title" }),
+        archivedAt: "2026-07-05T00:00:00.000Z",
+      });
+      await db.tasks.add(task);
+
+      await archiveTaskNow("already-archived");
+
+      expect(await db.tasks.count()).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(1);
+      const archived = await db.archivedTasks.get("already-archived");
+      expect(archived!.title).toBe("Newer Title");
     });
   });
 
