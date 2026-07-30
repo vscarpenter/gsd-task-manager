@@ -126,28 +126,42 @@ export async function listArchivedTasks(): Promise<TaskRecord[]> {
 export async function restoreTask(taskId: string): Promise<void> {
   const db = getDb();
 
-  const archivedTask = await db.archivedTasks.get(taskId);
-  if (!archivedTask) {
-    throw new Error("Task not found in archive");
-  }
-
-  // Remove archivedAt timestamp
-  const { archivedAt: _archivedAt, ...taskWithoutArchive } = archivedTask;
-
-  // Move back to main tasks table; load the sync-config module concurrently
-  // since the import does not depend on the write completing.
-  const [, { getSyncConfig }] = await Promise.all([
-    db.tasks.add(taskWithoutArchive),
-    import("@/lib/sync/config"),
-  ]);
+  // Resolve the sync dependencies BEFORE opening the transaction. Awaiting a
+  // non-Dexie promise (the dynamic import, the config read) inside a Dexie
+  // transaction lets it commit early, which would reopen the very atomicity
+  // hole the transaction exists to close. Same ordering as archiveOldTasks.
+  const { getSyncConfig } = await import("@/lib/sync/config");
   const syncConfig = await getSyncConfig();
-  if (syncConfig?.enabled) {
-    const queue = getSyncQueue();
-    await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive);
-  }
+  const queue = getSyncQueue();
 
-  // Remove from archive
-  await db.archivedTasks.delete(taskId);
+  // The read, both writes, and the sync enqueue commit as one unit. Previously
+  // the task was added to `tasks` and only removed from `archivedTasks` several
+  // awaits later, so any failure in between (or a closed tab) left it in BOTH
+  // tables — a live task wearing an archived id, which the v15 cleanup then has
+  // to be careful not to delete. Reading the archived row inside the
+  // transaction also closes the TOCTOU gap between two concurrent restores:
+  // IndexedDB serializes transactions with overlapping scope, so the second
+  // one sees the row already gone instead of colliding on `tasks.add`.
+  await db.transaction(
+    "rw",
+    [db.tasks, db.archivedTasks, db.syncQueue],
+    async () => {
+      const archivedTask = await db.archivedTasks.get(taskId);
+      if (!archivedTask) {
+        throw new Error("Task not found in archive");
+      }
+
+      // Remove archivedAt timestamp
+      const { archivedAt: _archivedAt, ...taskWithoutArchive } = archivedTask;
+
+      await db.tasks.add(taskWithoutArchive);
+      await db.archivedTasks.delete(taskId);
+
+      if (syncConfig?.enabled) {
+        await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive);
+      }
+    }
+  );
 }
 
 /**
