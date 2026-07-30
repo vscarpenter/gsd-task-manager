@@ -60,6 +60,14 @@ export async function applyRemoteChange(
     return;
   }
 
+  // Mirror the batch pull's archive guard: a locally archived task must not be
+  // resurrected by a realtime event either, or the SSE path would silently
+  // reintroduce the collision the pull path now prevents.
+  if (await db.archivedTasks.get(remoteTask.id)) {
+    logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
+    return;
+  }
+
   if (action === 'create') {
     const existing = await db.tasks.get(remoteTask.id);
     if (!existing) {

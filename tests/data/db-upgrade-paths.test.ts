@@ -587,6 +587,98 @@ describe('db upgrade callbacks', () => {
   });
 });
 
+describe('v15 upgrade: archive-resurrection cleanup', () => {
+  const V14_STORES = {
+    tasks: 'id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt',
+    archivedTasks: 'id, quadrant, completed, dueDate, completedAt, archivedAt',
+    smartViews: 'id, name, isBuiltIn, createdAt',
+    notificationSettings: 'id',
+    syncQueue: 'id, taskId, operation, timestamp, retryCount, status',
+    syncMetadata: 'key',
+    deviceInfo: 'key',
+    archiveSettings: 'id',
+    syncHistory: 'id, timestamp, status, deviceId',
+    appPreferences: 'id',
+  };
+
+  function legacyTask(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id,
+      title: `Task ${id}`,
+      description: '',
+      urgent: false,
+      important: false,
+      quadrant: 'not-urgent-not-important',
+      completed: true,
+      completedAt: '2026-06-01T00:00:00.000Z',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
+      recurrence: 'none',
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: false,
+      notificationSent: false,
+      timeEntries: [],
+      timeSpent: 0,
+      ...overrides,
+    };
+  }
+
+  beforeEach(async () => {
+    await deleteDb();
+    vi.resetModules();
+  });
+
+  it('removes tasks that already exist in archivedTasks', async () => {
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('archivedTasks').add({
+        ...legacyTask('resurrected'),
+        archivedAt: '2026-07-05T00:00:00.000Z',
+      });
+      // The sync pull re-added the archived task to `tasks`, which made every
+      // subsequent archive run abort with ConstraintError.
+      await legacy.table('tasks').bulkAdd([
+        legacyTask('resurrected'),
+        legacyTask('genuinely-live', { completed: false, completedAt: undefined }),
+      ]);
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    await expect(db.tasks.get('resurrected')).resolves.toBeUndefined();
+    await expect(db.tasks.get('genuinely-live')).resolves.toBeDefined();
+    // The archived copy is authoritative and must survive untouched.
+    await expect(db.archivedTasks.get('resurrected')).resolves.toBeDefined();
+  });
+
+  it('truncates over-long titles so the record stops being quarantined', async () => {
+    const overLongTitle = 'x'.repeat(81);
+
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('tasks').add(legacyTask('long-title', { title: overLongTitle }));
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    const repaired = await db.tasks.get('long-title');
+    expect(repaired).toBeDefined();
+    expect(repaired!.title).toHaveLength(80);
+    expect(repaired!.title).toBe('x'.repeat(80));
+  });
+
+  it('leaves compliant titles untouched', async () => {
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('tasks').add(legacyTask('short-title', { title: 'Perfectly fine' }));
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    const untouched = await db.tasks.get('short-title');
+    expect(untouched!.title).toBe('Perfectly fine');
+  });
+});
+
 describe('getDb() environment guard', () => {
   beforeEach(async () => {
     await deleteDb();

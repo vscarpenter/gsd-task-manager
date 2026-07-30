@@ -143,6 +143,90 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 });
 
+describe('pullRemoteChanges archive guard', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.archivedTasks.clear();
+    await db.syncQueue.clear();
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+  });
+
+  it('does not resurrect a task that is already archived locally', async () => {
+    // Archiving removes the task from `tasks` but leaves the remote copy alive,
+    // so without this guard every pull re-adds it — permanently undoing the
+    // archive and colliding with the archived copy on the next archive run.
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('archived-task'),
+      archivedAt: '2026-05-19T00:00:00.000Z',
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('archived-task', '2026-05-20T00:00:00.000Z')]),
+      }),
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(0);
+    await expect(db.tasks.get('archived-task')).resolves.toBeUndefined();
+    await expect(db.archivedTasks.count()).resolves.toBe(1);
+  });
+
+  it('still pulls non-archived tasks alongside an archived one', async () => {
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('archived-task'),
+      archivedAt: '2026-05-19T00:00:00.000Z',
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [
+          pbRecord('archived-task', '2026-05-20T00:00:00.000Z'),
+          pbRecord('live-task', '2026-05-20T00:00:00.000Z'),
+        ]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['live-task', { pbRecordId: 'rec-live-task', clientUpdatedAt: '2026-05-20T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(1);
+    await expect(db.tasks.get('live-task')).resolves.toBeDefined();
+    await expect(db.tasks.get('archived-task')).resolves.toBeUndefined();
+  });
+
+  it('pulls a restored task again once it leaves the archive', async () => {
+    const db = getDb();
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('restored-task', '2026-05-20T00:00:00.000Z')]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['restored-task', { pbRecordId: 'rec-restored-task', clientUpdatedAt: '2026-05-20T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(1);
+    await expect(db.tasks.get('restored-task')).resolves.toBeDefined();
+  });
+});
+
 describe('pullRemoteChanges deletion reconciliation', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

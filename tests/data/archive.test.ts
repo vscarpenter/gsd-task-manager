@@ -112,6 +112,58 @@ describe("archive", () => {
       expect(await db.archivedTasks.count()).toBe(1);
     });
 
+    it("should_archive_a_task_that_is_already_in_the_archive", async () => {
+      // Regression: a task archived earlier can be resurrected in `tasks` by a
+      // sync pull while its archived copy still exists. bulkAdd then threw
+      // ConstraintError and aborted the whole transaction, so NO task was ever
+      // archived again on that device.
+      const db = getDb();
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+
+      const resurrected = createMockTask({
+        id: "resurrected-task",
+        title: "Resurrected Task",
+        completed: true,
+        completedAt: oldDate.toISOString(),
+        createdAt: oldDate.toISOString(),
+        updatedAt: oldDate.toISOString(),
+      });
+
+      await db.archivedTasks.add({ ...resurrected, archivedAt: oldDate.toISOString() });
+      await db.tasks.add(resurrected);
+
+      const archivedCount = await archiveOldTasks(30);
+
+      expect(archivedCount).toBe(1);
+      expect(await db.tasks.count()).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(1);
+    });
+
+    it("should_not_let_one_duplicate_block_archiving_the_rest", async () => {
+      const db = getDb();
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+      const base = {
+        completed: true,
+        completedAt: oldDate.toISOString(),
+        createdAt: oldDate.toISOString(),
+        updatedAt: oldDate.toISOString(),
+      };
+
+      const duplicate = createMockTask({ id: "dupe", title: "Dupe", ...base });
+      const fresh = createMockTask({ id: "fresh", title: "Fresh", ...base });
+
+      await db.archivedTasks.add({ ...duplicate, archivedAt: oldDate.toISOString() });
+      await db.tasks.bulkAdd([duplicate, fresh]);
+
+      const archivedCount = await archiveOldTasks(30);
+
+      expect(archivedCount).toBe(2);
+      expect(await db.tasks.count()).toBe(0);
+      expect(await db.archivedTasks.count()).toBe(2);
+    });
+
     it("should_skip_incomplete_tasks", async () => {
       const db = getDb();
       const oldDate = new Date();

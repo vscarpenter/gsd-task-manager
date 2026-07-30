@@ -64,8 +64,28 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
 
   const skippedCount = records.length - validRecords.length;
 
+  // Never resurrect a locally archived task. Archiving removes the task from
+  // `tasks` but leaves the remote copy alive, so without this guard every pull
+  // re-adds it via the `!localTask` branch below — silently undoing the archive
+  // and colliding with the archived copy on the next archive run.
+  // `restoreTask` removes the row from `archivedTasks`, so a restored task
+  // starts syncing again on its own.
+  const archivedIds = new Set(
+    await db.archivedTasks
+      .where(':id')
+      .anyOf(validRecords.map(r => r['task_id'] as string))
+      .primaryKeys()
+  );
+  const applicableRecords = validRecords.filter(
+    record => !archivedIds.has(record['task_id'] as string)
+  );
+
+  if (archivedIds.size > 0) {
+    logger.debug('Skipped archived tasks during pull', { count: archivedIds.size });
+  }
+
   // Pre-fetch matching local tasks in bulk to preserve device-local fields
-  const taskIds = validRecords.map(r => r['task_id'] as string);
+  const taskIds = applicableRecords.map(r => r['task_id'] as string);
   const localTasksRaw = await db.tasks.bulkGet(taskIds);
   const localTaskMap = new Map(
     localTasksRaw
@@ -76,7 +96,7 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
   // Each record targets a distinct task id, so the local writes are
   // independent and run concurrently.
   const pullOutcomes = await Promise.all(
-    validRecords.map(async (record) => {
+    applicableRecords.map(async (record) => {
       const taskId = record['task_id'] as string;
       const localTask = localTaskMap.get(taskId);
       const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
