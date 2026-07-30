@@ -43,13 +43,15 @@ vi.mock('@/lib/db', () => {
     delete: vi.fn(),
     toArray: vi.fn().mockResolvedValue([]),
   };
-  // Nothing is archived in these tests, so the pull's archive guard resolves
-  // to an empty id set and every fetched record stays applicable.
+  // Nothing is archived in these tests, so the pull's archive guard finds no
+  // matching rows and every fetched record stays applicable.
   const mockArchivedTasks = {
     get: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
+    bulkDelete: vi.fn().mockResolvedValue(undefined),
     where: vi.fn(() => ({
       anyOf: vi.fn(() => ({
-        primaryKeys: vi.fn().mockResolvedValue([]),
+        toArray: vi.fn().mockResolvedValue([]),
       })),
     })),
   };

@@ -9,7 +9,7 @@ import { getPocketBase } from './pocketbase-client';
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { isPendingSyncQueueItem } from './queue';
 
@@ -53,35 +53,63 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
   skippedCount: number;
 }> {
   const db = getDb();
-  // First pass: validate records without local state (just to filter invalid ones)
+  // First pass: validate records without local state (just to filter invalid ones).
+  // The mapped `updatedAt` is retained so the archive guard below can compare the
+  // remote edit time without mapping every record a second time.
   const validRecords: RecordModel[] = [];
+  const remoteUpdatedAt = new Map<string, string>();
   for (const record of records) {
     const test = pocketBaseToTaskRecord(record, null);
     if (test) {
       validRecords.push(record);
+      remoteUpdatedAt.set(test.id, test.updatedAt);
     }
   }
 
   const skippedCount = records.length - validRecords.length;
 
-  // Never resurrect a locally archived task. Archiving removes the task from
+  // Don't resurrect a locally archived task. Archiving removes the task from
   // `tasks` but leaves the remote copy alive, so without this guard every pull
   // re-adds it via the `!localTask` branch below — silently undoing the archive
   // and colliding with the archived copy on the next archive run.
-  // `restoreTask` removes the row from `archivedTasks`, so a restored task
-  // starts syncing again on its own.
-  const archivedIds = new Set(
-    await db.archivedTasks
+  //
+  // The archive is a conditional tombstone, not an absolute one: a remote edit
+  // made AFTER this device archived the task beats it, matching the engine's
+  // edit-beats-delete LWW rule. pb-push abandons such a delete as stale and
+  // relies on this pull to bring the newer version back, so suppressing it here
+  // would strand that edit forever once the cursor advances past it.
+  const archivedById = new Map(
+    (await db.archivedTasks
       .where(':id')
-      .anyOf(validRecords.map(r => r['task_id'] as string))
-      .primaryKeys()
-  );
-  const applicableRecords = validRecords.filter(
-    record => !archivedIds.has(record['task_id'] as string)
+      .anyOf([...remoteUpdatedAt.keys()])
+      .toArray()
+    ).map(task => [task.id, task])
   );
 
-  if (archivedIds.size > 0) {
-    logger.debug('Skipped archived tasks during pull', { count: archivedIds.size });
+  const unarchivedIds: string[] = [];
+  const applicableRecords = validRecords.filter((record) => {
+    const taskId = record['task_id'] as string;
+    const archived = archivedById.get(taskId);
+    if (!archived) return true;
+
+    if (isRemoteNewerThanArchive(remoteUpdatedAt.get(taskId), archived.archivedAt)) {
+      unarchivedIds.push(taskId);
+      return true;
+    }
+    return false;
+  });
+
+  // A remote edit that beat the archive un-archives the task. Leaving the
+  // archived row behind would re-archive it on the next run and lose the edit
+  // again, and would recreate the duplicate this whole guard exists to prevent.
+  if (unarchivedIds.length > 0) {
+    await db.archivedTasks.bulkDelete(unarchivedIds);
+    logger.debug('Un-archived tasks edited remotely after archiving', { count: unarchivedIds.length });
+  }
+
+  const suppressedCount = validRecords.length - applicableRecords.length;
+  if (suppressedCount > 0) {
+    logger.debug('Skipped archived tasks during pull', { count: suppressedCount });
   }
 
   // Pre-fetch matching local tasks in bulk to preserve device-local fields

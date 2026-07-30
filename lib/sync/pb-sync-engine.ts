@@ -13,7 +13,7 @@ import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/syn
 import { notifySyncSuccess, notifySyncError } from './notifications';
 import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
 import { ensureValidAuth } from './pb-auth';
-import { getDeviceId } from './pb-sync-helpers';
+import { getDeviceId, isRemoteNewerThanArchive } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { isPendingSyncQueueItem } from './queue';
@@ -62,10 +62,17 @@ export async function applyRemoteChange(
 
   // Mirror the batch pull's archive guard: a locally archived task must not be
   // resurrected by a realtime event either, or the SSE path would silently
-  // reintroduce the collision the pull path now prevents.
-  if (await db.archivedTasks.get(remoteTask.id)) {
-    logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
-    return;
+  // reintroduce the collision the pull path now prevents. The tombstone is
+  // conditional — a remote edit that post-dates the archive wins under the
+  // engine's edit-beats-delete LWW rule and un-archives the task.
+  const archived = await db.archivedTasks.get(remoteTask.id);
+  if (archived) {
+    if (!isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) {
+      logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
+      return;
+    }
+    await db.archivedTasks.delete(remoteTask.id);
+    logger.debug('Un-archived: remote edit post-dates the archive', { taskId: remoteTask.id });
   }
 
   if (action === 'create') {

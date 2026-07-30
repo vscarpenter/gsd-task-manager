@@ -4,6 +4,7 @@ import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, PBSyncConfig, DeviceInfo } from "@/lib/sync/types";
 import { createLogger } from "@/lib/logger";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { ARCHIVE_CONFIG, TIME_MS } from "@/lib/constants";
 
 const logger = createLogger("DB");
 
@@ -390,14 +391,31 @@ class GsdDatabase extends Dexie {
         appPreferences: "id"
       })
       .upgrade(async (trans) => {
-        // 1. Drop resurrected duplicates. The archived copy is authoritative —
-        // the user already chose to archive these — so `tasks` loses the copy.
+        // 1. Drop resurrected duplicates — but only those that still satisfy the
+        // archive predicate. Sharing an id with an archived row does NOT by itself
+        // prove a sync resurrection: `restoreTask` is not transactional (it adds to
+        // `tasks` and only then deletes from `archivedTasks`), and replace-mode
+        // import clears `tasks` alone. Either can legitimately leave a live task
+        // holding an archived id, and deleting that would discard the user's
+        // restore. Requiring the row to still be archivable is the evidence that
+        // it is stale: if it qualifies, auto-archive would re-archive it within the
+        // hour regardless, so removing it now reaches the same end state.
         const archivedIds = new Set<string>(
           await trans.table("archivedTasks").toCollection().primaryKeys() as string[]
         );
+        const archiveSettings = await trans.table("archiveSettings").get("settings");
+        const archiveAfterDays: number =
+          archiveSettings?.archiveAfterDays ?? ARCHIVE_CONFIG.DEFAULT_ARCHIVE_AFTER_DAYS;
+        const cutoffIso = new Date(Date.now() - archiveAfterDays * TIME_MS.DAY).toISOString();
+
         const resurrected = await trans
           .table("tasks")
-          .filter((task: TaskRecord) => archivedIds.has(task.id))
+          .filter((task: TaskRecord) =>
+            archivedIds.has(task.id)
+            && task.completed
+            && !!task.completedAt
+            && task.completedAt < cutoffIso
+          )
           .primaryKeys() as string[];
         if (resurrected.length > 0) {
           await trans.table("tasks").bulkDelete(resurrected);
