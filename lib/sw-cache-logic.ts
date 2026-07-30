@@ -10,6 +10,8 @@ export interface CacheNameSet {
 	runtime: string;
 }
 
+const LEGACY_CAPTURE_QUERY_KEYS = ["action", "title", "url", "tags"] as const;
+
 export function classifyRequest(
 	pathname: string,
 	acceptHeader: string | null,
@@ -81,6 +83,54 @@ export function shouldDeleteCache(
 		return false;
 	}
 	return cacheName.startsWith("gsd-");
+}
+
+/**
+ * Return a network/cache-safe replacement for the retired query-string
+ * bookmarklet contract. Null means the URL is not a valid legacy capture URL.
+ */
+export function getSafeLegacyCaptureUrl(value: string): string | null {
+	try {
+		const url = new URL(value);
+		if (url.searchParams.get("action") !== "capture") {
+			return null;
+		}
+		return getSafePageUrl(value);
+	} catch {
+		return null;
+	}
+}
+
+export function isCapturePayloadUrl(value: string): boolean {
+	try {
+		const url = new URL(value);
+		const fragmentParams = new URLSearchParams(url.hash.slice(1));
+		return (
+			url.searchParams.get("action") === "capture" ||
+			fragmentParams.get("action") === "capture"
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Page fragments are client state and must never become Cache API keys. The
+ * legacy query form additionally needs its retired private fields removed.
+ */
+export function getSafePageUrl(value: string): string | null {
+	try {
+		const url = new URL(value);
+		if (url.searchParams.get("action") === "capture") {
+			for (const key of LEGACY_CAPTURE_QUERY_KEYS) {
+				url.searchParams.delete(key);
+			}
+		}
+		url.hash = "";
+		return url.href;
+	} catch {
+		return null;
+	}
 }
 
 export function getEvictionCandidates<T>(keys: T[], maxEntries: number): T[] {

@@ -6,6 +6,9 @@ import {
 	getCacheNames,
 	shouldDeleteCache,
 	getEvictionCandidates,
+	getSafeLegacyCaptureUrl,
+	getSafePageUrl,
+	isCapturePayloadUrl,
 } from "@/lib/sw-cache-logic";
 
 describe("classifyRequest", () => {
@@ -199,6 +202,41 @@ describe("getEvictionCandidates", () => {
 	});
 });
 
+describe("getSafeLegacyCaptureUrl", () => {
+	it("removes capture data while preserving unrelated query parameters", () => {
+		expect(
+			getSafeLegacyCaptureUrl(
+				"https://gsd.test/?action=capture&title=private&url=https%3A%2F%2Finternal.test%2Fplan&tags=secret&keep=1",
+			),
+		).toBe("https://gsd.test/?keep=1");
+	});
+
+	it("returns null for URLs that do not carry a legacy capture action", () => {
+		expect(getSafeLegacyCaptureUrl("https://gsd.test/?action=new-task")).toBeNull();
+		expect(getSafeLegacyCaptureUrl("not a URL")).toBeNull();
+	});
+});
+
+describe("page cache URL privacy", () => {
+	it("removes fragments from page request and cache URLs", () => {
+		expect(
+			getSafePageUrl(
+				"https://gsd.test/?keep=1#action=capture&title=private&url=https%3A%2F%2Finternal.test%2Fplan",
+			),
+		).toBe("https://gsd.test/?keep=1");
+	});
+
+	it("detects capture data in query strings and fragments", () => {
+		expect(isCapturePayloadUrl("https://gsd.test/?action=capture&title=private")).toBe(
+			true,
+		);
+		expect(isCapturePayloadUrl("https://gsd.test/#action=capture&title=private")).toBe(
+			true,
+		);
+		expect(isCapturePayloadUrl("https://gsd.test/#settings")).toBe(false);
+	});
+});
+
 describe("source sync check", () => {
 	it("should have matching function signatures in public/sw-cache-logic.js and lib/sw-cache-logic.ts", () => {
 		const jsPath = resolve(__dirname, "../../public/sw-cache-logic.js");
@@ -255,6 +293,21 @@ describe("source sync check", () => {
 		);
 		expect(js.getEvictionCandidates(["a", "b", "c"], 2)).toEqual(
 			getEvictionCandidates(["a", "b", "c"], 2),
+		);
+		expect(
+			js.getSafeLegacyCaptureUrl(
+				"https://gsd.test/?action=capture&title=private&keep=1",
+			),
+		).toBe(
+			getSafeLegacyCaptureUrl(
+				"https://gsd.test/?action=capture&title=private&keep=1",
+			),
+		);
+		expect(js.getSafePageUrl("https://gsd.test/#private")).toBe(
+			getSafePageUrl("https://gsd.test/#private"),
+		);
+		expect(js.isCapturePayloadUrl("https://gsd.test/#action=capture&title=x")).toBe(
+			isCapturePayloadUrl("https://gsd.test/#action=capture&title=x"),
 		);
 	});
 });

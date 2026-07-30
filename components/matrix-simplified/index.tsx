@@ -13,7 +13,7 @@ import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useNotificationChecker } from "@/lib/use-notification-checker";
 import { TOAST_DURATION } from "@/lib/constants";
 import { SHOW_COMPLETED_EVENT, readShowCompleted } from "@/lib/preferences/show-completed";
-import type { TaskRecord } from "@/lib/types";
+import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { TaskCard } from "@/components/task-card";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
@@ -187,8 +187,22 @@ export function MatrixSimplified() {
     if (!next) dispatchOverlay({ type: "closeShare" });
   };
 
-  const handleOpenCreateDrawer = (payload?: CapturePayload) => {
+  const handleOpenCreateDrawer = (payload?: CapturePayload | TaskDraft) => {
     if (payload) {
+      if ("description" in payload) {
+        dispatchOverlay({
+          type: "openCreate",
+          initial: {
+            title: payload.title,
+            description: payload.description,
+            urgent: payload.urgent,
+            important: payload.important,
+            tags: payload.tags ?? [],
+          },
+        });
+        return;
+      }
+
       const { cleanTitle, urls } = extractUrlsFromTitle(payload.title);
       dispatchOverlay({
         type: "openCreate",

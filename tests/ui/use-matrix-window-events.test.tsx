@@ -1,10 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   APPLY_SMART_VIEW_EVENT,
   HIGHLIGHT_TASK_EVENT,
   NEW_TASK_EVENT,
 } from "@/lib/use-shell-command-handlers";
+import { UI_TIMING } from "@/lib/constants/ui";
 import { useMatrixWindowEvents } from "@/components/matrix-simplified/use-matrix-window-events";
 import { createTask } from "@/lib/tasks";
 import { toast } from "sonner";
@@ -34,27 +35,32 @@ describe("useMatrixWindowEvents", () => {
     vi.clearAllMocks();
   });
 
-  it("captures bookmarklet URL params into a task and cleans only consumed params", async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("opens bookmarklet fragment data for confirmation without persisting", async () => {
     const searchInput = makeInput("search");
     const captureInput = makeInput("capture");
+    const openCreateDrawer = vi.fn();
     window.history.replaceState(
       {},
       "",
-      "/?action=capture&title=Read%20this&url=https%3A%2F%2Fexample.com%2Farticle%3Fx%3D1&tags=Ops,Ops,Research&keep=1"
+      "/?keep=1#action=capture&title=Read%20this&url=https%3A%2F%2Fexample.com%2Farticle%3Fx%3D1&tags=Ops,Ops,Research&anchor=matrix"
     );
 
     renderHook(() =>
       useMatrixWindowEvents({
         searchInputRef: { current: searchInput },
         captureInputRef: { current: captureInput },
-        openCreateDrawer: vi.fn(),
+        openCreateDrawer,
         highlightTaskById: vi.fn(),
         applySmartViewById: vi.fn(),
       })
     );
 
     await waitFor(() =>
-      expect(createTask).toHaveBeenCalledWith({
+      expect(openCreateDrawer).toHaveBeenCalledWith({
         title: "Read this",
         description: "https://example.com/article?x=1",
         urgent: false,
@@ -62,8 +68,64 @@ describe("useMatrixWindowEvents", () => {
         tags: ["ops", "research"],
       })
     );
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Task captured", expect.any(Object)));
+    expect(createTask).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
     expect(window.location.search).toBe("?keep=1");
+    expect(window.location.hash).toBe("#anchor=matrix");
+  });
+
+  it("rejects and removes legacy query-string capture data", async () => {
+    const searchInput = makeInput("search");
+    const captureInput = makeInput("capture");
+    const openCreateDrawer = vi.fn();
+    window.history.replaceState(
+      {},
+      "",
+      "/?action=capture&title=Legacy%20private%20task&url=https%3A%2F%2Finternal.example%2Fprivate&keep=1#matrix"
+    );
+
+    renderHook(() =>
+      useMatrixWindowEvents({
+        searchInputRef: { current: searchInput },
+        captureInputRef: { current: captureInput },
+        openCreateDrawer,
+        highlightTaskById: vi.fn(),
+        applySmartViewById: vi.fn(),
+      })
+    );
+
+    await waitFor(() => expect(window.location.search).toBe("?keep=1"));
+    expect(window.location.hash).toBe("#matrix");
+    expect(openCreateDrawer).not.toHaveBeenCalled();
+    expect(createTask).not.toHaveBeenCalled();
+  });
+
+  it("keeps pending new-task focus when the drawer callback identity changes", () => {
+    vi.useFakeTimers();
+    const searchInput = makeInput("search");
+    const captureInput = makeInput("capture");
+    const searchInputRef = { current: searchInput };
+    const captureInputRef = { current: captureInput };
+    window.history.replaceState({}, "", "/?action=new-task");
+
+    const { rerender } = renderHook(
+      ({ openCreateDrawer }) =>
+        useMatrixWindowEvents({
+          searchInputRef,
+          captureInputRef,
+          openCreateDrawer,
+          highlightTaskById: vi.fn(),
+          applySmartViewById: vi.fn(),
+        }),
+      { initialProps: { openCreateDrawer: vi.fn() } }
+    );
+
+    rerender({ openCreateDrawer: vi.fn() });
+    act(() => {
+      vi.advanceTimersByTime(UI_TIMING.FOCUS_DELAY_MS);
+    });
+
+    expect(document.activeElement).toBe(captureInput);
   });
 
   it("ignores global shortcuts while typing and focuses search from the page body", () => {

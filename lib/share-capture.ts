@@ -36,12 +36,13 @@ function parseTags(raw: string | null): string[] {
 }
 
 /**
- * Parses `?action=capture&title=…&url=…&tags=…` query params into a TaskDraft
+ * Parses `#action=capture&title=…&url=…&tags=…` fragment params into a TaskDraft
  * destined for the Eliminate quadrant. Returns null when the action does not
  * apply or when there is nothing meaningful to capture (no title and no URL).
  *
- * Why URL-driven: bookmarklets cannot reach this app's IndexedDB across origins,
- * so the bookmarklet opens this app with params and we materialize the task here.
+ * Why fragment-driven: bookmarklets cannot reach this app's IndexedDB across
+ * origins, but fragments remain client-side and never enter navigation requests,
+ * access logs, referrers, or service-worker cache keys.
  */
 export function parseShareCaptureParams(params: URLSearchParams): TaskDraft | null {
   if (params.get("action") !== "capture") return null;

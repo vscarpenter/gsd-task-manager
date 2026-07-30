@@ -2,6 +2,57 @@
 
 ---
 
+## Done — 2026-07-30: Resolve Codex Security capture findings
+
+**Branch:** `codex/fix-security-capture-sentry` · **Tier:** Standard (two bounded
+frontend trust-boundary fixes with no new public API or architecture).
+
+**Plan (TDD):**
+- [x] RED: prove capture URL parameters open a prefilled create drawer without
+  calling `createTask()`.
+- [x] RED: prove cancelling the capture preview leaves persistence untouched
+  while confirming creates exactly one task.
+- [x] RED: prove Sentry scrubs capture fields from history breadcrumbs and event
+  request URLs while preserving unrelated query parameters.
+- [x] GREEN: route URL captures through the existing create drawer and add
+  centralized Sentry telemetry URL scrubbing.
+- [x] EXPANDED RED: prove bookmarklet task content stays in the client-only
+  fragment, legacy query captures never reach controlled network/cache keys,
+  and activation deletes legacy cache entries.
+- [x] EXPANDED RED: prove the final Sentry envelope drops arbitrary task content,
+  request payloads, user data, nested causes, AggregateError members, and
+  encoded sentinels while retaining structural diagnostics.
+- [x] EXPANDED GREEN: migrate the capture contract to
+  `#action=capture&title=…&url=…&tags=…`, reject legacy query captures, and
+  canonicalize service-worker requests/cache keys.
+- [x] EXPANDED GREEN: replace the partial Sentry sanitizer with a bounded,
+  fail-closed allowlist projection.
+- [x] FINAL RED: prove a controlled legacy query navigation redirects before
+  application HTML and preserves only unrelated query parameters.
+- [x] FINAL GREEN: redirect legacy capture navigations at the service-worker
+  boundary so startup subresources cannot inherit private capture fields.
+- [x] Verify targeted tests, changed-file coverage, typecheck, lint, full tests,
+  production build/browser behavior, and a fresh Codex Security scan.
+
+**Out of scope:** nonce-based zero-click capture, broader task-form redesign, or
+unrelated dependency/tooling changes.
+
+**Verification:** full suite 2,322 passed / 1 skipped; overall coverage 88.89%
+statements, 88.84% functions, 89.86% lines; changed capture/Sentry/cache files
+meet the 80% statement/function/line standard; `bun typecheck` passed; `bun
+lint` passed with 10 pre-existing warnings outside this work; production build
+passed; accessibility review returned 0 findings. Live controlled-worker
+verification cache-busted the service worker, proved fragment captures do not
+reach network/cache/persistence before confirmation, and proved a legacy query
+redirect leaves the browser and forced subresource `Referer` on the sanitized
+URL. Codex Security scan `b2b28c65-3fa4-4d88-bec9-1457208d3aa0` confirmed both
+original findings were gone and identified the final low referrer edge; focused
+confirmation scan `d311a221-9e15-4eb1-917f-f53e4fc46690` reported 0 findings.
+The latter marked coverage partial only for an unrelated page-cache growth
+primitive whose hostile reachability and material impact were not established.
+
+---
+
 ## Done — 2026-07-12: Handle failed view transitions without duplicate Sentry events
 
 **Branch:** `fix/view-transition-rejection-telemetry` · **Tier:** Standard (two bounded frontend error-handling changes; no visual or public contract change).
