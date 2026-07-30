@@ -2,6 +2,8 @@
 // Loaded via importScripts() in sw.js (functions land on global scope).
 // Imported in tests via: require("../../public/sw-cache-logic")
 
+const LEGACY_CAPTURE_QUERY_KEYS = ["action", "title", "url", "tags"];
+
 function classifyRequest(
 	pathname,
 	acceptHeader,
@@ -69,6 +71,46 @@ function shouldDeleteCache(cacheName, currentCacheNames) {
 	return cacheName.startsWith("gsd-");
 }
 
+function getSafeLegacyCaptureUrl(value) {
+	try {
+		const url = new URL(value);
+		if (url.searchParams.get("action") !== "capture") {
+			return null;
+		}
+		return getSafePageUrl(value);
+	} catch {
+		return null;
+	}
+}
+
+function isCapturePayloadUrl(value) {
+	try {
+		const url = new URL(value);
+		const fragmentParams = new URLSearchParams(url.hash.slice(1));
+		return (
+			url.searchParams.get("action") === "capture" ||
+			fragmentParams.get("action") === "capture"
+		);
+	} catch {
+		return false;
+	}
+}
+
+function getSafePageUrl(value) {
+	try {
+		const url = new URL(value);
+		if (url.searchParams.get("action") === "capture") {
+			for (const key of LEGACY_CAPTURE_QUERY_KEYS) {
+				url.searchParams.delete(key);
+			}
+		}
+		url.hash = "";
+		return url.href;
+	} catch {
+		return null;
+	}
+}
+
 function getEvictionCandidates(keys, maxEntries) {
 	if (keys.length <= maxEntries) {
 		return [];
@@ -81,6 +123,9 @@ if (typeof module !== "undefined" && module.exports) {
 		classifyRequest,
 		getCacheNames,
 		shouldDeleteCache,
+		getSafeLegacyCaptureUrl,
+		getSafePageUrl,
+		isCapturePayloadUrl,
 		getEvictionCandidates,
 	};
 }

@@ -5,12 +5,10 @@
  * isn't dominated by event-subscription boilerplate.
  */
 
-import { useEffect, type RefObject } from "react";
-import { toast } from "sonner";
-import { createTask } from "@/lib/tasks";
+import { useEffect, useEffectEvent, type RefObject } from "react";
 import { parseShareCaptureParams } from "@/lib/share-capture";
-import { TOAST_DURATION } from "@/lib/constants";
 import { UI_TIMING } from "@/lib/constants/ui";
+import type { TaskDraft } from "@/lib/types";
 import {
   APPLY_SMART_VIEW_EVENT,
   HIGHLIGHT_TASK_EVENT,
@@ -27,7 +25,7 @@ function isEditable(el: Element | null): boolean {
 export interface MatrixWindowEventsDeps {
   searchInputRef: RefObject<HTMLInputElement | null>;
   captureInputRef: RefObject<HTMLInputElement | null>;
-  openCreateDrawer: () => void;
+  openCreateDrawer: (initial?: TaskDraft) => void;
   highlightTaskById: (taskId: string) => void;
   applySmartViewById: (viewId: string) => Promise<void>;
 }
@@ -39,29 +37,52 @@ export function useMatrixWindowEvents({
   highlightTaskById,
   applySmartViewById,
 }: MatrixWindowEventsDeps): void {
-  // URL-driven actions: PWA shortcut focuses the capture bar; bookmarklet
-  // (`?action=capture&title=…&url=…&tags=…`) materializes a task in the
-  // Eliminate quadrant. Both clean their params off the URL afterward.
+  const openCreateDrawerEvent = useEffectEvent((initial?: TaskDraft) => {
+    openCreateDrawer(initial);
+  });
+
+  // URL-driven actions: the PWA shortcut remains a query action, while the
+  // bookmarklet uses a client-only fragment so task content is never sent in
+  // the navigation request. Legacy query captures are removed but not opened.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const action = params.get("action");
-    if (action !== "new-task" && action !== "capture") return;
+    const queryParams = new URLSearchParams(window.location.search);
+    const fragmentParams = new URLSearchParams(window.location.hash.slice(1));
+    const queryAction = queryParams.get("action");
+    const fragmentAction = fragmentParams.get("action");
+    const isNewTaskAction = queryAction === "new-task";
+    const isLegacyCapture = queryAction === "capture";
+    const isFragmentCapture = fragmentAction === "capture";
+    if (!isNewTaskAction && !isLegacyCapture && !isFragmentCapture) return;
 
     let focusTimer: ReturnType<typeof setTimeout> | undefined;
-    if (action === "new-task") {
+    if (isNewTaskAction && !isFragmentCapture) {
       focusTimer = setTimeout(() => captureInputRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
-    } else {
-      const draft = parseShareCaptureParams(params);
+    } else if (isFragmentCapture) {
+      const draft = parseShareCaptureParams(fragmentParams);
       if (draft) {
-        createTask(draft)
-          .then(() => toast.success("Task captured", { duration: TOAST_DURATION.SHORT }))
-          .catch(() => toast.error("Failed to capture task", { duration: TOAST_DURATION.LONG }));
+        captureInputRef.current?.focus();
+        openCreateDrawerEvent(draft);
       }
     }
 
-    ["action", "title", "url", "tags"].forEach((k) => params.delete(k));
-    const next = params.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
+    if (isNewTaskAction || isLegacyCapture) {
+      ["action", "title", "url", "tags"].forEach((key) => queryParams.delete(key));
+    }
+    if (isFragmentCapture) {
+      ["action", "title", "url", "tags"].forEach((key) => fragmentParams.delete(key));
+    }
+
+    const nextQuery = queryParams.toString();
+    const nextFragment = isFragmentCapture
+      ? fragmentParams.toString()
+      : window.location.hash.slice(1);
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${
+        nextFragment ? `#${nextFragment}` : ""
+      }`
+    );
 
     return () => {
       if (focusTimer) clearTimeout(focusTimer);

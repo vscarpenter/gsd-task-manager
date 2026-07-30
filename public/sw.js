@@ -40,9 +40,8 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
 	event.waitUntil(
-		caches
-			.keys()
-			.then((keys) =>
+		Promise.all([
+			caches.keys().then((keys) =>
 				Promise.all(
 					keys.map((key) => {
 						if (shouldDeleteCache(key, CACHE_NAMES)) {
@@ -51,7 +50,17 @@ self.addEventListener("activate", (event) => {
 						return undefined;
 					}),
 				),
-			)
+			),
+			caches.open(CACHE_NAMES.pages).then((cache) =>
+				cache.keys().then((requests) =>
+					Promise.all(
+						requests
+							.filter((request) => isCapturePayloadUrl(request.url))
+							.map((request) => cache.delete(request)),
+					),
+				),
+			),
+		])
 			.then(() => self.clients.claim()),
 	);
 });
@@ -73,6 +82,24 @@ self.addEventListener("fetch", (event) => {
 
 	const requestUrl = new URL(request.url);
 	const isSameOrigin = requestUrl.origin === self.location.origin;
+	const legacyCaptureRedirectUrl =
+		isSameOrigin && request.method === "GET" && request.mode === "navigate"
+			? getSafeLegacyCaptureUrl(request.url)
+			: null;
+
+	// Retired query-form captures may contain private task context. Redirect the
+	// navigation before serving HTML so the browser cannot attach those fields
+	// to same-origin subresource Referer headers during document startup.
+	if (
+		legacyCaptureRedirectUrl &&
+		legacyCaptureRedirectUrl !== request.url
+	) {
+		event.respondWith(
+			Promise.resolve(Response.redirect(legacyCaptureRedirectUrl, 302)),
+		);
+		return;
+	}
+
 	const classification = classifyRequest(
 		requestUrl.pathname,
 		request.headers.get("accept"),
@@ -87,26 +114,31 @@ self.addEventListener("fetch", (event) => {
 	}
 
 	if (classification === "pages") {
+		const safePageUrl = getSafePageUrl(request.url);
+		const pageRequest = safePageUrl && safePageUrl !== request.url
+			? createSafePageRequest(request, safePageUrl)
+			: request;
+
 		// Network-first for HTML pages and Next.js RSC flight data.
 		// RSC data (__next.*.txt) contains build-specific module IDs that
 		// must stay in sync with the JS chunks. Serving stale RSC data from
 		// a previous build causes React error #130 (undefined component).
 		event.respondWith(
-			fetch(request)
+			fetch(pageRequest)
 				.then((response) => {
 					if (response && response.status === 200) {
 						const clone = response.clone();
 						caches.open(CACHE_NAMES.pages).then((cache) => {
-							cache.put(request, clone).catch(() => {});
+							cache.put(pageRequest, clone).catch(() => {});
 						});
 					}
 					return response;
 				})
 				.catch(() => {
-					return caches.match(request).then((cached) => {
+					return caches.match(pageRequest).then((cached) => {
 						if (cached) return cached;
 
-						const url = new URL(request.url);
+						const url = new URL(pageRequest.url);
 						const altPath = url.pathname.endsWith("/")
 							? url.pathname.slice(0, -1)
 							: url.pathname + "/";
@@ -166,6 +198,20 @@ self.addEventListener("fetch", (event) => {
 		}),
 	);
 });
+
+function createSafePageRequest(request, safeUrl) {
+	const headers = new Headers();
+	const accept = request.headers.get("accept");
+	if (accept) {
+		headers.set("accept", accept);
+	}
+	return new Request(safeUrl, {
+		method: "GET",
+		headers,
+		credentials: request.credentials,
+		redirect: "follow",
+	});
+}
 
 // Handle notification clicks
 self.addEventListener("notificationclick", (event) => {

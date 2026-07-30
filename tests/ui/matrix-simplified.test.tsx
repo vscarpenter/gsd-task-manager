@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import type { TaskRecord } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 
@@ -135,6 +136,7 @@ describe("<MatrixSimplified>", () => {
     if (!Element.prototype.scrollIntoView) {
       Element.prototype.scrollIntoView = vi.fn();
     }
+    vi.mocked(createTask).mockClear();
     vi.mocked(celebrateCompletion).mockClear();
     vi.mocked(toggleCompleted).mockClear();
     vi.mocked(deleteTask).mockClear();
@@ -198,6 +200,12 @@ describe("<MatrixSimplified>", () => {
     expect(screen.getByRole("heading", { name: /gsd matrix/i })).toBeInTheDocument();
   });
 
+  it("keeps the static-export server snapshot hydration-safe", () => {
+    const html = renderToString(<MatrixSimplified />);
+    expect(html).toContain("GSD Matrix");
+    expect(html).toContain("Capture a task");
+  });
+
   it("renders four quadrant panes (regions)", () => {
     render(<MatrixSimplified />);
     expect(screen.getByRole("region", { name: /do first quadrant/i })).toBeInTheDocument();
@@ -216,6 +224,58 @@ describe("<MatrixSimplified>", () => {
     expect(await screen.findByRole("heading", { name: /new task/i })).toBeInTheDocument();
   });
 
+  describe("share capture URL confirmation", () => {
+    const captureUrl =
+      "/?keep=1#action=capture&title=Review%20roadmap&url=https%3A%2F%2Fexample.com%2Froadmap&tags=planning,work";
+
+    it("previews the capture and cancelling leaves persistence untouched", async () => {
+      const user = userEvent.setup();
+      window.history.replaceState({}, "", captureUrl);
+
+      render(<MatrixSimplified />);
+
+      expect(await screen.findByRole("heading", { name: /new task/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/^title$/i)).toHaveValue("Review roadmap");
+      expect(screen.getByLabelText(/description/i)).toHaveValue("https://example.com/roadmap");
+      expect(createTask).not.toHaveBeenCalled();
+      expect(window.location.search).toBe("?keep=1");
+      expect(window.location.hash).toBe("");
+
+      await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+      expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument();
+      expect(createTask).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+    });
+
+    it("creates exactly one task after explicit confirmation", async () => {
+      const user = userEvent.setup();
+      window.history.replaceState({}, "", captureUrl);
+
+      render(<MatrixSimplified />);
+
+      expect(await screen.findByRole("heading", { name: /new task/i })).toBeInTheDocument();
+      expect(createTask).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: /create task/i }));
+
+      await waitFor(() => expect(createTask).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument()
+      );
+      expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Review roadmap",
+          description: "https://example.com/roadmap",
+          urgent: false,
+          important: false,
+          tags: ["planning", "work"],
+        })
+      );
+    });
+  });
+
   it("passes drawer-selected dependencies to createTask on the create path", async () => {
     const user = userEvent.setup();
     tasksFixture.current = [makeTask({ id: "dep-1", title: "Prepare deck" })];
@@ -226,9 +286,11 @@ describe("<MatrixSimplified>", () => {
     });
     await screen.findByRole("heading", { name: /new task/i });
 
-    await user.type(screen.getByLabelText(/^title$/i), "Present deck");
+    const titleInput = screen.getByLabelText(/^title$/i);
+    await waitFor(() => expect(titleInput).toHaveFocus());
+    await user.type(titleInput, "Present deck");
     await user.type(screen.getByLabelText(/search tasks/i), "prepare");
-    await user.click(screen.getByTestId("dep-suggestion"));
+    await user.click(await screen.findByTestId("dep-suggestion"));
     await user.click(screen.getByRole("button", { name: /create task/i }));
 
     await waitFor(() =>
@@ -360,6 +422,9 @@ describe("<MatrixSimplified>", () => {
       const dialog = await screen.findByTestId("share-task-dialog");
       expect(dialog).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /share task: shareable thing/i })).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+      expect(screen.queryByTestId("share-task-dialog")).not.toBeInTheDocument();
     });
 
     it("opens the create drawer pre-set to a quadrant when its empty-state pill is clicked (polish v0.9.2 — item 3)", async () => {

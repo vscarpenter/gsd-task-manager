@@ -5,6 +5,63 @@ const mockCaptureException = vi.hoisted(() => vi.fn());
 const mockCaptureMessage = vi.hoisted(() => vi.fn());
 const mockGetClient = vi.hoisted(() => vi.fn());
 
+interface TestBreadcrumb {
+  category?: string;
+  type?: string;
+  level?: string;
+  timestamp?: number;
+  message?: string;
+  data?: Record<string, unknown>;
+}
+
+interface TestEvent {
+  event_id?: string;
+  timestamp?: number;
+  platform?: string;
+  level?: string;
+  environment?: string;
+  release?: string;
+  message?: string;
+  request?: {
+    url?: string;
+    method?: string;
+    headers?: Record<string, string>;
+    data?: unknown;
+    query_string?: string;
+  };
+  breadcrumbs?: TestBreadcrumb[];
+  exception?: {
+    values?: Array<{
+      type?: string;
+      value?: string;
+      mechanism?: { type?: string; handled?: boolean; data?: Record<string, unknown> };
+      stacktrace?: {
+        frames?: Array<{
+          filename?: string;
+          abs_path?: string;
+          function?: string;
+          module?: string;
+          package?: string;
+          lineno?: number;
+          colno?: number;
+          in_app?: boolean;
+          vars?: Record<string, unknown>;
+          context_line?: string;
+        }>;
+      };
+    }>;
+  };
+  contexts?: Record<string, unknown>;
+  extra?: Record<string, unknown>;
+  tags?: Record<string, string>;
+  user?: Record<string, unknown>;
+}
+
+interface TestSentryOptions {
+  beforeBreadcrumb?: (breadcrumb: TestBreadcrumb) => TestBreadcrumb | null;
+  beforeSend?: (event: TestEvent) => TestEvent | null;
+}
+
 vi.mock("@sentry/browser", () => ({
   init: (...args: unknown[]) => {
     mockInit(...args);
@@ -56,7 +113,43 @@ describe("Sentry wrapper", () => {
     expect(mockInit).not.toHaveBeenCalled();
   });
 
-  it("should call Sentry.captureException when initialized", async () => {
+  it("should reduce navigation breadcrumbs and event URLs to path-only telemetry", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const legacyCaptureUrl =
+      "/?action=capture&title=Private%20roadmap&url=https%3A%2F%2Finternal.example%2Fplan&tags=secret&keep=1";
+    const fragmentCaptureUrl =
+      "/#action=capture&title=Private%20roadmap&url=https%3A%2F%2Finternal.example%2Fplan&tags=secret&keep=1";
+    const breadcrumb = options.beforeBreadcrumb?.({
+      category: "navigation",
+      message: "Private roadmap",
+      data: { from: fragmentCaptureUrl, to: "/?keep=1" },
+    });
+    const event = options.beforeSend?.({
+      request: { url: `https://gsd.vinny.dev${legacyCaptureUrl}` },
+      breadcrumbs: [
+        {
+          category: "navigation",
+          message: "Private roadmap",
+          data: { from: fragmentCaptureUrl, to: "/?keep=1" },
+        },
+      ],
+    });
+
+    expect(breadcrumb?.message).toBeUndefined();
+    expect(breadcrumb?.data?.from).toBe("/");
+    expect(event?.request?.url).toBe("/");
+    expect(event?.breadcrumbs?.[0]?.data?.from).toBe("/");
+    expect(JSON.stringify({ breadcrumb, event })).not.toContain("Private");
+    expect(JSON.stringify({ breadcrumb, event })).not.toContain("internal.example");
+    expect(JSON.stringify({ breadcrumb, event })).not.toContain("secret");
+  });
+
+  it("should capture a privacy-safe exception copy when initialized", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
 
     const { initSentry, captureException } = await import("@/lib/sentry");
@@ -65,9 +158,14 @@ describe("Sentry wrapper", () => {
     const error = new Error("test error");
     captureException(error, { action: "test" });
 
-    expect(mockCaptureException).toHaveBeenCalledWith(error, {
+    expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error), {
       contexts: { gsd: { action: "test" } },
     });
+    const [capturedError] = mockCaptureException.mock.calls[0] as [Error];
+    expect(capturedError).not.toBe(error);
+    expect(capturedError.name).toBe("Error");
+    expect(capturedError.message).toBe("Error details redacted");
+    expect(capturedError.stack).not.toContain("test error");
   });
 
   it("should mask token-bearing exception details and context before capture", async () => {
@@ -90,8 +188,7 @@ describe("Sentry wrapper", () => {
     const [capturedError, capturedOptions] = mockCaptureException.mock.calls[0];
     expect(capturedError).not.toBe(error);
     expect(capturedError).toBeInstanceOf(Error);
-    expect((capturedError as Error).message).not.toContain("abc123");
-    expect((capturedError as Error).message).not.toContain("raw-token");
+    expect((capturedError as Error).message).toBe("Error details redacted");
     expect((capturedError as Error).stack).not.toContain("stack-secret");
 
     const serializedOptions = JSON.stringify(capturedOptions);
@@ -101,20 +198,205 @@ describe("Sentry wrapper", () => {
     expect(serializedOptions).toContain("***");
   });
 
-  it("should mask token-bearing custom error properties before capture", async () => {
+  it("should drop custom error properties, causes, and AggregateError members", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
 
     const { initSentry, captureException } = await import("@/lib/sentry");
     initSentry();
 
-    const error = new Error("clean message") as Error & { authToken: string };
-    error.authToken = "custom-secret";
+    const nested = new Error("NESTED_TASK_SENTINEL");
+    const cause = new Error("CAUSE_TASK_SENTINEL");
+    const error = new AggregateError(
+      [nested, { task: "OBJECT_TASK_SENTINEL" }],
+      "ROOT_TASK_SENTINEL",
+      { cause }
+    ) as AggregateError & { taskTitle: string };
+    error.taskTitle = "PROPERTY_TASK_SENTINEL";
 
     captureException(error);
 
-    const [capturedError] = mockCaptureException.mock.calls[0];
+    const [capturedError] = mockCaptureException.mock.calls[0] as [Error];
     expect(capturedError).not.toBe(error);
-    expect((capturedError as { authToken: string }).authToken).toBe("***");
+    expect(capturedError.message).toBe("Error details redacted");
+    expect(capturedError.name).toBe("AggregateError");
+    expect(Object.hasOwn(capturedError, "cause")).toBe(false);
+    expect(Object.hasOwn(capturedError, "errors")).toBe(false);
+    expect(Object.hasOwn(capturedError, "taskTitle")).toBe(false);
+    expect(`${capturedError.message}\n${capturedError.stack ?? ""}`).not.toContain(
+      "TASK_SENTINEL"
+    );
+  });
+
+  it("should project outgoing events onto a privacy-safe allowlist", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const rawSentinel = "TASK_SENTINEL_7f3b";
+    const encodedSentinel = "TASK%5FSENTINEL%5F7f3b";
+    const base64Sentinel = "VEFTS19TRU5USU5FTF83ZjNi";
+    const event = options.beforeSend?.({
+      event_id: "safe-event-id",
+      timestamp: 1234,
+      platform: "javascript",
+      level: "error",
+      environment: "production",
+      release: "10.4.1",
+      message: rawSentinel,
+      request: {
+        url: `https://gsd.test/tasks/${rawSentinel}?action=capture&title=${encodedSentinel}`,
+        method: "POST",
+        headers: { authorization: `Bearer ${rawSentinel}` },
+        data: { taskTitle: rawSentinel },
+        query_string: `task=${base64Sentinel}`,
+      },
+      exception: {
+        values: [
+          {
+            type: "PocketBaseError",
+            value: rawSentinel,
+            mechanism: {
+              type: "generic",
+              handled: true,
+              data: { original: rawSentinel },
+            },
+            stacktrace: {
+              frames: [
+                {
+                  filename: `https://gsd.test/_next/static/chunk.js?token=${rawSentinel}`,
+                  abs_path: `https://gsd.test/_next/static/chunk.js#${base64Sentinel}`,
+                  function: rawSentinel,
+                  module: base64Sentinel,
+                  package: "gsd",
+                  lineno: 42,
+                  colno: 7,
+                  in_app: true,
+                  vars: { title: rawSentinel },
+                  context_line: rawSentinel,
+                },
+              ],
+            },
+          },
+        ],
+      },
+      breadcrumbs: [
+        { category: "console", message: rawSentinel, data: { payload: rawSentinel } },
+      ],
+      contexts: { gsd: { taskTitle: rawSentinel } },
+      extra: { cause: rawSentinel },
+      tags: { task: rawSentinel },
+      user: { id: rawSentinel, email: `${rawSentinel}@example.com` },
+    });
+
+    const serialized = JSON.stringify(event);
+    expect(serialized).not.toContain(rawSentinel);
+    expect(serialized).not.toContain(encodedSentinel);
+    expect(serialized).not.toContain(base64Sentinel);
+    expect(event).toMatchObject({
+      event_id: "safe-event-id",
+      timestamp: 1234,
+      platform: "javascript",
+      level: "error",
+      environment: "production",
+      release: "10.4.1",
+      request: {
+        url: "/",
+        method: "POST",
+      },
+    });
+    expect(event?.message).toBeUndefined();
+    expect(event?.exception?.values?.[0]?.value).toBe("Error details redacted");
+    expect(event?.exception?.values?.[0]?.mechanism).toEqual({
+      type: "generic",
+      handled: true,
+    });
+    expect(event?.exception?.values?.[0]?.stacktrace?.frames?.[0]).toMatchObject({
+      filename: "/_next/static/chunk.js",
+      abs_path: "/_next/static/chunk.js",
+      lineno: 42,
+      colno: 7,
+      in_app: true,
+    });
+    expect(event?.exception?.values?.[0]?.stacktrace?.frames?.[0]?.function).toBeUndefined();
+    expect(event?.exception?.values?.[0]?.stacktrace?.frames?.[0]?.module).toBeUndefined();
+    expect(event?.contexts).toBeUndefined();
+    expect(event?.extra).toBeUndefined();
+    expect(event?.tags).toBeUndefined();
+    expect(event?.user).toBeUndefined();
+  });
+
+  it("should keep only structural HTTP breadcrumb data", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const breadcrumb = options.beforeBreadcrumb?.({
+      category: "http",
+      type: "http",
+      message: "TASK_SENTINEL_HTTP",
+      data: {
+        url: "https://api.example/tasks/TASK_SENTINEL_HTTP?token=secret",
+        method: "get",
+        status_code: 503,
+        body: "TASK_SENTINEL_HTTP",
+      },
+    });
+
+    expect(breadcrumb).toEqual({
+      category: "http",
+      type: "http",
+      data: {
+        url: "/",
+        method: "GET",
+        status_code: 503,
+      },
+    });
+    expect(JSON.stringify(breadcrumb)).not.toContain("TASK_SENTINEL_HTTP");
+  });
+
+  it("should not inspect dropped event fields with throwing accessors", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const event = { event_id: "safe-event-id" } as TestEvent;
+    Object.defineProperty(event, "extra", {
+      get: () => {
+        throw new Error("PRIVATE_ACCESSOR_SENTINEL");
+      },
+    });
+
+    expect(() => options.beforeSend?.(event)).not.toThrow();
+    expect(options.beforeSend?.(event)).toEqual({
+      type: undefined,
+      event_id: "safe-event-id",
+    });
+  });
+
+  it("should fail closed when a retained event field throws", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const event = { event_id: "safe-event-id" } as TestEvent;
+    Object.defineProperty(event, "request", {
+      get: () => {
+        throw new Error("PRIVATE_REQUEST_SENTINEL");
+      },
+    });
+
+    expect(options.beforeSend?.(event)).toEqual({
+      type: undefined,
+      event_id: "safe-event-id",
+    });
   });
 
   it("should not call Sentry.captureException when not initialized", async () => {

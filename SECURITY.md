@@ -37,6 +37,35 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Automated security updates via Dependabot/Renovate
    - All packages kept at stable, non-canary versions
 
+4. **Privacy-Safe Web Capture**
+   - Bookmarklets pass task content in a client-only URL fragment:
+     `#action=capture&title=…&url=…&tags=…`
+   - Capture data opens the existing task drawer and is not persisted until the
+     user selects **Create task**
+   - The retired query-string form (`?action=capture`) is rejected; the service
+     worker removes its private fields before any controlled network request or
+     cache write and deletes legacy capture cache entries during activation
+
+   Bookmarklet implementations should construct the destination like this:
+
+   ```js
+   const capture = new URLSearchParams({
+     action: "capture",
+     title: document.title,
+     url: window.location.href,
+   });
+   window.open(`https://gsd.vinny.dev/#${capture.toString()}`);
+   ```
+
+5. **Telemetry Data Minimization**
+   - Sentry is disabled unless `NEXT_PUBLIC_SENTRY_DSN` is explicitly configured
+   - The final `beforeSend` boundary builds a new event from an allowlist instead
+     of forwarding the SDK event object
+   - Error messages, task context, request bodies/headers/query strings, user
+     fields, tags, and arbitrary extras are dropped
+   - Only structural diagnostics such as error type, sanitized stack locations,
+     HTTP method, path-only URLs, release, environment, and severity are retained
+
 ## Cloud Sync Security (Optional)
 
 When users enable cloud sync, the following security measures protect their data:
