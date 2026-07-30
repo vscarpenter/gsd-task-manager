@@ -37,6 +37,7 @@ vi.mock('@/lib/sync/task-mapper', () => ({
 
 // Mock DB
 const mockTasks = new Map<string, Record<string, unknown>>();
+const mockArchivedTasks = new Map<string, Record<string, unknown>>();
 const mockDb = {
   tasks: {
     get: vi.fn((id: string) => Promise.resolve(mockTasks.get(id))),
@@ -50,6 +51,13 @@ const mockDb = {
     }),
     delete: vi.fn((id: string) => {
       mockTasks.delete(id);
+      return Promise.resolve();
+    }),
+  },
+  archivedTasks: {
+    get: vi.fn((id: string) => Promise.resolve(mockArchivedTasks.get(id))),
+    delete: vi.fn((id: string) => {
+      mockArchivedTasks.delete(id);
       return Promise.resolve();
     }),
   },
@@ -104,9 +112,13 @@ vi.mock('@/lib/sync/notifications', () => ({
 }));
 
 // Mock helpers
-vi.mock('@/lib/sync/pb-sync-helpers', () => ({
-  getDeviceId: vi.fn().mockResolvedValue('device-123'),
-}));
+vi.mock('@/lib/sync/pb-sync-helpers', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/sync/pb-sync-helpers')>('@/lib/sync/pb-sync-helpers');
+  return {
+    ...actual,
+    getDeviceId: vi.fn().mockResolvedValue('device-123'),
+  };
+});
 
 // Mock auth — fullSync attempts a silent token refresh before push/pull.
 const mockEnsureValidAuth = vi.fn().mockResolvedValue(true);
@@ -118,6 +130,7 @@ describe('pb-sync-engine', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTasks.clear();
+    mockArchivedTasks.clear();
     mockEnsureValidAuth.mockResolvedValue(true);
   });
 
@@ -138,6 +151,48 @@ describe('pb-sync-engine', () => {
       await applyRemoteChange('create', record as never);
 
       expect(mockDb.tasks.add).not.toHaveBeenCalled();
+    });
+
+    it('should not resurrect an archived task on a remote create that predates the archive', async () => {
+      mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-09T00:00:00.000Z' });
+
+      const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      await applyRemoteChange('create', record as never);
+
+      expect(mockDb.tasks.add).not.toHaveBeenCalled();
+      expect(mockTasks.has('task-1')).toBe(false);
+    });
+
+    it('should not resurrect an archived task on a remote update that predates the archive', async () => {
+      mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-09T00:00:00.000Z' });
+
+      const record = { task_id: 'task-1', title: 'Updated', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      await applyRemoteChange('update', record as never);
+
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
+      expect(mockTasks.has('task-1')).toBe(false);
+    });
+
+    it('should restore an archived task when the remote edit post-dates the archive', async () => {
+      // edit-beats-delete under LWW: pb-push abandons the stale delete, so the
+      // realtime path must let the newer remote edit win over the archive.
+      mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-07T00:00:00.000Z' });
+
+      const record = { task_id: 'task-1', title: 'Edited Elsewhere', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      await applyRemoteChange('update', record as never);
+
+      expect(mockTasks.has('task-1')).toBe(true);
+      expect(mockArchivedTasks.has('task-1')).toBe(false);
+    });
+
+    it('should un-archive on a remote create that post-dates the archive', async () => {
+      mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-07T00:00:00.000Z' });
+
+      const record = { task_id: 'task-1', title: 'Recreated', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      await applyRemoteChange('create', record as never);
+
+      expect(mockTasks.has('task-1')).toBe(true);
+      expect(mockArchivedTasks.has('task-1')).toBe(false);
     });
 
     it('should apply a remote update when remote is newer (LWW)', async () => {

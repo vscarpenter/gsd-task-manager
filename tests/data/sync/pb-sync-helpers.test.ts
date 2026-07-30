@@ -5,7 +5,7 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
 
-import { fetchRemoteTaskIndex, escapeFilterValue, assertSafeRecordId } from '@/lib/sync/pb-sync-helpers';
+import { fetchRemoteTaskIndex, escapeFilterValue, assertSafeRecordId, isRemoteNewerThanArchive } from '@/lib/sync/pb-sync-helpers';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 
 describe('fetchRemoteTaskIndex', () => {
@@ -74,5 +74,30 @@ describe('assertSafeRecordId', () => {
     expect(() => assertSafeRecordId('user"injection')).toThrow('unsafe characters');
     expect(() => assertSafeRecordId("user'id")).toThrow('unsafe characters');
     expect(() => assertSafeRecordId('a && b')).toThrow('unsafe characters');
+  });
+});
+
+describe('isRemoteNewerThanArchive', () => {
+  const archivedAt = '2026-05-19T00:00:00.000Z';
+
+  it('is true only when the remote edit strictly post-dates the archive', () => {
+    expect(isRemoteNewerThanArchive('2026-05-20T00:00:00.000Z', archivedAt)).toBe(true);
+    expect(isRemoteNewerThanArchive('2026-05-18T00:00:00.000Z', archivedAt)).toBe(false);
+    // Equal timestamps must not resurrect: the archive is the later decision.
+    expect(isRemoteNewerThanArchive(archivedAt, archivedAt)).toBe(false);
+  });
+
+  it('compares instants, not strings, across timezone offsets', () => {
+    // 2026-05-19T02:00+04:00 is 22:00 on the 18th UTC — older despite sorting later.
+    expect(isRemoteNewerThanArchive('2026-05-19T02:00:00.000+04:00', archivedAt)).toBe(false);
+    expect(isRemoteNewerThanArchive('2026-05-19T02:00:00.000-04:00', archivedAt)).toBe(true);
+  });
+
+  it('refuses to resurrect on missing or unparseable timestamps', () => {
+    // An unprovable claim must leave the archive standing.
+    expect(isRemoteNewerThanArchive(undefined, archivedAt)).toBe(false);
+    expect(isRemoteNewerThanArchive('2026-05-20T00:00:00.000Z', undefined)).toBe(false);
+    expect(isRemoteNewerThanArchive('not-a-date', archivedAt)).toBe(false);
+    expect(isRemoteNewerThanArchive('2026-05-20T00:00:00.000Z', 'not-a-date')).toBe(false);
   });
 });

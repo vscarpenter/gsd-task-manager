@@ -3,6 +3,8 @@ import type { TaskRecord, NotificationSettings, ArchiveSettings, SyncHistoryReco
 import type { SmartView } from "@/lib/filters";
 import type { SyncQueueItem, PBSyncConfig, DeviceInfo } from "@/lib/sync/types";
 import { createLogger } from "@/lib/logger";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { ARCHIVE_CONFIG, TIME_MS } from "@/lib/constants";
 
 const logger = createLogger("DB");
 
@@ -366,6 +368,76 @@ class GsdDatabase extends Dexie {
           if (item.status === 'failed' && !item.failedAt) {
             item.failedAt = Date.now();
           }
+        });
+      });
+
+    // Version 15: repair data damaged by the archive/sync resurrection bug.
+    // Sync pulls re-added archived tasks to `tasks` while their archived copies
+    // remained, so archiveOldTasks aborted with ConstraintError on every run.
+    // The code-level fixes (idempotent bulkPut + pull-side archive guard) stop
+    // new damage; this heals devices that already have it. Index-only change:
+    // the stores block is identical to v14.
+    this.version(15)
+      .stores({
+        tasks: "id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt",
+        archivedTasks: "id, quadrant, completed, dueDate, completedAt, archivedAt",
+        smartViews: "id, name, isBuiltIn, createdAt",
+        notificationSettings: "id",
+        syncQueue: "id, taskId, operation, timestamp, retryCount, status",
+        syncMetadata: "key",
+        deviceInfo: "key",
+        archiveSettings: "id",
+        syncHistory: "id, timestamp, status, deviceId",
+        appPreferences: "id"
+      })
+      .upgrade(async (trans) => {
+        // 1. Drop resurrected duplicates — but only those that still satisfy the
+        // archive predicate. Sharing an id with an archived row does NOT by itself
+        // prove a sync resurrection: `restoreTask` is not transactional (it adds to
+        // `tasks` and only then deletes from `archivedTasks`), and replace-mode
+        // import clears `tasks` alone. Either can legitimately leave a live task
+        // holding an archived id, and deleting that would discard the user's
+        // restore. Requiring the row to still be archivable is the evidence that
+        // it is stale: if it qualifies, auto-archive would re-archive it within the
+        // hour regardless, so removing it now reaches the same end state.
+        const archivedIds = new Set<string>(
+          await trans.table("archivedTasks").toCollection().primaryKeys() as string[]
+        );
+        const archiveSettings = await trans.table("archiveSettings").get("settings");
+        const archiveAfterDays: number =
+          archiveSettings?.archiveAfterDays ?? ARCHIVE_CONFIG.DEFAULT_ARCHIVE_AFTER_DAYS;
+        const cutoffIso = new Date(Date.now() - archiveAfterDays * TIME_MS.DAY).toISOString();
+
+        const resurrected = await trans
+          .table("tasks")
+          .filter((task: TaskRecord) =>
+            archivedIds.has(task.id)
+            && task.completed
+            && !!task.completedAt
+            && task.completedAt < cutoffIso
+          )
+          .primaryKeys() as string[];
+        if (resurrected.length > 0) {
+          await trans.table("tasks").bulkDelete(resurrected);
+        }
+
+        // 2. Truncate over-long titles. Records written before the pull/write
+        // boundaries enforced TASK_TITLE_MAX_LENGTH fail validation on read and
+        // are quarantined out of the UI, leaving the user no way to repair them.
+        let repairedTitles = 0;
+        await trans
+          .table("tasks")
+          .toCollection()
+          .modify((task: TaskRecord) => {
+            if (typeof task.title === "string" && task.title.length > SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH) {
+              task.title = task.title.slice(0, SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH);
+              repairedTitles += 1;
+            }
+          });
+
+        logger.info("Archive resurrection cleanup complete", {
+          removedDuplicates: resurrected.length,
+          repairedTitles,
         });
       });
   }

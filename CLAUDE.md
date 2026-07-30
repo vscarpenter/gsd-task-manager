@@ -112,7 +112,7 @@ These packages are not self-explanatory from their names alone:
 
 ### Schema & Database
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
-- Database migrations in `lib/db.ts` - current version is 14
+- Database migrations in `lib/db.ts` - current version is 15
 - New task fields (recurrence, tags, subtasks, dependencies) are optional with sensible defaults
 - **Import schema** uses `.strip()` (not `.strict()`) to accept legacy exports with extra fields (e.g., `vectorClock` from the old Cloudflare sync system)
 - Export schema still uses `.strict()` to ensure clean outgoing data

@@ -82,3 +82,27 @@ export async function fetchRemoteTaskIndex(ownerId: string): Promise<{
     return { index, fetchSucceeded: false };
   }
 }
+
+/**
+ * Decide whether a remote edit outranks a local archive.
+ *
+ * Archiving a task enqueues a remote delete, but `pb-push` abandons that delete
+ * as stale when the remote was modified after the delete was queued — the
+ * engine's edit-beats-delete LWW rule. The pull and realtime paths therefore
+ * treat `archivedTasks` as a *conditional* tombstone: it suppresses a remote
+ * record only while that record is no newer than the archive decision.
+ *
+ * Returns false for missing or unparseable timestamps so an unprovable claim
+ * never resurrects a task — the archive stands unless the remote is demonstrably
+ * newer. Shared by both apply paths so the two guards cannot drift apart.
+ */
+export function isRemoteNewerThanArchive(
+  remoteUpdatedAt: string | undefined,
+  archivedAt: string | undefined,
+): boolean {
+  if (!remoteUpdatedAt || !archivedAt) return false;
+  const remoteTime = new Date(remoteUpdatedAt).getTime();
+  const archivedTime = new Date(archivedAt).getTime();
+  if (Number.isNaN(remoteTime) || Number.isNaN(archivedTime)) return false;
+  return remoteTime > archivedTime;
+}

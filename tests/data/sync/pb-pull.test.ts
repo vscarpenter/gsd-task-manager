@@ -143,6 +143,144 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 });
 
+describe('pullRemoteChanges archive guard', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.archivedTasks.clear();
+    await db.syncQueue.clear();
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+  });
+
+  it('does not resurrect a task that is already archived locally', async () => {
+    // Archiving removes the task from `tasks` but leaves the remote copy alive,
+    // so without this guard every pull re-adds it — permanently undoing the
+    // archive and colliding with the archived copy on the next archive run.
+    // The archive post-dates the remote record here, so nothing outranks it.
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('archived-task'),
+      archivedAt: '2026-05-21T00:00:00.000Z',
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('archived-task', '2026-05-20T00:00:00.000Z')]),
+      }),
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(0);
+    await expect(db.tasks.get('archived-task')).resolves.toBeUndefined();
+    await expect(db.archivedTasks.count()).resolves.toBe(1);
+  });
+
+  it('still pulls non-archived tasks alongside an archived one', async () => {
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('archived-task'),
+      archivedAt: '2026-05-21T00:00:00.000Z',
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [
+          pbRecord('archived-task', '2026-05-20T00:00:00.000Z'),
+          pbRecord('live-task', '2026-05-20T00:00:00.000Z'),
+        ]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['live-task', { pbRecordId: 'rec-live-task', clientUpdatedAt: '2026-05-20T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(1);
+    await expect(db.tasks.get('live-task')).resolves.toBeDefined();
+    await expect(db.tasks.get('archived-task')).resolves.toBeUndefined();
+  });
+
+  it('restores an archived task when the remote edit post-dates the archive', async () => {
+    // pb-push deliberately abandons a delete whose remote was modified after the
+    // delete was queued ("edit-beats-delete" LWW) and relies on this pull to
+    // bring the newer version back. The archive guard must not override that.
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('edited-after-archive'),
+      archivedAt: '2026-05-19T00:00:00.000Z',
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [
+          pbRecord('edited-after-archive', '2026-05-20T00:00:00.000Z'),
+        ]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['edited-after-archive', { pbRecordId: 'rec-edited-after-archive', clientUpdatedAt: '2026-05-20T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(1);
+    await expect(db.tasks.get('edited-after-archive')).resolves.toBeDefined();
+    // The archived row must go, or the task would be re-archived immediately
+    // and the remote edit lost again.
+    await expect(db.archivedTasks.get('edited-after-archive')).resolves.toBeUndefined();
+  });
+
+  it('keeps suppressing a remote record that predates the archive', async () => {
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('stale-remote'),
+      archivedAt: '2026-05-19T00:00:00.000Z',
+    });
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('stale-remote', '2026-05-18T00:00:00.000Z')]),
+      }),
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(0);
+    await expect(db.tasks.get('stale-remote')).resolves.toBeUndefined();
+    await expect(db.archivedTasks.get('stale-remote')).resolves.toBeDefined();
+  });
+
+  it('pulls a restored task again once it leaves the archive', async () => {
+    const db = getDb();
+
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('restored-task', '2026-05-20T00:00:00.000Z')]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['restored-task', { pbRecordId: 'rec-restored-task', clientUpdatedAt: '2026-05-20T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(1);
+    await expect(db.tasks.get('restored-task')).resolves.toBeDefined();
+  });
+});
+
 describe('pullRemoteChanges deletion reconciliation', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

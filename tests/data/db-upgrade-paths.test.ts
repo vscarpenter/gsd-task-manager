@@ -587,6 +587,143 @@ describe('db upgrade callbacks', () => {
   });
 });
 
+describe('v15 upgrade: archive-resurrection cleanup', () => {
+  const V14_STORES = {
+    tasks: 'id, quadrant, completed, dueDate, recurrence, *tags, createdAt, updatedAt, [quadrant+completed], notificationSent, *dependencies, completedAt',
+    archivedTasks: 'id, quadrant, completed, dueDate, completedAt, archivedAt',
+    smartViews: 'id, name, isBuiltIn, createdAt',
+    notificationSettings: 'id',
+    syncQueue: 'id, taskId, operation, timestamp, retryCount, status',
+    syncMetadata: 'key',
+    deviceInfo: 'key',
+    archiveSettings: 'id',
+    syncHistory: 'id, timestamp, status, deviceId',
+    appPreferences: 'id',
+  };
+
+  function legacyTask(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id,
+      title: `Task ${id}`,
+      description: '',
+      urgent: false,
+      important: false,
+      quadrant: 'not-urgent-not-important',
+      completed: true,
+      completedAt: '2026-06-01T00:00:00.000Z',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
+      recurrence: 'none',
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: false,
+      notificationSent: false,
+      timeEntries: [],
+      timeSpent: 0,
+      ...overrides,
+    };
+  }
+
+  beforeEach(async () => {
+    await deleteDb();
+    vi.resetModules();
+  });
+
+  it('removes tasks that already exist in archivedTasks', async () => {
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('archivedTasks').add({
+        ...legacyTask('resurrected'),
+        archivedAt: '2026-07-05T00:00:00.000Z',
+      });
+      // The sync pull re-added the archived task to `tasks`, which made every
+      // subsequent archive run abort with ConstraintError.
+      await legacy.table('tasks').bulkAdd([
+        legacyTask('resurrected'),
+        legacyTask('genuinely-live', { completed: false, completedAt: undefined }),
+      ]);
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    await expect(db.tasks.get('resurrected')).resolves.toBeUndefined();
+    await expect(db.tasks.get('genuinely-live')).resolves.toBeDefined();
+    // The archived copy is authoritative and must survive untouched.
+    await expect(db.archivedTasks.get('resurrected')).resolves.toBeDefined();
+  });
+
+  it('preserves a duplicate that no longer meets the archive predicate', async () => {
+    // restoreTask is not transactional (tasks.add ... archivedTasks.delete), and
+    // replace-mode import clears only `tasks`. Both can legitimately leave a live
+    // task sharing an id with an archived row. Deleting those would lose the
+    // user's restore, so only still-archivable duplicates are cleaned up.
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('archiveSettings').add({ id: 'settings', enabled: true, archiveAfterDays: 30 });
+      await legacy.table('archivedTasks').bulkAdd([
+        { ...legacyTask('restored-then-reopened'), archivedAt: '2026-07-05T00:00:00.000Z' },
+        { ...legacyTask('restored-and-recompleted'), archivedAt: '2026-07-05T00:00:00.000Z' },
+      ]);
+      await legacy.table('tasks').bulkAdd([
+        // Restored and re-opened — clearly live again.
+        legacyTask('restored-then-reopened', { completed: false, completedAt: undefined }),
+        // Restored and completed again today — not yet old enough to re-archive.
+        legacyTask('restored-and-recompleted', { completed: true, completedAt: new Date().toISOString() }),
+      ]);
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    await expect(db.tasks.get('restored-then-reopened')).resolves.toBeDefined();
+    await expect(db.tasks.get('restored-and-recompleted')).resolves.toBeDefined();
+  });
+
+  it('honours a custom archiveAfterDays when deciding what is stale', async () => {
+    const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
+
+    await seedAtVersion(14, async (legacy) => {
+      // With a 90-day window, a task completed 40 days ago is NOT archivable.
+      await legacy.table('archiveSettings').add({ id: 'settings', enabled: true, archiveAfterDays: 90 });
+      await legacy.table('archivedTasks').add({
+        ...legacyTask('within-window'),
+        archivedAt: '2026-07-05T00:00:00.000Z',
+      });
+      await legacy.table('tasks').add(
+        legacyTask('within-window', { completed: true, completedAt: fortyDaysAgo }),
+      );
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    await expect(db.tasks.get('within-window')).resolves.toBeDefined();
+  });
+
+  it('truncates over-long titles so the record stops being quarantined', async () => {
+    const overLongTitle = 'x'.repeat(81);
+
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('tasks').add(legacyTask('long-title', { title: overLongTitle }));
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    const repaired = await db.tasks.get('long-title');
+    expect(repaired).toBeDefined();
+    expect(repaired!.title).toHaveLength(80);
+    expect(repaired!.title).toBe('x'.repeat(80));
+  });
+
+  it('leaves compliant titles untouched', async () => {
+    await seedAtVersion(14, async (legacy) => {
+      await legacy.table('tasks').add(legacyTask('short-title', { title: 'Perfectly fine' }));
+    }, { 14: V14_STORES });
+
+    const db = await openCurrentDb();
+
+    const untouched = await db.tasks.get('short-title');
+    expect(untouched!.title).toBe('Perfectly fine');
+  });
+});
+
 describe('getDb() environment guard', () => {
   beforeEach(async () => {
     await deleteDb();

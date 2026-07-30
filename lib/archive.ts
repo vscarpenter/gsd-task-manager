@@ -87,7 +87,13 @@ export async function archiveOldTasks(
         archivedAt: now
       }));
 
-      await db.archivedTasks.bulkAdd(archivedTasks);
+      // bulkPut, not bulkAdd: a task archived earlier can reappear in `tasks`
+      // (a sync pull re-adding it, an import, a restore that was re-completed),
+      // and bulkAdd throws ConstraintError on the existing key. Because the
+      // whole batch runs in one transaction, that single collision aborted
+      // every archive run on the device — permanently. Re-archiving is
+      // idempotent, so overwriting the archived copy is the correct outcome.
+      await db.archivedTasks.bulkPut(archivedTasks);
 
       // Remove from main tasks table
       await db.tasks.bulkDelete(eligible.map((task) => task.id));
