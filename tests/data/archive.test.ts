@@ -575,6 +575,39 @@ describe("archive", () => {
       expect(restored!.archivedAt).toBe(now);
     });
 
+    it("should_not_clobber_a_newer_archived_row_with_the_stale_snapshot", async () => {
+      // Between the delete and the Undo click the same id can come back and be
+      // archived again with newer content: the remote copy survives when
+      // pb-push abandons the archive's delete as stale, the pull re-adds it
+      // (the archive guard no longer suppresses it — the row was just deleted),
+      // and auto-archive files it away again. Undo then holds a stale snapshot
+      // captured at delete time, so writing it unconditionally would discard
+      // the intervening edit.
+      const db = getDb();
+      const staleSnapshot = createMockTask({
+        id: "raced-undo",
+        title: "Stale Title",
+        completed: true,
+        completedAt: "2026-06-01T00:00:00.000Z",
+        archivedAt: "2026-07-05T00:00:00.000Z",
+      });
+      const newerRow = createMockTask({
+        id: "raced-undo",
+        title: "Newer Title From Another Device",
+        completed: true,
+        completedAt: "2026-06-01T00:00:00.000Z",
+        archivedAt: "2026-07-20T00:00:00.000Z",
+      });
+
+      await db.archivedTasks.add(newerRow);
+      await reinstateArchivedTask(staleSnapshot);
+
+      const stored = await db.archivedTasks.get("raced-undo");
+      expect(stored!.title).toBe("Newer Title From Another Device");
+      expect(stored!.archivedAt).toBe("2026-07-20T00:00:00.000Z");
+      expect(await db.archivedTasks.count()).toBe(1);
+    });
+
     it("should_be_idempotent_when_the_row_already_exists", async () => {
       // The Undo affordance can be activated twice (double-click, or a stale
       // toast). `add` threw ConstraintError on the second call, which escaped
