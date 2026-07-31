@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { BUILT_IN_SMART_VIEWS } from '@/lib/smart-views/built-in';
+import { SMART_VIEW_ICONS } from '@/lib/smart-views/icons';
 
 describe('BUILT_IN_SMART_VIEWS', () => {
   it('exports an array of smart views', () => {
@@ -76,6 +77,29 @@ describe('BUILT_IN_SMART_VIEWS', () => {
     const names = BUILT_IN_SMART_VIEWS.map(v => v.name);
     const uniqueNames = new Set(names);
     expect(uniqueNames.size).toBe(names.length);
+  });
+
+  // PRODUCT.md anti-reference: "a gamified todo toy". Emoji as feature icons is
+  // the loudest tell; the rest of the app draws its chrome with the Lucide set.
+  // `icon` stays a string (custom user views may still carry one) but built-ins
+  // name a Lucide glyph instead of embedding a pictograph.
+  it('no built-in view uses an emoji icon', () => {
+    for (const view of BUILT_IN_SMART_VIEWS) {
+      expect(view.icon).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
+  });
+
+  it('every built-in icon resolves to a known Lucide glyph', () => {
+    for (const view of BUILT_IN_SMART_VIEWS) {
+      expect(SMART_VIEW_ICONS).toHaveProperty(view.icon as string);
+    }
+  });
+
+  // "start now!" — PRODUCT.md voice: no exclamation-point cheerleading.
+  it('no built-in description uses exclamation-point cheerleading', () => {
+    for (const view of BUILT_IN_SMART_VIEWS) {
+      expect(view.description ?? '').not.toContain('!');
+    }
   });
 });
 

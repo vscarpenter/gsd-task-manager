@@ -20,6 +20,7 @@ import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
 import { MatrixGrid } from "./matrix-grid";
+import { MatrixGridSkeleton } from "./matrix-grid-skeleton";
 import { EditDrawer, type EditDraft } from "./edit-drawer";
 import { SmartViewStrip } from "./smart-view-strip";
 import { deriveMatrixView } from "./matrix-view";
@@ -129,7 +130,7 @@ async function handleToggle(task: TaskRecord, completedNext: boolean): Promise<v
 }
 
 export function MatrixSimplified() {
-  const { all } = useTasks();
+  const { all, isLoading } = useTasks();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
   const { sensors, activeId, handleDragStart, handleDragEnd } = useDragAndDrop(handleError);
 
@@ -297,17 +298,21 @@ export function MatrixSimplified() {
             </div>
           ) : null}
         </div>
-        <MatrixGrid
-          tasks={visibleTasks}
-          allTasks={all}
-          onEdit={handleEditOpen}
-          onToggleComplete={handleToggle}
-          onDelete={handleDelete}
-          onShare={handleShareOpen}
-          onAddInQuadrant={handleAddInQuadrant}
-          highlightedTaskId={highlightedTaskId}
-          onTaskRef={handleTaskRef}
-        />
+        {isLoading ? (
+          <MatrixGridSkeleton />
+        ) : (
+          <MatrixGrid
+            tasks={visibleTasks}
+            allTasks={all}
+            onEdit={handleEditOpen}
+            onToggleComplete={handleToggle}
+            onDelete={handleDelete}
+            onShare={handleShareOpen}
+            onAddInQuadrant={handleAddInQuadrant}
+            highlightedTaskId={highlightedTaskId}
+            onTaskRef={handleTaskRef}
+          />
+        )}
       </AppShell>
 
       <ShareTaskDialog

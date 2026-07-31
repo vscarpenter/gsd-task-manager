@@ -164,14 +164,27 @@ describe('buildCommandActions', () => {
     }
   });
 
-  it('should use default icon for smart views without one', () => {
+  // The label is the searchable, screen-reader-visible string — an icon glyph
+  // concatenated into it read out as "clipboard No Icon View" and polluted
+  // fuzzy-match scoring. Icons belong in the item's icon slot, not its label.
+  it('should label smart views by name alone, with no icon glyph', () => {
     const smartViews = [
       { id: 'no-icon', name: 'No Icon View', criteria: {} as FilterCriteria },
     ];
 
     const actions = buildCommandActions(createMockHandlers(), smartViews, defaultConditions);
     const viewAction = actions.find((a: CommandAction) => a.id === 'view-no-icon');
-    expect(viewAction!.label).toContain('📋');
+    expect(viewAction!.label).toBe('No Icon View');
+  });
+
+  it('should not embed an emoji in a smart view label', () => {
+    const smartViews = [
+      { id: 'today', name: 'Due Today', icon: '📅', criteria: {} as FilterCriteria },
+    ];
+
+    const actions = buildCommandActions(createMockHandlers(), smartViews, defaultConditions);
+    const viewAction = actions.find((a: CommandAction) => a.id === 'view-today');
+    expect(viewAction!.label).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
   // Migrated from the former tests/data/final-coverage-push.test.ts (finding F2.1).

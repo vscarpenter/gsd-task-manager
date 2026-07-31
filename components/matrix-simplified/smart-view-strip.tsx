@@ -10,7 +10,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SMART_VIEW_ICONS, type SmartViewIconKey } from "@/lib/smart-views/icons";
 import { useSmartViewOverflow } from "./use-smart-view-overflow";
+
+/**
+ * Renders a view's icon. Built-ins name a Lucide glyph; a custom view saved
+ * before the registry existed may still hold a raw character, which we render
+ * as-is rather than dropping the user's choice on the floor.
+ *
+ * The glyph is read as a direct member of the module-level registry rather than
+ * through a helper call: react-hooks/static-components cannot see through a
+ * function boundary and treats the returned type as a component minted during
+ * render, which would (wrongly) imply remounting on every keystroke.
+ */
+function SmartViewIcon({ icon }: { icon?: string }) {
+  if (!icon) return null;
+  const Glyph = SMART_VIEW_ICONS[icon as SmartViewIconKey];
+  return Glyph ? (
+    <Glyph className="h-3.5 w-3.5 shrink-0" aria-hidden />
+  ) : (
+    <span aria-hidden>{icon}</span>
+  );
+}
 
 interface SmartViewStripProps {
   views: SmartView[];
@@ -20,8 +41,11 @@ interface SmartViewStripProps {
 }
 
 /** Shared pill geometry so inline pills, the More button, and the ghost match. */
+// `touch-target` opts the pills into the 44px floor on coarse pointers. At 36px
+// they were the only interactive controls on the matrix without it, and they sit
+// in a horizontally scrolling row where a mis-tap changes the whole view.
 const PILL_BASE =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
+  "touch-target inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
 
 function pillVariant(active: boolean): string {
   // Editorial chrome: selection is a neutral sunken fill + ink, not a tinted pill.
@@ -126,7 +150,7 @@ function SmartViewButton({
       aria-pressed={active}
       className={cn(PILL_BASE, pillVariant(active))}
     >
-      {icon ? <span aria-hidden>{icon}</span> : null}
+      <SmartViewIcon icon={icon} />
       <span>{label}</span>
     </button>
   );
@@ -186,7 +210,7 @@ export function SmartViewOverflowMenu({
               aria-current={isActive ? "true" : undefined}
               className={cn("gap-2", isActive && "bg-background-muted text-foreground")}
             >
-              {view.icon ? <span aria-hidden>{view.icon}</span> : null}
+              <SmartViewIcon icon={view.icon} />
               <span className="flex-1">{view.name}</span>
               {isActive ? <CheckIcon className="h-3.5 w-3.5 text-foreground-muted" aria-hidden /> : null}
             </DropdownMenuItem>

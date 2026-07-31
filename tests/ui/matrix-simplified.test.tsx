@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import type { TaskRecord } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 
-const tasksFixture = vi.hoisted(() => ({ current: [] as TaskRecord[] }));
+const tasksFixture = vi.hoisted(() => ({ current: [] as TaskRecord[], loading: false }));
 const smartViewsFixture = vi.hoisted(() => ({
   enabled: false,
   current: [] as SmartView[],
@@ -21,7 +21,7 @@ vi.mock("@/lib/use-tasks", () => ({
       "urgent-not-important": [],
       "not-urgent-not-important": [],
     },
-    isLoading: false,
+    isLoading: tasksFixture.loading,
   }),
 }));
 
@@ -129,6 +129,7 @@ import { celebrateCompletion } from "@/lib/confetti";
 describe("<MatrixSimplified>", () => {
   beforeEach(() => {
     tasksFixture.current = [];
+    tasksFixture.loading = false;
     smartViewsFixture.enabled = false;
     smartViewsFixture.current = [];
     localStorage.removeItem("gsd:show-completed");
@@ -142,6 +143,34 @@ describe("<MatrixSimplified>", () => {
     vi.mocked(deleteTask).mockClear();
     vi.mocked(restoreTask).mockClear();
     handleSuccessSpy.mockClear();
+  });
+
+  // The empty states make a specific claim ("Nothing on fire.") that must not be
+  // shown before IndexedDB has been read — a user with urgent tasks would see the
+  // app assert the opposite of the truth for the duration of the load.
+  describe("loading state", () => {
+    it("renders the skeleton, not the empty-state grid, while tasks are loading", () => {
+      tasksFixture.loading = true;
+      render(<MatrixSimplified />);
+      expect(screen.getByTestId("matrix-grid-skeleton")).toBeInTheDocument();
+      expect(screen.queryByTestId("matrix-grid")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quadrant-empty-mark")).not.toBeInTheDocument();
+    });
+
+    it("exposes the skeleton to assistive tech as a busy status", () => {
+      tasksFixture.loading = true;
+      render(<MatrixSimplified />);
+      const sk = screen.getByTestId("matrix-grid-skeleton");
+      expect(sk).toHaveAttribute("role", "status");
+      expect(sk).toHaveAttribute("aria-busy", "true");
+    });
+
+    it("swaps to the real grid once loading resolves", () => {
+      tasksFixture.loading = false;
+      render(<MatrixSimplified />);
+      expect(screen.getByTestId("matrix-grid")).toBeInTheDocument();
+      expect(screen.queryByTestId("matrix-grid-skeleton")).not.toBeInTheDocument();
+    });
   });
 
   it("keeps the matrix single-column at tablet widths and merges it at large widths", () => {

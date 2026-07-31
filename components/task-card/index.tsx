@@ -39,11 +39,11 @@ export function TaskCard({
   const isBlocked = blockingTasks.length > 0;
   const isBlocking = blockedTasks.length > 0;
 
-  // The card carries its quadrant's pigment (spine, completion disc, tag chips,
-  // subtask fill) so the four-color matrix language reads on every surface.
+  // The card carries its quadrant's pigment (spine, completion disc, subtask
+  // fill) so the four-color matrix language reads on every surface. Tags are
+  // deliberately excluded — see the note in TaskCardMetadata.
   const quadrant = quadrantForTask(task.urgent, task.important);
   const accentVar = QUADRANT_ACCENT[quadrant.rdKey];
-  const washVar = `var(--${quadrant.rdKey}-wash)`;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -78,7 +78,15 @@ export function TaskCard({
         // Clear the sticky topbar + capture bar (plus ~12pt) when scrolled to.
         "scroll-mt-24",
         "border-card-border",
-        task.completed ? "opacity-60" : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40",
+        // focus-within, not focus-visible: the article is tabIndex={-1} and is
+        // only ever focused programmatically (scroll-to-highlight), and
+        // :focus-visible does not match programmatic focus — a ring here would
+        // be dead CSS. focus-within gives a keyboard user tabbing into the card
+        // the same row-highlight a mouse user gets on hover.
+        // ui-craft-detect-ignore-next-line
+        task.completed
+          ? "opacity-60"
+          : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40 focus-within:border-accent/40",
         !task.completed && isBlocked && "opacity-[0.62]",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
@@ -105,6 +113,7 @@ export function TaskCard({
       <TaskCardHeader
         task={task}
         accentVar={accentVar}
+        reserveBadgeSpace={taskIsOverdue}
         selectionMode={selectionMode}
         isSelected={isSelected}
         onToggleSelect={onToggleSelect}
@@ -116,7 +125,6 @@ export function TaskCard({
       <TaskCardMetadata
         task={task}
         accentVar={accentVar}
-        washVar={washVar}
         completedSubtasks={completedSubtasks}
         totalSubtasks={totalSubtasks}
         isBlocked={isBlocked}

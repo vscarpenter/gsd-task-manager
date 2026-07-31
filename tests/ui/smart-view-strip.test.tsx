@@ -186,6 +186,39 @@ describe("<SmartViewOverflowMenu>", () => {
   });
 });
 
+describe("<SmartViewStrip> icons", () => {
+  const withIcon = (icon?: string): SmartView => ({ ...makeView("a", "Overdue Backlog"), icon });
+
+  // Scope every count to the visible pill row: the hidden ghost measurement row
+  // always renders a "More" chevron, so counting svg across the whole container
+  // passes no matter what the icon slot does.
+  const visibleGlyphs = () =>
+    screen.getByRole("group", { name: "Smart views" }).querySelectorAll("svg");
+
+  it("renders a registry key as an SVG glyph, not literal text", () => {
+    render(
+      <SmartViewStrip views={[withIcon("overdue")]} onSelectView={vi.fn()} onClearView={vi.fn()} />
+    );
+    expect(visibleGlyphs().length).toBe(1);
+    expect(screen.queryByText("overdue")).not.toBeInTheDocument();
+  });
+
+  // A custom view saved before the registry existed still holds a raw glyph.
+  it("falls back to rendering an unrecognized icon string as-is", () => {
+    render(
+      <SmartViewStrip views={[withIcon("✨")]} onSelectView={vi.fn()} onClearView={vi.fn()} />
+    );
+    expect(screen.getAllByText("✨").length).toBeGreaterThan(0);
+  });
+
+  it("renders no glyph when a view has no icon", () => {
+    render(
+      <SmartViewStrip views={[withIcon(undefined)]} onSelectView={vi.fn()} onClearView={vi.fn()} />
+    );
+    expect(visibleGlyphs().length).toBe(0);
+  });
+});
+
 describe("<SmartViewStrip>", () => {
   it("renders nothing when there are no views", () => {
     const { container } = render(

@@ -88,10 +88,20 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
     void onSubmit(draft.toDraft(), task?.id);
   };
 
+  const heading = isCreateMode ? "New task" : "Edit task";
+
+  // Deliberately hand-rolled rather than Radix <Dialog>. ui-craft-detect flags
+  // this as a11y/modal-without-dialog, but the behaviours that rule protects are
+  // covered by explicit tests here (role/aria-modal, focus restore on close, and
+  // Escape layering). Radix's DismissableLayer handles Escape at the document
+  // level, which would break the layered-Escape contract the dependency
+  // suggestion popup relies on — a first Escape closes the popup, a second
+  // closes the drawer. See .ui-craft/decisions.md (2026-07-31).
   return (
     <div
       onClick={onClose}
       role="presentation"
+      // ui-craft-detect-ignore-next-line
       className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay"
     >
       <form
@@ -103,11 +113,11 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
         onKeyDown={trapKeyDown}
         onSubmit={submit}
         className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl animate-drawer-slide-in"
-        aria-label={isCreateMode ? "New task" : "Edit task"}
+        aria-label={heading}
       >
         <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-          <h2 className="rd-serif text-[22px] text-foreground">{isCreateMode ? "New task" : "Edit task"}</h2>
+          <h2 className="rd-serif text-[22px] text-foreground">{heading}</h2>
           {activeQuadrant ? (
             <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
               {activeQuadrant.title}
@@ -117,7 +127,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="touch-target ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted"
+            className="touch-target ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -130,7 +140,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
             value={draft.title}
             onChange={(e) => draft.setTitle(e.target.value)}
             placeholder="What needs doing?"
-            className="w-full rounded-lg border border-border bg-background px-3 py-3 text-[18px] font-medium text-foreground outline-none focus:border-foreground-muted placeholder:font-normal"
+            className="w-full rounded-lg border border-border bg-background px-3 py-3 text-[18px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
             aria-label="Title"
           />
 
@@ -142,7 +152,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
               rows={4}
               placeholder="Optional details, links, context"
               aria-label="Description"
-              className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted"
+              className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
             />
           </Field>
 

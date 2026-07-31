@@ -14,9 +14,11 @@ export function AppFooter() {
           href="https://vinny.dev/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-accent hover:underline"
+          className="rounded-xs text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
-          Vinny Carpenter
+          {/* Non-breaking space keeps the name whole — at 320px the footer
+              otherwise breaks it as "Vinny / Carpenter". */}
+          Vinny&nbsp;Carpenter
         </a>
         <span aria-hidden="true">{" · "}</span>
         <span className="text-foreground-muted/70">

@@ -145,7 +145,7 @@ describe("AppShell command palette wiring", () => {
       {
         id: "built-in-focus",
         name: "Today's Focus",
-        icon: "🎯",
+        icon: "flame",
         criteria: { status: "active" },
         isBuiltIn: true,
         createdAt: "2025-01-01T00:00:00.000Z",
@@ -162,7 +162,8 @@ describe("AppShell command palette wiring", () => {
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
     await waitFor(() => expect(screen.getByText("Smart Views")).toBeInTheDocument());
-    expect(screen.getByText("🎯 Today's Focus")).toBeInTheDocument();
+    // Label is the name alone; the glyph renders in the item's icon slot.
+    expect(screen.getByText("Today's Focus")).toBeInTheDocument();
   });
 
   it("navigates to /settings when Open settings is executed", async () => {

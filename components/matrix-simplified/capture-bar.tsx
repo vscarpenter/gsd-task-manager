@@ -137,7 +137,11 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       className={cn(
         "flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5",
         // Flat at rest on the hairline; lifts only when engaged (Inkwell flat-at-rest signature).
-        "transition-shadow focus-within:border-foreground-muted focus-within:shadow-lg"
+        "transition-shadow focus-within:border-foreground-muted focus-within:shadow-lg",
+        // The input clears its own outline, so the bar carries the focus ring for
+        // it. A lift alone is not a focus indicator — it disappears under
+        // forced-colors and reads as decoration rather than position.
+        "focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2"
       )}
     >
       <ZapIcon
@@ -154,6 +158,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         onKeyDown={onInputKey}
         placeholder="Capture a task..."
         aria-label="Capture a task"
+        // The focus indicator lives on the parent <form> (focus-within:ring-2
+        // ring-accent), which is the visible affordance for this borderless
+        // input. The rule matches per element and cannot see the parent.
+        // ui-craft-detect-ignore-next-line
         className="touch-target min-w-0 flex-1 border-0 bg-transparent text-[15px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
       />
       {text.trim() ? (
@@ -164,7 +172,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
             type="button"
             onClick={cycleQuadrant}
             title="Tab to cycle quadrant"
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in"
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             style={{
               backgroundColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
               color: accent,
@@ -194,7 +202,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
               // Enters just behind the quadrant pill (40ms) so the trailing controls
               // arrive as one coherent cluster instead of the pill animating alone.
               style={{ animationDelay: "40ms" }}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground animate-quadrant-pill-in"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 animate-quadrant-pill-in"
             >
               Details ↗
             </button>
@@ -211,6 +219,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         aria-disabled={!parsed.title}
         className={cn(
           "touch-target inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-[background-color,color,transform] duration-[120ms]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
           parsed.title
             ? "bg-accent text-card hover:bg-accent-hover active:scale-[0.97]"
             : "bg-accent/15 text-accent hover:bg-accent/20"
