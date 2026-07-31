@@ -19,6 +19,7 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - `.claude/rules/testing.md` — Test runner, TDD workflow, jsdom/bun gotchas
 - `.claude/rules/sw-cache.md` — Service worker multi-cache strategy (ADR 0012)
 - `.claude/rules/mcp-server.md` — MCP server package conventions and tool layout
+- `.claude/rules/archive-tombstone.md` — The `archivedTasks` tombstone invariant (ADR 0013); read before writing to `tasks` or `archivedTasks`
 
 ## Design Context
 
@@ -68,6 +69,7 @@ Architecture details for these subsystems live in path-scoped rules:
 - PWA / service-worker cache strategy → `.claude/rules/sw-cache.md` (auto-loads on `public/sw*.js`, `lib/sw-cache-logic.ts`)
 - PocketBase sync + OAuth → `.claude/rules/pocketbase-sync.md` (auto-loads on `lib/sync/**`)
 - MCP server package → `.claude/rules/mcp-server.md` (auto-loads on `packages/mcp-server/**`)
+- Archive/sync tombstone invariant → `.claude/rules/archive-tombstone.md` (auto-loads on `lib/archive.ts`, `lib/sync/**`, `lib/db.ts`)
 
 **Quick refs that survive without opening a rule file**:
 - Backend: self-hosted PocketBase at `https://api.vinny.io`; admin UI at `/_/`.
