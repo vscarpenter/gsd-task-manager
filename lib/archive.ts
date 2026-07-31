@@ -212,6 +212,43 @@ export async function deleteArchivedTask(taskId: string): Promise<void> {
 }
 
 /**
+ * Put an archived task back into the archive — the undo for deleteArchivedTask.
+ *
+ * Takes the whole record because the row is already gone by the time undo runs,
+ * so the caller is the only remaining source of truth for it.
+ *
+ * Writes only when the id is absent, and reports success either way. An existing
+ * row means one of two things, and skipping is right for both:
+ *
+ *   - the undo already ran (a double-click, or a toast still on screen), which
+ *     is why this cannot simply `add` — that threw ConstraintError; or
+ *   - the id came back and was archived again with *newer* content. That is
+ *     reachable: when pb-push abandons the archive's remote delete as stale, the
+ *     pull re-adds the task (the archive guard no longer suppresses it — this
+ *     row was just deleted) and auto-archive files it away again. The snapshot
+ *     held by the toast is from delete time, so writing it unconditionally would
+ *     discard the intervening edit.
+ *
+ * The stored row is therefore never older than the one being offered, so the
+ * read and the write must be one transaction — two undos racing could otherwise
+ * both observe an empty slot.
+ *
+ * Purely local: `archivedTasks` is never synced, and the remote copy was already
+ * deleted when the task was archived, so there is nothing to enqueue.
+ */
+export async function reinstateArchivedTask(task: TaskRecord): Promise<void> {
+  const db = getDb();
+
+  await db.transaction("rw", db.archivedTasks, async () => {
+    const existing = await db.archivedTasks.get(task.id);
+    if (existing) {
+      return;
+    }
+    await db.archivedTasks.put(task);
+  });
+}
+
+/**
  * Get count of archived tasks
  */
 export async function getArchivedCount(): Promise<number> {
