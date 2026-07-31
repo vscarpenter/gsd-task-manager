@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TaskRecord } from "@/lib/types";
+import { toast } from "sonner";
 
 // Mock @tanstack/react-virtual since jsdom has no layout engine
 vi.mock("@tanstack/react-virtual", () => ({
@@ -49,11 +50,13 @@ vi.mock("next/navigation", () => ({
 const mockListArchivedTasks = vi.fn<() => Promise<TaskRecord[]>>();
 const mockRestoreTask = vi.fn<(id: string) => Promise<void>>();
 const mockDeleteArchivedTask = vi.fn<(id: string) => Promise<void>>();
+const mockArchiveTaskNow = vi.fn<(id: string) => Promise<void>>();
 
 vi.mock("@/lib/archive", () => ({
   listArchivedTasks: (...args: unknown[]) => mockListArchivedTasks(...args as []),
   restoreTask: (...args: unknown[]) => mockRestoreTask(...args as [string]),
   deleteArchivedTask: (...args: unknown[]) => mockDeleteArchivedTask(...args as [string]),
+  archiveTaskNow: (...args: unknown[]) => mockArchiveTaskNow(...args as [string]),
 }));
 
 // Mock sonner toast
@@ -197,6 +200,64 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     await waitFor(() => {
       expect(mockRestoreTask).toHaveBeenCalledWith("task-1");
     });
+  });
+
+  it("undoes a restore through archiveTaskNow rather than raw Dexie writes", async () => {
+    // The Undo lives inside the success toast's action, so it is only reachable
+    // by invoking the callback sonner was handed.
+    const user = userEvent.setup();
+    mockListArchivedTasks.mockResolvedValue([
+      createMockArchivedTask({ id: "task-1", title: "Restorable Task" }),
+    ]);
+    mockRestoreTask.mockResolvedValue(undefined);
+    mockArchiveTaskNow.mockResolvedValue(undefined);
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Restorable Task")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /restore/i }));
+    await waitFor(() => {
+      expect(mockRestoreTask).toHaveBeenCalledWith("task-1");
+    });
+
+    const successCall = vi.mocked(toast.success).mock.calls.find(
+      ([message]) => typeof message === "string" && message.includes("Restored")
+    );
+    expect(successCall).toBeDefined();
+    const action = (successCall![1] as { action?: { onClick: () => Promise<void> } })?.action;
+    expect(action).toBeDefined();
+
+    await action!.onClick();
+
+    expect(mockArchiveTaskNow).toHaveBeenCalledWith("task-1");
+  });
+
+  it("surfaces an error when undoing a restore fails", async () => {
+    const user = userEvent.setup();
+    mockListArchivedTasks.mockResolvedValue([
+      createMockArchivedTask({ id: "task-1", title: "Restorable Task" }),
+    ]);
+    mockRestoreTask.mockResolvedValue(undefined);
+    mockArchiveTaskNow.mockRejectedValue(new Error("could not re-archive"));
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Restorable Task")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /restore/i }));
+    await waitFor(() => {
+      expect(mockRestoreTask).toHaveBeenCalledWith("task-1");
+    });
+
+    const successCall = vi.mocked(toast.success).mock.calls.find(
+      ([message]) => typeof message === "string" && message.includes("Restored")
+    );
+    const action = (successCall![1] as { action?: { onClick: () => Promise<void> } })?.action;
+
+    // A rejected undo must not escape as an unhandled rejection.
+    await expect(action!.onClick()).resolves.toBeUndefined();
+    expect(toast.error).toHaveBeenCalled();
   });
 
   it("deletes task with confirmation via useMutation", async () => {

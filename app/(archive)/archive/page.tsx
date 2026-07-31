@@ -8,7 +8,7 @@ import { RefreshCcwIcon, Trash2Icon } from "lucide-react";
 import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/task-card";
-import { listArchivedTasks, restoreTask, deleteArchivedTask } from "@/lib/archive";
+import { listArchivedTasks, restoreTask, deleteArchivedTask, archiveTaskNow } from "@/lib/archive";
 import type { TaskRecord } from "@/lib/types";
 import { toast } from "sonner";
 import { getDb } from "@/lib/db";
@@ -87,14 +87,16 @@ export default function ArchivePage() {
         action: {
           label: "Undo",
           onClick: async () => {
-            // Re-archive by moving back: delete from main tasks, add to archive
-            const db = getDb();
-            const restored = await db.tasks.get(task.id);
-            if (restored) {
-              await db.archivedTasks.add({ ...restored, archivedAt: new Date().toISOString() });
-              await db.tasks.delete(task.id);
+            // archiveTaskNow re-archives and queues the remote delete in one
+            // transaction. Doing it inline here left the task in both tables if
+            // either write failed, and never told other devices.
+            try {
+              await archiveTaskNow(task.id);
               queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
               toast.success("Restore undone");
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : `Failed to undo "${task.title}"`;
+              toast.error(errorMsg);
             }
           },
         },
