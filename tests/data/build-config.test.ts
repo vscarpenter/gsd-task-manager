@@ -50,4 +50,21 @@ describe("build configuration", () => {
 
     expect(configSource).toMatch(/turbopack:\s*\{\s*root:\s*__dirname\s*\}/);
   });
+
+  it("keeps the build-date fallback off the clock so dev never hydrate-mismatches", () => {
+    const configSource = readFileSync("next.config.ts", "utf8");
+    const fallbackLine = configSource
+      .split("\n")
+      .find((line) => line.includes("NEXT_PUBLIC_BUILD_DATE") && line.includes("??"));
+
+    expect(fallbackLine).toBeDefined();
+    // `next dev` never sources .build-env.sh, so this fallback is the value the
+    // dev server inlines. Deriving it from the clock makes the prerendered
+    // markup and a later-compiled client chunk disagree whenever the two span a
+    // UTC midnight, which React reports as a hydration mismatch — a scary
+    // console error that can mask real ones. Production is unaffected either
+    // way (the build script pins the env var), so the fallback should simply
+    // not depend on the current time.
+    expect(fallbackLine).not.toMatch(/new Date\(/);
+  });
 });
