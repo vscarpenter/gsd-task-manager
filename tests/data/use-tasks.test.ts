@@ -1,6 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
-import { keepValidTaskRecords } from '@/lib/use-tasks';
+import { renderHook } from '@testing-library/react';
+import { keepValidTaskRecords, useTasks } from '@/lib/use-tasks';
 import type { TaskRecord } from '@/lib/types';
+
+// Mirrors dexie-react-hooks' real contract: useLiveQuery(querier, deps, default)
+// returns `default` synchronously when one is supplied, and `undefined` until
+// the promise resolves when one is not. Passing a default therefore makes an
+// `isLoading` derived from `=== undefined` permanently false.
+const liveQueryResult = vi.hoisted(() => ({ resolved: undefined as TaskRecord[] | undefined }));
+vi.mock('dexie-react-hooks', () => ({
+  useLiveQuery: (_querier: unknown, _deps: unknown, defaultResult?: unknown) =>
+    liveQueryResult.resolved ?? defaultResult,
+}));
+
+vi.mock('@/lib/db', () => ({ getDb: () => ({ tasks: { toArray: async () => [] } }) }));
 
 // Mock logger so quarantine warnings don't produce side effects during tests.
 const mockWarn = vi.hoisted(() => vi.fn());
@@ -33,6 +46,34 @@ function buildTask(overrides?: Partial<TaskRecord>): TaskRecord {
     ...overrides,
   };
 }
+
+describe('useTasks loading state', () => {
+  // The matrix renders four empty states ("Nothing on fire.") while IndexedDB is
+  // still being read. That is a false statement about the user's data, so the
+  // hook must be able to say "not yet" — it cannot if it supplies a default.
+  it('reports isLoading while the live query has not resolved', () => {
+    liveQueryResult.resolved = undefined;
+    const { result } = renderHook(() => useTasks());
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.all).toEqual([]);
+  });
+
+  it('clears isLoading and buckets tasks once the query resolves', () => {
+    liveQueryResult.resolved = [buildTask({ id: 'a', quadrant: 'urgent-important', urgent: true, important: true })];
+    const { result } = renderHook(() => useTasks());
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.all).toHaveLength(1);
+    expect(result.current.byQuadrant['urgent-important']).toHaveLength(1);
+    liveQueryResult.resolved = undefined;
+  });
+
+  it('reports not-loading for an empty database, not loading-forever', () => {
+    liveQueryResult.resolved = [];
+    const { result } = renderHook(() => useTasks());
+    expect(result.current.isLoading).toBe(false);
+    liveQueryResult.resolved = undefined;
+  });
+});
 
 describe('keepValidTaskRecords', () => {
   it('passes valid records through unchanged', () => {

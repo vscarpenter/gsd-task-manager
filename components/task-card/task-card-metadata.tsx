@@ -9,8 +9,6 @@ export interface TaskCardMetadataProps {
   task: TaskRecord;
   /** CSS var for the task's quadrant pigment, e.g. "var(--q1)". */
   accentVar: string;
-  /** CSS var for the quadrant wash, e.g. "var(--q1-wash)". */
-  washVar: string;
   completedSubtasks: number;
   totalSubtasks: number;
   isBlocked: boolean;
@@ -24,7 +22,6 @@ export interface TaskCardMetadataProps {
 export function TaskCardMetadata({
   task,
   accentVar,
-  washVar,
   completedSubtasks,
   totalSubtasks,
   isBlocked,
@@ -37,15 +34,18 @@ export function TaskCardMetadata({
   const subtasksDone = totalSubtasks > 0 && completedSubtasks === totalSubtasks;
   return (
     <>
-      {/* Tags — quadrant-wash chips with quadrant-accent text (reference §06) */}
+      {/* Tags read neutral. Tinting them with the quadrant pigment restated a
+          fact the pane, header, and card spine already carry three times over,
+          and it mis-signalled: it implied the *tag* meant something about
+          urgency when "infra" and "home" are orthogonal to the matrix. Color
+          on this surface means quadrant, and only quadrant. */}
       {task.tags.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {task.tags.map((tag) => (
             <span
               key={tag}
               data-testid="task-tag"
-              style={{ backgroundColor: washVar, color: accentVar }}
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+              className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium text-foreground-muted"
             >
               {tag}
             </span>
@@ -57,13 +57,18 @@ export function TaskCardMetadata({
       {totalSubtasks > 0 ? (
         <div className="flex items-center gap-2 text-xs">
           <div className="flex-1 h-1.5 rounded-full bg-background-muted/80 overflow-hidden">
+            {/* Fill scales on the compositor rather than animating `width`:
+                a width transition relayouts every frame, and listing it
+                explicitly would only trade one detector finding for another.
+                300ms keeps it inside the 100-400ms UI transition band. */}
             <div
+              data-testid="subtask-progress-fill"
               className={cn(
-                "h-full rounded-full transition-all duration-500",
+                "h-full w-full origin-left rounded-full transition-transform duration-300",
                 subtasksDone && "bg-status-success"
               )}
               style={{
-                width: `${(completedSubtasks / totalSubtasks) * 100}%`,
+                transform: `scaleX(${completedSubtasks / totalSubtasks})`,
                 backgroundColor: subtasksDone ? undefined : accentVar,
               }}
             />

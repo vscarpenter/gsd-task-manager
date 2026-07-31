@@ -50,6 +50,9 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
+  // SnoozeDropdown renders these; it mounts whenever a task has a dueDate.
+  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
 }));
 
 function renderCard(taskOverrides?: Partial<TaskRecord>, allTasks?: TaskRecord[]) {
@@ -99,13 +102,36 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(disc.className).not.toContain("bg-status-success");
   });
 
-  it("renders tag chips in the quadrant wash + accent, not neutral gray", () => {
-    // q2 schedule with a tag
+  // Reverses the earlier "tag chips carry the quadrant pigment" rule. Tags are
+  // orthogonal to the matrix — "home" and "infra" say nothing about urgency —
+  // so tinting them implied a meaning they do not carry, and restated the
+  // quadrant a fifth time after the pane wash, header, rule, and spine. The
+  // spine and completion disc (asserted above) remain the card's pigment.
+  it("renders tag chips neutral, leaving pigment to mean quadrant only", () => {
     renderCard({ urgent: false, important: true, tags: ["work"] });
     const chip = screen.getByTestId("task-tag");
-    expect(chip.style.color).toBe("var(--q2)");
-    expect(chip.style.backgroundColor).toBe("var(--q2-wash)");
-    expect(chip.className).not.toContain("bg-background-muted");
+    expect(chip.style.color).toBe("");
+    expect(chip.style.backgroundColor).toBe("");
+    expect(chip.className).toContain("bg-background-muted");
+  });
+
+  // The overdue badge is absolutely positioned over the card's top-right. Without
+  // reserved space the title rendered *underneath* it (measured 39px of overlap
+  // at 1440px), so a long overdue title was partly unreadable. jsdom has no
+  // layout, so assert the reservation rather than the geometry.
+  it("reserves room for the overdue badge so the title truncates instead of colliding", () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString();
+    renderCard({ dueDate: yesterday, completed: false });
+    const title = screen.getByRole("heading", { level: 3 });
+    expect(title.parentElement?.className).toContain("pr-24");
+    expect(title.className).toContain("truncate");
+  });
+
+  it("does not reserve badge space when the task is not overdue", () => {
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString();
+    renderCard({ dueDate: tomorrow, completed: false });
+    const title = screen.getByRole("heading", { level: 3 });
+    expect(title.parentElement?.className).not.toContain("pr-24");
   });
 
   it("dims a blocked (incomplete) card to 0.62 opacity", () => {

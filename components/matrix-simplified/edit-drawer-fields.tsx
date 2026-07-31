@@ -102,7 +102,7 @@ export function DueDateField({
                 className={cn(
                   // Selected due-date preset reads in tide tint (reference §07);
                   // unselected presets stay graphite.
-                  "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all duration-200",
+                  "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-[background-color,color,box-shadow] duration-200",
                   isActive
                     ? "bg-accent-tint text-accent font-semibold shadow-sm"
                     : "text-foreground-muted hover:text-foreground"
@@ -172,7 +172,7 @@ function CustomDateInput({
       type="date"
       onChange={(e) => { if (e.target.value) { onCustomDateChange(e.target.value); onToggleCustomInput(false); } }}
       onBlur={() => onToggleCustomInput(false)}
-      className="rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted"
+      className="rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
       aria-label="Pick a custom due date"
     />
   );
@@ -200,11 +200,15 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           >
             <span className="opacity-60">#</span>
             {t}
+            {/* Removes a chip from an unsaved draft — nothing is persisted until
+                Save, and re-adding is one keystroke. A confirmation dialog on a
+                tag chip would be worse UX than the risk it guards. */}
+            {/* ui-craft-detect-ignore-next-line */}
             <button
               type="button"
               onClick={() => onRemoveTag(t)}
               aria-label={`Remove ${t}`}
-              className="hover:text-foreground"
+              className="rounded-xs hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <XIcon className="h-3 w-3" />
             </button>
@@ -217,7 +221,9 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           onBlur={onAddTag}
           placeholder={tags.length ? "" : "Add a tag…"}
           aria-label="Add a tag"
-          className="min-w-[80px] flex-1 border-0 bg-transparent text-[13px] text-foreground outline-none"
+          // Inset ring: this input is borderless inside a bordered chip box, so
+          // an offset ring would draw outside the field it belongs to.
+          className="min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         />
       </div>
     </Field>

@@ -119,10 +119,28 @@
   --q2: #2C6680;  /* Schedule  — tide  */
   --q3: #8A6A22;  /* Delegate  — ochre */
   --q4: #6F685F;  /* Eliminate — slate */
-  --q1-wash: #F4E4E0;
-  --q2-wash: #E1ECF1;
-  --q3-wash: #F0E9D8;
-  --q4-wash: #ECE9E3;
+  /* Pane washes sit ~45% of their former strength, close to --ivory. The pane
+     is *ground*, not a colored panel: at the old intensity a half-empty
+     quadrant became a large flat field of pigment, and four such fields around
+     white cards read as a kanban board rather than a matrix. The pigment still
+     states itself at full strength where it carries information — the pane
+     header, the 3px rule, and the card spine. */
+  --q1-wash: #F4EBE5;
+  --q2-wash: #E9EFF1;
+  --q3-wash: #F2EDE1;
+  --q4-wash: #EFEDE7;
+
+  /* Text-safe pigment for quadrant titles. Identical to the pigment except
+     where the pigment misses WCAG AA against its own header tint: ochre is the
+     lightest of the four, and "Delegate" at 15px measured 4.32:1 on
+     .quadrant-header-q3 (AA needs 4.5:1). Darkening the *ink* rather than the
+     header tint keeps the 10/10/12/14 tint ladder that equalizes perceived
+     header weight across pigments of differing lightness. Dark mode clears AA
+     on all four (4.60-6.36), so it rebinds every ink back to the pigment. */
+  --q1-ink: var(--q1);
+  --q2-ink: var(--q2);
+  --q3-ink: #7A5D1E;  /* ochre, one step darker — 5.27:1 */
+  --q4-ink: var(--q4);
 
   /* Wash/header component classes mix off these; repointed to the pigments so
      the matrix backdrops follow the four-color language automatically. */
@@ -169,12 +187,19 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
-    --q1-wash: #3A211D; --q2-wash: #173039; --q3-wash: #322B17; --q4-wash: #2A2620;
+    /* Softened to match light mode, and pulled below --paper so elevation
+       reads page < pane < card. The old values sat *lighter* than the card
+       surface, so cards appeared recessed into their own quadrant. */
+    --q1-wash: #231914; --q2-wash: #171E1E; --q3-wash: #201D12; --q4-wash: #1E1B15;
+    /* Dark pigments clear AA on their own header tints; no darker ink needed. */
+    --q3-ink: var(--q3);
   }
 }
 :root[data-theme="dark"] {
   --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
-  --q1-wash: #3A211D; --q2-wash: #173039; --q3-wash: #322B17; --q4-wash: #2A2620;
+  /* Keep in lockstep with the prefers-color-scheme branch above. */
+  --q1-wash: #231914; --q2-wash: #171E1E; --q3-wash: #201D12; --q4-wash: #1E1B15;
+  --q3-ink: var(--q3);
 }
 
 /* =====================================================================

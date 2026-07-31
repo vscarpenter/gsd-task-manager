@@ -77,11 +77,14 @@ export function DependenciesField({
               className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-[11.5px] font-medium text-foreground-muted"
             >
               {t.title}
+              {/* Unsaved-draft chip removal, same as the tag chips: reversible
+                  by re-searching, and nothing is written until Save. */}
+              {/* ui-craft-detect-ignore-next-line */}
               <button
                 type="button"
                 onClick={() => onChange(dependencies.filter((id) => id !== t.id))}
                 aria-label={`Remove dependency ${t.title}`}
-                className="hover:text-foreground"
+                className="rounded-xs hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <XIcon className="h-3 w-3" />
               </button>
@@ -110,7 +113,7 @@ export function DependenciesField({
             aria-label="Search tasks to add as a dependency"
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
-            className="min-w-[80px] flex-1 border-0 bg-transparent text-[13px] text-foreground outline-none disabled:cursor-not-allowed"
+            className="min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed"
           />
         </div>
         <Suggestions

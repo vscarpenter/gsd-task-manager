@@ -75,21 +75,21 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           </Section>
 
           <Section label="The four quadrants">
-            <QuadrantLine rdKey="q1" title="Do First" hint="Urgent & important — crises, deadlines. Handle now." />
-            <QuadrantLine rdKey="q2" title="Schedule" hint="Important, not urgent — strategy, growth. Protect time." />
-            <QuadrantLine rdKey="q3" title="Delegate" hint="Urgent, not important — interruptions. Hand these off." />
-            <QuadrantLine rdKey="q4" title="Eliminate" hint="Neither — noise. Stop doing these." />
+            <QuadrantLine rdKey="q1" title="Do First" hint="Urgent & important: crises, deadlines. Handle now." />
+            <QuadrantLine rdKey="q2" title="Schedule" hint="Important, not urgent: strategy, growth. Protect time." />
+            <QuadrantLine rdKey="q3" title="Delegate" hint="Urgent, not important: interruptions. Hand these off." />
+            <QuadrantLine rdKey="q4" title="Eliminate" hint="Neither: noise. Stop doing these." />
           </Section>
 
           <Section label="Quick-add smart syntax">
             <p style={bodyStyle}>
-              Type into the bar at the top. It parses priority markers from your text as you type — the dot on the left previews
+              Type into the bar at the top. It parses priority markers from your text as you type. The dot on the left previews
               which quadrant the task will land in.
             </p>
             <SyntaxRow symbol="!" meaning="Marks the task urgent" />
             <SyntaxRow symbol="!!" meaning="Urgent and important (Do First)" />
             <SyntaxRow symbol="*" meaning="Marks the task important" />
-            <SyntaxRow symbol="#tag" meaning="Adds a tag — any word-like token" />
+            <SyntaxRow symbol="#tag" meaning="Adds a tag (any word-like token)" />
             <p style={{ ...bodyStyle, color: "var(--ink-3)" }}>
               Example: <code style={codeStyle}>!! ship the deck #work #q2</code> creates an urgent + important task tagged{" "}
               <code style={codeStyle}>#work</code> and <code style={codeStyle}>#q2</code>.
@@ -113,15 +113,15 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
           <Section label="Editing, completing, and drag-drop">
             <p style={bodyStyle}>
-              <strong>Complete</strong> — tap the checkbox on any task card. Recurring tasks automatically spawn the next instance.
+              <strong>Complete</strong>: tap the checkbox on any task card. Recurring tasks automatically spawn the next instance.
             </p>
             <p style={bodyStyle}>
-              <strong>Edit</strong> — click anywhere on a task card (except the checkbox) to open the composer pre-filled with that
-              task&rsquo;s details. Save to update, close without saving to cancel.
+              <strong>Edit</strong>: hover a task card and click the pencil to open the composer pre-filled with that
+              task&rsquo;s details. On a phone the pencil is always visible. Save to update, close without saving to cancel.
             </p>
             <p style={bodyStyle}>
-              <strong>Drag to reclassify</strong> — drag a task onto any other quadrant. An 8-pixel activation distance
-              means plain clicks still open the editor.
+              <strong>Drag to reclassify</strong>: drag a task onto any other quadrant. An 8-pixel activation distance
+              means a stray click never starts a drag.
             </p>
           </Section>
 

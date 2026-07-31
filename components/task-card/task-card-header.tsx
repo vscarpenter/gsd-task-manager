@@ -12,6 +12,9 @@ export interface TaskCardHeaderProps {
   task: TaskRecord;
   /** CSS var for the task's quadrant pigment, e.g. "var(--q1)". */
   accentVar: string;
+  /** Reserves room for the absolutely-positioned overdue badge so a long title
+   *  truncates instead of rendering underneath it. */
+  reserveBadgeSpace?: boolean;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
@@ -23,6 +26,7 @@ export interface TaskCardHeaderProps {
 export function TaskCardHeader({
   task,
   accentVar,
+  reserveBadgeSpace,
   selectionMode,
   isSelected,
   onToggleSelect,
@@ -74,7 +78,7 @@ export function TaskCardHeader({
         ) : (
           <button
             type="button"
-            className="touch-target cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-background-muted"
+            className="touch-target cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             aria-label="Drag to move task"
             {...sortableAttributes}
             {...sortableListeners}
@@ -82,7 +86,7 @@ export function TaskCardHeader({
             <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
           </button>
         )}
-        <div className="min-w-0 flex-1">
+        <div className={cn("min-w-0 flex-1", reserveBadgeSpace && "pr-24")}>
           <h3 className={cn(
             "text-[15px] font-semibold leading-snug tracking-tight text-foreground truncate",
             task.completed && "line-through"
@@ -110,7 +114,7 @@ export function TaskCardHeader({
             className={cn(
               // active:scale-95 gives the completion toggle — the card's key
               // moment — a tactile down-press to pair with the check-pop on release.
-              "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-200 active:scale-95 sm:h-9 sm:w-9",
+              "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-95 sm:h-9 sm:w-9",
               task.completed
                 ? "shadow-sm"
                 : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"

@@ -199,7 +199,9 @@ export function buildCommandActions(
   builtInSmartViews.forEach((view) => {
     actions.push({
       id: `view-${view.id}`,
-      label: `${view.icon || '📋'} ${view.name}`,
+      // Name only — a glyph concatenated here is read aloud by screen readers
+      // and dilutes fuzzy-match scoring. Icons belong in the item's icon slot.
+      label: view.name,
       section: 'views',
       keywords: [
         view.name.toLowerCase(),

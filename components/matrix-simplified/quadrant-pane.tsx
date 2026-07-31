@@ -6,7 +6,7 @@ import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIc
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
-import { QUADRANT_ACCENT } from "@/lib/quadrants";
+import { QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 
 const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
@@ -71,6 +71,7 @@ export function QuadrantPane({
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
+  const ink = QUADRANT_INK[meta.rdKey];
   const QuadrantIcon = RD_ICON[meta.rdIcon];
   const taskIds = tasks.map((t) => t.id);
   const activeTaskCount = tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0);
@@ -121,7 +122,7 @@ export function QuadrantPane({
         </span>
         <span
           className="rd-serif text-[15px] font-semibold leading-none"
-          style={{ color: accent, letterSpacing: "-0.005em" }}
+          style={{ color: ink, letterSpacing: "-0.005em" }}
         >
           {meta.title}
         </span>
@@ -133,7 +134,7 @@ export function QuadrantPane({
           type="button"
           onClick={() => onAddInQuadrant(meta.rdKey)}
           aria-label={`Add to ${meta.title}`}
-          className="touch-target inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted hover:text-foreground"
+          className="touch-target inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           <PlusIcon className="h-3.5 w-3.5" />
         </button>
@@ -153,12 +154,12 @@ export function QuadrantPane({
                 <QuadrantIcon className="h-6 w-6" />
               </span>
               <p
-                className="rd-serif text-[18px] leading-tight text-foreground"
+                className="rd-serif text-balance text-[18px] leading-tight text-foreground"
                 style={{ letterSpacing: "-0.01em" }}
               >
                 {meta.rdEmptyHeadline}
               </p>
-              <p className="max-w-[26ch] text-caption text-foreground-muted">
+              <p className="max-w-[26ch] text-pretty text-caption text-foreground-muted">
                 {meta.rdEmptySupporting}
               </p>
               {/* Eliminate is the one quadrant where an empty state needs no action
@@ -167,7 +168,7 @@ export function QuadrantPane({
                 <button
                   type="button"
                   onClick={() => onAddInQuadrant(meta.rdKey)}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   style={{ borderColor: accent, color: accent }}
                 >
                   <PlusIcon className="h-3 w-3" aria-hidden />

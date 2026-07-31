@@ -12,6 +12,17 @@ export const QUADRANT_ACCENT: Record<RedesignQuadrantKey, string> = {
   q4: "var(--q4)",
 };
 
+/** Text-safe pigment for quadrant *titles*. Equals the pigment except where the
+ *  pigment misses WCAG AA on its own header tint (ochre, light mode) — see the
+ *  --q*-ink block in app/globals.css. Use QUADRANT_ACCENT for fills, rules, and
+ *  spines; use this only where the pigment is set as text color. */
+export const QUADRANT_INK: Record<RedesignQuadrantKey, string> = {
+  q1: "var(--q1-ink)",
+  q2: "var(--q2-ink)",
+  q3: "var(--q3-ink)",
+  q4: "var(--q4-ink)",
+};
+
 /** Same palette keyed by QuadrantId for components that reference the long-form id. */
 export const QUADRANT_ACCENT_BY_ID: Record<QuadrantId, string> = {
   "urgent-important": "var(--q1)",

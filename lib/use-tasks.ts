@@ -34,6 +34,10 @@ export function keepValidTaskRecords(rows: TaskRecord[]): TaskRecord[] {
 }
 
 export function useTasks(): TaskBuckets {
+  // No default result. Supplying one (previously `[]`) makes useLiveQuery return
+  // synchronously on first render, which pinned `isLoading` to false forever and
+  // made every consumer's skeleton dead code — the matrix painted four "nothing
+  // here" empty states before IndexedDB had been read.
   const result = useLiveQuery(async () => {
     if (typeof window === "undefined") {
       return [] as TaskRecord[];
@@ -42,7 +46,7 @@ export function useTasks(): TaskBuckets {
     const rows = await db.tasks.toArray();
     const valid = keepValidTaskRecords(rows);
     return valid.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  }, [], []);
+  }, []);
 
   const isLoading = result === undefined;
   const tasks = result ?? [];

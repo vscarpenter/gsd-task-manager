@@ -13,8 +13,8 @@ import type { SmartView } from "@/lib/filters";
 export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updatedAt'>[] = [
   {
     name: "Today's Focus",
-    description: "All urgent and important tasks - your top priorities",
-    icon: "🎯",
+    description: "All urgent and important tasks, your top priorities",
+    icon: "flame",
     isBuiltIn: true,
     criteria: {
       status: 'active',
@@ -24,7 +24,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "This Week",
     description: "Tasks needing attention this week (overdue + next 7 days)",
-    icon: "📅",
+    icon: "calendar",
     isBuiltIn: true,
     criteria: {
       status: 'active',
@@ -34,7 +34,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "Overdue Backlog",
     description: "All overdue tasks across quadrants",
-    icon: "⚠️",
+    icon: "overdue",
     isBuiltIn: true,
     criteria: {
       status: 'active',
@@ -44,7 +44,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "No Deadline",
     description: "Tasks without due dates for planning",
-    icon: "📋",
+    icon: "no-deadline",
     isBuiltIn: true,
     criteria: {
       status: 'active',
@@ -54,7 +54,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "Recently Added",
     description: "Tasks created in the last 7 days",
-    icon: "✨",
+    icon: "added",
     isBuiltIn: true,
     criteria: {
       status: 'active',
@@ -64,7 +64,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "This Week's Wins",
     description: "Completed tasks from the last 7 days",
-    icon: "🏆",
+    icon: "completed-recent",
     isBuiltIn: true,
     criteria: {
       status: 'completed',
@@ -74,7 +74,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "All Completed",
     description: "All completed tasks across all time",
-    icon: "✅",
+    icon: "completed",
     isBuiltIn: true,
     criteria: {
       status: 'completed'
@@ -83,7 +83,7 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   {
     name: "Recurring Tasks",
     description: "All tasks with recurrence enabled",
-    icon: "🔁",
+    icon: "recurring",
     isBuiltIn: true,
     criteria: {
       status: 'active',
@@ -92,8 +92,8 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
   },
   {
     name: "Ready to Work",
-    description: "Tasks with no blocking dependencies - start now!",
-    icon: "🚀",
+    description: "Tasks with no blocking dependencies",
+    icon: "ready",
     isBuiltIn: true,
     criteria: {
       status: 'active',
