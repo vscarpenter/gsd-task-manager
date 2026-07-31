@@ -7,6 +7,7 @@ import {
   restoreTask,
   archiveTaskNow,
   deleteArchivedTask,
+  reinstateArchivedTask,
   getArchivedCount,
 } from "@/lib/archive";
 import { getDb } from "@/lib/db";
@@ -547,6 +548,51 @@ describe("archive", () => {
       await deleteArchivedTask("delete-task");
 
       expect(await db.archivedTasks.count()).toBe(0);
+    });
+  });
+
+  describe("reinstateArchivedTask", () => {
+    it("should_put_a_deleted_task_back_into_the_archive", async () => {
+      const db = getDb();
+      const now = new Date().toISOString();
+      const task = createMockTask({
+        id: "undo-delete",
+        title: "Undo Delete",
+        completed: true,
+        completedAt: now,
+        archivedAt: now,
+      });
+
+      await db.archivedTasks.add(task);
+      await deleteArchivedTask("undo-delete");
+      expect(await db.archivedTasks.count()).toBe(0);
+
+      await reinstateArchivedTask(task);
+
+      const restored = await db.archivedTasks.get("undo-delete");
+      expect(restored).toBeDefined();
+      expect(restored!.title).toBe("Undo Delete");
+      expect(restored!.archivedAt).toBe(now);
+    });
+
+    it("should_be_idempotent_when_the_row_already_exists", async () => {
+      // The Undo affordance can be activated twice (double-click, or a stale
+      // toast). `add` threw ConstraintError on the second call, which escaped
+      // the handler as an unhandled rejection.
+      const db = getDb();
+      const now = new Date().toISOString();
+      const task = createMockTask({
+        id: "double-undo",
+        title: "Double Undo",
+        completed: true,
+        completedAt: now,
+        archivedAt: now,
+      });
+
+      await reinstateArchivedTask(task);
+      await expect(reinstateArchivedTask(task)).resolves.toBeUndefined();
+
+      expect(await db.archivedTasks.count()).toBe(1);
     });
   });
 

@@ -212,6 +212,23 @@ export async function deleteArchivedTask(taskId: string): Promise<void> {
 }
 
 /**
+ * Put an archived task back into the archive — the undo for deleteArchivedTask.
+ *
+ * Takes the whole record because the row is already gone by the time undo runs,
+ * so the caller is the only remaining source of truth for it.
+ *
+ * `put`, not `add`: the undo affordance can fire twice (a double-click, or a
+ * toast that is still on screen), and `add` threw ConstraintError on the second
+ * call. One write, so no transaction is needed. Purely local — `archivedTasks`
+ * is never synced, and the remote copy was already deleted when the task was
+ * archived, so there is nothing to enqueue.
+ */
+export async function reinstateArchivedTask(task: TaskRecord): Promise<void> {
+  const db = getDb();
+  await db.archivedTasks.put(task);
+}
+
+/**
  * Get count of archived tasks
  */
 export async function getArchivedCount(): Promise<number> {

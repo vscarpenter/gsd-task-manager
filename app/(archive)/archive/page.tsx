@@ -8,10 +8,9 @@ import { RefreshCcwIcon, Trash2Icon } from "lucide-react";
 import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/task-card";
-import { listArchivedTasks, restoreTask, deleteArchivedTask, archiveTaskNow } from "@/lib/archive";
+import { listArchivedTasks, restoreTask, deleteArchivedTask, archiveTaskNow, reinstateArchivedTask } from "@/lib/archive";
 import type { TaskRecord } from "@/lib/types";
 import { toast } from "sonner";
-import { getDb } from "@/lib/db";
 
 const ARCHIVED_TASKS_KEY = ["archivedTasks"] as const;
 const ESTIMATED_CARD_HEIGHT = 180;
@@ -119,10 +118,17 @@ export default function ArchivePage() {
         action: {
           label: "Undo",
           onClick: async () => {
-            const db = getDb();
-            await db.archivedTasks.add(task);
-            queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
-            toast.success("Delete undone");
+            // reinstateArchivedTask puts the row back idempotently, so a second
+            // activation is a no-op rather than a ConstraintError escaping as an
+            // unhandled rejection.
+            try {
+              await reinstateArchivedTask(task);
+              queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
+              toast.success("Delete undone");
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : `Failed to undo deleting "${task.title}"`;
+              toast.error(errorMsg);
+            }
           },
         },
       });

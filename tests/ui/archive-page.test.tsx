@@ -51,12 +51,14 @@ const mockListArchivedTasks = vi.fn<() => Promise<TaskRecord[]>>();
 const mockRestoreTask = vi.fn<(id: string) => Promise<void>>();
 const mockDeleteArchivedTask = vi.fn<(id: string) => Promise<void>>();
 const mockArchiveTaskNow = vi.fn<(id: string) => Promise<void>>();
+const mockReinstateArchivedTask = vi.fn<(task: TaskRecord) => Promise<void>>();
 
 vi.mock("@/lib/archive", () => ({
   listArchivedTasks: (...args: unknown[]) => mockListArchivedTasks(...args as []),
   restoreTask: (...args: unknown[]) => mockRestoreTask(...args as [string]),
   deleteArchivedTask: (...args: unknown[]) => mockDeleteArchivedTask(...args as [string]),
   archiveTaskNow: (...args: unknown[]) => mockArchiveTaskNow(...args as [string]),
+  reinstateArchivedTask: (...args: unknown[]) => mockReinstateArchivedTask(...args as [TaskRecord]),
 }));
 
 // Mock sonner toast
@@ -306,6 +308,67 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     await waitFor(() => {
       expect(mockDeleteArchivedTask).toHaveBeenCalledWith("task-1");
     });
+  });
+
+  it("undoes a delete through reinstateArchivedTask, tolerating a repeat click", async () => {
+    const user = userEvent.setup();
+    mockListArchivedTasks.mockResolvedValue([
+      createMockArchivedTask({ id: "task-1", title: "Keep Task" }),
+    ]);
+    mockDeleteArchivedTask.mockResolvedValue(undefined);
+    mockReinstateArchivedTask.mockResolvedValue(undefined);
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Keep Task")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /delete/i }));
+    await waitFor(() => {
+      expect(mockDeleteArchivedTask).toHaveBeenCalledWith("task-1");
+    });
+
+    const successCall = vi.mocked(toast.success).mock.calls.find(
+      ([message]) => typeof message === "string" && message.includes("Deleted")
+    );
+    expect(successCall).toBeDefined();
+    const action = (successCall![1] as { action?: { onClick: () => Promise<void> } })?.action;
+    expect(action).toBeDefined();
+
+    await action!.onClick();
+    // A second activation must not throw — the reinstate is idempotent.
+    await expect(action!.onClick()).resolves.toBeUndefined();
+
+    expect(mockReinstateArchivedTask).toHaveBeenCalledTimes(2);
+    expect(mockReinstateArchivedTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "task-1" })
+    );
+  });
+
+  it("surfaces an error when undoing a delete fails", async () => {
+    const user = userEvent.setup();
+    mockListArchivedTasks.mockResolvedValue([
+      createMockArchivedTask({ id: "task-1", title: "Keep Task" }),
+    ]);
+    mockDeleteArchivedTask.mockResolvedValue(undefined);
+    mockReinstateArchivedTask.mockRejectedValue(new Error("could not reinstate"));
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+    await waitFor(() => {
+      expect(screen.getByText("Keep Task")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: /delete/i }));
+    await waitFor(() => {
+      expect(mockDeleteArchivedTask).toHaveBeenCalledWith("task-1");
+    });
+
+    const successCall = vi.mocked(toast.success).mock.calls.find(
+      ([message]) => typeof message === "string" && message.includes("Deleted")
+    );
+    const action = (successCall![1] as { action?: { onClick: () => Promise<void> } })?.action;
+
+    // Must not escape as an unhandled rejection.
+    await expect(action!.onClick()).resolves.toBeUndefined();
+    expect(toast.error).toHaveBeenCalled();
   });
 
   it("fetches data only once via TanStack Query caching", async () => {
