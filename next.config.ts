@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 import pkg from "./package.json" with { type: "json" };
 
-const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE ?? new Date().toISOString().slice(0, 10);
+// Real builds pin this via scripts/generate-build-info.cjs -> .build-env.sh, so the
+// fallback only ever applies to `next dev`. It must not read the clock: the dev
+// server inlines this value into both the prerendered markup and the client
+// chunk, and those two are compiled at different moments — spanning a UTC
+// midnight (or reusing a cached render from a previous day) made them disagree
+// and React reported a hydration mismatch on every load.
+const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE ?? "dev";
 const buildNumber = process.env.NEXT_PUBLIC_BUILD_NUMBER ?? pkg.version;
 
 const nextConfig: NextConfig = {
