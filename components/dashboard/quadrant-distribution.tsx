@@ -46,7 +46,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
     <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h3 className="rd-serif text-title text-foreground">
+          <h3 className="text-title font-semibold text-foreground">
             Quadrant Distribution
           </h3>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -68,13 +68,17 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
           <p className="sr-only">
             {`${total} active tasks across ${segments.length} quadrants`}
           </p>
-          <div className="flex h-3 overflow-hidden rounded-full" aria-hidden>
+          {/* Segments are separated by a 3px gutter and each capped as its own
+              pill, so the split reads as four measurements rather than one bar
+              carved into zones. Percentage widths overflow by the gutter total;
+              the default flex-shrink absorbs it proportionally. */}
+          <div className="flex h-3 gap-[3px]" aria-hidden>
             {segments.map((segment) => {
               const pct = (segment.value / total) * 100;
               return (
                 <div
                   key={segment.id}
-                  className="h-full"
+                  className="h-full rounded-full"
                   style={{ width: `${pct}%`, backgroundColor: segment.color }}
                   title={`${segment.name}: ${segment.value} (${Math.round(pct)}%)`}
                 />

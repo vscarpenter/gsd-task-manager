@@ -88,9 +88,37 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(spine.style.backgroundColor).toBe("var(--q3)");
   });
 
-  it("colors the spine per quadrant (q2 schedule = tide)", () => {
+  it("colors the spine per quadrant (q2 schedule = steel)", () => {
     renderCard({ urgent: false, important: true });
     expect(screen.getByTestId("task-card-spine").style.backgroundColor).toBe("var(--q2)");
+  });
+
+  // Tidewater shrinks the spine from a 3px full-height square rule to a 2px
+  // pill inset 10px top and bottom. Full-height read as a border the card
+  // owned; inset reads as a mark placed on it, which is what a quadrant is.
+  it("draws the spine as a 2px pill inset from the card's top and bottom", () => {
+    renderCard();
+    const spine = screen.getByTestId("task-card-spine");
+    expect(spine.className).toContain("w-[2px]");
+    expect(spine.className).toContain("rounded-full");
+    expect(spine.className).toContain("top-[10px]");
+    expect(spine.className).toContain("bottom-[10px]");
+  });
+
+  // The grip used to hold a permanent 28px column, indenting every title on the
+  // board for an affordance almost never used. It now floats over the card's
+  // left edge, so titles start flush — dnd-kit's listeners are unchanged.
+  it("keeps titles flush left by floating the drag grip out of the layout flow", () => {
+    renderCard();
+    const grip = screen.getByRole("button", { name: /drag to move task/i });
+    expect(grip.className).toContain("absolute");
+    expect(grip.className).toContain("opacity-0");
+    expect(grip.className).toContain("group-hover:opacity-100");
+    expect(grip.className).toContain("group-focus-within:opacity-100");
+    // Only visibility is gated. Hit-testing must stay on, or Playwright's
+    // actionability check (and anything else that asserts before pointing)
+    // can never reach the handle — see tests/e2e/drag-and-drop.spec.ts.
+    expect(grip.className).not.toContain("pointer-events-none");
   });
 
   it("fills the completion disc with the quadrant accent (not success green) when complete", () => {
@@ -143,10 +171,10 @@ describe("TaskCard anatomy — four-pigment language", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Quadrant header icon column (reference §06)
+// Quadrant header identity dot (Tidewater)
 // ---------------------------------------------------------------------------
 
-describe("QuadrantPane header — fixed icon column", () => {
+describe("QuadrantPane header — quadrant identity dot", () => {
   function renderPane(rdKey: "q1" | "q2" | "q3" | "q4") {
     const meta = rdKey === "q1"
       ? quadrantForTask(true, true)
@@ -158,7 +186,6 @@ describe("QuadrantPane header — fixed icon column", () => {
     return render(
       <QuadrantPane
         meta={meta}
-        position="tl"
         tasks={[]}
         allTasks={[]}
         onEdit={vi.fn()}
@@ -170,9 +197,20 @@ describe("QuadrantPane header — fixed icon column", () => {
     );
   }
 
-  it("renders a fixed icon column in the quadrant header", () => {
+  // Tidewater reduces quadrant identity in the header to a single 7px dot —
+  // the 18px pigment glyph and the 3px pane top-bar are both retired, so the
+  // dot is the only place the pigment appears in the pane chrome.
+  it("marks the quadrant with a dot in its own pigment", () => {
     renderPane("q1");
-    expect(screen.getByTestId("quadrant-icon")).toBeInTheDocument();
+    const dot = screen.getByTestId("quadrant-icon");
+    expect(dot).toBeInTheDocument();
+    expect(dot.style.backgroundColor).toBe("var(--q1)");
+    expect(dot.className).toContain("rounded-full");
+  });
+
+  it("colors the header dot per quadrant (q3 delegate = brass)", () => {
+    renderPane("q3");
+    expect(screen.getByTestId("quadrant-icon").style.backgroundColor).toBe("var(--q3)");
   });
 
   it("shows an empty-state mark tile when the quadrant is empty", () => {

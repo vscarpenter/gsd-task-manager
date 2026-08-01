@@ -29,7 +29,10 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
             Streak
           </p>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="rd-serif text-[48px] leading-none tabular-nums tracking-tight text-foreground">
+            <span
+              className="text-[40px] font-semibold leading-none tabular-nums text-foreground"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               {current}
             </span>
             <span className="text-sm text-foreground-muted">

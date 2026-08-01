@@ -18,7 +18,7 @@ export function FeatureCard({ icon: Icon, title, description, className }: Featu
       <div className="mb-4 grid h-9 w-9 place-items-center rounded-lg bg-accent/10">
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
       </div>
-      <h3 className="rd-serif mb-2 text-xl tracking-tight text-foreground">
+      <h3 className="mb-2 text-xl font-semibold tracking-tight text-foreground">
         {title}
       </h3>
       <p className="text-sm text-foreground-muted leading-relaxed">{description}</p>

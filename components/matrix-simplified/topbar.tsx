@@ -36,8 +36,8 @@ export function SimplifiedTopbar({
     >
       <div className="min-w-0 flex-shrink-0">
         <h1
-          className="rd-serif text-2xl leading-tight text-foreground"
-          style={{ letterSpacing: "-0.01em" }}
+          className="text-[20px] font-semibold leading-tight text-foreground"
+          style={{ letterSpacing: "-0.015em" }}
         >
           {title}
         </h1>

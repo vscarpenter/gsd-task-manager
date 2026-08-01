@@ -50,7 +50,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               Field guide
             </div>
             <DialogTitle asChild>
-              <h2 className="rd-serif" style={{ margin: "4px 0 0", fontSize: 28, lineHeight: 1.1 }}>
+              <h2 style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 600, letterSpacing: "-0.015em", lineHeight: 1.1 }}>
                 How to use <em style={{ fontStyle: "italic", color: "var(--q2)" }}>GSD</em>
               </h2>
             </DialogTitle>
@@ -194,7 +194,7 @@ function Concept({ title, accent, children }: { title: string; accent: string; c
         style={{ width: 4, borderRadius: 3, background: accent, alignSelf: "stretch", flexShrink: 0, minHeight: 36 }}
       />
       <div>
-        <div className="rd-serif" style={{ fontSize: 18, lineHeight: 1.2, color: "var(--ink)" }}>
+        <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.2, color: "var(--ink)" }}>
           {title}
         </div>
         <p style={{ ...bodyStyle, marginTop: 2 }}>{children}</p>

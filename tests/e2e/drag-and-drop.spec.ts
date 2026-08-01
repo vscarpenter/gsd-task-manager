@@ -7,6 +7,11 @@ import type { Page, Locator } from "@playwright/test";
  *
  * Uses manual mouse events to simulate drag because @dnd-kit requires
  * pointer movement past an 8px activation distance before initiating drag.
+ *
+ * The IndexedDB seeds below open the store with NO explicit version. Dexie
+ * maps `version(N)` in lib/db.ts to IDB version N*10, so a hardcoded number
+ * here silently rots on the next schema bump — opening with `undefined` uses
+ * whatever version the app just created, which is always the right one.
  */
 
 /**
@@ -76,7 +81,7 @@ test.describe("Drag and Drop Between Quadrants", () => {
     // Seed a task in Q1 via IndexedDB
     await page.evaluate(() => {
       return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open("GsdTaskManager", 140);
+        const req = indexedDB.open("GsdTaskManager");
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction("tasks", "readwrite");
@@ -135,7 +140,7 @@ test.describe("Drag and Drop Between Quadrants", () => {
     // Seed a task in Q2
     await page.evaluate(() => {
       return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open("GsdTaskManager", 140);
+        const req = indexedDB.open("GsdTaskManager");
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction("tasks", "readwrite");
@@ -191,7 +196,7 @@ test.describe("Drag and Drop Between Quadrants", () => {
     // Seed a task with tags and description in Q1
     await page.evaluate(() => {
       return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open("GsdTaskManager", 140);
+        const req = indexedDB.open("GsdTaskManager");
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction("tasks", "readwrite");

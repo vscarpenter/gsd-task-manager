@@ -156,7 +156,7 @@ describe("TaskCard", () => {
     const { container } = render(<TaskCard task={completedTask} allTasks={[completedTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    expect(article).toHaveClass("opacity-60");
+    expect(article).toHaveClass("opacity-[0.55]");
   });
 
   it("displays tags when present", () => {
@@ -217,8 +217,9 @@ describe("TaskCard", () => {
     const { container } = render(<TaskCard task={overdueTask} allTasks={[overdueTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    // Overdue cards get a full rust hairline border (replaces the banned side-stripe).
-    expect(article).toHaveClass("border-status-overdue");
+    // Overdue cards get a half-strength rust border. Full strength competed
+    // with the badge for the same message; the border only needs to mark.
+    expect(article).toHaveClass("border-status-overdue/50");
   });
 
   it("does not show overdue warning for completed tasks", () => {

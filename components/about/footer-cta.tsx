@@ -13,7 +13,7 @@ export function FooterCta({ version }: FooterCtaProps) {
           <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
             Ready When You Are
           </p>
-          <h2 className="rd-serif mb-4 text-h2 text-foreground sm:text-h1">
+          <h2 className="mb-4 text-h2 font-semibold tracking-tight text-foreground sm:text-h1">
             Ready to get stuff done?
           </h2>
           <p className="mb-8 text-foreground-muted">

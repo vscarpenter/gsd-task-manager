@@ -82,8 +82,10 @@
   --text-eyebrow--letter-spacing: 0.12em;
   --text-eyebrow--font-weight: 500;
 
-  /* Radii */
+  /* Radii — Tidewater ladder: pane 14 (lg) · card 12 (md) · control 10 (sm) ·
+     icon button 8 (icon) · chip pill (full). */
   --radius-xs:   var(--r-xs);
+  --radius-icon: var(--r-icon);
   --radius-sm:   var(--r-sm);
   --radius-md:   var(--r-md);
   --radius-lg:   var(--r-lg);
@@ -96,9 +98,10 @@
   --container-wide:   1120px;
 }
 
-/* The 1.5px hairline — Inkwell's signature, exposed as an opt-in utility. */
+/* Legacy alias. Tidewater draws every rule at 1px, so this now matches the
+   default `border`; it is kept only so existing call sites keep compiling. */
 @utility border-hair {
-  border-width: 1.5px;
+  border-width: 1px;
 }
 
 /* Dark variant fires on Inkwell's manual [data-theme="dark"] toggle.
@@ -111,45 +114,36 @@
    via the imports above; everything below is GSD-only.
    ===================================================================== */
 :root {
-  /* Quadrant pigments — the only strong color (editorial). First-class and
-     decoupled from semantic tokens: q3 is ochre (NOT --olive, which is now
-     success-green) and q4 is slate (NOT --warning/amber). Dark values rebind
-     below. The matrix is the argument, so these four carry it. */
-  --q1: #B23A2E;  /* Do First  — rust  */
-  --q2: #2C6680;  /* Schedule  — tide  */
-  --q3: #8A6A22;  /* Delegate  — ochre */
-  --q4: #6F685F;  /* Eliminate — slate */
-  /* Pane washes sit ~45% of their former strength, close to --ivory. The pane
-     is *ground*, not a colored panel: at the old intensity a half-empty
-     quadrant became a large flat field of pigment, and four such fields around
-     white cards read as a kanban board rather than a matrix. The pigment still
-     states itself at full strength where it carries information — the pane
-     header, the 3px rule, and the card spine. */
-  --q1-wash: #F4EBE5;
-  --q2-wash: #E9EFF1;
-  --q3-wash: #F2EDE1;
-  --q4-wash: #EFEDE7;
+  /* Quadrant pigments — desaturated for Tidewater. They no longer paint whole
+     panes; they survive as a 7px header dot, a 2px card spine, the subtask
+     fill, and the completed disc. Muting them is what lets four hues coexist
+     with a single steel accent without the page reading as four brands. */
+  --q1: #A65B52;  /* Do First  — clay  */
+  --q2: #4A6E8A;  /* Schedule  — steel (same hue as --accent) */
+  --q3: #97814D;  /* Delegate  — brass */
+  --q4: #848B90;  /* Eliminate — stone */
 
-  /* Text-safe pigment for quadrant titles. Identical to the pigment except
-     where the pigment misses WCAG AA against its own header tint: ochre is the
-     lightest of the four, and "Delegate" at 15px measured 4.32:1 on
-     .quadrant-header-q3 (AA needs 4.5:1). Darkening the *ink* rather than the
-     header tint keeps the 10/10/12/14 tint ladder that equalizes perceived
-     header weight across pigments of differing lightness. Dark mode clears AA
-     on all four (4.60-6.36), so it rebinds every ink back to the pigment. */
-  --q1-ink: var(--q1);
-  --q2-ink: var(--q2);
-  --q3-ink: #7A5D1E;  /* ochre, one step darker — 5.27:1 */
-  --q4-ink: var(--q4);
+  /* Pane washes are RETIRED. Every pane now sits on one uniform ground
+     (--oat, #F7F9FA) so the eye reads four floating peers, not four colored
+     territories; quadrant identity moved to the dot and the spine. The tokens
+     remain — aliased to that single ground — because `bg-quadrant-*` is part
+     of the QuadrantMeta contract in lib/quadrants.ts and is still referenced
+     by onboarding and chart code. */
+  --q1-wash: var(--oat);
+  --q2-wash: var(--oat);
+  --q3-wash: var(--oat);
+  --q4-wash: var(--oat);
 
-  /* Wash/header component classes mix off these; repointed to the pigments so
-     the matrix backdrops follow the four-color language automatically. */
-  --q1-fill: var(--q1);
-  --q2-fill: var(--q2);
-  --q3-fill: var(--q3);
-  --q4-fill: var(--q4);
+  /* Text-safe pigment. The pigments are chosen light enough to work as fills
+     and dots but too light to set as small text, so every ink is darkened one
+     step and AA-checked against --paper and --oat (4.9-5.4:1 at 11-14px).
+     Use QUADRANT_ACCENT for fills, dots, and spines; QUADRANT_INK for text. */
+  --q1-ink: #94493F;
+  --q2-ink: #3E5D74;
+  --q3-ink: #75623A;
+  --q4-ink: #57616B;
 
-  /* Eisenhower matrix pane backdrops — the exact editorial washes. */
+  /* Eisenhower matrix pane backdrops — one uniform ground across all four. */
   --quadrant-focus:     var(--q1-wash);
   --quadrant-schedule:  var(--q2-wash);
   --quadrant-delegate:  var(--q3-wash);
@@ -161,13 +155,24 @@
   --gradient-delegate:  var(--q3);
   --gradient-eliminate: var(--q4);
 
-  /* Task-status palette — derived from Inkwell semantic tokens. */
+  /* Quiet glyph ink. One step darker than --ink-3 so a 1px-stroke icon sitting
+     on a control (the incomplete-task disc) clears the 3:1 non-text contrast
+     floor that --ink-3 misses at 2.5:1. Not for text. */
+  --ink-hint: #7E8994;
+
+  /* Task-status palette — derived from Inkwell semantic tokens.
+     Each *-muted is a chip background; the paired *-ink is the only tone in
+     the family that clears AA as text on top of it. The base pigment is a
+     fill/glyph color and fails as small text on its own tint (2.9-3.2:1). */
   --status-overdue:        var(--rust);
   --status-overdue-muted:  color-mix(in srgb, var(--rust)  14%, var(--paper));
+  --status-overdue-ink:    var(--rust-d);
   --status-blocked:        var(--warning);
   --status-blocked-muted:  var(--warning-tint);
+  --status-blocked-ink:    var(--warning-dark);
   --status-blocking:       var(--sky);
   --status-blocking-muted: color-mix(in srgb, var(--sky)   14%, var(--paper));
+  --status-blocking-ink:   #57616B;
   --status-success:        var(--olive);
   --status-success-muted:  var(--olive-tint);
 
@@ -181,25 +186,36 @@
   --duration-normal: var(--t-slow);
 }
 
-/* Dark-mode pigment + wash rebinding (handoff warm-dark values). --q*-fill and
-   --quadrant-* reference these, so the matrix follows automatically. Dual-cascade
-   pattern from inkwell-tokens: auto via prefers-color-scheme, manual via data-theme. */
+/* Dark-mode pigment rebinding (Tidewater cool-dark values). The washes stay
+   aliased to --oat, which rebinds itself in the dark cascade, so panes remain
+   one uniform ground without a second set of hardcoded values. Dual-cascade
+   pattern from inkwell-tokens: auto via prefers-color-scheme, manual via data-theme.
+
+   The inks lift *past* the pigment on dark: pigment-as-text on the 0.18 chip
+   tints measures 4.3-4.6:1, so q1 and q4 needed a lighter tone to clear AA. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
-    /* Softened to match light mode, and pulled below --paper so elevation
-       reads page < pane < card. The old values sat *lighter* than the card
-       surface, so cards appeared recessed into their own quadrant. */
-    --q1-wash: #231914; --q2-wash: #171E1E; --q3-wash: #201D12; --q4-wash: #1E1B15;
-    /* Dark pigments clear AA on their own header tints; no darker ink needed. */
+    --q1: #C98B82; --q2: #7FA9C6; --q3: #C2A96F; --q4: #9BA3A9;
+    --q1-ink: #D19B92;
+    --q2-ink: #93B8D1;
     --q3-ink: var(--q3);
+    --q4-ink: #AEB5BA;
+
+    --ink-hint: #7C868E;
+    /* On dark the neutral pigment is already light enough to read as text. */
+    --status-blocking-ink: var(--sky);
   }
 }
 :root[data-theme="dark"] {
-  --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
   /* Keep in lockstep with the prefers-color-scheme branch above. */
-  --q1-wash: #231914; --q2-wash: #171E1E; --q3-wash: #201D12; --q4-wash: #1E1B15;
+  --q1: #C98B82; --q2: #7FA9C6; --q3: #C2A96F; --q4: #9BA3A9;
+  --q1-ink: #D19B92;
+  --q2-ink: #93B8D1;
   --q3-ink: var(--q3);
+  --q4-ink: #AEB5BA;
+
+  --ink-hint: #7C868E;
+  --status-blocking-ink: var(--sky);
 }
 
 /* =====================================================================
@@ -234,6 +250,7 @@
   --color-q3: var(--q3);
   --color-q4: var(--q4);
   --color-ink-3: var(--ink-3);
+  --color-ink-hint: var(--ink-hint);
 
   /* Quadrant + status palettes — Eisenhower matrix backdrops and task
      state colors, both derived from Inkwell semantic tokens. */
@@ -243,10 +260,13 @@
   --color-quadrant-eliminate: var(--quadrant-eliminate);
   --color-status-overdue:        var(--status-overdue);
   --color-status-overdue-muted:  var(--status-overdue-muted);
+  --color-status-overdue-ink:    var(--status-overdue-ink);
   --color-status-blocked:        var(--status-blocked);
   --color-status-blocked-muted:  var(--status-blocked-muted);
+  --color-status-blocked-ink:    var(--status-blocked-ink);
   --color-status-blocking:       var(--status-blocking);
   --color-status-blocking-muted: var(--status-blocking-muted);
+  --color-status-blocking-ink:   var(--status-blocking-ink);
   --color-status-success:        var(--status-success);
   --color-status-success-muted:  var(--status-success-muted);
 
@@ -259,14 +279,12 @@
   --text-label--letter-spacing: 0.04em;
 }
 
-/* GSD chooses to make the 1.5px hairline the default Tailwind `border` width.
-   Inkwell's TAILWIND.md leaves Tailwind's 1px default alone and ships
-   `border-hair` (1.5px) as an opt-in utility — we deliberately invert that
-   trade-off because GSD has no third-party Tailwind components in conflict
-   and the hairline IS the brand. `border-hair` from Inkwell still works for
-   any code that wants to be explicit. */
+/* Tidewater draws every rule at 1px — the same width Tailwind ships by
+   default. The override is kept (rather than deleted) so the width stays
+   declared in one place alongside `border-hair`, and so reverting the
+   hairline experiment is a one-line change rather than an archaeology dig. */
 @utility border {
-  border-width: 1.5px;
+  border-width: 1px;
 }
 
 body {
@@ -327,58 +345,16 @@ main {
     @apply grid grid-cols-1 items-start gap-6 md:grid-cols-2;
   }
 
+  /* Tidewater: no 3px top bar and no per-quadrant background mix. A pane is a
+     plain floating card; identity is the header dot. */
   .matrix-card {
-    @apply relative rounded-2xl border border-card-border bg-card p-6 overflow-hidden;
+    @apply relative rounded-lg border border-card-border bg-card p-6;
     box-shadow: var(--shadow-column);
     transition: box-shadow 0.3s ease, transform 0.3s ease;
   }
 
   .matrix-card:hover {
     box-shadow: var(--shadow-card-hover);
-  }
-
-  /* Gradient accent bar at top of each quadrant */
-  .matrix-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    border-radius: 1rem 1rem 0 0;
-    opacity: 0.85;
-    transition: opacity 0.3s ease;
-  }
-
-  .matrix-card:hover::before {
-    opacity: 1;
-  }
-
-  .matrix-card.bg-quadrant-focus::before {
-    background: var(--gradient-focus);
-  }
-  .matrix-card.bg-quadrant-schedule::before {
-    background: var(--gradient-schedule);
-  }
-  .matrix-card.bg-quadrant-delegate::before {
-    background: var(--gradient-delegate);
-  }
-  .matrix-card.bg-quadrant-eliminate::before {
-    background: var(--gradient-eliminate);
-  }
-
-  /* Subtle quadrant gradient glow — adds depth without overwhelming content */
-  .matrix-card.bg-quadrant-focus {
-    background-color: color-mix(in srgb, var(--q1-fill) 18%, var(--paper));
-  }
-  .matrix-card.bg-quadrant-schedule {
-    background-color: color-mix(in srgb, var(--q2-fill) 17%, var(--paper));
-  }
-  .matrix-card.bg-quadrant-delegate {
-    background-color: color-mix(in srgb, var(--q3-fill) 20%, var(--paper));
-  }
-  .matrix-card.bg-quadrant-eliminate {
-    background-color: color-mix(in srgb, var(--q4-fill) 22%, var(--paper));
   }
 
   .matrix-card__header {
@@ -393,27 +369,10 @@ main {
     @apply text-sm text-foreground-muted;
   }
 
-  /* Pane backdrops use the exact editorial washes; --q*-wash is dark-aware
-     (rebinds under [data-theme="dark"]), so light + .dark share one value. */
-  .quadrant-wash-q1 { background-color: var(--q1-wash); }
-  .quadrant-wash-q2 { background-color: var(--q2-wash); }
-  .quadrant-wash-q3 { background-color: var(--q3-wash); }
-  .quadrant-wash-q4 { background-color: var(--q4-wash); }
-
-  .dark .quadrant-wash-q1 { background-color: var(--q1-wash); }
-  .dark .quadrant-wash-q2 { background-color: var(--q2-wash); }
-  .dark .quadrant-wash-q3 { background-color: var(--q3-wash); }
-  .dark .quadrant-wash-q4 { background-color: var(--q4-wash); }
-
-  .quadrant-header-q1 { background-color: color-mix(in srgb, var(--q1-fill) 10%, var(--paper)); }
-  .quadrant-header-q2 { background-color: color-mix(in srgb, var(--q2-fill) 10%, var(--paper)); }
-  .quadrant-header-q3 { background-color: color-mix(in srgb, var(--q3-fill) 12%, var(--paper)); }
-  .quadrant-header-q4 { background-color: color-mix(in srgb, var(--q4-fill) 14%, var(--paper)); }
-
-  .dark .quadrant-header-q1 { background-color: color-mix(in srgb, var(--q1-fill) 22%, transparent); }
-  .dark .quadrant-header-q2 { background-color: color-mix(in srgb, var(--q2-fill) 22%, transparent); }
-  .dark .quadrant-header-q3 { background-color: color-mix(in srgb, var(--q3-fill) 24%, transparent); }
-  .dark .quadrant-header-q4 { background-color: color-mix(in srgb, var(--q4-fill) 26%, transparent); }
+  /* The .quadrant-wash-q* / .quadrant-header-q* tint ladders are retired.
+     Tidewater gives every pane the same ground (--oat) and every pane header a
+     transparent background, so there is nothing left for these classes to
+     express. Panes now use `bg-oat` directly. */
 }
 
 /* View Transitions */
@@ -723,14 +682,11 @@ main {
   font-feature-settings: "ss01", "cv11";
 }
 
-/* Editorial serif utility — global so dashboard and settings pages can use
- * the same display typography as the redesign scope without duplicating
- * the font-family fallback chain inline. */
-.rd-serif {
-  font-family: var(--serif);
-  font-weight: 400;
-  letter-spacing: -0.01em;
-}
+/* `.rd-serif` is retired with the editorial serif. It was unlayered, so its
+ * `font-weight: 400` silently beat any `font-semibold` in @layer utilities —
+ * leaving it in place while Tidewater moved display type to 600 would have
+ * made every heading weight change a no-op. Call sites now set their own
+ * size/weight; `--serif` still resolves to Albert for anything external. */
 
 .redesign-scope .rd-mono {
   font-family: var(--mono);
@@ -984,6 +940,17 @@ main {
 @media (hover: none) {
   .task-card-mobile-actions { display: flex; }
   .task-card-desktop-actions { display: none; }
+
+  /* On hover-capable pointers the drag grip floats over the card's left edge
+     and only appears on hover/focus, so titles sit flush. Touch has no hover,
+     so it returns to the layout flow as a real, visible handle — otherwise the
+     only way to reorder by touch would be an invisible tap target sitting on
+     top of the title, which is both undiscoverable and easy to trigger by
+     accident. Unlayered, so it beats the Tailwind utilities in @layer. */
+  .task-card-grip {
+    position: static;
+    opacity: 1;
+  }
 }
 
 /* Enforce the 44px touch-target floor (WCAG 2.5.5) on coarse pointers for the

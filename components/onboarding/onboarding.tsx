@@ -133,7 +133,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
 
       <div className="flex min-h-[140px] items-center justify-center">{screen.visual}</div>
 
-      <DialogTitle className="rd-serif mt-6 text-[26px] font-normal leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
+      <DialogTitle className="mt-6 text-[26px] font-semibold leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
         {screen.title}
       </DialogTitle>
       <DialogDescription className="mt-3 max-w-[44ch] text-[15px] leading-relaxed text-foreground-muted">

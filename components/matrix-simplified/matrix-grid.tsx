@@ -48,12 +48,15 @@ export function MatrixGrid({
   })();
 
   return (
-    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:grid-rows-2 lg:gap-0 lg:overflow-hidden lg:rounded-xl lg:border lg:border-border lg:bg-card lg:shadow-sm">
-      {quadrants.map((meta, index) => (
+    // Four floating panes on a constant 16px gutter. The old lg: rules merged
+    // them into one bordered container and zeroed the gap, which made the
+    // matrix read as a single table; the gutter is what lets each quadrant read
+    // as its own surface while the 2x2 arrangement still carries the argument.
+    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
+      {quadrants.map((meta) => (
         <QuadrantPane
           key={meta.id}
           meta={meta}
-          position={POSITIONS[index]}
           tasks={grouped[meta.rdKey]}
           allTasks={allTasks}
           onEdit={onEdit}
@@ -68,5 +71,3 @@ export function MatrixGrid({
     </div>
   );
 }
-
-const POSITIONS = ["tl", "tr", "bl", "br"] as const;
