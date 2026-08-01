@@ -1,3 +1,124 @@
+# Spec: Implement the approved Refined Evolution hybrid
+
+**Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial
+
+## Goal
+
+Evolve the production GSD experience around the approved Refined Evolution
+shell, strengthening strategic planning, mobile capture/editing, keyboard speed,
+and weekly reflection while preserving the real matrix, task lifecycle, local
+storage, sync, and drag/drop contracts.
+
+## Inputs / outputs
+
+- Input: the approved design-exploration recommendation: Refined Evolution as
+  the production shell, Spatial Focus's Q2 emphasis, Native Calm's mobile
+  capture/detail behavior, Precision Utility's Option shortcuts, and Editorial
+  Planner's Review language.
+- Output: a matrix-owned page heading and compact planning introduction that
+  preserves the existing Violet Frost token system and balanced four-pane grid.
+- Output: an honest Q2 planning cue derived from all active Schedule tasks, with
+  an explicit action that focuses the existing Schedule pane.
+- Output: a safe-area-aware, thumb-zone Quick Capture plus a read-only mobile
+  task detail sheet whose explicit Edit action opens the existing task editor.
+- Output: working `Option+/`, `Option+N`, `Option+R`, and `Option+1`-`Option+4`
+  shortcuts, matched by physical key code and documented in Help.
+- Output: the existing `/dashboard` route reframed as Review with humane weekly
+  reflection prompts backed only by current task metrics.
+
+## Constraints
+
+- Keep IndexedDB, task CRUD, capture parsing, recurrence, dependencies, undo,
+  optional PocketBase sync, DnD, routes, and service-worker behavior unchanged.
+- Reuse production components and semantic Violet Frost tokens; do not import
+  design-lab state, `dl-*` classes, concept palettes, or mock data.
+- Keep the four-quadrant matrix visible by default. Q2 emphasis may focus and
+  scroll the existing pane but must not reorder/filter panes or change capture
+  classification.
+- Keep `/dashboard`, `ROUTES.DASHBOARD`, command IDs, test IDs, and analytics
+  data structures stable while changing only user-facing vocabulary to Review.
+- Option shortcuts must use `KeyboardEvent.code`, require Option/Alt as the only
+  modifier, and remain inert while typing, composing, repeating, or using a modal.
+- Preserve bare `n`, `/`, `?`, `Shift+N`, `Cmd/Ctrl+K`, drag/drop, and explicit
+  task Edit behavior.
+- Maintain WCAG 2.1 AA intent: one page-level heading, semantic quadrant
+  headings, visible programmatic focus, 44px coarse-pointer targets, 16px mobile
+  inputs, safe-area spacing, modal focus containment, and reduced-motion safety.
+
+## Edge cases
+
+- Do not render a false zero-task Q2 message before IndexedDB hydration; compute
+  the cue from all incomplete Q2 tasks so search and Smart Views cannot distort it.
+- Cross-route shortcuts must navigate to Matrix or Review and then deliver the
+  intended capture/quadrant focus without leaving command query parameters behind.
+- macOS Option keys may report characters such as `Dead`, `registered`, or
+  inverted punctuation through `event.key`; only the physical `event.code` is
+  stable enough for the shortcut contract.
+- Sticky mobile capture must sit above the existing fixed route navigation and
+  safe area without covering the last task, footer, dialogs, or virtual keyboard.
+- Inspecting a task must not mutate it. Completion, links, drag handles, menus,
+  and the existing explicit Edit action must remain independent controls.
+- Capture controls must reflow at narrow widths without horizontal overflow or
+  iOS focus zoom; native Tab order must remain available.
+- Review copy must not claim weekly Q2 completions because the current analytics
+  cannot support that fact consistently; active quadrant counts are the source
+  for reflection prompts.
+- Light/dark, empty/loading, search/filter, long task titles, completed tasks,
+  200% zoom-equivalent widths, and offline/local-only operation must remain usable.
+
+## Out of scope
+
+- Spatial Focus's pane reordering, single-quadrant filtering, persistent focus
+  state, or capture reclassification.
+- Native Calm's source-list replacement or second quadrant bottom navigation;
+  production retains the real matrix, explicit Edit, and real task editor.
+- Editorial typography/palette, journal persistence, or new weekly completion
+  analytics.
+- Schema, sync protocol, import/export, service worker, deploy, push, PR, merge,
+  or design-lab changes.
+
+## Acceptance criteria
+
+- [x] Matrix has exactly one page-level heading, a Refined planning hierarchy,
+  and the unchanged balanced four-pane desktop model.
+- [x] The Q2 cue reports the correct active Schedule count after loading and its
+  action plus `Option+2` visibly focus the Schedule pane.
+- [x] `Option+/`, `Option+N`, `Option+R`, and `Option+1`-`Option+4` work globally,
+  reject unsafe contexts, and are discoverable in Help.
+- [x] Mobile Quick Capture is reachable above labelled route navigation, reflows
+  safely, uses a 16px input, and exposes 44px contextual controls.
+- [x] Mobile task titles open a read-only, safe-area-aware detail sheet; its
+  explicit Edit action opens the existing editor, and inspection never persists.
+- [x] Dashboard is user-facing Review, with honest Q1/Q2/Q4 reflection prompts,
+  calm empty copy, and unchanged `/dashboard` navigation/data behavior.
+- [x] Quadrant titles are semantic headings and every changed React surface passes
+  the repository WCAG-AA review baseline.
+- [x] Focused/full tests, typecheck, lint, production build, and cache-busted live
+  desktop/mobile light/dark verification pass with no unexpected console/network
+  errors, overlap, or horizontal overflow.
+
+## Test stubs
+
+- `tests/data/use-app-shortcuts.test.ts`: physical-code mapping, unsafe-context
+  rejection, cleanup, and default prevention.
+- `tests/data/use-keyboard-shortcuts.test.ts`: legacy shortcuts ignore modified
+  Option/Cmd/Ctrl events.
+- `tests/ui/app-shell.test.tsx`: Refined heading mode and Option shortcut routing.
+- `tests/ui/use-matrix-window-events.test.tsx`: capture/quadrant event and query
+  delivery with command-parameter cleanup.
+- `tests/ui/matrix-simplified.test.tsx`: Q2 count/loading truth, focus action,
+  semantic hierarchy, and mobile capture wrapper contract.
+- `tests/ui/capture-bar.test.tsx`: native Tab order, narrow reflow, 16px input,
+  and coarse-pointer controls.
+- `tests/ui/task-detail-sheet.test.tsx`: read-only content, modal focus/Escape,
+  explicit Edit transition, and zero persistence during inspection.
+- `tests/ui/dashboard-page.test.tsx`: loading/empty/populated Review language and
+  prompt counts.
+- `tests/e2e/production-hybrid.spec.ts` and targeted matrix/navigation specs:
+  real shortcut, focus restoration, mobile, DnD, and browser behavior.
+
+---
+
 # Spec: Explore five visual directions for GSD
 
 **Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial

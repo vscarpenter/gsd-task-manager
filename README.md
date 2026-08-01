@@ -43,7 +43,7 @@ GSD Task Manager is a **completely private** task manager that runs entirely in 
 
 #### 📈 **Analytics & Insights**
 
-- ✅ **Dashboard View** — Visualize productivity patterns with interactive charts
+- ✅ **Review View** — Reflect on productivity patterns with interactive charts and planning prompts
 - ✅ **Completion Metrics** — Track daily, weekly, and monthly completion rates
 - ✅ **Streak Tracking** — Monitor current and longest completion streaks
 - ✅ **Quadrant Distribution** — Analyze where your time and energy is focused
@@ -93,9 +93,9 @@ Your task will automatically appear in the correct quadrant based on your select
 - **Delete a task** — Click the delete icon (trash)
 - **Move between quadrants** — Drag and drop tasks, or edit to change urgency/importance
 
-### Dashboard & Analytics
+### Review & Analytics
 
-View your productivity metrics and patterns by switching to **Dashboard** view (toggle in header):
+Reflect on your productivity metrics and patterns by switching to **Review**:
 
 - **Task Overview** — Total, active, and completed task counts
 - **Completion Rate** — Percentage of tasks completed
@@ -179,21 +179,16 @@ Automatically recreate tasks on a schedule:
 
 **Global Shortcuts:**
 - `⌘K` / `Ctrl+K` — Open command palette (universal search and actions)
-- `n` — Create a new task
+- `n` — Focus Quick Capture on the matrix
+- `Shift+N` — Open the full task composer
 - `/` — Focus the search bar
 - `?` — Show help dialog
+- `Option+/` / `Alt+/` — Open universal search
+- `Option+N` / `Alt+N` — Focus Quick Capture from any route
+- `Option+R` / `Alt+R` — Open Review
+- `Option+1`–`Option+4` / `Alt+1`–`Alt+4` — Focus Do First, Schedule, Delegate, or Eliminate
 
-**Smart View Shortcuts:**
-- `1-9` — Activate pinned smart view at that position
-- `0` — Clear active smart view filter
-
-**Command Palette Shortcuts:**
-- `⌘M` / `Ctrl+M` — View matrix
-- `⌘D` / `Ctrl+D` — View dashboard
-- `⌘T` / `Ctrl+T` — Toggle theme
-- `⌘,` / `Ctrl+,` — Open settings
-
-Use the command palette (⌘K) to discover all available shortcuts and actions!
+Use the command palette (`⌘K` / `Ctrl+K`) to discover available actions; use Help (`?`) for the complete shortcut ledger.
 
 ### Backing Up Your Data
 
@@ -231,7 +226,7 @@ Visit the [Install page](https://gsd.vinny.dev/install.html) for detailed instru
 
 ### Power User Tips
 
-6. **Check the dashboard weekly** — Review your completion rate and quadrant distribution to identify patterns
+6. **Open Review weekly** — Reflect on your completion rate and quadrant distribution to identify patterns
 7. **Use dependencies for projects** — Break down large initiatives into sequential tasks with clear prerequisites
 8. **Batch organize during reviews** — Use selection mode to bulk tag, move, or clean up tasks
 9. **Tag strategically** — Use consistent tags like `#work`, `#personal`, `#waiting` to enable filtering
@@ -391,7 +386,7 @@ See [packages/mcp-server/README.md](./packages/mcp-server/README.md) for detaile
 
 **v3.x**
 - ✅ Next.js 16 with Turbopack and React Compiler
-- ✅ Dashboard and analytics system
+- ✅ Review and analytics system
 - ✅ Batch operations and task dependencies
 - ✅ CloudFront edge routing for static export SPA navigation
 

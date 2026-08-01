@@ -2,6 +2,58 @@
 
 ---
 
+## Done — 2026-08-01: Implement approved Refined Evolution hybrid
+
+**Branch:** `design/five-visual-directions` · **Tier:** Non-trivial ·
+**Approved contract:** user design decision plus `tasks/spec.md`.
+
+**Plan (continuous spec -> implementation, TDD + browser proof):**
+- [x] Re-run branch preflight and preserve inherited stashes/generated diffs.
+- [x] Load project guidance, design skills, production architecture, prototypes,
+  tests, and prior design decision evidence.
+- [x] Map production seams for the shell/Q2 cue, mobile capture/editor,
+  shortcuts, and Review language without importing prototype state.
+- [x] RED: add regression contracts for shortcut safety/routing, Q2 truth/focus,
+  mobile capture geometry, semantic headings, and Review copy.
+- [x] GREEN: implement the matrix-owned Refined hierarchy and Q2 planning cue.
+- [x] GREEN: implement safe-area mobile capture/editor behavior and touch fixes.
+- [x] GREEN: implement the app-shell Option shortcut layer and Help discovery.
+- [x] GREEN: reframe `/dashboard` as Review with metric-backed prompts.
+- [x] Run Impeccable detector and WCAG-AA review; resolve every scoped finding.
+- [x] Cache-bust and seed the live app; verify desktop/mobile, light/dark,
+  shortcut, editor, DnD, 200%-equivalent reflow, console, and network behavior.
+- [x] Run focused/full tests, typecheck, lint, build; restore generated noise and
+  commit only scoped paths.
+
+**Out of scope:** data/schema/sync/service-worker changes, prototype imports,
+single-quadrant filtering/reordering, new persisted inspector/data state, deploy,
+push, PR, or merge. The inherited `public/sw.js` version diff remains outside
+this work.
+
+**Verification:** focused contracts passed 243/243; the full Vitest suite passed
+2,494 tests with 1 skipped. Typecheck passed. Lint passed with 0 errors and 10
+known warnings. The 15-route static build passed. Impeccable detection returned
+no findings, and the final changed-surface WCAG-AA review found no scoped
+regressions after focus, contrast, touch-target, semantics, and safe-area fixes.
+Targeted Chromium passed 20/20 across the hybrid, route navigation,
+classification, and DnD; the navigation suite also passed 15/15 across three
+repetitions. The hybrid passed 3/3 in WebKit; its shortcut path also proved modal
+suppression and in-place focus restoration in both engines. A cache-busted, realistically seeded live
+run unregistered 1 worker, cleared 2 caches, confirmed exact command/Help focus
+restoration, found no failed requests or unexpected console issues, measured the
+mobile capture edge at 772px above navigation at 783px, and found no horizontal
+overflow. Light/dark desktop/mobile/Review screenshots were inspected.
+
+**Limitations:** Firefox was unavailable because its Playwright browser executable
+is not installed. No physical iOS, virtual-keyboard, real-touch, or VoiceOver run
+was performed. Headless dev mode emitted known environment warnings for CSP
+`frame-ancestors` in a meta tag, unsupported periodic background sync, and Next's
+existing smooth-scroll advisory. Repeated WebKit dev-server runs after rebuilds
+also logged transient stale-chunk errors; the cache-busted live run and final
+browser assertions passed. No push, PR, deploy, or service-worker change was performed.
+
+---
+
 ## Done — 2026-08-01: Explore five visual directions
 
 **Branch:** `design/five-visual-directions` · **Tier:** Non-trivial (five full
