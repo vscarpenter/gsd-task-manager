@@ -93,7 +93,7 @@ export function FeaturesSection() {
           <p className="text-xs uppercase tracking-widest text-accent mb-3 text-center">
             Features
           </p>
-          <h2 className="rd-serif font-normal text-display tracking-tight text-foreground mb-12 text-center">
+          <h2 className="font-semibold text-display tracking-tight text-foreground mb-12 text-center">
             Everything you need. Nothing you don&apos;t.
           </h2>
         </ScrollReveal>

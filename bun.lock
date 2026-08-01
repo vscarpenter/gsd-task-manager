@@ -8,7 +8,7 @@
         "@dnd-kit/core": "6.3.1",
         "@dnd-kit/sortable": "10.0.0",
         "@dnd-kit/utilities": "3.2.2",
-        "@openai/codex-security": "^0.1.1",
+        "@openai/codex-security": "^0.1.4",
         "@radix-ui/react-dialog": "1.1.20",
         "@radix-ui/react-dropdown-menu": "2.1.22",
         "@radix-ui/react-icons": "1.3.2",
@@ -36,7 +36,7 @@
         "zod": "4.4.3",
       },
       "devDependencies": {
-        "@playwright/test": "^1.62.0",
+        "@playwright/test": "^1.62.1",
         "@tailwindcss/postcss": "4.3.3",
         "@testing-library/dom": "10.4.1",
         "@testing-library/jest-dom": "7.0.0",
@@ -412,7 +412,7 @@
 
     "@openai/codex-sdk": ["@openai/codex-sdk@0.144.6", "", { "dependencies": { "@openai/codex": "0.144.6" } }, "sha512-jFgXHjFq2//PTfJa8CySqhUilRBPVmCLuQoH5F+iJ2x4owZwPlnqmIbCkWIJJ6IxDuQdjf3ewg0LaDtc3i6h9Q=="],
 
-    "@openai/codex-security": ["@openai/codex-security@0.1.4", "", { "dependencies": { "@inquirer/prompts": "8.3.0", "@octokit/core": "7.0.6", "@openai/codex": "0.144.6", "@openai/codex-sdk": "0.144.6", "ajv": "8.20.0", "extract-zip": "2.0.1", "fast-uri": "3.1.4", "fflate": "0.8.2", "incur": "0.4.13", "papaparse": "5.5.3", "pdfjs-dist": "5.6.205", "smol-toml": "1.6.1" }, "bin": { "codex-security": "bin/codex-security.mjs" } }, "sha512-BOElTCc8oxlIVemL7j9a0Ekmsrb3/zboGzzyVf7i4opr9+Ij5D6qdMHcP5kcdPSowg+/rZhAndSJ3t7+Or0oKw=="],
+    "@openai/codex-security": ["@openai/codex-security@0.1.5", "", { "dependencies": { "@inquirer/prompts": "8.3.0", "@octokit/core": "7.0.6", "@openai/codex": "0.144.6", "@openai/codex-sdk": "0.144.6", "ajv": "8.20.0", "extract-zip": "2.0.1", "fast-uri": "3.1.4", "fflate": "0.8.2", "incur": "0.4.13", "papaparse": "5.5.3", "pdfjs-dist": "5.6.205", "smol-toml": "1.6.1" }, "bin": { "codex-security": "bin/codex-security.mjs" } }, "sha512-P6RZCrtZjQ23TG55VVYdrz5+/o5SGt4A3xDy18C/1ZqhfbRQYFzZIVP+HzfR2j0HaJv0l1KsKzuKtR8UOeK/UQ=="],
 
     "@openai/codex-win32-arm64": ["@openai/codex@0.144.6-win32-arm64", "", { "os": "win32", "cpu": "arm64" }, "sha512-SpMjXJLW43JzMP0K62mVcYfmFcpk0BK4AOgYmWSfyZHs3iRtHMd0UYw7605n/9lwkT2EqbwQLT2omZFeKJFzwA=="],
 

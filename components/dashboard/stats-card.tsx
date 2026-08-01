@@ -40,7 +40,7 @@ export function StatsCard({
   const trendColor = trend
     ? trend.isPositive
       ? "text-status-success"
-      : "text-status-overdue"
+      : "text-status-overdue-ink"
     : "text-foreground-muted";
 
   return (
@@ -63,7 +63,12 @@ export function StatsCard({
               </span>
             ) : null}
           </div>
-          <p className="rd-serif mt-3 text-[48px] leading-none tabular-nums tracking-tight text-foreground">
+          {/* 40px, not 48: Albert Sans carries more optical weight than the
+              retired serif did, so the old size read as shouting. */}
+          <p
+            className="mt-3 text-[40px] font-semibold leading-none tabular-nums text-foreground"
+            style={{ letterSpacing: "-0.02em" }}
+          >
             {animatedValue}
           </p>
         </div>
@@ -103,7 +108,8 @@ export function StatsCard({
 
 /**
  * Inline SVG sparkline. Stroke color follows the trend delta:
- * success (up), overdue (down), muted (flat / no trend).
+ * accent (up), overdue (down), tertiary ink (flat / no trend). A flat series
+ * carries no judgement, so it drops out of the color system entirely.
  */
 function Sparkline({
   values,
@@ -126,11 +132,13 @@ function Sparkline({
     })
     .join(" ");
 
+  // --ink-hint, not --ink-3: the handoff's #9AA5AE measures 2.48:1 on the card,
+  // under the 3:1 floor for a graphic that carries meaning (WCAG 1.4.11).
   const stroke =
     isPositive === undefined
-      ? "stroke-foreground-muted"
+      ? "stroke-ink-hint"
       : isPositive
-        ? "stroke-status-success"
+        ? "stroke-accent"
         : "stroke-status-overdue";
 
   return (

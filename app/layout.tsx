@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Newsreader } from "next/font/google";
+import { Albert_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
@@ -47,16 +47,18 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://*.ingest.us.sentry.io",
     ].join(" ");
 
-// Apple's "New York" serif (used for editorial headlines) only exists on Apple
-// devices; Newsreader is the cross-platform stand-in with near-identical
-// proportions. next/font self-hosts it (no runtime Google Fonts request, so no
-// CSP/connect-src change) and emits the @font-face at build time under output:export.
-// Exposed as --font-newsreader, which the --serif token chain references.
-const newsreader = Newsreader({
+// Tidewater runs one family everywhere; the editorial serif is retired. Albert
+// Sans is a geometric humanist with a tall x-height, so it stays legible at the
+// 11-12px chip sizes the matrix leans on while still carrying a 40px stat hero.
+// next/font self-hosts it (no runtime Google Fonts request, so no CSP/connect-src
+// change) and emits the @font-face at build time under output:export. Exposed as
+// --font-albert, which BOTH the --sans and --serif token chains reference —
+// --serif is kept aliased so any straggling call site degrades to the same face.
+const albertSans = Albert_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
-  variable: "--font-newsreader",
+  variable: "--font-albert",
   display: "swap",
 });
 
@@ -132,7 +134,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={newsreader.variable} suppressHydrationWarning>
+    <html lang="en" className={albertSans.variable} suppressHydrationWarning>
       <head>
         <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
         <link rel="preconnect" href="https://api.vinny.io" />

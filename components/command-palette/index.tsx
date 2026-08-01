@@ -88,7 +88,7 @@ export function CommandPalette({
       >
         {/* Calm editorial overlay: a serif title over the dimmed board (reference §07) */}
         <div className="flex items-baseline justify-between border-b border-border px-4 pt-3 pb-2">
-          <DialogTitle className="rd-serif text-[17px] font-semibold text-foreground">Commands</DialogTitle>
+          <DialogTitle className="text-[17px] font-semibold text-foreground">Commands</DialogTitle>
         </div>
         <DialogDescription className="sr-only">
           Search for tasks, actions, and settings. Use arrow keys to navigate and Enter to select.

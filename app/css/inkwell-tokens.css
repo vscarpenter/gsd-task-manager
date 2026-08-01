@@ -1,8 +1,9 @@
 /* =====================================================================
    Inkwell — design tokens & dark-mode cascade.
    Version: 1.3.1
-   Brand palette: GSD Editorial (warm paper + graphite ink + tide accent).
-   The four quadrant pigments are the only strong color; system-blue is retired.
+   Brand palette: GSD Tidewater (cool slate-blue mist + one steel accent).
+   Calm-minimal: a single accent carries every interactive surface, and the
+   four quadrant pigments are reduced to whisper-thin spines and dots.
 
    This file contains ONLY:
      • :root custom-property declarations
@@ -22,50 +23,56 @@
    ===================================================================== */
 
 :root {
-  /* ---------- Surfaces (warm editorial paper) ---------- */
-  --ivory: #F4F1E9;       /* page background — warm paper */
-  --paper: #FFFFFF;       /* card / panel surface */
-  --slate: #211E1A;       /* primary text — warm graphite ink */
-  --oat:   #FBF9F3;       /* secondary raised surface */
+  /* ---------- Surfaces (cool slate-blue mist) ---------- */
+  --ivory: #F1F3F5;       /* page background — cool mist */
+  --paper: #FDFEFE;       /* card / panel surface */
+  --slate: #242A31;       /* primary text — cool graphite ink */
+  --oat:   #F7F9FA;       /* secondary raised surface — the quadrant pane ground */
 
-  /* ---------- Accent (editorial tide — the single interactive tint) ---------- */
-  --accent:               #2C6680;
-  --accent-d:             #234F63;                /* hover/pressed */
-  --accent-tint:          rgba(44, 102, 128, 0.14); /* badge bg, tide on warm paper */
-  --accent-focus-ring:    rgba(44, 102, 128, 0.18); /* input focus halo */
-  --accent-strong-border: rgba(44, 102, 128, 0.5);  /* tinted chip border */
+  /* ---------- Accent (steel blue — the single interactive tint) ---------- */
+  --accent:               #4A6E8A;                  /* 4.97:1 on --paper */
+  --accent-d:             #3E5D74;                  /* hover/pressed, and accent-on-tint text */
+  --accent-tint:          rgba(74, 110, 138, 0.12); /* badge bg */
+  --accent-focus-ring:    rgba(74, 110, 138, 0.20); /* input focus halo */
+  --accent-strong-border: rgba(74, 110, 138, 0.5);  /* tinted chip border */
 
   /* ---------- Semantic ---------- */
-  --olive:        #3E7D52;                          /* success, additions — forest green */
-  --olive-tint:   rgba(62, 125, 82, 0.16);
-  --olive-strong-border: rgba(62, 125, 82, 0.45);   /* tinted success border */
-  --rust:         #B23A2E;                          /* danger, deletions — also q1/alert */
-  --rust-d:       #98301F;                          /* rust hover/pressed */
-  --rust-tint:    rgba(178, 58, 46, 0.10);          /* danger alert background */
-  --rust-tint-border: rgba(178, 58, 46, 0.45);      /* danger alert border */
-  --rust-focus-ring:  rgba(178, 58, 46, 0.18);      /* danger input focus halo */
-  --warning:      #C78E3F;
-  --warning-dark: #A06A2A;                         /* warning text (darker for contrast) */
-  --warning-tint: rgba(199, 142, 63, 0.16);
-  --warning-strong-border: rgba(199, 142, 63, 0.45); /* tinted warning border */
-  --info:         #2C6680;                         /* informational — tide */
-  --sky:          #4E7E96;                         /* alt info / data viz — lighter tide */
+  /* Success folds into the accent family: Tidewater runs one interactive hue,
+     so a separate green would have been a second accent competing at the same
+     chroma. The *text* tone is --accent-d, which clears AA on --olive-tint. */
+  --olive:        #3E5D74;                          /* success, additions */
+  --olive-tint:   rgba(74, 110, 138, 0.12);
+  --olive-strong-border: rgba(74, 110, 138, 0.45);  /* tinted success border */
+  --rust:         #A65B52;                          /* danger, deletions — also q1/alert */
+  --rust-d:       #94493F;                          /* rust hover/pressed, rust-on-tint text */
+  --rust-tint:    rgba(166, 91, 82, 0.12);          /* danger alert background */
+  --rust-tint-border: rgba(166, 91, 82, 0.45);      /* danger alert border */
+  --rust-focus-ring:  rgba(166, 91, 82, 0.20);      /* danger input focus halo */
+  --warning:      #97814D;
+  --warning-dark: #75623A;                         /* warning text (darker for contrast) */
+  --warning-tint: rgba(151, 129, 77, 0.14);
+  --warning-strong-border: rgba(151, 129, 77, 0.45); /* tinted warning border */
+  --info:         #4A6E8A;                         /* informational — accent */
+  --sky:          #848B90;                         /* alt info / blocking chips — neutral */
 
   /* ---------- Tertiary ink (quiet labels, dotted chart lines) ---------- */
-  --ink-3: #A49B8D;
+  --ink-3: #9AA5AE;
 
-  /* ---------- Neutral scale (warm taupe) ---------- */
-  --gray-100: #ECE7DC;  /* sunken / inset fill */
-  --gray-200: #E3DDD0;  /* hairline */
-  --gray-300: #D8D1C1;  /* hairline-strong / border */
-  --gray-500: #6E6760;  /* WCAG AA: 5.6:1 on --paper, 4.9:1 on --ivory */
-  --gray-700: #3A372F;
+  /* ---------- Neutral scale (cool slate) ---------- */
+  --gray-100: #E9EEF2;  /* sunken / inset fill */
+  --gray-200: #E3E9ED;  /* hairline */
+  --gray-300: #DBE1E6;  /* hairline-strong / border */
+  --gray-500: #5D6873;  /* WCAG AA: 5.9:1 on --paper, 5.5:1 on --ivory */
+  --gray-700: #3B434C;
 
   /* ---------- Typography ---------- */
-  /* Newsreader (loaded via next/font, exposed as --font-newsreader on <html>) is the
-     cross-platform stand-in for Apple's New York; falls back to Georgia if unloaded. */
-  --serif: ui-serif, "New York", var(--font-newsreader, Georgia), Georgia, "Times New Roman", Times, serif;
-  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Tidewater is a single-family system. Albert Sans (loaded via next/font,
+     exposed as --font-albert on <html>) carries display and body alike; the
+     editorial serif is retired. --serif deliberately points at the same stack
+     so any remaining `.rd-serif` / `font-serif` call site degrades to Albert
+     rather than falling back to Georgia mid-page. */
+  --serif: var(--font-albert), system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --sans:  var(--font-albert), system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono:  ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
 
   /* Type scale */
@@ -88,28 +95,35 @@
   --sp-7: 48px;
   --sp-8: 64px;
 
-  /* ---------- Radius ---------- */
+  /* ---------- Radius ----------
+     Tidewater ladder: pane 14 (--r-lg) · card 12 (--r-md) · inputs/buttons 10
+     (--r-sm) · icon buttons 8 (--r-icon) · chips pill. Radius steps down with
+     element size so nothing reads stamped from one uniform corner. */
   --r-xs:    4px;
-  --r-sm:    8px;
+  --r-icon:  8px;
+  --r-sm:   10px;
   --r-md:   12px;
   --r-lg:   14px;
   --r-xl:   20px;
   --r-pill: 999px;
 
-  /* ---------- Borders (signature 1.5px) ---------- */
-  --border:        1.5px solid var(--gray-300);
-  --border-strong: 1.5px solid var(--slate);
-  --border-hair:   1px   solid var(--gray-100);
-  --border-rule:   1px   solid var(--gray-300);
+  /* ---------- Borders (uniform 1px) ----------
+     Tidewater retires the 1.5px hairline: with the merged matrix grid gone,
+     structure is carried by the gap between floating panes, so a heavier rule
+     would only add weight the layout no longer needs. */
+  --border:        1px solid var(--gray-300);
+  --border-strong: 1px solid var(--slate);
+  --border-hair:   1px solid var(--gray-100);
+  --border-rule:   1px solid var(--gray-300);
 
-  /* ---------- Shadows (warm low-spread) ---------- */
-  --shadow-sm:         0 1px 2px  rgba(20, 20, 19, 0.06);
-  --shadow-md:         0 4px 14px rgba(20, 20, 19, 0.08);
-  --shadow-lg:         0 12px 28px rgba(20, 20, 19, 0.12);
-  --shadow-card-hover: 0 10px 30px rgba(20, 20, 19, 0.10);
+  /* ---------- Shadows (cool low-spread) ---------- */
+  --shadow-sm:         0 1px 3px  rgba(36, 42, 49, 0.04);
+  --shadow-md:         0 4px 14px rgba(36, 42, 49, 0.07);
+  --shadow-lg:         0 12px 28px rgba(36, 42, 49, 0.10);
+  --shadow-card-hover: 0 10px 30px rgba(36, 42, 49, 0.10);
 
   /* ---------- Backdrop (dialog::backdrop, modal scrims) ---------- */
-  --backdrop: rgba(15, 16, 24, 0.55);
+  --backdrop: rgba(20, 25, 30, 0.5);
 
   /* ---------- TLDR code-chip tint ----------
      Subtle overlay on the inverted .tldr surface. The .tldr panel flips
@@ -152,39 +166,41 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --ivory: #17150F;       /* page background — warm dark paper */
-    --paper: #221E17;       /* card / panel surface */
-    --slate: #F1ECE2;       /* primary text — warm light ink */
-    --oat:   #1B1812;       /* secondary raised surface */
+    --ivory: #14171A;       /* page background — cool dark */
+    --paper: #1D2125;       /* card / panel surface */
+    --slate: #E8ECEF;       /* primary text — cool light ink */
+    --oat:   #191D21;       /* secondary raised surface — pane ground */
 
-    --accent:               #6FAACB;                 /* lifted tide */
-    --accent-d:             #5A93B5;
-    --accent-tint:          rgba(111, 170, 203, 0.18);
-    --accent-focus-ring:    rgba(111, 170, 203, 0.28);
-    --accent-strong-border: rgba(111, 170, 203, 0.6);
+    --accent:               #7FA9C6;                 /* lifted steel */
+    --accent-d:             #93B8D1;
+    --accent-tint:          rgba(127, 169, 198, 0.18);
+    --accent-focus-ring:    rgba(127, 169, 198, 0.28);
+    --accent-strong-border: rgba(127, 169, 198, 0.6);
 
-    --olive:        #6FB07F;                          /* lifted success */
-    --olive-tint:   rgba(111, 176, 127, 0.18);
-    --olive-strong-border: rgba(111, 176, 127, 0.6); /* lifted tinted success border */
-    --rust:         #E0705F;                          /* lifted — also q1/alert */
-    --rust-d:       #D5614F;                           /* lifted rust hover/pressed */
-    --rust-tint:    rgba(224, 112, 95, 0.18);         /* lifted danger alert background */
-    --rust-tint-border: rgba(224, 112, 95, 0.6);      /* lifted danger alert border */
-    --rust-focus-ring:  rgba(224, 112, 95, 0.28);     /* lifted danger input focus halo */
-    --warning:      #D9A55F;
-    --warning-dark: #D9A55F;                         /* lifted warning text (same as warning for contrast) */
-    --warning-tint: rgba(217, 165, 95, 0.18);
-    --warning-strong-border: rgba(217, 165, 95, 0.6); /* lifted tinted warning border */
-    --info:         #6FAACB;                         /* informational — lifted tide */
-    --sky:          #7FB0CB;                          /* alt info / data viz — lifted tide */
+    --olive:        #93B8D1;                          /* success folds into accent */
+    --olive-tint:   rgba(127, 169, 198, 0.18);
+    --olive-strong-border: rgba(127, 169, 198, 0.6); /* lifted tinted success border */
+    --rust:         #C98B82;                          /* lifted — also q1/alert */
+    /* Lifted a step past --rust so rust-on-rust-tint clears AA: #C98B82 on the
+       0.18 tint over --paper measures 4.34:1, just under the 4.5 floor. */
+    --rust-d:       #D19B92;                          /* rust hover/pressed, rust-on-tint text */
+    --rust-tint:    rgba(201, 139, 130, 0.18);        /* lifted danger alert background */
+    --rust-tint-border: rgba(201, 139, 130, 0.6);     /* lifted danger alert border */
+    --rust-focus-ring:  rgba(201, 139, 130, 0.28);    /* lifted danger input focus halo */
+    --warning:      #C2A96F;
+    --warning-dark: #C2A96F;                         /* lifted warning text (same as warning for contrast) */
+    --warning-tint: rgba(194, 169, 111, 0.18);
+    --warning-strong-border: rgba(194, 169, 111, 0.6); /* lifted tinted warning border */
+    --info:         #7FA9C6;                         /* informational — lifted steel */
+    --sky:          #9BA3A9;                          /* alt info / blocking chips — neutral */
 
-    --ink-3: #6F685B;
+    --ink-3: #6E7880;
 
-    --gray-100: #1B1812;  /* sunken / inset fill (dark) */
-    --gray-200: #2A2620;  /* hairline (dark) */
-    --gray-300: #322D24;  /* hairline-strong / border (dark) */
-    --gray-500: #A79F92;  /* ink-2 (dark) */
-    --gray-700: #C8C0B2;
+    --gray-100: #262B30;  /* sunken / inset fill (dark) */
+    --gray-200: #2A3036;  /* hairline (dark) */
+    --gray-300: #2E343A;  /* hairline-strong / border (dark) */
+    --gray-500: #A2ACB5;  /* ink-2 (dark) */
+    --gray-700: #C7D0D8;
 
     --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
     --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
@@ -201,46 +217,47 @@
    lifted gray-500 color. These overrides carry higher specificity than the base
    rule, ensuring the dark chevron always wins regardless of cascade order. */
 :root:not([data-theme="light"]) .select {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A79F92' stroke-width='1.5' stroke-linecap='round'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A2ACB5' stroke-width='1.5' stroke-linecap='round'/></svg>");
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --ivory: #17150F;
-  --paper: #221E17;
-  --slate: #F1ECE2;
-  --oat:   #1B1812;
+  --ivory: #14171A;
+  --paper: #1D2125;
+  --slate: #E8ECEF;
+  --oat:   #191D21;
 
-  --accent:               #6FAACB;
-  --accent-d:             #5A93B5;
-  --accent-tint:          rgba(111, 170, 203, 0.18);
-  --accent-focus-ring:    rgba(111, 170, 203, 0.28);
-  --accent-strong-border: rgba(111, 170, 203, 0.6);
+  --accent:               #7FA9C6;
+  --accent-d:             #93B8D1;
+  --accent-tint:          rgba(127, 169, 198, 0.18);
+  --accent-focus-ring:    rgba(127, 169, 198, 0.28);
+  --accent-strong-border: rgba(127, 169, 198, 0.6);
 
-  --olive:        #6FB07F;
-  --olive-tint:   rgba(111, 176, 127, 0.18);
-  --olive-strong-border: rgba(111, 176, 127, 0.6); /* lifted tinted success border */
-  --rust:         #E0705F;
-  --rust-d:       #D5614F;                          /* lifted rust hover/pressed */
-  --rust-tint:    rgba(224, 112, 95, 0.18);         /* lifted danger alert background */
-  --rust-tint-border: rgba(224, 112, 95, 0.6);      /* lifted danger alert border */
-  --rust-focus-ring:  rgba(224, 112, 95, 0.28);     /* lifted danger input focus halo */
-  --warning:      #D9A55F;
-  --warning-dark: #D9A55F;                         /* lifted warning text (same as warning for contrast) */
-  --warning-tint: rgba(217, 165, 95, 0.18);
-  --warning-strong-border: rgba(217, 165, 95, 0.6); /* lifted tinted warning border */
-  --info:         #6FAACB;
-  --sky:          #7FB0CB;
+  --olive:        #93B8D1;                          /* success folds into accent */
+  --olive-tint:   rgba(127, 169, 198, 0.18);
+  --olive-strong-border: rgba(127, 169, 198, 0.6); /* lifted tinted success border */
+  --rust:         #C98B82;
+  /* See the @media branch above for why --rust-d sits a step past --rust. */
+  --rust-d:       #D19B92;                          /* rust hover/pressed, rust-on-tint text */
+  --rust-tint:    rgba(201, 139, 130, 0.18);        /* lifted danger alert background */
+  --rust-tint-border: rgba(201, 139, 130, 0.6);     /* lifted danger alert border */
+  --rust-focus-ring:  rgba(201, 139, 130, 0.28);    /* lifted danger input focus halo */
+  --warning:      #C2A96F;
+  --warning-dark: #C2A96F;                         /* lifted warning text (same as warning for contrast) */
+  --warning-tint: rgba(194, 169, 111, 0.18);
+  --warning-strong-border: rgba(194, 169, 111, 0.6); /* lifted tinted warning border */
+  --info:         #7FA9C6;
+  --sky:          #9BA3A9;
 
-  --ink-3: #6F685B;
+  --ink-3: #6E7880;
 
-  --gray-100: #1B1812;
-  --gray-200: #2A2620;
-  --gray-300: #322D24;
-  --gray-500: #A79F92;
-  --gray-700: #C8C0B2;
+  --gray-100: #262B30;
+  --gray-200: #2A3036;
+  --gray-300: #2E343A;
+  --gray-500: #A2ACB5;
+  --gray-700: #C7D0D8;
 
   --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
   --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
@@ -253,5 +270,5 @@
 }
 /* Select chevron dark-mode override: see comment above in @media section for rationale */
 :root[data-theme="dark"] .select {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A79F92' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A2ACB5' stroke-width='1.5' stroke-linecap='round'/></svg>");
 }

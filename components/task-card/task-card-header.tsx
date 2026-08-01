@@ -76,9 +76,19 @@ export function TaskCardHeader({
             aria-label={`Select ${task.title}`}
           />
         ) : (
+          // Floats over the card's left gutter instead of holding a column, so
+          // titles start flush. Visibility (not hit-testing) is what's gated:
+          // gating pointer-events too would be a no-op for a real mouse — you
+          // cannot reach the grip without hovering the card that reveals it —
+          // while breaking any tool that asserts actionability before moving
+          // the pointer, Playwright's `hover()` included.
           <button
             type="button"
-            className="touch-target cursor-grab touch-none shrink-0 rounded p-1.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            // bg-card matters: at 24px the button overhangs the card's 16px
+            // left gutter by 8px, so a transparent grip would render on top of
+            // the title's first glyph. An opaque fill makes the overlap read as
+            // a control appearing rather than a paint bug.
+            className="task-card-grip touch-target absolute left-0 top-2.5 z-10 flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded-icon bg-card opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100"
             aria-label="Drag to move task"
             {...sortableAttributes}
             {...sortableListeners}
@@ -88,13 +98,13 @@ export function TaskCardHeader({
         )}
         <div className={cn("min-w-0 flex-1", reserveBadgeSpace && "pr-24")}>
           <h3 className={cn(
-            "text-[15px] font-semibold leading-snug tracking-tight text-foreground truncate",
+            "truncate text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em] text-foreground",
             task.completed && "line-through"
           )}>
             {task.title}
           </h3>
           {task.description ? (
-            <p className="mt-0.5 text-xs text-foreground-muted line-clamp-2">
+            <p className="mt-[3px] text-[12.5px] leading-[1.55] text-foreground-muted line-clamp-2">
               <TaskDescription description={task.description} />
             </p>
           ) : null}
@@ -114,10 +124,13 @@ export function TaskCardHeader({
             className={cn(
               // active:scale-95 gives the completion toggle — the card's key
               // moment — a tactile down-press to pair with the check-pop on release.
-              "button-reset touch-target relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-95 sm:h-9 sm:w-9",
+              // One size at every breakpoint (34px): the disc is the card's
+              // primary action and a responsive step made it drift against the
+              // fixed 12px card padding.
+              "button-reset touch-target relative inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-95",
               task.completed
                 ? "shadow-sm"
-                : "border-border bg-background/90 text-foreground-muted shadow-sm shadow-black/[0.04] hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105 hover:shadow-accent/10"
+                : "border-border bg-card text-ink-hint hover:border-accent hover:text-accent hover:bg-accent/5 hover:scale-105"
             )}
             aria-pressed={task.completed}
             aria-busy={isTogglingComplete}
@@ -127,12 +140,12 @@ export function TaskCardHeader({
               // Color lives on the icon: the button's `button-reset` (unlayered
               // color: inherit) would neutralize a text-color class on the button.
               <CheckIcon
-                style={{ color: "var(--ivory)" }}
+                style={{ color: "var(--paper)" }}
                 className={checkIconClassName}
               />
             ) : (
               <>
-                <CircleIcon className="h-4 w-4 shrink-0" />
+                <CircleIcon className="h-[15px] w-[15px] shrink-0" />
                 <span
                   aria-hidden="true"
                   className="absolute h-1.5 w-1.5 rounded-full bg-current opacity-0 transition-opacity duration-200 group-hover:opacity-40"

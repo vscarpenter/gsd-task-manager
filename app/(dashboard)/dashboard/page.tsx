@@ -81,7 +81,12 @@ export default function DashboardPage(): React.ReactElement {
         <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
           <div className="mx-auto max-w-7xl">
             <p className="eyebrow">Workspace Insights</p>
-            <h1 className="rd-serif mt-2 text-3xl tracking-tight text-foreground sm:text-4xl">Dashboard</h1>
+            <h1
+              className="mt-2 text-[26px] font-semibold leading-tight text-foreground"
+              style={{ letterSpacing: "-0.015em" }}
+            >
+              Dashboard
+            </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted sm:text-base">
               Track follow-through, spot overdue drag, and keep the matrix balanced before work starts to sprawl.
             </p>

@@ -173,12 +173,25 @@ describe("<MatrixSimplified>", () => {
     });
   });
 
-  it("keeps the matrix single-column at tablet widths and merges it at large widths", () => {
+  it("keeps the matrix single-column at tablet widths and two-up at large widths", () => {
     render(<MatrixSimplified />);
     const grid = screen.getByTestId("matrix-grid");
 
     expect(grid).toHaveClass("grid-cols-1", "lg:grid-cols-2", "lg:grid-rows-2");
     expect(grid).not.toHaveClass("md:grid-cols-2", "md:grid-rows-2");
+  });
+
+  // Tidewater un-merges the desktop grid: the four panes float on the page with
+  // a constant 16px gutter instead of sharing one bordered container. The gutter
+  // must not collapse at lg — that collapse is what re-merged them.
+  it("floats the four panes on a constant 16px gutter with no merged container", () => {
+    render(<MatrixSimplified />);
+    const grid = screen.getByTestId("matrix-grid");
+
+    expect(grid).toHaveClass("gap-4");
+    expect(grid.className).not.toMatch(
+      /lg:(gap-0|overflow-hidden|rounded-xl|border|bg-card|shadow-sm)/
+    );
   });
 
   describe("completion celebration", () => {

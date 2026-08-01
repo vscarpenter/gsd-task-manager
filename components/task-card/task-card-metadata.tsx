@@ -45,7 +45,7 @@ export function TaskCardMetadata({
             <span
               key={tag}
               data-testid="task-tag"
-              className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium text-foreground-muted"
+              className="inline-flex items-center rounded-full bg-background-muted px-[9px] py-0.5 text-[11px] font-medium text-foreground-muted"
             >
               {tag}
             </span>
@@ -53,10 +53,10 @@ export function TaskCardMetadata({
         </div>
       ) : null}
 
-      {/* Subtasks progress — quadrant accent fill, success green at 100% */}
+      {/* Subtasks progress — quadrant accent fill, deepening to the accent at 100% */}
       {totalSubtasks > 0 ? (
         <div className="flex items-center gap-2 text-xs">
-          <div className="flex-1 h-1.5 rounded-full bg-background-muted/80 overflow-hidden">
+          <div className="flex-1 h-[5px] rounded-full bg-background-muted overflow-hidden">
             {/* Fill scales on the compositor rather than animating `width`:
                 a width transition relayouts every frame, and listing it
                 explicitly would only trade one detector finding for another.
@@ -85,9 +85,12 @@ export function TaskCardMetadata({
       {/* Dependency indicators */}
       {(isBlocked || isBlocking) && !task.completed ? (
         <div className="flex flex-wrap gap-2 text-xs">
+          {/* Tint-only chips: the border is gone (the tint alone separates them
+              from the card) and the text takes the *-ink tone, because the base
+              pigment reads at ~3:1 on its own tint — under the AA floor. */}
           {isBlocked ? (
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-status-blocked-muted border border-status-blocked/20 px-2 py-0.5 text-status-blocked font-medium"
+              className="inline-flex items-center gap-1 rounded-full bg-status-blocked-muted px-[9px] py-0.5 text-status-blocked-ink font-semibold"
               title={`Blocked by: ${blockingTasks.map(t => t.title).join(", ")}`}
             >
               <LockIcon className="h-3 w-3" />
@@ -96,7 +99,7 @@ export function TaskCardMetadata({
           ) : null}
           {isBlocking ? (
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-status-blocking-muted border border-status-blocking/20 px-2 py-0.5 text-status-blocking font-medium"
+              className="inline-flex items-center gap-1 rounded-full bg-status-blocking-muted px-[9px] py-0.5 text-status-blocking-ink font-semibold"
               title={`Blocking: ${blockedTasks.map(t => t.title).join(", ")}`}
             >
               <LinkIcon className="h-3 w-3" />

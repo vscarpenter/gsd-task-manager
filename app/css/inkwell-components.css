@@ -64,6 +64,7 @@ body {
 .eyebrow {
   font-family: var(--mono);
   font-size: var(--t-eyebrow);
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--gray-500);

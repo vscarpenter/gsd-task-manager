@@ -117,7 +117,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
       >
         <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-          <h2 className="rd-serif text-[22px] text-foreground">{heading}</h2>
+          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{heading}</h2>
           {activeQuadrant ? (
             <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
               {activeQuadrant.title}

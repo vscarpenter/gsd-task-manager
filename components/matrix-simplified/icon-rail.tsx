@@ -67,7 +67,7 @@ export function IconRail({ onHelp }: IconRailProps) {
             <GsdLogo size={28} />
             <span
               className={cn(
-                "rd-serif whitespace-nowrap text-[15px] tracking-tight text-foreground transition-opacity duration-150",
+                "whitespace-nowrap text-[15px] font-semibold tracking-tight text-foreground transition-opacity duration-150",
                 collapsed ? "opacity-0" : "opacity-100"
               )}
             >

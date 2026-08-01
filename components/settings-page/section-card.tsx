@@ -33,7 +33,7 @@ export function SectionCard({ eyebrow, title, description, icon: Icon, children 
           </p>
           <h2
             id={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
-            className="rd-serif mt-2 text-[2rem] tracking-tight text-foreground"
+            className="mt-2 text-[26px] font-semibold tracking-[-0.015em] text-foreground"
           >
             {title}
           </h2>

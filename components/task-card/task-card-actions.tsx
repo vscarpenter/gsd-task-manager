@@ -41,9 +41,10 @@ export function TaskCardActions({
     <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
       <div className="flex items-center gap-2">
         {taskIsDueToday && !taskIsOverdue ? (
-          // Due today reads as tide-semibold (reference §06); the warning glyph
-          // is reserved for the overdue state.
-          <span className="flex items-center gap-1 rounded-full bg-accent-tint px-2 py-0.5 text-accent font-semibold">
+          // Due today reads as accent-semibold; the warning glyph is reserved
+          // for the overdue state. Text is --accent-d, not --accent: the base
+          // accent measures 4.53:1 on its own tint, too close to the floor.
+          <span className="flex items-center gap-1 rounded-full bg-accent-tint px-[9px] py-0.5 text-accent-d font-semibold">
             <ClockIcon className="h-3 w-3" />
             Due today
           </span>
