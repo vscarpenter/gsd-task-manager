@@ -46,6 +46,36 @@ describe('buildCommandActions', () => {
     expect(navIds).toContain('view-archive');
   });
 
+  it('distinguishes focus handoffs from in-place actions', () => {
+    const actions = buildCommandActions(createMockHandlers(), [], defaultConditions);
+    const byId = new Map(actions.map((action) => [action.id, action]));
+
+    for (const id of [
+      'new-task',
+      'export-tasks',
+      'import-tasks',
+      'view-matrix',
+      'view-dashboard',
+      'view-archive',
+      'open-settings',
+      'open-help',
+    ]) {
+      expect(byId.get(id)?.focusAfterExecute).toBe('handoff');
+    }
+    expect(byId.get('toggle-theme')?.focusAfterExecute).toBeUndefined();
+  });
+
+  it('presents the dashboard route as Review with legacy discovery terms', () => {
+    const actions = buildCommandActions(createMockHandlers(), [], defaultConditions);
+    const review = actions.find((action) => action.id === 'view-dashboard');
+
+    expect(review?.label).toBe('View review');
+    expect(review?.shortcut).toEqual(['⌥', 'R']);
+    expect(review?.keywords).toEqual(
+      expect.arrayContaining(['review', 'weekly', 'reflection', 'dashboard', 'analytics'])
+    );
+  });
+
   it('should include settings actions', () => {
     const actions = buildCommandActions(createMockHandlers(), [], defaultConditions);
 

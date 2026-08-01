@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface TopbarProps {
   title: string;
+  titleAsLabel?: boolean;
   caption?: React.ReactNode;
   searchQuery?: string;
   onSearchChange?: (value: string) => void;
@@ -18,6 +19,7 @@ interface TopbarProps {
 
 export function SimplifiedTopbar({
   title,
+  titleAsLabel = false,
   caption,
   searchQuery,
   onSearchChange,
@@ -35,12 +37,11 @@ export function SimplifiedTopbar({
       )}
     >
       <div className="min-w-0 flex-shrink-0">
-        <h1
-          className="text-[20px] font-semibold leading-tight text-foreground"
-          style={{ letterSpacing: "-0.015em" }}
-        >
-          {title}
-        </h1>
+        {titleAsLabel ? (
+          <p className="text-h3 font-semibold text-foreground">{title}</p>
+        ) : (
+          <h1 className="text-h3 font-semibold text-foreground">{title}</h1>
+        )}
         {caption ? (
           <div className="mt-0.5 flex items-center gap-2 text-xs text-foreground-muted">
             {caption}
@@ -55,6 +56,7 @@ export function SimplifiedTopbar({
           <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <Input
             data-testid="search-input"
+            className="touch-target"
             ref={searchInputRef}
             placeholder="Search tasks…"
             style={{ paddingLeft: "2.25rem" }}

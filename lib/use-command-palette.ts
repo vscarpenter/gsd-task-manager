@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { CommandAction } from "@/lib/command-actions";
 import type { TaskRecord } from "@/lib/types";
 import { applyFilters } from "@/lib/filters";
@@ -49,6 +49,61 @@ function paletteReducer(state: PaletteState, action: PaletteAction): PaletteStat
 export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPaletteOptions) {
   const [state, dispatch] = useReducer(paletteReducer, INITIAL_PALETTE_STATE);
   const { open, search, selectedActionId } = state;
+  const openRef = useRef(open);
+  const wasOpenRef = useRef(open);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  const rememberOpener = useCallback(() => {
+    const activeElement = document.activeElement;
+    returnFocusRef.current = activeElement instanceof HTMLElement && activeElement !== document.body
+      ? activeElement
+      : null;
+  }, []);
+
+  const openPalette = useCallback(() => {
+    if (!openRef.current) {
+      rememberOpener();
+    }
+    openRef.current = true;
+    dispatch({ type: "open" });
+  }, [rememberOpener]);
+
+  const closePalette = useCallback(() => {
+    openRef.current = false;
+    dispatch({ type: "close" });
+  }, []);
+
+  useEffect(() => {
+    openRef.current = open;
+    let restoreFrame: number | undefined;
+
+    if (wasOpenRef.current && !open) {
+      const returnTarget = returnFocusRef.current;
+      returnFocusRef.current = null;
+      // Radix releases dialog focus during its own close cleanup. Restore on
+      // the next frame so WebKit cannot overwrite our earlier focus call, but
+      // do not steal focus if the user has already moved to another control.
+      restoreFrame = window.requestAnimationFrame(() => {
+        const activeElement = document.activeElement;
+        if (
+          returnTarget?.isConnected &&
+          (activeElement === document.body ||
+            activeElement === document.documentElement ||
+            activeElement?.hasAttribute("data-radix-focus-guard"))
+        ) {
+          returnTarget.focus();
+        }
+      });
+    }
+
+    wasOpenRef.current = open;
+
+    return () => {
+      if (restoreFrame !== undefined) {
+        window.cancelAnimationFrame(restoreFrame);
+      }
+    };
+  }, [open]);
 
   // Open/close with ⌘K / Ctrl+K, Escape to close. `dispatch` is stable, so the
   // listener subscribes once.
@@ -56,25 +111,33 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        dispatch({ type: "toggle" });
+        if (openRef.current) {
+          closePalette();
+        } else {
+          openPalette();
+        }
       } else if (e.key === 'Escape') {
-        dispatch({ type: "close" });
+        closePalette();
       }
     };
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, []);
+  }, [closePalette, openPalette]);
 
   useEffect(() => {
-    const openPalette = () => dispatch({ type: "open" });
-    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
-    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openPalette);
-  }, []);
+    const onOpenPalette = () => openPalette();
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpenPalette);
+    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpenPalette);
+  }, [openPalette]);
 
   const setOpen = (next: boolean | ((previous: boolean) => boolean)) => {
     const resolved = typeof next === 'function' ? next(open) : next;
-    dispatch(resolved ? { type: "open" } : { type: "close" });
+    if (resolved) {
+      openPalette();
+    } else {
+      closePalette();
+    }
   };
   const setSearch = (value: string) => dispatch({ type: "setSearch", value });
   const setSelectedActionId = (value: string | null) =>
@@ -117,12 +180,19 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
 
   // Execute an action and close palette
   const executeAction = (action: CommandAction) => {
+    // The action may navigate or open another focus-managed surface. In that
+    // case its destination owns focus; returning to the palette opener would
+    // steal focus back from the new context.
+    if (action.focusAfterExecute === "handoff") {
+      returnFocusRef.current = null;
+    }
     action.onExecute();
     setOpen(false);
   };
 
   // Handle task selection (navigate to matrix and highlight)
   const selectTask = (taskId: string) => {
+    returnFocusRef.current = null;
     if (onSelectTask) {
       onSelectTask(taskId);
       setOpen(false);

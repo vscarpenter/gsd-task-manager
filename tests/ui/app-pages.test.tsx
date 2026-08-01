@@ -55,6 +55,12 @@ vi.mock('@/components/client-layout', () => ({
   ),
 }));
 
+vi.mock('@/components/design-lab-runtime-gate', () => ({
+  DesignLabRuntimeGate: ({ appRuntime }: { appRuntime: React.ReactNode }) => (
+    <>{appRuntime}</>
+  ),
+}));
+
 vi.mock('@/components/query-provider', () => ({
   QueryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import type { CommandActionHandlers } from "@/lib/command-actions";
 import type { FilterCriteria } from "@/lib/filters";
+import type { RedesignQuadrantKey } from "@/lib/quadrants";
 
 /**
  * Window event dispatched by the command palette when the user picks
@@ -13,6 +14,8 @@ import type { FilterCriteria } from "@/lib/filters";
 export const NEW_TASK_EVENT = "gsd:new-task";
 export const HIGHLIGHT_TASK_EVENT = "gsd:highlight-task";
 export const APPLY_SMART_VIEW_EVENT = "gsd:apply-smart-view";
+export const FOCUS_CAPTURE_EVENT = "gsd:focus-capture";
+export const FOCUS_QUADRANT_EVENT = "gsd:focus-quadrant";
 
 /**
  * Window event dispatched by the command palette when the user picks
@@ -25,8 +28,19 @@ export interface ApplySmartViewEventDetail {
   criteria?: FilterCriteria;
 }
 
+export interface FocusQuadrantEventDetail {
+  quadrant: RedesignQuadrantKey;
+}
+
+export interface ShellShortcutHandlers {
+  onCapture: () => void;
+  onReview: () => void;
+  onFocusQuadrant: (quadrant: RedesignQuadrantKey) => void;
+}
+
 interface ShellCommandResult {
   handlers: CommandActionHandlers;
+  shortcutHandlers: ShellShortcutHandlers;
   onSelectTask: (taskId: string) => void;
   conditions: {
     isSyncEnabled: boolean;
@@ -99,8 +113,33 @@ export function useShellCommandHandlers(): ShellCommandResult {
     },
   };
 
+  const shortcutHandlers: ShellShortcutHandlers = {
+    onCapture: () => {
+      if (typeof window === "undefined") return;
+      if (window.location.pathname === "/") {
+        window.dispatchEvent(new CustomEvent(FOCUS_CAPTURE_EVENT));
+      } else {
+        router.push("/?action=new-task");
+      }
+    },
+    onReview: () => router.push("/dashboard"),
+    onFocusQuadrant: (quadrant) => {
+      if (typeof window === "undefined") return;
+      if (window.location.pathname === "/") {
+        window.dispatchEvent(
+          new CustomEvent<FocusQuadrantEventDetail>(FOCUS_QUADRANT_EVENT, {
+            detail: { quadrant },
+          })
+        );
+      } else {
+        router.push(`/?focusQuadrant=${quadrant}`);
+      }
+    },
+  };
+
   return {
     handlers,
+    shortcutHandlers,
     onSelectTask,
     conditions: {
       isSyncEnabled: false,

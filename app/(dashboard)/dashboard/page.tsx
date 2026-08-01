@@ -1,7 +1,7 @@
 "use client";
 
 import type { Route } from "next";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2Icon,
@@ -22,6 +22,9 @@ import { useKeyboardShortcuts } from "@/lib/use-keyboard-shortcuts";
 import { ROUTES } from "@/lib/routes";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
+import { ReviewPrompts } from "@/components/dashboard/review-prompts";
+import { Button } from "@/components/ui/button";
+import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
 import { useDashboardData } from "./use-dashboard-data";
 
 const TREND_OPTIONS = [
@@ -42,8 +45,6 @@ export default function DashboardPage(): React.ReactElement {
   const router = useRouter();
   const { all: tasks, isLoading } = useTasks();
   const [trendPeriod, setTrendPeriod] = useState<7 | 30 | 90>(30);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const data = useDashboardData(tasks, trendPeriod);
 
   const openMatrixAction = (params?: URLSearchParams) => {
@@ -64,40 +65,39 @@ export default function DashboardPage(): React.ReactElement {
         params.set("action", "new-task");
         openMatrixAction(params);
       },
-      onSearch: () => searchInputRef.current?.focus(),
-      onHelp: () => { window.dispatchEvent(new CustomEvent("gsd:open-help")); },
-    },
-    searchInputRef
+      onSearch: () => {
+        window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
+      },
+      onHelp: () => {
+        window.dispatchEvent(new CustomEvent("gsd:open-help"));
+      },
+    }
   );
 
   return (
-    <AppShell
-      title="Dashboard"
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
-      searchInputRef={searchInputRef}
-    >
+    <AppShell title="Review">
       <div className="space-y-8 pb-10">
-        <div className="border-b border-border/60 bg-gradient-to-b from-background to-background-muted/40 px-4 py-8 sm:px-6 sm:py-10">
+        <header className="border-b border-border/60 px-4 py-8 sm:px-6 sm:py-10">
           <div className="mx-auto max-w-7xl">
-            <p className="eyebrow">Workspace Insights</p>
-            <h1
-              className="mt-2 text-[26px] font-semibold leading-tight text-foreground"
-              style={{ letterSpacing: "-0.015em" }}
-            >
-              Dashboard
-            </h1>
+            <p className="eyebrow">Weekly review</p>
+            <h2 className="mt-2 text-h2 text-foreground">
+              What did this week make room for?
+            </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground-muted sm:text-base">
-              Track follow-through, spot overdue drag, and keep the matrix balanced before work starts to sprawl.
+              Look back before you look ahead. See what closed, what still needs an answer, and where intention can replace reaction.
             </p>
           </div>
-        </div>
+        </header>
 
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
           {isLoading ? (
-            <DashboardSkeleton />
+            <div role="status" aria-busy="true" aria-label="Loading review data">
+              <div aria-hidden="true">
+                <DashboardSkeleton />
+              </div>
+            </div>
           ) : tasks.length === 0 ? (
-            <DashboardEmpty />
+            <DashboardEmpty onOpenMatrix={() => openMatrixAction()} />
           ) : (
             <DashboardContent
               data={data}
@@ -113,14 +113,17 @@ export default function DashboardPage(): React.ReactElement {
   );
 }
 
-function DashboardEmpty(): React.ReactElement {
+function DashboardEmpty({ onOpenMatrix }: { onOpenMatrix: () => void }): React.ReactElement {
   return (
-    <div className="rounded-lg border-hair border-border bg-card p-12 text-center shadow-sm">
-      <ListTodoIcon className="mx-auto h-12 w-12 text-foreground-muted" />
-      <h2 className="mt-4 text-xl font-semibold text-foreground">No tasks yet</h2>
-      <p className="mt-2 text-sm text-foreground-muted">
-        Create your first task to start tracking your productivity!
+    <div className="mx-auto max-w-xl border-y border-border/70 py-14 text-center sm:py-16">
+      <ListTodoIcon className="mx-auto h-10 w-10 text-foreground-muted" aria-hidden />
+      <h2 className="mt-4 text-xl font-semibold text-foreground">Nothing to review yet</h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-foreground-muted">
+        Your review will take shape as work moves through the matrix. Start with one commitment that deserves your attention.
       </p>
+      <Button className="touch-target mt-6" onClick={onOpenMatrix}>
+        Open matrix
+      </Button>
     </div>
   );
 }
@@ -143,7 +146,7 @@ function DashboardContent({ data, tasks, trendPeriod, onTrendPeriodChange, onDea
     <div className="space-y-6">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Completed Today"
+          title="Closed today"
           value={metrics.completedToday}
           icon={CheckCircle2Icon}
           trend={previousSixAverage > 0 ? { value: completedTrend, isPositive: completedTrend >= 0 } : undefined}
@@ -152,7 +155,7 @@ function DashboardContent({ data, tasks, trendPeriod, onTrendPeriodChange, onDea
           series={completedSeries}
         />
         <StatsCard
-          title="Active Tasks"
+          title="Active commitments"
           value={metrics.activeTasks}
           icon={ListTodoIcon}
           insight={activeInsight}
@@ -160,7 +163,7 @@ function DashboardContent({ data, tasks, trendPeriod, onTrendPeriodChange, onDea
           series={createdSeries}
         />
         <StatsCard
-          title="Completion Rate"
+          title="Follow-through"
           value={`${metrics.completionRate}%`}
           icon={TrendingUpIcon}
           insight={completionInsight}
@@ -184,10 +187,13 @@ function DashboardContent({ data, tasks, trendPeriod, onTrendPeriodChange, onDea
         </div>
       )}
 
+      <ReviewPrompts distribution={metrics.quadrantDistribution} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <div className="flex items-center">
             <SegmentedControl
+              label="Completion trend period"
               options={TREND_OPTIONS}
               value={String(trendPeriod) as "7" | "30" | "90"}
               onChange={(v) => onTrendPeriodChange(Number(v) as 7 | 30 | 90)}

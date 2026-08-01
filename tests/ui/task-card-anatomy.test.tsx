@@ -161,11 +161,12 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(title.parentElement?.className).not.toContain("pr-24");
   });
 
-  it("dims a blocked (incomplete) card to 0.62 opacity", () => {
+  it("keeps a blocked card opaque so its text remains contrast-safe", () => {
     const blocker = createMockTask({ id: "b1", title: "Blocker", completed: false });
     const dependent = createMockTask({ id: "d1", dependencies: ["b1"], completed: false });
     renderCard({ id: "d1", dependencies: ["b1"], completed: false }, [dependent, blocker]);
-    expect(screen.getByTestId("task-card").className).toContain("opacity-[0.62]");
+    expect(screen.getByTestId("task-card")).toHaveClass("opacity-100");
+    expect(screen.getByTestId("task-card")).not.toHaveClass("opacity-[0.62]");
   });
 });
 
@@ -218,6 +219,15 @@ describe("QuadrantPane header — Violet Frost quadrant identity", () => {
     expect(icon.className.baseVal).toContain("h-[18px]");
     expect(title.style.color).toBe("var(--q1-ink)");
     expect(screen.getByTestId("quadrant-hint").style.color).toBe("var(--q1-ink)");
+  });
+
+  it("exposes a semantic, programmatically focusable quadrant target", () => {
+    renderPane("q2");
+    const pane = screen.getByTestId("quadrant-q2");
+
+    expect(screen.getByRole("heading", { level: 2, name: "Schedule" })).toBeInTheDocument();
+    expect(pane).toHaveAttribute("id", "matrix-quadrant-q2");
+    expect(pane).toHaveAttribute("tabindex", "-1");
   });
 
   it("colors every header surface from its own quadrant contract", () => {

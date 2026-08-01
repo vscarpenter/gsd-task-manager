@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
@@ -59,6 +59,49 @@ describe("TaskCard", () => {
 
     expect(screen.getByText("Test Task")).toBeInTheDocument();
     expect(screen.getByText("Test description")).toBeInTheDocument();
+  });
+
+  it("offers a dedicated task-title control for read-only details", async () => {
+    const user = userEvent.setup();
+    const onInspect = vi.fn();
+    render(
+      <TaskCard
+        task={mockTask}
+        allTasks={[mockTask]}
+        {...mockHandlers}
+        onInspect={onInspect}
+      />
+    );
+
+    const inspectButton = screen.getByRole("button", { name: "View details for Test Task" });
+    expect(inspectButton).toHaveClass("touch-target");
+    expect(inspectButton.closest("h3")).not.toHaveClass("truncate");
+    expect(screen.getByRole("button", { name: "Drag to move task" }).className).toContain(
+      "[@media(pointer:coarse)]:static"
+    );
+
+    await user.click(inspectButton);
+
+    expect(onInspect).toHaveBeenCalledWith(mockTask);
+    expect(screen.getByTestId("task-card").tagName).toBe("ARTICLE");
+  });
+
+  it("makes a pointer-click title the inspector return target", () => {
+    const onInspect = vi.fn();
+    render(
+      <TaskCard
+        task={mockTask}
+        allTasks={[mockTask]}
+        {...mockHandlers}
+        onInspect={onInspect}
+      />
+    );
+
+    const inspectButton = screen.getByRole("button", { name: "View details for Test Task" });
+    fireEvent.click(inspectButton);
+
+    expect(inspectButton).toHaveFocus();
+    expect(onInspect).toHaveBeenCalledWith(mockTask);
   });
 
   it("gives the drag handle a coarse-pointer touch target", () => {
@@ -151,12 +194,13 @@ describe("TaskCard", () => {
     expect(mockHandlers.onDelete).toHaveBeenCalledWith(mockTask);
   });
 
-  it("renders with reduced opacity when completed", () => {
+  it("keeps completed task content opaque for readable contrast", () => {
     const completedTask = { ...mockTask, completed: true };
     const { container } = render(<TaskCard task={completedTask} allTasks={[completedTask]} {...mockHandlers} />);
 
     const article = container.querySelector("article");
-    expect(article).toHaveClass("opacity-[0.55]");
+    expect(article).toHaveClass("opacity-100");
+    expect(article).not.toHaveClass("opacity-[0.55]");
   });
 
   it("displays tags when present", () => {

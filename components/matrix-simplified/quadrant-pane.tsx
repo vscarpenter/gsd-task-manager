@@ -21,12 +21,14 @@ interface QuadrantPaneProps {
   tasks: TaskRecord[];
   allTasks: TaskRecord[];
   onEdit: (task: TaskRecord) => void;
+  onInspect?: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
   highlightedTaskId?: string | null;
   onTaskRef?: (taskId: string, element: HTMLElement | null) => void;
+  sectionRef?: (element: HTMLElement | null) => void;
 }
 
 export function QuadrantPane({
@@ -34,12 +36,14 @@ export function QuadrantPane({
   tasks,
   allTasks,
   onEdit,
+  onInspect,
   onToggleComplete,
   onDelete,
   onShare,
   onAddInQuadrant,
   highlightedTaskId,
   onTaskRef,
+  sectionRef,
 }: QuadrantPaneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
@@ -52,9 +56,14 @@ export function QuadrantPane({
   return (
     <section
       data-testid={`quadrant-${meta.rdKey}`}
-      ref={setNodeRef}
+      id={`matrix-quadrant-${meta.rdKey}`}
+      ref={(node) => {
+        setNodeRef(node);
+        sectionRef?.(node);
+      }}
+      tabIndex={-1}
       className={cn(
-        "relative flex min-h-[280px] flex-col overflow-hidden rounded-lg border border-pane-border transition-colors",
+        "relative flex min-h-[280px] flex-col overflow-hidden rounded-lg border border-pane-border transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
         isOver && "ring-2 ring-inset"
       )}
       style={{
@@ -75,13 +84,13 @@ export function QuadrantPane({
           className="h-[18px] w-[18px] shrink-0"
           style={{ color: ink }}
         />
-        <span
+        <h2
           data-testid="quadrant-title"
-          className="shrink-0 text-[14px] font-semibold leading-none"
+          className="shrink-0 text-body font-semibold leading-none"
           style={{ color: ink }}
         >
           {meta.title}
-        </span>
+        </h2>
         <span data-testid="quadrant-hint" className="min-w-0 truncate text-caption" style={{ color: ink }}>
           {meta.rdHint}
         </span>
@@ -123,7 +132,7 @@ export function QuadrantPane({
                 <button
                   type="button"
                   onClick={() => onAddInQuadrant(meta.rdKey)}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-background-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  className="touch-target mt-2 inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-caption font-medium transition-colors hover:bg-background-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   // Border takes the raw pigment, text takes the darkened ink:
                   // brass (--q3) as 11px text measures 3.6:1 on the pane ground,
                   // under the 4.5:1 floor. A border has no such requirement.
@@ -141,6 +150,7 @@ export function QuadrantPane({
                 task={task}
                 allTasks={allTasks}
                 onEdit={onEdit}
+                onInspect={onInspect}
                 onDelete={onDelete}
                 onShare={onShare}
                 onToggleComplete={onToggleComplete}

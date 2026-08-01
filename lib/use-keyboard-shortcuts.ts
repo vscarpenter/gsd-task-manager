@@ -1,18 +1,9 @@
-import { useEffect, RefObject } from "react";
+import { useEffect, type RefObject } from "react";
 
-/**
- * Check if the event target is an element where typing is expected
- */
-function isTypingElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tag = target.tagName.toLowerCase();
-  if (tag === "input" || tag === "textarea" || tag === "select") {
-    return true;
-  }
-  return target.isContentEditable;
-}
+import {
+  hasOpenModal,
+  isEditableShortcutTarget,
+} from "@/lib/use-app-shortcuts";
 
 interface KeyboardShortcutHandlers {
   onNewTask: () => void;
@@ -36,8 +27,17 @@ export function useKeyboardShortcuts(
 ) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input fields
-      if (isTypingElement(event.target)) {
+      // Leave modified keys to the app shell and never fire behind a modal.
+      if (
+        event.defaultPrevented ||
+        event.repeat ||
+        event.isComposing ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        isEditableShortcutTarget(event.target) ||
+        hasOpenModal()
+      ) {
         return;
       }
 

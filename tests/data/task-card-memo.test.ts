@@ -105,6 +105,12 @@ describe('areTaskCardPropsEqual', () => {
     expect(areTaskCardPropsEqual(prev, next)).toBe(false);
   });
 
+  it('returns false when the read-only detail action becomes available', () => {
+    const prev = createProps({ onInspect: undefined });
+    const next = createProps({ onInspect: () => {} });
+    expect(areTaskCardPropsEqual(prev, next)).toBe(false);
+  });
+
   it('returns false when allTasks length changes', () => {
     const prev = createProps({ allTasks: [] });
     const next = createProps({ allTasks: [createTask()] });

@@ -17,6 +17,7 @@ import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
+import { DesignLabRuntimeGate } from "@/components/design-lab-runtime-gate";
 
 // The current static Next export emits inline hydration/RSC scripts. Keep
 // production inline script allowance until a deploy-time hash pipeline exists.
@@ -149,15 +150,23 @@ export default function RootLayout({
             <ToastProvider>
               <QueryProvider>
                 <TooltipProvider>
-                  <ClientLayout>
+                  <DesignLabRuntimeGate
+                    appRuntime={
+                      <>
+                        <ClientLayout>
+                          {children}
+                        </ClientLayout>
+                        <FirstTimeRedirect />
+                        <OnboardingGate />
+                        <PwaRegister />
+                        <WebMcpRegister />
+                        <InstallPwaPrompt />
+                        <PwaUpdateToast />
+                      </>
+                    }
+                  >
                     {children}
-                  </ClientLayout>
-                  <FirstTimeRedirect />
-                  <OnboardingGate />
-                  <PwaRegister />
-                  <WebMcpRegister />
-                  <InstallPwaPrompt />
-                  <PwaUpdateToast />
+                  </DesignLabRuntimeGate>
                   <GlobalErrorListener />
                   <SentryInit />
                   <ThemedToaster />

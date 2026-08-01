@@ -1,3 +1,223 @@
+# Spec: Implement the approved Refined Evolution hybrid
+
+**Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial
+
+## Goal
+
+Evolve the production GSD experience around the approved Refined Evolution
+shell, strengthening strategic planning, mobile capture/editing, keyboard speed,
+and weekly reflection while preserving the real matrix, task lifecycle, local
+storage, sync, and drag/drop contracts.
+
+## Inputs / outputs
+
+- Input: the approved design-exploration recommendation: Refined Evolution as
+  the production shell, Spatial Focus's Q2 emphasis, Native Calm's mobile
+  capture/detail behavior, Precision Utility's Option shortcuts, and Editorial
+  Planner's Review language.
+- Output: a matrix-owned page heading and compact planning introduction that
+  preserves the existing Violet Frost token system and balanced four-pane grid.
+- Output: an honest Q2 planning cue derived from all active Schedule tasks, with
+  an explicit action that focuses the existing Schedule pane.
+- Output: a safe-area-aware, thumb-zone Quick Capture plus a read-only mobile
+  task detail sheet whose explicit Edit action opens the existing task editor.
+- Output: working `Option+/`, `Option+N`, `Option+R`, and `Option+1`-`Option+4`
+  shortcuts, matched by physical key code and documented in Help.
+- Output: the existing `/dashboard` route reframed as Review with humane weekly
+  reflection prompts backed only by current task metrics.
+
+## Constraints
+
+- Keep IndexedDB, task CRUD, capture parsing, recurrence, dependencies, undo,
+  optional PocketBase sync, DnD, routes, and service-worker behavior unchanged.
+- Reuse production components and semantic Violet Frost tokens; do not import
+  design-lab state, `dl-*` classes, concept palettes, or mock data.
+- Keep the four-quadrant matrix visible by default. Q2 emphasis may focus and
+  scroll the existing pane but must not reorder/filter panes or change capture
+  classification.
+- Keep `/dashboard`, `ROUTES.DASHBOARD`, command IDs, test IDs, and analytics
+  data structures stable while changing only user-facing vocabulary to Review.
+- Option shortcuts must use `KeyboardEvent.code`, require Option/Alt as the only
+  modifier, and remain inert while typing, composing, repeating, or using a modal.
+- Preserve bare `n`, `/`, `?`, `Shift+N`, `Cmd/Ctrl+K`, drag/drop, and explicit
+  task Edit behavior.
+- Maintain WCAG 2.1 AA intent: one page-level heading, semantic quadrant
+  headings, visible programmatic focus, 44px coarse-pointer targets, 16px mobile
+  inputs, safe-area spacing, modal focus containment, and reduced-motion safety.
+
+## Edge cases
+
+- Do not render a false zero-task Q2 message before IndexedDB hydration; compute
+  the cue from all incomplete Q2 tasks so search and Smart Views cannot distort it.
+- Cross-route shortcuts must navigate to Matrix or Review and then deliver the
+  intended capture/quadrant focus without leaving command query parameters behind.
+- macOS Option keys may report characters such as `Dead`, `registered`, or
+  inverted punctuation through `event.key`; only the physical `event.code` is
+  stable enough for the shortcut contract.
+- Sticky mobile capture must sit above the existing fixed route navigation and
+  safe area without covering the last task, footer, dialogs, or virtual keyboard.
+- Inspecting a task must not mutate it. Completion, links, drag handles, menus,
+  and the existing explicit Edit action must remain independent controls.
+- Capture controls must reflow at narrow widths without horizontal overflow or
+  iOS focus zoom; native Tab order must remain available.
+- Review copy must not claim weekly Q2 completions because the current analytics
+  cannot support that fact consistently; active quadrant counts are the source
+  for reflection prompts.
+- Light/dark, empty/loading, search/filter, long task titles, completed tasks,
+  200% zoom-equivalent widths, and offline/local-only operation must remain usable.
+
+## Out of scope
+
+- Spatial Focus's pane reordering, single-quadrant filtering, persistent focus
+  state, or capture reclassification.
+- Native Calm's source-list replacement or second quadrant bottom navigation;
+  production retains the real matrix, explicit Edit, and real task editor.
+- Editorial typography/palette, journal persistence, or new weekly completion
+  analytics.
+- Schema, sync protocol, import/export, service worker, deploy, push, PR, merge,
+  or design-lab changes.
+
+## Acceptance criteria
+
+- [x] Matrix has exactly one page-level heading, a Refined planning hierarchy,
+  and the unchanged balanced four-pane desktop model.
+- [x] The Q2 cue reports the correct active Schedule count after loading and its
+  action plus `Option+2` visibly focus the Schedule pane.
+- [x] `Option+/`, `Option+N`, `Option+R`, and `Option+1`-`Option+4` work globally,
+  reject unsafe contexts, and are discoverable in Help.
+- [x] Mobile Quick Capture is reachable above labelled route navigation, reflows
+  safely, uses a 16px input, and exposes 44px contextual controls.
+- [x] Mobile task titles open a read-only, safe-area-aware detail sheet; its
+  explicit Edit action opens the existing editor, and inspection never persists.
+- [x] Dashboard is user-facing Review, with honest Q1/Q2/Q4 reflection prompts,
+  calm empty copy, and unchanged `/dashboard` navigation/data behavior.
+- [x] Quadrant titles are semantic headings and every changed React surface passes
+  the repository WCAG-AA review baseline.
+- [x] Focused/full tests, typecheck, lint, production build, and cache-busted live
+  desktop/mobile light/dark verification pass with no unexpected console/network
+  errors, overlap, or horizontal overflow.
+
+## Test stubs
+
+- `tests/data/use-app-shortcuts.test.ts`: physical-code mapping, unsafe-context
+  rejection, cleanup, and default prevention.
+- `tests/data/use-keyboard-shortcuts.test.ts`: legacy shortcuts ignore modified
+  Option/Cmd/Ctrl events.
+- `tests/ui/app-shell.test.tsx`: Refined heading mode and Option shortcut routing.
+- `tests/ui/use-matrix-window-events.test.tsx`: capture/quadrant event and query
+  delivery with command-parameter cleanup.
+- `tests/ui/matrix-simplified.test.tsx`: Q2 count/loading truth, focus action,
+  semantic hierarchy, and mobile capture wrapper contract.
+- `tests/ui/capture-bar.test.tsx`: native Tab order, narrow reflow, 16px input,
+  and coarse-pointer controls.
+- `tests/ui/task-detail-sheet.test.tsx`: read-only content, modal focus/Escape,
+  explicit Edit transition, and zero persistence during inspection.
+- `tests/ui/dashboard-page.test.tsx`: loading/empty/populated Review language and
+  prompt counts.
+- `tests/e2e/production-hybrid.spec.ts` and targeted matrix/navigation specs:
+  real shortcut, focus restoration, mobile, DnD, and browser behavior.
+
+---
+
+# Spec: Explore five visual directions for GSD
+
+**Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial
+
+## Goal
+
+Create a high-quality decision package that fairly audits the current GSD
+experience, implements five genuinely distinct interactive design directions in
+an isolated `/design-lab`, and supplies consistent browser evidence and tradeoff
+analysis without changing the production matrix or any persisted data path.
+
+## Inputs / outputs
+
+- Inputs: the user-approved exploration brief, `PRODUCT.md`, the shipped Violet
+  Frost system, current matrix/task/settings/dashboard sources, and the live app.
+- Output: `docs/design-exploration/current-state-audit.md` with evidence-backed
+  strengths, friction, responsive/accessibility risks, assumptions, and design
+  questions.
+- Output: a self-contained `/design-lab` overview, comparison mode, and five
+  dedicated responsive routes using one shared realistic mock dataset.
+- Output: `docs/design-exploration/design-directions.md` with concept systems,
+  screenshots, scored comparison, implementation/migration risk, and explicit
+  evidence-versus-judgment recommendations.
+- Output: consistent desktop, laptop, mobile, editor, dashboard/review, and dark
+  evidence under `artifacts/design-exploration/`.
+
+## Constraints
+
+- Keep the exploration isolated on `design/five-visual-directions`; do not edit
+  production matrix/task persistence/sync/service-worker/schema behavior.
+- Stay within Next.js, React, TypeScript, Tailwind/vanilla CSS, Radix, and Lucide;
+  add no second UI framework or runtime service.
+- Use concept-specific token contracts and locally bundled `next/font` faces or
+  platform stacks; no runtime font CDN.
+- Preserve the product personality: calm, focused, personal, trustworthy,
+  privacy-first, clear rather than clever, and powerful without enterprise noise.
+- Target WCAG 2.1 AA in both themes, including visible focus, keyboard order,
+  semantic names, color-independent quadrant meaning, reduced motion, 44px touch
+  targets, 200% zoom resilience, and intentional mobile reading order.
+- Use identical task records, counts, metadata, and completion states in every
+  concept so comparisons remain fair.
+
+## Edge cases
+
+- Fresh local profiles redirect to `/about` and may show onboarding; design-lab
+  verification must pre-seed launch state without touching production data.
+- PWA caches can serve stale chunks; browser proof must unregister workers and
+  clear GSD caches before screenshots.
+- Long titles, no-result search, completed tasks, low-content views, overdue and
+  due-today states, recurring work, subtasks, tags, and dependencies must remain
+  legible at desktop, laptop, mobile, dark mode, and 200% zoom.
+- Each concept needs a deliberate mobile composition; stacking the desktop grid
+  is not sufficient.
+- Theme and preview query parameters must remain compatible with static export.
+
+## Out of scope
+
+- Production matrix, dashboard, settings, archive, onboarding, sync, persistence,
+  database schema, service-worker behavior, deployment, or CloudFront changes.
+- A winner implementation, migration plan execution, PR, push, merge, or deploy.
+- Full prototype persistence, production drag/drop, or production analytics.
+
+## Acceptance criteria
+
+- [x] Current-state audit covers all ten requested sections and distinguishes
+  observed evidence from assumptions.
+- [x] Five directions differ across palette, typography, surface/depth, density,
+  shape, navigation, task cards, matrix model, capture, mobile, and emotion.
+- [x] Overview, comparison mode, and all five dedicated routes render from one
+  shared dataset and link to desktop/mobile previews.
+- [x] Every concept demonstrates prioritization, capture, card states, editing,
+  search/filtering, dashboard/review, mobile behavior, light/dark strategy, and
+  a useful no-result or low-content state.
+- [x] Palette tests measure required text/control contrast and every interactive
+  surface has keyboard-visible focus and meaningful accessible names.
+- [x] Chromium and WebKit behavioral checks cover desktop/mobile, keyboard-only
+  navigation, light/dark, and reduced motion after stale-cache prevention;
+  screenshot artifacts are captured consistently in Chromium.
+- [x] The five requested views plus one dark matrix—six files per concept—exist
+  under each artifact folder.
+- [x] Comparison document includes all requested concept details, 1-5 matrix,
+  tradeoff commentary, evidence/judgment labeling, and category recommendations.
+- [x] `bun install`, lint, typecheck, unit tests, build, and targeted Playwright
+  checks are reported honestly with any limitations.
+
+## Test stubs
+
+- `tests/data/design-lab-palette.test.ts`: shared concept contract and measured
+  light/dark contrast floors.
+- `tests/ui/design-lab.test.tsx`: overview navigation, shared-state rendering,
+  search/no-results, capture/editor interactions, theme and view controls.
+- `tests/e2e/design-lab.spec.ts`: all routes, responsive layout, keyboard focus,
+  theme switching, reduced motion, and screenshot-critical interaction states.
+- `tests/e2e/design-lab-isolation.spec.ts`: fresh-profile proof that the lab does
+  not initialize production storage, service worker, PWA, WebMCP, sync, or
+  onboarding runtime services.
+
+---
+
 # Spec: Apply Violet Frost across the application
 
 **Date:** 2026-07-31 · **Status:** Implemented · **Tier:** Non-trivial

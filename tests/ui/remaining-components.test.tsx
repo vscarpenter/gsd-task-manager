@@ -2,6 +2,7 @@
  * Coverage gap-closing tests for uncovered components:
  * - FirstTimeRedirect (0%)
  * - ClientLayout (0%)
+ * - DesignLabRuntimeGate
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -48,6 +49,7 @@ vi.mock('@/lib/logger', () => ({
 
 import { FirstTimeRedirect } from '@/components/first-time-redirect';
 import { ClientLayout } from '@/components/client-layout';
+import { DesignLabRuntimeGate } from '@/components/design-lab-runtime-gate';
 
 // --- FirstTimeRedirect Tests ---
 
@@ -93,6 +95,46 @@ describe('FirstTimeRedirect', () => {
 
     expect(container.innerHTML).toBe('');
   });
+});
+
+// --- DesignLabRuntimeGate Tests ---
+
+describe('DesignLabRuntimeGate', () => {
+  beforeEach(() => {
+    mockPathname = '/';
+  });
+
+  it.each(['/design-lab', '/design-lab/native-calm'])(
+    'renders only the isolated route content on %s',
+    (route) => {
+      mockPathname = route;
+
+      render(
+        <DesignLabRuntimeGate appRuntime={<div data-testid="app-runtime" />}>
+          <div data-testid="route-content" />
+        </DesignLabRuntimeGate>
+      );
+
+      expect(screen.getByTestId('route-content')).toBeInTheDocument();
+      expect(screen.queryByTestId('app-runtime')).not.toBeInTheDocument();
+    }
+  );
+
+  it.each(['/', '/about', '/design-laboratory'])(
+    'preserves the application runtime on %s',
+    (route) => {
+      mockPathname = route;
+
+      render(
+        <DesignLabRuntimeGate appRuntime={<div data-testid="app-runtime" />}>
+          <div data-testid="route-content" />
+        </DesignLabRuntimeGate>
+      );
+
+      expect(screen.getByTestId('app-runtime')).toBeInTheDocument();
+      expect(screen.queryByTestId('route-content')).not.toBeInTheDocument();
+    }
+  );
 });
 
 // --- ClientLayout Tests ---

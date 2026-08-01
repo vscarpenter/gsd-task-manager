@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { TaskRecord } from "@/lib/types";
@@ -19,6 +19,7 @@ export interface TaskCardHeaderProps {
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  onInspect?: (task: TaskRecord) => void;
   sortableAttributes: SortableAttributes;
   sortableListeners: SortableListeners;
 }
@@ -31,6 +32,7 @@ export function TaskCardHeader({
   isSelected,
   onToggleSelect,
   onToggleComplete,
+  onInspect,
   sortableAttributes,
   sortableListeners,
 }: TaskCardHeaderProps) {
@@ -68,13 +70,15 @@ export function TaskCardHeader({
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-start gap-2 min-w-0 flex-1">
         {selectionMode ? (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelect?.(task)}
-            className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2 cursor-pointer"
-            aria-label={`Select ${task.title}`}
-          />
+          <label className="touch-target mt-0.5 inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect?.(task)}
+              className="h-5 w-5 shrink-0 cursor-pointer rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
+              aria-label={`Select ${task.title}`}
+            />
+          </label>
         ) : (
           // Floats over the card's left gutter instead of holding a column, so
           // titles start flush. Visibility (not hit-testing) is what's gated:
@@ -88,7 +92,7 @@ export function TaskCardHeader({
             // left gutter by 8px, so a transparent grip would render on top of
             // the title's first glyph. An opaque fill makes the overlap read as
             // a control appearing rather than a paint bug.
-            className="task-card-grip touch-target absolute left-0 top-2.5 z-10 flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded-icon bg-card opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100"
+            className="task-card-grip touch-target absolute left-0 top-2.5 z-10 flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded-icon bg-card opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
             aria-label="Drag to move task"
             {...sortableAttributes}
             {...sortableListeners}
@@ -98,10 +102,28 @@ export function TaskCardHeader({
         )}
         <div className={cn("min-w-0 flex-1", reserveBadgeSpace && "pr-24")}>
           <h3 className={cn(
-            "truncate text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em] text-foreground",
+            "text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em] text-foreground",
+            !onInspect && "truncate",
             task.completed && "line-through"
           )}>
-            {task.title}
+            {onInspect ? (
+              <button
+                data-testid="view-task-details"
+                type="button"
+                onClick={(event) => {
+                  // Safari does not focus buttons on pointer click by default;
+                  // make the title the inspector's explicit return target.
+                  event.currentTarget.focus();
+                  onInspect(task);
+                }}
+                aria-label={`View details for ${task.title}`}
+                aria-haspopup="dialog"
+                className="button-reset touch-target -mx-1 inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-xs px-1 text-left transition-[background-color,color] hover:bg-background-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
+                <span className="min-w-0 truncate">{task.title}</span>
+                <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-foreground-muted" aria-hidden="true" />
+              </button>
+            ) : task.title}
           </h3>
           {task.description ? (
             <p className="mt-[3px] text-[12.5px] leading-[1.55] text-foreground-muted line-clamp-2">

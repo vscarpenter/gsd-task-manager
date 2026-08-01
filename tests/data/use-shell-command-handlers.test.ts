@@ -6,6 +6,8 @@ import {
   NEW_TASK_EVENT,
   HIGHLIGHT_TASK_EVENT,
   APPLY_SMART_VIEW_EVENT,
+  FOCUS_CAPTURE_EVENT,
+  FOCUS_QUADRANT_EVENT,
 } from "@/lib/use-shell-command-handlers";
 
 const pushMock = vi.fn();
@@ -77,6 +79,45 @@ describe("useShellCommandHandlers", () => {
     result.current.handlers.onNewTask();
 
     expect(pushMock).toHaveBeenCalledWith("/?action=new-task");
+  });
+
+  it("dispatches dedicated capture and quadrant-focus events on the matrix route", () => {
+    const captureListener = vi.fn();
+    const quadrantListener = vi.fn();
+    window.addEventListener(FOCUS_CAPTURE_EVENT, captureListener);
+    window.addEventListener(FOCUS_QUADRANT_EVENT, quadrantListener);
+    const { result } = renderHook(() => useShellCommandHandlers());
+
+    result.current.shortcutHandlers.onCapture();
+    result.current.shortcutHandlers.onFocusQuadrant("q2");
+
+    expect(captureListener).toHaveBeenCalledOnce();
+    expect(quadrantListener).toHaveBeenCalledOnce();
+    expect((quadrantListener.mock.calls[0][0] as CustomEvent).detail).toEqual({ quadrant: "q2" });
+    expect(pushMock).not.toHaveBeenCalled();
+    window.removeEventListener(FOCUS_CAPTURE_EVENT, captureListener);
+    window.removeEventListener(FOCUS_QUADRANT_EVENT, quadrantListener);
+  });
+
+  it("routes capture and quadrant focus back to the matrix off-route", () => {
+    navigateTo("/settings");
+    const { result } = renderHook(() => useShellCommandHandlers());
+
+    result.current.shortcutHandlers.onCapture();
+    result.current.shortcutHandlers.onFocusQuadrant("q4");
+
+    expect(pushMock.mock.calls.map((call) => call[0])).toEqual([
+      "/?action=new-task",
+      "/?focusQuadrant=q4",
+    ]);
+  });
+
+  it("routes the review shortcut to the dashboard", () => {
+    const { result } = renderHook(() => useShellCommandHandlers());
+
+    result.current.shortcutHandlers.onReview();
+
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
   it("toggles theme from resolved dark to light when set to system", () => {

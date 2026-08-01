@@ -30,7 +30,7 @@ interface RailItem {
 
 const PRIMARY: RailItem[] = [
   { routeKey: "HOME", label: "Matrix", icon: LayoutGridIcon },
-  { routeKey: "DASHBOARD", label: "Dashboard", icon: BarChart3Icon },
+  { routeKey: "DASHBOARD", label: "Review", icon: BarChart3Icon },
   { routeKey: "SETTINGS", label: "Settings", icon: SettingsIcon },
   { routeKey: "ABOUT", label: "About", icon: InfoIcon },
 ];
@@ -43,6 +43,15 @@ const ROUTE_TEST_IDS: Partial<Record<RouteKey, string>> = {
 };
 
 export function IconRail({ onHelp }: IconRailProps) {
+  return (
+    <>
+      <DesktopIconRail onHelp={onHelp} />
+      <MobileIconRail onHelp={onHelp} />
+    </>
+  );
+}
+
+export function DesktopIconRail({ onHelp }: IconRailProps) {
   const pathname = usePathname();
   const { navigateWithTransition, isPending } = useViewTransition();
   const [collapsed, setCollapsed] = useState<boolean>(readRailCollapsed);
@@ -54,58 +63,26 @@ export function IconRail({ onHelp }: IconRailProps) {
   const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
 
   return (
-    <>
-      <aside
-        className={cn(
-          "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-rail md:transition-[width] md:duration-150 md:ease-out",
-          collapsed ? "md:w-[60px]" : "md:w-[180px]"
-        )}
-        aria-label="Primary navigation"
-      >
-        <div className="sticky top-0 flex h-screen flex-col gap-1 px-2 py-3.5">
-          <div className="mb-2.5 flex h-8 items-center gap-2.5 px-1.5" title="GSD">
-            <GsdLogo size={28} />
-            <span
-              className={cn(
-                "whitespace-nowrap text-[15px] font-semibold tracking-tight text-foreground transition-opacity duration-150",
-                collapsed ? "opacity-0" : "opacity-100"
-              )}
-            >
-              GSD
-            </span>
-          </div>
-          <div className="my-1 h-px w-6 bg-border/70" aria-hidden />
-          {PRIMARY.map((item) => (
-            <RailButton
-              key={item.routeKey}
-              label={item.label}
-              icon={item.icon}
-              active={isRouteActive(pathname, item.routeKey)}
-              disabled={isPending}
-              collapsed={collapsed}
-              testId={ROUTE_TEST_IDS[item.routeKey]}
-              onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
-            />
-          ))}
-          <div className="flex-1" />
-          <RailButton
-            label="Help"
-            icon={CircleHelpIcon}
-            collapsed={collapsed}
-            onClick={onHelp}
-          />
-          <RailButton
-            label={toggleLabel}
-            icon={collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon}
-            collapsed={collapsed}
-            onClick={() => setCollapsed((prev) => !prev)}
-          />
+    <nav
+      className={cn(
+        "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-rail md:transition-[width] md:duration-150 md:ease-out",
+        collapsed ? "md:w-[60px]" : "md:w-[180px]"
+      )}
+      aria-label="Primary navigation"
+    >
+      <div className="sticky top-0 flex h-screen flex-col gap-1 px-2 py-3.5">
+        <div className="mb-2.5 flex h-8 items-center gap-2.5 px-1.5" title="GSD">
+          <GsdLogo size={28} />
+          <span
+            className={cn(
+              "whitespace-nowrap text-body font-semibold tracking-tight text-foreground transition-opacity duration-150",
+              collapsed ? "opacity-0" : "opacity-100"
+            )}
+          >
+            GSD
+          </span>
         </div>
-      </aside>
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-border/70 bg-rail px-2 py-1.5 md:hidden"
-        aria-label="Primary navigation (mobile)"
-      >
+        <div className="my-1 h-px w-6 bg-border/70" aria-hidden />
         {PRIMARY.map((item) => (
           <RailButton
             key={item.routeKey}
@@ -113,13 +90,51 @@ export function IconRail({ onHelp }: IconRailProps) {
             icon={item.icon}
             active={isRouteActive(pathname, item.routeKey)}
             disabled={isPending}
+            collapsed={collapsed}
+            testId={ROUTE_TEST_IDS[item.routeKey]}
             onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
-            mobile
           />
         ))}
-        <RailButton label="Help" icon={CircleHelpIcon} onClick={onHelp} mobile />
-      </nav>
-    </>
+        <div className="flex-1" />
+        <RailButton
+          label="Help"
+          icon={CircleHelpIcon}
+          collapsed={collapsed}
+          onClick={onHelp}
+        />
+        <RailButton
+          label={toggleLabel}
+          icon={collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon}
+          collapsed={collapsed}
+          onClick={() => setCollapsed((prev) => !prev)}
+        />
+      </div>
+    </nav>
+  );
+}
+
+export function MobileIconRail({ onHelp }: IconRailProps) {
+  const pathname = usePathname();
+  const { navigateWithTransition, isPending } = useViewTransition();
+
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 items-center gap-1 border-t border-border/70 bg-rail pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden"
+      aria-label="Primary navigation (mobile)"
+    >
+      {PRIMARY.map((item) => (
+        <RailButton
+          key={item.routeKey}
+          label={item.label}
+          icon={item.icon}
+          active={isRouteActive(pathname, item.routeKey)}
+          disabled={isPending}
+          onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
+          mobile
+        />
+      ))}
+      <RailButton label="Help" icon={CircleHelpIcon} onClick={onHelp} mobile />
+    </nav>
   );
 }
 
@@ -153,15 +168,16 @@ function RailButton({
         aria-label={label}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "touch-target group relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
+          "touch-target group relative flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
           active
-            ? "bg-background-muted text-foreground"
+            ? "bg-background-muted text-foreground after:absolute after:bottom-0.5 after:left-1/2 after:h-0.5 after:w-5 after:-translate-x-1/2 after:rounded-full after:bg-accent"
             : "text-foreground-muted hover:bg-background-muted/60 hover:text-foreground",
           disabled && "cursor-wait opacity-60"
         )}
       >
         <Icon className={cn("h-5 w-5", active && "text-accent")} aria-hidden />
+        <span className="max-w-full truncate text-caption leading-none">{label}</span>
       </button>
     );
   }
@@ -176,10 +192,10 @@ function RailButton({
       aria-label={label}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-10 w-full items-center gap-3 rounded-xl pl-2.5 pr-3 text-body transition-colors",
+        "touch-target relative flex h-10 w-full items-center gap-3 rounded-xl pl-2.5 pr-3 text-body transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
         active
-          ? "bg-background-muted text-foreground"
+          ? "bg-background-muted text-foreground before:absolute before:bottom-2 before:left-0 before:top-2 before:w-0.5 before:rounded-full before:bg-accent"
           : "text-foreground-muted hover:bg-background-muted/60 hover:text-foreground",
         disabled && "cursor-wait opacity-60"
       )}

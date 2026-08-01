@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { DndContext, DragOverlay } from "@dnd-kit/core";
 import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
@@ -27,6 +27,8 @@ import { deriveMatrixView } from "./matrix-view";
 import { useSmartViews } from "./use-smart-views";
 import { useTaskHighlight } from "./use-task-highlight";
 import { useMatrixWindowEvents } from "./use-matrix-window-events";
+import { MatrixIntro } from "./matrix-intro";
+import { TaskDetailSheet } from "./task-detail-sheet";
 
 /**
  * Client-only hydration gate. Returns `false` during the server render / first
@@ -65,6 +67,7 @@ function useShowCompleted(): boolean {
  */
 type OverlayState = {
   editingTask: TaskRecord | null;
+  viewingTaskId: string | null;
   createDrawerOpen: boolean;
   createInitial: Partial<EditDraft> | undefined;
   sharingTask: TaskRecord | null;
@@ -73,6 +76,8 @@ type OverlayState = {
 type OverlayAction =
   | { type: "openEdit"; task: TaskRecord }
   | { type: "closeEdit" }
+  | { type: "openInspect"; taskId: string }
+  | { type: "closeInspect" }
   | { type: "openCreate"; initial: Partial<EditDraft> | undefined }
   | { type: "closeCreate" }
   | { type: "openShare"; task: TaskRecord }
@@ -80,6 +85,7 @@ type OverlayAction =
 
 const initialOverlayState: OverlayState = {
   editingTask: null,
+  viewingTaskId: null,
   createDrawerOpen: false,
   createInitial: undefined,
   sharingTask: null,
@@ -91,6 +97,10 @@ function overlayReducer(state: OverlayState, action: OverlayAction): OverlayStat
       return { ...state, editingTask: action.task };
     case "closeEdit":
       return { ...state, editingTask: null };
+    case "openInspect":
+      return { ...state, viewingTaskId: action.taskId };
+    case "closeInspect":
+      return { ...state, viewingTaskId: null };
     case "openCreate":
       return { ...state, createDrawerOpen: true, createInitial: action.initial };
     case "closeCreate":
@@ -140,11 +150,23 @@ export function MatrixSimplified() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement | null>(null);
+  const quadrantNodesRef = useRef<Partial<Record<RedesignQuadrantKey, HTMLElement>>>({});
+  const pendingQuadrantRef = useRef<RedesignQuadrantKey | null>(null);
 
   const [overlay, dispatchOverlay] = useReducer(overlayReducer, initialOverlayState);
-  const { editingTask, createDrawerOpen, createInitial, sharingTask } = overlay;
+  const { editingTask, viewingTaskId, createDrawerOpen, createInitial, sharingTask } = overlay;
+  const viewingTask = viewingTaskId
+    ? all.find((task) => task.id === viewingTaskId) ?? null
+    : null;
   const mounted = useIsHydrated();
   const showCompleted = useShowCompleted();
+
+  useEffect(() => {
+    if (viewingTaskId && !isLoading && !viewingTask) {
+      // Reconcile an inspector whose backing task was deleted or removed by sync.
+      dispatchOverlay({ type: "closeInspect" });
+    }
+  }, [isLoading, viewingTask, viewingTaskId]);
 
   const clearSearch = () => setSearchQuery("");
   const { smartViewsEnabled, smartViews, activeSmartView, applySmartViewById, clearSmartView } =
@@ -161,6 +183,26 @@ export function MatrixSimplified() {
   const { highlightedTaskId, handleTaskRef, highlightTaskById } = useTaskHighlight(
     visibleTasks,
     clearSearch
+  );
+
+  const focusQuadrant = useCallback((key: RedesignQuadrantKey) => {
+    const target = quadrantNodesRef.current[key];
+    if (!target) {
+      pendingQuadrantRef.current = key;
+      return;
+    }
+    pendingQuadrantRef.current = null;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: "nearest", behavior: "auto" });
+  }, []);
+
+  const handleQuadrantRef = useCallback(
+    (key: RedesignQuadrantKey, element: HTMLElement | null) => {
+      if (element) quadrantNodesRef.current[key] = element;
+      else delete quadrantNodesRef.current[key];
+      if (element && pendingQuadrantRef.current === key) focusQuadrant(key);
+    },
+    [focusQuadrant]
   );
 
   const handleAddInQuadrant = (key: RedesignQuadrantKey) => {
@@ -183,6 +225,9 @@ export function MatrixSimplified() {
 
   const handleEditOpen = (task: TaskRecord) => dispatchOverlay({ type: "openEdit", task });
   const handleEditClose = () => dispatchOverlay({ type: "closeEdit" });
+  const handleInspectOpen = (task: TaskRecord) =>
+    dispatchOverlay({ type: "openInspect", taskId: task.id });
+  const handleInspectClose = () => dispatchOverlay({ type: "closeInspect" });
   const handleShareOpen = (task: TaskRecord) => dispatchOverlay({ type: "openShare", task });
   const handleShareOpenChange = (next: boolean) => {
     if (!next) dispatchOverlay({ type: "closeShare" });
@@ -226,6 +271,7 @@ export function MatrixSimplified() {
     openCreateDrawer: handleOpenCreateDrawer,
     highlightTaskById,
     applySmartViewById,
+    focusQuadrant,
   });
 
   const handleCreateClose = () => dispatchOverlay({ type: "closeCreate" });
@@ -256,6 +302,10 @@ export function MatrixSimplified() {
   };
 
   const activeDragTask = activeId ? all.find((t) => t.id === activeId) ?? null : null;
+  const activeScheduleCount = all.reduce(
+    (count, task) => count + (!task.completed && !task.urgent && task.important ? 1 : 0),
+    0
+  );
 
   // Header counts — three small inline pills, semantic colors. Overdue
   // pill is conditional on count > 0. Sits on the same baseline as the title
@@ -280,24 +330,33 @@ export function MatrixSimplified() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <AppShell
         title="GSD Matrix"
+        titleAsLabel
+        mainClassName="max-w-[1540px] pb-48 md:pb-6"
         caption={caption}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
       >
-        <div className="sticky top-[60px] z-10 -mx-4 mb-10 bg-topbar px-4 py-3 sm:-mx-9 sm:mb-12 sm:px-9 sm:py-4">
+        <MatrixIntro
+          scheduleCount={isLoading ? null : activeScheduleCount}
+          onFocusSchedule={() => focusQuadrant("q2")}
+        />
+        <div
+          data-testid="mobile-capture-dock"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:sticky md:bottom-auto md:left-auto md:right-auto md:top-[60px] md:-mx-9 md:mb-4 md:px-9 md:py-4"
+        >
           <CaptureBar onSubmit={handleCapture} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
-          {smartViewsEnabled ? (
-            <div className="mt-3">
-              <SmartViewStrip
-                views={smartViews}
-                activeViewId={activeSmartView?.id}
-                onSelectView={applySmartViewById}
-                onClearView={clearSmartView}
-              />
-            </div>
-          ) : null}
         </div>
+        {smartViewsEnabled ? (
+          <div className="mb-4">
+            <SmartViewStrip
+              views={smartViews}
+              activeViewId={activeSmartView?.id}
+              onSelectView={applySmartViewById}
+              onClearView={clearSmartView}
+            />
+          </div>
+        ) : null}
         {isLoading ? (
           <MatrixGridSkeleton />
         ) : (
@@ -305,12 +364,14 @@ export function MatrixSimplified() {
             tasks={visibleTasks}
             allTasks={all}
             onEdit={handleEditOpen}
+            onInspect={handleInspectOpen}
             onToggleComplete={handleToggle}
             onDelete={handleDelete}
             onShare={handleShareOpen}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={handleTaskRef}
+            onQuadrantRef={handleQuadrantRef}
           />
         )}
       </AppShell>
@@ -319,6 +380,14 @@ export function MatrixSimplified() {
         task={sharingTask}
         open={Boolean(sharingTask)}
         onOpenChange={handleShareOpenChange}
+      />
+
+      <TaskDetailSheet
+        open={Boolean(viewingTask)}
+        task={viewingTask}
+        allTasks={all}
+        onClose={handleInspectClose}
+        onEdit={handleEditOpen}
       />
 
       <EditDrawer
