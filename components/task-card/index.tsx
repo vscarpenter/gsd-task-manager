@@ -53,7 +53,7 @@ export function TaskCard({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : undefined,
-    // Tidewater floats the panes, so cards need a whisper of elevation to sit
+    // Violet Frost floats the panes, so cards need a whisper of elevation to sit
     // *on* the pane rather than dissolve into it — the 1px border alone reads
     // at 1.25:1 against the pane ground. Drag still gets the full lift.
     boxShadow: isDragging ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
@@ -100,13 +100,13 @@ export function TaskCard({
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}
     >
-      {/* 2pt quadrant spine — a pill inset 10px top and bottom rather than a
+      {/* 3pt quadrant spine — a pill inset 10px top and bottom rather than a
           full-height rule, so it reads as a mark on the card instead of part
           of the card's own border. */}
       <span
         data-testid="task-card-spine"
         aria-hidden
-        className="pointer-events-none absolute left-0 top-[10px] bottom-[10px] w-[2px] rounded-full"
+        className="pointer-events-none absolute left-0 top-[10px] bottom-[10px] w-[3px] rounded-full"
         style={{ backgroundColor: accentVar }}
       />
 

@@ -16,9 +16,7 @@ function Switch({
       "border border-border bg-background-accent",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       "disabled:cursor-not-allowed disabled:opacity-50",
-      // A toggle reads green when on (reference §03/§06), distinct from the tide
-      // action accent reserved for buttons and links.
-      "data-[state=checked]:bg-status-success data-[state=checked]:shadow-none",
+      "data-[state=checked]:bg-accent data-[state=checked]:shadow-none",
       "data-[state=unchecked]:bg-background-accent",
       className
     )}

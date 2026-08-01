@@ -31,7 +31,7 @@ export function SimplifiedTopbar({
     <header
       className={cn(
         "sticky top-0 z-20 flex items-center gap-3 border-b border-border/60",
-        "bg-background/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:px-7"
+        "bg-topbar px-4 py-3 sm:px-7"
       )}
     >
       <div className="min-w-0 flex-shrink-0">

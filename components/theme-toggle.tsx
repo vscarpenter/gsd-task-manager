@@ -2,17 +2,13 @@
 
 import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-// Check if we're in a browser environment
-const isBrowser = typeof window !== "undefined";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  // Initialize mounted based on whether we're in browser (avoids useEffect)
-  const [mounted] = useState(() => isBrowser);
+  const mounted = useIsHydrated();
 
   const isDark = theme !== "light";
 

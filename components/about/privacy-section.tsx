@@ -34,7 +34,7 @@ export function PrivacySection() {
             <div className="text-left max-w-sm mx-auto space-y-3">
               {privacyChecklist.map((item) => (
                 <div key={item} className="flex items-center gap-3">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" aria-hidden="true" />
+                  <Check className="h-4 w-4 shrink-0 text-status-success" aria-hidden="true" />
                   <span className="text-sm text-foreground-muted">{item}</span>
                 </div>
               ))}

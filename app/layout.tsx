@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "sonner";
+import { ThemedToaster } from "@/components/ui/themed-toaster";
 import "./globals.css";
 
 import { PwaRegister } from "@/components/pwa-register";
@@ -47,7 +47,7 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://*.ingest.us.sentry.io",
     ].join(" ");
 
-// Tidewater runs one family everywhere; the editorial serif is retired. Albert
+// Violet Frost runs one family everywhere; the editorial serif is retired. Albert
 // Sans is a geometric humanist with a tall x-height, so it stays legible at the
 // 11-12px chip sizes the matrix leans on while still carrying a 40px stat hero.
 // next/font self-hosts it (no runtime Google Fonts request, so no CSP/connect-src
@@ -87,6 +87,10 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F3F3F7" },
+    { media: "(prefers-color-scheme: dark)", color: "#14131B" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -156,7 +160,7 @@ export default function RootLayout({
                   <PwaUpdateToast />
                   <GlobalErrorListener />
                   <SentryInit />
-                  <Toaster richColors position="top-center" />
+                  <ThemedToaster />
                 </TooltipProvider>
               </QueryProvider>
             </ToastProvider>

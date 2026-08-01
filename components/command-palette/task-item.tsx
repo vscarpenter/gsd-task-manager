@@ -13,10 +13,10 @@ interface TaskItemProps {
 // Quadrant badge styles — the editorial four-color pigments (dark-aware tokens),
 // replacing the old hard-coded system-blue/red/amber Tailwind palette swatches.
 const quadrantStyles = {
-  "urgent-important": "bg-q1/15 text-q1",
-  "not-urgent-important": "bg-q2/15 text-q2",
-  "urgent-not-important": "bg-q3/15 text-q3",
-  "not-urgent-not-important": "bg-q4/15 text-q4",
+  "urgent-important": "bg-q1-header text-q1-ink",
+  "not-urgent-important": "bg-q2-header text-q2-ink",
+  "urgent-not-important": "bg-q3-header text-q3-ink",
+  "not-urgent-not-important": "bg-q4-header text-q4-ink",
 } as const;
 
 /**
@@ -42,7 +42,7 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
       <CheckIcon
         className={cn(
           "mr-2 h-4 w-4 shrink-0",
-          task.completed ? "text-status-success" : "text-foreground-muted/30"
+          task.completed ? "text-status-success-ink" : "text-foreground-muted/30"
         )}
       />
       <div className="flex-1 min-w-0 space-y-1">

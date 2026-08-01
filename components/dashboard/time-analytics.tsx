@@ -67,11 +67,11 @@ function EstimationInsights({ overCount, underCount }: { overCount: number; unde
       <h4 className="text-sm font-medium text-foreground">Estimation Insights</h4>
       <div className="mt-2 flex gap-6 text-sm">
         <div>
-          <span className="text-status-overdue font-medium">{overCount}</span>
+          <span className="text-status-overdue-ink font-medium">{overCount}</span>
           <span className="text-foreground-muted"> tasks over estimate</span>
         </div>
         <div>
-          <span className="text-status-success font-medium">{underCount}</span>
+          <span className="text-status-success-ink font-medium">{underCount}</span>
           <span className="text-foreground-muted"> tasks under estimate</span>
         </div>
       </div>
@@ -122,7 +122,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
           label="Running Timers"
           value={summary.tasksWithRunningTimers}
           subtitle={summary.tasksWithRunningTimers > 0 ? "active now" : "none active"}
-          valueColor={summary.tasksWithRunningTimers > 0 ? "text-status-success" : undefined}
+          valueColor={summary.tasksWithRunningTimers > 0 ? "text-status-success-ink" : undefined}
         />
       </div>
 
@@ -175,7 +175,7 @@ function getAccuracyLabel(accuracy: number): string {
 
 function getAccuracyColor(accuracy: number): string | undefined {
   if (accuracy === 0) return undefined;
-  if (accuracy >= 80 && accuracy <= 120) return "text-status-success";
-  if (accuracy > 150 || accuracy < 50) return "text-status-overdue";
+  if (accuracy >= 80 && accuracy <= 120) return "text-status-success-ink";
+  if (accuracy > 150 || accuracy < 50) return "text-status-overdue-ink";
   return "text-warning-dark";
 }

@@ -52,10 +52,10 @@ const SCREENS: Screen[] = [
             className="flex h-16 w-24 flex-col justify-between rounded-lg border p-2 text-left"
             style={{
               borderColor: `color-mix(in srgb, var(--${q.key}) 40%, transparent)`,
-              backgroundColor: `color-mix(in srgb, var(--${q.key}) 12%, transparent)`,
+              backgroundColor: `var(--${q.key}-wash)`,
             }}
           >
-            <span className="text-[11px] font-semibold" style={{ color: `var(--${q.key})` }}>
+            <span className="text-[11px] font-semibold" style={{ color: `var(--${q.key}-ink)` }}>
               {q.label}
             </span>
             <span className="text-[9px] text-foreground-muted">{q.tag}</span>
@@ -70,12 +70,12 @@ const SCREENS: Screen[] = [
     body: "Type a task and add !! for urgent, * for important, and #tags. The quadrant chip updates live as you type.",
     visual: (
       <div className="flex w-full max-w-[260px] items-center gap-2 rounded-full border border-border bg-background px-3 py-2" aria-hidden>
-        <ZapIcon className="h-4 w-4" style={{ color: "var(--q1)" }} />
+        <ZapIcon className="h-4 w-4" style={{ color: "var(--q1-ink)" }} />
         <span className="text-sm text-foreground-muted">Ship the deploy </span>
-        <span className="text-sm font-semibold" style={{ color: "var(--q1)" }}>!!</span>
+        <span className="text-sm font-semibold" style={{ color: "var(--q1-ink)" }}>!!</span>
         <span
           className="ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium"
-          style={{ backgroundColor: "var(--q1-wash)", color: "var(--q1)" }}
+          style={{ backgroundColor: "var(--q1-header)", color: "var(--q1-ink)" }}
         >
           Do First
         </span>
@@ -158,8 +158,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
             <button
               type="button"
               onClick={onClose}
-              className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-card transition-colors hover:bg-accent-hover"
-              style={{ color: "var(--ivory)" }}
+              className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
             >
               Start using GSD
             </button>
@@ -177,8 +176,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
           <button
             type="button"
             onClick={() => setIndex((i) => Math.min(i + 1, SCREENS.length - 1))}
-            className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold transition-colors hover:bg-accent-hover"
-            style={{ color: "var(--ivory)" }}
+            className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
           >
             Next
           </button>

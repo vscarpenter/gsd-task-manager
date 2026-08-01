@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
-import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
+import { quadrants, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useDialogFocus } from "./use-dialog-focus";
@@ -73,7 +73,8 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
 
   const isCreateMode = !task;
   const activeQuadrant = quadrants.find((q) => q.urgent === draft.urgent && q.important === draft.important);
-  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "var(--rust)";
+  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "var(--accent)";
+  const quadrantInk = activeQuadrant ? QUADRANT_INK[activeQuadrant.rdKey] : "var(--accent)";
 
   const submit = (e?: FormEvent): void => {
     e?.preventDefault();
@@ -102,7 +103,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
       onClick={onClose}
       role="presentation"
       // ui-craft-detect-ignore-next-line
-      className="fixed inset-0 z-[60] flex justify-end bg-black/30 animate-drawer-overlay"
+      className="fixed inset-0 z-[60] flex justify-end bg-[var(--backdrop)] animate-drawer-overlay"
     >
       <form
         data-testid="edit-drawer"
@@ -112,14 +113,14 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
         onClick={(e) => e.stopPropagation()}
         onKeyDown={trapKeyDown}
         onSubmit={submit}
-        className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-2xl animate-drawer-slide-in"
+        className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-[var(--shadow-lg)] animate-drawer-slide-in"
         aria-label={heading}
       >
         <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{heading}</h2>
           {activeQuadrant ? (
-            <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+            <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: quadrantInk }}>
               {activeQuadrant.title}
             </span>
           ) : null}

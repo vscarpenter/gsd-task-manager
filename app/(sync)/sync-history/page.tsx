@@ -20,19 +20,19 @@ const ROW_GAP = 16;
 
 function getStatusIcon(status: SyncHistoryRecord["status"]): React.ReactElement | null {
   switch (status) {
-    case "success": return <CheckCircle2Icon className="h-5 w-5 text-green-600" />;
-    case "error": return <XCircleIcon className="h-5 w-5 text-red-600" />;
-    case "conflict": return <AlertTriangleIcon className="h-5 w-5 text-amber-600" />;
-    case "partial": return <AlertTriangleIcon className="h-5 w-5 text-orange-600" />;
+    case "success": return <CheckCircle2Icon className="h-5 w-5 text-status-success" />;
+    case "error": return <XCircleIcon className="h-5 w-5 text-status-overdue" />;
+    case "conflict": return <AlertTriangleIcon className="h-5 w-5 text-status-blocked" />;
+    case "partial": return <AlertTriangleIcon className="h-5 w-5 text-status-blocking" />;
   }
 }
 
 function getStatusColor(status: SyncHistoryRecord["status"]): string {
   switch (status) {
-    case "success": return "bg-green-50 border-green-200";
-    case "error": return "bg-red-50 border-red-200";
-    case "conflict": return "bg-amber-50 border-amber-200";
-    case "partial": return "bg-orange-50 border-orange-200";
+    case "success": return "border-status-success/45 bg-status-success-muted";
+    case "error": return "border-status-overdue/45 bg-status-overdue-muted";
+    case "conflict": return "border-status-blocked/45 bg-status-blocked-muted";
+    case "partial": return "border-status-blocking/45 bg-status-blocking-muted";
   }
 }
 
@@ -52,7 +52,7 @@ function SyncHistoryStats({ stats }: { stats: SyncStatsData }): React.ReactEleme
       </div>
       <div className="rounded-lg border border-border bg-background-muted p-4">
         <div className="text-sm text-foreground-muted">Successful</div>
-        <div className="text-2xl font-semibold text-green-600">{stats.successfulSyncs}</div>
+        <div className="text-2xl font-semibold text-status-success-ink">{stats.successfulSyncs}</div>
       </div>
       <div className="rounded-lg border border-border bg-background-muted p-4">
         <div className="text-sm text-foreground-muted">Tasks Pushed</div>
@@ -96,14 +96,14 @@ function SyncHistoryRow({ record }: { record: SyncHistoryRecord }): React.ReactE
                 <span className="text-foreground-muted"><span className="font-medium text-foreground">{record.pulledCount}</span> pulled</span>
               )}
               {record.conflictsResolved > 0 && (
-                <span className="text-foreground-muted"><span className="font-medium text-amber-600">{record.conflictsResolved}</span> conflicts resolved</span>
+                <span className="text-foreground-muted"><span className="font-medium text-status-blocked-ink">{record.conflictsResolved}</span> conflicts resolved</span>
               )}
               {record.duration && (
                 <span className="text-foreground-muted">{record.duration}ms</span>
               )}
             </div>
             {record.errorMessage && (
-              <div className="mt-2 rounded bg-red-100 p-2 text-sm text-red-700">{record.errorMessage}</div>
+              <div className="mt-2 rounded bg-status-overdue-muted p-2 text-sm text-status-overdue-ink">{record.errorMessage}</div>
             )}
           </div>
         </div>

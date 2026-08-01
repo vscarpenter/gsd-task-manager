@@ -265,11 +265,11 @@ export function MatrixSimplified() {
       <span className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground">
         {mounted ? `${total - completed} active` : " "}
       </span>
-      <span className="inline-flex items-center rounded-full bg-status-success-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-success">
+      <span className="inline-flex items-center rounded-full bg-status-success-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-success-ink">
         {mounted ? `${completed} done` : " "}
       </span>
       {mounted && overdue > 0 ? (
-        <span className="inline-flex items-center rounded-full bg-status-overdue-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-overdue">
+        <span className="inline-flex items-center rounded-full bg-status-overdue-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-overdue-ink">
           {overdue} overdue
         </span>
     ) : null}
@@ -285,7 +285,7 @@ export function MatrixSimplified() {
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
       >
-        <div className="sticky top-[60px] z-10 -mx-4 mb-10 bg-background/85 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:-mx-9 sm:mb-12 sm:px-9 sm:py-4">
+        <div className="sticky top-[60px] z-10 -mx-4 mb-10 bg-topbar px-4 py-3 sm:-mx-9 sm:mb-12 sm:px-9 sm:py-4">
           <CaptureBar onSubmit={handleCapture} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
           {smartViewsEnabled ? (
             <div className="mt-3">

@@ -6,7 +6,7 @@ import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIc
 import { TaskCard } from "@/components/task-card";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
-import { QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
+import { QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK, QUADRANT_WASH } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 
 const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
@@ -44,6 +44,8 @@ export function QuadrantPane({
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
   const ink = QUADRANT_INK[meta.rdKey];
+  const wash = QUADRANT_WASH[meta.rdKey];
+  const header = QUADRANT_HEADER[meta.rdKey];
   const QuadrantIcon = RD_ICON[meta.rdIcon];
   const taskIds = tasks.map((t) => t.id);
   const activeTaskCount = tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0);
@@ -51,35 +53,38 @@ export function QuadrantPane({
     <section
       data-testid={`quadrant-${meta.rdKey}`}
       ref={setNodeRef}
-      // Every pane shares one ground (bg-oat). Four differently-washed panes
-      // read as four territories; one ground plus a pigment dot reads as one
-      // matrix with four labelled regions — which is what the tool means.
       className={cn(
-        "relative flex min-h-[280px] flex-col rounded-lg border border-gray-200 bg-oat transition-colors",
+        "relative flex min-h-[280px] flex-col overflow-hidden rounded-lg border border-pane-border transition-colors",
         isOver && "ring-2 ring-inset"
       )}
       style={{
         boxShadow: "var(--shadow-card)",
+        backgroundColor: wash,
         ...(isOver ? { ["--tw-ring-color" as string]: accent } : {}),
       }}
       aria-label={`${meta.title} quadrant`}
     >
-      {/* Header sits on the pane ground with no tint and no bottom rule — the
-          pane's own border is the only structure it needs at this size. */}
-      <header className="flex items-center gap-2 px-[18px] pb-2.5 pt-3.5">
-        {/* Quadrant identity is a 7px dot. It replaces the old 18px pigment
-            glyph + 3px top bar: one small mark states the quadrant without
-            competing with the task titles it sits above. */}
-        <span
+      <header
+        data-testid="quadrant-header"
+        className="flex items-center gap-2 border-t-[3px] px-[18px] pb-2.5 pt-3"
+        style={{ backgroundColor: header, borderTopColor: accent }}
+      >
+        <QuadrantIcon
           data-testid="quadrant-icon"
-          aria-hidden
-          className="h-[7px] w-[7px] shrink-0 rounded-full"
-          style={{ backgroundColor: accent }}
+          aria-hidden="true"
+          className="h-[18px] w-[18px] shrink-0"
+          style={{ color: ink }}
         />
-        <span className="shrink-0 text-[14px] font-semibold leading-none text-foreground">
+        <span
+          data-testid="quadrant-title"
+          className="shrink-0 text-[14px] font-semibold leading-none"
+          style={{ color: ink }}
+        >
           {meta.title}
         </span>
-        <span className="min-w-0 truncate text-caption text-foreground-muted">{meta.rdHint}</span>
+        <span data-testid="quadrant-hint" className="min-w-0 truncate text-caption" style={{ color: ink }}>
+          {meta.rdHint}
+        </span>
         <span className="ml-auto shrink-0 rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground-muted">
           {activeTaskCount}
         </span>

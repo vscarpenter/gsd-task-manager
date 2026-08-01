@@ -154,7 +154,7 @@ export function DeleteAccountDialog({
 		<Dialog open={open} onOpenChange={handleClose}>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2 text-status-overdue">
+					<DialogTitle className="flex items-center gap-2 text-status-overdue-ink">
 						<AlertTriangleIcon className="h-5 w-5" />
 						Delete Account
 					</DialogTitle>
@@ -167,10 +167,10 @@ export function DeleteAccountDialog({
 				<div className="space-y-4">
 					{/* What will be deleted */}
 					<div className="rounded-lg border border-status-overdue/35 bg-status-overdue-muted p-4">
-						<h4 className="mb-2 font-semibold text-status-overdue">
+						<h4 className="mb-2 font-semibold text-status-overdue-ink">
 							What will be deleted:
 						</h4>
-						<ul className="space-y-1 text-sm text-status-overdue">
+						<ul className="space-y-1 text-sm text-status-overdue-ink">
 							<li>• Your cloud account on the sync server</li>
 							<li>• Every task synced to that account</li>
 							{eraseLocal && <li>• All tasks and settings on this device</li>}
@@ -203,7 +203,7 @@ export function DeleteAccountDialog({
 								</Button>
 							)}
 							{exportFirst && hasExported && (
-								<p className="text-xs text-status-success">Exported successfully</p>
+								<p className="text-xs text-status-success-ink">Exported successfully</p>
 							)}
 						</div>
 					</div>
@@ -224,7 +224,7 @@ export function DeleteAccountDialog({
 					{/* Confirmation input */}
 					<div className="space-y-2">
 						<Label htmlFor="confirm-delete" className="text-sm font-semibold">
-							Type <span className="font-mono text-status-overdue">DELETE</span> to confirm:
+							Type <span className="font-mono text-status-overdue-ink">DELETE</span> to confirm:
 						</Label>
 						<Input
 							id="confirm-delete"

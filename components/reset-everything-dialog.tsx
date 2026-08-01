@@ -148,7 +148,7 @@ export function ResetEverythingDialog({
 		<Dialog open={open} onOpenChange={handleClose}>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle className="flex items-center gap-2 text-status-overdue">
+					<DialogTitle className="flex items-center gap-2 text-status-overdue-ink">
 						<AlertTriangleIcon className="h-5 w-5" />
 						Reset Everything
 					</DialogTitle>
@@ -160,10 +160,10 @@ export function ResetEverythingDialog({
 				<div className="space-y-4">
 					{/* Data Summary */}
 					<div className="rounded-lg border border-status-overdue/35 bg-status-overdue-muted p-4">
-						<h4 className="mb-2 font-semibold text-status-overdue">
+						<h4 className="mb-2 font-semibold text-status-overdue-ink">
 							What will be deleted:
 						</h4>
-						<ul className="space-y-1 text-sm text-status-overdue">
+						<ul className="space-y-1 text-sm text-status-overdue-ink">
 							<li>• {totalTasks} task{totalTasks !== 1 ? "s" : ""} ({activeTasks} active, {completedTasks} completed)</li>
 							<li>• All custom smart views</li>
 							<li>• All notification settings</li>
@@ -172,7 +172,7 @@ export function ResetEverythingDialog({
 								<li>• Cloud sync configuration (you will be logged out)</li>
 							)}
 							{pendingSync > 0 && (
-								<li className="font-semibold text-status-overdue">
+								<li className="font-semibold text-status-overdue-ink">
 									{pendingSync} unsynchronized change{pendingSync !== 1 ? "s" : ""}
 								</li>
 							)}
@@ -220,7 +220,7 @@ export function ResetEverythingDialog({
 								</Button>
 							)}
 							{exportFirst && hasExported && (
-								<p className="text-xs text-status-success">Exported successfully</p>
+								<p className="text-xs text-status-success-ink">Exported successfully</p>
 							)}
 						</div>
 					</div>
@@ -244,7 +244,7 @@ export function ResetEverythingDialog({
 					{/* Confirmation Input */}
 					<div className="space-y-2">
 						<Label htmlFor="confirm-text" className="text-sm font-semibold">
-							Type <span className="font-mono text-status-overdue">RESET</span> to confirm:
+							Type <span className="font-mono text-status-overdue-ink">RESET</span> to confirm:
 						</Label>
 						<Input
 							id="confirm-text"

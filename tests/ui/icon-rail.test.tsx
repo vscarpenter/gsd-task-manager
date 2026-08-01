@@ -68,4 +68,16 @@ describe("IconRail", () => {
       expect(button).toHaveClass("touch-target");
     }
   });
+
+  it("uses the global accent for active navigation on desktop and mobile", () => {
+    render(<IconRail onHelp={vi.fn()} />);
+
+    const matrixButtons = screen.getAllByRole("button", { name: "Matrix" });
+    expect(matrixButtons).toHaveLength(2);
+    for (const button of matrixButtons) {
+      const icon = button.querySelector("svg");
+      expect(icon).toHaveClass("text-accent");
+      expect(icon).not.toHaveClass("text-q1");
+    }
+  });
 });

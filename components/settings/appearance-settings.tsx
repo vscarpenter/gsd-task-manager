@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { SunIcon, MoonIcon, MonitorIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { SettingsRow } from "./shared-components";
 
 interface AppearanceSettingsProps {
@@ -18,6 +19,8 @@ export function AppearanceSettings({
 	onToggleCompleted,
 }: AppearanceSettingsProps) {
 	const { theme, setTheme } = useTheme();
+	const mounted = useIsHydrated();
+	const activeTheme = mounted ? theme : undefined;
 
 	return (
 		<>
@@ -30,19 +33,19 @@ export function AppearanceSettings({
 					<ThemeOption
 						icon={SunIcon}
 						label="Light"
-						isActive={theme === "light"}
+						isActive={activeTheme === "light"}
 						onClick={() => setTheme("light")}
 					/>
 					<ThemeOption
 						icon={MoonIcon}
 						label="Dark"
-						isActive={theme === "dark"}
+						isActive={activeTheme === "dark"}
 						onClick={() => setTheme("dark")}
 					/>
 					<ThemeOption
 						icon={MonitorIcon}
 						label="Auto"
-						isActive={theme === "system"}
+						isActive={activeTheme === "system"}
 						onClick={() => setTheme("system")}
 					/>
 				</div>

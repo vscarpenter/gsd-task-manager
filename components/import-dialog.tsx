@@ -103,7 +103,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
             className="w-full rounded-lg border-2 border-olive/30 bg-olive-tint p-4 text-left transition-all hover:border-olive/50 hover:bg-status-success-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-olive text-paper">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-olive text-on-success">
                 <PlusCircleIcon className="h-5 w-5" />
               </div>
               <div className="flex-1">
@@ -111,7 +111,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
                 <p className="mt-1 text-sm text-foreground-muted">
                   Keep your existing tasks and add the imported tasks. Duplicate IDs will be regenerated to avoid conflicts.
                 </p>
-                <p className="mt-2 text-xs font-medium text-olive">
+                <p className="mt-2 text-xs font-medium text-olive-d">
                   ✓ Safe - No data loss
                 </p>
               </div>
@@ -126,7 +126,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
             className="w-full rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-left transition-all hover:border-rust/50 hover:bg-status-overdue-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rust text-paper">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-fill text-on-danger">
                 <RefreshCwIcon className="h-5 w-5" />
               </div>
               <div className="flex-1">
@@ -134,7 +134,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
                 <p className="mt-1 text-sm text-foreground-muted">
                   Delete all existing tasks and replace them with the imported tasks. This action cannot be undone.
                 </p>
-                <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust">
+                <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust-d">
                   <AlertTriangleIcon className="h-3 w-3" />
                   <span>Warning - Deletes {existingTaskCount} existing task{existingTaskCount !== 1 ? "s" : ""}</span>
                 </div>

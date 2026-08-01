@@ -12,7 +12,7 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
 - **Realtime Sync** — PocketBase SSE (Server-Sent Events) for instant cross-device updates
 - **iOS-style Settings** — Full-page settings with grouped layout and modular sections (`components/settings-page/`)
-- **Command Palette (planned)** — Global ⌘K/Ctrl+K palette source exists at `components/command-palette/` but is **not wired into the v9 app shell**; resurrection tracked in `tasks/todo.md`
+- **Command Palette** — Global ⌘K/Ctrl+K task search and actions are wired through `components/matrix-simplified/app-shell.tsx`
 
 **Path-scoped rules** (auto-loaded by glob — open these only when working in the matching subtree):
 - `.claude/rules/pocketbase-sync.md` — PocketBase v0.23+ gotchas, sync architecture, OAuth callback debugging
@@ -28,7 +28,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 - **Register:** `product` — design serves the task (the matrix, capture bar, settings, dashboard), not a marketing surface.
 - **Personality:** calm & focused. Anti-references: flashy-AI startup, gamified todo toy, dense enterprise PM, generic SaaS dashboard.
 - **Principles:** tool disappears into the task · privacy is the foundation · the matrix is the argument · earned familiarity over novelty · delight in moments, restraint on pages.
-- **Visual system:** Inkwell 1.3.1 "Indigo & Cloud" — tokens in `app/css/inkwell-tokens.css`, signature 1.5px hairline, four-color quadrant language, WCAG-AA baseline. A `DESIGN.md` capturing this is planned (run `/impeccable document`).
+- **Visual system:** Inkwell 1.3.1 "Violet Frost" — Albert Sans, a lavender-gray surface stack, restrained aubergine for global interaction, and four matrix-only quadrant families. Runtime primitives live in `app/css/inkwell-tokens.css`; quadrant washes/headers live in `app/globals.css`; the durable contract is `DESIGN.md` plus `.ui-craft/brief.md` and `.ui-craft/tokens.md`. Aubergine is interaction ink, never purple-gradient decoration. WCAG AA is the baseline, and quadrant titles must use `--q*-ink` rather than raw pigment.
 
 ## Core Commands
 

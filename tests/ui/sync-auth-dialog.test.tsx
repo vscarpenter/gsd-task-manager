@@ -584,7 +584,8 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         const errorElement = screen.getByText('Logout failed');
         expect(errorElement).toBeInTheDocument();
-        expect(errorElement.closest('div')).toHaveClass('bg-red-50');
+        expect(errorElement.closest('div')).toHaveClass('bg-status-overdue-muted');
+        expect(errorElement.closest('div')).toHaveClass('text-status-overdue-ink');
       });
     });
 

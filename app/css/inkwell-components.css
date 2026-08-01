@@ -111,18 +111,18 @@ code, .code-inline {
   font-size: 14px;
   font-weight: 500;
   border-radius: var(--r-sm);
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: background var(--t-fast) ease, border-color var(--t-fast) ease;
 }
-.btn-primary        { background: var(--accent); color: var(--paper); }
+.btn-primary        { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover  { background: var(--accent-d); }
-.btn-secondary      { background: var(--paper); color: var(--slate); border-color: var(--gray-300); }
+.btn-secondary      { background: var(--paper); color: var(--slate); border-color: var(--control-border); }
 .btn-secondary:hover { background: var(--gray-100); }
 .btn-ghost          { background: transparent; color: var(--gray-700); }
 .btn-ghost:hover    { background: var(--gray-100); }
-.btn-danger         { background: var(--rust); color: var(--paper); }
-.btn-danger:hover   { background: var(--rust-d); }
+.btn-danger         { background: var(--danger-fill); color: var(--on-danger); }
+.btn-danger:hover   { background: var(--danger-fill-hover); }
 
 /* ---------- Input / Textarea / Select ---------- */
 .input,
@@ -132,14 +132,14 @@ code, .code-inline {
   font: 14px var(--sans);
   color: var(--slate);
   background: var(--paper);
-  border: var(--border);
+  border: 1px solid var(--control-border);
   border-radius: var(--r-sm);
   outline: none;
   transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease;
 }
 .input  { height: 38px; }
 .select { height: 38px; appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%236F6F75' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23646477' stroke-width='1.5' stroke-linecap='round'/></svg>");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
@@ -183,7 +183,7 @@ code, .code-inline {
 }
 .field-error {
   font: 500 12px/1.4 var(--sans);
-  color: var(--rust);
+  color: var(--rust-d);
 }
 
 /* ---------- Checkbox ---------- */
@@ -191,8 +191,8 @@ code, .code-inline {
 .checkbox input {
   appearance: none;
   width: 18px; height: 18px;
-  border: var(--border);
-  border-radius: 5px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--r-xs);
   background: var(--paper);
   position: relative;
   cursor: pointer;
@@ -204,7 +204,7 @@ code, .code-inline {
   position: absolute;
   left: 5px; top: 1px;
   width: 5px; height: 10px;
-  border: solid var(--paper);
+  border: solid var(--on-accent);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -214,7 +214,7 @@ code, .code-inline {
 .radio input {
   appearance: none;
   width: 18px; height: 18px;
-  border: var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 50%;
   background: var(--paper);
   position: relative;
@@ -253,7 +253,7 @@ code, .code-inline {
   box-shadow: var(--shadow-sm);
   transition: left var(--t-fast) var(--ease-out);
 }
-.switch input:checked { background: var(--olive); } /* toggle on = green (reference §03) */
+.switch input:checked { background: var(--accent); }
 .switch input:checked::after { left: 18px; }
 
 /* ---------- Keyboard chip (<kbd>) ---------- */
@@ -282,9 +282,9 @@ kbd, .kbd {
 }
 .badge-neutral { background: var(--gray-100);    color: var(--gray-700); }
 .badge-accent  { background: var(--accent-tint); color: var(--accent); }
-.badge-success { background: var(--olive-tint);  color: var(--olive); }
+.badge-success { background: var(--olive-tint);  color: var(--olive-d); }
 .badge-warning { background: var(--warning-tint); color: var(--warning-dark); }
-.badge-danger  { background: var(--rust); color: var(--paper); }
+.badge-danger  { background: var(--rust-tint); color: var(--rust-d); }
 
 /* ---------- Card ---------- */
 .card {
@@ -310,12 +310,11 @@ kbd, .kbd {
   border-radius: var(--r-md);
   padding: 20px 22px 18px;
 }
-.stat-card.warn { border-left: 4px solid var(--accent); padding-left: 19px; }
 .stat-num   { font: 500 44px/1 var(--serif); margin-bottom: 8px; color: var(--slate); }
 .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-500); }
 .stat-delta { font-family: var(--mono); font-size: 11px; margin-top: 6px; }
-.stat-delta.up   { color: var(--olive); }
-.stat-delta.down { color: var(--rust); }
+.stat-delta.up   { color: var(--olive-d); }
+.stat-delta.down { color: var(--rust-d); }
 .stat-delta.flat { color: var(--gray-500); }
 
 /* ---------- Table ---------- */
@@ -371,8 +370,8 @@ kbd, .kbd {
   border-radius: var(--r-pill);
   padding: 5px 12px;
 }
-.pill.sev      { background: var(--accent); color: var(--paper); letter-spacing: 0.03em; }
-.pill.resolved { background: var(--olive);  color: var(--paper); }
+.pill.sev      { background: var(--accent); color: var(--on-accent); letter-spacing: 0.03em; }
+.pill.resolved { background: var(--olive);  color: var(--on-success); }
 .pill.neutral  { background: var(--gray-100); color: var(--gray-700); border: var(--border); }
 .pill.neutral .v { font-family: var(--mono); }
 
@@ -477,11 +476,11 @@ kbd, .kbd {
 .alert.is-info    { background: var(--accent-tint);  border-color: var(--accent-strong-border); }
 .alert.is-info    .alert-title { color: var(--accent); }
 .alert.is-success { background: var(--olive-tint);   border-color: var(--olive-strong-border); }
-.alert.is-success .alert-title { color: var(--olive); }
+.alert.is-success .alert-title { color: var(--olive-d); }
 .alert.is-warning { background: var(--warning-tint); border-color: var(--warning-strong-border); }
 .alert.is-warning .alert-title { color: var(--warning-dark); }
 .alert.is-danger  { background: var(--rust-tint); border-color: var(--rust-tint-border); }
-.alert.is-danger  .alert-title { color: var(--rust); }
+.alert.is-danger  .alert-title { color: var(--rust-d); }
 
 /* ---------- Multi-line code block ---------- */
 .code-block {
@@ -665,7 +664,7 @@ pre.code-block { margin: 0; font: inherit; color: inherit; white-space: pre; }
 .pagination button:hover { border-color: var(--slate); color: var(--slate); }
 .pagination [aria-current="page"] {
   background: var(--accent);
-  color: var(--paper);
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 .pagination .ellipsis {

@@ -21,7 +21,7 @@ export function FooterCta({ version }: FooterCtaProps) {
           </p>
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-medium text-white shadow-md shadow-accent/20 transition-colors duration-200 hover:bg-accent-hover"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-medium text-on-accent shadow-md shadow-accent/20 transition-colors duration-200 hover:bg-accent-hover"
           >
             Open GSD Task Manager &rarr;
           </Link>

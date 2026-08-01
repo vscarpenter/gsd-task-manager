@@ -1,9 +1,9 @@
 /* =====================================================================
    Inkwell — design tokens & dark-mode cascade.
    Version: 1.3.1
-   Brand palette: GSD Tidewater (cool slate-blue mist + one steel accent).
-   Calm-minimal: a single accent carries every interactive surface, and the
-   four quadrant pigments are reduced to whisper-thin spines and dots.
+   Brand palette: GSD Violet Frost (lavender-gray frost + aubergine accent).
+   Calm-minimal: aubergine carries global interaction while four restrained
+   pigments communicate quadrant only.
 
    This file contains ONLY:
      • :root custom-property declarations
@@ -23,50 +23,57 @@
    ===================================================================== */
 
 :root {
-  /* ---------- Surfaces (cool slate-blue mist) ---------- */
-  --ivory: #F1F3F5;       /* page background — cool mist */
-  --paper: #FDFEFE;       /* card / panel surface */
-  --slate: #242A31;       /* primary text — cool graphite ink */
-  --oat:   #F7F9FA;       /* secondary raised surface — the quadrant pane ground */
+  /* ---------- Surfaces (lavender-gray frost) ---------- */
+  --ivory: #F3F3F7;       /* page background */
+  --paper: #FDFDFF;       /* card / panel surface */
+  --slate: #242331;       /* primary text — aubergine graphite */
+  --oat:   #F7F7FA;       /* secondary raised surface */
 
-  /* ---------- Accent (steel blue — the single interactive tint) ---------- */
-  --accent:               #4A6E8A;                  /* 4.97:1 on --paper */
-  --accent-d:             #3E5D74;                  /* hover/pressed, and accent-on-tint text */
-  --accent-tint:          rgba(74, 110, 138, 0.12); /* badge bg */
-  --accent-focus-ring:    rgba(74, 110, 138, 0.20); /* input focus halo */
-  --accent-strong-border: rgba(74, 110, 138, 0.5);  /* tinted chip border */
+  /* ---------- Accent (aubergine — the global interaction tint) ---------- */
+  --accent:               #5C4F7D;                 /* 7.20:1 on --paper */
+  --accent-d:             #4E426B;                 /* hover / pressed */
+  --on-accent:            #FDFDFF;                 /* text on filled accent */
+  --accent-tint:          rgba(92, 79, 125, 0.12);
+  --accent-focus-ring:    rgba(92, 79, 125, 0.24);
+  --accent-strong-border: rgba(92, 79, 125, 0.52);
 
   /* ---------- Semantic ---------- */
-  /* Success folds into the accent family: Tidewater runs one interactive hue,
-     so a separate green would have been a second accent competing at the same
-     chroma. The *text* tone is --accent-d, which clears AA on --olive-tint. */
-  --olive:        #3E5D74;                          /* success, additions */
-  --olive-tint:   rgba(74, 110, 138, 0.12);
-  --olive-strong-border: rgba(74, 110, 138, 0.45);  /* tinted success border */
-  --rust:         #A65B52;                          /* danger, deletions — also q1/alert */
-  --rust-d:       #94493F;                          /* rust hover/pressed, rust-on-tint text */
-  --rust-tint:    rgba(166, 91, 82, 0.12);          /* danger alert background */
-  --rust-tint-border: rgba(166, 91, 82, 0.45);      /* danger alert border */
-  --rust-focus-ring:  rgba(166, 91, 82, 0.20);      /* danger input focus halo */
-  --warning:      #97814D;
-  --warning-dark: #75623A;                         /* warning text (darker for contrast) */
-  --warning-tint: rgba(151, 129, 77, 0.14);
-  --warning-strong-border: rgba(151, 129, 77, 0.45); /* tinted warning border */
-  --info:         #4A6E8A;                         /* informational — accent */
-  --sky:          #848B90;                         /* alt info / blocking chips — neutral */
+  --olive:        #4F7B5F;                         /* success, additions */
+  --olive-d:      #3B644A;                         /* success text on tint */
+  --on-success:   #FDFDFF;
+  --olive-tint:   rgba(79, 123, 95, 0.14);
+  --olive-strong-border: rgba(79, 123, 95, 0.45);
+  --rust:         #B95F5A;                         /* danger and Q1 pigment */
+  --rust-d:       #873F3C;                         /* danger text on tint */
+  --danger-fill:  #873F3C;                         /* filled destructive control */
+  --danger-fill-hover: #753633;
+  --on-danger:    #FDFDFF;
+  --rust-tint:    rgba(185, 95, 90, 0.12);
+  --rust-tint-border: rgba(185, 95, 90, 0.45);
+  --rust-focus-ring:  rgba(185, 95, 90, 0.22);
+  --warning:      #A17D37;
+  --warning-dark: #71551F;
+  --warning-tint: rgba(161, 125, 55, 0.14);
+  --warning-strong-border: rgba(161, 125, 55, 0.45);
+  --info:         #5C4F7D;
+  --sky:          #7A7D8E;
 
   /* ---------- Tertiary ink (quiet labels, dotted chart lines) ---------- */
-  --ink-3: #9AA5AE;
+  --ink-3: #89899B;
 
-  /* ---------- Neutral scale (cool slate) ---------- */
-  --gray-100: #E9EEF2;  /* sunken / inset fill */
-  --gray-200: #E3E9ED;  /* hairline */
-  --gray-300: #DBE1E6;  /* hairline-strong / border */
-  --gray-500: #5D6873;  /* WCAG AA: 5.9:1 on --paper, 5.5:1 on --ivory */
-  --gray-700: #3B434C;
+  /* ---------- Neutral scale (violet slate) ---------- */
+  --gray-100: #ECECF2;
+  --gray-200: #E2E1EA;
+  --gray-300: #D9D9E4;
+  --gray-500: #646477;  /* 5.69:1 on --paper */
+  --gray-700: #3F3E50;
+  --control-border: #8D8C9D; /* 3.24:1 boundary on --paper */
+  --pane-border: #D6D5E0;
+  --rail: #EEEFF4;
+  --topbar: #F7F7FA;
 
   /* ---------- Typography ---------- */
-  /* Tidewater is a single-family system. Albert Sans (loaded via next/font,
+  /* Violet Frost is a single-family system. Albert Sans (loaded via next/font,
      exposed as --font-albert on <html>) carries display and body alike; the
      editorial serif is retired. --serif deliberately points at the same stack
      so any remaining `.rd-serif` / `font-serif` call site degrades to Albert
@@ -96,7 +103,7 @@
   --sp-8: 64px;
 
   /* ---------- Radius ----------
-     Tidewater ladder: pane 14 (--r-lg) · card 12 (--r-md) · inputs/buttons 10
+     Violet Frost ladder: pane 14 (--r-lg) · card 12 (--r-md) · inputs/buttons 10
      (--r-sm) · icon buttons 8 (--r-icon) · chips pill. Radius steps down with
      element size so nothing reads stamped from one uniform corner. */
   --r-xs:    4px;
@@ -108,7 +115,7 @@
   --r-pill: 999px;
 
   /* ---------- Borders (uniform 1px) ----------
-     Tidewater retires the 1.5px hairline: with the merged matrix grid gone,
+     With the merged matrix grid gone,
      structure is carried by the gap between floating panes, so a heavier rule
      would only add weight the layout no longer needs. */
   --border:        1px solid var(--gray-300);
@@ -116,14 +123,14 @@
   --border-hair:   1px solid var(--gray-100);
   --border-rule:   1px solid var(--gray-300);
 
-  /* ---------- Shadows (cool low-spread) ---------- */
-  --shadow-sm:         0 1px 3px  rgba(36, 42, 49, 0.04);
-  --shadow-md:         0 4px 14px rgba(36, 42, 49, 0.07);
-  --shadow-lg:         0 12px 28px rgba(36, 42, 49, 0.10);
-  --shadow-card-hover: 0 10px 30px rgba(36, 42, 49, 0.10);
+  /* ---------- Shadows (aubergine low-spread) ---------- */
+  --shadow-sm:         0 1px 2px rgba(36, 35, 49, 0.055), 0 6px 15px rgba(36, 35, 49, 0.035);
+  --shadow-md:         0 3px 8px rgba(36, 35, 49, 0.07), 0 14px 30px rgba(36, 35, 49, 0.055);
+  --shadow-lg:         0 5px 12px rgba(36, 35, 49, 0.08), 0 20px 44px rgba(36, 35, 49, 0.07);
+  --shadow-card-hover: 0 4px 10px rgba(36, 35, 49, 0.08), 0 16px 34px rgba(36, 35, 49, 0.07);
 
   /* ---------- Backdrop (dialog::backdrop, modal scrims) ---------- */
-  --backdrop: rgba(20, 25, 30, 0.5);
+  --backdrop: rgba(36, 35, 49, 0.52);
 
   /* ---------- TLDR code-chip tint ----------
      Subtle overlay on the inverted .tldr surface. The .tldr panel flips
@@ -136,7 +143,7 @@
   --t-base:   150ms;
   --t-slow:   300ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-pop: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ---------- Layout ---------- */
   --content-narrow:  820px;
@@ -166,48 +173,56 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --ivory: #14171A;       /* page background — cool dark */
-    --paper: #1D2125;       /* card / panel surface */
-    --slate: #E8ECEF;       /* primary text — cool light ink */
-    --oat:   #191D21;       /* secondary raised surface — pane ground */
+    --ivory: #14131B;
+    --paper: #211F2B;
+    --slate: #ECEAF2;
+    --oat:   #191821;
 
-    --accent:               #7FA9C6;                 /* lifted steel */
-    --accent-d:             #93B8D1;
-    --accent-tint:          rgba(127, 169, 198, 0.18);
-    --accent-focus-ring:    rgba(127, 169, 198, 0.28);
-    --accent-strong-border: rgba(127, 169, 198, 0.6);
+    --accent:               #A99BCB;
+    --accent-d:             #BBAFDA;
+    --on-accent:            #14131B;
+    --accent-tint:          rgba(169, 155, 203, 0.18);
+    --accent-focus-ring:    rgba(169, 155, 203, 0.30);
+    --accent-strong-border: rgba(169, 155, 203, 0.62);
 
-    --olive:        #93B8D1;                          /* success folds into accent */
-    --olive-tint:   rgba(127, 169, 198, 0.18);
-    --olive-strong-border: rgba(127, 169, 198, 0.6); /* lifted tinted success border */
-    --rust:         #C98B82;                          /* lifted — also q1/alert */
-    /* Lifted a step past --rust so rust-on-rust-tint clears AA: #C98B82 on the
-       0.18 tint over --paper measures 4.34:1, just under the 4.5 floor. */
-    --rust-d:       #D19B92;                          /* rust hover/pressed, rust-on-tint text */
-    --rust-tint:    rgba(201, 139, 130, 0.18);        /* lifted danger alert background */
-    --rust-tint-border: rgba(201, 139, 130, 0.6);     /* lifted danger alert border */
-    --rust-focus-ring:  rgba(201, 139, 130, 0.28);    /* lifted danger input focus halo */
-    --warning:      #C2A96F;
-    --warning-dark: #C2A96F;                         /* lifted warning text (same as warning for contrast) */
-    --warning-tint: rgba(194, 169, 111, 0.18);
-    --warning-strong-border: rgba(194, 169, 111, 0.6); /* lifted tinted warning border */
-    --info:         #7FA9C6;                         /* informational — lifted steel */
-    --sky:          #9BA3A9;                          /* alt info / blocking chips — neutral */
+    --olive:        #82B793;
+    --olive-d:      #A0C9AB;
+    --on-success:   #14131B;
+    --olive-tint:   rgba(130, 183, 147, 0.18);
+    --olive-strong-border: rgba(130, 183, 147, 0.62);
+    --rust:         #D88C86;
+    --rust-d:       #E7A7A3;
+    --danger-fill:  #D88C86;
+    --danger-fill-hover: #E7A7A3;
+    --on-danger:    #14131B;
+    --rust-tint:    rgba(216, 140, 134, 0.18);
+    --rust-tint-border: rgba(216, 140, 134, 0.62);
+    --rust-focus-ring:  rgba(216, 140, 134, 0.30);
+    --warning:      #D0AF68;
+    --warning-dark: #E0C485;
+    --warning-tint: rgba(208, 175, 104, 0.18);
+    --warning-strong-border: rgba(208, 175, 104, 0.62);
+    --info:         #A99BCB;
+    --sky:          #A5A7B8;
 
-    --ink-3: #6E7880;
+    --ink-3: #777383;
 
-    --gray-100: #262B30;  /* sunken / inset fill (dark) */
-    --gray-200: #2A3036;  /* hairline (dark) */
-    --gray-300: #2E343A;  /* hairline-strong / border (dark) */
-    --gray-500: #A2ACB5;  /* ink-2 (dark) */
-    --gray-700: #C7D0D8;
+    --gray-100: #292734;
+    --gray-200: #302E3B;
+    --gray-300: #393645;
+    --gray-500: #AAA6B8;
+    --gray-700: #D0CDD9;
+    --control-border: #6F6B80;
+    --pane-border: #393645;
+    --rail: #191821;
+    --topbar: #191821;
 
     --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
     --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
     --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
     --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
 
-    --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
+    --backdrop: rgba(7, 6, 11, 0.68);
 
     --tldr-code-tint: rgba(0, 0, 0, 0.08);           /* .tldr surface is light in dark mode */
   }
@@ -217,58 +232,67 @@
    lifted gray-500 color. These overrides carry higher specificity than the base
    rule, ensuring the dark chevron always wins regardless of cascade order. */
 :root:not([data-theme="light"]) .select {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A2ACB5' stroke-width='1.5' stroke-linecap='round'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23AAA6B8' stroke-width='1.5' stroke-linecap='round'/></svg>");
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --ivory: #14171A;
-  --paper: #1D2125;
-  --slate: #E8ECEF;
-  --oat:   #191D21;
+  --ivory: #14131B;
+  --paper: #211F2B;
+  --slate: #ECEAF2;
+  --oat:   #191821;
 
-  --accent:               #7FA9C6;
-  --accent-d:             #93B8D1;
-  --accent-tint:          rgba(127, 169, 198, 0.18);
-  --accent-focus-ring:    rgba(127, 169, 198, 0.28);
-  --accent-strong-border: rgba(127, 169, 198, 0.6);
+  --accent:               #A99BCB;
+  --accent-d:             #BBAFDA;
+  --on-accent:            #14131B;
+  --accent-tint:          rgba(169, 155, 203, 0.18);
+  --accent-focus-ring:    rgba(169, 155, 203, 0.30);
+  --accent-strong-border: rgba(169, 155, 203, 0.62);
 
-  --olive:        #93B8D1;                          /* success folds into accent */
-  --olive-tint:   rgba(127, 169, 198, 0.18);
-  --olive-strong-border: rgba(127, 169, 198, 0.6); /* lifted tinted success border */
-  --rust:         #C98B82;
-  /* See the @media branch above for why --rust-d sits a step past --rust. */
-  --rust-d:       #D19B92;                          /* rust hover/pressed, rust-on-tint text */
-  --rust-tint:    rgba(201, 139, 130, 0.18);        /* lifted danger alert background */
-  --rust-tint-border: rgba(201, 139, 130, 0.6);     /* lifted danger alert border */
-  --rust-focus-ring:  rgba(201, 139, 130, 0.28);    /* lifted danger input focus halo */
-  --warning:      #C2A96F;
-  --warning-dark: #C2A96F;                         /* lifted warning text (same as warning for contrast) */
-  --warning-tint: rgba(194, 169, 111, 0.18);
-  --warning-strong-border: rgba(194, 169, 111, 0.6); /* lifted tinted warning border */
-  --info:         #7FA9C6;
-  --sky:          #9BA3A9;
+  --olive:        #82B793;
+  --olive-d:      #A0C9AB;
+  --on-success:   #14131B;
+  --olive-tint:   rgba(130, 183, 147, 0.18);
+  --olive-strong-border: rgba(130, 183, 147, 0.62);
+  --rust:         #D88C86;
+  --rust-d:       #E7A7A3;
+  --danger-fill:  #D88C86;
+  --danger-fill-hover: #E7A7A3;
+  --on-danger:    #14131B;
+  --rust-tint:    rgba(216, 140, 134, 0.18);
+  --rust-tint-border: rgba(216, 140, 134, 0.62);
+  --rust-focus-ring:  rgba(216, 140, 134, 0.30);
+  --warning:      #D0AF68;
+  --warning-dark: #E0C485;
+  --warning-tint: rgba(208, 175, 104, 0.18);
+  --warning-strong-border: rgba(208, 175, 104, 0.62);
+  --info:         #A99BCB;
+  --sky:          #A5A7B8;
 
-  --ink-3: #6E7880;
+  --ink-3: #777383;
 
-  --gray-100: #262B30;
-  --gray-200: #2A3036;
-  --gray-300: #2E343A;
-  --gray-500: #A2ACB5;
-  --gray-700: #C7D0D8;
+  --gray-100: #292734;
+  --gray-200: #302E3B;
+  --gray-300: #393645;
+  --gray-500: #AAA6B8;
+  --gray-700: #D0CDD9;
+  --control-border: #6F6B80;
+  --pane-border: #393645;
+  --rail: #191821;
+  --topbar: #191821;
 
   --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
   --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
   --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
   --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
 
-  --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
+  --backdrop: rgba(7, 6, 11, 0.68);
 
   --tldr-code-tint: rgba(0, 0, 0, 0.08);           /* .tldr surface is light in dark mode */
 }
 /* Select chevron dark-mode override: see comment above in @media section for rationale */
 :root[data-theme="dark"] .select {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A2ACB5' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23AAA6B8' stroke-width='1.5' stroke-linecap='round'/></svg>");
 }

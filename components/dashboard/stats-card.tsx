@@ -39,7 +39,7 @@ export function StatsCard({
   const animatedValue = useCountUp(value);
   const trendColor = trend
     ? trend.isPositive
-      ? "text-status-success"
+      ? "text-status-success-ink"
       : "text-status-overdue-ink"
     : "text-foreground-muted";
 

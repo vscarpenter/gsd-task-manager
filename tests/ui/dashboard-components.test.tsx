@@ -550,7 +550,7 @@ describe('Dashboard Components', () => {
       );
 
       // Should render with the danger (overdue) accuracy color
-      const accuracyValue = container.querySelector('.text-status-overdue');
+      const accuracyValue = container.querySelector('.text-status-overdue-ink');
       expect(accuracyValue).toBeInTheDocument();
     });
 

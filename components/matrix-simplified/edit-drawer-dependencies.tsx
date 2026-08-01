@@ -138,7 +138,7 @@ export function DependenciesField({
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-xs text-rust">
+        <p id={errorId} role="alert" className="text-xs text-rust-d">
           {error}
         </p>
       ) : null}
