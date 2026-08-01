@@ -11,9 +11,10 @@ urgent/important split is a structural decision the app makes visible, not a lab
 to remember. The interface is unhurried and low-noise — the user should feel clear-headed and in
 control, never overwhelmed, never behind, never nagged.
 
-The visual system is Inkwell 1.3.1: serif display against a system sans, the 1.5px hairline,
-cool-stone surfaces, and a four-colour quadrant language (rust / tide / ochre / slate) that is
-the one place strong colour is spent.
+The visual system is Inkwell 1.3.1 Violet Frost: Albert Sans, a lavender-gray canvas with pale
+paper surfaces, quiet 1px boundaries, and restrained aubergine interaction ink. Four bounded
+quadrant families (muted rose / juniper / ochre / smoke slate) make priority visible without
+colouring unrelated metadata.
 
 ## Audience
 
@@ -41,10 +42,10 @@ stays composed.
    Users come to decide and act, not to admire the UI. When in doubt, remove.
 2. **Privacy is the foundation, not a feature to advertise.** Local-first by default, sync
    strictly opt-in, no tracking, no dark patterns.
-3. **The matrix is the argument.** Design reinforces the urgent/important distinction — the
-   four-quadrant colour language, washes and accents carry meaning rather than flattening tasks
-   back into a generic list.
-4. **Earned familiarity over novelty.** Drag-and-drop, command palette, keyboard shortcuts and
+3. **The matrix is the argument.** Design reinforces the urgent/important distinction in two
+   confident places: the pane header and the task-card marker. Washes stay quiet and unrelated
+   metadata stays neutral rather than flattening tasks back into a generic list.
+4. **Earned familiarity over novelty.** Drag-and-drop, keyboard shortcuts, the command palette and
    standard form controls, all done well. Don't reinvent standard affordances for flavour.
 5. **Delight in moments, restraint on pages.** Reserve celebration and personality for genuine
    moments (task completion). Every other surface stays composed.
@@ -53,8 +54,9 @@ stays composed.
 
 GSD must not look or feel like:
 
-- **A flashy AI startup** — no purple gradients, glassmorphism-by-default, gradient text, or
-  supercharge/streamline/seamless copy.
+- **A flashy AI startup** — no purple gradients, glowing violet blobs, glassmorphism-by-default,
+  gradient text, or supercharge/streamline/seamless copy. Aubergine is restrained interaction
+  ink, never gradient decoration.
 - **A gamified todo toy** — no mascots, no points/badges economy, no juvenile illustration, no
   emoji standing in for designed icons. (One completion confetti is the deliberate exception.)
 - **A dense enterprise PM tool** — not Jira/Asana. Complexity is a failure, not a feature.
@@ -67,7 +69,8 @@ GSD must not look or feel like:
   ≥3:1, ≥44px touch targets on coarse pointers, `prefers-reduced-motion` fallback on every
   animation, and colour never the sole carrier of meaning.
 - **Dark mode is first-class**, not an inversion — Inkwell Pattern B (system preference with
-  manual override), hues lifted to hold contrast on dark surfaces.
+  manual override), using the independently tuned `#14131B` canvas, `#191821` raised surface,
+  `#211F2B` paper, `#ECEAF2` ink and `#A99BCB` interaction accent.
 - **Offline-first PWA.** Every surface must render from IndexedDB with no network. Data surfaces
   must distinguish "loading" from "empty" — an empty state asserts something specific and must
   never be shown before the local read resolves.
@@ -87,6 +90,11 @@ GSD must not look or feel like:
    home is the pane header (band, icon, title, 3px rule) and the card (spine, completion disc).
    Washes are quiet ground. Redundant signalling forces every statement to be timid, which is
    what reads as generic. (2026-07-30)
-3. **Quadrant titles use `--q*-ink`, not `--q*`.** Ochre misses AA against its own header tint at
-   15px; the ink token darkens the text rather than lightening the header, which preserves the
-   10/10/12/14 tint ladder that equalises perceived header weight. (2026-07-31)
+3. **Quadrant titles use `--q*-ink`, not `--q*`.** Raw pigments do not all clear AA against their
+   own header at 15px. The ink tokens preserve the approved exact header bands while giving every
+   title a contrast-safe voice. This supersedes the earlier percentage-based header-tint ladder.
+   (2026-07-31)
+4. **Aubergine means global interaction, not “purple styling.”** Use it for actions, active
+   navigation, links and focus. Never use it as Q2, a decorative wash, glow, or gradient; that
+   distinction keeps Violet Frost calm instead of reading like a flashy AI-startup theme.
+   (2026-07-31)

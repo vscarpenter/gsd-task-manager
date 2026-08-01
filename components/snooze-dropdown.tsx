@@ -62,7 +62,7 @@ export function SnoozeDropdown({ task, onSnooze, className }: SnoozeDropdownProp
           type="button"
           className={cn(
             "rounded p-2 sm:px-1.5 sm:py-0.5 hover:bg-background-muted hover:text-foreground touch-manipulation",
-            isSnoozed && "text-amber-500",
+            isSnoozed && "text-status-blocked-ink",
             className
           )}
           aria-label={isSnoozed ? `Snoozed for ${formatRemainingTime(remainingMinutes)}` : "Snooze notifications"}

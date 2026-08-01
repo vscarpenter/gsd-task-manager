@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { SettingsRow, SettingsSelectRow } from '@/components/settings/shared-components';
 import { AboutSection } from '@/components/settings/about-section';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
@@ -178,6 +179,14 @@ describe('Settings Components', () => {
   });
 
   describe('AppearanceSettings', () => {
+    it('keeps theme choices inert while the server snapshot resolves', () => {
+      const html = renderToString(
+        <AppearanceSettings showCompleted={false} onToggleCompleted={vi.fn()} />
+      );
+      expect(html).toContain('aria-busy="true"');
+      expect(html.match(/disabled=""/g)).toHaveLength(3);
+    });
+
     it('renders all three theme options', () => {
       render(<AppearanceSettings showCompleted={false} onToggleCompleted={vi.fn()} />);
       expect(screen.getByText('Light')).toBeInTheDocument();

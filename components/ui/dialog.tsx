@@ -39,7 +39,7 @@ export function DialogContent({
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 w-full bg-card shadow-xl overscroll-contain focus:outline-none",
+        "fixed z-50 w-full bg-card shadow-[var(--shadow-lg)] overscroll-contain focus:outline-none",
         // Desktop: centered modal
         "md:left-1/2 md:top-1/2 md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-card-border md:p-6",
         // Mobile: full-screen with safe areas, scrollable

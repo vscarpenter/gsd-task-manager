@@ -1,65 +1,105 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-05-31",
+  "generatedAt": "2026-08-01T03:28:40Z",
   "title": "Design System: GSD Task Manager",
   "extensions": {
     "colorMeta": {
-      "deep-indigo": {
-        "role": "primary",
-        "displayName": "Deep Indigo",
-        "canonical": "#3B4A8C",
-        "tonalRamp": ["oklch(0.16 0.06 270)", "oklch(0.27 0.09 270)", "oklch(0.40 0.10 270)", "oklch(0.52 0.10 270)", "oklch(0.63 0.09 270)", "oklch(0.74 0.07 270)", "oklch(0.85 0.04 270)", "oklch(0.95 0.02 270)"]
-      },
-      "rust": {
-        "role": "secondary",
-        "displayName": "Rust",
-        "canonical": "#B04A3F",
-        "tonalRamp": ["oklch(0.18 0.05 28)", "oklch(0.30 0.08 28)", "oklch(0.42 0.11 28)", "oklch(0.53 0.13 28)", "oklch(0.64 0.12 28)", "oklch(0.75 0.09 28)", "oklch(0.86 0.05 28)", "oklch(0.95 0.02 28)"]
-      },
-      "sage": {
-        "role": "secondary",
-        "displayName": "Sage",
-        "canonical": "#788C5D",
-        "tonalRamp": ["oklch(0.20 0.04 130)", "oklch(0.32 0.06 130)", "oklch(0.44 0.07 130)", "oklch(0.56 0.08 130)", "oklch(0.67 0.08 130)", "oklch(0.77 0.06 130)", "oklch(0.87 0.04 130)", "oklch(0.95 0.02 130)"]
-      },
-      "amber": {
-        "role": "secondary",
-        "displayName": "Amber",
-        "canonical": "#C78E3F",
-        "tonalRamp": ["oklch(0.22 0.05 75)", "oklch(0.34 0.08 75)", "oklch(0.46 0.10 75)", "oklch(0.58 0.11 75)", "oklch(0.69 0.10 75)", "oklch(0.79 0.08 75)", "oklch(0.88 0.05 75)", "oklch(0.95 0.02 75)"]
-      },
-      "cool-stone": {
-        "role": "neutral",
-        "displayName": "Cool Stone",
-        "canonical": "#F4F4F0",
-        "tonalRamp": ["oklch(0.18 0.004 110)", "oklch(0.30 0.004 110)", "oklch(0.42 0.004 110)", "oklch(0.55 0.004 110)", "oklch(0.68 0.004 110)", "oklch(0.80 0.004 110)", "oklch(0.90 0.004 110)", "oklch(0.96 0.004 110)"]
-      },
-      "ink-slate": {
-        "role": "neutral",
-        "displayName": "Ink Slate",
-        "canonical": "#13141B",
-        "tonalRamp": ["oklch(0.13 0.012 270)", "oklch(0.24 0.012 270)", "oklch(0.36 0.010 270)", "oklch(0.48 0.008 270)", "oklch(0.60 0.006 270)", "oklch(0.72 0.005 270)", "oklch(0.85 0.004 270)", "oklch(0.95 0.003 270)"]
-      }
+      "canvas-light": { "role": "neutral", "displayName": "Violet Frost Canvas", "canonical": "#F3F3F7", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "paper-light": { "role": "neutral", "displayName": "Near-White Paper", "canonical": "#FDFDFF", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "slate-light": { "role": "neutral", "displayName": "Aubergine Graphite", "canonical": "#242331", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "raised-light": { "role": "neutral", "displayName": "Raised Frost", "canonical": "#F7F7FA", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "accent-light": { "role": "primary", "displayName": "Aubergine Interaction", "canonical": "#5C4F7D", "tonalRamp": ["#201A2C", "#30263F", "#4E426B", "#5C4F7D", "#7E70A0", "#A99BCB", "#BBAFDA", "#E7E1F1"] },
+      "accent-light-hover": { "role": "primary", "displayName": "Aubergine Pressed", "canonical": "#4E426B", "tonalRamp": ["#201A2C", "#30263F", "#4E426B", "#5C4F7D", "#7E70A0", "#A99BCB", "#BBAFDA", "#E7E1F1"] },
+      "success-light": { "role": "tertiary", "displayName": "Success Evergreen", "canonical": "#4F7B5F", "tonalRamp": ["#1D3224", "#3B644A", "#4F7B5F", "#6D9980", "#82B793", "#A0C9AB", "#C5DDCC", "#EEF6F0"] },
+      "success-light-ink": { "role": "tertiary", "displayName": "Success Ink", "canonical": "#3B644A", "tonalRamp": ["#1D3224", "#3B644A", "#4F7B5F", "#6D9980", "#82B793", "#A0C9AB", "#C5DDCC", "#EEF6F0"] },
+      "danger-light": { "role": "tertiary", "displayName": "Danger Rose", "canonical": "#B95F5A", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "danger-light-ink": { "role": "tertiary", "displayName": "Danger Ink", "canonical": "#873F3C", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "warning-light": { "role": "tertiary", "displayName": "Warning Ochre", "canonical": "#A17D37", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "warning-light-ink": { "role": "tertiary", "displayName": "Warning Ink", "canonical": "#71551F", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q1-light": { "role": "secondary", "displayName": "Q1 Muted Rose Pigment", "canonical": "#B95F5A", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-light": { "role": "secondary", "displayName": "Q2 Juniper Pigment", "canonical": "#4D7A72", "tonalRamp": ["#173B36", "#234B45", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-light": { "role": "secondary", "displayName": "Q3 Ochre Pigment", "canonical": "#A17D37", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-light": { "role": "secondary", "displayName": "Q4 Smoke Slate Pigment", "canonical": "#7A7D8E", "tonalRamp": ["#2D2F3A", "#414352", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "q1-light-ink": { "role": "secondary", "displayName": "Q1 Rose Ink", "canonical": "#873F3C", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-light-ink": { "role": "secondary", "displayName": "Q2 Juniper Ink", "canonical": "#315B54", "tonalRamp": ["#173B36", "#234B45", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-light-ink": { "role": "secondary", "displayName": "Q3 Ochre Ink", "canonical": "#71551F", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-light-ink": { "role": "secondary", "displayName": "Q4 Smoke Slate Ink", "canonical": "#56596B", "tonalRamp": ["#2D2F3A", "#414352", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "q1-light-wash": { "role": "secondary", "displayName": "Q1 Rose Wash", "canonical": "#FBF5F4", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-light-wash": { "role": "secondary", "displayName": "Q2 Juniper Wash", "canonical": "#F2F8F6", "tonalRamp": ["#173B36", "#234B45", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-light-wash": { "role": "secondary", "displayName": "Q3 Ochre Wash", "canonical": "#FAF7EF", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-light-wash": { "role": "secondary", "displayName": "Q4 Smoke Slate Wash", "canonical": "#F5F5F8", "tonalRamp": ["#2D2F3A", "#414352", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "q1-light-header": { "role": "secondary", "displayName": "Q1 Rose Header", "canonical": "#F2DEDC", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-light-header": { "role": "secondary", "displayName": "Q2 Juniper Header", "canonical": "#DDEBE7", "tonalRamp": ["#173B36", "#234B45", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-light-header": { "role": "secondary", "displayName": "Q3 Ochre Header", "canonical": "#F0E6CF", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-light-header": { "role": "secondary", "displayName": "Q4 Smoke Slate Header", "canonical": "#E6E6ED", "tonalRamp": ["#2D2F3A", "#414352", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "neutral-100-light": { "role": "neutral", "displayName": "Light Neutral 100", "canonical": "#ECECF2", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "neutral-200-light": { "role": "neutral", "displayName": "Light Neutral 200", "canonical": "#E2E1EA", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "neutral-300-light": { "role": "neutral", "displayName": "Light Neutral 300", "canonical": "#D9D9E4", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "neutral-500-light": { "role": "neutral", "displayName": "Light Muted Text", "canonical": "#646477", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "neutral-700-light": { "role": "neutral", "displayName": "Light Secondary Ink", "canonical": "#3F3E50", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "control-border-light": { "role": "neutral", "displayName": "Light Control Boundary", "canonical": "#8D8C9D", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "pane-border-light": { "role": "neutral", "displayName": "Light Pane Boundary", "canonical": "#D6D5E0", "tonalRamp": ["#14131B", "#242331", "#3F3E50", "#646477", "#8D8C9D", "#D9D9E4", "#ECECF2", "#FDFDFF"] },
+      "canvas-dark": { "role": "neutral", "displayName": "Dark Violet Canvas", "canonical": "#14131B", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "raised-dark": { "role": "neutral", "displayName": "Dark Raised Surface", "canonical": "#191821", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "paper-dark": { "role": "neutral", "displayName": "Dark Paper Surface", "canonical": "#211F2B", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "slate-dark": { "role": "neutral", "displayName": "Dark Primary Ink", "canonical": "#ECEAF2", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "accent-dark": { "role": "primary", "displayName": "Lifted Aubergine Interaction", "canonical": "#A99BCB", "tonalRamp": ["#201A2C", "#30263F", "#4E426B", "#5C4F7D", "#7E70A0", "#A99BCB", "#BBAFDA", "#E7E1F1"] },
+      "accent-dark-hover": { "role": "primary", "displayName": "Lifted Aubergine Pressed", "canonical": "#BBAFDA", "tonalRamp": ["#201A2C", "#30263F", "#4E426B", "#5C4F7D", "#7E70A0", "#A99BCB", "#BBAFDA", "#E7E1F1"] },
+      "success-dark": { "role": "tertiary", "displayName": "Dark Success Evergreen", "canonical": "#82B793", "tonalRamp": ["#1D3224", "#3B644A", "#4F7B5F", "#6D9980", "#82B793", "#A0C9AB", "#C5DDCC", "#EEF6F0"] },
+      "success-dark-ink": { "role": "tertiary", "displayName": "Dark Success Ink", "canonical": "#A0C9AB", "tonalRamp": ["#1D3224", "#3B644A", "#4F7B5F", "#6D9980", "#82B793", "#A0C9AB", "#C5DDCC", "#EEF6F0"] },
+      "danger-dark": { "role": "tertiary", "displayName": "Dark Danger Rose", "canonical": "#D88C86", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "danger-dark-ink": { "role": "tertiary", "displayName": "Dark Danger Ink", "canonical": "#E7A7A3", "tonalRamp": ["#4A2223", "#682F30", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "warning-dark": { "role": "tertiary", "displayName": "Dark Warning Ochre", "canonical": "#D0AF68", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "warning-dark-ink": { "role": "tertiary", "displayName": "Dark Warning Ink", "canonical": "#E0C485", "tonalRamp": ["#39290D", "#523A13", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q1-dark": { "role": "secondary", "displayName": "Dark Q1 Rose Pigment", "canonical": "#D88C86", "tonalRamp": ["#1C181E", "#352327", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-dark": { "role": "secondary", "displayName": "Dark Q2 Juniper Pigment", "canonical": "#83B2A8", "tonalRamp": ["#171E1D", "#253632", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-dark": { "role": "secondary", "displayName": "Dark Q3 Ochre Pigment", "canonical": "#D0AF68", "tonalRamp": ["#1E1B17", "#352E20", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-dark": { "role": "secondary", "displayName": "Dark Q4 Smoke Slate Pigment", "canonical": "#A5A7B8", "tonalRamp": ["#1B1B22", "#2C2C37", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "q1-dark-ink": { "role": "secondary", "displayName": "Dark Q1 Rose Ink", "canonical": "#E7A7A3", "tonalRamp": ["#1C181E", "#352327", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-dark-ink": { "role": "secondary", "displayName": "Dark Q2 Juniper Ink", "canonical": "#A6CEC6", "tonalRamp": ["#171E1D", "#253632", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-dark-ink": { "role": "secondary", "displayName": "Dark Q3 Ochre Ink", "canonical": "#E0C485", "tonalRamp": ["#1E1B17", "#352E20", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-dark-ink": { "role": "secondary", "displayName": "Dark Q4 Smoke Slate Ink", "canonical": "#C3C4D0", "tonalRamp": ["#1B1B22", "#2C2C37", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "q1-dark-wash": { "role": "secondary", "displayName": "Dark Q1 Rose Wash", "canonical": "#1C181E", "tonalRamp": ["#1C181E", "#352327", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-dark-wash": { "role": "secondary", "displayName": "Dark Q2 Juniper Wash", "canonical": "#171E1D", "tonalRamp": ["#171E1D", "#253632", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-dark-wash": { "role": "secondary", "displayName": "Dark Q3 Ochre Wash", "canonical": "#1E1B17", "tonalRamp": ["#1E1B17", "#352E20", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-dark-wash": { "role": "secondary", "displayName": "Dark Q4 Smoke Slate Wash", "canonical": "#1B1B22", "tonalRamp": ["#1B1B22", "#2C2C37", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "q1-dark-header": { "role": "secondary", "displayName": "Dark Q1 Rose Header", "canonical": "#352327", "tonalRamp": ["#1C181E", "#352327", "#873F3C", "#B95F5A", "#D88C86", "#E7A7A3", "#F2DEDC", "#FBF5F4"] },
+      "q2-dark-header": { "role": "secondary", "displayName": "Dark Q2 Juniper Header", "canonical": "#253632", "tonalRamp": ["#171E1D", "#253632", "#315B54", "#4D7A72", "#83B2A8", "#A6CEC6", "#DDEBE7", "#F2F8F6"] },
+      "q3-dark-header": { "role": "secondary", "displayName": "Dark Q3 Ochre Header", "canonical": "#352E20", "tonalRamp": ["#1E1B17", "#352E20", "#71551F", "#A17D37", "#D0AF68", "#E0C485", "#F0E6CF", "#FAF7EF"] },
+      "q4-dark-header": { "role": "secondary", "displayName": "Dark Q4 Smoke Slate Header", "canonical": "#2C2C37", "tonalRamp": ["#1B1B22", "#2C2C37", "#56596B", "#7A7D8E", "#A5A7B8", "#C3C4D0", "#E6E6ED", "#F5F5F8"] },
+      "neutral-100-dark": { "role": "neutral", "displayName": "Dark Neutral 100", "canonical": "#292734", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "neutral-200-dark": { "role": "neutral", "displayName": "Dark Neutral 200", "canonical": "#302E3B", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "neutral-300-dark": { "role": "neutral", "displayName": "Dark Neutral 300", "canonical": "#393645", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "neutral-500-dark": { "role": "neutral", "displayName": "Dark Muted Text", "canonical": "#AAA6B8", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "neutral-700-dark": { "role": "neutral", "displayName": "Dark Secondary Ink", "canonical": "#D0CDD9", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] },
+      "control-border-dark": { "role": "neutral", "displayName": "Dark Control Boundary", "canonical": "#6F6B80", "tonalRamp": ["#0B0A10", "#14131B", "#191821", "#211F2B", "#393645", "#6F6B80", "#AAA6B8", "#ECEAF2"] }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Largest editorial moments (About, marketing). Serif, fixed 48px." },
-      "headline": { "displayName": "Headline", "purpose": "Page and section titles (H1/H2). Serif." },
-      "title": { "displayName": "Title", "purpose": "Card and panel headings. Serif 19px / sans 18px." },
-      "body": { "displayName": "Body", "purpose": "Running text and UI copy. System sans, weight 430." },
-      "label": { "displayName": "Label", "purpose": "Eyebrows, keyboard chips, micro-labels. Mono, uppercase, 0.12em tracking." }
+      "display": { "displayName": "Display", "purpose": "Albert Sans 48px/1.1 at weight 500 for the largest editorial moments." },
+      "headline": { "displayName": "Headline", "purpose": "Albert Sans 32px/1.2 at weight 500 for page titles." },
+      "section": { "displayName": "Section", "purpose": "Albert Sans 24px/1.3 at weight 500 for major section headings." },
+      "title": { "displayName": "Title", "purpose": "Albert Sans 19px/1.22 at weight 500 for card and panel titles." },
+      "body": { "displayName": "Body", "purpose": "Albert Sans 16px/1.55 at weight 430 for working UI and prose capped at 65–75ch." },
+      "small": { "displayName": "Small", "purpose": "Albert Sans 14px/1.5 at weight 430 for compact supporting copy." },
+      "caption": { "displayName": "Caption", "purpose": "Albert Sans 12px/1.4 at weight 500 for quiet metadata." },
+      "label": { "displayName": "Eyebrow", "purpose": "Albert Sans 11px/1 at weight 600 with 0.12em tracking for one sparing uppercase label." }
     },
     "shadows": [
-      { "name": "shadow-sm", "value": "0 1px 2px rgba(20,20,19,0.06)", "purpose": "Resting card/column elevation; switch thumbs." },
-      { "name": "shadow-md", "value": "0 4px 14px rgba(20,20,19,0.08)", "purpose": "Dropdowns and popovers." },
-      { "name": "shadow-lg", "value": "0 12px 28px rgba(20,20,19,0.12)", "purpose": "Dialogs and the edit drawer." },
-      { "name": "shadow-card-hover", "value": "0 10px 30px rgba(20,20,19,0.10)", "purpose": "Card hover lift, paired with translateY(-3px)." }
+      { "name": "shadow-sm-light", "value": "0 1px 2px rgba(36, 35, 49, 0.055), 0 6px 15px rgba(36, 35, 49, 0.035)", "purpose": "Low resting separation for cards and switch thumbs on light surfaces." },
+      { "name": "shadow-md-light", "value": "0 3px 8px rgba(36, 35, 49, 0.07), 0 14px 30px rgba(36, 35, 49, 0.055)", "purpose": "Dropdowns and popovers in light mode." },
+      { "name": "shadow-lg-light", "value": "0 5px 12px rgba(36, 35, 49, 0.08), 0 20px 44px rgba(36, 35, 49, 0.07)", "purpose": "Dialogs, drawers, and overlays in light mode." },
+      { "name": "shadow-card-hover-light", "value": "0 4px 10px rgba(36, 35, 49, 0.08), 0 16px 34px rgba(36, 35, 49, 0.07)", "purpose": "Task and link-card hover lift in light mode." },
+      { "name": "shadow-sm-dark", "value": "0 1px 2px rgba(0, 0, 0, 0.45)", "purpose": "Low resting separation on dark surfaces." },
+      { "name": "shadow-md-dark", "value": "0 4px 14px rgba(0, 0, 0, 0.50)", "purpose": "Dropdowns and popovers in dark mode." },
+      { "name": "shadow-lg-dark", "value": "0 12px 28px rgba(0, 0, 0, 0.55)", "purpose": "Dialogs, drawers, and overlays in dark mode." },
+      { "name": "shadow-card-hover-dark", "value": "0 10px 30px rgba(0, 0, 0, 0.50)", "purpose": "Task and link-card hover lift in dark mode." }
     ],
     "motion": [
-      { "name": "t-fast", "value": "120ms", "purpose": "Button/border state transitions." },
-      { "name": "t-base", "value": "150ms", "purpose": "Default component transitions." },
-      { "name": "t-slow", "value": "300ms", "purpose": "Drawer slide-in, view transitions." },
+      { "name": "t-fast", "value": "120ms", "purpose": "Fast button, border, and immediate feedback transitions." },
+      { "name": "t-base", "value": "150ms", "purpose": "Standard component and surface transitions." },
+      { "name": "t-slow", "value": "300ms", "purpose": "Large or one-time transitions such as drawers and view changes." },
       { "name": "ease-out", "value": "cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Default easing for state transitions." },
-      { "name": "ease-pop", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Sparing pop emphasis (quadrant pill entrance)." }
+      { "name": "ease-pop", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Sparing pop emphasis for the quadrant pill entrance only." }
     ],
     "breakpoints": [
       { "name": "mobile", "value": "720px" },
@@ -72,103 +112,112 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The default call to action. Deep-indigo fill, used once per context.",
+      "description": "The default call to action; aubergine is reserved for intent and filled text adapts across themes.",
       "html": "<button class=\"ds-btn-primary\">Add task</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; font: 500 14px system-ui, sans-serif; color: #FFFFFF; background: #3B4A8C; border: 1.5px solid transparent; border-radius: 8px; cursor: pointer; transition: background 120ms ease, transform 120ms ease; } .ds-btn-primary:hover { background: #2A3768; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #F4F4F0, 0 0 0 4px #3B4A8C; } .ds-btn-primary:active { transform: scale(0.97); }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 16px; font: 500 14px/1 var(--sans, system-ui, sans-serif); color: var(--on-accent, #FDFDFF); background: var(--accent, #5C4F7D); border: 1px solid transparent; border-radius: var(--r-sm, 10px); cursor: pointer; transition: background 120ms ease, transform 120ms ease; } .ds-btn-primary:hover { background: var(--accent-d, #4E426B); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:disabled { cursor: not-allowed; opacity: 0.55; } @media (pointer: coarse) { .ds-btn-primary { min-height: 44px; } }"
     },
     {
       "name": "Secondary Button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Subtle action. Cloud-white fill with the signature hairline border.",
+      "description": "A restrained paper action with a control-strength boundary and neutral hierarchy.",
       "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
-      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; font: 500 14px system-ui, sans-serif; color: #13141B; background: #FFFFFF; border: 1.5px solid #CFCFCC; border-radius: 8px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; } .ds-btn-secondary:hover { background: #EDEDEA; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #F4F4F0, 0 0 0 4px #3B4A8C; } .ds-btn-secondary:active { transform: scale(0.97); }"
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 16px; font: 500 14px/1 var(--sans, system-ui, sans-serif); color: var(--slate, #242331); background: var(--paper, #FDFDFF); border: 1px solid var(--control-border, #8D8C9D); border-radius: var(--r-sm, 10px); cursor: pointer; transition: background 120ms ease, border-color 120ms ease, transform 120ms ease; } .ds-btn-secondary:hover { background: var(--gray-100, #ECECF2); } .ds-btn-secondary:focus-visible { outline: none; border-color: var(--accent, #5C4F7D); box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } .ds-btn-secondary:active { transform: scale(0.97); } @media (pointer: coarse) { .ds-btn-secondary { min-height: 44px; } }"
     },
     {
       "name": "Ghost Button",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Lowest-emphasis action; borderless until hovered.",
+      "description": "The lowest-emphasis action; transparent at rest and neutral on hover.",
       "html": "<button class=\"ds-btn-ghost\">Skip</button>",
-      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; font: 500 14px system-ui, sans-serif; color: #3A3B41; background: transparent; border: 1.5px solid transparent; border-radius: 8px; cursor: pointer; transition: background 120ms ease, transform 120ms ease; } .ds-btn-ghost:hover { background: #EDEDEA; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #F4F4F0, 0 0 0 4px #3B4A8C; } .ds-btn-ghost:active { transform: scale(0.97); }"
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 16px; font: 500 14px/1 var(--sans, system-ui, sans-serif); color: var(--gray-700, #3F3E50); background: transparent; border: 1px solid transparent; border-radius: var(--r-sm, 10px); cursor: pointer; transition: background 120ms ease, color 120ms ease, transform 120ms ease; } .ds-btn-ghost:hover { color: var(--slate, #242331); background: var(--gray-100, #ECECF2); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } .ds-btn-ghost:active { transform: scale(0.97); } @media (pointer: coarse) { .ds-btn-ghost { min-height: 44px; } }"
     },
     {
       "name": "Text Input",
       "kind": "input",
       "refersTo": "input",
-      "description": "Single-line field. Hairline border, indigo focus halo.",
+      "description": "A compact paper field with an accessible boundary and aubergine focus halo.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"What needs doing?\" />",
-      "css": ".ds-input { width: 280px; height: 38px; padding: 0 12px; font: 14px system-ui, sans-serif; color: #13141B; background: #FFFFFF; border: 1.5px solid #CFCFCC; border-radius: 8px; outline: none; transition: border-color 120ms ease, box-shadow 120ms ease; } .ds-input::placeholder { color: #6F6F75; } .ds-input:focus { border-color: #3B4A8C; box-shadow: 0 0 0 3px rgba(59,74,140,0.18); }"
+      "css": ".ds-input { width: 280px; height: 38px; padding: 0 12px; font: 430 14px/1.5 var(--sans, system-ui, sans-serif); color: var(--slate, #242331); background: var(--paper, #FDFDFF); border: 1px solid var(--control-border, #8D8C9D); border-radius: var(--r-sm, 10px); outline: none; transition: border-color 120ms ease, box-shadow 120ms ease; } .ds-input::placeholder { color: var(--gray-500, #646477); opacity: 1; } .ds-input:hover { border-color: var(--gray-700, #3F3E50); } .ds-input:focus { border-color: var(--accent, #5C4F7D); box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } .ds-input:disabled { color: var(--gray-500, #646477); background: var(--gray-100, #ECECF2); cursor: not-allowed; }"
     },
     {
-      "name": "Accent Badge",
+      "name": "Neutral Chip",
       "kind": "chip",
-      "refersTo": "badge-accent",
-      "description": "Pill label. Tinted background of the hue's own color, never gray text on a tint.",
-      "html": "<span class=\"ds-badge-accent\">Schedule</span>",
-      "css": ".ds-badge-accent { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; font: 500 12px system-ui, sans-serif; color: #3B4A8C; background: rgba(59,74,140,0.14); border-radius: 999px; }"
+      "refersTo": "badge-neutral",
+      "description": "Ordinary tags and metadata stay neutral; quadrant color is never inherited decoratively.",
+      "html": "<span class=\"ds-chip-neutral\">Planning</span>",
+      "css": ".ds-chip-neutral { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; font: 500 12px/1 var(--sans, system-ui, sans-serif); color: var(--gray-700, #3F3E50); background: var(--gray-100, #ECECF2); border: 1px solid var(--gray-200, #E2E1EA); border-radius: 999px; }"
     },
     {
-      "name": "Card",
+      "name": "Task Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Cloud-white panel on the cool-stone ground. Flat at rest; lifts as a link.",
-      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Quarterly review</div><div class=\"ds-card-body\">Draft the deck and circulate before Friday.</div></div>",
-      "css": ".ds-card { background: #FFFFFF; border: 1.5px solid #CFCFCC; border-radius: 14px; padding: 24px; transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease; } .ds-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(20,20,19,0.10); border-color: #13141B; } .ds-card-title { font: 500 19px ui-serif, Georgia, serif; letter-spacing: -0.008em; color: #13141B; margin-bottom: 8px; } .ds-card-body { font: 430 16px/1.55 system-ui, sans-serif; color: #3A3B41; }"
+      "description": "A quiet paper card with a 3px quadrant marker; general metadata remains neutral.",
+      "html": "<article class=\"ds-task-card\"><span class=\"ds-task-card-marker\" aria-hidden=\"true\"></span><div><h3 class=\"ds-task-card-title\">Finalize launch brief</h3><p class=\"ds-task-card-meta\">Today · Planning</p></div></article>",
+      "css": ".ds-task-card { position: relative; display: flex; gap: 12px; padding: 16px 16px 16px 20px; color: var(--slate, #242331); background: var(--paper, #FDFDFF); border: 1px solid var(--gray-300, #D9D9E4); border-radius: var(--r-md, 12px); box-shadow: var(--shadow-sm, 0 1px 2px rgba(36, 35, 49, 0.055)); transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; } .ds-task-card:hover { border-color: var(--q1, #B95F5A); box-shadow: var(--shadow-card-hover, 0 4px 10px rgba(36, 35, 49, 0.08)); transform: translateY(-2px); } .ds-task-card:focus-within { outline: none; box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } .ds-task-card-marker { position: absolute; inset: 8px auto 8px 5px; width: 3px; background: var(--q1, #B95F5A); border-radius: 999px; } .ds-task-card-title { margin: 0; font: 600 14px/1.35 var(--sans, system-ui, sans-serif); color: var(--slate, #242331); } .ds-task-card-meta { margin: 5px 0 0; font: 500 12px/1.4 var(--sans, system-ui, sans-serif); color: var(--gray-500, #646477); }"
     },
     {
       "name": "Checkbox",
       "kind": "custom",
       "refersTo": "checkbox",
-      "description": "Task completion control. Hairline square that fills indigo when checked.",
-      "html": "<label class=\"ds-checkbox\"><input type=\"checkbox\" checked /> Done</label>",
-      "css": ".ds-checkbox { display: inline-flex; align-items: center; gap: 10px; font: 430 16px system-ui, sans-serif; color: #13141B; cursor: pointer; user-select: none; } .ds-checkbox input { appearance: none; width: 18px; height: 18px; border: 1.5px solid #CFCFCC; border-radius: 5px; background: #FFFFFF; position: relative; cursor: pointer; transition: background 120ms, border-color 120ms; } .ds-checkbox input:checked { background: #3B4A8C; border-color: #3B4A8C; } .ds-checkbox input:checked::after { content: \"\"; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #FFFFFF; border-width: 0 2px 2px 0; transform: rotate(45deg); }"
+      "description": "The task-completion control uses the global interaction accent and an adaptive check mark.",
+      "html": "<label class=\"ds-checkbox\"><input type=\"checkbox\" checked /> <span>Done</span></label>",
+      "css": ".ds-checkbox { display: inline-flex; align-items: center; gap: 10px; font: 430 16px/1.55 var(--sans, system-ui, sans-serif); color: var(--slate, #242331); cursor: pointer; user-select: none; } .ds-checkbox input { appearance: none; width: 18px; height: 18px; margin: 0; border: 1px solid var(--control-border, #8D8C9D); border-radius: var(--r-xs, 4px); background: var(--paper, #FDFDFF); position: relative; cursor: pointer; transition: background 120ms ease, border-color 120ms ease; } .ds-checkbox input:hover { border-color: var(--accent, #5C4F7D); } .ds-checkbox input:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } .ds-checkbox input:checked { background: var(--accent, #5C4F7D); border-color: var(--accent, #5C4F7D); } .ds-checkbox input:checked::after { content: \"\"; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid var(--on-accent, #FDFDFF); border-width: 0 2px 2px 0; transform: rotate(45deg); }"
     },
     {
-      "name": "Quadrant Pane (Do First)",
+      "name": "Quadrant Pane — Do First",
       "kind": "custom",
-      "refersTo": "quadrant-pane",
-      "description": "Signature component: an Eisenhower quadrant. Hue wash over cloud-white, 3px top accent bar, tinted header. Shown here as Q1 / Do First (rust).",
-      "html": "<section class=\"ds-quadrant\"><header class=\"ds-quadrant-head\"><span class=\"ds-quadrant-eyebrow\">Urgent · Important</span><h3 class=\"ds-quadrant-title\">Do First</h3></header><div class=\"ds-quadrant-body\">Crises, deadlines, emergencies.</div></section>",
-      "css": ".ds-quadrant { position: relative; width: 300px; background: color-mix(in srgb, #B04A3F 18%, #FFFFFF); border: 1.5px solid #CFCFCC; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,20,19,0.06); } .ds-quadrant::before { content: \"\"; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #B04A3F; } .ds-quadrant-head { padding: 16px 20px 12px; background: color-mix(in srgb, #B04A3F 10%, #FFFFFF); } .ds-quadrant-eyebrow { display: inline-block; font: 500 11px ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #6F6F75; margin-bottom: 6px; } .ds-quadrant-title { margin: 0; font: 500 19px ui-serif, Georgia, serif; letter-spacing: -0.008em; color: #13141B; } .ds-quadrant-body { padding: 14px 20px 18px; font: 430 16px/1.55 system-ui, sans-serif; color: #3A3B41; }"
+      "refersTo": "pane",
+      "description": "The signature matrix pane combines an exact wash, header band, 3px pigment rule, Lucide-style icon, and ink-safe title.",
+      "html": "<section class=\"ds-quadrant\"><header class=\"ds-quadrant-head\"><svg class=\"ds-quadrant-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 2c.5 4-2.5 6-2.5 9 0 1.7 1.1 3 2.5 3 2 0 3-1.7 3-3.5 1.9 2 3 4.2 3 6.5a6 6 0 0 1-12 0c0-3.1 1.7-5.8 5-8.2-.1 2.2.5 3.5 1.5 4.2\"/></svg><h3 class=\"ds-quadrant-title\">Do First</h3><span class=\"ds-quadrant-hint\">Urgent · Important</span><span class=\"ds-quadrant-count\">3</span></header><div class=\"ds-quadrant-body\"><article class=\"ds-quadrant-task\">Resolve launch blocker</article></div></section>",
+      "css": ".ds-quadrant { width: 320px; overflow: hidden; color: var(--slate, #242331); background: var(--q1-wash, #FBF5F4); border: 1px solid var(--pane-border, #D6D5E0); border-radius: var(--r-lg, 14px); box-shadow: var(--shadow-sm, 0 1px 2px rgba(36, 35, 49, 0.055)); } .ds-quadrant-head { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 18px; background: var(--q1-header, #F2DEDC); border-top: 3px solid var(--q1, #B95F5A); } .ds-quadrant-icon { width: 18px; height: 18px; flex: none; color: var(--q1-ink, #873F3C); } .ds-quadrant-title { margin: 0; font: 600 14px/1 var(--sans, system-ui, sans-serif); color: var(--q1-ink, #873F3C); } .ds-quadrant-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 12px/1.4 var(--sans, system-ui, sans-serif); color: var(--gray-500, #646477); } .ds-quadrant-count { margin-left: auto; padding: 2px 8px; font: 500 11px/1.4 var(--sans, system-ui, sans-serif); color: var(--gray-500, #646477); background: var(--gray-100, #ECECF2); border-radius: 999px; } .ds-quadrant-body { min-height: 120px; padding: 12px 16px 16px; } .ds-quadrant-task { padding: 14px 16px; font: 600 14px/1.35 var(--sans, system-ui, sans-serif); color: var(--slate, #242331); background: var(--paper, #FDFDFF); border: 1px solid var(--gray-300, #D9D9E4); border-radius: var(--r-md, 12px); }"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Active navigation uses aubergine for the icon while its container stays on a quiet neutral surface.",
+      "html": "<button class=\"ds-nav-item\" aria-current=\"page\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\"/></svg><span>Matrix</span></button>",
+      "css": ".ds-nav-item { display: inline-flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 12px 0 10px; font: 500 16px/1 var(--sans, system-ui, sans-serif); color: var(--slate, #242331); background: var(--gray-100, #ECECF2); border: 1px solid transparent; border-radius: 12px; cursor: pointer; transition: background 150ms ease, color 150ms ease; } .ds-nav-icon { width: 20px; height: 20px; color: var(--accent, #5C4F7D); } .ds-nav-item:hover { background: var(--gray-200, #E2E1EA); } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-focus-ring, rgba(92, 79, 125, 0.24)); } @media (pointer: coarse) { .ds-nav-item { min-height: 44px; } }"
     }
   ],
   "narrative": {
-    "northStar": "The Strategist's Matrix",
-    "overview": "GSD is built around one act: deciding what matters before doing anything. The interface should feel like a strategist's well-ordered planning surface, not a cockpit of dials. Everything is calm, deliberate, and legible at a glance; the four-quadrant Eisenhower grid is the argument the whole system makes, and the visual language exists to make that prioritization decision feel obvious rather than busy. The Inkwell 'Indigo & Cloud' system carries this: a cool-stone paper ground, a single deep-indigo accent for intent, serif headings that lend authority without shouting, and a 1.5px hairline that draws structure with the lightest possible touch. The personality is calm and focused. Surfaces are quiet, type does the talking, and the one saturated color is spent only where it means something. Delight is reserved for genuine moments (completing a task) and never spread across the surface.",
+    "northStar": "The Strategist’s Matrix",
+    "overview": "GSD is built around one act: deciding what matters before doing anything. The interface should feel like a strategist’s well-ordered planning surface, not a cockpit of dials. Everything is calm, deliberate, and legible at a glance. The four-quadrant Eisenhower grid is the argument the whole system makes, and the visual language exists to make prioritization obvious without making the product busy. Inkwell Violet Frost carries that intent with a lavender-gray canvas, pale paper surfaces, Albert Sans, quiet 1px boundaries, and one restrained aubergine interaction color. Four bounded quadrant pigments make the matrix scannable without turning the rest of the application into a rainbow. Color communicates hierarchy or state; it is not decoration. This system rejects four traps: the flashy AI-startup look, the gamified todo toy, the dense enterprise PM tool, and the generic SaaS dashboard. Violet Frost’s aubergine is an interaction ink, not permission for purple gradients, glowing violet blobs, gradient text, or decorative spectacle. Delight is reserved for genuine moments such as completing a task.",
     "keyCharacteristics": [
-      "Cool-stone editorial ground; cloud-white panels; deep indigo as the sole accent.",
-      "Serif headings (Georgia family) against a system-sans body: a contrast pairing, not two competing sans.",
-      "The 1.5px hairline is the signature border; structure is drawn, not boxed in shadow.",
-      "Four fixed quadrant hues (rust / indigo / sage / amber), always paired with label + position.",
-      "Flat at rest; surfaces lift only in response to state. Motion is 120–300ms, ease-out, never decorative.",
-      "First-class dark mode (Pattern B), WCAG-AA contrast by construction."
+      "Lavender-gray canvas, near-white paper, and a subtle raised surface establish depth quietly.",
+      "Albert Sans carries display, body, labels, and controls as one coherent family.",
+      "Aubergine is reserved for global interaction: actions, current selection, links, and focus.",
+      "Four fixed quadrant families use pigment, darker/lighter ink, wash, and header tokens.",
+      "Matrix identity is stated in the pane header and card marker; unrelated metadata stays neutral.",
+      "Surfaces are restrained at rest and respond with small contrast, elevation, or motion changes.",
+      "Light and dark modes are independently tuned and share one semantic contract."
     ],
     "rules": [
-      { "name": "The Quadrant Quartet Rule", "body": "Rust = Do First, Indigo = Schedule, Sage = Delegate, Amber = Eliminate. These four assignments are fixed. Never reassign a quadrant hue, and never convey a quadrant by color alone; always pair it with its label and grid position.", "section": "colors" },
-      { "name": "The One Accent Rule", "body": "Deep indigo is spent only on intent: primary actions, current selection, focus, links. It is never a decorative fill or a gradient. If indigo appears somewhere that isn't an action or a state, remove it.", "section": "colors" },
-      { "name": "The Serif-Up Rule", "body": "Serif climbs (display to title), sans holds the body and the working UI. Never set body copy in the serif, and never set a display heading in the sans. The contrast between the two faces is the hierarchy.", "section": "typography" },
-      { "name": "The One Eyebrow Rule", "body": "The mono uppercase eyebrow with its leading 24px indigo rule is a deliberate, named brand element used sparingly. A single signature kicker, never a tracked-uppercase label stamped above every section.", "section": "typography" },
-      { "name": "The Flat-at-Rest Rule", "body": "Surfaces are flat until they respond. Shadow is the language of state (hover, focus, float, overlay), not a default decoration. If a resting element has a shadow but no interaction, it should probably be a hairline border instead.", "section": "elevation" }
+      { "name": "The Aubergine Restraint Rule", "body": "Aubergine is the global interaction ink. Use it for actions, selection, links, and focus. Never use it as Q2, a decorative wash, a glow, or a gradient.", "section": "colors" },
+      { "name": "The Quadrant Quartet Rule", "body": "Q1 muted rose, Q2 juniper, Q3 ochre, and Q4 smoke slate are fixed. Never reassign them, and never convey a quadrant by hue alone: pair pigment with title, icon, and grid position.", "section": "colors" },
+      { "name": "The Semantic Separation Rule", "body": "Quadrant pigments describe priority only. Tags, sync state, navigation, and other metadata use neutral, interaction, or status tokens according to their own meaning. A shared hex family does not make two roles interchangeable.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Albert Sans carries display and working UI. Hierarchy comes from scale, weight, spacing, and contrast, not from switching families.", "section": "typography" },
+      { "name": "The One-Eyebrow Rule", "body": "A small tracked eyebrow can introduce one key section. It is a deliberate exception, not a template label stamped above every heading.", "section": "typography" }
     ],
     "dos": [
-      "Do use the 1.5px hairline (#CFCFCC) as the default border. It is the brand; structure is drawn, not shadowed.",
-      "Do reserve the serif (Georgia) for display and headings and the system sans for body and working UI: the contrast pairing is the hierarchy.",
-      "Do spend deep indigo only on intent: primary actions, current selection, focus rings, links. Keep it on 10% or less of any screen.",
-      "Do pair every quadrant hue with its label and grid position, so the matrix reads in grayscale and for color-blind users.",
-      "Do keep surfaces flat at rest and lift them only on interaction (hover translateY(-3px), focus halo, dialog shadow).",
-      "Do honor prefers-reduced-motion with an instant/crossfade fallback on every animation, and keep touch targets 44px or larger on coarse pointers.",
-      "Do hold muted text at gray-500 (#6F6F75) or darker (the AA floor), never a lighter 'elegant' gray."
+      "Use the exact Violet Frost surface, interaction, semantic, and quadrant tokens.",
+      "Keep Albert Sans as the only visual type family across display and working UI.",
+      "Spend aubergine on global interaction and keep it to a small share of each view.",
+      "Pair every quadrant pigment with title, icon, and position so the matrix works without color.",
+      "Use `--q*-ink` for quadrant text and `--q*` for non-text marks.",
+      "Keep washes quiet and state the quadrant primarily in the header and card marker.",
+      "Honor reduced motion and 44px coarse-pointer targets."
     ],
     "donts": [
-      "Don't ship the flashy AI-startup look: no purple gradients, no glassmorphism as default, no background-clip:text gradient text, no buzzword copy (supercharge / streamline / seamless).",
-      "Don't drift toward a gamified todo toy: no mascots, no points or badge economies, no juvenile illustration. One tasteful completion confetti is the deliberate exception, not a license.",
-      "Don't build a dense enterprise PM tool: no overwhelming toolbars, no deeply nested settings, no feature soup. GSD is a focused personal tool.",
-      "Don't fall into the generic SaaS dashboard: no cookie-cutter card grids, no hero-metric template (big number + small label + gradient accent).",
-      "Don't use border-left/border-right greater than 1px as a colored accent stripe. The legacy .stat-card.warn and .overdue-task left-borders are anti-patterns to migrate, not to copy.",
-      "Don't extend the deprecated .matrix-card or .rd-* (redesign-scope) class systems. Build on components/ui/* and the Inkwell primitives.",
-      "Don't introduce a web font or a third type family. Three system stacks (serif / sans / mono) carry everything.",
-      "Don't set fluid clamp() headings in product UI. The type scale is fixed px on purpose."
+      "Don’t turn Violet Frost into a purple-gradient aesthetic. No violet/cyan gradients, glowing blobs, gradient text, or glassmorphism-by-default.",
+      "Don’t use aubergine as Q2 or a generic decorative fill.",
+      "Don’t color tags or unrelated metadata with their task’s quadrant.",
+      "Don’t use raw quadrant pigments for normal-size text when an ink token exists.",
+      "Don’t drift toward mascots, points, badge economies, feature soup, or cookie-cutter card grids.",
+      "Don’t extend deprecated `.matrix-card` or `.rd-*` component systems.",
+      "Don’t introduce another display or body font; the single-family Albert Sans system is deliberate.",
+      "Don’t use fluid `clamp()` headings inside the product shell; the fixed scale is intentional."
     ]
   }
 }

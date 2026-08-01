@@ -24,17 +24,17 @@ function getIconComponent(type: IconType) {
     case 'cloud-off':
       return <CloudOffIcon className="h-5 w-5" />;
     case 'alert-auth':
-      return <AlertCircleIcon className="h-5 w-5 text-red-600 animate-pulse" />;
+      return <AlertCircleIcon className="h-5 w-5 animate-pulse text-status-overdue" />;
     case 'clock':
-      return <ClockIcon className="h-5 w-5 text-orange-500" />;
+      return <ClockIcon className="h-5 w-5 text-status-blocked" />;
     case 'cloud-syncing':
       return <CloudIcon className="h-5 w-5 animate-pulse" />;
     case 'check-success':
-      return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      return <CheckCircleIcon className="h-5 w-5 text-status-success" />;
     case 'x-error':
-      return <XCircleIcon className="h-5 w-5 text-red-500" />;
+      return <XCircleIcon className="h-5 w-5 text-status-overdue" />;
     case 'alert-conflict':
-      return <AlertCircleIcon className="h-5 w-5 text-yellow-500" />;
+      return <AlertCircleIcon className="h-5 w-5 text-status-blocked" />;
     case 'cloud-idle':
       return <CloudIcon className="h-5 w-5" />;
   }
@@ -116,7 +116,7 @@ export function SyncButton() {
               {hasAuthError && (
                 <Badge
                   variant="default"
-                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-red-600 text-white text-xs"
+                  className="absolute -right-1 -top-1 h-5 min-w-[20px] border border-status-overdue/45 bg-status-overdue-muted px-1 text-xs text-status-overdue-ink"
                 >
                   !
                 </Badge>
@@ -125,18 +125,18 @@ export function SyncButton() {
               {isEnabled && !hasAuthError && pendingCount > 0 && (
                 <Badge
                   variant="default"
-                  className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-accent text-white text-xs"
+                  className="absolute -right-1 -top-1 h-5 min-w-[20px] bg-accent px-1 text-xs text-on-accent"
                 >
                   {pendingCount}
                 </Badge>
               )}
 
               {!isEnabled && (
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-gray-400" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-status-blocking" />
               )}
 
               {!hasAuthError && retryCountdown !== null && retryCountdown > 0 && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-medium text-orange-500">
+                <span className="text-caption absolute -bottom-1 left-1/2 -translate-x-1/2 font-medium text-status-blocked-ink">
                   {retryCountdown}s
                 </span>
               )}
@@ -145,7 +145,7 @@ export function SyncButton() {
           <TooltipContent>
             <p>{tooltip}</p>
             {status === 'error' && error && (
-              <p className="text-xs text-red-400 mt-1">{error}</p>
+              <p className="mt-1 text-xs text-status-overdue-ink">{error}</p>
             )}
           </TooltipContent>
         </Tooltip>

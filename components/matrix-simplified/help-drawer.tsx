@@ -51,7 +51,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             </div>
             <DialogTitle asChild>
               <h2 style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 600, letterSpacing: "-0.015em", lineHeight: 1.1 }}>
-                How to use <em style={{ fontStyle: "italic", color: "var(--q2)" }}>GSD</em>
+                How to use <em style={{ fontStyle: "italic", color: "var(--accent)" }}>GSD</em>
               </h2>
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -62,11 +62,11 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
           <Section label="One board, one capture bar">
-            <Concept title="The matrix" accent="var(--q1)">
+            <Concept title="The matrix" accent="var(--accent)">
               The classic 2×2 Eisenhower board is your home view. Drag a task between quadrants to reclassify it; hover a
               quadrant while dragging to see the drop target highlight.
             </Concept>
-            <Concept title="The capture bar" accent="var(--q2)">
+            <Concept title="The capture bar" accent="var(--accent)">
               Every task starts in the bar at the top. Type your task, hit{" "}
               <kbd>Enter</kbd>, and the parser routes it to the right quadrant based on{" "}
               <code style={codeStyle}>!</code> / <code style={codeStyle}>*</code> markers — or press{" "}
@@ -131,7 +131,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               tasks sync across devices against a self-hosted PocketBase backend.
             </p>
             <p style={{ ...bodyStyle, color: "var(--ink-3)" }}>
-              A blue badge means there are pending changes to push; a red&nbsp;<em>!</em> badge means the session expired and you
+              An aubergine badge means there are pending changes to push; a coral&nbsp;<em>!</em> badge means the session expired and you
               need to re-authenticate. Visit{" "}
               <Link href={"/sync-history" as const} style={linkStyle} onClick={onClose}>
                 Sync history
@@ -274,14 +274,14 @@ const codeStyle: React.CSSProperties = {
   fontFamily: "var(--mono)",
   fontSize: 12,
   padding: "2px 8px",
-  borderRadius: 6,
+  borderRadius: "var(--r-xs)",
   border: "var(--line)",
   background: "var(--bg-inset)",
   color: "var(--ink)",
 };
 
 const linkStyle: React.CSSProperties = {
-  color: "var(--q2)",
+  color: "var(--accent)",
   textDecoration: "underline",
   textUnderlineOffset: 2,
 };

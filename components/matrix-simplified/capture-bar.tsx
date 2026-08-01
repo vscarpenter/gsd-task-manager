@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowRightIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
-import { quadrantByRdKey, QUADRANT_ACCENT, type RedesignQuadrantKey } from "@/lib/quadrants";
+import {
+  quadrantByRdKey,
+  QUADRANT_ACCENT,
+  QUADRANT_HEADER,
+  QUADRANT_INK,
+  type RedesignQuadrantKey,
+} from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 
 export interface CapturePayload {
@@ -95,6 +101,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   const effectiveKey = override ?? autoKey;
   const meta = quadrantByRdKey(effectiveKey);
   const accent = QUADRANT_ACCENT[effectiveKey];
+  const ink = QUADRANT_INK[effectiveKey];
 
   const cycleQuadrant = () => {
     const idx = CYCLE.indexOf(override);
@@ -174,8 +181,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
             title="Tab to cycle quadrant"
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             style={{
-              backgroundColor: `color-mix(in srgb, ${accent} 20%, transparent)`,
-              color: accent,
+              backgroundColor: QUADRANT_HEADER[effectiveKey],
+              color: ink,
             }}
           >
             <span
@@ -221,7 +228,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
           "touch-target inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-[background-color,color,transform] duration-[120ms]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
           parsed.title
-            ? "bg-accent text-card hover:bg-accent-hover active:scale-[0.97]"
+            ? "bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.97]"
             : "bg-accent/15 text-accent hover:bg-accent/20"
         )}
       >

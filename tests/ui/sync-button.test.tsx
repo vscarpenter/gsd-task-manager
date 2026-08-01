@@ -99,9 +99,9 @@ describe('SyncButton', () => {
 
   it('shows offline indicator dot when sync is disabled', () => {
     render(<SyncButton />);
-    // The button should have a gray dot indicator when not enabled
+    // Offline is neutral status, not a hard-coded framework gray.
     const button = screen.getByRole('button', { name: /sync disabled/i });
-    expect(button.querySelector('.bg-gray-400')).toBeInTheDocument();
+    expect(button.querySelector('.bg-status-blocking')).toBeInTheDocument();
   });
 
   it('renders enabled idle state', () => {

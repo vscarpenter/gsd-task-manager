@@ -57,7 +57,7 @@ export function IconRail({ onHelp }: IconRailProps) {
     <>
       <aside
         className={cn(
-          "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-background md:transition-[width] md:duration-150 md:ease-out",
+          "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-rail md:transition-[width] md:duration-150 md:ease-out",
           collapsed ? "md:w-[60px]" : "md:w-[180px]"
         )}
         aria-label="Primary navigation"
@@ -103,7 +103,7 @@ export function IconRail({ onHelp }: IconRailProps) {
         </div>
       </aside>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-border/70 bg-background/95 px-2 py-1.5 backdrop-blur md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-border/70 bg-rail px-2 py-1.5 md:hidden"
         aria-label="Primary navigation (mobile)"
       >
         {PRIMARY.map((item) => (
@@ -161,7 +161,7 @@ function RailButton({
           disabled && "cursor-wait opacity-60"
         )}
       >
-        <Icon className={cn("h-5 w-5", active && "text-q1")} aria-hidden />
+        <Icon className={cn("h-5 w-5", active && "text-accent")} aria-hidden />
       </button>
     );
   }
@@ -184,7 +184,7 @@ function RailButton({
         disabled && "cursor-wait opacity-60"
       )}
     >
-      <Icon className={cn("h-5 w-5 shrink-0", active && "text-q1")} aria-hidden />
+      <Icon className={cn("h-5 w-5 shrink-0", active && "text-accent")} aria-hidden />
       <span
         className={cn(
           "whitespace-nowrap transition-opacity duration-150",

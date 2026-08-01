@@ -134,9 +134,9 @@ function ActionRow({
 		>
 			{/* Leading icon is chrome on a disclosure row → graphite; destructive stays
 			    rust. Tide is reserved for genuine actions and links (reference §07). */}
-			<Icon className={`w-5 h-5 ${isDanger ? "text-rust" : "text-foreground-muted"}`} />
+			<Icon className={`w-5 h-5 ${isDanger ? "text-rust-d" : "text-foreground-muted"}`} />
 			<div className="flex-1 min-w-0">
-				<p className={`text-sm font-medium ${isDanger ? "text-rust" : "text-foreground"}`}>
+				<p className={`text-sm font-medium ${isDanger ? "text-rust-d" : "text-foreground"}`}>
 					{label}
 				</p>
 				{description && (

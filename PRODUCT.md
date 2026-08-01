@@ -20,7 +20,7 @@ Success looks like a user who spends less time in Q1 (reactive firefighting) and
 
 ## Brand Personality
 
-**Calm and focused.** GSD should feel like a quiet desk, not a cockpit. The interface is unhurried and low-noise; the editorial restraint of the Inkwell system (serif display against a system sans, a single indigo accent, the 1.5px hairline, cool-stone surfaces) is the personality made visible.
+**Calm and focused.** GSD should feel like a quiet desk, not a cockpit. The interface is unhurried and low-noise; the restraint of Inkwell Violet Frost makes that personality visible through Albert Sans, a lavender-gray canvas, pale paper surfaces, quiet boundaries, and a single aubergine interaction color.
 
 - **Emotional goal:** the user feels clear-headed and in control: never overwhelmed, never behind, never nagged.
 - **Voice:** plain and direct. Respects the reader's attention and intelligence. Names what the product literally does. No productivity hype, no buzzwords, no exclamation-point cheerleading.
@@ -30,7 +30,7 @@ Success looks like a user who spends less time in Q1 (reactive firefighting) and
 
 GSD should explicitly NOT look or feel like:
 
-- **A flashy AI startup:** no purple gradients, glassmorphism-by-default, gradient text, or supercharge/streamline/seamless copy. Substance over shine.
+- **A flashy AI startup:** no purple gradients, glowing violet blobs, glassmorphism-by-default, gradient text, or supercharge/streamline/seamless copy. Violet Frost uses aubergine as restrained interaction ink, never as gradient decoration. Substance over shine.
 - **A gamified todo toy:** no cartoon mascots, no points/badges economy, no juvenile illustration. (One tasteful completion confetti is the deliberate exception, not a license for toy aesthetics.)
 - **A dense enterprise PM tool:** not Jira/Asana. No overwhelming toolbars, deeply nested settings, or feature soup. GSD is a focused *personal* tool; complexity is a failure, not a feature.
 - **A generic SaaS dashboard:** no cookie-cutter card grids, no hero-metric template (big number + small label + gradient accent), no interchangeable enterprise-app sameness.
@@ -41,9 +41,9 @@ GSD should explicitly NOT look or feel like:
 
 2. **Privacy is the foundation, not a feature to advertise.** Local-first by default, sync strictly opt-in, no tracking, no dark patterns. Every flow should make it obvious the user owns their data, and never pressure them out of that ownership.
 
-3. **The matrix is the argument.** GSD exists to make the urgent/important distinction tangible. Design should reinforce prioritization (the four-quadrant color language, washes, and accents carry meaning) rather than flattening tasks back into a generic list.
+3. **The matrix is the argument.** GSD exists to make the urgent/important distinction tangible. State each quadrant clearly in its pane header and task-card marker; keep the wash quiet and unrelated metadata neutral. The four-color language reinforces prioritization without flattening tasks back into a generic list or tinting everything in sight.
 
-4. **Earned familiarity over novelty.** Drag-and-drop, command palette, keyboard shortcuts, and standard form controls, all done well. Don't reinvent standard affordances for flavor; a focused personal tool wins on trust and muscle memory, not surprise.
+4. **Earned familiarity over novelty.** Drag-and-drop, keyboard shortcuts, command palette, and standard form controls, all done well. Don't reinvent standard affordances for flavor; a focused personal tool wins on trust and muscle memory, not surprise.
 
 5. **Delight in moments, restraint on pages.** Reserve celebration and personality for genuine moments (task completion). Keep every other surface composed. This is the line between "calm & focused" and the gamified/flashy traps above.
 
@@ -51,8 +51,8 @@ GSD should explicitly NOT look or feel like:
 
 WCAG 2.1 AA is the baseline, enforced by construction and review (see `coding-standards.md` Part 2 and the `a11y-reviewer` agent):
 
-- **Contrast:** body text ≥4.5:1, large text ≥3:1. Neutral tokens carry annotated contrast ratios (e.g. `--gray-500` at 5.05:1 on paper) so muted text never drifts below the floor.
+- **Contrast:** body text ≥4.5:1, large text ≥3:1. Violet Frost's light `--gray-500` (`#646477`) measures 5.69:1 on paper (`#FDFDFF`), so muted text has a documented floor. Quadrant titles use their `--q*-ink` token rather than the raw pigment.
 - **Motion:** every animation has a `prefers-reduced-motion: reduce` fallback (crossfade or instant). Reveals enhance already-visible content; they never gate visibility.
 - **Touch:** interactive targets expand to ≥44px on coarse pointers (WCAG 2.5.5) while staying compact on mouse-driven desktops.
 - **Color independence:** the four-quadrant language pairs color with labels and position, never relying on hue alone to convey quadrant or task state.
-- **Dark mode:** first-class (Inkwell Pattern B: system preference with manual override), with lifted hues tuned to hold contrast on dark surfaces.
+- **Dark mode:** first-class (Inkwell Pattern B: system preference with manual override), with a separately tuned `#14131B` canvas, `#211F2B` paper, `#ECEAF2` ink, and lifted `#A99BCB` interaction accent rather than a mechanical inversion.

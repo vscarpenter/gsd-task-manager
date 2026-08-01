@@ -163,7 +163,7 @@ export function SyncSettings({
 			<div className="px-4 py-3.5">
 				<div className="rounded-lg border border-status-overdue/35 bg-status-overdue-muted/40 p-4 space-y-3">
 					<div>
-						<p className="text-sm font-semibold text-status-overdue">Danger zone</p>
+						<p className="text-sm font-semibold text-status-overdue-ink">Danger zone</p>
 						<p className="text-xs text-foreground-muted mt-1">
 							Permanently delete your account and every task synced to it. This
 							cannot be undone.
@@ -189,4 +189,3 @@ export function SyncSettings({
 		</>
 	);
 }
-

@@ -118,7 +118,7 @@ export function ShareTabContent({
             aria-describedby={emailError ? "recipient-email-error" : undefined}
           />
           {emailError && (
-            <p id="recipient-email-error" role="alert" className="text-xs text-red-600">
+            <p id="recipient-email-error" role="alert" className="text-xs text-status-overdue-ink">
               {emailError}
             </p>
           )}

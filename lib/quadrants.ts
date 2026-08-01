@@ -23,6 +23,21 @@ export const QUADRANT_INK: Record<RedesignQuadrantKey, string> = {
   q4: "var(--q4-ink)",
 };
 
+/** Quiet pane ground and stronger header band for each matrix quadrant. */
+export const QUADRANT_WASH: Record<RedesignQuadrantKey, string> = {
+  q1: "var(--q1-wash)",
+  q2: "var(--q2-wash)",
+  q3: "var(--q3-wash)",
+  q4: "var(--q4-wash)",
+};
+
+export const QUADRANT_HEADER: Record<RedesignQuadrantKey, string> = {
+  q1: "var(--q1-header)",
+  q2: "var(--q2-header)",
+  q3: "var(--q3-header)",
+  q4: "var(--q4-header)",
+};
+
 /** Same palette keyed by QuadrantId for components that reference the long-form id. */
 export const QUADRANT_ACCENT_BY_ID: Record<QuadrantId, string> = {
   "urgent-important": "var(--q1)",

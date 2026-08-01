@@ -37,7 +37,7 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
         role="presentation"
       >
         <div
-          className="relative my-8 w-full max-w-md rounded-lg border border-card-border bg-card p-6 shadow-xl"
+          className="relative my-8 w-full max-w-md rounded-lg border border-card-border bg-card p-6 shadow-[var(--shadow-lg)]"
           onClick={(e) => e.stopPropagation()}
         >
           <DialogHeader
@@ -63,7 +63,7 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
 function DialogBackdrop({ onClose }: { onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 bg-[var(--backdrop)] backdrop-blur-sm"
       onClick={onClose}
       aria-hidden="true"
     />
@@ -160,7 +160,7 @@ function DialogBody({ state, oauthCallbacks }: DialogBodyProps) {
 
 function LoadingOverlay() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--backdrop)] backdrop-blur-sm">
       <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent border-t-transparent" />
     </div>
   );

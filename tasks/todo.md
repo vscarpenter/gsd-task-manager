@@ -2,6 +2,44 @@
 
 ---
 
+## Done — 2026-07-31: Apply Violet Frost across the application
+
+**Branch:** `codex/violet-frost-theme` · **Tier:** Non-trivial (shared color
+contract, all routed surfaces, fallback documents, and shipped brand assets).
+
+**Plan (TDD):**
+- [x] Inventory runtime tokens, routed surfaces, exceptional fallbacks, linked
+  documents, and static assets.
+- [x] RED: lock the exact Violet Frost token, contrast, matrix-anatomy, navigation,
+  fallback, semantic-class, and asset contracts.
+- [x] GREEN: implement shared light/dark tokens and the approved matrix quadrant
+  treatment.
+- [x] GREEN: remove Tidewater/raw-color leaks from all routes, fallbacks, report,
+  metadata, and static assets.
+- [x] Verify focused/full tests, coverage, typecheck, lint, production build,
+  accessibility review, and every route in a cache-reset live app.
+
+**Out of scope:** feature, navigation, layout, typography, data-model, sync-protocol,
+deployment, and unrelated repository-document changes.
+
+**Verification:** full suite 2,389 passed / 1 skipped; overall coverage 89.28%
+statements, 81.89% branches, 89.12% functions, and 90.26% lines; `bun
+typecheck` passed; `bun lint` passed with 10 pre-existing warnings outside this
+work; production static build passed. Accessibility review reported 0 Violet
+Frost regressions. A reset-state production sweep covered all 16 routed/theme
+combinations plus every Settings anchor and the standalone report with no page
+errors, console errors, failed requests, token mismatches, or horizontal
+overflow. Desktop and 390x844 matrix/settings screenshots were inspected in
+both themes; temporary verification tasks were removed afterward.
+
+**Resuming from here:** implementation and local verification are complete on
+`codex/violet-frost-theme`; no deployment or publication was performed. Browser
+chrome follows the OS-qualified metadata color, so a manual in-app theme override
+can differ from the browser chrome until that can be synchronized without racing
+Next.js head hydration.
+
+---
+
 ## Done — 2026-07-30: Resolve Codex Security capture findings
 
 **Branch:** `codex/fix-security-capture-sentry` · **Tier:** Standard (two bounded

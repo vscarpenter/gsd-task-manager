@@ -15,8 +15,9 @@ import { captureException } from "@/lib/sentry";
 const preStyle: React.CSSProperties = {
   marginTop: "0.5rem",
   padding: "1rem",
-  background: "#f3f4f6",
-  borderRadius: "0.375rem",
+  background: "#F7F7FA",
+  border: "1px solid #D9D9E4",
+  borderRadius: "0.625rem",
   fontSize: "0.75rem",
   overflow: "auto",
   whiteSpace: "pre-wrap",
@@ -25,12 +26,12 @@ const preStyle: React.CSSProperties = {
 
 const tryAgainButtonStyle: React.CSSProperties = {
   padding: "0.5rem 1rem",
-  /* Editorial tide (--accent). Hard-coded: global-error renders outside
+  /* Violet Frost aubergine. Hard-coded: global-error renders outside
      the root layout, so the token cascade isn't available here. */
-  background: "#2C6680",
-  color: "#fff",
+  background: "#5C4F7D",
+  color: "#FDFDFF",
   border: "none",
-  borderRadius: "0.375rem",
+  borderRadius: "0.625rem",
   cursor: "pointer",
   fontWeight: 500,
   fontSize: "0.875rem",
@@ -39,13 +40,59 @@ const tryAgainButtonStyle: React.CSSProperties = {
 const goHomeButtonStyle: React.CSSProperties = {
   padding: "0.5rem 1rem",
   background: "transparent",
-  color: "#13141b",
-  border: "1.5px solid #d1d5db",
-  borderRadius: "0.375rem",
+  color: "#242331",
+  border: "1px solid #D9D9E4",
+  borderRadius: "0.625rem",
   cursor: "pointer",
   fontWeight: 500,
   fontSize: "0.875rem",
 };
+
+const fallbackThemeCss = `
+  :root {
+    color-scheme: light;
+    --error-canvas: #F3F3F7;
+    --error-paper: #FDFDFF;
+    --error-ink: #242331;
+    --error-muted: #646477;
+    --error-raised: #F7F7FA;
+    --error-border: #D9D9E4;
+    --error-control-border: #8D8C9D;
+    --error-accent: #5C4F7D;
+    --error-on-accent: #FDFDFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --error-canvas: #14131B;
+      --error-paper: #211F2B;
+      --error-ink: #ECEAF2;
+      --error-muted: #AAA6B8;
+      --error-raised: #191821;
+      --error-border: #393645;
+      --error-control-border: #6F6B80;
+      --error-accent: #A99BCB;
+      --error-on-accent: #14131B;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --error-canvas: #14131B;
+    --error-paper: #211F2B;
+    --error-ink: #ECEAF2;
+    --error-muted: #AAA6B8;
+    --error-raised: #191821;
+    --error-border: #393645;
+    --error-control-border: #6F6B80;
+    --error-accent: #A99BCB;
+    --error-on-accent: #14131B;
+  }
+  body { background: var(--error-canvas) !important; color: var(--error-ink) !important; }
+  .global-error-muted { color: var(--error-muted) !important; }
+  .global-error-pre { background: var(--error-raised) !important; border-color: var(--error-border) !important; }
+  .global-error-primary { background: var(--error-accent) !important; color: var(--error-on-accent) !important; }
+  .global-error-secondary { color: var(--error-ink) !important; border-color: var(--error-control-border) !important; }
+`;
 
 export default function GlobalError({
   error,
@@ -56,15 +103,26 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     captureException(error, { digest: error.digest });
+    try {
+      const savedTheme = window.localStorage.getItem("gsd-theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    } catch {
+      // A degraded fallback must stay renderable even when storage is blocked.
+    }
   }, [error]);
 
   return (
     <html lang="en">
+      <head>
+        <style>{fallbackThemeCss}</style>
+      </head>
       <body
         style={{
           fontFamily: "system-ui, -apple-system, sans-serif",
-          background: "#fafaf9",
-          color: "#13141b",
+          background: "#F3F3F7",
+          color: "#242331",
           margin: 0,
         }}
       >
@@ -82,8 +140,9 @@ export default function GlobalError({
             Something went wrong
           </h1>
           <p
+            className="global-error-muted"
             style={{
-              color: "#6b7280",
+              color: "#646477",
               maxWidth: "28rem",
               textAlign: "center",
               margin: "0 0 1rem",
@@ -105,22 +164,24 @@ export default function GlobalError({
                 style={{
                   cursor: "pointer",
                   fontSize: "0.875rem",
-                  color: "#6b7280",
+                  color: "#646477",
                 }}
+                className="global-error-muted"
               >
                 Error details
               </summary>
-              <pre style={preStyle}>
+              <pre className="global-error-pre" style={preStyle}>
                 {error.message}
               </pre>
             </details>
           )}
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
-            <button type="button" onClick={reset} style={tryAgainButtonStyle}>
+            <button className="global-error-primary" type="button" onClick={reset} style={tryAgainButtonStyle}>
               Try again
             </button>
             <button
               type="button"
+              className="global-error-secondary"
               onClick={() => {
                 window.location.href = "/";
               }}

@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 
 // --- Mocks ---
 
@@ -77,6 +78,13 @@ describe('ThemeToggle', () => {
       systemTheme: 'light',
       forcedTheme: undefined,
     });
+  });
+
+  it('renders a non-interactive placeholder in the server snapshot', () => {
+    const html = renderToString(<ThemeToggle />);
+    expect(html).toContain('data-testid="theme-toggle-placeholder"');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).not.toContain('<button');
   });
 
   it('renders a toggle button with correct aria-label', () => {

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { CalendarIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { quadrants, QUADRANT_ACCENT } from "@/lib/quadrants";
+import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 
 // ─── Shared ────────────────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
         {quadrants.map((q) => {
           const active = q.urgent === urgent && q.important === important;
           const a = QUADRANT_ACCENT[q.rdKey];
+          const ink = QUADRANT_INK[q.rdKey];
           return (
             <button
               data-testid={`edit-quadrant-${q.rdKey}`}
@@ -47,8 +48,8 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
               )}
               style={
                 active
-                  ? { borderColor: a, backgroundColor: `color-mix(in srgb, ${a} 14%, transparent)`, color: a }
-                  : { borderColor: `color-mix(in srgb, ${a} 35%, transparent)`, color: `color-mix(in srgb, ${a} 78%, var(--ink-3))` }
+                  ? { borderColor: a, backgroundColor: QUADRANT_HEADER[q.rdKey], color: ink }
+                  : { borderColor: `color-mix(in srgb, ${a} 35%, transparent)`, color: ink }
               }
               aria-pressed={active}
             >

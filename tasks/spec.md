@@ -1,3 +1,90 @@
+# Spec: Apply Violet Frost across the application
+
+**Date:** 2026-07-31 · **Status:** Implemented · **Tier:** Non-trivial
+
+## Goal
+
+Replace the current Tidewater presentation with the approved Violet Frost direction
+across every user-visible route, theme state, fallback, linked report, and shipped
+brand asset while preserving the product's calm, local-first interaction model.
+
+## Inputs / outputs
+
+- Input: the approved Violet Frost mockup, including its lavender-gray canvas,
+  aubergine interaction color, restrained semantic hues, and four distinct quadrant
+  header bands/washes.
+- Output: one shared light/dark token system consumed by the matrix, dashboard,
+  archive, settings, about, install, sync history, 404/error/loading states, dialogs,
+  the linked codebase report, browser/PWA metadata, and static icons.
+- Output: matrix panes with a quiet quadrant wash, tinted header band, 3px pigment
+  rule, Lucide quadrant icon, ink-safe title, and a 3px inset task-card spine.
+
+## Constraints
+
+- Preserve Albert Sans, layout, information architecture, behavior, persistence,
+  and offline/PWA functionality; this is a color-system rollout, not a product
+  redesign.
+- Keep aubergine reserved for global interaction. Matrix pigments communicate
+  quadrant only; tags and unrelated state metadata remain neutral.
+- Meet WCAG 2.1 AA for body text, controls, and quadrant titles in light and dark
+  themes. Dark mode is independently tuned rather than mechanically inverted.
+- Use semantic tokens instead of raw Tailwind hue families in application code.
+- Add no runtime dependency and make no schema, sync-protocol, or route changes.
+- Treat the previously approved visual direction as approval for this spec and its
+  downstream plan, per the repository's standing design instruction.
+
+## Edge cases
+
+- Automatic, forced-light, and forced-dark modes must resolve to the same semantic
+  contract without duplicate cascades drifting apart.
+- `app/global-error.tsx` renders without the normal CSS cascade and therefore needs
+  a self-contained Violet Frost fallback.
+- The linked static codebase report owns a separate inline theme and persistence
+  key; it must be themed independently.
+- Empty, loading, populated, overdue, success, warning, failure, disabled, hover,
+  focus, and drag-over states must remain legible in both themes.
+- SVG and raster PWA/social assets must agree so cached or platform-selected image
+  formats do not retain Tidewater colors.
+
+## Out of scope
+
+- New features, route/navigation changes, typography replacement, layout
+  restructuring, animation redesign, data migrations, deployment, or publication.
+- Re-theming repository-only historical reports that are not linked or served by
+  the application.
+
+## Acceptance criteria
+
+- [x] Exact approved Violet Frost light tokens and the contrast-safe dark companion
+  are the only runtime color source of truth.
+- [x] Every application route and Settings section inherits Violet Frost with no
+  raw numeric Tailwind semantic-color classes.
+- [x] Matrix panes and task cards match the approved quadrant treatment, including
+  loading and empty states.
+- [x] Active navigation uses the global aubergine accent, not a quadrant pigment.
+- [x] Global error, component error, 404, dialogs, sync states, and PWA surfaces use
+  the same semantic language.
+- [x] Manifest, favicon, app icons, social preview, matrix illustration, and linked
+  static report contain no retired Tidewater palette values.
+- [x] Token/contrast/asset regression tests, focused UI tests, full tests,
+  typecheck, lint, and production build pass.
+- [x] Every routed page is verified in the running app after clearing stale PWA
+  state, with representative light and dark screenshots inspected.
+- [x] An accessibility review of changed React surfaces reports no unresolved
+  WCAG-AA regression.
+
+## Test stubs
+
+- `tests/data/violet-frost-theme.test.ts`: exact token contract, calculated contrast,
+  static metadata/assets, linked report, and raw semantic-color leak scan.
+- `tests/ui/task-card-anatomy.test.tsx`: pane header band/icon/rule/wash and 3px
+  task-card spine.
+- `tests/ui/icon-rail.test.tsx`: desktop/mobile active navigation uses `text-accent`.
+- `tests/ui/global-error.test.tsx`: degraded-mode Violet Frost inline colors.
+- `tests/ui/sync-auth-dialog.test.tsx`: semantic danger styling replaces raw red.
+
+---
+
 # Spec: Resolve 2026-07-10 application audit findings
 
 **Date:** 2026-07-10 · **Status:** Complete · **Tier:** Non-trivial

@@ -93,13 +93,12 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(screen.getByTestId("task-card-spine").style.backgroundColor).toBe("var(--q2)");
   });
 
-  // Tidewater shrinks the spine from a 3px full-height square rule to a 2px
-  // pill inset 10px top and bottom. Full-height read as a border the card
-  // owned; inset reads as a mark placed on it, which is what a quadrant is.
-  it("draws the spine as a 2px pill inset from the card's top and bottom", () => {
+  // Violet Frost gives the quadrant mark enough weight to hold its own beside
+  // the pane header while keeping it inset from the card's structural border.
+  it("draws the spine as a 3px pill inset from the card's top and bottom", () => {
     renderCard();
     const spine = screen.getByTestId("task-card-spine");
-    expect(spine.className).toContain("w-[2px]");
+    expect(spine.className).toContain("w-[3px]");
     expect(spine.className).toContain("rounded-full");
     expect(spine.className).toContain("top-[10px]");
     expect(spine.className).toContain("bottom-[10px]");
@@ -171,10 +170,10 @@ describe("TaskCard anatomy — four-pigment language", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Quadrant header identity dot (Tidewater)
+// Quadrant header identity (Violet Frost)
 // ---------------------------------------------------------------------------
 
-describe("QuadrantPane header — quadrant identity dot", () => {
+describe("QuadrantPane header — Violet Frost quadrant identity", () => {
   function renderPane(rdKey: "q1" | "q2" | "q3" | "q4") {
     const meta = rdKey === "q1"
       ? quadrantForTask(true, true)
@@ -197,20 +196,35 @@ describe("QuadrantPane header — quadrant identity dot", () => {
     );
   }
 
-  // Tidewater reduces quadrant identity in the header to a single 7px dot —
-  // the 18px pigment glyph and the 3px pane top-bar are both retired, so the
-  // dot is the only place the pigment appears in the pane chrome.
-  it("marks the quadrant with a dot in its own pigment", () => {
+  it("uses the quadrant wash as the pane ground", () => {
     renderPane("q1");
-    const dot = screen.getByTestId("quadrant-icon");
-    expect(dot).toBeInTheDocument();
-    expect(dot.style.backgroundColor).toBe("var(--q1)");
-    expect(dot.className).toContain("rounded-full");
+    expect(screen.getByTestId("quadrant-q1").style.backgroundColor).toBe("var(--q1-wash)");
   });
 
-  it("colors the header dot per quadrant (q3 delegate = brass)", () => {
+  it("renders a tinted header with a 3px pigment rule", () => {
+    renderPane("q1");
+    const header = screen.getByTestId("quadrant-header");
+    expect(header.style.backgroundColor).toBe("var(--q1-header)");
+    expect(header.style.borderTopColor).toBe("var(--q1)");
+    expect(header.className).toContain("border-t-[3px]");
+  });
+
+  it("uses a Lucide glyph and ink-safe title in the quadrant ink", () => {
+    renderPane("q1");
+    const icon = screen.getByTestId("quadrant-icon");
+    const title = screen.getByTestId("quadrant-title");
+    expect(icon.tagName.toLowerCase()).toBe("svg");
+    expect(icon.style.color).toBe("var(--q1-ink)");
+    expect(icon.className.baseVal).toContain("h-[18px]");
+    expect(title.style.color).toBe("var(--q1-ink)");
+    expect(screen.getByTestId("quadrant-hint").style.color).toBe("var(--q1-ink)");
+  });
+
+  it("colors every header surface from its own quadrant contract", () => {
     renderPane("q3");
-    expect(screen.getByTestId("quadrant-icon").style.backgroundColor).toBe("var(--q3)");
+    expect(screen.getByTestId("quadrant-q3").style.backgroundColor).toBe("var(--q3-wash)");
+    expect(screen.getByTestId("quadrant-header").style.backgroundColor).toBe("var(--q3-header)");
+    expect(screen.getByTestId("quadrant-icon").style.color).toBe("var(--q3-ink)");
   });
 
   it("shows an empty-state mark tile when the quadrant is empty", () => {

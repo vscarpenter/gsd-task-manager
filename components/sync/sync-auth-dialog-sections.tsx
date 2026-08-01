@@ -39,11 +39,11 @@ export function SessionExpiredSection({
 }: SessionExpiredSectionProps) {
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-        <p className="mb-1 text-sm font-medium text-amber-700 dark:text-amber-400">
+      <div className="rounded-lg border border-status-blocked/45 bg-status-blocked-muted p-4">
+        <p className="mb-1 text-sm font-medium text-status-blocked-ink">
           Session expired
         </p>
-        <p className="text-sm text-amber-600 dark:text-amber-300">
+        <p className="text-sm text-status-blocked-ink">
           Your session for {syncStatus.email} has expired.
           Sign in again to continue syncing.
         </p>
@@ -177,8 +177,8 @@ function LogoutConfirmation({
   const changeLabel = pendingChanges === 1 ? "change" : "changes";
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
-      <p className="mb-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+    <div className="rounded-lg border border-status-blocked/45 bg-status-blocked-muted p-3">
+      <p className="mb-2 text-sm font-medium text-status-blocked-ink">
         You have {pendingChanges} unsynchronized {changeLabel}.
         Logging out will discard them.
       </p>
@@ -209,7 +209,7 @@ function ErrorMessage({ error }: { error: string | null }) {
   if (!error) return null;
 
   return (
-    <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+    <div className="rounded-lg bg-status-overdue-muted p-3 text-sm text-status-overdue-ink">
       {error}
     </div>
   );

@@ -59,4 +59,16 @@ describe("GlobalError", () => {
     fireEvent.click(screen.getByText("Go home"));
     expect(window.location.href).toBe("/");
   });
+
+  it("uses the Violet Frost palette when the root stylesheet is unavailable", () => {
+    render(<GlobalError error={testError} reset={mockReset} />);
+
+    expect(document.body).toHaveStyle({ background: "#F3F3F7", color: "#242331" });
+    expect(screen.getByText(/Your data is safe/)).toHaveStyle({ color: "#646477" });
+    expect(screen.getByText("Try again")).toHaveStyle({ background: "#5C4F7D" });
+    expect(screen.getByText("Go home")).toHaveStyle({
+      color: "#242331",
+      border: "1px solid #D9D9E4",
+    });
+  });
 });
