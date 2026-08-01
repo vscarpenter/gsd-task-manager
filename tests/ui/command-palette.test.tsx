@@ -7,6 +7,7 @@ import { CommandGroup } from '@/components/command-palette/command-group';
 import { CommandPalette } from '@/components/command-palette';
 import { createMockTask } from '@/tests/fixtures';
 import type { CommandAction, CommandActionHandlers } from '@/lib/command-actions';
+import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/use-command-palette';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -50,6 +51,16 @@ describe('Command Palette Components', () => {
       );
 
       expect(screen.getByText('Test Action')).toBeInTheDocument();
+    });
+
+    it('gives command actions a coarse-pointer target', () => {
+      render(
+        <CommandWrapper>
+          <CommandActionItem action={createAction()} onSelect={vi.fn()} />
+        </CommandWrapper>
+      );
+
+      expect(screen.getByRole('option', { name: 'Test Action' })).toHaveClass('touch-target');
     });
   });
 
@@ -100,6 +111,16 @@ describe('Command Palette Components', () => {
       );
 
       expect(screen.getByText('#work #urgent')).toBeInTheDocument();
+    });
+
+    it('gives task results a coarse-pointer target', () => {
+      render(
+        <CommandWrapper>
+          <TaskItem task={createMockTask({ title: 'Buy groceries' })} onSelect={vi.fn()} />
+        </CommandWrapper>
+      );
+
+      expect(screen.getByRole('option', { name: /Buy groceries/ })).toHaveClass('touch-target');
     });
   });
 
@@ -263,6 +284,82 @@ describe('CommandPalette (full component)', () => {
         screen.queryByPlaceholderText('Search tasks, actions, settings...')
       ).not.toBeInTheDocument();
     });
+  });
+
+  it('restores focus to the exact opener after an event-triggered palette closes', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT))}
+        >
+          Open commands
+        </button>
+        <CommandPalette handlers={makeHandlers()} conditions={defaultConditions} />
+      </>
+    );
+
+    const opener = screen.getByRole('button', { name: 'Open commands' });
+    await user.click(opener);
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Search tasks, actions, settings...')).toHaveFocus()
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it('does not return focus to the opener when a command hands off to another surface', async () => {
+    const user = userEvent.setup();
+    const handlers = makeHandlers();
+
+    render(
+      <>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT))}
+        >
+          Open commands
+        </button>
+        <CommandPalette handlers={handlers} conditions={defaultConditions} />
+      </>
+    );
+
+    const opener = screen.getByRole('button', { name: 'Open commands' });
+    await user.click(opener);
+    await user.click(await screen.findByText('Create new task'));
+
+    await waitFor(() =>
+      expect(screen.queryByPlaceholderText('Search tasks, actions, settings...')).not.toBeInTheDocument()
+    );
+    expect(handlers.onNewTask).toHaveBeenCalledTimes(1);
+    expect(opener).not.toHaveFocus();
+  });
+
+  it('restores focus to the opener after a non-handoff command executes', async () => {
+    const user = userEvent.setup();
+    const handlers = makeHandlers();
+
+    render(
+      <>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT))}
+        >
+          Open commands
+        </button>
+        <CommandPalette handlers={handlers} conditions={defaultConditions} />
+      </>
+    );
+
+    const opener = screen.getByRole('button', { name: 'Open commands' });
+    await user.click(opener);
+    await user.click(await screen.findByText('Toggle theme'));
+
+    await waitFor(() => expect(opener).toHaveFocus());
+    expect(handlers.onToggleTheme).toHaveBeenCalledTimes(1);
   });
 
   it('calls the action handler when an action item is clicked', async () => {

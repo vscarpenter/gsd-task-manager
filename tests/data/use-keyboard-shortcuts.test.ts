@@ -128,6 +128,59 @@ describe("useKeyboardShortcuts", () => {
     document.body.removeChild(div);
   });
 
+  it("does not claim Option shortcuts reserved for the app shell", () => {
+    renderHook(() => useKeyboardShortcuts(mockHandlers));
+
+    const event = new KeyboardEvent("keydown", {
+      code: "KeyN",
+      key: "n",
+      altKey: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+
+    expect(mockHandlers.onNewTask).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("does not trigger shortcuts from a select or nested contentEditable child", () => {
+    renderHook(() => useKeyboardShortcuts(mockHandlers));
+    const select = document.createElement("select");
+    document.body.appendChild(select);
+    select.dispatchEvent(new KeyboardEvent("keydown", { key: "n", bubbles: true }));
+
+    const editable = document.createElement("div");
+    editable.contentEditable = "true";
+    const child = document.createElement("span");
+    editable.appendChild(child);
+    document.body.appendChild(editable);
+    child.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true }));
+
+    expect(mockHandlers.onNewTask).not.toHaveBeenCalled();
+    expect(mockHandlers.onSearch).not.toHaveBeenCalled();
+
+    select.remove();
+    editable.remove();
+  });
+
+  it("does not trigger while a modal is open or for blocked keyboard events", () => {
+    renderHook(() => useKeyboardShortcuts(mockHandlers));
+    const modal = document.createElement("div");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    document.body.appendChild(modal);
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "n" }));
+    modal.remove();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "n", repeat: true }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "n", isComposing: true }));
+    const handled = new KeyboardEvent("keydown", { key: "n", cancelable: true });
+    handled.preventDefault();
+    window.dispatchEvent(handled);
+
+    expect(mockHandlers.onNewTask).not.toHaveBeenCalled();
+  });
+
   it("removes event listener on unmount", () => {
     const removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
     const { unmount } = renderHook(() => useKeyboardShortcuts(mockHandlers));

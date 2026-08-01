@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export interface HelpDrawerProps {
@@ -10,12 +12,25 @@ export interface HelpDrawerProps {
 }
 
 export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
-  if (!open) return null;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent
-        className="redesign-scope rd-fade-in border-card-border bg-transparent p-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:max-h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:overflow-hidden md:p-0"
+        ref={contentRef}
+        aria-modal="true"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+          contentRef.current?.querySelector<HTMLButtonElement>('[aria-label="Close"]')?.focus();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          restoreFocusOrMainContent(previouslyFocusedRef.current);
+          previouslyFocusedRef.current = null;
+        }}
+        className="redesign-scope rd-fade-in max-h-[calc(100dvh-env(safe-area-inset-top))] border-card-border bg-transparent p-0 [&>button]:right-[max(1rem,env(safe-area-inset-right))] [&>button]:top-[max(1rem,env(safe-area-inset-top))] md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:max-h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:overflow-hidden md:p-0"
         style={{ paddingBottom: 0 }}
       >
         <div
@@ -29,8 +44,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           }}
         >
         <header
+          className="pb-4 pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(3.25rem,calc(1.5rem+env(safe-area-inset-right)))] pt-[max(1.25rem,env(safe-area-inset-top))]"
           style={{
-            padding: "20px 52px 16px 24px",
             borderBottom: "var(--border-hair)",
             display: "flex",
             alignItems: "flex-start",
@@ -60,7 +75,11 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           </div>
         </header>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "22px 24px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
+        <div
+          data-testid="help-drawer-scroll"
+          className="pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pt-[1.375rem]"
+          style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 28 }}
+        >
           <Section label="One board, one capture bar">
             <Concept title="The matrix" accent="var(--accent)">
               The classic 2×2 Eisenhower board is your home view. Drag a task between quadrants to reclassify it; hover a
@@ -70,7 +89,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               Every task starts in the bar at the top. Type your task, hit{" "}
               <kbd>Enter</kbd>, and the parser routes it to the right quadrant based on{" "}
               <code style={codeStyle}>!</code> / <code style={codeStyle}>*</code> markers — or press{" "}
-              <kbd>Tab</kbd> to cycle the destination manually.
+              <kbd>Tab</kbd> to reach the destination control, then use <kbd>Enter</kbd> or <kbd>Space</kbd> to cycle it
+              manually.
             </Concept>
           </Section>
 
@@ -101,13 +121,16 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <ShortcutRow keys={["⌘", "K"]} action="Open the command palette" />
             <ShortcutRow keys={["Shift", "N"]} action="Open the full composer" />
             <ShortcutRow keys={["/"]} action="Focus the search field" />
-            <ShortcutRow keys={["Tab"]} action="Cycle quadrant override (in the capture bar)" />
+            <ShortcutRow keys={["⌥", "/"]} action="Open universal search" />
+            <ShortcutRow keys={["⌥", "N"]} action="Focus Quick Capture from anywhere" />
+            <ShortcutRow keys={["⌥", "R"]} action="Open Review" />
+            <ShortcutRow keys={["⌥", "1–4"]} action="Focus a matrix quadrant" />
             <ShortcutRow keys={["Enter"]} action="Submit the task (in the capture bar)" />
             <ShortcutRow keys={["?"]} action="Open this help drawer" />
             <ShortcutRow keys={["Esc"]} action="Close any open drawer" />
             <p style={{ ...bodyStyle, color: "var(--ink-3)", fontSize: 12 }}>
-              Global shortcuts are suppressed while a text field is focused, so typing in the capture bar or composer
-              won&rsquo;t hijack keys.
+              Option shortcuts follow the physical key position and are suppressed while a text field or modal is active,
+              so typing in Quick Capture or the composer won&rsquo;t hijack keys.
             </p>
           </Section>
 

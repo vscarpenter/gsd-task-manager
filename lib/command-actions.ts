@@ -18,6 +18,8 @@ export interface CommandAction {
   keywords: string[]; // For fuzzy search
   onExecute: () => void | Promise<void>;
   condition?: () => boolean; // Show/hide based on state
+  /** Whether closing the palette should return focus to its opener. */
+  focusAfterExecute?: 'restore' | 'handoff';
 }
 
 /**
@@ -62,9 +64,6 @@ export function buildCommandActions(
     hasSelection: boolean;
   }
 ): CommandAction[] {
-  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const modKey = isMac ? '⌘' : 'Ctrl';
-
   // Import icon components dynamically
   const actions: CommandAction[] = [];
 
@@ -73,15 +72,14 @@ export function buildCommandActions(
     {
       id: 'new-task',
       label: 'Create new task',
-      shortcut: [modKey, 'N'],
       section: 'actions',
       keywords: ['new', 'create', 'add', 'task'],
-      onExecute: handlers.onNewTask
+      onExecute: handlers.onNewTask,
+      focusAfterExecute: 'handoff'
     },
     {
       id: 'toggle-theme',
       label: 'Toggle theme',
-      shortcut: [modKey, 'T'],
       section: 'actions',
       keywords: ['dark', 'light', 'theme', 'appearance'],
       onExecute: handlers.onToggleTheme
@@ -91,14 +89,16 @@ export function buildCommandActions(
       label: 'Export tasks as JSON',
       section: 'actions',
       keywords: ['export', 'download', 'backup', 'json'],
-      onExecute: handlers.onExportTasks
+      onExecute: handlers.onExportTasks,
+      focusAfterExecute: 'handoff'
     },
     {
       id: 'import-tasks',
       label: 'Import tasks from JSON',
       section: 'actions',
       keywords: ['import', 'upload', 'restore', 'json'],
-      onExecute: handlers.onImportTasks
+      onExecute: handlers.onImportTasks,
+      focusAfterExecute: 'handoff'
     }
   );
 
@@ -107,25 +107,27 @@ export function buildCommandActions(
     {
       id: 'view-matrix',
       label: 'View matrix',
-      shortcut: [modKey, 'M'],
       section: 'navigation',
       keywords: ['matrix', 'quadrants', 'eisenhower', 'home'],
-      onExecute: handlers.onViewMatrix
+      onExecute: handlers.onViewMatrix,
+      focusAfterExecute: 'handoff'
     },
     {
       id: 'view-dashboard',
-      label: 'View dashboard',
-      shortcut: [modKey, 'D'],
+      label: 'View review',
+      shortcut: ['⌥', 'R'],
       section: 'navigation',
-      keywords: ['dashboard', 'analytics', 'stats', 'metrics'],
-      onExecute: handlers.onViewDashboard
+      keywords: ['review', 'weekly', 'reflection', 'planning', 'dashboard', 'analytics', 'stats', 'metrics'],
+      onExecute: handlers.onViewDashboard,
+      focusAfterExecute: 'handoff'
     },
     {
       id: 'view-archive',
       label: 'View archived tasks',
       section: 'navigation',
       keywords: ['archive', 'completed', 'old', 'history'],
-      onExecute: handlers.onViewArchive
+      onExecute: handlers.onViewArchive,
+      focusAfterExecute: 'handoff'
     }
   );
 
@@ -137,6 +139,7 @@ export function buildCommandActions(
       section: 'navigation',
       keywords: ['sync', 'history', 'cloud', 'operations'],
       onExecute: handlers.onViewSyncHistory,
+      focusAfterExecute: 'handoff',
       condition: () => conditions.isSyncEnabled
     });
   }
@@ -146,10 +149,10 @@ export function buildCommandActions(
     {
       id: 'open-settings',
       label: 'Open settings',
-      shortcut: [modKey, ','],
       section: 'settings',
       keywords: ['settings', 'preferences', 'config'],
-      onExecute: handlers.onOpenSettings
+      onExecute: handlers.onOpenSettings,
+      focusAfterExecute: 'handoff'
     },
     {
       id: 'open-help',
@@ -157,7 +160,8 @@ export function buildCommandActions(
       shortcut: ['?'],
       section: 'settings',
       keywords: ['help', 'guide', 'documentation', 'tutorial'],
-      onExecute: handlers.onOpenHelp
+      onExecute: handlers.onOpenHelp,
+      focusAfterExecute: 'handoff'
     }
   );
 
@@ -208,7 +212,8 @@ export function buildCommandActions(
         ...(view.description?.toLowerCase().split(' ') || []),
         'filter', 'view'
       ],
-      onExecute: () => handlers.onApplySmartView(view.criteria, view.id)
+      onExecute: () => handlers.onApplySmartView(view.criteria, view.id),
+      focusAfterExecute: 'handoff'
     });
   });
 

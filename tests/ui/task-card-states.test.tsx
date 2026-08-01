@@ -109,6 +109,7 @@ describe("TaskCard states", () => {
   it("renders selection checkbox when selectionMode is true", () => {
     renderTaskCard({}, { selectionMode: true, isSelected: false, onToggleSelect: vi.fn() });
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox").closest("label")).toHaveClass("touch-target");
   });
 
   it("renders selected checkbox state", () => {
@@ -214,5 +215,12 @@ describe("TaskCard states", () => {
 
     // Dependency indicator hidden for completed tasks
     expect(screen.queryByText(/Blocked by/)).not.toBeInTheDocument();
+  });
+
+  it("keeps completed task text at contrast-safe opacity", () => {
+    renderTaskCard({ completed: true });
+
+    expect(screen.getByTestId("task-card")).toHaveClass("opacity-100");
+    expect(screen.getByTestId("task-card")).not.toHaveClass("opacity-[0.55]");
   });
 });

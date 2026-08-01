@@ -17,6 +17,7 @@ export function TaskCard({
   onEdit,
   onDelete,
   onToggleComplete,
+  onInspect,
   onShare,
   onDuplicate,
   onSnooze,
@@ -87,10 +88,8 @@ export function TaskCard({
         // be dead CSS. focus-within gives a keyboard user tabbing into the card
         // the same row-highlight a mouse user gets on hover.
         // ui-craft-detect-ignore-next-line
-        task.completed
-          ? "opacity-[0.55]"
-          : "opacity-100 hover:-translate-y-0.5 hover:border-accent/40 focus-within:border-accent/40",
-        !task.completed && isBlocked && "opacity-[0.62]",
+        "opacity-100",
+        !task.completed && "hover:-translate-y-0.5 hover:border-accent/40 focus-within:border-accent/40",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
         // Half-strength so an overdue card is marked, not alarmed — the badge
@@ -125,6 +124,7 @@ export function TaskCard({
         isSelected={isSelected}
         onToggleSelect={onToggleSelect}
         onToggleComplete={onToggleComplete}
+        onInspect={onInspect}
         sortableAttributes={attributes}
         sortableListeners={listeners}
       />

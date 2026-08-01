@@ -16,7 +16,7 @@ test.describe("Matrix Navigation", () => {
     
     // Verify we're on settings page by checking for settings-related content
     await expect(page.locator("[data-testid='nav-settings']")).toBeVisible();
-    await expect(page.url()).toContain("/settings");
+    await expect(page).toHaveURL(/\/settings\/?$/);
   });
 
   test("should navigate to dashboard page", async ({ page }) => {
@@ -24,29 +24,30 @@ test.describe("Matrix Navigation", () => {
     
     // Verify we're on dashboard page
     await expect(page.locator("[data-testid='nav-dashboard']")).toBeVisible();
-    await expect(page.url()).toContain("/dashboard");
+    await expect(page).toHaveURL(/\/dashboard\/?$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Review" })).toBeVisible();
   });
 
   test("should return to matrix from settings", async ({ page }) => {
     await matrixPage.openSettings();
-    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(/\/settings\/?$/);
     
     await matrixPage.openMatrix();
     
     // Verify we're back on matrix page
     await expect(page.locator("[data-testid='matrix-grid']")).toBeVisible();
-    await expect(page.url()).toContain("/");
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/$/);
   });
 
   test("should return to matrix from dashboard", async ({ page }) => {
     await matrixPage.openDashboard();
-    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(/\/dashboard\/?$/);
     
     await matrixPage.openMatrix();
     
     // Verify we're back on matrix page
     await expect(page.locator("[data-testid='matrix-grid']")).toBeVisible();
-    await expect(page.url()).toContain("/");
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/$/);
   });
 
   test("should highlight active navigation item", async ({ page }) => {
@@ -55,7 +56,7 @@ test.describe("Matrix Navigation", () => {
     
     // Navigate to dashboard
     await matrixPage.openDashboard();
-    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(/\/dashboard\/?$/);
     
     // Dashboard should now be active
     await expect(page.locator("[data-testid='nav-dashboard']")).toBeVisible();

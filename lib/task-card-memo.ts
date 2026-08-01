@@ -17,6 +17,8 @@ export interface TaskCardProps {
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  /** Opens the task's read-only detail surface without changing persistence. */
+  onInspect?: (task: TaskRecord) => void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
@@ -114,6 +116,7 @@ function hasUIStateChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): 
     prevProps.selectionMode !== nextProps.selectionMode ||
     prevProps.isSelected !== nextProps.isSelected ||
     prevProps.isHighlighted !== nextProps.isHighlighted ||
+    Boolean(prevProps.onInspect) !== Boolean(nextProps.onInspect) ||
     prevProps.allTasks.length !== nextProps.allTasks.length
   );
 }

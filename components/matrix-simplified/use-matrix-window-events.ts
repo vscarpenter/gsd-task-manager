@@ -11,16 +11,15 @@ import { UI_TIMING } from "@/lib/constants/ui";
 import type { TaskDraft } from "@/lib/types";
 import {
   APPLY_SMART_VIEW_EVENT,
+  FOCUS_CAPTURE_EVENT,
+  FOCUS_QUADRANT_EVENT,
   HIGHLIGHT_TASK_EVENT,
   NEW_TASK_EVENT,
   type ApplySmartViewEventDetail,
+  type FocusQuadrantEventDetail,
 } from "@/lib/use-shell-command-handlers";
-
-function isEditable(el: Element | null): boolean {
-  if (!(el instanceof HTMLElement)) return false;
-  const t = el.tagName;
-  return t === "INPUT" || t === "TEXTAREA" || el.isContentEditable;
-}
+import type { RedesignQuadrantKey } from "@/lib/quadrants";
+import { hasOpenModal, isEditableShortcutTarget } from "@/lib/use-app-shortcuts";
 
 export interface MatrixWindowEventsDeps {
   searchInputRef: RefObject<HTMLInputElement | null>;
@@ -28,6 +27,7 @@ export interface MatrixWindowEventsDeps {
   openCreateDrawer: (initial?: TaskDraft) => void;
   highlightTaskById: (taskId: string) => void;
   applySmartViewById: (viewId: string) => Promise<void>;
+  focusQuadrant: (quadrant: RedesignQuadrantKey) => void;
 }
 
 export function useMatrixWindowEvents({
@@ -36,6 +36,7 @@ export function useMatrixWindowEvents({
   openCreateDrawer,
   highlightTaskById,
   applySmartViewById,
+  focusQuadrant,
 }: MatrixWindowEventsDeps): void {
   const openCreateDrawerEvent = useEffectEvent((initial?: TaskDraft) => {
     openCreateDrawer(initial);
@@ -92,7 +93,16 @@ export function useMatrixWindowEvents({
   // Global "/" focuses search; "n" handled by CaptureBar; "?" opens help
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isEditable(document.activeElement) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (
+        e.defaultPrevented ||
+        e.repeat ||
+        e.isComposing ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        (isEditableShortcutTarget(e.target) || isEditableShortcutTarget(document.activeElement)) ||
+        hasOpenModal()
+      ) return;
       if (e.key === "/") {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -110,7 +120,19 @@ export function useMatrixWindowEvents({
     const params = new URLSearchParams(window.location.search);
     const taskId = params.get("highlight");
     const smartViewId = params.get("smartView");
-    if (!taskId && !smartViewId) return;
+    const focusQuadrantParam = params.get("focusQuadrant");
+    const quadrant = ["q1", "q2", "q3", "q4"].includes(focusQuadrantParam ?? "")
+      ? (focusQuadrantParam as RedesignQuadrantKey)
+      : null;
+    if (!taskId && !smartViewId && !focusQuadrantParam) return;
+
+    // Quadrant focus has its own pending-target queue in MatrixSimplified, so
+    // deliver it immediately. Deferring it to the next animation frame lets a
+    // hydration render cancel this effect before the request reaches that
+    // queue, which loses cross-route Option+1–4 focus.
+    if (quadrant) {
+      focusQuadrant(quadrant);
+    }
 
     const frame = window.requestAnimationFrame(() => {
       if (taskId) {
@@ -122,14 +144,20 @@ export function useMatrixWindowEvents({
     });
     params.delete("highlight");
     params.delete("smartView");
+    params.delete("focusQuadrant");
     const next = params.toString();
     window.history.replaceState({}, "", `${window.location.pathname}${next ? `?${next}` : ""}`);
     return () => window.cancelAnimationFrame(frame);
-  }, [applySmartViewById, highlightTaskById]);
+  }, [applySmartViewById, focusQuadrant, highlightTaskById]);
 
   // Shell command events (⌘K palette, etc.).
   useEffect(() => {
     const openNewTask = () => openCreateDrawer();
+    const focusCapture = () => captureInputRef.current?.focus();
+    const focusRequestedQuadrant = (event: Event) => {
+      const quadrant = (event as CustomEvent<FocusQuadrantEventDetail>).detail?.quadrant;
+      if (quadrant) focusQuadrant(quadrant);
+    };
     const highlightTask = (event: Event) => {
       const taskId = (event as CustomEvent<{ taskId?: string }>).detail?.taskId;
       if (taskId) {
@@ -144,14 +172,18 @@ export function useMatrixWindowEvents({
     };
 
     window.addEventListener(NEW_TASK_EVENT, openNewTask);
+    window.addEventListener(FOCUS_CAPTURE_EVENT, focusCapture);
+    window.addEventListener(FOCUS_QUADRANT_EVENT, focusRequestedQuadrant);
     window.addEventListener(HIGHLIGHT_TASK_EVENT, highlightTask);
     window.addEventListener(APPLY_SMART_VIEW_EVENT, applySmartView);
     window.addEventListener("highlightTask", highlightTask);
     return () => {
       window.removeEventListener(NEW_TASK_EVENT, openNewTask);
+      window.removeEventListener(FOCUS_CAPTURE_EVENT, focusCapture);
+      window.removeEventListener(FOCUS_QUADRANT_EVENT, focusRequestedQuadrant);
       window.removeEventListener(HIGHLIGHT_TASK_EVENT, highlightTask);
       window.removeEventListener(APPLY_SMART_VIEW_EVENT, applySmartView);
       window.removeEventListener("highlightTask", highlightTask);
     };
-  }, [applySmartViewById, highlightTaskById, openCreateDrawer]);
+  }, [applySmartViewById, captureInputRef, focusQuadrant, highlightTaskById, openCreateDrawer]);
 }

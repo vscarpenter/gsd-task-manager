@@ -11,6 +11,7 @@ import {
   type RedesignQuadrantKey,
 } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
+import { hasOpenModal, isEditableShortcutTarget } from "@/lib/use-app-shortcuts";
 
 export interface CapturePayload {
   title: string;
@@ -34,12 +35,6 @@ function deriveAutoKey(urgent: boolean, important: boolean): RedesignQuadrantKey
   if (!urgent && important) return "q2";
   if (urgent) return "q3";
   return "q4";
-}
-
-function isEditable(el: Element | null): boolean {
-  if (!(el instanceof HTMLElement)) return false;
-  const t = el.tagName;
-  return t === "INPUT" || t === "TEXTAREA" || el.isContentEditable;
 }
 
 export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: CaptureBarProps) {
@@ -69,7 +64,16 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
 
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
-      if (isEditable(document.activeElement) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (
+        e.defaultPrevented ||
+        e.repeat ||
+        e.isComposing ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        (isEditableShortcutTarget(e.target) || isEditableShortcutTarget(document.activeElement)) ||
+        hasOpenModal()
+      ) return;
       if (e.key === "n") {
         e.preventDefault();
         internalRef.current?.focus();
@@ -127,12 +131,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
 
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") submit();
-    else if (e.key === "Tab" && text.trim()) {
-      e.preventDefault();
-      cycleQuadrant();
-    } else if (e.key === "Escape") {
-      setText("");
-      setOverride(null);
+    else if (e.key === "Escape") {
       internalRef.current?.blur();
     }
   };
@@ -142,7 +141,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       data-testid="capture-bar"
       onSubmit={submit}
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5",
+        "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-card px-3 py-2.5 sm:flex sm:gap-3 sm:px-4 sm:py-3.5",
         // Flat at rest on the hairline; lifts only when engaged (Inkwell flat-at-rest signature).
         "transition-shadow focus-within:border-foreground-muted focus-within:shadow-lg",
         // The input clears its own outline, so the bar carries the focus ring for
@@ -154,7 +153,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       <ZapIcon
         aria-hidden
         onAnimationEnd={() => setJustCaptured(false)}
-        className={cn("h-4 w-4 shrink-0 transition-colors", justCaptured && "animate-capture-pop")}
+        className={cn("col-start-1 row-start-1 h-4 w-4 shrink-0 transition-colors", justCaptured && "animate-capture-pop")}
         style={{ color: text.trim() ? accent : "color-mix(in srgb, var(--gray-500) 70%, transparent)" }}
       />
       <input
@@ -163,13 +162,13 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onInputKey}
-        placeholder="Capture a task..."
+        placeholder="Capture a task…"
         aria-label="Capture a task"
         // The focus indicator lives on the parent <form> (focus-within:ring-2
         // ring-accent), which is the visible affordance for this borderless
         // input. The rule matches per element and cannot see the parent.
         // ui-craft-detect-ignore-next-line
-        className="touch-target min-w-0 flex-1 border-0 bg-transparent text-[15px] leading-snug text-foreground outline-none placeholder:text-foreground-muted"
+        className="touch-target col-start-2 row-start-1 min-w-0 flex-1 border-0 bg-transparent text-base text-foreground outline-none placeholder:text-foreground-muted sm:text-body"
       />
       {text.trim() ? (
         <>
@@ -178,8 +177,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
             key={effectiveKey}
             type="button"
             onClick={cycleQuadrant}
-            title="Tab to cycle quadrant"
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            title="Choose task destination"
+            className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
             style={{
               backgroundColor: QUADRANT_HEADER[effectiveKey],
               color: ink,
@@ -190,7 +189,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
               aria-hidden
             />
             {meta.title}
-            {override ? <span className="ml-1 font-normal normal-case opacity-60">·fixed</span> : null}
+            {override ? <span className="ml-1 font-normal normal-case">·fixed</span> : null}
           </button>
           {onMoreOptions ? (
             <button
@@ -209,14 +208,14 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
               // Enters just behind the quadrant pill (40ms) so the trailing controls
               // arrive as one coherent cluster instead of the pill animating alone.
               style={{ animationDelay: "40ms" }}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 animate-quadrant-pill-in"
+              className="touch-target col-start-3 row-start-2 inline-flex items-center gap-1 justify-self-end rounded-md px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 animate-quadrant-pill-in sm:col-auto sm:row-auto"
             >
               Details ↗
             </button>
           ) : null}
         </>
       ) : (
-        <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-foreground-muted">
+        <span className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex">
           n
         </span>
       )}
@@ -225,7 +224,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         type="submit"
         aria-disabled={!parsed.title}
         className={cn(
-          "touch-target inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold transition-[background-color,color,transform] duration-[120ms]",
+          "touch-target col-start-3 row-start-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-body font-semibold transition-[background-color,color,transform] duration-[120ms] sm:col-auto sm:row-auto sm:h-9 sm:px-4",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
           parsed.title
             ? "bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.97]"

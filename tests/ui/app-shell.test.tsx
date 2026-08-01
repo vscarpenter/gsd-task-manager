@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppShell } from "@/components/matrix-simplified/app-shell";
+import {
+  FOCUS_CAPTURE_EVENT,
+  FOCUS_QUADRANT_EVENT,
+} from "@/lib/use-shell-command-handlers";
 
 const pushMock = vi.fn();
 const mockGetAppPreferences = vi.fn();
@@ -84,6 +88,70 @@ describe("AppShell command palette wiring", () => {
     });
   });
 
+  it("lets matrix content own the page heading while retaining a compact shell label", () => {
+    render(
+      <AppShell title="GSD Matrix" titleAsLabel>
+        <h1>Decide what deserves you.</h1>
+      </AppShell>
+    );
+
+    expect(screen.getByText("GSD Matrix").tagName).toBe("P");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Decide what deserves you.");
+  });
+
+  it("accepts a matrix-only main width and mobile clearance contract", () => {
+    render(
+      <AppShell title="GSD Matrix" mainClassName="max-w-[1540px] pb-48 md:pb-6">
+        <div>content</div>
+      </AppShell>
+    );
+
+    expect(screen.getByRole("main")).toHaveClass("max-w-[1540px]", "pb-48", "md:pb-6");
+  });
+
+  it("provides a first-focusable skip link and targetable main region", async () => {
+    const user = userEvent.setup();
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    await user.tab();
+    const skipLink = screen.getByRole("link", { name: "Skip to main content" });
+    expect(skipLink).toHaveFocus();
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+    expect(skipLink.className).toContain("safe-area-inset-top");
+    expect(skipLink.className).toContain("safe-area-inset-left");
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+    expect(screen.getByRole("main")).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("keeps the fixed mobile navigation after page content in keyboard order", () => {
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    const main = screen.getByRole("main");
+    const mobileNav = screen.getByRole("navigation", { name: /mobile/i });
+    expect(main.compareDocumentPosition(mobileNav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("gives shell search, command, and footer links coarse-pointer targets", () => {
+    render(
+      <AppShell title="Test" searchQuery="" onSearchChange={vi.fn()}>
+        <div>content</div>
+      </AppShell>
+    );
+
+    expect(screen.getByRole("button", { name: /open command palette/i })).toHaveClass("touch-target");
+    expect(screen.getByRole("textbox", { name: "Search tasks" })).toHaveClass("touch-target");
+    expect(screen.getByRole("link", { name: /Vinny\s+Carpenter/ })).toHaveClass("touch-target");
+  });
+
   it("opens the command palette when Ctrl+K is pressed", async () => {
     render(
       <AppShell title="Test">
@@ -98,6 +166,60 @@ describe("AppShell command palette wiring", () => {
         screen.getByPlaceholderText("Search tasks, actions, settings...")
       ).toBeInTheDocument();
     });
+  });
+
+  it("opens universal search from the physical Option+/ shortcut", async () => {
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    fireEvent.keyDown(window, { code: "Slash", key: "÷", altKey: true });
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Search tasks, actions, settings...")).toBeInTheDocument();
+    });
+  });
+
+  it("suppresses global Option shortcuts while the command palette is open", async () => {
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    fireEvent.keyDown(window, { code: "Slash", key: "÷", altKey: true });
+    await waitFor(() =>
+      expect(screen.getByRole("dialog")).toHaveAttribute("data-state", "open")
+    );
+
+    fireEvent.keyDown(window, { code: "KeyR", key: "®", altKey: true });
+
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeVisible();
+  });
+
+  it("routes Option capture, review, and quadrant focus through the shell", () => {
+    const capture = vi.fn();
+    const quadrant = vi.fn();
+    window.addEventListener(FOCUS_CAPTURE_EVENT, capture);
+    window.addEventListener(FOCUS_QUADRANT_EVENT, quadrant);
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    fireEvent.keyDown(window, { code: "KeyN", key: "Dead", altKey: true });
+    fireEvent.keyDown(window, { code: "Digit2", key: "™", altKey: true });
+    fireEvent.keyDown(window, { code: "KeyR", key: "®", altKey: true });
+
+    expect(capture).toHaveBeenCalledOnce();
+    expect((quadrant.mock.calls[0][0] as CustomEvent).detail).toEqual({ quadrant: "q2" });
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
+    window.removeEventListener(FOCUS_CAPTURE_EVENT, capture);
+    window.removeEventListener(FOCUS_QUADRANT_EVENT, quadrant);
   });
 
   it("opens the command palette from the visible topbar button", async () => {
@@ -115,6 +237,21 @@ describe("AppShell command palette wiring", () => {
         screen.getByPlaceholderText("Search tasks, actions, settings...")
       ).toBeInTheDocument();
     });
+  });
+
+  it("restores the command button after an in-place action in click-only browsers", async () => {
+    const user = userEvent.setup();
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    const commandButton = screen.getByRole("button", { name: /open command palette/i });
+    fireEvent.click(commandButton);
+    await user.click(await screen.findByText("Toggle theme"));
+
+    await waitFor(() => expect(commandButton).toHaveFocus());
   });
 
   it("does not surface smart-view actions in the palette", async () => {

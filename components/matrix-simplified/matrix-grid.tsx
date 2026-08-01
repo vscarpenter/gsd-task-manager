@@ -8,24 +8,28 @@ interface MatrixGridProps {
   tasks: TaskRecord[];
   allTasks: TaskRecord[];
   onEdit: (task: TaskRecord) => void;
+  onInspect?: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
   highlightedTaskId?: string | null;
   onTaskRef?: (taskId: string, element: HTMLElement | null) => void;
+  onQuadrantRef?: (key: RedesignQuadrantKey, element: HTMLElement | null) => void;
 }
 
 export function MatrixGrid({
   tasks,
   allTasks,
   onEdit,
+  onInspect,
   onToggleComplete,
   onDelete,
   onShare,
   onAddInQuadrant,
   highlightedTaskId,
   onTaskRef,
+  onQuadrantRef,
 }: MatrixGridProps) {
   const grouped = (() => {
     const out: Record<RedesignQuadrantKey, TaskRecord[]> = { q1: [], q2: [], q3: [], q4: [] };
@@ -60,12 +64,14 @@ export function MatrixGrid({
           tasks={grouped[meta.rdKey]}
           allTasks={allTasks}
           onEdit={onEdit}
+          onInspect={onInspect}
           onToggleComplete={onToggleComplete}
           onDelete={onDelete}
           onShare={onShare}
           onAddInQuadrant={onAddInQuadrant}
           highlightedTaskId={highlightedTaskId}
           onTaskRef={onTaskRef}
+          sectionRef={(element) => onQuadrantRef?.(meta.rdKey, element)}
         />
       ))}
     </div>

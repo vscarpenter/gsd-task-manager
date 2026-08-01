@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import type { TaskRecord } from "@/lib/types";
@@ -114,9 +114,28 @@ vi.mock("@/lib/use-drag-and-drop", () => ({
 // AppShell uses IconRail → useViewTransition → useRouter which requires Next.js app router context.
 // Mock the shell so tests focus on the MatrixSimplified logic, not layout chrome.
 vi.mock("@/components/matrix-simplified/app-shell", () => ({
-  AppShell: ({ title, children }: { title: string; children: React.ReactNode }) => (
+  AppShell: ({
+    title,
+    titleAsLabel,
+    searchQuery,
+    onSearchChange,
+    children,
+  }: {
+    title: string;
+    titleAsLabel?: boolean;
+    searchQuery?: string;
+    onSearchChange?: (value: string) => void;
+    children: React.ReactNode;
+  }) => (
     <div>
-      <h1>{title}</h1>
+      {titleAsLabel ? <p data-testid="topbar-title">{title}</p> : <h1>{title}</h1>}
+      {onSearchChange ? (
+        <input
+          aria-label="Shell search"
+          value={searchQuery ?? ""}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
+      ) : null}
       {children}
     </div>
   ),
@@ -140,6 +159,7 @@ describe("<MatrixSimplified>", () => {
     vi.mocked(createTask).mockClear();
     vi.mocked(celebrateCompletion).mockClear();
     vi.mocked(toggleCompleted).mockClear();
+    vi.mocked(updateTask).mockClear();
     vi.mocked(deleteTask).mockClear();
     vi.mocked(restoreTask).mockClear();
     handleSuccessSpy.mockClear();
@@ -239,13 +259,72 @@ describe("<MatrixSimplified>", () => {
 
   it("renders 'GSD Matrix' title", () => {
     render(<MatrixSimplified />);
-    expect(screen.getByRole("heading", { name: /gsd matrix/i })).toBeInTheDocument();
+    expect(screen.getByTestId("topbar-title")).toHaveTextContent("GSD Matrix");
+    expect(screen.getByRole("heading", { level: 1, name: /decide what deserves you/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
   it("keeps the static-export server snapshot hydration-safe", () => {
     const html = renderToString(<MatrixSimplified />);
     expect(html).toContain("GSD Matrix");
+    expect(html).toContain("Decide what deserves you.");
     expect(html).toContain("Capture a task");
+  });
+
+  it("reports active Schedule work from the full task set", () => {
+    tasksFixture.current = [
+      makeTask({ id: "q2-a", urgent: false, important: true, completed: false }),
+      makeTask({ id: "q2-b", urgent: false, important: true, completed: false }),
+      makeTask({ id: "q2-done", urgent: false, important: true, completed: true }),
+      makeTask({ id: "q1", urgent: true, important: true, completed: false }),
+    ];
+
+    render(<MatrixSimplified />);
+
+    expect(screen.getByText("2 strategic commitments need protected time.")).toBeInTheDocument();
+  });
+
+  it("does not publish a false Q2 count while tasks are loading", () => {
+    tasksFixture.loading = true;
+    render(<MatrixSimplified />);
+
+    expect(screen.queryByText(/strategic commitment.*protected time/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Reserve one strategic block before reacting.")).toBeInTheDocument();
+  });
+
+  it("keeps the Q2 planning count stable when search filters the matrix", async () => {
+    tasksFixture.current = [
+      makeTask({ id: "q2", title: "Write the strategy", urgent: false, important: true }),
+      makeTask({ id: "q1", title: "Fix production", urgent: true, important: true }),
+    ];
+    render(<MatrixSimplified />);
+
+    await userEvent.type(screen.getByLabelText("Shell search"), "production");
+
+    expect(screen.getByText("1 strategic commitment needs protected time.")).toBeInTheDocument();
+    expect(screen.queryByText("Write the strategy")).not.toBeInTheDocument();
+  });
+
+  it("focuses and scrolls Schedule from the Q2 planning cue", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    render(<MatrixSimplified />);
+
+    await userEvent.click(screen.getByRole("button", { name: /focus schedule/i }));
+
+    expect(screen.getByTestId("quadrant-q2")).toHaveFocus();
+    expect(screen.getByTestId("quadrant-q2")).toHaveClass("focus:ring-2", "focus:ring-accent");
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" });
+  });
+
+  it("docks Quick Capture above mobile navigation and restores top-stickiness on desktop", () => {
+    render(<MatrixSimplified />);
+    expect(screen.getByTestId("mobile-capture-dock")).toHaveClass(
+      "fixed",
+      "md:sticky",
+      "pl-[max(0.75rem,env(safe-area-inset-left))]",
+      "pr-[max(0.75rem,env(safe-area-inset-right))]"
+    );
   });
 
   it("renders four quadrant panes (regions)", () => {
@@ -254,6 +333,8 @@ describe("<MatrixSimplified>", () => {
     expect(screen.getByRole("region", { name: /schedule quadrant/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /delegate quadrant/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /eliminate quadrant/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Do First" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Schedule" })).toBeInTheDocument();
   });
 
   it("opens the create drawer when the shell new-task event fires", async () => {
@@ -360,6 +441,84 @@ describe("<MatrixSimplified>", () => {
         expect.objectContaining({ dependencies: ["dep-ghost"] })
       )
     );
+  });
+
+  it("inspects task details without persistence, then enters the explicit editor", async () => {
+    const user = userEvent.setup();
+    tasksFixture.current = [
+      makeTask({
+        id: "inspect-1",
+        title: "Protect strategy time",
+        description: "Block Friday morning",
+        urgent: false,
+        important: true,
+      }),
+    ];
+    render(<MatrixSimplified />);
+
+    await user.click(screen.getByRole("button", { name: /view details for protect strategy time/i }));
+
+    const details = screen.getByRole("dialog", { name: "Protect strategy time" });
+    expect(details).toBeInTheDocument();
+    expect(within(details).getByText("Block Friday morning")).toBeInTheDocument();
+    expect(updateTask).not.toHaveBeenCalled();
+    expect(createTask).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Edit task" }));
+
+    expect(await screen.findByRole("heading", { name: "Edit task" })).toBeInTheDocument();
+    expect(screen.queryByTestId("task-detail-sheet")).not.toBeInTheDocument();
+  });
+
+  it("keeps an open task inspector in sync with the latest task record", async () => {
+    const user = userEvent.setup();
+    tasksFixture.current = [
+      makeTask({
+        id: "inspect-live",
+        title: "Original task title",
+        description: "Original task description",
+        urgent: false,
+        important: true,
+      }),
+    ];
+    const { rerender } = render(<MatrixSimplified />);
+
+    await user.click(screen.getByRole("button", { name: /view details for original task title/i }));
+    expect(screen.getByRole("dialog", { name: "Original task title" })).toBeInTheDocument();
+
+    tasksFixture.current = [
+      makeTask({
+        id: "inspect-live",
+        title: "Updated task title",
+        description: "Updated task description",
+        urgent: false,
+        important: true,
+      }),
+    ];
+    rerender(<MatrixSimplified />);
+
+    const details = screen.getByRole("dialog", { name: "Updated task title" });
+    expect(within(details).getByText("Updated task description")).toBeInTheDocument();
+    expect(screen.queryByText("Original task title")).not.toBeInTheDocument();
+    expect(screen.queryByText("Original task description")).not.toBeInTheDocument();
+  });
+
+  it("closes an open task inspector when its task disappears", async () => {
+    const user = userEvent.setup();
+    tasksFixture.current = [makeTask({ id: "inspect-deleted", title: "Delete during review" })];
+    const { rerender } = render(<MatrixSimplified />);
+
+    await user.click(
+      screen.getByRole("button", { name: /view details for delete during review/i })
+    );
+    expect(screen.getByRole("dialog", { name: "Delete during review" })).toBeInTheDocument();
+
+    tasksFixture.current = [];
+    rerender(<MatrixSimplified />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("task-detail-sheet")).not.toBeInTheDocument();
+    });
   });
 
   it("highlights a task when the shell highlight event fires", async () => {
