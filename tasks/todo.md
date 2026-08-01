@@ -22,7 +22,7 @@ contract, all routed surfaces, fallback documents, and shipped brand assets).
 **Out of scope:** feature, navigation, layout, typography, data-model, sync-protocol,
 deployment, and unrelated repository-document changes.
 
-**Verification:** full suite 2,387 passed / 1 skipped; overall coverage 89.28%
+**Verification:** full suite 2,389 passed / 1 skipped; overall coverage 89.28%
 statements, 81.89% branches, 89.12% functions, and 90.26% lines; `bun
 typecheck` passed; `bun lint` passed with 10 pre-existing warnings outside this
 work; production static build passed. Accessibility review reported 0 Violet

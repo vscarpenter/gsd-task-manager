@@ -14,9 +14,13 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="subtle" aria-label="Toggle theme" className="h-10 w-10 p-0">
+      <span
+        aria-hidden="true"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-foreground-muted"
+        data-testid="theme-toggle-placeholder"
+      >
         <SunIcon className="h-5 w-5" />
-      </Button>
+      </span>
     );
   }
 

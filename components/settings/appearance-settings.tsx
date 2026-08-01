@@ -29,24 +29,32 @@ export function AppearanceSettings({
 				label="Theme"
 				description="Choose your visual style"
 			>
-				<div className="flex gap-1 bg-background-muted rounded-lg p-1">
+				<div
+					className="flex gap-1 bg-background-muted rounded-lg p-1"
+					role="group"
+					aria-label="Theme options"
+					aria-busy={mounted ? undefined : true}
+				>
 					<ThemeOption
 						icon={SunIcon}
 						label="Light"
 						isActive={activeTheme === "light"}
 						onClick={() => setTheme("light")}
+						disabled={!mounted}
 					/>
 					<ThemeOption
 						icon={MoonIcon}
 						label="Dark"
 						isActive={activeTheme === "dark"}
 						onClick={() => setTheme("dark")}
+						disabled={!mounted}
 					/>
 					<ThemeOption
 						icon={MonitorIcon}
 						label="Auto"
 						isActive={activeTheme === "system"}
 						onClick={() => setTheme("system")}
+						disabled={!mounted}
 					/>
 				</div>
 			</SettingsRow>
@@ -74,11 +82,13 @@ function ThemeOption({
 	label,
 	isActive,
 	onClick,
+	disabled,
 }: {
 	icon: React.ComponentType<{ className?: string }>;
 	label: string;
 	isActive: boolean;
 	onClick: () => void;
+	disabled: boolean;
 }) {
 	return (
 		<button
@@ -88,12 +98,14 @@ function ThemeOption({
 				relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
 				transition-all duration-200 ease-out
 				pointer-coarse:min-h-11 pointer-coarse:px-4
+				disabled:cursor-wait disabled:opacity-60
 				${isActive
 					? "bg-card text-foreground shadow-sm"
 					: "text-foreground-muted hover:text-foreground"
 				}
 			`}
 			aria-pressed={isActive}
+			disabled={disabled}
 		>
 			<Icon className="w-3.5 h-3.5" />
 			<span>{label}</span>
