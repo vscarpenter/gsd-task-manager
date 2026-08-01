@@ -305,15 +305,21 @@ describe("<MatrixSimplified>", () => {
     expect(screen.queryByText("Write the strategy")).not.toBeInTheDocument();
   });
 
-  it("focuses and scrolls Schedule from the Q2 planning cue", async () => {
+  it("shows and unmistakably focuses Schedule from the Q2 planning cue", async () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
     render(<MatrixSimplified />);
 
-    await userEvent.click(screen.getByRole("button", { name: /focus schedule/i }));
+    await userEvent.click(screen.getByRole("button", { name: /show schedule/i }));
 
     expect(screen.getByTestId("quadrant-q2")).toHaveFocus();
-    expect(screen.getByTestId("quadrant-q2")).toHaveClass("focus:ring-2", "focus:ring-accent");
+    expect(screen.getByTestId("quadrant-q2")).toHaveClass(
+      "shadow-[var(--shadow-card)]",
+      "focus:ring-4",
+      "focus:ring-accent",
+      "focus:ring-offset-4"
+    );
+    expect(screen.getByTestId("quadrant-q2").style.boxShadow).toBe("");
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" });
   });
 
