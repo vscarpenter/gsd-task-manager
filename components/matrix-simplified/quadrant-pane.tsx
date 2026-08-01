@@ -63,11 +63,10 @@ export function QuadrantPane({
       }}
       tabIndex={-1}
       className={cn(
-        "relative flex min-h-[280px] flex-col overflow-hidden rounded-lg border border-pane-border transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+        "relative flex min-h-[280px] flex-col overflow-hidden rounded-lg border border-pane-border shadow-[var(--shadow-card)] transition-colors focus:outline-none focus:ring-4 focus:ring-accent focus:ring-offset-4",
         isOver && "ring-2 ring-inset"
       )}
       style={{
-        boxShadow: "var(--shadow-card)",
         backgroundColor: wash,
         ...(isOver ? { ["--tw-ring-color" as string]: accent } : {}),
       }}

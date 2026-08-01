@@ -10,6 +10,8 @@ test.describe("Refined Evolution production hybrid", () => {
   });
 
   test("supports the physical Option shortcut model", async ({ page }) => {
+    await expect(page.getByRole("button", { name: /show schedule/i })).toBeVisible();
+
     await page.keyboard.press("Alt+n");
     await expect(page.getByTestId("capture-input")).toBeFocused();
     await page.getByTestId("capture-input").blur();
@@ -20,8 +22,12 @@ test.describe("Refined Evolution production hybrid", () => {
       ["3", "q3"],
       ["4", "q4"],
     ] as const) {
+      const target = page.getByTestId(`quadrant-${quadrant}`);
+      const restingShadow = await target.evaluate((element) => getComputedStyle(element).boxShadow);
       await page.keyboard.press(`Alt+${key}`);
-      await expect(page.getByTestId(`quadrant-${quadrant}`)).toBeFocused();
+      await expect(target).toBeFocused();
+      const focusedShadow = await target.evaluate((element) => getComputedStyle(element).boxShadow);
+      expect(focusedShadow).not.toBe(restingShadow);
     }
 
     await page.keyboard.press("Alt+/");

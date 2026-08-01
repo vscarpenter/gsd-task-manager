@@ -47,7 +47,7 @@ export function MatrixIntro({ scheduleCount, onFocusSchedule }: MatrixIntroProps
           disabled={scheduleCount === null}
           className="touch-target col-span-2 inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-small font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50 sm:col-span-1"
         >
-          Focus Schedule
+          Show Schedule
           <kbd className="rounded border border-on-accent/40 px-1.5 py-0.5 font-mono text-caption" aria-label="Option 2">
             ⌥2
           </kbd>

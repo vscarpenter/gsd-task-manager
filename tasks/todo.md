@@ -2,6 +2,36 @@
 
 ---
 
+## Done — 2026-08-01: Clarify and strengthen Q2 shortcut feedback
+
+**Branch:** `design/five-visual-directions` · **Tier:** Standard (bounded copy and
+focus-state correction with no new navigation, persistence, or public contract).
+
+**Plan (TDD + browser proof):**
+- [x] RED: require truthful “Show Schedule” copy and an unmistakable persistent
+  focus ring on the destination quadrant.
+- [x] GREEN: update the Q2 cue and shared quadrant focus styling without changing
+  the shortcut’s safe-context rules.
+- [x] Verify focused tests and a cache-safe live Option+2 path in Chromium and
+  WebKit, including console/runtime state.
+- [x] Run the scoped WCAG-AA review, restore generated noise, and commit only the
+  implementation, regression contract, and tracker update.
+
+**Out of scope:** calendar/time-blocking features, shortcut activation while
+typing or a dialog is open, service-worker changes, deploy, push, PR, or merge.
+
+**Verification:** the original browser repro proved focus moved without any
+rendered ring because the pane&rsquo;s inline card shadow overrode Tailwind&rsquo;s
+ring shadow. The resting shadow now composes through the Tailwind shadow utility;
+Chromium and WebKit both proved Option+1&ndash;4 changed DOM focus and the
+rendered box shadow. Focused tests passed 62/62, the full suite passed 2,494
+tests with 1 skipped, typecheck passed, and lint passed with 10 inherited
+warnings. The 15-route production build passed and its generated CSS contains
+both the composable card shadow and 4px focus-ring rules. The scoped WCAG-AA
+review returned 0 findings. The inherited `public/sw.js` diff remains untouched.
+
+---
+
 ## Done — 2026-08-01: Implement approved Refined Evolution hybrid
 
 **Branch:** `design/five-visual-directions` · **Tier:** Non-trivial ·
