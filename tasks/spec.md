@@ -1,3 +1,102 @@
+# Spec: Explore five visual directions for GSD
+
+**Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial
+
+## Goal
+
+Create a high-quality decision package that fairly audits the current GSD
+experience, implements five genuinely distinct interactive design directions in
+an isolated `/design-lab`, and supplies consistent browser evidence and tradeoff
+analysis without changing the production matrix or any persisted data path.
+
+## Inputs / outputs
+
+- Inputs: the user-approved exploration brief, `PRODUCT.md`, the shipped Violet
+  Frost system, current matrix/task/settings/dashboard sources, and the live app.
+- Output: `docs/design-exploration/current-state-audit.md` with evidence-backed
+  strengths, friction, responsive/accessibility risks, assumptions, and design
+  questions.
+- Output: a self-contained `/design-lab` overview, comparison mode, and five
+  dedicated responsive routes using one shared realistic mock dataset.
+- Output: `docs/design-exploration/design-directions.md` with concept systems,
+  screenshots, scored comparison, implementation/migration risk, and explicit
+  evidence-versus-judgment recommendations.
+- Output: consistent desktop, laptop, mobile, editor, dashboard/review, and dark
+  evidence under `artifacts/design-exploration/`.
+
+## Constraints
+
+- Keep the exploration isolated on `design/five-visual-directions`; do not edit
+  production matrix/task persistence/sync/service-worker/schema behavior.
+- Stay within Next.js, React, TypeScript, Tailwind/vanilla CSS, Radix, and Lucide;
+  add no second UI framework or runtime service.
+- Use concept-specific token contracts and locally bundled `next/font` faces or
+  platform stacks; no runtime font CDN.
+- Preserve the product personality: calm, focused, personal, trustworthy,
+  privacy-first, clear rather than clever, and powerful without enterprise noise.
+- Target WCAG 2.1 AA in both themes, including visible focus, keyboard order,
+  semantic names, color-independent quadrant meaning, reduced motion, 44px touch
+  targets, 200% zoom resilience, and intentional mobile reading order.
+- Use identical task records, counts, metadata, and completion states in every
+  concept so comparisons remain fair.
+
+## Edge cases
+
+- Fresh local profiles redirect to `/about` and may show onboarding; design-lab
+  verification must pre-seed launch state without touching production data.
+- PWA caches can serve stale chunks; browser proof must unregister workers and
+  clear GSD caches before screenshots.
+- Long titles, no-result search, completed tasks, low-content views, overdue and
+  due-today states, recurring work, subtasks, tags, and dependencies must remain
+  legible at desktop, laptop, mobile, dark mode, and 200% zoom.
+- Each concept needs a deliberate mobile composition; stacking the desktop grid
+  is not sufficient.
+- Theme and preview query parameters must remain compatible with static export.
+
+## Out of scope
+
+- Production matrix, dashboard, settings, archive, onboarding, sync, persistence,
+  database schema, service-worker behavior, deployment, or CloudFront changes.
+- A winner implementation, migration plan execution, PR, push, merge, or deploy.
+- Full prototype persistence, production drag/drop, or production analytics.
+
+## Acceptance criteria
+
+- [x] Current-state audit covers all ten requested sections and distinguishes
+  observed evidence from assumptions.
+- [x] Five directions differ across palette, typography, surface/depth, density,
+  shape, navigation, task cards, matrix model, capture, mobile, and emotion.
+- [x] Overview, comparison mode, and all five dedicated routes render from one
+  shared dataset and link to desktop/mobile previews.
+- [x] Every concept demonstrates prioritization, capture, card states, editing,
+  search/filtering, dashboard/review, mobile behavior, light/dark strategy, and
+  a useful no-result or low-content state.
+- [x] Palette tests measure required text/control contrast and every interactive
+  surface has keyboard-visible focus and meaningful accessible names.
+- [x] Chromium and WebKit behavioral checks cover desktop/mobile, keyboard-only
+  navigation, light/dark, and reduced motion after stale-cache prevention;
+  screenshot artifacts are captured consistently in Chromium.
+- [x] The five requested views plus one dark matrix—six files per concept—exist
+  under each artifact folder.
+- [x] Comparison document includes all requested concept details, 1-5 matrix,
+  tradeoff commentary, evidence/judgment labeling, and category recommendations.
+- [x] `bun install`, lint, typecheck, unit tests, build, and targeted Playwright
+  checks are reported honestly with any limitations.
+
+## Test stubs
+
+- `tests/data/design-lab-palette.test.ts`: shared concept contract and measured
+  light/dark contrast floors.
+- `tests/ui/design-lab.test.tsx`: overview navigation, shared-state rendering,
+  search/no-results, capture/editor interactions, theme and view controls.
+- `tests/e2e/design-lab.spec.ts`: all routes, responsive layout, keyboard focus,
+  theme switching, reduced motion, and screenshot-critical interaction states.
+- `tests/e2e/design-lab-isolation.spec.ts`: fresh-profile proof that the lab does
+  not initialize production storage, service worker, PWA, WebMCP, sync, or
+  onboarding runtime services.
+
+---
+
 # Spec: Apply Violet Frost across the application
 
 **Date:** 2026-07-31 · **Status:** Implemented · **Tier:** Non-trivial

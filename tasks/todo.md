@@ -2,6 +2,54 @@
 
 ---
 
+## Done — 2026-08-01: Explore five visual directions
+
+**Branch:** `design/five-visual-directions` · **Tier:** Non-trivial (five full
+interactive product concepts, shared state, documentation, browser evidence, and
+cross-browser verification). **Approved contract:** attached user brief plus
+`tasks/spec.md`.
+
+**Plan (TDD + browser proof):**
+- [x] Run branch preflight, preserve inherited stashes/`public/sw.js`, and create
+  the isolated branch.
+- [x] Load PRODUCT/DESIGN, project UI memory, design skills, tokens, accessibility,
+  typography, motion, responsive, dashboard, form, and verification guidance.
+- [x] Audit the live and local product surfaces and write the current-state report.
+- [x] RED: add shared-data/palette/component/e2e contracts for the design lab.
+- [x] GREEN: implement the overview, comparison mode, shared mock state, and five
+  concept routes without importing production persistence or sync behavior.
+- [x] Review changed React surfaces for WCAG AA and correct findings.
+- [x] Cache-bust and capture 30 consistent Chromium desktop/laptop/mobile/editor/
+  review/dark artifacts; verify behavior separately in Chromium and WebKit.
+- [x] Write the comparison decision package and recommendation matrix.
+- [x] Run install, focused/full tests, coverage, typecheck, lint, build, and
+  targeted Playwright checks; commit only scoped design-exploration files.
+
+**Out of scope:** production UI changes, persistence/sync/schema/service-worker
+changes, deploy, push, PR, merge, or selecting/implementing a winner.
+
+**Verification:** `bun install --frozen-lockfile` passed without dependency
+changes. The full suite passed 2,416 tests with 1 skipped; coverage is 87.86%
+statements, 81.19% branches, 87.43% functions, and 88.87% lines. Typecheck and
+the 15-page static build passed. Lint passed with 0 errors and 10 pre-existing
+warnings outside this work. Targeted Playwright passed 11/11 in Chromium and
+11/11 in WebKit, including fresh-profile runtime isolation, responsive and
+200%-equivalent reflow, 44px coarse targets, physical-key Option shortcuts,
+reduced motion, theme/query state, and contained mobile preview navigation.
+Production-build smoke covered 12 route/viewport states in each engine, and axe
+reported 0 violations across the overview plus all five concepts in light/dark
+(11 states). The evidence set contains 30 Chromium concept screenshots and 8
+Chromium current-state baseline captures; WebKit is behavioral evidence, not a
+second screenshot set.
+
+**Limitations:** the prototypes are deliberately in-memory and omit persistence,
+sync, production drag/drop, loading/offline/write-failure simulation, and a
+winner migration. No VoiceOver, physical iOS, virtual-keyboard, real-touch, or
+usability-study proof was performed. Three inherited stashes and the pre-existing
+`public/sw.js` version diff remain untouched and outside the scoped commits.
+
+---
+
 ## Done — 2026-07-31: Apply Violet Frost across the application
 
 **Branch:** `codex/violet-frost-theme` · **Tier:** Non-trivial (shared color
