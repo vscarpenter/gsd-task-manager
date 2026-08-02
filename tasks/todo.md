@@ -2,7 +2,7 @@
 
 ---
 
-## In progress — 2026-08-01: Date-anchored matrix intro briefing
+## Done — 2026-08-01: Date-anchored matrix intro briefing
 
 **Branch:** `feat/matrix-intro-briefing` · **Tier:** Standard (content-only change
 to the matrix intro block: one new pure module, two component wirings, test
@@ -33,7 +33,8 @@ reserved blank space, keeping the static-export snapshot date-free.
   90.9/86.8/85.7/92.5. Live browser (SW busted, console clean): all-clear,
   overdue-located, and overdue-scattered states each rendered the correct
   sentence; seeds cleaned up. Empty/Q1-majority states unit-covered only.
-- [ ] Version bump (minor), commit, push, PR.
+- [x] Version bump (11.0.1 → 11.1.0, package.json + sw.js CACHE_VERSION),
+  commit `9e46145`, pushed, PR #468.
 
 **Out of scope:** layout/spacing changes, the Protect Q2 card, design-lab
 prototype copy (historical artifact), midnight rollover re-render, About-page
