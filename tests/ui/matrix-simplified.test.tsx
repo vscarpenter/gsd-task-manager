@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
+import { introDateLabel } from "@/components/matrix-simplified/intro-copy";
 import type { TaskRecord } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
 
@@ -260,15 +261,41 @@ describe("<MatrixSimplified>", () => {
   it("renders 'GSD Matrix' title", () => {
     render(<MatrixSimplified />);
     expect(screen.getByTestId("topbar-title")).toHaveTextContent("GSD Matrix");
-    expect(screen.getByRole("heading", { level: 1, name: /decide what deserves you/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /today.s matrix/i })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
+  it("shows today's date as the page heading once hydrated", () => {
+    render(<MatrixSimplified />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      introDateLabel(new Date())
+    );
   });
 
   it("keeps the static-export server snapshot hydration-safe", () => {
     const html = renderToString(<MatrixSimplified />);
     expect(html).toContain("GSD Matrix");
-    expect(html).toContain("Decide what deserves you.");
+    expect(html).toContain("Today’s matrix —");
+    expect(html).not.toContain(introDateLabel(new Date()));
     expect(html).toContain("Capture a task");
+  });
+
+  it("reads the board state in the intro briefing", () => {
+    tasksFixture.current = [
+      makeTask({ id: "od1", urgent: true, important: true, dueDate: "2000-01-01" }),
+      makeTask({ id: "od2", urgent: true, important: true, dueDate: "2000-01-02" }),
+      makeTask({ id: "q4" }),
+    ];
+    render(<MatrixSimplified />);
+
+    expect(screen.getByText("Both overdue tasks sit in Do First.")).toBeInTheDocument();
+  });
+
+  it("does not publish a board reading while tasks are loading", () => {
+    tasksFixture.loading = true;
+    render(<MatrixSimplified />);
+
+    expect(screen.queryByText(/the board is clear/i)).not.toBeInTheDocument();
   });
 
   it("reports active Schedule work from the full task set", () => {

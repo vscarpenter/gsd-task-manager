@@ -28,6 +28,7 @@ import { useSmartViews } from "./use-smart-views";
 import { useTaskHighlight } from "./use-task-highlight";
 import { useMatrixWindowEvents } from "./use-matrix-window-events";
 import { MatrixIntro } from "./matrix-intro";
+import { deriveIntroStats, introDateLabel, introMessage } from "./intro-copy";
 import { TaskDetailSheet } from "./task-detail-sheet";
 
 /**
@@ -306,6 +307,13 @@ export function MatrixSimplified() {
     (count, task) => count + (!task.completed && !task.urgent && task.important ? 1 : 0),
     0
   );
+  // Intro briefing: date + state reading render only after hydration so the
+  // prerendered static export never bakes in a build-time date or an empty-board
+  // message computed before IndexedDB has loaded.
+  const introReady = mounted && !isLoading;
+  const introStats = introReady
+    ? deriveIntroStats(all, new Date().toISOString().slice(0, 10))
+    : null;
 
   // Header counts — three small inline pills, semantic colors. Overdue
   // pill is conditional on count > 0. Sits on the same baseline as the title
@@ -338,6 +346,8 @@ export function MatrixSimplified() {
         searchInputRef={searchInputRef}
       >
         <MatrixIntro
+          dateLabel={mounted ? introDateLabel(new Date()) : null}
+          message={introStats ? introMessage(introStats) : null}
           scheduleCount={isLoading ? null : activeScheduleCount}
           onFocusSchedule={() => focusQuadrant("q2")}
         />
