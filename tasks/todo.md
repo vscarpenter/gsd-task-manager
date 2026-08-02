@@ -2,6 +2,46 @@
 
 ---
 
+## Done — 2026-08-01: Date-anchored matrix intro briefing
+
+**Branch:** `feat/matrix-intro-briefing` · **Tier:** Standard (content-only change
+to the matrix intro block: one new pure module, two component wirings, test
+updates; no new public contract). **Approved contract:** user-approved design in
+this session (date-anchored briefing direction).
+
+**Design summary:** replace the static hero copy ("Decide what deserves you." /
+"Hold the whole picture…") with a date-anchored briefing. Eyebrow stays
+"Today's matrix"; the h1 becomes the formatted local date with an sr-only
+"Today's matrix — " prefix; the subtext becomes one computed sentence from a
+priority-ordered rule set (empty board → overdue-located → overdue-scattered →
+Q1-majority → all-clear). The subtext never mentions Q2 (the Protect Q2 card
+owns that topic) and never repeats raw counts (the header pills own those).
+Hydration: `dateLabel`/`stats` props are `null` until mounted/loaded and render
+reserved blank space, keeping the static-export snapshot date-free.
+
+**Plan (TDD):**
+- [x] RED: unit tests for `intro-copy.ts` — `introDateLabel(now)` formatting and
+  `introMessage(stats)` across all rules, boundaries, and pluralization.
+  (16 tests; red confirmed via unresolved module import.)
+- [x] GREEN: implement `components/matrix-simplified/intro-copy.ts`. (16/16.)
+- [x] Wire `MatrixIntro` (dateLabel + message props, sr-only h1 prefix) and
+  `index.tsx` (compute stats from `all`); update `app-shell.test.tsx` and
+  `matrix-simplified.test.tsx` assertions, including the `renderToString`
+  hydration-safety test (server snapshot asserted date-free).
+- [x] Verify: full suite 2,513 pass / 1 skip; typecheck clean; lint 0 errors
+  (10 known warnings). Coverage: intro-copy 100%, matrix-intro 100%, index.tsx
+  90.9/86.8/85.7/92.5. Live browser (SW busted, console clean): all-clear,
+  overdue-located, and overdue-scattered states each rendered the correct
+  sentence; seeds cleaned up. Empty/Q1-majority states unit-covered only.
+- [x] Version bump (11.0.1 → 11.1.0, package.json + sw.js CACHE_VERSION),
+  commit `9e46145`, pushed, PR #468.
+
+**Out of scope:** layout/spacing changes, the Protect Q2 card, design-lab
+prototype copy (historical artifact), midnight rollover re-render, About-page
+copy.
+
+---
+
 ## Done — 2026-08-01: Clarify and strengthen Q2 shortcut feedback
 
 **Branch:** `design/five-visual-directions` · **Tier:** Standard (bounded copy and

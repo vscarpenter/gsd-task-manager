@@ -3,6 +3,10 @@
 import { ArrowDownRightIcon, CalendarRangeIcon } from "lucide-react";
 
 interface MatrixIntroProps {
+  /** Formatted local date for the h1; null until hydrated so the static export stays date-free. */
+  dateLabel: string | null;
+  /** One-sentence state reading from introMessage(); null while tasks load. */
+  message: string | null;
   scheduleCount: number | null;
   onFocusSchedule: () => void;
 }
@@ -13,16 +17,17 @@ function scheduleMessage(count: number): string {
   return `${count} strategic commitments need protected time.`;
 }
 
-export function MatrixIntro({ scheduleCount, onFocusSchedule }: MatrixIntroProps) {
+export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule }: MatrixIntroProps) {
   return (
     <section className="mb-6 grid items-end gap-5 border-b border-border/70 pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.58fr)] lg:gap-10">
       <div>
         <p className="text-eyebrow uppercase text-foreground-muted">Today&rsquo;s matrix</p>
-        <h1 className="mt-3 max-w-[20ch] text-display font-semibold text-foreground">
-          Decide what deserves you.
+        <h1 className="mt-3 text-display font-semibold text-foreground">
+          <span className="sr-only">Today&rsquo;s matrix — </span>
+          {dateLabel ?? " "}
         </h1>
         <p className="mt-3 max-w-[58ch] text-body text-foreground-muted">
-          Hold the whole picture, then protect the work that matters before urgency chooses for you.
+          {message ?? " "}
         </p>
       </div>
 

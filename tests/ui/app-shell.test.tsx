@@ -91,13 +91,13 @@ describe("AppShell command palette wiring", () => {
   it("lets matrix content own the page heading while retaining a compact shell label", () => {
     render(
       <AppShell title="GSD Matrix" titleAsLabel>
-        <h1>Decide what deserves you.</h1>
+        <h1>Saturday, August 1</h1>
       </AppShell>
     );
 
     expect(screen.getByText("GSD Matrix").tagName).toBe("P");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Decide what deserves you.");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Saturday, August 1");
   });
 
   it("accepts a matrix-only main width and mobile clearance contract", () => {
