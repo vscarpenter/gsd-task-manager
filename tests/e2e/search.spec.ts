@@ -22,8 +22,6 @@ test.describe("Search Functionality", () => {
     await matrixPage.createTask("Complete project report");
     await matrixPage.createTask("Call mom");
     
-    await page.waitForTimeout(500);
-    
     // Search for specific task
     await matrixPage.search("groceries");
     
@@ -37,8 +35,6 @@ test.describe("Search Functionality", () => {
     // Create tasks
     await matrixPage.createTask("Task one");
     await matrixPage.createTask("Task two");
-    
-    await page.waitForTimeout(500);
     
     const initialCount = await matrixPage.getTaskCount();
     expect(initialCount).toBe(2);
@@ -59,8 +55,6 @@ test.describe("Search Functionality", () => {
   test("should show no results for non-matching search", async ({ page }) => {
     await matrixPage.createTask("Existing task");
     
-    await page.waitForTimeout(500);
-    
     // Search for non-existent task
     await matrixPage.search("nonexistent task");
     
@@ -71,8 +65,6 @@ test.describe("Search Functionality", () => {
 
   test("should be case-insensitive", async ({ page }) => {
     await matrixPage.createTask("Test Task");
-    
-    await page.waitForTimeout(500);
     
     // Search with different case
     await matrixPage.search("test task");
@@ -87,8 +79,6 @@ test.describe("Search Functionality", () => {
   test("should handle partial matches", async ({ page }) => {
     await matrixPage.createTask("Complete the project report");
 
-    await page.waitForTimeout(500);
-
     // Search for partial word
     await matrixPage.search("project");
 
@@ -101,8 +91,6 @@ test.describe("Search Functionality", () => {
     await matrixPage.createTask("Buy lettuce #grocery");
     await matrixPage.createTask("Write quarterly memo #work");
     await matrixPage.createTask("Untagged task");
-
-    await page.waitForTimeout(500);
 
     await matrixPage.search("grocery");
 
@@ -120,8 +108,6 @@ test.describe("Search Functionality", () => {
   test("should search across multiple tags", async ({ page }) => {
     await matrixPage.createTask("Refactor module #work #urgent");
     await matrixPage.createTask("Call dentist #personal");
-
-    await page.waitForTimeout(500);
 
     await matrixPage.search("urgent");
     await expect(

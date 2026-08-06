@@ -62,7 +62,6 @@ test.describe("PWA Install Prompt", () => {
 
     // Trigger the install prompt event
     await triggerInstallPrompt(page);
-    await page.waitForTimeout(500);
 
     // The install dialog should appear
     const installDialog = page.locator("[aria-labelledby='install-pwa-title']");
@@ -73,7 +72,6 @@ test.describe("PWA Install Prompt", () => {
     await waitForAppLoad(page);
 
     await triggerInstallPrompt(page);
-    await page.waitForTimeout(500);
 
     const installDialog = page.locator("[aria-labelledby='install-pwa-title']");
     await expect(installDialog).toBeVisible({ timeout: 5000 });
@@ -81,7 +79,6 @@ test.describe("PWA Install Prompt", () => {
     // Click dismiss
     const dismissButton = page.locator("button[aria-label='Dismiss install prompt']");
     await dismissButton.click();
-    await page.waitForTimeout(500);
 
     // Dialog should be gone
     await expect(installDialog).not.toBeVisible();
@@ -111,15 +108,12 @@ test.describe("PWA Install Prompt", () => {
       window.dispatchEvent(event);
     });
 
-    await page.waitForTimeout(500);
-
     const installDialog = page.locator("[aria-labelledby='install-pwa-title']");
     await expect(installDialog).toBeVisible({ timeout: 5000 });
 
     // Click install button
     const installButton = page.getByRole("button", { name: /install/i }).first();
     await installButton.click();
-    await page.waitForTimeout(500);
 
     // Verify prompt() was called
     const promptCalled = await page.evaluate(() => (window as unknown as { __promptCalled: boolean }).__promptCalled);
@@ -134,7 +128,6 @@ test.describe("PWA Install Prompt", () => {
 
     // Try to trigger the event — should be ignored in standalone mode
     await triggerInstallPrompt(page);
-    await page.waitForTimeout(1000);
 
     // Dialog should NOT appear
     const installDialog = page.locator("[aria-labelledby='install-pwa-title']");
@@ -146,19 +139,16 @@ test.describe("PWA Install Prompt", () => {
 
     // Trigger and dismiss
     await triggerInstallPrompt(page);
-    await page.waitForTimeout(500);
 
     const installDialog = page.locator("[aria-labelledby='install-pwa-title']");
     await expect(installDialog).toBeVisible({ timeout: 5000 });
 
     const dismissButton = page.locator("button[aria-label='Dismiss install prompt']");
     await dismissButton.click();
-    await page.waitForTimeout(500);
     await expect(installDialog).not.toBeVisible();
 
     // Trigger again immediately — should not reappear (cooldown)
     await triggerInstallPrompt(page);
-    await page.waitForTimeout(1000);
     await expect(installDialog).not.toBeVisible();
   });
 });

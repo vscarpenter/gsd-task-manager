@@ -17,6 +17,11 @@ function scheduleMessage(count: number): string {
   return `${count} strategic commitments need protected time.`;
 }
 
+// Firefox can restore a button's dynamic disabled state across reloads. React's
+// button typings omit Firefox's supported autocomplete escape hatch, so spread
+// the lowercase DOM attribute without weakening the component's prop types.
+const preventPersistedDisabledState = { autoComplete: "off" } as const;
+
 export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule }: MatrixIntroProps) {
   return (
     <section className="mb-6 grid items-end gap-5 border-b border-border/70 pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.58fr)] lg:gap-10">
@@ -46,8 +51,8 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
               : scheduleMessage(scheduleCount)}
           </p>
         </div>
-        <button
-          type="button"
+        <button type="button"
+          {...preventPersistedDisabledState}
           onClick={onFocusSchedule}
           disabled={scheduleCount === null}
           className="touch-target col-span-2 inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2 text-small font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50 sm:col-span-1"

@@ -33,7 +33,6 @@ test.describe("Settings Navigation", () => {
 
   test("should navigate back to matrix from settings", async ({ page }) => {
     await matrixPage.openSettings();
-    await page.waitForTimeout(500);
 
     await matrixPage.openMatrix();
 

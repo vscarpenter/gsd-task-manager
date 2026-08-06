@@ -87,7 +87,7 @@ async function primeContext(context: BrowserContext): Promise<void> {
 function observeFailures(page: Page, failureList: string[]): void {
   page.on("pageerror", (error) => failureList.push(`pageerror: ${error.message}`));
   page.on("console", (message) => {
-    if (message.type() === "error" && !message.text().includes("frame-ancestors")) {
+    if (message.type() === "error") {
       failureList.push(`console: ${message.text()}`);
     }
   });

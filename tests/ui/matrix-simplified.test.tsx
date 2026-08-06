@@ -318,10 +318,18 @@ describe("<MatrixSimplified>", () => {
 
   it("keeps the static-export server snapshot hydration-safe", () => {
     const html = renderToString(<MatrixSimplified />);
+    const snapshot = document.createElement("div");
+    snapshot.innerHTML = html;
+    const showSchedule = Array.from(snapshot.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Show Schedule")
+    );
+
     expect(html).toContain("GSD Matrix");
     expect(html).toContain("Today’s matrix —");
     expect(html).not.toContain(introDateLabel(new Date()));
     expect(html).toContain("Capture a task");
+    expect(showSchedule).toBeDisabled();
+    expect(showSchedule).toHaveAttribute("autocomplete", "off");
   });
 
   it("reads the board state in the intro briefing", () => {

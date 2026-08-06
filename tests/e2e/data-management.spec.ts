@@ -11,11 +11,9 @@ import { waitForAppLoad } from "./helpers/test-helpers";
  */
 
 async function gotoDataSection(matrixPage: MatrixPage): Promise<void> {
-  await matrixPage.openSettings();
-  await matrixPage.page
-    .locator("aside.lg\\:block")
-    .getByRole("button", { name: "Data & Storage" })
-    .click();
+  // This suite exercises import/export, not client navigation. Deep-link to
+  // avoid making every parallel case race Next's first /settings compilation.
+  await matrixPage.page.goto("/settings#data", { waitUntil: "domcontentloaded" });
   await expect(matrixPage.page.locator("main h2", { hasText: "Data & Storage" })).toBeVisible();
 }
 

@@ -16,7 +16,6 @@ import { TOAST_DURATION } from "@/lib/constants";
 import { SHOW_COMPLETED_EVENT, readShowCompleted } from "@/lib/preferences/show-completed";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
-import { TaskCard } from "@/components/task-card";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
@@ -379,7 +378,7 @@ export function MatrixSimplified() {
         <MatrixIntro
           dateLabel={mounted ? introDateLabel(new Date()) : null}
           message={introStats ? introMessage(introStats) : null}
-          scheduleCount={isLoading ? null : activeScheduleCount}
+          scheduleCount={mounted && !isLoading ? activeScheduleCount : null}
           onFocusSchedule={() => focusQuadrant("q2")}
         />
         <div
@@ -449,14 +448,13 @@ export function MatrixSimplified() {
 
       <DragOverlay dropAnimation={null}>
         {activeDragTask ? (
-          <div style={{ cursor: "grabbing" }}>
-            <TaskCard
-              task={activeDragTask}
-              allTasks={all}
-              onEdit={() => {}}
-              onDelete={() => {}}
-              onToggleComplete={() => {}}
-            />
+          <div
+            data-testid="drag-overlay"
+            aria-hidden="true"
+            className="max-w-sm rounded-lg border border-pane-border bg-card px-4 py-3 shadow-[var(--shadow-elevated)]"
+            style={{ cursor: "grabbing" }}
+          >
+            <p className="truncate text-small font-semibold text-foreground">{activeDragTask.title}</p>
           </div>
         ) : null}
       </DragOverlay>

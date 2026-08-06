@@ -127,9 +127,6 @@ test.describe("Recurring Task Auto-Creation", () => {
     // Complete the task
     await taskCard.first().locator("[data-testid='complete-task']").click();
 
-    // Wait for recurrence to create new instance
-    await page.waitForTimeout(1000);
-
     // The completed task may be hidden by default, but a NEW uncompleted instance
     // should appear. Verify at least 1 visible task with this title exists (the new one).
     const visibleCards = page.locator("[data-testid='task-card']").filter({ hasText: "Daily Standup" });
@@ -160,7 +157,6 @@ test.describe("Recurring Task Auto-Creation", () => {
 
     // Complete the task
     await taskCard.first().locator("[data-testid='complete-task']").click();
-    await page.waitForTimeout(1000);
 
     // New instance should appear (completed one may be hidden)
     const visibleCards = page.locator("[data-testid='task-card']").filter({ hasText: "Weekly Review" });
@@ -191,7 +187,6 @@ test.describe("Recurring Task Auto-Creation", () => {
 
     // Complete the task
     await taskCard.first().locator("[data-testid='complete-task']").click();
-    await page.waitForTimeout(1000);
 
     // New instance should appear (completed one may be hidden)
     const visibleCards = page.locator("[data-testid='task-card']").filter({ hasText: "Monthly Report" });
@@ -211,7 +206,7 @@ test.describe("Recurring Task Auto-Creation", () => {
 
     // Complete it
     await taskCard.locator("[data-testid='complete-task']").click();
-    await page.waitForTimeout(1000);
+    await expect(taskCard).toBeHidden();
 
     // Should still have exactly 1 task (now completed, possibly hidden)
     // The key assertion: no second task was created
@@ -242,7 +237,6 @@ test.describe("Recurring Task Auto-Creation", () => {
 
     // Complete it
     await taskInQ2.first().locator("[data-testid='complete-task']").click();
-    await page.waitForTimeout(1000);
 
     // New instance should also appear in Q2 (uncompleted)
     const newInstanceInQ2 = q2.locator("[data-testid='task-card']").filter({ hasText: "Q2 Recurring" });

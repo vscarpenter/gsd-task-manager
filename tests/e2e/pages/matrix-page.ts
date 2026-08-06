@@ -1,4 +1,4 @@
-import { Page, Locator } from "@playwright/test";
+import { expect, Page, Locator } from "@playwright/test";
 
 export class MatrixPage {
   readonly page: Page;
@@ -28,23 +28,23 @@ export class MatrixPage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto("/");
-    await this.page.waitForLoadState("networkidle");
+    await this.page.goto("/", { waitUntil: "domcontentloaded" });
     
     // Handle redirect to about page by navigating to matrix
     if (this.page.url().includes("/about")) {
       await this.navMatrix.click();
-      await this.page.waitForLoadState("networkidle");
     }
     
-    await this.page.waitForTimeout(2000); // Wait for app to fully render
     await this.matrixGrid.waitFor({ state: "visible", timeout: 20000 });
+    await expect(this.page.getByRole("button", { name: /Show Schedule/ })).toBeEnabled();
   }
 
   async createTask(title: string): Promise<void> {
+    const taskCount = await this.page.locator("[data-testid='task-card']").count();
     await this.captureBar.locator("[data-testid='capture-input']").fill(title);
     await this.captureBar.locator("[data-testid='submit-task']").click();
-    await this.page.waitForTimeout(500);
+    await expect(this.captureBar.locator("[data-testid='capture-input']")).toHaveValue("");
+    await expect(this.page.locator("[data-testid='task-card']")).toHaveCount(taskCount + 1);
   }
 
   async getTaskCount(): Promise<number> {
@@ -63,7 +63,7 @@ export class MatrixPage {
   async completeTask(title: string): Promise<void> {
     const taskCard = this.page.locator("[data-testid='task-card']").filter({ hasText: title });
     await taskCard.locator("[data-testid='complete-task']").click();
-    await this.page.waitForTimeout(500);
+    await expect(taskCard).toBeHidden();
   }
 
   async deleteTask(title: string): Promise<void> {
@@ -72,7 +72,7 @@ export class MatrixPage {
     await taskCard.hover();
     // Click the delete button directly (desktop actions)
     await taskCard.locator("[data-testid='delete-task']").click();
-    await this.page.waitForTimeout(500);
+    await expect(taskCard).toHaveCount(0);
   }
 
   /**
@@ -147,12 +147,10 @@ export class MatrixPage {
 
   async search(query: string): Promise<void> {
     await this.searchInput.fill(query);
-    await this.page.waitForTimeout(300);
   }
 
   async clearSearch(): Promise<void> {
     await this.searchInput.fill("");
-    await this.page.waitForTimeout(300);
   }
 
   async openSettings(): Promise<void> {
@@ -160,10 +158,10 @@ export class MatrixPage {
     const pwaDialog = this.page.locator("[role='dialog'][aria-labelledby='install-pwa-title']");
     if (await pwaDialog.isVisible().catch(() => false)) {
       await pwaDialog.locator("button[aria-label='Dismiss install prompt']").click();
-      await this.page.waitForTimeout(200);
+      await expect(pwaDialog).toBeHidden();
     }
     await this.navSettings.click();
-    await this.page.waitForTimeout(500);
+    await expect(this.page).toHaveURL(/\/settings/);
   }
 
   async openDashboard(): Promise<void> {
@@ -171,10 +169,10 @@ export class MatrixPage {
     const pwaDialog = this.page.locator("[role='dialog'][aria-labelledby='install-pwa-title']");
     if (await pwaDialog.isVisible().catch(() => false)) {
       await pwaDialog.locator("button[aria-label='Dismiss install prompt']").click();
-      await this.page.waitForTimeout(200);
+      await expect(pwaDialog).toBeHidden();
     }
     await this.navDashboard.click();
-    await this.page.waitForTimeout(500);
+    await expect(this.page).toHaveURL(/\/dashboard/);
   }
 
   async openMatrix(): Promise<void> {
@@ -182,9 +180,9 @@ export class MatrixPage {
     const pwaDialog = this.page.locator("[role='dialog'][aria-labelledby='install-pwa-title']");
     if (await pwaDialog.isVisible().catch(() => false)) {
       await pwaDialog.locator("button[aria-label='Dismiss install prompt']").click();
-      await this.page.waitForTimeout(200);
+      await expect(pwaDialog).toBeHidden();
     }
     await this.navMatrix.click();
-    await this.page.waitForTimeout(500);
+    await expect(this.matrixGrid).toBeVisible();
   }
 }

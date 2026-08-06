@@ -54,8 +54,8 @@ export function QuadrantPane({
   const taskIds = tasks.map((t) => t.id);
   const activeTaskCount = tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0);
   return (
-    <section
-      data-testid={`quadrant-${meta.rdKey}`}
+    <section data-testid={`quadrant-${meta.rdKey}`}
+      data-drop-active={isOver ? "true" : undefined}
       id={`matrix-quadrant-${meta.rdKey}`}
       ref={(node) => {
         setNodeRef(node);

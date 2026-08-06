@@ -19,36 +19,77 @@ import type { Page, Locator } from "@playwright/test";
  * This works with @dnd-kit's PointerSensor activation constraint.
  */
 async function performDrag(page: Page, source: Locator, target: Locator) {
-  await source.hover();
-  const handleBox = await source.boundingBox();
-  const targetBox = await target.boundingBox();
+  const overlay = page.locator("[data-testid='drag-overlay']");
+  let lastError: unknown;
 
-  if (!handleBox || !targetBox) {
-    throw new Error("Could not get bounding boxes for drag source/target");
+  // Browser load can occasionally make the first pointer sequence miss the
+  // sensor's activation frame. Retry the actual state transition, not a sleep.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let mouseIsDown = false;
+    try {
+      await source.scrollIntoViewIfNeeded();
+      await source.hover();
+      const handleBox = await source.boundingBox();
+      if (!handleBox) throw new Error("Could not get a bounding box for the drag source");
+
+      const startX = handleBox.x + handleBox.width / 2;
+      const startY = handleBox.y + handleBox.height / 2;
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      mouseIsDown = true;
+      await page.mouse.move(startX + 16 + attempt * 8, startY, { steps: 6 });
+      await overlay.waitFor({ state: "visible", timeout: 3000 });
+
+      // Re-read the target after activation because dnd-kit can change layout.
+      const targetBox = await target.boundingBox();
+      if (!targetBox) throw new Error("Could not get a bounding box for the drop target");
+      const viewport = page.viewportSize();
+      const visibleTop = viewport ? Math.max(targetBox.y + 2, 2) : targetBox.y + 2;
+      const visibleBottom = viewport
+        ? Math.min(targetBox.y + targetBox.height - 2, viewport.height - 2)
+        : targetBox.y + targetBox.height - 2;
+      if (visibleTop > visibleBottom) throw new Error("Drop target is outside the viewport");
+
+      const targetPoints = [
+        { x: targetBox.x + targetBox.width / 2, y: (visibleTop + visibleBottom) / 2 },
+        { x: targetBox.x + targetBox.width - 24, y: visibleBottom },
+        { x: targetBox.x + 24, y: visibleBottom },
+      ];
+      let targetIsActive = false;
+      for (const point of targetPoints) {
+        await page.mouse.move(point.x, point.y, { steps: 8 });
+        try {
+          await expect(target).toHaveAttribute("data-drop-active", "true", { timeout: 1500 });
+          targetIsActive = true;
+          break;
+        } catch {
+          // Try another visible part of the pane while preserving drag state.
+        }
+      }
+      if (!targetIsActive) throw new Error("Drop target never became active");
+
+      await page.mouse.up();
+      mouseIsDown = false;
+      await overlay.waitFor({ state: "hidden", timeout: 3000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (mouseIsDown) await page.mouse.up();
+      await overlay.waitFor({ state: "hidden", timeout: 3000 }).catch(() => undefined);
+    }
   }
 
-  const startX = handleBox.x + handleBox.width / 2;
-  const startY = handleBox.y + handleBox.height / 2;
-  const viewport = page.viewportSize();
-  const endX = targetBox.x + targetBox.width / 2;
-  // Lower quadrants can extend below the viewport. Chromium/WebKit happen to
-  // auto-scroll when Playwright sends an off-screen mouse coordinate, but
-  // Firefox reports `over: null`. Drop inside the visible portion instead.
-  const targetCenterY = targetBox.y + targetBox.height / 2;
-  const endY = viewport
-    ? Math.max(1, Math.min(targetCenterY, viewport.height - 1))
-    : targetCenterY;
+  throw lastError instanceof Error ? lastError : new Error("Drag operation failed");
+}
 
-  await page.mouse.move(startX, startY);
-  await page.mouse.down();
-  // Move past the 8px activation distance
-  await page.mouse.move(startX, startY - 10, { steps: 3 });
-  await page.waitForTimeout(100);
-  // Move to target center
-  await page.mouse.move(endX, endY, { steps: 10 });
-  await page.waitForTimeout(100);
-  await page.mouse.up();
-  await page.waitForTimeout(1000);
+async function reloadMatrix(page: Page): Promise<void> {
+  try {
+    await page.reload({ waitUntil: "domcontentloaded" });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("NS_BINDING_ABORTED")) throw error;
+    await page.waitForLoadState("domcontentloaded");
+  }
+  await waitForAppLoad(page);
 }
 
 test.describe("Drag and Drop Between Quadrants", () => {
@@ -61,7 +102,6 @@ test.describe("Drag and Drop Between Quadrants", () => {
 
     // Create a task — defaults to Q4 (not urgent, not important) via capture bar
     await createTaskViaCaptureBar(page, "Move to Q1");
-    await page.waitForTimeout(500);
 
     // Verify it's in Q4
     const q4 = page.locator("[data-testid='quadrant-q4']");
@@ -120,8 +160,7 @@ test.describe("Drag and Drop Between Quadrants", () => {
       });
     });
 
-    await page.reload();
-    await waitForAppLoad(page);
+    await reloadMatrix(page);
 
     // Verify task is in Q1
     const q1 = page.locator("[data-testid='quadrant-q1']");
@@ -179,8 +218,7 @@ test.describe("Drag and Drop Between Quadrants", () => {
       });
     });
 
-    await page.reload();
-    await waitForAppLoad(page);
+    await reloadMatrix(page);
 
     const q2 = page.locator("[data-testid='quadrant-q2']");
     const taskInQ2 = q2.locator("[data-testid='task-card']").filter({ hasText: "Schedule This" });
@@ -235,8 +273,7 @@ test.describe("Drag and Drop Between Quadrants", () => {
       });
     });
 
-    await page.reload();
-    await waitForAppLoad(page);
+    await reloadMatrix(page);
 
     const q1 = page.locator("[data-testid='quadrant-q1']");
     const task = q1.locator("[data-testid='task-card']").filter({ hasText: "Preserve My Data" });

@@ -156,8 +156,6 @@ test("keeps the design lab outside production storage and runtime services", asy
     );
     expect(installEventWasNotPrevented).toBe(true);
 
-    await page.waitForTimeout(3_250);
-
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByText("Install GSD Task Manager")).toHaveCount(0);
 
