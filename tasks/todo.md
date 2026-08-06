@@ -2,6 +2,48 @@
 
 ---
 
+## Done — 2026-08-05: Resolve rescan High and Medium findings
+
+**Branch:** `codex/resolve-pre-rescan-issues` · **Tier:** Non-trivial ·
+**Approved contract:** the user approved the current rescan's one High and eight
+Medium findings; detailed contract in
+`tasks/spec-rescan-high-medium-remediation.md`.
+
+**Plan (continuous spec → TDD → implementation → verification):**
+- [x] Resolve the current scan findings against repository evidence and record
+  the approved contract, authority boundaries, edge cases, and test stubs.
+- [x] Add red regression/quality tests for the build, security/PocketBase,
+  hydration, E2E, MCP dispatcher, maintainability, and system-test gates.
+- [x] Fix the fail-open build, add the secret-scan baseline/gate, and align
+  repository PocketBase assets with production 0.39.10.
+- [x] Fix deterministic hydration and replace Playwright fixed sleeps with
+  state-based waits guarded by automatic browser-runtime error capture.
+- [x] Replace the MCP switch with an exhaustive typed registry and enforce a
+  per-file production code-shape ratchet.
+- [x] Add and pass the disposable authenticated PocketBase system test.
+- [x] Run required specialist reviews plus full root/MCP/build/E2E/security
+  verification, make scoped logical commits, and leave inherited files intact.
+
+**Authority boundary:** no Git-history rewrite or force-push is authorized. The
+expired historical JWT remains a separately coordinated destructive cleanup;
+this pass prevents recurrence and makes existing exceptions explicit without
+committing matched secret content.
+
+**Verification:** root coverage passed 2,561 tests / 1 skip at 88.41/82.14/
+88.31/89.44; MCP coverage passed 225 / 2 skips at 84.64/77.42/86.39/84.82.
+PocketBase fresh and real 0.26.6-to-0.39.10 upgrade scenarios passed 2/2,
+including accented, CJK, emoji, owner isolation, timestamps, and encrypted disk
+state. The final full Playwright run passed 269/270 across Chromium, Firefox,
+and WebKit; its sole Firefox keyboard-dialog flake then passed 3/3 repetitions
+(30/30 for that file), while every changed DnD path passed in the full run. A
+prior full run in this pass passed 270/270. Typecheck, MCP build, the 15-route
+production build, zero-warning lint, code-shape ratchet, shell syntax, full-
+history Gitleaks (668 commits), `bun audit`, and diff checks passed. Final WCAG
+and PocketBase/sync reviews returned 0 blocking findings and 0 suggestions.
+The three inherited dirty files and three existing stashes were preserved.
+
+---
+
 ## Done — 2026-08-05: Resolve pre-rescan issues 1–5
 
 **Branch:** `codex/resolve-pre-rescan-issues` · **Tier:** Non-trivial ·
