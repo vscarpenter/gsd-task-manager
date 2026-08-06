@@ -218,6 +218,33 @@ describe('task-mapper', () => {
       expect(result).toBeNull();
     });
 
+    it.each(['client_created_at', 'client_updated_at'])('should reject an invalid %s', (field) => {
+      mockLogger.error.mockClear();
+      const result = pocketBaseToTaskRecord(buildPBRecord({ [field]: 'not-a-date' }));
+
+      expect(result).toBeNull();
+      const [, , metadata] = mockLogger.error.mock.calls[0]!;
+      expect(metadata.validationErrors).toContain(field);
+    });
+
+    it('should reject client timestamps without a timezone', () => {
+      const result = pocketBaseToTaskRecord(buildPBRecord({
+        client_updated_at: '2026-04-08T10:00:00.000',
+      }));
+
+      expect(result).toBeNull();
+    });
+
+    it('should accept client timestamps with explicit numeric offsets', () => {
+      const result = pocketBaseToTaskRecord(buildPBRecord({
+        client_created_at: '2026-04-01T01:00:00.000+01:00',
+        client_updated_at: '2026-04-08T11:00:00.000+01:00',
+      }));
+
+      expect(result?.createdAt).toBe('2026-04-01T01:00:00.000+01:00');
+      expect(result?.updatedAt).toBe('2026-04-08T11:00:00.000+01:00');
+    });
+
     it('should log the Zod issues under the validationErrors key so Sentry forwarding keeps them', () => {
       mockLogger.error.mockClear();
       const pb = buildPBRecord({ quadrant: 'invalid-quadrant' });

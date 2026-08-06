@@ -2,8 +2,8 @@
  * Tests for the InstallPwaPrompt component.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('@/components/ui/button', () => ({
@@ -45,6 +45,8 @@ vi.mock('@/lib/logger', () => ({
 
 import { InstallPwaPrompt } from '@/components/install-pwa-prompt';
 
+const defaultUserAgent = window.navigator.userAgent;
+
 describe('InstallPwaPrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -63,6 +65,14 @@ describe('InstallPwaPrompt', () => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })),
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: defaultUserAgent,
     });
   });
 
@@ -212,6 +222,31 @@ describe('InstallPwaPrompt', () => {
     });
 
     // Prompt should NOT reappear within the 7-day cooldown window
+    expect(screen.queryByText('Install GSD Task Manager')).not.toBeInTheDocument();
+  });
+
+  it('should not re-show from the Safari fallback timer after dismissal', () => {
+    vi.useFakeTimers();
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 Version/18.0 Safari/605.1.15',
+    });
+    render(<InstallPwaPrompt />);
+
+    act(() => {
+      const event = new Event('beforeinstallprompt', { cancelable: true });
+      Object.defineProperty(event, 'prompt', { value: vi.fn() });
+      Object.defineProperty(event, 'userChoice', {
+        value: Promise.resolve({ outcome: 'dismissed' }),
+      });
+      window.dispatchEvent(event);
+    });
+    expect(screen.getByText('Install GSD Task Manager')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Dismiss install prompt'));
+    expect(screen.queryByText('Install GSD Task Manager')).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(3000));
     expect(screen.queryByText('Install GSD Task Manager')).not.toBeInTheDocument();
   });
 

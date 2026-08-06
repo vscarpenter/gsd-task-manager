@@ -29,8 +29,15 @@ async function performDrag(page: Page, source: Locator, target: Locator) {
 
   const startX = handleBox.x + handleBox.width / 2;
   const startY = handleBox.y + handleBox.height / 2;
+  const viewport = page.viewportSize();
   const endX = targetBox.x + targetBox.width / 2;
-  const endY = targetBox.y + targetBox.height / 2;
+  // Lower quadrants can extend below the viewport. Chromium/WebKit happen to
+  // auto-scroll when Playwright sends an off-screen mouse coordinate, but
+  // Firefox reports `over: null`. Drop inside the visible portion instead.
+  const targetCenterY = targetBox.y + targetBox.height / 2;
+  const endY = viewport
+    ? Math.max(1, Math.min(targetCenterY, viewport.height - 1))
+    : targetCenterY;
 
   await page.mouse.move(startX, startY);
   await page.mouse.down();

@@ -12,6 +12,7 @@ const smartViewsFixture = vi.hoisted(() => ({
   current: [] as SmartView[],
 }));
 const handleSuccessSpy = vi.hoisted(() => vi.fn());
+const logErrorSpy = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/use-tasks", () => ({
   useTasks: () => ({
@@ -102,6 +103,16 @@ vi.mock("@/lib/use-error-handler", () => ({
   useErrorHandlerWithUndo: () => ({ handleError: vi.fn(), handleSuccess: handleSuccessSpy }),
 }));
 
+vi.mock("@/lib/error-logger", () => ({
+  logError: logErrorSpy,
+  ErrorActions: {
+    CREATE_TASK: "create_task",
+    UPDATE_TASK: "update_task",
+    DELETE_TASK: "delete_task",
+    TOGGLE_TASK: "toggle_task_completion",
+  },
+}));
+
 // useDragAndDrop sets up DnD sensors — stub it out to avoid pointer-sensor issues in jsdom
 vi.mock("@/lib/use-drag-and-drop", () => ({
   useDragAndDrop: () => ({
@@ -157,13 +168,14 @@ describe("<MatrixSimplified>", () => {
     if (!Element.prototype.scrollIntoView) {
       Element.prototype.scrollIntoView = vi.fn();
     }
-    vi.mocked(createTask).mockClear();
+    vi.mocked(createTask).mockReset().mockResolvedValue(undefined);
     vi.mocked(celebrateCompletion).mockClear();
-    vi.mocked(toggleCompleted).mockClear();
-    vi.mocked(updateTask).mockClear();
-    vi.mocked(deleteTask).mockClear();
-    vi.mocked(restoreTask).mockClear();
+    vi.mocked(toggleCompleted).mockReset().mockResolvedValue(undefined);
+    vi.mocked(updateTask).mockReset().mockResolvedValue(undefined);
+    vi.mocked(deleteTask).mockReset().mockResolvedValue(undefined);
+    vi.mocked(restoreTask).mockReset().mockResolvedValue(undefined);
     handleSuccessSpy.mockClear();
+    logErrorSpy.mockClear();
   });
 
   // The empty states make a specific claim ("Nothing on fire.") that must not be
@@ -254,6 +266,38 @@ describe("<MatrixSimplified>", () => {
           important: true,
           tags: ["ops"],
         })
+      )
+    );
+  });
+
+  it("logs capture failures with a non-content action context", async () => {
+    const failure = new Error("capture write failed");
+    vi.mocked(createTask).mockRejectedValueOnce(failure);
+    render(<MatrixSimplified />);
+
+    await userEvent.type(screen.getByLabelText("Capture a task"), "private title{Enter}");
+
+    await waitFor(() =>
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        failure,
+        expect.objectContaining({ action: "create_task" })
+      )
+    );
+    expect(logErrorSpy.mock.calls[0][1]).not.toHaveProperty("metadata");
+  });
+
+  it("logs completion failures with the task id and toggle action", async () => {
+    const failure = new Error("toggle failed");
+    vi.mocked(toggleCompleted).mockRejectedValueOnce(failure);
+    tasksFixture.current = [makeTask({ id: "toggle-error", title: "Toggle error" })];
+    render(<MatrixSimplified />);
+
+    await userEvent.click(screen.getByRole("button", { name: /mark as complete/i }));
+
+    await waitFor(() =>
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        failure,
+        expect.objectContaining({ action: "toggle_task_completion", taskId: "toggle-error" })
       )
     );
   });
@@ -476,6 +520,24 @@ describe("<MatrixSimplified>", () => {
     );
   });
 
+  it("logs edit failures with the task id and update action", async () => {
+    const user = userEvent.setup();
+    const failure = new Error("edit failed");
+    vi.mocked(updateTask).mockRejectedValueOnce(failure);
+    tasksFixture.current = [makeTask({ id: "edit-error", title: "Edit error" })];
+    render(<MatrixSimplified />);
+
+    await user.click(screen.getAllByRole("button", { name: /^edit task$/i })[0]);
+    await user.click(await screen.findByRole("button", { name: /save changes/i }));
+
+    await waitFor(() =>
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        failure,
+        expect.objectContaining({ action: "update_task", taskId: "edit-error" })
+      )
+    );
+  });
+
   it("inspects task details without persistence, then enters the explicit editor", async () => {
     const user = userEvent.setup();
     tasksFixture.current = [
@@ -682,6 +744,23 @@ describe("<MatrixSimplified>", () => {
   });
 
   describe("delete + undo", () => {
+    it("logs delete failures with the task id and delete action", async () => {
+      const user = userEvent.setup();
+      const failure = new Error("delete failed");
+      vi.mocked(deleteTask).mockRejectedValueOnce(failure);
+      tasksFixture.current = [makeTask({ id: "delete-error", title: "Delete error" })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /delete task/i }));
+
+      await waitFor(() =>
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          failure,
+          expect.objectContaining({ action: "delete_task", taskId: "delete-error" })
+        )
+      );
+    });
+
     it("offers an Undo toast that restores the deleted task", async () => {
       const user = userEvent.setup();
       tasksFixture.current = [makeTask({ id: "del-1", title: "Delete me" })];

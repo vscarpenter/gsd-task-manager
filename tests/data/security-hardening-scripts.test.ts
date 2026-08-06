@@ -106,8 +106,10 @@ describe('security hardening scripts and workflows', () => {
     const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.8');
-    expect(rootPackage.overrides.hono).toBe('>=4.12.29');
-    expect(rootPackage.overrides.undici).toBe('>=7.28.0');
+    expect(rootPackage.overrides.hono).toBe('4.13.0');
+    expect(rootPackage.overrides.undici).toBe('7.29.0');
+    expect(rootPackage.overrides['fast-uri']).toBe('4.1.2');
+    expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
     expect(rootPackage.overrides.vite).toBe('>=8.1.4');
     expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.1');
     expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
@@ -115,5 +117,42 @@ describe('security hardening scripts and workflows', () => {
     expect(mcpPackage.dependencies['@sentry/node']).toBe('10.67.0');
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.10');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.10');
+    expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
+  });
+
+  it('pins the Bun runtime and invokes the repository audit without dynamic npx execution', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const bunSetupFiles = [
+      '.github/actions/build-static-export/action.yml',
+      '.github/workflows/ci.yml',
+      '.github/workflows/publish-mcp-server.yml',
+      '.github/workflows/security-audit.yml',
+      '.github/workflows/sonarcloud.yml',
+    ].map(readRepoFile);
+
+    expect(rootPackage.packageManager).toBe('bun@1.3.14');
+    expect(rootPackage.scripts.audit).toBe('bun audit --audit-level=high');
+    for (const file of bunSetupFiles) {
+      expect(file).not.toContain('bun-version: latest');
+      expect(file).toContain('bun-version: 1.3.14');
+    }
+  });
+
+  it('fails lint on warnings while excluding generated coverage at every workspace depth', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const eslintConfig = readRepoFile('eslint.config.mjs');
+
+    expect(rootPackage.scripts.lint).toBe('eslint . --max-warnings=0');
+    expect(eslintConfig).toContain('"**/coverage/**"');
+  });
+
+  it('keeps security documentation references on tracked canonical files', () => {
+    const agents = readRepoFile('AGENTS.md');
+    const architecture = readRepoFile('ARCHITECTURE.md');
+
+    expect(agents).not.toContain('.blume/insights/security-trust-boundaries.md');
+    expect(architecture).not.toContain('.blume/insights/security-trust-boundaries.md');
+    expect(agents).toContain('SECURITY.md');
+    expect(architecture).toContain('SECURITY.md');
   });
 });

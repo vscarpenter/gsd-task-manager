@@ -209,8 +209,6 @@ test.describe("Data Management — Import", () => {
 
     await gotoDataSection(matrixPage);
 
-    // The DataManagement section renders an active-task count.
-    // Use the inner content <main> (the settings layout nests two mains).
-    await expect(page.locator("main.min-w-0")).toContainText(/2/);
+    await expect(page.getByText("2 tasks", { exact: true })).toBeVisible();
   });
 });

@@ -11,8 +11,8 @@ import { waitForAppLoad, createTaskViaCaptureBar } from "./helpers/test-helpers"
 
 /**
  * Seed a recurring task into IndexedDB. Must be called AFTER the app is loaded
- * (so Dexie has already opened the DB at the correct version). We open at
- * the current schema version (14) to avoid blocking on a versionchange transaction.
+ * (so Dexie has already opened the DB at the correct version). Opening without
+ * an explicit version reuses the schema Dexie created and survives migrations.
  */
 async function seedRecurringTask(
   page: import("@playwright/test").Page,
@@ -26,8 +26,7 @@ async function seedRecurringTask(
   await page.evaluate(
     ({ title, recurrence, dueDate, quadrant }) => {
       return new Promise<void>((resolve, reject) => {
-        const DB_VERSION = 140;
-        const req = indexedDB.open("GsdTaskManager", DB_VERSION);
+        const req = indexedDB.open("GsdTaskManager");
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction("tasks", "readwrite");

@@ -74,7 +74,10 @@ When users enable cloud sync, the following security measures protect their data
 
 1. **User-Owned Server**
    - PocketBase instance runs on user's own infrastructure (e.g., AWS EC2)
-   - Tasks stored as plaintext in PocketBase SQLite database
+   - Selected task content fields are encrypted at rest by the PocketBase
+     hooks in `docker/pb_hooks/tasks_encryption.pb.js`
+   - `GSD_TASKS_ENC_KEY` is required by the self-hosted runtime; the one-shot
+     migration encrypts existing plaintext rows
    - User has full control over data retention and access
    - No third-party cloud service has access to task data
 
@@ -116,7 +119,9 @@ The MCP server allows Claude Desktop to access and manage tasks via natural lang
 1. **PocketBase API Access**
    - MCP server communicates directly with PocketBase using auth token
    - Auth token stored only in Claude Desktop config file
-   - No encryption layer — tasks are plaintext on user's own server
+   - PocketBase hooks encrypt selected content fields before persistence and
+     decrypt them after reads; API clients continue to receive the normal task
+     shape over HTTPS
 
 2. **Read & Write Access**
    - MCP tools support both read and write operations

@@ -26,7 +26,7 @@ migrate((app) => {
     }
     app.save(r);
   }
-}, (app) => {
+}, (_app) => {
   // Down migration intentionally a no-op: reversing requires the key and is not
   // part of rollback. Restore from backup if reversal is ever needed.
 });

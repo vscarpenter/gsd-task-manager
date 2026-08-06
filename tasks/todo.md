@@ -2,6 +2,71 @@
 
 ---
 
+## Done — 2026-08-05: Resolve pre-rescan issues 1–5
+
+**Branch:** `codex/resolve-pre-rescan-issues` · **Tier:** Non-trivial ·
+**Approved contract:** the user approved issues 1–5 from the pre-rescan review;
+detailed contract in `tasks/spec-pre-rescan-hardening.md`.
+
+**Plan (continuous TDD + immutable scan proof):**
+- [x] Add red tests for MCP diagnostic redaction, task mutation error logging,
+  composite form semantics, local-only completion animation, and deterministic
+  repository tooling.
+- [x] Implement the behavioral fixes without changing the visual design or
+  exposing task content in diagnostics.
+- [x] Pin Bun, replace dynamic audit execution, make lint warning-free, and
+  repair the missing trust-boundary documentation references.
+- [x] Run focused/full verification, browser interaction verification, and skeptical
+  changed-file review.
+- [x] Commit only intended remediation paths and prove that commit produces a
+  clean scan worktree; preserve inherited files and existing stashes.
+
+**Verification:** red produced 14 expected failures. Root coverage passed 2,544
+tests / 1 skip at 88.86% statement, 82.51% branch, 88.69% function, and 89.88%
+line coverage. MCP coverage passed 218/218 at 84.45/77.37/86.20/84.55.
+Playwright passed 270/270 across Chromium, Firefox, and WebKit. Typecheck, MCP
+build, 15-route production build, zero-warning lint, workflow YAML parsing,
+`git diff --check`, and `bun audit` all passed. The scan target is the resulting
+commit checked out in a clean detached worktree, not the inherited local tree.
+
+**Preserved inherited state:** three stashes plus modified
+`coding-standards.md`, `docs/codebase-analysis-report.html`, and `public/sw.js`.
+
+---
+
+## Done — 2026-08-05: Resolve the top five audit risks
+
+**Branch:** `main` (uncommitted; no commit requested) · **Tier:** Non-trivial ·
+**Approved contract:** the user asked to resolve the audit report's ranked top
+five; detailed contract in `tasks/spec-top-five-audit-risks.md`.
+
+**Plan (TDD + executable gate proof):**
+- [x] Fix SEC-01 by parsing one captured Bun audit JSON document and failing
+  closed on High/Critical findings or invalid evidence.
+- [x] Fix TEST-01 by repairing deterministic Playwright isolation/fixtures and
+  adding blocking Chromium CI with failure artifacts.
+- [x] Fix TEST-02 by adding behavior coverage for MCP risk paths until its
+  existing thresholds pass, then make that gate blocking in CI/Sonar.
+- [x] Fix DEP-01 by removing the unused scanner, updating vulnerable
+  transitive resolutions, and proving the installed graph audit-clean.
+- [x] Fix CFG-01 by rejecting malformed remote client timestamps before LWW
+  mapping, with mapper and pull regression tests.
+- [x] Run focused and full tests, typecheck, lint, build as warranted, audit,
+  Chromium E2E, and a skeptical changed-file review.
+
+**Verification:** root suite 2,530 pass / 1 skip with 88.80% statement,
+82.46% branch, 88.69% function, and 89.81% line coverage; MCP suite 216/216
+with 86.01/78.26/91.17/86.21 coverage; Playwright 270/270 across Chromium,
+Firefox, and WebKit. Typecheck, MCP build, 15-route production build, workflow
+YAML parsing, and `bun audit` passed. Lint reported 0 errors and 12 inherited
+or generated warnings. The security checker itself is 87.80% statement and
+84.61% branch covered.
+
+**Preserved inherited state:** three stashes plus modified
+`coding-standards.md`, `docs/codebase-analysis-report.html`, and `public/sw.js`.
+
+---
+
 ## Done — 2026-08-01: Date-anchored matrix intro briefing
 
 **Branch:** `feat/matrix-intro-briefing` · **Tier:** Standard (content-only change

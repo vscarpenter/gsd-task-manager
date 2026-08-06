@@ -62,7 +62,7 @@ export function DependenciesField({
     [atLimit ? limitNoteId : null, error ? errorId : null].filter(Boolean).join(" ") || undefined;
 
   return (
-    <Field label="Depends on">
+    <Field label="Depends on" as="group">
       <div
         className="relative"
         onBlur={(e) => {
@@ -190,6 +190,10 @@ function Suggestions({
             key={t.id}
             type="button"
             data-testid="dep-suggestion"
+            // Keep the search input focused through pointer activation. WebKit
+            // can report a null blur relatedTarget before click otherwise,
+            // unmounting the option before it can commit the selection.
+            onPointerDown={(event) => event.preventDefault()}
             onClick={() => onPick(t.id)}
             className="block w-full truncate px-3 py-2 text-left text-[13px] text-foreground hover:bg-background-muted"
           >

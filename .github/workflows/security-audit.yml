@@ -24,7 +24,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.14
 
       - name: Prefer IPv4 for npm registry
         run: echo 'precedence ::ffff:0:0/96 100' | sudo tee -a /etc/gai.conf
@@ -35,27 +35,23 @@ jobs:
       - name: Run security audit
         id: audit
         run: |
-          # Run audit and capture exit code separately from network errors.
-          # bun audit exits 1 for both vulnerabilities AND registry fetch failures
-          # (e.g. deprecated/unpublished packages like ast-types-flow@0.0.8).
-          # We distinguish real vulnerability findings from transient registry errors
-          # by checking the JSON output — if no advisories are present the failure
-          # was a network/registry issue and we treat it as a soft warning, not a
-          # hard block.
-          bun audit --audit-level=high --json > audit-results.json 2>&1 || AUDIT_EXIT=$?
+          set +e
+          bun audit --audit-level=high --json > audit-results.json 2> audit-errors.log
+          AUDIT_EXIT=$?
+          node scripts/check-audit-results.cjs audit-results.json
+          CHECK_EXIT=$?
+          set -e
 
-          if [ "${AUDIT_EXIT:-0}" -ne 0 ]; then
-            # Check if there are actual vulnerability advisories in the output
-            if bun audit --audit-level=high 2>&1 | grep -qE "^\s+[0-9]+ (critical|high)"; then
-              echo "has_vulnerabilities=true" >> $GITHUB_OUTPUT
-              exit 1
-            else
-              echo "Registry fetch error during audit (likely a deprecated/unpublished package)."
-              echo "No high/critical vulnerability advisories detected — treating as warning only."
-              echo "has_vulnerabilities=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "has_vulnerabilities=false" >> $GITHUB_OUTPUT
+          if [ "$CHECK_EXIT" -eq 1 ]; then
+            echo "has_vulnerabilities=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          echo "has_vulnerabilities=false" >> "$GITHUB_OUTPUT"
+          if [ "$CHECK_EXIT" -ne 0 ] || [ "$AUDIT_EXIT" -ne 0 ]; then
+            echo "Security audit did not produce clean, valid evidence." >&2
+            sed -n '1,80p' audit-errors.log >&2
+            exit 1
           fi
 
       - name: Audit summary

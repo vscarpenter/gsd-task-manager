@@ -24,8 +24,7 @@ const logger = createLogger('SYNC_PULL');
  * value forged via a direct API write — could stamp a time years ahead, winning
  * every future LWW comparison and locking the task from all other devices. Values
  * beyond `now + MAX_CLIENT_CLOCK_SKEW_MS` are treated as untrustworthy and capped
- * to that bound; unparseable input is returned unchanged so Zod/NaN handling stays
- * with the caller.
+ * to that bound. Remote callers validate the value before invoking this helper.
  */
 export function clampClientTimestamp(iso: string, nowMs: number = Date.now()): string {
   const t = new Date(iso).getTime();
@@ -118,8 +117,8 @@ const pbTaskRecordSchema = z.object({
   due_date: z.string().default(''),
   completed: z.boolean(),
   completed_at: z.string().default(''),
-  client_created_at: z.string(),
-  client_updated_at: z.string(),
+  client_created_at: z.iso.datetime({ offset: true }),
+  client_updated_at: z.iso.datetime({ offset: true }),
   recurrence: recurrenceTypeSchema.default('none'),
   tags: z.array(z.string().max(SCHEMA_LIMITS.TAG_MAX_LENGTH)).max(SCHEMA_LIMITS.MAX_TAGS).default([]),
   subtasks: z.array(subtaskSchema).max(SCHEMA_LIMITS.MAX_SUBTASKS).default([]),
