@@ -9,21 +9,27 @@ import PocketBase from 'pocketbase';
 import type { GsdConfig } from './types.js';
 
 let pbInstance: PocketBase | null = null;
+let pbUrl = '';
+let pbToken = '';
 
 /**
  * Get or create an authenticated PocketBase client
  */
 export function getPocketBase(config: GsdConfig): PocketBase {
-  if (!pbInstance) {
+  if (!pbInstance || pbUrl !== config.pocketBaseUrl) {
+    pbInstance?.authStore.clear();
     pbInstance = new PocketBase(config.pocketBaseUrl);
     pbInstance.autoCancellation(false);
+    pbUrl = config.pocketBaseUrl;
+    pbToken = '';
   }
 
-  // Ensure auth token is set
-  if (config.authToken && !pbInstance.authStore.isValid) {
-    // Manually set the auth token from config
-    // The token comes from the user's browser session
-    pbInstance.authStore.save(config.authToken, null);
+  // A long-lived MCP process can be reconfigured without restarting. Never
+  // retain one principal's auth state when the configured bearer token changes.
+  if (config.authToken !== pbToken) {
+    if (pbToken) pbInstance.authStore.clear();
+    if (config.authToken) pbInstance.authStore.save(config.authToken, null);
+    pbToken = config.authToken;
   }
 
   return pbInstance;
@@ -37,6 +43,8 @@ export function clearPocketBase(): void {
     pbInstance.authStore.clear();
   }
   pbInstance = null;
+  pbUrl = '';
+  pbToken = '';
 }
 
 /**

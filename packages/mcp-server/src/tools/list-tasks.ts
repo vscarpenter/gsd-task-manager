@@ -1,5 +1,9 @@
 import { getPocketBase } from '../pocketbase-client.js';
-import { getTaskCache, generateTaskListCacheKey } from '../cache.js';
+import {
+  getTaskCache,
+  generateTaskListCacheKey,
+  taskCacheNamespace,
+} from '../cache.js';
 import { createMcpLogger } from '../utils/logger.js';
 import type {
   GsdConfig,
@@ -20,11 +24,13 @@ export async function listTasks(
   filters?: TaskFilters
 ): Promise<Task[]> {
   const cache = getTaskCache();
-  const cacheKey = generateTaskListCacheKey(filters);
+  const namespace = taskCacheNamespace(config);
+  const cacheKey = generateTaskListCacheKey(filters, namespace);
+  const allCacheKey = generateTaskListCacheKey(undefined, namespace);
 
   // Check cache: for filtered requests, try the 'all' cache first and filter locally
   if (filters) {
-    const cachedAll = cache.getTaskList('all');
+    const cachedAll = cache.getTaskList(allCacheKey);
     if (cachedAll) {
       return applyTaskFilters(cachedAll, filters);
     }
@@ -40,7 +46,7 @@ export async function listTasks(
 
   // Cache unfiltered results
   if (!filters) {
-    cache.setTaskList(cacheKey, tasks);
+    cache.setTaskList(cacheKey, tasks, namespace);
   }
 
   return applyTaskFilters(tasks, filters);

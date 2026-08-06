@@ -50,16 +50,34 @@ describe('getPocketBase', () => {
     expect(authStore.save).toHaveBeenCalledWith('token', null);
   });
 
-  it('does not overwrite a valid auth store or save an empty token', () => {
+  it('does not resave an unchanged token and clears an empty token', () => {
     authStore.isValid = true;
     getPocketBase(config);
-    expect(authStore.save).not.toHaveBeenCalled();
+    getPocketBase(config);
+    expect(authStore.save).toHaveBeenCalledOnce();
 
-    clearPocketBase();
     vi.clearAllMocks();
     authStore.isValid = false;
     getPocketBase({ ...config, authToken: '' });
     expect(authStore.save).not.toHaveBeenCalled();
+    expect(authStore.clear).toHaveBeenCalledOnce();
+  });
+
+  it('replaces auth state when a long-lived process switches principals', () => {
+    getPocketBase(config);
+    getPocketBase({ ...config, authToken: 'token-two' });
+
+    expect(authStore.clear).toHaveBeenCalledOnce();
+    expect(authStore.save).toHaveBeenNthCalledWith(1, 'token', null);
+    expect(authStore.save).toHaveBeenNthCalledWith(2, 'token-two', null);
+  });
+
+  it('creates a new client when the backend URL changes', () => {
+    const first = getPocketBase(config);
+    const second = getPocketBase({ ...config, pocketBaseUrl: 'https://other.example.com' });
+
+    expect(second).not.toBe(first);
+    expect(pocketBaseConstructor).toHaveBeenCalledTimes(2);
   });
 });
 

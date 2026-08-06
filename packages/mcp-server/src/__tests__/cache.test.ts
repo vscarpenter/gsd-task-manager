@@ -3,6 +3,7 @@ import {
   generateTaskListCacheKey,
   getTaskCache,
   resetTaskCache,
+  taskCacheNamespace,
 } from '../cache.js';
 import type { Task } from '../types.js';
 
@@ -25,6 +26,8 @@ function task(id: string): Task {
 }
 
 describe('task cache', () => {
+  const namespace = 'principal-one';
+
   beforeEach(() => {
     resetTaskCache();
     vi.useFakeTimers();
@@ -49,44 +52,44 @@ describe('task cache', () => {
     const tasks = [task('one'), task('two')];
 
     expect(cache.getTaskList('all')).toBeNull();
-    cache.setTaskList('all', tasks);
+    cache.setTaskList('all', tasks, namespace);
     expect(cache.getTaskList('all')).toEqual(tasks);
-    expect(cache.getTask('one')).toEqual(tasks[0]);
-    expect(cache.getTask('missing')).toBeNull();
+    expect(cache.getTask('one', namespace)).toEqual(tasks[0]);
+    expect(cache.getTask('missing', namespace)).toBeNull();
     expect(cache.getStats()).toMatchObject({ hits: 2, misses: 2, hitRate: 0.5 });
   });
 
   it('expires entries after the configured TTL', () => {
     const cache = getTaskCache({ ttlMs: 100, maxEntries: 5 });
-    cache.setTask(task('expiring'));
+    cache.setTask(task('expiring'), namespace);
     vi.advanceTimersByTime(101);
 
-    expect(cache.getTask('expiring')).toBeNull();
+    expect(cache.getTask('expiring', namespace)).toBeNull();
     expect(cache.getStats().singleTaskCache.size).toBe(0);
   });
 
   it('evicts the oldest entry when capacity is reached', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 1 });
-    cache.setTask(task('oldest'));
-    cache.setTask(task('newest'));
+    cache.setTask(task('oldest'), namespace);
+    cache.setTask(task('newest'), namespace);
 
-    expect(cache.getTask('oldest')).toBeNull();
-    expect(cache.getTask('newest')?.id).toBe('newest');
+    expect(cache.getTask('oldest', namespace)).toBeNull();
+    expect(cache.getTask('newest', namespace)?.id).toBe('newest');
   });
 
   it('invalidates one task and every cached list', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
-    cache.setTaskList('all', [task('one'), task('two')]);
-    cache.invalidateTask('one');
+    cache.setTaskList('all', [task('one'), task('two')], namespace);
+    cache.invalidateTask('one', namespace);
 
-    expect(cache.getTask('one')).toBeNull();
-    expect(cache.getTask('two')?.id).toBe('two');
+    expect(cache.getTask('one', namespace)).toBeNull();
+    expect(cache.getTask('two', namespace)?.id).toBe('two');
     expect(cache.getTaskList('all')).toBeNull();
   });
 
   it('clears entries and resets statistics', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
-    cache.setTaskList('all', [task('one')]);
+    cache.setTaskList('all', [task('one')], namespace);
     cache.getTaskList('all');
     cache.invalidate();
     cache.resetStats();
@@ -94,6 +97,14 @@ describe('task cache', () => {
     expect(cache.getStats()).toMatchObject({ hits: 0, misses: 0, hitRate: 0 });
     expect(cache.getStats().taskListCache.size).toBe(0);
     expect(cache.getStats().singleTaskCache.size).toBe(0);
+  });
+
+  it('isolates individual task entries by principal namespace', () => {
+    const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
+    cache.setTaskList('principal-one|all', [task('shared-id')], 'principal-one');
+
+    expect(cache.getTask('shared-id', 'principal-one')?.id).toBe('shared-id');
+    expect(cache.getTask('shared-id', 'principal-two')).toBeNull();
   });
 });
 
@@ -109,5 +120,14 @@ describe('generateTaskListCacheKey', () => {
       completed: false,
       tags: ['work', 'alpha'],
     })).toBe('q:urgent-important|c:false|t:alpha,work');
+  });
+
+  it('isolates keys by backend and bearer token without exposing either token', () => {
+    const first = taskCacheNamespace({ pocketBaseUrl: 'https://pb.test', authToken: 'token-one' });
+    const second = taskCacheNamespace({ pocketBaseUrl: 'https://pb.test', authToken: 'token-two' });
+
+    expect(first).not.toBe(second);
+    expect(first).not.toContain('token-one');
+    expect(generateTaskListCacheKey(undefined, first)).toBe(`${first}|all`);
   });
 });
