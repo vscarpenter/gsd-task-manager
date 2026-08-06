@@ -5,15 +5,15 @@
 # Usage:
 #   PB_BIN=/path/to/pocketbase ./scripts/verify-pb-encryption.sh
 #
-# This is a staging/local harness — it is NOT run in CI (no PB binary there).
-# It proves Acceptance Criteria 1-3 and 5: content is ciphertext at rest in
-# SQLite and plaintext over the REST API.
+# This focused local harness proves content is ciphertext at rest in SQLite and
+# plaintext over the REST API. CI runs the broader authenticated two-user/MCP/
+# realtime proof through `bun run test:system:pocketbase`.
 #
 # JSON-field coercion risk (staging gate):
 #   The columns tags/subtasks/time_entries are json-typed in PocketBase (see
 #   scripts/setup-pocketbase-collections.sh). The encryption hook stores a bare
 #   "enc:v1:<ciphertext>" string in them — NOT a JSON array. Whether PocketBase
-#   0.26.6's json column accepts a bare string is only provable against a running
+#   0.39.10's json column accepts a bare string is only provable against a running
 #   instance. This harness now asserts ciphertext-at-rest AND full array round-trip
 #   for all three json fields. If ANY of those assertions FAIL at staging, the
 #   remedy is to change the three columns (tags, subtasks, time_entries) from json
@@ -40,9 +40,19 @@ for cmd in curl jq sqlite3 python3 openssl; do
 done
 # Note: python3 is required by setup-pocketbase-collections.sh, invoked in step 2
 
-echo "1) start PocketBase with the encryption hook"
+FRESH_MIGRATIONS="$WORK/fresh-migrations"
+mkdir -p "$FRESH_MIGRATIONS"
+cp docker/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js "$FRESH_MIGRATIONS/"
+cp docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js "$FRESH_MIGRATIONS/"
+
+echo "1) initialize and start PocketBase with production hooks/migrations"
+"$PB_BIN" superuser upsert "$ADMIN_EMAIL" "$ADMIN_PASS" --dir="$WORK" >/dev/null
+GSD_TASKS_ENC_KEY="$KEY" "$PB_BIN" migrate up \
+  --dir="$WORK" --hooksDir=docker/pb_hooks --migrationsDir="$FRESH_MIGRATIONS" \
+  --automigrate=false >/dev/null
 GSD_TASKS_ENC_KEY="$KEY" "$PB_BIN" serve \
-  --dir="$WORK" --hooksDir=docker/pb_hooks --migrationsDir=docker/pb_migrations \
+  --dir="$WORK" --hooksDir=docker/pb_hooks --migrationsDir="$FRESH_MIGRATIONS" \
+  --automigrate=false \
   --http=127.0.0.1:8099 >"$WORK/pb.log" 2>&1 &
 PB_PID=$!
 
@@ -57,8 +67,7 @@ if ! curl -sf http://127.0.0.1:8099/api/health >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "2) create superuser + tasks collection"
-"$PB_BIN" superuser upsert "$ADMIN_EMAIL" "$ADMIN_PASS" --dir="$WORK" >/dev/null
+echo "2) create tasks collection"
 
 # setup-pocketbase-collections.sh reads credentials from env vars:
 #   PB_URL, PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD

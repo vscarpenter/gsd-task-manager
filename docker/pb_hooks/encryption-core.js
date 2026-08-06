@@ -17,6 +17,28 @@ function requireValidKey(key) {
   }
 }
 
+function jsonFieldString(record, field) {
+  const raw = record.get(field);
+  if (typeof raw === "string") return raw;
+
+  // PocketBase exposes JSON columns to JSVM as raw byte arrays. getString()
+  // returns their JSON representation without lossy array-of-byte stringifying.
+  if (typeof record.getString === "function") {
+    const coerced = record.getString(field);
+    if (typeof coerced === "string" && coerced !== "") {
+      try {
+        const parsed = JSON.parse(coerced);
+        if (typeof parsed === "string") return parsed;
+      } catch {
+        // Plain JSON text (for example an array) is already the desired input.
+      }
+      return coerced;
+    }
+  }
+
+  return JSON.stringify(raw);
+}
+
 function encryptRecord(record, cipherFn) {
   for (const f of ENCRYPTED_TEXT_FIELDS) {
     const v = record.get(f);
@@ -26,7 +48,7 @@ function encryptRecord(record, cipherFn) {
   for (const f of ENCRYPTED_JSON_FIELDS) {
     const raw = record.get(f);
     if (raw === null || raw === undefined) continue;
-    const asString = typeof raw === "string" ? raw : JSON.stringify(raw);
+    const asString = jsonFieldString(record, f);
     if (isEncrypted(asString)) continue;
     record.set(f, PREFIX + cipherFn(asString));
   }
@@ -39,7 +61,9 @@ function decryptRecord(record, decipherFn) {
     record.set(f, decipherFn(v.slice(PREFIX.length)));
   }
   for (const f of ENCRYPTED_JSON_FIELDS) {
-    const v = record.get(f);
+    const raw = record.get(f);
+    if (raw === null || raw === undefined) continue;
+    const v = jsonFieldString(record, f);
     if (!isEncrypted(v)) continue;
     record.set(f, JSON.parse(decipherFn(v.slice(PREFIX.length))));
   }
@@ -51,6 +75,7 @@ module.exports = {
   ENCRYPTED_JSON_FIELDS,
   isEncrypted,
   requireValidKey,
+  jsonFieldString,
   encryptRecord,
   decryptRecord,
 };

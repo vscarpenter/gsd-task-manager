@@ -9,6 +9,7 @@ const VALID_KEY = "k".repeat(32);
 interface RecordDouble {
   data: Record<string, unknown>;
   get: (field: string) => unknown;
+  getString: (field: string) => string;
   set: (field: string, value: unknown) => void;
 }
 
@@ -38,7 +39,15 @@ interface MigrationRuntime {
 
 interface MigrationAppDouble {
   findAllRecords: ReturnType<typeof vi.fn>;
-  save: ReturnType<typeof vi.fn>;
+  db: ReturnType<typeof vi.fn>;
+}
+
+interface BootstrapEventDouble {
+  next: () => void;
+  app: {
+    db: () => { newQuery: (sql: string) => unknown };
+    vacuum: () => void;
+  };
 }
 
 function toCiphertext(value: string): string {
@@ -63,6 +72,10 @@ function fakeRecord(initial: Record<string, unknown>): RecordDouble {
   return {
     data,
     get: (field: string): unknown => data[field],
+    getString: (field: string): string => {
+      const value = data[field];
+      return typeof value === "string" ? value : JSON.stringify(value);
+    },
     set: (field: string, value: unknown): void => {
       data[field] = value;
     },
@@ -115,8 +128,9 @@ function loadMigrationRuntime(key: string | undefined = VALID_KEY): MigrationRun
     encrypt: vi.fn((value: string) => toCiphertext(value)),
   };
   const sandbox = {
+    DynamicModel: function DynamicModel(initial: object) { return initial; },
     $os: { getenv: vi.fn(() => key) },
-    $security: { encrypt: runtime.encrypt },
+    $security: { encrypt: runtime.encrypt, decrypt: vi.fn((value: string) => fromCiphertext(value)) },
     migrate: (
       up: MigrationRuntime["up"],
       down: MigrationRuntime["down"],
@@ -126,13 +140,30 @@ function loadMigrationRuntime(key: string | undefined = VALID_KEY): MigrationRun
     },
   };
   vm.runInNewContext(
-    readDockerScript("docker/pb_migrations/1781000000_encrypt_existing_tasks.js"),
+    readDockerScript("docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js"),
     sandbox,
-    { filename: "1781000000_encrypt_existing_tasks.js" },
+    { filename: "1781100000_harden_task_encryption_cleanup.js" },
   );
   expect(runtime.up).toBeTypeOf("function");
   expect(runtime.down).toBeTypeOf("function");
   return runtime as MigrationRuntime;
+}
+
+function loadCleanupHook(): (event: BootstrapEventDouble) => void {
+  let handler: ((event: BootstrapEventDouble) => void) | undefined;
+  const sandbox = {
+    DynamicModel: function DynamicModel(initial: object) { return initial; },
+    onBootstrap: (registered: (event: BootstrapEventDouble) => void): void => {
+      handler = registered;
+    },
+  };
+  vm.runInNewContext(
+    readDockerScript("docker/pb_hooks/migration_cleanup.pb.js"),
+    sandbox,
+    { filename: "migration_cleanup.pb.js" },
+  );
+  expect(handler).toBeTypeOf("function");
+  return handler!;
 }
 
 describe("PocketBase task encryption hooks", () => {
@@ -200,6 +231,29 @@ describe("PocketBase task encryption hooks", () => {
   });
 });
 
+describe("PocketBase encryption migration cleanup hook", () => {
+  it("vacuums_once_after_the_backfill_commits", () => {
+    const handler = loadCleanupHook();
+    const next = vi.fn();
+    const vacuum = vi.fn();
+    const execute = vi.fn();
+    let lookup = 0;
+    const newQuery = vi.fn(() => ({
+      one: (model: { count: number }) => {
+        model.count = lookup < 2 ? 1 : 0;
+        lookup += 1;
+      },
+      execute,
+    }));
+
+    handler({ next, app: { db: () => ({ newQuery }), vacuum } });
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(vacuum).toHaveBeenCalledOnce();
+    expect(execute).toHaveBeenCalledOnce();
+  });
+});
+
 describe("PocketBase task encryption migration", () => {
   it("backfills_plaintext_task_fields_and_skips_already_encrypted_values", () => {
     const runtime = loadMigrationRuntime();
@@ -210,37 +264,61 @@ describe("PocketBase task encryption migration", () => {
       subtasks: [{ id: "s1", title: "step", completed: false }],
       time_entries: encrypted(JSON.stringify([{ minutes: 25 }])),
     });
+    const updates: Array<Record<string, unknown>> = [];
+    const query = {
+      one: vi.fn((model: { count: number }) => { model.count = 1; }),
+      bind: vi.fn((params: Record<string, unknown>) => {
+        updates.push(params);
+        return query;
+      }),
+      execute: vi.fn(),
+    };
     const app: MigrationAppDouble = {
       findAllRecords: vi.fn(() => [task]),
-      save: vi.fn(),
+      db: vi.fn(() => ({ newQuery: vi.fn(() => query) })),
     };
 
     runtime.up(app);
 
     expect(app.findAllRecords).toHaveBeenCalledWith("tasks");
-    expect(decryptStored(task.data.title)).toBe("Legacy task");
-    expect(task.data.description).toBe("");
-    expect(JSON.parse(decryptStored(task.data.tags))).toEqual(["legacy", "sync"]);
-    expect(JSON.parse(decryptStored(task.data.subtasks))).toEqual([
+    expect(decryptStored(updates[0].title)).toBe("Legacy task");
+    expect(updates[0].description).toBeUndefined();
+    expect(JSON.parse(decryptStored(updates[0].tags))).toEqual(["legacy", "sync"]);
+    expect(JSON.parse(decryptStored(updates[0].subtasks))).toEqual([
       { id: "s1", title: "step", completed: false },
     ]);
-    expect(task.data.time_entries).toBe(encrypted(JSON.stringify([{ minutes: 25 }])));
+    expect(updates[0].time_entries).toBeUndefined();
     expect(runtime.encrypt).not.toHaveBeenCalledWith(
       JSON.stringify([{ minutes: 25 }]),
       VALID_KEY,
     );
-    expect(app.save).toHaveBeenCalledWith(task);
+    expect(query.bind).toHaveBeenCalledOnce();
+    expect(query.execute).toHaveBeenCalledTimes(4);
   });
 
   it("fails_closed_on_invalid_key_before_reading_or_saving_records", () => {
     const runtime = loadMigrationRuntime("short");
     const app: MigrationAppDouble = {
       findAllRecords: vi.fn(() => [fakeRecord({ title: "Legacy task" })]),
-      save: vi.fn(),
+      db: vi.fn(),
     };
 
     expect(() => runtime.up(app)).toThrow(/GSD_TASKS_ENC_KEY/);
     expect(app.findAllRecords).not.toHaveBeenCalled();
-    expect(app.save).not.toHaveBeenCalled();
+    expect(app.db).not.toHaveBeenCalled();
+  });
+
+  it("treats_a_missing_tasks_table_as_a_fresh_install", () => {
+    const runtime = loadMigrationRuntime();
+    const query = {
+      one: vi.fn((model: { count: number }) => { model.count = 0; }),
+    };
+    const app: MigrationAppDouble = {
+      findAllRecords: vi.fn(),
+      db: vi.fn(() => ({ newQuery: vi.fn(() => query) })),
+    };
+
+    expect(() => runtime.up(app)).not.toThrow();
+    expect(app.findAllRecords).not.toHaveBeenCalled();
   });
 });

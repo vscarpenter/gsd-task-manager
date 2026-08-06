@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 function readRepoFile(path: string): string {
@@ -99,6 +100,83 @@ describe('security hardening scripts and workflows', () => {
     expect(dockerfile).toContain('POCKETBASE_SHA256_AMD64');
     expect(dockerfile).toContain('POCKETBASE_SHA256_ARM64');
     expect(dockerfile).toContain('sha256sum -c');
+  });
+
+  it('aligns self-hosted assets with the production PocketBase 0.39.10 release', () => {
+    const dockerfile = readRepoFile('docker/Dockerfile');
+    const dockerReadme = readRepoFile('docker/README.md');
+    const setupGuide = readRepoFile('docker/docker-setup-and-run.md');
+
+    expect(dockerfile).toContain('ARG POCKETBASE_VERSION=0.39.10');
+    expect(dockerfile).toContain(
+      'ARG POCKETBASE_SHA256_AMD64=67f68c8041dbb6a35fd7af5997ffc5063a7a7b96bf9df810360788f9e9975408'
+    );
+    expect(dockerfile).toContain(
+      'ARG POCKETBASE_SHA256_ARM64=5bad497eaf2522418673eacfcc90e75106036f19b4aeeac6e59bc48503c01ddf'
+    );
+    expect(dockerReadme).not.toMatch(/POCKETBASE_VERSION=0\.26\./);
+    expect(setupGuide).not.toMatch(/POCKETBASE_VERSION=0\.26\./);
+  });
+
+  it('runs a pinned blocking Gitleaks scan over full history with a secret-safe baseline', () => {
+    const workflow = readRepoFile('.github/workflows/security-audit.yml');
+    const ignore = readRepoFile('.gitleaksignore').trim().split('\n');
+
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).toContain('GITLEAKS_VERSION: 8.30.1');
+    expect(workflow).toContain(
+      'GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+    );
+    expect(workflow).toContain('gitleaks git --redact --log-opts="--all"');
+    expect(workflow).not.toMatch(/continue-on-error:\s*true/);
+    expect(ignore.length).toBeGreaterThan(0);
+    for (const fingerprint of ignore) {
+      expect(fingerprint).toMatch(/^[0-9a-f]{40}:[^:]+:[^:]+:\d+$/);
+      expect(fingerprint).not.toMatch(/eyJ[A-Za-z0-9_-]+\./);
+    }
+  });
+
+  it('registers a disposable PocketBase system test without production endpoints', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const workflow = readRepoFile('.github/workflows/ci.yml');
+    const runner = readRepoFile('scripts/run-pocketbase-system-test.sh');
+    const systemTest = readRepoFile('packages/mcp-server/src/__tests__/system/pocketbase-system.test.ts');
+    const upgradeTest = readRepoFile(
+      'packages/mcp-server/src/__tests__/system/pocketbase-upgrade-system.test.ts'
+    );
+    const entrypoint = readRepoFile('docker/docker-entrypoint.sh');
+    const shippedMigration = readRepoFile(
+      'docker/pb_migrations/1781000000_encrypt_existing_tasks.js'
+    );
+    const followupMigration = readRepoFile(
+      'docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js'
+    );
+
+    expect(rootPackage.scripts['test:system:pocketbase']).toBeDefined();
+    expect(workflow).toContain('test:system:pocketbase');
+    expect(runner).toContain('CURRENT_POCKETBASE_VERSION="0.39.10"');
+    expect(runner).toContain('UPGRADE_SOURCE_VERSION="0.26.6"');
+    expect(runner).toContain('CURRENT_SHA256=');
+    expect(runner).toContain('UPGRADE_SOURCE_SHA256=');
+    expect(systemTest).toContain('127.0.0.1');
+    expect(systemTest).not.toContain('api.vinny.io');
+    expect(systemTest).toContain('handleToolCall');
+    expect(systemTest).toContain('subscribe');
+    expect(systemTest).toContain('plaintext');
+    expect(upgradeTest).not.toContain('api.vinny.io');
+    expect(upgradeTest).toContain("'migrate'");
+    expect(upgradeTest).toContain('legacyMigrationDirectory');
+    expect(upgradeTest).toContain('1781000000_encrypt_existing_tasks.js');
+    expect(upgradeTest).toContain('plaintextRemnants');
+    expect(entrypoint).toContain('pocketbase migrate up');
+    expect(entrypoint).toContain('--automigrate=false');
+    expect(entrypoint).toContain('TASKS_TABLE_EXISTS');
+    expect(entrypoint).toContain('/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js');
+    expect(followupMigration).toContain('records.length > 0');
+    expect(followupMigration).toContain('$security.decrypt');
+    expect(createHash('sha256').update(shippedMigration).digest('hex')).toBe(
+      '4bad51a41488c9f5fca0d0f8665ee6c594f6f4af82b7075d752607f3baa71ae5'
+    );
   });
 
   it('pins dependency overrides and MCP dev tools to audited patched versions', () => {

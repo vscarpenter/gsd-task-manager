@@ -106,12 +106,18 @@ Caddy will obtain and renew certificates from Let's Encrypt automatically.
 Override the default PocketBase version at build time:
 
 ```bash
-docker compose build --build-arg POCKETBASE_VERSION=0.26.9
+docker compose build --build-arg POCKETBASE_VERSION=0.39.10
 ```
 
 ## Data Persistence
 
 PocketBase data (database, uploaded files) is stored in a Docker volume named `pb_data`. Your data survives container rebuilds.
+
+The entrypoint runs migrations with automigration disabled before serving.
+Applied migration files are immutable: fresh volumes use the compatibility
+migration set, while volumes with an existing `tasks` table run the full
+forward-only set and complete any pending encryption cleanup before the API is
+available.
 
 To back up:
 ```bash

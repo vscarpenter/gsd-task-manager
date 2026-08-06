@@ -54,7 +54,11 @@ const config = [
         },
     },
     {
-        files: ["docker/pb_hooks/**/*.js", "docker/pb_migrations/**/*.js"],
+        files: [
+            "docker/pb_hooks/**/*.js",
+            "docker/pb_migrations/**/*.js",
+            "docker/pb_fresh_migrations/**/*.js",
+        ],
         rules: {
             "@typescript-eslint/no-require-imports": "off",
             "@typescript-eslint/triple-slash-reference": "off",

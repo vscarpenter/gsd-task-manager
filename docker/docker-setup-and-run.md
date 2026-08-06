@@ -62,6 +62,13 @@ The `docker compose` command must be able to find this key. Three equivalent opt
 
 **Back up the key separately from the database** — a database backup is useless without this key, and a lost key makes encrypted data unrecoverable.
 
+At startup the container applies forward-only migrations before opening the
+API. Fresh databases use a no-op compatibility record for the immutable legacy
+backfill because no tasks table exists yet. Existing databases run the original
+backfill only if it is genuinely pending, then a later remediation normalizes
+legacy JSON ciphertext and schedules a one-time SQLite vacuum. Do not edit or
+rename an applied file under `docker/pb_migrations`; add a later migration.
+
 ### Staging verification gate (JSON fields)
 
 Before relying on at-rest encryption in production, validate it against a running PocketBase
@@ -183,7 +190,7 @@ No more certificate warnings — the browser trusts the mkcert-issued certificat
 Override the default PocketBase version at build time:
 
 ```bash
-docker compose build --build-arg POCKETBASE_VERSION=0.26.9
+docker compose build --build-arg POCKETBASE_VERSION=0.39.10
 ```
 
 ## Data Persistence & Backups
