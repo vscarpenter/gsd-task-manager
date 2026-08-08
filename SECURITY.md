@@ -46,15 +46,11 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      worker removes its private fields before any controlled network request or
      cache write and deletes legacy capture cache entries during activation
 
-   Bookmarklet implementations should construct the destination like this:
+   Bookmarklet implementations should construct the destination like this
+   (paste as a single line into the bookmark's URL field):
 
    ```js
-   const capture = new URLSearchParams({
-     action: "capture",
-     title: document.title,
-     url: window.location.href,
-   });
-   window.open(`https://gsd.vinny.dev/#${capture.toString()}`);
+   javascript:(function(){var p=new URLSearchParams({action:"capture",title:document.title||location.hostname,url:location.href,tags:"readme,todo"});window.open("https://gsd.vinny.dev/#"+p.toString(),"_blank");})();
    ```
 
 5. **Telemetry Data Minimization**
