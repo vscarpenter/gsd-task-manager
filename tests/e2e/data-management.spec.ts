@@ -11,11 +11,9 @@ import { waitForAppLoad } from "./helpers/test-helpers";
  */
 
 async function gotoDataSection(matrixPage: MatrixPage): Promise<void> {
-  await matrixPage.openSettings();
-  await matrixPage.page
-    .locator("aside.lg\\:block")
-    .getByRole("button", { name: "Data & Storage" })
-    .click();
+  // This suite exercises import/export, not client navigation. Deep-link to
+  // avoid making every parallel case race Next's first /settings compilation.
+  await matrixPage.page.goto("/settings#data", { waitUntil: "domcontentloaded" });
   await expect(matrixPage.page.locator("main h2", { hasText: "Data & Storage" })).toBeVisible();
 }
 
@@ -209,8 +207,6 @@ test.describe("Data Management — Import", () => {
 
     await gotoDataSection(matrixPage);
 
-    // The DataManagement section renders an active-task count.
-    // Use the inner content <main> (the settings layout nests two mains).
-    await expect(page.locator("main.min-w-0")).toContainText(/2/);
+    await expect(page.getByText("2 tasks", { exact: true })).toBeVisible();
   });
 });

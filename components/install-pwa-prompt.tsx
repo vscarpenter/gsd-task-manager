@@ -95,7 +95,12 @@ export function InstallPwaPrompt() {
     // For Safari/iOS, show prompt after a delay
     if (browserType === "safari" && !isInstalled) {
       const timer = setTimeout(() => {
-        setPromptState((prev) => ({ ...prev, showPrompt: true }));
+        // The user may dismiss a synthetic/native prompt while this fallback
+        // timer is pending. Re-check persisted state so the timer cannot
+        // immediately reopen a prompt the user just closed.
+        if (!isWithinDismissalCooldown()) {
+          setPromptState((prev) => ({ ...prev, showPrompt: true }));
+        }
       }, 3000); // Show after 3 seconds
 
       return () => {

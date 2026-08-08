@@ -28,6 +28,20 @@ function makeTask(overrides: Partial<TaskRecord> & { id: string }): TaskRecord {
 }
 
 describe("<DependenciesField>", () => {
+  it("should_render_a_named_group_without_wrapping_controls_in_a_label", () => {
+    const { container } = render(
+      <DependenciesField
+        taskId="z"
+        dependencies={[]}
+        allTasks={[]}
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("group", { name: "Depends on" })).toBeInTheDocument();
+    expect(container.querySelector("label button, label input")).toBeNull();
+  });
+
   it("should_render_chip_with_task_title_for_each_resolvable_dependency", () => {
     const tasks = [
       makeTask({ id: "a", title: "Write spec" }),

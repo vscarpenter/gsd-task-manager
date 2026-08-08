@@ -2,7 +2,7 @@
  * Tests for the task-card sub-components (actions, header, metadata).
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { SortableAttributes } from "@/components/task-card/types";
 
@@ -96,6 +96,87 @@ describe("TaskCardHeader", () => {
 
     const heading = container.querySelector("h3");
     expect(heading).toHaveClass("line-through");
+  });
+
+  it("does not animate when completion arrives without a local activation", async () => {
+    const { TaskCardHeader } = await import(
+      "@/components/task-card/task-card-header"
+    );
+    const task = {
+      id: "external-completion",
+      title: "Synced completion",
+      description: "",
+      urgent: false,
+      important: true,
+      quadrant: "not-urgent-important" as const,
+      completed: false,
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+      recurrence: "none" as const,
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: true,
+      notificationSent: false,
+    };
+    const props = {
+      selectionMode: false,
+      isSelected: false,
+      onToggleComplete: vi.fn(),
+      sortableAttributes: {} as SortableAttributes,
+      sortableListeners: undefined,
+    };
+    const { container, rerender } = render(<TaskCardHeader task={task} {...props} />);
+
+    rerender(<TaskCardHeader task={{ ...task, completed: true }} {...props} />);
+
+    expect(container.querySelector(".animate-check-pop")).toBeNull();
+  });
+
+  it("animates after a successful local completion", async () => {
+    const { TaskCardHeader } = await import(
+      "@/components/task-card/task-card-header"
+    );
+    const user = userEvent.setup();
+    const task = {
+      id: "local-completion",
+      title: "Local completion",
+      description: "",
+      urgent: false,
+      important: true,
+      quadrant: "not-urgent-important" as const,
+      completed: false,
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+      recurrence: "none" as const,
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: true,
+      notificationSent: false,
+    };
+    const onToggleComplete = vi.fn().mockResolvedValue(undefined);
+    const props = {
+      selectionMode: false,
+      isSelected: false,
+      onToggleComplete,
+      sortableAttributes: {} as SortableAttributes,
+      sortableListeners: undefined,
+    };
+    const { container, rerender } = render(<TaskCardHeader task={task} {...props} />);
+
+    await user.click(screen.getByRole("button", { name: "Mark as complete" }));
+    rerender(<TaskCardHeader task={{ ...task, completed: true }} {...props} />);
+
+    expect(container.querySelector(".animate-check-pop")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(container.querySelector(".animate-check-pop")).toBeNull();
+    });
+
+    rerender(<TaskCardHeader task={task} {...props} />);
+    rerender(<TaskCardHeader task={{ ...task, completed: true }} {...props} />);
+    expect(container.querySelector(".animate-check-pop")).toBeNull();
   });
 });
 

@@ -1,7 +1,15 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
 const requireFromRepo = createRequire(resolve(process.cwd(), "package.json"));
@@ -19,6 +27,51 @@ interface TypeScriptModule {
 function firstNumericMajor(versionRange: string): number | null {
   const match = versionRange.match(/\d+/);
   return match ? Number(match[0]) : null;
+}
+
+function runStaticBuildWrapper(options: {
+  createArtifact?: boolean;
+  exitCode?: number;
+}): { status: number | null; stdout: string } {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "gsd-static-build-"));
+  const fixtureScripts = join(fixtureRoot, "scripts");
+  const fixtureBin = join(fixtureRoot, "bin");
+  mkdirSync(fixtureScripts);
+  mkdirSync(fixtureBin);
+
+  const wrapper = readFileSync("scripts/build-static-export.sh", "utf8");
+  writeFileSync(join(fixtureScripts, "build-static-export.sh"), wrapper);
+  writeFileSync(
+    join(fixtureRoot, ".build-env.sh"),
+    `export PATH=${JSON.stringify(`${fixtureBin}:${process.env.PATH ?? ""}`)}\n`,
+  );
+
+  const fakeNext = [
+    "#!/usr/bin/env bash",
+    "echo 'fixture next build'",
+    options.createArtifact ? "mkdir -p out && printf '<html></html>' > out/index.html" : "true",
+    `exit ${options.exitCode ?? 0}`,
+    "",
+  ].join("\n");
+  writeFileSync(join(fixtureBin, "next"), fakeNext);
+  chmodSync(join(fixtureBin, "next"), 0o755);
+
+  try {
+    const stdout = execFileSync("bash", ["scripts/build-static-export.sh"], {
+      cwd: fixtureRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { status: 0, stdout };
+  } catch (error) {
+    const failure = error as { status?: number | null; stdout?: Buffer | string };
+    return {
+      status: failure.status ?? null,
+      stdout: String(failure.stdout ?? ""),
+    };
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 }
 
 describe("build configuration", () => {
@@ -66,5 +119,24 @@ describe("build configuration", () => {
     // way (the build script pins the env var), so the fallback should simply
     // not depend on the current time.
     expect(fallbackLine).not.toMatch(/new Date\(/);
+  });
+
+  it("delegates production builds to the fail-closed static-export wrapper", () => {
+    const packageJson = requireFromRepo("./package.json") as PackageJson;
+
+    expect(packageJson.scripts?.build).toContain("bash scripts/build-static-export.sh");
+    expect(packageJson.scripts?.build).not.toContain("next build 2>&1 | grep");
+  });
+
+  it("preserves a failing next build exit status through output filtering", () => {
+    const result = runStaticBuildWrapper({ exitCode: 42 });
+
+    expect(result.stdout).toContain("fixture next build");
+    expect(result.status).toBe(42);
+  });
+
+  it("rejects a successful build command that did not export the app shell", () => {
+    expect(runStaticBuildWrapper({ exitCode: 0 }).status).not.toBe(0);
+    expect(runStaticBuildWrapper({ createArtifact: true, exitCode: 0 }).status).toBe(0);
   });
 });

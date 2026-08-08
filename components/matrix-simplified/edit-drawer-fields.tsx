@@ -8,7 +8,26 @@ import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 
 // ─── Shared ────────────────────────────────────────────────────────────────
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
+export function Field({
+  label,
+  children,
+  as = "label",
+}: {
+  label: string;
+  children: React.ReactNode;
+  as?: "label" | "group";
+}): React.ReactElement {
+  if (as === "group") {
+    return (
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+          {label}
+        </legend>
+        <div className="flex flex-col gap-1.5">{children}</div>
+      </fieldset>
+    );
+  }
+
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
@@ -29,7 +48,7 @@ interface QuadrantFieldProps {
 
 export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProps): React.ReactElement {
   return (
-    <Field label="Quadrant">
+    <Field label="Quadrant" as="group">
       <div className="grid grid-cols-2 gap-2">
         {quadrants.map((q) => {
           const active = q.urgent === urgent && q.important === important;
@@ -90,7 +109,7 @@ export function DueDateField({
   onPresetChange, onCustomDateChange, onToggleCustomInput,
 }: DueDateFieldProps): React.ReactElement {
   return (
-    <Field label="Due date">
+    <Field label="Due date" as="group">
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-lg border border-border bg-background-muted p-1">
           {DUE_PRESETS.map((p) => {
@@ -192,7 +211,7 @@ interface TagsFieldProps {
 
 export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemoveTag, onTagKeyDown }: TagsFieldProps): React.ReactElement {
   return (
-    <Field label="Tags">
+    <Field label="Tags" as="group">
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background p-2">
         {tags.map((t) => (
           <span

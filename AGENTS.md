@@ -56,8 +56,8 @@ skill rather than a naive screenshot (see `CLAUDE.md`).
 
 ## Security review surfaces
 
-The security-relevant trust boundaries (PocketBase sync owner-scoping, the MCP
-write-ops, service-worker cache exclusions, import/export validation, the
-PocketBase encryption hooks) and the controls that already bound them are mapped
-in `.blume/insights/security-trust-boundaries.md` — read it before auditing or
-threat-modeling those subsystems.
+The security-relevant trust boundaries (PocketBase sync owner-scoping, MCP
+write operations, service-worker cache exclusions, import/export validation,
+and PocketBase encryption hooks) are mapped in
+`docs/security-trust-boundaries.md`; `SECURITY.md` documents the deployment
+posture. Read both before auditing or threat-modeling those subsystems.

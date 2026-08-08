@@ -3,7 +3,8 @@
  * Reduces redundant API calls
  */
 
-import type { Task } from './types.js';
+import { createHash } from 'node:crypto';
+import type { GsdConfig, Task } from './types.js';
 
 export interface CacheConfig {
   /** Time-to-live in milliseconds (default: 30 seconds) */
@@ -106,6 +107,11 @@ class TaskCacheManager {
     this.singleTaskCache = new TTLCache<Task>(config);
   }
 
+  private singleTaskKey(namespace: string, taskId: string): string {
+    if (!namespace) throw new Error('A principal cache namespace is required');
+    return `${namespace}|${taskId}`;
+  }
+
   /**
    * Get cached task list
    */
@@ -122,20 +128,20 @@ class TaskCacheManager {
   /**
    * Cache task list
    */
-  setTaskList(cacheKey: string, tasks: Task[]): void {
+  setTaskList(cacheKey: string, tasks: Task[], namespace: string): void {
     this.taskListCache.set(cacheKey, tasks);
 
     // Also cache individual tasks for single-task lookups
     tasks.forEach((task) => {
-      this.singleTaskCache.set(task.id, task);
+      this.singleTaskCache.set(this.singleTaskKey(namespace, task.id), task);
     });
   }
 
   /**
    * Get cached single task
    */
-  getTask(taskId: string): Task | null {
-    const result = this.singleTaskCache.get(taskId);
+  getTask(taskId: string, namespace: string): Task | null {
+    const result = this.singleTaskCache.get(this.singleTaskKey(namespace, taskId));
     if (result) {
       this.hitCount++;
     } else {
@@ -147,8 +153,8 @@ class TaskCacheManager {
   /**
    * Cache single task
    */
-  setTask(task: Task): void {
-    this.singleTaskCache.set(task.id, task);
+  setTask(task: Task, namespace: string): void {
+    this.singleTaskCache.set(this.singleTaskKey(namespace, task.id), task);
   }
 
   /**
@@ -162,8 +168,8 @@ class TaskCacheManager {
   /**
    * Invalidate specific task (for targeted invalidation)
    */
-  invalidateTask(taskId: string): void {
-    this.singleTaskCache.delete(taskId);
+  invalidateTask(taskId: string, namespace: string): void {
+    this.singleTaskCache.delete(this.singleTaskKey(namespace, taskId));
     // Also clear list cache since it may contain this task
     this.taskListCache.clear();
   }
@@ -228,13 +234,24 @@ export function generateTaskListCacheKey(filters?: {
   quadrant?: string;
   completed?: boolean;
   tags?: string[];
-}): string {
-  if (!filters) return 'all';
+}, namespace?: string): string {
+  if (!filters) return namespace ? `${namespace}|all` : 'all';
 
   const parts: string[] = [];
   if (filters.quadrant) parts.push(`q:${filters.quadrant}`);
   if (filters.completed !== undefined) parts.push(`c:${filters.completed}`);
   if (filters.tags?.length) parts.push(`t:${filters.tags.sort().join(',')}`);
 
-  return parts.length > 0 ? parts.join('|') : 'all';
+  const filterKey = parts.length > 0 ? parts.join('|') : 'all';
+  return namespace ? `${namespace}|${filterKey}` : filterKey;
+}
+
+/**
+ * One-way session namespace for cache isolation. Never place a bearer token in
+ * a cache key or diagnostic surface, even though this cache is process-local.
+ */
+export function taskCacheNamespace(config: GsdConfig): string {
+  return createHash('sha256')
+    .update(`${config.pocketBaseUrl}\0${config.authToken}`)
+    .digest('hex');
 }

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 function readRepoFile(path: string): string {
@@ -101,13 +102,92 @@ describe('security hardening scripts and workflows', () => {
     expect(dockerfile).toContain('sha256sum -c');
   });
 
+  it('aligns self-hosted assets with the production PocketBase 0.39.10 release', () => {
+    const dockerfile = readRepoFile('docker/Dockerfile');
+    const dockerReadme = readRepoFile('docker/README.md');
+    const setupGuide = readRepoFile('docker/docker-setup-and-run.md');
+
+    expect(dockerfile).toContain('ARG POCKETBASE_VERSION=0.39.10');
+    expect(dockerfile).toContain(
+      'ARG POCKETBASE_SHA256_AMD64=67f68c8041dbb6a35fd7af5997ffc5063a7a7b96bf9df810360788f9e9975408'
+    );
+    expect(dockerfile).toContain(
+      'ARG POCKETBASE_SHA256_ARM64=5bad497eaf2522418673eacfcc90e75106036f19b4aeeac6e59bc48503c01ddf'
+    );
+    expect(dockerReadme).not.toMatch(/POCKETBASE_VERSION=0\.26\./);
+    expect(setupGuide).not.toMatch(/POCKETBASE_VERSION=0\.26\./);
+  });
+
+  it('runs a pinned blocking Gitleaks scan over full history with a secret-safe baseline', () => {
+    const workflow = readRepoFile('.github/workflows/security-audit.yml');
+    const ignore = readRepoFile('.gitleaksignore').trim().split('\n');
+
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).toContain('GITLEAKS_VERSION: 8.30.1');
+    expect(workflow).toContain(
+      'GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+    );
+    expect(workflow).toContain('gitleaks git --redact --log-opts="--all"');
+    expect(workflow).not.toMatch(/continue-on-error:\s*true/);
+    expect(ignore.length).toBeGreaterThan(0);
+    for (const fingerprint of ignore) {
+      expect(fingerprint).toMatch(/^[0-9a-f]{40}:[^:]+:[^:]+:\d+$/);
+      expect(fingerprint).not.toMatch(/eyJ[A-Za-z0-9_-]+\./);
+    }
+  });
+
+  it('registers a disposable PocketBase system test without production endpoints', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const workflow = readRepoFile('.github/workflows/ci.yml');
+    const runner = readRepoFile('scripts/run-pocketbase-system-test.sh');
+    const systemTest = readRepoFile('packages/mcp-server/src/__tests__/system/pocketbase-system.test.ts');
+    const upgradeTest = readRepoFile(
+      'packages/mcp-server/src/__tests__/system/pocketbase-upgrade-system.test.ts'
+    );
+    const entrypoint = readRepoFile('docker/docker-entrypoint.sh');
+    const shippedMigration = readRepoFile(
+      'docker/pb_migrations/1781000000_encrypt_existing_tasks.js'
+    );
+    const followupMigration = readRepoFile(
+      'docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js'
+    );
+
+    expect(rootPackage.scripts['test:system:pocketbase']).toBeDefined();
+    expect(workflow).toContain('test:system:pocketbase');
+    expect(runner).toContain('CURRENT_POCKETBASE_VERSION="0.39.10"');
+    expect(runner).toContain('UPGRADE_SOURCE_VERSION="0.26.6"');
+    expect(runner).toContain('CURRENT_SHA256=');
+    expect(runner).toContain('UPGRADE_SOURCE_SHA256=');
+    expect(systemTest).toContain('127.0.0.1');
+    expect(systemTest).not.toContain('api.vinny.io');
+    expect(systemTest).toContain('handleToolCall');
+    expect(systemTest).toContain('subscribe');
+    expect(systemTest).toContain('plaintext');
+    expect(upgradeTest).not.toContain('api.vinny.io');
+    expect(upgradeTest).toContain("'migrate'");
+    expect(upgradeTest).toContain('legacyMigrationDirectory');
+    expect(upgradeTest).toContain('1781000000_encrypt_existing_tasks.js');
+    expect(upgradeTest).toContain('plaintextRemnants');
+    expect(entrypoint).toContain('pocketbase migrate up');
+    expect(entrypoint).toContain('--automigrate=false');
+    expect(entrypoint).toContain('TASKS_TABLE_EXISTS');
+    expect(entrypoint).toContain('/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js');
+    expect(followupMigration).toContain('records.length > 0');
+    expect(followupMigration).toContain('$security.decrypt');
+    expect(createHash('sha256').update(shippedMigration).digest('hex')).toBe(
+      '4bad51a41488c9f5fca0d0f8665ee6c594f6f4af82b7075d752607f3baa71ae5'
+    );
+  });
+
   it('pins dependency overrides and MCP dev tools to audited patched versions', () => {
     const rootPackage = JSON.parse(readRepoFile('package.json'));
     const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.8');
-    expect(rootPackage.overrides.hono).toBe('>=4.12.29');
-    expect(rootPackage.overrides.undici).toBe('>=7.28.0');
+    expect(rootPackage.overrides.hono).toBe('4.13.0');
+    expect(rootPackage.overrides.undici).toBe('7.29.0');
+    expect(rootPackage.overrides['fast-uri']).toBe('4.1.2');
+    expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
     expect(rootPackage.overrides.vite).toBe('>=8.1.4');
     expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.1');
     expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
@@ -115,5 +195,42 @@ describe('security hardening scripts and workflows', () => {
     expect(mcpPackage.dependencies['@sentry/node']).toBe('10.67.0');
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.10');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.10');
+    expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
+  });
+
+  it('pins the Bun runtime and invokes the repository audit without dynamic npx execution', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const bunSetupFiles = [
+      '.github/actions/build-static-export/action.yml',
+      '.github/workflows/ci.yml',
+      '.github/workflows/publish-mcp-server.yml',
+      '.github/workflows/security-audit.yml',
+      '.github/workflows/sonarcloud.yml',
+    ].map(readRepoFile);
+
+    expect(rootPackage.packageManager).toBe('bun@1.3.14');
+    expect(rootPackage.scripts.audit).toBe('bun audit --audit-level=high');
+    for (const file of bunSetupFiles) {
+      expect(file).not.toContain('bun-version: latest');
+      expect(file).toContain('bun-version: 1.3.14');
+    }
+  });
+
+  it('fails lint on warnings while excluding generated coverage at every workspace depth', () => {
+    const rootPackage = JSON.parse(readRepoFile('package.json'));
+    const eslintConfig = readRepoFile('eslint.config.mjs');
+
+    expect(rootPackage.scripts.lint).toBe('eslint . --max-warnings=0');
+    expect(eslintConfig).toContain('"**/coverage/**"');
+  });
+
+  it('keeps security documentation references on tracked canonical files', () => {
+    const agents = readRepoFile('AGENTS.md');
+    const architecture = readRepoFile('ARCHITECTURE.md');
+
+    expect(agents).not.toContain('.blume/insights/security-trust-boundaries.md');
+    expect(architecture).not.toContain('.blume/insights/security-trust-boundaries.md');
+    expect(agents).toContain('SECURITY.md');
+    expect(architecture).toContain('SECURITY.md');
   });
 });

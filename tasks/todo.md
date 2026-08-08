@@ -2,6 +2,113 @@
 
 ---
 
+## Done — 2026-08-05: Resolve rescan High and Medium findings
+
+**Branch:** `codex/resolve-pre-rescan-issues` · **Tier:** Non-trivial ·
+**Approved contract:** the user approved the current rescan's one High and eight
+Medium findings; detailed contract in
+`tasks/spec-rescan-high-medium-remediation.md`.
+
+**Plan (continuous spec → TDD → implementation → verification):**
+- [x] Resolve the current scan findings against repository evidence and record
+  the approved contract, authority boundaries, edge cases, and test stubs.
+- [x] Add red regression/quality tests for the build, security/PocketBase,
+  hydration, E2E, MCP dispatcher, maintainability, and system-test gates.
+- [x] Fix the fail-open build, add the secret-scan baseline/gate, and align
+  repository PocketBase assets with production 0.39.10.
+- [x] Fix deterministic hydration and replace Playwright fixed sleeps with
+  state-based waits guarded by automatic browser-runtime error capture.
+- [x] Replace the MCP switch with an exhaustive typed registry and enforce a
+  per-file production code-shape ratchet.
+- [x] Add and pass the disposable authenticated PocketBase system test.
+- [x] Run required specialist reviews plus full root/MCP/build/E2E/security
+  verification, make scoped logical commits, and leave inherited files intact.
+
+**Authority boundary:** no Git-history rewrite or force-push is authorized. The
+expired historical JWT remains a separately coordinated destructive cleanup;
+this pass prevents recurrence and makes existing exceptions explicit without
+committing matched secret content.
+
+**Verification:** root coverage passed 2,561 tests / 1 skip at 88.41/82.14/
+88.31/89.44; MCP coverage passed 225 / 2 skips at 84.64/77.42/86.39/84.82.
+PocketBase fresh and real 0.26.6-to-0.39.10 upgrade scenarios passed 2/2,
+including accented, CJK, emoji, owner isolation, timestamps, and encrypted disk
+state. The final full Playwright run passed 269/270 across Chromium, Firefox,
+and WebKit; its sole Firefox keyboard-dialog flake then passed 3/3 repetitions
+(30/30 for that file), while every changed DnD path passed in the full run. A
+prior full run in this pass passed 270/270. Typecheck, MCP build, the 15-route
+production build, zero-warning lint, code-shape ratchet, shell syntax, full-
+history Gitleaks (668 commits), `bun audit`, and diff checks passed. Final WCAG
+and PocketBase/sync reviews returned 0 blocking findings and 0 suggestions.
+The three inherited dirty files and three existing stashes were preserved.
+
+---
+
+## Done — 2026-08-05: Resolve pre-rescan issues 1–5
+
+**Branch:** `codex/resolve-pre-rescan-issues` · **Tier:** Non-trivial ·
+**Approved contract:** the user approved issues 1–5 from the pre-rescan review;
+detailed contract in `tasks/spec-pre-rescan-hardening.md`.
+
+**Plan (continuous TDD + immutable scan proof):**
+- [x] Add red tests for MCP diagnostic redaction, task mutation error logging,
+  composite form semantics, local-only completion animation, and deterministic
+  repository tooling.
+- [x] Implement the behavioral fixes without changing the visual design or
+  exposing task content in diagnostics.
+- [x] Pin Bun, replace dynamic audit execution, make lint warning-free, and
+  repair the missing trust-boundary documentation references.
+- [x] Run focused/full verification, browser interaction verification, and skeptical
+  changed-file review.
+- [x] Commit only intended remediation paths and prove that commit produces a
+  clean scan worktree; preserve inherited files and existing stashes.
+
+**Verification:** red produced 14 expected failures. Root coverage passed 2,544
+tests / 1 skip at 88.86% statement, 82.51% branch, 88.69% function, and 89.88%
+line coverage. MCP coverage passed 218/218 at 84.45/77.37/86.20/84.55.
+Playwright passed 270/270 across Chromium, Firefox, and WebKit. Typecheck, MCP
+build, 15-route production build, zero-warning lint, workflow YAML parsing,
+`git diff --check`, and `bun audit` all passed. The scan target is the resulting
+commit checked out in a clean detached worktree, not the inherited local tree.
+
+**Preserved inherited state:** three stashes plus modified
+`coding-standards.md`, `docs/codebase-analysis-report.html`, and `public/sw.js`.
+
+---
+
+## Done — 2026-08-05: Resolve the top five audit risks
+
+**Branch:** `main` (uncommitted; no commit requested) · **Tier:** Non-trivial ·
+**Approved contract:** the user asked to resolve the audit report's ranked top
+five; detailed contract in `tasks/spec-top-five-audit-risks.md`.
+
+**Plan (TDD + executable gate proof):**
+- [x] Fix SEC-01 by parsing one captured Bun audit JSON document and failing
+  closed on High/Critical findings or invalid evidence.
+- [x] Fix TEST-01 by repairing deterministic Playwright isolation/fixtures and
+  adding blocking Chromium CI with failure artifacts.
+- [x] Fix TEST-02 by adding behavior coverage for MCP risk paths until its
+  existing thresholds pass, then make that gate blocking in CI/Sonar.
+- [x] Fix DEP-01 by removing the unused scanner, updating vulnerable
+  transitive resolutions, and proving the installed graph audit-clean.
+- [x] Fix CFG-01 by rejecting malformed remote client timestamps before LWW
+  mapping, with mapper and pull regression tests.
+- [x] Run focused and full tests, typecheck, lint, build as warranted, audit,
+  Chromium E2E, and a skeptical changed-file review.
+
+**Verification:** root suite 2,530 pass / 1 skip with 88.80% statement,
+82.46% branch, 88.69% function, and 89.81% line coverage; MCP suite 216/216
+with 86.01/78.26/91.17/86.21 coverage; Playwright 270/270 across Chromium,
+Firefox, and WebKit. Typecheck, MCP build, 15-route production build, workflow
+YAML parsing, and `bun audit` passed. Lint reported 0 errors and 12 inherited
+or generated warnings. The security checker itself is 87.80% statement and
+84.61% branch covered.
+
+**Preserved inherited state:** three stashes plus modified
+`coding-standards.md`, `docs/codebase-analysis-report.html`, and `public/sw.js`.
+
+---
+
 ## Done — 2026-08-01: Date-anchored matrix intro briefing
 
 **Branch:** `feat/matrix-intro-briefing` · **Tier:** Standard (content-only change

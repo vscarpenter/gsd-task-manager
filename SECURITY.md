@@ -46,15 +46,11 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      worker removes its private fields before any controlled network request or
      cache write and deletes legacy capture cache entries during activation
 
-   Bookmarklet implementations should construct the destination like this:
+   Bookmarklet implementations should construct the destination like this
+   (paste as a single line into the bookmark's URL field):
 
    ```js
-   const capture = new URLSearchParams({
-     action: "capture",
-     title: document.title,
-     url: window.location.href,
-   });
-   window.open(`https://gsd.vinny.dev/#${capture.toString()}`);
+   javascript:(function(){var p=new URLSearchParams({action:"capture",title:document.title||location.hostname,url:location.href,tags:"readme,todo"});window.open("https://gsd.vinny.dev/#"+p.toString(),"_blank");})();
    ```
 
 5. **Telemetry Data Minimization**
@@ -74,7 +70,10 @@ When users enable cloud sync, the following security measures protect their data
 
 1. **User-Owned Server**
    - PocketBase instance runs on user's own infrastructure (e.g., AWS EC2)
-   - Tasks stored as plaintext in PocketBase SQLite database
+   - Selected task content fields are encrypted at rest by the PocketBase
+     hooks in `docker/pb_hooks/tasks_encryption.pb.js`
+   - `GSD_TASKS_ENC_KEY` is required by the self-hosted runtime; the one-shot
+     migration encrypts existing plaintext rows
    - User has full control over data retention and access
    - No third-party cloud service has access to task data
 
@@ -116,7 +115,9 @@ The MCP server allows Claude Desktop to access and manage tasks via natural lang
 1. **PocketBase API Access**
    - MCP server communicates directly with PocketBase using auth token
    - Auth token stored only in Claude Desktop config file
-   - No encryption layer — tasks are plaintext on user's own server
+   - PocketBase hooks encrypt selected content fields before persistence and
+     decrypt them after reads; API clients continue to receive the normal task
+     shape over HTTPS
 
 2. **Read & Write Access**
    - MCP tools support both read and write operations

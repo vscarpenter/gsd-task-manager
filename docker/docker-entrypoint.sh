@@ -24,12 +24,38 @@ cleanup() {
 trap cleanup TERM INT QUIT
 
 # -- Start PocketBase ------------------------------------------------------
+MIGRATIONS_DIR=/pb_migrations
+TASKS_TABLE_EXISTS=0
+if [ -f /pb_data/data.db ]; then
+    TASKS_TABLE_EXISTS="$(sqlite3 /pb_data/data.db \
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'tasks';" \
+        2>/dev/null || echo 0)"
+fi
+
+if [ "$TASKS_TABLE_EXISTS" != "1" ]; then
+    # The shipped backfill predates fresh-install handling and must remain
+    # immutable for databases that already recorded it. A fresh database has
+    # no legacy tasks, so apply a same-name no-op plus the forward remediation.
+    MIGRATIONS_DIR="${TMPDIR:-/tmp}/gsd-fresh-migrations-$$"
+    mkdir -p "$MIGRATIONS_DIR"
+    cp /pb_fresh_migrations/1781000000_encrypt_existing_tasks.js "$MIGRATIONS_DIR/"
+    cp /pb_migrations/1781100000_harden_task_encryption_cleanup.js "$MIGRATIONS_DIR/"
+fi
+
+echo "[gsd] Applying PocketBase migrations..."
+/usr/local/bin/pocketbase migrate up \
+    --dir=/pb_data \
+    --hooksDir=/pb_hooks \
+    --migrationsDir="$MIGRATIONS_DIR" \
+    --automigrate=false
+
 echo "[gsd] Starting PocketBase..."
 /usr/local/bin/pocketbase serve \
     --http=0.0.0.0:8090 \
     --dir=/pb_data \
     --hooksDir=/pb_hooks \
-    --migrationsDir=/pb_migrations \
+    --migrationsDir="$MIGRATIONS_DIR" \
+    --automigrate=false \
     --publicDir=/pb_data/pb_public &
 PB_PID=$!
 

@@ -18,5 +18,5 @@ linked source and decision records over duplicating implementation detail here.
 | MCP server | [`packages/mcp-server/README.md`](packages/mcp-server/README.md) and [ADR 0005](docs/adr/0005-mcp-server-integration.md) |
 | Self-hosting and deployment | [`docker/README.md`](docker/README.md), [`docs/ops/`](docs/ops/), and [`README.md`](README.md) |
 | Testing and definition of done | [`coding-standards.md`](coding-standards.md), [`CLAUDE.md`](CLAUDE.md#testing-guidelines), and [`tests/e2e/README.md`](tests/e2e/README.md) |
-| Security posture and trust boundaries | [`SECURITY.md`](SECURITY.md) and [`.blume/insights/security-trust-boundaries.md`](.blume/insights/security-trust-boundaries.md) |
+| Security posture and trust boundaries | [`SECURITY.md`](SECURITY.md) and [`docs/security-trust-boundaries.md`](docs/security-trust-boundaries.md) |
 | Architecture decision history | [`docs/adr/`](docs/adr/) |

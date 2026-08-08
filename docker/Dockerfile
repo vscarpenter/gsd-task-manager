@@ -23,12 +23,12 @@ COPY . .
 # Build static export (produces out/ directory)
 RUN node scripts/generate-build-info.cjs \
     && node scripts/update-sw-version.cjs \
-    && bash -c 'source .build-env.sh && bunx --bun next build'
+    && bash scripts/build-static-export.sh
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)
-ARG POCKETBASE_VERSION=0.26.6
-ARG POCKETBASE_SHA256_AMD64=f4d9ad15dbadae3905d8404abed5c772d5c8b1c9563741c91adefb9f14b8201e
-ARG POCKETBASE_SHA256_ARM64=0758d9fe0ba054c0ca9e6a5c9425e9fe9044159ccbfa5fa4946f7d14bcbf01f1
+ARG POCKETBASE_VERSION=0.39.10
+ARG POCKETBASE_SHA256_AMD64=67f68c8041dbb6a35fd7af5997ffc5063a7a7b96bf9df810360788f9e9975408
+ARG POCKETBASE_SHA256_ARM64=5bad497eaf2522418673eacfcc90e75106036f19b4aeeac6e59bc48503c01ddf
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-certificates \
     && case "$TARGETARCH" in \
@@ -66,9 +66,10 @@ RUN chmod +x /entrypoint.sh
 # /pb_data volume so an existing named volume cannot shadow them.
 COPY docker/pb_hooks/      /pb_hooks/
 COPY docker/pb_migrations/ /pb_migrations/
+COPY docker/pb_fresh_migrations/ /pb_fresh_migrations/
 
 # Allow non-root to bind privileged ports (80, 443)
-RUN apk add --no-cache libcap \
+RUN apk add --no-cache libcap sqlite \
     && setcap cap_net_bind_service=+ep /usr/bin/caddy \
     && setcap cap_net_bind_service=+ep /usr/local/bin/pocketbase
 

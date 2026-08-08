@@ -169,11 +169,7 @@ describe('RootLayout', () => {
     expect(cspContent).toContain('https://api.vinny.io');
   });
 
-  it('declares frame-ancestors in the meta CSP for header parity', () => {
-    // Note: browsers ignore frame-ancestors when delivered via <meta> (only
-    // honored from an HTTP header). The directive is still present here for
-    // defense-in-depth parity with the CloudFront/Caddy headers and to document
-    // clickjacking intent for tooling that parses the meta tag. See issue #398.
+  it('omits header-only frame-ancestors from the meta CSP', () => {
     render(
       <RootLayout>
         <p>content</p>
@@ -181,7 +177,7 @@ describe('RootLayout', () => {
     );
 
     const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-    expect(csp).toHaveAttribute('content', expect.stringContaining("frame-ancestors 'none'"));
+    expect(csp).not.toHaveAttribute('content', expect.stringContaining('frame-ancestors'));
   });
 });
 

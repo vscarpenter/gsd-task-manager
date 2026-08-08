@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckIcon, ChevronRightIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -38,32 +38,37 @@ export function TaskCardHeader({
 }: TaskCardHeaderProps) {
   const completionLabel = task.completed ? "Mark as incomplete" : "Mark as complete";
   const [isTogglingComplete, setIsTogglingComplete] = useState(false);
+  const [locallyCompletedTaskId, setLocallyCompletedTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!locallyCompletedTaskId) return;
+
+    const timer = window.setTimeout(() => {
+      setLocallyCompletedTaskId((current) =>
+        current === locallyCompletedTaskId ? null : current
+      );
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [locallyCompletedTaskId]);
 
   const handleToggleComplete = async () => {
     if (isTogglingComplete) return;
 
     setIsTogglingComplete(true);
     try {
-      await onToggleComplete(task, !task.completed);
+      const completedNext = !task.completed;
+      await onToggleComplete(task, completedNext);
+      setLocallyCompletedTaskId(completedNext ? task.id : null);
     } finally {
       setIsTogglingComplete(false);
     }
   };
 
-  // Pop the check only on the complete *moment* (false→true), never on mount —
-  // a page load showing already-done tasks is not a completion moment, and the
-  // brand reserves motion for moments, not page loads. This transition-gated
-  // animation must read the previous value during render so the class commits
-  // on the transition render (a derived/discarded value or an effect-driven
-  // setState would either never paint or be flagged as adjust-state-on-prop).
-  const wasCompleted = useRef(task.completed);
-  // react-doctor-disable-next-line react-hooks-js/refs -- previous-value read for a transition-gated animation that must commit
-  const justCompleted = task.completed && !wasCompleted.current;
-  useEffect(() => {
-    wasCompleted.current = task.completed;
-  }, [task.completed]);
-
-  // react-doctor-disable-next-line react-hooks-js/refs -- previous-value read for a transition-gated animation that must commit
+  // Reserve the pop for a successful local completion. Initial data and remote
+  // sync can render a task as completed, but those are state observations rather
+  // than the user's completion moment.
+  const justCompleted = task.completed && locallyCompletedTaskId === task.id;
   const checkIconClassName = cn("h-4 w-4 shrink-0", justCompleted && "animate-check-pop");
 
   return (

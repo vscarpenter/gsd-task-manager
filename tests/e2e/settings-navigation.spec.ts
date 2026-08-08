@@ -17,8 +17,9 @@ test.describe("Settings Navigation", () => {
     // Verify we're on settings page
     await expect(page.url()).toContain("/settings");
     
-    // Verify settings page content is visible (use main h1 to avoid banner h1)
-    await expect(page.locator("main h1")).toContainText("Settings");
+    await expect(
+      page.locator("#main-content").getByRole("heading", { name: "Settings", exact: true })
+    ).toBeVisible();
   });
 
   test("should display settings navigation", async ({ page }) => {
@@ -32,7 +33,6 @@ test.describe("Settings Navigation", () => {
 
   test("should navigate back to matrix from settings", async ({ page }) => {
     await matrixPage.openSettings();
-    await page.waitForTimeout(500);
 
     await matrixPage.openMatrix();
 

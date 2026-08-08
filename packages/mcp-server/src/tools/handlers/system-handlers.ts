@@ -1,6 +1,7 @@
 import { getSyncStatus, listTasks, type GsdConfig } from '../../tools.js';
 import { getTaskCache } from '../../cache.js';
 import { getPocketBase } from '../../pocketbase-client.js';
+import { redactPocketBaseHost } from '../../api/client.js';
 import { VERSION } from '../../version.js';
 import type { McpToolResponse } from './types.js';
 
@@ -22,13 +23,13 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     checks.push({
       name: 'PocketBase Connectivity',
       status: 'success',
-      details: `Connected to ${config.pocketBaseUrl}`,
+      details: `Connected to ${redactPocketBaseHost(config.pocketBaseUrl)}`,
     });
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'PocketBase Connectivity',
       status: 'error',
-      details: `Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: 'PocketBase health check failed',
     });
   }
 
@@ -40,11 +41,11 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
       status: 'success',
       details: `Authenticated (${status.taskCount} tasks accessible)`,
     });
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'Authentication',
       status: 'error',
-      details: error instanceof Error ? error.message : 'Token validation failed',
+      details: 'Token validation failed',
     });
   }
 
@@ -56,11 +57,11 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
       status: 'success',
       details: `Successfully fetched ${tasks.length} tasks`,
     });
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'Task Access',
       status: 'error',
-      details: error instanceof Error ? error.message : 'Failed to fetch tasks',
+      details: 'Failed to fetch tasks',
     });
   }
 

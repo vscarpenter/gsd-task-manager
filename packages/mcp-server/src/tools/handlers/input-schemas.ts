@@ -30,36 +30,36 @@ const subtaskTitleSchema = z.string().min(1).max(SCHEMA_LIMITS.SUBTASK_TITLE_MAX
 const tagsSchema = z.array(tagSchema).max(SCHEMA_LIMITS.MAX_TAGS);
 const dependenciesSchema = z.array(idSchema).max(SCHEMA_LIMITS.MAX_DEPENDENCIES);
 
-const listTasksArgsSchema = z.strictObject({
+export const listTasksArgsSchema = z.strictObject({
   quadrant: quadrantSchema.optional(),
   completed: z.boolean().optional(),
   tags: tagsSchema.optional(),
 });
 
-const getTaskArgsSchema = z.strictObject({
+export const getTaskArgsSchema = z.strictObject({
   taskId: idSchema,
 });
 
-const searchTasksArgsSchema = z.strictObject({
+export const searchTasksArgsSchema = z.strictObject({
   query: z.string().min(1),
 });
 
-const getTagAnalyticsArgsSchema = z.strictObject({
+export const getTagAnalyticsArgsSchema = z.strictObject({
   limit: z.number().int().positive().optional(),
 });
 
-const getHelpArgsSchema = z.strictObject({
+export const getHelpArgsSchema = z.strictObject({
   topic: z.enum(['tools', 'analytics', 'setup', 'examples', 'troubleshooting']).optional(),
 });
 
-const getCacheStatsArgsSchema = z.strictObject({
+export const getCacheStatsArgsSchema = z.strictObject({
   reset: z.boolean().optional(),
 });
 
 const notifyBeforeSchema = z.number().int().min(0).optional();
 const estimatedMinutesSchema = z.number().int().min(1).max(10080).optional();
 
-const createTaskArgsSchema = z.strictObject({
+export const createTaskArgsSchema = z.strictObject({
   title: taskTitleSchema,
   description: taskDescriptionSchema.optional(),
   urgent: z.boolean(),
@@ -78,7 +78,7 @@ const createTaskArgsSchema = z.strictObject({
   dryRun: z.boolean().optional(),
 });
 
-const updateTaskArgsSchema = z.strictObject({
+export const updateTaskArgsSchema = z.strictObject({
   id: idSchema,
   title: taskTitleSchema.optional(),
   description: taskDescriptionSchema.optional(),
@@ -108,13 +108,13 @@ const updateTaskArgsSchema = z.strictObject({
   dryRun: z.boolean().optional(),
 });
 
-const completeTaskArgsSchema = z.strictObject({
+export const completeTaskArgsSchema = z.strictObject({
   id: idSchema,
   completed: z.boolean(),
   dryRun: z.boolean().optional(),
 });
 
-const deleteTaskArgsSchema = z.strictObject({
+export const deleteTaskArgsSchema = z.strictObject({
   id: idSchema,
   dryRun: z.boolean().optional(),
 });
@@ -135,19 +135,19 @@ const bulkOperationSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('delete') }),
 ]);
 
-const bulkUpdateTasksArgsSchema = z.strictObject({
+export const bulkUpdateTasksArgsSchema = z.strictObject({
   taskIds: z.array(idSchema).min(1).max(SCHEMA_LIMITS.MAX_BULK_TASKS),
   operation: bulkOperationSchema,
   dryRun: z.boolean().optional(),
 });
 
-const emptyArgsSchema = z.strictObject({});
+export const emptyArgsSchema = z.strictObject({});
 
 /**
- * Map of tool-name → Zod schema. `handleToolCall` consults this before
- * dispatch; tools not present here are passed through unvalidated.
+ * Exhaustive map of tool-name → Zod schema. The dispatcher registry is keyed
+ * by this object so a tool cannot be added to one boundary without the other.
  */
-const toolArgSchemas: Record<string, z.ZodTypeAny> = {
+export const toolArgSchemas = {
   get_sync_status: emptyArgsSchema,
   list_devices: emptyArgsSchema,
   get_task_stats: emptyArgsSchema,
@@ -168,14 +168,23 @@ const toolArgSchemas: Record<string, z.ZodTypeAny> = {
   validate_config: emptyArgsSchema,
   get_help: getHelpArgsSchema,
   get_cache_stats: getCacheStatsArgsSchema,
-};
+} as const satisfies Record<string, z.ZodTypeAny>;
+
+export type ToolName = keyof typeof toolArgSchemas;
+export type ToolArgs<Name extends ToolName> = z.output<(typeof toolArgSchemas)[Name]>;
 
 /**
  * Validate `args` against the schema registered for `toolName`. Returns the
  * parsed value on success, throws a formatted error on failure.
  */
+export function validateToolArgs<Name extends ToolName>(
+  toolName: Name,
+  args: unknown
+): ToolArgs<Name>;
+export function validateToolArgs(toolName: string, args: unknown): unknown;
 export function validateToolArgs(toolName: string, args: unknown): unknown {
-  const schema = toolArgSchemas[toolName];
+  const schemas: Record<string, z.ZodTypeAny> = toolArgSchemas;
+  const schema = schemas[toolName];
   if (!schema) return args;
 
   const result = schema.safeParse(args);

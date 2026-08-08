@@ -36,7 +36,6 @@ test.describe("Sync & Auth UI States", () => {
     // Click the sync button
     const syncButton = page.locator("button[aria-label='Sync not enabled']");
     await syncButton.click();
-    await page.waitForTimeout(1000);
 
     // The auth overlay contains sign-in text
     const signInText = page.locator("text=/sign in|sync your tasks/i");
@@ -49,7 +48,6 @@ test.describe("Sync & Auth UI States", () => {
     // Open the sync auth dialog
     const syncButton = page.locator("button[aria-label='Sync not enabled']");
     await syncButton.click();
-    await page.waitForTimeout(1000);
 
     // Should show Google and/or GitHub OAuth buttons
     const oauthOption = page.locator("text=/Google|GitHub/i");
@@ -62,7 +60,6 @@ test.describe("Sync & Auth UI States", () => {
     // Open the auth dialog
     const syncButton = page.locator("button[aria-label='Sync not enabled']");
     await syncButton.click();
-    await page.waitForTimeout(1000);
 
     // Find and verify the overlay opened
     const signInText = page.locator("text=/sign in|sync your tasks/i");
@@ -71,7 +68,6 @@ test.describe("Sync & Auth UI States", () => {
     // Close via the close button
     const closeButton = page.locator("button[aria-label='Close']");
     await closeButton.click();
-    await page.waitForTimeout(500);
 
     // Overlay should be gone
     await expect(signInText.first()).not.toBeVisible();
@@ -82,8 +78,6 @@ test.describe("Sync & Auth UI States", () => {
 
     // Navigate to settings
     await page.locator("[data-testid='nav-settings']").click();
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
 
     // Settings page should have loaded — verify by URL or visible heading
     await expect(page).toHaveURL(/settings/, { timeout: 10000 });

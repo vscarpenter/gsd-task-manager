@@ -8,6 +8,7 @@ import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { toast } from "sonner";
 import { useTasks } from "@/lib/use-tasks";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
+import { ErrorActions, logError } from "@/lib/error-logger";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useNotificationChecker } from "@/lib/use-notification-checker";
@@ -15,7 +16,6 @@ import { TOAST_DURATION } from "@/lib/constants";
 import { SHOW_COMPLETED_EVENT, readShowCompleted } from "@/lib/preferences/show-completed";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
-import { TaskCard } from "@/components/task-card";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
@@ -92,6 +92,21 @@ const initialOverlayState: OverlayState = {
   sharingTask: null,
 };
 
+function reportTaskMutationError(
+  error: unknown,
+  action: string,
+  userMessage: string,
+  taskId?: string
+): void {
+  logError(error, {
+    action,
+    taskId,
+    userMessage,
+    timestamp: new Date().toISOString(),
+  });
+  toast.error(userMessage, { duration: TOAST_DURATION.LONG });
+}
+
 function overlayReducer(state: OverlayState, action: OverlayAction): OverlayState {
   switch (action.type) {
     case "openEdit":
@@ -126,8 +141,8 @@ async function handleCapture({ title, urgent, important, tags }: CapturePayload)
       tags: tags.length > 0 ? tags : undefined,
     });
     toast.success("Task added", { duration: TOAST_DURATION.SHORT });
-  } catch {
-    toast.error("Failed to create task", { duration: TOAST_DURATION.LONG });
+  } catch (error) {
+    reportTaskMutationError(error, ErrorActions.CREATE_TASK, "Failed to create task");
   }
 }
 
@@ -135,8 +150,13 @@ async function handleToggle(task: TaskRecord, completedNext: boolean): Promise<v
   try {
     await toggleCompleted(task.id, completedNext);
     if (completedNext) celebrateCompletion();
-  } catch {
-    toast.error("Failed to update task", { duration: TOAST_DURATION.LONG });
+  } catch (error) {
+    reportTaskMutationError(
+      error,
+      ErrorActions.TOGGLE_TASK,
+      "Failed to update task",
+      task.id
+    );
   }
 }
 
@@ -219,8 +239,13 @@ export function MatrixSimplified() {
       await deleteTask(task.id);
       // Faithful undo: restore the exact original record (id/timestamps intact).
       handleSuccess("Task deleted", () => restoreTask(task));
-    } catch {
-      toast.error("Failed to delete task", { duration: TOAST_DURATION.LONG });
+    } catch (error) {
+      reportTaskMutationError(
+        error,
+        ErrorActions.DELETE_TASK,
+        "Failed to delete task",
+        task.id
+      );
     }
   };
 
@@ -297,8 +322,13 @@ export function MatrixSimplified() {
         toast.success("Task added", { duration: TOAST_DURATION.SHORT });
         dispatchOverlay({ type: "closeCreate" });
       }
-    } catch {
-      toast.error("Failed to save task", { duration: TOAST_DURATION.LONG });
+    } catch (error) {
+      reportTaskMutationError(
+        error,
+        taskId ? ErrorActions.UPDATE_TASK : ErrorActions.CREATE_TASK,
+        "Failed to save task",
+        taskId
+      );
     }
   };
 
@@ -348,7 +378,7 @@ export function MatrixSimplified() {
         <MatrixIntro
           dateLabel={mounted ? introDateLabel(new Date()) : null}
           message={introStats ? introMessage(introStats) : null}
-          scheduleCount={isLoading ? null : activeScheduleCount}
+          scheduleCount={mounted && !isLoading ? activeScheduleCount : null}
           onFocusSchedule={() => focusQuadrant("q2")}
         />
         <div
@@ -418,14 +448,13 @@ export function MatrixSimplified() {
 
       <DragOverlay dropAnimation={null}>
         {activeDragTask ? (
-          <div style={{ cursor: "grabbing" }}>
-            <TaskCard
-              task={activeDragTask}
-              allTasks={all}
-              onEdit={() => {}}
-              onDelete={() => {}}
-              onToggleComplete={() => {}}
-            />
+          <div
+            data-testid="drag-overlay"
+            aria-hidden="true"
+            className="max-w-sm rounded-lg border border-pane-border bg-card px-4 py-3 shadow-[var(--shadow-elevated)]"
+            style={{ cursor: "grabbing" }}
+          >
+            <p className="truncate text-small font-semibold text-foreground">{activeDragTask.title}</p>
           </div>
         ) : null}
       </DragOverlay>

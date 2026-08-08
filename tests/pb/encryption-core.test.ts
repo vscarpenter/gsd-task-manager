@@ -11,6 +11,14 @@ function fakeRecord(initial: Record<string, unknown>) {
   const data = { ...initial };
   return {
     get: (f: string) => data[f],
+    getString: (f: string) => {
+      const value = data[f];
+      return Buffer.isBuffer(value)
+        ? value.toString("utf8")
+        : typeof value === "string"
+          ? value
+          : JSON.stringify(value);
+    },
     set: (f: string, v: unknown) => { data[f] = v; },
     _data: data,
   };
@@ -70,6 +78,19 @@ describe("encryption-core", () => {
     core.decryptRecord(r, dec);
     // must round-trip back to the original array of objects
     expect(r._data.time_entries).toEqual(timeEntries);
+  });
+
+  it("should_roundtrip_pocketbase_raw_json_bytes", () => {
+    const tags = ["work", "upgrade"];
+    const r = fakeRecord({
+      title: "t",
+      tags: Buffer.from(JSON.stringify(tags), "utf8"),
+    });
+
+    core.encryptRecord(r, enc);
+    expect(r._data.tags).toMatch(/^enc:v1:/);
+    core.decryptRecord(r, dec);
+    expect(r._data.tags).toEqual(tags);
   });
 
   it("should_be_idempotent_on_double_encrypt", () => {

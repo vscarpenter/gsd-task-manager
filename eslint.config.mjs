@@ -11,7 +11,7 @@ const config = [
             ".cursor/**",
             ".pi/**",
             "out/**",
-            "coverage/**",
+            "**/coverage/**",
             "worker/.wrangler/**",
             "packages/mcp-server/dist/**",
             "packages/native/ios.backup/build/**",
@@ -36,6 +36,13 @@ const config = [
         },
         rules: {
             "@next/next/no-img-element": "off",
+            "@typescript-eslint/no-unused-vars": [
+                "warn",
+                {
+                    argsIgnorePattern: "^_",
+                    varsIgnorePattern: "^_",
+                },
+            ],
             "react/jsx-props-no-spreading": "off",
             // Allow setState in effects for legitimate state sync patterns
             // (e.g., resetting form state when dialog closes, syncing derived state)
@@ -47,7 +54,11 @@ const config = [
         },
     },
     {
-        files: ["docker/pb_hooks/**/*.js", "docker/pb_migrations/**/*.js"],
+        files: [
+            "docker/pb_hooks/**/*.js",
+            "docker/pb_migrations/**/*.js",
+            "docker/pb_fresh_migrations/**/*.js",
+        ],
         rules: {
             "@typescript-eslint/no-require-imports": "off",
             "@typescript-eslint/triple-slash-reference": "off",
