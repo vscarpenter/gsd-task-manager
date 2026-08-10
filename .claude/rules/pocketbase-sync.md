@@ -9,8 +9,8 @@ paths:
 
 ## PocketBase v0.23+ Gotchas
 
-- **`created` / `updated` are optional autodate fields**, not system fields, in PB ≥0.23. The live `tasks` collection HAS them (added + backfilled 2026-06-10 via the iOS repo's `scripts/pb-add-autodate-fields.sh`), so `sort`/`filter` on `updated` works. A fresh instance created by an old setup script lacks them — pulls filtering on `updated` then 400.
-- **Date literals in filters use PB's space form** (`updated >= "2026-06-10 18:55:13.123Z"`), and PB returns autodate values in that form too — normalize to ISO (`T`) before `new Date()` (Safari/Firefox don't reliably parse the space form).
+- **Never use `created` / `updated` in PocketBase sort, filter, or index expressions.** Keep sync queries on the custom `client_updated_at` field so current and freshly provisioned PB 0.23+ collections share one contract.
+- **Cursor literals are ISO strings** (`client_updated_at >= "2026-06-10T18:55:13.123Z"`) because `client_updated_at` is the app-owned text timestamp.
 - **Relation fields**: the `_pb_users_auth_` placeholder doesn't work as a `collectionId`. Use `text` type for owner FK, or look up the real collection ID.
 - **Admin auth endpoint**: `/api/collections/_superusers/auth-with-password` (not the legacy `/api/admins/auth-with-password`).
 - **Rate limiting**: throttle push ops to ~100ms between requests; batch-fetch remote IDs to avoid 429s.
@@ -19,7 +19,7 @@ paths:
 ## Sync Architecture
 
 - **Protocol**: last-write-wins (LWW) using `client_updated_at`; remote wins if newer.
-- **Two-timestamp pattern**: `client_updated_at` (client-stamped text field) is the LWW conflict-resolution authority; the server-stamped autodate `updated` is the pull-cursor authority (`PBSyncConfig.lastServerUpdatedAt`, 30s overlap). Never swap them: a server-side re-save bumps `updated` without the content being newer, and a skewed client clock can stamp `client_updated_at` behind every device's cursor. The legacy client-stamped `lastSyncAt` cursor is migrated once with a 24h rewind and otherwise left untouched.
+- **Cursor contract**: `client_updated_at` is both the LWW authority and pull query field. Advance `lastClientUpdatedAt` only from records actually committed locally, clamp future values to now + 5 minutes, subtract a 30-second overlap, and query the next pull with `>=`. `pullCursorVersion: 2` proves the cursor's domain; an unversioned `lastServerUpdatedAt` forces a full pull and is cleared.
 - **Realtime**: PocketBase SSE auto-reconnects; periodic sync runs as safety net.
 - **Echo filtering**: skip own-device changes via `device_id` comparison.
 - **Auth**: PocketBase SDK auto-stores tokens in localStorage and auto-refreshes.

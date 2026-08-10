@@ -17,6 +17,14 @@ describe("GlobalError", () => {
     expect(screen.getByText(/Your data is safe in local storage/)).toBeInTheDocument();
   });
 
+  it("announces and focuses the root fallback", () => {
+    render(<GlobalError error={testError} reset={mockReset} />);
+
+    const alert = screen.getByRole("alert", { name: "Something went wrong" });
+    expect(alert).toHaveFocus();
+    expect(alert).toHaveAttribute("tabindex", "-1");
+  });
+
   it("displays error message in collapsible details", () => {
     render(<GlobalError error={testError} reset={mockReset} />);
 

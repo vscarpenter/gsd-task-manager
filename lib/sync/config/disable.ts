@@ -45,6 +45,8 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
     email: null,
     provider: null,
     lastSyncAt: null,
+    lastClientUpdatedAt: null,
+    pullCursorVersion: 2,
     lastServerUpdatedAt: null,
     lastSuccessfulSyncAt: null,
     consecutiveFailures: 0,

@@ -8,6 +8,7 @@ import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getHealthMonitor } from '@/lib/sync/health-monitor';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
+import { subscribe, unsubscribe } from '@/lib/sync/pb-realtime';
 import { getDb } from '@/lib/db';
 import type { PBSyncResult } from '@/lib/sync/types';
 
@@ -20,6 +21,10 @@ vi.mock('@/lib/sync/background-sync', () => ({
 }));
 vi.mock('@/lib/sync/config', () => ({
   getAutoSyncConfig: vi.fn(),
+}));
+vi.mock('@/lib/sync/pb-realtime', () => ({
+  subscribe: vi.fn().mockResolvedValue(undefined),
+  unsubscribe: vi.fn(),
 }));
 vi.mock('@/lib/db');
 
@@ -135,6 +140,31 @@ describe('useSync', () => {
       await flushAsync();
 
       expect(mockHealthMonitor.start).toHaveBeenCalled();
+    });
+
+    it('should subscribe to realtime when authenticated sync is enabled', async () => {
+      vi.mocked(isAuthenticated).mockReturnValue(true);
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: true,
+        deviceId: 'browser-device',
+      });
+
+      renderHook(() => useSync(), { wrapper });
+
+      await waitFor(() => {
+        expect(subscribe).toHaveBeenCalledWith('browser-device');
+      });
+    });
+
+    it('should unsubscribe realtime when sync is disabled', async () => {
+      vi.mocked(isAuthenticated).mockReturnValue(false);
+
+      renderHook(() => useSync(), { wrapper });
+
+      await waitFor(() => {
+        expect(unsubscribe).toHaveBeenCalled();
+      });
     });
 
     it('should not start health monitor when sync is disabled', async () => {
@@ -378,6 +408,7 @@ describe('useSync', () => {
       unmount();
 
       expect(mockHealthMonitor.stop).toHaveBeenCalled();
+      expect(unsubscribe).toHaveBeenCalled();
     });
 
     it('should clear intervals on unmount', () => {

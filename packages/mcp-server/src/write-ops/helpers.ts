@@ -4,7 +4,7 @@
  */
 
 import type { GsdConfig, PBTask } from '../types.js';
-import { taskToPBFields } from '../types.js';
+import { pbTaskSnapshotFields, taskDependencyPatchToPBFields, taskToPBFields } from '../types.js';
 import type { Task } from '../types.js';
 import { getPocketBase } from '../pocketbase-client.js';
 import { getTaskCache } from '../cache.js';
@@ -107,8 +107,11 @@ async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string
       `task_id = "${escapeFilterValue(taskId)}"`
     );
     return record.id;
-  } catch {
-    throw new Error(`Task not found in PocketBase: ${taskId}`);
+  } catch (error) {
+    if ((error as { status?: unknown } | null)?.status === 404) {
+      throw new Error(`Task not found in PocketBase: ${taskId}`);
+    }
+    throw error;
   }
 }
 
@@ -131,7 +134,7 @@ export async function fetchSinglePBTaskFresh(
       .getFirstListItem<PBTask>(`task_id = "${escapeFilterValue(taskId)}"`);
     return {
       pbRecordId: record.id,
-      clientUpdatedAt: record.client_updated_at,
+      clientUpdatedAt: pbTaskSnapshotFields(record).clientUpdatedAt,
       record,
     };
   } catch (err) {
@@ -171,9 +174,10 @@ export async function fetchPBSnapshotForTasks(
 
   const records = await pb.collection('tasks').getFullList<PBTask>({ filter });
   for (const record of records) {
-    map.set(record.task_id, {
+    const snapshot = pbTaskSnapshotFields(record);
+    map.set(snapshot.taskId, {
       pbRecordId: record.id,
-      clientUpdatedAt: record.client_updated_at,
+      clientUpdatedAt: snapshot.clientUpdatedAt,
       record,
     });
   }
@@ -197,12 +201,12 @@ export async function fetchPBRecordIdsForTasks(
 
   const records = await pb.collection('tasks').getFullList<PBTask>({
     filter,
-    fields: 'id,task_id',
+    fields: 'id,task_id,client_updated_at',
   });
 
   const map = new Map<string, string>();
   for (const record of records) {
-    map.set(record.task_id, record.id);
+    map.set(pbTaskSnapshotFields(record).taskId, record.id);
   }
   return map;
 }
@@ -238,16 +242,17 @@ export async function deleteTaskInPBById(
   await pb.collection('tasks').delete(pbRecordId);
 }
 
-/**
- * Sleep helper for throttling sequential PocketBase writes. PB returns 429 if
- * we spam; a short delay between bulk calls keeps us under the limiter.
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export async function updateTaskDependenciesInPBById(
+  config: GsdConfig,
+  pbRecordId: string,
+  dependencies: string[],
+  clientUpdatedAt: string,
+  deviceId: string
+): Promise<void> {
+  const pb = getPocketBase(config);
+  const fields = taskDependencyPatchToPBFields(dependencies, clientUpdatedAt, deviceId);
+  await pb.collection('tasks').update(pbRecordId, fields);
 }
-
-/** Delay between PocketBase writes during bulk operations, in milliseconds. */
-export const PB_BULK_WRITE_DELAY_MS = 100;
 
 /**
  * Get the current user's ID and device ID from PocketBase auth.

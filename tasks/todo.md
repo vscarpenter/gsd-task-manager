@@ -2,6 +2,40 @@
 
 ---
 
+## Done — 2026-08-10: Resolve four Medium and fourteen Low audit findings
+
+**Branch:** `codex/resolve-audit-findings` · **Tier:** Non-trivial ·
+**Approved contract:** the user approved remediation of the exact findings from
+the 2026-08-06 rescan; detailed contract in
+`tasks/spec-audit-findings-remediation.md`.
+
+**Plan (continuous diagnosis → TDD → implementation → rescan):**
+- [x] Reverify every finding against current `main` and preserve inherited state.
+- [x] Diagnose and regression-lock the Chromium E2E navigation race.
+- [x] Resolve CI, documentation, typing, cycles, observability, dependency,
+  license, CSP, and immutable-provenance findings.
+- [x] Add live browser/PocketBase system coverage, targeted MCP write coverage,
+  and safe bulk-write performance improvements.
+- [x] Reduce and tighten the code-shape exception baseline.
+- [x] Control the historical credential within the explicit authority boundary;
+  deleting it from shared history remains a separately authorized rewrite.
+- [x] Run specialist review, full verification, and refresh the canonical report.
+
+**Verification:** root coverage passed 2,606 tests / 1 skip at 86.54/80.55/
+86.97/87.66; MCP coverage passed 289 / 3 skips at 89.25/85.13/86.20/88.91,
+with write operations at 99.25/95.20/100/99.71. Disposable PocketBase 0.39.10
+and real 0.26.6-upgrade system paths passed 3/3. The 15-route production build,
+strict-CSP Chromium boot, typecheck, MCP build, zero-warning lint, code-shape
+ratchet, dependency/license/SBOM gates, current-source and full-history secret
+scans, and diff checks passed. The affected browser set passed 42/42 across
+Chromium, Firefox, and WebKit; the canonical full sweep completed 270/270.
+Final WCAG and PocketBase/sync/MCP reviews returned 0 blocking findings and 0
+suggestions. Three existing stashes remain preserved. SEC-04 remains one
+controlled Medium manual gate because no shared-history rewrite or force-push
+was authorized; all other 17 findings are closed.
+
+---
+
 ## Done — 2026-08-05: Resolve rescan High and Medium findings
 
 **Branch:** `codex/resolve-pre-rescan-issues` · **Tier:** Non-trivial ·
@@ -942,8 +976,8 @@ None currently.
 
 - [ ] Decompose `updateTask` (~126 lines) and `bulkUpdateTasks` (~149 lines) in `packages/mcp-server/src/write-ops/`. Suggested extractions: `buildUpdatedTask(currentTask, input)`, `diffChanges(currentTask, input)`, `writeOneWithPreflight(...)`. Both are well over the 40-line standard.
 - [ ] Unify the conflict surface: have `bulk-operations.ts` catch `ConflictError` from a shared `writeOneWithPreflight` helper and push `err.taskId` to `conflicts`. Eliminates the duplicated `if (preflight.clientUpdatedAt !== X)` comparison and gives one definition of "conflict."
-- [ ] Verify whether PocketBase rate-limits all requests or only writes. If all requests, the bulk preflight doubles request count but the throttle only sleeps between iterations — may still trip 429s on large bulks. Either apply throttle to both preflight and write, or document the assumption.
-- [ ] Pre-existing `findPBRecordId` in `helpers.ts` has the same silent-error-swallowing flaw fixed in PR5 for `fetchSinglePBTaskFresh`. Apply the same `status === 404` discrimination there.
+- [x] Rate-limit the fresh preflight and mutation as one serialized operation, keep 100 ms between operations even after failures, and honor one bounded PocketBase `Retry-After` retry.
+- [x] Preserve non-404 PocketBase failures from `findPBRecordId`; only a real 404 maps to “Task not found,” so status and retry metadata reach the limiter.
 - [ ] Add lessons.md entry: MCP write-path test fixtures didn't catch the original stale-spread bug because mocks never went stale between calls. Future tests should exercise the read→write timeline, not just data shapes.
 
 

@@ -71,6 +71,16 @@ describe("archive", () => {
       expect(stored!.enabled).toBe(false);
       expect(stored!.archiveAfterDays).toBe(30);
     });
+
+    it("should_initialize_defaults_idempotently_when_effects_race", async () => {
+      const [first, second] = await Promise.all([
+        getArchiveSettings(),
+        getArchiveSettings(),
+      ]);
+
+      expect(first).toEqual(second);
+      expect(await getDb().archiveSettings.count()).toBe(1);
+    });
   });
 
   describe("updateArchiveSettings", () => {
@@ -146,6 +156,31 @@ describe("archive", () => {
       expect(archivedCount).toBe(1);
       expect(await db.tasks.count()).toBe(0);
       expect(await db.archivedTasks.count()).toBe(1);
+    });
+
+    it("should_preserve_a_newer_archived_snapshot_when_a_stale_live_copy_reappears", async () => {
+      const db = getDb();
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+      const staleLive = createMockTask({
+        id: "stale-resurrection",
+        title: "Stale live title",
+        completed: true,
+        completedAt: oldDate.toISOString(),
+        updatedAt: "2026-07-01T00:00:00.000Z",
+      });
+      await db.archivedTasks.add({
+        ...staleLive,
+        title: "Newer archived title",
+        updatedAt: "2026-07-03T00:00:00.000Z",
+        archivedAt: "2026-07-04T00:00:00.000Z",
+      });
+      await db.tasks.add(staleLive);
+
+      await archiveOldTasks(30);
+
+      expect(await db.tasks.get(staleLive.id)).toBeUndefined();
+      expect((await db.archivedTasks.get(staleLive.id))?.title).toBe("Newer archived title");
     });
 
     it("should_not_let_one_duplicate_block_archiving_the_rest", async () => {
@@ -515,9 +550,17 @@ describe("archive", () => {
       // Same reasoning as archiveOldTasks' bulkPut: re-archiving must be
       // idempotent, or a lingering archived row makes undo permanently fail.
       const db = getDb();
-      const task = createMockTask({ id: "already-archived", title: "Newer Title" });
+      const task = createMockTask({
+        id: "already-archived",
+        title: "Newer Title",
+        updatedAt: "2026-07-06T00:00:00.000Z",
+      });
       await db.archivedTasks.add({
-        ...createMockTask({ id: "already-archived", title: "Stale Title" }),
+        ...createMockTask({
+          id: "already-archived",
+          title: "Stale Title",
+          updatedAt: "2026-07-04T00:00:00.000Z",
+        }),
         archivedAt: "2026-07-05T00:00:00.000Z",
       });
       await db.tasks.add(task);
@@ -528,6 +571,27 @@ describe("archive", () => {
       expect(await db.archivedTasks.count()).toBe(1);
       const archived = await db.archivedTasks.get("already-archived");
       expect(archived!.title).toBe("Newer Title");
+    });
+
+    it("should_not_replace_a_newer_tombstone_with_an_older_live_snapshot", async () => {
+      const db = getDb();
+      const live = createMockTask({
+        id: "newer-tombstone",
+        title: "Stale live title",
+        updatedAt: "2026-07-01T00:00:00.000Z",
+      });
+      await db.archivedTasks.add({
+        ...live,
+        title: "Newer archived title",
+        updatedAt: "2026-07-03T00:00:00.000Z",
+        archivedAt: "2026-07-04T00:00:00.000Z",
+      });
+      await db.tasks.add(live);
+
+      await archiveTaskNow(live.id);
+
+      expect(await db.tasks.get(live.id)).toBeUndefined();
+      expect((await db.archivedTasks.get(live.id))?.title).toBe("Newer archived title");
     });
   });
 

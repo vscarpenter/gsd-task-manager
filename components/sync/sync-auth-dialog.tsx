@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { XIcon, CloudIcon } from "lucide-react";
+import { useDialogFocus } from "@/components/matrix-simplified/use-dialog-focus";
 import { useSyncAuthDialog } from "./use-sync-auth-dialog";
 import {
   RefreshingSection,
@@ -18,14 +20,11 @@ interface SyncAuthDialogProps {
 
 export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogProps) {
   const state = useSyncAuthDialog({ isOpen, onSuccess });
+  const { dialogRef, handleKeyDown } = useSyncDialogFocus(isOpen && state.mounted, onClose);
 
   if (!isOpen || !state.mounted) return null;
 
-  const oauthCallbacks = {
-    onStart: state.handleOAuthStart,
-    onSuccess: state.handleOAuthSuccess,
-    onError: state.handleOAuthError,
-  };
+  const oauthCallbacks = getOAuthCallbacks(state);
 
   const dialogContent = (
     <>
@@ -37,8 +36,13 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
         role="presentation"
       >
         <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sync-auth-dialog-title"
           className="relative my-8 w-full max-w-md rounded-lg border border-card-border bg-card p-6 shadow-[var(--shadow-lg)]"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handleKeyDown}
         >
           <DialogHeader
             syncStatus={state.syncStatus}
@@ -58,6 +62,36 @@ export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogPro
   );
 
   return createPortal(dialogContent, document.body);
+}
+
+function getOAuthCallbacks(state: ReturnType<typeof useSyncAuthDialog>) {
+  return {
+    onStart: state.handleOAuthStart,
+    onSuccess: state.handleOAuthSuccess,
+    onError: state.handleOAuthError,
+  };
+}
+
+function useSyncDialogFocus(open: boolean, onClose: () => void) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const trapTab = useDialogFocus(open, dialogRef);
+
+  useEffect(() => {
+    if (open) {
+      dialogRef.current?.querySelector<HTMLElement>("[data-dialog-initial-focus]")?.focus();
+    }
+  }, [open]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    trapTab(event);
+  };
+
+  return { dialogRef, handleKeyDown };
 }
 
 function DialogBackdrop({ onClose }: { onClose: () => void }) {
@@ -82,19 +116,22 @@ function DialogHeader({ syncStatus, sessionExpired, onClose }: DialogHeaderProps
   return (
     <div className="mb-6 flex items-start justify-between">
       <div className="flex items-center gap-3">
-        <CloudIcon className="h-6 w-6 text-accent" />
+        <CloudIcon className="h-6 w-6 text-accent" aria-hidden="true" />
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Sync Settings</h2>
+          <h2 id="sync-auth-dialog-title" className="text-xl font-semibold text-foreground">
+            Sync Settings
+          </h2>
           <p className="text-sm text-foreground-muted">{subtitle}</p>
         </div>
       </div>
       <button
         type="button"
         onClick={onClose}
+        data-dialog-initial-focus
         className="rounded-md p-1 text-foreground-muted hover:bg-background-muted hover:text-foreground"
         aria-label="Close"
       >
-        <XIcon className="h-5 w-5" />
+        <XIcon className="h-5 w-5" aria-hidden="true" />
       </button>
     </div>
   );
@@ -160,8 +197,16 @@ function DialogBody({ state, oauthCallbacks }: DialogBodyProps) {
 
 function LoadingOverlay() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--backdrop)] backdrop-blur-sm">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--backdrop)] backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="sr-only">Loading sync settings</span>
+      <div
+        className="h-12 w-12 animate-spin rounded-full border-4 border-accent border-t-transparent"
+        aria-hidden="true"
+      />
     </div>
   );
 }

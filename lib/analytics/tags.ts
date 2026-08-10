@@ -1,5 +1,5 @@
 import type { TaskRecord } from "@/lib/types";
-import type { TagStatistic } from "./metrics";
+import type { TagStatistic } from "./types";
 
 /**
  * Calculate statistics for each tag

@@ -13,6 +13,9 @@ vi.mock('@/lib/logger', () => ({
 
 // Mock task-mapper
 vi.mock('@/lib/sync/task-mapper', () => ({
+  getPocketBaseTaskId: vi.fn((record) =>
+    typeof record.task_id === 'string' ? record.task_id : null
+  ),
   pocketBaseToTaskRecord: vi.fn((record) => {
     if (record.task_id === 'invalid') return null;
     return {
@@ -39,6 +42,11 @@ vi.mock('@/lib/sync/task-mapper', () => ({
 const mockTasks = new Map<string, Record<string, unknown>>();
 const mockArchivedTasks = new Map<string, Record<string, unknown>>();
 const mockDb = {
+  transaction: vi.fn(async (
+    _mode: string,
+    _tables: unknown[],
+    callback: () => Promise<void>
+  ) => callback()),
   tasks: {
     get: vi.fn((id: string) => Promise.resolve(mockTasks.get(id))),
     add: vi.fn((task: Record<string, unknown>) => {
@@ -140,7 +148,7 @@ describe('pb-sync-engine', () => {
 
       await applyRemoteChange('create', record as never);
 
-      expect(mockDb.tasks.add).toHaveBeenCalled();
+      expect(mockDb.tasks.put).toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(true);
     });
 
@@ -150,7 +158,7 @@ describe('pb-sync-engine', () => {
       const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
       await applyRemoteChange('create', record as never);
 
-      expect(mockDb.tasks.add).not.toHaveBeenCalled();
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
 
     it('should not resurrect an archived task on a remote create that predates the archive', async () => {
@@ -159,7 +167,7 @@ describe('pb-sync-engine', () => {
       const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
       await applyRemoteChange('create', record as never);
 
-      expect(mockDb.tasks.add).not.toHaveBeenCalled();
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(false);
     });
 
@@ -183,6 +191,11 @@ describe('pb-sync-engine', () => {
 
       expect(mockTasks.has('task-1')).toBe(true);
       expect(mockArchivedTasks.has('task-1')).toBe(false);
+      expect(mockDb.transaction).toHaveBeenCalledWith(
+        'rw',
+        [mockDb.tasks, mockDb.archivedTasks],
+        expect.any(Function)
+      );
     });
 
     it('should un-archive on a remote create that post-dates the archive', async () => {
@@ -264,7 +277,7 @@ describe('pb-sync-engine', () => {
       await applyRemoteChange('update', record as never);
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
-      expect(mockDb.tasks.add).not.toHaveBeenCalled();
+      expect(mockArchivedTasks.has('invalid')).toBe(false);
     });
   });
 

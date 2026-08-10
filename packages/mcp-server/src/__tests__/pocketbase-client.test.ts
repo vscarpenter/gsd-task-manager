@@ -11,7 +11,7 @@ const { authStore, autoCancellation, pocketBaseConstructor } = vi.hoisted(() => 
     authStore: store,
     autoCancellation: vi.fn(),
     pocketBaseConstructor: vi.fn(function PocketBaseMock() {
-      return { authStore: store, autoCancellation: vi.fn() };
+      return { authStore: store, autoCancellation: vi.fn(), afterSend: undefined };
     }),
   };
 });
@@ -34,7 +34,7 @@ beforeEach(() => {
   authStore.isValid = false;
   authStore.record = null;
   pocketBaseConstructor.mockImplementation(function PocketBaseMock() {
-    return { authStore, autoCancellation };
+    return { authStore, autoCancellation, afterSend: undefined };
   });
 });
 
@@ -78,6 +78,21 @@ describe('getPocketBase', () => {
 
     expect(second).not.toBe(first);
     expect(pocketBaseConstructor).toHaveBeenCalledTimes(2);
+  });
+
+  it('captures Retry-After from a real 429 response into the SDK error body', () => {
+    const pb = getPocketBase(config) as ReturnType<typeof getPocketBase> & {
+      afterSend: (response: Response, data: unknown) => unknown;
+    };
+    const response = new Response('{}', {
+      status: 429,
+      headers: { 'Retry-After': '3' },
+    });
+
+    expect(pb.afterSend(response, { message: 'rate limited' })).toEqual({
+      message: 'rate limited',
+      retryAfterMs: 3000,
+    });
   });
 });
 

@@ -5,7 +5,7 @@ import type { RefObject } from "react";
 import type { TaskRecord } from "@/lib/types";
 import { resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
 import { UI_TIMING } from "@/lib/constants/ui";
-import type { EditDraft } from "./edit-drawer";
+import type { EditDraft } from "./edit-draft";
 
 function classifyExistingDate(iso: string | undefined): DuePreset {
   if (!iso) return "none";

@@ -38,6 +38,15 @@ export interface PBTask {
   updated: string; // PocketBase auto-field
 }
 
+export interface PBTaskSnapshotFields {
+  taskId: string;
+  clientUpdatedAt: string;
+}
+
+export function pbTaskSnapshotFields(record: PBTask): PBTaskSnapshotFields {
+  return { taskId: record.task_id, clientUpdatedAt: record.client_updated_at };
+}
+
 // Task structure (matches GSD TaskRecord from frontend, camelCase)
 export interface Task {
   id: string;
@@ -177,6 +186,18 @@ export function taskToPBFields(
     time_entries: task.timeEntries ?? [],
     client_updated_at: task.updatedAt,
     client_created_at: task.createdAt,
+    device_id: deviceId,
+  };
+}
+
+export function taskDependencyPatchToPBFields(
+  dependencies: string[],
+  clientUpdatedAt: string,
+  deviceId: string
+): Partial<PBTask> {
+  return {
+    dependencies,
+    client_updated_at: clientUpdatedAt,
     device_id: deviceId,
   };
 }

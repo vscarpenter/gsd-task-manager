@@ -5,7 +5,7 @@
  * Extracted from lib/filters.ts for better code organization.
  */
 
-import type { SmartView } from "@/lib/filters";
+import type { SmartView } from "@/lib/smart-views/types";
 
 /**
  * Built-in Smart Views that come with the app

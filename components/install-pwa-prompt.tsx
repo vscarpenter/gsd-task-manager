@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
@@ -12,6 +12,10 @@ const logger = createLogger("PWA");
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+interface StandaloneNavigator extends Navigator {
+  standalone?: boolean;
 }
 
 function detectBrowserType(): "chrome" | "safari" | "other" {
@@ -53,19 +57,44 @@ const INITIAL_PROMPT_STATE: PromptState = {
   showPrompt: false,
 };
 
+function useRestorePromptFocus(showPrompt: boolean) {
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!showPrompt) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    return () => previouslyFocused.current?.focus?.();
+  }, [showPrompt]);
+}
+
+async function runInstallPrompt(
+  deferredPrompt: BeforeInstallPromptEvent | null,
+  onAccepted: () => void
+) {
+  if (!deferredPrompt) {
+    navigateToInstall();
+    return;
+  }
+  try {
+    await deferredPrompt.prompt();
+    if ((await deferredPrompt.userChoice).outcome === "accepted") onAccepted();
+  } catch (error) {
+    logger.error("Install prompt error", error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
 export function InstallPwaPrompt() {
   const [{ deferredPrompt, showPrompt }, setPromptState] =
     useState<PromptState>(INITIAL_PROMPT_STATE);
   const [browserType] = useState<"chrome" | "safari" | "other">(detectBrowserType);
+  useRestorePromptFocus(showPrompt);
 
   useEffect(() => {
     // Check if already installed
     const isInstalled =
       window.matchMedia("(display-mode: standalone)").matches ||
       // navigator.standalone is a non-standard Safari/WebKit property not in
-      // the TypeScript DOM types; `any` cast is the only way to access it.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window.navigator as any).standalone === true;
+      // the TypeScript DOM types, so model the optional WebKit extension.
+      (window.navigator as StandaloneNavigator).standalone === true;
 
     if (isInstalled) {
       return; // Don't show prompt if already installed
@@ -114,24 +143,8 @@ export function InstallPwaPrompt() {
     };
   }, [browserType]);
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      // If no install prompt (e.g., Safari), redirect to instructions
-      navigateToInstall();
-      return;
-    }
-
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-
-      if (outcome === "accepted") {
-        setPromptState(INITIAL_PROMPT_STATE);
-      }
-    } catch (error) {
-      logger.error("Install prompt error", error instanceof Error ? error : new Error(String(error)));
-    }
-  };
+  const handleInstallClick = () =>
+    void runInstallPrompt(deferredPrompt, () => setPromptState(INITIAL_PROMPT_STATE));
 
   const handleDismiss = () => {
     setPromptState((prev) => ({ ...prev, showPrompt: false }));
@@ -144,12 +157,18 @@ export function InstallPwaPrompt() {
 
   return (
     <div
-      role="dialog"
+      role="region"
       aria-labelledby="install-pwa-title"
       aria-describedby="install-pwa-description"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") handleDismiss();
+      }}
       className="fixed inset-x-3 top-3 z-50 rounded-lg border bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
     >
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        GSD Task Manager is available to install.
+      </span>
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
           <Download className="h-5 w-5 text-primary" aria-hidden="true" />

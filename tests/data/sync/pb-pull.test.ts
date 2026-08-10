@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RecordModel } from 'pocketbase';
+import Dexie from 'dexie';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { TaskRecord } from '@/lib/types';
@@ -92,6 +93,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
   it('does not include invalid (un-applied) records in the cursor', async () => {
     const badRecord = pbRecord('t1', '2099-12-31T00:00:00.000Z');
+    badRecord.updated = '2099-12-31T00:00:00.000Z';
     // Force `pocketBaseToTaskRecord` to reject by stripping a required field.
     delete (badRecord as Record<string, unknown>).title;
 
@@ -106,6 +108,21 @@ describe('pullRemoteChanges cursor clamping', () => {
     // is persisted with a 30s overlap subtracted so the next pull's `>=` filter
     // can re-catch boundary records reliably across clock drift.
     expect(maxObservedTimestamp).toBe('2026-05-17T23:59:30.000Z');
+  });
+
+  it('uses client_updated_at for filtering and sorting', async () => {
+    const getFullList = vi.fn(async () => []);
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getFullList }),
+    });
+
+    await pullRemoteChanges('2026-05-18T00:00:00.000Z');
+
+    expect(getFullList).toHaveBeenCalledWith(expect.objectContaining({
+      filter: expect.stringContaining('client_updated_at >= "2026-05-18T00:00:00.000Z"'),
+      sort: 'client_updated_at',
+    }));
+    expect(getFullList.mock.calls[0][0].filter).not.toMatch(/\bupdated\b/);
   });
 
   it('skips records where remote timestamp equals local (no phantom pull count)', async () => {
@@ -138,8 +155,9 @@ describe('pullRemoteChanges cursor clamping', () => {
       }),
     });
 
-    const { pulledCount } = await pullRemoteChanges(null);
+    const { pulledCount, maxObservedTimestamp } = await pullRemoteChanges(null);
     expect(pulledCount).toBe(0);
+    expect(maxObservedTimestamp).toBeNull();
   });
 });
 
@@ -170,9 +188,10 @@ describe('pullRemoteChanges archive guard', () => {
       }),
     });
 
-    const { pulledCount } = await pullRemoteChanges(null);
+    const { pulledCount, maxObservedTimestamp } = await pullRemoteChanges(null);
 
     expect(pulledCount).toBe(0);
+    expect(maxObservedTimestamp).toBeNull();
     await expect(db.tasks.get('archived-task')).resolves.toBeUndefined();
     await expect(db.archivedTasks.count()).resolves.toBe(1);
   });
@@ -237,6 +256,29 @@ describe('pullRemoteChanges archive guard', () => {
     // The archived row must go, or the task would be re-archived immediately
     // and the remote edit lost again.
     await expect(db.archivedTasks.get('edited-after-archive')).resolves.toBeUndefined();
+  });
+
+  it('rolls back tombstone removal when the corresponding live write fails', async () => {
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('atomic-restore'),
+      archivedAt: '2026-05-19T00:00:00.000Z',
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [
+          pbRecord('atomic-restore', '2026-05-20T00:00:00.000Z'),
+        ]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+    const addSpy = vi.spyOn(db.tasks, 'add').mockRejectedValueOnce(new Error('write failed'));
+
+    await expect(pullRemoteChanges(null)).rejects.toThrow('write failed');
+
+    await expect(db.archivedTasks.get('atomic-restore')).resolves.toBeDefined();
+    await expect(db.tasks.get('atomic-restore')).resolves.toBeUndefined();
+    addSpy.mockRestore();
   });
 
   it('keeps suppressing a remote record that predates the archive', async () => {
@@ -379,5 +421,57 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     await pullRemoteChanges(null);
 
     await expect(db.tasks.get('local-copy')).resolves.toBeDefined();
+  });
+
+  it('serializes deletion reconciliation with a concurrent local edit and queue write', async () => {
+    const db = getDb();
+    const original = makeTask('concurrent-edit');
+    const edited = { ...original, title: 'Edited while reconciling', updatedAt: '2026-05-19T00:00:00.000Z' };
+    await db.tasks.add(original);
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+
+    let markReadStarted!: () => void;
+    let releaseRead!: () => void;
+    const readStarted = new Promise<void>((resolve) => { markReadStarted = resolve; });
+    const readRelease = new Promise<void>((resolve) => { releaseRead = resolve; });
+    const originalToArray = db.tasks.toArray.bind(db.tasks);
+    const toArraySpy = vi.spyOn(db.tasks, 'toArray').mockImplementationOnce(async () => {
+      const snapshot = await originalToArray();
+      markReadStarted();
+      await Dexie.waitFor(readRelease);
+      return snapshot;
+    });
+
+    try {
+      const pull = pullRemoteChanges(null);
+      await readStarted;
+      let concurrentCommitted = false;
+      const concurrentEdit = Dexie.ignoreTransaction(() =>
+        db.transaction('rw', [db.tasks, db.syncQueue], async () => {
+          await db.tasks.put(edited);
+          await db.syncQueue.add({
+            id: 'concurrent-queue-item',
+            taskId: edited.id,
+            operation: 'update',
+            payload: edited,
+            timestamp: Date.now(),
+            retryCount: 0,
+            status: 'pending',
+          });
+        })
+      ).then(() => { concurrentCommitted = true; });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(concurrentCommitted).toBe(false);
+      releaseRead();
+      await pull;
+      await concurrentEdit;
+
+      await expect(db.tasks.get(edited.id)).resolves.toEqual(edited);
+      await expect(db.syncQueue.get('concurrent-queue-item')).resolves.toBeDefined();
+    } finally {
+      releaseRead();
+      toArraySpy.mockRestore();
+    }
   });
 });

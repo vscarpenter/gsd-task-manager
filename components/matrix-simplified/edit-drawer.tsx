@@ -10,16 +10,8 @@ import { useDialogFocus } from "./use-dialog-focus";
 import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField } from "./edit-drawer-fields";
 import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
-
-export interface EditDraft {
-  title: string;
-  description: string;
-  urgent: boolean;
-  important: boolean;
-  dueDate?: string;
-  tags: string[];
-  dependencies: string[];
-}
+import type { EditDraft } from "./edit-draft";
+export type { EditDraft } from "./edit-draft";
 
 interface EditDrawerProps {
   open: boolean;

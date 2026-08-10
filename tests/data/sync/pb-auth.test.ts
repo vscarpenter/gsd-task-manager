@@ -15,6 +15,13 @@ const mockPb = {
   cancelRequest: mockCancelRequest,
 };
 
+function tokenExpiringIn(seconds: number): string {
+  const payload = Buffer.from(
+    JSON.stringify({ exp: Math.floor(Date.now() / 1000) + seconds })
+  ).toString('base64url');
+  return `header.${payload}.signature`;
+}
+
 vi.mock('@/lib/sync/pocketbase-client', () => ({
   getPocketBase: vi.fn(() => mockPb),
   clearPocketBase: vi.fn(),
@@ -43,7 +50,7 @@ import {
 describe('PocketBase Auth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPb.authStore.token = 'test-token';
+    mockPb.authStore.token = tokenExpiringIn(3600);
     mockPb.authStore.isValid = true;
   });
 
@@ -215,11 +222,23 @@ describe('PocketBase Auth', () => {
   describe('ensureValidAuth', () => {
     it('returns true without refreshing when the token is still valid', async () => {
       mockPb.authStore.isValid = true;
+      mockPb.authStore.token = tokenExpiringIn(3600);
 
       const result = await ensureValidAuth();
 
       expect(result).toBe(true);
       expect(mockAuthRefresh).not.toHaveBeenCalled();
+    });
+
+    it('proactively refreshes a valid token near expiry', async () => {
+      mockPb.authStore.isValid = true;
+      mockPb.authStore.token = tokenExpiringIn(60);
+      mockAuthRefresh.mockResolvedValue({});
+
+      const result = await ensureValidAuth();
+
+      expect(mockAuthRefresh).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
     });
 
     it('attempts a silent refresh when the token is expired but present', async () => {

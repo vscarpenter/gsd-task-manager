@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { taskRecordToPocketBase, pocketBaseToTaskRecord } from '@/lib/sync/task-mapper';
+import {
+  getPocketBaseRealtimeEnvelope,
+  taskRecordToPocketBase,
+  pocketBaseToTaskRecord,
+} from '@/lib/sync/task-mapper';
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import type { TaskRecord } from '@/lib/types';
 
@@ -84,6 +88,22 @@ function buildPBRecord(overrides?: Record<string, unknown>) {
 }
 
 describe('task-mapper', () => {
+  describe('getPocketBaseRealtimeEnvelope', () => {
+    it('validates snake_case input and returns a camelCase envelope', () => {
+      expect(getPocketBaseRealtimeEnvelope(buildPBRecord())).toEqual({
+        taskId: 'task-123',
+        ownerId: 'user-1',
+        deviceId: 'device-1',
+      });
+    });
+
+    it('rejects malformed realtime identity fields', () => {
+      expect(getPocketBaseRealtimeEnvelope(buildPBRecord({ task_id: '' }))).toBeNull();
+      expect(getPocketBaseRealtimeEnvelope(buildPBRecord({ owner: 42 }))).toBeNull();
+      expect(getPocketBaseRealtimeEnvelope(buildPBRecord({ device_id: {} }))).toBeNull();
+    });
+  });
+
   describe('taskRecordToPocketBase', () => {
     it('should map camelCase local fields to snake_case PB fields', () => {
       const local = buildLocalTask();

@@ -8,11 +8,13 @@
 
 import { getPocketBase } from './pocketbase-client';
 import { createLogger } from '@/lib/logger';
+import { isTokenExpired } from 'pocketbase';
 
 const logger = createLogger('SYNC_AUTH');
 
 export type OAuthProvider = 'google' | 'github';
 const DEFAULT_OAUTH_TIMEOUT_MS = 120_000;
+const AUTH_REFRESH_THRESHOLD_SECONDS = 5 * 60;
 
 /**
  * Runtime whitelist of OAuth providers. The `OAuthProvider` type is erased
@@ -230,7 +232,12 @@ export async function refreshAuth(): Promise<boolean> {
  */
 export async function ensureValidAuth(): Promise<boolean> {
   const pb = getPocketBase();
-  if (pb.authStore.isValid) return true;
   if (!pb.authStore.token) return false;
+  if (
+    pb.authStore.isValid &&
+    !isTokenExpired(pb.authStore.token, AUTH_REFRESH_THRESHOLD_SECONDS)
+  ) {
+    return true;
+  }
   return refreshAuth();
 }

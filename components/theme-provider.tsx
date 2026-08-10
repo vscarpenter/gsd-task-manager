@@ -15,6 +15,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       enableSystem
       disableTransitionOnChange
       storageKey="gsd-theme"
+      scriptProps={{ src: "/theme-init.js" }}
     >
       {children}
     </NextThemesProvider>

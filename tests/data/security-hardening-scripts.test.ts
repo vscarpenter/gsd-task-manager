@@ -134,6 +134,10 @@ describe('security hardening scripts and workflows', () => {
       expect(fingerprint).toMatch(/^[0-9a-f]{40}:[^:]+:[^:]+:\d+$/);
       expect(fingerprint).not.toMatch(/eyJ[A-Za-z0-9_-]+\./);
     }
+    const security = readRepoFile('SECURITY.md');
+    expect(security).toContain('Commit `e9230cb`');
+    expect(security).toContain('coordinated history rewrite and');
+    expect(security).toContain('separately approved manual gate');
   });
 
   it('registers a disposable PocketBase system test without production endpoints', () => {
@@ -188,11 +192,12 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides.undici).toBe('7.29.0');
     expect(rootPackage.overrides['fast-uri']).toBe('4.1.2');
     expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
-    expect(rootPackage.overrides.vite).toBe('>=8.1.4');
+    expect(rootPackage.overrides['caniuse-lite']).toBe('1.0.30001809');
+    expect(rootPackage.overrides.vite).toBe('>=8.2.1');
     expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.1');
     expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
     expect(rootPackage.overrides.qs).toBe('>=6.15.2');
-    expect(mcpPackage.dependencies['@sentry/node']).toBe('10.67.0');
+    expect(mcpPackage.dependencies['@sentry/node']).toBe('10.70.0');
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.10');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.10');
     expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
@@ -220,8 +225,38 @@ describe('security hardening scripts and workflows', () => {
     const rootPackage = JSON.parse(readRepoFile('package.json'));
     const eslintConfig = readRepoFile('eslint.config.mjs');
 
-    expect(rootPackage.scripts.lint).toBe('eslint . --max-warnings=0');
+    expect(rootPackage.scripts.lint).toContain('eslint . --max-warnings=0');
+    expect(rootPackage.scripts.lint).toContain('BROWSERSLIST_IGNORE_OLD_DATA=1');
     expect(eslintConfig).toContain('"**/coverage/**"');
+  });
+
+  it('uses immutable CI runners and action revisions', () => {
+    const workflows = [
+      '.github/actions/build-static-export/action.yml',
+      ...[
+        'apply-risk-label.yml',
+        'ci.yml',
+        'deploy-cloudfront-infra.yml',
+        'deploy-dev.yml',
+        'deploy-prod.yml',
+        'publish-docker.yml',
+        'publish-mcp-server.yml',
+        'security-audit.yml',
+        'sonarcloud.yml',
+      ].map((name) => `.github/workflows/${name}`),
+    ].map(readRepoFile);
+
+    for (const workflow of workflows) {
+      expect(workflow).not.toContain('ubuntu-latest');
+      expect(workflow).not.toMatch(/uses:\s+[^\s@]+@v\d+(?:\s|$)/);
+    }
+  });
+
+  it('pins Docker base images by digest', () => {
+    const dockerfile = readRepoFile('docker/Dockerfile');
+
+    expect(dockerfile).toMatch(/^FROM oven\/bun:1@sha256:[0-9a-f]{64}/m);
+    expect(dockerfile).toMatch(/^FROM caddy:2-alpine@sha256:[0-9a-f]{64}/m);
   });
 
   it('keeps security documentation references on tracked canonical files', () => {

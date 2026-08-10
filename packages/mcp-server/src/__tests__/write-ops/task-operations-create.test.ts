@@ -113,6 +113,57 @@ describe('createTask URL extraction', () => {
     expect(result.task.title).toBe('Read later');
     expect(helpers.createTaskInPB).not.toHaveBeenCalled();
   });
+
+  it('persists a fully populated task after auth hydration', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const result = await createTask(config, {
+      title: 'Persisted task',
+      urgent: false,
+      important: true,
+      dueDate: '2020-01-01T00:00:00.000Z',
+      tags: Array.from({ length: 11 }, (_, index) => `tag-${index}`),
+      subtasks: [{ title: 'Step', completed: false }],
+      recurrence: 'monthly',
+      notifyBefore: 10,
+      notificationEnabled: false,
+      estimatedMinutes: 45,
+    });
+
+    expect(result.dryRun).toBe(false);
+    expect(result.validation.warnings).toEqual([
+      'Due date is in the past',
+      'Task has more than 10 tags, consider simplifying',
+    ]);
+    expect(result.task.subtasks[0]?.id).toMatch(/^[a-f0-9]{32}$/);
+    expect(result.task).toMatchObject({
+      recurrence: 'monthly',
+      notifyBefore: 10,
+      notificationEnabled: false,
+      estimatedMinutes: 45,
+    });
+    expect(helpers.getAuthInfo).toHaveBeenCalledWith(config);
+    expect(helpers.createTaskInPB).toHaveBeenCalledWith(
+      config,
+      result.task,
+      'owner-1',
+      'device-1'
+    );
+  });
+
+  it('rejects missing dependency ids before persistence', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+
+    await expect(
+      createTask(config, {
+        title: 'Blocked task',
+        urgent: false,
+        important: false,
+        dependencies: ['missing'],
+      })
+    ).rejects.toThrow(/Dependency tasks not found/);
+
+    expect(helpers.createTaskInPB).not.toHaveBeenCalled();
+  });
 });
 
 describe('updateTask URL parity', () => {

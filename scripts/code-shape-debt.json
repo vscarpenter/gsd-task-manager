@@ -1,0 +1,16 @@
+{
+  "owner": "GSD Task Manager maintainers",
+  "deadline": "2026-12-31",
+  "policy": "Remaining exceptions may only decrease. Resolve or explicitly renew this contract before the deadline.",
+  "maximumRemainingViolations": {
+    "complexity": 38,
+    "max-depth": 4,
+    "max-lines": 0,
+    "max-lines-per-function": 115
+  },
+  "resolvedTargets": [
+    "lib/db.ts:GsdDatabase.constructor",
+    "packages/mcp-server/src/write-ops/task-operations.ts:updateTask",
+    "packages/mcp-server/src/write-ops/bulk-operations.ts:bulkUpdateTasks"
+  ]
+}

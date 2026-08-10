@@ -5,6 +5,7 @@ import {
   use,
   useReducer,
   useEffect,
+  type Dispatch,
   type ReactNode,
 } from 'react';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
@@ -17,6 +18,7 @@ import { UI_TIMING } from '@/lib/constants/ui';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncResult, PBSyncConfig } from '@/lib/sync/types';
 import { getDb } from '@/lib/db';
+import { subscribe, unsubscribe } from '@/lib/sync/pb-realtime';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -130,6 +132,175 @@ function syncReducer(state: SyncReducerState, action: SyncAction): SyncReducerSt
   }
 }
 
+async function reconcileRealtime(enabled: boolean, deviceId?: string): Promise<void> {
+  if (!enabled || !deviceId) {
+    unsubscribe();
+    return;
+  }
+  try {
+    await subscribe(deviceId);
+  } catch (error) {
+    logger.warn('Failed to start realtime sync', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+function reconcileHealthMonitor(enabled: boolean): void {
+  const monitor = getHealthMonitor();
+  if (monitor.isActive() === enabled) return;
+  if (enabled) monitor.start();
+  else monitor.stop();
+}
+
+async function reconcileBackgroundSync(enabled: boolean, deviceId?: string): Promise<void> {
+  const manager = getBackgroundSyncManager();
+  if (!enabled) {
+    if (manager.isRunning()) manager.stop();
+    return;
+  }
+  const config = await getAutoSyncConfig();
+  if (!config.enabled) {
+    if (manager.isRunning()) manager.stop();
+    return;
+  }
+  if (!manager.isRunning()) {
+    logger.debug('Starting background sync manager');
+    await manager.start(config, deviceId);
+  }
+}
+
+async function reconcileSyncServices(): Promise<boolean> {
+  const db = getDb();
+  const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
+  const enabled = isAuthenticated() && Boolean(config?.enabled);
+  await reconcileRealtime(enabled, config?.deviceId);
+  reconcileHealthMonitor(enabled);
+  await reconcileBackgroundSync(enabled, config?.deviceId);
+  return enabled;
+}
+
+function stopSyncServices(): void {
+  const healthMonitor = getHealthMonitor();
+  if (healthMonitor.isActive()) healthMonitor.stop();
+  const backgroundSync = getBackgroundSyncManager();
+  if (backgroundSync.isRunning()) backgroundSync.stop();
+  unsubscribe();
+}
+
+function useSyncLifecycle(dispatch: Dispatch<SyncAction>): void {
+  useEffect(() => {
+    const checkEnabled = async () => {
+      const isEnabled = await reconcileSyncServices();
+      dispatch({ type: 'SET_ENABLED', isEnabled });
+    };
+    void checkEnabled();
+    const interval = setInterval(checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
+      stopSyncServices();
+    };
+  }, [dispatch]);
+}
+
+async function updateCoordinatorStatus(dispatch: Dispatch<SyncAction>): Promise<void> {
+  const coordinator = getSyncCoordinator();
+  const coordStatus = await coordinator.getStatus();
+  dispatch({
+    type: 'SET_COORDINATOR_STATUS',
+    isSyncing: coordStatus.isRunning,
+    pendingRequests: coordStatus.pendingRequests,
+    nextRetryAt: coordStatus.nextRetryAt,
+    retryCount: coordStatus.retryCount,
+    lastSuccessfulSyncAt: coordStatus.lastSuccessfulSyncAt,
+  });
+  const autoConfig = await getAutoSyncConfig();
+  dispatch({
+    type: 'SET_AUTO_SYNC',
+    autoSyncEnabled: autoConfig.enabled,
+    autoSyncInterval: autoConfig.intervalMinutes,
+  });
+  if (coordStatus.lastResult) {
+    dispatch({ type: 'SET_LAST_RESULT', lastResult: coordStatus.lastResult });
+  }
+  if (coordStatus.lastError) {
+    dispatch({ type: 'SET_ERROR', error: coordStatus.lastError });
+  }
+}
+
+function useCoordinatorStatus(dispatch: Dispatch<SyncAction>): void {
+  useEffect(() => {
+    const update = () => updateCoordinatorStatus(dispatch);
+    void update();
+    const interval = setInterval(update, UI_TIMING.STATUS_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [dispatch]);
+}
+
+function useSyncHealthMonitoring(isEnabled: boolean): void {
+  useEffect(() => {
+    if (!isEnabled) return;
+    let lastHealthCheckTime = 0;
+    const checkHealth = async () => {
+      const now = Date.now();
+      if (now - lastHealthCheckTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) return;
+      lastHealthCheckTime = now;
+      const report = await getHealthMonitor().check();
+      for (const issue of report.issues) {
+        logger.warn('Health issue detected', {
+          type: issue.type,
+          severity: issue.severity,
+          message: issue.message,
+        });
+      }
+    };
+    const timeout = setTimeout(checkHealth, UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
+    const interval = setInterval(checkHealth, SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [isEnabled]);
+}
+
+function scheduleStatusReset(dispatch: Dispatch<SyncAction>, delay: number): void {
+  setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), delay);
+}
+
+function dispatchSyncResult(dispatch: Dispatch<SyncAction>, result: PBSyncResult): void {
+  if (result.status === 'success') {
+    dispatch({ type: 'SYNC_SUCCESS', lastResult: result });
+    scheduleStatusReset(dispatch, UI_TIMING.AUTO_RESET_SUCCESS_MS);
+    return;
+  }
+  if (result.status === 'already_running') {
+    dispatch({ type: 'SYNC_IDLE', lastResult: result });
+    return;
+  }
+  dispatch({ type: 'SYNC_ERROR', error: result.error || 'Sync failed', lastResult: result });
+  scheduleStatusReset(dispatch, UI_TIMING.AUTO_RESET_ERROR_MS);
+}
+
+async function runManualSync(dispatch: Dispatch<SyncAction>): Promise<PBSyncResult> {
+  dispatch({ type: 'SYNC_START' });
+  try {
+    const coordinator = getSyncCoordinator();
+    await coordinator.requestSync('user');
+    const status = await coordinator.getStatus();
+    const result = status.lastResult ?? {
+      status: status.lastError ? 'error' as const : 'success' as const,
+      ...(status.lastError ? { error: status.lastError } : {}),
+    };
+    dispatchSyncResult(dispatch, result);
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Sync failed';
+    const result: PBSyncResult = { status: 'error', error: message };
+    dispatchSyncResult(dispatch, result);
+    return result;
+  }
+}
+
 /**
  * App-level provider that owns all sync lifecycle management.
  *
@@ -142,164 +313,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(syncReducer, initialSyncState);
   const { isEnabled } = state;
 
-  // Single lifecycle owner for health monitor and background sync
-  useEffect(() => {
-    const checkEnabled = async () => {
-      const pbAuthenticated = isAuthenticated();
-      const db = getDb();
-      const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
-      const enabled = pbAuthenticated && !!config?.enabled;
-      dispatch({ type: 'SET_ENABLED', isEnabled: enabled });
-
-      // Start or stop health monitor based on sync state
-      const healthMonitor = getHealthMonitor();
-      if (enabled && !healthMonitor.isActive()) {
-        healthMonitor.start();
-      } else if (!enabled && healthMonitor.isActive()) {
-        healthMonitor.stop();
-      }
-
-      // Start or stop background sync manager
-      const bgSyncManager = getBackgroundSyncManager();
-      if (enabled) {
-        const autoSyncConfig = await getAutoSyncConfig();
-        if (autoSyncConfig.enabled && !bgSyncManager.isRunning()) {
-          logger.debug('Starting background sync manager');
-          await bgSyncManager.start(autoSyncConfig, config?.deviceId);
-        } else if (!autoSyncConfig.enabled && bgSyncManager.isRunning()) {
-          bgSyncManager.stop();
-        }
-      } else if (bgSyncManager.isRunning()) {
-        bgSyncManager.stop();
-      }
-    };
-
-    checkEnabled();
-    const interval = setInterval(checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
-
-    return () => {
-      clearInterval(interval);
-      const healthMonitor = getHealthMonitor();
-      if (healthMonitor.isActive()) healthMonitor.stop();
-      const bgSyncManager = getBackgroundSyncManager();
-      if (bgSyncManager.isRunning()) bgSyncManager.stop();
-    };
-  }, []);
-
-  // Poll coordinator status to update UI
-  useEffect(() => {
-    const updateStatus = async () => {
-      const coordinator = getSyncCoordinator();
-      const coordStatus = await coordinator.getStatus();
-
-      dispatch({
-        type: 'SET_COORDINATOR_STATUS',
-        isSyncing: coordStatus.isRunning,
-        pendingRequests: coordStatus.pendingRequests,
-        nextRetryAt: coordStatus.nextRetryAt,
-        retryCount: coordStatus.retryCount,
-        lastSuccessfulSyncAt: coordStatus.lastSuccessfulSyncAt,
-      });
-
-      const autoConfig = await getAutoSyncConfig();
-      dispatch({
-        type: 'SET_AUTO_SYNC',
-        autoSyncEnabled: autoConfig.enabled,
-        autoSyncInterval: autoConfig.intervalMinutes,
-      });
-
-      if (coordStatus.lastResult) {
-        dispatch({ type: 'SET_LAST_RESULT', lastResult: coordStatus.lastResult });
-      }
-
-      if (coordStatus.lastError) {
-        dispatch({ type: 'SET_ERROR', error: coordStatus.lastError });
-      }
-    };
-
-    updateStatus();
-    const interval = setInterval(updateStatus, UI_TIMING.STATUS_POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Health monitoring
-  useEffect(() => {
-    if (!isEnabled) return;
-
-    let lastHealthCheckTime = 0;
-
-    const checkHealth = async () => {
-      const now = Date.now();
-      if (now - lastHealthCheckTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) return;
-
-      lastHealthCheckTime = now;
-      const healthMonitor = getHealthMonitor();
-      const report = await healthMonitor.check();
-
-      if (!report.healthy && report.issues.length > 0) {
-        for (const issue of report.issues) {
-          logger.warn('Health issue detected', {
-            type: issue.type,
-            severity: issue.severity,
-            message: issue.message,
-          });
-        }
-      }
-    };
-
-    const initialTimeout = setTimeout(checkHealth, UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
-    const interval = setInterval(checkHealth, SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, [isEnabled]);
-
-  const sync = async (): Promise<PBSyncResult> => {
-    dispatch({ type: 'SYNC_START' });
-
-    try {
-      const coordinator = getSyncCoordinator();
-      await coordinator.requestSync('user');
-
-      const coordStatus = await coordinator.getStatus();
-      let result: PBSyncResult;
-
-      if (coordStatus.lastResult) {
-        result = coordStatus.lastResult;
-
-        if (result.status === 'success') {
-          dispatch({ type: 'SYNC_SUCCESS', lastResult: result });
-          setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_SUCCESS_MS);
-        } else if (result.status === 'already_running') {
-          // Dedup signal -- not an error, just go back to idle
-          dispatch({ type: 'SYNC_IDLE', lastResult: result });
-        } else {
-          // 'error' or 'partial' -- both are error-like states
-          dispatch({ type: 'SYNC_ERROR', error: result.error || 'Sync failed', lastResult: result });
-          setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_ERROR_MS);
-        }
-      } else if (coordStatus.lastError) {
-        result = { status: 'error', error: coordStatus.lastError };
-        dispatch({ type: 'SYNC_ERROR', error: coordStatus.lastError, lastResult: result });
-        setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_ERROR_MS);
-      } else {
-        result = { status: 'success' };
-        dispatch({ type: 'SYNC_SUCCESS', lastResult: result });
-        setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_SUCCESS_MS);
-      }
-
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Sync failed';
-      const result: PBSyncResult = { status: 'error', error: errorMessage };
-      dispatch({ type: 'SYNC_ERROR', error: errorMessage, lastResult: result });
-
-      setTimeout(() => dispatch({ type: 'SET_STATUS', status: 'idle' }), UI_TIMING.AUTO_RESET_ERROR_MS);
-      return result;
-    }
-  };
+  useSyncLifecycle(dispatch);
+  useCoordinatorStatus(dispatch);
+  useSyncHealthMonitoring(isEnabled);
+  const sync = () => runManualSync(dispatch);
 
   const value: SyncState = {
     sync,

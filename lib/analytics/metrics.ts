@@ -2,6 +2,8 @@ import type { TaskRecord, QuadrantId } from "@/lib/types";
 import { startOfDay, startOfWeek, startOfMonth, isAfter, isBefore } from "date-fns";
 import { getStreakData } from "./streaks";
 import { calculateTagStatistics } from "./tags";
+import type { TagStatistic } from "./types";
+export type { TagStatistic } from "./types";
 
 /**
  * Core metrics for productivity tracking
@@ -33,16 +35,6 @@ export interface ProductivityMetrics {
   activeTasks: number;
   completedTasks: number;
   totalTasks: number;
-}
-
-/**
- * Statistics for a specific tag
- */
-export interface TagStatistic {
-  tag: string;
-  count: number; // Total tasks with this tag
-  completedCount: number;
-  completionRate: number; // Percentage (0-100)
 }
 
 /**

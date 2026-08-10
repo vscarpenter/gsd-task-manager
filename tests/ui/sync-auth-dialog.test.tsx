@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AuthState } from '@/lib/sync/pb-auth';
 
@@ -147,6 +147,52 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         expect(screen.getByText('Sync Settings')).toBeInTheDocument();
       });
+    });
+
+    it('exposes a labelled modal and moves focus inside it', async () => {
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      const dialog = await screen.findByRole('dialog', { name: 'Sync Settings' });
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+      await waitFor(() => expect(screen.getByLabelText('Close')).toHaveFocus());
+
+      opener.remove();
+    });
+
+    it('closes on Escape and restores focus to the opener', async () => {
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+      const onClose = vi.fn();
+      const { rerender } = render(
+        <SyncAuthDialog isOpen={true} onClose={onClose} />
+      );
+
+      const dialog = await screen.findByRole('dialog', { name: 'Sync Settings' });
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      rerender(<SyncAuthDialog isOpen={false} onClose={onClose} />);
+      await waitFor(() => expect(opener).toHaveFocus());
+      opener.remove();
+    });
+
+    it('keeps Tab focus inside the modal', async () => {
+      const user = userEvent.setup();
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      const dialog = await screen.findByRole('dialog', { name: 'Sync Settings' });
+      const focusable = dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]');
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      last.focus();
+
+      await user.tab();
+      expect(first).toHaveFocus();
     });
 
     it('should show "Enable cloud sync" when not authenticated', async () => {

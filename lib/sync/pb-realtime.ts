@@ -6,9 +6,9 @@
  * "echo" events from the current device to prevent feedback loops.
  */
 
-import { z } from 'zod';
 import { getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { applyRemoteChange } from './pb-sync-engine';
+import { getPocketBaseRealtimeEnvelope } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import type { RecordSubscription, RecordModel } from 'pocketbase';
 
@@ -16,33 +16,22 @@ const logger = createLogger('SYNC_REALTIME');
 
 let unsubscribeFn: (() => void) | null = null;
 let currentDeviceId: string | null = null;
-
-/**
- * Minimal shape that every inbound realtime record must satisfy before we
- * route it to the sync engine. PocketBase responses are normally well-typed,
- * but a compromised or misbehaving server could push something weird (an
- * object with a `toString` that fakes the current device id, for example).
- * Failing closed on type-mismatch is safer than letting unexpected shapes
- * flow into IndexedDB.
- */
-const realtimeRecordShape = z.object({
-  device_id: z.string(),
-  task_id: z.string(),
-  owner: z.string(),
-});
+let subscriptionPromise: Promise<void> | null = null;
+let subscriptionGeneration = 0;
 
 /**
  * Start listening for realtime changes on the tasks collection
  * Applies remote creates/updates/deletes to local IndexedDB.
  */
 export async function subscribe(deviceId: string): Promise<void> {
-  // Prevent double subscription
-  if (unsubscribeFn) {
-    logger.warn('Already subscribed to realtime, unsubscribing first');
-    unsubscribe();
+  if (unsubscribeFn && currentDeviceId === deviceId) {
+    return;
   }
 
-  currentDeviceId = deviceId;
+  if (subscriptionPromise && currentDeviceId === deviceId) {
+    return subscriptionPromise;
+  }
+
   const pb = getPocketBase();
   const userId = getCurrentUserId();
 
@@ -51,23 +40,43 @@ export async function subscribe(deviceId: string): Promise<void> {
     return;
   }
 
+  // Invalidate an active or still-starting subscription before replacing it.
+  // React development effect replay can call subscribe twice before the first
+  // PocketBase promise resolves, so startup is single-flight per device.
+  unsubscribe();
+  const generation = ++subscriptionGeneration;
+  currentDeviceId = deviceId;
   logger.debug('Subscribing to realtime task changes');
 
-  unsubscribeFn = await pb.collection('tasks').subscribe('*', handleRealtimeEvent);
-
-  logger.debug('Realtime subscription active');
+  const pending = (async () => {
+    const nextUnsubscribe = await pb.collection('tasks').subscribe('*', handleRealtimeEvent);
+    if (generation !== subscriptionGeneration || currentDeviceId !== deviceId) {
+      nextUnsubscribe();
+      return;
+    }
+    unsubscribeFn = nextUnsubscribe;
+    logger.debug('Realtime subscription active');
+  })();
+  subscriptionPromise = pending;
+  try {
+    await pending;
+  } finally {
+    if (subscriptionPromise === pending) subscriptionPromise = null;
+  }
 }
 
 /**
  * Stop listening for realtime changes
  */
 export function unsubscribe(): void {
+  subscriptionGeneration++;
+  subscriptionPromise = null;
   if (unsubscribeFn) {
     unsubscribeFn();
     unsubscribeFn = null;
-    currentDeviceId = null;
     logger.debug('Unsubscribed from realtime');
   }
+  currentDeviceId = null;
 }
 
 
@@ -77,34 +86,30 @@ export function unsubscribe(): void {
 async function handleRealtimeEvent(event: RecordSubscription<RecordModel>): Promise<void> {
   // Validate the record shape before doing anything else. Fails closed on
   // missing / non-string fields — see realtimeRecordShape above.
-  const parsed = realtimeRecordShape.safeParse(event.record);
-  if (!parsed.success) {
-    logger.warn('Skipping malformed realtime event', {
-      action: event.action,
-      issues: parsed.error.issues.map((i) => i.path.join('.')).join(','),
-    });
+  const record = getPocketBaseRealtimeEnvelope(event.record);
+  if (!record) {
+    logger.warn('Skipping malformed realtime event', { action: event.action });
     return;
   }
-  const record = parsed.data;
 
   // Skip echoes from this device to prevent feedback loops. Require both
   // sides non-empty so an empty/null currentDeviceId (cold-start race)
   // does not accidentally filter every legitimate event as an echo.
-  if (record.device_id && currentDeviceId && record.device_id === currentDeviceId) {
-    logger.debug('Skipping own-device echo', { action: event.action, taskId: record.task_id });
+  if (record.deviceId && currentDeviceId && record.deviceId === currentDeviceId) {
+    logger.debug('Skipping own-device echo', { action: event.action, taskId: record.taskId });
     return;
   }
 
   // Only process events for the current user.
   const userId = getCurrentUserId();
-  if (record.owner !== userId) {
+  if (record.ownerId !== userId) {
     return;
   }
 
   logger.debug('Realtime event received', {
     action: event.action,
-    taskId: record.task_id,
-    deviceId: record.device_id,
+    taskId: record.taskId,
+    deviceId: record.deviceId,
   });
 
   try {
@@ -113,7 +118,7 @@ async function handleRealtimeEvent(event: RecordSubscription<RecordModel>): Prom
     logger.error(
       'Failed to apply realtime change',
       error instanceof Error ? error : new Error(String(error)),
-      { action: event.action, taskId: record.task_id }
+      { action: event.action, taskId: record.taskId }
     );
   }
 }

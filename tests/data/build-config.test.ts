@@ -42,6 +42,10 @@ function runStaticBuildWrapper(options: {
   const wrapper = readFileSync("scripts/build-static-export.sh", "utf8");
   writeFileSync(join(fixtureScripts, "build-static-export.sh"), wrapper);
   writeFileSync(
+    join(fixtureScripts, "externalize-inline-assets.cjs"),
+    readFileSync("scripts/externalize-inline-assets.cjs", "utf8"),
+  );
+  writeFileSync(
     join(fixtureRoot, ".build-env.sh"),
     `export PATH=${JSON.stringify(`${fixtureBin}:${process.env.PATH ?? ""}`)}\n`,
   );
@@ -138,5 +142,19 @@ describe("build configuration", () => {
   it("rejects a successful build command that did not export the app shell", () => {
     expect(runStaticBuildWrapper({ exitCode: 0 }).status).not.toBe(0);
     expect(runStaticBuildWrapper({ createArtifact: true, exitCode: 0 }).status).toBe(0);
+  });
+
+  it("keeps root coverage thresholds blocking in CI and SonarCloud", () => {
+    const ci = readFileSync(".github/workflows/ci.yml", "utf8");
+    const sonar = readFileSync(".github/workflows/sonarcloud.yml", "utf8");
+
+    expect(ci).toContain("bun run test -- --coverage");
+    expect(sonar).not.toMatch(/continue-on-error:\s*true/);
+  });
+
+  it("opts the document into the declared smooth scroll behavior", () => {
+    const layout = readFileSync("app/layout.tsx", "utf8");
+
+    expect(layout).toContain('data-scroll-behavior="smooth"');
   });
 });

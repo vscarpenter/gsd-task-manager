@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import { Albert_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -19,13 +20,24 @@ import { FirstTimeRedirect } from "@/components/first-time-redirect";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
 import { DesignLabRuntimeGate } from "@/components/design-lab-runtime-gate";
 
-// The current static Next export emits inline hydration/RSC scripts. Keep
-// production inline script allowance until a deploy-time hash pipeline exists.
-// The dev-only http://localhost:8400 entries below allow the impeccable
-// live-mode picker; they are stripped from the production CSP.
-const scriptSrc = process.env.NODE_ENV === "development"
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8400"
-  : "script-src 'self' 'unsafe-inline'";
+// Development needs React's eval diagnostics and Next's inline bootstrap. The
+// production static export omits this meta policy: build post-processing moves
+// its bootstrap blocks to same-origin files and the hosting layer supplies the
+// strict response-header policy.
+const isDevelopment = process.env.NODE_ENV !== "production";
+const scriptSrc = "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8400";
+const configuredPocketBaseOrigin = (() => {
+  const configuredUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL;
+  if (!configuredUrl) return null;
+  try {
+    const parsed = new URL(configuredUrl);
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+      ? parsed.origin
+      : null;
+  } catch {
+    return null;
+  }
+})();
 
 const connectSrc = process.env.NODE_ENV === "development"
   ? [
@@ -39,6 +51,7 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://accounts.google.com",
       "https://github.com",
       "https://*.ingest.us.sentry.io",
+      configuredPocketBaseOrigin,
     ].join(" ")
   : [
       "connect-src 'self'",
@@ -63,7 +76,7 @@ const albertSans = Albert_Sans({
   display: "swap",
 });
 
-const contentSecurityPolicy = [
+const developmentContentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'none'",
   "object-src 'none'",
@@ -76,6 +89,16 @@ const contentSecurityPolicy = [
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");
+
+function DevelopmentCspMeta() {
+  if (!isDevelopment) return null;
+  return (
+    <meta
+      httpEquiv="Content-Security-Policy"
+      content={developmentContentSecurityPolicy}
+    />
+  );
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -128,48 +151,57 @@ export const metadata: Metadata = {
   }
 };
 
+function AppProviders({ children }: { children: ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ToastProvider>
+          <QueryProvider>
+            <TooltipProvider>
+              <DesignLabRuntimeGate
+                appRuntime={
+                  <>
+                    <ClientLayout>{children}</ClientLayout>
+                    <FirstTimeRedirect />
+                    <OnboardingGate />
+                    <PwaRegister />
+                    <WebMcpRegister />
+                    <InstallPwaPrompt />
+                    <PwaUpdateToast />
+                  </>
+                }
+              >
+                {children}
+              </DesignLabRuntimeGate>
+              <GlobalErrorListener />
+              <SentryInit />
+              <ThemedToaster />
+            </TooltipProvider>
+          </QueryProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
 export default function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={albertSans.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={albertSans.variable}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <head>
-        <meta httpEquiv="Content-Security-Policy" content={contentSecurityPolicy} />
+        <DevelopmentCspMeta />
         <link rel="preconnect" href="https://api.vinny.io" />
       </head>
       <body className="font-sans bg-background text-foreground antialiased">
-        <ErrorBoundary>
-          <ThemeProvider>
-            <ToastProvider>
-              <QueryProvider>
-                <TooltipProvider>
-                  <DesignLabRuntimeGate
-                    appRuntime={
-                      <>
-                        <ClientLayout>
-                          {children}
-                        </ClientLayout>
-                        <FirstTimeRedirect />
-                        <OnboardingGate />
-                        <PwaRegister />
-                        <WebMcpRegister />
-                        <InstallPwaPrompt />
-                        <PwaUpdateToast />
-                      </>
-                    }
-                  >
-                    {children}
-                  </DesignLabRuntimeGate>
-                  <GlobalErrorListener />
-                  <SentryInit />
-                  <ThemedToaster />
-                </TooltipProvider>
-              </QueryProvider>
-            </ToastProvider>
-          </ThemeProvider>
-        </ErrorBoundary>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

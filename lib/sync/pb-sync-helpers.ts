@@ -6,6 +6,7 @@ import { getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncConfig, RemoteTaskIndexEntry } from './types';
+import { getPocketBaseTaskIdentity } from './task-mapper';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -71,15 +72,47 @@ export async function fetchRemoteTaskIndex(ownerId: string): Promise<{
       fields: 'id,task_id,client_updated_at',
     });
     for (const r of records) {
-      index.set(r['task_id'] as string, {
-        pbRecordId: r.id,
-        clientUpdatedAt: (r['client_updated_at'] as string) ?? null,
-      });
+      const identity = getPocketBaseTaskIdentity(r);
+      if (identity) {
+        index.set(identity.taskId, {
+          pbRecordId: identity.pbRecordId,
+          clientUpdatedAt: identity.clientUpdatedAt,
+        });
+      }
     }
     return { index, fetchSucceeded: true };
   } catch {
     logger.warn('Could not fetch remote task index; will check individually');
     return { index, fetchSucceeded: false };
+  }
+}
+
+export async function fetchRemoteTaskEntry(
+  ownerId: string,
+  taskId: string
+): Promise<{ entry: RemoteTaskIndexEntry | null; fetchSucceeded: boolean }> {
+  assertSafeRecordId(ownerId, 'ownerId');
+  assertSafeRecordId(taskId, 'taskId');
+  const pb = getPocketBase();
+  try {
+    const record = await pb.collection('tasks').getFirstListItem(
+      `owner = "${escapeFilterValue(ownerId)}" && task_id = "${escapeFilterValue(taskId)}"`,
+      { fields: 'id,task_id,client_updated_at' }
+    );
+    const identity = getPocketBaseTaskIdentity(record);
+    return {
+      entry: identity ? {
+        pbRecordId: identity.pbRecordId,
+        clientUpdatedAt: identity.clientUpdatedAt,
+      } : null,
+      fetchSucceeded: Boolean(identity),
+    };
+  } catch (error) {
+    if ((error as { status?: number })?.status === 404) {
+      return { entry: null, fetchSucceeded: true };
+    }
+    logger.warn('Could not fetch fresh remote task entry');
+    return { entry: null, fetchSucceeded: false };
   }
 }
 

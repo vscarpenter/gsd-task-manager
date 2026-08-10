@@ -6,7 +6,7 @@
  */
 
 import { getDb } from '@/lib/db';
-import { pocketBaseToTaskRecord } from './task-mapper';
+import { getPocketBaseTaskId, pocketBaseToTaskRecord } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { getRetryManager } from './retry-manager';
 import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/sync-history';
@@ -37,20 +37,25 @@ export async function applyRemoteChange(
   const db = getDb();
 
   if (action === 'delete') {
-    const taskId = record['task_id'] as string;
+    const taskId = getPocketBaseTaskId(record);
+    if (!taskId) {
+      logger.warn('Realtime delete skipped: invalid record');
+      return;
+    }
 
     // Mirror reconcileDeletedTasks: don't drop a task that has a queued local
     // change. The pending op (edit-beats-delete under LWW) will be re-pushed and
     // recreate the remote record, so deleting locally now would just lose the
     // unsynced edit until the next pull round-trips.
-    const queuedOps = await db.syncQueue.toArray();
-    if (queuedOps.some((op) => op.taskId === taskId && isPendingSyncQueueItem(op))) {
-      logger.debug('Realtime delete skipped: local change pending', { taskId });
-      return;
-    }
-
-    await db.tasks.delete(taskId);
-    logger.debug('Realtime delete applied', { taskId });
+    await db.transaction('rw', [db.tasks, db.syncQueue], async () => {
+      const queuedOps = await db.syncQueue.toArray();
+      if (queuedOps.some((op) => op.taskId === taskId && isPendingSyncQueueItem(op))) {
+        logger.debug('Realtime delete skipped: local change pending', { taskId });
+        return;
+      }
+      await db.tasks.delete(taskId);
+      logger.debug('Realtime delete applied', { taskId });
+    });
     return;
   }
 
@@ -60,40 +65,22 @@ export async function applyRemoteChange(
     return;
   }
 
-  // Mirror the batch pull's archive guard: a locally archived task must not be
-  // resurrected by a realtime event either, or the SSE path would silently
-  // reintroduce the collision the pull path now prevents. The tombstone is
-  // conditional — a remote edit that post-dates the archive wins under the
-  // engine's edit-beats-delete LWW rule and un-archives the task.
-  const archived = await db.archivedTasks.get(remoteTask.id);
-  if (archived) {
-    if (!isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) {
+  await db.transaction('rw', [db.tasks, db.archivedTasks], async () => {
+    const archived = await db.archivedTasks.get(remoteTask.id);
+    if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) {
       logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
       return;
     }
-    await db.archivedTasks.delete(remoteTask.id);
-    logger.debug('Un-archived: remote edit post-dates the archive', { taskId: remoteTask.id });
-  }
-
-  if (action === 'create') {
-    const existing = await db.tasks.get(remoteTask.id);
-    if (!existing) {
-      await db.tasks.add(remoteTask);
-      logger.debug('Realtime create applied', { taskId: remoteTask.id });
-    }
-    return;
-  }
-
-  // update — LWW
-  const localTask = await db.tasks.get(remoteTask.id);
-  if (!localTask || new Date(remoteTask.updatedAt).getTime() > new Date(localTask.updatedAt).getTime()) {
-    // Re-map with existing local task to preserve device-local fields
+    const localTask = await db.tasks.get(remoteTask.id);
+    if (action === 'create' && localTask) return;
+    if (action === 'update' && localTask &&
+        new Date(remoteTask.updatedAt).getTime() <= new Date(localTask.updatedAt).getTime()) return;
     const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
-    if (mergedTask) {
-      await db.tasks.put(mergedTask);
-      logger.debug('Realtime update applied', { taskId: mergedTask.id });
-    }
-  }
+    if (!mergedTask) return;
+    if (archived) await db.archivedTasks.delete(remoteTask.id);
+    await db.tasks.put(mergedTask);
+    logger.debug(`Realtime ${action} applied`, { taskId: mergedTask.id });
+  });
 }
 
 // ─── Full sync orchestration ─────────────────────────────────────────
@@ -102,13 +89,16 @@ export async function applyRemoteChange(
 const LEGACY_CURSOR_REWIND_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Resolve the pull cursor. Prefers the server-stamped cursor; a config from a
- * pre-2026-06 build has only the client-stamped `lastSyncAt`, which can carry
- * client clock skew, so it is migrated once with a 24h rewind. The re-pulled
- * records are LWW no-ops.
+ * Resolve the client_updated_at pull cursor. The persisted field keeps its
+ * historical name for storage compatibility. A config from a pre-2026-06
+ * build has only `lastSyncAt`, so it is migrated once with a 24h rewind.
  */
-function resolveServerCursor(config: PBSyncConfig | undefined): string | null {
-  if (config?.lastServerUpdatedAt) return config.lastServerUpdatedAt;
+function resolvePullCursor(config: PBSyncConfig | undefined): string | null {
+  if (config?.pullCursorVersion === 2) return config.lastClientUpdatedAt ?? null;
+  // This value came from PocketBase's server timestamp domain. Mixing it with
+  // client_updated_at can permanently skip a slow-clock client write, so an
+  // unversioned config carrying it must perform a full pull.
+  if (config?.lastServerUpdatedAt) return null;
   if (config?.lastSyncAt) {
     return new Date(new Date(config.lastSyncAt).getTime() - LEGACY_CURSOR_REWIND_MS).toISOString();
   }
@@ -135,7 +125,7 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     await ensureValidAuth();
 
     const pushResult = await pushLocalChanges();
-    const pullResult = await pullRemoteChanges(resolveServerCursor(config));
+    const pullResult = await pullRemoteChanges(resolvePullCursor(config));
 
     if (!pushResult.authenticated && !pullResult.authenticated) {
       return await reportAuthFailure(retryManager, deviceId, triggeredBy, startTime);
@@ -177,12 +167,14 @@ async function reportAuthFailure(
 async function updateSyncCursor(config: PBSyncConfig | undefined, maxTimestamp: string | null): Promise<void> {
   if (!config) return;
 
-  // The legacy client-stamped `lastSyncAt` is intentionally not advanced —
-  // it only feeds the one-time migration in resolveServerCursor.
+  // The legacy `lastSyncAt` is intentionally not advanced — it only feeds the
+  // one-time migration in resolvePullCursor.
   const db = getDb();
   await db.syncMetadata.put({
     ...config,
-    lastServerUpdatedAt: maxTimestamp ?? config.lastServerUpdatedAt ?? null,
+    lastClientUpdatedAt: maxTimestamp ?? config.lastClientUpdatedAt ?? null,
+    pullCursorVersion: 2,
+    lastServerUpdatedAt: null,
     lastSuccessfulSyncAt: new Date().toISOString(),
   });
 }

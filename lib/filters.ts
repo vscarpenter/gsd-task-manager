@@ -2,63 +2,14 @@ import type { QuadrantId, RecurrenceType, TaskRecord } from "@/lib/types";
 import { isOverdue, isDueToday, isDueThisWeek } from "@/lib/utils";
 import { TIME_MS } from "@/lib/constants";
 import { getUncompletedBlockingTasks } from "@/lib/dependencies";
+import type { FilterCriteria } from "@/lib/smart-views/types";
 
 // Re-export types for convenience
 export type { QuadrantId, RecurrenceType };
+export type { FilterCriteria, SmartView } from "@/lib/smart-views/types";
 
 // Re-export BUILT_IN_SMART_VIEWS from extracted module for backward compatibility
 export { BUILT_IN_SMART_VIEWS } from "@/lib/smart-views/built-in";
-
-/**
- * Criteria for filtering tasks
- */
-export interface FilterCriteria {
-  // Quadrant filters
-  quadrants?: QuadrantId[];
-
-  // Status filters
-  status?: 'all' | 'active' | 'completed';
-
-  // Tag filters
-  tags?: string[];
-
-  // Due date filters
-  dueDateRange?: {
-    start?: string; // ISO date string
-    end?: string;   // ISO date string
-  };
-  overdue?: boolean;
-  dueToday?: boolean;
-  dueThisWeek?: boolean;
-  noDueDate?: boolean; // Filter for tasks without due dates
-
-  // Recurrence filters
-  recurrence?: RecurrenceType[];
-
-  // Date-based filters
-  recentlyAdded?: boolean; // Tasks created in the last 7 days
-  recentlyCompleted?: boolean; // Tasks completed in the last 7 days
-
-  // Dependency filters
-  readyToWork?: boolean; // Tasks with no uncompleted blocking dependencies
-
-  // Text search
-  searchQuery?: string;
-}
-
-/**
- * Smart View - saved filter combinations
- */
-export interface SmartView {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  criteria: FilterCriteria;
-  isBuiltIn: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 // ============================================================================
 // Individual Filter Functions

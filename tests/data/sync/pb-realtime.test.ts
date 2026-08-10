@@ -78,6 +78,31 @@ describe('pb-realtime', () => {
       // First subscription's unsubscribe should have been called
       expect(mockUnsubscribeFn).toHaveBeenCalled();
     });
+
+    it('should reuse the active subscription for the same device', async () => {
+      await subscribe('device-1');
+      mockUnsubscribeFn.mockClear();
+      await subscribe('device-1');
+
+      expect(mockSubscribe).toHaveBeenCalledTimes(1);
+      expect(mockUnsubscribeFn).not.toHaveBeenCalled();
+    });
+
+    it('should share one in-flight subscription for concurrent callers', async () => {
+      let resolveSubscription: ((unsubscribe: () => void) => void) | undefined;
+      mockSubscribe.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSubscription = resolve;
+        })
+      );
+
+      const first = subscribe('device-1');
+      const second = subscribe('device-1');
+
+      expect(mockSubscribe).toHaveBeenCalledTimes(1);
+      resolveSubscription?.(mockUnsubscribeFn);
+      await Promise.all([first, second]);
+    });
   });
 
   describe('unsubscribe', () => {

@@ -47,6 +47,7 @@ export * from './system-handlers.js';
 export type { McpToolResponse } from './types.js';
 
 import type { McpToolResponse } from './types.js';
+import { sanitizePocketBaseWriteError } from '../../write-ops/write-rate-limiter.js';
 
 type ToolRunner = (
   config: GsdConfig,
@@ -100,6 +101,18 @@ function isToolName(name: string): name is ToolName {
   return Object.hasOwn(toolArgSchemas, name);
 }
 
+const WRITE_TOOL_NAMES: ReadonlySet<ToolName> = new Set([
+  'create_task',
+  'update_task',
+  'complete_task',
+  'delete_task',
+  'bulk_update_tasks',
+]);
+
+function isPocketBaseStatusError(error: unknown): boolean {
+  return typeof (error as { status?: unknown } | null)?.status === 'number';
+}
+
 /**
  * Handle a tool call request
  * @param name - Tool name
@@ -118,7 +131,10 @@ export async function handleToolCall(
     }
     return await toolRegistry[name](config, args);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = isToolName(name) && WRITE_TOOL_NAMES.has(name) &&
+      isPocketBaseStatusError(error)
+      ? sanitizePocketBaseWriteError(error).code
+      : error instanceof Error ? error.message : 'Unknown error';
     return {
       content: [
         {

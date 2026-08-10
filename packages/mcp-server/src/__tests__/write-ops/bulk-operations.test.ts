@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { GsdConfig, Task } from '../../types.js';
 
+const { mockBulkInfo } = vi.hoisted(() => ({ mockBulkInfo: vi.fn() }));
+
+vi.mock('../../utils/logger.js', () => ({
+  createMcpLogger: () => ({
+    info: mockBulkInfo,
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
 vi.mock('../../write-ops/helpers.js', async () => {
   const actual = await vi.importActual<typeof import('../../write-ops/helpers.js')>(
     '../../write-ops/helpers.js'
@@ -15,7 +26,6 @@ vi.mock('../../write-ops/helpers.js', async () => {
     fetchSinglePBTaskFresh: vi.fn().mockResolvedValue(null),
     updateTaskInPBById: vi.fn().mockResolvedValue(undefined),
     deleteTaskInPBById: vi.fn().mockResolvedValue(undefined),
-    sleep: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -99,6 +109,29 @@ beforeEach(() => {
 });
 
 describe('bulkUpdateTasks — delete safety', () => {
+  it('returns an empty result without reading PocketBase', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+
+    await expect(
+      bulkUpdateTasks(config, [], { type: 'complete', completed: true })
+    ).resolves.toEqual({
+      updated: 0,
+      deleted: 0,
+      errors: [],
+      conflicts: [],
+      dryRun: false,
+    });
+    expect(helpers.fetchPBSnapshotForTasks).not.toHaveBeenCalled();
+  });
+
+  it('caps every bulk operation at 50 task ids', async () => {
+    const ids = Array.from({ length: 51 }, (_, index) => `t${index}`);
+
+    await expect(
+      bulkUpdateTasks(config, ids, { type: 'complete', completed: true })
+    ).rejects.toThrow(/Maximum: 50/);
+  });
+
   it('defaults dryRun to true for delete operations when not specified', async () => {
     const { listTasks } = await import('../../tools/list-tasks.js');
     const helpers = await import('../../write-ops/helpers.js');
@@ -152,42 +185,184 @@ describe('bulkUpdateTasks — delete safety', () => {
     expect(result.deleted).toBe(10);
   });
 
-  it('should_stamp_each_updated_task_with_a_fresh_timestamp_not_one_batch_wide_time', async () => {
-    // A throttled batch can span seconds. Each write must carry the time it was
-    // actually applied, not the time the batch started — otherwise a later
-    // item's stale timestamp can lose the next LWW round to a concurrent edit.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
-    try {
-      const helpers = await import('../../write-ops/helpers.js');
-      const ids = ['t1', 't2'];
-      const snapshot = new Map(ids.map((id) => [id, makeSnapshotEntry(id)]));
-      vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(snapshot);
-      for (const id of ids) {
-        vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(snapshot.get(id)!);
-      }
-      // The throttle between writes advances wall-clock time, simulating a slow
-      // batch where t2 is written a second after t1.
-      vi.mocked(helpers.sleep).mockImplementationOnce(async () => {
-        vi.advanceTimersByTime(1000);
-      });
+  it('reports no matches in dry-run and write modes', async () => {
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    const helpers = await import('../../write-ops/helpers.js');
+    vi.mocked(listTasks).mockResolvedValueOnce([]);
 
-      const result = await bulkUpdateTasks(
+    await expect(
+      bulkUpdateTasks(config, ['missing'], { type: 'delete' })
+    ).resolves.toMatchObject({ errors: ['No matching tasks found'], dryRun: true });
+
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(new Map());
+    await expect(
+      bulkUpdateTasks(
         config,
-        ids,
+        ['missing'],
         { type: 'complete', completed: true },
         { dryRun: false }
-      );
+      )
+    ).resolves.toMatchObject({ errors: ['No matching tasks found'], dryRun: false });
+  });
 
-      expect(result.updated).toBe(2);
-      const calls = vi.mocked(helpers.updateTaskInPBById).mock.calls;
-      expect(calls).toHaveLength(2);
-      const firstUpdatedAt = (calls[0][2] as Task).updatedAt;
-      const secondUpdatedAt = (calls[1][2] as Task).updatedAt;
-      expect(secondUpdatedAt).not.toBe(firstUpdatedAt);
-    } finally {
-      vi.useRealTimers();
+  it('previews non-delete matches as updates', async () => {
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    vi.mocked(listTasks).mockResolvedValueOnce([makeTask('t1')]);
+
+    await expect(
+      bulkUpdateTasks(
+        config,
+        ['t1'],
+        { type: 'complete', completed: true },
+        { dryRun: true }
+      )
+    ).resolves.toMatchObject({ updated: 1, deleted: 0, dryRun: true });
+  });
+
+  it('allows bounded batch work but serializes mutations through one write gate', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const ids = Array.from({ length: 12 }, (_, index) => `t${index}`);
+    const snapshot = new Map(ids.map((id) => [id, makeSnapshotEntry(id)]));
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(snapshot);
+
+    let activePreflights = 0;
+    let maxActivePreflights = 0;
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockImplementation(async (_config, id) => {
+      activePreflights++;
+      maxActivePreflights = Math.max(maxActivePreflights, activePreflights);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      activePreflights--;
+      return snapshot.get(id)!;
+    });
+    let activeMutations = 0;
+    let maxActiveMutations = 0;
+    vi.mocked(helpers.updateTaskInPBById).mockImplementation(async () => {
+      activeMutations++;
+      maxActiveMutations = Math.max(maxActiveMutations, activeMutations);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      activeMutations--;
+    });
+
+    const result = await bulkUpdateTasks(
+      config,
+      ids,
+      { type: 'complete', completed: true },
+      { dryRun: false }
+    );
+
+    expect(result.updated).toBe(12);
+    expect(maxActivePreflights).toBeLessThanOrEqual(4);
+    expect(maxActiveMutations).toBe(1);
+  });
+
+  it('keeps conflicts and errors in caller order under concurrent execution', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const ids = ['t1', 't2', 't3'];
+    const snapshot = new Map(ids.map((id) => [id, makeSnapshotEntry(id)]));
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(snapshot);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockImplementation(async (_config, id) => {
+      if (id === 't2') {
+        return { ...snapshot.get(id)!, clientUpdatedAt: '2026-04-02T00:00:00Z' };
+      }
+      if (id === 't3') throw new Error('write failed');
+      return snapshot.get(id)!;
+    });
+
+    const result = await bulkUpdateTasks(
+      config,
+      ids,
+      { type: 'complete', completed: true },
+      { dryRun: false }
+    );
+
+    expect(result.updated).toBe(1);
+    expect(result.conflicts).toEqual(['t2']);
+    expect(result.errors).toEqual(['Task t3: write_failed']);
+  });
+
+  it.each([
+    [
+      { type: 'move_quadrant', urgent: true, important: false } as const,
+      { urgent: true, important: false, quadrant: 'urgent-not-important' },
+    ],
+    [{ type: 'add_tags', tags: ['work', 'work'] } as const, { tags: ['old', 'work'] }],
+    [{ type: 'remove_tags', tags: ['old'] } as const, { tags: [] }],
+    [
+      { type: 'set_due_date', dueDate: '2026-05-01T00:00:00Z' } as const,
+      { dueDate: '2026-05-01T00:00:00Z' },
+    ],
+    [{ type: 'set_due_date' } as const, { dueDate: undefined }],
+    [{ type: 'complete', completed: false } as const, { completed: false, completedAt: undefined }],
+  ])('applies operation %# without changing the response contract', async (operation, expected) => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const snapshot = makeSnapshotEntry('t1');
+    snapshot.record.tags = ['old'];
+    snapshot.record.completed = true;
+    snapshot.record.completed_at = '2026-04-01T01:00:00Z';
+    snapshot.record.due_date = '2026-04-30T00:00:00Z';
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(
+      new Map([['t1', snapshot]])
+    );
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(snapshot);
+
+    const result = await bulkUpdateTasks(config, ['t1'], operation, { dryRun: false });
+
+    expect(result).toMatchObject({ updated: 1, errors: [], conflicts: [], dryRun: false });
+    const updated = vi.mocked(helpers.updateTaskInPBById).mock.calls[0]?.[2] as Task;
+    for (const [key, value] of Object.entries(expected)) {
+      if (value === undefined) expect(updated).not.toHaveProperty(key);
+      else expect(updated).toHaveProperty(key, value);
     }
+  });
+
+  it('retries a 429 once, pauses the write gate, and keeps result ordering stable', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const snapshot = makeSnapshotEntry('t1');
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(
+      new Map([['t1', snapshot]])
+    );
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValue(snapshot);
+    vi.mocked(helpers.updateTaskInPBById)
+      .mockRejectedValueOnce({ status: 429, retryAfterMs: 1 })
+      .mockResolvedValueOnce(undefined);
+
+    const result = await bulkUpdateTasks(
+      config,
+      ['t1', 'missing'],
+      { type: 'complete', completed: true },
+      { dryRun: false }
+    );
+
+    expect(result.updated).toBe(1);
+    expect(helpers.updateTaskInPBById).toHaveBeenCalledTimes(2);
+    expect(result.errors).toEqual(['Task missing: not found in PocketBase']);
+    expect(mockBulkInfo).toHaveBeenLastCalledWith(
+      'Bulk write completed',
+      expect.objectContaining({ rateLimitCount: 1, errorCount: 1 })
+    );
+  });
+
+  it('never copies raw PocketBase response text into the result', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const snapshot = makeSnapshotEntry('t1');
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(
+      new Map([['t1', snapshot]])
+    );
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValue(snapshot);
+    const secret = 'Confidential: acquire MegaCorp';
+    vi.mocked(helpers.updateTaskInPBById).mockRejectedValueOnce(
+      Object.assign(new Error(`422 title "${secret}" invalid`), { status: 422 })
+    );
+
+    const result = await bulkUpdateTasks(
+      config,
+      ['t1'],
+      { type: 'complete', completed: true },
+      { dryRun: false }
+    );
+
+    expect(result.errors).toEqual(['Task t1: validation_failed']);
+    expect(JSON.stringify(result)).not.toContain(secret);
   });
 
   it('does not apply the 10-cap to non-delete operations (50-cap still applies via schema)', async () => {

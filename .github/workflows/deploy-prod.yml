@@ -19,12 +19,12 @@ jobs:
   # holds no secrets and no deploy powers — it only reads and summarizes.
   evidence:
     name: Gate 2 evidence
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - name: Compute release evidence
@@ -59,7 +59,7 @@ jobs:
   deploy:
     name: Deploy to production
     needs: evidence
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     # The `production` environment carries the required-reviewer gate
     # (locked decision §7.5). The job pauses for human approval before
@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -110,7 +110,7 @@ jobs:
         uses: ./.github/actions/build-static-export
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1

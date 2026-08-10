@@ -20,14 +20,13 @@ export interface PBSyncConfig {
   email: string | null;
   provider: string | null;
   lastSyncAt: string | null;
+  /** Provenance-safe client_updated_at cursor introduced after the server-cursor rollback. */
+  lastClientUpdatedAt?: string | null;
+  /** Version 2 means lastClientUpdatedAt is authoritative, including a null full-pull cursor. */
+  pullCursorVersion?: 2;
   /**
-   * Pull cursor: the max PocketBase server-stamped `updated` observed (ISO
-   * form, 30s overlap already subtracted). Server-stamped so one device's
-   * skewed clock can never write records behind every other device's cursor.
-   * LWW conflict resolution stays on `client_updated_at` — a server-side
-   * re-save bumps `updated` without the content being newer. `lastSyncAt`
-   * above is the legacy client-stamped cursor, read once for migration and
-   * otherwise left untouched.
+   * Deprecated server timestamp cursor. Retained only so migration can detect
+   * and clear it; it must never be reused as a client_updated_at cursor.
    */
   lastServerUpdatedAt?: string | null;
   /** ISO timestamp of the last successful sync operation (for UI display) */

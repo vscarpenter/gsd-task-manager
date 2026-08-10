@@ -8,7 +8,7 @@
 
 import type { TaskRecord, Subtask, TimeEntry } from '@/lib/types';
 import type { RecordModel } from 'pocketbase';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
@@ -60,6 +60,52 @@ export interface PBTaskRecord {
   client_updated_at: string;
   client_created_at: string;
   device_id: string;
+}
+
+export interface PocketBaseTaskIdentity {
+  taskId: string;
+  pbRecordId: string;
+  clientUpdatedAt: string | null;
+}
+
+export interface PocketBaseRealtimeEnvelope {
+  taskId: string;
+  ownerId: string;
+  deviceId: string;
+}
+
+export function getPocketBaseTaskId(record: RecordModel): string | null {
+  const taskId = record['task_id'];
+  return typeof taskId === 'string' && taskId.length > 0 ? taskId : null;
+}
+
+export function getPocketBaseTaskIdentity(record: RecordModel): PocketBaseTaskIdentity | null {
+  const taskId = getPocketBaseTaskId(record);
+  const clientUpdatedAt = record['client_updated_at'];
+  if (!taskId || typeof record.id !== 'string') return null;
+  return {
+    taskId,
+    pbRecordId: record.id,
+    clientUpdatedAt: typeof clientUpdatedAt === 'string' ? clientUpdatedAt : null,
+  };
+}
+
+const realtimeEnvelopeSchema = z.object({
+  task_id: z.string().min(1),
+  owner: z.string().min(1),
+  device_id: z.string(),
+});
+
+export function getPocketBaseRealtimeEnvelope(
+  record: RecordModel
+): PocketBaseRealtimeEnvelope | null {
+  const parsed = realtimeEnvelopeSchema.safeParse(record);
+  if (!parsed.success) return null;
+  return {
+    taskId: parsed.data.task_id,
+    ownerId: parsed.data.owner,
+    deviceId: parsed.data.device_id,
+  };
 }
 
 /**

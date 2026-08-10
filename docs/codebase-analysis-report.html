@@ -4,921 +4,308 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>GSD Task Manager — Codebase Analysis Report</title>
+  <title>GSD Task Manager — Remediation Rescan</title>
   <style>
     :root {
       color-scheme: light dark;
       --paper: light-dark(#f5f0e6, #171b22);
-      --paper-raised: light-dark(#fffdf7, #202630);
-      --paper-muted: light-dark(#ebe4d8, #2a313c);
+      --raised: light-dark(#fffdf7, #202630);
+      --muted: light-dark(#ebe4d8, #2a313c);
       --ink: light-dark(#26313d, #e7e1d7);
       --ink-muted: light-dark(#65707b, #aeb6c0);
       --line: light-dark(#a6a092, #5d6672);
-      --line-strong: light-dark(#4d5864, #a8b0ba);
-      --accent: light-dark(#4f46a5, #a9a4ff);
-      --accent-soft: light-dark(#e2dff8, #332f5f);
-      --critical: light-dark(#7b1d2a, #ff9cac);
-      --critical-soft: light-dark(#f3d7dc, #4c222b);
-      --high: light-dark(#9b3e25, #ffad8c);
-      --high-soft: light-dark(#f2ded5, #522d22);
-      --medium: light-dark(#875d12, #f4c96d);
-      --medium-soft: light-dark(#eee3c9, #4d3e20);
-      --low: light-dark(#446349, #9bd0a3);
-      --low-soft: light-dark(#dce8db, #263e2c);
-      --ok: light-dark(#326247, #9bd0a3);
-      --print-paper: #ffffff;
-      --print-ink: #222222;
-      --radius: 0.35rem;
-      --measure: 82rem;
-      --border: 1.5px solid var(--line);
-      --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-      --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --accent: light-dark(#4f46a5, #aaa5ff);
+      --good: light-dark(#28603f, #9bd0a3);
+      --warn: light-dark(#875d12, #f4c96d);
+      --bad: light-dark(#8b2f27, #ffad9a);
+      --measure: 78rem;
+      --serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+      --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
-
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      background: var(--paper);
-      color: var(--ink);
-      font-family: var(--font-sans);
-      font-size: 1rem;
-      line-height: 1.58;
-    }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.58 var(--sans); }
     a { color: var(--accent); text-underline-offset: 0.18em; }
-    a:hover { text-decoration-thickness: 0.13em; }
-    button, summary { font: inherit; }
-    code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
-    code {
-      background: var(--paper-muted);
-      border: 1px solid var(--line);
-      border-radius: 0.2rem;
-      padding: 0.08rem 0.28rem;
-      overflow-wrap: anywhere;
-    }
-    pre {
-      margin: 0.85rem 0;
-      padding: 0.85rem 1rem;
-      overflow: auto;
-      background: var(--paper-muted);
-      border: var(--border);
-      border-radius: var(--radius);
-      font: 0.82rem/1.5 var(--font-mono);
-    }
-    h1, h2, h3, h4 {
-      font-family: var(--font-serif);
-      line-height: 1.12;
-      letter-spacing: -0.018em;
-      text-wrap: balance;
-    }
-    h1 { margin: 0.25rem 0 0.8rem; font-size: clamp(2.6rem, 7vw, 5.9rem); max-width: 12ch; }
-    h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.35rem); }
-    h3 { margin: 0; font-size: 1.35rem; }
-    h4 { margin: 0; font-size: 1.08rem; }
-    p { margin: 0.6rem 0 0; }
-    ul, ol { margin: 0.6rem 0 0; padding-left: 1.25rem; }
+    code { padding: 0.08rem 0.3rem; border: 1px solid var(--line); background: var(--muted); font: 0.88em var(--mono); overflow-wrap: anywhere; }
+    h1, h2, h3 { margin: 0; font-family: var(--serif); line-height: 1.08; text-wrap: balance; }
+    h1 { max-width: 13ch; font-size: clamp(2.8rem, 7vw, 6rem); }
+    h2 { font-size: clamp(1.8rem, 4vw, 3.1rem); }
+    h3 { font-size: 1.25rem; }
+    p { margin: 0.65rem 0 0; }
+    ul { margin: 0.65rem 0 0; padding-left: 1.25rem; }
     li + li { margin-top: 0.3rem; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 0.68rem 0.75rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-    th { font: 700 0.72rem/1.2 var(--font-mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); }
-    tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
-
-    .skip-link {
-      position: fixed;
-      top: 0.5rem;
-      left: 0.5rem;
-      z-index: 20;
-      padding: 0.6rem 0.8rem;
-      background: var(--paper-raised);
-      border: 2px solid var(--accent);
-      transform: translateY(-150%);
-    }
-    .skip-link:focus { transform: translateY(0); }
+    th, td { padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--ink-muted); font: 700 0.7rem/1.2 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
     .wrap { width: min(calc(100% - 2rem), var(--measure)); margin-inline: auto; }
-    .masthead { border-bottom: 1.5px solid var(--line-strong); }
-    .masthead-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid var(--line);
-      font: 700 0.72rem/1.2 var(--font-mono);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--ink-muted);
-    }
-    .hero { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 2rem; align-items: end; padding: 3.8rem 0 2.6rem; }
-    .kicker { margin: 0; font: 700 0.78rem/1.3 var(--font-mono); color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
-    .dek { max-width: 58rem; font-family: var(--font-serif); font-size: clamp(1.12rem, 2vw, 1.45rem); color: var(--ink-muted); }
-    .score {
-      border: 1.5px solid var(--line-strong);
-      padding: 1.1rem;
-      background: var(--paper-raised);
-      min-height: 12rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .score strong { display: block; font: 700 4.7rem/0.9 var(--font-serif); color: var(--accent); }
-    .score span { font: 700 0.72rem/1.35 var(--font-mono); color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.07em; }
-    .score p { font-size: 0.85rem; color: var(--ink-muted); }
-
-    .nav-shell { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 94%, transparent); border-bottom: 1.5px solid var(--line); backdrop-filter: blur(10px); }
-    .nav { display: flex; align-items: center; gap: 0.35rem; min-height: 3.15rem; overflow-x: auto; scrollbar-width: thin; }
-    .nav a, .control {
-      flex: 0 0 auto;
-      border: 1px solid transparent;
-      border-radius: 0.2rem;
-      padding: 0.42rem 0.6rem;
-      color: var(--ink-muted);
-      background: transparent;
-      font: 700 0.7rem/1.2 var(--font-mono);
-      text-transform: uppercase;
-      letter-spacing: 0.045em;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .nav a:hover, .control:hover, .control[aria-pressed="true"] { color: var(--ink); border-color: var(--line); background: var(--paper-raised); }
-    .nav-spacer { flex: 1 1 auto; }
-
-    main { padding-bottom: 5rem; }
-    section { padding: 4.2rem 0; border-bottom: 1.5px solid var(--line); scroll-margin-top: 3.5rem; }
-    .section-head { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(20rem, 1fr); gap: 2rem; align-items: end; margin-bottom: 1.65rem; }
-    .section-head p { color: var(--ink-muted); max-width: 60rem; }
-    .eyebrow { display: block; margin-bottom: 0.45rem; color: var(--accent); font: 700 0.72rem/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+    .skip { position: fixed; top: 0.5rem; left: 0.5rem; z-index: 20; padding: 0.5rem 0.75rem; background: var(--raised); transform: translateY(-160%); }
+    .skip:focus { transform: none; }
+    .masthead { border-bottom: 1.5px solid var(--line); }
+    .strap { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--line); color: var(--ink-muted); font: 700 0.7rem/1.2 var(--mono); text-transform: uppercase; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) 16rem; gap: 2rem; align-items: end; padding: 4rem 0 3rem; }
+    .kicker, .eyebrow, .label { color: var(--accent); font: 800 0.7rem/1.25 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+    .dek { max-width: 58rem; color: var(--ink-muted); font: 1.25rem/1.45 var(--serif); }
+    .score { padding: 1.1rem; border: 1.5px solid var(--line); background: var(--raised); }
+    .score strong { display: block; color: var(--accent); font: 700 4.5rem/0.9 var(--serif); }
+    .score p { color: var(--ink-muted); font-size: 0.85rem; }
+    nav { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(10px); }
+    nav .wrap { display: flex; gap: 1rem; overflow-x: auto; }
+    nav a { flex: 0 0 auto; padding: 0.8rem 0; color: var(--ink-muted); font: 700 0.7rem/1 var(--mono); text-decoration: none; text-transform: uppercase; }
+    nav a:hover { color: var(--ink); }
+    section { padding: 4rem 0; border-bottom: 1.5px solid var(--line); scroll-margin-top: 3rem; }
+    .section-head { display: grid; grid-template-columns: minmax(16rem, 0.7fr) minmax(20rem, 1fr); gap: 2rem; align-items: end; margin-bottom: 1.4rem; }
+    .section-head p { color: var(--ink-muted); }
     .grid { display: grid; gap: 1rem; }
-    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .card { background: var(--paper-raised); border: var(--border); border-radius: var(--radius); padding: 1.05rem; }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card, .table-shell { border: 1.5px solid var(--line); background: var(--raised); }
+    .card { padding: 1rem; }
     .card p, .card li { color: var(--ink-muted); }
-    .card .lead { color: var(--ink); }
-    .metric strong { display: block; margin: 0.18rem 0; font: 700 2.2rem/1 var(--font-serif); color: var(--accent); }
+    .metric strong { display: block; margin: 0.2rem 0; color: var(--accent); font: 700 2.1rem/1 var(--serif); }
     .metric small { color: var(--ink-muted); }
-    .label { display: block; font: 700 0.68rem/1.2 var(--font-mono); color: var(--ink-muted); letter-spacing: 0.06em; text-transform: uppercase; }
-    .counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: var(--border); background: var(--paper-raised); }
-    .count { padding: 1rem; text-align: center; border-right: 1px solid var(--line); }
-    .count:last-child { border-right: 0; }
-    .count strong { display: block; font: 700 2rem/1 var(--font-serif); }
-    .count span { font: 700 0.65rem/1 var(--font-mono); text-transform: uppercase; color: var(--ink-muted); }
-    .count.critical strong { color: var(--critical); }
-    .count.high strong { color: var(--high); }
-    .count.medium strong { color: var(--medium); }
-    .count.low strong { color: var(--low); }
-
-    .risk-list { counter-reset: risk; }
-    .risk { position: relative; padding-left: 4rem; min-height: 5.3rem; }
-    .risk::before {
-      counter-increment: risk;
-      content: "0" counter(risk);
-      position: absolute;
-      left: 1rem;
-      top: 1rem;
-      font: 700 1.5rem/1 var(--font-serif);
-      color: var(--accent);
+    .table-shell { overflow-x: auto; }
+    .table-shell table { min-width: 49rem; }
+    .ok { color: var(--good); font-weight: 800; }
+    .manual { color: var(--warn); font-weight: 800; }
+    .failed { color: var(--bad); font-weight: 800; }
+    .note { margin-top: 1rem; padding: 0.85rem 1rem; border-left: 3px solid var(--accent); background: var(--muted); }
+    details { border: 1.5px solid var(--line); background: var(--raised); }
+    details + details { margin-top: 0.75rem; }
+    summary { padding: 0.85rem 1rem; cursor: pointer; font-weight: 800; }
+    details > div { padding: 0 1rem 1rem; }
+    footer { padding: 2rem 0 4rem; color: var(--ink-muted); font-size: 0.85rem; }
+    @media (max-width: 800px) {
+      .hero, .section-head { grid-template-columns: 1fr; }
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      .strap { flex-direction: column; }
     }
-    .risk + .risk { margin-top: 0.7rem; }
-
-    .table-shell { overflow-x: auto; border: var(--border); background: var(--paper-raised); }
-    .table-shell table { min-width: 48rem; }
-    .status-ok { color: var(--ok); font-weight: 700; }
-    .status-warn { color: var(--medium); font-weight: 700; }
-    .status-fail { color: var(--high); font-weight: 700; }
-    .bar { width: 8rem; height: 0.5rem; background: var(--paper-muted); border: 1px solid var(--line); }
-    .bar > span { display: block; height: 100%; background: var(--accent); }
-
-    .filters { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 1rem 0 1.25rem; }
-    .filter { border: 1px solid var(--line); border-radius: 0.2rem; background: var(--paper-raised); color: var(--ink-muted); padding: 0.44rem 0.66rem; cursor: pointer; font: 700 0.7rem/1 var(--font-mono); text-transform: uppercase; }
-    .filter:hover, .filter[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
-    .dimension { margin-top: 2.4rem; }
-    .dimension-head { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin-bottom: 0.8rem; padding-bottom: 0.55rem; border-bottom: 1.5px solid var(--line-strong); }
-    .dimension-head span { font: 700 0.68rem/1 var(--font-mono); color: var(--ink-muted); text-transform: uppercase; }
-    .finding { padding: 0; overflow: clip; }
-    .finding + .finding { margin-top: 0.75rem; }
-    .finding[hidden] { display: none; }
-    .finding summary { list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.75rem; align-items: center; padding: 1rem; cursor: pointer; }
-    .finding summary::-webkit-details-marker { display: none; }
-    .finding summary::after { content: "+"; font: 700 1.3rem/1 var(--font-mono); color: var(--ink-muted); }
-    .finding[open] summary::after { content: "−"; }
-    .finding[open] summary { border-bottom: 1px solid var(--line); }
-    .finding-title { min-width: 0; }
-    .finding-heading { display: block; font: 700 1.08rem/1.3 var(--font-serif); }
-    .finding-meta { display: block; margin-top: 0.18rem; color: var(--ink-muted); font: 0.68rem/1.35 var(--font-mono); text-transform: uppercase; letter-spacing: 0.025em; }
-    .pill { display: inline-flex; align-items: center; justify-content: center; min-width: 4.5rem; border: 1px solid currentColor; border-radius: 999px; padding: 0.32rem 0.46rem; font: 800 0.63rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.055em; }
-    .pill.critical { color: var(--critical); background: var(--critical-soft); }
-    .pill.high { color: var(--high); background: var(--high-soft); }
-    .pill.medium { color: var(--medium); background: var(--medium-soft); }
-    .pill.low { color: var(--low); background: var(--low-soft); }
-    .finding-body { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(16rem, 0.75fr); gap: 1.2rem; padding: 1rem; }
-    .finding-body p:first-child { margin-top: 0; }
-    .facts { margin: 0; border-left: 1.5px solid var(--line); padding-left: 1rem; }
-    .fact + .fact { margin-top: 0.8rem; }
-    .fact dt { font: 700 0.65rem/1.25 var(--font-mono); color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.055em; }
-    .fact dd { margin: 0.18rem 0 0; font-size: 0.88rem; }
-    .finding .recommendation { margin-top: 0.8rem; padding: 0.78rem; background: var(--paper-muted); border-left: 3px solid var(--accent); }
-
-    .roadmap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-    .roadmap .card { position: relative; padding-top: 3.4rem; }
-    .roadmap .phase { position: absolute; top: 0; left: 0; right: 0; padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--line); background: var(--paper-muted); font: 700 0.7rem/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.07em; }
-    .note { border-left: 3px solid var(--accent); padding: 0.7rem 0.9rem; background: var(--accent-soft); }
-    .foot { padding: 2rem 0 4rem; color: var(--ink-muted); font: 0.76rem/1.5 var(--font-mono); }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-
-    @media (max-width: 900px) {
-      .hero, .section-head, .finding-body { grid-template-columns: 1fr; }
-      .score { min-height: auto; }
-      .grid-3, .grid-4, .roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .facts { border-left: 0; border-top: 1.5px solid var(--line); padding: 1rem 0 0; }
-    }
-    @media (max-width: 600px) {
-      .wrap { width: min(calc(100% - 1rem), var(--measure)); }
-      .masthead-top { align-items: flex-start; flex-direction: column; }
-      .hero { padding-top: 2.6rem; }
-      .grid-2, .grid-3, .grid-4, .roadmap { grid-template-columns: 1fr; }
-      .counts { grid-template-columns: repeat(2, 1fr); }
-      .count:nth-child(2) { border-right: 0; }
-      .count:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
-      .finding summary { grid-template-columns: 1fr auto; }
-      .finding summary .pill { grid-column: 1 / -1; justify-self: start; }
-      section { padding: 3rem 0; }
-    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     @media print {
-      .nav-shell, .filters, .control { display: none; }
-      body { background: var(--print-paper); color: var(--print-ink); }
-      section { break-inside: avoid; }
-      .finding { break-inside: avoid; }
-      .finding:not([open]) .finding-body { display: grid; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
+      nav, .skip { display: none; }
+      body { background: white; color: #222; }
+      .card, .table-shell, details, .score { break-inside: avoid; background: white; }
     }
   </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to report</a>
-
+  <a class="skip" href="#main">Skip to report</a>
   <header class="masthead">
-    <div class="wrap masthead-top">
-      <span>Independent engineering review · Working tree</span>
-      <span>Rescan 06 August 2026 · Commit f82683642392</span>
+    <div class="wrap strap">
+      <span>Remediation rescan · Working tree from 0040ba7</span>
+      <span>10 August 2026 · America/Chicago</span>
     </div>
     <div class="wrap hero">
       <div>
         <p class="kicker">GSD Task Manager · Codebase Analysis</p>
-        <h1>Strong controls. One unreliable signal.</h1>
-        <p class="dek">The former High-severity build failure is fixed, unit coverage remains above policy, and the production PocketBase boundary now has real system proof. The release signal is still imperfect: the canonical cross-browser run failed three Chromium navigation cases under local parallelism, then passed all nine focused repeats.</p>
+        <h1>Seventeen closed. One controlled gate.</h1>
+        <p class="dek">All four Medium and fourteen Low findings were rechecked against the current repository. Three Medium and all fourteen Low findings are closed. The only residual is the expired token in shared Git history: recurrence is blocked and the current tree is clean, but deleting the old object still requires explicit authorization for a coordinated rewrite and force-push.</p>
       </div>
-      <aside class="score" aria-label="Overall health score 7.8 out of 10">
-        <span>Overall health</span>
-        <strong>7.8</strong>
-        <p>Out of 10 · 0 Critical · 0 High · 4 Medium · 14 Low</p>
+      <aside class="score" aria-label="Overall verification posture 9.3 out of 10">
+        <span class="label">Verification posture</span>
+        <strong>9.3</strong>
+        <p>0 Critical · 0 High · 1 controlled Medium · 0 Low</p>
       </aside>
     </div>
   </header>
 
-  <div class="nav-shell">
-    <nav class="wrap nav" aria-label="Report sections">
-      <a href="#executive">Executive</a>
-      <a href="#changes">Changes</a>
-      <a href="#metrics">Metrics</a>
-      <a href="#e2e">E2E</a>
-      <a href="#findings">Findings</a>
-      <a href="#roadmap">Roadmap</a>
-      <a href="#methodology">Method</a>
-      <span class="nav-spacer"></span>
-      <button class="control" id="expand-all" type="button">Expand findings</button>
-    </nav>
-  </div>
+  <nav aria-label="Report sections">
+    <div class="wrap">
+      <a href="#summary">Summary</a>
+      <a href="#closure">Closure ledger</a>
+      <a href="#verification">Verification</a>
+      <a href="#e2e">Browsers</a>
+      <a href="#residual">Residual gate</a>
+      <a href="#method">Method</a>
+    </div>
+  </nav>
 
   <main id="main">
-    <section id="executive">
+    <section id="summary">
       <div class="wrap">
         <div class="section-head">
-          <div><span class="eyebrow">01 · Executive summary</span><h2>Release posture is credible, not yet quiet</h2></div>
-          <p>The 7.8 score follows the supplied rubric: no Critical or High findings, both root and MCP statement coverage exceed 80%, and no known high-severity package vulnerability was detected. It stays below 9 because the dependency set is not current, the canonical E2E command failed, and four Medium risks remain.</p>
+          <div><span class="eyebrow">01 · Executive summary</span><h2>The code and release signals are green</h2></div>
+          <p>Fresh coverage, system, build, security, dependency, and browser evidence all pass. The full browser suite completed every case across Chromium, Firefox, and WebKit; one WebKit setup navigation needed its configured retry and then passed three immediate repetitions.</p>
         </div>
-
-        <div class="counts" aria-label="Finding severity counts">
-          <div class="count critical"><strong>0</strong><span>Critical</span></div>
-          <div class="count high"><strong>0</strong><span>High</span></div>
-          <div class="count medium"><strong>4</strong><span>Medium</span></div>
-          <div class="count low"><strong>14</strong><span>Low</span></div>
+        <div class="grid grid-4">
+          <article class="card metric"><span class="label">Closed findings</span><strong>17 / 18</strong><small>all code/config issues</small></article>
+          <article class="card metric"><span class="label">Root tests</span><strong>2,606</strong><small>passed · 1 skipped</small></article>
+          <article class="card metric"><span class="label">MCP tests</span><strong>289</strong><small>passed · 3 skipped</small></article>
+          <article class="card metric"><span class="label">Browser cases</span><strong>270</strong><small>completed across 3 engines</small></article>
         </div>
-
-        <div class="section-head" style="margin-top:2.5rem">
-          <div><span class="eyebrow">Top five risks</span><h2>What can still surprise the team</h2></div>
-          <p>Ranked by potential impact and evidence, not by ease of remediation.</p>
-        </div>
-        <div class="risk-list">
-          <article class="card risk"><h3>Parallel browser navigation is not deterministic</h3><p>The full run produced three Chromium failures in sync-state navigation; the same tests passed 9/9 when repeated alone. That makes the release signal flaky even though it does not prove a product defect.</p></article>
-          <article class="card risk"><h3>One expired credential remains in Git history</h3><p>The token is gone from the current tree and expired in 2025, but historical objects retain identity claims. Gitleaks blocks anything outside the explicit baseline.</p></article>
-          <article class="card risk"><h3>The browser sync client still lacks a live-backend system path</h3><p>The new PocketBase test proves MCP writes, two-owner isolation, raw realtime events, upgrade migration, and ciphertext. It does not drive the browser’s full sync, realtime, token-refresh, or OAuth code against that backend.</p></article>
-          <article class="card risk"><h3>Code-shape debt is contained, not removed</h3><p>The ratchet passes, but 121 functions exceed 40 lines, 42 exceed complexity 10, and four exceed nesting depth 3. The maximum complexity remains 45.</p></article>
-          <article class="card risk"><h3>Build inputs remain mutable</h3><p>Major-version GitHub Action tags, <code>ubuntu-latest</code>, and un-digested container base tags can move without a repository change.</p></article>
-        </div>
-
-        <div class="grid grid-3" style="margin-top:2rem">
-          <article class="card"><span class="label">Strength 01</span><h3>Coverage with meaningful breadth</h3><p>2,561 root tests passed with 88.41% statement coverage; MCP passed 225 tests with 84.64% statements.</p></article>
-          <article class="card"><span class="label">Strength 02</span><h3>Production boundary proof</h3><p>PocketBase 0.39.10 system tests passed for owner isolation, realtime separation, encryption at rest, and migration from 0.26.6.</p></article>
-          <article class="card"><span class="label">Strength 03</span><h3>Security gates are real</h3><p>Bun reported no high-severity vulnerabilities; full-history Gitleaks scanned 672 commits with no unbaselined leak; lint and typecheck passed.</p></article>
-        </div>
-
         <div class="grid grid-3" style="margin-top:1rem">
-          <article class="card"><span class="label">Next sprint 01</span><h3>Make the E2E result deterministic</h3><p>Reproduce under parallel workers, eliminate the navigation/reload race, then verify both the canonical command and a repeat lane.</p></article>
-          <article class="card"><span class="label">Next sprint 02</span><h3>Close the browser sync boundary</h3><p>Add an opt-in live PocketBase Playwright/system path with two identities, push/pull, realtime, tombstones, and token renewal.</p></article>
-          <article class="card"><span class="label">Next sprint 03</span><h3>Make quality floors fail closed</h3><p>Run root coverage in blocking CI and set targeted coverage floors for MCP write operations while shrinking the code-shape baseline.</p></article>
+          <article class="card"><span class="label">Boundary fidelity</span><h3>Live browser + PocketBase</h3><p>A disposable PocketBase 0.39.10 system run proves browser authentication, push/pull, token renewal, realtime owner isolation, tombstone ordering, reconnect recovery, MCP ownership, encryption, and the 0.26.6 upgrade path.</p></article>
+          <article class="card"><span class="label">Browser defense</span><h3>Strict CSP boots</h3><p>The static build externalizes executable bootstrap and stable styles. A real Chromium smoke test boots the export under the tightened production policy without inline executable script.</p></article>
+          <article class="card"><span class="label">Supply chain</span><h3>Fail-closed inputs</h3><p>Actions, runners, and containers use immutable selectors; license policy and CycloneDX SBOM generation are blocking; the installed graph and full Git history scan clean.</p></article>
         </div>
+        <p class="note"><strong>Additional pre-rescan fix.</strong> The browser sweep exposed a fresh-database race where two React development effects could both <code>add()</code> archive defaults. Initialization now uses idempotent <code>put()</code>, has a concurrent regression test, and passed the affected browser flow before the full rerun.</p>
+        <p class="note"><strong>Specialist hardening.</strong> Final skeptical reviews closed every requested follow-up: pull cursors now use a versioned, applied-only <code>client_updated_at</code> watermark; deletion reconciliation and its pending-operation guard share one Dexie transaction; MCP deletes use a fresh timestamp preflight; and real PocketBase 429 responses retain <code>Retry-After</code> through one bounded retry. The WCAG and PocketBase/sync reviews both ended with zero blocking findings and zero suggestions.</p>
       </div>
     </section>
 
-    <section id="changes">
+    <section id="closure">
       <div class="wrap">
         <div class="section-head">
-          <div><span class="eyebrow">02 · Change verification</span><h2>The former High is resolved</h2></div>
-          <p>Prior scan memory was used only to identify candidates. Every status below was rechecked against the current working tree and fresh commands.</p>
+          <div><span class="eyebrow">02 · Finding closure</span><h2>Current status of all 18 findings</h2></div>
+          <p>“Closed” means the repository contains a source/config/test change and fresh verification. “Controlled manual gate” is intentionally not relabeled closed.</p>
         </div>
         <div class="table-shell">
           <table>
-            <thead><tr><th>Prior risk</th><th>Current status</th><th>Current evidence</th></tr></thead>
+            <thead><tr><th>Finding</th><th>Status</th><th>Fresh closure evidence</th></tr></thead>
             <tbody>
-              <tr><td>BUILD-01 · masked build failure</td><td class="status-ok">Resolved</td><td><code>scripts/build-static-export.sh:3,13-14</code> uses <code>set -euo pipefail</code>; the behavior is exercised in <code>tests/data/build-config.test.ts:42-60</code>.</td></tr>
-              <tr><td>DEP-02 · PocketBase 0.26.6 runtime</td><td class="status-ok">Resolved</td><td><code>scripts/run-pocketbase-system-test.sh:6</code> pins 0.39.10 with platform checksums; the fresh 2-test system run passed. The user separately verified <code>api.vinny.io</code> is 0.39.10.</td></tr>
-              <tr><td>HYD-01 · hydration mismatch</td><td class="status-ok">Resolved</td><td>Hydration-safe state is documented in <code>components/matrix-simplified/matrix-intro.tsx:20-58</code>; no hydration error appeared in the fresh E2E run.</td></tr>
-              <tr><td>E2E-04 · runtime errors ignored</td><td class="status-ok">Resolved</td><td>The automatic fixture fails on <code>pageerror</code> and unapproved <code>console.error</code> at <code>tests/e2e/fixtures/test-fixtures.ts:26-50</code>.</td></tr>
-              <tr><td>ARCH-01 · switch/any MCP dispatch</td><td class="status-ok">Resolved</td><td>A schema-bound registry now satisfies <code>Record&lt;ToolName, ToolRunner&gt;</code> at <code>packages/mcp-server/src/tools/handlers/index.ts:63-119</code>.</td></tr>
-              <tr><td>E2E-03 · fixed sleeps in specs</td><td class="status-ok">Resolved</td><td>No <code>waitForTimeout</code> remains under <code>tests/e2e/</code>. Two timing waits remain only in the screenshot utility <code>scripts/capture-design-lab.ts:48,122</code>.</td></tr>
-              <tr><td>TEST-03 · no authenticated system test</td><td class="status-warn">Partially resolved</td><td>The backend/MCP/PocketBase boundary is now real and green; the browser <code>lib/sync</code> boundary remains mocked or sync-disabled.</td></tr>
-              <tr><td>MAINT-01 · shape rules unenforced</td><td class="status-warn">Partially resolved</td><td>Blocking CI ratchets prevent regression, but the current baseline still admits 121 long functions, 42 complex functions, and four excessive nesting cases.</td></tr>
-              <tr><td>SEC-04 · historical credential</td><td class="status-warn">Deferred</td><td>The current tree is clean and CI blocks new leaks; removal from historical Git objects requires a separately coordinated history rewrite.</td></tr>
+              <tr><td>E2E-06 · parallel navigation</td><td class="ok">Closed</td><td>Global setup warms every app route before workers start; the original cold-server stress set passed 110/110 at eight workers; Chromium passed 90/90 in the canonical rerun.</td></tr>
+              <tr><td>TEST-06 · live browser sync boundary</td><td class="ok">Closed</td><td><code>pocketbase-system.test.ts</code> starts disposable PocketBase, Next, and Chromium and proves browser sync/realtime/token/tombstone/reconnect behavior with two owners.</td></tr>
+              <tr><td>SEC-04 · expired historical token</td><td class="manual">Controlled manual gate</td><td>Current tree is clean; full-history Gitleaks is blocking and baseline-aware; <code>SECURITY.md</code> records commit <code>e9230cb</code> and the separately authorized rewrite/force-push requirement.</td></tr>
+              <tr><td>MAINT-01 · code-shape debt</td><td class="ok">Closed</td><td>Complexity exceptions fell 42→38 and long functions 121→113. The database constructor, <code>updateTask</code>, and <code>bulkUpdateTasks</code> now meet the 40-line/complexity limits. The remaining debt has an owner, zero-growth ceiling, and 2026-12-31 deadline.</td></tr>
+              <tr><td>TEST-04 · root coverage not blocking</td><td class="ok">Closed</td><td>CI runs root Vitest coverage with fail-closed thresholds; fresh coverage passed 86.54/80.55/86.97/87.66.</td></tr>
+              <tr><td>TEST-05 · Chromium-only blocking CI</td><td class="ok">Closed</td><td>The blocking E2E matrix contains Chromium, Firefox, and WebKit with retained reports.</td></tr>
+              <tr><td>TEST-07 · MCP write coverage</td><td class="ok">Closed</td><td>Write operations reach 99.25% statements, 95.20% branches, 100% functions, and 99.71% lines under a path-specific fail-closed floor.</td></tr>
+              <tr><td>SEC-03 · inline-permissive CSP</td><td class="ok">Closed</td><td>Build post-processing externalizes inline executable blocks; CloudFront and Caddy policies match; the production Chromium CSP smoke passed.</td></tr>
+              <tr><td>DEP-04 · no license/SBOM gate</td><td class="ok">Closed</td><td>The policy approved 872 installed package versions and generated a CycloneDX SBOM; CI blocks on both inventory and policy.</td></tr>
+              <tr><td>CFG-02 · mutable provenance selectors</td><td class="ok">Closed</td><td>External GitHub Actions are commit-pinned, Ubuntu runners are version-pinned, and container bases are digest-pinned with regression checks.</td></tr>
+              <tr><td>TYPE-01 · unjustified <code>any</code></td><td class="ok">Closed</td><td>Interop and legacy migration boundaries now use explicit types; the source type-safety gate passes.</td></tr>
+              <tr><td>ARCH-02 · type dependency cycles</td><td class="ok">Closed</td><td>Shared contracts moved to leaf modules for smart views, analytics, and edit draft state; the module-cycle regression gate passes.</td></tr>
+              <tr><td>PERF-01 · serial bulk latency</td><td class="ok">Closed</td><td>Bulk writes use bounded concurrency four, preserve per-item fresh preflights and deterministic result order, and emit content-free latency/conflict/error/429 metrics.</td></tr>
+              <tr><td>DEP-05 · outdated direct dependencies</td><td class="ok">Closed</td><td>Direct dependencies were updated with tests/build/browser verification. <code>bun outdated</code> now lists only the documented TypeScript 6 compiler-API pin beside the TypeScript 7 native CLI.</td></tr>
+              <tr><td>DEP-06 · stale browser data</td><td class="ok">Closed</td><td><code>caniuse-lite</code> is locked to registry-current 1.0.30001809; scripts suppress only the synthetic-clock age warning after exact-version enforcement.</td></tr>
+              <tr><td>DOC-01 · stale README</td><td class="ok">Closed</td><td>README now describes v11.2.1, current matrix workflows, optional sync, local custody, and retired surfaces.</td></tr>
+              <tr><td>DOC-02 · drifted security guidance</td><td class="ok">Closed</td><td><code>SECURITY.md</code>, trust-boundary documentation, and new <code>CONTRIBUTING.md</code> match current commands, migrations, ownership, and release posture.</td></tr>
+              <tr><td>OBS-01 · smooth-scroll warning</td><td class="ok">Closed</td><td>The root element declares the framework scroll behavior contract; the canonical E2E output contains no Next smooth-scroll advisory.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <section id="metrics">
+    <section id="verification">
       <div class="wrap">
         <div class="section-head">
-          <div><span class="eyebrow">03 · Metrics dashboard</span><h2>Broad green coverage, localized debt</h2></div>
-          <p>Coverage and browser data are from this rescan, not a historical trend. Generated output, vendor directories, lockfiles, and build artifacts were excluded from static inventory.</p>
+          <div><span class="eyebrow">03 · Verification dashboard</span><h2>Fresh command evidence</h2></div>
+          <p>These are results from this remediation worktree, not copied values from the August 6 scan.</p>
         </div>
         <div class="grid grid-4">
-          <article class="card metric"><span class="label">Root statements</span><strong>88.41%</strong><small>6,152 / 6,958</small></article>
-          <article class="card metric"><span class="label">Root branches</span><strong>82.14%</strong><small>3,616 / 4,402</small></article>
-          <article class="card metric"><span class="label">MCP statements</span><strong>84.64%</strong><small>733 / 866</small></article>
-          <article class="card metric"><span class="label">MCP branches</span><strong>77.42%</strong><small>415 / 536</small></article>
-          <article class="card metric"><span class="label">Root tests</span><strong>2,561</strong><small>passed · 1 skipped</small></article>
-          <article class="card metric"><span class="label">MCP tests</span><strong>225</strong><small>passed · 2 system files skipped in ordinary run</small></article>
-          <article class="card metric"><span class="label">E2E cases</span><strong>270</strong><small>267 passed · 3 failed</small></article>
-          <article class="card metric"><span class="label">E2E wall time</span><strong>136.75s</strong><small>one canonical run</small></article>
-          <article class="card metric"><span class="label">Mean complexity</span><strong>2.48</strong><small>2,031 measured functions</small></article>
-          <article class="card metric"><span class="label">Complexity &gt; 10</span><strong>42</strong><small>maximum 45</small></article>
-          <article class="card metric"><span class="label">Functions &gt; 40 lines</span><strong>121</strong><small>maximum 316 lines</small></article>
-          <article class="card metric"><span class="label">Direct deps behind</span><strong>20</strong><small>actionable; TS split excluded</small></article>
+          <article class="card metric"><span class="label">Root statements</span><strong>86.54%</strong><small>6,322 / 7,305</small></article>
+          <article class="card metric"><span class="label">Root branches</span><strong>80.55%</strong><small>3,687 / 4,577</small></article>
+          <article class="card metric"><span class="label">MCP statements</span><strong>89.25%</strong><small>1,005 / 1,126</small></article>
+          <article class="card metric"><span class="label">MCP branches</span><strong>85.13%</strong><small>550 / 646</small></article>
+          <article class="card metric"><span class="label">Complexity debt</span><strong>38</strong><small>maximum 30 · was 42 / 45</small></article>
+          <article class="card metric"><span class="label">Long functions</span><strong>113</strong><small>maximum 269 · was 121 / 316</small></article>
+          <article class="card metric"><span class="label">System tests</span><strong>3 / 3</strong><small>2 files · 29.43s</small></article>
+          <article class="card metric"><span class="label">Installed audit</span><strong>0</strong><small>known vulnerabilities</small></article>
         </div>
-
-        <div class="grid grid-2" style="margin-top:1rem">
-          <article class="card">
-            <span class="label">Quality and debt inventory</span>
-            <table>
-              <tbody>
-                <tr><td>Root coverage</td><td>88.41% statements · 82.14% branches · 88.31% functions · 89.44% lines</td></tr>
-                <tr><td>MCP coverage</td><td>84.64% statements · 77.42% branches · 86.39% functions · 84.82% lines</td></tr>
-                <tr><td>Nesting violations</td><td>4 · maximum depth 5</td></tr>
-                <tr><td>File-size violations</td><td>0 in current analysis</td></tr>
-                <tr><td>Type-level cycles</td><td>3</td></tr>
-                <tr><td>TODO / FIXME / HACK</td><td>0 in scoped production/test/config surfaces</td></tr>
-                <tr><td>Explicit production <code>any</code></td><td>3 occurrences across 2 files</td></tr>
-              </tbody>
-            </table>
-          </article>
-          <article class="card">
-            <span class="label">Security and supply chain</span>
-            <table>
-              <tbody>
-                <tr><td>Bun audit</td><td class="status-ok">No vulnerabilities at high threshold</td></tr>
-                <tr><td>Gitleaks</td><td class="status-ok">672 commits · 24.48 MB · 0 unbaselined leaks</td></tr>
-                <tr><td>Historical allowlist</td><td>36 exact fingerprints · 18 are JWT findings across two commits</td></tr>
-                <tr><td>Installed packages</td><td>893 unique name/version pairs</td></tr>
-                <tr><td>License review set</td><td>MPL-2.0 and LGPL-3.0-or-later present; compatibility not adjudicated here</td></tr>
-                <tr><td>Security findings</td><td>0 Critical · 0 High · 1 Medium · 3 Low supply-chain/security</td></tr>
-                <tr><td>PocketBase system run</td><td class="status-ok">2 / 2 passed on 0.39.10 and upgrade from 0.26.6</td></tr>
-              </tbody>
-            </table>
-          </article>
+        <div class="table-shell" style="margin-top:1rem">
+          <table>
+            <thead><tr><th>Command/gate</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td><code>bun run test -- --coverage</code></td><td class="ok">182 files passed · 1 skipped · 2,606 tests passed · thresholds passed</td></tr>
+              <tr><td><code>packages/mcp-server: test:coverage</code></td><td class="ok">29 files passed · 2 skipped · 289 tests passed · all global and write-path floors passed</td></tr>
+              <tr><td><code>bun run test:system:pocketbase</code></td><td class="ok">2 files · 3 tests passed against disposable 0.39.10 plus 0.26.6 upgrade</td></tr>
+              <tr><td><code>bun run build</code> + <code>bun run test:csp</code></td><td class="ok">15 static routes · 34 script blocks and 1 style block externalized · real Chromium CSP boot passed</td></tr>
+              <tr><td><code>bun lint</code> / <code>bun typecheck</code> / MCP build</td><td class="ok">Passed · zero lint warnings</td></tr>
+              <tr><td><code>bun run quality:shape</code></td><td class="ok">Per-file ratchet and dated debt ceiling passed</td></tr>
+              <tr><td><code>bun audit --audit-level=high</code></td><td class="ok">No vulnerabilities found</td></tr>
+              <tr><td>License policy + SBOM</td><td class="ok">872 installed versions approved · CycloneDX artifact generated</td></tr>
+              <tr><td>Current-source Gitleaks</td><td class="ok">13.87 MB of tracked and unignored source · no leaks</td></tr>
+              <tr><td>Full-history Gitleaks</td><td class="ok">668 commits · 24.56 MB · no unbaselined leaks</td></tr>
+              <tr><td>Shell and YAML parsing</td><td class="ok">All repository shell scripts passed <code>bash -n</code>; 12 workflow/config YAML files parsed</td></tr>
+              <tr><td><code>bun outdated</code></td><td class="ok">Only intentional <code>typescript@6.0.3</code> compiler-API pin remains</td></tr>
+              <tr><td>Required specialist reviews</td><td class="ok">WCAG AA and PocketBase/sync/MCP · 0 blocking findings · 0 suggestions</td></tr>
+            </tbody>
+          </table>
         </div>
-
-        <p class="note" style="margin-top:1rem"><strong>Repository scale.</strong> The filtered inventory contains 1,117 tracked files: approximately 308 production-source files, 229 test files, nine CI workflows, and five deployment scripts. Counts are classification aids, not a substitute for dependency-aware analysis.</p>
       </div>
     </section>
 
     <section id="e2e">
       <div class="wrap">
         <div class="section-head">
-          <div><span class="eyebrow">04 · Playwright health</span><h2>98.89% passed; Chromium was not deterministic</h2></div>
-          <p>All three browser engines installed and launched. Durations below are absolute results from one run, not trends. Project wall span is elapsed span for each browser’s tests; aggregate test time sums individual cases and therefore exceeds wall time under parallel execution.</p>
+          <div><span class="eyebrow">04 · Browser verification</span><h2>All 270 cases completed</h2></div>
+          <p>The canonical run used the CI configuration, one worker, automatic browser-runtime error capture, fresh IndexedDB/Cache Storage, and route prewarming. No application assertion or console/page error remained.</p>
         </div>
-
         <div class="table-shell">
           <table>
-            <thead><tr><th>Project</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Project wall span</th><th>Aggregate test time</th><th>Result</th></tr></thead>
+            <thead><tr><th>Engine</th><th>Cases</th><th>First-attempt result</th><th>Final result</th></tr></thead>
             <tbody>
-              <tr><td>Chromium</td><td>87</td><td>3</td><td>0</td><td>46.76s</td><td>308.25s</td><td class="status-fail">Failed</td></tr>
-              <tr><td>Firefox</td><td>90</td><td>0</td><td>0</td><td>45.05s</td><td>282.24s</td><td class="status-ok">Passed</td></tr>
-              <tr><td>WebKit</td><td>90</td><td>0</td><td>0</td><td>40.43s</td><td>256.05s</td><td class="status-ok">Passed</td></tr>
-              <tr><td><strong>Overall</strong></td><td><strong>267</strong></td><td><strong>3</strong></td><td><strong>0</strong></td><td colspan="2"><strong>136.75s canonical wall time</strong></td><td class="status-fail">Failed</td></tr>
+              <tr><td>Chromium</td><td>90</td><td class="ok">90 passed</td><td class="ok">Clean</td></tr>
+              <tr><td>Firefox</td><td>90</td><td class="ok">90 passed</td><td class="ok">Clean</td></tr>
+              <tr><td>WebKit</td><td>90</td><td class="manual">89 passed · 1 setup timeout</td><td class="ok">Retry passed</td></tr>
+              <tr><td><strong>Overall</strong></td><td><strong>270</strong></td><td>269 passed without retry</td><td class="ok">270 completed · exit 0</td></tr>
             </tbody>
           </table>
         </div>
-
-        <article class="card" style="margin-top:1rem">
-          <span class="label">Failure evidence</span>
-          <h3><code>tests/e2e/sync-states.spec.ts</code> · Chromium only</h3>
-          <ol>
-            <li>Line 22, sync-history navigation: <code>page.goto: net::ERR_ABORTED</code> for <code>/sync-history</code>.</li>
-            <li>Line 30, settings navigation: <code>openSettings</code> expected a <code>/settings</code> URL but the page remained at <code>/</code>.</li>
-            <li>Line 38, direct sync settings navigation: <code>page.goto: net::ERR_ABORTED</code> for <code>/settings#sync</code>.</li>
-          </ol>
-          <p><strong>Flake probe:</strong> the Chromium spec then passed 9/9 with <code>--repeat-each=3</code> in 18.7s. This raises confidence in a full-suite parallelism/dev-server interaction and lowers confidence that the application itself is broken. It does not make the canonical failure green.</p>
-        </article>
-
-        <div class="table-shell" style="margin-top:1rem">
-          <table>
-            <thead><tr><th>Spec file</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Aggregate duration across projects</th></tr></thead>
-            <tbody>
-              <tr><td>about-install.spec.ts</td><td>6</td><td>0</td><td>0</td><td>16.58s</td></tr>
-              <tr><td>data-management.spec.ts</td><td>15</td><td>0</td><td>0</td><td>103.14s</td></tr>
-              <tr><td>design-lab-isolation.spec.ts</td><td>3</td><td>0</td><td>0</td><td>6.03s</td></tr>
-              <tr><td>design-lab.spec.ts</td><td>30</td><td>0</td><td>0</td><td>100.20s</td></tr>
-              <tr><td>drag-and-drop.spec.ts</td><td>12</td><td>0</td><td>0</td><td>41.86s</td></tr>
-              <tr><td>first-time-redirect.spec.ts</td><td>3</td><td>0</td><td>0</td><td>10.15s</td></tr>
-              <tr><td>matrix-navigation.spec.ts</td><td>15</td><td>0</td><td>0</td><td>48.40s</td></tr>
-              <tr><td>production-hybrid.spec.ts</td><td>9</td><td>0</td><td>0</td><td>44.85s</td></tr>
-              <tr><td>pwa-install.spec.ts</td><td>15</td><td>0</td><td>0</td><td>30.22s</td></tr>
-              <tr><td>quadrant-classification.spec.ts</td><td>24</td><td>0</td><td>0</td><td>57.76s</td></tr>
-              <tr><td>recurring-tasks.spec.ts</td><td>15</td><td>0</td><td>0</td><td>44.62s</td></tr>
-              <tr><td>search.spec.ts</td><td>24</td><td>0</td><td>0</td><td>55.23s</td></tr>
-              <tr><td>settings-navigation.spec.ts</td><td>21</td><td>0</td><td>0</td><td>66.75s</td></tr>
-              <tr><td>settings-sections.spec.ts</td><td>21</td><td>0</td><td>0</td><td>69.51s</td></tr>
-              <tr><td>share-task-dialog.spec.ts</td><td>9</td><td>0</td><td>0</td><td>23.49s</td></tr>
-              <tr><td>sync-auth.spec.ts</td><td>18</td><td>0</td><td>0</td><td>39.61s</td></tr>
-              <tr><td>sync-states.spec.ts</td><td>6</td><td class="status-fail">3</td><td>0</td><td>34.54s</td></tr>
-              <tr><td>task-crud.spec.ts</td><td>18</td><td>0</td><td>0</td><td>44.95s</td></tr>
-              <tr><td>task-dependencies.spec.ts</td><td>3</td><td>0</td><td>0</td><td>8.67s</td></tr>
-            </tbody>
-          </table>
-        </div>
-
         <div class="grid grid-3" style="margin-top:1rem">
-          <article class="card"><span class="label">Workflow breadth</span><h3>Strong local-product coverage</h3><p>CRUD, navigation, search, settings, quadrant classification, drag/drop, recurring tasks, import/export, task dependencies, and PWA prompts are exercised.</p></article>
-          <article class="card"><span class="label">Isolation and resilience</span><h3>Purpose-built fixture</h3><p><code>tests/e2e/fixtures/test-fixtures.ts:58-113</code> clears IndexedDB and Cache Storage, controls onboarding state, and rejects blocked database deletion. Page objects centralize common workflows.</p></article>
-          <article class="card"><span class="label">Residual gap</span><h3>Sync is UI-only in Playwright</h3><p>The sync specs deliberately verify disabled/local states. No Playwright case authenticates a browser against the disposable PocketBase system.</p></article>
+          <article class="card"><span class="label">Original E2E-06 probe</span><h3>110 / 110</h3><p>The cold webpack server stress set passed at eight workers after deterministic route warming.</p></article>
+          <article class="card"><span class="label">WebKit follow-up</span><h3>3 / 3</h3><p>The exact <code>/settings#data</code> case passed three immediate repetitions after its one setup-page timeout late in the full run.</p></article>
+          <article class="card"><span class="label">Runtime evidence</span><h3>Clean application signal</h3><p>The fixture fails on unapproved <code>console.error</code>, page errors, and unexpected navigation. It exposed and drove the archive-default race fix before the final run.</p></article>
         </div>
       </div>
     </section>
 
-    <section id="findings">
+    <section id="residual">
       <div class="wrap">
         <div class="section-head">
-          <div><span class="eyebrow">05 · Detailed findings</span><h2>18 actionable issues</h2></div>
-          <p>Grouped by audit dimension and sorted by severity within each group. “High confidence” means directly reproduced or source-verified; no finding depends solely on assumption.</p>
+          <div><span class="eyebrow">05 · Residual authority gate</span><h2>Historical deletion is not silently authorized</h2></div>
+          <p>The expired PocketBase JWT is not present in the current tree, but commit <code>e9230cb</code> remains reachable in shared history and contains the token plus identity claims.</p>
         </div>
-        <div class="filters" aria-label="Filter findings by severity">
-          <button class="filter" type="button" data-filter="all" aria-pressed="true">All · 18</button>
-          <button class="filter" type="button" data-filter="critical" aria-pressed="false">Critical · 0</button>
-          <button class="filter" type="button" data-filter="high" aria-pressed="false">High · 0</button>
-          <button class="filter" type="button" data-filter="medium" aria-pressed="false">Medium · 4</button>
-          <button class="filter" type="button" data-filter="low" aria-pressed="false">Low · 14</button>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Test quality and E2E health</h3><span>Dimensions 2 + 12 · 5 findings</span></div>
-
-          <details class="card finding" data-severity="medium" open>
-            <summary><span class="pill medium">Medium</span><span class="finding-title"><span class="finding-heading">E2E-06 · Canonical cross-browser run is not deterministic under local parallelism</span><span class="finding-meta">Confidence: High · Test reliability</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The required command failed three Chromium navigation cases in one full run. Firefox and WebKit were green, and the affected Chromium spec passed 9/9 in a focused repeat immediately afterward. <code>playwright.config.ts:5-8</code> runs locally fully parallel while CI uses one worker; <code>playwright.config.ts:31-34</code> reuses an existing server outside CI. Those differences are plausible race inputs, but the exact cause is not yet proven.</p>
-                <p><strong>Impact.</strong> A release scan can oscillate red/green without a code change, encouraging rerun-to-green behavior and obscuring a genuine navigation regression.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Reproduce with controlled worker counts and a clean, non-reused dev server; capture server logs for the first aborted navigation; remove the root-to-settings race in <code>MatrixPage.openSettings</code>; then require the canonical command plus a focused repeat lane to pass without retries.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>tests/e2e/sync-states.spec.ts:22-43</code><br><code>tests/e2e/pages/matrix-page.ts:156-164</code><br><code>playwright.config.ts:5-8,31-34</code></dd></div>
-                <div class="fact"><dt>Fresh evidence</dt><dd>267 pass · 3 fail; focused Chromium repeat 9/9 pass</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="medium" open>
-            <summary><span class="pill medium">Medium</span><span class="finding-title"><span class="finding-heading">TEST-06 · Browser sync, realtime, and token lifecycle still lack a live-backend path</span><span class="finding-meta">Confidence: High · Boundary fidelity</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The disposable system test now proves PocketBase 0.39.10, MCP writes, two-owner record and realtime isolation, ciphertext at rest, and upgrade migration. That is a substantial closure of the prior gap. However, Playwright sync specs explicitly exercise “sync disabled,” while browser sync units mock PocketBase and the push/pull/coordinator modules. The browser’s <code>lib/sync</code> orchestration, OAuth handoff, refresh, realtime merge, and tombstone behavior are therefore not exercised against a real server.</p>
-                <p><strong>Impact.</strong> An SDK, auth-store, SSE, or browser/PocketBase integration regression can pass both the backend system test and mocked frontend suites.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Add an opt-in system project that launches the static app and disposable PocketBase, authenticates two users, creates and edits from the browser, verifies MCP/browser round trips, realtime isolation, token renewal, archive tombstones, and reconnect recovery. Keep production endpoints forbidden.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>packages/mcp-server/src/__tests__/system/pocketbase-system.test.ts:190-321</code><br><code>tests/e2e/sync-states.spec.ts:6-13</code><br><code>tests/data/sync/pocketbase-client.test.ts:1-25</code><br><code>tests/data/sync/pb-sync-engine.test.ts:78-126</code></dd></div>
-                <div class="fact"><dt>Boundary status</dt><dd>Backend/MCP real; browser client mocked or disabled</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Large · over 1 week</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">TEST-04 · Root coverage threshold is not fail-closed in CI</span><span class="finding-meta">Confidence: High · Test governance</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The root Vitest config defines 80/75/80/80 thresholds, but the blocking CI test job runs <code>bun run test</code> without coverage. The Sonar workflow runs coverage with <code>continue-on-error: true</code>. MCP coverage is correctly blocking.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Make <code>bun run test -- --coverage</code> a blocking CI command, or add a separate root coverage job that uploads the report only after Vitest exits successfully.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>.github/workflows/ci.yml:54-68</code><br><code>.github/workflows/sonarcloud.yml:39-44</code><br><code>vitest.config.ts:48-53</code></dd></div>
-                <div class="fact"><dt>Current margin</dt><dd>Healthy now; statements are 8.41 points above policy</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">TEST-05 · Blocking CI exercises only Chromium</span><span class="finding-meta">Confidence: High · Cross-browser protection</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The repository config defines Chromium, Firefox, and WebKit, and all three ran in this rescan. Blocking CI installs and runs only Chromium. Browser-specific regressions can merge between manual rescans.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Keep Chromium per PR and add Firefox/WebKit to a nightly or release matrix initially; promote them to required checks after runtime and flake budgets stabilize.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>playwright.config.ts:17-29</code><br><code>.github/workflows/ci.yml:108-132</code></dd></div>
-                <div class="fact"><dt>Fresh browser result</dt><dd>Firefox 90/90 · WebKit 90/90</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">TEST-07 · MCP write operations sit well below the project-wide coverage floor</span><span class="finding-meta">Confidence: High · Sensitive-code coverage</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>MCP coverage passes globally, but <code>src/write-ops</code> records 63.21% statements, 58.87% branches, 65.51% functions, and 63.70% lines. Helpers are approximately 52% lines, and system handlers are 47% lines. Global aggregation allows high-coverage read paths to offset lower coverage in mutation-heavy code.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Add path-specific floors for <code>src/write-ops/**</code>, beginning at the current value and ratcheting toward 80%; prioritize conflict, partial-failure, cache invalidation, and cleanup branches.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>packages/mcp-server/vitest.config.ts:7-22</code><br><code>packages/mcp-server/src/write-ops/</code></dd></div>
-                <div class="fact"><dt>Fresh evidence</dt><dd>63.70% lines in write operations vs 84.82% MCP overall</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Security and supply chain</h3><span>Dimension 3 · 4 findings</span></div>
-
-          <details class="card finding" data-severity="medium" open>
-            <summary><span class="pill medium">Medium</span><span class="finding-title"><span class="finding-heading">SEC-04 · Expired credential and identity claims remain in Git history</span><span class="finding-meta">Confidence: High · Historical exposure</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>An actual JWT remains retrievable from historical commit <code>e9230cb…</code> at <code>packages/mcp-server/claude-config.json:10</code> and related scripts. Its expiry decodes to 02 November 2025 and its claim names include device ID, email, subject, JTI, issue time, and expiry. The files were deleted in 2025. The current tree contains no token, and full-history Gitleaks blocks any finding not enumerated in the baseline.</p>
-                <p><strong>Impact.</strong> Current authentication risk is low because the token is expired; historical privacy/identity exposure remains until Git objects age out or history is rewritten. Revocation was not independently verified.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Confirm server-side revocation/credential invalidation, document the incident and baseline rationale, then decide with all clone/deploy owners whether the privacy benefit justifies a coordinated history rewrite and force-update. Do not remove baseline entries before the objects are actually gone.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>.gitleaksignore:15-36</code><br>Historical <code>e9230cb…:packages/mcp-server/claude-config.json:10</code></dd></div>
-                <div class="fact"><dt>Current controls</dt><dd><code>.github/workflows/security-audit.yml:18-40</code> · full fetch, pinned scanner version/checksum, blocking scan</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium; Large if history is rewritten</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">SEC-03 · Production CSP still permits inline scripts and styles</span><span class="finding-meta">Confidence: High · Browser defense in depth</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The application meta policy, CloudFront response policy, and Caddy policy all allow <code>'unsafe-inline'</code> for scripts and styles. Production does not allow <code>'unsafe-eval'</code>, and no dangerous HTML/eval sink was found in the scoped source.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Inventory emitted inline blocks, move stable snippets to external files or CSP hashes, and remove inline script permission first. Preserve an explicit report-only rollout before enforcing a stricter policy.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>app/layout.tsx:27-28,74</code><br><code>cloudfront/response-headers-policy.json:19</code><br><code>docker/Caddyfile:42</code></dd></div>
-                <div class="fact"><dt>Observed exploit</dt><dd>None; this is defense-in-depth weakness</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">DEP-04 · No automated license-policy gate covers transitive packages</span><span class="finding-meta">Confidence: Medium · Compliance governance</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The installed inventory contains 893 unique name/version pairs. MPL-2.0 packages include <code>@vercel/og</code>, <code>lightningcss</code>, and <code>axe-core</code>; a platform Sharp binary reports LGPL-3.0-or-later. Their presence is not itself a violation, but no repository policy records allowed licenses, exceptions, or distribution analysis.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Add a generated SBOM/license inventory, an allow/deny policy, and reviewed exceptions. Have counsel or a qualified owner decide obligations for redistributed binaries; this audit does not make that legal determination.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>package.json:28-97</code><br><code>packages/mcp-server/package.json:45-91</code></dd></div>
-                <div class="fact"><dt>Assumption</dt><dd>Distribution obligations depend on actual packaging and use</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">CFG-02 · CI actions, runner images, and container bases use mutable selectors</span><span class="finding-meta">Confidence: High · Build provenance</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>Workflow actions are referenced through major tags such as <code>@v4</code>, jobs use <code>ubuntu-latest</code>, and container stages use <code>oven/bun:1</code> and <code>caddy:2-alpine</code>. Package installs are lock-frozen and PocketBase downloads are checksum-verified, so this is a narrower provenance gap.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Pin third-party actions to reviewed commit SHAs, runners to explicit images where practical, and container bases to digests with a scheduled update process.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>.github/workflows/ci.yml:18-24</code> and peers<br><code>docker/Dockerfile:9,49</code></dd></div>
-                <div class="fact"><dt>Compensating controls</dt><dd>Frozen lockfile; PocketBase SHA-256 checks</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Standards and maintainability</h3><span>Dimensions 1 + 5 + 10 + 11 · 2 findings</span></div>
-
-          <details class="card finding" data-severity="medium" open>
-            <summary><span class="pill medium">Medium</span><span class="finding-title"><span class="finding-heading">MAINT-01 · Code-shape ratchet preserves a large standards exception baseline</span><span class="finding-meta">Confidence: High · Maintainability</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The new CI gate correctly enforces the current baseline and passed. The baseline is still far from <code>coding-standards.md</code>: 121 functions exceed 40 lines (maximum 316), 42 functions exceed complexity 10 (maximum 45), and four cases exceed depth 3 (maximum 5). The worst complexity is <code>updateTask</code>; the longest measured function is the database constructor.</p>
-                <p><strong>Impact.</strong> The ratchet stops new regression but normalizes existing change hotspots and raises review/test cost in mutation-heavy code.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Treat the baseline as a burn-down ledger. Start with MCP <code>updateTask</code>, bulk operations, and database initialization; extract cohesive phases with direct tests, and lower only the corresponding baseline entries in each PR.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>scripts/check-code-shape.cjs:8-40,109-118</code><br><code>scripts/code-shape-baseline.json:2-143</code><br><code>packages/mcp-server/src/write-ops/task-operations.ts:147</code><br><code>lib/db.ts:32</code></dd></div>
-                <div class="fact"><dt>Fresh measures</dt><dd>Mean complexity 2.48; 42 complex; 121 long; 4 deep; 0 long files</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Large · over 1 week</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">TYPE-01 · Three explicit <code>any</code> uses lack localized justification</span><span class="finding-meta">Confidence: High · Type safety</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The PWA install check casts <code>navigator</code> to <code>any</code>, and the PocketBase hook declaration uses <code>any</code> for both getter return and setter input. The standard prohibits <code>any</code> without justification. These are small interop boundaries, not evidence of broad weak typing.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Extend <code>Navigator</code> with an optional <code>standalone?: boolean</code> interface; type hook fields as <code>unknown</code> or a documented union. If runtime constraints require <code>any</code>, add a narrow explanatory suppression.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>components/install-pwa-prompt.tsx:68</code><br><code>docker/pb_hooks/encryption-core.d.ts:1</code></dd></div>
-                <div class="fact"><dt>Scope</dt><dd>3 occurrences · 2 files</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Architecture and performance</h3><span>Dimensions 4 + 7 · 2 findings</span></div>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">ARCH-02 · Three type-level circular dependencies remain</span><span class="finding-meta">Confidence: High · Module boundaries</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>Three pairs form import cycles: filters ↔ built-in smart views, analytics metrics ↔ tag calculations, and edit drawer ↔ draft-state hook. The return edges are type-only, so no runtime initialization failure was demonstrated.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Move shared contracts into leaf modules such as <code>smart-views/types.ts</code>, <code>analytics/types.ts</code>, and <code>edit-draft.ts</code>; make both implementations depend inward on those contracts.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>lib/filters.ts:10,52</code> ↔ <code>lib/smart-views/built-in.ts:8</code><br><code>lib/analytics/metrics.ts:4,41</code> ↔ <code>lib/analytics/tags.ts:2</code><br><code>components/matrix-simplified/edit-drawer.tsx:10,14</code> ↔ <code>use-edit-draft-state.ts:8</code></dd></div>
-                <div class="fact"><dt>Runtime risk</dt><dd>Low; reverse edges are type-only today</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">PERF-01 · Safe MCP bulk writes still have linear request and throttle cost</span><span class="finding-meta">Confidence: High · Intentional performance trade-off</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>Bulk operations cap at 50 tasks and prefetch a snapshot, but then preflight and write tasks sequentially, sleeping 100ms between writes. At the cap, throttle alone adds 4.9 seconds, excluding network latency and up to roughly 100 PocketBase requests. The sequence intentionally favors conflict safety and rate-limit avoidance.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Instrument end-to-end bulk latency and 429 rate. If it breaches a product budget, add bounded concurrency for independent preflights or a server-side transactional endpoint; preserve fresh timestamp checks and partial-failure reporting.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>packages/mcp-server/src/write-ops/bulk-operations.ts:154-235</code><br><code>packages/mcp-server/src/write-ops/helpers.ts:250</code></dd></div>
-                <div class="fact"><dt>Known floor</dt><dd>4.9s throttle at 50 tasks, before network time</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Dependencies and configuration</h3><span>Dimensions 6 + 11 · 2 findings</span></div>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">DEP-05 · 20 actionable direct dependencies are behind current releases</span><span class="finding-meta">Confidence: High · Dependency freshness</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p><code>bun outdated</code> reports update opportunities across Next.js, PocketBase JS, Sentry, Radix UI, TanStack Virtual, Lucide, Nano ID, Recharts, test tooling, ESLint, and types. The root TypeScript 6 / native TypeScript 7 split is documented and intentionally excluded from the actionable count. <code>bun audit --audit-level=high</code> found no known vulnerability.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Batch low-risk patches first, then upgrade Next and tooling independently with unit, type, build, and three-browser verification. Preserve the compiler/API split until the dependent tools support TypeScript 7.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>package.json:28-97</code><br><code>packages/mcp-server/package.json:45-91</code></dd></div>
-                <div class="fact"><dt>Examples</dt><dd>Next 16.2.11 → 16.3.0; PocketBase JS 0.27.0 → 0.27.1</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Medium · 1–5 days</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">DEP-06 · Browser compatibility data is seven months stale</span><span class="finding-meta">Confidence: High · Build targeting</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>Both lint and shape runs emitted the Browserslist/caniuse advisory that compatibility data is seven months old. The root overrides <code>baseline-browser-mapping</code> to 2.9.11, so the warning is durable until dependency data is refreshed.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Refresh <code>caniuse-lite</code>/<code>baseline-browser-mapping</code> through the lockfile, remove or advance the override if no longer security-required, and verify the production CSS/JS target output.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Location</dt><dd><code>package.json:94</code></dd></div>
-                <div class="fact"><dt>Fresh evidence</dt><dd>Warning repeated in independent lint/shape commands</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Documentation and onboarding</h3><span>Dimension 9 · 2 findings</span></div>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">DOC-01 · README describes version 7 features removed from version 11</span><span class="finding-meta">Confidence: High · Product documentation</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The package is 11.1.0, but the README labels 7.8.1 current and advertises batch operations, Quick Settings, and smart-view pinning. <code>CLAUDE.md</code> explicitly says pinning was removed in v9, and the current shell does not expose these advertised workflows.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Rebuild the feature inventory from the current UI, update the version/release summary, remove retired workflow claims, and add a small release checklist that compares README claims with the shipped shell.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>README.md:6-7,41,71-72,112,379-380</code><br><code>package.json:3</code><br><code>CLAUDE.md:130</code></dd></div>
-                <div class="fact"><dt>User impact</dt><dd>Incorrect onboarding and product expectations</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">DOC-02 · Security and trust-boundary guidance has drifted</span><span class="finding-meta">Confidence: High · Operational documentation</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p><code>SECURITY.md</code> instructs <code>bun pm audit</code> rather than the working <code>bun audit</code>, claims Dependabot/Renovate automation without a repository config, and records the last audit as 08 March 2026. The trust-boundary map lists only migration <code>1781000000</code>, omitting the cleanup/vacuum migration <code>1781100000</code>. The coding standard asks contributors to read <code>CONTRIBUTING.md</code>, but that file is absent.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Update the audit command and current audit date; distinguish enabled automation from recommended process; add the immutable cleanup migration and system test to the trust map; either add <code>CONTRIBUTING.md</code> or remove it from the required reading contract.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>SECURITY.md:36-37,304-308,352</code><br><code>docs/security-trust-boundaries.md:14</code><br><code>docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js:134-144</code><br><code>coding-standards.md:29</code></dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-
-        <div class="dimension">
-          <div class="dimension-head"><h3>Error handling and observability</h3><span>Dimension 8 · 1 finding</span></div>
-
-          <details class="card finding" data-severity="low">
-            <summary><span class="pill low">Low</span><span class="finding-title"><span class="finding-heading">OBS-01 · Smooth-scroll advisory repeatedly pollutes E2E runtime output</span><span class="finding-meta">Confidence: High · Diagnostic signal</span></span></summary>
-            <div class="finding-body">
-              <div>
-                <p>The app globally enables smooth scrolling, but the root HTML element does not declare <code>data-scroll-behavior="smooth"</code>. Next.js repeatedly emitted its smooth-scroll navigation advisory during the E2E run. It did not fail the runtime-error fixture because it arrived through framework/dev-server diagnostics rather than an unapproved browser error.</p>
-                <div class="recommendation"><strong>Recommendation.</strong> Add the framework-declared data attribute to the root HTML element if smooth scrolling is intentional, or remove the global behavior. Keep framework warnings visible so the E2E log returns to a quiet baseline.</div>
-              </div>
-              <dl class="facts">
-                <div class="fact"><dt>Locations</dt><dd><code>app/css/inkwell-components.css:29</code><br><code>app/layout.tsx:137</code></dd></div>
-                <div class="fact"><dt>Runtime effect</dt><dd>Noise only; no functional failure demonstrated</dd></div>
-                <div class="fact"><dt>Effort</dt><dd>Small · under 1 day</dd></div>
-              </dl>
-            </div>
-          </details>
-        </div>
-      </div>
-    </section>
-
-    <section id="roadmap">
-      <div class="wrap">
-        <div class="section-head">
-          <div><span class="eyebrow">06 · Remediation roadmap</span><h2>Stabilize, deepen, then harden</h2></div>
-          <p>Sequenced to restore trust in the signal first, then close the highest-fidelity test gap, then reduce longer-horizon supply-chain and structural debt.</p>
-        </div>
-        <div class="roadmap">
+        <div class="grid grid-2">
           <article class="card">
-            <span class="phase">0–30 days · Signal</span>
-            <h3>Make green mean green</h3>
-            <ol>
-              <li>Diagnose and remove the Chromium parallel navigation race.</li>
-              <li>Make root coverage blocking in CI; retain MCP coverage.</li>
-              <li>Refresh browser-compatibility data.</li>
-              <li>Correct README, security, trust-boundary, and contribution guidance.</li>
-              <li>Remove the smooth-scroll diagnostic and the three unjustified <code>any</code> uses.</li>
-            </ol>
+            <span class="label">Controls in place</span>
+            <ul>
+              <li>Current-tree secret scan is clean.</li>
+              <li>Full-history Gitleaks is a blocking CI gate.</li>
+              <li>The committed baseline stores fingerprints only, never matched secret content.</li>
+              <li><code>SECURITY.md</code> names the retained object and forbids broadening the exception.</li>
+              <li>The user has verified production is PocketBase 0.39.10; version evidence is not treated as revocation evidence.</li>
+            </ul>
           </article>
           <article class="card">
-            <span class="phase">31–60 days · Fidelity</span>
-            <h3>Test the real boundary</h3>
-            <ol>
-              <li>Add live browser/PocketBase sync system coverage with two owners.</li>
-              <li>Add path-specific coverage floors for MCP writes.</li>
-              <li>Burn down the highest-complexity and longest functions.</li>
-              <li>Add scheduled Firefox/WebKit CI.</li>
-              <li>Update direct dependencies in risk-sized batches.</li>
-            </ol>
-          </article>
-          <article class="card">
-            <span class="phase">61–90 days · Provenance</span>
-            <h3>Reduce latent exposure</h3>
-            <ol>
-              <li>Decide and document the historical-token rewrite strategy.</li>
-              <li>Pin external actions and container images to immutable revisions.</li>
-              <li>Add SBOM/license policy and reviewed exceptions.</li>
-              <li>Move toward hash/external-file CSP without <code>unsafe-inline</code>.</li>
-              <li>Break the three type cycles and measure bulk-write latency before redesign.</li>
-            </ol>
+            <span class="label">Action requiring confirmation</span>
+            <h3>Coordinated shared-history rewrite</h3>
+            <p>Erasing the object requires rewriting affected commits, force-pushing rewritten refs, invalidating or recreating open branches, and instructing every collaborator to reclone or hard-reset. The remediation contract explicitly requires separate confirmation naming that destructive action.</p>
+            <p class="note"><strong>Rescan classification:</strong> one controlled Medium manual gate; no active Low findings.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section id="methodology">
+    <section id="method">
       <div class="wrap">
         <div class="section-head">
-          <div><span class="eyebrow">07 · Methodology and limitations</span><h2>Evidence boundaries</h2></div>
-          <p>This was a read-only engineering audit of the current working tree. The only intentional repository write is this canonical report.</p>
+          <div><span class="eyebrow">06 · Method and limitations</span><h2>Evidence boundaries</h2></div>
+          <p>Prior scan memory was orientation only. Every closure claim above was rechecked against current files and fresh commands.</p>
         </div>
         <div class="grid grid-2">
           <article class="card">
             <h3>Method</h3>
             <ul>
-              <li>Read the supplied audit worklist, current dirty <code>coding-standards.md</code>, project guidance, security boundary map, security policy, and subsystem rules.</li>
-              <li>Fetched the current <a href="https://raw.githubusercontent.com/vscarpenter/inkwell/main/agent-instructions.md">Inkwell agent instructions</a> successfully and applied the system directly; no local fallback was used.</li>
-              <li>Ran the exact root coverage and three-browser Playwright collection commands after installing Chromium, Firefox, and WebKit.</li>
-              <li>Ran MCP coverage, PocketBase system tests, lint, typecheck, shape ratchet, Bun audit, dependency freshness, license inventory, and full-history Gitleaks.</li>
-              <li>Inspected production source, tests, configuration, nine workflows, deployment scripts, Docker/Caddy/CloudFront configuration, PocketBase hooks/migrations, and documentation.</li>
-              <li>Excluded generated output, vendor directories, lockfiles, and build artifacts from static findings.</li>
+              <li>Inspected current production, tests, workflows, deployment headers, Docker images, PocketBase hooks/migrations, and documentation.</li>
+              <li>Ran root and MCP coverage, typecheck, zero-warning lint, code-shape governance, builds, CSP boot, dependency/license/SBOM checks, shell/YAML parsing, and full-history secret scanning.</li>
+              <li>Ran disposable PocketBase system tests and the complete Playwright collection across all supported engines.</li>
+              <li>Preserved the three existing stashes and did not contact or mutate production.</li>
             </ul>
           </article>
           <article class="card">
             <h3>Limitations</h3>
             <ul>
-              <li>One E2E run is one data point. No historical CI artifact was available, so this report does not claim duration or flake trends.</li>
-              <li>The focused 9/9 Chromium repeat localizes likely flakiness but does not prove the root cause.</li>
-              <li>The live PocketBase test used disposable local instances at 0.39.10 and 0.26.6; the production endpoint was not probed by this audit. Its 0.39.10 version is user-verified.</li>
-              <li>OAuth providers, production CloudFront/Caddy headers, Sentry ingestion, deployment credentials, and remote data were not exercised.</li>
-              <li>No production build was run because the audit’s anti-goal permits only the report write and the build updates tracked generated metadata. Build fail-closed behavior was source- and unit-test-verified.</li>
-              <li>License observations are an engineering inventory, not legal advice.</li>
-              <li>Pre-existing working-tree changes in <code>coding-standards.md</code> and <code>public/sw.js</code> were preserved and treated as current audit input.</li>
+              <li>The local system test used disposable PocketBase instances. Production OAuth providers, data, headers, and Sentry ingestion were not exercised.</li>
+              <li>The production PocketBase 0.39.10 version is user-verified, not independently probed in this pass.</li>
+              <li>One WebKit setup navigation required retry after 249 prior cases; the exact case then passed 3/3.</li>
+              <li>License policy is engineering inventory and allow/deny automation, not legal advice.</li>
+              <li>No deploy, push, merge, force-push, or remote configuration mutation was performed.</li>
             </ul>
           </article>
         </div>
-
-        <div class="table-shell" style="margin-top:1rem">
-          <table>
-            <thead><tr><th>Fresh command</th><th>Result</th></tr></thead>
-            <tbody>
-              <tr><td><code>bun run test -- --coverage</code></td><td class="status-ok">2,561 passed · 1 skipped · thresholds passed</td></tr>
-              <tr><td><code>npx playwright install chromium firefox webkit</code></td><td class="status-ok">All three installed/launched</td></tr>
-              <tr><td>Canonical Playwright JSON + HTML command</td><td class="status-fail">267 passed · 3 failed · 0 skipped · 136.75s</td></tr>
-              <tr><td><code>sync-states.spec.ts --project=chromium --repeat-each=3</code></td><td class="status-ok">9 passed · 18.7s</td></tr>
-              <tr><td><code>bun run --cwd packages/mcp-server test:coverage</code></td><td class="status-ok">225 passed · 2 skipped · thresholds passed</td></tr>
-              <tr><td><code>bun run test:system:pocketbase</code></td><td class="status-ok">2 passed · PocketBase 0.39.10 + upgrade from 0.26.6</td></tr>
-              <tr><td><code>bun lint</code> / <code>bun typecheck</code></td><td class="status-ok">Passed with zero lint warnings; compatibility-data advisory noted</td></tr>
-              <tr><td><code>bun quality:shape</code></td><td class="status-ok">Ratchet passed; 42 complexity, 4 depth, 0 file, 121 function violations</td></tr>
-              <tr><td><code>bun audit --audit-level=high</code></td><td class="status-ok">No vulnerabilities found</td></tr>
-              <tr><td>Full-history Gitleaks</td><td class="status-ok">672 commits · no unbaselined leak</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <details style="margin-top:1rem" open>
+          <summary>Final disposition</summary>
+          <div><p>The repository is ready for ordinary review with all code/config Medium and Low findings closed. The only remaining decision is whether to authorize the disruptive shared-history rewrite for SEC-04.</p></div>
+        </details>
       </div>
     </section>
   </main>
 
-  <footer class="wrap foot">
-    <p>GSD Task Manager codebase analysis · Canonical report at <code>docs/codebase-analysis-report.html</code> · Evidence collected 06 August 2026 in America/Chicago.</p>
+  <footer class="wrap">
+    GSD Task Manager remediation rescan · Canonical report <code>docs/codebase-analysis-report.html</code> · Evidence collected 10 August 2026.
   </footer>
-
-  <script>
-    const filterButtons = [...document.querySelectorAll("[data-filter]")];
-    const findings = [...document.querySelectorAll(".finding")];
-    for (const button of filterButtons) {
-      button.addEventListener("click", () => {
-        const filter = button.dataset.filter;
-        for (const candidate of filterButtons) {
-          candidate.setAttribute("aria-pressed", String(candidate === button));
-        }
-        for (const finding of findings) {
-          finding.hidden = filter !== "all" && finding.dataset.severity !== filter;
-        }
-      });
-    }
-
-    const expandButton = document.querySelector("#expand-all");
-    expandButton?.addEventListener("click", () => {
-      const shouldOpen = findings.some((finding) => !finding.open && !finding.hidden);
-      for (const finding of findings) {
-        if (!finding.hidden) finding.open = shouldOpen;
-      }
-      expandButton.textContent = shouldOpen ? "Collapse findings" : "Expand findings";
-    });
-  </script>
 </body>
 </html>
