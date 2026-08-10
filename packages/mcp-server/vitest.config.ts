@@ -19,6 +19,12 @@ export default defineConfig({
         branches: 75,
         functions: 80,
         lines: 80,
+        'src/write-ops/**': {
+          statements: 98,
+          branches: 95,
+          functions: 100,
+          lines: 98,
+        },
       },
     },
   },

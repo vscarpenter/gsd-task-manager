@@ -33,9 +33,11 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Try-catch blocks around JSON parsing
 
 3. **Dependency Management**
-   - Regular `bun pm audit` checks for vulnerabilities
-   - Automated security updates via Dependabot/Renovate
-   - All packages kept at stable, non-canary versions
+   - Blocking `bun audit --audit-level=high` checks for known vulnerabilities
+   - Blocking `bun run license:check` policy plus a CycloneDX SBOM artifact in CI
+   - Pinned GitHub Action revisions, runner images, and container base digests
+   - Dependency updates are reviewed manually; this repository does not claim
+     Dependabot or Renovate automation without a checked-in configuration
 
 4. **Privacy-Safe Web Capture**
    - Bookmarklets pass task content in a client-only URL fragment:
@@ -171,8 +173,11 @@ form-action 'self' https://accounts.google.com https://github.com;
 **Production (Current):**
 ```
 default-src 'self';
-script-src 'self' 'unsafe-inline';
-style-src 'self' 'unsafe-inline';
+script-src 'self';
+script-src-attr 'none';
+style-src 'self';
+style-src-elem 'self';
+style-src-attr 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self' data:;
 connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com https://*.ingest.us.sentry.io;
@@ -181,7 +186,14 @@ base-uri 'none';
 form-action 'self' https://accounts.google.com https://github.com;
 ```
 
-> **Note:** The current static Next.js export emits inline hydration/RSC scripts, so production still allows `unsafe-inline` for scripts and styles. Production must not allow `unsafe-eval`, and `connect-src` should stay limited to the app origin, PocketBase, OAuth provider domains, and the Sentry US-region ingest endpoint. The next hardening step is a deploy-time CSP hash pipeline that removes script `unsafe-inline`.
+> **Note:** The build externalizes Next.js hydration/RSC script blocks and
+> stable style blocks into hashed same-origin assets before deployment.
+> `style-src-attr 'unsafe-inline'` remains narrowly scoped to React's dynamic
+> style attributes (virtualized positioning, chart dimensions, and drag
+> transforms). The remaining runtime style elements from pinned Sonner and
+> next-themes releases are allowlisted by exact hashes and guarded by the
+> production browser smoke test; executable inline script and script
+> attributes are denied.
 
 #### 2. X-Frame-Options
 ```
@@ -297,11 +309,13 @@ Adapt the header values from Option 1 above into your IaC tool's response header
 
 1. **Regular Audits**
    ```bash
-   bun pm audit
+   bun audit --audit-level=high
+   bun run license:check
    ```
 
 2. **Keep Dependencies Updated**
-   - Review and merge Dependabot PRs promptly
+   - Review `bun outdated` regularly; retain the documented TypeScript 6
+     compiler-API compatibility package until downstream tooling supports 7
    - Test thoroughly after major version updates
    - Avoid canary/RC versions in production
 
@@ -327,7 +341,9 @@ Adapt the header values from Option 1 above into your IaC tool's response header
    - Clear browser data carefully (will delete all tasks!)
 
 3. **Data Privacy**
-   - Remember: All data is local, nothing is backed up automatically
+   - Local-only mode is not backed up automatically
+   - When optional sync is enabled, task data is transmitted to the configured
+     PocketBase server
    - Export before clearing browser data
    - Import only from trusted export files
 
@@ -345,25 +361,29 @@ If you discover a security vulnerability, please:
 
 ## Security Audit Results
 
-### Last Audit: 2026-03-08
+### Last Audit: 2026-08-10
 
-- ✅ All critical vulnerabilities resolved
-- ✅ Dependency vulnerabilities patched
-- ✅ PocketBase migration completed — simplified security model
-- ✅ OAuth authentication via PocketBase built-in providers
-- ✅ MCP server updated to PocketBase SDK
-- ✅ Row-level security enforced via PocketBase API rules
-
-### Previously Resolved Issues
-
-1. **nanoid vulnerability** - Upgraded from 4.0.2 to 5.1.6
-2. **Next.js SSRF vulnerability** - Upgraded from canary to stable 16.1.6
-3. **React RC versions** - Upgraded to stable 19.2.4
-4. **Missing error handling** - Added try-catch to importFromJson()
+- ✅ `bun audit --audit-level=high` reports no known vulnerabilities
+- ✅ Dependency licenses are fail-closed and a CycloneDX SBOM is produced in CI
+- ✅ PocketBase 0.39.10 upgrade and encryption cleanup paths are system-tested
+- ✅ OAuth authentication uses PocketBase built-in providers
+- ✅ Owner immutability and row-level task scoping are regression-tested
+- ✅ Full-history Gitleaks runs as a blocking, baseline-aware gate
 
 ### Known Trade-offs (Documented)
 
 1. **Auth Token in localStorage** — PocketBase SDK stores auth tokens in localStorage via its built-in `authStore`. Mitigated by React XSS protection, CSP headers, and HTTPS-only communication. Tasks are stored on user's own PocketBase server.
+
+2. **Expired token retained in shared Git history** — Commit `e9230cb` contains
+   an expired PocketBase JWT and associated identity claims. The current tree
+   does not contain the credential, and blocking full-history Gitleaks scans
+   allow only the committed content-free fingerprints in `.gitleaksignore`.
+   Removing the historical object requires a coordinated history rewrite and
+   force-push, which can invalidate collaborators' clones and open branches;
+   that destructive operation is a separately approved manual gate. Until
+   then, the exception must not be broadened, the old files must not be
+   restored, and any evidence that the credential is usable must be handled as
+   an incident rather than as an allowlist update.
 
 ## References
 

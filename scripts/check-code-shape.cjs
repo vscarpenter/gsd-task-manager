@@ -6,6 +6,7 @@ const { ESLint } = require("eslint");
 
 const REPO_ROOT = resolve(__dirname, "..");
 const BASELINE_PATH = resolve(__dirname, "code-shape-baseline.json");
+const DEBT_PATH = resolve(__dirname, "code-shape-debt.json");
 const RULES = ["complexity", "max-depth", "max-lines", "max-lines-per-function"];
 const PRODUCTION_GLOBS = [
   "app/**/*.{ts,tsx}",
@@ -99,6 +100,35 @@ function summarize(shape) {
   }).join("\n");
 }
 
+function violationCount(shape, rule) {
+  return Object.values(shape[rule] ?? {}).reduce((sum, entry) => sum + entry.count, 0);
+}
+
+function validateDebtLedger(ledger, current, now = new Date()) {
+  const failures = [];
+  if (typeof ledger.owner !== "string" || ledger.owner.trim().length === 0) {
+    failures.push("code-shape debt owner is missing");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ledger.deadline ?? "")) {
+    failures.push("code-shape debt deadline must use YYYY-MM-DD");
+  } else {
+    const deadline = new Date(`${ledger.deadline}T23:59:59.999Z`);
+    if (now > deadline) failures.push(`code-shape debt deadline expired on ${ledger.deadline}`);
+  }
+  for (const rule of RULES) {
+    const allowed = ledger.maximumRemainingViolations?.[rule];
+    if (!Number.isInteger(allowed) || allowed < 0) {
+      failures.push(`code-shape debt ceiling is missing for ${rule}`);
+      continue;
+    }
+    const measured = violationCount(current, rule);
+    if (measured > allowed) {
+      failures.push(`${rule}: total debt increased ${allowed} -> ${measured}`);
+    }
+  }
+  return failures;
+}
+
 async function main() {
   const current = await analyzeCodeShape();
   if (process.argv.includes("--print-baseline")) {
@@ -107,7 +137,11 @@ async function main() {
   }
 
   const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
-  const failures = compareCodeShape(baseline, current);
+  const ledger = JSON.parse(readFileSync(DEBT_PATH, "utf8"));
+  const failures = [
+    ...compareCodeShape(baseline, current),
+    ...validateDebtLedger(ledger, current),
+  ];
   process.stdout.write(`${summarize(current)}\n`);
   if (failures.length > 0) {
     process.stderr.write(`\nCode-shape ratchet failed:\n- ${failures.join("\n- ")}\n`);
@@ -115,7 +149,7 @@ async function main() {
   }
 }
 
-module.exports = { analyzeCodeShape, compareCodeShape, measuredValue };
+module.exports = { analyzeCodeShape, compareCodeShape, measuredValue, validateDebtLedger };
 
 if (require.main === module) {
   main().catch((error) => {

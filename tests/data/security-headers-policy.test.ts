@@ -18,6 +18,8 @@ describe("CloudFront response headers policy", () => {
 		);
 		expect(csp).not.toContain("connect-src 'self' https: wss:");
 		expect(csp).not.toContain("'unsafe-eval'");
+		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+		expect(csp).toContain("style-src-elem 'self'");
 		expect(csp).toContain("frame-ancestors 'none'");
 	});
 });

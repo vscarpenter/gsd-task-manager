@@ -10,6 +10,21 @@ import type { TaskRecord, ArchiveSettings } from "@/lib/types";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { ARCHIVE_CONFIG } from "@/lib/constants";
 
+function chooseArchiveSnapshot(
+  liveTask: TaskRecord,
+  existing: TaskRecord | undefined,
+  archivedAt: string
+): TaskRecord {
+  if (existing) {
+    const liveTime = new Date(liveTask.updatedAt).getTime();
+    const existingTime = new Date(existing.updatedAt).getTime();
+    if (Number.isNaN(liveTime) || Number.isNaN(existingTime) || existingTime >= liveTime) {
+      return existing;
+    }
+  }
+  return { ...liveTask, archivedAt };
+}
+
 /**
  * Get archive settings from database
  */
@@ -23,7 +38,9 @@ export async function getArchiveSettings(): Promise<ArchiveSettings> {
       enabled: false,
       archiveAfterDays: ARCHIVE_CONFIG.DEFAULT_ARCHIVE_AFTER_DAYS
     };
-    await db.archiveSettings.add(defaults);
+    // React development effects can request defaults concurrently on a fresh
+    // database. put() makes both initializers converge on the same singleton.
+    await db.archiveSettings.put(defaults);
     return defaults;
   }
 
@@ -82,17 +99,18 @@ export async function archiveOldTasks(
       }
 
       // Move tasks to archive table
-      const archivedTasks: TaskRecord[] = eligible.map((task) => ({
-        ...task,
-        archivedAt: now
-      }));
+      const existing = await db.archivedTasks.bulkGet(eligible.map((task) => task.id));
+      const archivedTasks = eligible.map((task, index) =>
+        chooseArchiveSnapshot(task, existing[index], now)
+      );
 
       // bulkPut, not bulkAdd: a task archived earlier can reappear in `tasks`
       // (a sync pull re-adding it, an import, a restore that was re-completed),
       // and bulkAdd throws ConstraintError on the existing key. Because the
       // whole batch runs in one transaction, that single collision aborted
       // every archive run on the device — permanently. Re-archiving is
-      // idempotent, so overwriting the archived copy is the correct outcome.
+      // idempotent. chooseArchiveSnapshot prevents a stale resurrected live
+      // copy from replacing a newer tombstone snapshot.
       await db.archivedTasks.bulkPut(archivedTasks);
 
       // Remove from main tasks table
@@ -193,7 +211,10 @@ export async function archiveTaskNow(taskId: string): Promise<void> {
         throw new Error("Task not found");
       }
 
-      await db.archivedTasks.put({ ...task, archivedAt: new Date().toISOString() });
+      const existing = await db.archivedTasks.get(taskId);
+      await db.archivedTasks.put(
+        chooseArchiveSnapshot(task, existing, new Date().toISOString())
+      );
       await db.tasks.delete(taskId);
 
       if (syncConfig?.enabled) {

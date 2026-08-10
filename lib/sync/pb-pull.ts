@@ -12,37 +12,58 @@ import { createLogger } from '@/lib/logger';
 import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { isPendingSyncQueueItem } from './queue';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
+import type { TaskRecord } from '@/lib/types';
 
 const logger = createLogger('SYNC_ENGINE');
 
 /** Overlap window subtracted from the persisted cursor to avoid boundary misses. */
 const CURSOR_OVERLAP_MS = 30 * 1000;
 
-/** PocketBase date fields use a space separator: "2026-06-10 18:55:13.123Z". */
-function toPocketBaseDate(iso: string): string {
-  return iso.replace('T', ' ');
+interface PreparedRemoteRecord {
+  record: RecordModel;
+  remoteTask: TaskRecord;
 }
 
-/** Normalize a PocketBase date back to ISO form so `new Date()` parses it everywhere. */
-function fromPocketBaseDate(pbDate: string): string {
-  return pbDate.replace(' ', 'T');
-}
-
-/**
- * Find the max server-stamped `updated` across all fetched records.
- * Every fetched record advances the watermark — including LWW no-ops, which
- * never need re-fetching. No clock-skew clamp is needed: a single server
- * clock cannot skew against itself.
- */
-function findMaxServerUpdated(records: RecordModel[]): string | null {
-  let max: string | null = null;
+function prepareRemoteRecords(records: RecordModel[]): PreparedRemoteRecord[] {
+  const prepared: PreparedRemoteRecord[] = [];
   for (const record of records) {
-    const raw = record['updated'] as string | undefined;
-    if (!raw) continue;
-    const iso = fromPocketBaseDate(raw);
-    if (!max || iso > max) max = iso;
+    const remoteTask = pocketBaseToTaskRecord(record, null);
+    if (remoteTask) {
+      prepared.push({ record, remoteTask });
+    }
   }
-  return max;
+  return prepared;
+}
+
+function findMaxAppliedClientUpdated(records: PreparedRemoteRecord[]): string | null {
+  let maxTime = Number.NEGATIVE_INFINITY;
+  const ceiling = Date.now() + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS;
+  for (const { remoteTask } of records) {
+    const parsed = new Date(remoteTask.updatedAt).getTime();
+    if (!Number.isNaN(parsed)) maxTime = Math.max(maxTime, Math.min(parsed, ceiling));
+  }
+  return Number.isFinite(maxTime) ? new Date(maxTime).toISOString() : null;
+}
+
+async function applyPreparedRecord(
+  db: ReturnType<typeof getDb>,
+  prepared: PreparedRemoteRecord
+): Promise<number> {
+  const { record, remoteTask } = prepared;
+  const archived = await db.archivedTasks.get(remoteTask.id);
+  if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) return 0;
+
+  const localTask = await db.tasks.get(remoteTask.id);
+  const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
+  if (!merged) return 0;
+  const remoteWins = !localTask ||
+    new Date(merged.updatedAt).getTime() > new Date(localTask.updatedAt).getTime();
+  if (archived) await db.archivedTasks.delete(remoteTask.id);
+  if (!remoteWins) return 0;
+  if (localTask) await db.tasks.put(merged);
+  else await db.tasks.add(merged);
+  return 1;
 }
 
 /**
@@ -51,111 +72,33 @@ function findMaxServerUpdated(records: RecordModel[]): string | null {
 async function applyRemoteRecords(records: RecordModel[]): Promise<{
   pulledCount: number;
   skippedCount: number;
+  appliedRecords: PreparedRemoteRecord[];
 }> {
   const db = getDb();
-  // First pass: validate records without local state (just to filter invalid ones).
-  // The mapped `updatedAt` is retained so the archive guard below can compare the
-  // remote edit time without mapping every record a second time.
-  const validRecords: RecordModel[] = [];
-  const remoteUpdatedAt = new Map<string, string>();
-  for (const record of records) {
-    const test = pocketBaseToTaskRecord(record, null);
-    if (test) {
-      validRecords.push(record);
-      remoteUpdatedAt.set(test.id, test.updatedAt);
+  const acceptedRecords = prepareRemoteRecords(records);
+  let pulledCount = 0;
+  const appliedRecords: PreparedRemoteRecord[] = [];
+  await db.transaction('rw', [db.tasks, db.archivedTasks], async () => {
+    for (const prepared of acceptedRecords) {
+      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction preserves tombstone/live invariants
+      const applied = await applyPreparedRecord(db, prepared);
+      pulledCount += applied;
+      if (applied > 0) appliedRecords.push(prepared);
     }
-  }
-
-  const skippedCount = records.length - validRecords.length;
-
-  // Don't resurrect a locally archived task. Archiving removes the task from
-  // `tasks` but leaves the remote copy alive, so without this guard every pull
-  // re-adds it via the `!localTask` branch below — silently undoing the archive
-  // and colliding with the archived copy on the next archive run.
-  //
-  // The archive is a conditional tombstone, not an absolute one: a remote edit
-  // made AFTER this device archived the task beats it, matching the engine's
-  // edit-beats-delete LWW rule. pb-push abandons such a delete as stale and
-  // relies on this pull to bring the newer version back, so suppressing it here
-  // would strand that edit forever once the cursor advances past it.
-  const archivedById = new Map(
-    (await db.archivedTasks
-      .where(':id')
-      .anyOf([...remoteUpdatedAt.keys()])
-      .toArray()
-    ).map(task => [task.id, task])
-  );
-
-  const unarchivedIds: string[] = [];
-  const applicableRecords = validRecords.filter((record) => {
-    const taskId = record['task_id'] as string;
-    const archived = archivedById.get(taskId);
-    if (!archived) return true;
-
-    if (isRemoteNewerThanArchive(remoteUpdatedAt.get(taskId), archived.archivedAt)) {
-      unarchivedIds.push(taskId);
-      return true;
-    }
-    return false;
   });
-
-  // A remote edit that beat the archive un-archives the task. Leaving the
-  // archived row behind would re-archive it on the next run and lose the edit
-  // again, and would recreate the duplicate this whole guard exists to prevent.
-  if (unarchivedIds.length > 0) {
-    await db.archivedTasks.bulkDelete(unarchivedIds);
-    logger.debug('Un-archived tasks edited remotely after archiving', { count: unarchivedIds.length });
-  }
-
-  const suppressedCount = validRecords.length - applicableRecords.length;
-  if (suppressedCount > 0) {
-    logger.debug('Skipped archived tasks during pull', { count: suppressedCount });
-  }
-
-  // Pre-fetch matching local tasks in bulk to preserve device-local fields
-  const taskIds = applicableRecords.map(r => r['task_id'] as string);
-  const localTasksRaw = await db.tasks.bulkGet(taskIds);
-  const localTaskMap = new Map(
-    localTasksRaw
-      .filter((t): t is NonNullable<typeof t> => t !== undefined)
-      .map(t => [t.id, t])
-  );
-
-  // Each record targets a distinct task id, so the local writes are
-  // independent and run concurrently.
-  const pullOutcomes = await Promise.all(
-    applicableRecords.map(async (record) => {
-      const taskId = record['task_id'] as string;
-      const localTask = localTaskMap.get(taskId);
-      const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
-      if (!remoteTask) return 0;
-
-      if (!localTask) {
-        await db.tasks.add(remoteTask);
-        return 1;
-      }
-
-      const remoteTime = new Date(remoteTask.updatedAt).getTime();
-      const localTime = new Date(localTask.updatedAt).getTime();
-      if (remoteTime > localTime) {
-        await db.tasks.put(remoteTask);
-        return 1;
-      }
-      return 0;
-    })
-  );
-
-  const pulledCount = pullOutcomes.reduce((sum: number, n) => sum + n, 0);
-
-  return { pulledCount, skippedCount };
+  return {
+    pulledCount,
+    skippedCount: records.length - acceptedRecords.length,
+    appliedRecords,
+  };
 }
 
 /**
  * Pull remote changes from PocketBase into local IndexedDB.
- * Fetches tasks whose server-stamped `updated` is at or past the cursor.
+ * Fetches tasks whose client-stamped `client_updated_at` is at or past the cursor.
  * LWW: remote wins if remote client_updated_at > local updatedAt.
  */
-export async function pullRemoteChanges(lastServerUpdatedAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
+export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const pb = getPocketBase();
   const ownerId = getCurrentUserId();
 
@@ -167,30 +110,29 @@ export async function pullRemoteChanges(lastServerUpdatedAt: string | null): Pro
   assertSafeRecordId(ownerId, 'ownerId');
 
   let filter = `owner = "${escapeFilterValue(ownerId)}"`;
-  if (lastServerUpdatedAt) {
-    // `updated` is PocketBase's server-stamped autodate, so a device with a
-    // skewed clock can never write a record behind this cursor. `>=` (paired
-    // with the 30s overlap subtracted when persisting the cursor) re-catches
-    // boundary records; re-fetches are no-ops via LWW.
-    filter += ` && updated >= "${escapeFilterValue(toPocketBaseDate(lastServerUpdatedAt))}"`;
+  if (lastClientUpdatedAt) {
+    // PocketBase 0.23+ doesn't allow collection queries to sort/filter on the
+    // system `updated` field. Keep the cursor on the same custom field as LWW.
+    // `>=`, paired with the overlap below, re-catches boundary records.
+    filter += ` && client_updated_at >= "${escapeFilterValue(lastClientUpdatedAt)}"`;
   }
 
   const records = await pb.collection('tasks').getFullList({
     filter,
-    sort: 'updated',
+    sort: 'client_updated_at',
   });
 
-  const { pulledCount, skippedCount } = await applyRemoteRecords(records);
+  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records);
   if (skippedCount > 0) {
     logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }
 
-  // Advance the cursor from everything fetched — the server watermark covers
-  // LWW no-ops too — minus a 30s overlap so the next pull's `>=` filter
-  // catches anything written near the boundary.
-  const maxFetched = findMaxServerUpdated(records);
-  const maxObservedTimestamp = maxFetched
-    ? new Date(new Date(maxFetched).getTime() - CURSOR_OVERLAP_MS).toISOString()
+  // Only records actually committed locally may advance the watermark.
+  // Invalid, archive-suppressed, and LWW-skipped records remain eligible for
+  // a later overlapping pull instead of poisoning the cursor.
+  const maxApplied = findMaxAppliedClientUpdated(appliedRecords);
+  const maxObservedTimestamp = maxApplied
+    ? new Date(new Date(maxApplied).getTime() - CURSOR_OVERLAP_MS).toISOString()
     : null;
 
   await reconcileDeletedTasks(ownerId);
@@ -208,8 +150,8 @@ export async function pullRemoteChanges(lastServerUpdatedAt: string | null): Pro
  * writes, so a task just pushed (and dequeued) in this same fullSync is present.
  * On a replicated/proxied backend, read-after-write lag could briefly hide such
  * a task and delete it locally. Recovery relies on the recently-pushed record's
- * server `updated` timestamp falling inside the next pull's CURSOR_OVERLAP_MS
- * window, so it is re-fetched and re-added (it still exists remotely). The
+ * `client_updated_at` falling inside the next pull's CURSOR_OVERLAP_MS window,
+ * so it is re-fetched and re-added (it still exists remotely). The
  * pending-op guard below covers the common not-yet-pushed case directly.
  */
 async function reconcileDeletedTasks(ownerId: string): Promise<void> {
@@ -220,21 +162,21 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   }
 
   const db = getDb();
-  const localTasks = await db.tasks.toArray();
   const remoteTaskIds = new Set(remoteIndex.keys());
-
-  const allPendingOps = await db.syncQueue.toArray();
-  const pendingTaskIds = new Set(
-    allPendingOps.filter(isPendingSyncQueueItem).map(op => op.taskId)
-  );
-
-  const toDelete = localTasks.filter(
-    local => !remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)
-  );
-  await Promise.all(
-    toDelete.map(local => {
+  await db.transaction('rw', [db.tasks, db.syncQueue], async () => {
+    const [localTasks, allPendingOps] = await Promise.all([
+      db.tasks.toArray(),
+      db.syncQueue.toArray(),
+    ]);
+    const pendingTaskIds = new Set(
+      allPendingOps.filter(isPendingSyncQueueItem).map(op => op.taskId)
+    );
+    const toDelete = localTasks.filter(
+      local => !remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)
+    );
+    await db.tasks.bulkDelete(toDelete.map((local) => local.id));
+    for (const local of toDelete) {
       logger.debug('Deleted locally: task removed from server', { taskId: local.id });
-      return db.tasks.delete(local.id);
-    })
-  );
+    }
+  });
 }

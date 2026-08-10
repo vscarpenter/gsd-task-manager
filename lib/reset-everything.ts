@@ -90,6 +90,8 @@ function buildPreservedSyncMetadata(deviceId: string) {
 		email: null,
 		provider: null,
 		lastSyncAt: null,
+		lastClientUpdatedAt: null,
+		pullCursorVersion: 2 as const,
 		lastServerUpdatedAt: null,
 		lastSuccessfulSyncAt: null,
 		consecutiveFailures: 0,
@@ -236,6 +238,8 @@ export function reloadAfterReset(): void {
 	logger.info("Reloading application after reset");
 
 	if (typeof window !== "undefined") {
+		// Reset must recreate the document so no in-memory store survives.
+		// eslint-disable-next-line @next/next/no-location-assign-relative-destination
 		window.location.href = "/";
 	}
 }

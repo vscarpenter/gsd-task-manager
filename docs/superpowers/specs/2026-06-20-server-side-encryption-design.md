@@ -27,7 +27,7 @@ Per the privacy review, task content (`title`, `description`, `tags`, `subtasks`
 
 Why this over whole-DB SQLCipher or volume encryption:
 - **No custom build.** JS hooks load into the official prebuilt binary; SQLCipher would force a self-maintained Go build, abandoning the pinned official release.
-- **Breaks nothing.** Verified that no server-side `filter`/`sort`/`fields` query references an encrypted field — they use only `owner`, `updated`, `client_updated_at`, `last_seen_at`. Even MCP `search_tasks` fetches full records and filters client-side. So losing server-side query on encrypted fields costs nothing here.
+- **Breaks nothing.** Verified that no server-side `filter`/`sort`/`fields` query references an encrypted field — they use only `owner`, `client_updated_at`, and `last_seen_at`. Even MCP `search_tasks` fetches full records and filters client-side. So losing server-side query on encrypted fields costs nothing here.
 - **Transparent to all consumers.** Decryption happens server-side before serialization, so the web client, MCP server, and sync receive plaintext exactly as today — zero client changes.
 
 ## Design

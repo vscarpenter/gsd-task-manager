@@ -250,7 +250,7 @@ describe('InstallPwaPrompt', () => {
     expect(screen.queryByText('Install GSD Task Manager')).not.toBeInTheDocument();
   });
 
-  it('should have role="dialog" with proper aria attributes', async () => {
+  it('exposes a labelled non-modal region and announces its arrival', async () => {
     render(<InstallPwaPrompt />);
 
     act(() => {
@@ -263,12 +263,37 @@ describe('InstallPwaPrompt', () => {
     });
 
     await waitFor(() => {
-      const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveAttribute('aria-labelledby', 'install-pwa-title');
-      expect(dialog).toHaveAttribute(
+      const region = screen.getByRole('region', { name: 'Install GSD Task Manager' });
+      expect(region).toHaveAttribute('aria-labelledby', 'install-pwa-title');
+      expect(region).toHaveAttribute(
         'aria-describedby',
         'install-pwa-description'
       );
+      expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
     });
+  });
+
+  it('dismisses on Escape and restores the focus held before the prompt appeared', async () => {
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    render(<InstallPwaPrompt />);
+
+    act(() => {
+      const event = new Event('beforeinstallprompt', { cancelable: true });
+      Object.defineProperty(event, 'prompt', { value: vi.fn() });
+      Object.defineProperty(event, 'userChoice', {
+        value: Promise.resolve({ outcome: 'dismissed' }),
+      });
+      window.dispatchEvent(event);
+    });
+
+    const region = await screen.findByRole('region', { name: 'Install GSD Task Manager' });
+    screen.getByText('Not Now').focus();
+    fireEvent.keyDown(region, { key: 'Escape' });
+
+    expect(screen.queryByRole('region', { name: 'Install GSD Task Manager' })).not.toBeInTheDocument();
+    await waitFor(() => expect(opener).toHaveFocus());
+    opener.remove();
   });
 });

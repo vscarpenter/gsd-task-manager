@@ -1,4 +1,4 @@
-interface EncRecord { get(field: string): any; set(field: string, value: any): void; }
+interface EncRecord { get(field: string): unknown; set(field: string, value: unknown): void; }
 declare const core: {
   PREFIX: string;
   ENCRYPTED_TEXT_FIELDS: string[];

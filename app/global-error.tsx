@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { captureException } from "@/lib/sentry";
 
 /**
@@ -94,13 +94,10 @@ const fallbackThemeCss = `
   .global-error-secondary { color: var(--error-ink) !important; border-color: var(--error-control-border) !important; }
 `;
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+function useGlobalErrorFallback(
+  error: Error & { digest?: string },
+  fallbackRef: RefObject<HTMLDivElement | null>
+) {
   useEffect(() => {
     captureException(error, { digest: error.digest });
     try {
@@ -111,7 +108,19 @@ export default function GlobalError({
     } catch {
       // A degraded fallback must stay renderable even when storage is blocked.
     }
-  }, [error]);
+    fallbackRef.current?.focus({ preventScroll: true });
+  }, [error, fallbackRef]);
+}
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  const fallbackRef = useRef<HTMLDivElement>(null);
+  useGlobalErrorFallback(error, fallbackRef);
 
   return (
     <html lang="en">
@@ -127,6 +136,10 @@ export default function GlobalError({
         }}
       >
         <div
+          ref={fallbackRef}
+          role="alert"
+          aria-labelledby="global-error-title"
+          tabIndex={-1}
           style={{
             display: "flex",
             minHeight: "100vh",
@@ -136,7 +149,10 @@ export default function GlobalError({
             padding: "1rem",
           }}
         >
-          <h1 style={{ fontSize: "2rem", fontWeight: 700, margin: "0 0 0.75rem" }}>
+          <h1
+            id="global-error-title"
+            style={{ fontSize: "2rem", fontWeight: 700, margin: "0 0 0.75rem" }}
+          >
             Something went wrong
           </h1>
           <p
@@ -183,6 +199,8 @@ export default function GlobalError({
               type="button"
               className="global-error-secondary"
               onClick={() => {
+                // The root layout failed, so the client router may not be usable.
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                 window.location.href = "/";
               }}
               style={goHomeButtonStyle}

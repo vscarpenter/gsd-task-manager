@@ -2,13 +2,12 @@
  * Background Sync Manager
  *
  * Handles automatic background synchronization with smart triggers.
- * Also manages PocketBase realtime subscriptions alongside periodic sync.
- * Realtime SSE gives instant updates; periodic sync acts as a safety net.
+ * Realtime SSE is owned by SyncProvider; this manager is only the periodic
+ * safety net and event-triggered sync scheduler.
  */
 
 import { getSyncCoordinator } from './sync-coordinator';
 import { getSyncQueue } from './queue';
-import { subscribe as subscribeRealtime, unsubscribe as unsubscribeRealtime } from './pb-realtime';
 import type { BackgroundSyncConfig } from './types';
 import { createLogger } from '@/lib/logger';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
@@ -27,9 +26,9 @@ export class BackgroundSyncManager {
     private config: BackgroundSyncConfig | null = null;
 
     /**
-     * Start background sync and realtime subscription
+     * Start background sync scheduling.
      */
-    async start(config: BackgroundSyncConfig, deviceId?: string): Promise<void> {
+    async start(config: BackgroundSyncConfig, _deviceId?: string): Promise<void> {
         if (this.isActive) {
             logger.warn('Background sync already running, stopping previous instance');
             this.stop();
@@ -46,17 +45,6 @@ export class BackgroundSyncManager {
         if (!config.enabled) {
             logger.debug('Auto-sync disabled in config, not starting');
             return;
-        }
-
-        // Start PocketBase realtime subscription for instant updates
-        if (deviceId) {
-            try {
-                await subscribeRealtime(deviceId);
-            } catch (error) {
-                logger.warn('Failed to start realtime subscription, falling back to polling', {
-                    error: error instanceof Error ? error.message : String(error),
-                });
-            }
         }
 
         this.startPeriodicSync(config.intervalMinutes);
@@ -78,7 +66,7 @@ export class BackgroundSyncManager {
     }
 
     /**
-     * Stop all background sync activities and realtime subscription
+     * Stop all background sync scheduling activities.
      */
     stop(): void {
         if (!this.isActive) return;
@@ -87,9 +75,6 @@ export class BackgroundSyncManager {
 
         this.isActive = false;
         this.config = null;
-
-        // Stop realtime subscription
-        unsubscribeRealtime();
 
         if (this.syncInterval) {
             clearInterval(this.syncInterval);

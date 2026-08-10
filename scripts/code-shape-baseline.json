@@ -8,7 +8,6 @@
     "components/pwa-register.tsx": { "count": 1, "max": 11 },
     "components/reset-everything-dialog.tsx": { "count": 1, "max": 14 },
     "components/settings-page/settings-body.tsx": { "count": 1, "max": 15 },
-    "components/sync/sync-button.tsx": { "count": 1, "max": 11 },
     "components/task-card/index.tsx": { "count": 1, "max": 14 },
     "components/task-card/task-card-header.tsx": { "count": 1, "max": 13 },
     "components/task-card/task-card-metadata.tsx": { "count": 1, "max": 19 },
@@ -22,23 +21,20 @@
     "lib/sync/pb-push.ts": { "count": 2, "max": 14 },
     "lib/sync/pb-sync-engine.ts": { "count": 1, "max": 12 },
     "lib/sync/sync-coordinator.ts": { "count": 1, "max": 12 },
-    "lib/sync/sync-provider.tsx": { "count": 2, "max": 14 },
+    "lib/sync/sync-provider.tsx": { "count": 1, "max": 11 },
     "lib/sync/task-mapper.ts": { "count": 1, "max": 16 },
     "lib/tasks/crud/update.ts": { "count": 1, "max": 13 },
     "lib/use-app-shortcuts.ts": { "count": 1, "max": 12 },
     "lib/use-keyboard-shortcuts.ts": { "count": 1, "max": 17 },
     "packages/mcp-server/src/api/retry.ts": { "count": 1, "max": 11 },
     "packages/mcp-server/src/types.ts": { "count": 2, "max": 18 },
-    "packages/mcp-server/src/write-ops/bulk-operations.ts": { "count": 1, "max": 25 },
-    "packages/mcp-server/src/write-ops/task-operations.ts": { "count": 2, "max": 45 }
+    "packages/mcp-server/src/write-ops/task-operations.ts": { "count": 1, "max": 20 }
   },
   "max-depth": {
     "components/pwa-register.tsx": { "count": 3, "max": 5 },
     "lib/analytics/time-tracking.ts": { "count": 1, "max": 4 }
   },
-  "max-lines": {
-    "components/matrix-simplified/index.tsx": { "count": 1, "max": 402 }
-  },
+  "max-lines": {},
   "max-lines-per-function": {
     "app/(archive)/archive/page.tsx": { "count": 1, "max": 151 },
     "app/(dashboard)/dashboard/page.tsx": { "count": 2, "max": 80 },
@@ -46,7 +42,6 @@
     "app/(pwa)/install/page.tsx": { "count": 1, "max": 45 },
     "app/(sync)/sync-history/page.tsx": { "count": 2, "max": 85 },
     "app/global-error.tsx": { "count": 1, "max": 99 },
-    "app/layout.tsx": { "count": 1, "max": 46 },
     "components/about/hero-section.tsx": { "count": 1, "max": 66 },
     "components/about/matrix-section.tsx": { "count": 1, "max": 58 },
     "components/about/mcp-section.tsx": { "count": 1, "max": 50 },
@@ -74,7 +69,7 @@
     "components/matrix-simplified/edit-drawer.tsx": { "count": 1, "max": 149 },
     "components/matrix-simplified/help-drawer.tsx": { "count": 1, "max": 169 },
     "components/matrix-simplified/icon-rail.tsx": { "count": 2, "max": 73 },
-    "components/matrix-simplified/index.tsx": { "count": 1, "max": 270 },
+    "components/matrix-simplified/index.tsx": { "count": 1, "max": 269 },
     "components/matrix-simplified/matrix-grid.tsx": { "count": 1, "max": 54 },
     "components/matrix-simplified/matrix-intro.tsx": { "count": 1, "max": 44 },
     "components/matrix-simplified/quadrant-pane.tsx": { "count": 1, "max": 128 },
@@ -104,7 +99,7 @@
     "components/snooze-dropdown.tsx": { "count": 1, "max": 65 },
     "components/sync/oauth-buttons.tsx": { "count": 1, "max": 69 },
     "components/sync/sync-auth-dialog-sections.tsx": { "count": 1, "max": 41 },
-    "components/sync/sync-button.tsx": { "count": 1, "max": 102 },
+    "components/sync/sync-button.tsx": { "count": 1, "max": 85 },
     "components/sync/use-sync-auth-dialog.ts": { "count": 1, "max": 109 },
     "components/sync/use-sync-health.ts": { "count": 1, "max": 43 },
     "components/sync/use-sync-status.ts": { "count": 1, "max": 69 },
@@ -117,7 +112,6 @@
     "components/ui/toast.tsx": { "count": 1, "max": 52 },
     "lib/analytics/time-tracking.ts": { "count": 1, "max": 46 },
     "lib/command-actions.ts": { "count": 1, "max": 145 },
-    "lib/db.ts": { "count": 1, "max": 316 },
     "lib/hooks/use-sync-status.ts": { "count": 1, "max": 68 },
     "lib/sentry.ts": { "count": 2, "max": 45 },
     "lib/sync/error-categorizer.ts": { "count": 1, "max": 53 },
@@ -126,7 +120,7 @@
     "lib/sync/pb-pull.ts": { "count": 1, "max": 70 },
     "lib/sync/pb-push.ts": { "count": 2, "max": 69 },
     "lib/sync/pb-sync-engine.ts": { "count": 1, "max": 47 },
-    "lib/sync/sync-provider.tsx": { "count": 2, "max": 140 },
+    "lib/sync/sync-provider.tsx": { "count": 1, "max": 42 },
     "lib/tasks/crud/toggle.ts": { "count": 1, "max": 48 },
     "lib/tasks/import-export.ts": { "count": 1, "max": 42 },
     "lib/use-command-palette.ts": { "count": 1, "max": 131 },
@@ -139,7 +133,6 @@
     "packages/mcp-server/src/tools/handlers/system-handlers.ts": { "count": 2, "max": 58 },
     "packages/mcp-server/src/tools/handlers/write-handlers.ts": { "count": 1, "max": 41 },
     "packages/mcp-server/src/tools/prompts.ts": { "count": 1, "max": 55 },
-    "packages/mcp-server/src/write-ops/bulk-operations.ts": { "count": 2, "max": 115 },
-    "packages/mcp-server/src/write-ops/task-operations.ts": { "count": 3, "max": 104 }
+    "packages/mcp-server/src/write-ops/task-operations.ts": { "count": 2, "max": 69 }
   }
 }

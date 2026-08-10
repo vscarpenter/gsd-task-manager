@@ -14,9 +14,10 @@
 // Re-export all types
 export type {
   ProductivityMetrics,
-  TagStatistic,
   TrendDataPoint
 } from "./metrics";
+
+export type { TagStatistic } from "./types";
 
 export type { StreakData } from "./streaks";
 

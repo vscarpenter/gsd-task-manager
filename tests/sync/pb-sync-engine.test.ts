@@ -13,6 +13,17 @@ vi.mock('@/lib/sync/queue', () => ({
 
 vi.mock('@/lib/sync/task-mapper', () => ({
   taskRecordToPocketBase: vi.fn((task) => ({ task_id: task.id, ...task })),
+  getPocketBaseTaskIdentity: vi.fn((record) => (
+    typeof record.id === 'string' && typeof record.task_id === 'string'
+      ? {
+          pbRecordId: record.id,
+          taskId: record.task_id,
+          clientUpdatedAt: typeof record.client_updated_at === 'string'
+            ? record.client_updated_at
+            : null,
+        }
+      : null
+  )),
   pocketBaseToTaskRecord: vi.fn((record) => ({
     id: record.task_id,
     title: record.title || 'Test',
@@ -41,6 +52,7 @@ vi.mock('@/lib/db', () => {
     add: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
+    bulkDelete: vi.fn().mockResolvedValue(undefined),
     toArray: vi.fn().mockResolvedValue([]),
   };
   // Nothing is archived in these tests, so the pull's archive guard finds no
@@ -68,6 +80,7 @@ vi.mock('@/lib/db', () => {
       archivedTasks: mockArchivedTasks,
       syncMetadata: mockSyncMetadata,
       syncQueue: mockSyncQueue,
+      transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     })),
   };
 });
@@ -122,6 +135,7 @@ import { recordSyncError } from '@/lib/sync-history';
 function createMockPB() {
   const collectionMock = {
     getFullList: vi.fn().mockResolvedValue([]),
+    getFirstListItem: vi.fn().mockRejectedValue({ status: 404 }),
     create: vi.fn().mockResolvedValue({ id: 'pb-123' }),
     update: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue({}),
@@ -211,6 +225,7 @@ describe('pb-sync-engine', () => {
 
       const mockCollection = {
         getFullList: vi.fn().mockResolvedValue([]), // Success but empty
+        getFirstListItem: vi.fn().mockRejectedValue({ status: 404 }),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -246,7 +261,7 @@ describe('pb-sync-engine', () => {
       expect(result.maxObservedTimestamp).toBeNull();
     });
 
-    it('should filter and sort on the server-stamped updated field', async () => {
+    it('should filter and sort on client_updated_at', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
@@ -259,19 +274,17 @@ describe('pb-sync-engine', () => {
 
       await pullRemoteChanges('2026-06-10T15:00:00.000Z');
 
-      // `updated` is a PB date field: the filter literal must use PocketBase's
-      // space-separated form, not ISO `T` form.
       const listOptions = mockCollection.getFullList.mock.calls[0][0];
-      expect(listOptions.sort).toBe('updated');
-      expect(listOptions.filter).toContain('updated >= "2026-06-10 15:00:00.000Z"');
-      expect(listOptions.filter).not.toContain('client_updated_at');
+      expect(listOptions.sort).toBe('client_updated_at');
+      expect(listOptions.filter).toContain('client_updated_at >= "2026-06-10T15:00:00.000Z"');
+      expect(listOptions.filter).not.toMatch(/(^|[^_])updated\s*>?=/);
     });
 
-    it('should track maxObservedTimestamp from the records\' server-stamped updated', async () => {
+    it('should track maxObservedTimestamp from applied client_updated_at values', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
-      // `updated` values deliberately differ from client_updated_at to prove
-      // the cursor reads the server stamp, not the client one.
+      // PocketBase system `updated` values deliberately differ to prove they
+      // cannot influence the client_updated_at cursor.
       const records = [
         { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-01-01T00:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-18 10:00:00.000Z' },
         { id: 'pb-2', task_id: 'task-2', title: 'B', client_updated_at: '2024-06-15T12:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-20 09:00:00.000Z' },
@@ -298,14 +311,13 @@ describe('pb-sync-engine', () => {
       expect(result.authenticated).toBe(true);
       // Cursor is persisted with a 30s overlap subtracted so the next pull's
       // `>=` filter can re-catch boundary records, normalized to ISO form.
-      expect(result.maxObservedTimestamp).toBe('2024-06-20T08:59:30.000Z');
+      expect(result.maxObservedTimestamp).toBe('2024-06-15T11:59:30.000Z');
     });
 
-    it('should advance the cursor from fetched records even when LWW applies none', async () => {
+    it('should not advance the cursor when LWW applies no record', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
-      // The server watermark moves on every fetch we complete — an LWW no-op
-      // record never needs re-fetching, so it must still advance the cursor.
+      // The cursor advances only after a local state transition commits.
       const records = [
         { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-01-01T00:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-20 09:00:00.000Z' },
       ];
@@ -322,18 +334,18 @@ describe('pb-sync-engine', () => {
 
       const db = getDb();
       // Local task already has the same client timestamp -> LWW no-op
-      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([
+      (db.tasks.get as ReturnType<typeof vi.fn>).mockResolvedValue(
         { id: 'task-1', updatedAt: '2024-01-01T00:00:00.000Z' },
-      ]);
+      );
       (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const result = await pullRemoteChanges(null);
 
       expect(result.pulledCount).toBe(0);
-      expect(result.maxObservedTimestamp).toBe('2024-06-20T08:59:30.000Z');
+      expect(result.maxObservedTimestamp).toBeNull();
     });
 
-    it('should ignore records without a server-stamped updated when computing the cursor', async () => {
+    it('should ignore PocketBase system updated when computing the cursor', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const records = [
@@ -357,10 +369,8 @@ describe('pb-sync-engine', () => {
 
       const result = await pullRemoteChanges(null);
 
-      // Records were applied, but neither carried a server stamp the cursor
-      // could trust — the client timestamps must NOT leak into the cursor.
       expect(result.pulledCount).toBe(2);
-      expect(result.maxObservedTimestamp).toBeNull();
+      expect(result.maxObservedTimestamp).toBe('2024-06-16T11:59:30.000Z');
     });
 
     it('should return null maxObservedTimestamp when no records pulled', async () => {
@@ -452,7 +462,7 @@ describe('pb-sync-engine', () => {
       expect(notifySyncError).toHaveBeenCalled();
     });
 
-    it('should use server-observed timestamp for cursor instead of client clock', async () => {
+    it('should use applied client_updated_at for the pull cursor', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const records = [
@@ -489,19 +499,20 @@ describe('pb-sync-engine', () => {
 
       expect(result.status).toBe('success');
 
-      // Verify cursor was set to the PB server-stamped `updated`, not the
-      // client-stamped client_updated_at, and persisted to the new field.
+      // The provenance-safe field carries the client_updated_at cursor.
       const putCalls = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls;
       expect(putCalls.length).toBeGreaterThan(0);
       const putCall = putCalls[0][0];
       // Cursor is persisted with a 30s overlap subtracted; see pb-pull.ts.
-      expect(putCall.lastServerUpdatedAt).toBe('2024-06-16T02:59:30.000Z');
+      expect(putCall.lastClientUpdatedAt).toBe('2024-06-15T11:59:30.000Z');
+      expect(putCall.pullCursorVersion).toBe(2);
+      expect(putCall.lastServerUpdatedAt).toBeNull();
       // The legacy client-stamped cursor is left untouched (only read once,
       // for migration).
       expect(putCall.lastSyncAt).toBe('2024-01-01T00:00:00.000Z');
     });
 
-    it('should prefer lastServerUpdatedAt over the legacy lastSyncAt for the pull filter', async () => {
+    it('should discard an unversioned server cursor and perform a full pull', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
@@ -526,7 +537,11 @@ describe('pb-sync-engine', () => {
       await fullSync('auto');
 
       const pullOptions = mockCollection.getFullList.mock.calls[0][0];
-      expect(pullOptions.filter).toContain('updated >= "2024-06-01 00:00:00.000Z"');
+      expect(pullOptions.filter).toBe('owner = "user-123"');
+      const putCall = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(putCall.lastServerUpdatedAt).toBeNull();
+      expect(putCall.lastClientUpdatedAt).toBeNull();
+      expect(putCall.pullCursorVersion).toBe(2);
     });
 
     it('should migrate a legacy client-stamped cursor by rewinding 24 hours', async () => {
@@ -543,7 +558,7 @@ describe('pb-sync-engine', () => {
 
       const db = getDb();
       // Old-build config: only the client-stamped cursor exists. It may carry
-      // up to ±5min of client clock skew, so the first server-stamped pull
+      // up to ±5min of client clock skew, so the first cursor-based pull
       // rewinds a full day; re-pulled records are LWW no-ops.
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         key: 'sync_config',
@@ -556,7 +571,7 @@ describe('pb-sync-engine', () => {
       await fullSync('auto');
 
       const pullOptions = mockCollection.getFullList.mock.calls[0][0];
-      expect(pullOptions.filter).toContain('updated >= "2024-06-14 12:00:00.000Z"');
+      expect(pullOptions.filter).toContain('client_updated_at >= "2024-06-14T12:00:00.000Z"');
     });
 
     it('should not call recordSuccess on partial failure', async () => {
@@ -619,7 +634,9 @@ describe('pb-sync-engine', () => {
         enabled: true,
         deviceId: 'device-1',
         lastSyncAt: null,
-        lastServerUpdatedAt: existingCursor,
+        lastClientUpdatedAt: existingCursor,
+        pullCursorVersion: 2 as const,
+        lastServerUpdatedAt: null,
       };
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
       (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -632,7 +649,8 @@ describe('pb-sync-engine', () => {
       const putCalls = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls;
       expect(putCalls.length).toBeGreaterThan(0);
       const putCall = putCalls[0][0];
-      expect(putCall.lastServerUpdatedAt).toBe(existingCursor);
+      expect(putCall.lastClientUpdatedAt).toBe(existingCursor);
+      expect(putCall.lastServerUpdatedAt).toBeNull();
     });
   });
 });

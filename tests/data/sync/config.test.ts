@@ -241,6 +241,8 @@ describe('Sync Config', () => {
       expect(config?.email).toBeNull();
       expect(config?.provider).toBeNull();
       expect(config?.lastSyncAt).toBeNull();
+      expect(config?.lastClientUpdatedAt).toBeNull();
+      expect(config?.pullCursorVersion).toBe(2);
       expect(config?.lastServerUpdatedAt).toBeNull();
       expect(config?.consecutiveFailures).toBe(0);
       expect(config?.lastFailureAt).toBeNull();
@@ -494,6 +496,8 @@ describe('Sync Config', () => {
       const config = await getSyncConfig();
 
       expect(config?.lastSyncAt).toBeNull();
+      expect(config?.lastClientUpdatedAt).toBeNull();
+      expect(config?.pullCursorVersion).toBe(2);
       expect(config?.lastServerUpdatedAt).toBeNull();
 
       const taskCount = await db.tasks.count();

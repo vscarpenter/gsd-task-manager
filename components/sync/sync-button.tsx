@@ -40,6 +40,43 @@ function getIconComponent(type: IconType) {
   }
 }
 
+interface SyncStatusOverlaysProps {
+  hasAuthError: boolean;
+  isEnabled: boolean;
+  pendingCount: number;
+  retryCountdown: number | null;
+}
+
+function SyncStatusOverlays({
+  hasAuthError,
+  isEnabled,
+  pendingCount,
+  retryCountdown,
+}: SyncStatusOverlaysProps) {
+  return (
+    <>
+      {hasAuthError && (
+        <Badge className="absolute -right-1 -top-1 h-5 min-w-[20px] border border-status-overdue/45 bg-status-overdue-muted px-1 text-xs text-status-overdue-ink">
+          !
+        </Badge>
+      )}
+      {isEnabled && !hasAuthError && pendingCount > 0 && (
+        <Badge className="absolute -right-1 -top-1 h-5 min-w-[20px] bg-accent px-1 text-xs text-on-accent">
+          {pendingCount}
+        </Badge>
+      )}
+      {!isEnabled && (
+        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-status-blocking" />
+      )}
+      {!hasAuthError && retryCountdown !== null && retryCountdown > 0 && (
+        <span className="text-caption absolute -bottom-1 left-1/2 -translate-x-1/2 font-medium text-status-blocked-ink">
+          {retryCountdown}s
+        </span>
+      )}
+    </>
+  );
+}
+
 export function SyncButton() {
   const { sync, isSyncing, status, error, isEnabled, nextRetryAt } = useSync();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -98,7 +135,6 @@ export function SyncButton() {
   function handleAuthSuccess() {
     setAuthDialogOpen(false);
   }
-
   return (
     <>
       <TooltipProvider delayDuration={300}>
@@ -110,36 +146,15 @@ export function SyncButton() {
               disabled={isSyncing}
               className="relative h-12 w-12 p-0"
               aria-label={tooltip}
+              data-testid="sync-button"
             >
               {icon}
-
-              {hasAuthError && (
-                <Badge
-                  variant="default"
-                  className="absolute -right-1 -top-1 h-5 min-w-[20px] border border-status-overdue/45 bg-status-overdue-muted px-1 text-xs text-status-overdue-ink"
-                >
-                  !
-                </Badge>
-              )}
-
-              {isEnabled && !hasAuthError && pendingCount > 0 && (
-                <Badge
-                  variant="default"
-                  className="absolute -right-1 -top-1 h-5 min-w-[20px] bg-accent px-1 text-xs text-on-accent"
-                >
-                  {pendingCount}
-                </Badge>
-              )}
-
-              {!isEnabled && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-status-blocking" />
-              )}
-
-              {!hasAuthError && retryCountdown !== null && retryCountdown > 0 && (
-                <span className="text-caption absolute -bottom-1 left-1/2 -translate-x-1/2 font-medium text-status-blocked-ink">
-                  {retryCountdown}s
-                </span>
-              )}
+              <SyncStatusOverlays
+                hasAuthError={hasAuthError}
+                isEnabled={isEnabled}
+                pendingCount={pendingCount}
+                retryCountdown={retryCountdown}
+              />
             </Button>
           </TooltipTrigger>
           <TooltipContent>

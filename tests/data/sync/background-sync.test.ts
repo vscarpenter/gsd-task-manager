@@ -115,7 +115,7 @@ describe("BackgroundSyncManager", () => {
     manager.stop();
   });
 
-  it("stop clears running state and unsubscribes realtime", async () => {
+  it("stop clears polling state without touching provider-owned realtime", async () => {
     const manager = new BackgroundSyncManager();
 
     await manager.start({ enabled: true, intervalMinutes: 5, syncOnFocus: false, syncOnOnline: false, debounceAfterChangeMs: 500 }, "device-1");
@@ -125,7 +125,7 @@ describe("BackgroundSyncManager", () => {
     manager.stop();
 
     expect(manager.isRunning()).toBe(false);
-    expect(mockUnsubscribe).toHaveBeenCalled();
+    expect(mockUnsubscribe).not.toHaveBeenCalled();
   });
 
   it("stop is a no-op when not active", () => {
@@ -175,7 +175,7 @@ describe("BackgroundSyncManager", () => {
     manager.stop();
   });
 
-  it("start subscribes to realtime when deviceId is provided", async () => {
+  it("start leaves realtime ownership with SyncProvider", async () => {
     const manager = new BackgroundSyncManager();
 
     await manager.start({
@@ -186,7 +186,7 @@ describe("BackgroundSyncManager", () => {
       debounceAfterChangeMs: 500,
     }, "my-device");
 
-    expect(mockSubscribe).toHaveBeenCalledWith("my-device");
+    expect(mockSubscribe).not.toHaveBeenCalled();
 
     manager.stop();
   });

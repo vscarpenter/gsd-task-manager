@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { SCHEMA_LIMITS } from "./constants/schema";
 
 export const quadrantIdSchema = z.enum([

@@ -1,5 +1,49 @@
 # Implementation Notes
 
+## 2026-08-10 — Four Medium and fourteen Low remediation
+
+- Baseline is current `main` at `0040ba7`; implementation branch is
+  `codex/resolve-audit-findings`.
+- Branch preflight found no conflict markers. Preserve three existing stashes.
+- The inherited `bun.lock` diff moves the root Vite resolution from 8.2.0 to
+  8.2.1 and records a nested Vitest/Vite resolution. Dependency remediation may
+  incorporate it but must not revert it.
+- The accepted 2026-08-06 audit plus the user's explicit request is the approved
+  implementation contract. Exact findings and acceptance criteria are recorded
+  in `tasks/spec-audit-findings-remediation.md`.
+- Shared-history rewrite/force-push remains a separate hard-to-reverse approval
+  gate even though SEC-04 is in scope for resolution.
+- E2E-06 reproduced only on a cold webpack development server under parallel
+  browser workers. First compilation took 6.9 seconds for `/` and 0.5–3.0
+  seconds for secondary routes, allowing client navigations to remain pending
+  until the per-test timeout. Playwright global setup now discovers every
+  `app/**/page.tsx` route and compiles them sequentially before workers start.
+  The original cold-server stress set then passed 110/110 at eight workers.
+- Pull watermarks now use a versioned `lastClientUpdatedAt` cursor derived only
+  from validated records actually applied after archive/LWW checks. The next
+  pull uses the required overlap window, and unversioned server-time cursors
+  reset instead of crossing timestamp domains.
+- Remote-deletion reconciliation re-reads local tasks and pending writes and
+  performs conditional deletion in one Dexie transaction. A forced
+  interleaving regression proves a concurrent local edit cannot be deleted.
+- MCP write throttling now spaces every serialized operation, including after
+  non-429 failures, captures PocketBase `Retry-After` before the SDK discards
+  headers, and allows one bounded retry. Single and cascading deletes share a
+  fresh timestamp preflight and known-record-id delete path; only true 404s are
+  translated to “Task not found.” Dispatcher and bulk responses expose stable,
+  content-free failure codes and no longer announce partial work as complete.
+- Final root coverage passed 2,606 tests / 1 skip across 182 passing files at
+  86.54/80.55/86.97/87.66. MCP coverage passed 289 tests / 3 skips across 29
+  passing files at 89.25/85.13/86.20/88.91; write operations reached
+  99.25/95.20/100/99.71.
+- Disposable PocketBase 0.39.10 plus the 0.26.6 upgrade path passed 3/3 system
+  tests. The 15-route build and strict-CSP Chromium smoke passed; tracked and
+  unignored source scanned clean with Gitleaks. Root lint, typecheck, code-shape
+  ratchet, MCP build, dependency/license/SBOM gates, and diff checks passed.
+- The affected browser set passed 42/42 across Chromium, Firefox, and WebKit.
+  Final WCAG and PocketBase/sync/MCP reviews both returned zero blocking
+  findings and zero suggestions.
+
 ## 2026-08-05 — Rescan High and Medium remediation
 
 - The user confirmed the production server at `api.vinny.io` runs PocketBase

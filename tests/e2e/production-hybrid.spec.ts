@@ -39,7 +39,7 @@ test.describe("Refined Evolution production hybrid", () => {
     await expect(page.getByTestId("quadrant-q4")).toBeFocused();
 
     const installPrompt = page.locator(
-      "[role='dialog'][aria-labelledby='install-pwa-title']"
+      "[role='region'][aria-labelledby='install-pwa-title']"
     );
     await installPrompt.waitFor({ state: "visible", timeout: 750 }).catch(() => undefined);
     if (await installPrompt.isVisible().catch(() => false)) {

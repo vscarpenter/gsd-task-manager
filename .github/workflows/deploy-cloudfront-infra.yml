@@ -32,7 +32,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy CloudFront infrastructure
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     # The cloudfront-infra environment gates this on a required reviewer.
     # A broken viewer-request function or a malformed policy can take the
@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Full history so `git diff github.event.before HEAD` always
           # resolves, even when a push contains multiple commits.
@@ -113,7 +113,7 @@ jobs:
         if: |
           steps.changes.outputs.deploy_functions == 'true' ||
           steps.changes.outputs.deploy_policy == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1

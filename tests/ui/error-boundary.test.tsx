@@ -42,6 +42,22 @@ describe("ErrorBoundary", () => {
     consoleError.mockRestore();
   });
 
+  it("announces and focuses the fallback after an error", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
+    );
+
+    const alert = screen.getByRole("alert", { name: "Something went wrong" });
+    expect(alert).toHaveFocus();
+    expect(alert).toHaveAttribute("tabindex", "-1");
+
+    consoleError.mockRestore();
+  });
+
   it("displays error details when present", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 

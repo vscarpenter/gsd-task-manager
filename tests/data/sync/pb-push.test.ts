@@ -8,8 +8,10 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
 
-const { fetchRemoteTaskIndexMock } = vi.hoisted(() => ({
+const { fetchRemoteTaskIndexMock, fetchRemoteTaskEntryMock, delayMock } = vi.hoisted(() => ({
   fetchRemoteTaskIndexMock: vi.fn(),
+  fetchRemoteTaskEntryMock: vi.fn(),
+  delayMock: vi.fn(async () => {}),
 }));
 
 vi.mock('@/lib/sync/pb-sync-helpers', async () => {
@@ -19,11 +21,12 @@ vi.mock('@/lib/sync/pb-sync-helpers', async () => {
   return {
     ...actual,
     fetchRemoteTaskIndex: fetchRemoteTaskIndexMock,
+    fetchRemoteTaskEntry: fetchRemoteTaskEntryMock,
     getCurrentUserId: vi.fn(() => 'user-1'),
     getDeviceId: vi.fn(async () => 'dev-1'),
     // Use zero throttle to keep tests fast.
     THROTTLE_MS: 0,
-    delay: vi.fn(async () => {}),
+    delay: delayMock,
   };
 });
 
@@ -52,6 +55,40 @@ describe('pushLocalChanges LWW guard', () => {
   beforeEach(async () => {
     await getDb().syncQueue.clear();
     fetchRemoteTaskIndexMock.mockReset();
+    fetchRemoteTaskEntryMock.mockReset();
+    delayMock.mockClear();
+    fetchRemoteTaskEntryMock.mockImplementation(async (ownerId: string, taskId: string) => {
+      const result = await fetchRemoteTaskIndexMock(ownerId);
+      return {
+        entry: result.index.get(taskId) ?? null,
+        fetchSucceeded: result.fetchSucceeded,
+      };
+    });
+  });
+
+  it('rechecks the individual record immediately before mutation', async () => {
+    const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', payload);
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T10:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+    fetchRemoteTaskEntryMock.mockResolvedValueOnce({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T13:00:00.000Z' },
+      fetchSucceeded: true,
+    });
+    const updateSpy = vi.fn();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(fetchRemoteTaskEntryMock).toHaveBeenCalledWith('user-1', 't1');
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(result.pushedCount).toBe(0);
   });
 
   it('skips a queued update whose payload is older than the remote record', async () => {
@@ -215,7 +252,7 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(0);
   });
 
-  it('refreshes the in-memory index after upsert so a later stale delete is skipped', async () => {
+  it('fresh-reads the just-updated record so a later stale delete is skipped', async () => {
     // Same task: queue an update (payload.updatedAt = T2), then a delete queued at T1 < T2.
     // Initial remote index has clientUpdatedAt T0 < T1 < T2, so the update proceeds
     // and bumps the in-memory index entry to { clientUpdatedAt: T2 }. The subsequent
@@ -243,6 +280,15 @@ describe('pushLocalChanges LWW guard', () => {
       ]),
       fetchSucceeded: true,
     });
+    fetchRemoteTaskEntryMock
+      .mockResolvedValueOnce({
+        entry: { pbRecordId: 'rec-1', clientUpdatedAt: T0 },
+        fetchSucceeded: true,
+      })
+      .mockResolvedValueOnce({
+        entry: { pbRecordId: 'rec-1', clientUpdatedAt: T2 },
+        fetchSucceeded: true,
+      });
 
     const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
     const deleteSpy = vi.fn();
@@ -292,6 +338,31 @@ describe('pushLocalChanges LWW guard', () => {
     expect(result.lastError).toBe('network_error');
     // Item should remain queued for a future retry.
     expect(await getSyncQueue().getPendingCount()).toBe(1);
+  });
+
+  it('throttles before the next request after a non-rate-limit failure', async () => {
+    const firstPayload = makeTask('t1', '2026-05-18T12:00:00.000Z');
+    const secondPayload = makeTask('t2', '2026-05-18T12:05:00.000Z');
+    await getSyncQueue().enqueue('update', 't1', firstPayload);
+    await getSyncQueue().enqueue('update', 't2', secondPayload);
+    const pending = await getDb().syncQueue.toArray();
+    await getDb().syncQueue.update(pending.find((item) => item.taskId === 't1')!.id, { timestamp: 1 });
+    await getDb().syncQueue.update(pending.find((item) => item.taskId === 't2')!.id, { timestamp: 2 });
+    fetchRemoteTaskEntryMock
+      .mockResolvedValueOnce({ entry: { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }, fetchSucceeded: true })
+      .mockResolvedValueOnce({ entry: { pbRecordId: 'rec-2', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }, fetchSucceeded: true });
+    const updateSpy = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error('validation failed'), { status: 422 }))
+      .mockResolvedValueOnce({ id: 'rec-2' });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(result).toMatchObject({ pushedCount: 1, failedCount: 1 });
+    expect(updateSpy).toHaveBeenCalledTimes(2);
+    expect(delayMock).toHaveBeenCalledWith(0);
   });
 
   it('records a permanent validation error via the ERROR log branch without logging raw PB content', async () => {

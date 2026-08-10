@@ -135,7 +135,9 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
     }
     message += `\nTo delete this task, pass dryRun=false explicitly.`;
   } else {
-    message = `✅ Task deleted successfully!\n\n`;
+    message = result.partial
+      ? `⚠️ Task deleted; dependency cleanup is incomplete.\n\n`
+      : `✅ Task deleted successfully!\n\n`;
     message += `Deleted: "${result.taskTitle}" (${result.taskId})`;
 
     if (result.affectedTasks.length > 0) {
@@ -143,6 +145,12 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
       result.affectedTasks.forEach((title) => {
         message += `  - ${title}\n`;
       });
+    }
+    if (result.conflicts.length > 0) {
+      message += `\n\nConflicts: ${result.conflicts.join(', ')} (changed during cleanup)`;
+    }
+    if (result.errors.length > 0) {
+      message += `\n\nCleanup errors:\n${result.errors.join('\n')}`;
     }
   }
 
@@ -156,6 +164,42 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
   };
 }
 
+type BulkResult = Awaited<ReturnType<typeof bulkUpdateTasks>>;
+
+function formatBulkCounts(result: BulkResult, futureTense: boolean): string {
+  const updated = result.updated > 0
+    ? `${futureTense ? 'Would update' : 'Updated'}: ${result.updated} task(s)\n`
+    : '';
+  const deleted = result.deleted > 0
+    ? `${futureTense ? 'Would delete' : 'Deleted'}: ${result.deleted} task(s)\n`
+    : '';
+  return updated + deleted;
+}
+
+function formatBulkIssues(result: BulkResult): string {
+  const errors = result.errors.length > 0
+    ? `\nErrors (${result.errors.length}):\n${result.errors.map((error, index) => `${index + 1}. ${error}`).join('\n')}\n`
+    : '';
+  const conflicts = result.conflicts.length > 0
+    ? `\nConflicts (${result.conflicts.length} skipped — task changed during bulk operation):\n${result.conflicts.map((id, index) => `${index + 1}. ${id} (re-fetch and retry if you still want to apply the change)`).join('\n')}\n`
+    : '';
+  return errors + conflicts;
+}
+
+function formatBulkMessage(result: BulkResult, isPartial: boolean): string {
+  if (result.dryRun) {
+    const affected = result.updated + result.deleted;
+    return `🔍 DRY RUN - Bulk operation would affect ${affected} task(s) (not saved):\n\n` +
+      formatBulkCounts(result, true) +
+      `\nTo apply changes, remove dryRun or set it to false.` +
+      formatBulkIssues(result);
+  }
+  const headline = isPartial
+    ? `⚠️ Bulk operation partially completed.\n\n`
+    : `✅ Bulk operation completed!\n\n`;
+  return headline + formatBulkCounts(result, false) + formatBulkIssues(result);
+}
+
 export async function handleBulkUpdateTasks(
   config: GsdConfig,
   args: { taskIds: string[]; operation: BulkOperation; dryRun?: boolean }
@@ -163,42 +207,15 @@ export async function handleBulkUpdateTasks(
   const result = await bulkUpdateTasks(config, args.taskIds, args.operation, {
     dryRun: args.dryRun,
   });
-
-  let message: string;
-  if (result.dryRun) {
-    message = `🔍 DRY RUN - Bulk operation would affect ${result.updated + result.deleted} task(s) (not saved):\n\n`;
-    if (result.updated > 0) message += `Would update: ${result.updated} task(s)\n`;
-    if (result.deleted > 0) message += `Would delete: ${result.deleted} task(s)\n`;
-    message += `\nTo apply changes, remove dryRun or set it to false.`;
-  } else {
-    message = `✅ Bulk operation completed!\n\n`;
-    if (result.updated > 0) message += `Updated: ${result.updated} task(s)\n`;
-    if (result.deleted > 0) message += `Deleted: ${result.deleted} task(s)\n`;
-  }
-
-  if (result.errors.length > 0) {
-    message += `\nErrors (${result.errors.length}):\n`;
-    result.errors.forEach((err, idx) => {
-      message += `${idx + 1}. ${err}\n`;
-    });
-  }
-
-  // Surface conflicts so the model can decide to refetch + retry. Conflicts
-  // are an expected LWW outcome (a concurrent writer changed the task between
-  // snapshot and write), not a failure — reported separately from errors.
-  if (result.conflicts && result.conflicts.length > 0) {
-    message += `\nConflicts (${result.conflicts.length} skipped — task changed during bulk operation):\n`;
-    result.conflicts.forEach((id, idx) => {
-      message += `${idx + 1}. ${id} (re-fetch and retry if you still want to apply the change)\n`;
-    });
-  }
+  const isPartial = result.errors.length > 0 || result.conflicts.length > 0;
 
   return {
     content: [
       {
         type: 'text' as const,
-        text: message,
+        text: formatBulkMessage(result, isPartial),
       },
     ],
+    ...(isPartial ? { isError: true } : {}),
   };
 }

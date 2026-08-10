@@ -9,10 +9,10 @@ import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
 import { taskRecordToPocketBase } from './task-mapper';
 import { createLogger } from '@/lib/logger';
-import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskIndex } from './pb-sync-helpers';
+import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskEntry } from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
-import type { SyncQueueItem, RemoteTaskIndexEntry } from './types';
+import type { SyncQueueItem } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -84,14 +84,12 @@ type PushItemOutcome = 'pushed' | 'skipped' | 'index_unavailable';
  */
 async function pushSingleItem(
   item: SyncQueueItem,
-  remoteIndex: Map<string, RemoteTaskIndexEntry>,
-  indexFetchSucceeded: boolean,
   ownerId: string,
   deviceId: string,
 ): Promise<PushItemOutcome> {
   const pb = getPocketBase();
   const queue = getSyncQueue();
-  const remote = remoteIndex.get(item.taskId);
+  const { entry: remote, fetchSucceeded } = await fetchRemoteTaskEntry(ownerId, item.taskId);
 
   if (item.operation === 'create' || item.operation === 'update') {
     if (!item.payload) {
@@ -104,7 +102,7 @@ async function pushSingleItem(
     // verify whether the queued write would clobber newer remote data.
     // Refuse to push and let the next attempt retry once the index is
     // available again. Mirrors the symmetric guard in the delete path.
-    if (!remote && !indexFetchSucceeded) {
+    if (!fetchSucceeded) {
       logger.warn('Skipping upsert dequeue: remote index unavailable', {
         taskId: item.taskId,
         operation: item.operation,
@@ -127,11 +125,7 @@ async function pushSingleItem(
       return 'skipped';
     }
 
-    const recordId = await upsertRemoteTask(item.payload, remote?.pbRecordId, ownerId, deviceId);
-    remoteIndex.set(item.taskId, {
-      pbRecordId: recordId,
-      clientUpdatedAt: item.payload.updatedAt,
-    });
+    await upsertRemoteTask(item.payload, remote?.pbRecordId, ownerId, deviceId);
     await queue.dequeue(item.id);
     return 'pushed';
   }
@@ -149,12 +143,11 @@ async function pushSingleItem(
       return 'skipped';
     }
     await pb.collection('tasks').delete(remote.pbRecordId);
-    remoteIndex.delete(item.taskId);
     await queue.dequeue(item.id);
     return 'pushed';
   }
 
-  if (!indexFetchSucceeded) {
+  if (!fetchSucceeded) {
     logger.warn('Skipping delete dequeue: remote index unavailable', { taskId: item.taskId });
     await queue.recordAttemptFailure(item.id, 'Remote task index unavailable for delete verification');
     return 'index_unavailable';
@@ -198,10 +191,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
 
-  const [deviceId, { index: remoteIndex, fetchSucceeded }] = await Promise.all([
-    getDeviceId(),
-    fetchRemoteTaskIndex(ownerId),
-  ]);
+  const deviceId = await getDeviceId();
   let pushedCount = 0;
   let failedCount = 0;
   let skippedCount = 0;
@@ -211,7 +201,7 @@ export async function pushLocalChanges(): Promise<PushResult> {
   for (const item of pending) {
     try {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
-      const outcome = await pushSingleItem(item, remoteIndex, fetchSucceeded, ownerId, deviceId);
+      const outcome = await pushSingleItem(item, ownerId, deviceId);
       if (outcome === 'pushed') {
         pushedCount++;
       } else if (outcome === 'skipped') {
@@ -221,9 +211,6 @@ export async function pushLocalChanges(): Promise<PushResult> {
         lastError = 'remote_index_unavailable';
       }
 
-      if (pushedCount + failedCount + skippedCount < pending.length) {
-        await delay(THROTTLE_MS);
-      }
     } catch (error) {
       failedCount++;
       // Persist a stable error code only — never the raw error message,
@@ -262,6 +249,10 @@ export async function pushLocalChanges(): Promise<PushResult> {
         });
         break;
       }
+    }
+
+    if (pushedCount + failedCount + skippedCount < pending.length) {
+      await delay(THROTTLE_MS);
     }
   }
 

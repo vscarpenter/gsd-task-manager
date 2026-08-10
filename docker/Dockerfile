@@ -6,7 +6,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build the Next.js static export
 # ---------------------------------------------------------------------------
-FROM oven/bun:1 AS builder
+FROM oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS builder
 
 WORKDIR /app
 
@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-c
 # ---------------------------------------------------------------------------
 # Stage 2: Runtime — Caddy (HTTPS reverse proxy) + PocketBase
 # ---------------------------------------------------------------------------
-FROM caddy:2-alpine
+FROM caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
 
 # Run as non-root user for security
 RUN addgroup -S gsd && adduser -S gsd -G gsd

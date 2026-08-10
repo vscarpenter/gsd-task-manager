@@ -52,6 +52,11 @@ export async function listTasks(
   return applyTaskFilters(tasks, filters);
 }
 
+/** Fetch directly from PocketBase, bypassing the read cache for write preflights. */
+export function listTasksFresh(config: GsdConfig): Promise<Task[]> {
+  return fetchTasks(config);
+}
+
 /**
  * Fetch all tasks from PocketBase collection
  */
@@ -75,15 +80,17 @@ async function fetchTasks(config: GsdConfig): Promise<Task[]> {
       }
     }).filter((task): task is Task => task !== null);
   } catch (error) {
-    throw new Error(
+    const safeError = new Error(
       `Failed to fetch tasks from PocketBase\n\n` +
-        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
         `Please check:\n` +
         `  1. Your internet connection\n` +
         `  2. GSD_POCKETBASE_URL is correct\n` +
         `  3. Your auth token is valid\n\n` +
         `Run: npx gsd-mcp-server --validate`
     );
+    const status = (error as { status?: unknown } | null)?.status;
+    if (typeof status === 'number') Object.assign(safeError, { status });
+    throw safeError;
   }
 }
 

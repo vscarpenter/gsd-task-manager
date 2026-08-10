@@ -56,39 +56,52 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>
       {children}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-md">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={cn(
-              "flex items-center gap-3 rounded-lg border border-card-border bg-card px-4 py-3 shadow-lg",
-              "animate-in slide-in-from-bottom-5"
-            )}
-          >
-            <p className="flex-1 text-sm text-foreground">{toast.message}</p>
-            {toast.action && (
-              <Button
-                variant="subtle"
-                className="px-3 py-1 text-xs"
-                onClick={() => {
-                  toast.action?.onClick();
-                  hideToast(toast.id);
-                }}
-              >
-                {toast.action.label}
-              </Button>
-            )}
-            <button
-              type="button"
-              onClick={() => hideToast(toast.id)}
-              className="text-foreground-muted hover:text-foreground"
-              aria-label="Dismiss"
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+      <ToastAnnouncements toasts={toasts} />
+      <ToastStack toasts={toasts} hideToast={hideToast} />
     </ToastContext.Provider>
+  );
+}
+
+function ToastAnnouncements({ toasts }: { toasts: Toast[] }) {
+  return (
+    <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {toasts.map((toast) => toast.message).join(". ")}
+    </div>
+  );
+}
+
+function ToastStack({ toasts, hideToast }: { toasts: Toast[]; hideToast: (id: string) => void }) {
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-md">
+      {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} hideToast={hideToast} />)}
+    </div>
+  );
+}
+
+function ToastItem({ toast, hideToast }: { toast: Toast; hideToast: (id: string) => void }) {
+  const runAction = () => {
+    toast.action?.onClick();
+    hideToast(toast.id);
+  };
+  return (
+    <div className={cn(
+      "flex items-center gap-3 rounded-lg border border-card-border bg-card px-4 py-3 shadow-lg",
+      "animate-in slide-in-from-bottom-5"
+    )}>
+      <p className="flex-1 text-sm text-foreground">{toast.message}</p>
+      {toast.action && (
+        <Button variant="subtle" className="px-3 py-1 text-xs" onClick={runAction}>
+          {toast.action.label}
+        </Button>
+      )}
+      <button
+        type="button"
+        onClick={() => hideToast(toast.id)}
+        className="text-foreground-muted hover:text-foreground"
+        aria-label="Dismiss"
+      >
+        <XIcon className="h-4 w-4" aria-hidden="true" />
+      </button>
+    </div>
   );
 }

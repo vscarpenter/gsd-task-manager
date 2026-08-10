@@ -402,9 +402,9 @@ sequenceDiagram
         Engine->>DB: Clear processed queue items
 
         %% Pull phase
-        Engine->>DB: Read lastSyncAt cursor
+        Engine->>DB: Read versioned lastClientUpdatedAt cursor
         DB-->>Engine: timestamp
-        Engine->>PB: GET records (filter: updated > lastSyncAt)
+        Engine->>PB: GET records (filter: client_updated_at >= cursor)
         PB-->>Engine: Remote records[]
         
         loop Each remote change
