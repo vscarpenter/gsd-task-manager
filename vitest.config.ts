@@ -28,7 +28,12 @@ export default defineConfig({
         "app/**/*.tsx",
         "scripts/**/*.ts",
         "scripts/**/*.js",
-        "scripts/**/*.cjs"
+        "scripts/**/*.cjs",
+        // Stagehand tooling: only the deterministic modules — browser glue
+        // (harness/verify/smoke) is verified by acceptance runs, not unit tests.
+        "tools/stagehand/args.ts",
+        "tools/stagehand/report.ts",
+        "tools/stagehand/journeys.ts"
       ],
       exclude: [
         "**/*.test.ts",
