@@ -17,6 +17,8 @@ const config = [
             "packages/native/ios.backup/build/**",
             "design_handoff_gsd_redesign/**",
             "handoff_gsd_simplified_v9/**",
+            "tools/stagehand/evidence/**",
+            "tools/stagehand/page-scripts/**",
         ],
     },
     ...nextCoreWebVitals,
