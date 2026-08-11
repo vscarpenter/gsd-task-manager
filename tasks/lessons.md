@@ -80,3 +80,9 @@ Fix pattern: wait for the title to be focused before touching other fields
 (unit: `waitFor(() => expect(title).toHaveFocus())`; e2e:
 `locator("[data-testid='edit-title']:focus").waitFor()` — now baked into
 `MatrixPage.openEditDrawer`). Same root cause bit both layers in one session.
+
+## 2026-08-11 — Stagehand integration
+
+- **A full-screen modal blinds Stagehand observe/act while extract keeps working.** The onboarding tour makes the app inert; the interactive-element snapshot is honestly empty (~1.8k input tokens is the tell) but extract reads the inert tree anyway — so AI verdicts can describe UI a user cannot touch. Suppress gates the same way e2e fixtures do (pre-seed the flag via addInitScript) and treat "observe returns 0 for every phrasing" as structural, not a wording problem.
+- **Extract-after-act races Dexie liveQuery.** The DOM updates a beat after a mutating act; extracting immediately reads the pre-update tree. A short render settle after mutating steps fixes it deterministically.
+- **Bun resolves modules from the script's location, not cwd** — scratch scripts outside the repo can't import the repo's node_modules; run diagnostics from a gitignored in-repo dir instead.

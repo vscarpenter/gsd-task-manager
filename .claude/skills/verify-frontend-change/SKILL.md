@@ -46,13 +46,15 @@ If a dev server is already running, reuse it.
 
 ### 3. Get a trustworthy render — bust the service worker
 
-**Before trusting anything you see**, clear the cached chunks. Paste `scripts/reset-app-state.js` into the page console (via the browser's JS tool), then hard-reload. This unregisters every service worker and deletes the `gsd-*` Cache API entries, so the next load pulls fresh code from the dev server.
+Steps 3 and 4 are automated end-to-end by the Stagehand runner (`bun tools/stagehand/verify.ts`, see the evidence ladder below) — the manual flow here is for interactive browser sessions.
+
+**Before trusting anything you see**, clear the cached chunks. Paste `tools/stagehand/page-scripts/reset-app-state.js` into the page console (via the browser's JS tool), then hard-reload. This unregisters every service worker and deletes the `gsd-*` Cache API entries, so the next load pulls fresh code from the dev server.
 
 IndexedDB survives this — it's separate from the Cache API — so any seeded data persists across the reset. If you skip this step, assume every screenshot is suspect.
 
 ### 4. Seed state — if the surface is data-dependent
 
-The dashboard and matrix render empty with no tasks, so there's nothing to verify on a fresh load. Inject realistic data straight into IndexedDB with `scripts/seed-tasks.js` instead of clicking through the capture bar — it's faster and deterministic.
+The dashboard and matrix render empty with no tasks, so there's nothing to verify on a fresh load. Inject realistic data straight into IndexedDB with `tools/stagehand/page-scripts/seed-tasks.js` instead of clicking through the capture bar — it's faster and deterministic.
 
 Key facts the seeder encodes so you don't have to:
 
@@ -95,7 +97,7 @@ Close with the verdict and its evidence (template below). State which dimensions
 
 A real browser (and dev server) may not be available — for example, in a spawned subagent, headless CI, or a sandbox. Walk down this ladder and **report which rung you reached**:
 
-1. **Live browser** — the full flow above. Best evidence.
+1. **Live browser** — the full flow above, driven interactively via the Chrome tools **or headlessly via the Stagehand runner**: `bun tools/stagehand/verify.ts --goal "<acceptance criteria>" [--seed matrix|dashboard] [--path /route] [--act "<atomic instruction>"]`. The runner busts the SW, seeds IndexedDB, replays acts observe-then-act, and emits a JSON verdict plus screenshots and console/network evidence under `tools/stagehand/evidence/`; exit 0 means goal met with a clean console. Best evidence either way — use the runner when no interactive browser is attached (needs `ANTHROPIC_API_KEY` and a running dev server).
 2. **Served-artifact check** — fetch the actual chunk the dev server returns (the CSS/JS under `/_next/...`) and grep for the new code *and the absence of the old*. This answers "am I looking at stale code?" without a browser — it's the cheapest way to defeat the stale-chunk trap when you can't bust the SW visually. Pair it with a targeted `bun run test:e2e` spec for real behavior in a real engine (one spec, not the whole suite — see right-sizing above).
 3. **Static reasoning + deferral** — read the changed code, reason about behavior, and produce the verification *plan* (which surface, what to seed, what to click, what would prove it) — then explicitly defer execution: "Verified by inspection; runtime check pending — run steps 3–5 in a browser."
 
