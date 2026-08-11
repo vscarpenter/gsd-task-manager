@@ -2,6 +2,22 @@
 
 ---
 
+## Done — 2026-08-11: Stagehand verification layer + live smoke tests (v11.3.0)
+
+Branch `feat/stagehand-verification`. Spec: `docs/superpowers/specs/2026-08-11-stagehand-verification-design.md`; plan: `docs/superpowers/plans/2026-08-11-stagehand-verification.md`.
+
+- [x] tools/stagehand/: harness (Haiku 4.5), verify.ts CLI, smoke.ts + 6 journeys, args/report modules
+- [x] Page scripts moved to tools/stagehand/page-scripts/ + console-collector.js; SKILL.md updated (paths + runner rung)
+- [x] Acceptance: verify true/false/--act runs green locally; smoke 6/6 local AND 6/6 vs https://gsd.vinny.dev; stopped-server failure path exits 1
+- [x] Coverage 96%+ on deterministic modules; suite/typecheck/lint green; version 11.3.0
+
+### Resuming From Here
+- Done: all 9 plan tasks complete and committed on the branch.
+- Next: change report + comprehension quiz, then push + PR on user go-ahead.
+- Blockers: none. Assumptions: ANTHROPIC_API_KEY stays shell/env-provided (not in .env.local).
+
+---
+
 ## Done — 2026-08-10: Resolve four Medium and fourteen Low audit findings
 
 **Branch:** `codex/resolve-audit-findings` · **Tier:** Non-trivial ·
