@@ -84,6 +84,14 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     model: { modelName: STAGEHAND_MODEL, apiKey },
     logging: { level: "error", format: "pretty" },
   });
+  // The onboarding tour modal makes the app inert behind it, which blanks
+  // Stagehand's interactive-element snapshot (observe/act find nothing).
+  // Pre-seed the seen-flag exactly like the Playwright e2e fixtures do;
+  // onboarding itself is covered by its own specs. try/catch: localStorage
+  // is inaccessible on about:blank's opaque origin.
+  await browser.context.addInitScript(
+    'try { window.localStorage.setItem("gsd-onboarding-seen", "true"); } catch {}'
+  );
   const page = await acquirePage(browser);
   const accumulated = emptyEvidence();
   let lastPath = "/";
