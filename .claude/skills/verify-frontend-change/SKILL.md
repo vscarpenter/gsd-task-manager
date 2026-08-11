@@ -46,13 +46,13 @@ If a dev server is already running, reuse it.
 
 ### 3. Get a trustworthy render — bust the service worker
 
-**Before trusting anything you see**, clear the cached chunks. Paste `scripts/reset-app-state.js` into the page console (via the browser's JS tool), then hard-reload. This unregisters every service worker and deletes the `gsd-*` Cache API entries, so the next load pulls fresh code from the dev server.
+**Before trusting anything you see**, clear the cached chunks. Paste `tools/stagehand/page-scripts/reset-app-state.js` into the page console (via the browser's JS tool), then hard-reload. This unregisters every service worker and deletes the `gsd-*` Cache API entries, so the next load pulls fresh code from the dev server.
 
 IndexedDB survives this — it's separate from the Cache API — so any seeded data persists across the reset. If you skip this step, assume every screenshot is suspect.
 
 ### 4. Seed state — if the surface is data-dependent
 
-The dashboard and matrix render empty with no tasks, so there's nothing to verify on a fresh load. Inject realistic data straight into IndexedDB with `scripts/seed-tasks.js` instead of clicking through the capture bar — it's faster and deterministic.
+The dashboard and matrix render empty with no tasks, so there's nothing to verify on a fresh load. Inject realistic data straight into IndexedDB with `tools/stagehand/page-scripts/seed-tasks.js` instead of clicking through the capture bar — it's faster and deterministic.
 
 Key facts the seeder encodes so you don't have to:
 
