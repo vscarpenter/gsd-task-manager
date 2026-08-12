@@ -2,6 +2,15 @@
 
 ---
 
+## Done — 2026-08-11: Close two Medium audit findings and refresh report
+
+- [x] OBS-01: Smoke reports now fail for console errors, page errors, and failed requests; focused regression coverage passed.
+- [x] TEST-01: Added a serialized production-export PWA lifecycle gate for Chromium, Firefox, and WebKit, including service-worker control, cache-boundary checks, and an unavailable-origin reload.
+- [x] Fixed the gate-discovered offline startup gap by precaching and classifying <code>/theme-init.js</code> as a runtime asset.
+- [x] Regenerated <code>docs/codebase-analysis-report.html</code> with fresh root, production PWA, CSP, quality, and browser evidence. The latest canonical E2E sweep is recorded accurately as 269/270, with the isolated Chromium timeout retained as a Low follow-up.
+
+---
+
 ## Done — 2026-08-11: Stagehand verification layer + live smoke tests (v11.3.0)
 
 Branch `feat/stagehand-verification`. Spec: `docs/superpowers/specs/2026-08-11-stagehand-verification-design.md`; plan: `docs/superpowers/plans/2026-08-11-stagehand-verification.md`.

@@ -36,6 +36,7 @@ Data collection — run before analysis:
    browser cannot be installed/launched in this environment, say so explicitly
    and mark that project's data as "not collected" rather than "failed".
 3. Use both result sets as primary evidence for dimensions 2 and 12 below.
+4. Use 'bun run smoke' to run the smoke test suite.
 
 Analyze across these dimensions:
 1. Standards compliance with @coding-standards.md

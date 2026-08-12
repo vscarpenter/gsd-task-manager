@@ -50,6 +50,7 @@ function classifyRequest(
 function isRuntimeAsset(pathname) {
 	return (
 		pathname === "/manifest.json" ||
+		pathname === "/theme-init.js" ||
 		pathname === "/favicon.svg" ||
 		pathname.startsWith("/icons/")
 	);

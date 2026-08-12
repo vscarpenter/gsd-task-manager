@@ -53,13 +53,22 @@ describe("verifyExitCode", () => {
     expect(verifyExitCode({ observed: "", goalMet: false, evidence: "" }, cleanEvidence)).toBe(1);
   });
 
-  it("ignores warnings and failed requests", () => {
+  it("ignores warnings", () => {
     expect(
       verifyExitCode(
         { observed: "", goalMet: true, evidence: "" },
-        { ...cleanEvidence, consoleWarnings: ["w"], failedRequests: ["404 x"] }
+        { ...cleanEvidence, consoleWarnings: ["w"] }
       )
     ).toBe(0);
+  });
+
+  it("returns 1 when a request fails", () => {
+    expect(
+      verifyExitCode(
+        { observed: "", goalMet: true, evidence: "" },
+        { ...cleanEvidence, failedRequests: ["GET /api/tasks: net::ERR_FAILED"] }
+      )
+    ).toBe(1);
   });
 });
 
@@ -70,6 +79,17 @@ describe("buildSmokeReport", () => {
 
   it("exits 1 on any failure", () => {
     expect(buildSmokeReport("u", [pass, fail], cleanEvidence, "dir").exitCode).toBe(1);
+  });
+
+  it("exits 1 when a journey passes but page evidence is blocking", () => {
+    expect(
+      buildSmokeReport(
+        "u",
+        [pass],
+        { ...cleanEvidence, pageErrors: ["uncaught error"], failedRequests: ["GET /data: failed"] },
+        "dir"
+      ).exitCode
+    ).toBe(1);
   });
 });
 
@@ -89,6 +109,24 @@ describe("formatSmokeTable", () => {
       "dir"
     );
     expect(formatSmokeTable(report)).toContain("console errors: 2");
+  });
+
+  it("surfaces every blocking evidence class", () => {
+    const report = buildSmokeReport(
+      "u",
+      [pass],
+      {
+        ...cleanEvidence,
+        consoleErrors: ["console"],
+        pageErrors: ["page"],
+        failedRequests: ["GET /data: failed"],
+      },
+      "dir"
+    );
+    const table = formatSmokeTable(report);
+    expect(table).toContain("console errors: 1");
+    expect(table).toContain("page errors: 1");
+    expect(table).toContain("failed requests: 1");
   });
 });
 

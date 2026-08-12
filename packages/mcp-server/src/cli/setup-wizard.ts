@@ -6,6 +6,7 @@
 import { writeFileSync, chmodSync } from 'node:fs';
 import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
+import { redactPocketBaseHost } from '../api/client.js';
 import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/config.js';
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
 import { getSetupArtifactPath, removeSetupArtifact } from './setup-artifact.js';
@@ -57,9 +58,8 @@ async function configureAuthentication(pbUrl: string): Promise<string> {
     console.log(`  Tasks in PocketBase: ${status.taskCount}`);
     console.log();
     return authToken;
-  } catch (error) {
+  } catch {
     console.log('✗ Token validation failed');
-    console.log('Error:', error instanceof Error ? error.message : 'Unknown error');
     console.log('\nPlease check your token and try again.');
     process.exit(1);
   }
@@ -74,9 +74,8 @@ async function testTaskAccess(pbUrl: string, authToken: string): Promise<void> {
     const config: GsdConfig = { pocketBaseUrl: pbUrl, authToken };
     const tasks = await listTasks(config);
     console.log(`✓ Success! (Found ${tasks.length} tasks)`);
-  } catch (error) {
+  } catch {
     console.log('⚠ Could not list tasks');
-    console.log('Error:', error instanceof Error ? error.message : 'Unknown error');
     console.log('This may resolve after tasks are synced.\n');
   }
 }
@@ -139,7 +138,7 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
             command: 'npx',
             args: ['-y', 'gsd-mcp-server'],
             env: {
-              GSD_POCKETBASE_URL: pbUrl,
+              GSD_POCKETBASE_URL: redactPocketBaseHost(pbUrl),
               GSD_AUTH_TOKEN: `<see ${configPath}>  // ${tokenPreview}`,
             },
           },
@@ -212,10 +211,10 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
 
     // Step 4: Next Steps
     displayNextSteps();
-  } catch (error) {
+  } catch {
     // Best-effort cleanup so a partial setup does not leave a token at rest.
     removeSetupArtifact();
-    console.error('\n✗ Setup failed:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('\n✗ Setup failed.');
     process.exit(1);
   }
 }

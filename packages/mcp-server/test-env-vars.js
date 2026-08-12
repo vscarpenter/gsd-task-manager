@@ -12,10 +12,6 @@ const vars = {
 console.log('GSD_POCKETBASE_URL:', vars.GSD_POCKETBASE_URL ? '✅ Set' : '❌ Missing');
 console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? '✅ Set' : '❌ Missing');
 
-console.log('\nValues:');
-console.log('GSD_POCKETBASE_URL:', vars.GSD_POCKETBASE_URL || '(not set)');
-console.log('GSD_AUTH_TOKEN:', vars.GSD_AUTH_TOKEN ? '***' : '(not set)');
-
 const missing = Object.entries(vars).reduce((acc, [k, v]) => {
   if (!v) acc.push(k);
   return acc;

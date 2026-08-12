@@ -5,6 +5,7 @@
 
 import type { GsdConfig, SyncStatus } from '../tools.js';
 import { getSyncStatus, listDevices, listTasks } from '../tools.js';
+import { redactPocketBaseHost } from '../api/client.js';
 import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/config.js';
 
 /**
@@ -48,7 +49,7 @@ async function validatePBConnection(pbUrl: string): Promise<ValidationCheck> {
       return {
         name: 'PocketBase Connectivity',
         status: '✓',
-        details: `Connected to ${pbUrl}`,
+        details: `Connected to ${redactPocketBaseHost(pbUrl)}`,
       };
     } else {
       return {
@@ -61,7 +62,7 @@ async function validatePBConnection(pbUrl: string): Promise<ValidationCheck> {
     return {
       name: 'PocketBase Connectivity',
       status: '✗',
-      details: `Failed to connect to ${pbUrl}`,
+      details: `Failed to connect to ${redactPocketBaseHost(pbUrl)}`,
     };
   }
 }
@@ -93,11 +94,11 @@ async function validateAuthentication(config: GsdConfig): Promise<ValidationChec
       details: `Token valid (${status.taskCount} tasks accessible)`,
     });
     checks.push(createSyncStatusCheck(status));
-  } catch (error) {
+  } catch {
     checks.push({
       name: 'Authentication',
       status: '✗',
-      details: error instanceof Error ? error.message : 'Token validation failed',
+      details: 'Token validation failed',
     });
   }
 
@@ -115,11 +116,11 @@ async function validateTaskAccess(config: GsdConfig): Promise<ValidationCheck> {
       status: '✓',
       details: `Successfully read ${tasks.length} tasks`,
     };
-  } catch (error) {
+  } catch {
     return {
       name: 'Task Access',
       status: '✗',
-      details: error instanceof Error ? error.message : 'Failed to read tasks',
+      details: 'Failed to read tasks',
     };
   }
 }
@@ -195,7 +196,7 @@ export async function runValidation(): Promise<void> {
   if (!isSafePocketBaseUrl(pbUrl)) {
     console.log('✗ Configuration Error\n');
     console.log(UNSAFE_POCKETBASE_URL_MESSAGE);
-    console.log(`\nGSD_POCKETBASE_URL is currently: ${pbUrl}`);
+    console.log(`\nGSD_POCKETBASE_URL is currently: ${redactPocketBaseHost(pbUrl)}`);
     process.exit(1);
   }
 

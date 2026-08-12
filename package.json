@@ -25,6 +25,7 @@
 		"test:e2e:ui": "playwright test --ui",
 		"test:e2e:debug": "playwright test --debug",
 		"test:csp": "node scripts/verify-production-csp.cjs",
+		"test:pwa": "node scripts/verify-production-pwa.cjs",
 		"smoke": "bun tools/stagehand/smoke.ts",
 		"audit": "bun audit --audit-level=high"
 	},

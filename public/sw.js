@@ -20,6 +20,7 @@ const PRECACHE_PAGES = [
 
 const PRECACHE_RUNTIME = [
 	"/manifest.json",
+	"/theme-init.js",
 	"/icons/icon-192.png",
 	"/icons/icon-512.png",
 	"/icons/icon.svg",
