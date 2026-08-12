@@ -139,9 +139,10 @@ jobs:
         run: bun run test:e2e -- --project=${{ matrix.browser }} --reporter=line,html
         env:
           CI: true
-      - name: Build production export for strict CSP smoke test
-        if: matrix.browser == 'chromium'
+      - name: Build production export
         run: bun run build
+      - name: Verify production PWA lifecycle in ${{ matrix.browser }}
+        run: bun run test:pwa -- ${{ matrix.browser }}
       - name: Boot production export under strict CSP
         if: matrix.browser == 'chromium'
         run: bun run test:csp

@@ -61,6 +61,12 @@ describe("classifyRequest", () => {
 		);
 	});
 
+	it("should return runtime for the startup theme script", () => {
+		expect(classifyRequest("/theme-init.js", null, true, "GET")).toBe(
+			"runtime",
+		);
+	});
+
 	it("should return runtime for /icons/*.png", () => {
 		expect(classifyRequest("/icons/icon-192.png", null, true, "GET")).toBe(
 			"runtime",
