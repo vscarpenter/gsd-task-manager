@@ -101,6 +101,24 @@ describe('Task Import/Export Operations', () => {
           primaryKeys: vi.fn().mockResolvedValue([]),
         })),
       },
+      // Every user-owned store the 2.0.0 envelope carries (ADR 0014). Defaults
+      // are empty so existing task-only assertions keep their meaning.
+      archivedTasks: {
+        toArray: vi.fn().mockResolvedValue([]),
+        clear: vi.fn(),
+        put: vi.fn(),
+        toCollection: vi.fn(() => ({
+          primaryKeys: vi.fn().mockResolvedValue([]),
+        })),
+      },
+      smartViews: {
+        toArray: vi.fn().mockResolvedValue([]),
+        clear: vi.fn(),
+        put: vi.fn(),
+      },
+      notificationSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
+      archiveSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
+      appPreferences: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
       syncQueue: {
         add: vi.fn(),
         clear: vi.fn(),
@@ -124,7 +142,7 @@ describe('Task Import/Export Operations', () => {
       expect(result).toHaveProperty('exportedAt');
       expect(result).toHaveProperty('version');
       expect(result.tasks).toHaveLength(2);
-      expect(result.version).toBe('1.0.0');
+      expect(result.version).toBe('2.0.0');
     });
 
     it('should validate tasks with schema', async () => {
@@ -156,7 +174,7 @@ describe('Task Import/Export Operations', () => {
       const result = await exportTasks();
 
       expect(result.tasks).toEqual([]);
-      expect(result.version).toBe('1.0.0');
+      expect(result.version).toBe('2.0.0');
     });
 
     it('should skip invalid tasks instead of aborting the whole export', async () => {
@@ -328,9 +346,19 @@ describe('Task Import/Export Operations', () => {
 
       await importTasks(validPayload, 'replace');
 
+      // Scoped across every table a restore writes — a narrower scope would let
+      // a partial restore commit (ADR 0014).
       expect(mockDb.transaction).toHaveBeenCalledWith(
         'rw',
-        [mockDb.tasks, mockDb.syncQueue],
+        [
+          mockDb.tasks,
+          mockDb.archivedTasks,
+          mockDb.smartViews,
+          mockDb.notificationSettings,
+          mockDb.archiveSettings,
+          mockDb.appPreferences,
+          mockDb.syncQueue,
+        ],
         expect.any(Function)
       );
     });
@@ -419,7 +447,7 @@ describe('Task Import/Export Operations', () => {
 
       expect(parsed).toHaveProperty('tasks');
       expect(parsed.tasks).toHaveLength(2);
-      expect(parsed.version).toBe('1.0.0');
+      expect(parsed.version).toBe('2.0.0');
     });
 
     it('should format with indentation', async () => {

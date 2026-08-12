@@ -38,6 +38,7 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit |
 | `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path |
 | Migration v15 | `lib/db.ts` | Deletes only duplicates that stay archivable |
+| `applyArchivedTasks` | `lib/tasks/import-export.ts` | Idempotent `put`; live copy wins on a contradictory payload; absent key ≠ delete |
 
 Adding a writer? Add it to this table and give it a test for each rule that applies.
 
@@ -47,4 +48,6 @@ Adding a writer? Add it to this table and give it a test for each rule that appl
 - **`bulkAdd` inside a transaction is all-or-nothing.** One duplicate key aborts the entire batch, which turns a single bad row into a permanent feature outage.
 - **Byte comparison does not identify resurrected rows.** Sync normalizes fields on the round trip. Measured against the affected dataset, content comparison matched zero of 167 duplicates.
 - **`archivedTasks` is never synced.** The remote copy is deleted when the task is archived, so undoing a permanent delete enqueues nothing.
+- **An absent key in a backup is not an instruction to delete.** A `1.0.0` export carries no `archivedTasks`, so replace-mode import must leave the archive alone rather than read the silence as "empty". Distinguish a missing key from an empty array (ADR 0014).
+- **`taskRecordSchema` is `.strict()` and declares no `archivedAt`.** Validating archived rows with it rejects every one of them — silently, since callers skip invalid records rather than throw. Use `archivedTaskRecordSchema`.
 - **Verifying against one dataset proves less than it looks.** The production data that exposed this bug held no counterexamples to the absolute-tombstone version. A real-data check passed while the rule was still wrong. Reason about the invariant, then measure.

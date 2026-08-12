@@ -209,4 +209,90 @@ test.describe("Data Management — Import", () => {
 
     await expect(page.getByText("2 tasks", { exact: true })).toBeVisible();
   });
+
+  /**
+   * The restore half of ADR 0014. Before it, a v2 backup's archive was dropped
+   * on import, so a user who wiped their browser got their board back and lost
+   * everything they had ever archived.
+   */
+  test("replace-mode restore brings the archive back", async ({ page }) => {
+    await matrixPage.createTask("Task before restore");
+    await gotoDataSection(matrixPage);
+
+    const now = "2026-01-01T00:00:00.000Z";
+    const archivedRecord = {
+      id: "restored-archive-1",
+      title: "Restored from the archive",
+      description: "",
+      urgent: false,
+      important: false,
+      quadrant: "not-urgent-not-important",
+      completed: true,
+      createdAt: now,
+      updatedAt: now,
+      archivedAt: now,
+      recurrence: "none",
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: false,
+      notificationSent: false,
+    };
+
+    const backup = JSON.stringify({
+      version: "2.0.0",
+      exportedAt: now,
+      tasks: [{ ...archivedRecord, id: "restored-live-1", title: "Restored live task", completed: false, archivedAt: undefined }],
+      archivedTasks: [archivedRecord],
+      archiveSettings: { id: "settings", enabled: true, archiveAfterDays: 90 },
+    });
+
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: /import/i }).click();
+    await (await fileChooserPromise).setFiles({
+      name: "full-backup.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(backup),
+    });
+
+    const dialog = page.getByRole("dialog", { name: /import tasks/i });
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: /replace everything/i }).click();
+    await expect(dialog).toBeHidden();
+
+    // The archive is restored into its own store, not the board.
+    const archived = await page.evaluate(() => {
+      return new Promise<unknown[]>((resolve, reject) => {
+        const req = indexedDB.open("GsdTaskManager");
+        req.onsuccess = () => {
+          const db = req.result;
+          const store = db.transaction("archivedTasks", "readonly").objectStore("archivedTasks");
+          const all = store.getAll();
+          all.onsuccess = () => { db.close(); resolve(all.result); };
+          all.onerror = () => { db.close(); reject(all.error); };
+        };
+        req.onerror = () => reject(req.error);
+      });
+    });
+
+    expect(archived).toHaveLength(1);
+    expect((archived[0] as { title: string }).title).toBe("Restored from the archive");
+    expect((archived[0] as { archivedAt: string }).archivedAt).toBe(now);
+
+    // Settings ride along on the restore path.
+    const archiveDays = await page.evaluate(() => {
+      return new Promise<number | undefined>((resolve, reject) => {
+        const req = indexedDB.open("GsdTaskManager");
+        req.onsuccess = () => {
+          const db = req.result;
+          const get = db.transaction("archiveSettings", "readonly")
+            .objectStore("archiveSettings").get("settings");
+          get.onsuccess = () => { db.close(); resolve(get.result?.archiveAfterDays); };
+          get.onerror = () => { db.close(); reject(get.error); };
+        };
+        req.onerror = () => reject(req.error);
+      });
+    });
+    expect(archiveDays).toBe(90);
+  });
 });

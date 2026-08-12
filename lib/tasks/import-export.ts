@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
-import { importPayloadSchema, taskRecordSchema } from "@/lib/schema";
+import { archivedTaskRecordSchema, importPayloadSchema, taskRecordSchema } from "@/lib/schema";
 import type { ImportPayload, TaskRecord } from "@/lib/types";
 import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
@@ -11,6 +11,9 @@ const MAX_IMPORT_TASKS = 10_000;
 
 /** Maximum raw JSON string size (10 MB) to prevent memory exhaustion */
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
+
+/** Envelope version written by this build. See docs/adr/0014. */
+const BACKUP_ENVELOPE_VERSION = "2.0.0";
 
 function getUtf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
@@ -48,16 +51,81 @@ async function collectExportableTasks(): Promise<{ tasks: TaskRecord[]; skippedC
   return { tasks: normalized, skippedCount };
 }
 
-function toPayload(tasks: TaskRecord[]): ImportPayload {
-  return { tasks, exportedAt: isoNow(), version: "1.0.0" } satisfies ImportPayload;
+/**
+ * Read the archive, keeping only rows that pass the archived-record schema.
+ *
+ * Deliberately NOT `taskRecordSchema`: that schema is `.strict()` and declares no
+ * `archivedAt`, so every archived row would fail and be counted as corrupt —
+ * producing an empty archive in the backup that looks like an empty archive on
+ * disk. See ADR 0014.
+ */
+async function collectExportableArchive(): Promise<{ tasks: TaskRecord[]; skippedCount: number }> {
+  const db = getDb();
+  const archived = await db.archivedTasks.toArray();
+  const normalized: TaskRecord[] = [];
+  let skippedCount = 0;
+  for (const task of archived) {
+    const result = archivedTaskRecordSchema.safeParse(task);
+    if (result.success) {
+      normalized.push(result.data as TaskRecord);
+    } else {
+      skippedCount++;
+      logger.warn('Skipping corrupt archived task during export', { taskId: task.id });
+    }
+  }
+  return { tasks: normalized, skippedCount };
 }
 
 /**
- * Export all tasks as a structured payload
+ * Collect every user-owned store for a backup.
+ *
+ * Device-local and account-identifying stores are excluded by omission rather
+ * than by filtering: `syncMetadata` carries email / userId / deviceId, and a
+ * backup is a file people mail themselves. See ADR 0014 for the full table.
+ */
+async function collectUserOwnedStores() {
+  const db = getDb();
+  const [smartViews, notificationSettings, archiveSettings, appPreferences] = await Promise.all([
+    db.smartViews.toArray(),
+    db.notificationSettings.get("settings"),
+    db.archiveSettings.get("settings"),
+    db.appPreferences.get("preferences"),
+  ]);
+  return { smartViews, notificationSettings, archiveSettings, appPreferences };
+}
+
+/**
+ * Build the backup envelope once, reporting how many records were unreadable.
+ *
+ * Single source for both `exportTasks` and `exportToJsonWithReport`, so the file
+ * a user downloads can never contain less than the API says it does.
+ */
+async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: number }> {
+  const [live, archive, stores] = await Promise.all([
+    collectExportableTasks(),
+    collectExportableArchive(),
+    collectUserOwnedStores(),
+  ]);
+
+  const payload: ImportPayload = {
+    version: BACKUP_ENVELOPE_VERSION,
+    exportedAt: isoNow(),
+    tasks: live.tasks,
+    archivedTasks: archive.tasks,
+    smartViews: stores.smartViews as ImportPayload["smartViews"],
+    ...(stores.notificationSettings ? { notificationSettings: stores.notificationSettings } : {}),
+    ...(stores.archiveSettings ? { archiveSettings: stores.archiveSettings } : {}),
+    ...(stores.appPreferences ? { appPreferences: stores.appPreferences } : {}),
+  };
+
+  return { payload, skippedCount: live.skippedCount + archive.skippedCount };
+}
+
+/**
+ * Export every user-owned store as a structured payload (envelope 2.0.0).
  */
 export async function exportTasks(): Promise<ImportPayload> {
-  const { tasks } = await collectExportableTasks();
-  return toPayload(tasks);
+  return (await buildBackup()).payload;
 }
 
 /**
@@ -143,6 +211,107 @@ async function resolveSyncDeps(): Promise<{ syncEnabled: boolean; queue: SyncQue
 }
 
 /**
+ * Write the archive, upholding the ADR 0013 tombstone rules.
+ *
+ * Rule 1 — an id lives in `tasks` or `archivedTasks`, never both. A payload
+ * listing an id in both is self-contradictory; the live copy wins and the
+ * archived duplicate is dropped, because resurrecting a tombstone over live work
+ * loses data while dropping a redundant tombstone does not.
+ *
+ * Rule 3 — `put`, never `add`, so a re-import cannot raise a ConstraintError and
+ * abort the surrounding transaction.
+ *
+ * Returns the number of archived records dropped, so the caller can report it
+ * rather than swallow it.
+ */
+async function applyArchivedTasks(
+  archivedTasks: TaskRecord[] | undefined,
+  mode: "replace" | "merge"
+): Promise<number> {
+  // Silence is not an instruction to delete: a 1.0.0 backup says nothing about
+  // the archive, so replace must leave it alone.
+  if (!archivedTasks) return 0;
+
+  const db = getDb();
+  if (mode === "replace") await db.archivedTasks.clear();
+
+  const liveIds = new Set((await db.tasks.toCollection().primaryKeys()) as string[]);
+  const existingArchivedIds =
+    mode === "merge"
+      ? new Set((await db.archivedTasks.toCollection().primaryKeys()) as string[])
+      : new Set<string>();
+
+  let dropped = 0;
+  for (const task of archivedTasks) {
+    if (liveIds.has(task.id)) {
+      dropped++;
+      continue;
+    }
+    if (existingArchivedIds.has(task.id)) continue;
+    await db.archivedTasks.put(task);
+  }
+  return dropped;
+}
+
+async function applySmartViews(
+  smartViews: ImportPayload["smartViews"],
+  mode: "replace" | "merge"
+): Promise<void> {
+  if (!smartViews) return;
+  const db = getDb();
+  if (mode === "replace") await db.smartViews.clear();
+  for (const view of smartViews) {
+    await db.smartViews.put(view as never);
+  }
+}
+
+/** Settings singletons, applied on the restore path only. */
+async function applySettings(parsed: ImportPayload): Promise<void> {
+  const db = getDb();
+  if (parsed.notificationSettings) await db.notificationSettings.put(parsed.notificationSettings);
+  if (parsed.archiveSettings) await db.archiveSettings.put(parsed.archiveSettings);
+  if (parsed.appPreferences) await db.appPreferences.put(parsed.appPreferences);
+}
+
+/** Every table a restore writes. A narrower scope would let a partial restore commit. */
+function importTransactionTables(db: ReturnType<typeof getDb>) {
+  return [
+    db.tasks,
+    db.archivedTasks,
+    db.smartViews,
+    db.notificationSettings,
+    db.archiveSettings,
+    db.appPreferences,
+    db.syncQueue,
+  ];
+}
+
+/** Write the live-task table, returning what sync needs to hear about. */
+async function applyTasks(
+  tasks: TaskRecord[],
+  mode: "replace" | "merge"
+): Promise<{ created: TaskRecord[]; deletedIds: string[] }> {
+  const db = getDb();
+
+  if (mode === "replace") {
+    const existingIds = new Set((await db.tasks.toCollection().primaryKeys()) as string[]);
+    const importedIds = new Set(tasks.map(t => t.id));
+    const deletedIds = [...existingIds].filter(id => !importedIds.has(id));
+
+    await db.tasks.clear();
+    await db.tasks.bulkAdd(tasks);
+    return { created: tasks, deletedIds };
+  }
+
+  const existingTasks = await db.tasks.toArray();
+  const existingIds = new Set(existingTasks.map(t => t.id));
+  const { tasks: regeneratedTasks, idMap } = regenerateConflictingIds(tasks, existingIds);
+  const tasksToImport = remapTaskReferences(regeneratedTasks, idMap);
+  await db.tasks.bulkAdd(tasksToImport);
+  return { created: tasksToImport, deletedIds: [] };
+}
+
+/**
  * Import tasks from a payload with merge or replace mode
  */
 export async function importTasks(payload: ImportPayload, mode: "replace" | "merge" = "replace"): Promise<void> {
@@ -161,34 +330,35 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
 
   let tasksToCreate: TaskRecord[] = [];
   let taskIdsToDelete: string[] = [];
+  let droppedArchivedCount = 0;
 
-  await db.transaction("rw", [db.tasks, db.syncQueue], async () => {
-    if (mode === "replace") {
-      const existingIds = new Set(
-        (await db.tasks.toCollection().primaryKeys()) as string[],
-      );
-      const importedIds = new Set(parsed.tasks.map(t => t.id));
-      taskIdsToDelete = [...existingIds].filter(id => !importedIds.has(id));
+  await db.transaction(
+    "rw",
+    importTransactionTables(db),
+    async () => {
+      ({ created: tasksToCreate, deletedIds: taskIdsToDelete } = await applyTasks(parsed.tasks, mode));
 
-      await db.tasks.clear();
-      await db.tasks.bulkAdd(parsed.tasks);
-      tasksToCreate = parsed.tasks;
-    } else {
-      const existingTasks = await db.tasks.toArray();
-      const existingIds = new Set(existingTasks.map(t => t.id));
-      const { tasks: regeneratedTasks, idMap } = regenerateConflictingIds(parsed.tasks, existingIds);
-      const tasksToImport = remapTaskReferences(regeneratedTasks, idMap);
-      await db.tasks.bulkAdd(tasksToImport);
-      tasksToCreate = tasksToImport;
-    }
+      droppedArchivedCount = await applyArchivedTasks(parsed.archivedTasks, mode);
+      await applySmartViews(parsed.smartViews, mode);
+      // Settings belong to the restore path: merging combines task lists, it
+      // does not adopt another device's configuration.
+      if (mode === "replace") await applySettings(parsed);
 
-    if (syncEnabled) {
-      await Promise.all([
-        ...taskIdsToDelete.map((id) => queue.enqueue('delete', id, null)),
-        ...tasksToCreate.map((task) => queue.enqueue('create', task.id, task)),
-      ]);
-    }
-  });
+      if (syncEnabled) {
+        // Archived rows are never synced — the remote copy is deleted when a
+        // task is archived (ADR 0013).
+        await Promise.all([
+          ...taskIdsToDelete.map((id) => queue.enqueue('delete', id, null)),
+          ...tasksToCreate.map((task) => queue.enqueue('create', task.id, task)),
+        ]);
+      }
+    });
+
+  if (droppedArchivedCount > 0) {
+    logger.warn('Dropped archived records that were also present as live tasks', {
+      count: droppedArchivedCount,
+    });
+  }
 
   if (syncEnabled) {
     scheduleSyncAfterChange();
@@ -221,8 +391,11 @@ export async function importFromJson(raw: string, mode: "replace" | "merge" = "r
  * Use this when you need to tell the user that some records were unreadable.
  */
 export async function exportToJsonWithReport(): Promise<ExportReport> {
-  const { tasks, skippedCount } = await collectExportableTasks();
-  return { json: JSON.stringify(toPayload(tasks), null, 2), skippedCount };
+  // Shares buildBackup with exportTasks: this is the path the Settings "Export
+  // tasks" button uses, so anything it omits is omitted from every backup a user
+  // actually takes.
+  const { payload, skippedCount } = await buildBackup();
+  return { json: JSON.stringify(payload, null, 2), skippedCount };
 }
 
 /**

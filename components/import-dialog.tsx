@@ -109,7 +109,7 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground">Merge Tasks</h3>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  Keep your existing tasks and add the imported tasks. Duplicate IDs will be regenerated to avoid conflicts.
+                  Keep your existing tasks and add the imported ones, archive included. Duplicate IDs are regenerated to avoid conflicts, and your settings stay as they are.
                 </p>
                 <p className="mt-2 text-xs font-medium text-olive-d">
                   ✓ Safe - No data loss
@@ -130,9 +130,9 @@ export function ImportDialog({ open, onOpenChange, fileContents, existingTaskCou
                 <RefreshCwIcon className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Replace All Tasks</h3>
+                <h3 className="font-semibold text-foreground">Replace Everything</h3>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  Delete all existing tasks and replace them with the imported tasks. This action cannot be undone.
+                  Restore this backup over your current data — tasks, archive, and settings. This action cannot be undone.
                 </p>
                 <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust-d">
                   <AlertTriangleIcon className="h-3 w-3" />
