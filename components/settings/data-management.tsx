@@ -8,6 +8,8 @@ import { SettingsRow } from "./shared-components";
 interface DataManagementProps {
 	activeTasks: number;
 	completedTasks: number;
+	/** Auto-archived tasks. Counted in `totalTasks`, shown separately so the two rows agree. */
+	archivedTasks: number;
 	totalTasks: number;
 	estimatedSize: string;
 	/** Export tasks to a JSON backup. Resolves `true` on success, `false` on failure. */
@@ -18,12 +20,55 @@ interface DataManagementProps {
 	pendingSync?: number;
 }
 
+type StorageSummaryRowsProps = Pick<
+	DataManagementProps,
+	"activeTasks" | "completedTasks" | "archivedTasks" | "totalTasks" | "estimatedSize"
+>;
+
+/**
+ * The two read-only rows describing what this device is holding. Split out so
+ * the breakdown always accounts for every record counted in `totalTasks`.
+ */
+function StorageSummaryRows({
+	activeTasks,
+	completedTasks,
+	archivedTasks,
+	totalTasks,
+	estimatedSize,
+}: StorageSummaryRowsProps) {
+	return (
+		<>
+			<SettingsRow label="Local storage">
+				<div className="text-right">
+					<p className="text-sm font-medium text-foreground">{estimatedSize} KB</p>
+					<p className="text-xs text-foreground-muted">{totalTasks} tasks</p>
+				</div>
+			</SettingsRow>
+
+			<SettingsRow label="Tasks breakdown">
+				<div className="flex gap-4 text-xs">
+					<span className="text-foreground-muted">
+						Active: <span className="font-medium text-foreground">{activeTasks}</span>
+					</span>
+					<span className="text-foreground-muted">
+						Done: <span className="font-medium text-foreground">{completedTasks}</span>
+					</span>
+					<span className="text-foreground-muted">
+						Archived: <span className="font-medium text-foreground">{archivedTasks}</span>
+					</span>
+				</div>
+			</SettingsRow>
+		</>
+	);
+}
+
 /**
  * iOS-style data management settings
  */
 export function DataManagement({
 	activeTasks,
 	completedTasks,
+	archivedTasks,
 	totalTasks,
 	estimatedSize,
 	onExport,
@@ -36,25 +81,13 @@ export function DataManagement({
 
 	return (
 		<>
-			{/* Storage Stats Row */}
-			<SettingsRow label="Local storage">
-				<div className="text-right">
-					<p className="text-sm font-medium text-foreground">{estimatedSize} KB</p>
-					<p className="text-xs text-foreground-muted">{totalTasks} tasks</p>
-				</div>
-			</SettingsRow>
-
-			{/* Task Breakdown Row */}
-			<SettingsRow label="Tasks breakdown">
-				<div className="flex gap-4 text-xs">
-					<span className="text-foreground-muted">
-						Active: <span className="font-medium text-foreground">{activeTasks}</span>
-					</span>
-					<span className="text-foreground-muted">
-						Done: <span className="font-medium text-foreground">{completedTasks}</span>
-					</span>
-				</div>
-			</SettingsRow>
+			<StorageSummaryRows
+				activeTasks={activeTasks}
+				completedTasks={completedTasks}
+				archivedTasks={archivedTasks}
+				totalTasks={totalTasks}
+				estimatedSize={estimatedSize}
+			/>
 
 			{/* Export Row */}
 			<ActionRow

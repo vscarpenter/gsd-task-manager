@@ -20,7 +20,7 @@ export interface Harness {
   goto(routePath: string): Promise<void>;
   currentUrl(): Promise<string>;
   resetAppState(): Promise<void>;
-  seed(scenario: "matrix" | "dashboard"): Promise<void>;
+  seed(scenario: "matrix" | "dashboard" | "storage"): Promise<void>;
   screenshot(name: string): Promise<string>;
   readEvidence(): Promise<PageEvidence>;
   writeReport(name: string, data: unknown): string;

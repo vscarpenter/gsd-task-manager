@@ -61,8 +61,14 @@ separately so the two rows do not contradict each other.
 - `estimatedSize` must account for archived records too, or it contradicts the count
   directly beside it.
 
-**Edge cases.** Zero archived tasks → row reads exactly as today. Archive count still
-loading → do not flash a wrong number; render the live-task figure only once resolved.
+**Edge cases.** Zero archived tasks → row reads exactly as today.
+
+*Amended during implementation:* the original spec required withholding the figure until
+the archive query resolved, "so it does not flash a wrong number." Dropped. The live-task
+figure already renders as `0 tasks` while `tasks` loads, so a placeholder would fix half a
+flash while leaving the other half — and `ArchiveSettings` sets the established precedent
+with `useLiveQuery(...) ?? 0`. Consistency beats a partial fix. Revisit only if the whole
+settings surface gets a loading treatment.
 
 **Acceptance criteria.**
 1. With 59 live and 232 archived, the storage row reports 291 tasks.
