@@ -45,6 +45,9 @@ export function QuadrantPane({
   onTaskRef,
   sectionRef,
 }: QuadrantPaneProps) {
+  // `meta.id` names both the droppable and the SortableContext below. The
+  // SortableContext id is load-bearing: a card dropped onto another card
+  // resolves its target quadrant through its container, since `over` is the card.
   const { setNodeRef, isOver } = useDroppable({ id: meta.id });
   const accent = QUADRANT_ACCENT[meta.rdKey];
   const ink = QUADRANT_INK[meta.rdKey];
@@ -106,7 +109,7 @@ export function QuadrantPane({
         </button>
       </header>
 
-      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+      <SortableContext id={meta.id} items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-1">
           {tasks.length === 0 ? (
             <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">

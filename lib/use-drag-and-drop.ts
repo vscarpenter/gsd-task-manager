@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useSensors, useSensor, PointerSensor, TouchSensor, KeyboardSensor, DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import type { Announcements } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import type { QuadrantId } from "@/lib/types";
 import { moveTaskToQuadrant } from "@/lib/tasks";
+import { containerOf, quadrantTitle, resolveDropQuadrant } from "@/lib/dnd-drop-target";
 import { DND_CONFIG } from "@/lib/constants";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
 
@@ -21,20 +22,33 @@ export type DragErrorHandler = (
 ) => void;
 
 /**
- * Custom hook for drag-and-drop functionality in MatrixBoard
- * Configures sensors and provides drag handler with error handling
+ * dnd-kit's default `onDragEnd` announcement claims the item was "dropped over"
+ * the target the moment the gesture ends — before the write has resolved, and
+ * regardless of whether it succeeds. These report intent only; the outcome is
+ * announced separately once it is actually known.
  */
-export function useDragAndDrop(onError: DragErrorHandler) {
-  const [activeId, setActiveId] = useState<string | null>(null);
+const DRAG_ANNOUNCEMENTS: Announcements = {
+  onDragStart: ({ active }) => `Picked up task ${active.id}.`,
+  onDragOver: ({ over }) => {
+    const quadrant = resolveDropQuadrant(over);
+    return quadrant ? `Over ${quadrantTitle(quadrant)}.` : "Not over a quadrant.";
+  },
+  onDragEnd: ({ over }) => {
+    const quadrant = resolveDropQuadrant(over);
+    return quadrant ? `Dropped over ${quadrantTitle(quadrant)}. Moving…` : "Drop cancelled.";
+  },
+  onDragCancel: () => "Drag cancelled. Task returned to its quadrant.",
+};
 
-  // Configure sensors for drag-and-drop (mouse + touch + keyboard).
-  // KeyboardSensor makes the drag handle operable without a pointer (WCAG 2.1.1);
-  // sortableKeyboardCoordinates drives arrow-key movement within the sortable list.
-  const sensors = useSensors(
+/**
+ * Mouse, touch, and keyboard sensors. The KeyboardSensor makes the drag handle
+ * operable without a pointer (WCAG 2.1.1); sortableKeyboardCoordinates drives
+ * arrow-key movement within the sortable list.
+ */
+function useDragSensors() {
+  return useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: DND_CONFIG.POINTER_DISTANCE,
-      },
+      activationConstraint: { distance: DND_CONFIG.POINTER_DISTANCE },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
@@ -42,16 +56,27 @@ export function useDragAndDrop(onError: DragErrorHandler) {
         tolerance: DND_CONFIG.TOUCH_TOLERANCE,
       },
     }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+}
+
+/**
+ * Custom hook for drag-and-drop functionality in MatrixBoard
+ * Configures sensors and provides drag handler with error handling
+ */
+export function useDragAndDrop(onError: DragErrorHandler) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  // Announced after the write settles, so assistive tech never hears "moved"
+  // for a move that threw. Rendered into an sr-only live region by the board.
+  const [statusMessage, setStatusMessage] = useState("");
+  const sensors = useDragSensors();
 
   /**
    * Track which task is being dragged for DragOverlay
    */
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    setStatusMessage("");
   };
 
   /**
@@ -65,12 +90,18 @@ export function useDragAndDrop(onError: DragErrorHandler) {
       return;
     }
 
+    const targetQuadrant = resolveDropQuadrant(over);
+    if (!targetQuadrant || containerOf(active) === targetQuadrant) {
+      return;
+    }
+
     const taskId = active.id as string;
-    const targetQuadrant = over.id as QuadrantId;
 
     try {
       await moveTaskToQuadrant(taskId, targetQuadrant);
+      setStatusMessage(`Task moved to ${quadrantTitle(targetQuadrant)}.`);
     } catch (error) {
+      setStatusMessage(ErrorMessages.TASK_MOVE_FAILED);
       onError(error, {
         action: ErrorActions.MOVE_TASK,
         taskId,
@@ -84,6 +115,8 @@ export function useDragAndDrop(onError: DragErrorHandler) {
   return {
     sensors,
     activeId,
+    statusMessage,
+    announcements: DRAG_ANNOUNCEMENTS,
     handleDragStart,
     handleDragEnd,
   };
