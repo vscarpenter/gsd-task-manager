@@ -4,6 +4,7 @@ import {
   getBlockingTasks,
   getBlockedTasks,
   getUncompletedBlockingTasks,
+  getUncompletedBlockedTasks,
   isTaskBlocked,
   isTaskBlocking,
   getReadyTasks,
@@ -166,6 +167,32 @@ describe("Dependencies utility", () => {
     it("should_return_empty_when_task_has_no_dependencies", () => {
       const taskA = taskWith("A");
       expect(getUncompletedBlockingTasks(taskA, [taskA])).toHaveLength(0);
+    });
+  });
+
+  describe("getUncompletedBlockedTasks", () => {
+    it("should_filter_out_completed_dependents", () => {
+      const taskA = taskWith("A");
+      const taskB = taskWith("B", ["A"], true); // completed dependent
+      const taskC = taskWith("C", ["A"], false); // still open
+      const tasks = [taskA, taskB, taskC];
+
+      const open = getUncompletedBlockedTasks("A", tasks);
+      expect(open).toHaveLength(1);
+      expect(open[0].id).toBe("C");
+    });
+
+    it("should_return_empty_when_all_dependents_completed", () => {
+      const taskA = taskWith("A");
+      const taskB = taskWith("B", ["A"], true);
+      const tasks = [taskA, taskB];
+
+      expect(getUncompletedBlockedTasks("A", tasks)).toHaveLength(0);
+    });
+
+    it("should_return_empty_when_no_tasks_depend_on_it", () => {
+      const taskA = taskWith("A");
+      expect(getUncompletedBlockedTasks("A", [taskA])).toHaveLength(0);
     });
   });
 

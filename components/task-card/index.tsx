@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { AlertTriangleIcon } from "lucide-react";
 import { cn, isOverdue, isDueToday, daysOverdue } from "@/lib/utils";
-import { getUncompletedBlockingTasks, getBlockedTasks } from "@/lib/dependencies";
+import { getUncompletedBlockingTasks, getUncompletedBlockedTasks } from "@/lib/dependencies";
 import { quadrantForTask, QUADRANT_ACCENT } from "@/lib/quadrants";
 import { type TaskCardProps } from "@/lib/task-card-memo";
 import { TaskCardHeader } from "@/components/task-card/task-card-header";
@@ -36,7 +36,7 @@ export function TaskCard({
   const totalSubtasks = task.subtasks.length;
 
   const blockingTasks = getUncompletedBlockingTasks(task, allTasks);
-  const blockedTasks = getBlockedTasks(task.id, allTasks);
+  const blockedTasks = getUncompletedBlockedTasks(task.id, allTasks);
   const isBlocked = blockingTasks.length > 0;
   const isBlocking = blockedTasks.length > 0;
 

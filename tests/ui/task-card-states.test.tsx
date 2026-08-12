@@ -168,6 +168,45 @@ describe("TaskCard states", () => {
     expect(screen.getByText(/Blocking/)).toBeInTheDocument();
   });
 
+  it("hides the blocking badge once every dependent is completed", () => {
+    const blockerTask = createMockTask({ id: "blocker-1" });
+    const dependentTask = createMockTask({
+      id: "dependent-1",
+      dependencies: ["blocker-1"],
+      completed: true,
+    });
+
+    renderTaskCard(
+      { id: "blocker-1", title: "Blocker Task" },
+      {},
+      [blockerTask, dependentTask]
+    );
+
+    expect(screen.queryByText(/Blocking/)).not.toBeInTheDocument();
+  });
+
+  it("counts only open dependents in the blocking badge", () => {
+    const blockerTask = createMockTask({ id: "blocker-1" });
+    const doneDependent = createMockTask({
+      id: "dependent-done",
+      dependencies: ["blocker-1"],
+      completed: true,
+    });
+    const openDependent = createMockTask({
+      id: "dependent-open",
+      dependencies: ["blocker-1"],
+      completed: false,
+    });
+
+    renderTaskCard(
+      { id: "blocker-1", title: "Blocker Task" },
+      {},
+      [blockerTask, doneDependent, openDependent]
+    );
+
+    expect(screen.getByText(/Blocking 1/)).toBeInTheDocument();
+  });
+
   it("renders all subtasks completed with green styling", () => {
     const { container } = renderTaskCard({
       subtasks: [
