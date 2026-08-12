@@ -2,16 +2,12 @@ import { parseSmokeArgs } from "./args";
 import { createHarness, type Harness } from "./harness";
 import { buildSmokeReport, formatSmokeTable, type JourneyResult } from "./report";
 import { journeys, type Journey } from "./journeys";
+import { withTimeout } from "./timeout";
 
 const JOURNEY_TIMEOUT_MS = 90_000;
 // Dexie liveQuery re-renders land a beat after an act mutates state; extracting
 // immediately reads the pre-update DOM (seen live: task created but Q1 read empty).
 const RENDER_SETTLE_MS = 1500;
-
-const timeout = (ms: number): Promise<never> =>
-  new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`journey timed out after ${ms}ms`)), ms);
-  });
 
 const settleForRender = (): Promise<void> =>
   new Promise((resolve) => {
@@ -43,7 +39,7 @@ async function executeJourney(harness: Harness, journey: Journey): Promise<void>
 async function runJourney(harness: Harness, journey: Journey): Promise<JourneyResult> {
   const startedAt = Date.now();
   try {
-    await Promise.race([executeJourney(harness, journey), timeout(JOURNEY_TIMEOUT_MS)]);
+    await withTimeout(executeJourney(harness, journey), JOURNEY_TIMEOUT_MS);
     return {
       name: journey.name,
       status: "PASS",

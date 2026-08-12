@@ -31,11 +31,12 @@ import { runSetupWizard } from '../../cli/setup-wizard.js';
 describe('runSetupWizard', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
   let logSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`process.exit:${code}`);
@@ -50,6 +51,8 @@ describe('runSetupWizard', () => {
   });
 
   it('validates access and writes an owner-only redacted configuration artifact', async () => {
+    const privateUrl = 'https://private.internal:8443';
+    vi.mocked(prompt).mockResolvedValueOnce(privateUrl);
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
     vi.mocked(getSyncStatus).mockResolvedValueOnce({
       healthy: true,
@@ -69,6 +72,8 @@ describe('runSetupWizard', () => {
     expect(options).toEqual({ mode: 0o600 });
     expect(chmodSync).toHaveBeenCalledWith('/private/setup.json', 0o600);
     expect(logSpy.mock.calls.flat().join('\n')).not.toContain('secret-token');
+    expect(logSpy.mock.calls.flat().join('\n')).toContain('https://[pocketbase-host]');
+    expect(logSpy.mock.calls.flat().join('\n')).not.toContain('private.internal');
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
@@ -103,7 +108,7 @@ describe('runSetupWizard', () => {
     await expect(runSetupWizard()).resolves.toBeUndefined();
 
     expect(logSpy).toHaveBeenCalledWith('⚠ Warning: Got status 503');
-    expect(logSpy).toHaveBeenCalledWith('Error:', 'Unknown error');
+    expect(logSpy).toHaveBeenCalledWith('⚠ Could not list tasks');
   });
 
   it('cleans up and exits when the token is empty', async () => {
@@ -123,7 +128,16 @@ describe('runSetupWizard', () => {
 
     await expect(runSetupWizard()).rejects.toThrow('process.exit:1');
 
-    expect(logSpy).toHaveBeenCalledWith('Error:', 'Unknown error');
+    expect(logSpy).toHaveBeenCalledWith('✗ Token validation failed');
     expect(removeSetupArtifact).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not echo a setup failure that includes a configured host', async () => {
+    const privateUrl = 'https://private.internal:8443';
+    vi.mocked(prompt).mockRejectedValueOnce(new Error(`request to ${privateUrl} failed`));
+
+    await expect(runSetupWizard()).rejects.toThrow('process.exit:1');
+
+    expect(errorSpy.mock.calls.flat().join('\n')).not.toContain('private.internal');
   });
 });

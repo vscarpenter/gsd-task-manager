@@ -51,6 +51,20 @@ describe('runValidation', () => {
     expect(logSpy).toHaveBeenCalledWith('    2 total devices, 1 active');
   });
 
+  it('redacts the configured host from successful validation output', async () => {
+    process.env.GSD_POCKETBASE_URL = 'https://private.internal:8443';
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
+    vi.mocked(getSyncStatus).mockResolvedValueOnce({ healthy: true, taskCount: 3, lastSyncAt: null });
+    vi.mocked(listTasks).mockResolvedValueOnce([] as never);
+    vi.mocked(listDevices).mockResolvedValueOnce([] as never);
+
+    await expect(runValidation()).resolves.toBeUndefined();
+
+    const output = logSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('https://[pocketbase-host]');
+    expect(output).not.toContain('private.internal');
+  });
+
   it('reports warning-only connectivity, sync, and device results without exiting', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 503 })));
     vi.mocked(getSyncStatus).mockResolvedValueOnce({
@@ -80,9 +94,26 @@ describe('runValidation', () => {
     await expect(runValidation()).rejects.toThrow('process.exit:1');
 
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(logSpy).toHaveBeenCalledWith('    Failed to connect to https://pb.example.com');
-    expect(logSpy).toHaveBeenCalledWith('    bad token');
-    expect(logSpy).toHaveBeenCalledWith('    tasks unavailable');
+    expect(logSpy).toHaveBeenCalledWith('    Failed to connect to https://[pocketbase-host]');
+    expect(logSpy).toHaveBeenCalledWith('    Token validation failed');
+    expect(logSpy).toHaveBeenCalledWith('    Failed to read tasks');
+  });
+
+  it('does not echo the configured host from failing validation output', async () => {
+    const privateUrl = 'https://private.internal:8443';
+    process.env.GSD_POCKETBASE_URL = privateUrl;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error(`request to ${privateUrl} failed`);
+    }));
+    vi.mocked(getSyncStatus).mockRejectedValueOnce(new Error(`request to ${privateUrl} failed`));
+    vi.mocked(listTasks).mockRejectedValueOnce(new Error(`request to ${privateUrl} failed`));
+    vi.mocked(listDevices).mockResolvedValueOnce([] as never);
+
+    await expect(runValidation()).rejects.toThrow('process.exit:1');
+
+    const output = logSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('https://[pocketbase-host]');
+    expect(output).not.toContain('private.internal');
   });
 
   it('uses stable fallback messages for non-Error failures', async () => {

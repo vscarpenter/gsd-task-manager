@@ -92,6 +92,17 @@ describe('CLI URL safety guards', () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
+  it('does not disclose an unsafe configured host', async () => {
+    process.env.GSD_POCKETBASE_URL = 'http://private.internal';
+    process.env.GSD_AUTH_TOKEN = 'secret-token';
+
+    await expect(runValidation()).rejects.toThrow('process.exit:1');
+
+    const output = vi.mocked(console.log).mock.calls.flat().join('\n');
+    expect(output).toContain('http://[pocketbase-host]');
+    expect(output).not.toContain('private.internal');
+  });
+
   it('runSetupWizard exits before token-bearing calls when the prompted URL is unsafe', async () => {
     // prompt() is mocked to return an unsafe http://api.attacker.example URL.
     await expect(runSetupWizard()).rejects.toThrow('process.exit:1');
