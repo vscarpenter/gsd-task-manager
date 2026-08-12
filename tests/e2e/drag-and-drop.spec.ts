@@ -291,3 +291,93 @@ test.describe("Drag and Drop Between Quadrants", () => {
     await expect(movedTask).toContainText("project-x");
   });
 });
+
+/**
+ * Lift a card with the keyboard and step until the drag is genuinely over a
+ * quadrant other than its own, then drop.
+ *
+ * A single arrow press often resolves to the source's *own* pane, which is a
+ * legitimate no-op — so a fixed number of presses makes the test order-dependent.
+ * Steps against dnd-kit's own announcement, which names the quadrant under the
+ * cursor, and asserts we actually crossed before committing the drop.
+ */
+async function keyboardDragOut(page: Page, dragHandle: Locator) {
+  const overOtherQuadrant = page.getByText(/Over (Do First|Schedule|Delegate)\./);
+
+  await dragHandle.focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator("[data-testid='drag-overlay']")).toBeVisible();
+
+  for (let press = 0; press < 5; press += 1) {
+    await page.keyboard.press("ArrowUp");
+    if (await overOtherQuadrant.count()) break;
+  }
+  await expect(overOtherQuadrant.first()).toBeVisible();
+
+  await page.keyboard.press("Space");
+}
+
+test.describe("Keyboard drag between quadrants", () => {
+  test.beforeEach(async ({ clearIndexedDB }) => {
+    // Fixture clears IndexedDB
+  });
+
+  /**
+   * Regression: the drop handler cast `over.id` straight to a QuadrantId. Task
+   * cards are droppables too (useSortable), so arrow-key movement resolved
+   * `over` to a neighbouring *card* and the write received a task id — every
+   * keyboard drop failed with "Failed to move task. Please try again."
+   *
+   * Only a real keyboard sequence exercises this; pointer drags usually land on
+   * the pane rect and mask it.
+   */
+  test("keyboard drag moves a task into the target quadrant", async ({ page }) => {
+    await waitForAppLoad(page);
+
+    // Every quadrant needs an occupant: sortableKeyboardCoordinates traverses
+    // between registered droppables, and the failure mode under test is landing
+    // on a *card* rather than a pane.
+    await createTaskViaCaptureBar(page, "Q1 anchor !!");
+    await createTaskViaCaptureBar(page, "Q2 anchor *");
+    await createTaskViaCaptureBar(page, "Q3 anchor !");
+    await createTaskViaCaptureBar(page, "Keyboard move me");
+
+    const q4 = page.locator("[data-testid='quadrant-q4']");
+    const taskInQ4 = q4.locator("[data-testid='task-card']").filter({ hasText: "Keyboard move me" });
+    await expect(taskInQ4).toBeVisible();
+
+    // Lift with Space, traverse with an arrow, drop with Space — the documented
+    // dnd-kit keyboard contract.
+    const dragHandle = taskInQ4.locator("button[aria-label='Drag to move task']");
+    await keyboardDragOut(page, dragHandle);
+
+    // Before the fix this threw and the card stayed put.
+    await expect(taskInQ4).toHaveCount(0, { timeout: 5000 });
+    await expect(page.getByText("Failed to move task")).toHaveCount(0);
+
+    const movedCard = page
+      .locator("[data-testid='task-card']")
+      .filter({ hasText: "Keyboard move me" });
+    await expect(movedCard).toBeVisible();
+  });
+
+  test("keyboard drag reports the settled outcome to assistive tech", async ({ page }) => {
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Q1 anchor !!");
+    await createTaskViaCaptureBar(page, "Q2 anchor *");
+    await createTaskViaCaptureBar(page, "Announce me");
+
+    const q4 = page.locator("[data-testid='quadrant-q4']");
+    const card = q4.locator("[data-testid='task-card']").filter({ hasText: "Announce me" });
+    await expect(card).toBeVisible();
+
+    await keyboardDragOut(page, card.locator("button[aria-label='Drag to move task']"));
+
+    // The status region reports the result only after the write resolves, so a
+    // screen-reader user is never told "moved" for a move that failed.
+    await expect(page.locator("[data-testid='drag-status']")).toHaveText(
+      /Task moved to (Do First|Schedule|Delegate)\./,
+      { timeout: 5000 }
+    );
+  });
+});

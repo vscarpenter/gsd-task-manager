@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
-import { DndContext, DragOverlay } from "@dnd-kit/core";
+import { DndContext, closestCorners } from "@dnd-kit/core";
 import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
@@ -19,6 +19,7 @@ import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
+import { DragLayer } from "./drag-layer";
 import { MatrixGrid } from "./matrix-grid";
 import { MatrixGridSkeleton } from "./matrix-grid-skeleton";
 import { EditDrawer, type EditDraft } from "./edit-drawer";
@@ -163,7 +164,8 @@ async function handleToggle(task: TaskRecord, completedNext: boolean): Promise<v
 export function MatrixSimplified() {
   const { all, isLoading } = useTasks();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
-  const { sensors, activeId, handleDragStart, handleDragEnd } = useDragAndDrop(handleError);
+  const { sensors, activeId, statusMessage, announcements, handleDragStart, handleDragEnd } =
+    useDragAndDrop(handleError);
 
   useAutoArchive();
   useNotificationChecker();
@@ -365,7 +367,17 @@ export function MatrixSimplified() {
   );
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      // Cards and quadrant panes are both droppables. The default
+      // rectIntersection favours whichever rect overlaps, which made pointer
+      // drops depend on exactly where the cursor landed; closestCorners picks
+      // the nearest target consistently and the handler resolves it either way.
+      collisionDetection={closestCorners}
+      accessibility={{ announcements }}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <AppShell
         title="GSD Matrix"
         titleAsLabel
@@ -446,18 +458,7 @@ export function MatrixSimplified() {
         onSubmit={handleEditSubmit}
       />
 
-      <DragOverlay dropAnimation={null}>
-        {activeDragTask ? (
-          <div
-            data-testid="drag-overlay"
-            aria-hidden="true"
-            className="max-w-sm rounded-lg border border-pane-border bg-card px-4 py-3 shadow-[var(--shadow-elevated)]"
-            style={{ cursor: "grabbing" }}
-          >
-            <p className="truncate text-small font-semibold text-foreground">{activeDragTask.title}</p>
-          </div>
-        ) : null}
-      </DragOverlay>
+      <DragLayer task={activeDragTask} statusMessage={statusMessage} />
     </DndContext>
   );
 }
