@@ -2,6 +2,44 @@
 
 ---
 
+## Done — 2026-08-12: Review remediation, Wave C (v11.4.0)
+
+Spec: `tasks/spec-review-remediation-wave-a-b.md` (W-C1).
+ADR: `docs/adr/0014-versioned-backup-envelope.md`.
+
+- [x] #478 `feat(backup)` — envelope 2.0.0 carries all six user-owned stores; import
+      accepts 1.0.0 and 2.0.0; device-local and account stores excluded by design
+
+**The trap worth remembering:** `archivedAt` is declared in no schema and
+`taskRecordSchema` is `.strict()`, so validating archived rows with it rejects every
+one — *silently*, because the export path skips invalid records rather than throwing.
+A naive implementation would have produced an empty archive indistinguishable from a
+genuinely empty one. Recorded in `.claude/rules/archive-tombstone.md`.
+
+### Resuming From Here
+
+- **Done:** Waves A, B, C merged. Suite at 2669 passed; e2e 21/21 on data + settings.
+- **Next (user's selections, in the approved order):**
+  1. **Wave D** — Phase 1 leftovers: complete-undo toast (~2h), capture-friendly error
+     serialization (~1h), filtered empty state + filter-aware header counts (~1 day),
+     portal the Depends-on dropdown + popover audit + body-scroll lock (~1 day).
+  2. **Wave E** — trash with 30-day retention (ADR 0015). Now unblocked: `deletedTasks`
+     becomes another optional key in the 2.0.0 envelope, no second breaking bump.
+  3. **Wave F** — command palette correctness, completed-task disclosure, layout fixes.
+  4. **Wave G** — decompose `edit-drawer.tsx` **first** (hard gate), then recurrence,
+     subtasks, estimate input, then remove the Wave A "Coming soon" badges.
+- **Blockers:** none.
+- **Carried follow-ups:**
+  - Keyboard drag cannot easily reach an *empty* quadrant (`sortableKeyboardCoordinates`
+    traverses registered droppables). Deserves its own issue.
+  - `isTaskBlocking` in `lib/dependencies.ts` has no callers and keeps the unfiltered
+    semantics that caused #473.
+  - True offline testing (network severed) remains uncovered — deselected by the user.
+  - `tests/ui/zz-dbg.test.tsx` is a scratch file with a deliberately-failing assertion;
+    a hook blocks the agent from deleting it. **Remove it manually.**
+
+---
+
 ## Done — 2026-08-12: Review remediation, Waves A & B (v11.3.1 → v11.3.4)
 
 Spec: `tasks/spec-review-remediation-wave-a-b.md`. Source: `action-checklist.md`, derived
