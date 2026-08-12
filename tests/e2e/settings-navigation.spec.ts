@@ -110,4 +110,73 @@ test.describe("Settings Navigation", () => {
 
     expect(download.suggestedFilename()).toMatch(/^gsd-tasks-.*\.json$/);
   });
+
+  /**
+   * The backup is the only copy of this data that leaves the app, so what
+   * matters is the *contents* of the file the user actually receives — not that
+   * a download fired. Before ADR 0014 this file held 1 of 6 user-owned stores.
+   */
+  test("exported backup carries every user-owned store and no account data", async ({ page }) => {
+    await matrixPage.createTask("Live task for backup");
+
+    // Archived tasks live in their own store and can't be created from the UI.
+    await page.evaluate(() => {
+      return new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open("GsdTaskManager");
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction("archivedTasks", "readwrite");
+          const now = new Date().toISOString();
+          tx.objectStore("archivedTasks").put({
+            id: "e2e-archived-1",
+            title: "Archived task for backup",
+            description: "",
+            urgent: false,
+            important: false,
+            quadrant: "not-urgent-not-important",
+            completed: true,
+            createdAt: now,
+            updatedAt: now,
+            archivedAt: now,
+            recurrence: "none",
+            tags: [],
+            subtasks: [],
+            dependencies: [],
+            notificationEnabled: false,
+            notificationSent: false,
+            timeSpent: 0,
+            timeEntries: [],
+          });
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+        req.onerror = () => reject(req.error);
+      });
+    });
+
+    await matrixPage.openSettings();
+    await page.locator("aside.lg\\:block").getByRole("button", { name: "Data & Storage" }).click();
+    await expect(page.locator("main h2", { hasText: "Data & Storage" })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: /Export tasks/ }).click();
+    const stream = await (await downloadPromise).createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk as Buffer);
+    const backup = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+
+    expect(backup.version).toBe("2.0.0");
+    expect(backup.tasks.length).toBeGreaterThan(0);
+
+    // The 232-record omission this ADR exists to fix.
+    expect(backup.archivedTasks).toHaveLength(1);
+    expect(backup.archivedTasks[0].archivedAt).toBeTruthy();
+
+    // syncMetadata carries email / userId / deviceId. A backup must not bind
+    // the file to an account.
+    const serialized = JSON.stringify(backup);
+    for (const forbidden of ["syncMetadata", "deviceInfo", "syncHistory", "syncQueue"]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+  });
 });

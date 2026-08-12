@@ -63,10 +63,34 @@ export interface TaskDraft {
   estimatedMinutes?: number; // Estimated time to complete task
 }
 
+/**
+ * Backup envelope — see docs/adr/0014-versioned-backup-envelope.md.
+ *
+ * Everything past `tasks` is optional so that a 1.0.0 payload parses unchanged.
+ * An absent key means the backup says nothing about that store, which import
+ * treats differently from an empty array: silence leaves the store alone.
+ */
 export interface ImportPayload {
   tasks: TaskRecord[];
   exportedAt: string;
   version: string;
+  archivedTasks?: TaskRecord[];
+  smartViews?: SmartViewRecord[];
+  notificationSettings?: NotificationSettings;
+  archiveSettings?: ArchiveSettings;
+  appPreferences?: AppPreferences;
+}
+
+/** Shape of a stored (custom) smart view as it appears in a backup. */
+export interface SmartViewRecord {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  criteria: Record<string, unknown>;
+  isBuiltIn: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface NotificationSettings {

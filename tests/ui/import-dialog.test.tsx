@@ -97,8 +97,10 @@ describe("ImportDialog", () => {
   it("renders replace option button", () => {
     render(<ImportDialog {...defaultProps} />);
 
-    expect(screen.getByText("Replace All Tasks")).toBeInTheDocument();
-    expect(screen.getByText(/delete all existing tasks/i)).toBeInTheDocument();
+    expect(screen.getByText("Replace Everything")).toBeInTheDocument();
+    // Replace restores the whole backup, not just the task list (ADR 0014), so
+    // the copy has to name what else it overwrites.
+    expect(screen.getByText(/tasks, archive, and settings/i)).toBeInTheDocument();
     expect(screen.getByText(/warning - deletes 5 existing/i)).toBeInTheDocument();
   });
 
@@ -123,7 +125,7 @@ describe("ImportDialog", () => {
     const user = userEvent.setup();
     render(<ImportDialog {...defaultProps} />);
 
-    await user.click(screen.getByText("Replace All Tasks"));
+    await user.click(screen.getByText("Replace Everything"));
 
     await waitFor(() => {
       expect(mockImportFromJson).toHaveBeenCalledWith(validJsonContent, "replace");
@@ -145,7 +147,7 @@ describe("ImportDialog", () => {
     const user = userEvent.setup();
     render(<ImportDialog {...defaultProps} />);
 
-    await user.click(screen.getByText("Replace All Tasks"));
+    await user.click(screen.getByText("Replace Everything"));
 
     await waitFor(() => {
       expect(mockOnImportComplete).toHaveBeenCalled();
@@ -171,7 +173,7 @@ describe("ImportDialog", () => {
     render(<ImportDialog {...defaultProps} />);
 
     const mergeButton = screen.getByText("Merge Tasks").closest("button");
-    const replaceButton = screen.getByText("Replace All Tasks").closest("button");
+    const replaceButton = screen.getByText("Replace Everything").closest("button");
     const cancelButton = screen.getByRole("button", { name: /cancel/i });
 
     await user.click(mergeButton!);

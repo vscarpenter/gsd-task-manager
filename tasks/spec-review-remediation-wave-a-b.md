@@ -149,6 +149,74 @@ blocked state.
 
 ---
 
+---
+
+## W-C1 · Backup omits five of six user-owned stores
+
+**Status:** approved 2026-08-12. ADR: `docs/adr/0014-versioned-backup-envelope.md`.
+
+**Problem.** `exportTasks()` reads only `db.tasks` (`lib/tasks/import-export.ts:36`), and
+`importTasks()` writes inside a transaction scoped to `[db.tasks, db.syncQueue]`. Five
+user-owned stores never reach a backup: `archivedTasks`, `smartViews`,
+`notificationSettings`, `archiveSettings`, `appPreferences`. On the reviewed dataset that
+was 59 of 291 records. Export is the only way data leaves this app.
+
+**Inputs/Outputs.** Envelope `2.0.0`, keys mirroring table names, structurally a superset
+of `1.0.0` so one parser reads both. Device-local and account-identifying stores stay out —
+see the ADR's table.
+
+**Constraints.**
+- **`archivedAt` is in no schema.** `taskRecordSchema` is `.strict()`, so validating
+  archived records with it drops every one of them. A dedicated `archivedTaskRecordSchema`
+  is required. This is the single highest-risk detail in the change.
+- **`syncMetadata` must never be exported** — it holds `email`, `userId`, `deviceId`,
+  `localTaskOwnerUserId`. Privacy requirement.
+- Import is a new writer to `archivedTasks`: one transaction, `put` not `add`, no older
+  snapshot overwriting a newer one. Register it in `.claude/rules/archive-tombstone.md`.
+- `archivedTasks` is never synced — archived rows enqueue nothing.
+- Import keeps `.strip()` leniency; export keeps `.strict()`.
+
+**Edge cases.**
+- v1 payload (tasks only) → imports exactly as today; absent stores are left untouched.
+- Same id in both `tasks` and `archivedTasks` in the payload → live wins, archived
+  duplicate dropped, count reported (never silently swallowed).
+- Merge mode → archived rows added only when the id is absent from both tables; settings
+  untouched.
+- Empty `archivedTasks` → round-trips as an empty array, not a missing key.
+- A corrupt record in any store → skipped and counted, never aborting the whole backup.
+
+**Acceptance criteria.**
+1. Export of 4 live + 3 archived + settings produces an envelope containing all of them.
+2. Round-trip through replace mode restores every store byte-for-byte.
+3. A `1.0.0` payload still imports its tasks, and leaves other stores untouched.
+4. `syncMetadata`, `syncQueue`, `deviceInfo`, `syncHistory` never appear in output.
+5. Archived records survive export with `archivedAt` intact.
+6. A payload listing one id as both live and archived imports the live copy only, and
+   reports one dropped record.
+7. Merge mode leaves local settings unchanged.
+8. Replace-mode import runs in one transaction spanning every table it writes.
+
+**Test stubs.**
+```
+tests/data/import-export.test.ts (or export-full-fidelity.test.ts)
+  export
+    should_include_archived_tasks_with_archivedAt
+    should_include_smart_views_and_settings
+    should_never_include_sync_metadata_or_device_stores
+    should_emit_empty_arrays_rather_than_missing_keys
+  import v1 compatibility
+    should_import_tasks_from_a_1_0_0_payload
+    should_leave_other_stores_untouched_for_v1
+  import replace
+    should_restore_every_store
+    should_drop_archived_duplicate_when_id_is_also_live
+  import merge
+    should_add_archived_only_when_id_absent_from_both_tables
+    should_not_overwrite_local_settings
+```
+
+---
+
 ## Out of scope
 
 - Toast lanes / sync-toast preemption — could not be reproduced from code; the undo closure
