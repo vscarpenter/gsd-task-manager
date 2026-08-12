@@ -136,7 +136,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
           <Section label="Editing, completing, and drag-drop">
             <p style={bodyStyle}>
-              <strong>Complete</strong>: tap the checkbox on any task card. Recurring tasks automatically spawn the next instance.
+              <strong>Complete</strong>: tap the checkbox on any task card.
             </p>
             <p style={bodyStyle}>
               <strong>Edit</strong>: hover a task card and click the pencil to open the composer pre-filled with that

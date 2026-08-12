@@ -18,6 +18,13 @@ interface Feature {
   icon: LucideIcon;
   title: string;
   description: string;
+  /**
+   * Marks a capability that is modelled and implemented but has no way in yet.
+   * Recurrence and subtasks both render read-only on the card and in the detail
+   * sheet, and recurrence even spawns its next instance on completion — but the
+   * composer can author neither, so listing them unbadged oversells the product.
+   */
+  badge?: string;
 }
 
 // First three are hero features (Eisenhower Matrix, Privacy First, MCP Server) —
@@ -58,6 +65,7 @@ const features: Feature[] = [
     title: "Recurring Tasks",
     description:
       "Daily standup prep. Weekly reviews. Monthly goals. Set once, repeat automatically.",
+    badge: "Coming soon",
   },
   {
     icon: Tags,
@@ -70,6 +78,7 @@ const features: Feature[] = [
     title: "Subtasks",
     description:
       "Break complex work into steps. Track progress with a checklist.",
+    badge: "Coming soon",
   },
   {
     icon: Smartphone,
@@ -117,6 +126,7 @@ export function FeaturesSection() {
                   icon={feature.icon}
                   title={feature.title}
                   description={feature.description}
+                  badge={feature.badge}
                   className={lgSpan}
                 />
               );

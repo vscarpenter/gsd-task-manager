@@ -348,7 +348,6 @@ describe("Filter utilities", () => {
         "Recently Added",
         "This Week's Wins",
         "All Completed",
-        "Recurring Tasks",
         "Ready to Work",
       ];
 
@@ -374,10 +373,11 @@ describe("Filter utilities", () => {
       expect(view?.criteria.dueThisWeek).toBe(true);
     });
 
-    it("should have Recurring Tasks view", () => {
+    // Withheld until the composer can set `recurrence` — see
+    // lib/smart-views/built-in.ts. Restore with the recurrence authoring UI.
+    it("should not ship a Recurring Tasks view while recurrence is unauthorable", () => {
       const view = BUILT_IN_SMART_VIEWS.find(v => v.name === "Recurring Tasks");
-      expect(view).toBeDefined();
-      expect(view?.criteria.recurrence).toEqual(["daily", "weekly", "monthly"]);
+      expect(view).toBeUndefined();
     });
 
     it("should have No Deadline view", () => {
