@@ -2,6 +2,44 @@
 
 ---
 
+## Done — 2026-08-12: Review remediation, Waves A & B (v11.3.1 → v11.3.4)
+
+Spec: `tasks/spec-review-remediation-wave-a-b.md`. Source: `action-checklist.md`, derived
+from an external review of deployed v11.2.1.
+
+- [x] #473 `fix(deps)` — Blocking badge counts only open dependents (`getUncompletedBlockedTasks`)
+- [x] #474 `fix(settings)` — storage figure includes archived; `useStorageSummary` extracted; seeder gained `gsdSeed.archived()` + `storage` scenario
+- [x] #475 `fix(about)` — Recurring/Subtasks badged "Coming soon", Recurring smart view withheld, Help recurrence line removed
+- [x] #476 `fix(dnd)` — drop targets resolve to quadrants instead of `over.id as QuadrantId`; `closestCorners`; a11y announcement gated on the write
+
+**Seven checklist claims were verified false or stale** and deliberately not actioned —
+see the "Rejected claims" table in the spec. Notably: the version misalignment was already
+fixed, `Shift+N` is accurate, `TaskTimer` and the whole snooze UI are shipped, the badge did
+*not* skew "Ready to Work", and the recurrence engine genuinely works.
+
+### Resuming From Here
+
+- **Done:** Waves A and B, all four PRs merged to `main`. Suite green at 2657 passed.
+- **Next:** Wave C — versioned full-fidelity export/import (ADR 0014). This is the P0
+  data-loss item: export reads only `db.tasks`, omitting `archivedTasks`, `smartViews`,
+  `notificationSettings`, `archiveSettings`, `appPreferences`.
+- **Order matters:** Wave C must land before Wave E (trash), so `deletedTasks` is an
+  additive minor rather than a second breaking envelope bump.
+- **Hard gate for Wave G:** `edit-drawer.tsx` must be decomposed *before* recurrence,
+  subtasks, and estimate inputs are added. The shape ratchet's `max-lines` budget is 0
+  and one-way.
+- **Blockers:** none.
+- **Open follow-ups:**
+  - Keyboard drag cannot easily reach an *empty* quadrant — `sortableKeyboardCoordinates`
+    navigates between registered droppables. Deserves its own issue.
+  - `isTaskBlocking` in `lib/dependencies.ts` has no callers and retains the unfiltered
+    semantics that caused #473. A future caller would reinstate the bug.
+  - True offline testing (network severed) remains uncovered; the user deselected it.
+  - When Wave G lands: remove the two About badges, restore the Recurring Tasks built-in
+    view, restore the Help sentence, and revert the four tests asserting their absence.
+
+---
+
 ## Done — 2026-08-11: Close two Medium audit findings and refresh report
 
 - [x] OBS-01: Smoke reports now fail for console errors, page errors, and failed requests; focused regression coverage passed.
