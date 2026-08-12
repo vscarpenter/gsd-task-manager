@@ -111,6 +111,21 @@ export function getUncompletedBlockingTasks(task: TaskRecord, allTasks: TaskReco
 }
 
 /**
+ * Get uncompleted tasks that this task is blocking
+ *
+ * The mirror of getUncompletedBlockingTasks. A dependency edge outlives the work
+ * it described: once a dependent is completed it is no longer waiting on anything,
+ * so counting it would report a task as blocking work that has already shipped.
+ *
+ * @param taskId - ID of the task to check
+ * @param allTasks - All tasks in the system
+ * @returns Array of uncompleted tasks that depend on this one
+ */
+export function getUncompletedBlockedTasks(taskId: string, allTasks: TaskRecord[]): TaskRecord[] {
+  return getBlockedTasks(taskId, allTasks).filter(t => !t.completed);
+}
+
+/**
  * Check if a task is blocked (has uncompleted dependencies)
  * @param task - The task to check
  * @param allTasks - All tasks in the system
