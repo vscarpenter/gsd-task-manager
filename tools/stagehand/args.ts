@@ -1,4 +1,4 @@
-export type SeedScenario = "matrix" | "dashboard" | "none";
+export type SeedScenario = "matrix" | "dashboard" | "storage" | "none";
 
 export interface VerifyArgs {
   goal: string;
@@ -17,7 +17,7 @@ export interface SmokeArgs {
 
 const VERIFY_DEFAULT_URL = "http://localhost:3000";
 const SMOKE_DEFAULT_URL = "https://gsd.vinny.dev";
-const SEED_SCENARIOS: readonly SeedScenario[] = ["matrix", "dashboard", "none"];
+const SEED_SCENARIOS: readonly SeedScenario[] = ["matrix", "dashboard", "storage", "none"];
 
 function expectValue(argv: string[], index: number, flag: string): string {
   const value = argv[index];
@@ -42,7 +42,7 @@ export function parseVerifyArgs(argv: string[]): VerifyArgs {
     else if (flag === "--seed") {
       const value = expectValue(argv, (i += 1), flag);
       if (!SEED_SCENARIOS.includes(value as SeedScenario)) {
-        throw new Error(`--seed must be matrix, dashboard, or none (got "${value}")`);
+        throw new Error(`--seed must be matrix, dashboard, storage, or none (got "${value}")`);
       }
       args.seed = value as SeedScenario;
     } else if (flag === "--path") args.path = expectValue(argv, (i += 1), flag);

@@ -22,6 +22,7 @@ import {
   type SettingsSectionId,
 } from "./settings-sidebar-data";
 import type { SettingsData } from "./use-settings-data";
+import { useStorageSummary } from "./use-storage-summary";
 
 const ImportDialog = lazy(() =>
   import("@/components/import-dialog").then((m) => ({ default: m.ImportDialog }))
@@ -56,13 +57,7 @@ export function SettingsBody({
   const activeMeta =
     SETTINGS_SECTIONS.find((s) => s.id === activeSection) ?? SETTINGS_SECTIONS[0];
 
-  let activeTaskCount = 0;
-  let completedTaskCount = 0;
-  for (const task of tasks) {
-    if (task.completed) completedTaskCount += 1;
-    else activeTaskCount += 1;
-  }
-  const estimatedKb = (JSON.stringify(tasks).length / 1024).toFixed(1);
+  const storage = useStorageSummary(tasks);
 
   // Returns whether the backup was actually written, so callers (e.g. the
   // delete-account dialog's export-first gate) can refuse to proceed when the
@@ -162,10 +157,11 @@ export function SettingsBody({
         )}
         {activeSection === "data" && (
           <DataManagement
-            activeTasks={activeTaskCount}
-            completedTasks={completedTaskCount}
-            totalTasks={tasks.length}
-            estimatedSize={estimatedKb}
+            activeTasks={storage.activeTasks}
+            completedTasks={storage.completedTasks}
+            archivedTasks={storage.archivedTasks}
+            totalTasks={storage.totalTasks}
+            estimatedSize={storage.estimatedKb}
             onExport={handleExport}
             onImportClick={handleImportClick}
             isLoading={isExporting || tasksLoading}

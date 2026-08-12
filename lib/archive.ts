@@ -276,3 +276,24 @@ export async function getArchivedCount(): Promise<number> {
   const db = getDb();
   return db.archivedTasks.count();
 }
+
+/** Archived-task footprint, for the Settings storage summary. */
+export interface ArchivedStorageStats {
+  count: number;
+  bytes: number;
+}
+
+/**
+ * Measure the archived store's footprint in one pass.
+ *
+ * Settings reports storage two rows above "Reset everything", so the count and
+ * the size have to describe the same set of records — a count that includes
+ * archived tasks beside a size that doesn't would misstate what a reset destroys.
+ * Reading the rows (rather than just counting them) is what makes the byte figure
+ * real; the Data section is a deliberate navigation, not a hot path.
+ */
+export async function getArchivedStorageStats(): Promise<ArchivedStorageStats> {
+  const db = getDb();
+  const archived = await db.archivedTasks.toArray();
+  return { count: archived.length, bytes: JSON.stringify(archived).length };
+}

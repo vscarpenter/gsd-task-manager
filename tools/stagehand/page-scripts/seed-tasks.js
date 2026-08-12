@@ -34,6 +34,7 @@
 (() => {
   const DB_NAME = "GsdTaskManager";
   const STORE = "tasks";
+  const ARCHIVE_STORE = "archivedTasks";
   const SEED_PREFIX = "seed-";
 
   // Inline copy of resolveQuadrantId (lib/quadrants.ts) — quadrant is stored
@@ -94,21 +95,21 @@
     return record;
   };
 
-  const withStore = (mode, fn) =>
+  const withStore = (mode, fn, storeName = STORE) =>
     new Promise((resolve, reject) => {
       const open = indexedDB.open(DB_NAME); // no version => current (v14)
       open.onerror = () => reject(open.error);
       open.onsuccess = () => {
         const db = open.result;
-        if (!db.objectStoreNames.contains(STORE)) {
+        if (!db.objectStoreNames.contains(storeName)) {
           db.close();
           reject(new Error(
-            `'${STORE}' store missing — load the app once so Dexie creates the schema, then re-run.`
+            `'${storeName}' store missing — load the app once so Dexie creates the schema, then re-run.`
           ));
           return;
         }
-        const tx = db.transaction(STORE, mode);
-        const store = tx.objectStore(STORE);
+        const tx = db.transaction(storeName, mode);
+        const store = tx.objectStore(storeName);
         const result = fn(store);
         tx.oncomplete = () => { db.close(); resolve(result); };
         tx.onerror = () => { db.close(); reject(tx.error); };
@@ -123,21 +124,50 @@
     return msg;
   };
 
-  const clear = async () => {
+  // Archived tasks live in their own store and are never in `tasks` — the
+  // tombstone invariant (ADR 0013) is that an id is in one table or the other,
+  // never both. Surfaces that report storage or archive counts read this store,
+  // so seeding it is the only way to exercise them.
+  const archived = async (specs) => {
+    const records = specs.map((spec) => ({
+      ...makeRecord(spec),
+      archivedAt: isoDaysAgo(spec.archivedDaysAgo ?? 30),
+    }));
+    await withStore(
+      "readwrite",
+      (store) => records.forEach((r) => store.put(r)),
+      ARCHIVE_STORE
+    );
+    const msg = `gsdSeed: wrote ${records.length} archived task(s). Reload to see them.`;
+    console.log(msg, records.map((r) => r.id));
+    return msg;
+  };
+
+  const clearStore = (storeName) => {
     let removed = 0;
-    await withStore("readwrite", (store) => {
-      const cursorReq = store.openCursor();
-      cursorReq.onsuccess = (e) => {
-        const cursor = e.target.result;
-        if (!cursor) return;
-        if (String(cursor.value.id).startsWith(SEED_PREFIX)) {
-          cursor.delete();
-          removed++;
-        }
-        cursor.continue();
-      };
-    });
-    const msg = `gsdSeed: removed ${removed} seed-* task(s). Reload to refresh.`;
+    return withStore(
+      "readwrite",
+      (store) => {
+        const cursorReq = store.openCursor();
+        cursorReq.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (!cursor) return;
+          if (String(cursor.value.id).startsWith(SEED_PREFIX)) {
+            cursor.delete();
+            removed++;
+          }
+          cursor.continue();
+        };
+      },
+      storeName
+    ).then(() => removed);
+  };
+
+  const clear = async () => {
+    const removed = await clearStore(STORE);
+    const removedArchived = await clearStore(ARCHIVE_STORE);
+    const msg =
+      `gsdSeed: removed ${removed} seed-* task(s) and ${removedArchived} archived. Reload to refresh.`;
     console.log(msg);
     return msg;
   };
@@ -165,6 +195,17 @@
     { title: "Q4 — eliminate" },
   ]);
 
-  window.gsdSeed = { seed, clear, dashboard, matrix, makeRecord };
-  return "gsdSeed ready — try gsdSeed.dashboard(), gsdSeed.matrix(), or gsdSeed.clear().";
+  // Storage: live tasks plus archived ones, for surfaces that must report both
+  // (Settings → Data & Storage counts every record a reset would destroy).
+  const storage = async () => {
+    await matrix();
+    return archived([
+      { title: "Archived one", completed: true },
+      { title: "Archived two", completed: true },
+      { title: "Archived three", completed: true },
+    ]);
+  };
+
+  window.gsdSeed = { seed, archived, clear, dashboard, matrix, storage, makeRecord };
+  return "gsdSeed ready — try gsdSeed.dashboard(), gsdSeed.matrix(), gsdSeed.storage(), or gsdSeed.clear().";
 })();

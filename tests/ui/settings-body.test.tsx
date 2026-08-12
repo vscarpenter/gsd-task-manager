@@ -9,6 +9,7 @@ const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 const mockToastWarning = vi.fn();
 const mockExport = vi.fn();
+const mockArchivedStats = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -25,6 +26,9 @@ vi.mock("@/lib/logger", () => ({
 }));
 vi.mock("@/lib/tasks", () => ({
   exportToJsonWithReport: (...a: unknown[]) => mockExport(...a),
+}));
+vi.mock("@/lib/archive", () => ({
+  getArchivedStorageStats: (...a: unknown[]) => mockArchivedStats(...a),
 }));
 
 // Stub every leaf section EXCEPT DataManagement, which provides the real
@@ -94,6 +98,7 @@ let lastInput: HTMLInputElement | null = null;
 beforeEach(() => {
   vi.clearAllMocks();
   mockExport.mockResolvedValue({ json: "{}", skippedCount: 0 });
+  mockArchivedStats.mockResolvedValue({ count: 0, bytes: 0 });
   // jsdom lacks object-URL APIs used by the export download.
   if (!("createObjectURL" in URL)) {
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = () => "blob:x";
@@ -132,6 +137,27 @@ describe("SettingsBody", () => {
     // 2 active + 1 done out of 3 total.
     expect(screen.getByText("3 tasks")).toBeInTheDocument();
     expect(screen.getByText("Export tasks")).toBeInTheDocument();
+  });
+
+  it("counts archived tasks in the local-storage figure", async () => {
+    mockArchivedStats.mockResolvedValue({ count: 232, bytes: 240_000 });
+    renderBody("data");
+
+    // The figure sits two rows above "Reset everything", so understating it
+    // misrepresents exactly what a reset would destroy: 3 live + 232 archived.
+    await waitFor(() => expect(screen.getByText("235 tasks")).toBeInTheDocument());
+  });
+
+  it("reports the live count when nothing is archived", async () => {
+    renderBody("data");
+    await waitFor(() => expect(screen.getByText("3 tasks")).toBeInTheDocument());
+  });
+
+  it("surfaces the archived count in the task breakdown", async () => {
+    mockArchivedStats.mockResolvedValue({ count: 232, bytes: 240_000 });
+    renderBody("data");
+
+    await waitFor(() => expect(screen.getByText("232")).toBeInTheDocument());
   });
 
   it("exports tasks and reports success", async () => {
