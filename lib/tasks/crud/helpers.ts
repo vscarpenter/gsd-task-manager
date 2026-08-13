@@ -76,7 +76,10 @@ export async function runTaskSyncTransaction<T>(
 
   const result = await db.transaction(
     "rw!",
-    [db.tasks, db.syncQueue],
+    // `deletedTasks` is in scope for every task mutation because delete moves a
+    // record into it and restore moves one out (ADR 0015); a narrower scope
+    // would make those two operations non-atomic.
+    [db.tasks, db.deletedTasks, db.syncQueue],
     () => mutation({ syncEnabled, enqueue })
   );
   if (didEnqueue) scheduleSyncAfterChange();

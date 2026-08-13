@@ -20,6 +20,8 @@ const TASKS_V5 = `${TASKS_V3}, notificationSent`;
 const TASKS_V6 = `${TASKS_V5}, *dependencies`;
 const TASKS_V8 = `${TASKS_V6}, completedAt`;
 const ARCHIVED_TASKS = "id, quadrant, completed, dueDate, completedAt, archivedAt";
+// Trash (ADR 0015). Indexed on deletedAt because the retention sweep queries a range.
+const DELETED_TASKS = "id, quadrant, completed, dueDate, deletedAt";
 const SMART_VIEWS = "id, name, isBuiltIn, createdAt";
 const SYNC_QUEUE = "id, taskId, operation, timestamp, retryCount";
 const SYNC_QUEUE_WITH_STATUS = `${SYNC_QUEUE}, status`;
@@ -46,6 +48,7 @@ const STORES_V9 = {
 const STORES_V10 = { ...STORES_V9, syncHistory: "id, timestamp, status, deviceId" };
 const STORES_V11 = { ...STORES_V10, appPreferences: "id" };
 const STORES_V14 = { ...STORES_V11, syncQueue: SYNC_QUEUE_WITH_STATUS };
+const STORES_V16 = { ...STORES_V14, deletedTasks: DELETED_TASKS };
 
 function migrateTaskEnhancements(transaction: Transaction) {
   return transaction.table("tasks").toCollection().modify((task: TaskRecord) => {
@@ -226,4 +229,7 @@ export function registerDatabaseVersions(database: Dexie): void {
   database.version(13).stores(STORES_V11).upgrade(migratePocketBase);
   database.version(14).stores(STORES_V14).upgrade(migrateQueueStatus);
   database.version(15).stores(STORES_V14).upgrade(repairArchiveResurrection);
+  // v16 adds the trash store. No upgrade function: an empty new table needs no
+  // backfill, and existing rows in tasks/archivedTasks are untouched by it.
+  database.version(16).stores(STORES_V16);
 }

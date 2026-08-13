@@ -1,7 +1,12 @@
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
-import { archivedTaskRecordSchema, importPayloadSchema, taskRecordSchema } from "@/lib/schema";
+import {
+  archivedTaskRecordSchema,
+  importPayloadSchema,
+  taskRecordSchema,
+  trashedTaskRecordSchema,
+} from "@/lib/schema";
 import type { ImportPayload, TaskRecord } from "@/lib/types";
 import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
@@ -13,7 +18,7 @@ const MAX_IMPORT_TASKS = 10_000;
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
 
 /** Envelope version written by this build. See docs/adr/0014. */
-const BACKUP_ENVELOPE_VERSION = "2.0.0";
+const BACKUP_ENVELOPE_VERSION = "2.1.0";
 
 function getUtf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
@@ -83,6 +88,23 @@ async function collectExportableArchive(): Promise<{ tasks: TaskRecord[]; skippe
  * than by filtering: `syncMetadata` carries email / userId / deviceId, and a
  * backup is a file people mail themselves. See ADR 0014 for the full table.
  */
+/** Trash rows for the backup. Restoring one resumes its retention clock. */
+async function collectExportableTrash(): Promise<{ tasks: TaskRecord[]; skippedCount: number }> {
+  const db = getDb();
+  const trashed = await db.deletedTasks.toArray();
+  const normalized: TaskRecord[] = [];
+  let skippedCount = 0;
+  for (const task of trashed) {
+    const result = trashedTaskRecordSchema.safeParse(task);
+    if (result.success) normalized.push(result.data as TaskRecord);
+    else {
+      skippedCount++;
+      logger.warn('Skipping corrupt trashed task during export', { taskId: task.id });
+    }
+  }
+  return { tasks: normalized, skippedCount };
+}
+
 async function collectUserOwnedStores() {
   const db = getDb();
   const [smartViews, notificationSettings, archiveSettings, appPreferences] = await Promise.all([
@@ -101,9 +123,10 @@ async function collectUserOwnedStores() {
  * a user downloads can never contain less than the API says it does.
  */
 async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: number }> {
-  const [live, archive, stores] = await Promise.all([
+  const [live, archive, trash, stores] = await Promise.all([
     collectExportableTasks(),
     collectExportableArchive(),
+    collectExportableTrash(),
     collectUserOwnedStores(),
   ]);
 
@@ -112,13 +135,17 @@ async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: nu
     exportedAt: isoNow(),
     tasks: live.tasks,
     archivedTasks: archive.tasks,
+    deletedTasks: trash.tasks,
     smartViews: stores.smartViews as ImportPayload["smartViews"],
     ...(stores.notificationSettings ? { notificationSettings: stores.notificationSettings } : {}),
     ...(stores.archiveSettings ? { archiveSettings: stores.archiveSettings } : {}),
     ...(stores.appPreferences ? { appPreferences: stores.appPreferences } : {}),
   };
 
-  return { payload, skippedCount: live.skippedCount + archive.skippedCount };
+  return {
+    payload,
+    skippedCount: live.skippedCount + archive.skippedCount + trash.skippedCount,
+  };
 }
 
 /**
@@ -253,6 +280,28 @@ async function applyArchivedTasks(
   return dropped;
 }
 
+/**
+ * Restore the trash. Same rules as the archive: an absent key means the backup
+ * says nothing about trash, and a record already live elsewhere is skipped so an
+ * id never occupies two lifecycle tables (ADR 0013, extended by ADR 0015).
+ */
+async function applyTrashedTasks(
+  deletedTasks: TaskRecord[] | undefined,
+  mode: "replace" | "merge"
+): Promise<void> {
+  if (!deletedTasks) return;
+  const db = getDb();
+  if (mode === "replace") await db.deletedTasks.clear();
+
+  const liveIds = new Set((await db.tasks.toCollection().primaryKeys()) as string[]);
+  const archivedIds = new Set((await db.archivedTasks.toCollection().primaryKeys()) as string[]);
+
+  for (const task of deletedTasks) {
+    if (liveIds.has(task.id) || archivedIds.has(task.id)) continue;
+    await db.deletedTasks.put(task);
+  }
+}
+
 async function applySmartViews(
   smartViews: ImportPayload["smartViews"],
   mode: "replace" | "merge"
@@ -278,6 +327,7 @@ function importTransactionTables(db: ReturnType<typeof getDb>) {
   return [
     db.tasks,
     db.archivedTasks,
+    db.deletedTasks,
     db.smartViews,
     db.notificationSettings,
     db.archiveSettings,
@@ -339,6 +389,7 @@ export async function importTasks(payload: ImportPayload, mode: "replace" | "mer
       ({ created: tasksToCreate, deletedIds: taskIdsToDelete } = await applyTasks(parsed.tasks, mode));
 
       droppedArchivedCount = await applyArchivedTasks(parsed.archivedTasks, mode);
+      await applyTrashedTasks(parsed.deletedTasks, mode);
       await applySmartViews(parsed.smartViews, mode);
       // Settings belong to the restore path: merging combines task lists, it
       // does not adopt another device's configuration.

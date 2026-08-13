@@ -13,6 +13,7 @@ import { FeatureSettings } from "@/components/settings/feature-settings";
 import { NotificationSettingsSection } from "@/components/settings/notification-settings";
 import { SyncSettings } from "@/components/settings/sync-settings";
 import { ArchiveSettings } from "@/components/settings/archive-settings";
+import { TrashSettings } from "@/components/settings/trash-settings";
 import { DataManagement } from "@/components/settings/data-management";
 import { AboutSection } from "@/components/settings/about-section";
 
@@ -155,6 +156,7 @@ export function SettingsBody({
         {activeSection === "archive" && (
           <ArchiveSettings onViewArchive={() => router.push("/archive")} />
         )}
+        {activeSection === "trash" && <TrashSettings />}
         {activeSection === "data" && (
           <DataManagement
             activeTasks={storage.activeTasks}

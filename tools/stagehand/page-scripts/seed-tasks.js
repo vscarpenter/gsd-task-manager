@@ -35,6 +35,7 @@
   const DB_NAME = "GsdTaskManager";
   const STORE = "tasks";
   const ARCHIVE_STORE = "archivedTasks";
+  const TRASH_STORE = "deletedTasks";
   const SEED_PREFIX = "seed-";
 
   // Inline copy of resolveQuadrantId (lib/quadrants.ts) — quadrant is stored
@@ -166,6 +167,7 @@
   const clear = async () => {
     const removed = await clearStore(STORE);
     const removedArchived = await clearStore(ARCHIVE_STORE);
+    await clearStore(TRASH_STORE);
     const msg =
       `gsdSeed: removed ${removed} seed-* task(s) and ${removedArchived} archived. Reload to refresh.`;
     console.log(msg);
@@ -195,6 +197,28 @@
     { title: "Q4 — eliminate" },
   ]);
 
+  // Trash (ADR 0015): soft-deleted tasks awaiting the 30-day retention sweep.
+  const trashed = async (specs) => {
+    const records = specs.map((spec) => ({
+      ...makeRecord(spec),
+      deletedAt: isoDaysAgo(spec.deletedDaysAgo ?? 2),
+    }));
+    await withStore(
+      "readwrite",
+      (store) => records.forEach((r) => store.put(r)),
+      TRASH_STORE
+    );
+    const msg = `gsdSeed: wrote ${records.length} trashed task(s). Reload to see them.`;
+    console.log(msg, records.map((r) => r.id));
+    return msg;
+  };
+
+  const trash = () =>
+    trashed([
+      { title: "Deleted yesterday", deletedDaysAgo: 1 },
+      { title: "Deleted last week", deletedDaysAgo: 7 },
+    ]);
+
   // Storage: live tasks plus archived ones, for surfaces that must report both
   // (Settings → Data & Storage counts every record a reset would destroy).
   const storage = async () => {
@@ -206,6 +230,6 @@
     ]);
   };
 
-  window.gsdSeed = { seed, archived, clear, dashboard, matrix, storage, makeRecord };
+  window.gsdSeed = { seed, archived, trashed, clear, dashboard, matrix, storage, trash, makeRecord };
   return "gsdSeed ready — try gsdSeed.dashboard(), gsdSeed.matrix(), gsdSeed.storage(), or gsdSeed.clear().";
 })();

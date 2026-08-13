@@ -99,6 +99,15 @@ export const archivedTaskRecordSchema = taskRecordSchema
 	.extend({ archivedAt: z.iso.datetime({ offset: true }).optional() })
 	.strict();
 
+/** Trash rows (ADR 0015). Same shape, different timestamp. */
+export const storedTrashedTaskRecordSchema = storedTaskRecordSchema
+	.extend({ deletedAt: z.iso.datetime({ offset: true }).optional() })
+	.strip();
+
+export const trashedTaskRecordSchema = taskRecordSchema
+	.extend({ deletedAt: z.iso.datetime({ offset: true }).optional() })
+	.strict();
+
 /** Lenient counterpart for reading archived rows back in. */
 export const storedArchivedTaskRecordSchema = storedTaskRecordSchema
 	.extend({ archivedAt: z.iso.datetime({ offset: true }).optional() })
@@ -152,6 +161,7 @@ export const importPayloadSchema = z.object({
 	exportedAt: z.iso.datetime({ offset: true }),
 	version: z.string(),
 	archivedTasks: z.array(storedArchivedTaskRecordSchema).optional(),
+	deletedTasks: z.array(storedTrashedTaskRecordSchema).optional(),
 	smartViews: z.array(smartViewSchema).optional(),
 	notificationSettings: notificationSettingsSchema.optional(),
 	archiveSettings: archiveSettingsSchema.optional(),

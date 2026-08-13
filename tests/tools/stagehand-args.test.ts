@@ -43,7 +43,7 @@ describe("parseVerifyArgs", () => {
 
   it("throws on invalid seed", () => {
     expect(() => parseVerifyArgs(["--goal", "g", "--seed", "bogus"])).toThrow(
-      /matrix, dashboard, storage, or none/
+      /matrix, dashboard, storage, trash, or none/
     );
   });
 

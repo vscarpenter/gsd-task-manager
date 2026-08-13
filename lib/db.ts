@@ -13,6 +13,8 @@ import { registerDatabaseVersions } from "@/lib/db-migrations";
 class GsdDatabase extends Dexie {
   tasks!: Table<TaskRecord, string>;
   archivedTasks!: Table<TaskRecord, string>;
+  /** Trash — see docs/adr/0015-trash-with-retention.md. */
+  deletedTasks!: Table<TaskRecord, string>;
   smartViews!: Table<SmartView, string>;
   notificationSettings!: Table<NotificationSettings, string>;
   syncQueue!: Table<SyncQueueItem, string>;
