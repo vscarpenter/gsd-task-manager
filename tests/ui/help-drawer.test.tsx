@@ -91,10 +91,8 @@ describe("HelpDrawer", () => {
     await waitFor(() => expect(screen.getByRole("main")).toHaveFocus());
   });
 
-  it("does not describe recurrence while no UI can set it", () => {
+  it("documents recurrence now that the composer can set it", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
-    // The recurrence engine works, but nothing in the app can turn it on, so
-    // documenting it sends readers looking for a control that isn't there.
-    expect(document.body.textContent).not.toMatch(/recurring tasks automatically/i);
+    expect(document.body.textContent).toMatch(/recurring tasks automatically/i);
   });
 });

@@ -17,28 +17,21 @@ describe("about-page privacy copy", () => {
 });
 
 describe("about-page shipped-feature claims", () => {
-  // Recurrence and subtasks are modelled, rendered read-only on the card and in
-  // the detail sheet, and fully implemented in the data layer — but no UI can
-  // author either one. Advertising them as available oversells the product.
-  // Asserting on the heading's accessible name, not just its text, so the
-  // caveat reaches screen-reader users along with everyone else.
-  it("should_mark_recurring_tasks_as_not_yet_available", () => {
+  // Recurrence and subtasks were badged "Coming soon" while the schema and the
+  // engine existed but no UI could reach them. Both are authorable now, so the
+  // page can claim them plainly again.
+  it("should_claim_recurring_tasks_without_a_caveat", () => {
     render(<FeaturesSection />);
-    expect(
-      screen.getByRole("heading", { name: /Recurring Tasks\s+Coming soon/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recurring Tasks" })).toBeInTheDocument();
   });
 
-  it("should_mark_subtasks_as_not_yet_available", () => {
+  it("should_claim_subtasks_without_a_caveat", () => {
     render(<FeaturesSection />);
-    expect(
-      screen.getByRole("heading", { name: /Subtasks\s+Coming soon/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Subtasks" })).toBeInTheDocument();
   });
 
-  it("should_not_badge_shipped_features", () => {
-    render(<FeaturesSection />);
-    const card = screen.getByRole("heading", { name: "Eisenhower Matrix" }).closest("div");
-    expect(card?.textContent).not.toMatch(/coming soon/i);
+  it("should_not_badge_any_feature_as_coming_soon", () => {
+    const { container } = render(<FeaturesSection />);
+    expect(container.textContent).not.toMatch(/coming soon/i);
   });
 });
