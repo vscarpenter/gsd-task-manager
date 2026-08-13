@@ -14,6 +14,49 @@ import type { Page, Locator } from "@playwright/test";
  * whatever version the app just created, which is always the right one.
  */
 
+/** Vertical band of the drop target we need on screen to aim a pointer at it. */
+const MIN_TARGET_BAND_PX = 24;
+/** One wheel notch, large enough to cross a quadrant without overshooting the grid. */
+const SCROLL_STEP_PX = 240;
+
+/**
+ * Scrolls the drop target into range while the drag is active.
+ *
+ * The matrix is taller than a short viewport, and how tall depends on the font
+ * the host resolves — the same 1280x720 viewport fits all four quadrants on a
+ * developer machine but not on a CI runner. Rather than pin a viewport height
+ * that only holds until the next row of fields lands, bring the target into
+ * view the way a user does. @dnd-kit tracks scrolling during a drag, so the
+ * gesture does not disturb the pointer session.
+ */
+async function bringTargetIntoView(page: Page, target: Locator): Promise<void> {
+  const viewport = page.viewportSize();
+  if (!viewport) return;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const box = await target.boundingBox();
+    if (!box) return;
+    const topInView = box.y + box.height - MIN_TARGET_BAND_PX > 0;
+    const bottomInView = box.y + MIN_TARGET_BAND_PX < viewport.height;
+    if (topInView && bottomInView) return;
+
+    const previousY = box.y;
+    await page.mouse.wheel(0, box.y > 0 ? SCROLL_STEP_PX : -SCROLL_STEP_PX);
+    // `html { scroll-behavior: smooth }` animates the scroll, so wait for the
+    // box to actually move instead of assuming the wheel applied synchronously.
+    try {
+      await expect
+        .poll(async () => (await target.boundingBox())?.y ?? previousY, {
+          timeout: 2000,
+          intervals: [50, 50, 100],
+        })
+        .not.toBe(previousY);
+    } catch {
+      return; // Already scrolled as far as the page allows.
+    }
+  }
+}
+
 /**
  * Perform a drag from a source handle to a target container using manual mouse events.
  * This works with @dnd-kit's PointerSensor activation constraint.
@@ -41,6 +84,7 @@ async function performDrag(page: Page, source: Locator, target: Locator) {
       await overlay.waitFor({ state: "visible", timeout: 3000 });
 
       // Re-read the target after activation because dnd-kit can change layout.
+      await bringTargetIntoView(page, target);
       const targetBox = await target.boundingBox();
       if (!targetBox) throw new Error("Could not get a bounding box for the drop target");
       const viewport = page.viewportSize();

@@ -149,7 +149,7 @@ async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: nu
 }
 
 /**
- * Export every user-owned store as a structured payload (envelope 2.0.0).
+ * Export every user-owned store as a structured payload (envelope 2.1.0).
  */
 export async function exportTasks(): Promise<ImportPayload> {
   return (await buildBackup()).payload;

@@ -4,7 +4,10 @@ import { test as base } from "@playwright/test";
 // navigates while Next's development font response is still in flight.
 // 2152398850 is NS_BINDING_ABORTED; keep this fingerprint deliberately narrow
 // so missing fonts, non-local URLs, and every application error still fail.
-const FIREFOX_ABORTED_DEV_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ stretch:100 src index:0\): status=2152398850 source: http:\/\/localhost:3000\/(?:_next\/static\/media\/[a-z0-9.-]+|__nextjs_font\/[a-z0-9.-]+)\.woff2"\]$/;
+// The filename class includes `_` because Turbopack's hashed asset names carry
+// underscores (26aa48c1bdeb5547-s.p.30a_ou6vtcpon.woff2); without it this stops
+// matching and the aborted-font diagnostic fails tests again.
+const FIREFOX_ABORTED_DEV_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ stretch:100 src index:0\): status=2152398850 source: http:\/\/localhost:3000\/(?:_next\/static\/media\/[a-z0-9._-]+|__nextjs_font\/[a-z0-9._-]+)\.woff2"\]$/;
 
 function isExpectedBrowserDiagnostic(message: string): boolean {
   return FIREFOX_ABORTED_DEV_FONT.test(message);

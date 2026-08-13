@@ -165,7 +165,7 @@ test.describe("Settings Navigation", () => {
     for await (const chunk of stream) chunks.push(chunk as Buffer);
     const backup = JSON.parse(Buffer.concat(chunks).toString("utf8"));
 
-    expect(backup.version).toBe("2.0.0");
+    expect(backup.version).toBe("2.1.0");
     expect(backup.tasks.length).toBeGreaterThan(0);
 
     // The 232-record omission this ADR exists to fix.

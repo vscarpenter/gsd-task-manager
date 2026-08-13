@@ -122,8 +122,17 @@ export class MatrixPage {
    */
   async addDependencyInDrawer(query: string, suggestionTitle: string): Promise<void> {
     const drawer = this.page.locator("[data-testid='edit-drawer']");
-    await drawer.locator("[data-testid='dep-search']").fill(query);
-    await drawer
+    const search = drawer.locator("[data-testid='dep-search']");
+    await search.fill(query);
+    // The popup is position: fixed and re-measures the field on scroll, so it
+    // sits wherever the field sits. "Depends on" is the last group in a drawer
+    // that scrolls internally, and Firefox and WebKit leave that field off
+    // screen after the fill — which parks the popup outside the viewport and
+    // makes it unclickable. Bring the anchor back into view first.
+    await search.scrollIntoViewIfNeeded();
+    // Portalled to document.body so the drawer's scroll container cannot clip
+    // it (#483), so this is scoped to the page rather than the drawer.
+    await this.page
       .locator("[data-testid='dep-suggestion']")
       .filter({ hasText: suggestionTitle })
       .click();
