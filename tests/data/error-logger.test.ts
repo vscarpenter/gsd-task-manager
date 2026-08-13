@@ -111,7 +111,7 @@ describe("Error Logger module", () => {
 			logError(error, context);
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[GSD Error]",
+				expect.stringContaining("[GSD Error]"),
 				expect.objectContaining({
 					action: "test_action",
 					errorType: "Error",
@@ -134,7 +134,7 @@ describe("Error Logger module", () => {
 			logError(error, context);
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[GSD Error]",
+				expect.stringContaining("[GSD Error]"),
 				expect.objectContaining({
 					action: "test_action",
 					errorType: "Error",
@@ -391,6 +391,29 @@ describe("Error Logger module", () => {
 				expect(message.length).toBeGreaterThan(10);
 				expect(message).toMatch(/[.!]/); // Ends with punctuation
 			});
+		});
+	});
+
+	describe("capture-friendly console output", () => {
+		it("summarises action, error type, and message in the string argument", () => {
+			const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+			try {
+				logError(new TypeError("over.id is not a quadrant"), {
+					action: "move_task_to_quadrant",
+					userMessage: "Failed to move task",
+					timestamp: new Date().toISOString(),
+				});
+
+				// The reviewer of v11.2.1 got "[GSD Error] [object Object]" and had
+				// nothing to diagnose a failing drag with.
+				const [firstArg] = spy.mock.calls[0];
+				expect(firstArg).not.toContain("[object Object]");
+				expect(firstArg).toContain("move_task_to_quadrant");
+				expect(firstArg).toContain("TypeError");
+				expect(firstArg).toContain("over.id is not a quadrant");
+			} finally {
+				spy.mockRestore();
+			}
 		});
 	});
 });

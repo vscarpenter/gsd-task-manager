@@ -40,16 +40,22 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
     stack: error instanceof Error ? error.stack : undefined
   };
 
-  // In development, log to console with full context
+  // The string argument carries enough to diagnose from on its own. Console
+  // capture stringifies arguments, so passing only an object lands in a bug
+  // report as "[GSD Error] [object Object]" — which is what a reviewer of this
+  // app actually got, and why they could not diagnose a failing drag.
+  const summary =
+    `[GSD Error] ${loggedError.action}: ${loggedError.errorType}: ${loggedError.errorMessage}`;
+
   if (process.env.NODE_ENV === 'development') {
-    console.error('[GSD Error]', {
+    console.error(summary, {
       ...loggedError,
       originalError: error
     });
   } else {
     // In production, send to error tracking service
     // Example: Sentry.captureException(error, { contexts: { gsd: loggedError } });
-    console.error('[GSD Error]', {
+    console.error(summary, {
       action: loggedError.action,
       errorType: loggedError.errorType,
       errorMessage: loggedError.errorMessage,

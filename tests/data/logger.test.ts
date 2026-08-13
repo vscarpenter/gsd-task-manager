@@ -76,7 +76,7 @@ describe("Logger module", () => {
 
 			expect(consoleDebugSpy).toHaveBeenCalledTimes(1);
 			expect(consoleDebugSpy).toHaveBeenCalledWith(
-				"[DB]",
+				expect.stringContaining("[DB]"),
 				expect.objectContaining({
 					level: "DEBUG",
 					context: "DB",
@@ -91,7 +91,7 @@ describe("Logger module", () => {
 
 			expect(consoleLogSpy).toHaveBeenCalledTimes(1);
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				"[SYNC_ENGINE]",
+				expect.stringContaining("[SYNC_ENGINE]"),
 				expect.objectContaining({
 					level: "INFO",
 					context: "SYNC_ENGINE",
@@ -106,7 +106,7 @@ describe("Logger module", () => {
 
 			expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
 			expect(consoleWarnSpy).toHaveBeenCalledWith(
-				"[AUTH]",
+				expect.stringContaining("[AUTH]"),
 				expect.objectContaining({
 					level: "WARN",
 					context: "AUTH",
@@ -121,7 +121,7 @@ describe("Logger module", () => {
 
 			expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[TASK_CRUD]",
+				expect.stringContaining("[TASK_CRUD]"),
 				expect.objectContaining({
 					level: "ERROR",
 					context: "TASK_CRUD",
@@ -135,7 +135,7 @@ describe("Logger module", () => {
 			logger.info("timestamp check");
 
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				"[UI]",
+				expect.stringContaining("[UI]"),
 				expect.objectContaining({
 					timestamp: expect.stringMatching(
 						/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
@@ -231,7 +231,7 @@ describe("Logger module", () => {
 			logger.info("sync started", metadata);
 
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				"[SYNC_PUSH]",
+				expect.stringContaining("[SYNC_PUSH]"),
 				expect.objectContaining({
 					metadata: expect.objectContaining({
 						correlationId: "abc-123",
@@ -578,7 +578,7 @@ describe("Logger module", () => {
 			logger.error("sync failed", testError, { phase: "push" });
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[SYNC_ENGINE]",
+				expect.stringContaining("[SYNC_ENGINE]"),
 				expect.objectContaining({
 					level: "ERROR",
 					message: "sync failed",
@@ -597,7 +597,7 @@ describe("Logger module", () => {
 			logger.error("something went wrong");
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[SYNC_ENGINE]",
+				expect.stringContaining("[SYNC_ENGINE]"),
 				expect.objectContaining({
 					level: "ERROR",
 					message: "something went wrong",
@@ -612,7 +612,7 @@ describe("Logger module", () => {
 			logger.error("db failure", testError);
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[DB]",
+				expect.stringContaining("[DB]"),
 				expect.objectContaining({
 					metadata: expect.objectContaining({
 						errorType: "TypeError",
@@ -656,7 +656,7 @@ describe("Logger module", () => {
 			logger.error("sync issue", syncError);
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				"[SYNC_ENGINE]",
+				expect.stringContaining("[SYNC_ENGINE]"),
 				expect.objectContaining({
 					metadata: expect.objectContaining({
 						errorType: "SyncError",
@@ -808,7 +808,7 @@ describe("Logger module", () => {
 			childLogger.info("push started");
 
 			expect(consoleLogSpy).toHaveBeenCalledWith(
-				"[SYNC_PUSH]",
+				expect.stringContaining("[SYNC_PUSH]"),
 				expect.objectContaining({
 					context: "SYNC_PUSH",
 				}),
@@ -850,6 +850,37 @@ describe("Logger module", () => {
 			const counter2 = parseInt(id2.split("-")[1], 10);
 
 			expect(counter2).toBe(counter1 + 1);
+		});
+	});
+
+	describe("capture-friendly console output", () => {
+		it("puts the message in the string argument, not only the object", () => {
+			vi.stubEnv("NODE_ENV", "development");
+			createLogger("TASK_CRUD").error("Failed to toggle task completion");
+
+			// Tools that capture console output stringify the arguments, so an
+			// object-only payload renders as "[TASK_CRUD] [object Object]" and
+			// tells a bug reporter nothing.
+			const [firstArg] = consoleErrorSpy.mock.calls[0];
+			expect(firstArg).toContain("TASK_CRUD");
+			expect(firstArg).toContain("Failed to toggle task completion");
+		});
+
+		it("still passes the structured object for devtools", () => {
+			vi.stubEnv("NODE_ENV", "development");
+			createLogger("SYNC_ENGINE").error("Push failed");
+
+			const [, second] = consoleErrorSpy.mock.calls[0];
+			expect(second).toMatchObject({ context: "SYNC_ENGINE", message: "Push failed" });
+		});
+
+		it("names the error type and message when an Error is supplied", () => {
+			vi.stubEnv("NODE_ENV", "development");
+			createLogger("DB").error("Write rejected", new TypeError("bad key"));
+
+			const [firstArg] = consoleErrorSpy.mock.calls[0];
+			expect(firstArg).toContain("TypeError");
+			expect(firstArg).toContain("bad key");
 		});
 	});
 });

@@ -172,21 +172,50 @@ function formatLog(
     ...(sanitized && Object.keys(sanitized).length > 0 ? { metadata: sanitized } : {}),
   };
 
-  // Use structured logObject for all levels for consistent output
+  // The string argument has to carry the message on its own. A structured
+  // object reads fine in devtools, which expands it — but anything that captures
+  // console output stringifies the arguments, and an object-only payload lands
+  // in a bug report as "[TASK_CRUD] [object Object]". The object still follows,
+  // so devtools loses nothing.
+  const prefix = formatLogPrefix(context, message, sanitized);
+
   switch (level) {
     case 'debug':
-      console.debug(`[${context}]`, logObject);
+      console.debug(prefix, logObject);
       break;
     case 'info':
-      console.log(`[${context}]`, logObject);
+      console.log(prefix, logObject);
       break;
     case 'warn':
-      console.warn(`[${context}]`, logObject);
+      console.warn(prefix, logObject);
       break;
     case 'error':
-      console.error(`[${context}]`, logObject);
+      console.error(prefix, logObject);
       break;
   }
+}
+
+/**
+ * Build the human-readable half of a log line: context, message, and — when an
+ * Error was supplied — its type and message, which are what make a report
+ * actionable.
+ *
+ * Takes the **sanitized** metadata, never the caller's. Error text from a remote
+ * 4xx body can echo task field names and values, and this string is the most
+ * visible part of the log line. `tests/data/sync/pb-push.test.ts` asserts a task
+ * title never reaches it.
+ */
+function formatLogPrefix(
+  context: LogContext,
+  message: string,
+  sanitized?: LogMetadata
+): string {
+  const errorType = sanitized?.errorType;
+  const errorMessage = sanitized?.errorMessage;
+  const detail = errorType || errorMessage
+    ? ` — ${[errorType, errorMessage].filter(Boolean).join(': ')}`
+    : '';
+  return `[${context}] ${message}${detail}`;
 }
 
 /**

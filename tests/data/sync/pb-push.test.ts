@@ -406,7 +406,7 @@ describe('pushLocalChanges LWW guard', () => {
       // should echo task field names or values that a 4xx body may include.
       expect(result.lastError).not.toContain('title');
 
-      const syncErrorLog = consoleErrorSpy.mock.calls.find((call) => call[0] === '[SYNC_ENGINE]');
+      const syncErrorLog = consoleErrorSpy.mock.calls.find((call) => String(call[0]).startsWith('[SYNC_ENGINE]'));
       expect(syncErrorLog).toBeDefined();
       const serializedLog = JSON.stringify(syncErrorLog);
       expect(serializedLog).toContain('validation_failed');

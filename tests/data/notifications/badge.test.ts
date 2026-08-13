@@ -90,7 +90,7 @@ describe('Notification Badge', () => {
 
       // Logger routes error through console.error with structured format
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[NOTIFICATIONS]',
+        expect.stringContaining('[NOTIFICATIONS]'),
         expect.objectContaining({ message: 'Error setting app badge' })
       );
       consoleErrorSpy.mockRestore();
@@ -132,7 +132,7 @@ describe('Notification Badge', () => {
 
       // Logger routes error through console.error with structured format
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[NOTIFICATIONS]',
+        expect.stringContaining('[NOTIFICATIONS]'),
         expect.objectContaining({ message: 'Error clearing app badge' })
       );
       consoleErrorSpy.mockRestore();
