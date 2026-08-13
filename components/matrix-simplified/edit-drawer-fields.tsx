@@ -5,6 +5,7 @@ import { CalendarIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
+import type { RecurrenceType } from "@/lib/types";
 
 // ─── Shared ────────────────────────────────────────────────────────────────
 
@@ -245,6 +246,55 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           // an offset ring would draw outside the field it belongs to.
           className="min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         />
+      </div>
+    </Field>
+  );
+}
+
+const RECURRENCE_OPTIONS: { value: RecurrenceType; label: string }[] = [
+  { value: "none", label: "Never" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
+/**
+ * How often the task comes back.
+ *
+ * The recurrence engine has always worked — completing a recurring task spawns
+ * the next instance — but nothing in the app could turn it on, so the About
+ * page advertised a feature no user could reach.
+ */
+export function RecurrenceField({
+  recurrence,
+  onChange,
+}: {
+  recurrence: RecurrenceType;
+  onChange: (value: RecurrenceType) => void;
+}): React.ReactElement {
+  return (
+    <Field label="Repeat" as="group">
+      <div className="flex flex-wrap gap-1.5">
+        {RECURRENCE_OPTIONS.map((option) => {
+          const active = option.value === recurrence;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              data-testid={`edit-recurrence-${option.value}`}
+              onClick={() => onChange(option.value)}
+              aria-pressed={active}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                active
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border text-foreground-muted hover:bg-background-muted"
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     </Field>
   );
