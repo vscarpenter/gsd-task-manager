@@ -2,6 +2,53 @@
 
 ---
 
+## Done — 2026-08-12: Review remediation, Waves D & E (v11.4.1 → v11.6.0)
+
+Spec: `tasks/spec-review-remediation-wave-a-b.md`. ADR: `docs/adr/0015-trash-with-retention.md`.
+
+- [x] #480 `feat(matrix)` — complete-undo toast; `toggleCompleted` now returns
+      `{ task, recurringInstance }` so undo can remove the spawned next instance
+- [x] #481 `fix(logging)` — message moved into the console string argument; the
+      prefix is built from *sanitized* metadata, and the pb-push leak guard now covers it
+- [x] #482 `feat(matrix)` — filtered-empty state; header counts describe the visible set
+- [x] #483 `fix(edit-drawer)` — dependency popup portalled out of the scroll container,
+      arrow-key selection, scroll lock, backdrop-drag guard
+- [x] #484 `feat(trash)` — soft-delete with 30-day retention (ADR 0015)
+
+**Two things worth remembering:**
+
+1. **Clipping is not stacking.** An absolutely-positioned descendant of an
+   `overflow-auto` container is cut off at its edge; no z-index fixes it because the
+   pixels are never painted. Portalling is the only fix. Once portalled, the popup has
+   no positioned ancestor, so the anchor rect must be tracked — with `capture: true`,
+   since the drawer's scroller does not bubble scroll to window.
+2. **JSX `{/* */}` comments count as code** to the shape gate's `max-lines-per-function`
+   (they are expression containers). `//` comments are skipped. This cost two ratchet
+   failures before it was obvious.
+
+### Resuming From Here
+
+- **Done:** Waves A, B, C, D, E merged. Suite at 2714 passed. Dexie schema v16.
+- **Next (user's remaining selections):**
+  1. **Wave F** — command palette correctness (`UI`/`NUNI` badges + export/import
+     actions that only open Settings), completed-task disclosure + strike/dim, layout
+     fixes (mobile capture bar, Share modal fold, drag-handle clipping). ~2.5 days.
+  2. **Wave G** — decompose `edit-drawer.tsx` **first** (hard gate), then recurrence,
+     subtasks, estimate input; finally remove the Wave A "Coming soon" badges,
+     restore the Recurring Tasks built-in view and the Help sentence.
+- **Blockers:** none.
+- **Carried follow-ups:**
+  - Trash is per-device (never synced), same as the archive — recorded in ADR 0015.
+  - A dedicated Trash page rather than a Settings section, if the list grows.
+  - Keyboard drag cannot easily reach an *empty* quadrant.
+  - `isTaskBlocking` in `lib/dependencies.ts` has no callers and keeps the unfiltered
+    semantics that caused #473.
+  - True offline testing (network severed) remains uncovered — deselected by the user.
+  - `tests/ui/zz-dbg.test.tsx` is a scratch file with a deliberately-failing assertion;
+    a hook blocks the agent from deleting it. **Remove it manually.**
+
+---
+
 ## Done — 2026-08-12: Review remediation, Wave C (v11.4.0)
 
 Spec: `tasks/spec-review-remediation-wave-a-b.md` (W-C1).
