@@ -80,11 +80,16 @@ export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updated
       status: 'completed'
     }
   },
-  // "Recurring Tasks" is withheld until the composer can set `recurrence`.
-  // The engine works — completing a recurring task spawns the next instance —
-  // but no UI can turn recurrence on, so for a UI-only user the view can only
-  // ever be empty. Restore it alongside the recurrence authoring UI; the
-  // criteria shape is preserved in git history.
+  {
+    name: "Recurring Tasks",
+    description: "All tasks with recurrence enabled",
+    icon: "recurring",
+    isBuiltIn: true,
+    criteria: {
+      status: 'active',
+      recurrence: ['daily', 'weekly', 'monthly']
+    }
+  },
   {
     name: "Ready to Work",
     description: "Tasks with no blocking dependencies",

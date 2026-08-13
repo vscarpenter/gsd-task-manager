@@ -66,13 +66,11 @@ describe('BUILT_IN_SMART_VIEWS', () => {
     expect(thisWeeksWins?.criteria.status).toBe('completed');
   });
 
-  // Withheld until the edit drawer can set `recurrence`. The recurrence engine
-  // works (toggle.ts spawns the next instance on completion), but nothing in the
-  // UI can turn it on, so this view can only ever be empty for a UI-only user.
-  // Restore it with the recurrence authoring UI.
-  it('omits the Recurring Tasks view while recurrence has no authoring UI', () => {
+  it('includes Recurring Tasks view', () => {
     const recurring = BUILT_IN_SMART_VIEWS.find(v => v.name === 'Recurring Tasks');
-    expect(recurring).toBeUndefined();
+    expect(recurring).toBeDefined();
+    expect(recurring?.criteria.recurrence).toEqual(['daily', 'weekly', 'monthly']);
+    expect(recurring?.criteria.status).toBe('active');
   });
 
   it('all views have unique names', () => {

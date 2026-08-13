@@ -65,7 +65,6 @@ const features: Feature[] = [
     title: "Recurring Tasks",
     description:
       "Daily standup prep. Weekly reviews. Monthly goals. Set once, repeat automatically.",
-    badge: "Coming soon",
   },
   {
     icon: Tags,
@@ -78,7 +77,6 @@ const features: Feature[] = [
     title: "Subtasks",
     description:
       "Break complex work into steps. Track progress with a checklist.",
-    badge: "Coming soon",
   },
   {
     icon: Smartphone,
