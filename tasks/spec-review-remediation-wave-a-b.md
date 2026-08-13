@@ -1,7 +1,7 @@
 # Spec — Review Remediation, Waves A & B
 
 **Status:** Approved 2026-08-12
-**Source:** `action-checklist.md`, derived from the external review of web app v11.2.1
+**Source:** `docs/audits/ACTION-CHECKLIST-2026-08-12.md`, derived from the external review of web app v11.2.1
 **Tier:** Non-trivial (coordinated changes across four subsystems)
 
 Claims in the source checklist were verified against the code before this spec was
