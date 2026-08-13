@@ -107,9 +107,12 @@ export function TaskCardHeader({
         )}
         <div className={cn("min-w-0 flex-1", reserveBadgeSpace && "pr-24")}>
           <h3 className={cn(
-            "text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em] text-foreground",
+            "text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em]",
             !onInspect && "truncate",
-            task.completed && "line-through"
+            // Strike-through alone leaves the title at full contrast; in dark
+            // mode that makes a completed card read as an active one. The
+            // recede is what carries the state.
+            task.completed ? "text-foreground-muted line-through" : "text-foreground"
           )}>
             {onInspect ? (
               <button
