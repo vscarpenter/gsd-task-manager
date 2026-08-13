@@ -55,6 +55,8 @@ export interface EditDraftState {
   addSubtask: (title: string) => void;
   toggleSubtask: (id: string) => void;
   removeSubtask: (id: string) => void;
+  estimateInput: string;
+  setEstimateInput: (v: string) => void;
   toDraft: () => EditDraft;
 }
 
@@ -70,11 +72,62 @@ function subtaskActions(setSubtasks: Dispatch<SetStateAction<Subtask[]>>) {
   };
 }
 
+/**
+ * Minutes, or undefined for "no estimate".
+ *
+ * An empty field must not become 0 — the Review page averages estimates, and a
+ * zero would drag Estimation Accuracy down for every task nobody estimated.
+ */
+function parseEstimate(raw: string): number | undefined {
+  const value = Number.parseInt(raw.trim(), 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
 /** Append a subtask, ignoring blank input. Ids are generated locally until save. */
 function appendSubtask(subtasks: Subtask[], rawTitle: string): Subtask[] {
   const title = rawTitle.trim();
   if (!title) return subtasks;
   return [...subtasks, { id: generateId(), title, completed: false }];
+}
+
+/**
+ * The fields that describe the work itself: how often it repeats, what it
+ * breaks into, and how long it should take.
+ *
+ * Split from the core fields so the drawer's state hook stops growing every
+ * time a field is added — the reason the shape ratchet caught the last three.
+ */
+function useDetailDraftFields(
+  task: TaskRecord | null | undefined,
+  initialDraft: Partial<EditDraft> | undefined
+) {
+  const [recurrence, setRecurrence] = useState<RecurrenceType>(() =>
+    task ? task.recurrence ?? "none" : initialDraft?.recurrence ?? "none"
+  );
+  const [subtasks, setSubtasks] = useState<Subtask[]>(() =>
+    task ? task.subtasks ?? [] : initialDraft?.subtasks ?? []
+  );
+  // Held as a string so an emptied field means "no estimate" rather than 0.
+  const [estimateInput, setEstimateInput] = useState<string>(() =>
+    String(task?.estimatedMinutes ?? initialDraft?.estimatedMinutes ?? "")
+  );
+
+  return {
+    recurrence,
+    setRecurrence,
+    subtasks,
+    ...subtaskActions(setSubtasks),
+    estimateInput,
+    setEstimateInput,
+  };
+}
+
+/** Tags come from the task in edit mode and the seeded draft in create mode. */
+function seedTags(
+  task: TaskRecord | null | undefined,
+  initialDraft: Partial<EditDraft> | undefined
+): string[] {
+  return task ? task.tags ?? [] : initialDraft?.tags ?? [];
 }
 
 /** Normalise and append a tag, ignoring blanks and duplicates. */
@@ -124,17 +177,12 @@ export function useEditDraftState(
     task ? classifyExistingCustomDate(task.dueDate) : undefined
   );
   const [showCustomDateInput, setShowCustomDateInput] = useState(false);
-  const [tags, setTags] = useState<string[]>(() => (task ? task.tags ?? [] : initialDraft?.tags ?? []));
+  const [tags, setTags] = useState<string[]>(() => seedTags(task, initialDraft));
   const [tagInput, setTagInput] = useState("");
   const [dependencies, setDependencies] = useState<string[]>(() =>
     task ? task.dependencies ?? [] : initialDraft?.dependencies ?? []
   );
-  const [recurrence, setRecurrence] = useState<RecurrenceType>(() =>
-    task ? task.recurrence ?? "none" : initialDraft?.recurrence ?? "none"
-  );
-  const [subtasks, setSubtasks] = useState<Subtask[]>(() =>
-    task ? task.subtasks ?? [] : initialDraft?.subtasks ?? []
-  );
+  const detail = useDetailDraftFields(task, initialDraft);
 
   useAutofocusTitle(titleRef);
 
@@ -151,8 +199,9 @@ export function useEditDraftState(
     dueDate: resolveDueDate(customDate, duePreset),
     tags,
     dependencies,
-    recurrence,
-    subtasks,
+    recurrence: detail.recurrence,
+    subtasks: detail.subtasks,
+    estimatedMinutes: parseEstimate(detail.estimateInput),
   });
 
   return {
@@ -167,9 +216,7 @@ export function useEditDraftState(
     tagInput, setTagInput,
     addTag,
     dependencies, setDependencies,
-    recurrence, setRecurrence,
-    subtasks,
-    ...subtaskActions(setSubtasks),
+    ...detail,
     toDraft,
   };
 }
