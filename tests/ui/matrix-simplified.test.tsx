@@ -131,18 +131,23 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
   AppShell: ({
     title,
     titleAsLabel,
+    caption,
     searchQuery,
     onSearchChange,
     children,
   }: {
     title: string;
     titleAsLabel?: boolean;
+    caption?: React.ReactNode;
     searchQuery?: string;
     onSearchChange?: (value: string) => void;
     children: React.ReactNode;
   }) => (
     <div>
       {titleAsLabel ? <p data-testid="topbar-title">{title}</p> : <h1>{title}</h1>}
+      {/* The header counts live here. Dropping them from the stub hid whether
+          they describe the filtered board or the whole database. */}
+      {caption ? <div data-testid="topbar-caption">{caption}</div> : null}
       {onSearchChange ? (
         <input
           aria-label="Shell search"
@@ -848,6 +853,60 @@ describe("<MatrixSimplified>", () => {
       const undoAction = handleSuccessSpy.mock.calls[0][1] as () => Promise<void>;
       await undoAction();
       expect(restoreTask).toHaveBeenCalledWith(expect.objectContaining({ id: "del-1" }));
+    });
+  });
+
+  describe("filtered empty state", () => {
+    it("says nothing matched instead of showing the quadrant empty copy", async () => {
+      tasksFixture.current = [
+        makeTask({ id: "a", title: "Active alpha" }),
+        makeTask({ id: "b", title: "Active bravo" }),
+      ];
+      render(<MatrixSimplified />);
+
+      await userEvent.type(screen.getByLabelText("Shell search"), "zzz-no-match");
+
+      // Previously each quadrant kept its default copy ("Nothing on fire.")
+      // while the header still read "2 active", so the board looked as if it
+      // had vanished rather than been filtered.
+      await waitFor(() =>
+        expect(screen.getByTestId("filtered-empty")).toBeInTheDocument()
+      );
+      expect(screen.getByTestId("filtered-empty")).toHaveTextContent("zzz-no-match");
+      expect(screen.queryByText("Nothing on fire.")).not.toBeInTheDocument();
+    });
+
+    it("offers a way back to the full board", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [makeTask({ id: "a", title: "Active alpha" })];
+      render(<MatrixSimplified />);
+
+      await user.type(screen.getByLabelText("Shell search"), "zzz-no-match");
+      await waitFor(() => expect(screen.getByTestId("filtered-empty")).toBeInTheDocument());
+
+      await user.click(screen.getByRole("button", { name: /clear (search|filter)/i }));
+
+      await waitFor(() => expect(screen.queryByTestId("filtered-empty")).not.toBeInTheDocument());
+      expect(screen.getByText("Active alpha")).toBeInTheDocument();
+    });
+
+    it("keeps the quadrant empty copy when the board is genuinely empty", () => {
+      tasksFixture.current = [];
+      render(<MatrixSimplified />);
+
+      expect(screen.queryByTestId("filtered-empty")).not.toBeInTheDocument();
+    });
+
+    it("reports the match count in the header while filtering", async () => {
+      tasksFixture.current = [
+        makeTask({ id: "a", title: "Active alpha" }),
+        makeTask({ id: "b", title: "Active bravo" }),
+      ];
+      render(<MatrixSimplified />);
+
+      await userEvent.type(screen.getByLabelText("Shell search"), "alpha");
+
+      await waitFor(() => expect(screen.getByText("1 active")).toBeInTheDocument());
     });
   });
 });

@@ -20,6 +20,8 @@ import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
 import { handleCapture, handleToggle, reportTaskMutationError } from "./task-actions";
 import { DragLayer } from "./drag-layer";
+import { FilteredEmpty } from "./filtered-empty";
+import { MatrixCaption } from "./matrix-caption";
 import { MatrixGrid } from "./matrix-grid";
 import { MatrixGridSkeleton } from "./matrix-grid-skeleton";
 import { EditDrawer, type EditDraft } from "./edit-drawer";
@@ -148,7 +150,13 @@ export function MatrixSimplified() {
   const { smartViewsEnabled, smartViews, activeSmartView, applySmartViewById, clearSmartView } =
     useSmartViews(clearSearch);
 
-  const { visibleTasks, total, completed, overdue } = deriveMatrixView({
+  // The empty state offers one way back, so it clears whichever filter is on.
+  const handleClearFilter = () => {
+    clearSearch();
+    clearSmartView();
+  };
+
+  const { visibleTasks, total, completed, overdue, isFiltered, matchCount } = deriveMatrixView({
     all,
     showCompleted,
     smartViewsEnabled,
@@ -300,25 +308,6 @@ export function MatrixSimplified() {
     ? deriveIntroStats(all, new Date().toISOString().slice(0, 10))
     : null;
 
-  // Header counts — three small inline pills, semantic colors. Overdue
-  // pill is conditional on count > 0. Sits on the same baseline as the title
-  // (the topbar wraps the caption slot in a flex row).
-  const caption = (
-    <>
-      <span className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground">
-        {mounted ? `${total - completed} active` : " "}
-      </span>
-      <span className="inline-flex items-center rounded-full bg-status-success-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-success-ink">
-        {mounted ? `${completed} done` : " "}
-      </span>
-      {mounted && overdue > 0 ? (
-        <span className="inline-flex items-center rounded-full bg-status-overdue-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-status-overdue-ink">
-          {overdue} overdue
-        </span>
-    ) : null}
-    </>
-  );
-
   return (
     <DndContext
       sensors={sensors}
@@ -335,7 +324,14 @@ export function MatrixSimplified() {
         title="GSD Matrix"
         titleAsLabel
         mainClassName="max-w-[1540px] pb-48 md:pb-6"
-        caption={caption}
+        caption={
+          <MatrixCaption
+            active={total - completed}
+            completed={completed}
+            overdue={overdue}
+            mounted={mounted}
+          />
+        }
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
@@ -364,6 +360,12 @@ export function MatrixSimplified() {
         ) : null}
         {isLoading ? (
           <MatrixGridSkeleton />
+        ) : isFiltered && matchCount === 0 ? (
+          <FilteredEmpty
+            query={searchQuery}
+            viewName={activeSmartView?.name}
+            onClear={handleClearFilter}
+          />
         ) : (
           <MatrixGrid
             tasks={visibleTasks}
