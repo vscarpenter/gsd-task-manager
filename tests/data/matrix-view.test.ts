@@ -125,4 +125,69 @@ describe("deriveMatrixView", () => {
     });
     expect(view.visibleTasks.map((t) => t.id)).toEqual(["active"]);
   });
+
+  describe("filter awareness", () => {
+    it("reports no filter when nothing narrows the board", () => {
+      const view = deriveMatrixView({
+        all: [active, done, overdue],
+        showCompleted: false,
+        smartViewsEnabled: false,
+        activeSmartView: null,
+        searchQuery: "",
+      });
+      expect(view.isFiltered).toBe(false);
+      expect(view.matchCount).toBe(2);
+    });
+
+    it("reports a filter and its match count while searching", () => {
+      const view = deriveMatrixView({
+        all: [active, done, overdue],
+        showCompleted: false,
+        smartViewsEnabled: false,
+        activeSmartView: null,
+        searchQuery: "alpha",
+      });
+      expect(view.isFiltered).toBe(true);
+      expect(view.matchCount).toBe(1);
+    });
+
+    it("counts only what the filter matched, not the whole board", () => {
+      // The header read "5 active" beside an apparently empty board, which is
+      // what made a filtered board look broken rather than filtered.
+      const view = deriveMatrixView({
+        all: [active, done, overdue],
+        showCompleted: false,
+        smartViewsEnabled: false,
+        activeSmartView: null,
+        searchQuery: "alpha",
+      });
+      expect(view.total).toBe(1);
+      expect(view.completed).toBe(0);
+      expect(view.overdue).toBe(0);
+    });
+
+    it("reports zero matches for a query nothing satisfies", () => {
+      const view = deriveMatrixView({
+        all: [active, done, overdue],
+        showCompleted: false,
+        smartViewsEnabled: false,
+        activeSmartView: null,
+        searchQuery: "nothing-matches-this",
+      });
+      expect(view.isFiltered).toBe(true);
+      expect(view.matchCount).toBe(0);
+      expect(view.total).toBe(0);
+    });
+
+    it("treats an active smart view as a filter", () => {
+      const view = deriveMatrixView({
+        all: [active, done, overdue],
+        showCompleted: false,
+        smartViewsEnabled: true,
+        activeSmartView: completedView,
+        searchQuery: "",
+      });
+      expect(view.isFiltered).toBe(true);
+    });
+  });
 });
