@@ -53,6 +53,7 @@ async function clearEveryStore() {
   await Promise.all([
     db.tasks.clear(),
     db.archivedTasks.clear(),
+    db.deletedTasks.clear(),
     db.smartViews.clear(),
     db.notificationSettings.clear(),
     db.archiveSettings.clear(),
@@ -90,7 +91,7 @@ describe("Backup envelope", () => {
 
     it("should_announce_the_new_envelope_version", async () => {
       await seedEveryStore();
-      expect((await exportTasks()).version).toBe("2.0.0");
+      expect((await exportTasks()).version).toBe("2.1.0");
     });
 
     it("should_never_include_device_local_or_account_stores", async () => {
@@ -236,6 +237,56 @@ describe("Backup envelope", () => {
 
       // Merge combines task lists; it does not adopt another device's config.
       expect((await db.archiveSettings.get("settings"))?.archiveAfterDays).toBe(60);
+    });
+  });
+
+  describe("trash in the envelope (ADR 0015)", () => {
+    it("should_export_trashed_tasks_with_deletedAt", async () => {
+      const db = getDb();
+      await db.deletedTasks.put({
+        ...createMockTask({ id: "trashed-1" }),
+        deletedAt: "2026-02-01T00:00:00.000Z",
+      });
+
+      const payload = await exportTasks();
+
+      expect(payload.deletedTasks).toHaveLength(1);
+      expect(payload.deletedTasks?.[0]?.deletedAt).toBe("2026-02-01T00:00:00.000Z");
+    });
+
+    it("should_restore_trash_with_its_original_deletedAt", async () => {
+      const db = getDb();
+      await db.deletedTasks.put({
+        ...createMockTask({ id: "trashed-1" }),
+        deletedAt: "2026-02-01T00:00:00.000Z",
+      });
+      const backup = await exportTasks();
+      await db.deletedTasks.clear();
+
+      await importTasks(backup, "replace");
+
+      // The retention clock resumes where it left off rather than restarting,
+      // so a restore cannot silently extend a deletion by another 30 days.
+      expect((await db.deletedTasks.get("trashed-1"))?.deletedAt).toBe(
+        "2026-02-01T00:00:00.000Z"
+      );
+    });
+
+    it("should_not_restore_a_trashed_record_whose_id_is_live", async () => {
+      const db = getDb();
+
+      await importTasks(
+        {
+          version: "2.1.0",
+          exportedAt: "2026-01-01T00:00:00.000Z",
+          tasks: [createMockTask({ id: "shared" })],
+          deletedTasks: [{ ...createMockTask({ id: "shared" }), deletedAt: "2026-02-01T00:00:00.000Z" }],
+        },
+        "replace"
+      );
+
+      expect(await db.tasks.get("shared")).toBeDefined();
+      expect(await db.deletedTasks.get("shared")).toBeUndefined();
     });
   });
 });

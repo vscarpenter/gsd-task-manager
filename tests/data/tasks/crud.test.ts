@@ -101,6 +101,14 @@ describe('Task CRUD Operations', () => {
         clear: vi.fn(),
         count: vi.fn(),
       },
+      // Trash (ADR 0015): delete moves a record in, restore takes one out.
+      deletedTasks: {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        clear: vi.fn(),
+        count: vi.fn().mockResolvedValue(0),
+      },
       syncQueue: {},
       transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     };
@@ -583,11 +591,11 @@ describe('Task CRUD Operations', () => {
     };
 
     it('should re-insert the exact record, preserving id, completed state, and createdAt', async () => {
-      mockDb.tasks.add.mockResolvedValue(undefined);
+      mockDb.tasks.put.mockResolvedValue(undefined);
 
       await restoreTask(deletedRecord);
 
-      expect(mockDb.tasks.add).toHaveBeenCalledWith(
+      expect(mockDb.tasks.put).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'task-restore-1',
           completed: true,
@@ -598,11 +606,11 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should not regenerate the id (faithful restore, not a new task)', async () => {
-      mockDb.tasks.add.mockResolvedValue(undefined);
+      mockDb.tasks.put.mockResolvedValue(undefined);
 
       await restoreTask(deletedRecord);
 
-      const added = mockDb.tasks.add.mock.calls[0][0];
+      const added = mockDb.tasks.put.mock.calls[0][0];
       expect(added.id).toBe('task-restore-1');
     });
 
@@ -611,7 +619,7 @@ describe('Task CRUD Operations', () => {
         enabled: true,
         deviceId: 'test-device',
       });
-      mockDb.tasks.add.mockResolvedValue(undefined);
+      mockDb.tasks.put.mockResolvedValue(undefined);
 
       await restoreTask(deletedRecord);
 
@@ -619,7 +627,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should not enqueue sync when sync is disabled', async () => {
-      mockDb.tasks.add.mockResolvedValue(undefined);
+      mockDb.tasks.put.mockResolvedValue(undefined);
 
       await restoreTask(deletedRecord);
 
@@ -627,7 +635,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should throw a wrapped error when the database add fails', async () => {
-      mockDb.tasks.add.mockRejectedValue(new Error('Constraint violation'));
+      mockDb.tasks.put.mockRejectedValue(new Error('Constraint violation'));
 
       await expect(restoreTask(deletedRecord)).rejects.toThrow('Failed to restore task');
     });
@@ -704,7 +712,7 @@ describe('Task CRUD Operations', () => {
       };
 
       mockDb.tasks.get.mockResolvedValue(original);
-      mockDb.tasks.add.mockResolvedValue(undefined);
+      mockDb.tasks.put.mockResolvedValue(undefined);
 
       const result = await duplicateTask('task-1');
 
@@ -726,7 +734,7 @@ describe('Task CRUD Operations', () => {
       };
 
       mockDb.tasks.get.mockResolvedValue(original);
-      mockDb.tasks.add.mockResolvedValue(undefined);
+      mockDb.tasks.put.mockResolvedValue(undefined);
       (getSyncConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
         enabled: false,
         deviceId: 'test-device',

@@ -6,6 +6,7 @@ import {
   DatabaseIcon,
   InfoIcon,
   SlidersHorizontalIcon,
+  Trash2Icon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ export type SettingsSectionId =
   | "notifications"
   | "sync"
   | "archive"
+  | "trash"
   | "data"
   | "about";
 
@@ -34,6 +36,7 @@ export const SETTINGS_SECTIONS: SectionMeta[] = [
   { id: "notifications", label: "Notifications", icon: BellIcon, description: "Reminders and alerts", group: "Preferences" },
   { id: "sync", label: "Cloud Sync", icon: CloudIcon, description: "Multi-device synchronization", group: "Preferences" },
   { id: "archive", label: "Archive", icon: ArchiveIcon, description: "Auto-archive completed tasks", group: "Data" },
+  { id: "trash", label: "Trash", icon: Trash2Icon, description: "Recover recently deleted tasks", group: "Data" },
   { id: "data", label: "Data & Storage", icon: DatabaseIcon, description: "Backup, import, and reset", group: "Data" },
   { id: "about", label: "About", icon: InfoIcon, description: "Version and project info", group: "Info" },
 ];

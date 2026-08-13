@@ -21,7 +21,11 @@ export async function restoreTask(task: TaskRecord): Promise<void> {
   try {
     const db = getDb();
     await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
-      await db.tasks.add(task);
+      // `put`, not `add`: this is the Undo path and must stay idempotent.
+      await db.tasks.put(task);
+      // The record is in trash whenever this ran from the delete toast. Leaving
+      // the row behind would put one id in two lifecycle tables (ADR 0013).
+      await db.deletedTasks.delete(task.id);
       if (syncEnabled) await enqueue("create", task.id, task);
     });
 

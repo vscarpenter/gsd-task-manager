@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { getArchiveSettings, archiveOldTasks } from './archive';
+import { purgeExpiredTrash } from './trash';
 import { createLogger } from './logger';
 import { TIME_MS } from './constants';
 
@@ -15,6 +16,17 @@ const logger = createLogger('AUTO_ARCHIVE');
 export function useAutoArchive() {
   useEffect(() => {
     const checkAndArchive = async () => {
+      // Retention runs unconditionally, before the archive check. Trash is a
+      // safety floor rather than a workflow preference, so it is not gated on
+      // the archive toggle — a user with auto-archive off still needs deleted
+      // tasks to stop accumulating (ADR 0015).
+      try {
+        const purged = await purgeExpiredTrash();
+        if (purged > 0) logger.info('Purged expired trash', { count: purged });
+      } catch (error) {
+        logger.error('Trash purge failed', error instanceof Error ? error : undefined);
+      }
+
       try {
         const settings = await getArchiveSettings();
 

@@ -111,6 +111,15 @@ describe('Task Import/Export Operations', () => {
           primaryKeys: vi.fn().mockResolvedValue([]),
         })),
       },
+      // Trash (ADR 0015) — carried in the 2.1.0 envelope.
+      deletedTasks: {
+        toArray: vi.fn().mockResolvedValue([]),
+        clear: vi.fn(),
+        put: vi.fn(),
+        toCollection: vi.fn(() => ({
+          primaryKeys: vi.fn().mockResolvedValue([]),
+        })),
+      },
       smartViews: {
         toArray: vi.fn().mockResolvedValue([]),
         clear: vi.fn(),
@@ -142,7 +151,7 @@ describe('Task Import/Export Operations', () => {
       expect(result).toHaveProperty('exportedAt');
       expect(result).toHaveProperty('version');
       expect(result.tasks).toHaveLength(2);
-      expect(result.version).toBe('2.0.0');
+      expect(result.version).toBe('2.1.0');
     });
 
     it('should validate tasks with schema', async () => {
@@ -174,7 +183,7 @@ describe('Task Import/Export Operations', () => {
       const result = await exportTasks();
 
       expect(result.tasks).toEqual([]);
-      expect(result.version).toBe('2.0.0');
+      expect(result.version).toBe('2.1.0');
     });
 
     it('should skip invalid tasks instead of aborting the whole export', async () => {
@@ -353,6 +362,7 @@ describe('Task Import/Export Operations', () => {
         [
           mockDb.tasks,
           mockDb.archivedTasks,
+          mockDb.deletedTasks,
           mockDb.smartViews,
           mockDb.notificationSettings,
           mockDb.archiveSettings,
@@ -447,7 +457,7 @@ describe('Task Import/Export Operations', () => {
 
       expect(parsed).toHaveProperty('tasks');
       expect(parsed.tasks).toHaveLength(2);
-      expect(parsed.version).toBe('2.0.0');
+      expect(parsed.version).toBe('2.1.0');
     });
 
     it('should format with indentation', async () => {

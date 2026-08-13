@@ -42,6 +42,7 @@ export interface TaskRecord {
   snoozedUntil?: string;
   // Archive field
   archivedAt?: string; // Timestamp when task was archived
+  deletedAt?: string; // Timestamp when task was moved to trash (ADR 0015)
   // Time tracking fields
   estimatedMinutes?: number; // Estimated time to complete task
   timeSpent?: number; // Total time spent in minutes (calculated from timeEntries)
@@ -75,6 +76,7 @@ export interface ImportPayload {
   exportedAt: string;
   version: string;
   archivedTasks?: TaskRecord[];
+  deletedTasks?: TaskRecord[];
   smartViews?: SmartViewRecord[];
   notificationSettings?: NotificationSettings;
   archiveSettings?: ArchiveSettings;
