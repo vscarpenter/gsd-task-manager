@@ -10,4 +10,5 @@ export interface EditDraft {
   dependencies: string[];
   recurrence: RecurrenceType;
   subtasks: Subtask[];
+  estimatedMinutes?: number;
 }

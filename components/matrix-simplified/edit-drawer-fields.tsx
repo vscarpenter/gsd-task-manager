@@ -411,3 +411,38 @@ function SubtaskEntry({
     />
   );
 }
+
+/**
+ * How long the task should take.
+ *
+ * The Review page has always reported Total Estimated and Estimation Accuracy;
+ * with the timer wired to cards but no estimate input, both had nothing to
+ * measure against.
+ */
+export function EstimateField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}): React.ReactElement {
+  return (
+    <Field label="Estimate">
+      <div className="flex items-center gap-2">
+        <input
+          data-testid="edit-estimate"
+          type="number"
+          min={1}
+          max={10080}
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="—"
+          aria-label="Estimate in minutes"
+          className="w-28 rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+        />
+        <span className="text-[13px] text-foreground-muted">minutes</span>
+      </div>
+    </Field>
+  );
+}

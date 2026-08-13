@@ -9,7 +9,7 @@ import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useEditDraftState } from "./use-edit-draft-state";
-import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField } from "./edit-drawer-fields";
+import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
@@ -257,14 +257,7 @@ function EditDrawerBody({
             onChange={(u, i) => { draft.setUrgent(u); draft.setImportant(i); }}
           />
 
-          <RecurrenceField recurrence={draft.recurrence} onChange={draft.setRecurrence} />
-
-          <SubtasksField
-            subtasks={draft.subtasks}
-            onAdd={draft.addSubtask}
-            onToggle={draft.toggleSubtask}
-            onRemove={draft.removeSubtask}
-          />
+          <TaskDetailFields draft={draft} />
 
           <SchedulingAndLinksFields
             draft={draft}
@@ -325,6 +318,24 @@ function handleTagKeyDown(
   if (event.key === "Backspace" && !draft.tagInput && draft.tags.length) {
     draft.setTags(draft.tags.slice(0, -1));
   }
+}
+
+/** Repeat, checklist, and estimate — the fields describing the work itself. */
+function TaskDetailFields({ draft }: { draft: ReturnType<typeof useEditDraftState> }) {
+  return (
+    <>
+      <RecurrenceField recurrence={draft.recurrence} onChange={draft.setRecurrence} />
+
+      <SubtasksField
+        subtasks={draft.subtasks}
+        onAdd={draft.addSubtask}
+        onToggle={draft.toggleSubtask}
+        onRemove={draft.removeSubtask}
+      />
+
+      <EstimateField value={draft.estimateInput} onChange={draft.setEstimateInput} />
+    </>
+  );
 }
 
 /** Due date, tags, and dependencies — the fields that relate a task to others. */
