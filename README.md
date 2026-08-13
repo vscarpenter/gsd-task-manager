@@ -4,7 +4,7 @@ A privacy-first Eisenhower matrix for deciding what to do, schedule, delegate,
 or eliminate.
 
 **Live app:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**Current version:** 11.7.1
+**Current version:** 11.7.2
 **Current product:** the v11 single-matrix shell, offline-first local storage,
 optional PocketBase sync, and the GSD MCP server.
 
