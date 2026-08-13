@@ -4,7 +4,7 @@ import { lazy, Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { exportToJsonWithReport } from "@/lib/tasks";
+import { downloadBackup } from "@/lib/backup-download";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 
@@ -68,14 +68,8 @@ export function SettingsBody({
     // No `finally`: the React Compiler can't yet optimize a component with a
     // try/finally, so the exporting reset is duplicated across both paths.
     try {
-      const { json, skippedCount } = await exportToJsonWithReport();
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `gsd-tasks-${new Date().toISOString()}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
+      const { ok, skippedCount } = await downloadBackup();
+      if (!ok) throw new Error("Export failed");
       if (skippedCount > 0) {
         // Never let a corrupt record silently vanish from the user's backup.
         toast.warning(
