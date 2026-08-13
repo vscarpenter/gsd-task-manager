@@ -43,6 +43,31 @@ export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubm
   );
 }
 
+/**
+ * Close on Escape.
+ *
+ * `onClose` may change identity between renders, so useEffectEvent keeps the
+ * listener subscribed once while always calling the latest handler.
+ */
+function useEscapeToClose(onClose: () => void): void {
+  const handleEscape = useEffectEvent(() => onClose());
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleEscape(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+}
+
+/** Pigment for whichever quadrant the current urgent/important pair names. */
+function quadrantChrome(urgent: boolean, important: boolean) {
+  const activeQuadrant = quadrants.find((q) => q.urgent === urgent && q.important === important);
+  return {
+    activeQuadrant,
+    accent: activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "var(--accent)",
+    quadrantInk: activeQuadrant ? QUADRANT_INK[activeQuadrant.rdKey] : "var(--accent)",
+  };
+}
+
 function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
   const modalSurface = useModalSurface(onClose);
@@ -57,19 +82,10 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
     draft.setDependencies(ids);
   };
 
-  // `onClose` may change identity between renders; useEffectEvent keeps the
-  // keydown listener subscribed once while always calling the latest handler.
-  const handleEscape = useEffectEvent(() => onClose());
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleEscape(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  useEscapeToClose(onClose);
 
   const isCreateMode = !task;
-  const activeQuadrant = quadrants.find((q) => q.urgent === draft.urgent && q.important === draft.important);
-  const accent = activeQuadrant ? QUADRANT_ACCENT[activeQuadrant.rdKey] : "var(--accent)";
-  const quadrantInk = activeQuadrant ? QUADRANT_INK[activeQuadrant.rdKey] : "var(--accent)";
+  const { activeQuadrant, accent, quadrantInk } = quadrantChrome(draft.urgent, draft.important);
 
   const submit = (e?: FormEvent): void => {
     e?.preventDefault();
@@ -111,84 +127,22 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
         className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-[var(--shadow-lg)] animate-drawer-slide-in"
         aria-label={heading}
       >
-        <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
-          <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{heading}</h2>
-          {activeQuadrant ? (
-            <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: quadrantInk }}>
-              {activeQuadrant.title}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="touch-target ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </header>
+        <DrawerHeader
+          heading={heading}
+          accent={accent}
+          quadrantInk={quadrantInk}
+          activeQuadrantTitle={activeQuadrant?.title}
+          onClose={onClose}
+        />
 
-        <div className="flex flex-1 flex-col gap-5 overflow-auto overscroll-contain px-5 py-5">
-          <input
-            data-testid="edit-title"
-            ref={titleRef}
-            value={draft.title}
-            onChange={(e) => draft.setTitle(e.target.value)}
-            placeholder="What needs doing?"
-            className="w-full rounded-lg border border-border bg-background px-3 py-3 text-[18px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
-            aria-label="Title"
-          />
-
-          <Field label="Description">
-            <textarea
-              data-testid="edit-description"
-              value={draft.description}
-              onChange={(e) => draft.setDescription(e.target.value)}
-              rows={4}
-              placeholder="Optional details, links, context"
-              aria-label="Description"
-              className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
-            />
-          </Field>
-
-          <QuadrantField
-            urgent={draft.urgent}
-            important={draft.important}
-            onChange={(u, i) => { draft.setUrgent(u); draft.setImportant(i); }}
-          />
-
-          <DueDateField
-            duePreset={draft.duePreset}
-            customDate={draft.customDate}
-            showCustomDateInput={draft.showCustomDateInput}
-            onPresetChange={draft.setDuePreset}
-            onCustomDateChange={draft.setCustomDate}
-            onToggleCustomInput={draft.setShowCustomDateInput}
-          />
-
-          <TagsField
-            tags={draft.tags}
-            tagInput={draft.tagInput}
-            onTagInputChange={draft.setTagInput}
-            onAddTag={draft.addTag}
-            onRemoveTag={(t) => draft.setTags(draft.tags.filter((x) => x !== t))}
-            onTagKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") { e.preventDefault(); draft.addTag(); }
-              else if (e.key === "Backspace" && !draft.tagInput && draft.tags.length) {
-                draft.setTags(draft.tags.slice(0, -1));
-              }
-            }}
-          />
-
-          <DependenciesField
-            taskId={task?.id}
-            dependencies={draft.dependencies}
-            allTasks={allTasks}
-            onChange={handleDependenciesChange}
-            error={dependencyError}
-          />
-        </div>
+        <EditDrawerBody
+          draft={draft}
+          titleRef={titleRef}
+          taskId={task?.id}
+          allTasks={allTasks}
+          dependencyError={dependencyError}
+          onDependenciesChange={handleDependenciesChange}
+        />
 
         <DrawerFooter
           onClose={onClose}
@@ -234,5 +188,179 @@ function DrawerFooter({
             {isCreateMode ? "Create task" : "Save changes"}
           </button>
         </footer>
+  );
+}
+
+/** The drawer's title bar: quadrant dot, heading, and the close control. */
+function DrawerHeader({
+  heading,
+  accent,
+  quadrantInk,
+  activeQuadrantTitle,
+  onClose,
+}: {
+  heading: string;
+  accent: string;
+  quadrantInk: string;
+  activeQuadrantTitle?: string;
+  onClose: () => void;
+}) {
+  return (
+        <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
+          <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{heading}</h2>
+          {activeQuadrantTitle ? (
+            <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: quadrantInk }}>
+              {activeQuadrantTitle}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="touch-target ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </header>
+  );
+}
+
+/**
+ * The scrolling field stack.
+ *
+ * Split from the form shell so each field group can be added or reordered
+ * without growing the component that owns submit, focus, and dismissal.
+ */
+function EditDrawerBody({
+  draft,
+  titleRef,
+  taskId,
+  allTasks,
+  dependencyError,
+  onDependenciesChange,
+}: {
+  draft: ReturnType<typeof useEditDraftState>;
+  titleRef: React.RefObject<HTMLInputElement | null>;
+  taskId?: string;
+  allTasks: TaskRecord[];
+  dependencyError: string | null;
+  onDependenciesChange: (ids: string[]) => void;
+}) {
+  return (
+        <div className="flex flex-1 flex-col gap-5 overflow-auto overscroll-contain px-5 py-5">
+          <TitleAndDescriptionFields draft={draft} titleRef={titleRef} />
+
+          <QuadrantField
+            urgent={draft.urgent}
+            important={draft.important}
+            onChange={(u, i) => { draft.setUrgent(u); draft.setImportant(i); }}
+          />
+
+          <SchedulingAndLinksFields
+            draft={draft}
+            taskId={taskId}
+            allTasks={allTasks}
+            dependencyError={dependencyError}
+            onDependenciesChange={onDependenciesChange}
+          />
+        </div>
+  );
+}
+
+/** The two free-text fields at the top of the drawer. */
+function TitleAndDescriptionFields({
+  draft,
+  titleRef,
+}: {
+  draft: ReturnType<typeof useEditDraftState>;
+  titleRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <>
+      <input
+        data-testid="edit-title"
+        ref={titleRef}
+        value={draft.title}
+        onChange={(e) => draft.setTitle(e.target.value)}
+        placeholder="What needs doing?"
+        className="w-full rounded-lg border border-border bg-background px-3 py-3 text-[18px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
+        aria-label="Title"
+      />
+
+      <Field label="Description">
+        <textarea
+          data-testid="edit-description"
+          value={draft.description}
+          onChange={(e) => draft.setDescription(e.target.value)}
+          rows={4}
+          placeholder="Optional details, links, context"
+          aria-label="Description"
+          className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+        />
+      </Field>
+    </>
+  );
+}
+
+/** Enter/comma commits a tag; Backspace on an empty input removes the last one. */
+function handleTagKeyDown(
+  event: React.KeyboardEvent,
+  draft: ReturnType<typeof useEditDraftState>
+): void {
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    draft.addTag();
+    return;
+  }
+  if (event.key === "Backspace" && !draft.tagInput && draft.tags.length) {
+    draft.setTags(draft.tags.slice(0, -1));
+  }
+}
+
+/** Due date, tags, and dependencies — the fields that relate a task to others. */
+interface SchedulingAndLinksFieldsProps {
+  draft: ReturnType<typeof useEditDraftState>;
+  taskId?: string;
+  allTasks: TaskRecord[];
+  dependencyError: string | null;
+  onDependenciesChange: (ids: string[]) => void;
+}
+
+function SchedulingAndLinksFields({
+  draft,
+  taskId,
+  allTasks,
+  dependencyError,
+  onDependenciesChange,
+}: SchedulingAndLinksFieldsProps) {
+  return (
+    <>
+          <DueDateField
+            duePreset={draft.duePreset}
+            customDate={draft.customDate}
+            showCustomDateInput={draft.showCustomDateInput}
+            onPresetChange={draft.setDuePreset}
+            onCustomDateChange={draft.setCustomDate}
+            onToggleCustomInput={draft.setShowCustomDateInput}
+          />
+
+          <TagsField
+            tags={draft.tags}
+            tagInput={draft.tagInput}
+            onTagInputChange={draft.setTagInput}
+            onAddTag={draft.addTag}
+            onRemoveTag={(t) => draft.setTags(draft.tags.filter((x) => x !== t))}
+            onTagKeyDown={(e) => handleTagKeyDown(e, draft)}
+          />
+
+          <DependenciesField
+            taskId={taskId}
+            dependencies={draft.dependencies}
+            allTasks={allTasks}
+            onChange={onDependenciesChange}
+            error={dependencyError}
+          />
+    </>
   );
 }
