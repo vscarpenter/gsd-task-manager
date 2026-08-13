@@ -74,38 +74,24 @@ export function TaskCardHeader({
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-start gap-2 min-w-0 flex-1">
-        {selectionMode ? (
-          <label className="touch-target mt-0.5 inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => onToggleSelect?.(task)}
-              className="h-5 w-5 shrink-0 cursor-pointer rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
-              aria-label={`Select ${task.title}`}
-            />
-          </label>
-        ) : (
-          // Floats over the card's left gutter instead of holding a column, so
-          // titles start flush. Visibility (not hit-testing) is what's gated:
-          // gating pointer-events too would be a no-op for a real mouse — you
-          // cannot reach the grip without hovering the card that reveals it —
-          // while breaking any tool that asserts actionability before moving
-          // the pointer, Playwright's `hover()` included.
-          <button
-            type="button"
-            // bg-card matters: at 24px the button overhangs the card's 16px
-            // left gutter by 8px, so a transparent grip would render on top of
-            // the title's first glyph. An opaque fill makes the overlap read as
-            // a control appearing rather than a paint bug.
-            className="task-card-grip touch-target absolute left-0 top-2.5 z-10 flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded-icon bg-card opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
-            aria-label="Drag to move task"
-            {...sortableAttributes}
-            {...sortableListeners}
-          >
-            <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
-          </button>
-        )}
-        <div className={cn("min-w-0 flex-1", reserveBadgeSpace && "pr-24")}>
+        <CardLeadingControl
+          task={task}
+          selectionMode={selectionMode}
+          isSelected={isSelected}
+          onToggleSelect={onToggleSelect}
+          sortableAttributes={sortableAttributes}
+          sortableListeners={sortableListeners}
+        />
+        <div
+          className={cn(
+            "min-w-0 flex-1",
+            // Clears the grip's column. The grip is absolute from the card's
+            // border and overruns the 16px card padding by 8px, so without this
+            // it lands on the title's first character.
+            !selectionMode && "pl-2",
+            reserveBadgeSpace && "pr-24"
+          )}
+        >
           <h3 className={cn(
             "text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em]",
             !onInspect && "truncate",
@@ -187,5 +173,54 @@ export function TaskCardHeader({
         <TooltipContent>{completionLabel}</TooltipContent>
       </Tooltip>
     </div>
+  );
+}
+
+/**
+ * The card's left gutter: a selection checkbox in selection mode, otherwise the
+ * drag grip.
+ */
+function CardLeadingControl({
+  task,
+  selectionMode,
+  isSelected,
+  onToggleSelect,
+  sortableAttributes,
+  sortableListeners,
+}: Pick<
+  TaskCardHeaderProps,
+  "task" | "selectionMode" | "isSelected" | "onToggleSelect" | "sortableAttributes" | "sortableListeners"
+>) {
+  return selectionMode ? (
+          <label className="touch-target mt-0.5 inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect?.(task)}
+              className="h-5 w-5 shrink-0 cursor-pointer rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
+              aria-label={`Select ${task.title}`}
+            />
+          </label>
+        ) : (
+          // Floats over the card's left gutter instead of holding a column, so
+          // titles start flush. Visibility (not hit-testing) is what's gated:
+          // gating pointer-events too would be a no-op for a real mouse — you
+          // cannot reach the grip without hovering the card that reveals it —
+          // while breaking any tool that asserts actionability before moving
+          // the pointer, Playwright's `hover()` included.
+          <button
+            type="button"
+            // The 24px button starts at the card's left border and the card
+            // pads 16px, so it reached 8px into the text column and covered the
+            // title's leading glyph — "QA TEST 3" read as "A TEST 3". An opaque
+            // fill made that look deliberate rather than fixing it; the text
+            // column now reserves the missing 8px instead (see the wrapper).
+            className="task-card-grip touch-target absolute left-0 top-2.5 z-10 flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded-icon bg-card opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
+            aria-label="Drag to move task"
+            {...sortableAttributes}
+            {...sortableListeners}
+          >
+            <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
+          </button>
   );
 }
