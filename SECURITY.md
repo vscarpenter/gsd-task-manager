@@ -176,7 +176,7 @@ default-src 'self';
 script-src 'self';
 script-src-attr 'none';
 style-src 'self';
-style-src-elem 'self';
+style-src-elem 'self' 'unsafe-inline';
 style-src-attr 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self' data:;
@@ -190,10 +190,22 @@ form-action 'self' https://accounts.google.com https://github.com;
 > stable style blocks into hashed same-origin assets before deployment.
 > `style-src-attr 'unsafe-inline'` remains narrowly scoped to React's dynamic
 > style attributes (virtualized positioning, chart dimensions, and drag
-> transforms). The remaining runtime style elements from pinned Sonner and
-> next-themes releases are allowlisted by exact hashes and guarded by the
-> production browser smoke test; executable inline script and script
-> attributes are denied.
+> transforms). Executable inline script and script attributes are denied, and
+> the production browser smoke test guards the script directives.
+>
+> `style-src-elem` allows `'unsafe-inline'` because the scroll lock that
+> `@radix-ui/react-dialog` applies through `react-remove-scroll` cannot be
+> hash-pinned. That library interpolates the measured scrollbar width into the
+> stylesheet it injects, so the text differs across platforms and zoom levels —
+> a hash computed on one machine fails on another. Enforcing hashes here did
+> not harden the app; it silently broke every modal, leaving the page scrollable
+> behind open dialogs. A hash in the directive also makes `'unsafe-inline'`
+> inert, so the two cannot coexist.
+>
+> The residual risk is bounded: an attacker who could inject a style element
+> already needs the HTML injection that `script-src 'self'` denies, and
+> `style-src-attr 'unsafe-inline'` was already permitted. Script execution,
+> `base-uri`, `form-action`, and `connect-src` remain locked down.
 
 #### 2. X-Frame-Options
 ```

@@ -115,6 +115,26 @@ describe('PocketBase Auth', () => {
       expect(close).toHaveBeenCalledOnce();
     });
 
+    it('should not close a popup the browser already reports as closed', async () => {
+      mockAuthWithOAuth2.mockResolvedValue({
+        record: { id: 'user-123', email: 'test@example.com' },
+      });
+      const close = vi.fn();
+      // accounts.google.com serves Cross-Origin-Opener-Policy: same-origin, which
+      // swaps the browsing context group and severs our handle. Chrome then reports
+      // the popup as closed and refuses close(), logging a COOP violation for a call
+      // that could never have done anything.
+      const popupWindow = {
+        closed: true,
+        location: { href: '' },
+        close,
+      } as unknown as Window;
+
+      await loginWithProvider('google', { popupWindow });
+
+      expect(close).not.toHaveBeenCalled();
+    });
+
     it('should cancel the PocketBase request when OAuth times out', async () => {
       vi.useFakeTimers();
       try {

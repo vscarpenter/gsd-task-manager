@@ -38,7 +38,7 @@ now shipped.**
 
 - **Done:** Waves A–G complete. Suite at 2736 passed. Dexie v16, backup envelope 2.1.0.
 - **Next:** nothing outstanding from the user's selections. Unselected items from
-  `action-checklist.md` remain available — search/tag ergonomics (Phase 2), backup nudge
+  `docs/audits/ACTION-CHECKLIST-2026-08-12.md` remain available — search/tag ergonomics (Phase 2), backup nudge
   and copy-diagnostics (Phase 3), due times / per-task reminders (Phase 4), and all of
   Phases 5–7.
 - **Blockers:** none.
@@ -141,7 +141,7 @@ genuinely empty one. Recorded in `.claude/rules/archive-tombstone.md`.
 
 ## Done — 2026-08-12: Review remediation, Waves A & B (v11.3.1 → v11.3.4)
 
-Spec: `tasks/spec-review-remediation-wave-a-b.md`. Source: `action-checklist.md`, derived
+Spec: `tasks/spec-review-remediation-wave-a-b.md`. Source: `docs/audits/ACTION-CHECKLIST-2026-08-12.md`, derived
 from an external review of deployed v11.2.1.
 
 - [x] #473 `fix(deps)` — Blocking badge counts only open dependents (`getUncompletedBlockedTasks`)

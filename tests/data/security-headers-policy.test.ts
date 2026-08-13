@@ -22,4 +22,22 @@ describe("CloudFront response headers policy", () => {
 		expect(csp).toContain("style-src-elem 'self'");
 		expect(csp).toContain("frame-ancestors 'none'");
 	});
+
+	it("lets Radix inject its scroll-lock stylesheet", () => {
+		const policyPath = resolve(
+			__dirname,
+			"../../cloudfront/response-headers-policy.json",
+		);
+		const policy = JSON.parse(readFileSync(policyPath, "utf-8"));
+		const csp =
+			policy.SecurityHeadersConfig.ContentSecurityPolicy.ContentSecurityPolicy;
+		const styleSrcElem = csp.match(/style-src-elem[^;]*/)?.[0] ?? "";
+
+		// react-remove-scroll interpolates the measured scrollbar width into the
+		// stylesheet it injects, so its text differs per device and cannot be
+		// hash-pinned. A hash in this directive would also make 'unsafe-inline'
+		// a no-op, so the two cannot coexist.
+		expect(styleSrcElem).toContain("'unsafe-inline'");
+		expect(styleSrcElem).not.toContain("sha256-");
+	});
 });

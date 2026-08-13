@@ -75,8 +75,18 @@ export function openOAuthPopup(provider: OAuthProvider): Window | null {
 }
 
 function closeOAuthPopup(popupWindow?: Window | null): void {
+  // A provider that serves Cross-Origin-Opener-Policy: same-origin — accounts.google.com
+  // does — swaps the browsing context group when the popup navigates to it, severing this
+  // handle. The browser then reports the popup as closed and refuses close(), logging a
+  // COOP violation for a call that could not have done anything. Such a popup closes
+  // itself from its own final page, so skipping the call loses no cleanup. Providers that
+  // send no COOP, such as GitHub, keep the handle live and are still closed here.
+  if (!popupWindow || popupWindow.closed) {
+    return;
+  }
+
   try {
-    popupWindow?.close?.();
+    popupWindow.close?.();
   } catch {
     // Some mobile browsers do not allow closing OAuth browser contexts — expected, not an error.
     logger.debug("Could not close OAuth popup window — expected on some mobile browsers");

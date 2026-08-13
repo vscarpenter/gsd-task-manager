@@ -49,6 +49,12 @@ describe("static export CSP hardening", () => {
     expect(cloudFrontCsp).toContain("style-src-attr 'unsafe-inline'");
     expect(caddy).toContain("script-src 'self'");
     expect(caddy).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    // Both deployments must agree, or the Docker build reintroduces the bug.
+    for (const csp of [cloudFrontCsp, caddy]) {
+      const styleSrcElem = csp.match(/style-src-elem[^;]*/)?.[0] ?? "";
+      expect(styleSrcElem).toContain("'unsafe-inline'");
+      expect(styleSrcElem).not.toContain("sha256-");
+    }
     expect(layout).toContain('process.env.NODE_ENV === "development"');
     expect(readFileSync("components/theme-provider.tsx", "utf8")).toContain(
       'scriptProps={{ src: "/theme-init.js" }}',

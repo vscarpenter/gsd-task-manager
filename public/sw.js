@@ -1,12 +1,20 @@
 // Cache version — updated at build time by scripts/update-sw-version.cjs
 // Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '11.11.0';
+const CACHE_VERSION = '11.11.4';
 const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 
 importScripts('./sw-cache-logic.js');
 
 const CACHE_NAMES = getCacheNames(CACHE_VERSION, IMMUTABLE_CACHE_VERSION);
+
+// Page responses carry `Vary: Accept` from the CloudFront agent-discovery
+// function, which content-negotiates /path against /path.md. cache.addAll()
+// stores its requests without an Accept header, so a real navigation
+// (Accept: text/html,...) can never match those entries under default Vary
+// rules — every offline page lookup misses. We key the page cache by URL
+// alone, storing only the HTML variant, so ignoring Vary is safe here.
+const PAGE_MATCH_OPTIONS = { ignoreVary: true };
 
 const PRECACHE_PAGES = [
 	"/",
@@ -136,7 +144,7 @@ self.addEventListener("fetch", (event) => {
 					return response;
 				})
 				.catch(() => {
-					return caches.match(pageRequest).then((cached) => {
+					return caches.match(pageRequest, PAGE_MATCH_OPTIONS).then((cached) => {
 						if (cached) return cached;
 
 						const url = new URL(pageRequest.url);
@@ -145,8 +153,12 @@ self.addEventListener("fetch", (event) => {
 							: url.pathname + "/";
 
 						return caches
-							.match(altPath)
-							.then((altCached) => altCached || caches.match("/"));
+							.match(altPath, PAGE_MATCH_OPTIONS)
+							.then(
+								(altCached) =>
+									altCached || caches.match("/", PAGE_MATCH_OPTIONS),
+							)
+							.then((fallback) => fallback || offlineDocumentResponse());
 					});
 				}),
 		);
@@ -194,11 +206,35 @@ self.addEventListener("fetch", (event) => {
 					return response;
 				})
 				.catch(() => {
-					return caches.match(request);
+					return caches
+						.match(request)
+						.then((fallback) => fallback || offlineAssetResponse());
 				});
 		}),
 	);
 });
+
+// respondWith() must never receive undefined. The browser reports that as
+// "Failed to convert value to 'Response'" and fails the request as a network
+// error, which for a navigation means a blank error page rather than a miss.
+function offlineDocumentResponse() {
+	return new Response(
+		"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" +
+			'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+			"<title>Offline</title></head><body><h1>You are offline</h1>" +
+			"<p>This page has not been saved for offline use. " +
+			"Reconnect and try again.</p></body></html>",
+		{
+			status: 503,
+			statusText: "Offline",
+			headers: { "content-type": "text/html; charset=utf-8" },
+		},
+	);
+}
+
+function offlineAssetResponse() {
+	return new Response("", { status: 504, statusText: "Offline" });
+}
 
 function createSafePageRequest(request, safeUrl) {
 	const headers = new Headers();
