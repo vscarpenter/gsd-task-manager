@@ -1,3 +1,5 @@
+import type { RecurrenceType } from "@/lib/types";
+
 export interface EditDraft {
   title: string;
   description: string;
@@ -6,4 +8,5 @@ export interface EditDraft {
   dueDate?: string;
   tags: string[];
   dependencies: string[];
+  recurrence: RecurrenceType;
 }

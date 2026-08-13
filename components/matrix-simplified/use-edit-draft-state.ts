@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
-import type { TaskRecord } from "@/lib/types";
+import type { RecurrenceType, TaskRecord } from "@/lib/types";
 import { resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
 import { UI_TIMING } from "@/lib/constants/ui";
 import type { EditDraft } from "./edit-draft";
@@ -48,6 +48,8 @@ export interface EditDraftState {
   addTag: () => void;
   dependencies: string[];
   setDependencies: (v: string[]) => void;
+  recurrence: RecurrenceType;
+  setRecurrence: (v: RecurrenceType) => void;
   toDraft: () => EditDraft;
 }
 
@@ -57,6 +59,27 @@ export interface EditDraftState {
  * initializers. EditDrawer remounts this hook (via a `key` on the task id) when
  * the selected task changes, so no effect is needed to re-sync from props.
  */
+/** Normalise and append a tag, ignoring blanks and duplicates. */
+function appendTag(tags: string[], raw: string): string[] {
+  const value = raw.trim().toLowerCase().replace(/^#/, "");
+  if (!value || tags.includes(value)) return tags;
+  return [...tags, value];
+}
+
+/** Move focus to the title field shortly after the drawer mounts. */
+function useAutofocusTitle(titleRef: RefObject<HTMLInputElement | null>): void {
+  useEffect(() => {
+    const timer = setTimeout(() => titleRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [titleRef]);
+}
+
+/** Resolve the picked preset (or custom date) into an ISO due date. */
+function resolveDueDate(customDate: string | undefined, duePreset: DuePreset): string | undefined {
+  const rawDate = customDate ?? resolveDuePreset(duePreset);
+  return rawDate ? new Date(`${rawDate}T00:00:00`).toISOString() : undefined;
+}
+
 export function useEditDraftState(
   task: TaskRecord | null | undefined,
   initialDraft: Partial<EditDraft> | undefined,
@@ -82,26 +105,19 @@ export function useEditDraftState(
   const [dependencies, setDependencies] = useState<string[]>(() =>
     task ? task.dependencies ?? [] : initialDraft?.dependencies ?? []
   );
+  const [recurrence, setRecurrence] = useState<RecurrenceType>(() =>
+    task ? task.recurrence ?? "none" : initialDraft?.recurrence ?? "none"
+  );
 
-  // Move focus to the title field shortly after the drawer mounts.
-  useEffect(() => {
-    const timer = setTimeout(() => titleRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [titleRef]);
+  useAutofocusTitle(titleRef);
 
   const addTag = (): void => {
-    const v = tagInput.trim().toLowerCase().replace(/^#/, "");
-    if (!v || tags.includes(v)) {
-      setTagInput("");
-      return;
-    }
-    setTags([...tags, v]);
+    setTags(appendTag(tags, tagInput));
     setTagInput("");
   };
 
   const toDraft = (): EditDraft => {
-    const rawDate = customDate ?? resolveDuePreset(duePreset);
-    const dueDate = rawDate ? new Date(`${rawDate}T00:00:00`).toISOString() : undefined;
+    const dueDate = resolveDueDate(customDate, duePreset);
     return {
       title: title.trim(),
       description: description.trim(),
@@ -110,6 +126,7 @@ export function useEditDraftState(
       dueDate,
       tags,
       dependencies,
+      recurrence,
     };
   };
 
@@ -125,6 +142,7 @@ export function useEditDraftState(
     tagInput, setTagInput,
     addTag,
     dependencies, setDependencies,
+    recurrence, setRecurrence,
     toDraft,
   };
 }
