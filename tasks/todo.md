@@ -2,6 +2,58 @@
 
 ---
 
+## Done — 2026-08-12: Review remediation, Waves F & G (v11.6.1 → v11.10.1)
+
+Spec: `tasks/spec-review-remediation-wave-a-b.md`. **Every wave the user selected is
+now shipped.**
+
+**Wave F**
+- [x] #486 `fix(palette)` — quadrant badges named properly (`NUNI` → `Eliminate`);
+      export actually exports, import lands on `/settings#data`
+- [x] #487 `feat(matrix)` — completed tasks collapsed behind a per-quadrant "N done"
+      disclosure; completed titles dim as well as strike
+- [x] #488 `fix(task-card)` — drag grip no longer covers the title's first character
+
+**Wave G**
+- [x] #489 `refactor(edit-drawer)` — the hard gate: form split into field groups
+- [x] #490 `feat` — recurrence authoring
+- [x] #491 `feat` — subtasks authoring
+- [x] #492 `feat` — estimate input
+- [x] #493 `feat` — Wave A's withheld surfaces restored
+
+### Findings worth keeping
+
+- **Two of three layout claims did not reproduce.** The mobile capture bar clears the
+  last card, and the Share dialog's actions are on screen at 720px. Both are kept as
+  measured regression guards in `tests/e2e/layout-overlap.spec.ts` rather than removed.
+- **jsdom has no layout**, so overlap defects are invisible to the unit suite by
+  construction. They need real bounding boxes at a real viewport.
+- **The estimate is stored as a string** in draft state so an emptied field means "no
+  estimate" rather than `0` — a zero would drag Review's Estimation Accuracy down for
+  every unestimated task.
+- The `e2e-quality-gates` test bans fixed `waitForTimeout` sleeps; use
+  `scrollIntoViewIfNeeded` or an assertion instead.
+
+### Resuming From Here
+
+- **Done:** Waves A–G complete. Suite at 2736 passed. Dexie v16, backup envelope 2.1.0.
+- **Next:** nothing outstanding from the user's selections. Unselected items from
+  `action-checklist.md` remain available — search/tag ergonomics (Phase 2), backup nudge
+  and copy-diagnostics (Phase 3), due times / per-task reminders (Phase 4), and all of
+  Phases 5–7.
+- **Blockers:** none.
+- **Carried follow-ups:**
+  - Trash is per-device (never synced), same as the archive — ADR 0015.
+  - A dedicated Trash page rather than a Settings section, if the list grows.
+  - Keyboard drag cannot easily reach an *empty* quadrant.
+  - `isTaskBlocking` in `lib/dependencies.ts` has no callers and keeps the unfiltered
+    semantics that caused #473.
+  - True offline testing (network severed) remains uncovered — deselected by the user.
+  - `tests/ui/zz-dbg.test.tsx` is a scratch file with a deliberately-failing assertion;
+    a hook blocks the agent from deleting it. **Remove it manually.**
+
+---
+
 ## Done — 2026-08-12: Review remediation, Waves D & E (v11.4.1 → v11.6.0)
 
 Spec: `tasks/spec-review-remediation-wave-a-b.md`. ADR: `docs/adr/0015-trash-with-retention.md`.
