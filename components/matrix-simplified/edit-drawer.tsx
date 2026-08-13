@@ -6,6 +6,7 @@ import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 import { DrawerHint } from "@/components/ui/drawer-hint";
+import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField } from "./edit-drawer-fields";
@@ -44,6 +45,8 @@ export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubm
 
 function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
+  const modalSurface = useModalSurface(onClose);
+
   const drawerRef = useRef<HTMLFormElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
   const trapKeyDown = useDialogFocus(true, drawerRef);
@@ -92,7 +95,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   // closes the drawer. See .ui-craft/decisions.md (2026-07-31).
   return (
     <div
-      onClick={onClose}
+      {...modalSurface}
       role="presentation"
       // ui-craft-detect-ignore-next-line
       className="fixed inset-0 z-[60] flex justify-end bg-[var(--backdrop)] animate-drawer-overlay"
@@ -126,7 +129,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
           </button>
         </header>
 
-        <div className="flex flex-1 flex-col gap-5 overflow-auto px-5 py-5">
+        <div className="flex flex-1 flex-col gap-5 overflow-auto overscroll-contain px-5 py-5">
           <input
             data-testid="edit-title"
             ref={titleRef}
@@ -187,6 +190,27 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
           />
         </div>
 
+        <DrawerFooter
+          onClose={onClose}
+          canSave={Boolean(draft.title.trim())}
+          isCreateMode={isCreateMode}
+        />
+      </form>
+    </div>
+  );
+}
+
+/** The sticky action bar. Split out to keep the drawer body readable. */
+function DrawerFooter({
+  onClose,
+  canSave,
+  isCreateMode,
+}: {
+  onClose: () => void;
+  canSave: boolean;
+  isCreateMode: boolean;
+}) {
+  return (
         <footer className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5">
           <DrawerHint />
           <div className="flex-1" />
@@ -200,7 +224,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
           <button
             data-testid="save-task"
             type="submit"
-            disabled={!draft.title.trim()}
+            disabled={!canSave}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-1.5 text-[13px] font-medium text-background",
               "hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -210,7 +234,5 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
             {isCreateMode ? "Create task" : "Save changes"}
           </button>
         </footer>
-      </form>
-    </div>
   );
 }
