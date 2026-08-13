@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronRightIcon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIcon } from "lucide-react";
@@ -55,7 +57,16 @@ export function QuadrantPane({
   const header = QUADRANT_HEADER[meta.rdKey];
   const QuadrantIcon = RD_ICON[meta.rdIcon];
   const taskIds = tasks.map((t) => t.id);
-  const activeTaskCount = tasks.reduce((count, task) => count + (task.completed ? 0 : 1), 0);
+  // Completed work is separated rather than interleaved. Show-completed used to
+  // inject every finished card inline, growing the board past 8,000px and
+  // pushing the active tasks — the whole point of the quadrant — off screen.
+  const activeTasks = tasks.filter((task) => !task.completed);
+  const completedTasks = tasks.filter((task) => task.completed);
+  const activeTaskCount = activeTasks.length;
+  const [showCompletedHere, setShowCompletedHere] = useState(false);
+  const cardHandlers: CardHandlers = {
+    onEdit, onInspect, onDelete, onShare, onToggleComplete, highlightedTaskId, onTaskRef,
+  };
   return (
     <section data-testid={`quadrant-${meta.rdKey}`}
       data-drop-active={isOver ? "true" : undefined}
@@ -111,7 +122,7 @@ export function QuadrantPane({
 
       <SortableContext id={meta.id} items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-1">
-          {tasks.length === 0 ? (
+          {activeTasks.length === 0 && completedTasks.length === 0 ? (
             <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">
               {/* Reassuring mark: one icon in ink-3 on a 60pt sunken tile — never a
                   colorful illustration (reference §09). */}
@@ -146,23 +157,94 @@ export function QuadrantPane({
               ) : null}
             </div>
           ) : (
-            tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                allTasks={allTasks}
-                onEdit={onEdit}
-                onInspect={onInspect}
-                onDelete={onDelete}
-                onShare={onShare}
-                onToggleComplete={onToggleComplete}
-                isHighlighted={task.id === highlightedTaskId}
-                taskRef={(element) => onTaskRef?.(task.id, element)}
-              />
-            ))
+            <TaskCardList tasks={activeTasks} allTasks={allTasks} handlers={cardHandlers} />
           )}
+
+          <CompletedDisclosure
+            tasks={completedTasks}
+            allTasks={allTasks}
+            open={showCompletedHere}
+            onToggle={() => setShowCompletedHere((open) => !open)}
+            handlers={cardHandlers}
+          />
         </div>
       </SortableContext>
     </section>
+  );
+}
+
+/**
+ * Finished work in this quadrant, collapsed by default.
+ *
+ * Nothing is hidden permanently — Show-completed asked for these, and one click
+ * returns them. What changes is that they no longer bury the active tasks the
+ * quadrant exists to surface.
+ */
+function CompletedDisclosure({
+  tasks,
+  allTasks,
+  open,
+  onToggle,
+  handlers,
+}: {
+  tasks: TaskRecord[];
+  allTasks: TaskRecord[];
+  open: boolean;
+  onToggle: () => void;
+  handlers: CardHandlers;
+}) {
+  if (tasks.length === 0) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <ChevronRightIcon
+          className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")}
+          aria-hidden="true"
+        />
+        {tasks.length} done
+      </button>
+      {open ? <TaskCardList tasks={tasks} allTasks={allTasks} handlers={handlers} /> : null}
+    </>
+  );
+}
+
+type CardHandlers = Pick<
+  QuadrantPaneProps,
+  "onEdit" | "onInspect" | "onDelete" | "onShare" | "onToggleComplete" | "highlightedTaskId" | "onTaskRef"
+>;
+
+/** A run of task cards. Shared by the active list and the completed disclosure. */
+function TaskCardList({
+  tasks,
+  allTasks,
+  handlers,
+}: {
+  tasks: TaskRecord[];
+  allTasks: TaskRecord[];
+  handlers: CardHandlers;
+}) {
+  return (
+    <>
+      {tasks.map((task) => (
+        <TaskCard
+          key={task.id}
+          task={task}
+          allTasks={allTasks}
+          onEdit={handlers.onEdit}
+          onInspect={handlers.onInspect}
+          onDelete={handlers.onDelete}
+          onShare={handlers.onShare}
+          onToggleComplete={handlers.onToggleComplete}
+          isHighlighted={task.id === handlers.highlightedTaskId}
+          taskRef={(element) => handlers.onTaskRef?.(task.id, element)}
+        />
+      ))}
+    </>
   );
 }

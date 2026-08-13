@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures/test-fixtures";
 import { MatrixPage } from "./pages/matrix-page";
-import { waitForAppLoad } from "./helpers/test-helpers";
+import { waitForAppLoad, createTaskViaCaptureBar } from "./helpers/test-helpers";
 
 test.describe("Task CRUD Operations", () => {
   let matrixPage: MatrixPage;
@@ -103,5 +103,38 @@ test.describe("Task CRUD Operations", () => {
     await expect(page.locator("[data-testid='task-card']").filter({ hasText: "First task" })).toBeVisible();
     await expect(page.locator("[data-testid='task-card']").filter({ hasText: "Second task" })).toBeVisible();
     await expect(page.locator("[data-testid='task-card']").filter({ hasText: "Third task" })).toBeVisible();
+  });
+});
+
+test.describe("Completed tasks stay collapsed", () => {
+  test.beforeEach(async ({ clearIndexedDB }) => {
+    // Fixture clears IndexedDB
+  });
+
+  /**
+   * Show-completed used to inject every finished card inline, growing the board
+   * past 8,000px and pushing active work off screen. The cards are still
+   * reachable — one click — they just no longer bury the quadrant's point.
+   */
+  test("show-completed reveals a disclosure, not a wall of cards", async ({ page }) => {
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Finish me !!");
+    await createTaskViaCaptureBar(page, "Still open !!");
+
+    const q1 = page.locator("[data-testid='quadrant-q1']");
+    const target = q1.locator("[data-testid='task-card']").filter({ hasText: "Finish me" });
+    await target.getByRole("button", { name: /mark as complete/i }).click();
+
+    await page.evaluate(() => localStorage.setItem("gsd:show-completed", "true"));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForAppLoad(page);
+
+    const disclosure = q1.getByRole("button", { name: /1 done/i });
+    await expect(disclosure).toBeVisible();
+    await expect(q1.locator("[data-testid='task-card']").filter({ hasText: "Finish me" })).toHaveCount(0);
+    await expect(q1.locator("[data-testid='task-card']").filter({ hasText: "Still open" })).toBeVisible();
+
+    await disclosure.click();
+    await expect(q1.locator("[data-testid='task-card']").filter({ hasText: "Finish me" })).toBeVisible();
   });
 });

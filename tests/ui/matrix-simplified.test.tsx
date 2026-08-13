@@ -164,6 +164,17 @@ import { MatrixSimplified } from "@/components/matrix-simplified";
 import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 
+/**
+ * Completed tasks now live behind a per-quadrant "N done" disclosure, so tests
+ * that assert on them have to open it first — the same click a user makes.
+ */
+async function revealCompleted() {
+  const toggles = screen.queryAllByRole("button", { name: /\d+ done/i });
+  for (const toggle of toggles) {
+    await userEvent.click(toggle);
+  }
+}
+
 describe("<MatrixSimplified>", () => {
   beforeEach(() => {
     tasksFixture.current = [];
@@ -251,6 +262,7 @@ describe("<MatrixSimplified>", () => {
       localStorage.setItem("gsd:show-completed", "true");
       tasksFixture.current = [makeTask({ id: "b", title: "Done bravo", completed: true })];
       render(<MatrixSimplified />);
+      await revealCompleted();
 
       await user.click(screen.getByRole("button", { name: /mark as incomplete/i }));
 
@@ -314,6 +326,7 @@ describe("<MatrixSimplified>", () => {
       localStorage.setItem("gsd:show-completed", "true");
       tasksFixture.current = [makeTask({ id: "b", title: "Done bravo", completed: true })];
       render(<MatrixSimplified />);
+      await revealCompleted();
 
       await user.click(screen.getByRole("button", { name: /mark as incomplete/i }));
 
@@ -735,10 +748,11 @@ describe("<MatrixSimplified>", () => {
 
     await user.click(await screen.findByRole("button", { name: /all completed/i }));
 
-    await waitFor(() => {
-      expect(screen.queryByText("Active alpha")).not.toBeInTheDocument();
-      expect(screen.getByText("Done bravo")).toBeInTheDocument();
-    });
+    await waitFor(() =>
+      expect(screen.queryByText("Active alpha")).not.toBeInTheDocument()
+    );
+    await revealCompleted();
+    expect(screen.getByText("Done bravo")).toBeInTheDocument();
   });
 
   describe("show-completed preference", () => {
@@ -752,7 +766,7 @@ describe("<MatrixSimplified>", () => {
       expect(screen.queryByText("Done bravo")).not.toBeInTheDocument();
     });
 
-    it("shows completed tasks when 'gsd:show-completed' is true", () => {
+    it("shows completed tasks when 'gsd:show-completed' is true", async () => {
       localStorage.setItem("gsd:show-completed", "true");
       tasksFixture.current = [
         makeTask({ id: "a", title: "Active alpha", completed: false }),
@@ -760,6 +774,9 @@ describe("<MatrixSimplified>", () => {
       ];
       render(<MatrixSimplified />);
       expect(screen.getByText("Active alpha")).toBeInTheDocument();
+
+      // Behind the "N done" disclosure now, so it takes the click a user makes.
+      await revealCompleted();
       expect(screen.getByText("Done bravo")).toBeInTheDocument();
     });
 
@@ -779,8 +796,10 @@ describe("<MatrixSimplified>", () => {
       });
 
       await waitFor(() =>
-        expect(screen.getByText("Done bravo")).toBeInTheDocument(),
+        expect(screen.getByRole("button", { name: /1 done/i })).toBeInTheDocument(),
       );
+      await revealCompleted();
+      expect(screen.getByText("Done bravo")).toBeInTheDocument();
     });
 
     it("opens the share dialog with the target task when its share button is clicked", async () => {

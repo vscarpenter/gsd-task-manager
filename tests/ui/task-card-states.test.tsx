@@ -262,4 +262,14 @@ describe("TaskCard states", () => {
     expect(screen.getByTestId("task-card")).toHaveClass("opacity-100");
     expect(screen.getByTestId("task-card")).not.toHaveClass("opacity-[0.55]");
   });
+
+  it("dims a completed title, not just strikes it", () => {
+    const { container } = renderTaskCard({ id: "done", title: "Finished", completed: true });
+
+    // Strike-through alone leaves the title at full contrast, which in dark
+    // mode makes a completed card near-indistinguishable from an active one.
+    const heading = container.querySelector("h3");
+    expect(heading?.className).toContain("line-through");
+    expect(heading?.className).toContain("text-foreground-muted");
+  });
 });
