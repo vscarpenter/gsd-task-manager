@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { runBackupExport } from "@/lib/backup-download";
 import type { CommandActionHandlers } from "@/lib/command-actions";
 import type { FilterCriteria } from "@/lib/filters";
 import type { RedesignQuadrantKey } from "@/lib/quadrants";
@@ -85,11 +86,16 @@ export function useShellCommandHandlers(): ShellCommandResult {
       const current = theme === "system" ? resolvedTheme : theme;
       setTheme(current === "dark" ? "light" : "dark");
     },
+    // The label says "Export tasks as JSON", so it exports. Navigating to
+    // Settings — and to the Appearance tab at that — was not what it promised.
     onExportTasks: async () => {
-      router.push("/settings");
+      await runBackupExport();
     },
+    // Import needs the merge/replace confirmation that lives on the Data
+    // section, so this lands the user on that control rather than performing a
+    // destructive write straight from the palette.
     onImportTasks: () => {
-      router.push("/settings");
+      router.push("/settings#data");
     },
     onOpenSettings: () => router.push("/settings"),
     onOpenHelp: () => {

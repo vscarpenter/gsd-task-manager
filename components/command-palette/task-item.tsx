@@ -2,6 +2,7 @@
 
 import { Command } from "cmdk";
 import { CheckIcon } from "lucide-react";
+import { quadrants } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
 import type { TaskRecord } from "@/lib/types";
 
@@ -23,10 +24,9 @@ const quadrantStyles = {
  * Renders a single task item in the command palette
  */
 export function TaskItem({ task, onSelect }: TaskItemProps) {
-  const quadrantLabel = task.quadrant
-    .split("-")
-    .map((w) => w[0].toUpperCase())
-    .join("");
+  // The board's own name for the quadrant. Initials of the raw id read as
+  // "UI" and "NUNI" — an encoding of the database value, not a label.
+  const quadrantLabel = quadrants.find((q) => q.id === task.quadrant)?.title ?? task.quadrant;
 
   return (
     <Command.Item

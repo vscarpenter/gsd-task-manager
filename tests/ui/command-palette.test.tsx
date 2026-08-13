@@ -86,10 +86,8 @@ describe('Command Palette Components', () => {
       expect(screen.getByText('Buy groceries')).toBeInTheDocument();
     });
 
-    it('renders quadrant badge', () => {
-      const task = createMockTask({
-        quadrant: 'urgent-important',
-      });
+    it('names the quadrant the way the board does', () => {
+      const task = createMockTask({ quadrant: 'urgent-important' });
 
       render(
         <CommandWrapper>
@@ -97,8 +95,22 @@ describe('Command Palette Components', () => {
         </CommandWrapper>
       );
 
-      // urgent-important => "UI" (first letter of each word uppercased)
-      expect(screen.getByText('UI')).toBeInTheDocument();
+      // Initials of the raw id produced "UI" here and "NUNI" for Q4 — an
+      // encoding of the database value rather than a label anyone recognises.
+      expect(screen.getByText('Do First')).toBeInTheDocument();
+    });
+
+    it('does not render initials of the raw quadrant id', () => {
+      const task = createMockTask({ quadrant: 'not-urgent-not-important' });
+
+      render(
+        <CommandWrapper>
+          <TaskItem task={task} onSelect={vi.fn()} />
+        </CommandWrapper>
+      );
+
+      expect(screen.queryByText('NUNI')).not.toBeInTheDocument();
+      expect(screen.getByText('Eliminate')).toBeInTheDocument();
     });
 
     it('renders tags', () => {

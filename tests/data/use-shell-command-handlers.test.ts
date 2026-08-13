@@ -22,6 +22,16 @@ vi.mock("next-themes", () => ({
   useTheme: () => themeState,
 }));
 
+const downloadBackupMock = vi.fn();
+const runBackupExportMock = vi.fn();
+vi.mock("@/lib/backup-download", () => ({
+  downloadBackup: (...a: unknown[]) => downloadBackupMock(...a),
+  runBackupExport: (...a: unknown[]) => runBackupExportMock(...a),
+}));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+}));
+
 function navigateTo(pathname: string) {
   window.history.pushState({}, "", pathname);
 }
@@ -134,9 +144,10 @@ describe("useShellCommandHandlers", () => {
     expect(setThemeMock).toHaveBeenCalledWith("dark");
   });
 
-  it("routes export, import, settings, dashboard, matrix and archive actions", async () => {
+  it("routes the navigation actions", async () => {
     const { result } = renderHook(() => useShellCommandHandlers());
-    await result.current.handlers.onExportTasks();
+    // Export is deliberately absent: it performs the export rather than
+    // navigating, and import now lands on the Data section it needs.
     result.current.handlers.onImportTasks();
     result.current.handlers.onOpenSettings();
     result.current.handlers.onViewDashboard();
@@ -144,8 +155,7 @@ describe("useShellCommandHandlers", () => {
     result.current.handlers.onViewArchive();
 
     expect(pushMock.mock.calls.map((c) => c[0])).toEqual([
-      "/settings",
-      "/settings",
+      "/settings#data",
       "/settings",
       "/dashboard",
       "/",
@@ -189,6 +199,30 @@ describe("useShellCommandHandlers", () => {
       isSyncEnabled: false,
       selectionMode: false,
       hasSelection: false,
+    });
+  });
+
+  describe("data actions actually act", () => {
+    it("exports rather than navigating to Settings", async () => {
+      runBackupExportMock.mockResolvedValue(true);
+      const { result } = renderHook(() => useShellCommandHandlers());
+
+      await result.current.handlers.onExportTasks();
+
+      // The palette entry reads "Export tasks as JSON". It used to open
+      // Settings on the Appearance tab.
+      expect(runBackupExportMock).toHaveBeenCalled();
+      expect(pushMock).not.toHaveBeenCalled();
+    });
+
+    it("lands import on the Data section, not the default tab", () => {
+      const { result } = renderHook(() => useShellCommandHandlers());
+
+      result.current.handlers.onImportTasks();
+
+      // Import needs the merge/replace confirmation that lives there, so this
+      // routes to the control rather than writing straight from the palette.
+      expect(pushMock).toHaveBeenCalledWith("/settings#data");
     });
   });
 });
