@@ -314,4 +314,59 @@ describe("<EditDrawer>", () => {
       expect(onClose).toHaveBeenCalled();
     });
   });
+
+  describe("scroll containment and accidental dismissal", () => {
+    function renderDrawer(props: { onClose?: () => void } = {}) {
+      return render(
+        <EditDrawer
+          open
+          task={mockTask}
+          onClose={props.onClose ?? vi.fn()}
+          onSubmit={vi.fn()}
+        />
+      );
+    }
+
+    it("locks body scroll while open and restores it on close", () => {
+      const { unmount } = renderDrawer();
+      expect(document.body.style.overflow).toBe("hidden");
+
+      unmount();
+      expect(document.body.style.overflow).not.toBe("hidden");
+    });
+
+    it("contains overscroll so the page behind does not move", () => {
+      renderDrawer();
+      const scroller = screen
+        .getByTestId("edit-drawer")
+        .querySelector(".overflow-auto, .overflow-y-auto");
+      expect(scroller?.className).toContain("overscroll-contain");
+    });
+
+    it("does not close when a drag starts inside the form and ends on the backdrop", async () => {
+      const onClose = vi.fn();
+      renderDrawer({ onClose });
+
+      const form = screen.getByTestId("edit-drawer");
+      const backdrop = form.parentElement as HTMLElement;
+
+      // Selecting text or dragging a scrollbar routinely releases outside the
+      // form. Treating that as "dismiss" throws away an in-progress edit.
+      fireEvent.mouseDown(form);
+      fireEvent.click(backdrop);
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("still closes on a genuine backdrop click", () => {
+      const onClose = vi.fn();
+      renderDrawer({ onClose });
+
+      const backdrop = screen.getByTestId("edit-drawer").parentElement as HTMLElement;
+      fireEvent.mouseDown(backdrop);
+      fireEvent.click(backdrop);
+
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });

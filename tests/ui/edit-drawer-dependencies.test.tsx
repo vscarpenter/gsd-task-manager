@@ -248,4 +248,89 @@ describe("findDependencyCycleError", () => {
     const tasks = [makeTask({ id: "a", title: "Alpha" }), makeTask({ id: "b", title: "Beta" })];
     expect(findDependencyCycleError("b", ["a", "ghost-1"], tasks)).toBeNull();
   });
+
+  describe("popup escapes the drawer's scroll container", () => {
+    it("should_render_suggestions_outside_the_scrolling_ancestor", async () => {
+      // The drawer body is `overflow-auto`, which CLIPS absolutely-positioned
+      // descendants — the list was cut off behind the sticky Save footer and
+      // could not be clicked at 1280x720. z-index cannot fix clipping; the
+      // popup has to leave the container entirely.
+      const { container } = render(
+        <div style={{ overflow: "auto" }} data-testid="scroll-container">
+          <DependenciesField
+            taskId="z"
+            dependencies={[]}
+            allTasks={[makeTask({ id: "a", title: "Alpha" })]}
+            onChange={vi.fn()}
+          />
+        </div>
+      );
+
+      await userEvent.type(screen.getByTestId("dep-search"), "Alp");
+
+      const suggestion = await screen.findByTestId("dep-suggestion");
+      expect(suggestion).toBeInTheDocument();
+      expect(container.contains(suggestion)).toBe(false);
+    });
+  });
+
+  describe("keyboard selection", () => {
+    it("should_pick_the_highlighted_suggestion_with_arrow_keys_and_enter", async () => {
+      const onChange = vi.fn();
+      render(
+        <DependenciesField
+          taskId="z"
+          dependencies={[]}
+          allTasks={[
+            makeTask({ id: "a", title: "Alpha one" }),
+            makeTask({ id: "b", title: "Alpha two" }),
+          ]}
+          onChange={onChange}
+        />
+      );
+
+      await userEvent.type(screen.getByTestId("dep-search"), "Alpha");
+      await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+
+      expect(onChange).toHaveBeenCalledWith(["b"]);
+    });
+
+    it("should_pick_the_first_suggestion_on_a_single_arrow_down", async () => {
+      const onChange = vi.fn();
+      render(
+        <DependenciesField
+          taskId="z"
+          dependencies={[]}
+          allTasks={[
+            makeTask({ id: "a", title: "Alpha one" }),
+            makeTask({ id: "b", title: "Alpha two" }),
+          ]}
+          onChange={onChange}
+        />
+      );
+
+      await userEvent.type(screen.getByTestId("dep-search"), "Alpha");
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+
+      expect(onChange).toHaveBeenCalledWith(["a"]);
+    });
+
+    it("should_expose_the_listbox_relationship_to_assistive_tech", async () => {
+      render(
+        <DependenciesField
+          taskId="z"
+          dependencies={[]}
+          allTasks={[makeTask({ id: "a", title: "Alpha one" })]}
+          onChange={vi.fn()}
+        />
+      );
+
+      const input = screen.getByTestId("dep-search");
+      await userEvent.type(input, "Alpha");
+
+      expect(input).toHaveAttribute("role", "combobox");
+      expect(input).toHaveAttribute("aria-expanded", "true");
+      expect(await screen.findByRole("listbox")).toBeInTheDocument();
+    });
+  });
 });
