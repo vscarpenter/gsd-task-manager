@@ -2,23 +2,23 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { DndContext, closestCorners } from "@dnd-kit/core";
-import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
-import { celebrateCompletion } from "@/lib/confetti";
+import { createTask, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { toast } from "sonner";
+import { TOAST_DURATION } from "@/lib/constants";
 import { useTasks } from "@/lib/use-tasks";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
-import { ErrorActions, logError } from "@/lib/error-logger";
+import { ErrorActions } from "@/lib/error-logger";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
 import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useNotificationChecker } from "@/lib/use-notification-checker";
-import { TOAST_DURATION } from "@/lib/constants";
 import { SHOW_COMPLETED_EVENT, readShowCompleted } from "@/lib/preferences/show-completed";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
+import { handleCapture, handleToggle, reportTaskMutationError } from "./task-actions";
 import { DragLayer } from "./drag-layer";
 import { MatrixGrid } from "./matrix-grid";
 import { MatrixGridSkeleton } from "./matrix-grid-skeleton";
@@ -93,21 +93,6 @@ const initialOverlayState: OverlayState = {
   sharingTask: null,
 };
 
-function reportTaskMutationError(
-  error: unknown,
-  action: string,
-  userMessage: string,
-  taskId?: string
-): void {
-  logError(error, {
-    action,
-    taskId,
-    userMessage,
-    timestamp: new Date().toISOString(),
-  });
-  toast.error(userMessage, { duration: TOAST_DURATION.LONG });
-}
-
 function overlayReducer(state: OverlayState, action: OverlayAction): OverlayState {
   switch (action.type) {
     case "openEdit":
@@ -126,38 +111,6 @@ function overlayReducer(state: OverlayState, action: OverlayAction): OverlayStat
       return { ...state, sharingTask: action.task };
     case "closeShare":
       return { ...state, sharingTask: null };
-  }
-}
-
-// Pure capture/toggle handlers — they close over no component state, so they
-// live at module scope (stable identity for memoized children).
-async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<void> {
-  try {
-    const { cleanTitle, urls } = extractUrlsFromTitle(title);
-    await createTask({
-      title: cleanTitle,
-      description: buildDescription("", urls),
-      urgent,
-      important,
-      tags: tags.length > 0 ? tags : undefined,
-    });
-    toast.success("Task added", { duration: TOAST_DURATION.SHORT });
-  } catch (error) {
-    reportTaskMutationError(error, ErrorActions.CREATE_TASK, "Failed to create task");
-  }
-}
-
-async function handleToggle(task: TaskRecord, completedNext: boolean): Promise<void> {
-  try {
-    await toggleCompleted(task.id, completedNext);
-    if (completedNext) celebrateCompletion();
-  } catch (error) {
-    reportTaskMutationError(
-      error,
-      ErrorActions.TOGGLE_TASK,
-      "Failed to update task",
-      task.id
-    );
   }
 }
 
@@ -417,7 +370,9 @@ export function MatrixSimplified() {
             allTasks={all}
             onEdit={handleEditOpen}
             onInspect={handleInspectOpen}
-            onToggleComplete={handleToggle}
+            onToggleComplete={(task, completedNext) =>
+              handleToggle(task, completedNext, handleSuccess)
+            }
             onDelete={handleDelete}
             onShare={handleShareOpen}
             onAddInQuadrant={handleAddInQuadrant}

@@ -106,6 +106,35 @@ describe("task crud side effects (real DB)", () => {
     expect(instances).toHaveLength(1);
   });
 
+  describe("toggleCompleted result", () => {
+    it("reports the spawned instance so a caller can undo the whole completion", async () => {
+      const db = getDb();
+      await db.tasks.put(createMockTask({
+        id: "recurring-2",
+        recurrence: "daily",
+        dueDate: "2026-07-10T12:00:00.000Z",
+      }));
+
+      const result = await toggleCompleted("recurring-2", true);
+
+      // Undo has to remove the next instance too; without the id it would
+      // un-complete the task and leave an orphan behind.
+      expect(result.task.completed).toBe(true);
+      expect(result.recurringInstance).not.toBeNull();
+      expect(await db.tasks.get(result.recurringInstance!.id)).toBeDefined();
+    });
+
+    it("reports no instance for a non-recurring completion", async () => {
+      const db = getDb();
+      await db.tasks.put(createMockTask({ id: "plain-1" }));
+
+      const result = await toggleCompleted("plain-1", true);
+
+      expect(result.task.completed).toBe(true);
+      expect(result.recurringInstance).toBeNull();
+    });
+  });
+
   describe("snoozeTask", () => {
     it("sets snoozedUntil and persists it for a positive duration", async () => {
       const db = getDb();

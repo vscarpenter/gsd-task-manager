@@ -189,7 +189,7 @@ describe("Task CRUD operations", () => {
 
       // Wait a bit to ensure different timestamp
       await new Promise(resolve => setTimeout(resolve, 10));
-      const updated = await toggleCompleted(task.id, true);
+      const { task: updated } = await toggleCompleted(task.id, true);
 
       expect(updated.completed).toBe(true);
       expect(updated.updatedAt).not.toBe(task.updatedAt);
@@ -199,7 +199,7 @@ describe("Task CRUD operations", () => {
       const task = await createTask(createSampleTask());
       await toggleCompleted(task.id, true);
 
-      const updated = await toggleCompleted(task.id, false);
+      const { task: updated } = await toggleCompleted(task.id, false);
 
       expect(updated.completed).toBe(false);
     });

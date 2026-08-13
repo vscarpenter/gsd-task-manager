@@ -417,7 +417,7 @@ describe('Task CRUD Operations', () => {
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
 
-      const result = await toggleCompleted('task-1', true);
+      const { task: result } = await toggleCompleted('task-1', true);
 
       expect(result.completed).toBe(true);
       expect(result.completedAt).toBeDefined();
@@ -438,7 +438,7 @@ describe('Task CRUD Operations', () => {
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
 
-      const result = await toggleCompleted('task-1', false);
+      const { task: result } = await toggleCompleted('task-1', false);
 
       expect(result.completed).toBe(false);
       expect(result.completedAt).toBeUndefined();

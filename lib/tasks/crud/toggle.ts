@@ -31,19 +31,32 @@ async function withCompletionLock<T>(
 }
 
 /**
+ * Outcome of a completion toggle.
+ *
+ * `recurringInstance` is the task spawned by completing a recurring task. Undo
+ * needs it: reversing only the completion would leave the next instance behind
+ * as an orphan, so the caller receives the id rather than having to guess it
+ * from `parentTaskId` (which every instance in a chain shares).
+ */
+export interface ToggleCompletedResult {
+  task: TaskRecord;
+  recurringInstance: TaskRecord | null;
+}
+
+/**
  * Toggle task completion status, handling recurring task creation
  */
 export async function toggleCompleted(
   id: string,
   completed: boolean
-): Promise<TaskRecord> {
+): Promise<ToggleCompletedResult> {
   return withCompletionLock(id, () => toggleCompletedTransaction(id, completed));
 }
 
 async function toggleCompletedTransaction(
   id: string,
   completed: boolean
-): Promise<TaskRecord> {
+): Promise<ToggleCompletedResult> {
   try {
     const db = getDb();
     const result = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
@@ -80,7 +93,7 @@ async function toggleCompletedTransaction(
       completed,
       title: nextRecord.title,
     });
-    return nextRecord;
+    return { task: nextRecord, recurringInstance };
   } catch (error) {
     logger.error(
       "Failed to toggle task completion",
