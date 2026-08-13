@@ -50,7 +50,9 @@ function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
 
 vi.mock("@/lib/tasks", () => ({
   createTask: vi.fn().mockResolvedValue(undefined),
-  toggleCompleted: vi.fn().mockResolvedValue(undefined),
+  // Returns { task, recurringInstance } so callers can undo the whole
+  // completion, including the instance a recurring task spawns.
+  toggleCompleted: vi.fn().mockResolvedValue({ task: null, recurringInstance: null }),
   updateTask: vi.fn().mockResolvedValue(undefined),
   deleteTask: vi.fn().mockResolvedValue(undefined),
   restoreTask: vi.fn().mockResolvedValue(undefined),
@@ -170,7 +172,7 @@ describe("<MatrixSimplified>", () => {
     }
     vi.mocked(createTask).mockReset().mockResolvedValue(undefined);
     vi.mocked(celebrateCompletion).mockClear();
-    vi.mocked(toggleCompleted).mockReset().mockResolvedValue(undefined);
+    vi.mocked(toggleCompleted).mockReset().mockResolvedValue({ task: null, recurringInstance: null });
     vi.mocked(updateTask).mockReset().mockResolvedValue(undefined);
     vi.mocked(deleteTask).mockReset().mockResolvedValue(undefined);
     vi.mocked(restoreTask).mockReset().mockResolvedValue(undefined);
@@ -249,6 +251,69 @@ describe("<MatrixSimplified>", () => {
 
       await waitFor(() => expect(toggleCompleted).toHaveBeenCalledWith("b", false));
       expect(celebrateCompletion).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("completion undo", () => {
+    it("offers an undo when a task is completed", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [makeTask({ id: "a", title: "Active alpha", completed: false })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /mark as complete/i }));
+
+      // Completion is the most frequent action and its checkbox sits inches
+      // from delete, which has had an Undo since forever.
+      await waitFor(() =>
+        expect(handleSuccessSpy).toHaveBeenCalledWith(
+          "Task completed",
+          expect.any(Function)
+        )
+      );
+    });
+
+    it("un-completes the task when the undo runs", async () => {
+      const user = userEvent.setup();
+      tasksFixture.current = [makeTask({ id: "a", title: "Active alpha", completed: false })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /mark as complete/i }));
+      await waitFor(() => expect(handleSuccessSpy).toHaveBeenCalled());
+
+      vi.mocked(toggleCompleted).mockClear();
+      await handleSuccessSpy.mock.calls[0][1]();
+
+      expect(toggleCompleted).toHaveBeenCalledWith("a", false);
+    });
+
+    it("removes the spawned next instance when undoing a recurring completion", async () => {
+      const user = userEvent.setup();
+      vi.mocked(toggleCompleted).mockResolvedValueOnce({
+        task: makeTask({ id: "r", completed: true }),
+        recurringInstance: makeTask({ id: "r-next", completed: false }),
+      });
+      tasksFixture.current = [makeTask({ id: "r", title: "Recurring task", completed: false })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /mark as complete/i }));
+      await waitFor(() => expect(handleSuccessSpy).toHaveBeenCalled());
+
+      await handleSuccessSpy.mock.calls[0][1]();
+
+      // Undoing only the completion would leave the next instance orphaned.
+      expect(deleteTask).toHaveBeenCalledWith("r-next");
+    });
+
+    it("does not offer an undo when un-completing", async () => {
+      const user = userEvent.setup();
+      localStorage.setItem("gsd:show-completed", "true");
+      tasksFixture.current = [makeTask({ id: "b", title: "Done bravo", completed: true })];
+      render(<MatrixSimplified />);
+
+      await user.click(screen.getByRole("button", { name: /mark as incomplete/i }));
+
+      await waitFor(() => expect(toggleCompleted).toHaveBeenCalledWith("b", false));
+      expect(handleSuccessSpy).not.toHaveBeenCalled();
     });
   });
 
