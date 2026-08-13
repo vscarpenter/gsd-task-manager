@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { RefObject } from "react";
-import type { RecurrenceType, TaskRecord } from "@/lib/types";
+import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
 import { resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
 import { UI_TIMING } from "@/lib/constants/ui";
+import { generateId } from "@/lib/id-generator";
 import type { EditDraft } from "./edit-draft";
 
 function classifyExistingDate(iso: string | undefined): DuePreset {
@@ -50,15 +51,32 @@ export interface EditDraftState {
   setDependencies: (v: string[]) => void;
   recurrence: RecurrenceType;
   setRecurrence: (v: RecurrenceType) => void;
+  subtasks: Subtask[];
+  addSubtask: (title: string) => void;
+  toggleSubtask: (id: string) => void;
+  removeSubtask: (id: string) => void;
   toDraft: () => EditDraft;
 }
 
-/**
- * Owns all form-field state for EditDrawer. Field values are seeded once from
- * the task (edit mode) or initialDraft (create mode) via lazy useState
- * initializers. EditDrawer remounts this hook (via a `key` on the task id) when
- * the selected task changes, so no effect is needed to re-sync from props.
- */
+/** The three ways a draft's checklist changes. */
+function subtaskActions(setSubtasks: Dispatch<SetStateAction<Subtask[]>>) {
+  return {
+    addSubtask: (title: string) => setSubtasks((current) => appendSubtask(current, title)),
+    toggleSubtask: (id: string) =>
+      setSubtasks((current) =>
+        current.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s))
+      ),
+    removeSubtask: (id: string) => setSubtasks((current) => current.filter((s) => s.id !== id)),
+  };
+}
+
+/** Append a subtask, ignoring blank input. Ids are generated locally until save. */
+function appendSubtask(subtasks: Subtask[], rawTitle: string): Subtask[] {
+  const title = rawTitle.trim();
+  if (!title) return subtasks;
+  return [...subtasks, { id: generateId(), title, completed: false }];
+}
+
 /** Normalise and append a tag, ignoring blanks and duplicates. */
 function appendTag(tags: string[], raw: string): string[] {
   const value = raw.trim().toLowerCase().replace(/^#/, "");
@@ -80,6 +98,12 @@ function resolveDueDate(customDate: string | undefined, duePreset: DuePreset): s
   return rawDate ? new Date(`${rawDate}T00:00:00`).toISOString() : undefined;
 }
 
+/**
+ * Owns all form-field state for EditDrawer. Field values are seeded once from
+ * the task (edit mode) or initialDraft (create mode) via lazy useState
+ * initializers. EditDrawer remounts this hook (via a `key` on the task id) when
+ * the selected task changes, so no effect is needed to re-sync from props.
+ */
 export function useEditDraftState(
   task: TaskRecord | null | undefined,
   initialDraft: Partial<EditDraft> | undefined,
@@ -108,6 +132,9 @@ export function useEditDraftState(
   const [recurrence, setRecurrence] = useState<RecurrenceType>(() =>
     task ? task.recurrence ?? "none" : initialDraft?.recurrence ?? "none"
   );
+  const [subtasks, setSubtasks] = useState<Subtask[]>(() =>
+    task ? task.subtasks ?? [] : initialDraft?.subtasks ?? []
+  );
 
   useAutofocusTitle(titleRef);
 
@@ -116,19 +143,17 @@ export function useEditDraftState(
     setTagInput("");
   };
 
-  const toDraft = (): EditDraft => {
-    const dueDate = resolveDueDate(customDate, duePreset);
-    return {
-      title: title.trim(),
-      description: description.trim(),
-      urgent,
-      important,
-      dueDate,
-      tags,
-      dependencies,
-      recurrence,
-    };
-  };
+  const toDraft = (): EditDraft => ({
+    title: title.trim(),
+    description: description.trim(),
+    urgent,
+    important,
+    dueDate: resolveDueDate(customDate, duePreset),
+    tags,
+    dependencies,
+    recurrence,
+    subtasks,
+  });
 
   return {
     title, setTitle,
@@ -143,6 +168,8 @@ export function useEditDraftState(
     addTag,
     dependencies, setDependencies,
     recurrence, setRecurrence,
+    subtasks,
+    ...subtaskActions(setSubtasks),
     toDraft,
   };
 }

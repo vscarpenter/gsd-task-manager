@@ -1,4 +1,4 @@
-import type { RecurrenceType } from "@/lib/types";
+import type { RecurrenceType, Subtask } from "@/lib/types";
 
 export interface EditDraft {
   title: string;
@@ -9,4 +9,5 @@ export interface EditDraft {
   tags: string[];
   dependencies: string[];
   recurrence: RecurrenceType;
+  subtasks: Subtask[];
 }

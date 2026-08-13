@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
-import type { RecurrenceType } from "@/lib/types";
+import type { RecurrenceType, Subtask } from "@/lib/types";
 
 // ─── Shared ────────────────────────────────────────────────────────────────
 
@@ -297,5 +297,117 @@ export function RecurrenceField({
         })}
       </div>
     </Field>
+  );
+}
+
+/**
+ * A task's checklist.
+ *
+ * Progress already rendered on the card and in the detail sheet; only the way
+ * to author the items was missing. Edits stay in the draft until Save, so
+ * ticking an item here is reversible by closing without saving.
+ */
+export function SubtasksField({
+  subtasks,
+  onAdd,
+  onToggle,
+  onRemove,
+}: {
+  subtasks: Subtask[];
+  onAdd: (title: string) => void;
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+}): React.ReactElement {
+  const [entry, setEntry] = useState("");
+  const done = subtasks.filter((s) => s.completed).length;
+
+  const commit = (): void => {
+    onAdd(entry);
+    setEntry("");
+  };
+
+  return (
+    <Field label={subtasks.length ? `Subtasks · ${done}/${subtasks.length}` : "Subtasks"} as="group">
+      {subtasks.length > 0 ? (
+        <ul className="space-y-1">
+          {subtasks.map((subtask) => (
+            <SubtaskRow
+              key={subtask.id}
+              subtask={subtask}
+              onToggle={onToggle}
+              onRemove={onRemove}
+            />
+          ))}
+        </ul>
+      ) : null}
+      <SubtaskEntry value={entry} onChange={setEntry} onCommit={commit} />
+    </Field>
+  );
+}
+
+/** One checklist item: tick, label, remove. */
+function SubtaskRow({
+  subtask,
+  onToggle,
+  onRemove,
+}: {
+  subtask: Subtask;
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+}): React.ReactElement {
+  return (
+    <li className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={subtask.completed}
+        onChange={() => onToggle(subtask.id)}
+        aria-label={subtask.title}
+        className="h-4 w-4 shrink-0 cursor-pointer rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-1"
+      />
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-[13px]",
+          subtask.completed ? "text-foreground-muted line-through" : "text-foreground"
+        )}
+      >
+        {subtask.title}
+      </span>
+      {/* ui-craft-detect-ignore-next-line */}
+      <button
+        type="button"
+        onClick={() => onRemove(subtask.id)}
+        aria-label={`Remove subtask ${subtask.title}`}
+        className="rounded-xs p-1 text-foreground-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        <XIcon className="h-3 w-3" />
+      </button>
+    </li>
+  );
+}
+
+/** The "add a subtask" input. Enter commits rather than submitting the drawer. */
+function SubtaskEntry({
+  value,
+  onChange,
+  onCommit,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+}): React.ReactElement {
+  return (
+    <input
+      data-testid="edit-subtask-input"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        onCommit();
+      }}
+      placeholder="Add a subtask…"
+      aria-label="Add a subtask"
+      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+    />
   );
 }
