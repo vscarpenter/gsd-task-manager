@@ -11,6 +11,26 @@ function isEncrypted(v) {
   return typeof v === "string" && v.indexOf(PREFIX) === 0;
 }
 
+function isValidCiphertext(value, decipherFn, json = false) {
+  if (!isEncrypted(value) || typeof decipherFn !== "function") return false;
+  try {
+    const plaintext = decipherFn(value.slice(PREFIX.length));
+    if (json) JSON.parse(plaintext);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function serializableJson(value) {
+  try {
+    JSON.parse(value);
+    return value;
+  } catch {
+    return JSON.stringify(value);
+  }
+}
+
 function requireValidKey(key) {
   if (typeof key !== "string" || key.length !== 32) {
     throw new Error("GSD_TASKS_ENC_KEY must be a 32-character AES-256 key (fail-closed)");
@@ -39,18 +59,18 @@ function jsonFieldString(record, field) {
   return JSON.stringify(raw);
 }
 
-function encryptRecord(record, cipherFn) {
+function encryptRecord(record, cipherFn, decipherFn) {
   for (const f of ENCRYPTED_TEXT_FIELDS) {
     const v = record.get(f);
-    if (v === null || v === undefined || v === "" || isEncrypted(v)) continue;
+    if (v === null || v === undefined || v === "" || isValidCiphertext(v, decipherFn)) continue;
     record.set(f, PREFIX + cipherFn(String(v)));
   }
   for (const f of ENCRYPTED_JSON_FIELDS) {
     const raw = record.get(f);
     if (raw === null || raw === undefined) continue;
     const asString = jsonFieldString(record, f);
-    if (isEncrypted(asString)) continue;
-    record.set(f, PREFIX + cipherFn(asString));
+    if (isValidCiphertext(asString, decipherFn, true)) continue;
+    record.set(f, PREFIX + cipherFn(serializableJson(asString)));
   }
 }
 
@@ -74,6 +94,7 @@ module.exports = {
   ENCRYPTED_TEXT_FIELDS,
   ENCRYPTED_JSON_FIELDS,
   isEncrypted,
+  isValidCiphertext,
   requireValidKey,
   jsonFieldString,
   encryptRecord,

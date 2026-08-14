@@ -126,13 +126,39 @@ export const appPreferencesSchema = z.object({
 	smartViewsEnabled: z.boolean(),
 });
 
+/** Runtime validation for filters persisted in custom smart views and backups. */
+export const filterCriteriaSchema = z.object({
+	quadrants: z.array(quadrantIdSchema).optional(),
+	status: z.enum(["all", "active", "completed"]).optional(),
+	tags: z.array(z.string()).optional(),
+	dueDateRange: z.object({
+		start: z.string().optional(),
+		end: z.string().optional(),
+	}).strict().optional(),
+	// Legacy custom views may retain this unused pre-filter shape. Preserve it
+	// with a bounded runtime type rather than admitting arbitrary criteria.
+	dueDate: z.object({
+		mode: z.string(),
+		days: z.number().int().nonnegative().optional(),
+	}).strict().optional(),
+	overdue: z.boolean().optional(),
+	dueToday: z.boolean().optional(),
+	dueThisWeek: z.boolean().optional(),
+	noDueDate: z.boolean().optional(),
+	recurrence: z.array(recurrenceTypeSchema).optional(),
+	recentlyAdded: z.boolean().optional(),
+	recentlyCompleted: z.boolean().optional(),
+	readyToWork: z.boolean().optional(),
+	searchQuery: z.string().optional(),
+}).strict();
+
 /** Custom smart views only — built-ins are derived at read time, never stored. */
 export const smartViewSchema = z.object({
 	id: z.string().min(1),
 	name: z.string().min(1),
 	description: z.string().optional(),
 	icon: z.string().optional(),
-	criteria: z.record(z.string(), z.unknown()),
+	criteria: filterCriteriaSchema,
 	isBuiltIn: z.boolean().default(false),
 	createdAt: z.iso.datetime({ offset: true }),
 	updatedAt: z.iso.datetime({ offset: true }),

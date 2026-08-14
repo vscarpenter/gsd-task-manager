@@ -53,14 +53,17 @@ async function applyPreparedRecord(
   const { record, remoteTask } = prepared;
   const archived = await db.archivedTasks.get(remoteTask.id);
   if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) return 0;
+  const deleted = await db.deletedTasks.get(remoteTask.id);
+  if (deleted && !isRemoteNewerThanArchive(remoteTask.updatedAt, deleted.deletedAt)) return 0;
 
   const localTask = await db.tasks.get(remoteTask.id);
   const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
   if (!merged) return 0;
   const remoteWins = !localTask ||
     new Date(merged.updatedAt).getTime() > new Date(localTask.updatedAt).getTime();
-  if (archived) await db.archivedTasks.delete(remoteTask.id);
   if (!remoteWins) return 0;
+  if (archived) await db.archivedTasks.delete(remoteTask.id);
+  if (deleted) await db.deletedTasks.delete(remoteTask.id);
   if (localTask) await db.tasks.put(merged);
   else await db.tasks.add(merged);
   return 1;
@@ -78,7 +81,7 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
   const acceptedRecords = prepareRemoteRecords(records);
   let pulledCount = 0;
   const appliedRecords: PreparedRemoteRecord[] = [];
-  await db.transaction('rw', [db.tasks, db.archivedTasks], async () => {
+  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks], async () => {
     for (const prepared of acceptedRecords) {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction preserves tombstone/live invariants
       const applied = await applyPreparedRecord(db, prepared);

@@ -65,10 +65,15 @@ export async function applyRemoteChange(
     return;
   }
 
-  await db.transaction('rw', [db.tasks, db.archivedTasks], async () => {
+  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks], async () => {
     const archived = await db.archivedTasks.get(remoteTask.id);
     if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) {
       logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
+      return;
+    }
+    const deleted = await db.deletedTasks.get(remoteTask.id);
+    if (deleted && !isRemoteNewerThanArchive(remoteTask.updatedAt, deleted.deletedAt)) {
+      logger.debug('Realtime change skipped: task is deleted locally', { taskId: remoteTask.id });
       return;
     }
     const localTask = await db.tasks.get(remoteTask.id);
@@ -78,6 +83,7 @@ export async function applyRemoteChange(
     const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
     if (!mergedTask) return;
     if (archived) await db.archivedTasks.delete(remoteTask.id);
+    if (deleted) await db.deletedTasks.delete(remoteTask.id);
     await db.tasks.put(mergedTask);
     logger.debug(`Realtime ${action} applied`, { taskId: mergedTask.id });
   });

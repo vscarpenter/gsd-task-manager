@@ -8,7 +8,11 @@ onRecordCreate((e) => {
   const core = require(`${__hooks}/encryption-core.js`);
   const key = $os.getenv("GSD_TASKS_ENC_KEY");
   core.requireValidKey(key);
-  core.encryptRecord(e.record, (s) => $security.encrypt(s, key));
+  core.encryptRecord(
+    e.record,
+    (s) => $security.encrypt(s, key),
+    (s) => $security.decrypt(s, key),
+  );
   e.next();
 }, "tasks");
 
@@ -17,7 +21,11 @@ onRecordUpdate((e) => {
   const core = require(`${__hooks}/encryption-core.js`);
   const key = $os.getenv("GSD_TASKS_ENC_KEY");
   core.requireValidKey(key);
-  core.encryptRecord(e.record, (s) => $security.encrypt(s, key));
+  core.encryptRecord(
+    e.record,
+    (s) => $security.encrypt(s, key),
+    (s) => $security.decrypt(s, key),
+  );
   e.next();
 }, "tasks");
 

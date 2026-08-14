@@ -40,6 +40,7 @@ if [ "$TASKS_TABLE_EXISTS" != "1" ]; then
     mkdir -p "$MIGRATIONS_DIR"
     cp /pb_fresh_migrations/1781000000_encrypt_existing_tasks.js "$MIGRATIONS_DIR/"
     cp /pb_migrations/1781100000_harden_task_encryption_cleanup.js "$MIGRATIONS_DIR/"
+    cp /pb_migrations/1781200000_reencrypt_invalid_prefixed_task_fields.js "$MIGRATIONS_DIR/"
 fi
 
 echo "[gsd] Applying PocketBase migrations..."

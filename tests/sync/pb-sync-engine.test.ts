@@ -67,6 +67,12 @@ vi.mock('@/lib/db', () => {
       })),
     })),
   };
+  // Deleted rows are conditional tombstones just like archived rows. Keep this
+  // mock table present so pull-path tests exercise the real transaction shape.
+  const mockDeletedTasks = {
+    get: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
+  };
   const mockSyncMetadata = {
     get: vi.fn(),
     put: vi.fn(),
@@ -78,6 +84,7 @@ vi.mock('@/lib/db', () => {
     getDb: vi.fn(() => ({
       tasks: mockTasks,
       archivedTasks: mockArchivedTasks,
+      deletedTasks: mockDeletedTasks,
       syncMetadata: mockSyncMetadata,
       syncQueue: mockSyncQueue,
       transaction: vi.fn(async (_mode, _tables, callback) => callback()),

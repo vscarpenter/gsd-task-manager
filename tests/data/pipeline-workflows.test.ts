@@ -6,6 +6,15 @@ function readWorkflow(path: string): string {
 }
 
 describe("pipeline workflows", () => {
+  it('only publishes Docker images from reviewed push and tag refs', () => {
+    const workflow = readWorkflow('.github/workflows/publish-docker.yml');
+
+    expect(workflow).toContain('push:');
+    expect(workflow).not.toContain('workflow_dispatch:');
+    expect(workflow).not.toContain('dry_run');
+    expect(workflow).not.toContain('github.event_name');
+  });
+
   it("reconciles risk labels instead of accumulating stale tiers", () => {
     const workflow = readWorkflow(".github/workflows/apply-risk-label.yml");
     const invalidTierIndex = workflow.indexOf("if (!tier) {");
