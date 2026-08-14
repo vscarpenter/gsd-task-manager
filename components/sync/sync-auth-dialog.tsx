@@ -118,7 +118,7 @@ function DialogHeader({ syncStatus, sessionExpired, onClose }: DialogHeaderProps
       <div className="flex items-center gap-3">
         <CloudIcon className="h-6 w-6 text-accent" aria-hidden="true" />
         <div>
-          <h2 id="sync-auth-dialog-title" className="text-xl font-semibold text-foreground">
+          <h2 id="sync-auth-dialog-title" className="text-h3 font-semibold text-foreground">
             Sync Settings
           </h2>
           <p className="text-sm text-foreground-muted">{subtitle}</p>

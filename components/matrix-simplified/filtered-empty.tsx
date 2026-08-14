@@ -28,7 +28,7 @@ export function FilteredEmpty({ query, viewName, onClear }: FilteredEmptyProps) 
     >
       <SearchXIcon className="h-6 w-6 text-foreground-muted" aria-hidden="true" />
       <div className="space-y-1">
-        <p className="rd-serif text-xl text-foreground">No tasks match {label}</p>
+        <p className="text-h3 text-foreground">No tasks match {label}</p>
         <p className="text-sm text-foreground-muted">
           Your tasks are still here — this view is just narrowed.
         </p>

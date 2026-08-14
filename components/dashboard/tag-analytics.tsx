@@ -21,7 +21,7 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
   if (displayTags.length === 0) {
     return (
       <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-        <h3 className="mb-4 text-title font-semibold text-foreground">Top Tags</h3>
+        <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
         <p className="text-sm text-foreground-muted">
           No tags to display. Add tags to your tasks to see analytics here.
         </p>
@@ -31,7 +31,7 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
 
   return (
     <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-title font-semibold text-foreground">Top Tags</h3>
+      <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
       <div className="space-y-3">
         {displayTags.map((stat) => {
           const barWidth = Math.max((stat.count / maxCount) * 100, 4);

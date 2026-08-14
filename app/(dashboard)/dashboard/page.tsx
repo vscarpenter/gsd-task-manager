@@ -117,7 +117,7 @@ function DashboardEmpty({ onOpenMatrix }: { onOpenMatrix: () => void }): React.R
   return (
     <div className="mx-auto max-w-xl border-y border-border/70 py-14 text-center sm:py-16">
       <ListTodoIcon className="mx-auto h-10 w-10 text-foreground-muted" aria-hidden />
-      <h2 className="mt-4 text-xl font-semibold text-foreground">Nothing to review yet</h2>
+      <h2 className="mt-4 text-h3 font-semibold text-foreground">Nothing to review yet</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-foreground-muted">
         Your review will take shape as work moves through the matrix. Start with one commitment that deserves your attention.
       </p>

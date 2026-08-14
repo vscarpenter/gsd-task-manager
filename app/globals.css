@@ -284,13 +284,12 @@
   --color-status-success-muted:  var(--status-success-muted);
   --color-status-success-ink:    var(--status-success-ink);
 
-  /* Type names Inkwell does not ship — kept verbatim for existing call sites. */
-  --text-title: 18px;
-  --text-title--line-height: 1.35;
-  --text-title--letter-spacing: -0.01em;
-  --text-label: 11px;
-  --text-label--line-height: 1.45;
-  --text-label--letter-spacing: 0.04em;
+  /* No GSD-only type names. `text-title` and `text-label` used to live here as
+     near-duplicates of steps Inkwell already ships, at values that contradicted
+     DESIGN.md §3 — title was 18px/1.35/-0.01em against a documented
+     19px/1.22/-0.008em, and label was 11px/1.45/0.04em against a documented
+     11px/1/0.12em. Two names for one step is how a ramp drifts. Call sites now
+     use `text-h3` and `text-eyebrow`, which are the documented steps. */
 }
 
 /* Violet Frost draws structural rules at 1px — the same width Tailwind ships by

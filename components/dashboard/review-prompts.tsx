@@ -71,7 +71,7 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
               className="py-5 first:pt-0 last:pb-0 md:px-6 md:py-0 md:first:pl-0 md:last:pr-0"
             >
               <p
-                className="text-label font-semibold uppercase tracking-wide"
+                className="text-eyebrow font-semibold uppercase"
                 style={{ color: QUADRANT_INK[prompt.rdKey] }}
               >
                 {prompt.label}

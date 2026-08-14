@@ -25,7 +25,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
       {/* Top: eyebrow + count, with a calm icon matching the other stat cards */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-label font-semibold uppercase text-foreground-muted">
+          <p className="text-eyebrow font-semibold uppercase text-foreground-muted">
             Streak
           </p>
           <div className="mt-3 flex items-baseline gap-2">
