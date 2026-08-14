@@ -1201,3 +1201,35 @@ Branch: feat/edit-drawer-dependencies
 - Systemic danger-color token: text-red-400-on-white fails AA in sync-button.tsx:148 and sync-auth-dialog-sections.tsx:212 too — a shared token fix covers all.
 - restoreTask does not re-create inbound dependency edges after delete/undo (pre-existing, noted above).
 - Subtask editing still drawer-less (also lost in #238).
+
+---
+
+## 2026-08-14 — Impeccable audit remediation (P1 + P2)
+
+Branch `fix/audit-p1-p2-remediation`. Audit report:
+https://claude.ai/code/artifact/135957c7-806a-4cbe-9b02-1b9c6ddb440b
+
+- [x] **P1** settings sidebar group labels — dropped `/80`; measured 3.72:1 → 5.69:1 light, 6.84:1 dark
+- [x] **P1** `useCountUp` honors `prefers-reduced-motion` (extracted `lib/prefers-reduced-motion.ts`); predicate is evaluated *before* the NODE_ENV escape or it short-circuits away untested
+- [x] **P2** reduced-motion reset no longer freezes `animate-spin`; duplicate reset removed from `inkwell-components.css`
+- [x] **P2** `.button-reset` moved into `@layer components` — restores dead colour utilities on the dialog close button and task-card title
+- [x] **P2** matrix grid sized by container query (`@min-[696px]`, capped at 2 cols)
+- [x] **P2** desktop settings rail is a named `<nav>` landmark
+- [x] **P2** per-quadrant render cap (`ACTIVE_RENDER_CAP = 50`) with a "N more" disclosure
+- [x] **P2** coarse-pointer 44px floor made structural on `.btn`/`.input`/`.select` + pseudo-element hit expansion on checkbox/radio/switch
+
+Verification: 2767 unit, 107 e2e (chromium), typecheck, lint. Live-verified in
+Chrome light + dark, SW-busted and seeded with 59 tasks.
+
+**Resuming From Here / deferred follow-ups:**
+- All six **P3** findings are untouched by design (scope was P1+P2): dual type
+  vocabulary, `--text-title` 18px vs DESIGN.md 19px, dead `.rd-serif` at
+  `filtered-empty.tsx:31`, three dead animation utilities, mobile settings-nav
+  overflow cue, `aria-current="page"` on section switchers.
+- e2e ran chromium only; firefox/webkit not exercised for the new specs.
+- The audit's tablet claim was **partly overstated**: 768px genuinely cannot fit
+  two readable panes while the icon rail is expanded (506px available, ~696px
+  needed). Collapsing the rail below `lg:` would be the real fix for iPad
+  portrait, and is a separate design decision.
+- `ACTIVE_RENDER_CAP = 50` was not profiled — it is a defensible budget, not a
+  measured one.
