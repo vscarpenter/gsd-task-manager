@@ -741,12 +741,11 @@ hr.rule       { border: none; border-top: var(--border-rule); margin: 0 0 22px; 
 /* =====================================================================
    Accessibility
    ===================================================================== */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+/* The reduced-motion reset lives in app/globals.css, not here.
+   This file is imported with `layer(components)`, and !important declarations
+   resolve layer order in reverse — so a duplicate reset in this file outranked
+   the unlayered one in globals.css and could not be overridden from there. One
+   reset, one place, and exceptions (progress indicators) stay overridable. */
 
 *:focus-visible {
   outline: 2px solid var(--accent);

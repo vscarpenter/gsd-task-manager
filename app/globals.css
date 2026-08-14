@@ -634,6 +634,18 @@ main {
     scroll-behavior: auto !important;
   }
 
+  /* Progress feedback is exempt. Reducing motion means removing decoration,
+     not deleting the only signal that the app is still working: clamped by the
+     reset above, `animate-spin` completed one 0.01ms revolution and stopped,
+     leaving a static ring that reads as a hung interface. Screen-reader users
+     still heard "Loading"; sighted users who prefer reduced motion got nothing.
+     A slow, even rotation carries none of the vestibular risk that the
+     preference exists to avoid. */
+  .animate-spin {
+    animation-duration: 1600ms !important;
+    animation-iteration-count: infinite !important;
+  }
+
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none !important;
