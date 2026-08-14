@@ -56,7 +56,12 @@ export function MatrixGrid({
     // them into one bordered container and zeroed the gap, which made the
     // matrix read as a single table; the gutter is what lets each quadrant read
     // as its own surface while the 2x2 arrangement still carries the argument.
-    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2">
+    //
+    // The two-column switch is md: (768px), not lg:. At lg: the whole tablet
+    // band — iPad portrait, split-screen, small laptops — stacked into one
+    // column, which is the one arrangement that destroys the argument the grid
+    // exists to make. The panes are height-constrained, not width-constrained.
+    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2">
       {quadrants.map((meta) => (
         <QuadrantPane
           key={meta.id}

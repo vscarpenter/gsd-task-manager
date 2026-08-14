@@ -82,4 +82,37 @@ test.describe("Layout overlap", () => {
     // action below the fold reads as a dialog with no way out.
     expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(720);
   });
+
+  test("the matrix keeps its 2x2 arrangement at tablet width", async ({ page }) => {
+    // iPad portrait. The two-column switch used to sit at lg: (1024px), so this
+    // whole viewport band — tablets, small laptops, split-screen — stacked the
+    // four quadrants into one column. "The matrix is the argument" (PRODUCT.md);
+    // stacked, the urgent/important relationship stops being spatial at all.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await waitForAppLoad(page);
+
+    const q1 = await box(page.locator("[data-testid='quadrant-q1']"));
+    const q2 = await box(page.locator("[data-testid='quadrant-q2']"));
+    const q3 = await box(page.locator("[data-testid='quadrant-q3']"));
+
+    // Q1 and Q2 share a row: same top, different left edge.
+    expect(Math.abs(q1.y - q2.y)).toBeLessThanOrEqual(2);
+    expect(q2.x).toBeGreaterThan(q1.x + q1.width - 2);
+
+    // Q3 opens the second row beneath Q1, sharing its left edge.
+    expect(q3.y).toBeGreaterThan(q1.y + q1.height - 2);
+    expect(Math.abs(q3.x - q1.x)).toBeLessThanOrEqual(2);
+  });
+
+  test("the matrix still stacks to one column on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await waitForAppLoad(page);
+
+    const q1 = await box(page.locator("[data-testid='quadrant-q1']"));
+    const q2 = await box(page.locator("[data-testid='quadrant-q2']"));
+
+    // Stacking below the tablet breakpoint is intended, not a regression.
+    expect(Math.abs(q2.x - q1.x)).toBeLessThanOrEqual(2);
+    expect(q2.y).toBeGreaterThan(q1.y + q1.height - 2);
+  });
 });
