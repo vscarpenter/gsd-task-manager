@@ -85,10 +85,6 @@ export function TaskCardHeader({
         <div
           className={cn(
             "min-w-0 flex-1",
-            // Reserves the grip's lane. The grip is absolute from the card's
-            // border and overruns the 16px card padding, so without this it
-            // lands on the title's first character.
-            !selectionMode && "pl-2",
             reserveBadgeSpace && "pr-24"
           )}
         >
@@ -211,8 +207,8 @@ function CardLeadingControl({
           <button
             type="button"
             // Sized to the lane, which is narrow: the spine ends 4px in and the
-            // reserved text column starts at 25px, leaving 21px. A 24px button
-            // at left-0 could not fit, so it painted over both neighbours — the
+            // card's content edge is at 25px, leaving 21px. A 24px button at
+            // left-0 could not fit, so it painted over both neighbours — the
             // spine vanished under its opaque fill for 24px, and its right edge
             // landed on the title's first glyph ("Deepsec" read as ")eepsec").
             // 16px inset 6px leaves 3px of air before the spine and 2px after,

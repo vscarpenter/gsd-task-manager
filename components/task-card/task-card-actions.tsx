@@ -38,7 +38,10 @@ export function TaskCardActions({
   onSnooze,
 }: TaskCardActionsProps) {
   return (
-    <div className="flex items-center justify-between gap-2 text-xs text-foreground-muted">
+    <div
+      data-testid="task-card-actions"
+      className="flex items-center justify-between gap-2 text-xs text-foreground-muted"
+    >
       <div className="flex items-center gap-2">
         {taskIsDueToday && !taskIsOverdue ? (
           // Due today reads as accent-semibold; the warning glyph is reserved

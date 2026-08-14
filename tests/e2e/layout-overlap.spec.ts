@@ -67,6 +67,25 @@ test.describe("Layout overlap", () => {
     expect(gripBox.x).toBeGreaterThanOrEqual(spineBox.x + spineBox.width + GRIP_CLEARANCE);
   });
 
+  test("every row on a card shares one left edge", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Aligned rows !! #infra");
+
+    const card = page.locator("[data-testid='task-card']").filter({ hasText: "Aligned rows" });
+    await card.hover();
+
+    const title = await box(card.locator("h3"));
+    const tag = await box(card.locator("[data-testid='task-tag']").first());
+    const actions = await box(card.locator("[data-testid='task-card-actions']"));
+
+    // The grip's lane was reserved by padding the title's wrapper, which its
+    // sibling rows do not share — so tags and the due-date/actions row started
+    // 8px to the title's left and the card read as ragged.
+    expect(Math.abs(tag.x - title.x), "tag row vs title").toBeLessThanOrEqual(1);
+    expect(Math.abs(actions.x - title.x), "actions row vs title").toBeLessThanOrEqual(1);
+  });
+
   test("the mobile capture bar does not cover the last task card", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await waitForAppLoad(page);
