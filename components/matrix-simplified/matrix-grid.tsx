@@ -57,28 +57,38 @@ export function MatrixGrid({
     // matrix read as a single table; the gutter is what lets each quadrant read
     // as its own surface while the 2x2 arrangement still carries the argument.
     //
-    // The two-column switch is md: (768px), not lg:. At lg: the whole tablet
-    // band — iPad portrait, split-screen, small laptops — stacked into one
-    // column, which is the one arrangement that destroys the argument the grid
-    // exists to make. The panes are height-constrained, not width-constrained.
-    <div data-testid="matrix-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2">
-      {quadrants.map((meta) => (
-        <QuadrantPane
-          key={meta.id}
-          meta={meta}
-          tasks={grouped[meta.rdKey]}
-          allTasks={allTasks}
-          onEdit={onEdit}
-          onInspect={onInspect}
-          onToggleComplete={onToggleComplete}
-          onDelete={onDelete}
-          onShare={onShare}
-          onAddInQuadrant={onAddInQuadrant}
-          highlightedTaskId={highlightedTaskId}
-          onTaskRef={onTaskRef}
-          sectionRef={(element) => onQuadrantRef?.(meta.rdKey, element)}
-        />
-      ))}
+    // Columns are decided by the grid's own available width, not by a viewport
+    // breakpoint. A breakpoint cannot see the icon rail: at 768px the expanded
+    // rail takes ~180px, so a md:grid-cols-2 rule produced 245px panes in which
+    // every task title truncated to about fifteen characters.
+    //
+    // The count is capped at two on purpose. auto-fit would have found three
+    // columns on a wide desktop, and a 3+1 arrangement destroys the argument
+    // exactly as thoroughly as a 1x4 stack: the matrix means Q1/Q2 over Q3/Q4
+    // or it means nothing. 696px is two 340px panes plus the 16px gutter.
+    <div className="@container">
+      <div
+        data-testid="matrix-grid"
+        className="grid gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-2"
+      >
+        {quadrants.map((meta) => (
+          <QuadrantPane
+            key={meta.id}
+            meta={meta}
+            tasks={grouped[meta.rdKey]}
+            allTasks={allTasks}
+            onEdit={onEdit}
+            onInspect={onInspect}
+            onToggleComplete={onToggleComplete}
+            onDelete={onDelete}
+            onShare={onShare}
+            onAddInQuadrant={onAddInQuadrant}
+            highlightedTaskId={highlightedTaskId}
+            onTaskRef={onTaskRef}
+            sectionRef={(element) => onQuadrantRef?.(meta.rdKey, element)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

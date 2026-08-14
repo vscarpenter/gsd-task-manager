@@ -224,22 +224,22 @@ describe("<MatrixSimplified>", () => {
     });
   });
 
-  // The two-column switch moved from lg: to md: (2026-08-14 design audit).
-  // At lg: the whole 768-1023px band — iPad portrait, Android tablets,
-  // split-screen, small laptops — stacked into one column, which is the one
-  // arrangement that destroys "the matrix is the argument": urgent-vs-important
-  // stops being spatial and becomes four lists in a row. The panes are
-  // constrained by height (min-h-280px), not width.
+  // Columns are decided by the grid's own available width, not by a viewport
+  // breakpoint (2026-08-14 design audit). A breakpoint cannot see the icon
+  // rail: at 768px the rail takes ~180px, so md:grid-cols-2 produced 245px
+  // panes with every title truncated to ~15 characters. Capped at two columns
+  // because auto-fit found three on a wide desktop, and 3+1 destroys the
+  // argument as thoroughly as 1x4.
   //
-  // Real two-column geometry at 768px is asserted in
-  // tests/e2e/layout-overlap.spec.ts; jsdom has no layout, so this only pins
-  // the breakpoint decision itself.
-  it("goes two-up from tablet widths and stacks only below them", () => {
+  // jsdom has no layout, so this only pins the mechanism. Real geometry and
+  // the 340px pane floor are measured in tests/e2e/layout-overlap.spec.ts.
+  it("sizes its columns by container width rather than viewport breakpoints", () => {
     render(<MatrixSimplified />);
     const grid = screen.getByTestId("matrix-grid");
 
-    expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "md:grid-rows-2");
-    expect(grid).not.toHaveClass("lg:grid-cols-2", "lg:grid-rows-2");
+    expect(grid.parentElement).toHaveClass("@container");
+    expect(grid).toHaveClass("@min-[696px]:grid-cols-2", "@min-[696px]:grid-rows-2");
+    expect(grid.className).not.toMatch(/\b(md|lg):grid-cols-2\b/);
   });
 
   // Tidewater un-merges the desktop grid: the four panes float on the page with
