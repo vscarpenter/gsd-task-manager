@@ -224,12 +224,22 @@ describe("<MatrixSimplified>", () => {
     });
   });
 
-  it("keeps the matrix single-column at tablet widths and two-up at large widths", () => {
+  // The two-column switch moved from lg: to md: (2026-08-14 design audit).
+  // At lg: the whole 768-1023px band — iPad portrait, Android tablets,
+  // split-screen, small laptops — stacked into one column, which is the one
+  // arrangement that destroys "the matrix is the argument": urgent-vs-important
+  // stops being spatial and becomes four lists in a row. The panes are
+  // constrained by height (min-h-280px), not width.
+  //
+  // Real two-column geometry at 768px is asserted in
+  // tests/e2e/layout-overlap.spec.ts; jsdom has no layout, so this only pins
+  // the breakpoint decision itself.
+  it("goes two-up from tablet widths and stacks only below them", () => {
     render(<MatrixSimplified />);
     const grid = screen.getByTestId("matrix-grid");
 
-    expect(grid).toHaveClass("grid-cols-1", "lg:grid-cols-2", "lg:grid-rows-2");
-    expect(grid).not.toHaveClass("md:grid-cols-2", "md:grid-rows-2");
+    expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "md:grid-rows-2");
+    expect(grid).not.toHaveClass("lg:grid-cols-2", "lg:grid-rows-2");
   });
 
   // Tidewater un-merges the desktop grid: the four panes float on the page with
