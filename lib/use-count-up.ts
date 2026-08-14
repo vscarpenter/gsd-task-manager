@@ -1,18 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 /**
  * Animates a number from 0 to the target value on mount.
- * Skips animation in test environments where rAF callbacks
- * don't fire synchronously.
+ * Skips animation when the user prefers reduced motion, and in test
+ * environments where rAF callbacks don't fire synchronously.
  */
 export function useCountUp(target: number | string, duration = 500): string {
   const numericTarget = typeof target === "string" ? parseFloat(target) : target;
   const isNumeric = !isNaN(numericTarget) && isFinite(numericTarget);
   const suffix = typeof target === "string" ? target.replace(/[\d.-]/g, "") : "";
 
-  const skipAnimation = process.env.NODE_ENV === "test";
+  // Motion preference is evaluated first on purpose. Behind the NODE_ENV check
+  // it would short-circuit away in tests, leaving the guard permanently
+  // unexercised — which is how a reduced-motion regression ships unnoticed.
+  const skipAnimation = prefersReducedMotion() || process.env.NODE_ENV === "test";
   const [current, setCurrent] = useState(skipAnimation ? numericTarget : 0);
   const hasAnimated = useRef(false);
 
