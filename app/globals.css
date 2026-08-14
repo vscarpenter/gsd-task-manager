@@ -284,13 +284,12 @@
   --color-status-success-muted:  var(--status-success-muted);
   --color-status-success-ink:    var(--status-success-ink);
 
-  /* Type names Inkwell does not ship — kept verbatim for existing call sites. */
-  --text-title: 18px;
-  --text-title--line-height: 1.35;
-  --text-title--letter-spacing: -0.01em;
-  --text-label: 11px;
-  --text-label--line-height: 1.45;
-  --text-label--letter-spacing: 0.04em;
+  /* No GSD-only type names. `text-title` and `text-label` used to live here as
+     near-duplicates of steps Inkwell already ships, at values that contradicted
+     DESIGN.md §3 — title was 18px/1.35/-0.01em against a documented
+     19px/1.22/-0.008em, and label was 11px/1.45/0.04em against a documented
+     11px/1/0.12em. Two names for one step is how a ramp drifts. Call sites now
+     use `text-h3` and `text-eyebrow`, which are the documented steps. */
 }
 
 /* Violet Frost draws structural rules at 1px — the same width Tailwind ships by
@@ -348,13 +347,19 @@ main {
   display: none;  /* Chrome, Safari and Opera */
 }
 
-.button-reset {
-  @apply appearance-none border-0 bg-transparent p-0;
-  font: inherit;
-  color: inherit;
-}
-
 @layer components {
+  /* Must stay inside @layer components. Tailwind v4 resolves cascade layers
+     before specificity, and unlayered CSS outranks every utility — so declared
+     at the top level this rule's `color: inherit` silently beat the
+     `text-*` / `hover:text-*` utilities sitting next to it in the JSX, with no
+     build error and nothing jsdom could observe. Covered by
+     tests/e2e/token-cascade.spec.ts. */
+  .button-reset {
+    @apply appearance-none border-0 bg-transparent p-0;
+    font: inherit;
+    color: inherit;
+  }
+
   .matrix-grid {
     @apply grid grid-cols-1 items-start gap-6 md:grid-cols-2;
   }
@@ -524,69 +529,6 @@ main {
     animation: capture-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  @keyframes new-task-glow {
-    0%, 100% {
-      box-shadow: 0 0 0 0 var(--accent-focus-ring);
-    }
-    50% {
-      box-shadow: 0 0 0 6px transparent;
-    }
-  }
-
-  .animate-new-task-glow {
-    animation: new-task-glow 1.5s ease-in-out 3;
-  }
-
-  /* Staggered card entrance — each card delays by its index via inline style */
-  .animate-stagger-in {
-    animation: slide-in-card 0.3s ease-out both;
-  }
-
-  /* Enhanced drag lift — used on actively dragged task card */
-  @keyframes drag-lift {
-    from {
-      transform: scale(1);
-      box-shadow: var(--shadow-card);
-    }
-    to {
-      transform: scale(1.03);
-      box-shadow: var(--shadow-card-hover);
-    }
-  }
-
-  .animate-drag-lift {
-    animation: drag-lift 0.15s ease-out forwards;
-  }
-
-  /* Drop zone pulse when drag is over */
-  @keyframes drop-zone-pulse {
-    0%, 100% {
-      box-shadow: 0 0 0 0 var(--accent-focus-ring);
-    }
-    50% {
-      box-shadow: 0 0 0 8px transparent;
-    }
-  }
-
-  .animate-drop-zone-pulse {
-    animation: drop-zone-pulse 1s ease-in-out infinite;
-  }
-
-  @keyframes bulk-bar-in {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-bulk-bar-in {
-    animation: bulk-bar-in 0.2s ease-out both;
-  }
-
   /* Edit drawer slide-in from right */
   @keyframes drawer-slide-in {
     from {
@@ -626,6 +568,18 @@ main {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Progress feedback is exempt. Reducing motion means removing decoration,
+     not deleting the only signal that the app is still working: clamped by the
+     reset above, `animate-spin` completed one 0.01ms revolution and stopped,
+     leaving a static ring that reads as a hung interface. Screen-reader users
+     still heard "Loading"; sighted users who prefer reduced motion got nothing.
+     A slow, even rotation carries none of the vestibular risk that the
+     preference exists to avoid. */
+  .animate-spin {
+    animation-duration: 1600ms !important;
+    animation-iteration-count: infinite !important;
   }
 
   ::view-transition-old(root),

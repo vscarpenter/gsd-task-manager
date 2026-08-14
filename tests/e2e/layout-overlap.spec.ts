@@ -82,4 +82,53 @@ test.describe("Layout overlap", () => {
     // action below the fold reads as a dialog with no way out.
     expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(720);
   });
+
+  // The matrix goes two-up on available width, not on a viewport breakpoint.
+  //
+  // A viewport breakpoint cannot see the icon rail. At 768px the expanded rail
+  // takes ~180px, so a md: two-column rule produced 245px panes in which every
+  // task title truncated to about fifteen characters ("Escalation 1: in…").
+  // Two columns nobody can read is worse than one column that works, so the
+  // grid asks whether two *readable* panes fit and answers for itself.
+  const MIN_PANE = 340;
+
+  test("never renders a pane too narrow to read a task title", async ({ page }) => {
+    for (const width of [390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await waitForAppLoad(page);
+
+      for (const key of ["q1", "q2", "q3", "q4"]) {
+        const pane = await box(page.locator(`[data-testid='quadrant-${key}']`));
+        expect(pane.width, `${key} at ${width}px`).toBeGreaterThanOrEqual(MIN_PANE - 1);
+      }
+    }
+  });
+
+  test("goes two-up as soon as two readable panes fit", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await waitForAppLoad(page);
+
+    const q1 = await box(page.locator("[data-testid='quadrant-q1']"));
+    const q2 = await box(page.locator("[data-testid='quadrant-q2']"));
+    const q3 = await box(page.locator("[data-testid='quadrant-q3']"));
+
+    // Q1 and Q2 share a row: same top, different left edge.
+    expect(Math.abs(q1.y - q2.y)).toBeLessThanOrEqual(2);
+    expect(q2.x).toBeGreaterThan(q1.x + q1.width - 2);
+
+    // Q3 opens the second row beneath Q1, sharing its left edge.
+    expect(q3.y).toBeGreaterThan(q1.y + q1.height - 2);
+    expect(Math.abs(q3.x - q1.x)).toBeLessThanOrEqual(2);
+  });
+
+  test("stacks to one column on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await waitForAppLoad(page);
+
+    const q1 = await box(page.locator("[data-testid='quadrant-q1']"));
+    const q2 = await box(page.locator("[data-testid='quadrant-q2']"));
+
+    expect(Math.abs(q2.x - q1.x)).toBeLessThanOrEqual(2);
+    expect(q2.y).toBeGreaterThan(q1.y + q1.height - 2);
+  });
 });

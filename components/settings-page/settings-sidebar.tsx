@@ -26,42 +26,20 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
 
   return (
     <>
-      {/* Mobile: horizontal pill nav */}
-      <nav
-        aria-label="Settings sections"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {sections.map((section) => {
-          const Icon = section.icon;
-          const isActive = section.id === activeId;
-          return (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => onSelect(section.id)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
-                "min-h-11",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-                isActive
-                  ? "border-accent/40 bg-accent/10 text-accent"
-                  : "border-border bg-card text-foreground-muted hover:text-foreground",
-              )}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <Icon className="h-4 w-4" />
-              {section.label}
-            </button>
-          );
-        })}
-      </nav>
+      <MobilePillNav sections={sections} activeId={activeId} onSelect={onSelect} />
 
       {/* Desktop: vertical nav card */}
       <aside className="hidden lg:block lg:w-[260px] lg:shrink-0">
-        <div className="sticky top-24 flex flex-col gap-3 rounded-2xl border border-border bg-card p-2 shadow-sm">
+        <nav
+          aria-label="Settings sections"
+          className="sticky top-24 flex flex-col gap-3 rounded-2xl border border-border bg-card p-2 shadow-sm"
+        >
           {groups.map(({ group, items }) => (
             <div key={group}>
-              <p className="px-3 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted/80">
+              {/* Full-strength --gray-500, never alpha-reduced: at 10px the /80
+                  composite measured 3.72:1 on paper, under the AA floor, and it
+                  failed in light mode only. */}
+              <p className="px-3 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
                 {group}
               </p>
               <ul className="space-y-0.5">
@@ -77,9 +55,58 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
               </ul>
             </div>
           ))}
-        </div>
+        </nav>
       </aside>
     </>
+  );
+}
+
+/**
+ * Phone/tablet navigation: one horizontal row of pills.
+ *
+ * The scrollbar is hidden by design, so a short fade on the trailing edge is
+ * the only thing telling the reader the row continues past the fold — eight
+ * sections never fit on a phone.
+ */
+function MobilePillNav({
+  sections,
+  activeId,
+  onSelect,
+}: {
+  sections: SectionMeta[];
+  activeId: SettingsSectionId;
+  onSelect: (id: SettingsSectionId) => void;
+}) {
+  return (
+    <nav
+      data-testid="settings-nav-scroller"
+      aria-label="Settings sections"
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]"
+    >
+      {sections.map((section) => {
+        const Icon = section.icon;
+        const isActive = section.id === activeId;
+        return (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => onSelect(section.id)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+              "min-h-11",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+              isActive
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-border bg-card text-foreground-muted hover:text-foreground",
+            )}
+            aria-current={isActive ? "true" : undefined}
+          >
+            <Icon className="h-4 w-4" />
+            {section.label}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -102,7 +129,7 @@ function SidebarItem({ section, isActive, onSelect }: SidebarItemProps) {
           ? "bg-accent/10 text-foreground"
           : "text-foreground-muted hover:bg-background-muted hover:text-foreground",
       )}
-      aria-current={isActive ? "page" : undefined}
+      aria-current={isActive ? "true" : undefined}
     >
       {/* Active accent bar */}
       <span

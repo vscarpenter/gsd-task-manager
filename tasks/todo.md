@@ -1201,3 +1201,62 @@ Branch: feat/edit-drawer-dependencies
 - Systemic danger-color token: text-red-400-on-white fails AA in sync-button.tsx:148 and sync-auth-dialog-sections.tsx:212 too — a shared token fix covers all.
 - restoreTask does not re-create inbound dependency edges after delete/undo (pre-existing, noted above).
 - Subtask editing still drawer-less (also lost in #238).
+
+---
+
+## 2026-08-14 — Impeccable audit remediation (P1 + P2)
+
+Branch `fix/audit-p1-p2-remediation`. Audit report:
+https://claude.ai/code/artifact/135957c7-806a-4cbe-9b02-1b9c6ddb440b
+
+- [x] **P1** settings sidebar group labels — dropped `/80`; measured 3.72:1 → 5.69:1 light, 6.84:1 dark
+- [x] **P1** `useCountUp` honors `prefers-reduced-motion` (extracted `lib/prefers-reduced-motion.ts`); predicate is evaluated *before* the NODE_ENV escape or it short-circuits away untested
+- [x] **P2** reduced-motion reset no longer freezes `animate-spin`; duplicate reset removed from `inkwell-components.css`
+- [x] **P2** `.button-reset` moved into `@layer components` — restores dead colour utilities on the dialog close button and task-card title
+- [x] **P2** matrix grid sized by container query (`@min-[696px]`, capped at 2 cols)
+- [x] **P2** desktop settings rail is a named `<nav>` landmark
+- [x] **P2** per-quadrant render cap (`ACTIVE_RENDER_CAP = 50`) with a "N more" disclosure
+- [x] **P2** coarse-pointer 44px floor made structural on `.btn`/`.input`/`.select` + pseudo-element hit expansion on checkbox/radio/switch
+
+Verification: 2767 unit, 107 e2e (chromium), typecheck, lint. Live-verified in
+Chrome light + dark, SW-busted and seeded with 59 tasks.
+
+**Resuming From Here / deferred follow-ups:**
+- All six **P3** findings are untouched by design (scope was P1+P2): dual type
+  vocabulary, `--text-title` 18px vs DESIGN.md 19px, dead `.rd-serif` at
+  `filtered-empty.tsx:31`, three dead animation utilities, mobile settings-nav
+  overflow cue, `aria-current="page"` on section switchers.
+- e2e ran chromium only; firefox/webkit not exercised for the new specs.
+- The audit's tablet claim was **partly overstated**: 768px genuinely cannot fit
+  two readable panes while the icon rail is expanded (506px available, ~696px
+  needed). Collapsing the rail below `lg:` would be the real fix for iPad
+  portrait, and is a separate design decision.
+- `ACTIVE_RENDER_CAP = 50` was not profiled — it is a defensible budget, not a
+  measured one.
+
+### 2026-08-14 (cont.) — P3 remediation
+
+- [x] **P3** off-ramp type sizes — `text-xl` (20px, no ramp step) → `text-h3` at 4 sites; DESIGN.md §3 gains the **One-Ramp Rule**
+- [x] **P3** `--text-title` **and `--text-label`** removed — both were GSD-only aliases for steps Inkwell ships, both drifted off DESIGN.md; 10 call sites → `text-h3` / `text-eyebrow`
+- [x] **P3** inert `.rd-serif` dropped from `filtered-empty.tsx:31`
+- [x] **P3** five (not three) unreferenced animation utilities deleted
+- [x] **P3** mobile settings nav gains a trailing mask fade (`data-testid="settings-nav-scroller"`)
+- [x] **P3** `aria-current="page"` → `"true"` in both sidebar branches
+
+Scope chosen by the user for the type-vocabulary finding: **off-ramp sizes only**,
+not the 236-site migration to Inkwell names.
+
+Verification: 2770 unit, 107 e2e (chromium), typecheck, lint. Live-verified in
+Chrome — `text-h3` renders 19px/23.18px/−0.152px and `text-eyebrow`
+11px/11px/1.32px, matching DESIGN.md exactly.
+
+**Resuming From Here / still open:**
+- **Detector is still at 22 advisories, unchanged.** All 22 are arbitrary
+  `text-[Npx]` values (13px ×10, 10px ×6, 40px ×2, 18/22/26/27px) which the
+  chosen scope did not cover. The One-Ramp Rule now states the policy; moving
+  those onto ramp steps, or documenting them as real steps, is the follow-up.
+- The detector cannot see fractional sizes (`text-[14.5px]`, `text-[12.5px]` on
+  the task card) or named Tailwind steps at all — noted in DESIGN.md §3.
+- `design-lab.spec.ts:119` flaked once under parallel load and passed on re-run
+  and in isolation; it references nothing changed here.
+- e2e still chromium-only.

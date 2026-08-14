@@ -303,6 +303,17 @@ weight, spacing, and contrast, not from switching families.
 **The One-Eyebrow Rule.** A small tracked eyebrow can introduce one key section. It is a deliberate
 exception, not a template label stamped above every heading.
 
+**The One-Ramp Rule.** The eight steps above are the whole type scale. Tailwind's default size names
+are permitted only where they land exactly on a step — `text-xs` = Caption, `text-sm` = Small,
+`text-base` = Body, `text-2xl` = H2 — and read as spelling, not as a second scale. Sizes with no step
+behind them are not: `text-xl` (20px) and `text-3xl` (30px) belong to Tailwind's ramp, not this one.
+
+Two consequences follow. Do not add a GSD-only alias for a step Inkwell already ships; `text-title`
+and `text-label` were exactly that, and both had drifted off the documented values before they were
+removed. And do not reach for an arbitrary `text-[Npx]` — the mechanical detector catches whole-pixel
+arbitrary values, but it cannot see a fractional one or a named Tailwind step, so a new size that is
+genuinely needed gets documented here first.
+
 ## 4. Elevation
 
 Violet Frost preserves the compact floating-pane structure. Boundaries are quiet 1px rules;

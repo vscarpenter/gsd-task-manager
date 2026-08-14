@@ -20,7 +20,7 @@ export function FeatureCard({ icon: Icon, title, description, badge, className }
       <div className="mb-4 grid h-9 w-9 place-items-center rounded-lg bg-accent/10">
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
       </div>
-      <h3 className="mb-2 flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+      <h3 className="mb-2 flex flex-wrap items-center gap-2 text-h3 font-semibold tracking-tight text-foreground">
         {title}
         {/* Explicit space: JSX drops newline whitespace between expressions, and
             without it the accessible name runs together as "SubtasksComing soon". */}
