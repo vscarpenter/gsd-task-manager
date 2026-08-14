@@ -53,4 +53,38 @@ describe("SettingsSidebar", () => {
       }
     });
   });
+
+  describe("current-section semantics", () => {
+    it("marks the active section without claiming a page navigation occurred", () => {
+      renderSidebar();
+      const current = screen
+        .getAllByRole("button", { name: /Appearance/ })
+        .map((el) => el.getAttribute("aria-current"));
+
+      expect(current).toHaveLength(2);
+      // These buttons switch a section within one route. aria-current="page"
+      // tells assistive tech the user navigated to a different page when they
+      // did not; "true" is the accurate token for a non-navigation selection.
+      expect(current.every((value) => value === "true")).toBe(true);
+    });
+
+    it("leaves inactive sections unmarked", () => {
+      renderSidebar();
+      for (const el of screen.getAllByRole("button", { name: /Notifications/ })) {
+        expect(el).not.toHaveAttribute("aria-current");
+      }
+    });
+  });
+
+  describe("mobile overflow", () => {
+    it("signals that more sections exist past the right edge", () => {
+      const { container } = renderSidebar();
+      // Eight sections in a scroller with the scrollbar deliberately hidden.
+      // Without a cue at the trailing edge, the sections past the fold are
+      // discoverable only by guessing that the row scrolls at all.
+      const scroller = container.querySelector("[data-testid='settings-nav-scroller']");
+      expect(scroller).not.toBeNull();
+      expect(scroller?.className).toMatch(/mask-/);
+    });
+  });
 });

@@ -26,10 +26,14 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
 
   return (
     <>
-      {/* Mobile: horizontal pill nav */}
+      {/* Mobile: horizontal pill nav.
+          The scrollbar is hidden by design, so a short fade on the trailing
+          edge is the only thing telling the reader the row continues past the
+          fold — eight sections never fit on a phone. */}
       <nav
+        data-testid="settings-nav-scroller"
         aria-label="Settings sections"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]"
       >
         {sections.map((section) => {
           const Icon = section.icon;
@@ -47,7 +51,7 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
                   ? "border-accent/40 bg-accent/10 text-accent"
                   : "border-border bg-card text-foreground-muted hover:text-foreground",
               )}
-              aria-current={isActive ? "page" : undefined}
+              aria-current={isActive ? "true" : undefined}
             >
               <Icon className="h-4 w-4" />
               {section.label}
@@ -108,7 +112,7 @@ function SidebarItem({ section, isActive, onSelect }: SidebarItemProps) {
           ? "bg-accent/10 text-foreground"
           : "text-foreground-muted hover:bg-background-muted hover:text-foreground",
       )}
-      aria-current={isActive ? "page" : undefined}
+      aria-current={isActive ? "true" : undefined}
     >
       {/* Active accent bar */}
       <span
