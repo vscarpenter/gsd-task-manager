@@ -76,9 +76,13 @@ export function TaskCard({
       className={cn(
         // Explicit property list (not transition-all): only these change on the
         // card, and `all` would also transition the dnd-kit drag transform.
-        // Asymmetric padding: the extra 4px on the left is the gutter the
-        // spine sits in, so the title still starts on the card's optical edge.
-        "group relative flex flex-col gap-2 rounded-md border bg-card py-3 pl-4 pr-3 transition-[transform,border-color,box-shadow,opacity] duration-200 ease-out animate-slide-in-card",
+        "group relative flex flex-col gap-2 rounded-md border bg-card py-3 pr-3 transition-[transform,border-color,box-shadow,opacity] duration-200 ease-out animate-slide-in-card",
+        // The left inset covers the spine's 4px gutter plus the lane the drag
+        // grip floats in. It lives here, on the card, rather than on the title
+        // alone: padding only the title left tags, chips, and the due-date row
+        // starting 8px to its left, so the card read as ragged. Selection mode
+        // swaps the grip for an in-flow checkbox and reclaims the lane.
+        selectionMode ? "pl-4" : "pl-6",
         // Clear the sticky topbar + capture bar (plus ~12pt) when scrolled to.
         "scroll-mt-24",
         "border-card-border",

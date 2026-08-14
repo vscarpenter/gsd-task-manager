@@ -352,9 +352,20 @@ async function keyboardDragOut(page: Page, dragHandle: Locator) {
   await page.keyboard.press("Space");
   await expect(page.locator("[data-testid='drag-overlay']")).toBeVisible();
 
-  for (let press = 0; press < 5; press += 1) {
+  // Each step has to settle before the next one is worth taking. dnd-kit's
+  // KeyboardSensor scrolls between steps with `behavior: 'smooth'` (its
+  // default — lib/use-drag-and-drop.ts does not override it), so the
+  // announcement for a press lands a frame or two after the key. Pressing and
+  // counting in the same breath raced that scroll, which made the number of
+  // steps needed depend on sub-pixel card geometry: a 2px change to the drag
+  // handle's box was enough to flip this test red without touching drag at all.
+  for (let press = 0; press < 8; press += 1) {
     await page.keyboard.press("ArrowUp");
-    if (await overOtherQuadrant.count()) break;
+    const crossed = await overOtherQuadrant
+      .first()
+      .waitFor({ state: "attached", timeout: 500 })
+      .then(() => true, () => false);
+    if (crossed) break;
   }
   await expect(overOtherQuadrant.first()).toBeVisible();
 

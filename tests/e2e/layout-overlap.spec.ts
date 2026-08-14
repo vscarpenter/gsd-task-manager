@@ -20,7 +20,13 @@ test.describe("Layout overlap", () => {
     // Fixture clears IndexedDB
   });
 
-  test("the drag grip does not cover the title's first character", async ({ page }) => {
+  // The grip floats in the lane between the quadrant spine and the title. It is
+  // an opaque-on-hover box painted at z-10, so anything it overlaps it erases —
+  // and a lane it merely *touches* re-breaks on the next subpixel rounding.
+  // Both neighbours therefore get a real gap, not a shared edge.
+  const GRIP_CLEARANCE = 2;
+
+  test("the drag grip clears the title's first character", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await waitForAppLoad(page);
     await createTaskViaCaptureBar(page, "QA TEST 3 !!");
@@ -35,8 +41,49 @@ test.describe("Layout overlap", () => {
     const titleBox = await box(card.locator("h3"));
 
     // The grip used to overhang the gutter by 8px, hiding the leading glyph —
-    // "QA TEST 3" rendered as "A TEST 3".
-    expect(gripBox.x + gripBox.width).toBeLessThanOrEqual(titleBox.x + 1);
+    // "QA TEST 3" rendered as "A TEST 3". Reserving exactly enough space fixed
+    // the overhang but left the edges flush, so the glyph's antialiasing was
+    // still being nibbled: "Deepsec" rendered as ")eepsec".
+    expect(gripBox.x + gripBox.width).toBeLessThanOrEqual(titleBox.x - GRIP_CLEARANCE);
+  });
+
+  test("the drag grip clears the quadrant spine", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Spine check !!");
+
+    const card = page.locator("[data-testid='task-card']").filter({ hasText: "Spine check" });
+    await card.hover();
+
+    const grip = card.getByRole("button", { name: "Drag to move task" });
+    await expect(grip).toBeVisible();
+
+    const gripBox = await box(grip);
+    const spineBox = await box(card.locator("[data-testid='task-card-spine']"));
+
+    // Both anchor to the card's padding box, so `left-0` stacked them: the
+    // grip's opaque fill painted over the top 24px of the spine and read as the
+    // icon breaking out through the card's left edge.
+    expect(gripBox.x).toBeGreaterThanOrEqual(spineBox.x + spineBox.width + GRIP_CLEARANCE);
+  });
+
+  test("every row on a card shares one left edge", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Aligned rows !! #infra");
+
+    const card = page.locator("[data-testid='task-card']").filter({ hasText: "Aligned rows" });
+    await card.hover();
+
+    const title = await box(card.locator("h3"));
+    const tag = await box(card.locator("[data-testid='task-tag']").first());
+    const actions = await box(card.locator("[data-testid='task-card-actions']"));
+
+    // The grip's lane was reserved by padding the title's wrapper, which its
+    // sibling rows do not share — so tags and the due-date/actions row started
+    // 8px to the title's left and the card read as ragged.
+    expect(Math.abs(tag.x - title.x), "tag row vs title").toBeLessThanOrEqual(1);
+    expect(Math.abs(actions.x - title.x), "actions row vs title").toBeLessThanOrEqual(1);
   });
 
   test("the mobile capture bar does not cover the last task card", async ({ page }) => {
