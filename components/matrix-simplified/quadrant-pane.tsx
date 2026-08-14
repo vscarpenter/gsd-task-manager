@@ -18,6 +18,18 @@ const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
   trash: Trash2Icon,
 };
 
+/**
+ * How many active cards a pane renders before deferring the rest behind a
+ * disclosure.
+ *
+ * The matrix is the one long-list surface here that is not virtualized: every
+ * active card in all four panes is real DOM inside a SortableContext, which is
+ * what lets drag-and-drop stay simple. A render budget buys most of what
+ * windowing would, without asking dnd-kit to drop onto nodes that do not
+ * exist. Every id still goes into SortableContext, so ordering is unaffected.
+ */
+export const ACTIVE_RENDER_CAP = 50;
+
 interface QuadrantPaneProps {
   meta: QuadrantMeta;
   tasks: TaskRecord[];
@@ -64,6 +76,13 @@ export function QuadrantPane({
   const completedTasks = tasks.filter((task) => task.completed);
   const activeTaskCount = activeTasks.length;
   const [showCompletedHere, setShowCompletedHere] = useState(false);
+  // The cap is a render budget, not a filter: the header count below still
+  // reports every active task, because an overloaded quadrant is exactly the
+  // thing the matrix exists to make visible.
+  const [showAllActive, setShowAllActive] = useState(false);
+  const hasDeferredActive = activeTasks.length > ACTIVE_RENDER_CAP;
+  const visibleActive = showAllActive ? activeTasks : activeTasks.slice(0, ACTIVE_RENDER_CAP);
+  const deferredActiveCount = activeTasks.length - visibleActive.length;
   const cardHandlers: CardHandlers = {
     onEdit, onInspect, onDelete, onShare, onToggleComplete, highlightedTaskId, onTaskRef,
   };
@@ -157,7 +176,24 @@ export function QuadrantPane({
               ) : null}
             </div>
           ) : (
-            <TaskCardList tasks={activeTasks} allTasks={allTasks} handlers={cardHandlers} />
+            <>
+              <TaskCardList tasks={visibleActive} allTasks={allTasks} handlers={cardHandlers} />
+              {hasDeferredActive ? (
+                <button
+                  data-testid="quadrant-more-active"
+                  type="button"
+                  onClick={() => setShowAllActive((open) => !open)}
+                  aria-expanded={showAllActive}
+                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <ChevronRightIcon
+                    className={cn("h-3.5 w-3.5 transition-transform", showAllActive && "rotate-90")}
+                    aria-hidden="true"
+                  />
+                  {showAllActive ? "Show fewer" : `${deferredActiveCount} more`}
+                </button>
+              ) : null}
+            </>
           )}
 
           <CompletedDisclosure
