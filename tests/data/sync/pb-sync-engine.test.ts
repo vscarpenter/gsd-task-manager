@@ -41,6 +41,7 @@ vi.mock('@/lib/sync/task-mapper', () => ({
 // Mock DB
 const mockTasks = new Map<string, Record<string, unknown>>();
 const mockArchivedTasks = new Map<string, Record<string, unknown>>();
+const mockDeletedTasks = new Map<string, Record<string, unknown>>();
 const mockDb = {
   transaction: vi.fn(async (
     _mode: string,
@@ -66,6 +67,13 @@ const mockDb = {
     get: vi.fn((id: string) => Promise.resolve(mockArchivedTasks.get(id))),
     delete: vi.fn((id: string) => {
       mockArchivedTasks.delete(id);
+      return Promise.resolve();
+    }),
+  },
+  deletedTasks: {
+    get: vi.fn((id: string) => Promise.resolve(mockDeletedTasks.get(id))),
+    delete: vi.fn((id: string) => {
+      mockDeletedTasks.delete(id);
       return Promise.resolve();
     }),
   },
@@ -139,6 +147,7 @@ describe('pb-sync-engine', () => {
     vi.clearAllMocks();
     mockTasks.clear();
     mockArchivedTasks.clear();
+    mockDeletedTasks.clear();
     mockEnsureValidAuth.mockResolvedValue(true);
   });
 
@@ -193,9 +202,31 @@ describe('pb-sync-engine', () => {
       expect(mockArchivedTasks.has('task-1')).toBe(false);
       expect(mockDb.transaction).toHaveBeenCalledWith(
         'rw',
-        [mockDb.tasks, mockDb.archivedTasks],
+        [mockDb.tasks, mockDb.archivedTasks, mockDb.deletedTasks],
         expect.any(Function)
       );
+    });
+
+    it('does not resurrect a deleted task when the remote update predates deletion', async () => {
+      mockDeletedTasks.set('task-1', { id: 'task-1', deletedAt: '2026-04-09T00:00:00.000Z' });
+
+      await applyRemoteChange('update', {
+        task_id: 'task-1', title: 'Stale remote', client_updated_at: '2026-04-08T00:00:00.000Z',
+      } as never);
+
+      expect(mockTasks.has('task-1')).toBe(false);
+      expect(mockDeletedTasks.has('task-1')).toBe(true);
+    });
+
+    it('restores a deleted task when the remote update post-dates deletion', async () => {
+      mockDeletedTasks.set('task-1', { id: 'task-1', deletedAt: '2026-04-07T00:00:00.000Z' });
+
+      await applyRemoteChange('update', {
+        task_id: 'task-1', title: 'Newer remote', client_updated_at: '2026-04-08T00:00:00.000Z',
+      } as never);
+
+      expect(mockTasks.has('task-1')).toBe(true);
+      expect(mockDeletedTasks.has('task-1')).toBe(false);
     });
 
     it('should un-archive on a remote create that post-dates the archive', async () => {

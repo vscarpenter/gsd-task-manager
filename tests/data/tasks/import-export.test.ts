@@ -340,6 +340,22 @@ describe('Task Import/Export Operations', () => {
       await expect(importTasks(invalidPayload, 'replace')).rejects.toThrow();
     });
 
+    it('rejects smart views with criteria that would crash the filter pipeline', async () => {
+      const invalidPayload = {
+        ...validPayload,
+        smartViews: [{
+          id: 'invalid-smart-view',
+          name: 'Invalid smart view',
+          criteria: { searchQuery: {} },
+          isBuiltIn: false,
+          createdAt: '2025-01-17T10:00:00Z',
+          updatedAt: '2025-01-17T10:00:00Z',
+        }],
+      };
+
+      await expect(importTasks(invalidPayload, 'replace')).rejects.toThrow();
+    });
+
     it('should default to replace mode', async () => {
       mockDb.tasks.clear.mockResolvedValue(undefined);
       mockDb.tasks.bulkAdd.mockResolvedValue(undefined);

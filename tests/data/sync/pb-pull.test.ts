@@ -167,6 +167,7 @@ describe('pullRemoteChanges archive guard', () => {
     const db = getDb();
     await db.tasks.clear();
     await db.archivedTasks.clear();
+    await db.deletedTasks.clear();
     await db.syncQueue.clear();
     fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
   });
@@ -194,6 +195,50 @@ describe('pullRemoteChanges archive guard', () => {
     expect(maxObservedTimestamp).toBeNull();
     await expect(db.tasks.get('archived-task')).resolves.toBeUndefined();
     await expect(db.archivedTasks.count()).resolves.toBe(1);
+  });
+
+  it('does not resurrect a task that is deleted locally after the remote edit', async () => {
+    const db = getDb();
+    await db.deletedTasks.add({
+      ...makeTask('deleted-task'),
+      deletedAt: '2026-05-21T00:00:00.000Z',
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('deleted-task', '2026-05-20T00:00:00.000Z')]),
+      }),
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(0);
+    await expect(db.tasks.get('deleted-task')).resolves.toBeUndefined();
+    await expect(db.deletedTasks.get('deleted-task')).resolves.toBeDefined();
+  });
+
+  it('restores a deleted task when the remote edit post-dates deletion', async () => {
+    const db = getDb();
+    await db.deletedTasks.add({
+      ...makeTask('edited-after-delete'),
+      deletedAt: '2026-05-19T00:00:00.000Z',
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getFullList: vi.fn(async () => [pbRecord('edited-after-delete', '2026-05-20T00:00:00.000Z')]),
+      }),
+    });
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['edited-after-delete', { pbRecordId: 'rec-edited-after-delete', clientUpdatedAt: '2026-05-20T00:00:00.000Z' }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(1);
+    await expect(db.tasks.get('edited-after-delete')).resolves.toBeDefined();
+    await expect(db.deletedTasks.get('edited-after-delete')).resolves.toBeUndefined();
   });
 
   it('still pulls non-archived tasks alongside an archived one', async () => {

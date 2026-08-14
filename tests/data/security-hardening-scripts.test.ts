@@ -155,6 +155,9 @@ describe('security hardening scripts and workflows', () => {
     const followupMigration = readRepoFile(
       'docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js'
     );
+    const prefixRepairMigration = readRepoFile(
+      'docker/pb_migrations/1781200000_reencrypt_invalid_prefixed_task_fields.js'
+    );
 
     expect(rootPackage.scripts['test:system:pocketbase']).toBeDefined();
     expect(workflow).toContain('test:system:pocketbase');
@@ -176,8 +179,11 @@ describe('security hardening scripts and workflows', () => {
     expect(entrypoint).toContain('--automigrate=false');
     expect(entrypoint).toContain('TASKS_TABLE_EXISTS');
     expect(entrypoint).toContain('/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js');
+    expect(entrypoint).toContain('1781200000_reencrypt_invalid_prefixed_task_fields.js');
     expect(followupMigration).toContain('records.length > 0');
     expect(followupMigration).toContain('$security.decrypt');
+    expect(prefixRepairMigration).toContain('isValidCiphertext');
+    expect(prefixRepairMigration).toContain('$security.decrypt');
     expect(createHash('sha256').update(shippedMigration).digest('hex')).toBe(
       '4bad51a41488c9f5fca0d0f8665ee6c594f6f4af82b7075d752607f3baa71ae5'
     );

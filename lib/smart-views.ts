@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
+import { smartViewSchema } from "@/lib/schema";
 import type { AppPreferences } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { SMART_VIEWS_CONFIG } from "@/lib/constants";
@@ -18,12 +19,23 @@ const DEFAULT_APP_PREFERENCES: AppPreferences = {
   smartViewsEnabled: false,
 };
 
+function parseSmartView(view: unknown): SmartView {
+  return smartViewSchema.parse(view) as SmartView;
+}
+
+function parseStoredSmartView(view: unknown): SmartView | undefined {
+  const parsed = smartViewSchema.safeParse(view);
+  return parsed.success ? parsed.data as SmartView : undefined;
+}
+
 /**
  * Get all Smart Views (built-in + custom)
  */
 export async function getSmartViews(): Promise<SmartView[]> {
   const db = getDb();
-  const customViews = await db.smartViews.toArray();
+  const customViews = (await db.smartViews.toArray())
+    .map(parseStoredSmartView)
+    .filter((view): view is SmartView => view !== undefined);
 
   // Convert built-in views to full SmartView objects
   const builtInViews: SmartView[] = BUILT_IN_SMART_VIEWS.map(view => ({
@@ -49,7 +61,8 @@ export async function getSmartView(id: string): Promise<SmartView | undefined> {
 
   // Otherwise, fetch from database
   const db = getDb();
-  return db.smartViews.get(id);
+  const stored = await db.smartViews.get(id);
+  return stored ? parseStoredSmartView(stored) : undefined;
 }
 
 /**
@@ -69,8 +82,9 @@ export async function createSmartView(
     updatedAt: now
   };
 
-  await db.smartViews.add(newView);
-  return newView;
+  const validated = parseSmartView(newView);
+  await db.smartViews.add(validated);
+  return validated;
 }
 
 /**
@@ -97,8 +111,9 @@ export async function updateSmartView(
     updatedAt: isoNow()
   };
 
-  await db.smartViews.put(updated);
-  return updated;
+  const validated = parseSmartView(updated);
+  await db.smartViews.put(validated);
+  return validated;
 }
 
 /**

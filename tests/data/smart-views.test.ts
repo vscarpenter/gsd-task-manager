@@ -90,6 +90,22 @@ describe('Smart Views', () => {
         });
       });
     });
+
+    it('skips persisted views with malformed criteria instead of returning a crashable filter', async () => {
+      const db = getDb();
+      await db.smartViews.add({
+        id: 'malformed-view',
+        name: 'Malformed',
+        criteria: { searchQuery: {} },
+        isBuiltIn: false,
+        createdAt: '2025-01-15T12:00:00.000Z',
+        updatedAt: '2025-01-15T12:00:00.000Z',
+      } as never);
+
+      const views = await getSmartViews();
+
+      expect(views.find((view) => view.id === 'malformed-view')).toBeUndefined();
+    });
   });
 
   describe('getSmartView', () => {
@@ -126,6 +142,13 @@ describe('Smart Views', () => {
   });
 
   describe('createSmartView', () => {
+    it('rejects malformed criteria from direct runtime callers', async () => {
+      await expect(createSmartView({
+        name: 'Malformed',
+        criteria: { searchQuery: {} },
+      } as never)).rejects.toThrow();
+    });
+
     it('should create new custom smart view', async () => {
       const newView = await createSmartView({
         name: 'High Priority',

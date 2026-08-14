@@ -44,6 +44,7 @@ FRESH_MIGRATIONS="$WORK/fresh-migrations"
 mkdir -p "$FRESH_MIGRATIONS"
 cp docker/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js "$FRESH_MIGRATIONS/"
 cp docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js "$FRESH_MIGRATIONS/"
+cp docker/pb_migrations/1781200000_reencrypt_invalid_prefixed_task_fields.js "$FRESH_MIGRATIONS/"
 
 echo "1) initialize and start PocketBase with production hooks/migrations"
 "$PB_BIN" superuser upsert "$ADMIN_EMAIL" "$ADMIN_PASS" --dir="$WORK" >/dev/null

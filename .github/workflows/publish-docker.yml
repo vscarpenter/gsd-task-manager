@@ -5,8 +5,6 @@ name: Publish Docker Image
 #
 #   push to main      -> :edge and :sha-<short>   (moving + immutable "latest commit")
 #   push tag vX.Y.Z   -> :X.Y.Z, :X.Y, :latest    (release)
-#   workflow_dispatch -> build only by default (dry_run), or push when dry_run=false
-#
 # GHCR auth uses the built-in GITHUB_TOKEN. Docker Hub is published only when the
 # DOCKERHUB_USERNAME / DOCKERHUB_TOKEN repo secrets are configured, so the workflow
 # stays correct even if those secrets are absent.
@@ -17,12 +15,6 @@ on:
       - main
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run (build only, do not push)'
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -46,8 +38,6 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           REPO: ${{ github.repository }}
-          EVENT: ${{ github.event_name }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           # Registries: GHCR always; Docker Hub only when its secret is configured.
           IMAGES="ghcr.io/${REPO}"
@@ -58,12 +48,7 @@ jobs:
             echo "dockerhub_enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-          # Push on every trigger except an explicit dry-run dispatch.
-          if [ "$EVENT" = "workflow_dispatch" ] && [ "$DRY_RUN" = "true" ]; then
-            echo "push_enabled=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "push_enabled=true" >> "$GITHUB_OUTPUT"
-          fi
+          echo "push_enabled=true" >> "$GITHUB_OUTPUT"
 
           {
             echo "images<<EOF"
@@ -144,11 +129,7 @@ jobs:
         run: |
           {
             echo "### Docker image"
-            if [ "${{ steps.cfg.outputs.push_enabled }}" = "true" ]; then
-              echo "Pushed the following tags:"
-            else
-              echo "Dry run — built but did not push. Tags that would have been pushed:"
-            fi
+            echo "Pushed the following tags:"
             echo '```'
             echo "${{ steps.meta.outputs.tags }}"
             echo '```'

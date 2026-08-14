@@ -9,6 +9,11 @@ export interface FilterCriteria {
     start?: string;
     end?: string;
   };
+  /** @deprecated Retained only for legacy persisted smart views. */
+  dueDate?: {
+    mode: string;
+    days?: number;
+  };
   overdue?: boolean;
   dueToday?: boolean;
   dueThisWeek?: boolean;

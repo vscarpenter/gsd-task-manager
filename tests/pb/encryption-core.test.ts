@@ -39,7 +39,7 @@ describe("encryption-core", () => {
 
   it("should_encrypt_text_fields_and_roundtrip", () => {
     const r = fakeRecord({ title: "Buy milk", description: "2%" });
-    core.encryptRecord(r, enc);
+    core.encryptRecord(r, enc, dec);
     expect(r._data.title).toMatch(/^enc:v1:/);
     expect(r._data.description).toMatch(/^enc:v1:/);
     core.decryptRecord(r, dec);
@@ -53,7 +53,7 @@ describe("encryption-core", () => {
       tags: ["work", "urgent"],
       subtasks: [{ id: "s1", title: "step", completed: false }],
     });
-    core.encryptRecord(r, enc);
+    core.encryptRecord(r, enc, dec);
     expect(typeof r._data.tags).toBe("string");
     expect(r._data.tags).toMatch(/^enc:v1:/);
     core.decryptRecord(r, dec);
@@ -71,7 +71,7 @@ describe("encryption-core", () => {
       subtasks: [],
       time_entries: timeEntries,
     });
-    core.encryptRecord(r, enc);
+    core.encryptRecord(r, enc, dec);
     // time_entries must be a ciphertext string after encryption
     expect(typeof r._data.time_entries).toBe("string");
     expect(r._data.time_entries).toMatch(/^enc:v1:/);
@@ -87,7 +87,7 @@ describe("encryption-core", () => {
       tags: Buffer.from(JSON.stringify(tags), "utf8"),
     });
 
-    core.encryptRecord(r, enc);
+    core.encryptRecord(r, enc, dec);
     expect(r._data.tags).toMatch(/^enc:v1:/);
     core.decryptRecord(r, dec);
     expect(r._data.tags).toEqual(tags);
@@ -95,9 +95,9 @@ describe("encryption-core", () => {
 
   it("should_be_idempotent_on_double_encrypt", () => {
     const r = fakeRecord({ title: "x", description: "", tags: [] });
-    core.encryptRecord(r, enc);
+    core.encryptRecord(r, enc, dec);
     const once = { ...r._data };
-    core.encryptRecord(r, enc); // second pass must not double-wrap
+    core.encryptRecord(r, enc, dec); // second pass must not double-wrap
     expect(r._data.title).toBe(once.title);
     expect(r._data.tags).toBe(once.tags);
   });
@@ -111,7 +111,30 @@ describe("encryption-core", () => {
 
   it("should_leave_empty_text_fields_unencrypted", () => {
     const r = fakeRecord({ title: "x", description: "" });
-    core.encryptRecord(r, enc);
+    core.encryptRecord(r, enc, dec);
     expect(r._data.description).toBe("");
+  });
+
+  it("re-encrypts_user_content_that_only_spoofs_the_ciphertext_prefix", () => {
+    const authenticatedDec = (value: string) => {
+      const plaintext = Buffer.from(value, "base64").toString("utf8");
+      if (Buffer.from(plaintext, "utf8").toString("base64") !== value) {
+        throw new Error("invalid ciphertext");
+      }
+      return plaintext;
+    };
+    const r = fakeRecord({
+      title: "enc:v1:not-authenticated-ciphertext",
+      tags: "enc:v1:not-json-ciphertext",
+    });
+
+    core.encryptRecord(r, enc, authenticatedDec);
+
+    expect(r._data.title).toBe(
+      "enc:v1:" + enc("enc:v1:not-authenticated-ciphertext"),
+    );
+    expect(r._data.tags).toBe(
+      "enc:v1:" + enc(JSON.stringify("enc:v1:not-json-ciphertext")),
+    );
   });
 });
