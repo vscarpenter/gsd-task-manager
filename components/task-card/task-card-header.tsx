@@ -85,9 +85,9 @@ export function TaskCardHeader({
         <div
           className={cn(
             "min-w-0 flex-1",
-            // Clears the grip's column. The grip is absolute from the card's
-            // border and overruns the 16px card padding by 8px, so without this
-            // it lands on the title's first character.
+            // Reserves the grip's lane. The grip is absolute from the card's
+            // border and overruns the 16px card padding, so without this it
+            // lands on the title's first character.
             !selectionMode && "pl-2",
             reserveBadgeSpace && "pr-24"
           )}
@@ -210,12 +210,16 @@ function CardLeadingControl({
           // the pointer, Playwright's `hover()` included.
           <button
             type="button"
-            // The 24px button starts at the card's left border and the card
-            // pads 16px, so it reached 8px into the text column and covered the
-            // title's leading glyph — "QA TEST 3" read as "A TEST 3". An opaque
-            // fill made that look deliberate rather than fixing it; the text
-            // column now reserves the missing 8px instead (see the wrapper).
-            className="task-card-grip touch-target absolute left-0 top-2.5 z-10 flex h-6 w-6 cursor-grab touch-none items-center justify-center rounded-icon bg-card opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
+            // Sized to the lane, which is narrow: the spine ends 4px in and the
+            // reserved text column starts at 25px, leaving 21px. A 24px button
+            // at left-0 could not fit, so it painted over both neighbours — the
+            // spine vanished under its opaque fill for 24px, and its right edge
+            // landed on the title's first glyph ("Deepsec" read as ")eepsec").
+            // 16px inset 6px leaves 3px of air before the spine and 2px after,
+            // and the fill is gone: a transparent grip cannot erase what it
+            // floats over, so the next rounding error is cosmetic, not a bug.
+            // Coarse pointers drop the float entirely — see globals.css.
+            className="task-card-grip touch-target absolute left-[6px] top-3 z-10 flex h-5 w-4 cursor-grab touch-none items-center justify-center rounded-icon opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
             aria-label="Drag to move task"
             {...sortableAttributes}
             {...sortableListeners}
