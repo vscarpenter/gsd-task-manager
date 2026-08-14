@@ -26,39 +26,7 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
 
   return (
     <>
-      {/* Mobile: horizontal pill nav.
-          The scrollbar is hidden by design, so a short fade on the trailing
-          edge is the only thing telling the reader the row continues past the
-          fold — eight sections never fit on a phone. */}
-      <nav
-        data-testid="settings-nav-scroller"
-        aria-label="Settings sections"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]"
-      >
-        {sections.map((section) => {
-          const Icon = section.icon;
-          const isActive = section.id === activeId;
-          return (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => onSelect(section.id)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
-                "min-h-11",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-                isActive
-                  ? "border-accent/40 bg-accent/10 text-accent"
-                  : "border-border bg-card text-foreground-muted hover:text-foreground",
-              )}
-              aria-current={isActive ? "true" : undefined}
-            >
-              <Icon className="h-4 w-4" />
-              {section.label}
-            </button>
-          );
-        })}
-      </nav>
+      <MobilePillNav sections={sections} activeId={activeId} onSelect={onSelect} />
 
       {/* Desktop: vertical nav card */}
       <aside className="hidden lg:block lg:w-[260px] lg:shrink-0">
@@ -90,6 +58,55 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
         </nav>
       </aside>
     </>
+  );
+}
+
+/**
+ * Phone/tablet navigation: one horizontal row of pills.
+ *
+ * The scrollbar is hidden by design, so a short fade on the trailing edge is
+ * the only thing telling the reader the row continues past the fold — eight
+ * sections never fit on a phone.
+ */
+function MobilePillNav({
+  sections,
+  activeId,
+  onSelect,
+}: {
+  sections: SectionMeta[];
+  activeId: SettingsSectionId;
+  onSelect: (id: SettingsSectionId) => void;
+}) {
+  return (
+    <nav
+      data-testid="settings-nav-scroller"
+      aria-label="Settings sections"
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]"
+    >
+      {sections.map((section) => {
+        const Icon = section.icon;
+        const isActive = section.id === activeId;
+        return (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => onSelect(section.id)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+              "min-h-11",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+              isActive
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-border bg-card text-foreground-muted hover:text-foreground",
+            )}
+            aria-current={isActive ? "true" : undefined}
+          >
+            <Icon className="h-4 w-4" />
+            {section.label}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 

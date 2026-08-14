@@ -76,13 +76,6 @@ export function QuadrantPane({
   const completedTasks = tasks.filter((task) => task.completed);
   const activeTaskCount = activeTasks.length;
   const [showCompletedHere, setShowCompletedHere] = useState(false);
-  // The cap is a render budget, not a filter: the header count below still
-  // reports every active task, because an overloaded quadrant is exactly the
-  // thing the matrix exists to make visible.
-  const [showAllActive, setShowAllActive] = useState(false);
-  const hasDeferredActive = activeTasks.length > ACTIVE_RENDER_CAP;
-  const visibleActive = showAllActive ? activeTasks : activeTasks.slice(0, ACTIVE_RENDER_CAP);
-  const deferredActiveCount = activeTasks.length - visibleActive.length;
   const cardHandlers: CardHandlers = {
     onEdit, onInspect, onDelete, onShare, onToggleComplete, highlightedTaskId, onTaskRef,
   };
@@ -176,24 +169,7 @@ export function QuadrantPane({
               ) : null}
             </div>
           ) : (
-            <>
-              <TaskCardList tasks={visibleActive} allTasks={allTasks} handlers={cardHandlers} />
-              {hasDeferredActive ? (
-                <button
-                  data-testid="quadrant-more-active"
-                  type="button"
-                  onClick={() => setShowAllActive((open) => !open)}
-                  aria-expanded={showAllActive}
-                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <ChevronRightIcon
-                    className={cn("h-3.5 w-3.5 transition-transform", showAllActive && "rotate-90")}
-                    aria-hidden="true"
-                  />
-                  {showAllActive ? "Show fewer" : `${deferredActiveCount} more`}
-                </button>
-              ) : null}
-            </>
+            <CappedActiveList tasks={activeTasks} allTasks={allTasks} handlers={cardHandlers} />
           )}
 
           <CompletedDisclosure
@@ -206,6 +182,49 @@ export function QuadrantPane({
         </div>
       </SortableContext>
     </section>
+  );
+}
+
+/**
+ * Active work in this quadrant, rendered up to ACTIVE_RENDER_CAP.
+ *
+ * The cap is a render budget, not a filter — the pane header still reports
+ * every active task, because an overloaded quadrant is exactly the thing the
+ * matrix exists to make visible. Nothing is hidden permanently; one click
+ * renders the rest.
+ */
+function CappedActiveList({
+  tasks,
+  allTasks,
+  handlers,
+}: {
+  tasks: TaskRecord[];
+  allTasks: TaskRecord[];
+  handlers: CardHandlers;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? tasks : tasks.slice(0, ACTIVE_RENDER_CAP);
+  const deferred = tasks.length - visible.length;
+
+  return (
+    <>
+      <TaskCardList tasks={visible} allTasks={allTasks} handlers={handlers} />
+      {tasks.length > ACTIVE_RENDER_CAP ? (
+        <button
+          data-testid="quadrant-more-active"
+          type="button"
+          onClick={() => setShowAll((open) => !open)}
+          aria-expanded={showAll}
+          className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <ChevronRightIcon
+            className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-90")}
+            aria-hidden="true"
+          />
+          {showAll ? "Show fewer" : `${deferred} more`}
+        </button>
+      ) : null}
+    </>
   );
 }
 

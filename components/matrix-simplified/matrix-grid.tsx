@@ -31,25 +31,7 @@ export function MatrixGrid({
   onTaskRef,
   onQuadrantRef,
 }: MatrixGridProps) {
-  const grouped = (() => {
-    const out: Record<RedesignQuadrantKey, TaskRecord[]> = { q1: [], q2: [], q3: [], q4: [] };
-    for (const t of tasks) {
-      if (t.urgent && t.important) out.q1.push(t);
-      else if (!t.urgent && t.important) out.q2.push(t);
-      else if (t.urgent && !t.important) out.q3.push(t);
-      else out.q4.push(t);
-    }
-    for (const key of Object.keys(out) as RedesignQuadrantKey[]) {
-      out[key].sort((a, b) => {
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-        if (a.dueDate) return -1;
-        if (b.dueDate) return 1;
-        return 0;
-      });
-    }
-    return out;
-  })();
+  const grouped = groupByQuadrant(tasks);
 
   return (
     // Four floating panes on a constant 16px gutter. The old lg: rules merged
@@ -91,4 +73,31 @@ export function MatrixGrid({
       </div>
     </div>
   );
+}
+
+/**
+ * Bucket tasks into the four quadrants, each sorted with active work first and
+ * then by due date. Lives outside the component so the render function stays
+ * about layout.
+ */
+function groupByQuadrant(tasks: TaskRecord[]): Record<RedesignQuadrantKey, TaskRecord[]> {
+  const out: Record<RedesignQuadrantKey, TaskRecord[]> = { q1: [], q2: [], q3: [], q4: [] };
+  for (const t of tasks) {
+    if (t.urgent && t.important) out.q1.push(t);
+    else if (!t.urgent && t.important) out.q2.push(t);
+    else if (t.urgent && !t.important) out.q3.push(t);
+    else out.q4.push(t);
+  }
+  for (const key of Object.keys(out) as RedesignQuadrantKey[]) {
+    out[key].sort(byActiveThenDueDate);
+  }
+  return out;
+}
+
+function byActiveThenDueDate(a: TaskRecord, b: TaskRecord): number {
+  if (a.completed !== b.completed) return a.completed ? 1 : -1;
+  if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+  if (a.dueDate) return -1;
+  if (b.dueDate) return 1;
+  return 0;
 }
