@@ -28,7 +28,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 - **Register:** `product` — design serves the task (the matrix, capture bar, settings, dashboard), not a marketing surface.
 - **Personality:** calm & focused. Anti-references: flashy-AI startup, gamified todo toy, dense enterprise PM, generic SaaS dashboard.
 - **Principles:** tool disappears into the task · privacy is the foundation · the matrix is the argument · earned familiarity over novelty · delight in moments, restraint on pages.
-- **Visual system:** Inkwell 1.3.1 "Violet Frost" — Albert Sans, a lavender-gray surface stack, restrained aubergine for global interaction, and four matrix-only quadrant families. Runtime primitives live in `app/css/inkwell-tokens.css`; quadrant washes/headers live in `app/globals.css`; the durable contract is `DESIGN.md` plus `.ui-craft/brief.md` and `.ui-craft/tokens.md`. Aubergine is interaction ink, never purple-gradient decoration. WCAG AA is the baseline, and quadrant titles must use `--q*-ink` rather than raw pigment.
+- **Visual system:** Inkwell 1.4.0 "GSD Editorial" — warm paper surfaces, graphite ink, Newsreader serif display over system sans, and restrained tide (#2C6680) for global interaction, with four matrix-only quadrant families. Runtime primitives live in `app/css/inkwell-tokens.css`; quadrant washes/headers live in `app/globals.css`; the durable contract is `DESIGN.md` plus `.ui-craft/brief.md` and `.ui-craft/tokens.md`. Tide is interaction ink, never gradient decoration. WCAG AA is the baseline, and quadrant titles must use `--q*-ink` rather than raw pigment.
 
 ## Core Commands
 

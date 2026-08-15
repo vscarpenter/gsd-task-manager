@@ -11,10 +11,10 @@ urgent/important split is a structural decision the app makes visible, not a lab
 to remember. The interface is unhurried and low-noise — the user should feel clear-headed and in
 control, never overwhelmed, never behind, never nagged.
 
-The visual system is Inkwell 1.3.1 Violet Frost: Albert Sans, a lavender-gray canvas with pale
-paper surfaces, quiet 1px boundaries, and restrained aubergine interaction ink. Four bounded
-quadrant families (muted rose / juniper / ochre / smoke slate) make priority visible without
-colouring unrelated metadata.
+The visual system is Inkwell 1.4.0 GSD Editorial: Newsreader serif display over system sans, a
+warm paper canvas with quiet 1px boundaries, and restrained tide interaction ink. Four bounded
+quadrant families (rust / tide / ochre / slate) make priority visible without colouring
+unrelated metadata.
 
 ## Audience
 
@@ -54,8 +54,8 @@ stays composed.
 
 GSD must not look or feel like:
 
-- **A flashy AI startup** — no purple gradients, glowing violet blobs, glassmorphism-by-default,
-  gradient text, or supercharge/streamline/seamless copy. Aubergine is restrained interaction
+- **A flashy AI startup** — no tide/cyan gradients, glowing blobs, glassmorphism-by-default,
+  gradient text, or supercharge/streamline/seamless copy. Tide is restrained interaction
   ink, never gradient decoration.
 - **A gamified todo toy** — no mascots, no points/badges economy, no juvenile illustration, no
   emoji standing in for designed icons. (One completion confetti is the deliberate exception.)
@@ -69,8 +69,8 @@ GSD must not look or feel like:
   ≥3:1, ≥44px touch targets on coarse pointers, `prefers-reduced-motion` fallback on every
   animation, and colour never the sole carrier of meaning.
 - **Dark mode is first-class**, not an inversion — Inkwell Pattern B (system preference with
-  manual override), using the independently tuned `#14131B` canvas, `#191821` raised surface,
-  `#211F2B` paper, `#ECEAF2` ink and `#A99BCB` interaction accent.
+  manual override), using the independently tuned `#17150F` canvas, `#1B1812` raised surface,
+  `#221E17` paper, `#F1ECE2` ink and `#6FAACB` interaction accent.
 - **Offline-first PWA.** Every surface must render from IndexedDB with no network. Data surfaces
   must distinguish "loading" from "empty" — an empty state asserts something specific and must
   never be shown before the local read resolves.
@@ -94,7 +94,7 @@ GSD must not look or feel like:
    own header at 15px. The ink tokens preserve the approved exact header bands while giving every
    title a contrast-safe voice. This supersedes the earlier percentage-based header-tint ladder.
    (2026-07-31)
-4. **Aubergine means global interaction, not “purple styling.”** Use it for actions, active
-   navigation, links and focus. Never use it as Q2, a decorative wash, glow, or gradient; that
-   distinction keeps Violet Frost calm instead of reading like a flashy AI-startup theme.
-   (2026-07-31)
+4. **Tide means global interaction, not decorative styling.** Use it for actions, active
+   navigation, links and focus. Q2 shares tide's hex by design, but `--accent` and `--q2` stay
+   separate tokens; never use tide as a decorative wash, glow, or gradient. That distinction keeps
+   Editorial calm instead of reading like a flashy AI-startup theme. (2026-07-31)
