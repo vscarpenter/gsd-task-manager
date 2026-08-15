@@ -328,8 +328,11 @@ exception, not a template label stamped above every heading.
 
 **The One-Ramp Rule.** The eight steps above are the whole type scale. Tailwind's default size names
 are permitted only where they land exactly on a step — `text-xs` = Caption, `text-sm` = Small,
-`text-base` = Body, `text-2xl` = H2 — and read as spelling, not as a second scale. Sizes with no step
-behind them are not: `text-xl` (20px) and `text-3xl` (30px) belong to Tailwind's ramp, not this one.
+`text-base` = Body, `text-2xl` = H2 — and read as spelling, not as a second scale. A spelling carries
+size only, never the serif voice, since the Two-Voice Rule is wired to the ramp classes themselves;
+headings must use `.text-display`/`.text-h1`/`.text-h2`/`.text-h3`, not their Tailwind-spelling
+equivalents. Sizes with no step behind them are not: `text-xl` (20px) and `text-3xl` (30px) belong to
+Tailwind's ramp, not this one.
 
 Two consequences follow. Do not add a GSD-only alias for a step Inkwell already ships; `text-title`
 and `text-label` were exactly that, and both had drifted off the documented values before they were

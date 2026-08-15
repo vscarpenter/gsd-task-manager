@@ -322,9 +322,10 @@ body {
 /* The Two-Voice Rule (DESIGN.md): the serif carries display and headings,
    the sans carries working UI. The ramp's four heading steps are the serif
    voice; body/small/caption/eyebrow stay sans. Unlayered like `body` above,
-   not inside @layer components — Tailwind resolves cascade layers before
-   specificity, so an @layer components rule would lose to the `.text-h1`
-   etc. utility Tailwind generates from @theme in the utilities layer. */
+   not inside @layer components — not to beat the `.text-h1` etc. utilities
+   (the @theme text sizes emit no font-family, so there's no property
+   collision there), but so this rule also wins against any future
+   font-family utility, such as `font-sans`, applied to the same node. */
 .text-display,
 .text-h1,
 .text-h2,

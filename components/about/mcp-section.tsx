@@ -28,7 +28,7 @@ export function McpSection() {
             <p className="text-xs uppercase tracking-widest text-accent mb-3">
               For power users
             </p>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-4">
+            <h2 className="text-h2 font-semibold tracking-tight text-foreground sm:text-h1 mb-4">
               Let Claude manage your tasks.
             </h2>
             <p className="text-foreground-muted leading-relaxed mb-6">

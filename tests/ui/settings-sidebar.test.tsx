@@ -44,9 +44,9 @@ describe("SettingsSidebar", () => {
       expect(headings.length).toBeGreaterThan(0);
 
       for (const heading of headings) {
-        // --gray-500 (#646477) is the documented muted-text floor at 5.69:1 on
+        // --gray-500 (#6E6760) is the documented muted-text floor at 5.6:1 on
         // paper. An alpha modifier composites it to a lighter colour the token
-        // system never measured: /80 lands at 3.72:1, under the AA 4.5:1 floor,
+        // system never measured: /80 lands at 3.63:1, under the AA 4.5:1 floor,
         // and it fails in light mode only — so it hides from dark-mode testing.
         expect(heading.className).toContain("text-foreground-muted");
         expect(heading.className).not.toMatch(/text-foreground-muted\/\d+/);
