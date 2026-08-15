@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
+
+const noopSubscribe = () => () => {};
 
 /**
  * Animates a number from 0 to the target value on mount.
@@ -17,7 +19,17 @@ export function useCountUp(target: number | string, duration = 500): string {
   // it would short-circuit away in tests, leaving the guard permanently
   // unexercised — which is how a reduced-motion regression ships unnoticed.
   const skipAnimation = prefersReducedMotion() || process.env.NODE_ENV === "test";
-  const [current, setCurrent] = useState(skipAnimation ? numericTarget : 0);
+  // Hydration parity: the static export prerenders every count-up as 0, so the
+  // hydration render must also produce 0 even when the client prefers reduced
+  // motion — a motion-dependent first paint is a text mismatch (React #418).
+  // useSyncExternalStore's server snapshot keeps the hydration render at 0;
+  // the first post-hydration render then shows the target directly.
+  const hydrated = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
+  const [current, setCurrent] = useState(0);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
@@ -46,5 +58,6 @@ export function useCountUp(target: number | string, duration = 500): string {
   }, [numericTarget, duration, isNumeric, skipAnimation]);
 
   if (!isNumeric) return String(target);
-  return `${current}${suffix}`;
+  const value = skipAnimation && hydrated ? numericTarget : current;
+  return `${value}${suffix}`;
 }

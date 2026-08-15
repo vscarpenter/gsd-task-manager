@@ -5,9 +5,23 @@ description: Verify Sentry error capture is working after a DSN change or deploy
 
 ## Sentry verification (recurring debugging task)
 
-When testing Sentry capture after a DSN change or deploy:
+**Development never sends events.** `initSentry()` in `lib/sentry.ts` returns
+early when `ENV_CONFIG.isDevelopment` (localhost/127.0.0.1/*.local), so a dev
+server will not report to Sentry no matter what you trigger. Verify capture one
+of two ways:
 
-1. Confirm DSN is loaded: `console.log` in `lib/sentry/init.ts` (or wherever Sentry.init runs) and grep dev console for "Sentry initialized".
-2. Trigger a test error: `Sentry.captureException(new Error("manual-test-from-claude"))` in a dev-only handler, OR throw from a component error boundary.
-3. Verify in Sentry dashboard within ~30s.
-4. Remove the test trigger before commit (it's not a regression — leave it out of source).
+- **Staging (preferred):** deploy to `gsd-dev.vinny.dev` and trigger the test
+  error there.
+- **Local, gate lifted:** temporarily remove `|| ENV_CONFIG.isDevelopment` from
+  the `initSentry` guard, verify, then restore it before commit.
+
+Then:
+
+1. Confirm DSN is loaded: `console.log` in `lib/sentry.ts` where `Sentry.init`
+   runs and grep the console for it.
+2. Trigger a test error: `captureException(new Error("manual-test-from-claude"))`
+   in a dev-only handler, OR throw from a component error boundary.
+3. Verify in the Sentry dashboard within ~30s. Expect the message to read
+   "Error details redacted" — that's the privacy sanitizer working, not a
+   failure. Check the event's type, stack frames, and `gsd` context instead.
+4. Remove the test trigger (and restore the dev gate if lifted) before commit.
