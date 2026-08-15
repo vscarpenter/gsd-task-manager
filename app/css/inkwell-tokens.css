@@ -71,7 +71,7 @@
      to --gray-500). Matches iOS Surface.ink3 — one family value, resolved
      2026-08 after the platforms drifted (the lighter reference value failed
      AA as text and faded toward invisible in dark mode). */
-  --ink-3: #A49B8D;
+  --ink-3: #797368;
 
   /* ---------- Neutral scale (warm taupe) ---------- */
   --gray-100: #ECE7DC;  /* sunken / inset fill */
@@ -216,7 +216,7 @@
     --info:         #6FAACB;
     --sky:          #7FB0CB;
 
-    --ink-3: #6F685B;
+    --ink-3: #948A79;
 
     --gray-100: #1B1812;  /* sunken / inset fill (dark) */
     --gray-200: #2A2620;  /* hairline (dark) */
@@ -282,7 +282,7 @@
   --info:         #6FAACB;
   --sky:          #7FB0CB;
 
-  --ink-3: #6F685B;
+  --ink-3: #948A79;
 
   --gray-100: #1B1812;
   --gray-200: #2A2620;
