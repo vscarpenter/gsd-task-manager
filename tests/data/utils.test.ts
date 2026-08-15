@@ -26,6 +26,19 @@ describe("utils", () => {
       const result = cn();
       expect(result).toBe("");
     });
+
+    it("recognizes the Inkwell ramp classes as font-size utilities, so a later ramp class drops an earlier text-lg instead of colliding with text-color", () => {
+      const result = cn("text-lg font-semibold text-foreground", "text-h2");
+      expect(result).toContain("text-h2");
+      expect(result).not.toMatch(/(?<!\S)text-lg(?!\S)/);
+      expect(result).toContain("text-foreground");
+    });
+
+    it("keeps a ramp class alongside a text-color utility instead of dropping it as a same-group conflict", () => {
+      const result = cn("text-h2", "text-foreground");
+      expect(result).toContain("text-h2");
+      expect(result).toContain("text-foreground");
+    });
   });
 
   describe("isoNow", () => {

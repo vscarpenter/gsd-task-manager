@@ -88,7 +88,7 @@
   --text-eyebrow--letter-spacing: 0.12em;
   --text-eyebrow--font-weight: 500;
 
-  /* Radii — Violet Frost ladder: pane 14 (lg) · card 12 (md) · control 10 (sm) ·
+  /* Radii — Inkwell ladder: pane 14 (lg) · card 12 (md) · control 10 (sm) ·
      icon button 8 (icon) · chip pill (full). */
   --radius-xs:   var(--r-xs);
   --radius-icon: var(--r-icon);
@@ -104,7 +104,7 @@
   --container-wide:   1120px;
 }
 
-/* Legacy alias. Violet Frost draws every structural rule at 1px, so this matches the
+/* Legacy alias. The system draws every structural rule at 1px, so this matches the
    default `border`; it is kept only so existing call sites keep compiling. */
 @utility border-hair {
   border-width: 1px;
@@ -120,31 +120,35 @@
    via the imports above; everything below is GSD-only.
    ===================================================================== */
 :root {
-  /* Quadrant pigments belong to the matrix only. The aubergine accent remains
-     the global interaction color; these hues classify urgency/importance. */
-  --q1: #B95F5A;  /* Do First  — coral */
-  --q2: #4D7A72;  /* Schedule  — juniper */
-  --q3: #A17D37;  /* Delegate  — ochre */
-  --q4: #7A7D8E;  /* Eliminate — slate */
+  /* Quadrant pigments belong to the matrix only. The tide accent remains the
+     global interaction color; these hues classify urgency/importance. Q2 shares
+     tide's hex by design (the Editorial signature, matching iOS and the landing
+     page), but the tokens stay separate so the roles never blur. */
+  --q1: #B23A2E;  /* Do First  — rust  */
+  --q2: #2C6680;  /* Schedule  — tide  */
+  --q3: #8A6A22;  /* Delegate  — ochre */
+  --q4: #6F685F;  /* Eliminate — slate */
 
-  /* Quiet pane grounds and confident header bands from the approved mockup. */
-  --q1-wash: #FBF5F4;
-  --q2-wash: #F2F8F6;
-  --q3-wash: #FAF7EF;
-  --q4-wash: #F5F5F8;
-  --q1-header: #F2DEDC;
-  --q2-header: #DDEBE7;
-  --q3-header: #F0E6CF;
-  --q4-header: #E6E6ED;
+  /* Quiet pane grounds (the June editorial washes) and confident header bands
+     (the stronger tint family the iOS app and landing page ship as washes). */
+  --q1-wash: #F4EBE5;
+  --q2-wash: #E9EFF1;
+  --q3-wash: #F2EDE1;
+  --q4-wash: #EFEDE7;
+  --q1-header: #F4E4E0;
+  --q2-header: #E1ECF1;
+  --q3-header: #F0E9D8;
+  --q4-header: #ECE9E3;
 
-  /* Text-safe pigment. The pigments are chosen light enough to work as fills
-     and dots but too light to set as small text, so every ink is darkened one
-     step and AA-checked against --paper and --oat (4.9-5.4:1 at 11-14px).
+  /* Text-safe pigment. Editorial's rust and tide are already dark enough to set
+     as text (5.9:1 and 6.3:1 on white), so their inks equal the pigment; ochre
+     and slate are darkened one step (the same values the landing page derived)
+     and AA-checked against washes, headers, --paper, and --oat.
      Use QUADRANT_ACCENT for fills, dots, and spines; QUADRANT_INK for text. */
-  --q1-ink: #873F3C;
-  --q2-ink: #315B54;
-  --q3-ink: #71551F;
-  --q4-ink: #56596B;
+  --q1-ink: #B23A2E;
+  --q2-ink: #2C6680;
+  --q3-ink: #74591C;
+  --q4-ink: #615B54;
 
   /* Eisenhower matrix pane backdrops. */
   --quadrant-focus:     var(--q1-wash);
@@ -158,10 +162,11 @@
   --gradient-delegate:  var(--q3);
   --gradient-eliminate: var(--q4);
 
-  /* Quiet glyph ink. One step darker than --ink-3 so a 1px-stroke icon sitting
-     on a control (the incomplete-task disc) clears the 3:1 non-text contrast
-     floor that --ink-3 misses at 2.5:1. Not for text. */
-  --ink-hint: #7B7B8E;
+  /* Quiet glyph ink for a 1px-stroke icon sitting on a control (the
+     incomplete-task disc): clears the 3:1 non-text contrast floor while
+     staying one step softer than --ink-3, which is now the AA text-grade
+     tertiary shared with iOS. Not for text. */
+  --ink-hint: #8A8171;
 
   /* Task-status palette — derived from Inkwell semantic tokens.
      Each *-muted is a chip background; the paired *-ink is the only tone in
@@ -190,28 +195,29 @@
   --duration-normal: var(--t-slow);
 }
 
-/* Dark-mode pigment rebinding. Washes and headers are tuned independently so
-   the four regions stay distinct without glowing against the dark canvas. */
+/* Dark-mode pigment rebinding. The lifted editorial pigments are light enough
+   to double as their own text inks; washes and headers are tuned independently
+   so the four regions stay distinct without glowing against the dark canvas. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --q1: #D88C86; --q2: #83B2A8; --q3: #D0AF68; --q4: #A5A7B8;
-    --q1-ink: #E7A7A3; --q2-ink: #A6CEC6; --q3-ink: #E0C485; --q4-ink: #C3C4D0;
-    --q1-wash: #1C181E; --q2-wash: #171E1D; --q3-wash: #1E1B17; --q4-wash: #1B1B22;
-    --q1-header: #352327; --q2-header: #253632; --q3-header: #352E20; --q4-header: #2C2C37;
+    --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
+    --q1-ink: #E0705F; --q2-ink: #6FAACB; --q3-ink: #CFB266; --q4-ink: #A9A096;
+    --q1-wash: #231914; --q2-wash: #171E1E; --q3-wash: #201D12; --q4-wash: #1E1B15;
+    --q1-header: #3A211D; --q2-header: #173039; --q3-header: #322B17; --q4-header: #2A2620;
 
-    --ink-hint: #8B8799;
+    --ink-hint: #877D6D;
     /* On dark the neutral pigment is already light enough to read as text. */
     --status-blocking-ink: var(--sky);
   }
 }
 :root[data-theme="dark"] {
   /* Keep in lockstep with the prefers-color-scheme branch above. */
-  --q1: #D88C86; --q2: #83B2A8; --q3: #D0AF68; --q4: #A5A7B8;
-  --q1-ink: #E7A7A3; --q2-ink: #A6CEC6; --q3-ink: #E0C485; --q4-ink: #C3C4D0;
-  --q1-wash: #1C181E; --q2-wash: #171E1D; --q3-wash: #1E1B17; --q4-wash: #1B1B22;
-  --q1-header: #352327; --q2-header: #253632; --q3-header: #352E20; --q4-header: #2C2C37;
+  --q1: #E0705F; --q2: #6FAACB; --q3: #CFB266; --q4: #A9A096;
+  --q1-ink: #E0705F; --q2-ink: #6FAACB; --q3-ink: #CFB266; --q4-ink: #A9A096;
+  --q1-wash: #231914; --q2-wash: #171E1E; --q3-wash: #201D12; --q4-wash: #1E1B15;
+  --q1-header: #3A211D; --q2-header: #173039; --q3-header: #322B17; --q4-header: #2A2620;
 
-  --ink-hint: #8B8799;
+  --ink-hint: #877D6D;
   --status-blocking-ink: var(--sky);
 }
 
@@ -292,7 +298,7 @@
      use `text-h3` and `text-eyebrow`, which are the documented steps. */
 }
 
-/* Violet Frost draws structural rules at 1px — the same width Tailwind ships by
+/* Structural rules are drawn at 1px — the same width Tailwind ships by
    default. The override is kept (rather than deleted) so the width stays
    declared in one place alongside `border-hair`, and so reverting the
    hairline experiment is a one-line change rather than an archaeology dig. */
@@ -311,6 +317,20 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/* The Two-Voice Rule (DESIGN.md): the serif carries display and headings,
+   the sans carries working UI. The ramp's four heading steps are the serif
+   voice; body/small/caption/eyebrow stay sans. Unlayered like `body` above,
+   not inside @layer components — not to beat the `.text-h1` etc. utilities
+   (the @theme text sizes emit no font-family, so there's no property
+   collision there), but so this rule also wins against any future
+   font-family utility, such as `font-sans`, applied to the same node. */
+.text-display,
+.text-h1,
+.text-h2,
+.text-h3 {
+  font-family: var(--serif);
 }
 
 main {
@@ -645,11 +665,10 @@ main {
   font-feature-settings: "ss01", "cv11";
 }
 
-/* `.rd-serif` is retired with the editorial serif. It was unlayered, so its
- * `font-weight: 400` silently beat any `font-semibold` in @layer utilities —
- * leaving it in place while the single-family system moved display type to 600 would have
- * made every heading weight change a no-op. Call sites now set their own
- * size/weight; `--serif` still resolves to Albert for anything external. */
+/* `.rd-serif` stays retired even though the editorial serif is back. It was
+ * unlayered, so its `font-weight: 400` silently beat any `font-semibold` in
+ * @layer utilities — call sites set their own size/weight instead, and
+ * `--serif` (now Newsreader/New York again) covers anything external. */
 
 .redesign-scope .rd-mono {
   font-family: var(--mono);

@@ -16,7 +16,7 @@ export function PrivacySection() {
         <ScrollReveal>
           <div className="max-w-2xl mx-auto text-center">
             <Shield className="h-10 w-10 text-accent mx-auto mb-6" aria-hidden="true" />
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-4">
+            <h2 className="text-h2 font-semibold tracking-tight text-foreground sm:text-h1 mb-4">
               Your tasks stay on your device.
             </h2>
             <div className="text-foreground-muted leading-relaxed mb-8 space-y-4">

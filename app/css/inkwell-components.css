@@ -139,7 +139,7 @@ code, .code-inline {
 }
 .input  { height: 38px; }
 .select { height: 38px; appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23646477' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%236E6760' stroke-width='1.5' stroke-linecap='round'/></svg>");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
@@ -768,7 +768,7 @@ hr.rule       { border: none; border-top: var(--border-rule); margin: 0 0 22px; 
 
   /* The small toggles expand their reach, not their appearance. A pseudo-
      element is part of its originating element for hit-testing, so the control
-     keeps Violet Frost's compact 18px shape and still answers a 44px tap —
+     keeps the compact 18px shape and still answers a 44px tap —
      growing the boxes themselves would be a different design. Each of these
      inputs is already `position: relative`, and each uses ::after for its
      check/dot, so ::before is free. */

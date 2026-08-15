@@ -1260,3 +1260,31 @@ Chrome — `text-h3` renders 19px/23.18px/−0.152px and `text-eyebrow`
 - `design-lab.spec.ts:119` flaked once under parallel load and passed on re-run
   and in isolation; it references nothing changed here.
 - e2e still chromium-only.
+
+---
+
+## Resuming From Here (2026-08-15, editorial restore shipped)
+
+**Done:** The GSD Editorial restore is complete and shipped as PR #502
+(https://github.com/vscarpenter/gsd-task-manager/pull/502), six commits on
+`design/editorial-restore` (reskin c37520b, ink unification a0bd5a8,
+tailwind-merge ramp fix 3d25f41, test retarget b7637b0, docs rewrite f8ac76e,
+two-voice finish ff3b94a). Gates: typecheck, lint, vitest (2773), and e2e
+(327/327) green; quality:shape red but byte-identical to clean main (debt from
+#498/#500). Visual QA passed light and dark; gsd-matrix.png recaptured;
+GSD-Design-Reference.html byte-identical to the iOS repo copy.
+
+**Next:** Vinny decides on PR #502: the version bump (11.11.12 today; 12.0.0
+flagged) and merge. After merge: clean up the branch, then the follow-ups in
+the PR body (RETIRED_COLORS rgba/tonal guard gap, report-page olive drift,
+settings-sidebar.tsx:39 stale contrast comment, ratchet debt).
+
+**Blockers:** none. **Assumptions on record:** hex-grep exemptions for
+components/design-lab/design-data.ts and the RETIRED_COLORS list
+(user-approved); the docs realignment (CLAUDE.md, PRODUCT.md, .ui-craft) was a
+user-approved scope addition. package.json/bun.lock still carry the unrelated
+pre-existing stagehand bump, deliberately uncommitted. PR screenshots can be
+dragged into a comment from a fresh capture if wanted.
+
+**Out of scope, still pending elsewhere:** gsdtaskmanager.com and gsd-iosapp
+carry small uncommitted diffs from the same effort; they ship separately.

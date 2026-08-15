@@ -15,8 +15,8 @@ import { captureException } from "@/lib/sentry";
 const preStyle: React.CSSProperties = {
   marginTop: "0.5rem",
   padding: "1rem",
-  background: "#F7F7FA",
-  border: "1px solid #D9D9E4",
+  background: "#FBF9F3",
+  border: "1px solid #D8D1C1",
   borderRadius: "0.625rem",
   fontSize: "0.75rem",
   overflow: "auto",
@@ -26,10 +26,10 @@ const preStyle: React.CSSProperties = {
 
 const tryAgainButtonStyle: React.CSSProperties = {
   padding: "0.5rem 1rem",
-  /* Violet Frost aubergine. Hard-coded: global-error renders outside
+  /* Editorial tide. Hard-coded: global-error renders outside
      the root layout, so the token cascade isn't available here. */
-  background: "#5C4F7D",
-  color: "#FDFDFF",
+  background: "#2C6680",
+  color: "#FFFFFF",
   border: "none",
   borderRadius: "0.625rem",
   cursor: "pointer",
@@ -40,8 +40,8 @@ const tryAgainButtonStyle: React.CSSProperties = {
 const goHomeButtonStyle: React.CSSProperties = {
   padding: "0.5rem 1rem",
   background: "transparent",
-  color: "#242331",
-  border: "1px solid #D9D9E4",
+  color: "#211E1A",
+  border: "1px solid #D8D1C1",
   borderRadius: "0.625rem",
   cursor: "pointer",
   fontWeight: 500,
@@ -51,41 +51,41 @@ const goHomeButtonStyle: React.CSSProperties = {
 const fallbackThemeCss = `
   :root {
     color-scheme: light;
-    --error-canvas: #F3F3F7;
-    --error-paper: #FDFDFF;
-    --error-ink: #242331;
-    --error-muted: #646477;
-    --error-raised: #F7F7FA;
-    --error-border: #D9D9E4;
-    --error-control-border: #8D8C9D;
-    --error-accent: #5C4F7D;
-    --error-on-accent: #FDFDFF;
+    --error-canvas: #F4F1E9;
+    --error-paper: #FFFFFF;
+    --error-ink: #211E1A;
+    --error-muted: #6E6760;
+    --error-raised: #FBF9F3;
+    --error-border: #D8D1C1;
+    --error-control-border: #938A7B;
+    --error-accent: #2C6680;
+    --error-on-accent: #FFFFFF;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --error-canvas: #14131B;
-      --error-paper: #211F2B;
-      --error-ink: #ECEAF2;
-      --error-muted: #AAA6B8;
-      --error-raised: #191821;
-      --error-border: #393645;
-      --error-control-border: #6F6B80;
-      --error-accent: #A99BCB;
-      --error-on-accent: #14131B;
+      --error-canvas: #17150F;
+      --error-paper: #221E17;
+      --error-ink: #F1ECE2;
+      --error-muted: #A79F92;
+      --error-raised: #1B1812;
+      --error-border: #322D24;
+      --error-control-border: #746A5B;
+      --error-accent: #6FAACB;
+      --error-on-accent: #17150F;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --error-canvas: #14131B;
-    --error-paper: #211F2B;
-    --error-ink: #ECEAF2;
-    --error-muted: #AAA6B8;
-    --error-raised: #191821;
-    --error-border: #393645;
-    --error-control-border: #6F6B80;
-    --error-accent: #A99BCB;
-    --error-on-accent: #14131B;
+    --error-canvas: #17150F;
+    --error-paper: #221E17;
+    --error-ink: #F1ECE2;
+    --error-muted: #A79F92;
+    --error-raised: #1B1812;
+    --error-border: #322D24;
+    --error-control-border: #746A5B;
+    --error-accent: #6FAACB;
+    --error-on-accent: #17150F;
   }
   body { background: var(--error-canvas) !important; color: var(--error-ink) !important; }
   .global-error-muted { color: var(--error-muted) !important; }
@@ -130,8 +130,8 @@ export default function GlobalError({
       <body
         style={{
           fontFamily: "system-ui, -apple-system, sans-serif",
-          background: "#F3F3F7",
-          color: "#242331",
+          background: "#F4F1E9",
+          color: "#211E1A",
           margin: 0,
         }}
       >
@@ -158,7 +158,7 @@ export default function GlobalError({
           <p
             className="global-error-muted"
             style={{
-              color: "#646477",
+              color: "#6E6760",
               maxWidth: "28rem",
               textAlign: "center",
               margin: "0 0 1rem",
@@ -180,7 +180,7 @@ export default function GlobalError({
                 style={{
                   cursor: "pointer",
                   fontSize: "0.875rem",
-                  color: "#646477",
+                  color: "#6E6760",
                 }}
                 className="global-error-muted"
               >

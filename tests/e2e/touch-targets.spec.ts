@@ -83,7 +83,7 @@ test.describe("Coarse-pointer target floor", () => {
       expect(result.right, `#${id} reach right`).toBe(true);
 
       // The point of expanding the hit area with a pseudo-element rather than
-      // min-width/min-height is that Violet Frost's compact control shapes
+      // min-width/min-height is that Editorial's compact control shapes
       // survive. A 44px checkbox would be a different design.
       expect(result.visualHeight, `#${id} visual height`).toBeLessThan(30);
     }

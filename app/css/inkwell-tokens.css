@@ -1,9 +1,16 @@
 /* =====================================================================
    Inkwell — design tokens & dark-mode cascade.
-   Version: 1.3.1
-   Brand palette: GSD Violet Frost (lavender-gray frost + aubergine accent).
-   Calm-minimal: aubergine carries global interaction while four restrained
-   pigments communicate quadrant only.
+   Version: 1.4.0
+   Brand palette: GSD Editorial (warm paper + graphite ink + tide accent),
+   restored 2026-08 to realign web with the iOS app, gsdtaskmanager.com,
+   and the brand kit. The version bump marks the palette change — 1.3.1
+   shipped under two different palettes (Editorial, then Violet Frost)
+   and consumers had no way to tell them apart.
+
+   Structure kept from the 1.3.x line (it is brand-independent): the
+   1px rule system, the pane-14/card-12/control-10/icon-8 radius ladder,
+   the two-layer shadow geometry, the fill/on-color token families, and
+   the fixed type scale. Only brand values changed.
 
    This file contains ONLY:
      • :root custom-property declarations
@@ -23,63 +30,68 @@
    ===================================================================== */
 
 :root {
-  /* ---------- Surfaces (lavender-gray frost) ---------- */
-  --ivory: #F3F3F7;       /* page background */
-  --paper: #FDFDFF;       /* card / panel surface */
-  --slate: #242331;       /* primary text — aubergine graphite */
-  --oat:   #F7F7FA;       /* secondary raised surface */
+  /* ---------- Surfaces (warm editorial paper) ---------- */
+  --ivory: #F4F1E9;       /* page background — warm paper */
+  --paper: #FFFFFF;       /* card / panel surface */
+  --slate: #211E1A;       /* primary text — warm graphite ink */
+  --oat:   #FBF9F3;       /* secondary raised surface */
 
-  /* ---------- Accent (aubergine — the global interaction tint) ---------- */
-  --accent:               #5C4F7D;                 /* 7.20:1 on --paper */
-  --accent-d:             #4E426B;                 /* hover / pressed */
-  --on-accent:            #FDFDFF;                 /* text on filled accent */
-  --accent-tint:          rgba(92, 79, 125, 0.12);
-  --accent-focus-ring:    rgba(92, 79, 125, 0.24);
-  --accent-strong-border: rgba(92, 79, 125, 0.52);
+  /* ---------- Accent (editorial tide — the global interaction tint) ---------- */
+  --accent:               #2C6680;                 /* 6.33:1 on --paper */
+  --accent-d:             #234F63;                 /* hover / pressed */
+  --on-accent:            #FFFFFF;                 /* text on filled accent — 6.33:1 */
+  --accent-tint:          rgba(44, 102, 128, 0.14);
+  --accent-focus-ring:    rgba(44, 102, 128, 0.22);
+  --accent-strong-border: rgba(44, 102, 128, 0.5);
 
   /* ---------- Semantic ---------- */
-  --olive:        #4F7B5F;                         /* success, additions */
-  --olive-d:      #3B644A;                         /* success text on tint */
-  --on-success:   #FDFDFF;
-  --olive-tint:   rgba(79, 123, 95, 0.14);
-  --olive-strong-border: rgba(79, 123, 95, 0.45);
-  --rust:         #B95F5A;                         /* danger and Q1 pigment */
-  --rust-d:       #873F3C;                         /* danger text on tint */
-  --danger-fill:  #873F3C;                         /* filled destructive control */
-  --danger-fill-hover: #753633;
-  --on-danger:    #FDFDFF;
-  --rust-tint:    rgba(185, 95, 90, 0.12);
-  --rust-tint-border: rgba(185, 95, 90, 0.45);
-  --rust-focus-ring:  rgba(185, 95, 90, 0.22);
-  --warning:      #A17D37;
-  --warning-dark: #71551F;
-  --warning-tint: rgba(161, 125, 55, 0.14);
-  --warning-strong-border: rgba(161, 125, 55, 0.45);
-  --info:         #5C4F7D;
-  --sky:          #7A7D8E;
+  --olive:        #3E7D52;                         /* success, additions — forest green */
+  --olive-d:      #2F5F44;                         /* success text on tint — 6.00:1 */
+  --on-success:   #FFFFFF;                         /* text on filled success — 4.93:1 */
+  --olive-tint:   rgba(62, 125, 82, 0.16);
+  --olive-strong-border: rgba(62, 125, 82, 0.45);
+  --rust:         #B23A2E;                         /* danger pigment — also Q1/alert */
+  --rust-d:       #98301F;                         /* danger text on tint — 6.49:1 */
+  --danger-fill:  #B23A2E;                         /* filled destructive control */
+  --danger-fill-hover: #98301F;
+  --on-danger:    #FFFFFF;                         /* text on filled danger — 5.94:1 */
+  --rust-tint:    rgba(178, 58, 46, 0.10);
+  --rust-tint-border: rgba(178, 58, 46, 0.45);
+  --rust-focus-ring:  rgba(178, 58, 46, 0.20);
+  --warning:      #C78E3F;                         /* fill/glyph only, not small text */
+  --warning-dark: #8A5A1F;                         /* warning text — AA on warning-tint */
+  --warning-tint: rgba(199, 142, 63, 0.16);
+  --warning-strong-border: rgba(199, 142, 63, 0.45);
+  --info:         #2C6680;                         /* informational — tide */
+  --sky:          #4E7E96;                         /* alt info / data viz — lighter tide */
 
-  /* ---------- Tertiary ink (quiet labels, dotted chart lines) ---------- */
-  --ink-3: #89899B;
+  /* ---------- Tertiary ink ----------
+     Quiet tertiary text, icons, and the dotted chart series. AA-checked:
+     4.55:1 on --paper, 4.19:1 on --ivory (body-size text on ivory steps up
+     to --gray-500). Matches iOS Surface.ink3 — one family value, resolved
+     2026-08 after the platforms drifted (the lighter reference value failed
+     AA as text and faded toward invisible in dark mode). */
+  --ink-3: #797368;
 
-  /* ---------- Neutral scale (violet slate) ---------- */
-  --gray-100: #ECECF2;
-  --gray-200: #E2E1EA;
-  --gray-300: #D9D9E4;
-  --gray-500: #646477;  /* 5.69:1 on --paper */
-  --gray-700: #3F3E50;
-  --control-border: #8D8C9D; /* 3.24:1 boundary on --paper */
-  --pane-border: #D6D5E0;
-  --rail: #EEEFF4;
-  --topbar: #F7F7FA;
+  /* ---------- Neutral scale (warm taupe) ---------- */
+  --gray-100: #ECE7DC;  /* sunken / inset fill */
+  --gray-200: #E3DDD0;  /* hairline */
+  --gray-300: #D8D1C1;  /* hairline-strong / border */
+  --gray-500: #6E6760;  /* WCAG AA: 5.6:1 on --paper, 4.9:1 on --ivory */
+  --gray-700: #3A372F;
+  --control-border: #938A7B; /* 3.41:1 boundary on --paper */
+  --pane-border: #D8D1C1;
+  --rail: #F0ECE2;
+  --topbar: #FBF9F3;
 
   /* ---------- Typography ---------- */
-  /* Violet Frost is a single-family system. Albert Sans (loaded via next/font,
-     exposed as --font-albert on <html>) carries display and body alike; the
-     editorial serif is retired. --serif deliberately points at the same stack
-     so any remaining `.rd-serif` / `font-serif` call site degrades to Albert
-     rather than falling back to Georgia mid-page. */
-  --serif: var(--font-albert), system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --sans:  var(--font-albert), system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Two-voice system. Newsreader (loaded via next/font, exposed as
+     --font-newsreader on <html>) is the cross-platform stand-in for Apple's
+     New York and carries display/headings; the system sans stack carries the
+     working UI at the 11-16px sizes the matrix leans on; mono is functional.
+     This mirrors the iOS app (New York titles + SF body) and the landing page. */
+  --serif: ui-serif, "New York", var(--font-newsreader, Georgia), Georgia, "Times New Roman", Times, serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono:  ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
 
   /* Type scale */
@@ -103,9 +115,9 @@
   --sp-8: 64px;
 
   /* ---------- Radius ----------
-     Violet Frost ladder: pane 14 (--r-lg) · card 12 (--r-md) · inputs/buttons 10
-     (--r-sm) · icon buttons 8 (--r-icon) · chips pill. Radius steps down with
-     element size so nothing reads stamped from one uniform corner. */
+     Ladder: pane 14 (--r-lg) · card 12 (--r-md) · inputs/buttons 10 (--r-sm) ·
+     icon buttons 8 (--r-icon) · chips pill. Radius steps down with element
+     size so nothing reads stamped from one uniform corner. */
   --r-xs:    4px;
   --r-icon:  8px;
   --r-sm:   10px;
@@ -115,22 +127,21 @@
   --r-pill: 999px;
 
   /* ---------- Borders (uniform 1px) ----------
-     With the merged matrix grid gone,
-     structure is carried by the gap between floating panes, so a heavier rule
-     would only add weight the layout no longer needs. */
+     Structure is carried by the gap between floating panes, so a heavier
+     rule would only add weight the layout no longer needs. */
   --border:        1px solid var(--gray-300);
   --border-strong: 1px solid var(--slate);
   --border-hair:   1px solid var(--gray-100);
   --border-rule:   1px solid var(--gray-300);
 
-  /* ---------- Shadows (aubergine low-spread) ---------- */
-  --shadow-sm:         0 1px 2px rgba(36, 35, 49, 0.055), 0 6px 15px rgba(36, 35, 49, 0.035);
-  --shadow-md:         0 3px 8px rgba(36, 35, 49, 0.07), 0 14px 30px rgba(36, 35, 49, 0.055);
-  --shadow-lg:         0 5px 12px rgba(36, 35, 49, 0.08), 0 20px 44px rgba(36, 35, 49, 0.07);
-  --shadow-card-hover: 0 4px 10px rgba(36, 35, 49, 0.08), 0 16px 34px rgba(36, 35, 49, 0.07);
+  /* ---------- Shadows (warm ink, low spread) ---------- */
+  --shadow-sm:         0 1px 2px rgba(40, 33, 22, 0.055), 0 6px 15px rgba(40, 33, 22, 0.035);
+  --shadow-md:         0 3px 8px rgba(40, 33, 22, 0.07), 0 14px 30px rgba(40, 33, 22, 0.055);
+  --shadow-lg:         0 5px 12px rgba(40, 33, 22, 0.08), 0 20px 44px rgba(40, 33, 22, 0.07);
+  --shadow-card-hover: 0 4px 10px rgba(40, 33, 22, 0.08), 0 16px 34px rgba(40, 33, 22, 0.07);
 
   /* ---------- Backdrop (dialog::backdrop, modal scrims) ---------- */
-  --backdrop: rgba(36, 35, 49, 0.52);
+  --backdrop: rgba(21, 18, 13, 0.52);
 
   /* ---------- TLDR code-chip tint ----------
      Subtle overlay on the inverted .tldr surface. The .tldr panel flips
@@ -173,56 +184,56 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --ivory: #14131B;
-    --paper: #211F2B;
-    --slate: #ECEAF2;
-    --oat:   #191821;
+    --ivory: #17150F;       /* page background — warm dark paper */
+    --paper: #221E17;       /* card / panel surface */
+    --slate: #F1ECE2;       /* primary text — warm light ink */
+    --oat:   #1B1812;       /* secondary raised surface */
 
-    --accent:               #A99BCB;
-    --accent-d:             #BBAFDA;
-    --on-accent:            #14131B;
-    --accent-tint:          rgba(169, 155, 203, 0.18);
-    --accent-focus-ring:    rgba(169, 155, 203, 0.30);
-    --accent-strong-border: rgba(169, 155, 203, 0.62);
+    --accent:               #6FAACB;                 /* lifted tide */
+    --accent-d:             #5A93B5;
+    --on-accent:            #17150F;                 /* dark paper ink, not white — 7.20:1 */
+    --accent-tint:          rgba(111, 170, 203, 0.18);
+    --accent-focus-ring:    rgba(111, 170, 203, 0.28);
+    --accent-strong-border: rgba(111, 170, 203, 0.6);
 
-    --olive:        #82B793;
-    --olive-d:      #A0C9AB;
-    --on-success:   #14131B;
-    --olive-tint:   rgba(130, 183, 147, 0.18);
-    --olive-strong-border: rgba(130, 183, 147, 0.62);
-    --rust:         #D88C86;
-    --rust-d:       #E7A7A3;
-    --danger-fill:  #D88C86;
-    --danger-fill-hover: #E7A7A3;
-    --on-danger:    #14131B;
-    --rust-tint:    rgba(216, 140, 134, 0.18);
-    --rust-tint-border: rgba(216, 140, 134, 0.62);
-    --rust-focus-ring:  rgba(216, 140, 134, 0.30);
-    --warning:      #D0AF68;
-    --warning-dark: #E0C485;
-    --warning-tint: rgba(208, 175, 104, 0.18);
-    --warning-strong-border: rgba(208, 175, 104, 0.62);
-    --info:         #A99BCB;
-    --sky:          #A5A7B8;
+    --olive:        #6FB07F;                          /* lifted success */
+    --olive-d:      #9CCBA6;                          /* success text on dark tint — 6.67:1 */
+    --on-success:   #17150F;                          /* 7.12:1 */
+    --olive-tint:   rgba(111, 176, 127, 0.18);
+    --olive-strong-border: rgba(111, 176, 127, 0.6);
+    --rust:         #E0705F;                          /* lifted — also Q1/alert */
+    --rust-d:       #E8907F;                          /* danger text on dark tint — 5.30:1 */
+    --danger-fill:  #E0705F;
+    --danger-fill-hover: #D5614F;
+    --on-danger:    #17150F;                          /* 5.78:1 */
+    --rust-tint:    rgba(224, 112, 95, 0.18);
+    --rust-tint-border: rgba(224, 112, 95, 0.6);
+    --rust-focus-ring:  rgba(224, 112, 95, 0.28);
+    --warning:      #D9A55F;
+    --warning-dark: #D9A55F;                          /* lifted warning text — 5.30:1 on tint */
+    --warning-tint: rgba(217, 165, 95, 0.18);
+    --warning-strong-border: rgba(217, 165, 95, 0.6);
+    --info:         #6FAACB;
+    --sky:          #7FB0CB;
 
-    --ink-3: #777383;
+    --ink-3: #948A79;
 
-    --gray-100: #292734;
-    --gray-200: #302E3B;
-    --gray-300: #393645;
-    --gray-500: #AAA6B8;
-    --gray-700: #D0CDD9;
-    --control-border: #6F6B80;
-    --pane-border: #393645;
-    --rail: #191821;
-    --topbar: #191821;
+    --gray-100: #1B1812;  /* sunken / inset fill (dark) */
+    --gray-200: #2A2620;  /* hairline (dark) */
+    --gray-300: #322D24;  /* hairline-strong / border (dark) */
+    --gray-500: #A79F92;  /* ink-2 (dark) */
+    --gray-700: #C8C0B2;
+    --control-border: #746A5B; /* 3.12:1 boundary on dark --paper */
+    --pane-border: #322D24;
+    --rail: #1B1812;
+    --topbar: #1B1812;
 
     --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
     --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
     --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
     --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
 
-    --backdrop: rgba(7, 6, 11, 0.68);
+    --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
 
     --tldr-code-tint: rgba(0, 0, 0, 0.08);           /* .tldr surface is light in dark mode */
   }
@@ -232,67 +243,67 @@
    lifted gray-500 color. These overrides carry higher specificity than the base
    rule, ensuring the dark chevron always wins regardless of cascade order. */
 :root:not([data-theme="light"]) .select {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23AAA6B8' stroke-width='1.5' stroke-linecap='round'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A79F92' stroke-width='1.5' stroke-linecap='round'/></svg>");
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --ivory: #14131B;
-  --paper: #211F2B;
-  --slate: #ECEAF2;
-  --oat:   #191821;
+  --ivory: #17150F;
+  --paper: #221E17;
+  --slate: #F1ECE2;
+  --oat:   #1B1812;
 
-  --accent:               #A99BCB;
-  --accent-d:             #BBAFDA;
-  --on-accent:            #14131B;
-  --accent-tint:          rgba(169, 155, 203, 0.18);
-  --accent-focus-ring:    rgba(169, 155, 203, 0.30);
-  --accent-strong-border: rgba(169, 155, 203, 0.62);
+  --accent:               #6FAACB;
+  --accent-d:             #5A93B5;
+  --on-accent:            #17150F;
+  --accent-tint:          rgba(111, 170, 203, 0.18);
+  --accent-focus-ring:    rgba(111, 170, 203, 0.28);
+  --accent-strong-border: rgba(111, 170, 203, 0.6);
 
-  --olive:        #82B793;
-  --olive-d:      #A0C9AB;
-  --on-success:   #14131B;
-  --olive-tint:   rgba(130, 183, 147, 0.18);
-  --olive-strong-border: rgba(130, 183, 147, 0.62);
-  --rust:         #D88C86;
-  --rust-d:       #E7A7A3;
-  --danger-fill:  #D88C86;
-  --danger-fill-hover: #E7A7A3;
-  --on-danger:    #14131B;
-  --rust-tint:    rgba(216, 140, 134, 0.18);
-  --rust-tint-border: rgba(216, 140, 134, 0.62);
-  --rust-focus-ring:  rgba(216, 140, 134, 0.30);
-  --warning:      #D0AF68;
-  --warning-dark: #E0C485;
-  --warning-tint: rgba(208, 175, 104, 0.18);
-  --warning-strong-border: rgba(208, 175, 104, 0.62);
-  --info:         #A99BCB;
-  --sky:          #A5A7B8;
+  --olive:        #6FB07F;
+  --olive-d:      #9CCBA6;
+  --on-success:   #17150F;
+  --olive-tint:   rgba(111, 176, 127, 0.18);
+  --olive-strong-border: rgba(111, 176, 127, 0.6);
+  --rust:         #E0705F;
+  --rust-d:       #E8907F;
+  --danger-fill:  #E0705F;
+  --danger-fill-hover: #D5614F;
+  --on-danger:    #17150F;
+  --rust-tint:    rgba(224, 112, 95, 0.18);
+  --rust-tint-border: rgba(224, 112, 95, 0.6);
+  --rust-focus-ring:  rgba(224, 112, 95, 0.28);
+  --warning:      #D9A55F;
+  --warning-dark: #D9A55F;
+  --warning-tint: rgba(217, 165, 95, 0.18);
+  --warning-strong-border: rgba(217, 165, 95, 0.6);
+  --info:         #6FAACB;
+  --sky:          #7FB0CB;
 
-  --ink-3: #777383;
+  --ink-3: #948A79;
 
-  --gray-100: #292734;
-  --gray-200: #302E3B;
-  --gray-300: #393645;
-  --gray-500: #AAA6B8;
-  --gray-700: #D0CDD9;
-  --control-border: #6F6B80;
-  --pane-border: #393645;
-  --rail: #191821;
-  --topbar: #191821;
+  --gray-100: #1B1812;
+  --gray-200: #2A2620;
+  --gray-300: #322D24;
+  --gray-500: #A79F92;
+  --gray-700: #C8C0B2;
+  --control-border: #746A5B;
+  --pane-border: #322D24;
+  --rail: #1B1812;
+  --topbar: #1B1812;
 
   --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
   --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
   --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
   --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
 
-  --backdrop: rgba(7, 6, 11, 0.68);
+  --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
 
   --tldr-code-tint: rgba(0, 0, 0, 0.08);           /* .tldr surface is light in dark mode */
 }
 /* Select chevron dark-mode override: see comment above in @media section for rationale */
 :root[data-theme="dark"] .select {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23AAA6B8' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23A79F92' stroke-width='1.5' stroke-linecap='round'/></svg>");
 }

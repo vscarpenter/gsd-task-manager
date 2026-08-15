@@ -64,8 +64,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             >
               Field guide
             </div>
-            <DialogTitle asChild>
-              <h2 style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 600, letterSpacing: "-0.015em", lineHeight: 1.1 }}>
+            <DialogTitle asChild className="text-h1">
+              <h2 style={{ margin: "4px 0 0" }}>
                 How to use <em style={{ fontStyle: "italic", color: "var(--accent)" }}>GSD</em>
               </h2>
             </DialogTitle>

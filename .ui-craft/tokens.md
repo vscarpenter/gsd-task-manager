@@ -1,12 +1,12 @@
 # Design Tokens
 
-<!-- Always loaded by the ui-craft skill. This documents the shipped Violet Frost contract.
+<!-- Always loaded by the ui-craft skill. This documents the shipped GSD Editorial contract.
      Runtime foundation/status tokens live in app/css/inkwell-tokens.css. GSD quadrant and
      component aliases live in app/globals.css. Keep automatic and forced-dark branches identical. -->
 
 ## Token spine
 
-Violet Frost uses three practical layers:
+GSD Editorial uses three practical layers:
 
 1. **Foundation:** surface, ink, accent, neutral, type, spacing, radius, shadow, motion and z-index
    values in `app/css/inkwell-tokens.css`.
@@ -23,66 +23,66 @@ self-contained degraded fallbacks, and fixed-format assets that cannot consume C
 
 | Role | Token | Value |
 | --- | --- | --- |
-| Canvas | `--ivory` | `#F3F3F7` |
-| Paper | `--paper` | `#FDFDFF` |
-| Primary ink | `--slate` | `#242331` |
-| Raised surface | `--oat` | `#F7F7FA` |
-| Interaction | `--accent` | `#5C4F7D` |
-| Interaction hover/pressed | `--accent-d` | `#4E426B` |
-| Ink on interaction | `--on-accent` | `#FDFDFF` |
-| Interaction tint | `--accent-tint` | `rgba(92, 79, 125, 0.12)` |
-| Focus halo | `--accent-focus-ring` | `rgba(92, 79, 125, 0.24)` |
-| Strong accent boundary | `--accent-strong-border` | `rgba(92, 79, 125, 0.52)` |
+| Canvas | `--ivory` | `#F4F1E9` |
+| Paper | `--paper` | `#FFFFFF` |
+| Primary ink | `--slate` | `#211E1A` |
+| Raised surface | `--oat` | `#FBF9F3` |
+| Interaction | `--accent` | `#2C6680` |
+| Interaction hover/pressed | `--accent-d` | `#234F63` |
+| Ink on interaction | `--on-accent` | `#FFFFFF` |
+| Interaction tint | `--accent-tint` | `rgba(44, 102, 128, 0.14)` |
+| Focus halo | `--accent-focus-ring` | `rgba(44, 102, 128, 0.22)` |
+| Strong accent boundary | `--accent-strong-border` | `rgba(44, 102, 128, 0.5)` |
 
 ### Dark foundation
 
 | Role | Token | Value |
 | --- | --- | --- |
-| Canvas | `--ivory` | `#14131B` |
-| Raised surface | `--oat` | `#191821` |
-| Paper | `--paper` | `#211F2B` |
-| Primary ink | `--slate` | `#ECEAF2` |
-| Interaction | `--accent` | `#A99BCB` |
-| Interaction hover/pressed | `--accent-d` | `#BBAFDA` |
-| Ink on interaction | `--on-accent` | `#14131B` |
-| Interaction tint | `--accent-tint` | `rgba(169, 155, 203, 0.18)` |
-| Focus halo | `--accent-focus-ring` | `rgba(169, 155, 203, 0.30)` |
-| Strong accent boundary | `--accent-strong-border` | `rgba(169, 155, 203, 0.62)` |
+| Canvas | `--ivory` | `#17150F` |
+| Raised surface | `--oat` | `#1B1812` |
+| Paper | `--paper` | `#221E17` |
+| Primary ink | `--slate` | `#F1ECE2` |
+| Interaction | `--accent` | `#6FAACB` |
+| Interaction hover/pressed | `--accent-d` | `#5A93B5` |
+| Ink on interaction | `--on-accent` | `#17150F` |
+| Interaction tint | `--accent-tint` | `rgba(111, 170, 203, 0.18)` |
+| Focus halo | `--accent-focus-ring` | `rgba(111, 170, 203, 0.28)` |
+| Strong accent boundary | `--accent-strong-border` | `rgba(111, 170, 203, 0.6)` |
 
-The light aubergine has 7.20:1 contrast on paper. The lifted dark aubergine has 6.36:1
-contrast with dark paper ink. `--on-accent` must switch with the theme; white is not valid text
-on the lifted dark accent.
+The light tide accent has 6.33:1 contrast on paper. The lifted dark tide accent pairs with dark
+paper ink at 7.20:1. `--on-accent` must switch with the theme; white is not valid text on the
+lifted dark accent.
 
 ### Neutral and shell tokens
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `--gray-100` | `#ECECF2` | `#292734` | Sunken/inset fill |
-| `--gray-200` | `#E2E1EA` | `#302E3B` | Quiet rule |
-| `--gray-300` | `#D9D9E4` | `#393645` | Default boundary |
-| `--gray-500` | `#646477` | `#AAA6B8` | Muted text |
-| `--gray-700` | `#3F3E50` | `#D0CDD9` | Secondary strong ink |
-| `--ink-3` | `#89899B` | `#777383` | Quiet chart/glyph ink, not body text |
-| `--control-border` | `#8D8C9D` | `#6F6B80` | 3:1+ control boundary |
-| `--pane-border` | `#D6D5E0` | `#393645` | Quadrant pane boundary |
-| `--rail` | `#EEEFF4` | `#191821` | Icon rail |
-| `--topbar` | `#F7F7FA` | `#191821` | Top bar |
+| `--gray-100` | `#ECE7DC` | `#1B1812` | Sunken/inset fill |
+| `--gray-200` | `#E3DDD0` | `#2A2620` | Quiet rule |
+| `--gray-300` | `#D8D1C1` | `#322D24` | Default boundary |
+| `--gray-500` | `#6E6760` | `#A79F92` | Muted text |
+| `--gray-700` | `#3A372F` | `#C8C0B2` | Secondary strong ink |
+| `--ink-3` | `#797368` | `#948A79` | Quiet chart/glyph ink, not body text |
+| `--control-border` | `#938A7B` | `#746A5B` | 3:1+ control boundary |
+| `--pane-border` | `#D8D1C1` | `#322D24` | Quadrant pane boundary |
+| `--rail` | `#F0ECE2` | `#1B1812` | Icon rail |
+| `--topbar` | `#FBF9F3` | `#1B1812` | Top bar |
 
-Light `--gray-500` measures 5.69:1 on paper. Do not use `--ink-3` for normal text; scoped
-surfaces may rebind it to `--gray-500` when text contrast is required.
+Light `--gray-500` measures 5.6:1 on paper (4.9:1 on ivory). Do not use `--ink-3` for normal text;
+scoped surfaces may rebind it to `--gray-500` when text contrast is required.
 
 ### Semantic status families
 
 | Role | Light pigment / ink | Dark pigment / ink | On solid fill |
 | --- | --- | --- | --- |
-| Success | `#4F7B5F` / `#3B644A` | `#82B793` / `#A0C9AB` | `#FDFDFF` / `#14131B` |
-| Danger | `#B95F5A` / `#873F3C` | `#D88C86` / `#E7A7A3` | `#FDFDFF` / `#14131B` |
-| Warning | `#A17D37` / `#71551F` | `#D0AF68` / `#E0C485` | Use the theme's contrast-safe ink |
-| Information | `#5C4F7D` | `#A99BCB` | Use `--on-accent` |
-| Alternate information | `#7A7D8E` | `#A5A7B8` | Use the paired semantic ink |
+| Success | `#3E7D52` / `#2F5F44` | `#6FB07F` / `#9CCBA6` | `#FFFFFF` / `#17150F` |
+| Danger | `#B23A2E` / `#98301F` | `#E0705F` / `#E8907F` | `#FFFFFF` / `#17150F` |
+| Warning | `#C78E3F` / `#8A5A1F` | `#D9A55F` / `#D9A55F` | Use the theme's contrast-safe ink |
+| Information | `#2C6680` | `#6FAACB` | Use `--on-accent` |
+| Alternate information | `#4E7E96` | `#7FB0CB` | Use the paired semantic ink |
 
-Additional destructive control tokens are light `--danger-fill: #873F3C` and
-`--danger-fill-hover: #753633`; dark remaps them to `#D88C86` and `#E7A7A3`. Base pigments
+Additional destructive control tokens are light `--danger-fill: #B23A2E` and
+`--danger-fill-hover: #98301F`; dark remaps them to `#E0705F` and `#D5614F`. Base pigments
 are suitable for icons, rules, dots, and tinted-surface construction. Text on tints uses the
 `*-d`, `*-dark`, or `*-ink` token.
 
@@ -103,38 +103,41 @@ the title band.
 
 | Quadrant | Pigment | Ink | Wash | Header |
 | --- | --- | --- | --- | --- |
-| Q1 · Do First | `#B95F5A` | `#873F3C` | `#FBF5F4` | `#F2DEDC` |
-| Q2 · Schedule | `#4D7A72` | `#315B54` | `#F2F8F6` | `#DDEBE7` |
-| Q3 · Delegate | `#A17D37` | `#71551F` | `#FAF7EF` | `#F0E6CF` |
-| Q4 · Eliminate | `#7A7D8E` | `#56596B` | `#F5F5F8` | `#E6E6ED` |
+| Q1 · Do First | `#B23A2E` | `#B23A2E` | `#F4EBE5` | `#F4E4E0` |
+| Q2 · Schedule | `#2C6680` | `#2C6680` | `#E9EFF1` | `#E1ECF1` |
+| Q3 · Delegate | `#8A6A22` | `#74591C` | `#F2EDE1` | `#F0E9D8` |
+| Q4 · Eliminate | `#6F685F` | `#615B54` | `#EFEDE7` | `#ECE9E3` |
 
 #### Dark
 
 | Quadrant | Pigment | Ink | Wash | Header |
 | --- | --- | --- | --- | --- |
-| Q1 · Do First | `#D88C86` | `#E7A7A3` | `#1C181E` | `#352327` |
-| Q2 · Schedule | `#83B2A8` | `#A6CEC6` | `#171E1D` | `#253632` |
-| Q3 · Delegate | `#D0AF68` | `#E0C485` | `#1E1B17` | `#352E20` |
-| Q4 · Eliminate | `#A5A7B8` | `#C3C4D0` | `#1B1B22` | `#2C2C37` |
+| Q1 · Do First | `#E0705F` | `#E0705F` | `#231914` | `#3A211D` |
+| Q2 · Schedule | `#6FAACB` | `#6FAACB` | `#171E1E` | `#173039` |
+| Q3 · Delegate | `#CFB266` | `#CFB266` | `#201D12` | `#322B17` |
+| Q4 · Eliminate | `#A9A096` | `#A9A096` | `#1E1B15` | `#2A2620` |
 
-The dark ink/header pairs measure 7.36:1, 7.42:1, 7.94:1 and 7.97:1 respectively.
-Automatic dark mode and `[data-theme="dark"]` must declare the same values.
+The lifted dark pigments clear AA as text on their washes and headers, so dark inks equal their
+pigments. Automatic dark mode and `[data-theme="dark"]` must declare the same values.
 
 ### Color rules
 
-- Aubergine is restrained global interaction ink: actions, selection, links, and focus.
-- Aubergine is never Q2, a decorative wash, a glow, or gradient decoration.
-- Never create purple/cyan gradients or gradient text from the Violet Frost name.
+- Tide is restrained global interaction ink: actions, selection, links, and focus.
+- Q2 shares tide's hex by design, but `--accent` and `--q2` stay separate tokens; never use tide
+  as a decorative wash, a glow, or gradient decoration.
+- Never create tide/cyan gradients or gradient text; don't turn Editorial into a blue-gradient
+  aesthetic.
 - Tags and unrelated metadata stay neutral; quadrant identity stays in the matrix header/card marks.
 - Never place gray text on a colored surface. Use the hue's ink or adaptive on-color token.
 
 ## Typography
 
-Albert Sans is loaded with `next/font` at weights 400, 500 and 600, normal and italic. It is
-self-hosted in the static build and exposed as `--font-albert`.
+Newsreader is loaded with `next/font` at weights 400, 500 and 600, normal and italic. It is
+self-hosted in the static build and exposed as `--font-newsreader`.
 
-- `--sans`: Albert Sans → system sans fallback.
-- `--serif`: compatibility alias to the same Albert Sans stack; it does not introduce a serif.
+- `--serif`: `--font-newsreader` (Newsreader) feeds the serif chain, standing in for Apple's New
+  York on non-Apple platforms; it carries display and headlines.
+- `--sans`: the system sans stack — carries body, labels, and working UI.
 - `--mono`: system mono for code and keyboard notation only.
 
 | Token | Size / line-height | Weight | Tracking |
@@ -177,15 +180,15 @@ boundary must clear 3:1; the quieter gray/pane boundaries are for grouping, not 
 
 ## Shadows and backdrop
 
-Light shadows are two-layer aubergine-tinted stacks:
+Light shadows are two-layer warm-ink-tinted stacks:
 
-- `--shadow-sm`: `0 1px 2px rgba(36,35,49,.055), 0 6px 15px rgba(36,35,49,.035)`.
-- `--shadow-md`: `0 3px 8px rgba(36,35,49,.07), 0 14px 30px rgba(36,35,49,.055)`.
-- `--shadow-lg`: `0 5px 12px rgba(36,35,49,.08), 0 20px 44px rgba(36,35,49,.07)`.
-- `--shadow-card-hover`: `0 4px 10px rgba(36,35,49,.08), 0 16px 34px rgba(36,35,49,.07)`.
+- `--shadow-sm`: `0 1px 2px rgba(40,33,22,.055), 0 6px 15px rgba(40,33,22,.035)`.
+- `--shadow-md`: `0 3px 8px rgba(40,33,22,.07), 0 14px 30px rgba(40,33,22,.055)`.
+- `--shadow-lg`: `0 5px 12px rgba(40,33,22,.08), 0 20px 44px rgba(40,33,22,.07)`.
+- `--shadow-card-hover`: `0 4px 10px rgba(40,33,22,.08), 0 16px 34px rgba(40,33,22,.07)`.
 
-Dark shadows use black at 45–55% opacity. `--backdrop` is `rgba(36,35,49,.52)` in light and
-`rgba(7,6,11,.68)` in dark. Component aliases are `--shadow-card`, `--shadow-column`, and
+Dark shadows use black at 45–55% opacity. `--backdrop` is `rgba(21,18,13,.52)` in light and
+`rgba(0,0,0,.6)` in dark. Component aliases are `--shadow-card`, `--shadow-column`, and
 `--shadow-fab`.
 
 ## Motion and z-index
