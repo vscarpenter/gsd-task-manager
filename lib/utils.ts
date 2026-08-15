@@ -1,6 +1,23 @@
 import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
 import { TIME_MS, DATE_CONFIG } from "@/lib/constants";
+
+// tailwind-merge's default config only knows Tailwind's built-in font-size
+// scale (text-xs..text-9xl), so it doesn't recognize the Inkwell type ramp's
+// custom `text-*` utilities (app/globals.css's @theme block: display, h1, h2,
+// h3, body, small, caption, eyebrow). Left unextended, a ramp class colliding
+// with an unrelated text-color utility (e.g. "text-foreground") is silently
+// dropped instead of the intended text-lg/text-base/etc. — see
+// tests/data/utils.test.ts's "cn" tests for the failure mode this fixes.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [
+        { text: ["display", "h1", "h2", "h3", "body", "small", "caption", "eyebrow"] },
+      ],
+    },
+  },
+});
 
 export function cn(...classNames: Array<string | undefined | false | null>): string {
   return twMerge(clsx(classNames));

@@ -210,7 +210,7 @@ function DashboardContent({ data, tasks, trendPeriod, onTrendPeriodChange, onDea
           <TagAnalytics tagStats={metrics.tagStats} maxTags={8} />
         ) : (
           <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-semibold text-foreground">Top Tags</h3>
+            <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
             <div className="flex h-[240px] items-center justify-center">
               <p className="text-sm text-foreground-muted">Add tags to your tasks to see analytics here.</p>
             </div>
