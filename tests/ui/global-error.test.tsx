@@ -68,15 +68,15 @@ describe("GlobalError", () => {
     expect(window.location.href).toBe("/");
   });
 
-  it("uses the Violet Frost palette when the root stylesheet is unavailable", () => {
+  it("uses the Editorial palette when the root stylesheet is unavailable", () => {
     render(<GlobalError error={testError} reset={mockReset} />);
 
-    expect(document.body).toHaveStyle({ background: "#F3F3F7", color: "#242331" });
-    expect(screen.getByText(/Your data is safe/)).toHaveStyle({ color: "#646477" });
-    expect(screen.getByText("Try again")).toHaveStyle({ background: "#5C4F7D" });
+    expect(document.body).toHaveStyle({ background: "#F4F1E9", color: "#211E1A" });
+    expect(screen.getByText(/Your data is safe/)).toHaveStyle({ color: "#6E6760" });
+    expect(screen.getByText("Try again")).toHaveStyle({ background: "#2C6680" });
     expect(screen.getByText("Go home")).toHaveStyle({
-      color: "#242331",
-      border: "1px solid #D9D9E4",
+      color: "#211E1A",
+      border: "1px solid #D8D1C1",
     });
   });
 });

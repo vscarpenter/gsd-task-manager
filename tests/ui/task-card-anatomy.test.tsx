@@ -93,7 +93,7 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(screen.getByTestId("task-card-spine").style.backgroundColor).toBe("var(--q2)");
   });
 
-  // Violet Frost gives the quadrant mark enough weight to hold its own beside
+  // The quadrant mark gets enough weight to hold its own beside
   // the pane header while keeping it inset from the card's structural border.
   it("draws the spine as a 3px pill inset from the card's top and bottom", () => {
     renderCard();
@@ -171,10 +171,10 @@ describe("TaskCard anatomy — four-pigment language", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Quadrant header identity (Violet Frost)
+// Quadrant header identity
 // ---------------------------------------------------------------------------
 
-describe("QuadrantPane header — Violet Frost quadrant identity", () => {
+describe("QuadrantPane header — quadrant identity", () => {
   function renderPane(rdKey: "q1" | "q2" | "q3" | "q4") {
     const meta = rdKey === "q1"
       ? quadrantForTask(true, true)

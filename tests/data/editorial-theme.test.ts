@@ -6,87 +6,91 @@ import { describe, expect, it } from "vitest";
 const ROOT = resolve(__dirname, "../..");
 
 const LIGHT_PRIMITIVES = {
-  ivory: "#F3F3F7",
-  paper: "#FDFDFF",
-  slate: "#242331",
-  oat: "#F7F7FA",
-  accent: "#5C4F7D",
-  "accent-d": "#4E426B",
-  olive: "#4F7B5F",
-  rust: "#B95F5A",
-  "rust-d": "#873F3C",
-  warning: "#A17D37",
-  "warning-dark": "#71551F",
-  info: "#5C4F7D",
-  sky: "#7A7D8E",
-  "ink-3": "#89899B",
-  "gray-100": "#ECECF2",
-  "gray-200": "#E2E1EA",
-  "gray-300": "#D9D9E4",
-  "gray-500": "#646477",
-  "gray-700": "#3F3E50",
+  ivory: "#F4F1E9",
+  paper: "#FFFFFF",
+  slate: "#211E1A",
+  oat: "#FBF9F3",
+  accent: "#2C6680",
+  "accent-d": "#234F63",
+  olive: "#3E7D52",
+  rust: "#B23A2E",
+  "rust-d": "#98301F",
+  warning: "#C78E3F",
+  "warning-dark": "#8A5A1F",
+  info: "#2C6680",
+  sky: "#4E7E96",
+  "ink-3": "#797368",
+  "gray-100": "#ECE7DC",
+  "gray-200": "#E3DDD0",
+  "gray-300": "#D8D1C1",
+  "gray-500": "#6E6760",
+  "gray-700": "#3A372F",
 } as const;
 
 const QUADRANTS = {
-  q1: "#B95F5A",
-  q2: "#4D7A72",
-  q3: "#A17D37",
-  q4: "#7A7D8E",
-  "q1-ink": "#873F3C",
-  "q2-ink": "#315B54",
-  "q3-ink": "#71551F",
-  "q4-ink": "#56596B",
-  "q1-wash": "#FBF5F4",
-  "q2-wash": "#F2F8F6",
-  "q3-wash": "#FAF7EF",
-  "q4-wash": "#F5F5F8",
-  "q1-header": "#F2DEDC",
-  "q2-header": "#DDEBE7",
-  "q3-header": "#F0E6CF",
-  "q4-header": "#E6E6ED",
+  q1: "#B23A2E",
+  q2: "#2C6680",
+  q3: "#8A6A22",
+  q4: "#6F685F",
+  "q1-ink": "#B23A2E",
+  "q2-ink": "#2C6680",
+  "q3-ink": "#74591C",
+  "q4-ink": "#615B54",
+  "q1-wash": "#F4EBE5",
+  "q2-wash": "#E9EFF1",
+  "q3-wash": "#F2EDE1",
+  "q4-wash": "#EFEDE7",
+  "q1-header": "#F4E4E0",
+  "q2-header": "#E1ECF1",
+  "q3-header": "#F0E9D8",
+  "q4-header": "#ECE9E3",
 } as const;
 
 const DARK_PRIMITIVES = {
-  ivory: "#14131B",
-  paper: "#211F2B",
-  slate: "#ECEAF2",
-  oat: "#191821",
-  accent: "#A99BCB",
-  "accent-d": "#BBAFDA",
-  olive: "#82B793",
-  "olive-d": "#A0C9AB",
-  rust: "#D88C86",
-  "rust-d": "#E7A7A3",
-  warning: "#D0AF68",
-  "warning-dark": "#E0C485",
-  sky: "#A5A7B8",
-  "gray-100": "#292734",
-  "gray-200": "#302E3B",
-  "gray-300": "#393645",
-  "gray-500": "#AAA6B8",
-  "gray-700": "#D0CDD9",
+  ivory: "#17150F",
+  paper: "#221E17",
+  slate: "#F1ECE2",
+  oat: "#1B1812",
+  accent: "#6FAACB",
+  "accent-d": "#5A93B5",
+  olive: "#6FB07F",
+  "olive-d": "#9CCBA6",
+  rust: "#E0705F",
+  "rust-d": "#E8907F",
+  warning: "#D9A55F",
+  "warning-dark": "#D9A55F",
+  sky: "#7FB0CB",
+  "ink-3": "#948A79",
+  "gray-100": "#1B1812",
+  "gray-200": "#2A2620",
+  "gray-300": "#322D24",
+  "gray-500": "#A79F92",
+  "gray-700": "#C8C0B2",
 } as const;
 
 const DARK_QUADRANTS = {
-  q1: "#D88C86",
-  q2: "#83B2A8",
-  q3: "#D0AF68",
-  q4: "#A5A7B8",
-  "q1-ink": "#E7A7A3",
-  "q2-ink": "#A6CEC6",
-  "q3-ink": "#E0C485",
-  "q4-ink": "#C3C4D0",
-  "q1-wash": "#1C181E",
-  "q2-wash": "#171E1D",
-  "q3-wash": "#1E1B17",
-  "q4-wash": "#1B1B22",
-  "q1-header": "#352327",
-  "q2-header": "#253632",
-  "q3-header": "#352E20",
-  "q4-header": "#2C2C37",
+  q1: "#E0705F",
+  q2: "#6FAACB",
+  q3: "#CFB266",
+  q4: "#A9A096",
+  "q1-ink": "#E0705F",
+  "q2-ink": "#6FAACB",
+  "q3-ink": "#CFB266",
+  "q4-ink": "#A9A096",
+  "q1-wash": "#231914",
+  "q2-wash": "#171E1E",
+  "q3-wash": "#201D12",
+  "q4-wash": "#1E1B15",
+  "q1-header": "#3A211D",
+  "q2-header": "#173039",
+  "q3-header": "#322B17",
+  "q4-header": "#2A2620",
 } as const;
 
-const RETIRED_COLORS = ["#B23A2E", "#2C6680", "#8A6A22", "#6F685F", "#F4F1E9"];
+/* The Violet Frost palette (retired 2026-08 when web realigned with the iOS
+   app, gsdtaskmanager.com, and the brand kit). Saturated brand hexes only —
+   near-neutrals are excluded because raster anti-aliasing can synthesize them. */
+const RETIRED_COLORS = ["#5C4F7D", "#B95F5A", "#4D7A72", "#A99BCB", "#D88C86"];
 const RAW_SEMANTIC_HUE = /(?:bg|text|border|ring|outline|fill|stroke|shadow)-(?:red|rose|orange|amber|yellow|lime|green|emerald|teal|cyan|blue|indigo|violet|purple|fuchsia|pink)-\d{2,3}/g;
 
 function source(path: string): string {
@@ -136,7 +140,7 @@ async function pngColors(path: string): Promise<Set<string>> {
   return colors;
 }
 
-describe("Violet Frost theme contract", () => {
+describe("GSD Editorial theme contract", () => {
   it("defines the approved light primitives and quadrant palette", () => {
     const primitives = source("app/css/inkwell-tokens.css");
     const globals = source("app/globals.css");
@@ -148,7 +152,7 @@ describe("Violet Frost theme contract", () => {
     expect(contrast(LIGHT_PRIMITIVES.slate, LIGHT_PRIMITIVES.paper)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(LIGHT_PRIMITIVES["gray-500"], LIGHT_PRIMITIVES.paper)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(LIGHT_PRIMITIVES.accent, LIGHT_PRIMITIVES.paper)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast("#8D8C9D", LIGHT_PRIMITIVES.paper)).toBeGreaterThanOrEqual(3);
+    expect(contrast("#938A7B", LIGHT_PRIMITIVES.paper)).toBeGreaterThanOrEqual(3);
     for (const key of ["q1", "q2", "q3", "q4"] as const) {
       expect(contrast(QUADRANTS[`${key}-ink`], QUADRANTS[`${key}-header`])).toBeGreaterThanOrEqual(4.5);
     }
@@ -166,7 +170,7 @@ describe("Violet Frost theme contract", () => {
     expect(contrast(DARK_PRIMITIVES.slate, DARK_PRIMITIVES.paper)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(DARK_PRIMITIVES["gray-500"], DARK_PRIMITIVES.paper)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(DARK_PRIMITIVES.accent, DARK_PRIMITIVES.paper)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast("#6F6B80", DARK_PRIMITIVES.paper)).toBeGreaterThanOrEqual(3);
+    expect(contrast("#746A5B", DARK_PRIMITIVES.paper)).toBeGreaterThanOrEqual(3);
     for (const key of ["q1", "q2", "q3", "q4"] as const) {
       expect(contrast(DARK_QUADRANTS[`${key}-ink`], DARK_QUADRANTS[`${key}-header`])).toBeGreaterThanOrEqual(4.5);
     }
@@ -180,23 +184,23 @@ describe("Violet Frost theme contract", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("updates metadata, SVGs, and the linked report without retired Tidewater colors", () => {
+  it("updates metadata, SVGs, and the linked report without retired Violet Frost colors", () => {
     const manifest = JSON.parse(source("public/manifest.json")) as { background_color: string; theme_color: string };
-    expect(manifest).toMatchObject({ background_color: "#F3F3F7", theme_color: "#5C4F7D" });
+    expect(manifest).toMatchObject({ background_color: "#F4F1E9", theme_color: "#2C6680" });
     for (const path of ["public/favicon.svg", "public/icons/icon.svg", "public/og-image.svg", "public/docs/codebase-analysis-report.html"]) {
       const content = source(path);
-      expect(content).toContain("#5C4F7D");
+      expect(content).toContain("#2C6680");
       for (const retired of RETIRED_COLORS) expect(content.toUpperCase()).not.toContain(retired);
     }
     const standaloneFallbacks = `${source("app/global-error.tsx")}\n${source("public/docs/codebase-analysis-report.html")}`;
-    for (const value of ["#14131B", "#211F2B", "#ECEAF2", "#A99BCB"]) {
+    for (const value of ["#17150F", "#221E17", "#F1ECE2", "#6FAACB"]) {
       expect(standaloneFallbacks).toContain(value);
     }
-    expect(source("app/global-error.tsx")).toContain("--error-control-border: #6F6B80");
+    expect(source("app/global-error.tsx")).toContain("--error-control-border: #746A5B");
     expect(source("app/global-error.tsx")).toContain("border-color: var(--error-control-border)");
   });
 
-  it("updates every shipped raster asset without retired Tidewater colors", async () => {
+  it("updates every shipped raster asset without retired Violet Frost colors", async () => {
     const paths = [
       "public/icons/favicon-16.png",
       "public/icons/favicon-32.png",

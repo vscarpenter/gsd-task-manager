@@ -14,7 +14,7 @@ vi.mock('next/font/google', () => ({
   Geist: () => ({ className: 'mock-geist', variable: '--font-sans' }),
   Geist_Mono: () => ({ className: 'mock-geist-mono', variable: '--font-mono' }),
   Instrument_Serif: () => ({ className: 'mock-instrument', variable: '--font-instrument-serif' }),
-  Albert_Sans: () => ({ className: 'mock-albert', variable: '--font-albert' }),
+  Newsreader: () => ({ className: 'mock-newsreader', variable: '--font-newsreader' }),
 }));
 
 vi.mock('@/components/theme-provider', () => ({
