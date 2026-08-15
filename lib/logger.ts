@@ -22,6 +22,7 @@
  */
 
 import { captureException, captureMessage } from '@/lib/sentry';
+import { SENTRY_SAFE_METADATA_KEYS } from '@/lib/sentry-safe-keys';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -230,17 +231,6 @@ function maskError(error: Error): Error {
   masked.stack = error.stack ? maskSensitiveString(error.stack) : undefined;
   return masked;
 }
-
-/**
- * Diagnostic metadata keys that are safe to send to Sentry (an external SaaS).
- * Allowlist, not denylist: anything not listed — task `input`, PocketBase
- * `record`, etc. — is dropped so free-text user content never leaves the device.
- */
-const SENTRY_SAFE_METADATA_KEYS: ReadonlySet<string> = new Set([
-  'correlationId', 'userId', 'taskId', 'deviceId', 'phase', 'operation',
-  'action', 'trigger', 'triggeredBy', 'validationErrors', 'componentStack',
-  'count', 'attempt', 'status', 'statusCode', 'type', 'url', 'timestamp',
-]);
 
 /**
  * Keep only allowlisted, secret-masked diagnostic metadata. This is the single

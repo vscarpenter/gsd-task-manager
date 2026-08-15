@@ -62,6 +62,18 @@ interface TestSentryOptions {
   beforeSend?: (event: TestEvent) => TestEvent | null;
 }
 
+const mockEnvConfig = vi.hoisted(() => ({
+  environment: "production",
+  isDevelopment: false,
+  isProduction: true,
+  isStaging: false,
+  pocketBaseUrl: "https://api.vinny.io",
+}));
+
+vi.mock("@/lib/env-config", () => ({
+  ENV_CONFIG: mockEnvConfig,
+}));
+
 vi.mock("@sentry/browser", () => ({
   init: (...args: unknown[]) => {
     mockInit(...args);
@@ -79,6 +91,9 @@ describe("Sentry wrapper", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mockGetClient.mockReturnValue(undefined);
+    mockEnvConfig.environment = "production";
+    mockEnvConfig.isDevelopment = false;
+    mockEnvConfig.isProduction = true;
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
   });
 
@@ -102,6 +117,19 @@ describe("Sentry wrapper", () => {
         enabled: true,
       })
     );
+  });
+
+  it("should not initialize Sentry in development", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+    mockEnvConfig.environment = "development";
+    mockEnvConfig.isDevelopment = true;
+    mockEnvConfig.isProduction = false;
+
+    const { initSentry, isInitialized } = await import("@/lib/sentry");
+    initSentry();
+
+    expect(mockInit).not.toHaveBeenCalled();
+    expect(isInitialized()).toBe(false);
   });
 
   it("should not initialize Sentry when DSN is empty", async () => {
@@ -196,6 +224,35 @@ describe("Sentry wrapper", () => {
     expect(serializedOptions).not.toContain("context-secret");
     expect(serializedOptions).not.toContain("password-secret");
     expect(serializedOptions).toContain("***");
+  });
+
+  it("should not substitute its own stack for a stackless error", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureException } = await import("@/lib/sentry");
+    initSentry();
+
+    const error = new TypeError("native failure with no frames");
+    error.stack = undefined;
+    captureException(error);
+
+    const [capturedError] = mockCaptureException.mock.calls[0] as [Error];
+    expect(capturedError.name).toBe("TypeError");
+    expect(capturedError.stack).toBeUndefined();
+  });
+
+  it("should preserve well-known DOMException names for grouping", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureException } = await import("@/lib/sentry");
+    initSentry();
+
+    const error = new Error("quota hit");
+    error.name = "QuotaExceededError";
+    captureException(error);
+
+    const [capturedError] = mockCaptureException.mock.calls[0] as [Error];
+    expect(capturedError.name).toBe("QuotaExceededError");
   });
 
   it("should drop custom error properties, causes, and AggregateError members", async () => {
@@ -327,6 +384,38 @@ describe("Sentry wrapper", () => {
     expect(event?.user).toBeUndefined();
   });
 
+  it("should restore the vouched log message and keep allowlisted gsd context keys", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const event = options.beforeSend?.({
+      level: "error",
+      message: "RAW_MESSAGE_SENTINEL",
+      contexts: {
+        gsd: {
+          context: "sync-engine",
+          logMessage: "Sync failed",
+          action: "manual",
+          errorCode: "network_error",
+          taskTitle: "TASK_TITLE_SENTINEL",
+          input: "INPUT_SENTINEL",
+        },
+      },
+    });
+
+    expect(event?.message).toBe("Sync failed");
+    expect(event?.contexts).toEqual({
+      gsd: { context: "sync-engine", action: "manual", errorCode: "network_error" },
+    });
+    const serialized = JSON.stringify(event);
+    expect(serialized).not.toContain("RAW_MESSAGE_SENTINEL");
+    expect(serialized).not.toContain("TASK_TITLE_SENTINEL");
+    expect(serialized).not.toContain("INPUT_SENTINEL");
+  });
+
   it("should keep only structural HTTP breadcrumb data", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
 
@@ -420,8 +509,24 @@ describe("Sentry wrapper", () => {
 
     expect(mockCaptureMessage).toHaveBeenCalledWith("something went wrong", {
       level: "error",
-      contexts: { gsd: { action: "test" } },
+      contexts: { gsd: { action: "test", logMessage: "something went wrong" } },
     });
+  });
+
+  it("should embed a vouched masked copy of the message for beforeSend", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry, captureMessage } = await import("@/lib/sentry");
+    initSentry();
+
+    captureMessage("sync failed with token=abc123", { action: "push" });
+
+    const [, capturedOptions] = mockCaptureMessage.mock.calls[0] as [
+      string,
+      { contexts?: { gsd?: Record<string, unknown> } },
+    ];
+    expect(capturedOptions.contexts?.gsd?.logMessage).toBe("sync failed with token=***");
+    expect(capturedOptions.contexts?.gsd?.action).toBe("push");
   });
 
   it("should mask token-bearing messages and message context before capture", async () => {
