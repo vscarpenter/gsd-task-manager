@@ -5,6 +5,16 @@ import { SENTRY_SAFE_METADATA_KEYS } from "@/lib/sentry-safe-keys";
 
 const REDACTED = "***";
 const REDACTED_ERROR_MESSAGE = "Error details redacted";
+// Fixed labels for React's minified production errors. Only the error number
+// is read from the original message — never its args, which can carry DOM
+// text. Keeping the number makes hydration failures identifiable in Sentry
+// instead of collapsing into the generic redaction.
+const REACT_ERROR_PATTERN = /react\.dev\/errors\/(\d{3})/;
+const REACT_ERROR_LABELS: Record<string, string> = {
+  "418": "hydration mismatch",
+  "423": "root switched to client render",
+  "425": "hydration text mismatch",
+};
 const CAPTURE_QUERY_KEYS = ["action", "title", "url", "tags"] as const;
 const MAX_CONTEXT_DEPTH = 4;
 const MAX_CONTEXT_KEYS = 30;
@@ -428,7 +438,7 @@ function sanitizeEventException(
 
       return {
         type,
-        value: REDACTED_ERROR_MESSAGE,
+        value: describeExceptionValue(value.value),
         ...(value.mechanism
           ? {
               mechanism: {
@@ -443,6 +453,21 @@ function sanitizeEventException(
       };
     }),
   };
+}
+
+/**
+ * Redact an exception message, preserving only a React minified-error number
+ * (a fixed framework vocabulary, no user content) when one is present.
+ */
+function describeExceptionValue(raw: unknown): string {
+  if (typeof raw === "string") {
+    const match = raw.match(REACT_ERROR_PATTERN);
+    if (match) {
+      const label = REACT_ERROR_LABELS[match[1]];
+      return `React minified error #${match[1]}${label ? ` (${label})` : ""}`;
+    }
+  }
+  return REDACTED_ERROR_MESSAGE;
 }
 
 /**

@@ -384,6 +384,33 @@ describe("Sentry wrapper", () => {
     expect(event?.user).toBeUndefined();
   });
 
+  it("should label React minified errors by number instead of generic redaction", async () => {
+    process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
+
+    const { initSentry } = await import("@/lib/sentry");
+    initSentry();
+
+    const options = mockInit.mock.calls[0]?.[0] as TestSentryOptions;
+    const event = options.beforeSend?.({
+      level: "error",
+      exception: {
+        values: [
+          {
+            type: "Error",
+            value:
+              "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]=TASK_ARG_SENTINEL for the full message",
+            mechanism: { type: "onerror", handled: false },
+          },
+        ],
+      },
+    });
+
+    expect(event?.exception?.values?.[0]?.value).toBe(
+      "React minified error #418 (hydration mismatch)"
+    );
+    expect(JSON.stringify(event)).not.toContain("TASK_ARG_SENTINEL");
+  });
+
   it("should restore the vouched log message and keep allowlisted gsd context keys", async () => {
     process.env.NEXT_PUBLIC_SENTRY_DSN = "https://key@sentry.io/123";
 
