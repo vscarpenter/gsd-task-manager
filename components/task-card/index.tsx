@@ -54,7 +54,7 @@ export function TaskCard({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : undefined,
-    // Violet Frost floats the panes, so cards need a whisper of elevation to sit
+    // The panes float on the canvas, so cards need a whisper of elevation to sit
     // *on* the pane rather than dissolve into it — the 1px border alone reads
     // at 1.25:1 against the pane ground. Drag still gets the full lift.
     boxShadow: isDragging ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',

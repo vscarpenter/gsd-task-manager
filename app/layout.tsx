@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Albert_Sans } from "next/font/google";
+import { Newsreader } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ToastProvider } from "@/components/ui/toast";
@@ -61,18 +61,19 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://*.ingest.us.sentry.io",
     ].join(" ");
 
-// Violet Frost runs one family everywhere; the editorial serif is retired. Albert
-// Sans is a geometric humanist with a tall x-height, so it stays legible at the
-// 11-12px chip sizes the matrix leans on while still carrying a 40px stat hero.
-// next/font self-hosts it (no runtime Google Fonts request, so no CSP/connect-src
-// change) and emits the @font-face at build time under output:export. Exposed as
-// --font-albert, which BOTH the --sans and --serif token chains reference —
-// --serif is kept aliased so any straggling call site degrades to the same face.
-const albertSans = Albert_Sans({
+// Two-voice editorial type, shared with the iOS app and gsdtaskmanager.com.
+// Apple's "New York" serif (used for display headlines) only exists on Apple
+// devices; Newsreader is the cross-platform stand-in with near-identical
+// proportions. next/font self-hosts it (no runtime Google Fonts request, so no
+// CSP/connect-src change) and emits the @font-face at build time under
+// output:export. Exposed as --font-newsreader, which the --serif token chain
+// references; the working UI stays on the system sans stack for legibility at
+// the 11-12px chip sizes the matrix leans on.
+const newsreader = Newsreader({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
-  variable: "--font-albert",
+  variable: "--font-newsreader",
   display: "swap",
 });
 
@@ -107,8 +108,8 @@ export const viewport: Viewport = {
   userScalable: true,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F3F3F7" },
-    { media: "(prefers-color-scheme: dark)", color: "#14131B" },
+    { media: "(prefers-color-scheme: light)", color: "#F4F1E9" },
+    { media: "(prefers-color-scheme: dark)", color: "#17150F" },
   ],
 };
 
@@ -192,7 +193,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={albertSans.variable}
+      className={newsreader.variable}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

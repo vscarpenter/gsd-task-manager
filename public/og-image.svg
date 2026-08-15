@@ -1,42 +1,42 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Violet Frost canvas -->
-  <rect width="1200" height="630" fill="#F3F3F7" />
+  <!-- Warm paper ground -->
+  <rect width="1200" height="630" fill="#F4F1E9" />
 
   <!-- App mark: 2x2 matrix in the four pigments with a check on Do First (rust) -->
   <g transform="translate(120, 175)">
-    <rect x="0"   y="0"   width="130" height="130" rx="20" fill="#B95F5A" />
-    <rect x="150" y="0"   width="130" height="130" rx="20" fill="#4D7A72" />
-    <rect x="0"   y="150" width="130" height="130" rx="20" fill="#A17D37" />
-    <rect x="150" y="150" width="130" height="130" rx="20" fill="#7A7D8E" />
-    <path d="M37 65 L55 83 L92 42" fill="none" stroke="#FDFDFF"
+    <rect x="0"   y="0"   width="130" height="130" rx="20" fill="#B23A2E" />
+    <rect x="150" y="0"   width="130" height="130" rx="20" fill="#2C6680" />
+    <rect x="0"   y="150" width="130" height="130" rx="20" fill="#8A6A22" />
+    <rect x="150" y="150" width="130" height="130" rx="20" fill="#6F685F" />
+    <path d="M37 65 L55 83 L92 42" fill="none" stroke="#F4F1E9"
           stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
   </g>
 
   <!-- Title (editorial serif) -->
   <text x="500" y="245" font-family="Georgia, 'Times New Roman', serif"
-        font-size="60" font-weight="600" fill="#242331" letter-spacing="-1.5">
+        font-size="60" font-weight="600" fill="#211E1A" letter-spacing="-1.5">
     GSD Task Manager
   </text>
 
-  <!-- Subtitle (muted violet-gray) -->
+  <!-- Subtitle (graphite) -->
   <text x="500" y="320" font-family="system-ui, -apple-system, sans-serif"
-        font-size="34" font-weight="400" fill="#646477">
+        font-size="34" font-weight="400" fill="#6E6760">
     Get the right things done with a
   </text>
   <text x="500" y="366" font-family="system-ui, -apple-system, sans-serif"
-        font-size="34" font-weight="400" fill="#646477">
+        font-size="34" font-weight="400" fill="#6E6760">
     privacy-first Eisenhower matrix.
   </text>
 
-  <!-- Restraint: a single aubergine accent on the feature pills -->
+  <!-- Restraint: a single tide accent on the feature pills, graphite elsewhere -->
   <g transform="translate(500, 430)" font-family="system-ui, -apple-system, sans-serif">
-    <rect x="0" y="0" width="186" height="50" rx="25" fill="#5C4F7D" fill-opacity="0.1" stroke="#5C4F7D" stroke-width="1.5" />
-    <text x="93" y="32" font-size="18" font-weight="600" fill="#5C4F7D" text-anchor="middle">Privacy-First</text>
+    <rect x="0" y="0" width="186" height="50" rx="25" fill="#2C6680" fill-opacity="0.1" stroke="#2C6680" stroke-width="1.5" />
+    <text x="93" y="32" font-size="18" font-weight="600" fill="#2C6680" text-anchor="middle">Privacy-First</text>
 
-    <rect x="206" y="0" width="150" height="50" rx="25" fill="#5C4F7D" fill-opacity="0.1" stroke="#5C4F7D" stroke-width="1.5" />
-    <text x="281" y="32" font-size="18" font-weight="600" fill="#5C4F7D" text-anchor="middle">Offline PWA</text>
+    <rect x="206" y="0" width="150" height="50" rx="25" fill="#2C6680" fill-opacity="0.1" stroke="#2C6680" stroke-width="1.5" />
+    <text x="281" y="32" font-size="18" font-weight="600" fill="#2C6680" text-anchor="middle">Offline PWA</text>
 
-    <rect x="376" y="0" width="100" height="50" rx="25" fill="#5C4F7D" fill-opacity="0.1" stroke="#5C4F7D" stroke-width="1.5" />
-    <text x="426" y="32" font-size="18" font-weight="600" fill="#5C4F7D" text-anchor="middle">Free</text>
+    <rect x="376" y="0" width="100" height="50" rx="25" fill="#2C6680" fill-opacity="0.1" stroke="#2C6680" stroke-width="1.5" />
+    <text x="426" y="32" font-size="18" font-weight="600" fill="#2C6680" text-anchor="middle">Free</text>
   </g>
 </svg>

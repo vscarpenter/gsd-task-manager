@@ -63,8 +63,8 @@ export function StatsCard({
               </span>
             ) : null}
           </div>
-          {/* 40px, not 48: Albert Sans carries more optical weight than the
-              retired serif did, so the old size read as shouting. */}
+          {/* 40px, not 48: at this weight the metric already dominates the card,
+              so the larger size read as shouting. */}
           <p
             className="mt-3 text-[40px] font-semibold leading-none tabular-nums text-foreground"
             style={{ letterSpacing: "-0.02em" }}
