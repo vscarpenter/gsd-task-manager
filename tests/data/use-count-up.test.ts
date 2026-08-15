@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useCountUp } from "@/lib/use-count-up";
@@ -67,5 +69,23 @@ describe("useCountUp", () => {
     expect(result.current).toBe("42");
     expect(rafSpy).not.toHaveBeenCalled();
     rafSpy.mockRestore();
+  });
+
+  // The static export prerenders every count-up as "0". If a reduced-motion
+  // client's hydration render produced the target instead, React would see
+  // mismatched text and throw #418 — so the server-rendered value must be "0"
+  // regardless of the motion preference, with the jump to the target deferred
+  // until after hydration (useSyncExternalStore's server snapshot guarantees
+  // the hydration render matches this prerender).
+  it("prerenders 0 even when the environment reports reduced motion", () => {
+    vi.mocked(prefersReducedMotion).mockImplementation(() => true);
+    try {
+      function Probe() {
+        return createElement("span", null, useCountUp(42));
+      }
+      expect(renderToString(createElement(Probe))).toContain(">0<");
+    } finally {
+      vi.mocked(prefersReducedMotion).mockImplementation(() => false);
+    }
   });
 });

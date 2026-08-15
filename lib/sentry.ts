@@ -1,9 +1,20 @@
 import * as Sentry from "@sentry/browser";
 import type { Breadcrumb, ErrorEvent } from "@sentry/browser";
 import { ENV_CONFIG } from "@/lib/env-config";
+import { SENTRY_SAFE_METADATA_KEYS } from "@/lib/sentry-safe-keys";
 
 const REDACTED = "***";
 const REDACTED_ERROR_MESSAGE = "Error details redacted";
+// Fixed labels for React's minified production errors. Only the error number
+// is read from the original message — never its args, which can carry DOM
+// text. Keeping the number makes hydration failures identifiable in Sentry
+// instead of collapsing into the generic redaction.
+const REACT_ERROR_PATTERN = /react\.dev\/errors\/(\d{3})/;
+const REACT_ERROR_LABELS: Record<string, string> = {
+  "418": "hydration mismatch",
+  "423": "root switched to client render",
+  "425": "hydration text mismatch",
+};
 const CAPTURE_QUERY_KEYS = ["action", "title", "url", "tags"] as const;
 const MAX_CONTEXT_DEPTH = 4;
 const MAX_CONTEXT_KEYS = 30;
@@ -11,18 +22,35 @@ const MAX_CONTEXT_ARRAY_ITEMS = 20;
 const MAX_EVENT_BREADCRUMBS = 50;
 const MAX_EVENT_EXCEPTIONS = 10;
 const MAX_STACK_FRAMES = 100;
+// Fixed vocabulary only — names carry no user content. The DOMException names
+// cover IndexedDB, AbortController, and permission failures so stackless
+// errors from those APIs still group by cause instead of collapsing to "Error".
 const SAFE_ERROR_TYPES = new Set([
+  "AbortError",
   "AggregateError",
   "ApiError",
+  "ClientResponseError",
+  "ConstraintError",
+  "DataError",
   "DOMException",
   "Error",
   "EvalError",
+  "InvalidStateError",
+  "NetworkError",
+  "NotAllowedError",
+  "NotFoundError",
   "PocketBaseError",
+  "QuotaExceededError",
   "RangeError",
   "ReferenceError",
+  "SecurityError",
   "SyntaxError",
+  "TimeoutError",
+  "TransactionInactiveError",
   "TypeError",
+  "UnknownError",
   "URIError",
+  "VersionError",
   "ZodError",
 ]);
 const SAFE_APP_ROUTE_PATHS = new Set([
@@ -40,6 +68,13 @@ const SAFE_APP_ROUTE_PATHS = new Set([
   "/sync-history",
   "/sync-history/",
 ]);
+// `context` is the logger's fixed context name; `logMessage` is the vouched
+// copy of an already-masked log message that only our captureMessage writes.
+const SAFE_GSD_CONTEXT_KEYS: ReadonlySet<string> = new Set([
+  "context",
+  "logMessage",
+  ...SENTRY_SAFE_METADATA_KEYS,
+]);
 const SENSITIVE_KEY_PATTERN =
   /(?:password|passcode|secret|token|api[_-]?key|apikey|authorization|auth|session|cookie|refresh|access[_-]?token)/i;
 const SENSITIVE_ASSIGNMENT_PATTERN =
@@ -53,7 +88,11 @@ const BEARER_PATTERN = /\bBearer\s+[A-Za-z0-9._~+/=-]+/gi;
 export function initSentry(): void {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
-  if (!dsn) {
+  // Development stays local: dev sessions produced most of the Sentry noise
+  // (78% of the highest-volume issue) while never representing real users.
+  // To test capture end-to-end, use staging or temporarily lift this gate —
+  // see .claude/skills/sentry-verification/SKILL.md.
+  if (!dsn || ENV_CONFIG.isDevelopment) {
     return;
   }
 
@@ -82,6 +121,11 @@ export function captureException(
 /**
  * Capture a string message as an error-level Sentry event.
  * Used for logged errors that carry no Error object (e.g. validation failures).
+ *
+ * The masked message rides along as `contexts.gsd.logMessage` because the
+ * `beforeSend` allowlist drops the untrusted top-level `message` field; only
+ * this vouched copy — written exclusively here, after masking — is promoted
+ * back to `message` on the outgoing event.
  */
 export function captureMessage(
   message: string,
@@ -89,9 +133,15 @@ export function captureMessage(
 ): void {
   if (!Sentry.getClient()) return;
 
-  Sentry.captureMessage(maskSensitiveString(message), {
+  const masked = maskSensitiveString(message);
+  Sentry.captureMessage(masked, {
     level: "error",
-    ...(context ? { contexts: { gsd: sanitizeContext(context) } } : {}),
+    contexts: {
+      gsd: {
+        ...(context ? sanitizeContext(context) : {}),
+        logMessage: masked,
+      },
+    },
   });
 }
 
@@ -110,6 +160,11 @@ function sanitizeException(error: unknown): Error {
       .slice(1, MAX_STACK_FRAMES + 1)
       .map((line) => maskSensitiveString(line));
     sanitized.stack = [`${sanitized.name}: ${REDACTED_ERROR_MESSAGE}`, ...frames].join("\n");
+  } else {
+    // A stackless original must stay stackless. Leaving the copy's own stack
+    // in place would point every such event at this wrapper and collapse all
+    // stackless errors into one misleading Sentry issue.
+    sanitized.stack = undefined;
   }
 
   // Deliberately do not copy custom properties, `cause`, or AggregateError
@@ -276,6 +331,17 @@ function sanitizeEvent(event: ErrorEvent): ErrorEvent {
         .map((breadcrumb) => sanitizeBreadcrumb(breadcrumb));
     }
 
+    const gsd = sanitizeEventGsdContext(event.contexts);
+    if (gsd) {
+      const { logMessage, ...rest } = gsd;
+      if (typeof logMessage === "string") {
+        sanitized.message = logMessage;
+      }
+      if (Object.keys(rest).length > 0) {
+        sanitized.contexts = { gsd: rest };
+      }
+    }
+
     return sanitized;
   } catch {
     return minimalSafeEvent(event);
@@ -372,7 +438,7 @@ function sanitizeEventException(
 
       return {
         type,
-        value: REDACTED_ERROR_MESSAGE,
+        value: describeExceptionValue(value.value),
         ...(value.mechanism
           ? {
               mechanism: {
@@ -387,6 +453,45 @@ function sanitizeEventException(
       };
     }),
   };
+}
+
+/**
+ * Redact an exception message, preserving only a React minified-error number
+ * (a fixed framework vocabulary, no user content) when one is present.
+ */
+function describeExceptionValue(raw: unknown): string {
+  if (typeof raw === "string") {
+    const match = raw.match(REACT_ERROR_PATTERN);
+    if (match) {
+      const label = REACT_ERROR_LABELS[match[1]];
+      return `React minified error #${match[1]}${label ? ` (${label})` : ""}`;
+    }
+  }
+  return REDACTED_ERROR_MESSAGE;
+}
+
+/**
+ * Keep only allowlisted keys of the app's own `gsd` context, re-masked. All
+ * other contexts (and non-allowlisted gsd keys) stay dropped — they may carry
+ * task content from any capture path.
+ */
+function sanitizeEventGsdContext(
+  contexts: ErrorEvent["contexts"]
+): Record<string, unknown> | undefined {
+  const gsd = contexts?.gsd;
+  if (!gsd || typeof gsd !== "object" || Array.isArray(gsd)) {
+    return undefined;
+  }
+
+  const allowed = Object.fromEntries(
+    Object.entries(gsd as Record<string, unknown>).filter(([key]) =>
+      SAFE_GSD_CONTEXT_KEYS.has(key)
+    )
+  );
+  if (Object.keys(allowed).length === 0) {
+    return undefined;
+  }
+  return sanitizeRecord(allowed, new WeakSet(), 0);
 }
 
 function sanitizeTelemetryUrl(
