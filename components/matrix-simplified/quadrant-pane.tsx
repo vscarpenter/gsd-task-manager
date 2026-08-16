@@ -215,7 +215,7 @@ function CappedActiveList({
           type="button"
           onClick={() => setShowAll((open) => !open)}
           aria-expanded={showAll}
-          className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium tabular-nums text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <ChevronRightIcon
             className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-90")}
@@ -256,7 +256,7 @@ function CompletedDisclosure({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium tabular-nums text-foreground-muted transition-colors hover:bg-background-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ChevronRightIcon
           className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")}
