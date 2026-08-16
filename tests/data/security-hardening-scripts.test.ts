@@ -56,6 +56,16 @@ describe('security hardening scripts and workflows', () => {
     expect(workflow).toContain('fetch-depth: 0');
   });
 
+  it('publishes to npm via OIDC trusted publishing instead of a long-lived token', () => {
+    const workflow = readRepoFile('.github/workflows/publish-mcp-server.yml');
+
+    expect(workflow).toContain('id-token: write');
+    expect(workflow).not.toContain('NPM_TOKEN');
+    // npm CLI >=11.5.1 (bundled with Node 24) is required for the OIDC exchange.
+    expect(workflow).toContain("node-version: '24'");
+    expect(workflow).not.toContain("node-version: '20'");
+  });
+
   it('deletes stale HTML and service-worker objects during production deploy sync', () => {
     const deployScript = readRepoFile('scripts/deploy-app.sh');
     const htmlSyncStart = deployScript.indexOf('Syncing HTML files and service worker');
