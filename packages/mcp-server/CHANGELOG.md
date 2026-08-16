@@ -5,6 +5,30 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-08-16
+
+Catch-up release. npm last saw 1.2.1, so this version also carries the 1.2.2
+and 1.2.3 changes below to the registry.
+
+### Changed
+- **Cached auth principals are now isolated per token, and tool dispatch is
+  typed** (#469). Two clients with different tokens no longer share cache
+  entries.
+- **Audit remediation across the PocketBase client, tool handlers, and
+  write-op helpers** (#470).
+- **The setup wizard and `--validate` diagnostics redact the PocketBase host
+  in their output** (#472), matching the redaction already applied to client
+  error messages.
+
+### Dependencies
+- `pocketbase` 0.27.1 to 0.27.3
+- `@sentry/node` 10.67.0 to 10.70.0 (#470)
+
+## [1.2.3] - 2026-07-21
+
+### Dependencies
+- `@sentry/node` 10.65.0 to 10.67.0 (#447)
+
 ## [1.2.2] - 2026-06-30 🔒
 
 Security hardening. Closes a gap left by 1.1.4: the exact-match `pocketBaseUrl`
