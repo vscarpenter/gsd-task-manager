@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightIcon, ZapIcon } from "lucide-react";
+import { ArrowRightIcon, ArrowUpRightIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import {
   quadrantByRdKey,
@@ -210,14 +210,15 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
               style={{ animationDelay: "40ms" }}
               className="touch-target col-start-3 row-start-2 inline-flex items-center gap-1 justify-self-end rounded-md px-2 py-1 text-caption font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 animate-quadrant-pill-in sm:col-auto sm:row-auto"
             >
-              Details ↗
+              Details
+              <ArrowUpRightIcon className="h-3.5 w-3.5" aria-hidden />
             </button>
           ) : null}
         </>
       ) : (
-        <span className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex">
+        <kbd className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex">
           n
-        </span>
+        </kbd>
       )}
       <button
         data-testid="submit-task"

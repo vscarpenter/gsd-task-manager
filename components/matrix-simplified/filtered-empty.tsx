@@ -24,7 +24,7 @@ export function FilteredEmpty({ query, viewName, onClear }: FilteredEmptyProps) 
   return (
     <div
       data-testid="filtered-empty"
-      className="col-span-full flex flex-col items-center justify-center gap-3 rounded-[20px] border border-pane-border bg-card/60 px-6 py-16 text-center"
+      className="col-span-full flex flex-col items-center justify-center gap-3 rounded-xl border border-pane-border bg-card/60 px-6 py-16 text-center"
     >
       <SearchXIcon className="h-6 w-6 text-foreground-muted" aria-hidden="true" />
       <div className="space-y-1">
@@ -36,7 +36,7 @@ export function FilteredEmpty({ query, viewName, onClear }: FilteredEmptyProps) 
       <button
         type="button"
         onClick={onClear}
-        className="rounded-full border border-pane-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-background-muted"
+        className="touch-target rounded-full border border-pane-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
         {query.trim() ? "Clear search" : "Clear filter"}
       </button>
