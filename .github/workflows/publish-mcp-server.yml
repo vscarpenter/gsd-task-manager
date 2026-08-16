@@ -53,11 +53,14 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Setup Node (npm registry)
+      # No registry-url here: setup-node's registry-url writes an .npmrc that
+      # references ${NODE_AUTH_TOKEN}, which npm errors on when the var is
+      # unset. Trusted publishing needs no .npmrc — npm >=11.5.1 (Node 24)
+      # exchanges the workflow's OIDC token with npmjs directly.
+      - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: '24'
 
       - name: Verify tag matches package.json version
         if: github.event_name == 'push'
@@ -86,11 +89,12 @@ jobs:
       - name: Build
         run: bun run build
 
+      # Auth is OIDC trusted publishing (id-token: write above + the trusted
+      # publisher configured on npmjs.com for this repo/workflow/environment).
+      # No long-lived token: nothing to expire, nothing to leak.
       - name: Publish to npm
         if: github.event_name == 'push' || inputs.dry_run == false
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Rewrite package name for GitHub Packages
         if: github.event_name == 'push' || inputs.dry_run == false
@@ -110,7 +114,7 @@ jobs:
         if: github.event_name == 'push' || inputs.dry_run == false
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@${{ github.repository_owner }}'
 

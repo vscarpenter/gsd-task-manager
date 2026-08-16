@@ -28,8 +28,9 @@
       { "files": ["components/ui/label.tsx"], "rules": ["react-doctor/label-has-associated-control"] },
       // Links a static .html asset (not an App Router route); next/link would break it.
       { "files": ["components/settings/about-section.tsx"], "rules": ["react-doctor/nextjs-no-a-element"] },
-      // YAML workflow: NPM_TOKEN is scoped to the publish step, so the install
-      // step runs without the secret in its environment.
+      // YAML workflow: npmjs auth is OIDC trusted publishing (no secret at all);
+      // GITHUB_TOKEN is scoped to the GitHub Packages publish step, so the
+      // install step runs without any secret in its environment.
       { "files": [".github/workflows/publish-mcp-server.yml"], "rules": ["react-doctor/build-pipeline-secret-boundary"] },
       // Static HTML report intentionally linked from the About page.
       { "files": ["public/docs/**"], "rules": ["react-doctor/public-debug-artifact"] }

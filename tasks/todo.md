@@ -1,41 +1,34 @@
-# UI Polish Pass (/ui-craft polish) — 2026-08-16
+# Status — 2026-08-16
 
-Standard tier. Target: v9 single-matrix shell. CRAFT_LEVEL 7 → review.md
-Polish Pass applied; signature ("quadrant stated twice") verified intact and
-left as-built.
+## UI Polish Pass (/ui-craft polish) — DONE
 
-## Resuming From Here
+Shipped as PR #504 (squash-merged to main as 942cab9); local + remote branch
+deleted. Verified live before push (SW busted, DOM assertions, clean console).
 
-Done (committed on `style/matrix-polish-pass`):
-- capture-bar: "Details ↗" glyph → Lucide ArrowUpRightIcon; `n` hint span → kbd
-- filtered-empty: rounded-[20px] → rounded-xl (token scale); clear button
-  gains touch-target + focus-visible accent ring (a11y floor)
-- task-card-actions: bare `transition` → `transition-opacity` on hover reveal
-- quadrant-pane: tabular-nums on the "N more" / "N done" disclosure counts
-- Gates green: 2780 tests, typecheck, lint
+## gsd-mcp-server 1.2.4 publish — DONE
 
-Next:
-- Run /verify-frontend-change (browser check) before any push/PR — changes are
-  class/markup-only and unit-covered, so this was deferred
-- Push + PR only on user go-ahead
-- Optional next rung: /finalize (pre-ship gate)
+npm serves 1.2.4 (latest); GitHub Packages published.
 
-Assumptions:
-- No version bump: package.json/sw.js already carry an uncommitted 12.0.1
-  bump (deliberate leftover from a prior session); entangling it here would
-  sweep unrelated changes into the polish commit
+- Leaked npm token: REVOKED by user 2026-08-16. No replacement token needed —
+  the workflow now uses OIDC Trusted Publishing (see below). The dead
+  `NPM_TOKEN` GitHub secret can be deleted (`gh secret delete NPM_TOKEN`).
 
-Blockers: none.
+## OIDC Trusted Publishing — workflow side DONE, npmjs.com side PENDING (user)
 
----
+publish-mcp-server.yml now authenticates to npmjs via OIDC: Node 24 (npm
+≥11.5.1), no NPM_TOKEN, no registry-url on the npmjs setup-node (its .npmrc
+would reference an unset ${NODE_AUTH_TOKEN} and npm errors). GitHub Packages
+leg unchanged (GITHUB_TOKEN). Guard test added to
+security-hardening-scripts.test.ts.
 
-# Previous task: Publish gsd-mcp-server 1.2.4 (DONE)
+Before the next `mcp-v*` release the user must configure the trusted
+publisher on npmjs.com (package gsd-mcp-server → Settings → Publishing
+access): GitHub Actions / vscarpenter / gsd-task-manager /
+`publish-mcp-server.yml` / environment `mcp-release`. Until then a publish
+fails auth — that failure is the expected signal that config is missing.
 
-Outstanding (user):
-- REVOKE the npm token used 2026-08-16 on npmjs.com — it leaked into shell
-  history/transcript during `gh secret set` (was passed as the secret name).
-  Mint a replacement and `gh secret set NPM_TOKEN` before the next release.
+## Working-tree leftovers (deliberate, uncommitted on main)
 
-Optional follow-up: switch to npm Trusted Publishing (OIDC) so the token
-never expires again; requires npmjs.com config + bumping the workflow's
-setup-node to Node 24 (npm ≥11.5 needed for OIDC).
+bun.lock + package.json (stagehand ^4.0.1 bump) and public/sw.js
+(CACHE_VERSION 12.0.1) — pre-staged version-bump material from a prior
+session; commit them with the next release, not with feature work.
