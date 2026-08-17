@@ -228,10 +228,13 @@
     --rail: #1B1812;
     --topbar: #1B1812;
 
-    --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
-    --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
-    --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
-    --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
+    /* Elevation reads as a 1px light ring plus a faint drop — black blur
+       alone disappears into the dark canvas, so the ring carries the edge
+       and the blur only hints at depth. Ring alpha steps with elevation. */
+    --shadow-sm:         0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px  rgba(0, 0, 0, 0.35);
+    --shadow-md:         0 0 0 1px rgba(255, 255, 255, 0.07), 0 4px 14px rgba(0, 0, 0, 0.40);
+    --shadow-lg:         0 0 0 1px rgba(255, 255, 255, 0.09), 0 12px 28px rgba(0, 0, 0, 0.45);
+    --shadow-card-hover: 0 0 0 1px rgba(255, 255, 255, 0.09), 0 10px 30px rgba(0, 0, 0, 0.40);
 
     --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
 
@@ -294,10 +297,13 @@
   --rail: #1B1812;
   --topbar: #1B1812;
 
-  --shadow-sm:         0 1px 2px  rgba(0, 0, 0, 0.45);
-  --shadow-md:         0 4px 14px rgba(0, 0, 0, 0.50);
-  --shadow-lg:         0 12px 28px rgba(0, 0, 0, 0.55);
-  --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.50);
+  /* Elevation reads as a 1px light ring plus a faint drop — black blur
+     alone disappears into the dark canvas, so the ring carries the edge
+     and the blur only hints at depth. Ring alpha steps with elevation. */
+  --shadow-sm:         0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px  rgba(0, 0, 0, 0.35);
+  --shadow-md:         0 0 0 1px rgba(255, 255, 255, 0.07), 0 4px 14px rgba(0, 0, 0, 0.40);
+  --shadow-lg:         0 0 0 1px rgba(255, 255, 255, 0.09), 0 12px 28px rgba(0, 0, 0, 0.45);
+  --shadow-card-hover: 0 0 0 1px rgba(255, 255, 255, 0.09), 0 10px 30px rgba(0, 0, 0, 0.40);
 
   --backdrop: rgba(0, 0, 0, 0.6);                  /* pure-black scrim for dark surfaces */
 
