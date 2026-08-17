@@ -185,6 +185,14 @@
   --status-success-muted:  var(--olive-tint);
   --status-success-ink:    var(--olive-d);
 
+  /* Terminal panel — a fixed dark surface in BOTH themes: a terminal that
+     flipped light with the theme would read as a form field, not a console.
+     Light reuses the slate ink hex as ground; dark drops below the canvas
+     so the panel still reads distinct. */
+  --terminal-bg:    #211E1A;
+  --terminal-ink:   #F1ECE2;
+  --terminal-muted: #A79F92;
+
   /* Component-tier shadow aliases. */
   --shadow-card:   var(--shadow-sm);
   --shadow-column: var(--shadow-sm);
@@ -208,6 +216,8 @@
     --ink-hint: #877D6D;
     /* On dark the neutral pigment is already light enough to read as text. */
     --status-blocking-ink: var(--sky);
+    /* Below the canvas (#17150F) so the fixed-dark panel stays distinct. */
+    --terminal-bg: #11100B;
   }
 }
 :root[data-theme="dark"] {
@@ -219,6 +229,7 @@
 
   --ink-hint: #877D6D;
   --status-blocking-ink: var(--sky);
+  --terminal-bg: #11100B;
 }
 
 /* =====================================================================

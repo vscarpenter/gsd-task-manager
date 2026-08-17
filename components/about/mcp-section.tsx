@@ -1,4 +1,5 @@
 import { ScrollReveal } from "@/components/about/scroll-reveal";
+import { TerminalBlock } from "@/components/about/terminal-block";
 
 const exampleQueries = [
   '"What are my urgent tasks this week?"',
@@ -53,16 +54,10 @@ export function McpSection() {
 
           {/* Code column */}
           <ScrollReveal className="mt-10 lg:mt-0" delay={200}>
-            <p className="text-[10px] uppercase tracking-widest text-foreground-muted mb-2 font-medium">
-              Claude Desktop Config
-            </p>
-            <div className="rounded-xl border border-border bg-background-muted p-4 sm:p-6 overflow-x-auto">
-              <pre>
-                <code className="text-sm font-mono leading-relaxed text-foreground-muted">
-                  {claudeDesktopConfig}
-                </code>
-              </pre>
-            </div>
+            <TerminalBlock
+              label="Claude Desktop config"
+              code={claudeDesktopConfig}
+            />
           </ScrollReveal>
         </div>
       </div>
