@@ -303,7 +303,9 @@ display, headlines, section heads, and card titles.
 legible at the 11–12px chip sizes the matrix leans on.
 
 **Functional mono:** System mono, reserved for code and keyboard notation when equal-width glyphs
-carry meaning.
+carry meaning — plus one editorial exception: the uppercase kicker voice (`.kicker`, 11px mono at
+0.08em tracking), the sanctioned eyebrow treatment on marketing and docs surfaces. Mono never
+carries body text.
 
 This is the same two-voice pairing as the iOS app (New York titles over SF body) and
 gsdtaskmanager.com (Newsreader over system sans).

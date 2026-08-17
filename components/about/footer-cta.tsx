@@ -10,7 +10,7 @@ export function FooterCta({ version }: FooterCtaProps) {
     <section className="bg-gradient-to-b from-background-muted/20 to-background py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
-          <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
+          <p className="kicker mb-4 text-foreground-muted">
             Ready When You Are
           </p>
           <h2 className="mb-4 text-h2 font-semibold tracking-tight text-foreground sm:text-h1">

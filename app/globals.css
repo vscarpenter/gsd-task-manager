@@ -321,7 +321,8 @@ body {
 
 /* The Two-Voice Rule (DESIGN.md): the serif carries display and headings,
    the sans carries working UI. The ramp's four heading steps are the serif
-   voice; body/small/caption/eyebrow stay sans. Unlayered like `body` above,
+   voice; body/small/caption stay sans, and the uppercase kicker voice is
+   mono via `.kicker`. Unlayered like `body` above,
    not inside @layer components — not to beat the `.text-h1` etc. utilities
    (the @theme text sizes emit no font-family, so there's no property
    collision there), but so this rule also wins against any future
@@ -378,6 +379,18 @@ main {
     @apply appearance-none border-0 bg-transparent p-0;
     font: inherit;
     color: inherit;
+  }
+
+  /* The kicker: the uppercase mono eyebrow voice. Mono glyphs are already
+     wide, so tracking sits at 0.08em rather than the sans eyebrow's 0.12em —
+     reusing 0.12em here reads gappy. Color is the call site's decision. */
+  .kicker {
+    font-family: var(--mono);
+    font-size: var(--t-eyebrow);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .matrix-grid {

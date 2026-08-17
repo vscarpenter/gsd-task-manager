@@ -97,7 +97,7 @@ export function FeaturesSection() {
     <section className="py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollReveal>
-          <p className="text-xs uppercase tracking-widest text-accent mb-3 text-center">
+          <p className="kicker text-accent mb-3 text-center">
             Features
           </p>
           <h2 className="font-semibold text-display tracking-tight text-foreground mb-12 text-center">

@@ -138,7 +138,9 @@ self-hosted in the static build and exposed as `--font-newsreader`.
 - `--serif`: `--font-newsreader` (Newsreader) feeds the serif chain, standing in for Apple's New
   York on non-Apple platforms; it carries display and headlines.
 - `--sans`: the system sans stack — carries body, labels, and working UI.
-- `--mono`: system mono for code and keyboard notation only.
+- `--mono`: system mono for code and keyboard notation, plus the uppercase kicker voice —
+  the `.kicker` component class (11px mono, 0.08em tracking) is the sanctioned eyebrow
+  treatment on marketing/docs surfaces. Mono never carries body text.
 
 | Token | Size / line-height | Weight | Tracking |
 | --- | --- | --- | --- |

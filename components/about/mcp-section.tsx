@@ -25,7 +25,7 @@ export function McpSection() {
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
           {/* Text column */}
           <ScrollReveal>
-            <p className="text-xs uppercase tracking-widest text-accent mb-3">
+            <p className="kicker text-accent mb-3">
               For power users
             </p>
             <h2 className="text-h2 font-semibold tracking-tight text-foreground sm:text-h1 mb-4">

@@ -12,7 +12,7 @@ export function HeroSection() {
     <section className="bg-gradient-to-b from-background to-background-muted/30 py-24 sm:py-32">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
-          <p className="mb-4 text-xs uppercase tracking-[0.24em] text-foreground-muted">
+          <p className="kicker mb-4 text-foreground-muted">
             Productivity Framework
           </p>
 
