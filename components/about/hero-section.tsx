@@ -16,7 +16,7 @@ export function HeroSection() {
             Productivity Framework
           </p>
 
-          <h1 className="mb-6 text-4xl font-serif font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+          <h1 className="mb-6 text-[clamp(2.75rem,1.2rem+5.2vw,5rem)] font-serif font-semibold leading-[1.05] tracking-tight text-foreground">
             Stop juggling.
             <br />
             Start finishing.
