@@ -330,6 +330,19 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/* The inline-code chip rule (inkwell-components.css) paints a --gray-100
+   ground behind every <code>; inside the terminal panel that renders as
+   light bars over the dark ink. Unlayered on purpose — utilities can't
+   beat the unlayered chip rule, so this override can't either way live
+   in @layer components. Same approach as `.tldr code`. */
+.terminal-block code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: var(--t-small);
+  line-height: 1.65;
+}
+
 /* The Two-Voice Rule (DESIGN.md): the serif carries display and headings,
    the sans carries working UI. The ramp's four heading steps are the serif
    voice; body/small/caption stay sans, and the uppercase kicker voice is

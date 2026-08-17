@@ -41,7 +41,7 @@ export function TerminalBlock({ label, code }: TerminalBlockProps) {
   };
 
   return (
-    <div className="overflow-hidden rounded-xl bg-[var(--terminal-bg)] text-[var(--terminal-ink)] shadow-md">
+    <div className="terminal-block overflow-hidden rounded-xl bg-[var(--terminal-bg)] text-[var(--terminal-ink)] shadow-[var(--shadow-md)]">
       <div className="flex items-center justify-between gap-3 border-b border-white/10 py-2 pl-4 pr-2.5">
         <span className="flex min-w-0 items-center gap-3">
           <span className="flex gap-1.5" aria-hidden="true">
@@ -63,7 +63,7 @@ export function TerminalBlock({ label, code }: TerminalBlockProps) {
         </button>
       </div>
       <pre className="overflow-x-auto p-4 sm:p-5">
-        <code className="font-mono text-sm leading-relaxed">{code}</code>
+        <code>{code}</code>
       </pre>
     </div>
   );
