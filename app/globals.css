@@ -185,6 +185,14 @@
   --status-success-muted:  var(--olive-tint);
   --status-success-ink:    var(--olive-d);
 
+  /* Terminal panel — a fixed dark surface in BOTH themes: a terminal that
+     flipped light with the theme would read as a form field, not a console.
+     Light reuses the slate ink hex as ground; dark drops below the canvas
+     so the panel still reads distinct. */
+  --terminal-bg:    #211E1A;
+  --terminal-ink:   #F1ECE2;
+  --terminal-muted: #A79F92;
+
   /* Component-tier shadow aliases. */
   --shadow-card:   var(--shadow-sm);
   --shadow-column: var(--shadow-sm);
@@ -208,6 +216,8 @@
     --ink-hint: #877D6D;
     /* On dark the neutral pigment is already light enough to read as text. */
     --status-blocking-ink: var(--sky);
+    /* Below the canvas (#17150F) so the fixed-dark panel stays distinct. */
+    --terminal-bg: #11100B;
   }
 }
 :root[data-theme="dark"] {
@@ -219,6 +229,7 @@
 
   --ink-hint: #877D6D;
   --status-blocking-ink: var(--sky);
+  --terminal-bg: #11100B;
 }
 
 /* =====================================================================
@@ -319,9 +330,23 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/* The inline-code chip rule (inkwell-components.css) paints a --gray-100
+   ground behind every <code>; inside the terminal panel that renders as
+   light bars over the dark ink. Unlayered on purpose — utilities can't
+   beat the unlayered chip rule, so this override can't either way live
+   in @layer components. Same approach as `.tldr code`. */
+.terminal-block code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: var(--t-small);
+  line-height: 1.65;
+}
+
 /* The Two-Voice Rule (DESIGN.md): the serif carries display and headings,
    the sans carries working UI. The ramp's four heading steps are the serif
-   voice; body/small/caption/eyebrow stay sans. Unlayered like `body` above,
+   voice; body/small/caption stay sans, and the uppercase kicker voice is
+   mono via `.kicker`. Unlayered like `body` above,
    not inside @layer components — not to beat the `.text-h1` etc. utilities
    (the @theme text sizes emit no font-family, so there's no property
    collision there), but so this rule also wins against any future
@@ -378,6 +403,18 @@ main {
     @apply appearance-none border-0 bg-transparent p-0;
     font: inherit;
     color: inherit;
+  }
+
+  /* The kicker: the uppercase mono eyebrow voice. Mono glyphs are already
+     wide, so tracking sits at 0.08em rather than the sans eyebrow's 0.12em —
+     reusing 0.12em here reads gappy. Color is the call site's decision. */
+  .kicker {
+    font-family: var(--mono);
+    font-size: var(--t-eyebrow);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .matrix-grid {

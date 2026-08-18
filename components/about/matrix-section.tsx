@@ -35,7 +35,7 @@ export function MatrixSection() {
           {/* Explanation column */}
           <div className="order-2 lg:order-1 mt-12 lg:mt-0">
             <ScrollReveal>
-              <p className="text-xs uppercase tracking-widest text-accent mb-3">
+              <p className="kicker text-accent mb-3">
                 The Eisenhower Matrix
               </p>
               <h2 className="font-semibold text-display tracking-tight text-foreground mb-6">
@@ -67,7 +67,7 @@ export function MatrixSection() {
                     key={q.label}
                     className={`rounded-xl border p-4 sm:p-5 ${q.className}`}
                   >
-                    <span className="text-[10px] uppercase tracking-widest text-foreground-muted font-medium">
+                    <span className="kicker text-foreground-muted">
                       {q.label}
                     </span>
                     <h3 className="text-base font-semibold text-foreground mt-1">

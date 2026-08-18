@@ -12,11 +12,11 @@ export function HeroSection() {
     <section className="bg-gradient-to-b from-background to-background-muted/30 py-24 sm:py-32">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
-          <p className="mb-4 text-xs uppercase tracking-[0.24em] text-foreground-muted">
+          <p className="kicker mb-4 text-foreground-muted">
             Productivity Framework
           </p>
 
-          <h1 className="mb-6 text-4xl font-serif font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+          <h1 className="mb-6 text-[clamp(2.75rem,1.2rem+5.2vw,5rem)] font-serif font-semibold leading-[1.05] tracking-tight text-foreground">
             Stop juggling.
             <br />
             Start finishing.

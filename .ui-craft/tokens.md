@@ -138,7 +138,9 @@ self-hosted in the static build and exposed as `--font-newsreader`.
 - `--serif`: `--font-newsreader` (Newsreader) feeds the serif chain, standing in for Apple's New
   York on non-Apple platforms; it carries display and headlines.
 - `--sans`: the system sans stack — carries body, labels, and working UI.
-- `--mono`: system mono for code and keyboard notation only.
+- `--mono`: system mono for code and keyboard notation, plus the uppercase kicker voice —
+  the `.kicker` component class (11px mono, 0.08em tracking) is the sanctioned eyebrow
+  treatment on marketing/docs surfaces. Mono never carries body text.
 
 | Token | Size / line-height | Weight | Tracking |
 | --- | --- | --- | --- |
@@ -187,9 +189,10 @@ Light shadows are two-layer warm-ink-tinted stacks:
 - `--shadow-lg`: `0 5px 12px rgba(40,33,22,.08), 0 20px 44px rgba(40,33,22,.07)`.
 - `--shadow-card-hover`: `0 4px 10px rgba(40,33,22,.08), 0 16px 34px rgba(40,33,22,.07)`.
 
-Dark shadows use black at 45–55% opacity. `--backdrop` is `rgba(21,18,13,.52)` in light and
-`rgba(0,0,0,.6)` in dark. Component aliases are `--shadow-card`, `--shadow-column`, and
-`--shadow-fab`.
+Dark shadows are a 1px white ring (6–9% alpha, stepping with elevation) plus a faint black
+blur at 35–45% — the ring carries the edge because black blur alone disappears into the dark
+canvas. `--backdrop` is `rgba(21,18,13,.52)` in light and `rgba(0,0,0,.6)` in dark. Component
+aliases are `--shadow-card`, `--shadow-column`, and `--shadow-fab`.
 
 ## Motion and z-index
 
