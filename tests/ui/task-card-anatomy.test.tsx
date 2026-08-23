@@ -142,23 +142,40 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(chip.className).toContain("bg-background-muted");
   });
 
-  // The overdue badge is absolutely positioned over the card's top-right. Without
-  // reserved space the title rendered *underneath* it (measured 39px of overlap
-  // at 1440px), so a long overdue title was partly unreadable. jsdom has no
-  // layout, so assert the reservation rather than the geometry.
-  it("reserves room for the overdue badge so the title truncates instead of colliding", () => {
+  // Overdue used to be a 10px caption absolutely positioned over the card's
+  // top-right, which forced every overdue title to reserve 96px it did not
+  // otherwise need. It now sits in the footer row, the column where a reader
+  // already scans for dates.
+  it("states overdue as a footer chip carrying the day count and the due date", () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    renderCard({ dueDate: twoDaysAgo, completed: false });
+    const chip = screen.getByTestId("task-card-overdue-chip");
+
+    expect(screen.getByTestId("task-card-actions")).toContainElement(chip);
+    expect(chip).toHaveTextContent(/^2d overdue · \w{3} \d{1,2}$/);
+    expect(chip.className).toContain("bg-status-overdue-muted");
+    expect(chip.className).toContain("text-status-overdue-ink");
+  });
+
+  it("no longer reserves right padding for a corner overdue badge", () => {
     const yesterday = new Date(Date.now() - 86_400_000).toISOString();
     renderCard({ dueDate: yesterday, completed: false });
     const title = screen.getByRole("heading", { level: 3 });
-    expect(title.parentElement?.className).toContain("pr-24");
+    expect(title.parentElement?.className).not.toContain("pr-24");
     expect(title.className).toContain("truncate");
   });
 
-  it("does not reserve badge space when the task is not overdue", () => {
+  it("keeps the half-strength rust border as the only other overdue mark", () => {
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString();
+    renderCard({ dueDate: yesterday, completed: false });
+    expect(screen.getByTestId("task-card")).toHaveClass("border-status-overdue/50");
+    expect(screen.queryAllByText(/overdue/i)).toHaveLength(1);
+  });
+
+  it("shows no overdue chip on a card that is not overdue", () => {
     const tomorrow = new Date(Date.now() + 86_400_000).toISOString();
     renderCard({ dueDate: tomorrow, completed: false });
-    const title = screen.getByRole("heading", { level: 3 });
-    expect(title.parentElement?.className).not.toContain("pr-24");
+    expect(screen.queryByTestId("task-card-overdue-chip")).not.toBeInTheDocument();
   });
 
   it("keeps a blocked card opaque so its text remains contrast-safe", () => {
@@ -235,6 +252,20 @@ describe("QuadrantPane header — quadrant identity", () => {
     expect(screen.getByTestId("quadrant-q3").style.backgroundColor).toBe("var(--q3-wash)");
     expect(screen.getByTestId("quadrant-header").style.backgroundColor).toBe("var(--q3-header)");
     expect(screen.getByTestId("quadrant-icon").style.color).toBe("var(--q3-ink)");
+  });
+
+  // Paper, not the quadrant tint: ochre ink on the ochre header band measures
+  // under 4.5:1. The `--q*-ink` tokens are AA-checked against `--paper`, so a
+  // paper pill is the one ground on which every quadrant's ink is legible.
+  it("prints the count pill in the quadrant ink on a paper ground", () => {
+    renderPane("q3");
+    const pill = screen.getByTestId("quadrant-count");
+
+    expect(pill.style.color).toBe("var(--q3-ink)");
+    expect(pill.className).toContain("bg-card");
+    expect(pill.className).toContain("font-semibold");
+    expect(pill.className).not.toContain("bg-background-muted");
+    expect(pill.className).toContain("tabular-nums");
   });
 
   it("shows an empty-state mark tile when the quadrant is empty", () => {

@@ -12,9 +12,6 @@ export interface TaskCardHeaderProps {
   task: TaskRecord;
   /** CSS var for the task's quadrant pigment, e.g. "var(--q1)". */
   accentVar: string;
-  /** Reserves room for the absolutely-positioned overdue badge so a long title
-   *  truncates instead of rendering underneath it. */
-  reserveBadgeSpace?: boolean;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (task: TaskRecord) => void;
@@ -27,7 +24,6 @@ export interface TaskCardHeaderProps {
 export function TaskCardHeader({
   task,
   accentVar,
-  reserveBadgeSpace,
   selectionMode,
   isSelected,
   onToggleSelect,
@@ -82,12 +78,7 @@ export function TaskCardHeader({
           sortableAttributes={sortableAttributes}
           sortableListeners={sortableListeners}
         />
-        <div
-          className={cn(
-            "min-w-0 flex-1",
-            reserveBadgeSpace && "pr-24"
-          )}
-        >
+        <div className="min-w-0 flex-1">
           <h3 className={cn(
             "text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em]",
             !onInspect && "truncate",

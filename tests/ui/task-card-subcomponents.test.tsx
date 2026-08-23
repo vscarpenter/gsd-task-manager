@@ -306,6 +306,7 @@ describe("TaskCardActions", () => {
         }}
         taskIsOverdue={false}
         taskIsDueToday={false}
+        overdueDays={0}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
@@ -342,6 +343,7 @@ describe("TaskCardActions", () => {
         }}
         taskIsOverdue={false}
         taskIsDueToday={false}
+        overdueDays={0}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onShare={vi.fn()}
@@ -353,7 +355,7 @@ describe("TaskCardActions", () => {
     expect(screen.getByRole("button", { name: /duplicate task/i })).toBeInTheDocument();
   });
 
-  it("does not render overdue badge in actions row (now hoisted to card root)", async () => {
+  it("leads the footer row with the overdue chip", async () => {
     const { TaskCardActions } = await import(
       "@/components/task-card/task-card-actions"
     );
@@ -379,14 +381,16 @@ describe("TaskCardActions", () => {
         }}
         taskIsOverdue={true}
         taskIsDueToday={false}
+        overdueDays={3}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />
     );
 
-    // Polish v0.9.2: the overdue caption now lives on the TaskCard root,
-    // not in the actions footer. Confirm it is gone from this scope.
-    expect(screen.queryByText("Overdue")).not.toBeInTheDocument();
+    // The overdue caption came back down from the card root into the footer,
+    // where it shares a scan column with "Due today" and the relative date.
+    // Without a dueDate the chip states the age alone rather than an em-dash.
+    expect(screen.getByTestId("task-card-overdue-chip")).toHaveTextContent("3d overdue");
   });
 
   it("shows recurrence icon", async () => {
@@ -415,6 +419,7 @@ describe("TaskCardActions", () => {
         }}
         taskIsOverdue={false}
         taskIsDueToday={false}
+        overdueDays={0}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
       />

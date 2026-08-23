@@ -30,6 +30,15 @@ const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
  */
 export const ACTIVE_RENDER_CAP = 50;
 
+/**
+ * The active-count pill. It takes its quadrant's ink so the count joins the
+ * four-color language instead of sitting outside it in neutral gray, but the
+ * ground stays paper rather than the quadrant's own tint: the --q*-ink tokens
+ * are AA-checked against paper, and ochre ink on ochre measures under 4.5:1.
+ */
+const COUNT_PILL =
+  "ml-auto shrink-0 rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold tabular-nums";
+
 interface QuadrantPaneProps {
   meta: QuadrantMeta;
   tasks: TaskRecord[];
@@ -119,7 +128,7 @@ export function QuadrantPane({
         <span data-testid="quadrant-hint" className="min-w-0 truncate text-caption" style={{ color: ink }}>
           {meta.rdHint}
         </span>
-        <span className="ml-auto shrink-0 rounded-full bg-background-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground-muted">
+        <span data-testid="quadrant-count" className={COUNT_PILL} style={{ color: ink }}>
           {activeTaskCount}
         </span>
         <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon } from "lucide-react";
 import { cn, formatRelative } from "@/lib/utils";
 import { TIME_MS } from "@/lib/constants";
 import { SnoozeDropdown } from "@/components/snooze-dropdown";
@@ -16,10 +16,24 @@ function isWithinDay(iso: string): boolean {
   return diff > 0 && diff < TIME_MS.DAY;
 }
 
+const SHORT_DATE = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+/**
+ * "2d overdue · Aug 20". The date half is the point of moving this into the
+ * footer: the old corner badge stated the age and hid the date it was measured
+ * from, which is the one number a reader needs to reschedule.
+ */
+function overdueLabel(days: number, dueDate?: string): string {
+  const age = `${days}d overdue`;
+  return dueDate ? `${age} · ${SHORT_DATE.format(new Date(dueDate))}` : age;
+}
+
 export interface TaskCardActionsProps {
   task: TaskRecord;
   taskIsOverdue: boolean;
   taskIsDueToday: boolean;
+  /** Whole days past due; only read when taskIsOverdue. */
+  overdueDays: number;
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
@@ -31,6 +45,7 @@ export function TaskCardActions({
   task,
   taskIsOverdue,
   taskIsDueToday,
+  overdueDays,
   onEdit,
   onDelete,
   onShare,
@@ -43,7 +58,18 @@ export function TaskCardActions({
       className="flex items-center justify-between gap-2 text-xs text-foreground-muted"
     >
       <div className="flex items-center gap-2">
-        {taskIsDueToday && !taskIsOverdue ? (
+        {taskIsOverdue ? (
+          // Same anatomy as the "Due today" chip below, one row down the
+          // temperature scale, so the footer stays a single scan column
+          // instead of asking the eye to also check the card's corner.
+          <span
+            data-testid="task-card-overdue-chip"
+            className="flex items-center gap-1 rounded-full bg-status-overdue-muted px-[9px] py-0.5 font-semibold text-status-overdue-ink"
+          >
+            <AlertTriangleIcon className="h-3 w-3 shrink-0" aria-hidden />
+            {overdueLabel(overdueDays, task.dueDate)}
+          </span>
+        ) : taskIsDueToday ? (
           // Due today reads as accent-semibold; the warning glyph is reserved
           // for the overdue state. Text is --accent-d, not --accent: the base
           // accent measures 4.53:1 on its own tint, too close to the floor.
@@ -51,7 +77,7 @@ export function TaskCardActions({
             <ClockIcon className="h-3 w-3" />
             Due today
           </span>
-        ) : task.dueDate && !taskIsOverdue ? (
+        ) : task.dueDate ? (
           <span
             className={cn(
               "inline-flex items-center gap-1 truncate",

@@ -237,7 +237,8 @@ describe("<MatrixSimplified>", () => {
     render(<MatrixSimplified />);
     const grid = screen.getByTestId("matrix-grid");
 
-    expect(grid.parentElement).toHaveClass("@container");
+    // The axis-label frame now sits between the grid and its container scope.
+    expect(grid.closest(".\\@container")).not.toBeNull();
     expect(grid).toHaveClass("@min-[696px]:grid-cols-2", "@min-[696px]:grid-rows-2");
     expect(grid.className).not.toMatch(/\b(md|lg):grid-cols-2\b/);
   });
@@ -414,7 +415,7 @@ describe("<MatrixSimplified>", () => {
     const snapshot = document.createElement("div");
     snapshot.innerHTML = html;
     const showSchedule = Array.from(snapshot.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Show Schedule")
+      button.textContent?.includes("Protect Q2")
     );
 
     expect(html).toContain("GSD Matrix");
@@ -453,15 +454,19 @@ describe("<MatrixSimplified>", () => {
 
     render(<MatrixSimplified />);
 
-    expect(screen.getByText("2 strategic commitments need protected time.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
+      "Protect Q2 · 2 to schedule"
+    );
   });
 
   it("does not publish a false Q2 count while tasks are loading", () => {
     tasksFixture.loading = true;
     render(<MatrixSimplified />);
 
-    expect(screen.queryByText(/strategic commitment.*protected time/i)).not.toBeInTheDocument();
-    expect(screen.getByText("Reserve one strategic block before reacting.")).toBeInTheDocument();
+    const scheduleButton = screen.getByRole("button", { name: /protect q2/i });
+    expect(scheduleButton).toHaveTextContent("Protect Q2");
+    expect(scheduleButton).not.toHaveTextContent(/to schedule|clear/);
+    expect(scheduleButton).toBeDisabled();
   });
 
   it("keeps the Q2 planning count stable when search filters the matrix", async () => {
@@ -473,7 +478,9 @@ describe("<MatrixSimplified>", () => {
 
     await userEvent.type(screen.getByLabelText("Shell search"), "production");
 
-    expect(screen.getByText("1 strategic commitment needs protected time.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
+      "Protect Q2 · 1 to schedule"
+    );
     expect(screen.queryByText("Write the strategy")).not.toBeInTheDocument();
   });
 
@@ -482,7 +489,7 @@ describe("<MatrixSimplified>", () => {
     Element.prototype.scrollIntoView = scrollIntoView;
     render(<MatrixSimplified />);
 
-    await userEvent.click(screen.getByRole("button", { name: /show schedule/i }));
+    await userEvent.click(screen.getByRole("button", { name: /protect q2/i }));
 
     expect(screen.getByTestId("quadrant-q2")).toHaveFocus();
     expect(screen.getByTestId("quadrant-q2")).toHaveClass(
