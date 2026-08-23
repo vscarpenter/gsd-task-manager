@@ -29,6 +29,8 @@ const filesReferencingDeadSlug = (): string[] => {
 
 describe("GitHub repository URLs", () => {
   it("never reference the un-hyphenated repository slug", () => {
+    // Prose that discusses this bug trips the guard too. Refer to the bad
+    // repo by its bare name, never the full owner/name path.
     expect(filesReferencingDeadSlug()).toEqual([]);
   });
 });
