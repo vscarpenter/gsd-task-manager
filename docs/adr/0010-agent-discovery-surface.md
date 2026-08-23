@@ -3,6 +3,7 @@
 **Date:** 2026-04-20
 **Status:** Accepted
 **Deciders:** Vinny Carpenter
+**Amended:** 2026-08-23, added `/.well-known/security.txt` (RFC 9116).
 
 ## Context
 
@@ -37,6 +38,7 @@ Expose the following surface, all of it cacheable, all of it static:
 
 | Path | Type | Purpose |
 | --- | --- | --- |
+| `/.well-known/security.txt` | `text/plain; charset=utf-8` | RFC 9116 vulnerability-reporting contact, pointing at GitHub private advisories |
 | `/.well-known/api-catalog` | `application/linkset+json` | RFC 9727 linkset that anchors the PocketBase API and the MCP server |
 | `/.well-known/openapi/pocketbase.json` | `application/openapi+json` | OpenAPI 3.1 description of the GSD-specific PocketBase endpoints |
 | `/.well-known/oauth-protected-resource` | `application/json` | RFC 9728 metadata pointing to PocketBase as the authorization server |
@@ -97,6 +99,9 @@ global. Extension does not affect the AWS upload (`fileb://` reads bytes).
   surfaces (homepage + About).
 - `Vary: Accept` makes shared caches store two representations per route,
   doubling cache footprint for the homepage and About page.
+- `security.txt` carries a mandatory `Expires` date, and a static export has no
+  runtime to refresh it. A test in `tests/data/agent-discovery-files.test.ts`
+  fails once fewer than 30 days remain, so CI is the refresh alarm.
 
 ### Out of scope
 - A site-wide markdown rendition for every authenticated route (the matrix,

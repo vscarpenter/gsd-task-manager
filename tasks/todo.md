@@ -126,3 +126,50 @@ Next: push + open PR (awaiting go-ahead). Not committed on purpose:
 bun.lock / package.json / sw.js release leftovers, this file,
 first-run-guide.html, next-env.d.ts (dev-server regen),
 .tmp-preview-guide-vs-editorial.html (rm was denied — delete manually).
+
+## security.txt (RFC 9116), feat/security-txt, 2026-08-23
+
+Standard tier. Triggered by scanner traffic hitting `/.well-known/security.txt`
+and `/.well-known/assetlinks.json`. Decision: implement `security.txt`; leave
+`assetlinks.json` 404 (browser PWA, no Android package to assert).
+
+- [x] RED: expiry + field tests in tests/data/agent-discovery-files.test.ts
+- [x] GREEN: public/.well-known/security.txt
+- [x] Content-Type fix_type line in scripts/fix-discovery-content-types.sh
+- [x] Prod smoke check in scripts/smoke-test.sh (now 5 assertions, not 4)
+- [x] ADR 0010 discovery-file table row + Harder bullet + amendment date
+- [x] SECURITY.md: name the advisory URL that Policy: points at
+- [x] Enable GitHub private vulnerability reporting (now enabled:true)
+
+No version bump: package.json/sw.js/bun.lock carry the user's in-flight
+12.1.0 release leftovers. Left untouched, same as the editorial-imports run.
+
+### Resuming From Here (2026-08-23, feat/security-txt)
+
+Done: security.txt shipped TDD (RED on missing file, GREEN at 22/22 in
+tests/data/agent-discovery-files.test.ts). Expires 2027-08-01, with a test
+that fails at 30 days out so CI is the refresh alarm. Full suite 2806 pass,
+typecheck + lint clean.
+
+Version synced to 12.2.0 across the release trio (package.json, README:7,
+public/sw.js CACHE_VERSION) and folded into this PR at the user's request.
+That clears the documentation-currentness red: full suite is now 2807 pass,
+0 fail. bun.lock re-synced, which also carries the stagehand ^4.0.0 to
+^4.0.2 devDep bump the working tree already had.
+
+.build-info.json is gitignored but was also set to 12.2.0. update-sw-version.cjs
+prefers it over package.json, so a stale value there silently rewrites sw.js
+back on the next local build.
+
+Deliberately not done: assetlinks.json stays a 404. GSD is a browser PWA
+with no related_applications and no Play Store package to assert.
+
+Open follow-up: 11 tracked files link to github.com/vscarpenter/gsd-taskmanager,
+which 404s. Real slug is gsd-task-manager. Includes the whole .well-known
+discovery surface (api-catalog, mcp/server-card.json, agent-skills/index.json,
+oauth-protected-resource, openapi/pocketbase.json), public/index.md,
+public/about/index.md, cloudfront-function-response-headers.cjs, and the MCP
+server package. Not fixed here to keep this PR scoped.
+
+Not committed on purpose: first-run-guide.html,
+design_handoff_matrix_usability_tweaks/.
