@@ -135,3 +135,66 @@ describe('/.well-known/openapi/pocketbase.json', () => {
 		expect(Object.keys(spec.paths)).toContain('/api/collections/tasks/records');
 	});
 });
+
+describe('/.well-known/security.txt (RFC 9116)', () => {
+	const securityTxt = readFileSync(resolve(root, '.well-known/security.txt'), 'utf-8');
+
+	const field = (name: string): string | undefined =>
+		securityTxt.match(new RegExp(`^${name}:[ \\t]*(.+)$`, 'm'))?.[1]?.trim();
+
+	it('declares a Contact field, the one field RFC 9116 requires', () => {
+		const contact = field('Contact');
+		expect(contact).toBeDefined();
+		expect(contact).toMatch(/^(https:\/\/|mailto:)/);
+	});
+
+	it('declares Canonical as the production security.txt URL', () => {
+		expect(field('Canonical')).toBe('https://gsd.vinny.dev/.well-known/security.txt');
+	});
+
+	it('points Policy at the checked-in SECURITY.md', () => {
+		expect(field('Policy')).toBe(
+			'https://github.com/vscarpenter/gsd-task-manager/blob/main/SECURITY.md',
+		);
+	});
+
+	it('uses the live repository slug, since the un-hyphenated form 404s', () => {
+		expect(securityTxt).not.toMatch(/vscarpenter\/gsd-taskmanager\b/);
+	});
+
+	describe('Expires', () => {
+		const raw = field('Expires');
+		const DAY_MS = 86_400_000;
+		const daysOut = (): number =>
+			(new Date(raw as string).getTime() - Date.now()) / DAY_MS;
+
+		it('is present and parseable as an RFC 3339 timestamp', () => {
+			expect(raw).toBeDefined();
+			expect(raw).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+			expect(Number.isNaN(new Date(raw as string).getTime())).toBe(false);
+		});
+
+		it('is under a year out, as RFC 9116 section 2.5.5 recommends', () => {
+			expect(daysOut()).toBeLessThan(365);
+		});
+
+		// This is the refresh alarm. A static export has no server to renew
+		// security.txt, so CI is what notices the file is going stale.
+		it('has more than 30 days left: bump Expires when this fails', () => {
+			expect(daysOut()).toBeGreaterThan(30);
+		});
+	});
+});
+
+describe('scripts/fix-discovery-content-types.sh', () => {
+	const script = readFileSync(
+		resolve(__dirname, '../../scripts/fix-discovery-content-types.sh'),
+		'utf-8',
+	);
+
+	it('stamps security.txt as text/plain with an explicit charset', () => {
+		expect(script).toMatch(
+			/fix_type "\.well-known\/security\.txt" "text\/plain; charset=utf-8"/,
+		);
+	});
+});
