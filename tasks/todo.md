@@ -151,10 +151,15 @@ tests/data/agent-discovery-files.test.ts). Expires 2027-08-01, with a test
 that fails at 30 days out so CI is the refresh alarm. Full suite 2806 pass,
 typecheck + lint clean.
 
-Known red, not ours: documentation-currentness.test.ts fails locally only
-because the uncommitted package.json bump (12.1.0) outruns README:7
-(12.0.1). Both are 12.0.1 at HEAD, so branch CI is green. Fix README:7
-when that release lands.
+Version synced to 12.2.0 across the release trio (package.json, README:7,
+public/sw.js CACHE_VERSION) and folded into this PR at the user's request.
+That clears the documentation-currentness red: full suite is now 2807 pass,
+0 fail. bun.lock re-synced, which also carries the stagehand ^4.0.0 to
+^4.0.2 devDep bump the working tree already had.
+
+.build-info.json is gitignored but was also set to 12.2.0. update-sw-version.cjs
+prefers it over package.json, so a stale value there silently rewrites sw.js
+back on the next local build.
 
 Deliberately not done: assetlinks.json stays a 404. GSD is a browser PWA
 with no related_applications and no Play Store package to assert.
@@ -166,5 +171,5 @@ oauth-protected-resource, openapi/pocketbase.json), public/index.md,
 public/about/index.md, cloudfront-function-response-headers.cjs, and the MCP
 server package. Not fixed here to keep this PR scoped.
 
-Not committed on purpose: bun.lock, package.json, public/sw.js,
-first-run-guide.html, design_handoff_matrix_usability_tweaks/.
+Not committed on purpose: first-run-guide.html,
+design_handoff_matrix_usability_tweaks/.
