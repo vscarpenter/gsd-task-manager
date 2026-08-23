@@ -18,7 +18,6 @@ import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
-import { DesignLabRuntimeGate } from "@/components/design-lab-runtime-gate";
 
 // Development needs React's eval diagnostics and Next's inline bootstrap. The
 // production static export omits this meta policy: build post-processing moves
@@ -159,21 +158,13 @@ function AppProviders({ children }: { children: ReactNode }) {
         <ToastProvider>
           <QueryProvider>
             <TooltipProvider>
-              <DesignLabRuntimeGate
-                appRuntime={
-                  <>
-                    <ClientLayout>{children}</ClientLayout>
-                    <FirstTimeRedirect />
-                    <OnboardingGate />
-                    <PwaRegister />
-                    <WebMcpRegister />
-                    <InstallPwaPrompt />
-                    <PwaUpdateToast />
-                  </>
-                }
-              >
-                {children}
-              </DesignLabRuntimeGate>
+              <ClientLayout>{children}</ClientLayout>
+              <FirstTimeRedirect />
+              <OnboardingGate />
+              <PwaRegister />
+              <WebMcpRegister />
+              <InstallPwaPrompt />
+              <PwaUpdateToast />
               <GlobalErrorListener />
               <SentryInit />
               <ThemedToaster />
