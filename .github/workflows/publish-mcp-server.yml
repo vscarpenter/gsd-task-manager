@@ -14,7 +14,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  packages: write
 
 jobs:
   publish:
@@ -95,34 +94,6 @@ jobs:
       - name: Publish to npm
         if: github.event_name == 'push' || inputs.dry_run == false
         run: npm publish --provenance --access public
-
-      - name: Rewrite package name for GitHub Packages
-        if: github.event_name == 'push' || inputs.dry_run == false
-        env:
-          REPO_OWNER: ${{ github.repository_owner }}
-        run: |
-          node -e '
-            const fs = require("fs");
-            const owner = process.env.REPO_OWNER.toLowerCase();
-            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            pkg.name = "@" + owner + "/gsd-mcp-server";
-            pkg.publishConfig = { access: "public", registry: "https://npm.pkg.github.com" };
-            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-          '
-
-      - name: Setup Node (GitHub Packages registry)
-        if: github.event_name == 'push' || inputs.dry_run == false
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '24'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@${{ github.repository_owner }}'
-
-      - name: Publish to GitHub Packages
-        if: github.event_name == 'push' || inputs.dry_run == false
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Dry-run pack (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
