@@ -2,7 +2,6 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { AlertTriangleIcon } from "lucide-react";
 import { cn, isOverdue, isDueToday, daysOverdue } from "@/lib/utils";
 import { getUncompletedBlockingTasks, getUncompletedBlockedTasks } from "@/lib/dependencies";
 import { quadrantForTask, QUADRANT_ACCENT } from "@/lib/quadrants";
@@ -96,8 +95,8 @@ export function TaskCard({
         !task.completed && "hover:-translate-y-0.5 hover:border-accent/40 focus-within:border-accent/40",
         task.completed && "animate-complete-flash",
         isDragging && "cursor-grabbing",
-        // Half-strength so an overdue card is marked, not alarmed — the badge
-        // above carries the actual message.
+        // Half-strength so an overdue card is marked, not alarmed — the footer
+        // chip carries the actual message.
         taskIsOverdue && "border-status-overdue/50",
         selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
@@ -113,17 +112,9 @@ export function TaskCard({
         style={{ backgroundColor: accentVar }}
       />
 
-      {taskIsOverdue ? (
-        <span className="pointer-events-none absolute right-3 top-2.5 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-status-overdue-ink">
-          <AlertTriangleIcon className="h-[11px] w-[11px]" aria-hidden />
-          {overdueDays}d overdue
-        </span>
-      ) : null}
-
       <TaskCardHeader
         task={task}
         accentVar={accentVar}
-        reserveBadgeSpace={taskIsOverdue}
         selectionMode={selectionMode}
         isSelected={isSelected}
         onToggleSelect={onToggleSelect}
@@ -150,6 +141,7 @@ export function TaskCard({
         task={task}
         taskIsOverdue={taskIsOverdue}
         taskIsDueToday={taskIsDueToday}
+        overdueDays={overdueDays}
         onEdit={onEdit}
         onDelete={onDelete}
         onShare={onShare}

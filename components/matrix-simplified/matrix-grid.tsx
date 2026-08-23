@@ -49,10 +49,11 @@ export function MatrixGrid({
     // exactly as thoroughly as a 1x4 stack: the matrix means Q1/Q2 over Q3/Q4
     // or it means nothing. 696px is two 340px panes plus the 16px gutter.
     <div className="@container">
-      <div
-        data-testid="matrix-grid"
-        className="grid gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-2"
-      >
+      <AxisFrame>
+        <div
+          data-testid="matrix-grid"
+          className="grid gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-2"
+        >
         {quadrants.map((meta) => (
           <QuadrantPane
             key={meta.id}
@@ -70,10 +71,65 @@ export function MatrixGrid({
             sectionRef={(element) => onQuadrantRef?.(meta.rdKey, element)}
           />
         ))}
-      </div>
+        </div>
+      </AxisFrame>
     </div>
   );
 }
+
+/**
+ * Labels both ends of both axes and hands the 2x2 grid the rest of the row.
+ *
+ * The axes are the argument, and until now a reader had to reconstruct them
+ * from four quadrant hints. The frame spends a 22px gutter and an 8px band on
+ * saying them outright, and collapses to nothing below the width that produces
+ * two columns — a single-column stack has no axes, and labelling it would be a
+ * lie. The query is on the container rather than the viewport for the same
+ * reason the grid's is: only the container knows whether the rail is expanded.
+ * The labels are aria-hidden; each pane already carries "… quadrant".
+ */
+function AxisFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      data-testid="matrix-axis-frame"
+      className="@min-[696px]:grid @min-[696px]:grid-cols-[22px_minmax(0,1fr)] @min-[696px]:gap-x-1.5"
+    >
+      <div data-testid="matrix-axis-corner" aria-hidden="true" className="hidden @min-[696px]:block" />
+
+      <div
+        data-testid="matrix-axis-columns"
+        aria-hidden="true"
+        className="mb-2 hidden grid-cols-2 gap-4 @min-[696px]:grid"
+      >
+        <p className={AXIS_LABEL}>Urgent</p>
+        <p className={AXIS_LABEL}>Not urgent</p>
+      </div>
+
+      <div
+        data-testid="matrix-axis-rows"
+        aria-hidden="true"
+        className="hidden grid-rows-2 gap-4 @min-[696px]:grid"
+      >
+        <p className={VERTICAL_AXIS_LABEL}>Important</p>
+        <p className={VERTICAL_AXIS_LABEL}>Not important</p>
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The kicker voice, one step quieter than a kicker normally speaks: 10px and
+ * wider tracking, so the labels frame the matrix without competing with the
+ * quadrant titles they sit beside.
+ */
+const AXIS_LABEL =
+  "kicker m-0 text-center text-[10px] tracking-[0.14em] text-foreground-muted";
+
+/** Reads bottom-to-top, so the pair sits beside the rows it names. */
+const VERTICAL_AXIS_LABEL =
+  `${AXIS_LABEL} self-center justify-self-center rotate-180 [writing-mode:vertical-rl]`;
 
 /**
  * Bucket tasks into the four quadrants, each sorted with active work first and

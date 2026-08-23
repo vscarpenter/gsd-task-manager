@@ -10,7 +10,7 @@ test.describe("Refined Evolution production hybrid", () => {
   });
 
   test("supports the physical Option shortcut model", async ({ page }) => {
-    await expect(page.getByRole("button", { name: /show schedule/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /protect q2/i })).toBeVisible();
 
     await page.keyboard.press("Alt+n");
     await expect(page.getByTestId("capture-input")).toBeFocused();

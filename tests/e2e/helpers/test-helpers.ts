@@ -14,7 +14,7 @@ export async function waitForAppLoad(page: Page): Promise<void> {
     await expect(onboarding).toBeHidden();
   }
 
-  await expect(page.getByRole("button", { name: /Show Schedule/ })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Protect Q2/ })).toBeEnabled();
 }
 
 export async function getTaskCount(page: Page): Promise<number> {

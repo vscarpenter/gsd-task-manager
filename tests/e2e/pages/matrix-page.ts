@@ -36,7 +36,7 @@ export class MatrixPage {
     }
     
     await this.matrixGrid.waitFor({ state: "visible", timeout: 20000 });
-    await expect(this.page.getByRole("button", { name: /Show Schedule/ })).toBeEnabled();
+    await expect(this.page.getByRole("button", { name: /Protect Q2/ })).toBeEnabled();
   }
 
   async createTask(title: string): Promise<void> {
