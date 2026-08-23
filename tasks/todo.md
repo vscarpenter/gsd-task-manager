@@ -52,8 +52,10 @@ handoff collapses that whole card into the button label. The count is still in
 the button's accessible name. Re-adding a live region to a button label would
 announce on every Q2 change, which is noisier than what it replaces.
 
-Version bump deferred: `package.json` is 12.0.0 and the release trio
-(package.json + README:7 + sw.js CACHE_VERSION) should move together at ship time.
+Version bumped to **12.0.1** (patch) across the release trio: `package.json`,
+`README.md:7`, and `public/sw.js` CACHE_VERSION. Hand-edited rather than run
+through `scripts/update-sw-version.cjs` — `.build-info.json` is stale at 12.0.0
+and the script prefers it, so it would have written the old version back.
 
 # Status — 2026-08-16
 
