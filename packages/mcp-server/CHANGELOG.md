@@ -5,6 +5,13 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-08-23
+
+### Fixed
+- **Repository URLs in `--help` and the `get_help` tool now resolve** (#509).
+  They used an un-hyphenated form of the repository name that 404s with no
+  redirect. The correct slug is `gsd-task-manager`.
+
 ## [1.2.4] - 2026-08-16
 
 Catch-up release. npm last saw 1.2.1, so this version also carries the 1.2.2
@@ -568,6 +575,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.2.5]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.4...mcp-v1.2.5
 [1.1.4]: https://github.com/vscarpenter/gsd-task-manager/compare/v1.1.3...v1.1.4
 [0.3.0]: https://github.com/vscarpenter/gsd-task-manager/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/vscarpenter/gsd-task-manager/compare/v0.2.0...v0.2.1

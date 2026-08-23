@@ -194,3 +194,15 @@ Still broken on purpose: the mcp-server CHANGELOG link definitions point at
 tags that were never created (v0.1.0 through v1.1.4), so they 404 regardless
 of slug. And oauth-protected-resource uses a #cloud-sync anchor that has no
 matching heading in README.md.
+
+## MCP server 1.2.5, chore/mcp-release-1.2.5
+
+Patch release carrying only the #509 repository URL fix, which is the last
+place the old slug was still user-visible (npm ships the CLI help text).
+Verified against the built dist, not just source: `node dist/index.js --help`
+prints the corrected URLs, and a stdio probe returned exactly one valid
+JSON-RPC line on stdout with all logging on stderr.
+
+The new CHANGELOG link definition uses the real tag scheme
+(mcp-v1.2.4...mcp-v1.2.5). The legacy entries below it still cite tags that
+were never created and stay broken.
