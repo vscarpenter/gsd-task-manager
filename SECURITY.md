@@ -361,10 +361,14 @@ Adapt the header values from Option 1 above into your IaC tool's response header
 
 ## Vulnerability Reporting
 
+This section has a machine-readable counterpart at
+[`/.well-known/security.txt`](https://gsd.vinny.dev/.well-known/security.txt),
+published per RFC 9116.
+
 If you discover a security vulnerability, please:
 
 1. **Do NOT** open a public GitHub issue
-2. Email security concerns to the repository maintainer
+2. [Open a private security advisory](https://github.com/vscarpenter/gsd-task-manager/security/advisories/new)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

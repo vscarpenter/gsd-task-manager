@@ -1,0 +1,10 @@
+# GSD Task Manager security contact.
+#
+# Report vulnerabilities through GitHub private advisories, not public issues.
+# SECURITY.md describes what to include in a report.
+
+Contact: https://github.com/vscarpenter/gsd-task-manager/security/advisories/new
+Expires: 2027-08-01T00:00:00.000Z
+Policy: https://github.com/vscarpenter/gsd-task-manager/blob/main/SECURITY.md
+Canonical: https://gsd.vinny.dev/.well-known/security.txt
+Preferred-Languages: en

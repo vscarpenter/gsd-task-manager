@@ -36,6 +36,9 @@ fix_type() {
 
 echo "Fixing Content-Type on discovery files in $BUCKET ..."
 
+# RFC 9116: text/plain with an explicit charset.
+fix_type ".well-known/security.txt" "text/plain; charset=utf-8"
+
 # RFC 9727 — application/linkset+json (no file extension on disk).
 fix_type ".well-known/api-catalog" "application/linkset+json"
 
