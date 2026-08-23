@@ -568,8 +568,8 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
-[1.1.4]: https://github.com/vscarpenter/gsd-taskmanager/compare/v1.1.3...v1.1.4
-[0.3.0]: https://github.com/vscarpenter/gsd-taskmanager/compare/v0.2.1...v0.3.0
-[0.2.1]: https://github.com/vscarpenter/gsd-taskmanager/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/vscarpenter/gsd-taskmanager/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/vscarpenter/gsd-taskmanager/releases/tag/v0.1.0
+[1.1.4]: https://github.com/vscarpenter/gsd-task-manager/compare/v1.1.3...v1.1.4
+[0.3.0]: https://github.com/vscarpenter/gsd-task-manager/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/vscarpenter/gsd-task-manager/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/vscarpenter/gsd-task-manager/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/vscarpenter/gsd-task-manager/releases/tag/v0.1.0

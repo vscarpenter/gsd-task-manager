@@ -59,6 +59,6 @@ instance the maintainer operates personally.
 
 ## Source
 
-- Code: <https://github.com/vscarpenter/gsd-taskmanager>
+- Code: <https://github.com/vscarpenter/gsd-task-manager>
 - License: MIT
 - Maintainer: Vinny Carpenter

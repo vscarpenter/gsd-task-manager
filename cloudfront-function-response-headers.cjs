@@ -43,7 +43,7 @@ function handler(event) {
       '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"; type="application/json"',
       '</.well-known/mcp/server-card.json>; rel="mcp-server"; type="application/json"',
       '</.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json"',
-      '<https://github.com/vscarpenter/gsd-taskmanager>; rel="describedby"; type="text/html"'
+      '<https://github.com/vscarpenter/gsd-task-manager>; rel="describedby"; type="text/html"'
     ];
     headers['link'] = { value: links.join(', ') };
   }

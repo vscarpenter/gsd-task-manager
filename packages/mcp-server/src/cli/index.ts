@@ -67,8 +67,8 @@ CONFIGURATION:
     Windows: %APPDATA%\\Claude\\claude_desktop_config.json
 
 DOCUMENTATION:
-  Full docs: https://github.com/vscarpenter/gsd-taskmanager/tree/main/packages/mcp-server
-  Issues:    https://github.com/vscarpenter/gsd-taskmanager/issues
+  Full docs: https://github.com/vscarpenter/gsd-task-manager/tree/main/packages/mcp-server
+  Issues:    https://github.com/vscarpenter/gsd-task-manager/issues
 
 VERSION: ${VERSION}
 `);

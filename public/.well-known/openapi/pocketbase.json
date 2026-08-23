@@ -7,7 +7,7 @@
     "description": "Subset of the self-hosted PocketBase REST API used by GSD Task Manager for multi-device sync. All endpoints require an authenticated user and operate only on records owned by that user. PocketBase exposes its own auto-generated OpenAPI documentation in the admin UI; this document only covers the GSD-specific collections (tasks, devices) and their semantics.",
     "contact": {
       "name": "Vinny Carpenter",
-      "url": "https://github.com/vscarpenter/gsd-taskmanager"
+      "url": "https://github.com/vscarpenter/gsd-task-manager"
     },
     "license": {
       "name": "MIT",

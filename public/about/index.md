@@ -44,7 +44,7 @@ when a client sends `Accept: text/markdown`.
 
 ## Project links
 
-- **Source:** <https://github.com/vscarpenter/gsd-taskmanager>
+- **Source:** <https://github.com/vscarpenter/gsd-task-manager>
 - **MCP package:** <https://www.npmjs.com/package/gsd-mcp-server>
 - **License:** MIT
 - **Maintainer:** Vinny Carpenter
