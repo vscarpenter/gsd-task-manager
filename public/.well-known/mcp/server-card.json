@@ -8,9 +8,9 @@
     "description": "Read, create, update, and analyze tasks in GSD Task Manager from any MCP-aware assistant.",
     "vendor": "Vinny Carpenter",
     "homepage": "https://gsd.vinny.dev",
-    "documentation": "https://github.com/vscarpenter/gsd-taskmanager/blob/main/packages/mcp-server/README.md",
+    "documentation": "https://github.com/vscarpenter/gsd-task-manager/blob/main/packages/mcp-server/README.md",
     "license": "MIT",
-    "repository": "https://github.com/vscarpenter/gsd-taskmanager"
+    "repository": "https://github.com/vscarpenter/gsd-task-manager"
   },
   "transports": [
     {

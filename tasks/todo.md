@@ -164,12 +164,33 @@ back on the next local build.
 Deliberately not done: assetlinks.json stays a 404. GSD is a browser PWA
 with no related_applications and no Play Store package to assert.
 
-Open follow-up: 11 tracked files link to github.com/vscarpenter/gsd-taskmanager,
-which 404s. Real slug is gsd-task-manager. Includes the whole .well-known
-discovery surface (api-catalog, mcp/server-card.json, agent-skills/index.json,
-oauth-protected-resource, openapi/pocketbase.json), public/index.md,
-public/about/index.md, cloudfront-function-response-headers.cjs, and the MCP
-server package. Not fixed here to keep this PR scoped.
+Open follow-up, now handled in PR #509: the dead repository slug (the
+un-hyphenated form of the repo name) appeared in 11 tracked files and 404s.
+Real slug is gsd-task-manager.
 
 Not committed on purpose: first-run-guide.html,
 design_handoff_matrix_usability_tweaks/.
+
+## Dead GitHub slug, fix/github-repo-slug, PR #509
+
+Replaced 20 occurrences of the un-hyphenated repository slug across 11 files:
+the whole .well-known discovery surface, public/index.md, public/about/index.md,
+cloudfront-function-response-headers.cjs, and the MCP server package.
+tests/data/repository-urls.test.ts guards it with git grep over tracked files.
+
+### Resuming From Here (2026-08-23, fix/github-repo-slug)
+
+Trap worth remembering: the guard test greps ALL tracked files, so prose that
+quotes the bad slug trips it. PR #508's own todo note did exactly that, which
+turned CI red on PR #509 while the branch passed locally. Write about the bug
+using the bare repo name, never the full owner/name path.
+
+After merge, two things still need doing. The CloudFront function must be
+republished via scripts/deploy-cloudfront-function.sh before the Link header
+change reaches production. The MCP server needs an npm release (mcp-vX.Y.Z tag)
+before its CLI stops printing the old URL.
+
+Still broken on purpose: the mcp-server CHANGELOG link definitions point at
+tags that were never created (v0.1.0 through v1.1.4), so they 404 regardless
+of slug. And oauth-protected-resource uses a #cloud-sync anchor that has no
+matching heading in README.md.

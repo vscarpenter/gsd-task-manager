@@ -177,7 +177,7 @@ function buildTroubleshootingHelpSection(): string {
 
 **For more help:**
 - Run: \`npx gsd-mcp-server --validate\`
-- GitHub: https://github.com/vscarpenter/gsd-taskmanager/issues
+- GitHub: https://github.com/vscarpenter/gsd-task-manager/issues
 
 `;
 }
@@ -201,9 +201,9 @@ function buildAnalyticsHelpSection(): string {
 function buildAdditionalResourcesSection(): string {
   return `## Additional Resources
 
-- **Full Documentation:** https://github.com/vscarpenter/gsd-taskmanager/tree/main/packages/mcp-server
+- **Full Documentation:** https://github.com/vscarpenter/gsd-task-manager/tree/main/packages/mcp-server
 - **Setup Guide:** Run \`npx gsd-mcp-server --setup\`
-- **Issues/Support:** https://github.com/vscarpenter/gsd-taskmanager/issues
+- **Issues/Support:** https://github.com/vscarpenter/gsd-task-manager/issues
 
 **Version:** ${VERSION}
 **Backend:** PocketBase (self-hosted)
