@@ -38,4 +38,4 @@ Release the gsd-taskmanager app or MCP server. Replaces the recurring "bump vers
 - [ ] Version bump merged on `main`.
 - [ ] Tag exists on remote.
 - [ ] GitHub release page shows the new version.
-- [ ] If MCP server was published, `npm view @vscarpenter/gsd-mcp-server version` returns the new value.
+- [ ] If MCP server was published, `npm view gsd-mcp-server version` returns the new value.
