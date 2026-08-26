@@ -38,11 +38,21 @@ nothing about whether the work merged.
    - Non-empty output → **this check has expired, not failed.** It only proves a
      merge for a branch cut from the current `main`. Fall through to step 5.
 5. Only when step 4 came back non-empty, ask GitHub whether the branch was merged.
-   This is the authoritative answer, because it survives any history rewrite:
-   `gh pr list --state all --head <branch> --json number,state,mergedAt,title`
-   - A `MERGED` PR → the content landed; safe to force-delete.
-   - No PR, or an `OPEN`/`CLOSED` one → genuinely unmerged. Stop, show the user the
-     branch's commits (`git cherry -v main <branch>`), and do NOT force-delete.
+   This survives any history rewrite, and still answers after the remote branch is
+   deleted. `--head` matches on branch *name*, so you must also confirm the PR was
+   built from the commit the local branch actually points at:
+   ```bash
+   gh pr list --state all --head <branch> --json number,state,mergedAt,headRefOid
+   git rev-parse <branch>
+   ```
+   - A `MERGED` PR **whose `headRefOid` equals the local tip** → the content landed;
+     safe to force-delete.
+   - A `MERGED` PR whose `headRefOid` **differs** → the local branch has moved since
+     that PR merged, or the name was reused. Those extra commits are not in `main`.
+     Stop, show the user `git log --oneline <headRefOid>..<branch>`, and do NOT
+     force-delete.
+   - No PR, or only `OPEN`/`CLOSED` ones → genuinely unmerged. Stop, show the user
+     `git cherry -v main <branch>`, and do NOT force-delete.
 6. Force-delete the redundant local branch:
    `git branch -D <branch>`
 
@@ -65,6 +75,13 @@ nothing about whether the work merged.
   single-commit branch reads "already upstream" and every multi-commit branch reads
   "not in main". That pattern means squash-merge, not lost work. It is still useful
   as evidence *for* deletion (nothing flagged → definitely merged), never against.
+- **A merged PR proves the *name* merged, not the branch you are holding.**
+  `gh pr list --head` filters by branch name, so a branch that gained local commits
+  after its PR merged, or a name reused for new work, still returns the old `MERGED`
+  record. Acting on that deletes commits that never landed. This is why step 5
+  compares `headRefOid` against `git rev-parse <branch>` rather than trusting the
+  `MERGED` state alone. `headRefOid` remains readable long after the remote branch
+  is gone, which is what makes the comparison possible at cleanup time.
 - **`git worktree remove --force` discards uncommitted work silently.** Run
   `git -C <worktree> status --short` first and show the user anything it finds.
 - Deleting **multiple** branches at once: zsh does not word-split an unquoted
