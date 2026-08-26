@@ -163,34 +163,16 @@ export class MatrixPage {
   }
 
   async openSettings(): Promise<void> {
-    // Dismiss PWA install dialog if present (can block clicks in WebKit)
-    const pwaDialog = this.page.locator("[role='dialog'][aria-labelledby='install-pwa-title']");
-    if (await pwaDialog.isVisible().catch(() => false)) {
-      await pwaDialog.locator("button[aria-label='Dismiss install prompt']").click();
-      await expect(pwaDialog).toBeHidden();
-    }
     await this.navSettings.click();
     await expect(this.page).toHaveURL(/\/settings/);
   }
 
   async openDashboard(): Promise<void> {
-    // Dismiss PWA install dialog if present (can block clicks in WebKit)
-    const pwaDialog = this.page.locator("[role='dialog'][aria-labelledby='install-pwa-title']");
-    if (await pwaDialog.isVisible().catch(() => false)) {
-      await pwaDialog.locator("button[aria-label='Dismiss install prompt']").click();
-      await expect(pwaDialog).toBeHidden();
-    }
     await this.navDashboard.click();
     await expect(this.page).toHaveURL(/\/dashboard/);
   }
 
   async openMatrix(): Promise<void> {
-    // Dismiss PWA install dialog if present (can block clicks in WebKit)
-    const pwaDialog = this.page.locator("[role='dialog'][aria-labelledby='install-pwa-title']");
-    if (await pwaDialog.isVisible().catch(() => false)) {
-      await pwaDialog.locator("button[aria-label='Dismiss install prompt']").click();
-      await expect(pwaDialog).toBeHidden();
-    }
     await this.navMatrix.click();
     await expect(this.matrixGrid).toBeVisible();
   }

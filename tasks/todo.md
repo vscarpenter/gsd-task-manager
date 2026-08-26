@@ -1,208 +1,73 @@
-# Status — 2026-08-22
+# Status — 2026-08-25
 
-## Matrix usability tweaks (design handoff) — DONE (uncommitted → see below)
+## Remove the PWA install feature — DONE (committed)
 
-Branch `feat/matrix-usability-tweaks`. Source: `design_handoff_matrix_usability_tweaks/README.md`
-(+ `Matrix Review.dc.html` frames 1a baseline / 1b target). Tier: Standard.
+Branch `chore/remove-pwa-install-prompt`. Tier: Non-trivial (coordinated
+changes across route contract, service worker, sitemap, and copy). Scope was
+approved by the user up front, so spec → plan → implementation runs in one pass
+per the standing correction in the global CLAUDE.md.
 
-- [x] ① `matrix-intro.tsx` — one flex row; h1 `text-display` → `text-h2`; Protect Q2
-      card → one accent button `Protect Q2 · {n} to schedule` (`· clear` at 0).
-      Props unchanged. Row starts at `sm:` — see the mobile trap below.
-- [x] ② `matrix-grid.tsx` — `AxisFrame` wraps the grid with URGENT / NOT URGENT
-      column labels and vertical IMPORTANT / NOT IMPORTANT row labels, all
-      `aria-hidden`, all hidden below `@min-[696px]`.
-- [x] ③ `quadrant-pane.tsx` — count pill takes `bg-card` + inline `--q*-ink`,
-      weight 600. Measured AA: q3 ochre 6.59:1 light, 8.07:1 dark.
-- [x] ④ task-card — corner badge and `reserveBadgeSpace`/`pr-24` removed; rust
-      chip leads the footer row, `{n}d overdue · {short date}`. `overdueDays`
-      is now a required `TaskCardActions` prop.
+**Why:** the project now ships a native mobile app, so nudging users to install
+the web build as a PWA is a competing, worse install path.
 
-Verified live (dev, SW busted, IndexedDB seeded, 1440x900 + 390 + dark):
-all four quadrant headers at y=347/658, well above the 900 fold; console clean
-apart from the pre-existing `[PWA] Periodic sync registration failed` warning.
+**Decided scope (user-approved):**
+- Remove the install *prompt* and the `/install` how-to route.
+- KEEP `public/manifest.json`, `public/sw.js` offline shell, and
+  `components/pwa-register.tsx`. The app stays a working offline PWA; a browser
+  can still install it from its own menu. We just stop advertising it.
+- Rewrite the install-sell copy around offline, with no mobile-app link (no
+  store URL was supplied, and inventing one is worse than silence).
+
+### Tasks
+
+- [x] ① Red — update/delete the specs that assert install behavior
+- [x] ② Delete `components/install-pwa-prompt.tsx` + its mount in `app/layout.tsx`
+- [x] ③ Delete `app/(pwa)/install/page.tsx` (and the `(pwa)` group if empty)
+- [x] ④ Drop `INSTALL` from `lib/routes.ts` (ROUTES + ROUTE_VARIANTS)
+- [x] ⑤ Drop `/install/` from `public/sw.js` precache
+- [x] ⑥ Drop `/install` from `public/sitemap.xml` and `lib/sentry.ts` allowlist
+- [x] ⑦ Drop `/install` from `onboarding-gate.tsx` SUPPRESS_PREFIXES
+- [x] ⑧ Rewrite copy: `about/features-section.tsx`, `matrix-simplified/help-drawer.tsx`
+- [x] ⑨ Strip install-dismissal workarounds from e2e page object + fixtures
+- [x] ⑩ Refresh `scripts/code-shape-baseline.json`
+- [x] ⑪ Version trio bump 12.2.5 → 12.3.0 (package.json + README:7 + sw.js)
+- [x] ⑫ Verify: `bun run test`, `bun typecheck`, `bun lint`
+- [x] ⑬ Verify live via `/verify-frontend-change`
+- [ ] ⑭ Commit → push → PR
+
+### Verification
+
+- `bun run test` — 2767 passed, 1 skipped, 0 failed.
+- `bun typecheck`, `bun lint`, `bun run quality:shape` — all clean.
+- `bunx playwright test` — 285 passed across chromium, firefox, and webkit.
+- `bun run build` — static export succeeds; the route table no longer lists
+  `/install`, and `out/` contains no install directory.
+- Live browser (dev, no SW registered, console clean): the about card renders
+  "Works Offline" with the new copy, the help drawer no longer pitches PWA
+  install, no install banner mounts, and `/install/` 404s.
 
 ### Traps found
 
-- **The handoff frame is a 1500px desktop board.** Taking its single row
-  literally overflowed a 390px phone by 64px — the old layout was a grid that
-  stacked below `lg`, and an unconditional flex row dropped that. Fixed with
-  `flex-col … sm:flex-row`; pinned by `tests/e2e/matrix-briefing-fold.spec.ts`,
-  which fails against the unconditional row.
-- **The handoff says `rounded-lg` "(10px radius)".** In this repo `rounded-lg`
-  is 14px; 10px is `--r-sm` → `rounded-sm`. Frame 1a confirms the step-down is
-  intentional. Trust the pixel value and token name, not the class name.
-- **`quality:shape` is already red on a clean `main`** (pb-pull, pb-sync-engine,
-  sentry, terminal-block, capture-bar). This change adds nothing to it — the
-  axis frame and the count-pill class list were extracted to keep both touched
-  files at their baseline.
+- **Two unit suites failed for an unrelated reason.** `editorial-theme` could
+  not resolve `sharp` and `dependency-license-policy` counted 60 SBOM
+  components instead of 100+. Both traced to an incomplete `node_modules`
+  behind the dirty `bun.lock`, not to this change. `bun install` fixed both and
+  cleaned the lockfile.
+- **Repairing `.build-info.json` caused the version drift it was meant to
+  prevent.** `scripts/generate-build-info.cjs` resets to `package.json` only
+  when the two versions *differ*; when they match it increments the patch. I
+  set the stale file to 12.3.0 to match, so the build produced 12.3.1 and wrote
+  it into `sw.js`. Leave that untracked file stale and let the build reset it.
+- **`self.addEventListener("install")` in `public/sw.js` is the Service Worker
+  lifecycle event, not the install prompt.** A blind find-and-replace on
+  "install" breaks the offline cache.
 
-### Resuming From Here
+### Follow-ups (not done, deliberately)
 
-Done: all four changes implemented, verified live, and green on
-`bun run test` (2799), `bun typecheck`, `bun lint`, `bun run test:e2e --project=chromium` (112).
-
-Next: **not yet committed at the time of writing** — commit the source/test
-files only. Deliberately NOT staged: `package.json` + `bun.lock` (unrelated
-`@browserbasehq/stagehand` bump already in the tree), `design_handoff_*/`,
-`first-run-guide.html`.
-
-Blockers: none. Open decision for the user: the compact briefing drops the
-`aria-live="polite"` region that used to announce the Q2 count, because the
-handoff collapses that whole card into the button label. The count is still in
-the button's accessible name. Re-adding a live region to a button label would
-announce on every Q2 change, which is noisier than what it replaces.
-
-Version bumped to **12.0.1** (patch) across the release trio: `package.json`,
-`README.md:7`, and `public/sw.js` CACHE_VERSION. Hand-edited rather than run
-through `scripts/update-sw-version.cjs` — `.build-info.json` is stale at 12.0.0
-and the script prefers it, so it would have written the old version back.
-
-# Status — 2026-08-16
-
-## UI Polish Pass (/ui-craft polish) — DONE
-
-Shipped as PR #504 (squash-merged to main as 942cab9); local + remote branch
-deleted. Verified live before push (SW busted, DOM assertions, clean console).
-
-## gsd-mcp-server 1.2.4 publish — DONE
-
-npm serves 1.2.4 (latest); GitHub Packages published.
-
-- Leaked npm token: REVOKED by user 2026-08-16. No replacement token needed —
-  the workflow now uses OIDC Trusted Publishing (see below). The dead
-  `NPM_TOKEN` GitHub secret can be deleted (`gh secret delete NPM_TOKEN`).
-
-## OIDC Trusted Publishing — DONE (validated as far as possible pre-release)
-
-PR #505 merged (58ed107). npmjs.com trusted publisher configured by user
-2026-08-16 and reviewed field-by-field: vscarpenter/gsd-task-manager /
-publish-mcp-server.yml / environment mcp-release / npm publish permission.
-Dry-run dispatch (run 31969840150) green end-to-end on the new workflow:
-Node 24, npm 11.17.0, build + pack clean, publish steps correctly skipped.
-
-Cleanup completed 2026-08-16 (all user-approved):
-- `NPM_TOKEN` secret deleted from GitHub (verified absent)
-- Remote OIDC branch was already auto-removed at merge; refs pruned
-- npmjs Publishing access set to strict ("require 2FA, disallow bypass-2fa
-  tokens") — saved with security-key confirmation, "package scope updated!"
-
-Remaining: the OIDC exchange itself is only provable on the next real
-`mcp-v*` release — if it fails auth, suspect a publisher-config field
-mismatch before the workflow.
-
-## Working-tree leftovers (deliberate, uncommitted on main)
-
-bun.lock + package.json (stagehand ^4.0.1 bump) and public/sw.js
-(CACHE_VERSION 12.0.1) — pre-staged version-bump material from a prior
-session; commit them with the next release, not with feature work.
-
-## In flight: editorial imports from first-run-guide (feat/editorial-imports)
-
-Pulling four approved design elements from first-run-guide.html into GSD
-(analysis + side-by-side artifact in session 824c95b2, 2026-08-17):
-
-1. `.kicker` mono eyebrow class in globals.css; unify the seven drifting
-   about-page eyebrow call sites; amend the mono-scope line in
-   .ui-craft/tokens.md + DESIGN.md.
-2. TerminalBlock component (TDD) with copy button; replaces the bare
-   pre/code in components/about/mcp-section.tsx.
-3. Dark-mode shadows become 1px white ring + faint blur in
-   inkwell-tokens.css (both dark branches identical).
-4. About hero h1 goes clamp()-fluid; app surfaces keep the fixed scale.
-
-No version bump here — per the note above, version material rides with
-the next release. Left untouched: bun.lock/package.json/sw.js leftovers.
-
-### Resuming From Here (2026-08-17, feat/editorial-imports)
-
-Done: all four editorial imports implemented, verified, and committed
-locally (5 commits, 521c0a1..6702a15). Full suite 2784 green, typecheck +
-lint clean. Live-verified headlessly (Playwright vs bun dev): 80px fluid
-hero, mono kickers, copy → Copied → revert with real clipboard content,
-#11100B dark terminal, ring shadow live on dark matrix panes. Verification
-caught + fixed: code-chip tint bleeding into the terminal (6702a15).
-
-Next: push + open PR (awaiting go-ahead). Not committed on purpose:
-bun.lock / package.json / sw.js release leftovers, this file,
-first-run-guide.html, next-env.d.ts (dev-server regen),
-.tmp-preview-guide-vs-editorial.html (rm was denied — delete manually).
-
-## security.txt (RFC 9116), feat/security-txt, 2026-08-23
-
-Standard tier. Triggered by scanner traffic hitting `/.well-known/security.txt`
-and `/.well-known/assetlinks.json`. Decision: implement `security.txt`; leave
-`assetlinks.json` 404 (browser PWA, no Android package to assert).
-
-- [x] RED: expiry + field tests in tests/data/agent-discovery-files.test.ts
-- [x] GREEN: public/.well-known/security.txt
-- [x] Content-Type fix_type line in scripts/fix-discovery-content-types.sh
-- [x] Prod smoke check in scripts/smoke-test.sh (now 5 assertions, not 4)
-- [x] ADR 0010 discovery-file table row + Harder bullet + amendment date
-- [x] SECURITY.md: name the advisory URL that Policy: points at
-- [x] Enable GitHub private vulnerability reporting (now enabled:true)
-
-No version bump: package.json/sw.js/bun.lock carry the user's in-flight
-12.1.0 release leftovers. Left untouched, same as the editorial-imports run.
-
-### Resuming From Here (2026-08-23, feat/security-txt)
-
-Done: security.txt shipped TDD (RED on missing file, GREEN at 22/22 in
-tests/data/agent-discovery-files.test.ts). Expires 2027-08-01, with a test
-that fails at 30 days out so CI is the refresh alarm. Full suite 2806 pass,
-typecheck + lint clean.
-
-Version synced to 12.2.0 across the release trio (package.json, README:7,
-public/sw.js CACHE_VERSION) and folded into this PR at the user's request.
-That clears the documentation-currentness red: full suite is now 2807 pass,
-0 fail. bun.lock re-synced, which also carries the stagehand ^4.0.0 to
-^4.0.2 devDep bump the working tree already had.
-
-.build-info.json is gitignored but was also set to 12.2.0. update-sw-version.cjs
-prefers it over package.json, so a stale value there silently rewrites sw.js
-back on the next local build.
-
-Deliberately not done: assetlinks.json stays a 404. GSD is a browser PWA
-with no related_applications and no Play Store package to assert.
-
-Open follow-up, now handled in PR #509: the dead repository slug (the
-un-hyphenated form of the repo name) appeared in 11 tracked files and 404s.
-Real slug is gsd-task-manager.
-
-Not committed on purpose: first-run-guide.html,
-design_handoff_matrix_usability_tweaks/.
-
-## Dead GitHub slug, fix/github-repo-slug, PR #509
-
-Replaced 20 occurrences of the un-hyphenated repository slug across 11 files:
-the whole .well-known discovery surface, public/index.md, public/about/index.md,
-cloudfront-function-response-headers.cjs, and the MCP server package.
-tests/data/repository-urls.test.ts guards it with git grep over tracked files.
-
-### Resuming From Here (2026-08-23, fix/github-repo-slug)
-
-Trap worth remembering: the guard test greps ALL tracked files, so prose that
-quotes the bad slug trips it. PR #508's own todo note did exactly that, which
-turned CI red on PR #509 while the branch passed locally. Write about the bug
-using the bare repo name, never the full owner/name path.
-
-After merge, two things still need doing. The CloudFront function must be
-republished via scripts/deploy-cloudfront-function.sh before the Link header
-change reaches production. The MCP server needs an npm release (mcp-vX.Y.Z tag)
-before its CLI stops printing the old URL.
-
-Still broken on purpose: the mcp-server CHANGELOG link definitions point at
-tags that were never created (v0.1.0 through v1.1.4), so they 404 regardless
-of slug. And oauth-protected-resource uses a #cloud-sync anchor that has no
-matching heading in README.md.
-
-## MCP server 1.2.5, chore/mcp-release-1.2.5
-
-Patch release carrying only the #509 repository URL fix, which is the last
-place the old slug was still user-visible (npm ships the CLI help text).
-Verified against the built dist, not just source: `node dist/index.js --help`
-prints the corrected URLs, and a stdio probe returned exactly one valid
-JSON-RPC line on stdout with all logging on stderr.
-
-The new CHANGELOG link definition uses the real tag scheme
-(mcp-v1.2.4...mcp-v1.2.5). The legacy entries below it still cite tags that
-were never created and stay broken.
+- CloudFront's SPA function rewrites unknown paths to `index.html`, so
+  `gsd.vinny.dev/install` will serve the app shell with a 200 after deploy
+  rather than a real 404. The S3 object itself goes away because
+  `scripts/deploy-app.sh` syncs with `--delete`.
+- `docs/adr/0004-pwa-architecture.md` still lists limited install
+  discoverability as a consequence. Left as-is; the PWA architecture it
+  describes is unchanged. Worth a short ADR if the reasoning should be durable.

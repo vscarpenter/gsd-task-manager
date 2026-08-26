@@ -150,10 +150,6 @@
       "count": 1,
       "max": 48
     },
-    "app/(pwa)/install/page.tsx": {
-      "count": 1,
-      "max": 45
-    },
     "app/(sync)/sync-history/page.tsx": {
       "count": 2,
       "max": 85
@@ -229,10 +225,6 @@
     "components/import-dialog.tsx": {
       "count": 1,
       "max": 97
-    },
-    "components/install-pwa-prompt.tsx": {
-      "count": 1,
-      "max": 119
     },
     "components/matrix-simplified/app-shell.tsx": {
       "count": 1,

@@ -1,6 +1,6 @@
 // Cache version — updated at build time by scripts/update-sw-version.cjs
 // Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '12.2.5';
+const CACHE_VERSION = '12.3.0';
 const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 
@@ -21,7 +21,6 @@ const PRECACHE_PAGES = [
 	"/about/",
 	"/archive/",
 	"/dashboard/",
-	"/install/",
 	"/settings/",
 	"/sync-history/",
 ];

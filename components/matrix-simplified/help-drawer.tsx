@@ -173,7 +173,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               <Link href={ROUTES.SETTINGS} style={linkStyle} onClick={onClose}>
                 Settings
               </Link>
-              . The app works fully offline; install it as a PWA from your browser&rsquo;s menu to keep it one tap away.
+              . The app works fully offline.
             </p>
             <p style={bodyStyle}>
               Want the full story?{" "}

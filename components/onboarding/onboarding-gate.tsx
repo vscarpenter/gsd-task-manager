@@ -10,7 +10,7 @@ export const ONBOARDING_SEEN_KEY = "gsd-onboarding-seen";
 export const REPLAY_ONBOARDING_EVENT = "gsd:replay-onboarding";
 
 // Marketing / utility surfaces where the tour should not auto-open.
-const SUPPRESS_PREFIXES = ["/about", "/install"];
+const SUPPRESS_PREFIXES = ["/about"];
 
 const seenListeners = new Set<() => void>();
 

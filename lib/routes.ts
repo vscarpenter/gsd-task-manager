@@ -25,9 +25,6 @@ export const ROUTES = {
   /** Product about page */
   ABOUT: '/about' as Route,
 
-  /** PWA installation instructions */
-  INSTALL: '/install' as Route,
-
 } as const;
 
 /**
@@ -44,7 +41,6 @@ export const ROUTE_VARIANTS = {
   DASHBOARD: ['/dashboard', '/dashboard/', '/dashboard.html'] as const,
   SETTINGS: ['/settings', '/settings/', '/settings.html'] as const,
   ABOUT: ['/about', '/about/', '/about.html'] as const,
-  INSTALL: ['/install', '/install/', '/install.html'] as const,
 } as const;
 
 /**

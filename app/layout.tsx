@@ -11,7 +11,6 @@ import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { SentryInit } from "@/components/sentry-init";
 import { WebMcpRegister } from "@/components/webmcp-register";
-import { InstallPwaPrompt } from "@/components/install-pwa-prompt";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { GlobalErrorListener } from "@/components/global-error-listener";
 import { ClientLayout } from "@/components/client-layout";
@@ -163,7 +162,6 @@ function AppProviders({ children }: { children: ReactNode }) {
               <OnboardingGate />
               <PwaRegister />
               <WebMcpRegister />
-              <InstallPwaPrompt />
               <PwaUpdateToast />
               <GlobalErrorListener />
               <SentryInit />

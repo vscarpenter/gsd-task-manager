@@ -11,8 +11,8 @@ describe('routes', () => {
       expect(ROUTES.DASHBOARD).toBe('/dashboard');
     });
 
-    it('should define INSTALL route', () => {
-      expect(ROUTES.INSTALL).toBe('/install');
+    it('should not define an INSTALL route', () => {
+      expect(ROUTES).not.toHaveProperty('INSTALL');
     });
   });
 
@@ -28,10 +28,8 @@ describe('routes', () => {
       expect(ROUTE_VARIANTS.DASHBOARD).toContain('/dashboard.html');
     });
 
-    it('should include trailing slash and .html variants for INSTALL', () => {
-      expect(ROUTE_VARIANTS.INSTALL).toContain('/install');
-      expect(ROUTE_VARIANTS.INSTALL).toContain('/install/');
-      expect(ROUTE_VARIANTS.INSTALL).toContain('/install.html');
+    it('should not define INSTALL variants', () => {
+      expect(ROUTE_VARIANTS).not.toHaveProperty('INSTALL');
     });
   });
 
@@ -63,12 +61,6 @@ describe('routes', () => {
     it('should return false when pathname matches a different route', () => {
       expect(isRouteActive('/dashboard', 'HOME')).toBe(false);
       expect(isRouteActive('/', 'DASHBOARD')).toBe(false);
-    });
-
-    it('should return true for INSTALL route variants', () => {
-      expect(isRouteActive('/install', 'INSTALL')).toBe(true);
-      expect(isRouteActive('/install/', 'INSTALL')).toBe(true);
-      expect(isRouteActive('/install.html', 'INSTALL')).toBe(true);
     });
   });
 });

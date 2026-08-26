@@ -80,9 +80,9 @@ const features: Feature[] = [
   },
   {
     icon: Smartphone,
-    title: "Works as a PWA",
+    title: "Works Offline",
     description:
-      "Install on desktop or mobile. Full offline support. No app store required.",
+      "No connection required. Every feature works the same on a plane as it does at your desk.",
   },
   {
     icon: Cloud,

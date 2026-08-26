@@ -6,8 +6,8 @@ const code = '{\n  "mcpServers": {}\n}';
 
 // jsdom ships no navigator.clipboard; installing one is the only way to
 // exercise the copy path. fireEvent + advanceTimersByTime (not userEvent)
-// is this repo's pattern for fake-timer tests — userEvent's click deadlocks
-// under vitest fake timers (see install-pwa-prompt.test.tsx).
+// is this repo's pattern for fake-timer tests: userEvent's click deadlocks
+// under vitest fake timers.
 function installClipboard(writeText: ReturnType<typeof vi.fn>) {
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText },
