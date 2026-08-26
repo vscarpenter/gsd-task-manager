@@ -62,6 +62,35 @@ the web build as a PWA is a competing, worse install path.
   lifecycle event, not the install prompt.** A blind find-and-replace on
   "install" breaks the offline cache.
 
+## Add the iOS App Store link — DONE
+
+Follow-up on the same branch, after the store URL arrived:
+`https://apps.apple.com/app/id6776731612` (verified 200, redirects to
+`/us/app/gsd-task-manager/id6776731612`). Kept the region-agnostic short form
+so it localizes per visitor.
+
+Placed as a third hero CTA on the about page, styled to match the existing
+secondary pill so the accent "Open App" stays the dominant action. Order is
+Open App, Get the iOS app, Learn how it works: the two "start using it" actions
+sit together, with "learn more" last.
+
+- [x] Red: two failing specs in `tests/ui/about-components.test.tsx` asserting
+      the href and the `target`/`rel` pair
+- [x] Green: third CTA in `components/about/hero-section.tsx`
+- [x] Refactor forced by the shape ratchet (see trap below)
+- [x] Verified live at 390 / 768 / 1440: no horizontal overflow, tap targets
+      44px+, graceful wrap to two rows on phones; console clean
+
+### Trap: the ratchet catches added lines, and the fix is extraction
+
+Adding the CTA pushed `HeroSection` from 66 to 79 lines and
+`bun run quality:shape` failed. The baseline entry is
+`{count: 1, max: 66}`, so the fix had to keep the extracted piece *under* 40
+lines too, or the violation count would rise to 2 and fail a different check.
+Extracted a `HeroCtas` component plus shared `ctaBase` / `secondaryCta` class
+constants, which also removed the duplicated pill className the new link had
+just introduced. Never edit the baseline; it is the gate.
+
 ### Follow-ups (not done, deliberately)
 
 - CloudFront's SPA function rewrites unknown paths to `index.html`, so
