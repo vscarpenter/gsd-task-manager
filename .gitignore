@@ -60,6 +60,7 @@ sync.md
 !.claude/skills/verify-frontend-change/
 !.claude/skills/claude-code-primitives/
 !.claude/skills/sentry-verification/
+!.claude/skills/cleaning-up-merged-branches/
 
 *.tsbuildinfo
 
