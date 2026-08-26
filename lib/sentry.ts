@@ -61,8 +61,6 @@ const SAFE_APP_ROUTE_PATHS = new Set([
   "/archive/",
   "/dashboard",
   "/dashboard/",
-  "/install",
-  "/install/",
   "/settings",
   "/settings/",
   "/sync-history",

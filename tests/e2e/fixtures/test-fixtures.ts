@@ -68,13 +68,6 @@ export const test = base.extend<TestFixtures>({
         // Suppress the welcome tour overlay so it never blocks app-level specs.
         window.localStorage.setItem("gsd-onboarding-seen", "true");
       }
-      // WebKit's Safari user agent starts the app's delayed install banner in
-      // every ordinary spec. Dedicated PWA specs dispatch the install event
-      // explicitly, while the Safari fallback timer has component coverage.
-      Object.defineProperty(window.navigator, "userAgent", {
-        configurable: true,
-        value: "Playwright E2E",
-      });
       // Ordinary app specs exercise runtime behavior without a real worker.
       // Removing the capability makes the production feature-detection path
       // return early instead of letting Playwright's blocked registration

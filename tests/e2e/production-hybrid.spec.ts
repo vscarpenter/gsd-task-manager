@@ -38,14 +38,6 @@ test.describe("Refined Evolution production hybrid", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("quadrant-q4")).toBeFocused();
 
-    const installPrompt = page.locator(
-      "[role='region'][aria-labelledby='install-pwa-title']"
-    );
-    await installPrompt.waitFor({ state: "visible", timeout: 750 }).catch(() => undefined);
-    if (await installPrompt.isVisible().catch(() => false)) {
-      await installPrompt.getByRole("button", { name: "Dismiss install prompt" }).click();
-    }
-
     const commandButton = page.getByRole("button", { name: /open command palette/i });
     await commandButton.click();
     await page.getByText("Toggle theme", { exact: true }).click();

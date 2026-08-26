@@ -3,6 +3,51 @@ import { Lock, Monitor, Code2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollReveal } from "@/components/about/scroll-reveal";
 
+const APP_STORE_URL = "https://apps.apple.com/app/id6776731612";
+
+const ctaBase = cn(
+  "inline-flex items-center justify-center gap-2",
+  "rounded-full px-6 py-3 text-sm font-medium",
+  "transition-colors duration-200"
+);
+
+/** Bordered pill for the two actions that sit beside the primary CTA. */
+const secondaryCta = cn(
+  ctaBase,
+  "border border-border",
+  "bg-card text-foreground-muted hover:bg-background-muted hover:text-foreground"
+);
+
+function HeroCtas() {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-4">
+      <Link
+        href="/"
+        className={cn(
+          ctaBase,
+          "bg-accent text-on-accent hover:bg-accent-hover",
+          "shadow-md shadow-accent/20"
+        )}
+      >
+        Open App &rarr;
+      </Link>
+
+      <a
+        href={APP_STORE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={secondaryCta}
+      >
+        Get the iOS app
+      </a>
+
+      <a href="#how-it-works" className={secondaryCta}>
+        Learn how it works
+      </a>
+    </div>
+  );
+}
+
 /**
  * Hero section for the About / marketing page.
  * Centered single-column layout with headline, CTAs, and trust signals.
@@ -28,33 +73,7 @@ export function HeroSection() {
             moves the needle.
           </p>
 
-          {/* CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/"
-              className={cn(
-                "inline-flex items-center justify-center gap-2",
-                "rounded-full px-6 py-3 text-sm font-medium",
-                "transition-colors duration-200",
-                "bg-accent text-on-accent hover:bg-accent-hover",
-                "shadow-md shadow-accent/20"
-              )}
-            >
-              Open App &rarr;
-            </Link>
-
-            <a
-              href="#how-it-works"
-              className={cn(
-                "inline-flex items-center justify-center gap-2",
-                "rounded-full border border-border px-6 py-3 text-sm font-medium",
-                "transition-colors duration-200",
-                "bg-card text-foreground-muted hover:bg-background-muted hover:text-foreground"
-              )}
-            >
-              Learn how it works
-            </a>
-          </div>
+          <HeroCtas />
 
           {/* Trust signals — hairline divider above frames the row visually */}
           <div className="mx-auto mt-12 max-w-2xl border-t border-border-muted pt-6">

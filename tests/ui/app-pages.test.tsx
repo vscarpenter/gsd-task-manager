@@ -2,7 +2,6 @@
  * Tests for App Router page components with 0% coverage:
  * - app/layout.tsx (RootLayout)
  * - app/about/page.tsx (AboutPage)
- * - app/(pwa)/install/page.tsx (InstallPage)
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -39,10 +38,6 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/components/pwa-register', () => ({
   PwaRegister: () => null,
-}));
-
-vi.mock('@/components/install-pwa-prompt', () => ({
-  InstallPwaPrompt: () => null,
 }));
 
 vi.mock('@/components/pwa-update-toast', () => ({
@@ -121,7 +116,6 @@ vi.mock('@/package.json', () => ({
 
 import RootLayout from '@/app/layout';
 import AboutPage from '@/app/about/page';
-import InstallPage from '@/app/(pwa)/install/page';
 
 // --- Tests ---
 
@@ -196,27 +190,3 @@ describe('AboutPage', () => {
   });
 });
 
-describe('InstallPage', () => {
-  it('renders install instructions heading', () => {
-    render(<InstallPage />);
-
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Install GSD Task Manager'
-    );
-  });
-
-  it('renders Desktop, iOS, and Android sections', () => {
-    render(<InstallPage />);
-
-    expect(screen.getByText('Desktop')).toBeInTheDocument();
-    expect(screen.getByText('iOS')).toBeInTheDocument();
-    expect(screen.getByText('Android')).toBeInTheDocument();
-  });
-
-  it('renders install steps as ordered lists', () => {
-    const { container } = render(<InstallPage />);
-
-    const orderedLists = container.querySelectorAll('ol');
-    expect(orderedLists.length).toBe(3);
-  });
-});

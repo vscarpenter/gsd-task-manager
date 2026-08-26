@@ -26,6 +26,21 @@ describe('About Components', () => {
       expect(screen.getByText(/Stop juggling/)).toBeInTheDocument();
       expect(screen.getByText(/Open App/)).toBeInTheDocument();
     });
+
+    it('links to the iOS app on the App Store', () => {
+      render(<HeroSection />);
+
+      const link = screen.getByRole('link', { name: /ios app/i });
+      expect(link).toHaveAttribute('href', 'https://apps.apple.com/app/id6776731612');
+    });
+
+    it('opens the App Store link in a new tab without leaking the opener', () => {
+      render(<HeroSection />);
+
+      const link = screen.getByRole('link', { name: /ios app/i });
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    });
   });
 
   describe('FeatureCard', () => {
