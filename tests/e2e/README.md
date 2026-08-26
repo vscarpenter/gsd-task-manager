@@ -38,7 +38,7 @@ tests/e2e/
 ├── search.spec.ts                  ← title and tag search
 ├── settings-navigation.spec.ts     ← section nav, theme, toggles, export
 ├── data-management.spec.ts         ← import flows and import validation
-├── about-install.spec.ts           ← about + install page smoke tests
+├── about.spec.ts                   ← about page smoke tests
 └── first-time-redirect.spec.ts     ← first-visit /about redirect
 ```
 

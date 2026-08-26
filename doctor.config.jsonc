@@ -18,7 +18,6 @@
       // + managed focus/Escape already meet the a11y contract; a native <dialog>
       // migration is separate behavior-changing work. Findings sit on JSX
       // attribute lines, so they can't be inline-annotated.
-      { "files": ["components/install-pwa-prompt.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
       { "files": ["components/matrix-simplified/edit-drawer.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/no-noninteractive-element-interactions"] },
       { "files": ["components/onboarding/onboarding.tsx"], "rules": ["react-doctor/prefer-html-dialog", "react-doctor/prefer-tag-over-role"] },
       // role="group" + aria-label is the correct ARIA for a toolbar of filter

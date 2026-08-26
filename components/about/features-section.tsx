@@ -82,7 +82,7 @@ const features: Feature[] = [
     icon: Smartphone,
     title: "Works Offline",
     description:
-      "No connection required. Every feature works the same on a plane as it does at your desk.",
+      "No connection required. Capture, sort, and complete tasks the same on a plane as at your desk.",
   },
   {
     icon: Cloud,
