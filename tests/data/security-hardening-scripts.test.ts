@@ -18,10 +18,34 @@ describe('security hardening scripts and workflows', () => {
     expect(updateScript).toContain('Owner immutability rule was not applied');
   });
 
+  it('keeps the feedback collection write-only for anonymous callers', () => {
+    const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
+
+    // Anyone may create; nobody but a superuser may read, change, or remove.
+    expect(script).toContain('"createRule": ""');
+    expect(script).toContain('"listRule": null');
+    expect(script).toContain('"viewRule": null');
+    expect(script).toContain('"updateRule": null');
+    expect(script).toContain('"deleteRule": null');
+  });
+
+  it('gives feedback no field that could identify a submitter', () => {
+    const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
+
+    expect(script).not.toMatch(/"name":\s*"(?:owner|user|user_id|device_id|email|ip_address)"/);
+  });
+
+  it('makes a retried feedback submission idempotent', () => {
+    const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
+
+    expect(script).toContain('CREATE UNIQUE INDEX idx_feedback_submission_id');
+  });
+
   it('does not pass PocketBase superuser secrets or tokens directly in curl argv', () => {
     const scripts = [
       readRepoFile('scripts/setup-pocketbase-collections.sh'),
       readRepoFile('scripts/update-pocketbase-tasks-schema.sh'),
+      readRepoFile('scripts/setup-pocketbase-feedback-collection.sh'),
     ];
 
     for (const script of scripts) {

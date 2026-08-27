@@ -33,6 +33,7 @@ export interface CommandActionHandlers {
   onImportTasks: () => void;
   onOpenSettings: () => void;
   onOpenHelp: () => void;
+  onSendFeedback: () => void;
 
   // Navigation
   onViewDashboard: () => void;
@@ -152,6 +153,14 @@ export function buildCommandActions(
       section: 'settings',
       keywords: ['settings', 'preferences', 'config'],
       onExecute: handlers.onOpenSettings,
+      focusAfterExecute: 'handoff'
+    },
+    {
+      id: 'send-feedback',
+      label: 'Send feedback',
+      section: 'settings',
+      keywords: ['feedback', 'suggest', 'roadmap', 'vote', 'idea', 'bug'],
+      onExecute: handlers.onSendFeedback,
       focusAfterExecute: 'handoff'
     },
     {

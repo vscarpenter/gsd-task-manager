@@ -30,7 +30,7 @@
     },
     "components/settings-page/settings-body.tsx": {
       "count": 1,
-      "max": 14
+      "max": 15
     },
     "components/task-card/index.tsx": {
       "count": 1,
@@ -134,7 +134,7 @@
   "max-lines": {
     "lib/sentry.ts": {
       "count": 1,
-      "max": 465
+      "max": 463
     }
   },
   "max-lines-per-function": {
@@ -160,17 +160,13 @@
     },
     "components/about/hero-section.tsx": {
       "count": 1,
-      "max": 66
+      "max": 41
     },
     "components/about/matrix-section.tsx": {
       "count": 1,
       "max": 58
     },
     "components/about/mcp-section.tsx": {
-      "count": 1,
-      "max": 44
-    },
-    "components/about/privacy-section.tsx": {
       "count": 1,
       "max": 44
     },
@@ -340,7 +336,7 @@
     },
     "components/settings-page/settings-body.tsx": {
       "count": 1,
-      "max": 130
+      "max": 131
     },
     "components/settings-page/settings-sidebar.tsx": {
       "count": 1,
@@ -416,7 +412,7 @@
     },
     "lib/command-actions.ts": {
       "count": 1,
-      "max": 145
+      "max": 153
     },
     "lib/hooks/use-sync-status.ts": {
       "count": 1,
@@ -468,7 +464,7 @@
     },
     "lib/use-shell-command-handlers.ts": {
       "count": 1,
-      "max": 87
+      "max": 88
     },
     "packages/mcp-server/src/auth/token-status.ts": {
       "count": 1,

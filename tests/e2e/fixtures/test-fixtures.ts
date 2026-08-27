@@ -22,20 +22,32 @@ type TestFixtures = {
   clearIndexedDB: void;
   firstTimeVisitor: boolean;
   runtimeErrors: void;
+  /**
+   * Console errors the test causes on purpose — aborting a route, for one —
+   * which the browser reports as an error but which are not app faults.
+   * Opt in per test with `test.use()`; the guard stays strict everywhere else.
+   *
+   * One pattern rather than an array: Playwright reads a two-element array as
+   * a [value, options] fixture tuple, so `[/a/, /b/]` would arrive as `/a/`.
+   */
+  expectedConsoleErrors: RegExp | null;
 };
 
 export const test = base.extend<TestFixtures>({
   firstTimeVisitor: [false, { option: true }],
+  expectedConsoleErrors: [null, { option: true }],
   runtimeErrors: [
-    async ({ page }, runTest, testInfo) => {
+    async ({ page, expectedConsoleErrors }, runTest, testInfo) => {
       const runtimeErrors: string[] = [];
       const onPageError = (error: Error) => {
         runtimeErrors.push(`pageerror: ${error.stack ?? error.message}`);
       };
       const onConsole = (message: import("@playwright/test").ConsoleMessage) => {
-        if (message.type() === "error" && !isExpectedBrowserDiagnostic(message.text())) {
-          runtimeErrors.push(`console.error: ${message.text()}`);
-        }
+        if (message.type() !== "error") return;
+        const text = message.text();
+        if (isExpectedBrowserDiagnostic(text)) return;
+        if (expectedConsoleErrors?.test(text)) return;
+        runtimeErrors.push(`console.error: ${text}`);
       };
 
       page.on("pageerror", onPageError);

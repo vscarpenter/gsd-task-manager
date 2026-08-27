@@ -1,102 +1,69 @@
-# Status — 2026-08-25
+# Status — 2026-08-27
 
-## Remove the PWA install feature — DONE (committed)
+## Anonymous opt-in feedback — DONE (committed, not pushed)
 
-Branch `chore/remove-pwa-install-prompt`. Tier: Non-trivial (coordinated
-changes across route contract, service worker, sitemap, and copy). Scope was
-approved by the user up front, so spec → plan → implementation runs in one pass
-per the standing correction in the global CLAUDE.md.
+Branch `feat/anonymous-feedback`. Tier: **Non-trivial** (new outbound data path,
+new PocketBase collection with an unauthenticated write rule, privacy-copy change,
+new Settings surface). Spec: `tasks/spec-anonymous-feedback.md`, approved by the
+user, so spec → plan → implementation runs in one pass per the standing correction
+in the global CLAUDE.md.
 
-**Why:** the project now ships a native mobile app, so nudging users to install
-the web build as a PWA is a competing, worse install path.
+**Why:** Vinny has no signal from users today — no analytics by design — so he
+can't tell what people think or what to build next. The design answer is to make
+the privacy stance the feature's UX: capture locally, show the exact payload,
+send only on an explicit tap, attach no identifier at all.
 
 **Decided scope (user-approved):**
-- Remove the install *prompt* and the `/install` how-to route.
-- KEEP `public/manifest.json`, `public/sw.js` offline shell, and
-  `components/pwa-register.tsx`. The app stays a working offline PWA; a browser
-  can still install it from its own menu. We just stop advertising it.
-- Rewrite the install-sell copy around offline, with no mobile-app link (no
-  store URL was supplied, and inventing one is worse than silence).
+
+- Transport: the existing self-hosted PocketBase at `api.vinny.io`, anonymous.
+- Signals: roadmap poll + sentiment + category + free text, unified in one form.
+- Identity: **none**. Not even a rotatable device id — vote integrity is
+  client-side only, and that's the right fidelity here.
+- Roadmap candidates: hardcoded constant, no server read path.
+- Deferred: the "earned moment" prompt, and the public privacy-policy page.
 
 ### Tasks
 
-- [x] ① Red — update/delete the specs that assert install behavior
-- [x] ② Delete `components/install-pwa-prompt.tsx` + its mount in `app/layout.tsx`
-- [x] ③ Delete `app/(pwa)/install/page.tsx` (and the `(pwa)` group if empty)
-- [x] ④ Drop `INSTALL` from `lib/routes.ts` (ROUTES + ROUTE_VARIANTS)
-- [x] ⑤ Drop `/install/` from `public/sw.js` precache
-- [x] ⑥ Drop `/install` from `public/sitemap.xml` and `lib/sentry.ts` allowlist
-- [x] ⑦ Drop `/install` from `onboarding-gate.tsx` SUPPRESS_PREFIXES
-- [x] ⑧ Rewrite copy: `about/features-section.tsx`, `matrix-simplified/help-drawer.tsx`
-- [x] ⑨ Strip install-dismissal workarounds from e2e page object + fixtures
-- [x] ⑩ Refresh `scripts/code-shape-baseline.json`
-- [x] ⑪ Version trio bump 12.2.5 → 12.3.0 (package.json + README:7 + sw.js)
-- [x] ⑫ Verify: `bun run test`, `bun typecheck`, `bun lint`
-- [x] ⑬ Verify live via `/verify-frontend-change`
-- [ ] ⑭ Commit → push → PR
+- [x] ① Preflight + branch (`feat/anonymous-feedback`)
+- [x] ② Write spec (`tasks/spec-anonymous-feedback.md`)
+- [x] ③ Red — `tests/data/feedback-payload.test.ts` (the privacy test)
+- [x] ④ Green — `lib/feedback/roadmap-items.ts` + `feedback-payload.ts`
+- [x] ⑤ Red/green — `lib/feedback/feedback-store.ts` (localStorage draft + votes)
+- [x] ⑥ Red/green — `lib/feedback/submit-feedback.ts` (bare fetch, no auth header)
+- [x] ⑦ Settings → Feedback section + UI tests
+- [x] ⑧ Command palette "Send feedback" entry
+- [x] ⑨ About-page privacy copy acknowledges opt-in feedback
+- [x] ⑩ `scripts/setup-pocketbase-feedback-collection.sh`
+- [x] ⑪ E2E spec with the POST stubbed
+- [x] ⑫ Verify: `bun run test`, `typecheck`, `lint`, `quality:shape`
+- [x] ⑬ Verify in the running app (`/verify-frontend-change`)
+- [x] ⑭ Version bump trio (package.json + README:7 + sw.js CACHE_VERSION), PR
 
-### Verification
+### Assumptions
 
-- `bun run test` — 2767 passed, 1 skipped, 0 failed.
-- `bun typecheck`, `bun lint`, `bun run quality:shape` — all clean.
-- `bunx playwright test` — 285 passed across chromium, firefox, and webkit.
-- `bun run build` — static export succeeds; the route table no longer lists
-  `/install`, and `out/` contains no install directory.
-- Live browser (dev, no SW registered, console clean): the about card renders
-  "Works Offline" with the new copy, the help drawer no longer pitches PWA
-  install, no install banner mounts, and `/install/` 404s.
+- The `feedback` collection does not exist on `api.vinny.io` yet; the setup
+  script creates it and Vinny runs it against prod himself.
+- The roadmap candidate list in the spec is a seed for Vinny to curate, not a
+  product commitment.
 
-### Traps found
+### Resuming From Here
 
-- **Two unit suites failed for an unrelated reason.** `editorial-theme` could
-  not resolve `sharp` and `dependency-license-policy` counted 60 SBOM
-  components instead of 100+. Both traced to an incomplete `node_modules`
-  behind the dirty `bun.lock`, not to this change. `bun install` fixed both and
-  cleaned the lockfile.
-- **Repairing `.build-info.json` caused the version drift it was meant to
-  prevent.** `scripts/generate-build-info.cjs` resets to `package.json` only
-  when the two versions *differ*; when they match it increments the patch. I
-  set the stale file to 12.3.0 to match, so the build produced 12.3.1 and wrote
-  it into `sw.js`. Leave that untracked file stale and let the build reset it.
-- **`self.addEventListener("install")` in `public/sw.js` is the Service Worker
-  lifecycle event, not the install prompt.** A blind find-and-replace on
-  "install" breaks the offline cache.
+Feature is complete and committed on `feat/anonymous-feedback` (6 commits).
+`bun run test` (2830), `typecheck`, `lint`, and `quality:shape` are all green,
+and the surface was verified in the running app (both themes, a11y tree,
+success and failure paths).
 
-## Add the iOS App Store link — DONE
+**Not yet done — needs Vinny:**
+1. Push and open the PR. Not done without an explicit go-ahead.
+2. Run `scripts/setup-pocketbase-feedback-collection.sh` against prod, then do
+   the two manual steps it prints: rate limiting and log retention. Until the
+   collection exists, Send will fail with "That wasn't accepted."
+3. Curate `lib/feedback/roadmap-items.ts`. The eight candidates are a seed.
+4. Update the privacy policy at gsdtaskmanager.com/privacy (separate repo).
 
-Follow-up on the same branch, after the store URL arrived:
-`https://apps.apple.com/app/id6776731612` (verified 200, redirects to
-`/us/app/gsd-task-manager/id6776731612`). Kept the region-agnostic short form
-so it localizes per visitor.
+**Deferred by design:** the earned-moment prompt after N completed tasks.
 
-Placed as a third hero CTA on the about page, styled to match the existing
-secondary pill so the accent "Open App" stays the dominant action. Order is
-Open App, Get the iOS app, Learn how it works: the two "start using it" actions
-sit together, with "learn more" last.
+### Watch out
 
-- [x] Red: two failing specs in `tests/ui/about-components.test.tsx` asserting
-      the href and the `target`/`rel` pair
-- [x] Green: third CTA in `components/about/hero-section.tsx`
-- [x] Refactor forced by the shape ratchet (see trap below)
-- [x] Verified live at 390 / 768 / 1440: no horizontal overflow, tap targets
-      44px+, graceful wrap to two rows on phones; console clean
-
-### Trap: the ratchet catches added lines, and the fix is extraction
-
-Adding the CTA pushed `HeroSection` from 66 to 79 lines and
-`bun run quality:shape` failed. The baseline entry is
-`{count: 1, max: 66}`, so the fix had to keep the extracted piece *under* 40
-lines too, or the violation count would rise to 2 and fail a different check.
-Extracted a `HeroCtas` component plus shared `ctaBase` / `secondaryCta` class
-constants, which also removed the duplicated pill className the new link had
-just introduced. Never edit the baseline; it is the gate.
-
-### Follow-ups (not done, deliberately)
-
-- CloudFront's SPA function rewrites unknown paths to `index.html`, so
-  `gsd.vinny.dev/install` will serve the app shell with a 200 after deploy
-  rather than a real 404. The S3 object itself goes away because
-  `scripts/deploy-app.sh` syncs with `--delete`.
-- `docs/adr/0004-pwa-architecture.md` still lists limited install
-  discoverability as a consequence. Left as-is; the PWA architecture it
-  describes is unchanged. Worth a short ADR if the reasoning should be durable.
+- `localStorage.clear()` no-ops under jsdom-in-Bun; remove `gsd:feedback:*` keys
+  individually in `beforeEach` (see `.claude/rules/testing.md`).
