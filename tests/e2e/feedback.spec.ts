@@ -62,15 +62,22 @@ test.describe("Feedback", () => {
     expect(body).not.toMatch(/deviceId|device_id|owner|userId|token/i);
   });
 
-  test("keeps the draft when the send fails", async ({ page }) => {
-    await page.route("**/api/collections/feedback/records", (route) => route.abort("failed"));
+  // Aborting the request is the point of this case, and each engine reports the
+  // abort differently: Chromium as ERR_FAILED, Firefox as a failed CORS
+  // request, WebKit not at all. Both are the test's own doing, not the app's.
+  test.describe("when the request cannot leave the browser", () => {
+    test.use({ expectedConsoleErrors: /net::ERR_FAILED|CORS request did not succeed/ });
 
-    await openFeedback(page);
-    await page.getByLabel(/anything else/i).fill("do not lose this");
-    await page.getByRole("button", { name: /send feedback/i }).click();
+    test("keeps the draft when the send fails", async ({ page }) => {
+      await page.route("**/api/collections/feedback/records", (route) => route.abort("failed"));
 
-    await expect(page.getByRole("status")).toContainText(/connect/i);
-    await expect(page.getByLabel(/anything else/i)).toHaveValue("do not lose this");
+      await openFeedback(page);
+      await page.getByLabel(/anything else/i).fill("do not lose this");
+      await page.getByRole("button", { name: /send feedback/i }).click();
+
+      await expect(page.getByTestId("feedback-status")).toContainText(/connect/i);
+      await expect(page.getByLabel(/anything else/i)).toHaveValue("do not lose this");
+    });
   });
 
   test("clears the draft after a successful send", async ({ page }) => {
@@ -82,13 +89,13 @@ test.describe("Feedback", () => {
     await page.getByLabel(/anything else/i).fill("thanks for building this");
     await page.getByRole("button", { name: /send feedback/i }).click();
 
-    await expect(page.getByRole("status")).toContainText(/thank you/i);
+    await expect(page.getByTestId("feedback-status")).toContainText(/thank you/i);
     await expect(page.getByLabel(/anything else/i)).toHaveValue("");
   });
 
   test("deep-linking to /settings#feedback activates the section", async ({ page }) => {
     await page.goto("/settings#feedback");
-    await waitForAppLoad(page);
+    await page.waitForLoadState("networkidle");
 
     await expect(page.locator("main h2", { hasText: "Feedback" })).toBeVisible();
   });

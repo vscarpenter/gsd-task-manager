@@ -17,7 +17,10 @@ describe("Playwright quality gates", () => {
 
     expect(fixture).toContain('page.on("pageerror"');
     expect(fixture).toContain('page.on("console"');
-    expect(fixture).toContain('message.type() === "error"');
+    expect(fixture).toContain('message.type() !== "error"');
+    // The per-test console allowlist must default to off, so a test that does
+    // not opt in still fails on every error the browser reports.
+    expect(fixture).toContain("expectedConsoleErrors: [null, { option: true }]");
     expect(fixture).toContain("status=2152398850");
     expect(fixture).toContain("http:\\/\\/localhost:3000\\/");
     expect(fixture).toContain("_next\\/static\\/media");

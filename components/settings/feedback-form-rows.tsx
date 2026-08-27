@@ -171,6 +171,7 @@ export function FeedbackSendRow({ canSend, status, lastSentAt, onSend }: SendRow
         <p
           role="status"
           aria-live="polite"
+          data-testid="feedback-status"
           className={cn("text-xs", status.kind === "error" ? "text-status-error" : "text-foreground-muted")}
         >
           {message}
