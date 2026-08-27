@@ -86,3 +86,38 @@ Fix pattern: wait for the title to be focused before touching other fields
 - **A full-screen modal blinds Stagehand observe/act while extract keeps working.** The onboarding tour makes the app inert; the interactive-element snapshot is honestly empty (~1.8k input tokens is the tell) but extract reads the inert tree anyway — so AI verdicts can describe UI a user cannot touch. Suppress gates the same way e2e fixtures do (pre-seed the flag via addInitScript) and treat "observe returns 0 for every phrasing" as structural, not a wording problem.
 - **Extract-after-act races Dexie liveQuery.** The DOM updates a beat after a mutating act; extracting immediately reads the pre-update tree. A short render settle after mutating steps fixes it deterministically.
 - **Bun resolves modules from the script's location, not cwd** — scratch scripts outside the repo can't import the repo's node_modules; run diagnostics from a gitignored in-repo dir instead.
+
+## 2026-08-27 — Anonymous feedback: making a privacy claim testable
+
+- **Purity is what makes a "here's what we send" disclosure trustworthy.** The
+  usual failure mode is that someone adds a field to the request and forgets the
+  disclosure. Keeping `buildPayload` pure — submission id, version, and
+  timestamp all injected — lets the preview render the *same object* the body is
+  serialized from, so a test can assert they're identical instead of trusting
+  copy to stay accurate. Cost: the timestamp is the last-edit moment, not the
+  button press. Worth it.
+- **Rebuild persisted state field by field, never spread it.** `localStorage` is
+  writable by devtools and by anything achieving XSS. Spreading parsed JSON into
+  a draft would let an injected key ride along toward the payload; reconstructing
+  from known fields makes that structurally impossible.
+- **An in-memory fallback must key off a *failed write*, not an empty read.**
+  Falling back whenever storage reads empty conflates "nothing stored" with
+  "storage broken" — it resurrects drafts the user cleared, and it leaks state
+  between tests. Tying the copy to a write that actually failed is both correct
+  and self-resetting.
+- **`useSyncExternalStore` beats a state-setting effect for persisted UI state.**
+  The static export prerenders these pages, so reading storage during render
+  breaks hydration and reading it in an effect trips
+  `react-hooks/set-state-in-effect` (fatal under `--max-warnings=0`). A frozen
+  server snapshot plus a cached client snapshot solves both. `lib/use-is-hydrated.ts`
+  is the existing precedent.
+- **Identifiers are only dangerous in combination.** Reusing the existing
+  `syncMetadata.deviceId` would have made "anonymous" feedback joinable against
+  sync traffic and sync history. The answer wasn't a second id — it was none at
+  all, with vote integrity moved client-side.
+- **The code-shape ratchet is per-file with a zero allowance for new files.**
+  New components must land at complexity ≤10 / depth ≤3 / ≤400 lines / ≤40 lines
+  per function. Refresh the baseline with
+  `node scripts/check-code-shape.cjs --print-baseline` and diff it before
+  committing — a full refresh also tightens stale entries, which is safe but
+  shows up as unrelated churn.

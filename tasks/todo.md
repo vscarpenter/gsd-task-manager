@@ -1,6 +1,6 @@
 # Status — 2026-08-27
 
-## Anonymous opt-in feedback — IN PROGRESS
+## Anonymous opt-in feedback — DONE (committed, not pushed)
 
 Branch `feat/anonymous-feedback`. Tier: **Non-trivial** (new outbound data path,
 new PocketBase collection with an unauthenticated write rule, privacy-copy change,
@@ -26,18 +26,18 @@ send only on an explicit tap, attach no identifier at all.
 
 - [x] ① Preflight + branch (`feat/anonymous-feedback`)
 - [x] ② Write spec (`tasks/spec-anonymous-feedback.md`)
-- [ ] ③ Red — `tests/data/feedback-payload.test.ts` (the privacy test)
-- [ ] ④ Green — `lib/feedback/roadmap-items.ts` + `feedback-payload.ts`
-- [ ] ⑤ Red/green — `lib/feedback/feedback-store.ts` (localStorage draft + votes)
-- [ ] ⑥ Red/green — `lib/feedback/submit-feedback.ts` (bare fetch, no auth header)
-- [ ] ⑦ Settings → Feedback section + UI tests
-- [ ] ⑧ Command palette "Send feedback" entry
-- [ ] ⑨ About-page privacy copy acknowledges opt-in feedback
-- [ ] ⑩ `scripts/setup-pocketbase-feedback-collection.sh`
-- [ ] ⑪ E2E spec with the POST stubbed
-- [ ] ⑫ Verify: `bun run test`, `typecheck`, `lint`, `quality:shape`
-- [ ] ⑬ Verify in the running app (`/verify-frontend-change`)
-- [ ] ⑭ Version bump trio (package.json + README:7 + sw.js CACHE_VERSION), PR
+- [x] ③ Red — `tests/data/feedback-payload.test.ts` (the privacy test)
+- [x] ④ Green — `lib/feedback/roadmap-items.ts` + `feedback-payload.ts`
+- [x] ⑤ Red/green — `lib/feedback/feedback-store.ts` (localStorage draft + votes)
+- [x] ⑥ Red/green — `lib/feedback/submit-feedback.ts` (bare fetch, no auth header)
+- [x] ⑦ Settings → Feedback section + UI tests
+- [x] ⑧ Command palette "Send feedback" entry
+- [x] ⑨ About-page privacy copy acknowledges opt-in feedback
+- [x] ⑩ `scripts/setup-pocketbase-feedback-collection.sh`
+- [x] ⑪ E2E spec with the POST stubbed
+- [x] ⑫ Verify: `bun run test`, `typecheck`, `lint`, `quality:shape`
+- [x] ⑬ Verify in the running app (`/verify-frontend-change`)
+- [x] ⑭ Version bump trio (package.json + README:7 + sw.js CACHE_VERSION), PR
 
 ### Assumptions
 
@@ -48,12 +48,22 @@ send only on an explicit tap, attach no identifier at all.
 
 ### Resuming From Here
 
-Spec is written and approved. Next: task ③, the red privacy test.
+Feature is complete and committed on `feat/anonymous-feedback` (6 commits).
+`bun run test` (2830), `typecheck`, `lint`, and `quality:shape` are all green,
+and the surface was verified in the running app (both themes, a11y tree,
+success and failure paths).
+
+**Not yet done — needs Vinny:**
+1. Push and open the PR. Not done without an explicit go-ahead.
+2. Run `scripts/setup-pocketbase-feedback-collection.sh` against prod, then do
+   the two manual steps it prints: rate limiting and log retention. Until the
+   collection exists, Send will fail with "That wasn't accepted."
+3. Curate `lib/feedback/roadmap-items.ts`. The eight candidates are a seed.
+4. Update the privacy policy at gsdtaskmanager.com/privacy (separate repo).
+
+**Deferred by design:** the earned-moment prompt after N completed tasks.
 
 ### Watch out
 
-- `public/sw.js` carries a stray build-generated `CACHE_VERSION` bump to
-  `12.3.2` that predates this branch. Don't commit it on its own — fold it into
-  the deliberate version bump at task ⑭.
 - `localStorage.clear()` no-ops under jsdom-in-Bun; remove `gsd:feedback:*` keys
   individually in `beforeEach` (see `.claude/rules/testing.md`).
