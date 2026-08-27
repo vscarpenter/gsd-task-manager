@@ -27,7 +27,11 @@ migrate((app) => {
       return false;
     }
   };
-  const jsonInput = (record, field) => {
+  // Read a JSON column as the logical string it holds. PocketBase hands JSON
+  // columns to the JSVM byte-backed rather than as strings, and a value written
+  // through record.set() arrives JSON-quoted while one written through raw SQL
+  // does not. Both unwrap to the same text.
+  const jsonFieldText = (record, field) => {
     const raw = record.get(field);
     let value = typeof raw === "string" ? raw : record.getString(field);
     if (typeof value !== "string" || value === "") value = JSON.stringify(raw);
@@ -37,6 +41,13 @@ migrate((app) => {
     } catch {
       // Array/object JSON text is already the desired encryption input.
     }
+    return value;
+  };
+  // Quote a bare string so the encrypted plaintext round-trips through
+  // JSON.parse on read. Applied only when a value is actually being encrypted:
+  // quoting before the already-encrypted check would move the "enc:v1:" marker
+  // off the front and re-encrypt ciphertext that was already good.
+  const serializableJson = (value) => {
     try {
       JSON.parse(value);
       return value;
@@ -58,9 +69,9 @@ migrate((app) => {
     for (const field of JSONF) {
       const raw = record.get(field);
       if (raw === null || raw === undefined) continue;
-      const value = jsonInput(record, field);
+      const value = jsonFieldText(record, field);
       if (isValidCiphertext(value, true)) continue;
-      params[field] = PREFIX + $security.encrypt(value, key);
+      params[field] = PREFIX + $security.encrypt(serializableJson(value), key);
       assignments.push(field + " = {:" + field + "}");
     }
     if (assignments.length === 0) continue;
