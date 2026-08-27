@@ -7,6 +7,7 @@ const privacyChecklist = [
   "Optional secure cloud sync",
   "Export your data anytime as JSON",
   "Works entirely offline",
+  "Feedback is anonymous and opt-in",
 ];
 
 export function PrivacySection() {
@@ -29,6 +30,12 @@ export function PrivacySection() {
                 If you want sync across devices, the optional cloud backend
                 stores your tasks securely — encrypted in transit and protected
                 by authentication and owner-scoped access controls.
+              </p>
+              <p>
+                If you send feedback from Settings, you see the exact message
+                before it goes: no account, no device identifier, and nothing
+                from your tasks. It&apos;s anonymous, which also means I have no
+                way to write back.
               </p>
             </div>
             <div className="text-left max-w-sm mx-auto space-y-3">

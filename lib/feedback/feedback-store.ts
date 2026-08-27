@@ -34,12 +34,14 @@ function readRaw(key: string): string | null {
   }
 }
 
-function writeRaw(key: string, value: string): void {
-  if (typeof window === "undefined") return;
+/** Returns false when the value could not be stored, so the caller can keep a copy. */
+function writeRaw(key: string, value: string): boolean {
+  if (typeof window === "undefined") return false;
   try {
     window.localStorage.setItem(key, value);
+    return true;
   } catch {
-    // Falls back to the in-memory copy held by the caller.
+    return false;
   }
 }
 
@@ -84,6 +86,9 @@ function coerceDraft(value: unknown): FeedbackDraft {
 
 export function readDraft(): FeedbackDraft {
   const raw = readRaw(FEEDBACK_DRAFT_KEY);
+  // An absent value means an absent draft. The in-memory copy stands in only
+  // when a write actually failed — otherwise clearing site data in one tab
+  // would resurrect a draft the user believed they had thrown away.
   if (raw === null) return memoryDraft ? { ...memoryDraft } : emptyDraft();
 
   try {
@@ -94,8 +99,8 @@ export function readDraft(): FeedbackDraft {
 }
 
 export function writeDraft(draft: FeedbackDraft): void {
-  memoryDraft = { ...draft };
-  writeRaw(FEEDBACK_DRAFT_KEY, JSON.stringify(draft));
+  const stored = writeRaw(FEEDBACK_DRAFT_KEY, JSON.stringify(draft));
+  memoryDraft = stored ? null : { ...draft };
 }
 
 export function clearDraft(): void {
@@ -118,6 +123,6 @@ export function readLastSentAt(): string | null {
 }
 
 export function writeLastSentAt(isoTimestamp: string): void {
-  memoryLastSentAt = isoTimestamp;
-  writeRaw(FEEDBACK_LAST_SENT_KEY, isoTimestamp);
+  const stored = writeRaw(FEEDBACK_LAST_SENT_KEY, isoTimestamp);
+  memoryLastSentAt = stored ? null : isoTimestamp;
 }

@@ -11,6 +11,7 @@ function createMockHandlers(overrides?: Partial<CommandActionHandlers>): Command
     onImportTasks: vi.fn(),
     onOpenSettings: vi.fn(),
     onOpenHelp: vi.fn(),
+    onSendFeedback: vi.fn(),
     onViewDashboard: vi.fn(),
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),
@@ -34,6 +35,18 @@ describe('buildCommandActions', () => {
     expect(actionIds).toContain('toggle-theme');
     expect(actionIds).toContain('export-tasks');
     expect(actionIds).toContain('import-tasks');
+  });
+
+  it('exposes a send-feedback action in the settings section', () => {
+    const handlers = createMockHandlers();
+    const actions = buildCommandActions(handlers, [], defaultConditions);
+
+    const action = actions.find((a) => a.id === 'send-feedback');
+    expect(action?.section).toBe('settings');
+    expect(action?.keywords).toContain('roadmap');
+
+    action?.onExecute();
+    expect(handlers.onSendFeedback).toHaveBeenCalled();
   });
 
   it('should include navigation actions', () => {

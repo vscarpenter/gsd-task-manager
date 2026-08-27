@@ -98,6 +98,7 @@ export function useShellCommandHandlers(): ShellCommandResult {
       router.push("/settings#data");
     },
     onOpenSettings: () => router.push("/settings"),
+    onSendFeedback: () => router.push("/settings#feedback"),
     onOpenHelp: () => {
       if (typeof window === "undefined") return;
       window.dispatchEvent(new CustomEvent(OPEN_HELP_EVENT));

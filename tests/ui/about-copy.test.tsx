@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { FeaturesSection } from "@/components/about/features-section";
 import { McpSection } from "@/components/about/mcp-section";
+import { PrivacySection } from "@/components/about/privacy-section";
 
 describe("about-page privacy copy", () => {
   it("should_not_claim_zero_knowledge_or_e2e", () => {
@@ -33,5 +34,22 @@ describe("about-page shipped-feature claims", () => {
   it("should_not_badge_any_feature_as_coming_soon", () => {
     const { container } = render(<FeaturesSection />);
     expect(container.textContent).not.toMatch(/coming soon/i);
+  });
+});
+
+describe("about-page feedback disclosure", () => {
+  // Feedback is a new outbound path. The page's "no analytics tracking what
+  // you type" claim stays true because that is about passive collection, but
+  // staying silent about an explicit path would itself be the dark pattern.
+  it("should_disclose_that_feedback_is_opt_in", () => {
+    const { container } = render(<PrivacySection />);
+    expect(container.textContent).toMatch(/feedback/i);
+    expect(container.textContent).toMatch(/anonymous/i);
+  });
+
+  it("should_not_overclaim_that_nothing_ever_leaves", () => {
+    const { container } = render(<PrivacySection />);
+    expect(container.textContent).not.toMatch(/never leaves your device/i);
+    expect(container.textContent).not.toMatch(/nothing (?:is |ever )?(?:sent|collected)/i);
   });
 });

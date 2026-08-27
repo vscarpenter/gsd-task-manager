@@ -15,6 +15,7 @@ import { SyncSettings } from "@/components/settings/sync-settings";
 import { ArchiveSettings } from "@/components/settings/archive-settings";
 import { TrashSettings } from "@/components/settings/trash-settings";
 import { DataManagement } from "@/components/settings/data-management";
+import { FeedbackSettings } from "@/components/settings/feedback-settings";
 import { AboutSection } from "@/components/settings/about-section";
 
 import { SectionCard } from "./section-card";
@@ -165,6 +166,7 @@ export function SettingsBody({
             pendingSync={settings.pendingSync}
           />
         )}
+        {activeSection === "feedback" && <FeedbackSettings />}
         {activeSection === "about" && <AboutSection />}
       </SectionCard>
 
