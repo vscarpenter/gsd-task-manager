@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { emptyDraft } from "@/lib/feedback/feedback-payload";
+import { buildPayload, emptyDraft, MAX_MESSAGE_LENGTH } from "@/lib/feedback/feedback-payload";
 import {
   FEEDBACK_DRAFT_KEY,
   FEEDBACK_LAST_SENT_KEY,
@@ -9,6 +9,8 @@ import {
   toggleVote,
   readLastSentAt,
   writeLastSentAt,
+  subscribeToFeedback,
+  getFeedbackSnapshot,
 } from "@/lib/feedback/feedback-store";
 import { ROADMAP_ITEMS } from "@/lib/feedback/roadmap-items";
 
@@ -133,5 +135,95 @@ describe("when localStorage is unavailable", () => {
 
     expect(() => readDraft()).not.toThrow();
     expect(readDraft()).toEqual(emptyDraft());
+  });
+});
+
+describe("a stored message longer than the payload allows", () => {
+  const OVERSIZED = "x".repeat(MAX_MESSAGE_LENGTH + 500);
+
+  function storeOversizedDraft(): void {
+    localStorage.setItem(
+      FEEDBACK_DRAFT_KEY,
+      JSON.stringify({ ...emptyDraft(), message: OVERSIZED }),
+    );
+  }
+
+  it("is clamped to the limit rather than restored whole", () => {
+    storeOversizedDraft();
+
+    expect(readDraft().message).toHaveLength(MAX_MESSAGE_LENGTH);
+  });
+
+  it("still builds a payload, so opening the section cannot crash", () => {
+    storeOversizedDraft();
+
+    expect(() =>
+      buildPayload(readDraft(), {
+        submissionId: "submission-id",
+        appVersion: "12.4.0",
+        submittedAt: "2026-08-27T10:00:00.000Z",
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe("when another tab changes the draft", () => {
+  function emitStorage(key: string | null): void {
+    window.dispatchEvent(new StorageEvent("storage", { key }));
+  }
+
+  it("notifies subscribers", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToFeedback(listener);
+
+    emitStorage(FEEDBACK_DRAFT_KEY);
+
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("serves the other tab's draft on the next read", () => {
+    const unsubscribe = subscribeToFeedback(() => {});
+    getFeedbackSnapshot();
+
+    localStorage.setItem(
+      FEEDBACK_DRAFT_KEY,
+      JSON.stringify({ ...emptyDraft(), message: "written in the other tab" }),
+    );
+    emitStorage(FEEDBACK_DRAFT_KEY);
+
+    expect(getFeedbackSnapshot().draft.message).toBe("written in the other tab");
+    unsubscribe();
+  });
+
+  it("sees a draft the other tab sent and cleared", () => {
+    const unsubscribe = subscribeToFeedback(() => {});
+    writeDraft({ ...emptyDraft(), message: "about to be sent elsewhere" });
+    getFeedbackSnapshot();
+
+    localStorage.removeItem(FEEDBACK_DRAFT_KEY);
+    emitStorage(FEEDBACK_DRAFT_KEY);
+
+    expect(getFeedbackSnapshot().draft).toEqual(emptyDraft());
+    unsubscribe();
+  });
+
+  it("ignores keys that belong to other features", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToFeedback(listener);
+
+    emitStorage("gsd-onboarding-seen");
+
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("stops listening once the last subscriber leaves", () => {
+    const listener = vi.fn();
+    subscribeToFeedback(listener)();
+
+    emitStorage(FEEDBACK_DRAFT_KEY);
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });

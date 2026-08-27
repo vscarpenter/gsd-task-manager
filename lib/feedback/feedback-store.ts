@@ -1,5 +1,6 @@
 import {
   CATEGORIES,
+  MAX_MESSAGE_LENGTH,
   SENTIMENTS,
   emptyDraft,
   type Category,
@@ -68,6 +69,10 @@ function isCategory(value: unknown): value is Category {
  *
  * An older build, a hand-edited value, or a future field could all put unknown
  * keys in storage; reconstructing means only known fields ever reach the draft.
+ *
+ * The message is clamped for the same reason. `buildPayload` runs during render
+ * and throws on an over-long message, so an unclamped value read back from
+ * storage would crash the section on open and keep crashing on every reload.
  */
 function coerceDraft(value: unknown): FeedbackDraft {
   if (typeof value !== "object" || value === null) return emptyDraft();
@@ -76,7 +81,7 @@ function coerceDraft(value: unknown): FeedbackDraft {
   return {
     sentiment: isSentiment(stored.sentiment) ? stored.sentiment : null,
     category: isCategory(stored.category) ? stored.category : null,
-    message: typeof stored.message === "string" ? stored.message : "",
+    message: typeof stored.message === "string" ? stored.message.slice(0, MAX_MESSAGE_LENGTH) : "",
     votes: Array.isArray(stored.votes)
       ? [...new Set(stored.votes.filter((slug): slug is string => typeof slug === "string"))].filter(
           isRoadmapSlug,
@@ -170,10 +175,31 @@ function invalidate(): void {
   for (const listener of listeners) listener();
 }
 
+const OWN_KEYS = new Set<string>([FEEDBACK_DRAFT_KEY, FEEDBACK_LAST_SENT_KEY]);
+
+/**
+ * Another tab wrote one of our keys, so the cached snapshot is stale.
+ *
+ * Without this, a tab parked on this section keeps its own copy of the draft
+ * and can send feedback the user already sent somewhere else. A null key means
+ * the whole store was cleared, which counts too.
+ */
+function handleStorage(event: StorageEvent): void {
+  if (event.key !== null && !OWN_KEYS.has(event.key)) return;
+  invalidate();
+}
+
 export function subscribeToFeedback(listener: Listener): () => void {
+  if (listeners.size === 0 && typeof window !== "undefined") {
+    window.addEventListener("storage", handleStorage);
+  }
   listeners.add(listener);
+
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0 && typeof window !== "undefined") {
+      window.removeEventListener("storage", handleStorage);
+    }
   };
 }
 
