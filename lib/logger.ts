@@ -53,7 +53,8 @@ export type LogContext =
   | 'SMART_VIEWS'
   | 'ERROR_BOUNDARY'
   | 'GLOBAL_ERROR'
-  | 'WEBMCP';
+  | 'WEBMCP'
+  | 'FEEDBACK';
 
 export interface LogMetadata {
   [key: string]: unknown;
