@@ -1,20 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { generateId } from "@/lib/id-generator";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import {
   buildPayload,
-  emptyDraft,
   isDraftEmpty,
   type FeedbackDraft,
   type FeedbackPayload,
 } from "@/lib/feedback/feedback-payload";
 import {
-  clearDraft,
-  readDraft,
-  readLastSentAt,
-  writeDraft,
-  writeLastSentAt,
+  getFeedbackSnapshot,
+  getServerFeedbackSnapshot,
+  recordSend,
+  subscribeToFeedback,
+  updateDraft,
 } from "@/lib/feedback/feedback-store";
 import { submitFeedback, type SubmitFailureReason } from "@/lib/feedback/submit-feedback";
 
@@ -36,35 +34,29 @@ export type SendStatus =
 /**
  * Owns the feedback form's state.
  *
- * The submission id and timestamp are held in state rather than minted at send
- * time, so the payload rendered in the "what will be sent" disclosure is the
- * same object that gets posted. A failed send keeps the id, which makes the
- * retry idempotent; a successful one mints a fresh id for the next draft.
+ * The draft, the submission id, and the build timestamp all live in the store
+ * rather than in component state. That keeps the persisted draft readable on
+ * the first render after hydration without a state-setting effect, and it means
+ * the payload rendered in the "what will be sent" disclosure is the same object
+ * that gets posted.
  *
- * Both are set in an effect rather than during render: this page is prerendered
- * by the static export, and a clock read during render would not survive
- * hydration.
+ * The id survives a failed send, which makes the retry idempotent, and is
+ * replaced after a successful one.
  */
 export function useFeedbackForm() {
-  const [draft, setDraft] = useState<FeedbackDraft>(emptyDraft);
-  const [submissionId, setSubmissionId] = useState<string | null>(null);
-  const [builtAt, setBuiltAt] = useState<string | null>(null);
+  const state = useSyncExternalStore(
+    subscribeToFeedback,
+    getFeedbackSnapshot,
+    getServerFeedbackSnapshot,
+  );
   const [status, setStatus] = useState<SendStatus>({ kind: "idle" });
-  const [lastSentAt, setLastSentAt] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDraft(readDraft());
-    setLastSentAt(readLastSentAt());
-    setSubmissionId(generateId());
-    setBuiltAt(new Date().toISOString());
-  }, []);
 
   const update = useCallback((next: FeedbackDraft) => {
-    setDraft(next);
-    writeDraft(next);
-    setBuiltAt(new Date().toISOString());
+    updateDraft(next);
     setStatus({ kind: "idle" });
   }, []);
+
+  const { draft, submissionId, builtAt, lastSentAt } = state;
 
   const payload: FeedbackPayload | null =
     submissionId && builtAt
@@ -81,13 +73,7 @@ export function useFeedbackForm() {
       return;
     }
 
-    const sentAt = new Date().toISOString();
-    writeLastSentAt(sentAt);
-    clearDraft();
-    setLastSentAt(sentAt);
-    setDraft(emptyDraft());
-    setSubmissionId(generateId());
-    setBuiltAt(sentAt);
+    recordSend(new Date().toISOString());
     setStatus({ kind: "sent" });
   }, [payload]);
 

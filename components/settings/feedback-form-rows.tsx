@@ -66,6 +66,31 @@ interface NoteRowsProps {
   onMessageChange: (next: string) => void;
 }
 
+interface CategoryRowProps {
+  category: Category | null;
+  onChange: (next: Category | null) => void;
+}
+
+function FeedbackCategoryRow({ category, onChange }: CategoryRowProps) {
+  return (
+    <SettingsRow label="What kind of feedback is this?">
+      <select
+        aria-label="What kind of feedback is this?"
+        value={category ?? ""}
+        onChange={(event) => onChange((event.target.value || null) as Category | null)}
+        className="min-h-[44px] rounded-xl border border-border/70 bg-transparent px-3 text-sm text-foreground"
+      >
+        <option value="">Not sure</option>
+        {CATEGORIES.map((value) => (
+          <option key={value} value={value}>
+            {CATEGORY_LABELS[value]}
+          </option>
+        ))}
+      </select>
+    </SettingsRow>
+  );
+}
+
 /** The category picker and the free-text note. */
 export function FeedbackNoteRows({
   category,
@@ -75,21 +100,7 @@ export function FeedbackNoteRows({
 }: NoteRowsProps) {
   return (
     <>
-      <SettingsRow label="What kind of feedback is this?">
-        <select
-          aria-label="What kind of feedback is this?"
-          value={category ?? ""}
-          onChange={(event) => onCategoryChange((event.target.value || null) as Category | null)}
-          className="min-h-[44px] rounded-xl border border-border/70 bg-transparent px-3 text-sm text-foreground"
-        >
-          <option value="">Not sure</option>
-          {CATEGORIES.map((value) => (
-            <option key={value} value={value}>
-              {CATEGORY_LABELS[value]}
-            </option>
-          ))}
-        </select>
-      </SettingsRow>
+      <FeedbackCategoryRow category={category} onChange={onCategoryChange} />
 
       <div className="px-4 py-3.5">
         <label htmlFor="feedback-message" className="text-sm font-medium text-foreground">

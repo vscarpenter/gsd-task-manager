@@ -7,6 +7,7 @@ import {
   type Sentiment,
 } from "./feedback-payload";
 import { isRoadmapSlug } from "./roadmap-items";
+import { generateId } from "@/lib/id-generator";
 
 /**
  * Local draft state for the feedback section.
@@ -106,6 +107,7 @@ export function writeDraft(draft: FeedbackDraft): void {
 export function clearDraft(): void {
   memoryDraft = null;
   removeRaw(FEEDBACK_DRAFT_KEY);
+  invalidate();
 }
 
 /** Add or remove a vote. Returns a new draft; never mutates the input. */
@@ -125,4 +127,89 @@ export function readLastSentAt(): string | null {
 export function writeLastSentAt(isoTimestamp: string): void {
   const stored = writeRaw(FEEDBACK_LAST_SENT_KEY, isoTimestamp);
   memoryLastSentAt = stored ? null : isoTimestamp;
+}
+
+/**
+ * External-store plumbing so the form can read persisted state without a
+ * state-setting effect.
+ *
+ * The static export prerenders this page, so the first client render has to
+ * match the server's. `getServerFeedbackSnapshot` returns a frozen empty state
+ * for that render; React swaps in the real one immediately after hydration.
+ *
+ * The snapshot is cached because `useSyncExternalStore` compares by reference —
+ * rebuilding it per call would re-render forever. Every mutation below clears
+ * the cache and notifies.
+ */
+
+export interface FeedbackState {
+  draft: FeedbackDraft;
+  lastSentAt: string | null;
+  /** Minted once per submission; reused by a retry, replaced after a success. */
+  submissionId: string | null;
+  /** When the payload was last rebuilt. Null until the client has hydrated. */
+  builtAt: string | null;
+}
+
+type Listener = () => void;
+
+const listeners = new Set<Listener>();
+const SERVER_STATE: FeedbackState = Object.freeze({
+  draft: Object.freeze(emptyDraft()) as FeedbackDraft,
+  lastSentAt: null,
+  submissionId: null,
+  builtAt: null,
+});
+
+let cachedState: FeedbackState | null = null;
+let submissionId: string | null = null;
+let builtAt: string | null = null;
+
+function invalidate(): void {
+  cachedState = null;
+  for (const listener of listeners) listener();
+}
+
+export function subscribeToFeedback(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getServerFeedbackSnapshot(): FeedbackState {
+  return SERVER_STATE;
+}
+
+export function getFeedbackSnapshot(): FeedbackState {
+  if (cachedState) return cachedState;
+
+  // Lazily minted on the client only: this never runs during the export,
+  // because the server render uses SERVER_STATE above.
+  submissionId ??= generateId();
+  builtAt ??= new Date().toISOString();
+
+  cachedState = {
+    draft: readDraft(),
+    lastSentAt: readLastSentAt(),
+    submissionId,
+    builtAt,
+  };
+  return cachedState;
+}
+
+/** Persist a draft edit and stamp the moment the payload was rebuilt. */
+export function updateDraft(draft: FeedbackDraft): void {
+  writeDraft(draft);
+  builtAt = new Date().toISOString();
+  invalidate();
+}
+
+/** Record a successful send: clear the draft and mint an id for the next one. */
+export function recordSend(sentAt: string): void {
+  writeLastSentAt(sentAt);
+  clearDraft();
+  submissionId = generateId();
+  builtAt = sentAt;
+  invalidate();
 }

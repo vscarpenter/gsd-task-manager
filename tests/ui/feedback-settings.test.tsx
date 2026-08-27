@@ -4,6 +4,7 @@ import { FeedbackSettings } from "@/components/settings/feedback-settings";
 import {
   FEEDBACK_DRAFT_KEY,
   FEEDBACK_LAST_SENT_KEY,
+  clearDraft,
 } from "@/lib/feedback/feedback-store";
 import { MAX_MESSAGE_LENGTH, PAYLOAD_FIELDS } from "@/lib/feedback/feedback-payload";
 import { ROADMAP_ITEMS } from "@/lib/feedback/roadmap-items";
@@ -21,6 +22,8 @@ beforeEach(() => {
   // localStorage.clear() no-ops in jsdom under Bun; remove keys individually.
   localStorage.removeItem(FEEDBACK_DRAFT_KEY);
   localStorage.removeItem(FEEDBACK_LAST_SENT_KEY);
+  // The store caches its snapshot at module scope; clearing notifies and drops it.
+  clearDraft();
   fetchMock = vi.fn().mockResolvedValue(okResponse());
   vi.stubGlobal("fetch", fetchMock);
 });

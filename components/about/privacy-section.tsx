@@ -1,6 +1,12 @@
 import { Shield, Check } from "lucide-react";
 import { ScrollReveal } from "@/components/about/scroll-reveal";
 
+const privacyParagraphs = [
+  "GSD stores everything in your browser's IndexedDB. There's no account required, no server receiving your data by default, and no analytics tracking what you type.",
+  "If you want sync across devices, the optional cloud backend stores your tasks securely — encrypted in transit and protected by authentication and owner-scoped access controls.",
+  "If you send feedback from Settings, you see the exact message before it goes: no account, no device identifier, and nothing from your tasks. It's anonymous, which also means I have no way to write back.",
+];
+
 const privacyChecklist = [
   "No account required",
   "IndexedDB local storage",
@@ -21,22 +27,9 @@ export function PrivacySection() {
               Your tasks stay on your device.
             </h2>
             <div className="text-foreground-muted leading-relaxed mb-8 space-y-4">
-              <p>
-                GSD stores everything in your browser&apos;s IndexedDB. There&apos;s no
-                account required, no server receiving your data by default, and no
-                analytics tracking what you type.
-              </p>
-              <p>
-                If you want sync across devices, the optional cloud backend
-                stores your tasks securely — encrypted in transit and protected
-                by authentication and owner-scoped access controls.
-              </p>
-              <p>
-                If you send feedback from Settings, you see the exact message
-                before it goes: no account, no device identifier, and nothing
-                from your tasks. It&apos;s anonymous, which also means I have no
-                way to write back.
-              </p>
+              {privacyParagraphs.map((paragraph) => (
+                <p key={paragraph.slice(0, 32)}>{paragraph}</p>
+              ))}
             </div>
             <div className="text-left max-w-sm mx-auto space-y-3">
               {privacyChecklist.map((item) => (
