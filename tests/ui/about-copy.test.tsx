@@ -44,7 +44,17 @@ describe("about-page feedback disclosure", () => {
   it("should_disclose_that_feedback_is_opt_in", () => {
     const { container } = render(<PrivacySection />);
     expect(container.textContent).toMatch(/feedback/i);
-    expect(container.textContent).toMatch(/anonymous/i);
+    expect(container.textContent).toMatch(/opt-in/i);
+    expect(container.textContent).toMatch(/no identifier/i);
+  });
+
+  // The payload carries no identifier, but PocketBase request logs record the
+  // client IP against a timestamp the payload also carries. A flat "anonymous"
+  // promises more than the server delivers, so the page says what it can prove.
+  it("should_not_promise_anonymity_the_server_cannot_guarantee", () => {
+    const { container } = render(<PrivacySection />);
+    expect(container.textContent).not.toMatch(/\banonymous\b/i);
+    expect(container.textContent).toMatch(/logs/i);
   });
 
   it("should_not_overclaim_that_nothing_ever_leaves", () => {

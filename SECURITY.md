@@ -23,7 +23,11 @@ GSD Task Manager is a privacy-first application where all data is stored locally
 
 1. **Local Data Storage by Default**
    - All tasks stored in IndexedDB (client-side)
-   - No external API calls or data transmission in local-only mode
+   - No background network calls in local-only mode
+   - The one outbound request is the feedback a user chooses to send from
+     Settings; it is never automatic and carries no account, device, or task data
+   - PocketBase request logs record client IPs, so operators must keep the log
+     retention window short for the feedback route to stay unlinkable
    - Export/import functionality for user-controlled backups
    - Optional cloud sync requires explicit user opt-in
 

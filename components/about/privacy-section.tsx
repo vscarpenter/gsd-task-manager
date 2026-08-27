@@ -4,7 +4,7 @@ import { ScrollReveal } from "@/components/about/scroll-reveal";
 const privacyParagraphs = [
   "GSD stores everything in your browser's IndexedDB. There's no account required, no server receiving your data by default, and no analytics tracking what you type.",
   "If you want sync across devices, the optional cloud backend stores your tasks securely — encrypted in transit and protected by authentication and owner-scoped access controls.",
-  "If you send feedback from Settings, you see the exact message before it goes: no account, no device identifier, and nothing from your tasks. It's anonymous, which also means I have no way to write back.",
+  "If you send feedback from Settings, you see the exact message before it goes: no account, no device identifier, and nothing from your tasks. The message carries nothing that points back to you, though sending it makes an ordinary web request my server logs. I have no way to write back.",
 ];
 
 const privacyChecklist = [
@@ -13,7 +13,7 @@ const privacyChecklist = [
   "Optional secure cloud sync",
   "Export your data anytime as JSON",
   "Works entirely offline",
-  "Feedback is anonymous and opt-in",
+  "Opt-in feedback, with no identifier in the payload",
 ];
 
 export function PrivacySection() {
