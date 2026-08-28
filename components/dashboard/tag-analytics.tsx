@@ -21,7 +21,7 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
   if (displayTags.length === 0) {
     return (
       <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-        <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
+        <h3 className="mb-4 text-h3 font-semibold text-foreground">Top tags</h3>
         <p className="text-sm text-foreground-muted">
           No tags to display. Add tags to your tasks to see analytics here.
         </p>
@@ -31,7 +31,7 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
 
   return (
     <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
+      <h3 className="mb-4 text-h3 font-semibold text-foreground">Top tags</h3>
       <div className="space-y-3">
         {displayTags.map((stat) => {
           const barWidth = Math.max((stat.count / maxCount) * 100, 4);
@@ -55,12 +55,12 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
                 {/* Total tasks for this tag — graphite, because a tag is not a
                     quadrant and borrows no pigment (reference §07 polish). */}
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-foreground-muted/30 transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-foreground-muted/30 transition-[width] duration-300 ease-out motion-reduce:transition-none"
                   style={{ width: `${barWidth}%` }}
                 />
                 {/* Completed portion — success green, matching the dashboard's completed language */}
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-status-success transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-status-success transition-[width] duration-300 ease-out motion-reduce:transition-none"
                   style={{
                     width: `${barWidth * (stat.completionRate / 100)}%`,
                   }}

@@ -5,119 +5,73 @@ import { cn } from "@/lib/utils";
 interface StatsCardProps {
   title: string;
   value: string | number;
-  /** Footer meta string, e.g. "20 / 7d". Sits next to the trend delta. */
-  footerMeta?: string;
+  /** Plain-text comparison, e.g. "12% above your recent pace". Never a pill, never coloured. */
+  note?: string;
+  /** Volume context, e.g. "20 closed in 7 days". Rendered after the note. */
+  meta?: string;
   icon?: LucideIcon;
-  trend?: {
-    /** Percentage delta vs previous period. */
-    value: number;
-    isPositive: boolean;
-    /** Comparison label, e.g. "vs last week". Defaults to "vs last week". */
-    label?: string;
-  };
-  /** Neutral status pill copy ("Holding steady", "3 overdue"). */
-  insight?: string;
   /** 7–12 numeric points rendered as the inline sparkline. */
   series?: number[];
   className?: string;
 }
 
 /**
- * Unified stat card. One rhythm: eyebrow → neutral pill → serif hero number →
- * footer (delta + meta) → sparkline. Color is reserved for state deltas only.
+ * A single measurement in the review's hero rail.
+ *
+ * Deliberately borderless: the hero band groups these behind hairline dividers,
+ * because three bordered cards side by side rebuild the equal-weight card grid
+ * that reads as a generic SaaS dashboard. Hierarchy on this page comes from the
+ * verdict above, not from tinting one of these three.
  */
 export function StatsCard({
   title,
   value,
-  footerMeta,
+  note,
+  meta,
   icon: Icon,
-  trend,
-  insight,
   series,
   className,
 }: StatsCardProps) {
   const animatedValue = useCountUp(value);
-  const trendColor = trend
-    ? trend.isPositive
-      ? "text-status-success-ink"
-      : "text-status-overdue-ink"
-    : "text-foreground-muted";
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-lg border-hair border-border bg-card p-6",
-        className
-      )}
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-eyebrow font-semibold uppercase text-foreground-muted">
-              {title}
-            </p>
-            {insight ? (
-              <span className="inline-flex rounded-full bg-background-muted px-2 py-0.5 text-[10px] font-medium text-foreground-muted">
-                {insight}
-              </span>
-            ) : null}
-          </div>
-          {/* 40px, not 48: at this weight the metric already dominates the card,
-              so the larger size read as shouting. */}
-          <p
-            className="mt-3 text-[40px] font-semibold leading-none tabular-nums text-foreground"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            {animatedValue}
-          </p>
-        </div>
-        {Icon && (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background-muted">
-            <Icon className="h-4 w-4 text-foreground-muted" aria-hidden />
-          </div>
-        )}
+    <div className={cn("min-w-0", className)}>
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="h-3.5 w-3.5 shrink-0 text-foreground-muted" aria-hidden />}
+        <p className="text-eyebrow font-semibold uppercase text-foreground-muted">{title}</p>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 text-xs">
-        {trend ? (
-          <span className={cn("font-medium tabular-nums", trendColor)}>
-            {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%
-          </span>
-        ) : null}
-        {trend ? (
-          <span className="text-foreground-muted">{trend.label ?? "vs last week"}</span>
-        ) : null}
-        {footerMeta ? (
-          <>
-            {trend ? <span className="text-foreground-muted/60">·</span> : null}
-            <span className="text-foreground-muted">{footerMeta}</span>
-          </>
-        ) : null}
-      </div>
+      {/* 40px, not 48: at this weight the metric already dominates its column,
+          and the serif verdict above owns the page's largest voice. */}
+      <p
+        className="mt-3 text-[40px] font-semibold leading-none tabular-nums text-foreground"
+        style={{ letterSpacing: "-0.02em" }}
+      >
+        {animatedValue}
+      </p>
 
-      {series && series.length > 1 ? (
-        <Sparkline
-          values={series}
-          isPositive={trend ? trend.isPositive : undefined}
-        />
+      {note || meta ? (
+        <p className="mt-2 text-xs leading-relaxed text-foreground-muted">
+          {note}
+          {note && meta ? " · " : ""}
+          {meta}
+        </p>
       ) : null}
+
+      {series && series.length > 1 ? <Sparkline values={series} /> : null}
     </div>
   );
 }
 
 /**
- * Inline SVG sparkline. Stroke color follows the trend delta:
- * accent (up), overdue (down), tertiary ink (flat / no trend). A flat series
- * carries no judgement, so it drops out of the color system entirely.
+ * Inline SVG sparkline in a single neutral ink.
+ *
+ * Direction is deliberately uncoloured: a seven-point series is context, not a
+ * verdict, and colour on this page is reserved for quadrant identity and status.
+ * --ink-hint, not --ink-3: the handoff's #9AA5AE measures 2.48:1 on the card,
+ * under the 3:1 floor for a graphic that carries meaning (WCAG 1.4.11).
  */
-function Sparkline({
-  values,
-  isPositive,
-}: {
-  values: number[];
-  isPositive?: boolean;
-}) {
+function Sparkline({ values }: { values: number[] }) {
   const width = 120;
   const height = 28;
   const max = Math.max(...values, 1);
@@ -132,15 +86,6 @@ function Sparkline({
     })
     .join(" ");
 
-  // --ink-hint, not --ink-3: the handoff's #9AA5AE measures 2.48:1 on the card,
-  // under the 3:1 floor for a graphic that carries meaning (WCAG 1.4.11).
-  const stroke =
-    isPositive === undefined
-      ? "stroke-ink-hint"
-      : isPositive
-        ? "stroke-accent"
-        : "stroke-status-overdue";
-
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
@@ -154,7 +99,7 @@ function Sparkline({
         strokeWidth={1.6}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={stroke}
+        className="stroke-ink-hint"
       />
     </svg>
   );

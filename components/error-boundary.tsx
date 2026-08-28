@@ -8,6 +8,12 @@ const logger = createLogger("ERROR_BOUNDARY");
 
 interface ErrorBoundaryProps {
   children: ReactNode;
+  /**
+   * Scoped replacement for the full-screen fallback. Pass one when only a
+   * region failed and the surrounding shell should survive — a page that loses
+   * its data region still owes the reader working navigation.
+   */
+  fallback?: ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -38,7 +44,11 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback error={this.state.error} fallbackRef={this.fallbackRef} />;
+      return (
+        this.props.fallback ?? (
+          <ErrorFallback error={this.state.error} fallbackRef={this.fallbackRef} />
+        )
+      );
     }
 
     return this.props.children;
@@ -98,6 +108,6 @@ function navigateHome() {
   window.location.href = "/";
 }
 
-export function ErrorBoundary({ children }: ErrorBoundaryProps) {
-  return <ErrorBoundaryClass>{children}</ErrorBoundaryClass>;
+export function ErrorBoundary({ children, fallback }: ErrorBoundaryProps) {
+  return <ErrorBoundaryClass fallback={fallback}>{children}</ErrorBoundaryClass>;
 }

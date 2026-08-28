@@ -24,8 +24,8 @@ function EmptyState({ className }: { className?: string }) {
   return (
     <div className={cn("rounded-lg border-hair border-border bg-card p-6 shadow-sm", className)}>
       <h3 className="flex items-center gap-2 text-h3 font-semibold text-foreground">
-        <ClockIcon className="h-5 w-5 text-accent" />
-        Time Tracking
+        <ClockIcon className="h-5 w-5 text-foreground-muted" aria-hidden />
+        Time tracking
       </h3>
       <p className="mt-4 text-sm text-foreground-muted">
         No time tracking data yet. Start tracking time on tasks to see analytics here.
@@ -50,7 +50,7 @@ function QuadrantBar({ dist, totalMinutes }: { dist: QuadrantTimeDistribution; t
       </div>
       <div className="h-2 w-full rounded-full bg-background-muted overflow-hidden">
         <div
-          className="h-full rounded-full transition-all"
+          className="h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none"
           style={{ width: `${percentage}%`, backgroundColor: accent }}
         />
       </div>
@@ -64,7 +64,7 @@ function EstimationInsights({ overCount, underCount }: { overCount: number; unde
 
   return (
     <div className="mt-6 rounded-lg bg-background-muted p-4">
-      <h4 className="text-sm font-medium text-foreground">Estimation Insights</h4>
+      <h4 className="text-sm font-medium text-foreground">Estimation insights</h4>
       <div className="mt-2 flex gap-6 text-sm">
         <div>
           <span className="text-status-overdue-ink font-medium">{overCount}</span>
@@ -92,34 +92,34 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
   return (
     <div className={cn("rounded-lg border-hair border-border bg-card p-6 shadow-sm", className)}>
       <h3 className="flex items-center gap-2 text-h3 font-semibold text-foreground">
-        <ClockIcon className="h-5 w-5 text-accent" />
-        Time Tracking
+        <ClockIcon className="h-5 w-5 text-foreground-muted" aria-hidden />
+        Time tracking
       </h3>
 
       {/* Summary Stats */}
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatBlock
           icon={TimerIcon}
-          label="Total Tracked"
+          label="Total tracked"
           value={formatDuration(summary.totalMinutesTracked)}
           subtitle={`${summary.tasksWithTimeTracking} tasks`}
         />
         <StatBlock
           icon={TargetIcon}
-          label="Total Estimated"
+          label="Total estimated"
           value={formatDuration(summary.totalMinutesEstimated)}
           subtitle={`${summary.tasksWithEstimates} tasks`}
         />
         <StatBlock
           icon={TrendingUpIcon}
-          label="Estimation Accuracy"
+          label="Estimation accuracy"
           value={summary.estimationAccuracy > 0 ? `${summary.estimationAccuracy}%` : "N/A"}
           subtitle={getAccuracyLabel(summary.estimationAccuracy)}
           valueColor={getAccuracyColor(summary.estimationAccuracy)}
         />
         <StatBlock
           icon={ClockIcon}
-          label="Running Timers"
+          label="Running timers"
           value={summary.tasksWithRunningTimers}
           subtitle={summary.tasksWithRunningTimers > 0 ? "active now" : "none active"}
           valueColor={summary.tasksWithRunningTimers > 0 ? "text-status-success-ink" : undefined}
@@ -129,7 +129,7 @@ export function TimeAnalytics({ summary, quadrantDistribution, className }: Time
       {/* Quadrant Time Distribution */}
       {summary.totalMinutesTracked > 0 && (
         <div className="mt-6">
-          <h4 className="text-sm font-medium text-foreground-muted">Time by Quadrant</h4>
+          <h4 className="text-sm font-medium text-foreground-muted">Time by quadrant</h4>
           <div className="mt-3 space-y-3">
             {quadrantDistribution.map((dist) => (
               <QuadrantBar key={dist.quadrantId} dist={dist} totalMinutes={summary.totalMinutesTracked} />

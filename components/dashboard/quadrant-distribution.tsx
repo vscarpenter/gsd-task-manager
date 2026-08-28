@@ -47,7 +47,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <h3 className="text-h3 font-semibold text-foreground">
-            Quadrant Distribution
+            Quadrant distribution
           </h3>
           <p className="mt-1 text-sm text-foreground-muted">
             Active work split across the matrix.

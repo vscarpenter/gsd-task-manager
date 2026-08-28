@@ -8,7 +8,11 @@ import { StreakIndicator } from '@/components/dashboard/streak-indicator';
 import { TagAnalytics } from '@/components/dashboard/tag-analytics';
 import { UpcomingDeadlines } from '@/components/dashboard/upcoming-deadlines';
 import { TimeAnalytics } from '@/components/dashboard/time-analytics';
-import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
+import {
+  DashboardSkeleton,
+  StatRailSkeleton,
+  VerdictSkeleton,
+} from '@/components/dashboard/dashboard-skeleton';
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
 import type { TimeTrackingSummary, QuadrantTimeDistribution } from '@/lib/analytics';
@@ -28,29 +32,32 @@ describe('Dashboard Components', () => {
 
   describe('StatsCard', () => {
     it('should render stat value and label', () => {
-      render(<StatsCard value={42} title="Total Tasks" />);
+      render(<StatsCard value={42} title="Total tasks" />);
 
       expect(screen.getByText('42')).toBeInTheDocument();
-      expect(screen.getByText('Total Tasks')).toBeInTheDocument();
+      expect(screen.getByText('Total tasks')).toBeInTheDocument();
     });
 
-    it('should render with trend indicator up', () => {
-      render(<StatsCard value={42} title="Completed" trend={{ value: 15, isPositive: true }} />);
+    it('should render a comparison as plain text, with no arrow glyph', () => {
+      render(<StatsCard value={42} title="Closed today" note="15% above your recent pace" />);
 
-      expect(screen.getByText('42')).toBeInTheDocument();
-      expect(screen.getByText(/↑/)).toBeInTheDocument();
-      expect(screen.getByText(/15%/)).toBeInTheDocument();
+      expect(screen.getByText(/15% above your recent pace/)).toBeInTheDocument();
+      expect(screen.queryByText(/[\u2191\u2193]/)).not.toBeInTheDocument();
     });
 
-    it('should render with trend indicator down', () => {
-      render(<StatsCard value={10} title="Pending" trend={{ value: 8, isPositive: false }} />);
+    it('should render a downward comparison with the same neutral treatment', () => {
+      const { container } = render(
+        <StatsCard value={10} title="Closed today" note="8% below your recent pace" />
+      );
 
-      expect(screen.getByText('10')).toBeInTheDocument();
-      expect(screen.getByText(/↓/)).toBeInTheDocument();
-      expect(screen.getByText(/8%/)).toBeInTheDocument();
+      const note = screen.getByText(/8% below your recent pace/);
+      expect(note).toBeInTheDocument();
+      // Direction is carried by the words, never by colour (recipe acceptance bar).
+      expect(note.className).toContain('text-foreground-muted');
+      expect(container.querySelector('.text-status-overdue-ink')).not.toBeInTheDocument();
     });
 
-    it('should render without trend indicator', () => {
+    it('should render without a comparison', () => {
       render(<StatsCard value={5} title="Categories" />);
 
       expect(screen.getByText('5')).toBeInTheDocument();
@@ -64,28 +71,32 @@ describe('Dashboard Components', () => {
     });
 
     it('should render large numbers', () => {
-      render(<StatsCard value={1234} title="All Time Completed" />);
+      render(<StatsCard value={1234} title="All time closed" />);
 
       expect(screen.getByText('1234')).toBeInTheDocument();
     });
 
     it('should render without icon', () => {
-      render(<StatsCard value={5} title="No Icon" />);
+      render(<StatsCard value={5} title="No icon" />);
 
       expect(screen.getByText('5')).toBeInTheDocument();
-      expect(screen.getByText('No Icon')).toBeInTheDocument();
+      expect(screen.getByText('No icon')).toBeInTheDocument();
     });
 
-    it('should render footer meta string when provided', () => {
-      render(<StatsCard value={5} title="Active" footerMeta="20 / 7d" />);
+    it('should render meta context when provided', () => {
+      render(<StatsCard value={5} title="Active" meta="20 closed in 7 days" />);
 
-      expect(screen.getByText('20 / 7d')).toBeInTheDocument();
+      expect(screen.getByText(/20 closed in 7 days/)).toBeInTheDocument();
     });
 
-    it('should render insight pill when provided', () => {
-      render(<StatsCard value={5} title="Completed" insight="Holding steady" />);
+    it('should render as a rail item, not a bordered card', () => {
+      const { container } = render(<StatsCard value={5} title="Active" />);
+      const root = container.firstElementChild as HTMLElement;
 
-      expect(screen.getByText('Holding steady')).toBeInTheDocument();
+      // The hero band groups these with hairline dividers; a card border here
+      // would rebuild the equal-weight card grid the recipe bans.
+      expect(root.className).not.toContain('bg-card');
+      expect(root.className).not.toContain('border-hair');
     });
 
     it('should render an inline sparkline when series has 2+ points', () => {
@@ -96,6 +107,17 @@ describe('Dashboard Components', () => {
       // Sparkline is an SVG polyline; presence is enough to verify the wiring.
       expect(container.querySelector('svg polyline')).toBeInTheDocument();
     });
+
+    it('should draw every sparkline in the same neutral ink', () => {
+      const { container } = render(
+        <StatsCard value={5} title="Trend" series={[5, 4, 3, 2, 1]} />
+      );
+
+      // A seven-point series is not a judgement, so it never borrows the accent
+      // or the overdue pigment (brief: tide means interaction, not decoration).
+      const line = container.querySelector('svg polyline');
+      expect(line?.getAttribute('class')).toContain('stroke-ink-hint');
+    });
   });
 
   describe('StreakIndicator', () => {
@@ -104,6 +126,17 @@ describe('Dashboard Components', () => {
 
       expect(screen.getByText('7')).toBeInTheDocument();
       expect(screen.getByText(/streak/i)).toBeInTheDocument();
+    });
+
+    it('should size to its content rather than stretching to fill', () => {
+      const { container } = render(
+        <StreakIndicator streakData={{ current: 3, longest: 15, lastCompletionDate: null, last7Days: [false, false, false, false, true, true, true] }} />
+      );
+      const root = container.firstElementChild as HTMLElement;
+
+      // Regression: h-full resolved 100% against a grid row sized by the chart
+      // beside it, overflowing 199px into the reflection prompts band below.
+      expect(root.className).not.toContain('h-full');
     });
 
     it('should render longest streak as "Best" label', () => {
@@ -377,10 +410,10 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />);
 
-      expect(screen.getByText('Total Tracked')).toBeInTheDocument();
-      expect(screen.getByText('Total Estimated')).toBeInTheDocument();
-      expect(screen.getByText('Estimation Accuracy')).toBeInTheDocument();
-      expect(screen.getByText('Running Timers')).toBeInTheDocument();
+      expect(screen.getByText('Total tracked')).toBeInTheDocument();
+      expect(screen.getByText('Total estimated')).toBeInTheDocument();
+      expect(screen.getByText('Estimation accuracy')).toBeInTheDocument();
+      expect(screen.getByText('Running timers')).toBeInTheDocument();
     });
 
     it('should show "good accuracy" label for accuracy 80-120', () => {
@@ -534,7 +567,7 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />);
 
-      expect(screen.getByText('Total Estimated')).toBeInTheDocument();
+      expect(screen.getByText('Total estimated')).toBeInTheDocument();
     });
 
     it('should apply red color for very low accuracy', () => {
@@ -580,13 +613,30 @@ describe('Dashboard Components', () => {
       expect(grids.length).toBeGreaterThanOrEqual(3); // stats row + chart row + bottom row
     });
 
-    it('should render 4 stats card skeletons in top row', () => {
+    it('should leave the measure rail to the header skeleton', () => {
       const { container } = render(<DashboardSkeleton />);
 
-      // Stats row has lg:grid-cols-4
-      const statsRow = container.querySelector('.lg\\:grid-cols-4');
-      expect(statsRow).toBeInTheDocument();
-      expect(statsRow?.children.length).toBe(4);
+      // The three measures live in the hero band now, so the body skeleton must
+      // not reserve a four-up card row the page will never render.
+      expect(container.querySelector('.lg\\:grid-cols-4')).not.toBeInTheDocument();
+    });
+
+    it('should render three rail measures behind hairline dividers', () => {
+      const { container } = render(<StatRailSkeleton />);
+
+      const rail = container.querySelector('.sm\\:grid-cols-3');
+      expect(rail).toBeInTheDocument();
+      expect(rail?.children.length).toBe(3);
+      expect(rail?.className).toContain('divide-x');
+    });
+
+    it('should hold the verdict geometry while the local read resolves', () => {
+      const { container } = render(<VerdictSkeleton />);
+
+      // Two lines, matching the serif lead and its observation.
+      const root = container.firstElementChild as HTMLElement;
+      expect(root.children.length).toBe(2);
+      expect(root.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('should render chart and donut skeletons in second row', () => {

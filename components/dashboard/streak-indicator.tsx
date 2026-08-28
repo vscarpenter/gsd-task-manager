@@ -18,8 +18,11 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
   const { current, longest, last7Days } = streakData;
 
   return (
+    // No h-full: this card used to sit in a four-up equal-height row. Stacked
+    // under the distribution card it resolved 100% against a grid row sized by
+    // the chart beside it, overflowing 199px into the prompts band below.
     <div
-      className="flex h-full flex-col justify-between rounded-lg border-hair border-border bg-card p-6"
+      className="flex flex-col gap-4 rounded-lg border-hair border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       {/* Top: eyebrow + count, with a calm icon matching the other stat cards */}
@@ -46,7 +49,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
       </div>
 
       {/* Middle: 7-day activity strip — olive marks a completed day */}
-      <div className="mt-4 flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         {last7Days.map((active, index) => (
           <div key={DAY_LABELS[index]} className="flex flex-col items-center gap-1">
             <div
@@ -63,7 +66,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
       </div>
 
       {/* Bottom: factual personal best */}
-      <p className="mt-4 text-xs text-foreground-muted">
+      <p className="text-xs text-foreground-muted">
         {longest > 0
           ? `Best ${longest} ${longest === 1 ? "day" : "days"}`
           : "No streak yet"}

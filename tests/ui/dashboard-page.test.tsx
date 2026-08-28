@@ -78,6 +78,8 @@ vi.mock("@/components/dashboard/time-analytics", () => ({
 
 vi.mock("@/components/dashboard/dashboard-skeleton", () => ({
   DashboardSkeleton: () => <div data-testid="dashboard-skeleton" />,
+  VerdictSkeleton: () => <div data-testid="verdict-skeleton" />,
+  StatRailSkeleton: () => <div data-testid="stat-rail-skeleton" />,
 }));
 
 vi.mock("@/components/ui/segmented-control", () => ({
@@ -157,8 +159,9 @@ describe("DashboardPage review framing", () => {
     expect(screen.getByTestId("app-shell")).toHaveAttribute("data-has-search", "false");
     expect(screen.getByText("Weekly review")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "What did this week make room for?" })
+      screen.getByRole("heading", { level: 2, name: "You closed 7 commitments this week." })
     ).toBeInTheDocument();
+    expect(screen.getByText("1 commitment slipped past its due date.")).toBeInTheDocument();
     expect(screen.getByTestId("completion-chart")).toBeInTheDocument();
     expect(screen.getByTestId("quadrant-distribution")).toBeInTheDocument();
     expect(screen.getByTestId("time-analytics")).toBeInTheDocument();
@@ -180,9 +183,29 @@ describe("DashboardPage review framing", () => {
     mocks.useTasks.mockReturnValue({ all: [], isLoading: false });
     render(<DashboardPage />);
 
+    expect(
+      screen.getByRole("heading", { level: 2, name: "What did this week make room for?" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Nothing to review yet" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open matrix" }));
     expect(mocks.push).toHaveBeenCalledWith("/");
+  });
+
+  it("keeps the review shell and offers recovery when the local read fails", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.useTasks.mockImplementation(() => {
+      throw new Error("IndexedDB unavailable");
+    });
+
+    render(<DashboardPage />);
+
+    // A scoped fallback, not the app-wide boundary: the nav must survive so the
+    // matrix is still one click away when only the review data is unreadable.
+    expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/couldn.t read your review/i);
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+
+    consoleError.mockRestore();
   });
 
   it("announces loading review data while keeping skeleton geometry decorative", () => {
@@ -196,5 +219,7 @@ describe("DashboardPage review framing", () => {
       "true"
     );
     expect(screen.queryByRole("heading", { name: "Nothing to review yet" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("verdict-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("stat-rail-skeleton")).toBeInTheDocument();
   });
 });
