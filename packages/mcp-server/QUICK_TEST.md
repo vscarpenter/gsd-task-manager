@@ -2,7 +2,7 @@
 
 ## Setup (Do Once)
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server
+cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
 npm run build
 ```
 
@@ -13,7 +13,7 @@ npm run build
   "mcpServers": {
     "gsd-taskmanager": {
       "command": "node",
-      "args": ["/Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server/dist/index.js"],
+      "args": ["/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server/dist/index.js"],
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",
         "GSD_AUTH_TOKEN": "YOUR_TOKEN"

@@ -13,7 +13,7 @@ export PATH="$PATH:/opt/homebrew/bin:$HOME/.local/bin:$HOME/.bun/bin"
 
 REPO="${GSD_TRIAGE_REPO:-vscarpenter/gsd-task-manager}"
 WORKTREE="${GSD_TRIAGE_WORKTREE:-$HOME/.gsd-night-shift/worktree}"
-SOURCE="${GSD_TRIAGE_SOURCE:-$HOME/Projects/gsd-taskmanager}"
+SOURCE="${GSD_TRIAGE_SOURCE:-$HOME/Projects/GSD/gsd-taskmanager}"
 LOG_DIR="${GSD_TRIAGE_LOG_DIR:-$SOURCE/docs/ops/night-shift-logs}"
 HELPER="${GSD_TRIAGE_HELPER:-$SOURCE/scripts/failing-agent-prs.cjs}"
 

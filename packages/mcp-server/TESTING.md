@@ -5,7 +5,7 @@
 ### 1. Check Server Starts
 
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server
+cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
 
 # Set environment variables
 export GSD_POCKETBASE_URL="https://api.vinny.io"
