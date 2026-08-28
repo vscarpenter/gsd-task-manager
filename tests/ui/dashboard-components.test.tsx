@@ -841,6 +841,16 @@ describe('Dashboard Components', () => {
       expect(card.className).toMatch(/(^|\s)border(\s|$)/);
     });
 
+    it('should meet the coarse-pointer target floor on the empty-region link', () => {
+      render(<TagAnalytics tagStats={[]} />);
+      const link = screen.getByRole('link', { name: 'Open matrix' });
+
+      // A standalone block link, so WCAG's inline-text exception does not apply.
+      // brief.md Constraints: >=44px touch targets on coarse pointers.
+      expect(link.className).toContain('touch-target');
+      expect(link.className).toContain('inline-flex');
+    });
+
     it('should offer a next step from the tags empty region', () => {
       render(<TagAnalytics tagStats={[]} />);
 
