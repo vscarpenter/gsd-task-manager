@@ -42,7 +42,7 @@ export function CompletionChart({ data, control }: CompletionChartProps) {
   }));
 
   return (
-    <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+    <div className="rounded-lg border border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
       <ChartHeader control={control} />
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={chartData}>

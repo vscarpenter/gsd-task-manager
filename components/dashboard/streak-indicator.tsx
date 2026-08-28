@@ -22,7 +22,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
     // under the distribution card it resolved 100% against a grid row sized by
     // the chart beside it, overflowing 199px into the prompts band below.
     <div
-      className="flex flex-col gap-4 rounded-lg border-hair border-border bg-card p-6"
+      className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       {/* Top: eyebrow + count, with a calm icon matching the other stat cards */}
@@ -43,7 +43,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
             </span>
           </div>
         </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background-muted">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-icon bg-background-muted">
           <CalendarCheckIcon className="h-4 w-4 text-foreground-muted" aria-hidden />
         </div>
       </div>

@@ -239,7 +239,8 @@ describe('Dashboard Components', () => {
       render(<QuadrantDistribution distribution={distribution} />);
 
       expect(screen.getByText(/quadrant distribution/i)).toBeInTheDocument();
-      expect(screen.getByText(/no active tasks/i)).toBeInTheDocument();
+      expect(screen.getByText(/no active work to split yet/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open matrix' })).toHaveAttribute('href', '/');
     });
 
     it('should render with task distribution and show total in center', () => {
@@ -309,7 +310,7 @@ describe('Dashboard Components', () => {
     it('should render empty state when no tags', () => {
       render(<TagAnalytics tagStats={[]} />);
 
-      expect(screen.getByText(/no tags to display/i)).toBeInTheDocument();
+      expect(screen.getByText(/tag a task to see how each tag is tracking/i)).toBeInTheDocument();
     });
 
     it('should render tag statistics with completion info', () => {
@@ -393,7 +394,7 @@ describe('Dashboard Components', () => {
       render(<TimeAnalytics summary={emptySummary} quadrantDistribution={emptyDistribution} />);
 
       expect(screen.getByRole('heading', { name: /time tracking/i })).toBeInTheDocument();
-      expect(screen.getByText(/no time tracking data yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/track time on a task to see where your hours go/i)).toBeInTheDocument();
     });
 
     it('should render summary stats when time data exists', () => {
@@ -468,7 +469,7 @@ describe('Dashboard Components', () => {
       expect(screen.getByText('not enough data')).toBeInTheDocument();
     });
 
-    it('should show N/A for accuracy value when accuracy is 0', () => {
+    it('should show an em-dash for accuracy value when accuracy is 0', () => {
       const summary: TimeTrackingSummary = {
         ...emptySummary,
         tasksWithTimeTracking: 1,
@@ -478,7 +479,9 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />);
 
-      expect(screen.getByText('N/A')).toBeInTheDocument();
+      // Partial state: unknown is an em-dash, never "N/A" or a misleading 0.
+      expect(screen.getByText('\u2014')).toBeInTheDocument();
+      expect(screen.queryByText('N/A')).not.toBeInTheDocument();
     });
 
     it('should show running timers count with active label', () => {
@@ -682,7 +685,7 @@ describe('Dashboard Components', () => {
     it('should render empty state when no upcoming deadlines', () => {
       render(<UpcomingDeadlines tasks={[]} />);
 
-      expect(screen.getByText(/no upcoming deadlines/i)).toBeInTheDocument();
+      expect(screen.getByText(/no deadlines in the next seven days/i)).toBeInTheDocument();
     });
 
     it('should show overdue tasks', () => {
@@ -770,6 +773,113 @@ describe('Dashboard Components', () => {
       // Clicking should not throw even without handler
       const lateTaskButton = screen.getByRole('button', { name: /Late Task/i });
       await user.click(lateTaskButton);
+    });
+  });
+  describe('Finish-bar fixes', () => {
+    const trackedSummary: TimeTrackingSummary = {
+      totalMinutesTracked: 150,
+      totalMinutesEstimated: 180,
+      tasksWithTimeTracking: 5,
+      tasksWithEstimates: 4,
+      tasksWithRunningTimers: 1,
+      estimationAccuracy: 83,
+      overEstimateTasks: 1,
+      underEstimateTasks: 2,
+    };
+    const trackedDistribution: QuadrantTimeDistribution[] = [
+      { quadrantId: 'urgent-important', totalMinutes: 90, taskCount: 3 },
+      { quadrantId: 'not-urgent-important', totalMinutes: 60, taskCount: 2 },
+    ];
+    const emptySummary: TimeTrackingSummary = {
+      totalMinutesTracked: 0,
+      totalMinutesEstimated: 0,
+      tasksWithTimeTracking: 0,
+      tasksWithEstimates: 0,
+      tasksWithRunningTimers: 0,
+      estimationAccuracy: 0,
+      overEstimateTasks: 0,
+      underEstimateTasks: 0,
+    };
+
+    it('should not animate layout properties on tag bars', () => {
+      const { container } = render(
+        <TagAnalytics tagStats={[{ tag: 'work', count: 4, completedCount: 2, completionRate: 50 }]} />
+      );
+
+      // width/left/top animations force reflow every frame (ui-craft-detect).
+      expect(container.innerHTML).not.toMatch(/transition-\[width\]|transition-all/);
+    });
+
+    it('should not animate layout properties on quadrant time bars', () => {
+      const { container } = render(
+        <TimeAnalytics summary={trackedSummary} quadrantDistribution={trackedDistribution} />
+      );
+
+      expect(container.innerHTML).not.toMatch(/transition-\[width\]|transition-all/);
+    });
+
+    it('should set tabular-nums on every time-tracking figure', () => {
+      const { container } = render(
+        <TimeAnalytics summary={trackedSummary} quadrantDistribution={trackedDistribution} />
+      );
+
+      // Four KPI values, two quadrant rows, two estimation counts — all compared
+      // against each other, so proportional figures make the columns unreadable.
+      expect(container.querySelectorAll('.tabular-nums').length).toBeGreaterThanOrEqual(8);
+    });
+
+    it('should keep a border on the card built through cn()', () => {
+      const { container } = render(
+        <TimeAnalytics summary={trackedSummary} quadrantDistribution={trackedDistribution} />
+      );
+      const card = container.firstElementChild as HTMLElement;
+
+      // twMerge groups border-hair with border-border and drops the former,
+      // leaving border-width:0. `border` is a width utility it keeps.
+      expect(card.className).toContain('border-border');
+      expect(card.className).not.toContain('border-hair');
+      expect(card.className).toMatch(/(^|\s)border(\s|$)/);
+    });
+
+    it('should offer a next step from the tags empty region', () => {
+      render(<TagAnalytics tagStats={[]} />);
+
+      expect(screen.getByText(/tag a task to see how each tag is tracking/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open matrix' })).toHaveAttribute('href', '/');
+    });
+
+    it('should offer a next step from the time-tracking empty region', () => {
+      render(<TimeAnalytics summary={emptySummary} quadrantDistribution={[]} />);
+
+      expect(screen.getByText(/track time on a task to see where your hours go/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open matrix' })).toHaveAttribute('href', '/');
+    });
+
+    it('should state an empty deadline list without cheerleading', () => {
+      render(<UpcomingDeadlines tasks={[]} />);
+
+      const copy = screen.getByText(/no deadlines in the next seven days/i);
+      expect(copy).toBeInTheDocument();
+      // brief.md anti-reference: no exclamation-point cheerleading.
+      expect(copy.textContent).not.toContain('!');
+    });
+
+    it('should step the radius ladder rather than flattening it to one value', () => {
+      const { container } = render(
+        <TimeAnalytics summary={trackedSummary} quadrantDistribution={trackedDistribution} />
+      );
+
+      // Panel 14px (lg), the blocks nested inside it 12px (md).
+      expect((container.firstElementChild as HTMLElement).className).toContain('rounded-lg');
+      expect(container.querySelectorAll('.rounded-md').length).toBeGreaterThan(0);
+    });
+
+    it('should render deadline rows as controls on the control radius', () => {
+      const tasks = [createMockTask({ id: 'due-1', title: 'Due soon', completed: false, dueDate: new Date(Date.now() + 86400000).toISOString() })];
+      render(<UpcomingDeadlines tasks={tasks} />);
+
+      const row = screen.getByRole('button', { name: /Due soon/i });
+      expect(row.className).toContain('rounded-sm');
     });
   });
 });

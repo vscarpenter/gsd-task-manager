@@ -38,7 +38,7 @@ export function StatRailSkeleton() {
 function ChartSkeleton() {
   return (
     <div
-      className="space-y-4 rounded-lg border-hair border-border bg-card p-6"
+      className="space-y-4 rounded-lg border border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       <div className="flex items-start justify-between gap-4">
@@ -60,7 +60,7 @@ function ChartSkeleton() {
 function DistributionSkeleton() {
   return (
     <div
-      className="space-y-5 rounded-lg border-hair border-border bg-card p-6"
+      className="space-y-5 rounded-lg border border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -83,7 +83,7 @@ function DistributionSkeleton() {
 function StreakSkeleton() {
   return (
     <div
-      className="rounded-lg border-hair border-border bg-card p-6"
+      className="rounded-lg border border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
       <Skeleton className="h-3 w-16" />
@@ -121,7 +121,7 @@ function PromptsSkeleton() {
 
 function ListSkeleton() {
   return (
-    <div className="space-y-4 rounded-lg border-hair border-border bg-card p-6 shadow-sm">
+    <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
       <Skeleton className="h-5 w-40" />
       {Array.from({ length: 4 }, (_, i) => (
         <Skeleton key={i} className="h-14 w-full rounded-lg" />

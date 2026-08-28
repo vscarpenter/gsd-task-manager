@@ -50,7 +50,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
   })();
 
   return (
-    <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
       <h3 className="mb-4 text-h3 font-semibold text-foreground">
         Upcoming deadlines
       </h3>
@@ -58,7 +58,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
       {!hasDeadlines ? (
         <div className="flex h-[240px] items-center justify-center">
           <p className="text-sm text-foreground-muted">
-            No upcoming deadlines. You&apos;re all caught up!
+            No deadlines in the next seven days.
           </p>
         </div>
       ) : (
@@ -141,7 +141,7 @@ function DeadlineSection({
               <button
                 type="button"
                 onClick={() => onTaskClick?.(task)}
-                className={`w-full cursor-pointer rounded-lg border ${borderColor} ${bgColor} p-3 text-left transition-[box-shadow,transform] duration-150 ease-out hover:shadow-sm active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100`}
+                className={`w-full cursor-pointer rounded-sm border ${borderColor} ${bgColor} p-3 text-left transition-[box-shadow,transform] duration-150 ease-out hover:shadow-sm active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">

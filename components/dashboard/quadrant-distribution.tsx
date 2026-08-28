@@ -2,6 +2,7 @@
 
 import type { QuadrantId } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
+import { EmptyRegion } from "./empty-region";
 
 interface QuadrantDistributionProps {
   distribution: Record<QuadrantId, number>;
@@ -43,7 +44,7 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
   }
 
   return (
-    <div className="rounded-lg border-hair border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
+    <div className="rounded-lg border border-border bg-card p-6" style={{ boxShadow: "var(--shadow-column)" }}>
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <h3 className="text-h3 font-semibold text-foreground">
@@ -59,8 +60,8 @@ export function QuadrantDistribution({ distribution }: QuadrantDistributionProps
       </div>
 
       {segments.length === 0 ? (
-        <div className="mt-6 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border bg-background-muted/30">
-          <p className="text-sm text-foreground-muted">No active tasks to display</p>
+        <div className="mt-6 flex h-[120px] items-center justify-center rounded-md border border-dashed border-border bg-background-muted/30">
+          <EmptyRegion line="No active work to split yet." />
         </div>
       ) : (
         <div className="mt-6 space-y-5">
