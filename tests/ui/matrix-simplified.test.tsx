@@ -364,6 +364,34 @@ describe("<MatrixSimplified>", () => {
     );
   });
 
+  it("keeps every composer field when creating a task", async () => {
+    // The create branch hand-picked seven fields while the composer renders more than
+    // that, so Repeat, Subtasks, Estimate and Reminder were silently dropped on any task
+    // created through it. Edit kept them, which made the loss look like a save bug.
+    render(<MatrixSimplified />);
+
+    await userEvent.type(screen.getByLabelText("Capture a task"), "quarterly report");
+    await userEvent.click(screen.getByTestId("more-options"));
+
+    await screen.findByRole("heading", { name: /new task/i });
+    await userEvent.click(screen.getByRole("button", { name: "Weekly" }));
+    await userEvent.click(screen.getByRole("button", { name: "2h" }));
+    await userEvent.type(screen.getByTestId("edit-estimate"), "45");
+    await userEvent.click(screen.getByRole("button", { name: /create task/i }));
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "quarterly report",
+          recurrence: "weekly",
+          estimatedMinutes: 45,
+          notifyBefore: 120,
+          notificationEnabled: true,
+        })
+      )
+    );
+  });
+
   it("logs capture failures with a non-content action context", async () => {
     const failure = new Error("capture write failed");
     vi.mocked(createTask).mockRejectedValueOnce(failure);

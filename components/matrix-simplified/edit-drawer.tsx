@@ -9,7 +9,7 @@ import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useEditDraftState } from "./use-edit-draft-state";
-import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
+import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField, ReminderField } from "./edit-drawer-fields";
 import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
@@ -334,6 +334,8 @@ function TaskDetailFields({ draft }: { draft: ReturnType<typeof useEditDraftStat
       />
 
       <EstimateField value={draft.estimateInput} onChange={draft.setEstimateInput} />
+
+      <ReminderField minutes={draft.reminderMinutes} onChange={draft.setReminderMinutes} />
     </>
   );
 }

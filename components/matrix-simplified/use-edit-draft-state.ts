@@ -57,6 +57,9 @@ export interface EditDraftState {
   removeSubtask: (id: string) => void;
   estimateInput: string;
   setEstimateInput: (v: string) => void;
+  /** Minutes before due, or null for "no reminder on this task". */
+  reminderMinutes: number | null;
+  setReminderMinutes: (v: number | null) => void;
   toDraft: () => EditDraft;
 }
 
@@ -111,6 +114,13 @@ function useDetailDraftFields(
   const [estimateInput, setEstimateInput] = useState<string>(() =>
     String(task?.estimatedMinutes ?? initialDraft?.estimatedMinutes ?? "")
   );
+  // null = no reminder on this task. A stored `notifyBefore` only counts when the task
+  // actually has reminders on, so a disabled task reads as Off rather than showing a
+  // preset it will never fire.
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(() => {
+    if (task) return task.notificationEnabled ? task.notifyBefore ?? null : null;
+    return initialDraft?.notificationEnabled ? initialDraft.notifyBefore ?? null : null;
+  });
 
   return {
     recurrence,
@@ -119,6 +129,8 @@ function useDetailDraftFields(
     ...subtaskActions(setSubtasks),
     estimateInput,
     setEstimateInput,
+    reminderMinutes,
+    setReminderMinutes,
   };
 }
 
@@ -202,6 +214,8 @@ export function useEditDraftState(
     recurrence: detail.recurrence,
     subtasks: detail.subtasks,
     estimatedMinutes: parseEstimate(detail.estimateInput),
+    notifyBefore: detail.reminderMinutes ?? undefined,
+    notificationEnabled: detail.reminderMinutes !== null,
   });
 
   return {

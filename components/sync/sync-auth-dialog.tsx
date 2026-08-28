@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type KeyboardEvent } from "react";
+import type { OAuthProvider } from "@/lib/sync/pb-auth";
 import { createPortal } from "react-dom";
 import { XIcon, CloudIcon } from "lucide-react";
 import { useDialogFocus } from "@/components/matrix-simplified/use-dialog-focus";
@@ -149,7 +150,7 @@ function getSubtitle(
 interface DialogBodyProps {
   state: ReturnType<typeof useSyncAuthDialog>;
   oauthCallbacks: {
-    onStart: (provider: "google" | "github") => void;
+    onStart: (provider: OAuthProvider) => void;
     onSuccess: ReturnType<typeof useSyncAuthDialog>["handleOAuthSuccess"];
     onError: (err: Error) => void;
   };

@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { OAuthButtons } from "@/components/sync/oauth-buttons";
-import type { AuthState } from "@/lib/sync/pb-auth";
+import type { AuthState, OAuthProvider } from "@/lib/sync/pb-auth";
 import type { SyncStatusInfo } from "./use-sync-auth-dialog";
 
 interface OAuthCallbacks {
-  onStart: (provider: "google" | "github") => void;
+  onStart: (provider: OAuthProvider) => void;
   onSuccess: (authState: AuthState) => Promise<void>;
   onError: (err: Error) => void;
 }

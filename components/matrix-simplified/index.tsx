@@ -273,12 +273,14 @@ export function MatrixSimplified() {
         dispatchOverlay({ type: "closeEdit" });
       } else {
         const { cleanTitle, urls } = extractUrlsFromTitle(draft.title);
+        // Spread the draft rather than re-listing fields. The hand-picked version silently
+        // dropped Repeat, Subtasks, Estimate and Reminder — every field the composer shows
+        // but the list forgot — so a task created here lost them while the same task edited
+        // afterwards kept them.
         await createTask({
+          ...draft,
           title: cleanTitle,
           description: buildDescription(draft.description, urls),
-          urgent: draft.urgent,
-          important: draft.important,
-          dueDate: draft.dueDate,
           tags: draft.tags.length > 0 ? draft.tags : undefined,
           dependencies: draft.dependencies.length > 0 ? draft.dependencies : undefined,
         });

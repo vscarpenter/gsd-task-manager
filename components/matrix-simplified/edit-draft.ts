@@ -11,4 +11,7 @@ export interface EditDraft {
   recurrence: RecurrenceType;
   subtasks: Subtask[];
   estimatedMinutes?: number;
+  /** Minutes before the due date to remind. Undefined means "use the global default". */
+  notifyBefore?: number;
+  notificationEnabled?: boolean;
 }
