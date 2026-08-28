@@ -41,11 +41,46 @@ import {
   loginWithProvider,
   loginWithGoogle,
   loginWithGithub,
+  loginWithApple,
   getOAuthErrorMessage,
   openOAuthPopup,
   refreshAuth,
   ensureValidAuth,
 } from '@/lib/sync/pb-auth';
+
+describe('Sign in with Apple', () => {
+  // The iOS client has always offered Apple and this app never did, so an iOS user who
+  // picked it landed on a PocketBase account the web could not reach. The provider is
+  // already configured server-side; the whitelist here is what gated it.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthWithOAuth2.mockResolvedValue({
+      token: 'tok',
+      record: { id: 'user-1', email: 'someone@example.com' },
+    });
+  });
+
+  it('should_allow_apple_through_the_provider_whitelist', async () => {
+    await expect(loginWithProvider('apple')).resolves.toMatchObject({ isLoggedIn: true });
+    expect(mockAuthWithOAuth2).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'apple' })
+    );
+  });
+
+  it('should_expose_a_loginWithApple_wrapper', async () => {
+    await loginWithApple();
+    expect(mockAuthWithOAuth2).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'apple' })
+    );
+  });
+
+  it('should_still_reject_a_provider_that_is_not_whitelisted', async () => {
+    await expect(
+      loginWithProvider('facebook' as unknown as Parameters<typeof loginWithProvider>[0])
+    ).rejects.toThrow(/not allowed/i);
+    expect(mockAuthWithOAuth2).not.toHaveBeenCalled();
+  });
+});
 
 describe('PocketBase Auth', () => {
   beforeEach(() => {

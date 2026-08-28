@@ -150,8 +150,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
           <Section label="Cloud sync (optional)">
             <p style={bodyStyle}>
-              The cloud icon in the top bar is your sync control. Click it to sign in with Google or GitHub — once enabled, your
-              tasks sync across devices against a self-hosted PocketBase backend.
+              The cloud icon in the top bar is your sync control. Click it to sign in with Google, Apple, or GitHub — once
+              enabled, your tasks sync across devices against a self-hosted PocketBase backend.
             </p>
             <p style={{ ...bodyStyle, color: "var(--ink-3)" }}>
               An aubergine badge means there are pending changes to push; a coral&nbsp;<em>!</em> badge means the session expired and you

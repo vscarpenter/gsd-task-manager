@@ -12,7 +12,7 @@ import { isTokenExpired } from 'pocketbase';
 
 const logger = createLogger('SYNC_AUTH');
 
-export type OAuthProvider = 'google' | 'github';
+export type OAuthProvider = 'google' | 'github' | 'apple';
 const DEFAULT_OAUTH_TIMEOUT_MS = 120_000;
 const AUTH_REFRESH_THRESHOLD_SECONDS = 5 * 60;
 
@@ -25,7 +25,7 @@ const AUTH_REFRESH_THRESHOLD_SECONDS = 5 * 60;
  * Gating here ensures the SDK call only runs for providers we explicitly
  * support.
  */
-const ALLOWED_OAUTH_PROVIDERS = new Set<OAuthProvider>(['google', 'github']);
+const ALLOWED_OAUTH_PROVIDERS = new Set<OAuthProvider>(['google', 'github', 'apple']);
 
 export interface AuthState {
   isLoggedIn: boolean;
@@ -199,6 +199,21 @@ export function loginWithGoogle(options?: OAuthLoginOptions): Promise<AuthState>
 /** Convenience wrapper for GitHub OAuth */
 export function loginWithGithub(options?: OAuthLoginOptions): Promise<AuthState> {
   return loginWithProvider('github', options);
+}
+
+/**
+ * Convenience wrapper for Sign in with Apple.
+ *
+ * The GSD iOS app has always offered Apple (App Store Guideline 4.8 requires it), and
+ * this app did not — so a user who signed in with Apple there got a PocketBase account
+ * the web could never reach, and sync looked broken rather than absent. Offering the same
+ * three providers on both clients makes the choice recoverable instead of a one-way door.
+ *
+ * This does NOT merge accounts that are already split. Linking an Apple identity to an
+ * existing Google/GitHub user by verified email is a PocketBase server setting.
+ */
+export function loginWithApple(options?: OAuthLoginOptions): Promise<AuthState> {
+  return loginWithProvider('apple', options);
 }
 
 

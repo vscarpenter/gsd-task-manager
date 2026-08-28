@@ -23,7 +23,7 @@ optional PocketBase sync, and the GSD MCP server.
 - Archive, dashboard/review analytics, sync history, settings, and onboarding.
 - Local IndexedDB persistence, JSON import/export, offline PWA support, and
   user-controlled update prompts.
-- Optional multi-device PocketBase sync with Google or GitHub OAuth and
+- Optional multi-device PocketBase sync with Google, Apple, or GitHub OAuth and
   realtime server-sent events.
 - A separately installed MCP server with 20 task, analytics, and diagnostic
   tools, including validated and dry-run-aware writes.

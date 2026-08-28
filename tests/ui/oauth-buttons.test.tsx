@@ -13,12 +13,14 @@ import type { AuthState } from '@/lib/sync/pb-auth';
 const {
   mockLoginWithGoogle,
   mockLoginWithGithub,
+  mockLoginWithApple,
   mockOpenOAuthPopup,
   mockCancelOAuthLogin,
   mockPopupWindow,
 } = vi.hoisted(() => ({
   mockLoginWithGoogle: vi.fn(),
   mockLoginWithGithub: vi.fn(),
+  mockLoginWithApple: vi.fn(),
   mockOpenOAuthPopup: vi.fn(),
   mockCancelOAuthLogin: vi.fn(),
   mockPopupWindow: { closed: false },
@@ -28,6 +30,7 @@ const {
 vi.mock('@/lib/sync/pb-auth', () => ({
   loginWithGoogle: (...args: unknown[]) => mockLoginWithGoogle(...args),
   loginWithGithub: (...args: unknown[]) => mockLoginWithGithub(...args),
+  loginWithApple: (...args: unknown[]) => mockLoginWithApple(...args),
   openOAuthPopup: (...args: unknown[]) => mockOpenOAuthPopup(...args),
   cancelOAuthLogin: (...args: unknown[]) => mockCancelOAuthLogin(...args),
 }));
@@ -62,6 +65,13 @@ describe('OAuthButtons', () => {
 
       const googleButton = screen.getByRole('button', { name: /continue with google/i });
       expect(googleButton).toBeInTheDocument();
+    });
+
+    it('should render an Apple OAuth button', () => {
+      // Parity with the iOS client, which has always offered Apple. Without it, an iOS
+      // user who signed in with Apple has no way to reach those tasks here.
+      render(<OAuthButtons />);
+      expect(screen.getByRole('button', { name: /apple/i })).toBeInTheDocument();
     });
 
     it('should render GitHub OAuth button', () => {
@@ -133,6 +143,23 @@ describe('OAuthButtons', () => {
           requestKey: expect.stringMatching(/^oauth_google_/),
         })
       );
+    });
+
+    it('should call loginWithApple when the Apple button is clicked', async () => {
+      mockLoginWithApple.mockResolvedValue({ isLoggedIn: true } as AuthState);
+      const user = userEvent.setup();
+      render(<OAuthButtons />);
+      await user.click(screen.getByRole('button', { name: /apple/i }));
+      await waitFor(() => expect(mockLoginWithApple).toHaveBeenCalled());
+    });
+
+    it('should call onStart with "apple" when the Apple button is clicked', async () => {
+      const onStart = vi.fn();
+      mockLoginWithApple.mockResolvedValue({ isLoggedIn: true } as AuthState);
+      const user = userEvent.setup();
+      render(<OAuthButtons onStart={onStart} />);
+      await user.click(screen.getByRole('button', { name: /apple/i }));
+      await waitFor(() => expect(onStart).toHaveBeenCalledWith('apple'));
     });
 
     it('should call loginWithGithub when GitHub button is clicked', async () => {
