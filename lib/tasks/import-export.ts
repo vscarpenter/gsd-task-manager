@@ -7,7 +7,7 @@ import {
   taskRecordSchema,
   trashedTaskRecordSchema,
 } from "@/lib/schema";
-import type { ImportPayload, TaskRecord } from "@/lib/types";
+import type { ImportablePayload, ImportPayload, TaskRecord } from "@/lib/types";
 import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 
@@ -364,7 +364,7 @@ async function applyTasks(
 /**
  * Import tasks from a payload with merge or replace mode
  */
-export async function importTasks(payload: ImportPayload, mode: "replace" | "merge" = "replace"): Promise<void> {
+export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   const result = importPayloadSchema.safeParse(payload);
   if (!result.success) {

@@ -148,6 +148,42 @@ describe("Backup envelope", () => {
     });
   });
 
+  describe("import — numeric version from the iOS client", () => {
+    // The iOS app shipped `version` as an Int (1) while the web writes a semver
+    // string. A numeric version must import, or the two clients cannot exchange
+    // backups at all — see ADR 0014 (amended).
+    it("should_import_tasks_from_a_payload_whose_version_is_a_number", async () => {
+      const db = getDb();
+      await importTasks(
+        {
+          version: 1,
+          exportedAt: "2026-01-01T00:00:00.000Z",
+          tasks: [createMockTask({ id: "ios-1", title: "From iOS" })],
+        },
+        "replace"
+      );
+
+      expect(await db.tasks.count()).toBe(1);
+      expect((await db.tasks.get("ios-1"))?.title).toBe("From iOS");
+    });
+
+    it("should_restore_every_store_from_a_numeric_version_payload", async () => {
+      const db = getDb();
+      await seedEveryStore();
+      const backup = await exportTasks();
+
+      await db.delete();
+      await db.open();
+
+      await importTasks({ ...backup, version: 1 }, "replace");
+
+      expect(await db.tasks.count()).toBe(2);
+      expect(await db.archivedTasks.count()).toBe(3);
+      expect(await db.smartViews.count()).toBe(1);
+      expect(await db.archiveSettings.get("settings")).toBeDefined();
+    });
+  });
+
   describe("import — replace", () => {
     it("should_restore_every_store", async () => {
       const db = getDb();

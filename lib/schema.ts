@@ -185,7 +185,10 @@ export const notificationSettingsSchema = z.object({
 export const importPayloadSchema = z.object({
 	tasks: z.array(storedTaskRecordSchema),
 	exportedAt: z.iso.datetime({ offset: true }),
-	version: z.string(),
+	// The web writes a semver string; the iOS client shipped an Int (1). Accept
+	// either and normalise to a string so downstream code has one type to read.
+	// Widening only — every payload that parsed before still parses (ADR 0014).
+	version: z.union([z.string(), z.number()]).transform(String),
 	archivedTasks: z.array(storedArchivedTaskRecordSchema).optional(),
 	deletedTasks: z.array(storedTrashedTaskRecordSchema).optional(),
 	smartViews: z.array(smartViewSchema).optional(),
