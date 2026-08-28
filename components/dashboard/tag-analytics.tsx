@@ -1,6 +1,7 @@
 "use client";
 
 import type { TagStatistic } from "@/lib/analytics";
+import { EmptyRegion } from "./empty-region";
 
 interface TagAnalyticsProps {
   tagStats: TagStatistic[];
@@ -20,18 +21,16 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
 
   if (displayTags.length === 0) {
     return (
-      <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-        <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
-        <p className="text-sm text-foreground-muted">
-          No tags to display. Add tags to your tasks to see analytics here.
-        </p>
+      <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <h3 className="mb-4 text-h3 font-semibold text-foreground">Top tags</h3>
+        <EmptyRegion className="py-6" line="Tag a task to see how each tag is tracking." />
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border-hair border-border bg-card p-6 shadow-sm">
-      <h3 className="mb-4 text-h3 font-semibold text-foreground">Top Tags</h3>
+    <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+      <h3 className="mb-4 text-h3 font-semibold text-foreground">Top tags</h3>
       <div className="space-y-3">
         {displayTags.map((stat) => {
           const barWidth = Math.max((stat.count / maxCount) * 100, 4);
@@ -54,13 +53,16 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-background-muted">
                 {/* Total tasks for this tag — graphite, because a tag is not a
                     quadrant and borrows no pigment (reference §07 polish). */}
+                {/* No transition on either layer: these are static proportions
+                    on a read-only surface, and animating width forces reflow
+                    every frame. */}
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-foreground-muted/30 transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-foreground-muted/30"
                   style={{ width: `${barWidth}%` }}
                 />
                 {/* Completed portion — success green, matching the dashboard's completed language */}
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-status-success transition-all"
+                  className="absolute inset-y-0 left-0 rounded-full bg-status-success"
                   style={{
                     width: `${barWidth * (stat.completionRate / 100)}%`,
                   }}
