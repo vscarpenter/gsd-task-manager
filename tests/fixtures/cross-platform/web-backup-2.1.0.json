@@ -1,0 +1,126 @@
+{
+  "tasks": [
+    {
+      "id": "web-task-1",
+      "title": "Ship the parity fixes",
+      "description": "Both clients read the same envelope now.",
+      "urgent": true,
+      "important": true,
+      "quadrant": "urgent-important",
+      "completed": false,
+      "createdAt": "2026-08-01T09:00:00.000Z",
+      "updatedAt": "2026-08-20T17:30:00.000Z",
+      "dueDate": "2026-09-01T00:00:00.000Z",
+      "recurrence": "weekly",
+      "tags": ["work", "parity"],
+      "subtasks": [
+        { "id": "st-1", "title": "Widen the schema", "completed": true },
+        { "id": "st-2", "title": "Round-trip test", "completed": false }
+      ],
+      "dependencies": [],
+      "notifyBefore": 30,
+      "notificationEnabled": true,
+      "notificationSent": false,
+      "estimatedMinutes": 120,
+      "timeSpent": 45,
+      "timeEntries": [
+        { "id": "te-1", "startedAt": "2026-08-20T16:00:00.000Z", "endedAt": "2026-08-20T16:45:00.000Z" }
+      ]
+    },
+    {
+      "id": "web-task-2",
+      "title": "Blocked on the first one",
+      "description": "",
+      "urgent": false,
+      "important": true,
+      "quadrant": "not-urgent-important",
+      "completed": false,
+      "createdAt": "2026-08-02T09:00:00.000Z",
+      "updatedAt": "2026-08-02T09:00:00.000Z",
+      "recurrence": "none",
+      "tags": [],
+      "subtasks": [],
+      "dependencies": ["web-task-1"],
+      "notificationEnabled": true,
+      "notificationSent": false
+    }
+  ],
+  "exportedAt": "2026-08-28T12:00:00.000Z",
+  "version": "2.1.0",
+  "archivedTasks": [
+    {
+      "id": "web-arch-1",
+      "title": "Something finished long ago",
+      "description": "",
+      "urgent": false,
+      "important": false,
+      "quadrant": "not-urgent-not-important",
+      "completed": true,
+      "completedAt": "2026-05-01T10:00:00.000Z",
+      "createdAt": "2026-04-01T09:00:00.000Z",
+      "updatedAt": "2026-05-01T10:00:00.000Z",
+      "recurrence": "none",
+      "tags": ["done"],
+      "subtasks": [],
+      "dependencies": [],
+      "notificationEnabled": true,
+      "notificationSent": false,
+      "archivedAt": "2026-06-01T10:00:00.000Z"
+    }
+  ],
+  "deletedTasks": [
+    {
+      "id": "web-trash-1",
+      "title": "Deleted but recoverable",
+      "description": "",
+      "urgent": true,
+      "important": false,
+      "quadrant": "urgent-not-important",
+      "completed": false,
+      "createdAt": "2026-08-10T09:00:00.000Z",
+      "updatedAt": "2026-08-25T09:00:00.000Z",
+      "recurrence": "none",
+      "tags": [],
+      "subtasks": [],
+      "dependencies": [],
+      "notificationEnabled": true,
+      "notificationSent": false,
+      "deletedAt": "2026-08-27T09:00:00.000Z"
+    }
+  ],
+  "smartViews": [
+    {
+      "id": "custom-view-1",
+      "name": "Overdue work",
+      "description": "Everything late and tagged work",
+      "icon": "overdue",
+      "criteria": {
+        "status": "active",
+        "overdue": true,
+        "tags": ["work"],
+        "quadrants": ["urgent-important"],
+        "recurrence": ["weekly"]
+      },
+      "isBuiltIn": false,
+      "createdAt": "2026-07-01T09:00:00.000Z",
+      "updatedAt": "2026-07-15T09:00:00.000Z"
+    }
+  ],
+  "notificationSettings": {
+    "id": "settings",
+    "enabled": true,
+    "defaultReminder": 120,
+    "soundEnabled": false,
+    "quietHoursStart": "22:00",
+    "quietHoursEnd": "07:00",
+    "permissionAsked": true,
+    "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  "archiveSettings": { "id": "settings", "enabled": true, "archiveAfterDays": 60 },
+  "appPreferences": {
+    "id": "preferences",
+    "pinnedSmartViewIds": ["custom-view-1"],
+    "maxPinnedViews": 5,
+    "smartViewsEnabled": true
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "appPreferences" : {
+    "id" : "preferences",
+    "maxPinnedViews" : 5,
+    "pinnedSmartViewIds" : [
+      "custom-view-1"
+    ],
+    "smartViewsEnabled" : true
+  },
+  "archiveSettings" : {
+    "archiveAfterDays" : 60,
+    "enabled" : true,
+    "id" : "settings"
+  },
+  "archivedTasks" : [
+    {
+      "archivedAt" : "2026-06-01T10:00:00.000Z",
+      "completed" : true,
+      "completedAt" : "2026-05-01T10:00:00.000Z",
+      "createdAt" : "2026-04-01T09:00:00.000Z",
+      "dependencies" : [
+
+      ],
+      "description" : "",
+      "id" : "web-arch-1",
+      "important" : false,
+      "notificationEnabled" : true,
+      "notificationSent" : false,
+      "quadrant" : "not-urgent-not-important",
+      "recurrence" : "none",
+      "subtasks" : [
+
+      ],
+      "tags" : [
+        "done"
+      ],
+      "timeEntries" : [
+
+      ],
+      "title" : "Something finished long ago",
+      "updatedAt" : "2026-05-01T10:00:00.000Z",
+      "urgent" : false
+    }
+  ],
+  "deletedTasks" : [
+    {
+      "completed" : false,
+      "createdAt" : "2026-08-10T09:00:00.000Z",
+      "deletedAt" : "2026-08-27T09:00:00.000Z",
+      "dependencies" : [
+
+      ],
+      "description" : "",
+      "id" : "web-trash-1",
+      "important" : false,
+      "notificationEnabled" : true,
+      "notificationSent" : false,
+      "quadrant" : "urgent-not-important",
+      "recurrence" : "none",
+      "subtasks" : [
+
+      ],
+      "tags" : [
+
+      ],
+      "timeEntries" : [
+
+      ],
+      "title" : "Deleted but recoverable",
+      "updatedAt" : "2026-08-25T09:00:00.000Z",
+      "urgent" : true
+    }
+  ],
+  "exportedAt" : "2026-08-18T12:00:00.000Z",
+  "notificationSettings" : {
+    "defaultReminder" : 120,
+    "enabled" : true,
+    "id" : "settings",
+    "permissionAsked" : true,
+    "quietHoursEnd" : "07:00",
+    "quietHoursStart" : "22:00",
+    "soundEnabled" : false,
+    "updatedAt" : "2026-08-18T12:00:00.000Z"
+  },
+  "smartViews" : [
+    {
+      "createdAt" : "2026-07-01T09:00:00.000Z",
+      "criteria" : {
+        "dueThisWeek" : false,
+        "dueToday" : false,
+        "noDueDate" : false,
+        "overdue" : true,
+        "quadrants" : [
+          "urgent-important"
+        ],
+        "readyToWork" : false,
+        "recentlyAdded" : false,
+        "recentlyCompleted" : false,
+        "recurrence" : [
+          "weekly"
+        ],
+        "searchQuery" : "",
+        "status" : "active",
+        "tags" : [
+          "work"
+        ]
+      },
+      "icon" : "overdue",
+      "id" : "custom-view-1",
+      "isBuiltIn" : false,
+      "name" : "Overdue work",
+      "updatedAt" : "2026-07-15T09:00:00.000Z"
+    }
+  ],
+  "tasks" : [
+    {
+      "completed" : false,
+      "createdAt" : "2026-08-02T09:00:00.000Z",
+      "dependencies" : [
+        "web-task-1"
+      ],
+      "description" : "",
+      "id" : "web-task-2",
+      "important" : true,
+      "notificationEnabled" : true,
+      "notificationSent" : false,
+      "quadrant" : "not-urgent-important",
+      "recurrence" : "none",
+      "subtasks" : [
+
+      ],
+      "tags" : [
+
+      ],
+      "timeEntries" : [
+
+      ],
+      "title" : "Blocked on the first one",
+      "updatedAt" : "2026-08-18T12:00:00.000Z",
+      "urgent" : false
+    },
+    {
+      "completed" : false,
+      "createdAt" : "2026-08-01T09:00:00.000Z",
+      "dependencies" : [
+
+      ],
+      "description" : "Both clients read the same envelope now.",
+      "dueDate" : "2026-09-01T00:00:00.000Z",
+      "estimatedMinutes" : 120,
+      "id" : "web-task-1",
+      "important" : true,
+      "notificationEnabled" : true,
+      "notificationSent" : false,
+      "notifyBefore" : 30,
+      "quadrant" : "urgent-important",
+      "recurrence" : "weekly",
+      "subtasks" : [
+        {
+          "completed" : true,
+          "id" : "st-1",
+          "title" : "Widen the schema"
+        },
+        {
+          "completed" : false,
+          "id" : "st-2",
+          "title" : "Round-trip test"
+        }
+      ],
+      "tags" : [
+        "work",
+        "parity"
+      ],
+      "timeEntries" : [
+        {
+          "endedAt" : "2026-08-20T16:45:00.000Z",
+          "id" : "te-1",
+          "startedAt" : "2026-08-20T16:00:00.000Z"
+        }
+      ],
+      "timeSpent" : 45,
+      "title" : "Ship the parity fixes",
+      "updatedAt" : "2026-08-18T12:00:00.000Z",
+      "urgent" : true
+    }
+  ],
+  "version" : "2.1.0"
+}
