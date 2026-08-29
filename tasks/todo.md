@@ -26,3 +26,15 @@ Still open:
 - Claude Desktop config still lists old workspace paths (edit after quitting app).
 - Other sessions' iOS branches fix/capture-parser-parity + fix/reminder-options-parity
   merged as #11/#12; their local branches remain (not this session's to clean).
+
+## Carried from 2026-08-27 (anonymous feedback, shipped as #516)
+
+The prior status file tracked feat/anonymous-feedback; it merged as PR #516,
+so its "push and PR" item is done, and the prod `feedback` collection now
+responds (a bare POST returns 400, not 404) — the setup script appears to have
+run. Still possibly open, per that file:
+- The two manual steps the setup script prints: rate limiting and log
+  retention on api.vinny.io.
+- Curate `lib/feedback/roadmap-items.ts` — the eight candidates were a seed.
+- Update the privacy policy at gsdtaskmanager.com/privacy (separate repo).
+- Deferred by design: the earned-moment feedback prompt after N completions.
