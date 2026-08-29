@@ -34,6 +34,9 @@ export interface SettingsData {
   toggleSmartViews: () => Promise<void>;
   notificationToggle: () => Promise<void>;
   defaultReminderChange: (value: string) => Promise<void>;
+  soundToggle: () => Promise<void>;
+  quietHoursToggle: () => Promise<void>;
+  quietHoursChange: (which: "start" | "end", value: string) => Promise<void>;
   markAccountDeleted: () => void;
 }
 
@@ -126,6 +129,34 @@ export function useSettingsData(): SettingsData {
     await reloadNotificationSettings();
   };
 
+  const soundToggle = async () => {
+    if (!notificationSettings) return;
+    await updateNotificationSettings({ soundEnabled: !notificationSettings.soundEnabled });
+    await reloadNotificationSettings();
+  };
+
+  // Quiet hours are "on" exactly when both edges exist — the same condition
+  // isInQuietHours() checks — so the toggle seeds a sensible overnight window
+  // and clearing both edges is what turns the feature off.
+  const quietHoursToggle = async () => {
+    if (!notificationSettings) return;
+    const isOn = Boolean(notificationSettings.quietHoursStart && notificationSettings.quietHoursEnd);
+    await updateNotificationSettings(
+      isOn
+        ? { quietHoursStart: undefined, quietHoursEnd: undefined }
+        : { quietHoursStart: "22:00", quietHoursEnd: "08:00" },
+    );
+    await reloadNotificationSettings();
+  };
+
+  const quietHoursChange = async (which: "start" | "end", value: string) => {
+    if (!value) return; // an emptied time input is not a window edge
+    await updateNotificationSettings(
+      which === "start" ? { quietHoursStart: value } : { quietHoursEnd: value },
+    );
+    await reloadNotificationSettings();
+  };
+
   const markAccountDeleted = () => {
     setSyncEnabled(false);
     setPendingSync(0);
@@ -142,6 +173,9 @@ export function useSettingsData(): SettingsData {
     toggleSmartViews,
     notificationToggle,
     defaultReminderChange,
+    soundToggle,
+    quietHoursToggle,
+    quietHoursChange,
     markAccountDeleted,
   };
 }

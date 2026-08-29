@@ -68,14 +68,17 @@ vi.mock('@/components/ui/switch', () => ({
     checked,
     onCheckedChange,
     disabled,
+    'aria-label': ariaLabel,
   }: {
     checked: boolean;
     onCheckedChange: (v: boolean) => void;
     disabled?: boolean;
+    'aria-label'?: string;
   }) => (
     <button
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       onClick={() => !disabled && onCheckedChange(!checked)}
       disabled={disabled}
     >
@@ -308,7 +311,7 @@ describe('Settings Components', () => {
           onDefaultReminderChange={vi.fn()}
         />
       );
-      fireEvent.click(screen.getByRole('switch'));
+      fireEvent.click(screen.getByRole('switch', { name: /push notifications/i }));
       expect(onToggle).toHaveBeenCalled();
     });
 
@@ -326,6 +329,86 @@ describe('Settings Components', () => {
         />
       );
       expect(screen.getByText('Granted')).toBeInTheDocument();
+    });
+
+    describe('sound and quiet hours', () => {
+      const quietSettings = {
+        ...enabledSettings,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '08:00',
+      };
+
+      const renderSection = (
+        settings: typeof enabledSettings | typeof quietSettings | null,
+        handlers: Partial<{
+          onSoundToggle: () => Promise<void>;
+          onQuietHoursToggle: () => Promise<void>;
+          onQuietHoursChange: (which: 'start' | 'end', value: string) => Promise<void>;
+        }> = {}
+      ) =>
+        render(
+          <NotificationSettingsSection
+            settings={settings}
+            onNotificationToggle={vi.fn()}
+            onDefaultReminderChange={vi.fn()}
+            onSoundToggle={handlers.onSoundToggle ?? vi.fn()}
+            onQuietHoursToggle={handlers.onQuietHoursToggle ?? vi.fn()}
+            onQuietHoursChange={handlers.onQuietHoursChange ?? vi.fn()}
+          />
+        );
+
+      it('renders a Sound row reflecting soundEnabled and calls onSoundToggle on click', () => {
+        const onSoundToggle = vi.fn();
+        renderSection(enabledSettings, { onSoundToggle });
+
+        const soundSwitch = screen.getByRole('switch', { name: /sound/i });
+        expect(soundSwitch).toBeChecked();
+        fireEvent.click(soundSwitch);
+        expect(onSoundToggle).toHaveBeenCalledTimes(1);
+      });
+
+      it('renders the Quiet hours switch off when no hours are set and calls onQuietHoursToggle', () => {
+        const onQuietHoursToggle = vi.fn();
+        renderSection(enabledSettings, { onQuietHoursToggle });
+
+        const quietSwitch = screen.getByRole('switch', { name: /quiet hours/i });
+        expect(quietSwitch).not.toBeChecked();
+        fireEvent.click(quietSwitch);
+        expect(onQuietHoursToggle).toHaveBeenCalledTimes(1);
+      });
+
+      it('reveals From/To time inputs with the stored values when quiet hours are set', () => {
+        renderSection(quietSettings);
+
+        expect(screen.getByRole('switch', { name: /quiet hours/i })).toBeChecked();
+        expect(screen.getByLabelText('From')).toHaveValue('22:00');
+        expect(screen.getByLabelText('To')).toHaveValue('08:00');
+      });
+
+      it('hides the From/To time inputs when quiet hours are off', () => {
+        renderSection(enabledSettings);
+
+        expect(screen.queryByLabelText('From')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('To')).not.toBeInTheDocument();
+      });
+
+      it('changing a time input calls onQuietHoursChange with which edge and the value', () => {
+        const onQuietHoursChange = vi.fn();
+        renderSection(quietSettings, { onQuietHoursChange });
+
+        fireEvent.change(screen.getByLabelText('From'), { target: { value: '21:30' } });
+        expect(onQuietHoursChange).toHaveBeenCalledWith('start', '21:30');
+
+        fireEvent.change(screen.getByLabelText('To'), { target: { value: '07:00' } });
+        expect(onQuietHoursChange).toHaveBeenCalledWith('end', '07:00');
+      });
+
+      it('hides sound and quiet hours rows when notifications are disabled', () => {
+        renderSection({ ...enabledSettings, enabled: false });
+
+        expect(screen.queryByRole('switch', { name: /sound/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('switch', { name: /quiet hours/i })).not.toBeInTheDocument();
+      });
     });
   });
 

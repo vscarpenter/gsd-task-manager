@@ -8,6 +8,9 @@ interface NotificationSettingsProps {
 	settings: NotificationSettings | null;
 	onNotificationToggle: () => Promise<void>;
 	onDefaultReminderChange: (value: string) => Promise<void>;
+	onSoundToggle: () => Promise<void>;
+	onQuietHoursToggle: () => Promise<void>;
+	onQuietHoursChange: (which: "start" | "end", value: string) => Promise<void>;
 }
 
 const REMINDER_OPTIONS = [
@@ -25,6 +28,9 @@ export function NotificationSettingsSection({
 	settings,
 	onNotificationToggle,
 	onDefaultReminderChange,
+	onSoundToggle,
+	onQuietHoursToggle,
+	onQuietHoursChange,
 }: NotificationSettingsProps) {
 	if (!settings) {
 		return (
@@ -38,6 +44,10 @@ export function NotificationSettingsSection({
 		(opt) => opt.value === settings.defaultReminder.toString()
 	);
 
+	// The checker treats quiet hours as active only when both edges exist, so
+	// the switch mirrors that exact condition rather than a separate flag.
+	const quietHoursOn = Boolean(settings.quietHoursStart && settings.quietHoursEnd);
+
 	return (
 		<>
 			{/* Enable Notifications Row */}
@@ -47,6 +57,7 @@ export function NotificationSettingsSection({
 				state={settings.enabled}
 			>
 				<Switch
+					aria-label="Push notifications"
 					checked={settings.enabled}
 					onCheckedChange={onNotificationToggle}
 				/>
@@ -62,6 +73,50 @@ export function NotificationSettingsSection({
 				/>
 			)}
 
+			{/* Sound + quiet hours - only meaningful while notifications fire */}
+			{settings.enabled && (
+				<>
+					<SettingsRow
+						label="Sound"
+						description="Play a sound with each notification"
+						state={settings.soundEnabled}
+					>
+						<Switch
+							aria-label="Sound"
+							checked={settings.soundEnabled}
+							onCheckedChange={onSoundToggle}
+						/>
+					</SettingsRow>
+
+					<SettingsRow
+						label="Quiet hours"
+						description="Hold notifications during a daily window"
+						state={quietHoursOn}
+					>
+						<Switch
+							aria-label="Quiet hours"
+							checked={quietHoursOn}
+							onCheckedChange={onQuietHoursToggle}
+						/>
+					</SettingsRow>
+
+					{quietHoursOn && (
+						<>
+							<QuietHoursTimeRow
+								label="From"
+								value={settings.quietHoursStart ?? ""}
+								onChange={(value) => onQuietHoursChange("start", value)}
+							/>
+							<QuietHoursTimeRow
+								label="To"
+								value={settings.quietHoursEnd ?? ""}
+								onChange={(value) => onQuietHoursChange("end", value)}
+							/>
+						</>
+					)}
+				</>
+			)}
+
 			{/* Permission Status Row */}
 			{"Notification" in window && (
 				<SettingsRow label="Browser permission">
@@ -69,6 +124,33 @@ export function NotificationSettingsSection({
 				</SettingsRow>
 			)}
 		</>
+	);
+}
+
+/**
+ * One edge of the quiet-hours window as an iOS-style row with a native time
+ * input — the same disclosure position SettingsSelectRow puts its control in.
+ */
+function QuietHoursTimeRow({
+	label,
+	value,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	onChange: (value: string) => void;
+}) {
+	return (
+		<label className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px] cursor-pointer">
+			<span className="text-sm font-medium text-foreground">{label}</span>
+			<input
+				type="time"
+				aria-label={label}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				className="bg-transparent text-sm text-foreground-muted text-right cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xs"
+			/>
+		</label>
 	);
 }
 

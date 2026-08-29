@@ -139,6 +139,9 @@ export function SettingsBody({
             settings={settings.notificationSettings}
             onNotificationToggle={settings.notificationToggle}
             onDefaultReminderChange={settings.defaultReminderChange}
+            onSoundToggle={settings.soundToggle}
+            onQuietHoursToggle={settings.quietHoursToggle}
+            onQuietHoursChange={settings.quietHoursChange}
           />
         )}
         {activeSection === "sync" && settings.syncEnabled && (
