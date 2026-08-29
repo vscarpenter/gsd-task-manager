@@ -169,6 +169,18 @@ function resolveDueDate(customDate: string | undefined, duePreset: DuePreset): s
  * initializers. EditDrawer remounts this hook (via a `key` on the task id) when
  * the selected task changes, so no effect is needed to re-sync from props.
  */
+/** The due-date trio: preset classification, custom date, and its input's visibility. */
+function useDueDateDraft(task: TaskRecord | null | undefined) {
+  const [duePreset, setDuePreset] = useState<DuePreset>(() =>
+    task ? classifyExistingDate(task.dueDate) : "none"
+  );
+  const [customDate, setCustomDate] = useState<string | undefined>(() =>
+    task ? classifyExistingCustomDate(task.dueDate) : undefined
+  );
+  const [showCustomDateInput, setShowCustomDateInput] = useState(false);
+  return { duePreset, setDuePreset, customDate, setCustomDate, showCustomDateInput, setShowCustomDateInput };
+}
+
 export function useEditDraftState(
   task: TaskRecord | null | undefined,
   initialDraft: Partial<EditDraft> | undefined,
@@ -182,13 +194,7 @@ export function useEditDraftState(
   const [important, setImportant] = useState(() =>
     task ? task.important : initialDraft?.important ?? false
   );
-  const [duePreset, setDuePreset] = useState<DuePreset>(() =>
-    task ? classifyExistingDate(task.dueDate) : "none"
-  );
-  const [customDate, setCustomDate] = useState<string | undefined>(() =>
-    task ? classifyExistingCustomDate(task.dueDate) : undefined
-  );
-  const [showCustomDateInput, setShowCustomDateInput] = useState(false);
+  const due = useDueDateDraft(task);
   const [tags, setTags] = useState<string[]>(() => seedTags(task, initialDraft));
   const [tagInput, setTagInput] = useState("");
   const [dependencies, setDependencies] = useState<string[]>(() =>
@@ -208,7 +214,7 @@ export function useEditDraftState(
     description: description.trim(),
     urgent,
     important,
-    dueDate: resolveDueDate(customDate, duePreset),
+    dueDate: resolveDueDate(due.customDate, due.duePreset),
     tags,
     dependencies,
     recurrence: detail.recurrence,
@@ -223,9 +229,7 @@ export function useEditDraftState(
     description, setDescription,
     urgent, setUrgent,
     important, setImportant,
-    duePreset, setDuePreset,
-    customDate, setCustomDate,
-    showCustomDateInput, setShowCustomDateInput,
+    ...due,
     tags, setTags,
     tagInput, setTagInput,
     addTag,

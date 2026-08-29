@@ -364,6 +364,23 @@ async function applyTasks(
 /**
  * Import tasks from a payload with merge or replace mode
  */
+/**
+ * Enforce the import cap across every task-bearing store: a lossless backup
+ * carries archived and deleted tasks too, and the guard exists to bound total
+ * records written.
+ */
+function assertWithinImportCap(parsed: {
+  tasks: unknown[];
+  archivedTasks?: unknown[];
+  deletedTasks?: unknown[];
+}): void {
+  const totalTaskRecords =
+    parsed.tasks.length + (parsed.archivedTasks?.length ?? 0) + (parsed.deletedTasks?.length ?? 0);
+  if (totalTaskRecords > MAX_IMPORT_TASKS) {
+    throw new Error(`Import exceeds maximum of ${MAX_IMPORT_TASKS.toLocaleString()} tasks. Please split into smaller files.`);
+  }
+}
+
 export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   const result = importPayloadSchema.safeParse(payload);
@@ -372,13 +389,7 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
   }
   const parsed = result.data;
 
-  // Count every task-bearing store: a lossless backup carries archived and
-  // deleted tasks too, and the guard exists to bound total records written.
-  const totalTaskRecords =
-    parsed.tasks.length + (parsed.archivedTasks?.length ?? 0) + (parsed.deletedTasks?.length ?? 0);
-  if (totalTaskRecords > MAX_IMPORT_TASKS) {
-    throw new Error(`Import exceeds maximum of ${MAX_IMPORT_TASKS.toLocaleString()} tasks. Please split into smaller files.`);
-  }
+  assertWithinImportCap(parsed);
 
   const { syncEnabled, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
 
