@@ -372,7 +372,11 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
   }
   const parsed = result.data;
 
-  if (parsed.tasks.length > MAX_IMPORT_TASKS) {
+  // Count every task-bearing store: a lossless backup carries archived and
+  // deleted tasks too, and the guard exists to bound total records written.
+  const totalTaskRecords =
+    parsed.tasks.length + (parsed.archivedTasks?.length ?? 0) + (parsed.deletedTasks?.length ?? 0);
+  if (totalTaskRecords > MAX_IMPORT_TASKS) {
     throw new Error(`Import exceeds maximum of ${MAX_IMPORT_TASKS.toLocaleString()} tasks. Please split into smaller files.`);
   }
 

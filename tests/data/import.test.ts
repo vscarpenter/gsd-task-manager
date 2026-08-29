@@ -365,4 +365,58 @@ describe("Import functionality", () => {
       expect(task.subtasks[1].completed).toBe(false);
     });
   });
+  describe("Import cap", () => {
+    const makeStoredTask = (id: string) => ({
+      id,
+      title: `Task ${id}`,
+      description: "",
+      urgent: false,
+      important: false,
+      quadrant: "not-urgent-not-important",
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      recurrence: "none",
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: true,
+      notificationSent: false
+    });
+
+    const makeMany = (count: number, prefix: string) =>
+      Array.from({ length: count }, (_, i) => makeStoredTask(`${prefix}-${i}`));
+
+    it("rejects a payload whose stores together exceed the cap", async () => {
+      // 4,000 active + 4,000 archived + 2,001 deleted = 10,001 records —
+      // over the 10,000 guard even though tasks alone is far under it.
+      const payload = {
+        tasks: makeMany(4_000, "task"),
+        archivedTasks: makeMany(4_000, "arch").map(t => ({ ...t, archivedAt: new Date().toISOString() })),
+        deletedTasks: makeMany(2_001, "gone").map(t => ({ ...t, deletedAt: new Date().toISOString() })),
+        exportedAt: new Date().toISOString(),
+        version: "2.1.0"
+      };
+
+      await expect(importTasks(payload as unknown as ImportPayload, "replace")).rejects.toThrow(
+        /exceeds maximum/
+      );
+
+      // The guard must fire before any store is written.
+      expect(await listTasks()).toHaveLength(0);
+    });
+
+    it("accepts a payload at exactly the cap across stores", async () => {
+      const payload = {
+        tasks: makeMany(2, "task"),
+        archivedTasks: makeMany(1, "arch").map(t => ({ ...t, archivedAt: new Date().toISOString() })),
+        deletedTasks: makeMany(1, "gone").map(t => ({ ...t, deletedAt: new Date().toISOString() })),
+        exportedAt: new Date().toISOString(),
+        version: "2.1.0"
+      };
+
+      await expect(importTasks(payload as unknown as ImportPayload, "replace")).resolves.toBeUndefined();
+      expect(await listTasks()).toHaveLength(2);
+    });
+  });
 });
