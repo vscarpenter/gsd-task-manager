@@ -218,7 +218,7 @@ describe('Task CRUD Operations', () => {
         title: 'https://example.com',
         description: '',
         expectedTitle: 'Review link below',
-        expectedDescription: 'https://example.com/',
+        expectedDescription: 'https://example.com',
       },
       {
         scenario: 'leaves title unchanged when no URLs are present',
@@ -379,7 +379,7 @@ describe('Task CRUD Operations', () => {
         initialDescription: '',
         newTitle: 'https://example.com',
         expectedTitle: 'Review link below',
-        expectedDescription: 'https://example.com/',
+        expectedDescription: 'https://example.com',
       },
       {
         scenario: 'leaves the title unchanged when the updated title has no URL',

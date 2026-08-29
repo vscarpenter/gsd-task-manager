@@ -45,7 +45,7 @@ describe('createTask URL extraction', () => {
     });
 
     expect(result.task.title).toBe('Read later');
-    expect(result.task.description).toBe('https://example.com/');
+    expect(result.task.description).toBe('https://example.com');
   });
 
   it('uses the fallback title when the title is url-only', async () => {
@@ -57,7 +57,7 @@ describe('createTask URL extraction', () => {
     });
 
     expect(result.task.title).toBe('Review link below');
-    expect(result.task.description).toBe('https://example.com/');
+    expect(result.task.description).toBe('https://example.com');
   });
 
   it('appends the url below an existing description', async () => {
@@ -70,7 +70,7 @@ describe('createTask URL extraction', () => {
     });
 
     expect(result.task.title).toBe('Read later');
-    expect(result.task.description).toBe('Notes here\nhttps://example.com/');
+    expect(result.task.description).toBe('Notes here\nhttps://example.com');
   });
 
   it('does not extract javascript protocol urls', async () => {
