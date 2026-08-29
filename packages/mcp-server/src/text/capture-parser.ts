@@ -18,19 +18,21 @@ const FALLBACK_TITLE_FOR_URL_ONLY = "Review link below";
 // Matches http/https URLs; reuses the same pattern as lib/task-links.ts
 const TITLE_URL_PATTERN = /\bhttps?:\/\/[^\s<>"'`{}|\\^]+/giu;
 const TRAILING_PUNCTUATION = /[),.!?;:]+$/u;
-const MAX_URL_LENGTH = 2048;
+const MAX_URL_LENGTH = 2048; // spec §6.2: URLs of 2048 chars or more are rejected
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
 
 function sanitizeTitleUrl(candidate: string): string | null {
   const value = candidate.trim();
-  if (value.length === 0 || value.length > MAX_URL_LENGTH || /[\u0000-\u001F\u007F\s]/u.test(value)) {
+  if (value.length === 0 || value.length >= MAX_URL_LENGTH || /[\u0000-\u001F\u007F\s]/u.test(value)) {
     return null;
   }
   try {
     const url = new URL(value);
     if (!ALLOWED_PROTOCOLS.has(url.protocol.toLowerCase())) return null;
     if (!url.hostname || url.username || url.password) return null;
-    return url.href;
+    // Return the raw (trimmed) candidate, not url.href: both clients store the
+    // URL exactly as typed, so captures stay byte-identical across platforms.
+    return value;
   } catch {
     return null;
   }
@@ -56,7 +58,7 @@ export function extractUrlsFromTitle(title: string): ExtractedUrls {
     const trimmed = raw.replace(TRAILING_PUNCTUATION, "");
     const safe = sanitizeTitleUrl(trimmed);
     if (!safe) return raw; // leave invalid/unsafe candidates untouched
-    urls.push(safe);
+    if (!urls.includes(safe)) urls.push(safe); // dedupe repeats; still remove from title
     // Trailing punctuation (e.g. a period at the end of a sentence) is dropped
     // along with the URL — it was sentence-level punctuation around the link.
     return "";

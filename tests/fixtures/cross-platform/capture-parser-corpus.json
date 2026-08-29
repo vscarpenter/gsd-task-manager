@@ -1,0 +1,515 @@
+{
+  "note": "Canonical capture-parser behavior shared by the web client (lib/capture-parser.ts, composed as the app does: parseCapture then extractUrlsFromTitle) and the iOS client (GSDKit CaptureParser.parse). Byte-identical copies live at gsd-taskmanager/tests/fixtures/cross-platform/capture-parser-corpus.json and gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/capture-parser-corpus.json; both suites run every case. If you change parser behavior, change it in both clients and regenerate this file in both places.",
+  "cases": [
+    {
+      "name": "plain text, no shorthand",
+      "input": "Just a note",
+      "expect": {
+        "title": "Just a note",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "double bang sets urgent and important",
+      "input": "Ship the build !!",
+      "expect": {
+        "title": "Ship the build",
+        "urgent": true,
+        "important": true,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "single bang sets urgent only",
+      "input": "Call dentist !",
+      "expect": {
+        "title": "Call dentist",
+        "urgent": true,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "star sets important only",
+      "input": "Plan roadmap *",
+      "expect": {
+        "title": "Plan roadmap",
+        "urgent": false,
+        "important": true,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "bang plus star sets both",
+      "input": "Do it ! *",
+      "expect": {
+        "title": "Do it",
+        "urgent": true,
+        "important": true,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "double bang mid-sentence",
+      "input": "Urgent thing !! now",
+      "expect": {
+        "title": "Urgent thing now",
+        "urgent": true,
+        "important": true,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "flag glued to a word is literal text",
+      "input": "wow!much excitement",
+      "expect": {
+        "title": "wow!much excitement",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "repeated flag tokens are all stripped",
+      "input": "!! !! x",
+      "expect": {
+        "title": "x",
+        "urgent": true,
+        "important": true,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "flag-only input leaves an empty title",
+      "input": "!",
+      "expect": {
+        "title": "",
+        "urgent": true,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "whitespace collapses after token removal",
+      "input": "a   !!   b",
+      "expect": {
+        "title": "a b",
+        "urgent": true,
+        "important": true,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "basic tag",
+      "input": "Buy milk #errand",
+      "expect": {
+        "title": "Buy milk",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "errand"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "tags lowercase and dedupe case-insensitively",
+      "input": "Buy milk #Errand #errand #Home",
+      "expect": {
+        "title": "Buy milk",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "errand",
+          "home"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "unicode tags are whole tags",
+      "input": "Trip plan #café #日本語 #Grüße",
+      "expect": {
+        "title": "Trip plan",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "café",
+          "日本語",
+          "grüße"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "hyphen underscore and digits allowed in tags",
+      "input": "Task #to-do #a_b #123",
+      "expect": {
+        "title": "Task",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "to-do",
+          "a_b",
+          "123"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "tag over 30 chars is dropped but stripped",
+      "input": "Task #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "title": "Task",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "tag of exactly 30 chars is kept",
+      "input": "Task #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "title": "Task",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "tags cap at 20 keeping the first 20",
+      "input": "Task #t1 #t2 #t3 #t4 #t5 #t6 #t7 #t8 #t9 #t10 #t11 #t12 #t13 #t14 #t15 #t16 #t17 #t18 #t19 #t20 #t21 #t22 #t23 #t24 #t25",
+      "expect": {
+        "title": "Task",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "t1",
+          "t2",
+          "t3",
+          "t4",
+          "t5",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t10",
+          "t11",
+          "t12",
+          "t13",
+          "t14",
+          "t15",
+          "t16",
+          "t17",
+          "t18",
+          "t19",
+          "t20"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "hash inside a word is not a tag",
+      "input": "price#tag stays",
+      "expect": {
+        "title": "price#tag stays",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "tag before punctuation keeps the punctuation",
+      "input": "buy #milk, #eggs now",
+      "expect": {
+        "title": "buy, now",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "milk",
+          "eggs"
+        ],
+        "urls": []
+      }
+    },
+    {
+      "name": "leading hyphen is not a tag",
+      "input": "keep #-dash here",
+      "expect": {
+        "title": "keep #-dash here",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "url with path moves to description, stored raw",
+      "input": "Read this https://example.com/post later",
+      "expect": {
+        "title": "Read this later",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://example.com/post"
+        ]
+      }
+    },
+    {
+      "name": "bare-domain url stays raw with no trailing slash",
+      "input": "Read https://example.com later",
+      "expect": {
+        "title": "Read later",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://example.com"
+        ]
+      }
+    },
+    {
+      "name": "multiple urls extract in order",
+      "input": "See https://a.test and https://b.test",
+      "expect": {
+        "title": "See and",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://a.test",
+          "https://b.test"
+        ]
+      }
+    },
+    {
+      "name": "duplicate urls collapse to one",
+      "input": "Compare https://a.test https://a.test",
+      "expect": {
+        "title": "Compare",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://a.test"
+        ]
+      }
+    },
+    {
+      "name": "url-only title falls back",
+      "input": "https://example.com/x",
+      "expect": {
+        "title": "Review link below",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://example.com/x"
+        ]
+      }
+    },
+    {
+      "name": "trailing sentence punctuation is stripped from the url",
+      "input": "Check https://example.com.",
+      "expect": {
+        "title": "Check",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://example.com"
+        ]
+      }
+    },
+    {
+      "name": "paren-wrapped url is extracted",
+      "input": "see (https://a.test) now",
+      "expect": {
+        "title": "see ( now",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://a.test"
+        ]
+      }
+    },
+    {
+      "name": "url glued to a word stays in the title",
+      "input": "foohttps://a.test bar",
+      "expect": {
+        "title": "foohttps://a.test bar",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "url after punctuation is extracted",
+      "input": "read:https://a.test now",
+      "expect": {
+        "title": "read: now",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://a.test"
+        ]
+      }
+    },
+    {
+      "name": "uppercase scheme extracts and stays raw",
+      "input": "See HTTPS://EXAMPLE.COM now",
+      "expect": {
+        "title": "See now",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "HTTPS://EXAMPLE.COM"
+        ]
+      }
+    },
+    {
+      "name": "credentialed url is left in the title",
+      "input": "Login https://user:pass@example.com",
+      "expect": {
+        "title": "Login https://user:pass@example.com",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "non-http scheme is left in the title",
+      "input": "see ftp://example.com now",
+      "expect": {
+        "title": "see ftp://example.com now",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "javascript scheme is left in the title",
+      "input": "Bad javascript:alert(1) link",
+      "expect": {
+        "title": "Bad javascript:alert(1) link",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "url of exactly 2047 chars is accepted",
+      "input": "huge https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "title": "huge",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]
+      }
+    },
+    {
+      "name": "url of exactly 2048 chars is left in the title",
+      "input": "huge https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "title": "huge https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "quotes bound the url",
+      "input": "say \"https://a.test\" ok",
+      "expect": {
+        "title": "say \"\" ok",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": [
+          "https://a.test"
+        ]
+      }
+    },
+    {
+      "name": "scheme with no host is left in the title",
+      "input": "https:// nothing",
+      "expect": {
+        "title": "https:// nothing",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    },
+    {
+      "name": "flags tags and url together",
+      "input": "Fix login !! #auth #Auth https://app.test/bug now",
+      "expect": {
+        "title": "Fix login now",
+        "urgent": true,
+        "important": true,
+        "tags": [
+          "auth"
+        ],
+        "urls": [
+          "https://app.test/bug"
+        ]
+      }
+    },
+    {
+      "name": "url plus tag falls back and keeps the tag",
+      "input": "https://a.test #read",
+      "expect": {
+        "title": "Review link below",
+        "urgent": false,
+        "important": false,
+        "tags": [
+          "read"
+        ],
+        "urls": [
+          "https://a.test"
+        ]
+      }
+    },
+    {
+      "name": "empty input",
+      "input": "",
+      "expect": {
+        "title": "",
+        "urgent": false,
+        "important": false,
+        "tags": [],
+        "urls": []
+      }
+    }
+  ]
+}

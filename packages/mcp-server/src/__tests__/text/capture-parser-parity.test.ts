@@ -22,22 +22,22 @@ const FIXTURES: Fixture[] = [
   {
     name: 'single url in title',
     input: 'Read https://example.com later',
-    expected: { cleanTitle: 'Read later', urls: ['https://example.com/'] },
+    expected: { cleanTitle: 'Read later', urls: ['https://example.com'] },
   },
   {
     name: 'multiple urls',
     input: 'See https://a.test and https://b.test',
-    expected: { cleanTitle: 'See and', urls: ['https://a.test/', 'https://b.test/'] },
+    expected: { cleanTitle: 'See and', urls: ['https://a.test', 'https://b.test'] },
   },
   {
     name: 'url-only title falls back',
     input: 'https://example.com',
-    expected: { cleanTitle: 'Review link below', urls: ['https://example.com/'] },
+    expected: { cleanTitle: 'Review link below', urls: ['https://example.com'] },
   },
   {
     name: 'trailing punctuation stripped',
     input: 'Check https://example.com.',
-    expected: { cleanTitle: 'Check', urls: ['https://example.com/'] },
+    expected: { cleanTitle: 'Check', urls: ['https://example.com'] },
   },
   {
     name: 'javascript protocol url left in place',
@@ -87,13 +87,13 @@ describe('capture-parser parity: behavior', () => {
   });
 
   it('mcp buildDescription empty existing returns urls joined', () => {
-    expect(mcpBuild('', ['https://a.test/', 'https://b.test/'])).toBe(
-      'https://a.test/\nhttps://b.test/'
+    expect(mcpBuild('', ['https://a.test', 'https://b.test'])).toBe(
+      'https://a.test\nhttps://b.test'
     );
   });
 
   it('mcp buildDescription appends urls below trimmed existing', () => {
-    expect(mcpBuild('  Plan trip  ', ['https://a.test/'])).toBe('Plan trip\nhttps://a.test/');
+    expect(mcpBuild('  Plan trip  ', ['https://a.test'])).toBe('Plan trip\nhttps://a.test');
   });
 });
 

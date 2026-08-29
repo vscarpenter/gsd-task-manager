@@ -1,3 +1,5 @@
+import { SCHEMA_LIMITS } from "./constants/schema";
+
 export interface ParsedCapture {
   title: string;
   urgent: boolean;
@@ -15,19 +17,21 @@ const FALLBACK_TITLE_FOR_URL_ONLY = "Review link below";
 // Matches http/https URLs; reuses the same pattern as lib/task-links.ts
 const TITLE_URL_PATTERN = /\bhttps?:\/\/[^\s<>"'`{}|\\^]+/giu;
 const TRAILING_PUNCTUATION = /[),.!?;:]+$/u;
-const MAX_URL_LENGTH = 2048;
+const MAX_URL_LENGTH = 2048; // spec §6.2: URLs of 2048 chars or more are rejected
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
 
 function sanitizeTitleUrl(candidate: string): string | null {
   const value = candidate.trim();
-  if (value.length === 0 || value.length > MAX_URL_LENGTH || /[\u0000-\u001F\u007F\s]/u.test(value)) {
+  if (value.length === 0 || value.length >= MAX_URL_LENGTH || /[\u0000-\u001F\u007F\s]/u.test(value)) {
     return null;
   }
   try {
     const url = new URL(value);
     if (!ALLOWED_PROTOCOLS.has(url.protocol.toLowerCase())) return null;
     if (!url.hostname || url.username || url.password) return null;
-    return url.href;
+    // Return the raw (trimmed) candidate, not url.href: both clients store the
+    // URL exactly as typed, so captures stay byte-identical across platforms.
+    return value;
   } catch {
     return null;
   }
@@ -53,7 +57,7 @@ export function extractUrlsFromTitle(title: string): ExtractedUrls {
     const trimmed = raw.replace(TRAILING_PUNCTUATION, "");
     const safe = sanitizeTitleUrl(trimmed);
     if (!safe) return raw; // leave invalid/unsafe candidates untouched
-    urls.push(safe);
+    if (!urls.includes(safe)) urls.push(safe); // dedupe repeats; still remove from title
     // Trailing punctuation (e.g. a period at the end of a sentence) is dropped
     // along with the URL — it was sentence-level punctuation around the link.
     return "";
@@ -76,19 +80,33 @@ export function buildDescription(existing: string, urls: string[]): string {
   return existing.trim() ? `${existing.trim()}\n${urlBlock}` : urlBlock;
 }
 
-const TAG_PATTERN = /(^|\s)#([a-z0-9_-]+)/gi;
-const DOUBLE_BANG = /(^|\s)!!(\s|$)/g;
-const SINGLE_BANG = /(^|\s)!(\s|$)/g;
-const STAR = /(^|\s)\*(\s|$)/g;
+// A tag starts with a Unicode word character (letter, mark, number, underscore) and
+// may continue with those plus hyphens — the iOS parser's `\w[\w-]*`, pinned by the
+// cross-platform corpus (tests/fixtures/cross-platform/capture-parser-corpus.json).
+const TAG_PATTERN = /(^|\s)#([\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_-]*)/gu;
+// Flag tokens strip with their leading whitespace; the lookahead keeps the trailing
+// separator so repeated tokens ("!! !!") all match in one pass.
+const DOUBLE_BANG = /(?:^|\s)!!(?=\s|$)/g;
+const SINGLE_BANG = /(?:^|\s)!(?=\s|$)/g;
+const STAR = /(?:^|\s)\*(?=\s|$)/g;
 
 export function parseCapture(input: string): ParsedCapture {
   let working = input;
   const tags: string[] = [];
 
-  // Extract tags
-  working = working.replace(TAG_PATTERN, (_match, lead: string, tag: string) => {
-    tags.push(tag.toLowerCase());
-    return lead;
+  // Extract tags: lowercased, length-checked, deduplicated, capped at MAX_TAGS
+  // (spec §6.2). Out-of-range or over-cap tags are dropped from the tag list but
+  // still stripped from the title.
+  working = working.replace(TAG_PATTERN, (_match, _lead: string, tag: string) => {
+    const t = tag.toLowerCase();
+    if (
+      t.length <= SCHEMA_LIMITS.TAG_MAX_LENGTH &&
+      !tags.includes(t) &&
+      tags.length < SCHEMA_LIMITS.MAX_TAGS
+    ) {
+      tags.push(t);
+    }
+    return "";
   });
 
   let urgent = false;
@@ -100,7 +118,7 @@ export function parseCapture(input: string): ParsedCapture {
     urgent = true;
     important = true;
     DOUBLE_BANG.lastIndex = 0;
-    working = working.replace(DOUBLE_BANG, "$1$2");
+    working = working.replace(DOUBLE_BANG, "");
   }
 
   // Check for single ! (reset lastIndex)
@@ -108,7 +126,7 @@ export function parseCapture(input: string): ParsedCapture {
   if (SINGLE_BANG.test(working)) {
     urgent = true;
     SINGLE_BANG.lastIndex = 0;
-    working = working.replace(SINGLE_BANG, "$1$2");
+    working = working.replace(SINGLE_BANG, "");
   }
 
   // Check for * (reset lastIndex)
@@ -116,7 +134,7 @@ export function parseCapture(input: string): ParsedCapture {
   if (STAR.test(working)) {
     important = true;
     STAR.lastIndex = 0;
-    working = working.replace(STAR, "$1$2");
+    working = working.replace(STAR, "");
   }
 
   // Collapse whitespace and trim

@@ -95,34 +95,34 @@ describe("extractUrlsFromTitle", () => {
   it("extracts a single URL from the end of a title", () => {
     expect(extractUrlsFromTitle("Review this https://example.com")).toEqual({
       cleanTitle: "Review this",
-      urls: ["https://example.com/"],
+      urls: ["https://example.com"],
     });
   });
 
   it("extracts a single URL from the middle of a title", () => {
     expect(extractUrlsFromTitle("Check https://example.com for details")).toEqual({
       cleanTitle: "Check for details",
-      urls: ["https://example.com/"],
+      urls: ["https://example.com"],
     });
   });
 
   it("extracts all URLs when multiple are present", () => {
     const result = extractUrlsFromTitle("Compare https://foo.com and https://bar.com");
     expect(result.cleanTitle).toBe("Compare and");
-    expect(result.urls).toEqual(["https://foo.com/", "https://bar.com/"]);
+    expect(result.urls).toEqual(["https://foo.com", "https://bar.com"]);
   });
 
   it("returns 'Review link below' as cleanTitle when title is only a URL", () => {
     expect(extractUrlsFromTitle("https://example.com")).toEqual({
       cleanTitle: "Review link below",
-      urls: ["https://example.com/"],
+      urls: ["https://example.com"],
     });
   });
 
   it("returns 'Review link below' when title is only whitespace + URL", () => {
     expect(extractUrlsFromTitle("  https://example.com  ")).toEqual({
       cleanTitle: "Review link below",
-      urls: ["https://example.com/"],
+      urls: ["https://example.com"],
     });
   });
 
@@ -149,13 +149,13 @@ describe("extractUrlsFromTitle", () => {
   it("collapses extra whitespace in cleanTitle after URL removal", () => {
     const result = extractUrlsFromTitle("foo   https://example.com   bar");
     expect(result.cleanTitle).toBe("foo bar");
-    expect(result.urls).toEqual(["https://example.com/"]);
+    expect(result.urls).toEqual(["https://example.com"]);
   });
 
   it("preserves capture markers (! * #tag) alongside URL extraction", () => {
     const result = extractUrlsFromTitle("Review https://example.com ! #work");
     expect(result.cleanTitle).toBe("Review ! #work");
-    expect(result.urls).toEqual(["https://example.com/"]);
+    expect(result.urls).toEqual(["https://example.com"]);
   });
 });
 
