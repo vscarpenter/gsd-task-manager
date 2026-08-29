@@ -76,3 +76,38 @@ export async function updateNotificationSettings(
   }
   await db.notificationSettings.put(result.data);
 }
+
+/** The window toggleQuietHours seeds — the same overnight span the iOS client defaults to. */
+const DEFAULT_QUIET_HOURS = { start: "22:00", end: "08:00" } as const;
+
+/** Flip whether notifications play a sound. */
+export async function toggleNotificationSound(): Promise<void> {
+  const current = await getNotificationSettings();
+  await updateNotificationSettings({ soundEnabled: !current.soundEnabled });
+}
+
+/**
+ * Toggle the quiet-hours window.
+ *
+ * "On" is exactly the condition isInQuietHours() checks — both edges set — so
+ * there is no separate flag to drift: turning on seeds the overnight window,
+ * turning off clears both edges. A half-set state can never fire, so it reads
+ * as off and toggling completes the window.
+ */
+export async function toggleQuietHours(): Promise<void> {
+  const current = await getNotificationSettings();
+  const isOn = Boolean(current.quietHoursStart && current.quietHoursEnd);
+  await updateNotificationSettings(
+    isOn
+      ? { quietHoursStart: undefined, quietHoursEnd: undefined }
+      : { quietHoursStart: DEFAULT_QUIET_HOURS.start, quietHoursEnd: DEFAULT_QUIET_HOURS.end },
+  );
+}
+
+/** Move one edge of the quiet-hours window. An empty value is ignored — an emptied time input is not an edge. */
+export async function setQuietHoursEdge(which: "start" | "end", value: string): Promise<void> {
+  if (!value) return;
+  await updateNotificationSettings(
+    which === "start" ? { quietHoursStart: value } : { quietHoursEnd: value },
+  );
+}

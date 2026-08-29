@@ -33,6 +33,31 @@ const ImportDialog = lazy(() =>
 const logger = createLogger("UI");
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024; // 10 MB
 
+/** Open a JSON file picker; hand syntactically-valid contents to `onReady`. */
+function pickImportFile(onReady: (contents: string) => void): void {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json";
+  input.onchange = async (event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    if (file.size > MAX_IMPORT_BYTES) {
+      toast.error(
+        `Import file is too large (max 10 MB). Selected file: ${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      );
+      return;
+    }
+    try {
+      const contents = await file.text();
+      JSON.parse(contents);
+      onReady(contents);
+    } catch {
+      toast.error("Invalid JSON format in import file");
+    }
+  };
+  input.click();
+}
+
 interface SettingsBodyProps {
   activeSection: SettingsSectionId;
   tasks: TaskRecord[];
@@ -89,30 +114,11 @@ export function SettingsBody({
     }
   };
 
-  const handleImportClick = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json";
-    input.onchange = async (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      if (file.size > MAX_IMPORT_BYTES) {
-        toast.error(
-          `Import file is too large (max 10 MB). Selected file: ${(file.size / 1024 / 1024).toFixed(1)} MB`,
-        );
-        return;
-      }
-      try {
-        const contents = await file.text();
-        JSON.parse(contents);
-        setPendingImportContents(contents);
-        setImportDialogOpen(true);
-      } catch {
-        toast.error("Invalid JSON format in import file");
-      }
-    };
-    input.click();
-  };
+  const handleImportClick = () =>
+    pickImportFile((contents) => {
+      setPendingImportContents(contents);
+      setImportDialogOpen(true);
+    });
 
   return (
     <div className="min-w-0 flex-1">
