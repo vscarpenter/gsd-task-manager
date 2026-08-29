@@ -147,3 +147,62 @@ that requires an account contradicts the premise. Rejected.
 **A separate archive-only export.** Two files, two restore steps, and a user who takes one
 and not the other. Rejected: the failure mode is the same silent partial backup, just
 harder to notice.
+
+---
+
+## Amendment — 2026-08-28: `version` accepts a number
+
+**Status:** Accepted · **Deciders:** Vinny Carpenter
+
+### Context
+
+This ADR fixed a silent partial backup *within* the web app. A cross-platform parity
+audit found the same class of failure *between* clients.
+
+The GSD iOS/Mac app writes the envelope too, and it declared `version` as an `Int`,
+writing `1`. This app writes a semver string and gated import on `z.string()`. The two
+therefore could not exchange backups at all:
+
+- **iOS → web** was rejected outright with `Invalid import data: expected string,
+  received number` — before a single task was read.
+- **Web → iOS** appeared to work only because the iOS importer decodes a lenient
+  envelope that reads `tasks` and ignores every other key, including `version`. That
+  accident saved the import and reproduced this ADR's original bug on the other side of
+  the fence: `archivedTasks`, `deletedTasks`, `smartViews`, `notificationSettings`,
+  `archiveSettings` and `appPreferences` were all silently discarded.
+
+Export is still the only way data leaves this app without an account. A backup that the
+user's other client cannot read is not a backup.
+
+### Decision
+
+**`version` is widened on import to `string | number`, normalised to a string. Export is
+unchanged.**
+
+```ts
+version: z.union([z.string(), z.number()]).transform(String),
+```
+
+The envelope version itself does **not** change. The shape is identical — this app
+already accepted all six optional stores — so there is nothing structural for a new
+version number to signal. What changed is that the iOS client now writes the same string
+and populates the same stores; both clients settle on `"2.1.0"`.
+
+`ImportPayload` stays the narrower type (`version: string`) because that is what export
+writes. A new `ImportablePayload` widens the field at the import boundary only, so the
+looser contract is visible in the signature rather than hidden behind a cast.
+
+### Consequences
+
+**Strictly widening.** Every payload that parsed before still parses. A legacy iOS
+backup carrying `version: 1` now restores its tasks instead of being refused.
+
+**The type is no longer a version gate.** Nothing branches on `version` today — the
+envelope is a structural superset by design, and absent keys already mean "says nothing
+about that store". If a future shape genuinely needs branching, it must parse the value
+rather than assume its type.
+
+**Not fixed here.** `MAX_IMPORT_TASKS` still counts `tasks` only, so a lossless backup
+can carry more records than the 10,000 guard admits once `archivedTasks` and
+`deletedTasks` are populated. Tracked separately; changing a security limit did not
+belong in a compatibility fix.

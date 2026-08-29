@@ -6,18 +6,37 @@ import {
   cancelOAuthLogin,
   loginWithGoogle,
   loginWithGithub,
+  loginWithApple,
   openOAuthPopup,
   type AuthState,
+  type OAuthProvider,
 } from "@/lib/sync/pb-auth";
+
+/**
+ * Apple is offered here for parity with the GSD iOS app, which has always had it. Without
+ * it, an iOS user who signed in with Apple had a PocketBase account this app could not
+ * reach — sync looked broken rather than absent.
+ */
+const LOGIN_FNS: Record<OAuthProvider, typeof loginWithGoogle> = {
+  google: loginWithGoogle,
+  github: loginWithGithub,
+  apple: loginWithApple,
+};
+
+const PROVIDER_LABELS: Record<OAuthProvider, string> = {
+  google: "Continue with Google",
+  apple: "Continue with Apple",
+  github: "Continue with GitHub",
+};
 
 interface OAuthButtonsProps {
   onSuccess?: (authState: AuthState) => void | Promise<void>;
   onError?: (error: Error) => void;
-  onStart?: (provider: "google" | "github") => void;
+  onStart?: (provider: OAuthProvider) => void;
 }
 
 export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps) {
-  const [loading, setLoading] = useState<"google" | "github" | null>(null);
+  const [loading, setLoading] = useState<OAuthProvider | null>(null);
   const activeRequestKey = useRef<string | null>(null);
   const mounted = useRef(true);
 
@@ -33,7 +52,7 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
     };
   }, []);
 
-  const handleOAuth = (provider: "google" | "github") => {
+  const handleOAuth = (provider: OAuthProvider) => {
     const popupWindow = openOAuthPopup(provider);
     const requestKey = createOAuthRequestKey(provider);
     activeRequestKey.current = requestKey;
@@ -44,7 +63,7 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
   };
 
   const runOAuth = async (
-    provider: "google" | "github",
+    provider: OAuthProvider,
     requestKey: string,
     popupWindow: Window | null
   ) => {
@@ -59,7 +78,7 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
       }
     };
     try {
-      const loginFn = provider === "google" ? loginWithGoogle : loginWithGithub;
+      const loginFn = LOGIN_FNS[provider];
       const authState = await loginFn({ requestKey, popupWindow });
       if (mounted.current) {
         await onSuccess?.(authState);
@@ -76,28 +95,22 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
 
   return (
     <div className="space-y-3">
-      <Button
-        variant="subtle"
-        className="relative w-full justify-start"
-        disabled={loading !== null}
-        onClick={() => handleOAuth("google")}
-      >
-        {loading === "google" ? "Connecting..." : "Continue with Google"}
-      </Button>
-
-      <Button
-        variant="subtle"
-        className="relative w-full justify-start"
-        disabled={loading !== null}
-        onClick={() => handleOAuth("github")}
-      >
-        {loading === "github" ? "Connecting..." : "Continue with GitHub"}
-      </Button>
+      {(Object.keys(PROVIDER_LABELS) as OAuthProvider[]).map((provider) => (
+        <Button
+          key={provider}
+          variant="subtle"
+          className="relative w-full justify-start"
+          disabled={loading !== null}
+          onClick={() => handleOAuth(provider)}
+        >
+          {loading === provider ? "Connecting..." : PROVIDER_LABELS[provider]}
+        </Button>
+      ))}
     </div>
   );
 }
 
-function createOAuthRequestKey(provider: "google" | "github"): string {
+function createOAuthRequestKey(provider: OAuthProvider): string {
   const random =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()

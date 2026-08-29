@@ -8,6 +8,28 @@ export const quadrantIdSchema = z.enum([
 	"not-urgent-not-important",
 ]);
 
+/**
+ * Fill in the derived `quadrant` when a payload omits it.
+ *
+ * This app persists `quadrant` as an indexed column; the GSD iOS client treats it as
+ * computed from `urgent`/`important` and left it out of its backups entirely, so every
+ * one of them failed validation on the first task. Deriving it here keeps the stored
+ * shape strict while accepting the other client's honest omission.
+ *
+ * The mapping is inlined rather than imported from `lib/quadrants` so this module keeps
+ * no runtime dependencies beyond zod.
+ */
+function deriveQuadrant(value: unknown): unknown {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+	const record = value as Record<string, unknown>;
+	if (record.quadrant !== undefined) return value;
+	if (typeof record.urgent !== "boolean" || typeof record.important !== "boolean") return value;
+	const quadrant = record.urgent
+		? (record.important ? "urgent-important" : "urgent-not-important")
+		: (record.important ? "not-urgent-important" : "not-urgent-not-important");
+	return { ...record, quadrant };
+}
+
 export const recurrenceTypeSchema = z.enum([
 	"none",
 	"daily",
@@ -183,11 +205,16 @@ export const notificationSettingsSchema = z.object({
  * that store", which is different from an empty array.
  */
 export const importPayloadSchema = z.object({
-	tasks: z.array(storedTaskRecordSchema),
+	// `deriveQuadrant` runs only here, at the import boundary, where a payload from another
+	// client arrives. Records read back from IndexedDB always carry the column.
+	tasks: z.array(z.preprocess(deriveQuadrant, storedTaskRecordSchema)),
 	exportedAt: z.iso.datetime({ offset: true }),
-	version: z.string(),
-	archivedTasks: z.array(storedArchivedTaskRecordSchema).optional(),
-	deletedTasks: z.array(storedTrashedTaskRecordSchema).optional(),
+	// The web writes a semver string; the iOS client shipped an Int (1). Accept
+	// either and normalise to a string so downstream code has one type to read.
+	// Widening only — every payload that parsed before still parses (ADR 0014).
+	version: z.union([z.string(), z.number()]).transform(String),
+	archivedTasks: z.array(z.preprocess(deriveQuadrant, storedArchivedTaskRecordSchema)).optional(),
+	deletedTasks: z.array(z.preprocess(deriveQuadrant, storedTrashedTaskRecordSchema)).optional(),
 	smartViews: z.array(smartViewSchema).optional(),
 	notificationSettings: notificationSettingsSchema.optional(),
 	archiveSettings: archiveSettingsSchema.optional(),

@@ -74,6 +74,7 @@ export interface TaskDraft {
 export interface ImportPayload {
   tasks: TaskRecord[];
   exportedAt: string;
+  /** What this build writes. Import accepts more — see {@link ImportablePayload}. */
   version: string;
   archivedTasks?: TaskRecord[];
   deletedTasks?: TaskRecord[];
@@ -82,6 +83,18 @@ export interface ImportPayload {
   archiveSettings?: ArchiveSettings;
   appPreferences?: AppPreferences;
 }
+
+/**
+ * What import will *accept*, as opposed to what export writes.
+ *
+ * The GSD iOS client shipped `version` as an Int (`1`) while this app writes a
+ * semver string, which made backups untradeable between the two. Import now
+ * takes either and normalises to a string; export still writes only a string,
+ * so `ImportPayload` stays the narrower type for everything downstream.
+ */
+export type ImportablePayload = Omit<ImportPayload, "version"> & {
+  version: string | number;
+};
 
 /** Shape of a stored (custom) smart view as it appears in a backup. */
 export interface SmartViewRecord {
