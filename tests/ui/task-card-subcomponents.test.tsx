@@ -50,8 +50,6 @@ describe("TaskCardHeader", () => {
           notificationEnabled: true,
           notificationSent: false,
         }}
-        selectionMode={false}
-        isSelected={false}
         onToggleComplete={vi.fn()}
         sortableAttributes={{} as SortableAttributes}
         sortableListeners={undefined}
@@ -86,8 +84,6 @@ describe("TaskCardHeader", () => {
           notificationEnabled: true,
           notificationSent: false,
         }}
-        selectionMode={false}
-        isSelected={false}
         onToggleComplete={vi.fn()}
         sortableAttributes={{} as SortableAttributes}
         sortableListeners={undefined}
@@ -120,8 +116,6 @@ describe("TaskCardHeader", () => {
       notificationSent: false,
     };
     const props = {
-      selectionMode: false,
-      isSelected: false,
       onToggleComplete: vi.fn(),
       sortableAttributes: {} as SortableAttributes,
       sortableListeners: undefined,
@@ -157,8 +151,6 @@ describe("TaskCardHeader", () => {
     };
     const onToggleComplete = vi.fn().mockResolvedValue(undefined);
     const props = {
-      selectionMode: false,
-      isSelected: false,
       onToggleComplete,
       sortableAttributes: {} as SortableAttributes,
       sortableListeners: undefined,

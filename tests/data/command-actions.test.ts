@@ -22,8 +22,6 @@ function createMockHandlers(overrides?: Partial<CommandActionHandlers>): Command
 
 const defaultConditions = {
   isSyncEnabled: false,
-  selectionMode: false,
-  hasSelection: false,
 };
 
 describe('buildCommandActions', () => {
@@ -138,52 +136,9 @@ describe('buildCommandActions', () => {
     expect(actionIds).not.toContain('view-sync-history');
   });
 
-  it('should include selection mode toggle when handler is provided', () => {
-    const handlers = createMockHandlers({
-      onToggleSelectionMode: vi.fn(),
-    });
 
-    const actions = buildCommandActions(handlers, [], defaultConditions);
 
-    const selectionAction = actions.find((a) => a.id === 'toggle-selection-mode');
-    expect(selectionAction).toBeDefined();
-    expect(selectionAction!.label).toBe('Enter selection mode');
-  });
 
-  it('should show exit selection mode label when in selection mode', () => {
-    const handlers = createMockHandlers({
-      onToggleSelectionMode: vi.fn(),
-    });
-    const conditions = { ...defaultConditions, selectionMode: true };
-
-    const actions = buildCommandActions(handlers, [], conditions);
-
-    const selectionAction = actions.find((a) => a.id === 'toggle-selection-mode');
-    expect(selectionAction!.label).toBe('Exit selection mode');
-  });
-
-  it('should include clear selection when in selection mode with active selection', () => {
-    const handlers = createMockHandlers({
-      onClearSelection: vi.fn(),
-    });
-    const conditions = { isSyncEnabled: false, selectionMode: true, hasSelection: true };
-
-    const actions = buildCommandActions(handlers, [], conditions);
-
-    const clearAction = actions.find((a) => a.id === 'clear-selection');
-    expect(clearAction).toBeDefined();
-  });
-
-  it('should not include clear selection when not in selection mode', () => {
-    const handlers = createMockHandlers({
-      onClearSelection: vi.fn(),
-    });
-
-    const actions = buildCommandActions(handlers, [], defaultConditions);
-
-    const clearAction = actions.find((a) => a.id === 'clear-selection');
-    expect(clearAction).toBeUndefined();
-  });
 
   it('should execute smart view handler with correct criteria', () => {
     const handlers = createMockHandlers();
@@ -252,17 +207,6 @@ describe('buildCommandActions', () => {
       });
       const viewSyncHistory = actions.find((a) => a.id === 'view-sync-history');
       expect(viewSyncHistory?.condition?.()).toBe(true);
-    });
-
-    it('gates clear-selection on an active selection in selection mode', () => {
-      const handlers = createMockHandlers({ onClearSelection: vi.fn() });
-      const actions = buildCommandActions(handlers, [], {
-        isSyncEnabled: false,
-        selectionMode: true,
-        hasSelection: true,
-      });
-      const clearSelection = actions.find((a) => a.id === 'clear-selection');
-      expect(clearSelection?.condition?.()).toBe(true);
     });
   });
 });

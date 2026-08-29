@@ -27,7 +27,8 @@ optional PocketBase sync, and the GSD MCP server.
   realtime server-sent events.
 - A separately installed MCP server with 20 task, analytics, and diagnostic
   tools, including validated and dry-run-aware writes.
-- Light and dark Violet Frost themes with WCAG AA as the accessibility floor.
+- Light and dark Inkwell "GSD Editorial" themes with WCAG AA as the
+  accessibility floor.
 
 Retired v7/v8 surfaces such as selection-mode batch operations, the Quick
 Settings panel, and smart-view pinning shortcuts are not part of the v11 shell.

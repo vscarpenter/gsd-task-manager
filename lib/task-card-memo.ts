@@ -24,9 +24,6 @@ export interface TaskCardProps {
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;
-  selectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: (task: TaskRecord) => void;
   taskRef?: (el: HTMLElement | null) => void;
   isHighlighted?: boolean;
 }
@@ -113,8 +110,6 @@ function haveArraysChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): 
 /** Check if UI state props changed */
 function hasUIStateChanged(prevProps: TaskCardProps, nextProps: TaskCardProps): boolean {
   return (
-    prevProps.selectionMode !== nextProps.selectionMode ||
-    prevProps.isSelected !== nextProps.isSelected ||
     prevProps.isHighlighted !== nextProps.isHighlighted ||
     Boolean(prevProps.onInspect) !== Boolean(nextProps.onInspect) ||
     prevProps.allTasks.length !== nextProps.allTasks.length

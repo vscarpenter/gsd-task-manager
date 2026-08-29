@@ -87,17 +87,7 @@ describe('areTaskCardPropsEqual', () => {
     expect(areTaskCardPropsEqual(prev, next)).toBe(false);
   });
 
-  it('returns false when selection mode changes', () => {
-    const prev = createProps({ selectionMode: false });
-    const next = createProps({ selectionMode: true });
-    expect(areTaskCardPropsEqual(prev, next)).toBe(false);
-  });
 
-  it('returns false when isSelected changes', () => {
-    const prev = createProps({ isSelected: false });
-    const next = createProps({ isSelected: true });
-    expect(areTaskCardPropsEqual(prev, next)).toBe(false);
-  });
 
   it('returns false when highlight state changes', () => {
     const prev = createProps({ isHighlighted: false });

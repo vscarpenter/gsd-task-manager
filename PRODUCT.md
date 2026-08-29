@@ -14,7 +14,7 @@ Context of use is varied and often quick: a desktop browser during a planning bl
 
 GSD Task Manager turns the Eisenhower Matrix into a working surface. Tasks are sorted into four quadrants by two booleans (urgent, important): Do First, Schedule, Delegate, and Eliminate. Prioritization becomes a structural decision the app makes visible, not a label the user has to remember.
 
-It is privacy-first by construction: all data lives in the browser via IndexedDB, with JSON export/import for backups and an *optional* self-hosted PocketBase sync for multi-device users. It works fully offline as a PWA. Around the core matrix sit dependencies, recurring tasks, subtasks, tags, batch operations, and a dashboard of completion and quadrant analytics.
+It is privacy-first by construction: all data lives in the browser via IndexedDB, with JSON export/import for backups and an *optional* self-hosted PocketBase sync for multi-device users. It works fully offline as a PWA. Around the core matrix sit dependencies, recurring tasks, subtasks, tags, and a dashboard of completion and quadrant analytics. Bulk multi-select and custom smart-view creation are deliberately absent on the web — they ship on iOS, where touch idioms earn them; the web's power path is the command palette.
 
 Success looks like a user who spends less time in Q1 (reactive firefighting) and more in Q2 (strategic, important-but-not-urgent work), and who trusts the tool enough to keep their real life in it because nothing leaves their device unless they say so.
 
@@ -31,7 +31,7 @@ Success looks like a user who spends less time in Q1 (reactive firefighting) and
 GSD should explicitly NOT look or feel like:
 
 - **A flashy AI startup:** no tide/cyan gradients, glowing blobs, gradient text, glassmorphism-by-default, or supercharge/streamline/seamless copy. Editorial uses tide as restrained interaction ink, never as gradient decoration. Substance over shine.
-- **A gamified todo toy:** no cartoon mascots, no points/badges economy, no juvenile illustration. (One tasteful completion confetti is the deliberate exception, not a license for toy aesthetics.)
+- **A gamified todo toy:** no cartoon mascots, no points/badges economy, no juvenile illustration. (One tasteful completion confetti is the deliberate exception, not a license for toy aesthetics.) The Review page's streak card is consistency *data*, deliberately kept where iOS removed its tiles: factual counts and a 7-day strip, presented like every other stat — never flames, trophies, or guilt copy.
 - **A dense enterprise PM tool:** not Jira/Asana. No overwhelming toolbars, deeply nested settings, or feature soup. GSD is a focused *personal* tool; complexity is a failure, not a feature.
 - **A generic SaaS dashboard:** no cookie-cutter card grids, no hero-metric template (big number + small label + gradient accent), no interchangeable enterprise-app sameness.
 

@@ -15,8 +15,6 @@ interface CommandPaletteProps {
   handlers: CommandActionHandlers;
   conditions: {
     isSyncEnabled: boolean;
-    selectionMode: boolean;
-    hasSelection: boolean;
   };
   onSelectTask?: (taskId: string) => void;
   /**

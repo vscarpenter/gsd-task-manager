@@ -197,8 +197,6 @@ describe("useShellCommandHandlers", () => {
     const { result } = renderHook(() => useShellCommandHandlers());
     expect(result.current.conditions).toEqual({
       isSyncEnabled: false,
-      selectionMode: false,
-      hasSelection: false,
     });
   });
 

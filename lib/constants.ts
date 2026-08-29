@@ -127,8 +127,6 @@ export const DATE_CONFIG = {
  * Smart Views configuration
  */
 export const SMART_VIEWS_CONFIG = {
-  /** Length of generated nanoid for Smart View IDs */
-  ID_LENGTH: 12,
   /** Maximum number of pinned Smart Views in the header */
   MAX_PINNED: 5,
 } as const;
