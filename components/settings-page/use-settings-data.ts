@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import {
   getNotificationSettings,
   updateNotificationSettings,
+  toggleNotificationSound,
+  toggleQuietHours,
+  setQuietHoursEdge,
 } from "@/lib/notifications";
 import type { AppPreferences, NotificationSettings } from "@/lib/types";
 import { getSyncStatus } from "@/lib/sync/config";
@@ -34,6 +37,9 @@ export interface SettingsData {
   toggleSmartViews: () => Promise<void>;
   notificationToggle: () => Promise<void>;
   defaultReminderChange: (value: string) => Promise<void>;
+  soundToggle: () => Promise<void>;
+  quietHoursToggle: () => Promise<void>;
+  quietHoursChange: (which: "start" | "end", value: string) => Promise<void>;
   markAccountDeleted: () => void;
 }
 
@@ -106,25 +112,9 @@ export function useSettingsData(): SettingsData {
     );
   };
 
-  const reloadNotificationSettings = async () => {
-    setNotificationSettings(await getNotificationSettings());
-  };
-
-  const notificationToggle = async () => {
-    if (!notificationSettings) return;
-    const newEnabled = !notificationSettings.enabled;
-    if (newEnabled && "Notification" in window) {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
-    }
-    await updateNotificationSettings({ enabled: newEnabled });
-    await reloadNotificationSettings();
-  };
-
-  const defaultReminderChange = async (value: string) => {
-    await updateNotificationSettings({ defaultReminder: Number.parseInt(value, 10) });
-    await reloadNotificationSettings();
-  };
+  const notificationHandlers = buildNotificationHandlers(notificationSettings, () =>
+    getNotificationSettings().then(setNotificationSettings),
+  );
 
   const markAccountDeleted = () => {
     setSyncEnabled(false);
@@ -140,8 +130,46 @@ export function useSettingsData(): SettingsData {
     pendingSync,
     toggleCompleted,
     toggleSmartViews,
-    notificationToggle,
-    defaultReminderChange,
+    ...notificationHandlers,
     markAccountDeleted,
+  };
+}
+
+/**
+ * The five notification mutations, each followed by a state reload. The
+ * mutation semantics themselves (seed/clear the quiet-hours window, ignore
+ * empty edges) live in lib/notifications/settings.ts, unit-tested directly.
+ */
+function buildNotificationHandlers(
+  current: NotificationSettings | null,
+  reload: () => Promise<void>,
+) {
+  return {
+    notificationToggle: async () => {
+      if (!current) return;
+      const newEnabled = !current.enabled;
+      if (newEnabled && "Notification" in window) {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+      }
+      await updateNotificationSettings({ enabled: newEnabled });
+      await reload();
+    },
+    defaultReminderChange: async (value: string) => {
+      await updateNotificationSettings({ defaultReminder: Number.parseInt(value, 10) });
+      await reload();
+    },
+    soundToggle: async () => {
+      await toggleNotificationSound();
+      await reload();
+    },
+    quietHoursToggle: async () => {
+      await toggleQuietHours();
+      await reload();
+    },
+    quietHoursChange: async (which: "start" | "end", value: string) => {
+      await setQuietHoursEdge(which, value);
+      await reload();
+    },
   };
 }

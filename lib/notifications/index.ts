@@ -20,7 +20,10 @@ export {
 // Settings functions
 export {
   getNotificationSettings,
-  updateNotificationSettings
+  updateNotificationSettings,
+  toggleNotificationSound,
+  toggleQuietHours,
+  setQuietHoursEdge
 } from "./settings";
 
 // Badge functions
