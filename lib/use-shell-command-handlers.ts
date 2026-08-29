@@ -45,8 +45,6 @@ interface ShellCommandResult {
   onSelectTask: (taskId: string) => void;
   conditions: {
     isSyncEnabled: boolean;
-    selectionMode: boolean;
-    hasSelection: boolean;
   };
 }
 
@@ -150,8 +148,6 @@ export function useShellCommandHandlers(): ShellCommandResult {
     onSelectTask,
     conditions: {
       isSyncEnabled: false,
-      selectionMode: false,
-      hasSelection: false,
     },
   };
 }

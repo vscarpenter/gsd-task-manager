@@ -205,8 +205,6 @@ function makeHandlers(): CommandActionHandlers {
 
 const defaultConditions = {
   isSyncEnabled: false,
-  selectionMode: false,
-  hasSelection: false,
 };
 
 describe('CommandPalette (full component)', () => {

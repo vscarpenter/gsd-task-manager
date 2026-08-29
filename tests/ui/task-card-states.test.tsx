@@ -106,26 +106,8 @@ describe("TaskCard states", () => {
     vi.clearAllMocks();
   });
 
-  it("renders selection checkbox when selectionMode is true", () => {
-    renderTaskCard({}, { selectionMode: true, isSelected: false, onToggleSelect: vi.fn() });
-    expect(screen.getByRole("checkbox")).toBeInTheDocument();
-    expect(screen.getByRole("checkbox").closest("label")).toHaveClass("touch-target");
-  });
 
-  it("renders selected checkbox state", () => {
-    renderTaskCard({}, { selectionMode: true, isSelected: true, onToggleSelect: vi.fn() });
-    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
-    expect(checkbox.checked).toBe(true);
-  });
 
-  it("calls onToggleSelect when checkbox is toggled", async () => {
-    const onToggleSelect = vi.fn();
-    const user = userEvent.setup();
-    renderTaskCard({}, { selectionMode: true, isSelected: false, onToggleSelect });
-
-    await user.click(screen.getByRole("checkbox"));
-    expect(onToggleSelect).toHaveBeenCalled();
-  });
 
   it("renders dependency blocked indicator", () => {
     const blockingTask = createMockTask({

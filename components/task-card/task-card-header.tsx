@@ -12,9 +12,6 @@ export interface TaskCardHeaderProps {
   task: TaskRecord;
   /** CSS var for the task's quadrant pigment, e.g. "var(--q1)". */
   accentVar: string;
-  selectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: (task: TaskRecord) => void;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   onInspect?: (task: TaskRecord) => void;
   sortableAttributes: SortableAttributes;
@@ -24,9 +21,6 @@ export interface TaskCardHeaderProps {
 export function TaskCardHeader({
   task,
   accentVar,
-  selectionMode,
-  isSelected,
-  onToggleSelect,
   onToggleComplete,
   onInspect,
   sortableAttributes,
@@ -71,10 +65,6 @@ export function TaskCardHeader({
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-start gap-2 min-w-0 flex-1">
         <CardLeadingControl
-          task={task}
-          selectionMode={selectionMode}
-          isSelected={isSelected}
-          onToggleSelect={onToggleSelect}
           sortableAttributes={sortableAttributes}
           sortableListeners={sortableListeners}
         />
@@ -163,32 +153,12 @@ export function TaskCardHeader({
   );
 }
 
-/**
- * The card's left gutter: a selection checkbox in selection mode, otherwise the
- * drag grip.
- */
+/** The card's left gutter: the drag grip. */
 function CardLeadingControl({
-  task,
-  selectionMode,
-  isSelected,
-  onToggleSelect,
   sortableAttributes,
   sortableListeners,
-}: Pick<
-  TaskCardHeaderProps,
-  "task" | "selectionMode" | "isSelected" | "onToggleSelect" | "sortableAttributes" | "sortableListeners"
->) {
-  return selectionMode ? (
-          <label className="touch-target mt-0.5 inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => onToggleSelect?.(task)}
-              className="h-5 w-5 shrink-0 cursor-pointer rounded border-border text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
-              aria-label={`Select ${task.title}`}
-            />
-          </label>
-        ) : (
+}: Pick<TaskCardHeaderProps, "sortableAttributes" | "sortableListeners">) {
+  return (
           // Floats over the card's left gutter instead of holding a column, so
           // titles start flush. Visibility (not hit-testing) is what's gated:
           // gating pointer-events too would be a no-op for a real mouse — you

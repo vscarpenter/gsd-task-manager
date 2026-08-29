@@ -1,9 +1,7 @@
-import { nanoid } from "nanoid";
 import { getDb } from "@/lib/db";
 import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
 import { smartViewSchema } from "@/lib/schema";
 import type { AppPreferences } from "@/lib/types";
-import { isoNow } from "@/lib/utils";
 import { SMART_VIEWS_CONFIG } from "@/lib/constants";
 
 export const APP_PREFERENCES_EVENT = "gsd:app-preferences";
@@ -18,10 +16,6 @@ const DEFAULT_APP_PREFERENCES: AppPreferences = {
   maxPinnedViews: SMART_VIEWS_CONFIG.MAX_PINNED,
   smartViewsEnabled: false,
 };
-
-function parseSmartView(view: unknown): SmartView {
-  return smartViewSchema.parse(view) as SmartView;
-}
 
 function parseStoredSmartView(view: unknown): SmartView | undefined {
   const parsed = smartViewSchema.safeParse(view);
@@ -66,80 +60,13 @@ export async function getSmartView(id: string): Promise<SmartView | undefined> {
 }
 
 /**
- * Create a new custom Smart View
- */
-export async function createSmartView(
-  view: Omit<SmartView, 'id' | 'createdAt' | 'updatedAt' | 'isBuiltIn'>
-): Promise<SmartView> {
-  const db = getDb();
-  const now = isoNow();
-
-  const newView: SmartView = {
-    ...view,
-    id: nanoid(SMART_VIEWS_CONFIG.ID_LENGTH),
-    isBuiltIn: false,
-    createdAt: now,
-    updatedAt: now
-  };
-
-  const validated = parseSmartView(newView);
-  await db.smartViews.add(validated);
-  return validated;
-}
-
-/**
- * Update an existing custom Smart View
- */
-export async function updateSmartView(
-  id: string,
-  updates: Partial<Omit<SmartView, 'id' | 'createdAt' | 'updatedAt' | 'isBuiltIn'>>
-): Promise<SmartView> {
-  const db = getDb();
-  const existing = await db.smartViews.get(id);
-
-  if (!existing) {
-    throw new Error(`Smart View ${id} not found`);
-  }
-
-  if (existing.isBuiltIn) {
-    throw new Error("Cannot update built-in Smart Views");
-  }
-
-  const updated: SmartView = {
-    ...existing,
-    ...updates,
-    updatedAt: isoNow()
-  };
-
-  const validated = parseSmartView(updated);
-  await db.smartViews.put(validated);
-  return validated;
-}
-
-/**
- * Delete a custom Smart View
- */
-export async function deleteSmartView(id: string): Promise<void> {
-  const db = getDb();
-  const view = await db.smartViews.get(id);
-
-  if (view?.isBuiltIn) {
-    throw new Error("Cannot delete built-in Smart Views");
-  }
-
-  await db.smartViews.delete(id);
-}
-
-/**
- * Clear all custom Smart Views (built-ins are unaffected)
- */
-export async function clearCustomSmartViews(): Promise<void> {
-  const db = getDb();
-  await db.smartViews.clear();
-}
-
-/**
- * Get app preferences (including pinned smart view IDs)
+ * Get app preferences.
+ *
+ * Custom smart-view creation and pinning are deliberately web-absent (retired
+ * with the v9 shell; iOS is the surface that creates views). The read path
+ * above stays so existing custom views keep rendering, and the stored
+ * `pinnedSmartViewIds` / `maxPinnedViews` fields stay in the schema for data
+ * continuity — but nothing on the web writes or reads them anymore.
  */
 export async function getAppPreferences(): Promise<AppPreferences> {
   const db = getDb();
@@ -171,53 +98,4 @@ export async function updateAppPreferences(updates: Partial<Omit<AppPreferences,
 
   await db.appPreferences.put(updated);
   return updated;
-}
-
-/**
- * Get pinned smart views in order
- */
-export async function getPinnedSmartViews(): Promise<SmartView[]> {
-  const [prefs, allViews] = await Promise.all([
-    getAppPreferences(),
-    getSmartViews(),
-  ]);
-
-  // Return views in the order they appear in pinnedSmartViewIds
-  return prefs.pinnedSmartViewIds
-    .map(id => allViews.find(v => v.id === id))
-    .filter((view): view is SmartView => view !== undefined);
-}
-
-/**
- * Pin a smart view to the header
- */
-export async function pinSmartView(viewId: string): Promise<void> {
-  const prefs = await getAppPreferences();
-
-  // Check if already pinned
-  if (prefs.pinnedSmartViewIds.includes(viewId)) {
-    return; // Already pinned, nothing to do
-  }
-
-  // Check if we've reached the maximum
-  if (prefs.pinnedSmartViewIds.length >= prefs.maxPinnedViews) {
-    throw new Error(`Maximum ${prefs.maxPinnedViews} pinned views allowed`);
-  }
-
-  // Add to the end of the pinned list
-  await updateAppPreferences({
-    pinnedSmartViewIds: [...prefs.pinnedSmartViewIds, viewId]
-  });
-}
-
-/**
- * Unpin a smart view from the header
- */
-export async function unpinSmartView(viewId: string): Promise<void> {
-  const prefs = await getAppPreferences();
-
-  // Remove from pinned list
-  await updateAppPreferences({
-    pinnedSmartViewIds: prefs.pinnedSmartViewIds.filter(id => id !== viewId)
-  });
 }

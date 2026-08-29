@@ -22,9 +22,6 @@ export function TaskCard({
   onSnooze,
   onStartTimer,
   onStopTimer,
-  selectionMode,
-  isSelected,
-  onToggleSelect,
   taskRef,
   isHighlighted,
 }: TaskCardProps) {
@@ -79,9 +76,8 @@ export function TaskCard({
         // The left inset covers the spine's 4px gutter plus the lane the drag
         // grip floats in. It lives here, on the card, rather than on the title
         // alone: padding only the title left tags, chips, and the due-date row
-        // starting 8px to its left, so the card read as ragged. Selection mode
-        // swaps the grip for an in-flow checkbox and reclaims the lane.
-        selectionMode ? "pl-4" : "pl-6",
+        // starting 8px to its left, so the card read as ragged.
+        "pl-6",
         // Clear the sticky topbar + capture bar (plus ~12pt) when scrolled to.
         "scroll-mt-24",
         "border-card-border",
@@ -98,7 +94,6 @@ export function TaskCard({
         // Half-strength so an overdue card is marked, not alarmed — the footer
         // chip carries the actual message.
         taskIsOverdue && "border-status-overdue/50",
-        selectionMode && isSelected && "ring-2 ring-accent ring-offset-2",
         isHighlighted && "animate-pulse-highlight ring-4 ring-accent ring-offset-2"
       )}
     >
@@ -115,9 +110,6 @@ export function TaskCard({
       <TaskCardHeader
         task={task}
         accentVar={accentVar}
-        selectionMode={selectionMode}
-        isSelected={isSelected}
-        onToggleSelect={onToggleSelect}
         onToggleComplete={onToggleComplete}
         onInspect={onInspect}
         sortableAttributes={attributes}

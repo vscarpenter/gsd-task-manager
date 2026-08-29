@@ -46,10 +46,6 @@ export interface CommandActionHandlers {
 
   // Sync
   onTriggerSync?: () => Promise<void>;
-
-  // Selection
-  onToggleSelectionMode?: () => void;
-  onClearSelection?: () => void;
 }
 
 /**
@@ -61,8 +57,6 @@ export function buildCommandActions(
   builtInSmartViews: Array<{ id: string; name: string; icon?: string; criteria: FilterCriteria; description?: string }>,
   conditions: {
     isSyncEnabled: boolean;
-    selectionMode: boolean;
-    hasSelection: boolean;
   }
 ): CommandAction[] {
   // Import icon components dynamically
@@ -183,28 +177,6 @@ export function buildCommandActions(
       keywords: ['sync', 'upload', 'download', 'cloud'],
       onExecute: handlers.onTriggerSync,
       condition: () => conditions.isSyncEnabled
-    });
-  }
-
-  // Add selection mode actions if available
-  if (handlers.onToggleSelectionMode) {
-    actions.push({
-      id: 'toggle-selection-mode',
-      label: conditions.selectionMode ? 'Exit selection mode' : 'Enter selection mode',
-      section: 'actions',
-      keywords: ['select', 'selection', 'multiple', 'batch'],
-      onExecute: handlers.onToggleSelectionMode
-    });
-  }
-
-  if (handlers.onClearSelection && conditions.selectionMode && conditions.hasSelection) {
-    actions.push({
-      id: 'clear-selection',
-      label: 'Clear selection',
-      section: 'actions',
-      keywords: ['clear', 'deselect', 'unselect'],
-      onExecute: handlers.onClearSelection,
-      condition: () => conditions.selectionMode && conditions.hasSelection
     });
   }
 
