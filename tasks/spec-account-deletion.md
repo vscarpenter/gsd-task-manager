@@ -10,7 +10,7 @@ capability already shipped on iOS/Mac, against the same backend.
 
 ## Background
 
-- iOS/Mac (`/Users/vinnycarpenter/Projects/gsd-iosapp`) already implements this and is live in
+- iOS/Mac (`/Users/vinnycarpenter/Projects/GSD/gsd-iosapp`) already implements this and is live in
   production. Reference flow: `SyncEngine.eraseAllRemote()` deletes every remote task, then
   `AuthService.deleteAccount()` issues `DELETE /api/collections/users/records/{id}` with the
   user's own JWT (no superuser). `SessionStore.deleteAccount(eraseLocalData:)` orchestrates and

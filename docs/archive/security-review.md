@@ -9,10 +9,10 @@ This document captures the highest-priority issues found during a manual code re
 Severity: High
 
 Files:
-- [lib/env-config.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/env-config.ts:44)
-- [lib/env-config.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/env-config.ts:62)
-- [docker/docker-compose.yml](/Users/vinnycarpenter/Projects/gsd-taskmanager/docker/docker-compose.yml:16)
-- [docker/README.md](/Users/vinnycarpenter/Projects/gsd-taskmanager/docker/README.md:75)
+- [lib/env-config.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/env-config.ts:44)
+- [lib/env-config.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/env-config.ts:62)
+- [docker/docker-compose.yml](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/docker/docker-compose.yml:16)
+- [docker/README.md](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/docker/README.md:75)
 
 Issue:
 - Any non-local, non-whitelisted hostname is treated as `production`.
@@ -33,8 +33,8 @@ Recommended fix:
 Severity: High
 
 Files:
-- [lib/tasks/import-export.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/tasks/import-export.ts:108)
-- [lib/tasks/import-export.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/tasks/import-export.ts:122)
+- [lib/tasks/import-export.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/tasks/import-export.ts:108)
+- [lib/tasks/import-export.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/tasks/import-export.ts:122)
 
 Issue:
 - Merge imports correctly regenerate conflicting local IDs and remap references before writing to IndexedDB.
@@ -53,10 +53,10 @@ Recommended fix:
 Severity: Medium
 
 Files:
-- [lib/sync/task-mapper.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/sync/task-mapper.ts:17)
-- [lib/sync/task-mapper.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/sync/task-mapper.ts:140)
-- [lib/notification-checker.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/notification-checker.ts:107)
-- [lib/tasks/crud/snooze.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/tasks/crud/snooze.ts:42)
+- [lib/sync/task-mapper.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/sync/task-mapper.ts:17)
+- [lib/sync/task-mapper.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/sync/task-mapper.ts:140)
+- [lib/notification-checker.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/notification-checker.ts:107)
+- [lib/tasks/crud/snooze.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/tasks/crud/snooze.ts:42)
 
 Issue:
 - Reminder behavior depends on `notificationSent`, `lastNotificationAt`, and `snoozedUntil`.
@@ -76,7 +76,7 @@ Recommended fix:
 Severity: Medium
 
 Files:
-- [lib/tasks/crud/duplicate.ts](/Users/vinnycarpenter/Projects/gsd-taskmanager/lib/tasks/crud/duplicate.ts:27)
+- [lib/tasks/crud/duplicate.ts](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/lib/tasks/crud/duplicate.ts:27)
 
 Issue:
 - `duplicateTask()` passes `syncConfig?.enabled ?? true` to `enqueueSyncOperation`.
@@ -95,9 +95,9 @@ Recommended fix:
 Severity: Medium
 
 Files:
-- [docker/Dockerfile](/Users/vinnycarpenter/Projects/gsd-taskmanager/docker/Dockerfile:26)
-- [docker/Caddyfile](/Users/vinnycarpenter/Projects/gsd-taskmanager/docker/Caddyfile:23)
-- [SECURITY.md](/Users/vinnycarpenter/Projects/gsd-taskmanager/SECURITY.md:122)
+- [docker/Dockerfile](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/docker/Dockerfile:26)
+- [docker/Caddyfile](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/docker/Caddyfile:23)
+- [SECURITY.md](/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/SECURITY.md:122)
 
 Issue:
 - The Docker build references `scripts/generate-build-info.js`, but the repo contains `scripts/generate-build-info.cjs`.

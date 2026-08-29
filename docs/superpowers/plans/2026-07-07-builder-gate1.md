@@ -131,7 +131,7 @@ set -euo pipefail
 
 REPO="${GSD_BUILDER_REPO:-vscarpenter/gsd-task-manager}"
 WORKTREE="${GSD_BUILDER_WORKTREE:-$HOME/.gsd-builder/worktree}"
-SOURCE="${GSD_BUILDER_SOURCE:-$HOME/Projects/gsd-taskmanager}"
+SOURCE="${GSD_BUILDER_SOURCE:-$HOME/Projects/GSD/gsd-taskmanager}"
 LOG_DIR="${GSD_BUILDER_LOG_DIR:-$SOURCE/docs/ops/builder-logs}"
 
 MODE="run"
@@ -255,7 +255,7 @@ Expected: `OK`.
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/vinnycarpenter/Projects/gsd-taskmanager/scripts/builder-run.sh</string>
+    <string>/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/scripts/builder-run.sh</string>
   </array>
   <key>StartInterval</key><integer>1800</integer>
   <key>RunAtLoad</key><false/>
