@@ -1,69 +1,40 @@
-# Status — 2026-08-27
+# Session state — 2026-08-28 (path move + parity shipping + merges)
 
-## Anonymous opt-in feedback — DONE (committed, not pushed)
+## Resuming From Here
 
-Branch `feat/anonymous-feedback`. Tier: **Non-trivial** (new outbound data path,
-new PocketBase collection with an unauthenticated write rule, privacy-copy change,
-new Settings surface). Spec: `tasks/spec-anonymous-feedback.md`, approved by the
-user, so spec → plan → implementation runs in one pass per the standing correction
-in the global CLAUDE.md.
+Merged (all squash):
+- web #520 backup interop + Apple sign-in + reminders + import-cap fix → 65f15b6
+- iOS #10 full-fidelity backups + trash (merged from GitHub UI by Vinny)
+- web #521 retire half-wired plumbing + docs truth → e332f5b
+- web #522 sound + quiet-hours controls → e8d793a
+- Post-merge main verified green: 2877 tests, typecheck, shape ratchet.
 
-**Why:** Vinny has no signal from users today — no analytics by design — so he
-can't tell what people think or what to build next. The design answer is to make
-the privacy stance the feature's UX: capture locally, show the exact payload,
-send only on an explicit tap, attach no identifier at all.
+CI notes for next time:
+- The pre-push gate must include `bun run quality:shape` — the CI lint job runs
+  it and it is a required check. Both #520 and #522 needed shape-fix commits.
+- Repo ruleset requires code-owner review, which the owner can't self-satisfy;
+  owner PRs merge with `gh pr merge --admin`.
+- SonarCloud (new-code coverage 80%) is advisory, not required.
 
-**Decided scope (user-approved):**
+Still open:
+- Unpushed path-fix branches: web chore/gsd-workspace-paths (2 commits),
+  iOS chore/gsd-workspace-paths (1 commit), usage repo main (local-only).
+  Until the web one lands, main's builder-run.sh SOURCE default still names
+  the old path (installed launchd plists already fixed).
+- iOS import cap still counts tasks only — needs its own iOS change.
+- User to run: claude mcp add --scope local --transport http sentry https://mcp.sentry.dev/mcp
+- Claude Desktop config still lists old workspace paths (edit after quitting app).
+- Other sessions' iOS branches fix/capture-parser-parity + fix/reminder-options-parity
+  merged as #11/#12; their local branches remain (not this session's to clean).
 
-- Transport: the existing self-hosted PocketBase at `api.vinny.io`, anonymous.
-- Signals: roadmap poll + sentiment + category + free text, unified in one form.
-- Identity: **none**. Not even a rotatable device id — vote integrity is
-  client-side only, and that's the right fidelity here.
-- Roadmap candidates: hardcoded constant, no server read path.
-- Deferred: the "earned moment" prompt, and the public privacy-policy page.
+## Carried from 2026-08-27 (anonymous feedback, shipped as #516)
 
-### Tasks
-
-- [x] ① Preflight + branch (`feat/anonymous-feedback`)
-- [x] ② Write spec (`tasks/spec-anonymous-feedback.md`)
-- [x] ③ Red — `tests/data/feedback-payload.test.ts` (the privacy test)
-- [x] ④ Green — `lib/feedback/roadmap-items.ts` + `feedback-payload.ts`
-- [x] ⑤ Red/green — `lib/feedback/feedback-store.ts` (localStorage draft + votes)
-- [x] ⑥ Red/green — `lib/feedback/submit-feedback.ts` (bare fetch, no auth header)
-- [x] ⑦ Settings → Feedback section + UI tests
-- [x] ⑧ Command palette "Send feedback" entry
-- [x] ⑨ About-page privacy copy acknowledges opt-in feedback
-- [x] ⑩ `scripts/setup-pocketbase-feedback-collection.sh`
-- [x] ⑪ E2E spec with the POST stubbed
-- [x] ⑫ Verify: `bun run test`, `typecheck`, `lint`, `quality:shape`
-- [x] ⑬ Verify in the running app (`/verify-frontend-change`)
-- [x] ⑭ Version bump trio (package.json + README:7 + sw.js CACHE_VERSION), PR
-
-### Assumptions
-
-- The `feedback` collection does not exist on `api.vinny.io` yet; the setup
-  script creates it and Vinny runs it against prod himself.
-- The roadmap candidate list in the spec is a seed for Vinny to curate, not a
-  product commitment.
-
-### Resuming From Here
-
-Feature is complete and committed on `feat/anonymous-feedback` (6 commits).
-`bun run test` (2830), `typecheck`, `lint`, and `quality:shape` are all green,
-and the surface was verified in the running app (both themes, a11y tree,
-success and failure paths).
-
-**Not yet done — needs Vinny:**
-1. Push and open the PR. Not done without an explicit go-ahead.
-2. Run `scripts/setup-pocketbase-feedback-collection.sh` against prod, then do
-   the two manual steps it prints: rate limiting and log retention. Until the
-   collection exists, Send will fail with "That wasn't accepted."
-3. Curate `lib/feedback/roadmap-items.ts`. The eight candidates are a seed.
-4. Update the privacy policy at gsdtaskmanager.com/privacy (separate repo).
-
-**Deferred by design:** the earned-moment prompt after N completed tasks.
-
-### Watch out
-
-- `localStorage.clear()` no-ops under jsdom-in-Bun; remove `gsd:feedback:*` keys
-  individually in `beforeEach` (see `.claude/rules/testing.md`).
+The prior status file tracked feat/anonymous-feedback; it merged as PR #516,
+so its "push and PR" item is done, and the prod `feedback` collection now
+responds (a bare POST returns 400, not 404) — the setup script appears to have
+run. Still possibly open, per that file:
+- The two manual steps the setup script prints: rate limiting and log
+  retention on api.vinny.io.
+- Curate `lib/feedback/roadmap-items.ts` — the eight candidates were a seed.
+- Update the privacy policy at gsdtaskmanager.com/privacy (separate repo).
+- Deferred by design: the earned-moment feedback prompt after N completions.

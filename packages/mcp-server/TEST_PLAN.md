@@ -13,7 +13,7 @@ Test the MCP server in Claude Desktop to ensure all functionality works before p
 
 ### 1. Build the New Version
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server
+cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
 npm run build
 ```
 - Build successful
@@ -38,7 +38,7 @@ Edit: `~/Library/Application Support/Claude/claude_desktop_config.json`
     "gsd-taskmanager": {
       "command": "node",
       "args": [
-        "/Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server/dist/index.js"
+        "/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",
@@ -226,7 +226,7 @@ Edit: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ### If PASS -> Publish
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server
+cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
 bun run version:patch
 npm run build
 npm publish

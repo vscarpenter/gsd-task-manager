@@ -22,7 +22,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/vinnycarpenter/Projects/gsd-taskmanager/scripts/builder-run.sh</string>
+    <string>/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/scripts/builder-run.sh</string>
   </array>
 
   <key>StartInterval</key>

@@ -5,7 +5,7 @@ Get your GSD MCP server running in 5 minutes.
 ## 1. Build (if not already done)
 
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server
+cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
 npm install
 npm run build
 ```
@@ -35,7 +35,7 @@ npm run build
     "gsd-tasks": {
       "command": "node",
       "args": [
-        "/Users/vinnycarpenter/Projects/gsd-taskmanager/packages/mcp-server/dist/index.js"
+        "/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",

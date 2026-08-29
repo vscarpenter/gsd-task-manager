@@ -224,7 +224,7 @@ set -euo pipefail
 
 REPO="${GSD_TRIAGE_REPO:-vscarpenter/gsd-task-manager}"
 WORKTREE="${GSD_TRIAGE_WORKTREE:-$HOME/.gsd-night-shift/worktree}"
-SOURCE="${GSD_TRIAGE_SOURCE:-$HOME/Projects/gsd-taskmanager}"
+SOURCE="${GSD_TRIAGE_SOURCE:-$HOME/Projects/GSD/gsd-taskmanager}"
 LOG_DIR="${GSD_TRIAGE_LOG_DIR:-$SOURCE/docs/ops/night-shift-logs}"
 HELPER="${GSD_TRIAGE_HELPER:-$SOURCE/scripts/failing-agent-prs.cjs}"
 
@@ -365,7 +365,7 @@ create "triage:paused"   "b60205" "Kill switch — halts the nightly triage rout
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/vinnycarpenter/Projects/gsd-taskmanager/scripts/triage-run.sh</string>
+    <string>/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/scripts/triage-run.sh</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>

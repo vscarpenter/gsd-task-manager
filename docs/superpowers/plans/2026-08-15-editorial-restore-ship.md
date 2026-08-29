@@ -14,7 +14,7 @@
 
 - Do NOT adjust any value back toward Violet Frost. DESIGN.md is the authority.
 - Keep `package.json`, `bun.lock`, and any `.agents/` edits out of every commit (pre-existing dirt: stagehand `^4.0.0 → ^4.0.1`). Do NOT bump the version — Vinny decides 12.0.0 vs patch in the PR (current: 11.11.12).
-- `GSD-Design-Reference.html` must stay byte-identical to `~/Projects/gsd-iosapp/Design/GSD-Design-Reference.html`. It is identical right now — if you edit it, mirror the edit there.
+- `GSD-Design-Reference.html` must stay byte-identical to `~/Projects/GSD/gsd-iosapp/Design/GSD-Design-Reference.html`. It is identical right now — if you edit it, mirror the edit there.
 - The theme contract test must pass **as written**; fix failures on-palette, never by loosening the test.
 - Approved exemptions to the acceptance hex grep (`5C4F7D|B95F5A|4D7A72|A99BCB|D88C86`), to be noted in the PR body: `app/design-lab/**`, `components/design-lab/design-data.ts` (historical lab catalog, imported only by design-lab pages), and the theme test's `RETIRED_COLORS` list (the enforcement mechanism).
 - Intentional Violet Frost mention that stays: `app/css/inkwell-tokens.css:7` (version-history prose in the new 1.4.0 header explaining why the version bumped).
@@ -52,7 +52,7 @@ git diff public/docs/codebase-analysis-report.html | grep -iE "^[+-].*#[0-9A-Fa-
 - [ ] **Step 3: Confirm the iOS mirror is still byte-identical**
 
 ```bash
-diff -q GSD-Design-Reference.html ~/Projects/gsd-iosapp/Design/GSD-Design-Reference.html
+diff -q GSD-Design-Reference.html ~/Projects/GSD/gsd-iosapp/Design/GSD-Design-Reference.html
 ```
 
 Expected: no output (identical). Record any review findings before moving on; fix on-palette if something is off.
@@ -309,6 +309,6 @@ git push -u origin design/editorial-restore
 
 - All gates green, including e2e.
 - `grep -rniE "5C4F7D|B95F5A|4D7A72|A99BCB|D88C86" app components lib tests public` returns hits only in `app/design-lab/**`, `components/design-lab/design-data.ts`, and `tests/data/editorial-theme.test.ts` (approved exemptions).
-- `GSD-Design-Reference.html` byte-identical to `~/Projects/gsd-iosapp/Design/GSD-Design-Reference.html`.
+- `GSD-Design-Reference.html` byte-identical to `~/Projects/GSD/gsd-iosapp/Design/GSD-Design-Reference.html`.
 - `package.json`/`bun.lock` untouched by every commit; no version bump.
 - PR open against main with gate results and the version question flagged.

@@ -13,7 +13,7 @@ export PATH="$PATH:/opt/homebrew/bin:$HOME/.local/bin:$HOME/.bun/bin"
 
 REPO="${GSD_BUILDER_REPO:-vscarpenter/gsd-task-manager}"
 WORKTREE="${GSD_BUILDER_WORKTREE:-$HOME/.gsd-builder/worktree}"
-SOURCE="${GSD_BUILDER_SOURCE:-$HOME/Projects/gsd-taskmanager}"
+SOURCE="${GSD_BUILDER_SOURCE:-$HOME/Projects/GSD/gsd-taskmanager}"
 LOG_DIR="${GSD_BUILDER_LOG_DIR:-$SOURCE/docs/ops/builder-logs}"
 TOKENS_HELPER="${GSD_BUILDER_TOKENS_HELPER:-$SOURCE/scripts/extract-run-tokens.cjs}"
 

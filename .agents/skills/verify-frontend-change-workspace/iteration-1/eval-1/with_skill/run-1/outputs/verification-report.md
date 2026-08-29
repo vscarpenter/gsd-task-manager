@@ -124,11 +124,11 @@ Key findings:
 
 ## Evidence
 
-- Source: `/Users/vinnycarpenter/Projects/gsd-taskmanager/components/task-card/index.tsx` line 66–74
-- CSS tokens: `/Users/vinnycarpenter/Projects/gsd-taskmanager/app/globals.css` lines 206–207, 230–232
-- Token values: `/Users/vinnycarpenter/Projects/gsd-taskmanager/app/css/inkwell-tokens.css` line 41
+- Source: `/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/components/task-card/index.tsx` line 66–74
+- CSS tokens: `/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/app/globals.css` lines 206–207, 230–232
+- Token values: `/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/app/css/inkwell-tokens.css` line 41
 - Served CSS (downloaded): `http://localhost:3001/_next/static/chunks/Projects_gsd-taskmanager_app_globals_0xmbyqa.css`
-- Unit test: `/Users/vinnycarpenter/Projects/gsd-taskmanager/tests/ui/task-card.test.tsx` line 179–188
+- Unit test: `/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/tests/ui/task-card.test.tsx` line 179–188
 - Git commit: `8dd0f82` — "fix(matrix): keyboard drag-and-drop, Inkwell palette alignment, overdue de-clutter"
 
 ## Codified
