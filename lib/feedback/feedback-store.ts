@@ -23,9 +23,11 @@ import { generateId } from "@/lib/id-generator";
 
 export const FEEDBACK_DRAFT_KEY = "gsd:feedback:draft";
 export const FEEDBACK_LAST_SENT_KEY = "gsd:feedback:last-sent";
+export const FEEDBACK_NUDGE_DISMISSED_KEY = "gsd:feedback:nudge-dismissed";
 
 let memoryDraft: FeedbackDraft | null = null;
 let memoryLastSentAt: string | null = null;
+let memoryNudgeDismissedAt: string | null = null;
 
 function readRaw(key: string): string | null {
   if (typeof window === "undefined") return null;
@@ -134,6 +136,16 @@ export function writeLastSentAt(isoTimestamp: string): void {
   memoryLastSentAt = stored ? null : isoTimestamp;
 }
 
+/** When the user last pressed "Not now" on the Review page's feedback invitation. */
+export function readNudgeDismissedAt(): string | null {
+  return readRaw(FEEDBACK_NUDGE_DISMISSED_KEY) ?? memoryNudgeDismissedAt;
+}
+
+export function writeNudgeDismissedAt(isoTimestamp: string): void {
+  const stored = writeRaw(FEEDBACK_NUDGE_DISMISSED_KEY, isoTimestamp);
+  memoryNudgeDismissedAt = stored ? null : isoTimestamp;
+}
+
 /**
  * External-store plumbing so the form can read persisted state without a
  * state-setting effect.
@@ -150,6 +162,7 @@ export function writeLastSentAt(isoTimestamp: string): void {
 export interface FeedbackState {
   draft: FeedbackDraft;
   lastSentAt: string | null;
+  nudgeDismissedAt: string | null;
   /** Minted once per submission; reused by a retry, replaced after a success. */
   submissionId: string | null;
   /** When the payload was last rebuilt. Null until the client has hydrated. */
@@ -162,6 +175,7 @@ const listeners = new Set<Listener>();
 const SERVER_STATE: FeedbackState = Object.freeze({
   draft: Object.freeze(emptyDraft()) as FeedbackDraft,
   lastSentAt: null,
+  nudgeDismissedAt: null,
   submissionId: null,
   builtAt: null,
 });
@@ -175,7 +189,11 @@ function invalidate(): void {
   for (const listener of listeners) listener();
 }
 
-const OWN_KEYS = new Set<string>([FEEDBACK_DRAFT_KEY, FEEDBACK_LAST_SENT_KEY]);
+const OWN_KEYS = new Set<string>([
+  FEEDBACK_DRAFT_KEY,
+  FEEDBACK_LAST_SENT_KEY,
+  FEEDBACK_NUDGE_DISMISSED_KEY,
+]);
 
 /**
  * Another tab wrote one of our keys, so the cached snapshot is stale.
@@ -218,6 +236,7 @@ export function getFeedbackSnapshot(): FeedbackState {
   cachedState = {
     draft: readDraft(),
     lastSentAt: readLastSentAt(),
+    nudgeDismissedAt: readNudgeDismissedAt(),
     submissionId,
     builtAt,
   };
@@ -228,6 +247,12 @@ export function getFeedbackSnapshot(): FeedbackState {
 export function updateDraft(draft: FeedbackDraft): void {
   writeDraft(draft);
   builtAt = new Date().toISOString();
+  invalidate();
+}
+
+/** Record a "Not now" on the Review page invitation so every tab hides it. */
+export function recordNudgeDismissed(dismissedAt: string): void {
+  writeNudgeDismissedAt(dismissedAt);
   invalidate();
 }
 

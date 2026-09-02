@@ -167,25 +167,43 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             </p>
           </Section>
 
-          <Section label="Privacy">
-            <p style={bodyStyle}>
-              Tasks live in your browser&rsquo;s IndexedDB. Nothing is sent to a server unless you explicitly enable sync in{" "}
-              <Link href={ROUTES.SETTINGS} style={linkStyle} onClick={onClose}>
-                Settings
-              </Link>
-              . The app works fully offline.
-            </p>
-            <p style={bodyStyle}>
-              Want the full story?{" "}
-              <Link href={"/about" as const} style={linkStyle} onClick={onClose}>
-                Read the About page →
-              </Link>
-            </p>
-          </Section>
+          <PrivacySection onClose={onClose} />
         </div>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Split out so the drawer body stays under the code-shape ceiling; it is the
+ * one section that grows as new settings surfaces (sync, feedback) need a
+ * pointer from here.
+ */
+function PrivacySection({ onClose }: { onClose: () => void }) {
+  return (
+    <Section label="Privacy">
+      <p style={bodyStyle}>
+        Tasks live in your browser&rsquo;s IndexedDB. Nothing is sent to a server unless you explicitly enable sync in{" "}
+        <Link href={ROUTES.SETTINGS} style={linkStyle} onClick={onClose}>
+          Settings
+        </Link>
+        . The app works fully offline.
+      </p>
+      <p style={bodyStyle}>
+        Something rough or missing?{" "}
+        <Link href="/settings#feedback" style={linkStyle} onClick={onClose}>
+          Send feedback
+        </Link>
+        . It&rsquo;s anonymous, and you can read exactly what is sent before it goes.
+      </p>
+      <p style={bodyStyle}>
+        Want the full story?{" "}
+        <Link href={"/about" as const} style={linkStyle} onClick={onClose}>
+          Read the About page →
+        </Link>
+      </p>
+    </Section>
   );
 }
 

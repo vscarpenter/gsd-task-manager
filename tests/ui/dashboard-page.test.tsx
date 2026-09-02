@@ -76,6 +76,12 @@ vi.mock("@/components/dashboard/time-analytics", () => ({
   TimeAnalytics: () => <div data-testid="time-analytics" />,
 }));
 
+vi.mock("@/components/dashboard/feedback-nudge", () => ({
+  FeedbackNudge: ({ tasks }: { tasks: unknown[] }) => (
+    <div data-testid="feedback-nudge" data-task-count={tasks.length} />
+  ),
+}));
+
 vi.mock("@/components/dashboard/dashboard-skeleton", () => ({
   DashboardSkeleton: () => <div data-testid="dashboard-skeleton" />,
   VerdictSkeleton: () => <div data-testid="verdict-skeleton" />,
@@ -167,6 +173,12 @@ describe("DashboardPage review framing", () => {
     expect(screen.getByTestId("time-analytics")).toBeInTheDocument();
   });
 
+  it("hands the review's task list to the feedback invitation", () => {
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId("feedback-nudge")).toHaveAttribute("data-task-count", "1");
+  });
+
   it("opens the command palette for slash and preserves deadline navigation", () => {
     const onPaletteOpen = vi.fn();
     window.addEventListener("gsd:open-command-palette", onPaletteOpen, { once: true });
@@ -187,6 +199,7 @@ describe("DashboardPage review framing", () => {
       screen.getByRole("heading", { level: 2, name: "What did this week make room for?" })
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Nothing to review yet" })).toBeInTheDocument();
+    expect(screen.queryByTestId("feedback-nudge")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open matrix" }));
     expect(mocks.push).toHaveBeenCalledWith("/");
   });
@@ -221,5 +234,6 @@ describe("DashboardPage review framing", () => {
     expect(screen.queryByRole("heading", { name: "Nothing to review yet" })).not.toBeInTheDocument();
     expect(screen.getByTestId("verdict-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("stat-rail-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("feedback-nudge")).not.toBeInTheDocument();
   });
 });

@@ -86,6 +86,10 @@ and before they do they can see the exact payload that will leave their device.
 
 - The "earned moment" inline prompt after N completed tasks. Independently shippable,
   and the piece most likely to read as naggy — it gets its own review.
+  **Shipped separately 2026-09-02** as one dismissible sentence under the Review page's
+  stat rail (`components/dashboard/feedback-nudge.tsx`), gated by
+  `lib/feedback/nudge-eligibility.ts`: tenure ≥14 days, ≥10 completions over ≥3 days,
+  quiet for 90 days after a send and 180 after "Not now". Still no modal, toast, or badge.
 - The public privacy-policy page at `gsdtaskmanager.com/privacy` (different repo).
 - Any read path from the `feedback` collection into the app. Vote totals are not shown
   back to users; the collection is write-only from the client's perspective.

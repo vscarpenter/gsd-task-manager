@@ -25,6 +25,7 @@ import {
   VerdictSkeleton,
 } from "@/components/dashboard/dashboard-skeleton";
 import { ReviewPrompts } from "@/components/dashboard/review-prompts";
+import { FeedbackNudge } from "@/components/dashboard/feedback-nudge";
 import { Button } from "@/components/ui/button";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
 import { useDashboardData } from "./use-dashboard-data";
@@ -108,6 +109,7 @@ function ReviewBody({ onOpenMatrix, onDeadlineTaskClick }: ReviewBodyProps): Rea
             <HeroSlot isLoading={isLoading} isEmpty={isEmpty} data={data} />
           </div>
           {isLoading ? <StatRailSkeleton /> : isEmpty ? null : <StatRail data={data} />}
+          {!isLoading && !isEmpty && <FeedbackNudge tasks={tasks} />}
         </div>
       </header>
 
