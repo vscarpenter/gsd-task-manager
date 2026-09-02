@@ -122,6 +122,12 @@ Fix pattern: wait for the title to be focused before touching other fields
   committing — a full refresh also tightens stale entries, which is safe but
   shows up as unrelated churn.
 
+- **A honeypot field only deters DOM-driven bots.** The feedback endpoint is a JSON
+  API; anything abusing it POSTs to `/api/collections/feedback/records` directly and
+  never renders the form, so a decoy input would cost a schema field and a rule
+  expression while stopping nothing. Rate limiting on the create route, server-side
+  field maxes, and the unique `submission_id` index are the controls that matter.
+
 ## 2026-09-02 — Feedback nudge: verifying a conditional surface in the running app
 
 - **The SW re-registers on every load, so bust it immediately before each reload you
@@ -143,3 +149,16 @@ Fix pattern: wait for the title to be focused before touching other fields
 - **A control that unmounts itself on activation must hand focus off first.**
   `restoreFocusOrMainContent(null)` before the store write keeps keyboard focus on
   `#main-content` instead of `<body>`; the a11y reviewer caught it, a unit test now pins it.
+- **`audit` is a job in the separate `Security Audit` workflow, not in `ci.yml`.** A
+  red `audit` check with a green CI run means look up the `Security Audit` run
+  (`gh run list --workflow "Security Audit"`); `gh run view <ci-run> --log-failed`
+  shows nothing. Find the patched version with GitHub's advisory GraphQL
+  (`securityVulnerabilities(package:"browserslist")`), then follow the repo pattern:
+  pin the assertion in `security-hardening-scripts.test.ts` (red), add the `>=` floor
+  under `overrides`, `bun install`. A plain `bun install` on the committed lock is a
+  no-op, but a manifest change makes bun prune dangling entries on save, so the lock
+  diff carries an unrelated-looking cleanup.
+- **`sw.js` alone at package.json patch + 1 in the working tree is a deploy's build
+  artifact, not a pending bump.** Restore it with `git checkout -- public/sw.js` and
+  confirm the deploy via prod `sw.js` plus a grep of the served chunks for a string
+  the release introduced.
