@@ -233,6 +233,7 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides['fast-uri']).toBe('4.1.2');
     expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
     expect(rootPackage.overrides['caniuse-lite']).toBe('1.0.30001809');
+    expect(rootPackage.overrides.browserslist).toBe('>=4.28.7');
     expect(rootPackage.overrides.vite).toBe('>=8.2.1');
     expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.1');
     expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
