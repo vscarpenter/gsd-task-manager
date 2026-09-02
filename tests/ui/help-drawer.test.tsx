@@ -26,6 +26,15 @@ describe("HelpDrawer", () => {
     );
   });
 
+  it("points to the feedback section so the form is discoverable without a prompt", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+
+    expect(screen.getByRole("link", { name: "Send feedback" })).toHaveAttribute(
+      "href",
+      "/settings#feedback"
+    );
+  });
+
   it("keeps its header, scroll region, close control, and bottom edge inside device safe areas", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
 

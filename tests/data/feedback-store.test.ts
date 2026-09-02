@@ -3,6 +3,7 @@ import { buildPayload, emptyDraft, MAX_MESSAGE_LENGTH } from "@/lib/feedback/fee
 import {
   FEEDBACK_DRAFT_KEY,
   FEEDBACK_LAST_SENT_KEY,
+  FEEDBACK_NUDGE_DISMISSED_KEY,
   readDraft,
   writeDraft,
   clearDraft,
@@ -11,6 +12,9 @@ import {
   writeLastSentAt,
   subscribeToFeedback,
   getFeedbackSnapshot,
+  getServerFeedbackSnapshot,
+  readNudgeDismissedAt,
+  recordNudgeDismissed,
 } from "@/lib/feedback/feedback-store";
 import { ROADMAP_ITEMS } from "@/lib/feedback/roadmap-items";
 
@@ -21,6 +25,7 @@ beforeEach(() => {
   // localStorage.clear() no-ops in jsdom under Bun; remove keys individually.
   localStorage.removeItem(FEEDBACK_DRAFT_KEY);
   localStorage.removeItem(FEEDBACK_LAST_SENT_KEY);
+  localStorage.removeItem(FEEDBACK_NUDGE_DISMISSED_KEY);
   clearDraft();
 });
 
@@ -225,5 +230,43 @@ describe("when another tab changes the draft", () => {
     emitStorage(FEEDBACK_DRAFT_KEY);
 
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("nudge dismissal", () => {
+  const AT = "2026-09-02T12:00:00.000Z";
+
+  it("has no dismissal until the user presses Not now", () => {
+    expect(readNudgeDismissedAt()).toBeNull();
+    expect(getFeedbackSnapshot().nudgeDismissedAt).toBeNull();
+  });
+
+  it("records the dismissal, exposes it on the snapshot, and notifies subscribers", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToFeedback(listener);
+
+    recordNudgeDismissed(AT);
+
+    expect(readNudgeDismissedAt()).toBe(AT);
+    expect(getFeedbackSnapshot().nudgeDismissedAt).toBe(AT);
+    expect(localStorage.getItem(FEEDBACK_NUDGE_DISMISSED_KEY)).toBe(AT);
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("keeps the dismissal in memory when storage rejects the write", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("QuotaExceededError");
+    });
+
+    recordNudgeDismissed(AT);
+
+    expect(readNudgeDismissedAt()).toBe(AT);
+  });
+
+  it("never reports a dismissal during the static export", () => {
+    recordNudgeDismissed(AT);
+
+    expect(getServerFeedbackSnapshot().nudgeDismissedAt).toBeNull();
   });
 });

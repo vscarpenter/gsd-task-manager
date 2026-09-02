@@ -121,3 +121,25 @@ Fix pattern: wait for the title to be focused before touching other fields
   `node scripts/check-code-shape.cjs --print-baseline` and diff it before
   committing — a full refresh also tightens stale entries, which is safe but
   shows up as unrelated churn.
+
+## 2026-09-02 — Feedback nudge: verifying a conditional surface in the running app
+
+- **The SW re-registers on every load, so bust it immediately before each reload you
+  intend to trust.** One reset at the start of a session is not enough: `PwaRegister`
+  puts the worker back on the next load and it caches the chunk you are about to change.
+  The symptom was a hot-reloaded footer beside a stale `<p>` nudge on the same page.
+- **The Chrome extension's `resize_window` can report success without changing the
+  viewport.** `innerWidth` stayed at 1863 after a "successful" 390×844 resize. For narrow
+  breakpoints use headless Playwright with a mobile context (`isMobile`, `hasTouch`) and
+  seed IndexedDB inside that context; it also proves the coarse-pointer 44px targets.
+- **Click by element ref, not by coordinates, after any resize or reload.** A click at
+  coordinates taken from an earlier screenshot missed once the viewport height changed.
+- **A handler that reads nothing from props or state belongs at module scope.** Moving
+  `dismissNudge` out of the component was the difference between 41 and 36 lines under
+  the ≤40 lines-per-function ratchet, with no behaviour change.
+- **Derive "returning user" from the user's own records rather than a first-run
+  timestamp.** Oldest `createdAt` plus completion history works retroactively for people
+  already using the app, adds no tracking key, and measures use rather than install age.
+- **A control that unmounts itself on activation must hand focus off first.**
+  `restoreFocusOrMainContent(null)` before the store write keeps keyboard focus on
+  `#main-content` instead of `<body>`; the a11y reviewer caught it, a unit test now pins it.

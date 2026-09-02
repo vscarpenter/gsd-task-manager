@@ -152,6 +152,18 @@ describe("AppShell command palette wiring", () => {
     expect(screen.getByRole("link", { name: /Vinny\s+Carpenter/ })).toHaveClass("touch-target");
   });
 
+  it("keeps a quiet feedback link in the footer", () => {
+    render(
+      <AppShell title="Test">
+        <div>content</div>
+      </AppShell>
+    );
+
+    const link = screen.getByRole("link", { name: "Send feedback" });
+    expect(link).toHaveAttribute("href", "/settings#feedback");
+    expect(link).toHaveClass("touch-target");
+  });
+
   it("opens the command palette when Ctrl+K is pressed", async () => {
     render(
       <AppShell title="Test">
