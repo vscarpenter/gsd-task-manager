@@ -39,16 +39,16 @@ once the user's own task data proves they are a returning user. No toast, no mod
 ## Release + PR (owner request 2026-09-02)
 
 - [x] Bump the pinned trio to 12.7.0 (package.json, README:7, sw.js CACHE_VERSION); prod was 12.6.5.
-- [ ] Commit the bump, push `feat/feedback-nudge`, open the PR.
+- [x] Bump committed, branch pushed, PR #525 open: https://github.com/vscarpenter/gsd-task-manager/pull/525
 
 ## Resuming From Here
 
 - Done: nudge-eligibility module, store dismissal state, `FeedbackNudge` on the Review page,
   help-drawer + footer links, a11y fixes, 24 new tests; all gates green (test / typecheck /
   lint / quality:shape). Live-app verification PASS (details in step 7).
-- Next: owner says go → `git push -u origin feat/feedback-nudge` + PR. Version bump for the
-  release is deferred (see Deviations): reconcile the uncommitted 12.6.x edits first, then
-  bump the trio (package.json + README:7 + sw.js CACHE_VERSION) together.
+- Next: watch CI on PR #525, merge with `gh pr merge --admin` (owner PR, code-owner gate),
+  then `bun run deploy` and tag. `bun.lock` still carries unrelated local churn (mcp-server
+  1.2.4 → 1.2.5 plus dep re-serialization); decide separately whether to commit it.
 - Pre-existing red on this machine, not this branch: `documentation-currentness` (README
   12.5.0 vs uncommitted package.json 12.6.5) and `dependency-license-policy`
   (`@img/sharp-libvips-darwin-arm64@1.3.3` LGPL in the local install).
