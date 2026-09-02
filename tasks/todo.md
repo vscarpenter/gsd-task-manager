@@ -36,6 +36,11 @@ once the user's own task data proves they are a returning user. No toast, no mod
 - Version bump deferred: the working tree carries an uncommitted, internally inconsistent bump
   (package.json 12.6.5 vs sw.js 12.6.6, README 12.5.0). Not this branch's to overwrite.
 
+## Release + PR (owner request 2026-09-02)
+
+- [x] Bump the pinned trio to 12.7.0 (package.json, README:7, sw.js CACHE_VERSION); prod was 12.6.5.
+- [ ] Commit the bump, push `feat/feedback-nudge`, open the PR.
+
 ## Resuming From Here
 
 - Done: nudge-eligibility module, store dismissal state, `FeedbackNudge` on the Review page,
