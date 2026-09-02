@@ -1,3 +1,49 @@
+# Session state — 2026-09-02 (resume: merge #525, release v12.7.0, audit fix)
+
+Branch: `fix/deps-browserslist-advisory` (off `main` @ af0bbff). Local commits only, not pushed.
+
+## Done this session
+
+- [x] PR #525 squash-merged as `af0bbff` (`gh pr merge --admin`; owner PR, code-owner gate).
+      Local `feat/feedback-nudge` deleted after GitHub confirmed the merged head matched the
+      local tip. The remote branch still exists (deleting it is externally visible; left alone).
+- [x] Prod already served the release before the merge: `sw.js` 12.7.1 = package.json 12.7.0
+      + 1, deployed from this machine at 06:38 local; a served chunk contains
+      `nudge-dismissed`. The local `sw.js` at 12.7.1 was that build's artifact; reverted.
+- [x] Local tag `v12.7.0` → af0bbff. **Tag push and GitHub release were blocked by the
+      auto-mode classifier.** Owner runs:
+      `git push origin v12.7.0 && gh release create v12.7.0 --generate-notes --title "v12.7.0"`
+- [x] Security Audit went red on `main` at 07:01 today with no commit behind it (not #525):
+      browserslist ≤4.28.6, GHSA-c83g-rgw3-j3cx + GHSA-73wf-gq98-2v4g, fixed in 4.28.7.
+      Fixed test-first: guard-test pin (red) → `overrides.browserslist: ">=4.28.7"` →
+      `bun install` (green; lock → 4.28.8, bun also pruned dangling entries and fixed the stale
+      mcp-server 1.2.4 workspace entry). Gates: 2946 tests, typecheck, lint, quality:shape,
+      build, `bun audit`, `bun install --frozen-lockfile` (no changes).
+- [x] Codex P2 on #525 (archived completions are not counted by the nudge): mechanics are
+      accurate, the effect is fail-closed, auto-archive is off by default, and the 08-27
+      deviation note already covers it. Not replied to (PR comments need the owner's OK).
+- [x] `tasks/implementation-notes.md` (08-27 ledger) distilled into `tasks/lessons.md` and
+      deleted.
+
+## Resuming From Here
+
+- Next, on the owner's go-ahead: push `fix/deps-browserslist-advisory`, open the PR, watch the
+  **Security Audit** workflow (separate from CI) go green, `gh pr merge --admin`, clean up the
+  branch. Then push the tag and create the release (command above).
+- The owner's uncommitted `bun.lock` churn (a `bun update`-style refresh: babel, browserbase,
+  csstools…) was set aside, not committed. Backup:
+  `/private/tmp/claude-501/-Users-vinnycarpenter-Projects-GSD-gsd-taskmanager/661980b8-7522-4901-be12-764c5fbafbdc/scratchpad/bun.lock.local-churn`
+  — reproducible with `bun update` if wanted.
+- Possible follow-up from the Codex comment: count `archivedTasks` in `summarizeEngagement`
+  for users who archive aggressively. Nicety, not a bug.
+- Carried: `components/settings/about-section.tsx:11` still falls back to `"6.1.1"`; PB rate
+  limit + log retention manual steps; roadmap slug curation; privacy policy on
+  gsdtaskmanager.com.
+- Pre-existing red on this machine only: `dependency-license-policy`
+  (`@img/sharp-libvips-darwin-arm64` LGPL in the local install).
+
+---
+
 # Session state — 2026-09-02 (feedback nudge on the Review page)
 
 Branch: `feat/feedback-nudge` (web only; iOS deliberately not mirrored — owner decision 2026-09-02).
