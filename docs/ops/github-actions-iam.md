@@ -1,10 +1,23 @@
 # GitHub Actions → AWS Setup Runbook
 
-> **Current status:** the development deployment workflow is retained as a
-> restoration reference but disabled. The former DEV site and distribution are
-> not part of the active release path. Production deployment remains active.
+> **Current status:** development deploys only the exact successful CI artifact
+> from a same-repository push to protected `main`. Production builds without AWS
+> authority, signs the artifact, and grants AWS OIDC only after Gate 2 and
+> provenance verification.
 
-This is the one-time manual configuration required before `.github/workflows/deploy-dev.yml` (and later `deploy-prod.yml`, `deploy-cloudfront-infra.yml`) can deploy. Everything below happens in **your AWS account** and **your GitHub repo settings** — none of it is in code.
+This is the one-time manual configuration required before `.github/workflows/deploy-dev.yml` (and later `deploy-production-release.yml`, `deploy-cloudfront-infra.yml`) can deploy. Everything below happens in **your AWS account** and **your GitHub repo settings** — none of it is in code.
+
+Before merging the production workflow rename, disable the retired workflow
+identity while its file still exists on the default branch:
+
+~~~bash
+gh workflow disable deploy-prod.yml
+~~~
+
+After merging, verify .github/workflows/deploy-prod.yml is absent from the
+default branch. Do not reintroduce that path: historical release tags contain its
+old workflow_dispatch implementation. The replacement path is
+.github/workflows/deploy-production-release.yml.
 
 Trust model: GitHub-issued OIDC tokens authenticate to AWS roles scoped to specific GitHub Environments. No long-lived AWS access keys are stored anywhere.
 
@@ -130,6 +143,10 @@ GitHub → `vscarpenter/gsd-task-manager` → **Settings → Environments → Ne
 
 Required reviewers: **none** (dev auto-deploys on push to main, per locked decision §7.3).
 
+Deployment branches and tags: choose **Selected branches and tags**, and allow
+only the protected `main` branch. The workflow has no `workflow_dispatch` input
+and independently validates the CI branch, source repository, and exact head SHA.
+
 Add these **Environment variables** (not secrets — none of these are confidential):
 
 | Name | Value |
@@ -144,10 +161,9 @@ Add these **Environment variables** (not secrets — none of these are confident
 
 ## Step 4 — First-run sanity check
 
-Complete this step only if the development environment is intentionally restored
-and the workflow is re-enabled.
+Complete this after configuring the protected `development` environment.
 
-1. Merge any commit to `main` (or trigger the workflow manually: Actions → Deploy to Development → Run workflow).
+1. Merge any commit to `main`.
 2. Watch the run — `deploy` job should:
    - Download the `static-export-<sha>` artifact from the CI run.
    - Assume the IAM role via OIDC (no secrets used).
@@ -200,15 +216,25 @@ Then in GitHub: Settings → Environments → New environment → `production` �
 - **Required reviewers:** add `vscarpenter`.
 - **Variables:** the 5 from the table above, including `AWS_DEPLOY_ROLE_ARN` = `arn:aws:iam::ACCT:role/gsd-deploy-prod`.
 
+Set **Deployment branches and tags** to selected protected contexts: protected
+`main` plus the release-tag pattern `v*.*.*`. Repository-dispatch rollback runs
+trusted workflow code from `main`; the workflow separately resolves and authorizes
+the requested existing release tag before build or AWS access.
+
 ### First-run prod test
 
 1. Bump `package.json` version (e.g. 9.1.10 → 9.1.11), commit to main, merge via PR.
 2. Tag the merge commit: `git tag v9.1.11 && git push origin v9.1.11`.
-3. Watch the **Deploy to Production** workflow appear in Actions.
-4. It pauses at "Waiting for approval" — go to **Environments → production** and approve.
-5. The deploy runs, smoke-tests, completes. Verify `https://gsd.vinny.dev/` serves the new build.
+3. Watch the **Deploy Production Release** workflow appear in Actions.
+4. Confirm the build job has no environment, OIDC, or AWS permission.
+5. Confirm the separate attestation job signs `static-export-<release-sha>.tgz`.
+6. The deploy job pauses at "Waiting for approval" — review the evidence and approve.
+7. Confirm checksum and `gh attestation verify` complete before AWS configuration.
+8. The credential-free smoke job completes. Verify `https://gsd.vinny.dev/`.
 
-A `workflow_dispatch` from the Actions tab also works — useful for re-deploying the current main without bumping the version.
+For rollback, send the `deploy-production-release` repository-dispatch event with
+`client_payload.ref` set to an existing semantic release tag. Arbitrary branches,
+commits, and caller-selected workflow refs are rejected. See `docs/ops/gate2.md`.
 
 ---
 

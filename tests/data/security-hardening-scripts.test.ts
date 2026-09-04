@@ -58,7 +58,7 @@ describe('security hardening scripts and workflows', () => {
   });
 
   it('requires production deploy commits to be reachable from main before AWS access', () => {
-    const workflow = readRepoFile('.github/workflows/deploy-prod.yml');
+    const workflow = readRepoFile('.github/workflows/deploy-production-release.yml');
     const ancestryCheckIndex = workflow.indexOf('Verify deployment ref is on main');
     const awsCredentialsIndex = workflow.indexOf('Configure AWS credentials');
 
@@ -66,6 +66,71 @@ describe('security hardening scripts and workflows', () => {
     expect(awsCredentialsIndex).toBeGreaterThan(ancestryCheckIndex);
     expect(workflow).toContain('git merge-base --is-ancestor "$DEPLOY_COMMIT" origin/main');
     expect(workflow).toContain('fetch-depth: 0');
+  });
+
+  it('deploys development only from the exact successful main CI run', () => {
+    const workflow = readRepoFile('.github/workflows/deploy-dev.yml');
+
+    expect(workflow).not.toContain('workflow_dispatch:');
+    expect(workflow).toContain("github.event.workflow_run.head_branch == 'main'");
+    expect(workflow).toContain(
+      'github.event.workflow_run.head_repository.full_name == github.repository'
+    );
+    expect(workflow).toContain('ref: ${{ github.event.workflow_run.head_sha }}');
+    expect(workflow).toContain('name: static-export-${{ github.event.workflow_run.head_sha }}');
+    expect(workflow).not.toContain('build-static-export');
+  });
+
+  it('builds, attests, and deploys production in separate authority domains', () => {
+    const workflow = readRepoFile('.github/workflows/deploy-production-release.yml');
+    expect(() => readRepoFile('.github/workflows/deploy-prod.yml')).toThrow();
+    const buildStart = workflow.indexOf('\n  build:');
+    const attestStart = workflow.indexOf('\n  attest:');
+    const deployStart = workflow.indexOf('\n  deploy:');
+    const smokeStart = workflow.indexOf('\n  smoke:');
+    const buildBlock = workflow.slice(buildStart, attestStart);
+    const attestBlock = workflow.slice(attestStart, deployStart);
+    const deployBlock = workflow.slice(deployStart, smokeStart);
+    const smokeBlock = workflow.slice(smokeStart);
+
+    expect(workflow).not.toContain('workflow_dispatch:');
+    expect(workflow).toContain('repository_dispatch:');
+    expect(workflow).toContain('types: [deploy-production-release]');
+    expect(buildStart).toBeGreaterThan(-1);
+    expect(attestStart).toBeGreaterThan(buildStart);
+    expect(deployStart).toBeGreaterThan(attestStart);
+    expect(smokeStart).toBeGreaterThan(deployStart);
+
+    expect(buildBlock).toContain('Build static export');
+    expect(buildBlock).not.toContain('id-token:');
+    expect(buildBlock).not.toContain('environment:');
+    expect(buildBlock).not.toContain('configure-aws-credentials');
+
+    expect(attestBlock).toMatch(/uses: actions\/attest@[0-9a-f]{40}/);
+    expect(attestBlock).toContain(
+      'subject-path: artifact/static-export-${{ needs.evidence.outputs.deploy_sha }}.tgz'
+    );
+    expect(attestBlock).toContain(
+      'predicate-type: https://gsd.vinny.dev/attestations/release/v1'
+    );
+    expect(attestBlock).not.toContain('configure-aws-credentials');
+    expect(attestBlock).not.toContain('environment:');
+
+    const verifyIndex = deployBlock.indexOf('gh attestation verify');
+    const extractIndex = deployBlock.indexOf('Validate and extract static export');
+    const awsIndex = deployBlock.indexOf('Configure AWS credentials');
+    expect(verifyIndex).toBeGreaterThan(-1);
+    expect(extractIndex).toBeGreaterThan(verifyIndex);
+    expect(awsIndex).toBeGreaterThan(extractIndex);
+    expect(deployBlock).toContain('sha256sum -c');
+    expect(deployBlock).toContain('--predicate-type "$RELEASE_PREDICATE_TYPE"');
+    expect(deployBlock).toContain(
+      '.verificationResult.statement.predicate.deploySha == $deploySha'
+    );
+    expect(deployBlock).not.toContain('Build static export');
+    expect(deployBlock).not.toContain('bun install');
+    expect(smokeBlock).not.toContain('id-token:');
+    expect(smokeBlock).not.toContain('configure-aws-credentials');
   });
 
   it('requires MCP publishes to use the reviewed release environment and main ancestry', () => {
@@ -102,6 +167,7 @@ describe('security hardening scripts and workflows', () => {
     expect(htmlSyncBlock).toContain('--delete');
     expect(htmlSyncBlock).toContain('--include "*.html"');
     expect(htmlSyncBlock).toContain('--include "sw.js"');
+    expect(deployScript.match(/--no-follow-symlinks/g)).toHaveLength(3);
   });
 
 
@@ -309,7 +375,7 @@ describe('security hardening scripts and workflows', () => {
         'ci.yml',
         'deploy-cloudfront-infra.yml',
         'deploy-dev.yml',
-        'deploy-prod.yml',
+        'deploy-production-release.yml',
         'publish-docker.yml',
         'publish-mcp-server.yml',
         'security-audit.yml',

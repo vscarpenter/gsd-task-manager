@@ -45,6 +45,7 @@ echo -e "${BLUE}[1/3]${NC} Syncing to S3 (${S3_BUCKET})..."
 
 echo "  → Syncing static assets (JS, CSS, images)..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
+  --no-follow-symlinks \
   --delete \
   --exclude "*.html" \
   --exclude "sw.js" \
@@ -54,6 +55,7 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
 
 echo "  → Syncing HTML files and service worker..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
+  --no-follow-symlinks \
   --delete \
   --exclude "*" \
   --include "*.html" \
@@ -64,6 +66,7 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
 
 echo "  → Forcing stable runtime metadata..."
 aws s3 cp "$BUILD_DIR/theme-init.js" "$S3_BUCKET/theme-init.js" \
+  --no-follow-symlinks \
   --metadata-directive REPLACE \
   --cache-control "public,max-age=0,must-revalidate" \
   --content-type "application/javascript"
