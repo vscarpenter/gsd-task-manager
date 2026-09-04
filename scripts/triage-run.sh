@@ -49,11 +49,19 @@ else
   gh_fail_log "pr list failed"
 fi
 
-failing="$(printf '%s' "$prs_json" | GSD_TRIAGE_BOT_LOGIN="$BOT_LOGIN" node "$HELPER" 2>/dev/null || echo 0)"
-if [ "$failing" = "0" ]; then
-  echo "NO_WORK: no failing bot-authored claude/* PRs with a valid head SHA."
+# A helper that could not run has told us nothing. Reporting that as "no work"
+# would turn a broken lookup into a clean bill of health, so the two outcomes
+# stay distinct.
+if failing="$(printf '%s' "$prs_json" | GSD_TRIAGE_BOT_LOGIN="$BOT_LOGIN" node "$HELPER" 2>/dev/null)" &&
+  [ -n "$failing" ]; then
+  if [ "$failing" = "0" ]; then
+    echo "NO_WORK: no failing bot-authored claude/* PRs with a valid head SHA."
+  else
+    echo "DISCOVERY: failing bot-authored claude/* PRs=$failing"
+  fi
 else
-  echo "DISCOVERY: failing bot-authored claude/* PRs=$failing"
+  gh_fail_log "discovery helper did not run"
+  echo "UNKNOWN: discovery helper did not run; candidate count is unavailable."
 fi
 
 echo "DISABLED: local branch remediation is retired; no PR branch is checked out or executed."
