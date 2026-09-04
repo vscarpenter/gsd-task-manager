@@ -129,6 +129,54 @@ describe("DeleteAccountDialog", () => {
     expect(screen.getByRole("heading", { name: /delete account/i })).toBeInTheDocument();
   });
 
+  it("warns that synced tasks were deleted when the account survives", async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteRemoteAccountAndTasks).mockResolvedValue({
+      ok: false,
+      stage: "account",
+      remoteTasksErased: true,
+    });
+    render(<DeleteAccountDialog {...baseProps} />);
+
+    await user.type(screen.getByPlaceholderText("Type DELETE here"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /^delete account$/i }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringMatching(/some synced tasks were deleted, but your account is still there/i)
+      )
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(resetEverything).not.toHaveBeenCalled();
+    expect(disableSync).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: /delete account/i })).toBeInTheDocument();
+  });
+
+  it("pairs the partial-erasure warning with the sign-in prompt when the session died mid-wipe", async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteRemoteAccountAndTasks).mockResolvedValue({
+      ok: false,
+      stage: "tasks",
+      remoteTasksErased: true,
+      authRejected: true,
+    });
+    render(<DeleteAccountDialog {...baseProps} />);
+
+    await user.type(screen.getByPlaceholderText("Type DELETE here"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /^delete account$/i }));
+
+    // The state of the user's data and the next step must both survive; neither
+    // clause may be traded away for the other.
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringMatching(/some synced tasks were deleted/i)
+      )
+    );
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/sign in again/i));
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(resetEverything).not.toHaveBeenCalled();
+  });
+
   it("failed_export_does_not_unlock_delete_button", async () => {
     const user = userEvent.setup();
     const onExport = vi.fn().mockResolvedValue(false); // export failed
