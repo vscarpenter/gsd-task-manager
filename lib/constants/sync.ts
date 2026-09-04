@@ -55,6 +55,12 @@ export const SYNC_CONFIG = {
    * so a skewed/forged far-future timestamp can't permanently win LWW and lock a task.
    */
   MAX_CLIENT_CLOCK_SKEW_MS: 5 * 60 * 1000,
+
+  /** Hard aggregate ceiling for any authoritative remote task scan. */
+  MAX_REMOTE_TASKS: 10_000,
+
+  /** Fixed page size for bounded PocketBase task scans. */
+  REMOTE_TASK_PAGE_SIZE: 200,
 } as const;
 
 /**

@@ -16,7 +16,7 @@ import { ensureValidAuth } from './pb-auth';
 import { getDeviceId, isRemoteNewerThanArchive } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
-import { isPendingSyncQueueItem } from './queue';
+import { isUnresolvedSyncQueueItem } from './queue';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import type { RecordModel } from 'pocketbase';
 
@@ -49,7 +49,7 @@ export async function applyRemoteChange(
     // unsynced edit until the next pull round-trips.
     await db.transaction('rw', [db.tasks, db.syncQueue], async () => {
       const queuedOps = await db.syncQueue.toArray();
-      if (queuedOps.some((op) => op.taskId === taskId && isPendingSyncQueueItem(op))) {
+      if (queuedOps.some((op) => op.taskId === taskId && isUnresolvedSyncQueueItem(op))) {
         logger.debug('Realtime delete skipped: local change pending', { taskId });
         return;
       }

@@ -90,7 +90,7 @@ export interface SyncQueueItem {
 /** One row of the remote task index used by push/pull pre-fetch. */
 export interface RemoteTaskIndexEntry {
   pbRecordId: string;
-  clientUpdatedAt: string | null;
+  clientUpdatedAt: string;
 }
 
 // ============================================================================

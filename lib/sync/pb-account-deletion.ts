@@ -14,13 +14,9 @@
 
 import { getPocketBase, getCurrentUserId } from "./pocketbase-client";
 import { refreshAuth } from "./pb-auth";
-import { fetchRemoteTaskIndex } from "./pb-sync-helpers";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("SYNC_AUTH");
-
-/** Default delay between remote deletes — PocketBase 429-avoidance (matches iOS). */
-const DEFAULT_THROTTLE_MS = 100;
 
 export interface DeleteAccountResult {
   ok: boolean;
@@ -33,7 +29,7 @@ export interface DeleteAccountResult {
 }
 
 export interface DeleteAccountOptions {
-  /** Delay between remote task deletes. Tests pass 0; production uses 100ms. */
+  /** Retained for source compatibility; erasure is now one server transaction. */
   throttleMs?: number;
 }
 
@@ -48,10 +44,6 @@ function shortError(error: unknown): string {
   return message.slice(0, 200);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Delete every remote task for the current user, then delete the user account record.
  * Aborts before deleting the account if the task wipe can't be completed, so a partial
@@ -60,7 +52,7 @@ function sleep(ms: number): Promise<void> {
 export async function deleteRemoteAccountAndTasks(
   options: DeleteAccountOptions = {},
 ): Promise<DeleteAccountResult> {
-  const throttleMs = options.throttleMs ?? DEFAULT_THROTTLE_MS;
+  void options;
 
   // Refresh the (possibly expired) token, then resolve the owner id. A dead session
   // yields no id — report it so the UI can prompt a re-sign-in.
@@ -72,35 +64,10 @@ export async function deleteRemoteAccountAndTasks(
 
   const pb = getPocketBase();
 
-  // Build the authoritative remote index. If we can't list the tasks, abort — deleting
-  // the account now would orphan whatever we failed to enumerate.
-  const { index, fetchSucceeded } = await fetchRemoteTaskIndex(userId);
-  if (!fetchSucceeded) {
-    logger.warn("Aborting account deletion: could not list remote tasks");
-    return { ok: false, stage: "tasks", error: "Could not list remote tasks" };
-  }
-
-  // Delete every remote task first (throttled). A partial failure throws and leaves the
-  // account intact, so a retry re-fetches only the survivors and continues.
+  // The server route removes every owned task and the user in one transaction.
+  // It also serializes against task creation, closing the client snapshot race.
   try {
-    for (const entry of index.values()) {
-      // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
-      await pb.collection("tasks").delete(entry.pbRecordId);
-      if (throttleMs > 0) await sleep(throttleMs);
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      stage: "tasks",
-      authRejected: isAuthRejection(error),
-      error: shortError(error),
-    };
-  }
-
-  // Delete the user record last — once it's gone the token is invalid and tasks can no
-  // longer be removed.
-  try {
-    await pb.collection("users").delete(userId);
+    await pb.send("/api/gsd/account", { method: "DELETE" });
   } catch (error) {
     return {
       ok: false,
@@ -110,6 +77,6 @@ export async function deleteRemoteAccountAndTasks(
     };
   }
 
-  logger.info("Account and remote tasks deleted", { taskCount: index.size });
+  logger.info("Account and remote tasks deleted transactionally");
   return { ok: true, stage: "done" };
 }

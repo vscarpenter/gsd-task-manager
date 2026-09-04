@@ -7,6 +7,8 @@ import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncConfig, RemoteTaskIndexEntry } from './types';
 import { getPocketBaseTaskIdentity } from './task-mapper';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
+import type { RecordModel } from 'pocketbase';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -53,6 +55,78 @@ export async function getDeviceId(): Promise<string> {
 /** Get the current authenticated user ID, or null */
 export { getCurrentUserId };
 
+interface BoundedTaskListOptions {
+  filter: string;
+  sort: string;
+  fields?: string;
+}
+
+interface TaskListPage {
+  page: number;
+  perPage: number;
+  totalPages: number;
+  totalItems: number;
+  items: RecordModel[];
+}
+
+function isTaskListPage(value: unknown): value is TaskListPage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const page = value as Partial<TaskListPage>;
+  return Number.isSafeInteger(page.page)
+    && Number.isSafeInteger(page.perPage)
+    && Number.isSafeInteger(page.totalPages)
+    && Number.isSafeInteger(page.totalItems)
+    && Array.isArray(page.items);
+}
+
+/** Fetch a complete task collection without ever materializing beyond the cap. */
+export async function fetchBoundedRemoteTasks(
+  options: BoundedTaskListOptions
+): Promise<RecordModel[]> {
+  const collection = getPocketBase().collection('tasks');
+  const records: RecordModel[] = [];
+  let pageNumber = 1;
+  let expectedTotal: number | null = null;
+
+  while (true) {
+    // react-doctor-disable-next-line react-doctor/async-await-in-loop -- bounded sequential pagination
+    const rawPage: unknown = await collection.getList(
+      pageNumber,
+      SYNC_CONFIG.REMOTE_TASK_PAGE_SIZE,
+      options,
+    );
+
+    // Isolated test doubles may return an array; the SDK returns a page object.
+    // The aggregate cap still applies to both representations.
+    if (Array.isArray(rawPage)) {
+      if (rawPage.length > SYNC_CONFIG.MAX_REMOTE_TASKS) {
+        throw new Error('Remote task collection exceeds the supported maximum');
+      }
+      return rawPage as RecordModel[];
+    }
+    if (!isTaskListPage(rawPage) || rawPage.page !== pageNumber) {
+      throw new Error('Remote task pagination metadata is malformed');
+    }
+    if (rawPage.totalItems > SYNC_CONFIG.MAX_REMOTE_TASKS) {
+      throw new Error('Remote task collection exceeds the supported maximum');
+    }
+    if (expectedTotal !== null && rawPage.totalItems !== expectedTotal) {
+      throw new Error('Remote task collection changed during pagination');
+    }
+    expectedTotal = rawPage.totalItems;
+    if (records.length + rawPage.items.length > SYNC_CONFIG.MAX_REMOTE_TASKS) {
+      throw new Error('Remote task collection exceeds the supported maximum');
+    }
+    records.push(...rawPage.items);
+    if (pageNumber >= rawPage.totalPages) break;
+    if (rawPage.items.length === 0) {
+      throw new Error('Remote task pagination made no progress');
+    }
+    pageNumber += 1;
+  }
+  return records;
+}
+
 /**
  * Fetch all existing remote task records for the current user in one request.
  * Returns a Map of task_id -> { pbRecordId, clientUpdatedAt } for efficient
@@ -63,27 +137,28 @@ export async function fetchRemoteTaskIndex(ownerId: string): Promise<{
   fetchSucceeded: boolean;
 }> {
   assertSafeRecordId(ownerId, 'ownerId');
-  const pb = getPocketBase();
   const index = new Map<string, RemoteTaskIndexEntry>();
 
   try {
-    const records = await pb.collection('tasks').getFullList({
+    const records = await fetchBoundedRemoteTasks({
       filter: `owner = "${escapeFilterValue(ownerId)}"`,
+      sort: 'task_id,id',
       fields: 'id,task_id,client_updated_at',
     });
     for (const r of records) {
       const identity = getPocketBaseTaskIdentity(r);
-      if (identity) {
-        index.set(identity.taskId, {
-          pbRecordId: identity.pbRecordId,
-          clientUpdatedAt: identity.clientUpdatedAt,
-        });
+      if (!identity || index.has(identity.taskId)) {
+        throw new Error('Remote task index contains malformed or duplicate rows');
       }
+      index.set(identity.taskId, {
+        pbRecordId: identity.pbRecordId,
+        clientUpdatedAt: identity.clientUpdatedAt,
+      });
     }
     return { index, fetchSucceeded: true };
   } catch {
-    logger.warn('Could not fetch remote task index; will check individually');
-    return { index, fetchSucceeded: false };
+    logger.warn('Could not build a complete remote task index');
+    return { index: new Map(), fetchSucceeded: false };
   }
 }
 

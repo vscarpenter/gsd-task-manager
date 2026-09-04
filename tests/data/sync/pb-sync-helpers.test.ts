@@ -5,14 +5,20 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
 
-import { fetchRemoteTaskIndex, escapeFilterValue, assertSafeRecordId, isRemoteNewerThanArchive } from '@/lib/sync/pb-sync-helpers';
+import {
+  fetchBoundedRemoteTasks,
+  fetchRemoteTaskIndex,
+  escapeFilterValue,
+  assertSafeRecordId,
+  isRemoteNewerThanArchive,
+} from '@/lib/sync/pb-sync-helpers';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 
 describe('fetchRemoteTaskIndex', () => {
   it('returns task_id -> { pbRecordId, clientUpdatedAt } map', async () => {
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [
+        getList: vi.fn(async () => [
           { id: 'rec-1', task_id: 't1', client_updated_at: '2026-05-18T10:00:00.000Z' },
           { id: 'rec-2', task_id: 't2', client_updated_at: '2026-05-18T11:00:00.000Z' },
         ]),
@@ -32,7 +38,7 @@ describe('fetchRemoteTaskIndex', () => {
   it('falls back to an empty map and fetchSucceeded=false when PB throws', async () => {
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => {
+        getList: vi.fn(async () => {
           throw new Error('boom');
         }),
       }),
@@ -41,6 +47,80 @@ describe('fetchRemoteTaskIndex', () => {
     const { index, fetchSucceeded } = await fetchRemoteTaskIndex('user-1');
     expect(fetchSucceeded).toBe(false);
     expect(index.size).toBe(0);
+  });
+
+  it.each([
+    [{ id: 'rec-1', task_id: 't1' }],
+    [
+      { id: 'rec-1', task_id: 't1', client_updated_at: '2026-05-18T10:00:00.000Z' },
+      { id: 'rec-2', task_id: 't1', client_updated_at: '2026-05-18T11:00:00.000Z' },
+    ],
+  ])('marks malformed or duplicate rows as an incomplete index', async (items) => {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getList: vi.fn(async () => items) }),
+    });
+
+    const result = await fetchRemoteTaskIndex('user-1');
+    expect(result.fetchSucceeded).toBe(false);
+    expect(result.index.size).toBe(0);
+  });
+});
+
+describe('fetchBoundedRemoteTasks', () => {
+  it('paginates with stable options and returns only after every page succeeds', async () => {
+    const getList = vi.fn()
+      .mockResolvedValueOnce({
+        page: 1, perPage: 200, totalPages: 2, totalItems: 2,
+        items: [{ id: 'rec-1' }],
+      })
+      .mockResolvedValueOnce({
+        page: 2, perPage: 200, totalPages: 2, totalItems: 2,
+        items: [{ id: 'rec-2' }],
+      });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getList }),
+    });
+    const options = { filter: 'owner = "user-1"', sort: 'task_id,id', fields: 'id' };
+
+    await expect(fetchBoundedRemoteTasks(options)).resolves.toEqual([
+      { id: 'rec-1' },
+      { id: 'rec-2' },
+    ]);
+    expect(getList).toHaveBeenNthCalledWith(1, 1, 200, options);
+    expect(getList).toHaveBeenNthCalledWith(2, 2, 200, options);
+  });
+
+  it('rejects an oversized collection before materializing its items', async () => {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => ({
+          page: 1, perPage: 200, totalPages: 51, totalItems: 10_001, items: [],
+        })),
+      }),
+    });
+
+    await expect(fetchBoundedRemoteTasks({
+      filter: 'owner = "user-1"',
+      sort: 'task_id,id',
+    })).rejects.toThrow(/exceeds/);
+  });
+
+  it('rejects changing totals without returning partial data', async () => {
+    const getList = vi.fn()
+      .mockResolvedValueOnce({
+        page: 1, perPage: 200, totalPages: 2, totalItems: 2, items: [{ id: 'rec-1' }],
+      })
+      .mockResolvedValueOnce({
+        page: 2, perPage: 200, totalPages: 2, totalItems: 3, items: [{ id: 'rec-2' }],
+      });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getList }),
+    });
+
+    await expect(fetchBoundedRemoteTasks({
+      filter: 'owner = "user-1"',
+      sort: 'task_id,id',
+    })).rejects.toThrow(/changed during pagination/);
   });
 });
 

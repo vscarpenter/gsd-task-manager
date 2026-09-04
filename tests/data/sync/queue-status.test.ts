@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPendingSyncQueueItem } from '@/lib/sync/queue';
+import { isPendingSyncQueueItem, isUnresolvedSyncQueueItem } from '@/lib/sync/queue';
 import type { SyncQueueItem } from '@/lib/sync/types';
 
 function queueItem(status?: SyncQueueItem['status']): SyncQueueItem {
@@ -28,5 +28,14 @@ describe('isPendingSyncQueueItem', () => {
         status: 'cancelled',
       } as unknown as SyncQueueItem)
     ).toBe(false);
+  });
+});
+
+describe('isUnresolvedSyncQueueItem', () => {
+  it('protects legacy, pending, and failed local changes', () => {
+    expect(isUnresolvedSyncQueueItem(queueItem(undefined))).toBe(true);
+    expect(isUnresolvedSyncQueueItem(queueItem('pending'))).toBe(true);
+    expect(isUnresolvedSyncQueueItem(queueItem('failed'))).toBe(true);
+    expect(isUnresolvedSyncQueueItem({ ...queueItem('pending'), status: 'cancelled' } as never)).toBe(false);
   });
 });

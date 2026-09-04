@@ -5,13 +5,12 @@
  * Also reconciles deletions by comparing full remote index against local tasks.
  */
 
-import { getPocketBase } from './pocketbase-client';
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
-import { isPendingSyncQueueItem } from './queue';
+import { isUnresolvedSyncQueueItem } from './queue';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { TaskRecord } from '@/lib/types';
 
@@ -102,7 +101,6 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
  * LWW: remote wins if remote client_updated_at > local updatedAt.
  */
 export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
-  const pb = getPocketBase();
   const ownerId = getCurrentUserId();
 
   if (!ownerId) {
@@ -120,9 +118,9 @@ export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Pro
     filter += ` && client_updated_at >= "${escapeFilterValue(lastClientUpdatedAt)}"`;
   }
 
-  const records = await pb.collection('tasks').getFullList({
+  const records = await fetchBoundedRemoteTasks({
     filter,
-    sort: 'client_updated_at',
+    sort: 'client_updated_at,task_id,id',
   });
 
   const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records);
@@ -172,7 +170,7 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
       db.syncQueue.toArray(),
     ]);
     const pendingTaskIds = new Set(
-      allPendingOps.filter(isPendingSyncQueueItem).map(op => op.taskId)
+      allPendingOps.filter(isUnresolvedSyncQueueItem).map(op => op.taskId)
     );
     const toDelete = localTasks.filter(
       local => !remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)

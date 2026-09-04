@@ -226,13 +226,10 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(1);
   });
 
-  it('proceeds with the write when the remote record has null client_updated_at', async () => {
+  it('preserves the queue entry when the remote record has no usable version', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     await getSyncQueue().enqueue('update', 't1', payload);
 
-    // Remote record exists but has no client_updated_at (legacy or test data).
-    // The LWW guard's `remote?.clientUpdatedAt && ...` short-circuit must let
-    // this through to the upsert — there's nothing to compare against.
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
         ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: null }],
@@ -247,9 +244,11 @@ describe('pushLocalChanges LWW guard', () => {
 
     const result = await pushLocalChanges();
 
-    expect(updateSpy).toHaveBeenCalledTimes(1);
-    expect(result.pushedCount).toBe(1);
-    expect(await getSyncQueue().getPendingCount()).toBe(0);
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(result.pushedCount).toBe(0);
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('remote_index_unavailable');
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
   });
 
   it('fresh-reads the just-updated record so a later stale delete is skipped', async () => {
@@ -417,9 +416,7 @@ describe('pushLocalChanges LWW guard', () => {
     }
   });
 
-  it('fails open and proceeds with the write when remote clientUpdatedAt is unparseable', async () => {
-    // NaN contract: isRemoteNewer returns false on parse failure, so the
-    // write must proceed rather than silently dropping the user's edit.
+  it('preserves the queue entry when remote clientUpdatedAt is unparseable', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     await getSyncQueue().enqueue('update', 't1', payload);
 
@@ -437,9 +434,11 @@ describe('pushLocalChanges LWW guard', () => {
 
     const result = await pushLocalChanges();
 
-    expect(updateSpy).toHaveBeenCalledTimes(1);
-    expect(result.pushedCount).toBe(1);
-    expect(await getSyncQueue().getPendingCount()).toBe(0);
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(result.pushedCount).toBe(0);
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('remote_index_unavailable');
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
   });
 
   it('surfaces the server Retry-After (ms) from a 429 so the caller can back off', async () => {

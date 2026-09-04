@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  getPocketBaseTaskIdentity,
   getPocketBaseRealtimeEnvelope,
   taskRecordToPocketBase,
   pocketBaseToTaskRecord,
@@ -354,6 +355,24 @@ describe('task-mapper', () => {
       expect(result!.subtasks).toEqual([]);
       expect(result!.dependencies).toEqual([]);
       expect(result!.timeEntries).toEqual([]);
+    });
+  });
+
+  describe('remote task identity', () => {
+    it('requires a valid timezone-bearing client version', () => {
+      const base = { id: 'record-1', task_id: 'task-1' } as never;
+      for (const client_updated_at of [undefined, null, '', 'not-a-date', '2026-04-08T10:00:00.000']) {
+        expect(getPocketBaseTaskIdentity({ ...base, client_updated_at } as never)).toBeNull();
+      }
+    });
+
+    it('accepts UTC and numeric-offset client versions', () => {
+      expect(getPocketBaseTaskIdentity({
+        id: 'record-1', task_id: 'task-1', client_updated_at: '2026-04-08T10:00:00.000Z',
+      } as never)?.clientUpdatedAt).toBe('2026-04-08T10:00:00.000Z');
+      expect(getPocketBaseTaskIdentity({
+        id: 'record-1', task_id: 'task-1', client_updated_at: '2026-04-08T11:00:00.000+01:00',
+      } as never)?.clientUpdatedAt).toBe('2026-04-08T11:00:00.000+01:00');
     });
   });
 

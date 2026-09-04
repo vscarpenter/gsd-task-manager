@@ -291,7 +291,7 @@ describe('pb-sync-engine', () => {
       expect(mockTasks.has('task-1')).toBe(true);
     });
 
-    it('applies a realtime delete when the only queued operation has failed', async () => {
+    it('preserves a local task when its queued operation has failed', async () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'Stale local copy' });
       mockDb.syncQueue.toArray.mockResolvedValueOnce([
         { id: 'op-1', taskId: 'task-1', operation: 'update', status: 'failed' },
@@ -299,8 +299,8 @@ describe('pb-sync-engine', () => {
 
       await applyRemoteChange('delete', { task_id: 'task-1' } as never);
 
-      expect(mockDb.tasks.delete).toHaveBeenCalledWith('task-1');
-      expect(mockTasks.has('task-1')).toBe(false);
+      expect(mockDb.tasks.delete).not.toHaveBeenCalled();
+      expect(mockTasks.has('task-1')).toBe(true);
     });
 
     it('should skip invalid records from mapper', async () => {

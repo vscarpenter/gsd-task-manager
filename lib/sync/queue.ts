@@ -25,6 +25,12 @@ export function isPendingSyncQueueItem(item: SyncQueueItem): boolean {
   return (item.status ?? 'pending') === 'pending';
 }
 
+/** Local data remains conflict-protected until the user resolves or dismisses it. */
+export function isUnresolvedSyncQueueItem(item: SyncQueueItem): boolean {
+  const status = item.status ?? 'pending';
+  return status === 'pending' || status === 'failed';
+}
+
 export class SyncQueue {
   /**
    * Add operation to sync queue
