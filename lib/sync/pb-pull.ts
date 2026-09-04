@@ -10,9 +10,11 @@ import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
-import { isUnresolvedSyncQueueItem } from './queue';
+import { classifyRemoteDeletion } from './queue';
+import { toTrashedRecord } from '@/lib/trash';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { TaskRecord } from '@/lib/types';
+import type { SyncQueueItem } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -155,6 +157,49 @@ export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Pro
  * so it is re-fetched and re-added (it still exists remotely). The
  * pending-op guard below covers the common not-yet-pushed case directly.
  */
+interface RemoteAbsencePlan {
+  /** Tasks leaving `db.tasks`, whether trashed or dropped outright. */
+  deleteIds: string[];
+  /** Tasks whose never-pushed content is preserved in Trash instead of dropped. */
+  trashRecords: TaskRecord[];
+  /** Queue rows released with those tasks. */
+  staleRowIds: string[];
+}
+
+function groupRowsByTaskId(rows: SyncQueueItem[]): Map<string, SyncQueueItem[]> {
+  const grouped = new Map<string, SyncQueueItem[]>();
+  for (const row of rows) {
+    const existing = grouped.get(row.taskId);
+    if (existing) existing.push(row);
+    else grouped.set(row.taskId, [row]);
+  }
+  return grouped;
+}
+
+/**
+ * Decide, for every local task the remote index no longer lists, whether it is
+ * protected in place, dropped, or abandoned to Trash. Pure — the caller writes.
+ */
+function planRemoteAbsence(
+  localTasks: TaskRecord[],
+  remoteTaskIds: Set<string>,
+  queueRows: SyncQueueItem[],
+): RemoteAbsencePlan {
+  const rowsByTaskId = groupRowsByTaskId(queueRows);
+  const plan: RemoteAbsencePlan = { deleteIds: [], trashRecords: [], staleRowIds: [] };
+
+  for (const local of localTasks) {
+    if (remoteTaskIds.has(local.id)) continue;
+    const { verdict, staleRowIds } = classifyRemoteDeletion(rowsByTaskId.get(local.id) ?? []);
+    if (verdict === 'protect') continue;
+    if (verdict === 'abandon') plan.trashRecords.push(toTrashedRecord(local));
+    plan.staleRowIds.push(...staleRowIds);
+    plan.deleteIds.push(local.id);
+  }
+
+  return plan;
+}
+
 async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
   if (!fetchSucceeded) {
@@ -164,20 +209,22 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
 
   const db = getDb();
   const remoteTaskIds = new Set(remoteIndex.keys());
-  await db.transaction('rw', [db.tasks, db.syncQueue], async () => {
-    const [localTasks, allPendingOps] = await Promise.all([
+  await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue], async () => {
+    const [localTasks, queueRows] = await Promise.all([
       db.tasks.toArray(),
       db.syncQueue.toArray(),
     ]);
-    const pendingTaskIds = new Set(
-      allPendingOps.filter(isUnresolvedSyncQueueItem).map(op => op.taskId)
-    );
-    const toDelete = localTasks.filter(
-      local => !remoteTaskIds.has(local.id) && !pendingTaskIds.has(local.id)
-    );
-    await db.tasks.bulkDelete(toDelete.map((local) => local.id));
-    for (const local of toDelete) {
-      logger.debug('Deleted locally: task removed from server', { taskId: local.id });
+    const plan = planRemoteAbsence(localTasks, remoteTaskIds, queueRows);
+
+    if (plan.trashRecords.length > 0) await db.deletedTasks.bulkPut(plan.trashRecords);
+    if (plan.staleRowIds.length > 0) await db.syncQueue.bulkDelete(plan.staleRowIds);
+    await db.tasks.bulkDelete(plan.deleteIds);
+
+    if (plan.trashRecords.length > 0) {
+      logger.warn('Abandoned retry-exhausted local edits to trash', {
+        taskIds: plan.trashRecords.map((task) => task.id),
+      });
     }
+    logger.debug('Deleted locally: tasks removed from server', { count: plan.deleteIds.length });
   });
 }

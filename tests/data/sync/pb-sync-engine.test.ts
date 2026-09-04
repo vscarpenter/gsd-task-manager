@@ -72,6 +72,10 @@ const mockDb = {
   },
   deletedTasks: {
     get: vi.fn((id: string) => Promise.resolve(mockDeletedTasks.get(id))),
+    put: vi.fn((task: Record<string, unknown>) => {
+      mockDeletedTasks.set(task.id as string, task);
+      return Promise.resolve();
+    }),
     delete: vi.fn((id: string) => {
       mockDeletedTasks.delete(id);
       return Promise.resolve();
@@ -89,6 +93,7 @@ const mockDb = {
   },
   syncQueue: {
     toArray: vi.fn().mockResolvedValue([]),
+    bulkDelete: vi.fn().mockResolvedValue(undefined),
   },
 };
 vi.mock('@/lib/db', () => ({
@@ -289,9 +294,14 @@ describe('pb-sync-engine', () => {
 
       expect(mockDb.tasks.delete).not.toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(true);
+      // Protected in place, not trashed — the push will recreate it remotely.
+      expect(mockDb.deletedTasks.put).not.toHaveBeenCalled();
     });
 
-    it('preserves a local task when its queued operation has failed', async () => {
+    // The realtime mirror of the pull-path rule: a retry-exhausted row cannot
+    // be pushed, so it may not shield the task. The unsynced content goes to
+    // Trash and the dead row is dropped in the same transaction.
+    it('abandons a local task to trash when its queued operation has failed', async () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'Stale local copy' });
       mockDb.syncQueue.toArray.mockResolvedValueOnce([
         { id: 'op-1', taskId: 'task-1', operation: 'update', status: 'failed' },
@@ -299,8 +309,9 @@ describe('pb-sync-engine', () => {
 
       await applyRemoteChange('delete', { task_id: 'task-1' } as never);
 
-      expect(mockDb.tasks.delete).not.toHaveBeenCalled();
-      expect(mockTasks.has('task-1')).toBe(true);
+      expect(mockDb.tasks.delete).toHaveBeenCalledWith('task-1');
+      expect(mockDeletedTasks.get('task-1')).toMatchObject({ id: 'task-1' });
+      expect(mockDb.syncQueue.bulkDelete).toHaveBeenCalledWith(['op-1']);
     });
 
     it('should skip invalid records from mapper', async () => {

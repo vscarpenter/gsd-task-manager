@@ -25,10 +25,52 @@ export function isPendingSyncQueueItem(item: SyncQueueItem): boolean {
   return (item.status ?? 'pending') === 'pending';
 }
 
-/** Local data remains conflict-protected until the user resolves or dismisses it. */
-export function isUnresolvedSyncQueueItem(item: SyncQueueItem): boolean {
-  const status = item.status ?? 'pending';
-  return status === 'pending' || status === 'failed';
+/**
+ * A row that has exhausted its retry budget. `getPending()` never returns one
+ * and nothing re-arms it, so it can neither reach the server nor be retried.
+ * Module-private on purpose: `classifyRemoteDeletion` is the only supported way
+ * to ask what a queue row means for a remote deletion.
+ */
+function isFailedSyncQueueItem(item: SyncQueueItem): boolean {
+  return item.status === 'failed';
+}
+
+/** What a task's queue rows say about a deletion that arrived from the server. */
+export type RemoteDeletionVerdict = 'protect' | 'abandon' | 'apply';
+
+export interface RemoteDeletionDecision {
+  verdict: RemoteDeletionVerdict;
+  /** Queue rows released with the task. Empty only when the task stays. */
+  staleRowIds: string[];
+}
+
+/**
+ * Decide what a remote deletion may do to one local task.
+ *
+ * Protection exists because a queued push re-creates the remote record
+ * (edit-beats-delete under LWW), so deleting locally now would lose the unsynced
+ * edit until the next pull round-trips. That reasoning holds only for a row a
+ * push will actually attempt, so protection is scoped to exactly the set
+ * `getPending()` returns.
+ *
+ * A retry-exhausted row will never be pushed, so it may not shield the task —
+ * but its content never reached the server either, so the caller moves the task
+ * to Trash rather than dropping it. Either way the caller deletes `staleRowIds`
+ * in the same transaction, so a dead row can never outlive the task it guarded
+ * and shield it forever.
+ *
+ * Shared by `reconcileDeletedTasks` and the realtime delete handler so the two
+ * guards cannot drift apart. See docs/audits/AUDIT-2026-07-10.md.
+ */
+export function classifyRemoteDeletion(rowsForTask: SyncQueueItem[]): RemoteDeletionDecision {
+  // Pending wins first: a fresh retryable row outranks a stale exhausted one.
+  if (rowsForTask.some(isPendingSyncQueueItem)) return { verdict: 'protect', staleRowIds: [] };
+
+  // Every row goes, including any carrying a status outside the union — the
+  // task is leaving, so nothing of its queue may survive it.
+  const staleRowIds = rowsForTask.map((row) => row.id);
+  const verdict = rowsForTask.some(isFailedSyncQueueItem) ? 'abandon' : 'apply';
+  return { verdict, staleRowIds };
 }
 
 export class SyncQueue {

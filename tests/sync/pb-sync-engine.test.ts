@@ -6,9 +6,21 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   getCurrentUserId: vi.fn(),
 }));
 
+// Faithful stub of the real classifier. This suite's mockTasks.toArray resolves
+// [], so the pull path never reaches it today — the stub is hygiene against a
+// future test that populates tasks, not a load-bearing gate.
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(),
-  isUnresolvedSyncQueueItem: vi.fn((item) => ['pending', 'failed'].includes(item.status ?? 'pending')),
+  classifyRemoteDeletion: vi.fn((rows) => {
+    if (rows.some((row) => (row.status ?? 'pending') === 'pending')) {
+      return { verdict: 'protect', staleRowIds: [] };
+    }
+    const staleRowIds = rows.map((row) => row.id);
+    return {
+      verdict: rows.some((row) => row.status === 'failed') ? 'abandon' : 'apply',
+      staleRowIds,
+    };
+  }),
 }));
 
 vi.mock('@/lib/sync/task-mapper', () => ({

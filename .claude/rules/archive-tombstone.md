@@ -46,6 +46,8 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `restoreTask` (undo) | `lib/tasks/crud/restore.ts` | `put` + clears any trash row for the same id |
 | `purgeExpiredTrash` | `lib/trash.ts` | Deletes only rows with a `deletedAt` past the window |
 | `applyTrashedTasks` | `lib/tasks/import-export.ts` | Skips ids already live or archived; absent key ≠ delete |
+| `reconcileDeletedTasks` | `lib/sync/pb-pull.ts` | One transaction over tasks+deletedTasks+syncQueue; idempotent `bulkPut`; only a task whose queue rows are all retry-exhausted is preserved in trash |
+| `applyRemoteDeletion` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path; idempotent `put`; drops the released rows in the same transaction |
 
 Adding a writer? Add it to this table and give it a test for each rule that applies.
 
