@@ -226,44 +226,58 @@ async function validateTokenAndRefresh(
 /** Persist sync config to IndexedDB after successful OAuth */
 async function persistSyncConfig(authState: AuthState) {
   const db = getDb();
-  const existingConfig = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
-  const deviceId = existingConfig?.deviceId ?? crypto.randomUUID();
-  const localTaskCount = await db.tasks.count();
-  const localTaskOwnerUserId = existingConfig?.localTaskOwnerUserId ?? null;
+  await db.transaction(
+    "rw",
+    db.tasks,
+    db.archivedTasks,
+    db.deletedTasks,
+    db.syncMetadata,
+    async () => {
+      const existingConfig = (await db.syncMetadata.get("sync_config")) as
+        | PBSyncConfig
+        | undefined;
+      const lifecycleCounts = await Promise.all([
+        db.tasks.count(),
+        db.archivedTasks.count(),
+        db.deletedTasks.count(),
+      ]);
+      const localTaskOwnerUserId = existingConfig?.localTaskOwnerUserId ?? null;
 
-  if (
-    localTaskCount > 0 &&
-    localTaskOwnerUserId &&
-    localTaskOwnerUserId !== authState.userId
-  ) {
-    throw new Error(
-      "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync."
-    );
-  }
+      if (
+        lifecycleCounts.some((count) => count > 0) &&
+        localTaskOwnerUserId &&
+        localTaskOwnerUserId !== authState.userId
+      ) {
+        throw new Error(
+          "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync."
+        );
+      }
 
-  const newConfig: PBSyncConfig = {
-    key: "sync_config",
-    enabled: true,
-    userId: authState.userId,
-    deviceId,
-    deviceName: navigator.userAgent.substring(0, 50),
-    email: authState.email,
-    provider: authState.provider,
-    lastSyncAt: null,
-    lastClientUpdatedAt: null,
-    pullCursorVersion: 2,
-    lastServerUpdatedAt: null,
-    lastSuccessfulSyncAt: null,
-    consecutiveFailures: 0,
-    lastFailureAt: null,
-    lastFailureReason: null,
-    nextRetryAt: null,
-    autoSyncEnabled: true,
-    autoSyncIntervalMinutes: 2,
-    localTaskOwnerUserId: authState.userId,
-  };
+      const newConfig: PBSyncConfig = {
+        key: "sync_config",
+        enabled: true,
+        userId: authState.userId,
+        deviceId: existingConfig?.deviceId ?? crypto.randomUUID(),
+        deviceName: navigator.userAgent.substring(0, 50),
+        email: authState.email,
+        provider: authState.provider,
+        lastSyncAt: null,
+        lastClientUpdatedAt: null,
+        pullCursorVersion: 2,
+        lastServerUpdatedAt: null,
+        lastSuccessfulSyncAt: null,
+        consecutiveFailures: 0,
+        lastFailureAt: null,
+        lastFailureReason: null,
+        nextRetryAt: null,
+        autoSyncEnabled: true,
+        autoSyncIntervalMinutes: 2,
+        localTaskOwnerUserId: authState.userId,
+      };
 
-  await db.syncMetadata.put(newConfig);
+      await db.syncMetadata.put(newConfig);
+    },
+  );
 
   const queue = getSyncQueue();
   await queue.populateFromExistingTasks();

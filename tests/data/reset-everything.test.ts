@@ -10,42 +10,57 @@ const {
   mockDisableSync,
   mockGetSyncConfig,
   mockClear,
-  mockBulkDelete,
   mockAdd,
-  mockToArray,
+  mockResetFeedbackState,
 } = vi.hoisted(() => ({
   mockDisableSync: vi.fn().mockResolvedValue(undefined),
   mockGetSyncConfig: vi.fn().mockResolvedValue(null),
   mockClear: vi.fn().mockResolvedValue(undefined),
-  mockBulkDelete: vi.fn().mockResolvedValue(undefined),
   mockAdd: vi.fn().mockResolvedValue(undefined),
-  mockToArray: vi.fn().mockResolvedValue([]),
+  mockResetFeedbackState: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({
   getDb: () => ({
+    transaction: vi.fn(async (...args: unknown[]) => (args.at(-1) as () => Promise<unknown>)()),
     tasks: { clear: mockClear, name: 'tasks' },
     archivedTasks: { clear: mockClear, name: 'archivedTasks' },
+    deletedTasks: { clear: mockClear, name: 'deletedTasks' },
     notificationSettings: { clear: mockClear, name: 'notificationSettings' },
     archiveSettings: { clear: mockClear, name: 'archiveSettings' },
     syncQueue: { clear: mockClear, name: 'syncQueue' },
     syncHistory: { clear: mockClear, name: 'syncHistory' },
-    smartViews: {
-      toArray: mockToArray,
-      bulkDelete: mockBulkDelete,
-      name: 'smartViews',
-    },
+    smartViews: { clear: mockClear, name: 'smartViews' },
+    deviceInfo: { clear: mockClear, name: 'deviceInfo' },
+    appPreferences: { clear: mockClear, name: 'appPreferences' },
     syncMetadata: {
       clear: mockClear,
       add: mockAdd,
       name: 'syncMetadata',
     },
+    tables: [
+      { clear: mockClear, name: 'tasks' },
+      { clear: mockClear, name: 'archivedTasks' },
+      { clear: mockClear, name: 'deletedTasks' },
+      { clear: mockClear, name: 'smartViews' },
+      { clear: mockClear, name: 'notificationSettings' },
+      { clear: mockClear, name: 'syncQueue' },
+      { clear: mockClear, name: 'syncMetadata' },
+      { clear: mockClear, name: 'deviceInfo' },
+      { clear: mockClear, name: 'archiveSettings' },
+      { clear: mockClear, name: 'syncHistory' },
+      { clear: mockClear, name: 'appPreferences' },
+    ],
   }),
 }));
 
 vi.mock('@/lib/sync/config', () => ({
   disableSync: (...args: unknown[]) => mockDisableSync(...args),
   getSyncConfig: (...args: unknown[]) => mockGetSyncConfig(...args),
+}));
+
+vi.mock('@/lib/feedback/feedback-store', () => ({
+  resetFeedbackState: () => mockResetFeedbackState(),
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -63,11 +78,14 @@ describe('reset-everything', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetSyncConfig.mockResolvedValue(null);
-    mockToArray.mockResolvedValue([]);
     // localStorage.clear() does not work in jsdom-under-Bun — remove keys individually
-    localStorage.removeItem('pocketbase_auth');
-    localStorage.removeItem('gsd-pwa-dismissed');
-    localStorage.removeItem('theme');
+    for (const key of [
+      'pocketbase_auth', 'gsd-pwa-dismissed', 'theme', 'gsd-theme',
+      'gsd:feedback:draft', 'gsd:feedback:last-sent',
+      'gsd:feedback:nudge-dismissed', 'gsd-onboarding-seen',
+    ]) {
+      localStorage.removeItem(key);
+    }
   });
 
   describe('resetEverything', () => {
@@ -76,21 +94,39 @@ describe('reset-everything', () => {
 
       expect(result.success).toBe(true);
       expect(result.errors).toHaveLength(0);
-      // 6 standard tables + smartViews + syncMetadata
-      expect(result.clearedTables.length).toBeGreaterThanOrEqual(7);
+      expect(result.clearedTables).toEqual(expect.arrayContaining([
+        'tasks', 'archivedTasks', 'deletedTasks', 'smartViews',
+        'deviceInfo', 'appPreferences', 'syncMetadata',
+      ]));
       expect(result.clearedLocalStorage).toContain('pocketbase_auth');
-      expect(result.clearedLocalStorage).toContain('gsd-pwa-dismissed');
       expect(result.clearedLocalStorage).toContain('theme');
+      expect(mockResetFeedbackState).toHaveBeenCalled();
     });
 
     it('should preserve theme when preserveTheme option is true', async () => {
-      localStorage.setItem('theme', 'dark');
+      localStorage.setItem('gsd-theme', 'dark');
 
       const result = await resetEverything({ preserveTheme: true });
 
       expect(result.success).toBe(true);
-      expect(result.clearedLocalStorage).not.toContain('theme');
-      expect(localStorage.getItem('theme')).toBe('dark');
+      expect(result.clearedLocalStorage).not.toContain('gsd-theme');
+      expect(localStorage.getItem('gsd-theme')).toBe('dark');
+    });
+
+    it('clears every application-owned key while preserving unrelated origin data', async () => {
+      localStorage.setItem('gsd:feedback:draft', 'private');
+      localStorage.setItem('gsd-onboarding-seen', 'true');
+      localStorage.setItem('third-party-key', 'keep');
+
+      const result = await resetEverything();
+
+      expect(result.clearedLocalStorage).toEqual(expect.arrayContaining([
+        'gsd:feedback:draft', 'gsd-onboarding-seen',
+      ]));
+      expect(localStorage.getItem('gsd:feedback:draft')).toBeNull();
+      expect(localStorage.getItem('gsd-onboarding-seen')).toBeNull();
+      expect(localStorage.getItem('third-party-key')).toBe('keep');
+      localStorage.removeItem('third-party-key');
     });
 
     it('should disable sync as part of reset', async () => {
@@ -113,17 +149,6 @@ describe('reset-everything', () => {
       );
     });
 
-    it('should delete only custom smart views and keep built-in ones', async () => {
-      mockToArray.mockResolvedValue([
-        { id: 'built-in-1', isBuiltIn: true },
-        { id: 'custom-1', isBuiltIn: false },
-        { id: 'custom-2', isBuiltIn: false },
-      ]);
-
-      await resetEverything();
-
-      expect(mockBulkDelete).toHaveBeenCalledWith(['custom-1', 'custom-2']);
-    });
 
     it('should report errors when disableSync fails', async () => {
       mockDisableSync.mockRejectedValueOnce(new Error('sync error'));
@@ -154,13 +179,13 @@ describe('reset-everything', () => {
     });
 
     it('should handle preserveTheme=true when no theme is in localStorage', async () => {
-      // No theme set — localStorage.getItem('theme') returns null
+      // No theme set — localStorage.getItem('gsd-theme') returns null
       const result = await resetEverything({ preserveTheme: true });
 
       expect(result.success).toBe(true);
-      expect(result.clearedLocalStorage).not.toContain('theme');
+      expect(result.clearedLocalStorage).not.toContain('gsd-theme');
       // Theme should remain absent (not created)
-      expect(localStorage.getItem('theme')).toBeNull();
+      expect(localStorage.getItem('gsd-theme')).toBeNull();
     });
 
     it('should return correct buildPreservedSyncMetadata structure for a given deviceId', async () => {

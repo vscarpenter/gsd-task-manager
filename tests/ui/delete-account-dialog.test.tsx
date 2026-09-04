@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { deleteRemoteAccountAndTasks } from "@/lib/sync/pb-account-deletion";
-import { resetEverything } from "@/lib/reset-everything";
+import { reloadAfterReset, resetEverything } from "@/lib/reset-everything";
 import { disableSync } from "@/lib/sync/config";
 import { toast } from "sonner";
 
@@ -69,6 +69,32 @@ describe("DeleteAccountDialog", () => {
     await waitFor(() => expect(deleteRemoteAccountAndTasks).toHaveBeenCalled());
     expect(resetEverything).toHaveBeenCalledWith({ preserveTheme: true });
     expect(disableSync).not.toHaveBeenCalled();
+  });
+
+  it("reports incomplete local erasure and does not claim success or reload", async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteRemoteAccountAndTasks).mockResolvedValue({ ok: true, stage: "done" });
+    vi.mocked(resetEverything).mockResolvedValueOnce({
+      success: false,
+      clearedTables: ["tasks"],
+      clearedLocalStorage: [],
+      errors: ["IndexedDB: deletedTasks could not be cleared"],
+    });
+    render(<DeleteAccountDialog {...baseProps} />);
+
+    await user.click(screen.getByRole("switch", { name: /erase all tasks/i }));
+    await user.type(screen.getByPlaceholderText("Type DELETE here"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /^delete account$/i }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringMatching(/cloud account deleted.*local erase was incomplete/i),
+      ),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(reloadAfterReset).not.toHaveBeenCalled();
+    expect(baseProps.onDeleted).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: /delete account/i })).toBeInTheDocument();
   });
 
   it("keep_local_calls_disableSync_on_success", async () => {

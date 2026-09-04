@@ -126,7 +126,14 @@ export function DeleteAccountDialog({
 
 			// Remote account is gone. Only now do we touch local data.
 			if (eraseLocal) {
-				await resetEverything({ preserveTheme: true });
+				const resetResult = await resetEverything({ preserveTheme: true });
+				if (!resetResult.success) {
+					toast.error(
+						"Cloud account deleted, but local erase was incomplete. Use Reset Everything to retry local cleanup.",
+					);
+					dispatch({ type: "setDeleting", value: false });
+					return;
+				}
 				toast.success("Account deleted — reloading…");
 				setTimeout(() => reloadAfterReset(), UI_TIMING.RESET_RELOAD_DELAY_MS);
 				return;

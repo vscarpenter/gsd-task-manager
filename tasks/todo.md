@@ -1,3 +1,36 @@
+# Session state — 2026-09-04 (21-finding security remediation)
+
+Branch: `fix/security-review-2026-09-04` · Source: sealed scan
+`7a618980-51cd-4b14-8241-4020dd8a7e58` at `e7ae02d7`.
+
+## Plan
+
+- [x] Read security skill, repository policy, current sources, callers, and tests.
+- [x] Run eight independent read-only pre-patch investigations and reconcile scope.
+- [ ] RED/GREEN local lifecycle, account-switch, delete-dialog, import, telemetry,
+      verifier, cache, TLS, and feedback-control fixes.
+- [ ] RED/GREEN browser sync completeness/version/conflict/cardinality fixes plus
+      server-side account-deletion hooks.
+- [ ] RED/GREEN MCP principal, executable pinning, token display, and bounded reads.
+- [ ] RED/GREEN builder/night-shift attestation and fail-closed execution changes.
+- [ ] RED/GREEN deployment/publishing job privilege separation and protected dispatch.
+- [ ] Focused verification and atomic commits by boundary; never stage `bun.lock`.
+- [ ] One fresh bypass/regression reviewer; address one review cycle.
+- [ ] Full project/MCP/PocketBase/security gates and final fix report.
+
+## Decisions
+
+- Use the existing 10,000-task import ceiling for browser/MCP account-wide reads;
+  overflow is an explicit error, never silent truncation.
+- Retire unattended local PR code execution until a real ephemeral,
+  credential-free runner exists; exact-SHA attested discovery remains diagnostic.
+- Default anonymous feedback creation to denied. Public creation becomes an
+  explicit final setup step only after the provisioned controls verify.
+- Keep remote account cleanup client-compatible, but make checked-in server hooks
+  the authoritative no-orphan boundary for the supported deployment.
+
+---
+
 # Session state — 2026-09-02 (resume: merge #525, release v12.7.0, audit fix)
 
 Branch: `fix/deps-browserslist-advisory` (off `main` @ af0bbff). Local commits only, not pushed.
