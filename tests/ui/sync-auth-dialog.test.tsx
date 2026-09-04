@@ -433,6 +433,30 @@ describe('SyncAuthDialog', () => {
       expect(mockClearPocketBase).toHaveBeenCalled();
     });
 
+    it('should preserve legacy ownership recorded only in userId', async () => {
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: false,
+        userId: 'previous-user',
+        deviceId: 'device-123',
+      });
+      mockDb.archivedTasks.count.mockResolvedValue(1);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+      await waitFor(() => expect(capturedOnSuccess).toBeDefined());
+
+      await expect(capturedOnSuccess!({
+        isLoggedIn: true,
+        userId: 'new-user',
+        email: 'new@example.com',
+        provider: 'google',
+      })).rejects.toThrow(/different sync account/i);
+
+      expect(mockDb.syncMetadata.put).not.toHaveBeenCalled();
+      expect(mockQueue.populateFromExistingTasks).not.toHaveBeenCalled();
+      expect(mockClearPocketBase).toHaveBeenCalled();
+    });
+
     it.each([
       ['archivedTasks', 'archived'],
       ['deletedTasks', 'trashed'],

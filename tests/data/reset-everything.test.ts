@@ -129,6 +129,22 @@ describe('reset-everything', () => {
       localStorage.removeItem('third-party-key');
     });
 
+    it('clears feedback fallback state when localStorage enumeration fails', async () => {
+      const storageLength = vi.spyOn(window.localStorage, 'length', 'get').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      try {
+        const result = await resetEverything();
+
+        expect(result.success).toBe(false);
+        expect(result.errors).toContain('localStorage enumeration: SecurityError');
+        expect(mockResetFeedbackState).toHaveBeenCalled();
+      } finally {
+        storageLength.mockRestore();
+      }
+    });
+
     it('should disable sync as part of reset', async () => {
       await resetEverything();
 

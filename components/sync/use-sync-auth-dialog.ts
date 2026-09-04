@@ -268,7 +268,8 @@ async function persistSyncConfig(authState: AuthState) {
         db.archivedTasks.count(),
         db.deletedTasks.count(),
       ]);
-      const localTaskOwnerUserId = existingConfig?.localTaskOwnerUserId ?? null;
+      const localTaskOwnerUserId =
+        existingConfig?.localTaskOwnerUserId ?? existingConfig?.userId ?? null;
 
       if (
         lifecycleCounts.some((count) => count > 0) &&

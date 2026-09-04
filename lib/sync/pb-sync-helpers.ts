@@ -100,6 +100,15 @@ function validateTaskListPage(
   return value;
 }
 
+function assertCompleteTaskCollection(
+  records: RecordModel[],
+  expectedTotal: number | null,
+): void {
+  if (expectedTotal === null || records.length !== expectedTotal) {
+    throw new Error('Remote task pagination cardinality is inconsistent');
+  }
+}
+
 /** Fetch a complete task collection without ever materializing beyond the cap. */
 export async function fetchBoundedRemoteTasks(
   options: BoundedTaskListOptions
@@ -134,6 +143,7 @@ export async function fetchBoundedRemoteTasks(
     }
     pageNumber += 1;
   }
+  assertCompleteTaskCollection(records, expectedTotal);
   return records;
 }
 

@@ -123,6 +123,25 @@ describe('fetchBoundedRemoteTasks', () => {
     })).rejects.toThrow(/changed during pagination/);
   });
 
+  it('rejects a truncated final page before returning a partial collection', async () => {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => ({
+          page: 1,
+          perPage: 200,
+          totalPages: 1,
+          totalItems: 2,
+          items: [{ id: 'rec-1' }],
+        })),
+      }),
+    });
+
+    await expect(fetchBoundedRemoteTasks({
+      filter: 'owner = "user-1"',
+      sort: 'task_id,id',
+    })).rejects.toThrow(/cardinality is inconsistent/);
+  });
+
   it('rejects a response whose page does not match the requested page', async () => {
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({

@@ -106,6 +106,18 @@ function shouldSkipLocalStorageKey(key: string, preserveTheme: boolean): boolean
 	return !isAppOwned || (preserveTheme && key === "gsd-theme");
 }
 
+function clearFeedbackFallback(errors: string[]): void {
+	try {
+		resetFeedbackState();
+	} catch (err) {
+		const errorMsg = err instanceof Error ? err.message : "Unknown error";
+		errors.push(`feedback state: ${errorMsg}`);
+		logger.error("Failed to clear feedback state", err instanceof Error ? err : undefined, {
+			errorMessage: errorMsg,
+		});
+	}
+}
+
 /**
  * Clear localStorage items (except theme if preserveTheme=true)
  */
@@ -137,8 +149,6 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 			clearedItems: cleared,
 			preservedTheme: preserveTheme,
 		});
-		resetFeedbackState();
-
 	} catch (err) {
 		const errorMsg = err instanceof Error ? err.message : "Unknown error";
 		errors.push(`localStorage enumeration: ${errorMsg}`);
@@ -146,6 +156,7 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 			errorMessage: errorMsg
 		});
 	}
+	clearFeedbackFallback(errors);
 
 	return { items: cleared, errors };
 }
