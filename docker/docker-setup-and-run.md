@@ -173,9 +173,15 @@ volumes:
 
 environment:
   - SITE_ADDRESS=localhost
+  - TLS_MODE=custom            # ← uncomment this line
   - TLS_CERT=/certs/cert.pem   # ← uncomment this line
   - TLS_KEY=/certs/key.pem     # ← uncomment this line
 ```
+
+`TLS_MODE` selects the certificate source: `internal` (the default, Caddy's
+private CA), `public` (automatic Let's Encrypt), or `custom` (the files above).
+A cert and key pair with no `TLS_MODE` is still read as `custom`, so existing
+deployments keep working, but set it explicitly in new configuration.
 
 ### 4. Restart
 

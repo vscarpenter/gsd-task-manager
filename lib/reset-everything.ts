@@ -14,6 +14,7 @@ import { getDb } from "@/lib/db";
 import { disableSync, getSyncConfig } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
 import { SYNC_CONFIG } from "@/lib/constants/sync";
+import { resetFeedbackState } from "@/lib/feedback/feedback-store";
 
 const logger = createLogger("DB");
 
@@ -47,25 +48,17 @@ async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }>
 		const config = await getSyncConfig();
 		const deviceId = config?.deviceId;
 
-		// Clear standard tables in bulk
-		const tablesToClear = [
-			db.tasks, db.archivedTasks, db.notificationSettings,
-			db.archiveSettings, db.syncQueue, db.syncHistory,
-		] as const;
-		await Promise.all(tablesToClear.map((table) => table.clear()));
-		cleared.push(...tablesToClear.map((table) => table.name));
-
-		// Clear only custom smart views (preserve built-in)
-		const customViews = (await db.smartViews.toArray()).filter((v) => !v.isBuiltIn);
-		await db.smartViews.bulkDelete(customViews.map((v) => v.id));
-		cleared.push(`smartViews (${customViews.length} custom)`);
-
-		// Clear sync metadata but preserve deviceId
-		await db.syncMetadata.clear();
-		if (deviceId) {
-			await db.syncMetadata.add(buildPreservedSyncMetadata(deviceId));
-		}
-		cleared.push("syncMetadata");
+		const allTables = [...db.tables];
+		await db.transaction("rw", allTables, async () => {
+			for (const table of allTables) {
+				// react-doctor-disable-next-line react-doctor/async-await-in-loop -- one transaction must fail atomically
+				await table.clear();
+				cleared.push(table.name);
+			}
+			if (deviceId) {
+				await db.syncMetadata.add(buildPreservedSyncMetadata(deviceId));
+			}
+		});
 
 		logger.info("IndexedDB cleared successfully", { clearedTables: cleared });
 	} catch (err) {
@@ -104,6 +97,27 @@ function buildPreservedSyncMetadata(deviceId: string) {
 	};
 }
 
+function shouldSkipLocalStorageKey(key: string, preserveTheme: boolean): boolean {
+	const isAppOwned =
+		key === "pocketbase_auth" ||
+		key === "theme" ||
+		key.startsWith("gsd-") ||
+		key.startsWith("gsd:");
+	return !isAppOwned || (preserveTheme && key === "gsd-theme");
+}
+
+function clearFeedbackFallback(errors: string[]): void {
+	try {
+		resetFeedbackState();
+	} catch (err) {
+		const errorMsg = err instanceof Error ? err.message : "Unknown error";
+		errors.push(`feedback state: ${errorMsg}`);
+		logger.error("Failed to clear feedback state", err instanceof Error ? err : undefined, {
+			errorMessage: errorMsg,
+		});
+	}
+}
+
 /**
  * Clear localStorage items (except theme if preserveTheme=true)
  */
@@ -112,23 +126,23 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 	const errors: string[] = [];
 
 	try {
-		const theme = preserveTheme ? localStorage.getItem("theme") : null;
+		const knownKeys = ["pocketbase_auth", "theme", "gsd-theme"];
+		const storedKeys = Array.from(
+			{ length: localStorage.length },
+			(_, index) => localStorage.key(index),
+		).filter((key): key is string => key !== null);
+		const keys = [...new Set([...knownKeys, ...storedKeys])];
 
-		// Clear PocketBase auth data (stored by PB SDK)
-		localStorage.removeItem("pocketbase_auth");
-		cleared.push("pocketbase_auth");
+		for (const key of keys) {
+			if (shouldSkipLocalStorageKey(key, preserveTheme)) continue;
 
-		// Clear PWA prompt dismissal
-		localStorage.removeItem("gsd-pwa-dismissed");
-		cleared.push("gsd-pwa-dismissed");
-
-		// Clear theme if not preserving
-		if (!preserveTheme) {
-			localStorage.removeItem("theme");
-			cleared.push("theme");
-		} else if (theme !== null) {
-			// Restore theme
-			localStorage.setItem("theme", theme);
+			try {
+				localStorage.removeItem(key);
+				cleared.push(key);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : "Unknown error";
+				errors.push(`localStorage ${key}: ${message}`);
+			}
 		}
 
 		logger.info("localStorage cleared successfully", {
@@ -137,11 +151,12 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 		});
 	} catch (err) {
 		const errorMsg = err instanceof Error ? err.message : "Unknown error";
-		errors.push(`localStorage: ${errorMsg}`);
+		errors.push(`localStorage enumeration: ${errorMsg}`);
 		logger.error("Failed to clear localStorage", err instanceof Error ? err : undefined, {
 			errorMessage: errorMsg
 		});
 	}
+	clearFeedbackFallback(errors);
 
 	return { items: cleared, errors };
 }

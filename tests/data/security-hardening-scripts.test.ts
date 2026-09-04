@@ -29,6 +29,33 @@ describe('security hardening scripts and workflows', () => {
     expect(script).toContain('"deleteRule": null');
   });
 
+  it('installs and verifies anonymous feedback controls before enabling public writes', () => {
+    const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
+    const hook = readRepoFile('docker/pb_hooks/feedback_controls.pb.js');
+    const caddy = readRepoFile('docker/Caddyfile');
+    const disabledIndex = script.indexOf('"createRule": null');
+    const settingsIndex = script.indexOf('Installing rate-limit and private-log settings');
+    const markerVerifyIndex = script.lastIndexOf('/api/gsd/feedback-controls');
+    const publicIndex = script.lastIndexOf('{"createRule": ""}');
+
+    expect(disabledIndex).toBeGreaterThan(-1);
+    expect(settingsIndex).toBeGreaterThan(disabledIndex);
+    expect(markerVerifyIndex).toBeGreaterThan(settingsIndex);
+    expect(publicIndex).toBeGreaterThan(markerVerifyIndex);
+    expect(script).toContain('"label": "feedback:create"');
+    expect(script).toContain('"audience": ""');
+    expect(script).toContain('logs["logIP"] = False');
+    expect(script).toContain('logs["logAuthId"] = False');
+    expect(script).toContain('assert 0 <= logs["maxDays"] <= 1');
+
+    expect(hook).toContain('txApp.countRecords("feedback") >= 10000');
+    expect(hook).toContain('new TooManyRequestsError');
+    expect(hook).toContain('cronAdd("gsd-feedback-retention"');
+    expect(hook).toContain('created < {:cutoff}');
+    expect(hook).toContain('$apis.requireSuperuserAuth()');
+    expect(caddy).toContain('handle /api/gsd/feedback-controls*');
+  });
+
   it('gives feedback no field that could identify a submitter', () => {
     const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
 
@@ -46,6 +73,7 @@ describe('security hardening scripts and workflows', () => {
       readRepoFile('scripts/setup-pocketbase-collections.sh'),
       readRepoFile('scripts/update-pocketbase-tasks-schema.sh'),
       readRepoFile('scripts/setup-pocketbase-feedback-collection.sh'),
+      readRepoFile('scripts/verify-pb-encryption-remote.sh'),
     ];
 
     for (const script of scripts) {
@@ -57,7 +85,7 @@ describe('security hardening scripts and workflows', () => {
   });
 
   it('requires production deploy commits to be reachable from main before AWS access', () => {
-    const workflow = readRepoFile('.github/workflows/deploy-prod.yml');
+    const workflow = readRepoFile('.github/workflows/deploy-production-release.yml');
     const ancestryCheckIndex = workflow.indexOf('Verify deployment ref is on main');
     const awsCredentialsIndex = workflow.indexOf('Configure AWS credentials');
 
@@ -65,6 +93,71 @@ describe('security hardening scripts and workflows', () => {
     expect(awsCredentialsIndex).toBeGreaterThan(ancestryCheckIndex);
     expect(workflow).toContain('git merge-base --is-ancestor "$DEPLOY_COMMIT" origin/main');
     expect(workflow).toContain('fetch-depth: 0');
+  });
+
+  it('deploys development only from the exact successful main CI run', () => {
+    const workflow = readRepoFile('.github/workflows/deploy-dev.yml');
+
+    expect(workflow).not.toContain('workflow_dispatch:');
+    expect(workflow).toContain("github.event.workflow_run.head_branch == 'main'");
+    expect(workflow).toContain(
+      'github.event.workflow_run.head_repository.full_name == github.repository'
+    );
+    expect(workflow).toContain('ref: ${{ github.event.workflow_run.head_sha }}');
+    expect(workflow).toContain('name: static-export-${{ github.event.workflow_run.head_sha }}');
+    expect(workflow).not.toContain('build-static-export');
+  });
+
+  it('builds, attests, and deploys production in separate authority domains', () => {
+    const workflow = readRepoFile('.github/workflows/deploy-production-release.yml');
+    expect(() => readRepoFile('.github/workflows/deploy-prod.yml')).toThrow();
+    const buildStart = workflow.indexOf('\n  build:');
+    const attestStart = workflow.indexOf('\n  attest:');
+    const deployStart = workflow.indexOf('\n  deploy:');
+    const smokeStart = workflow.indexOf('\n  smoke:');
+    const buildBlock = workflow.slice(buildStart, attestStart);
+    const attestBlock = workflow.slice(attestStart, deployStart);
+    const deployBlock = workflow.slice(deployStart, smokeStart);
+    const smokeBlock = workflow.slice(smokeStart);
+
+    expect(workflow).not.toContain('workflow_dispatch:');
+    expect(workflow).toContain('repository_dispatch:');
+    expect(workflow).toContain('types: [deploy-production-release]');
+    expect(buildStart).toBeGreaterThan(-1);
+    expect(attestStart).toBeGreaterThan(buildStart);
+    expect(deployStart).toBeGreaterThan(attestStart);
+    expect(smokeStart).toBeGreaterThan(deployStart);
+
+    expect(buildBlock).toContain('Build static export');
+    expect(buildBlock).not.toContain('id-token:');
+    expect(buildBlock).not.toContain('environment:');
+    expect(buildBlock).not.toContain('configure-aws-credentials');
+
+    expect(attestBlock).toMatch(/uses: actions\/attest@[0-9a-f]{40}/);
+    expect(attestBlock).toContain(
+      'subject-path: artifact/static-export-${{ needs.evidence.outputs.deploy_sha }}.tgz'
+    );
+    expect(attestBlock).toContain(
+      'predicate-type: https://gsd.vinny.dev/attestations/release/v1'
+    );
+    expect(attestBlock).not.toContain('configure-aws-credentials');
+    expect(attestBlock).not.toContain('environment:');
+
+    const verifyIndex = deployBlock.indexOf('gh attestation verify');
+    const extractIndex = deployBlock.indexOf('Validate and extract static export');
+    const awsIndex = deployBlock.indexOf('Configure AWS credentials');
+    expect(verifyIndex).toBeGreaterThan(-1);
+    expect(extractIndex).toBeGreaterThan(verifyIndex);
+    expect(awsIndex).toBeGreaterThan(extractIndex);
+    expect(deployBlock).toContain('sha256sum -c');
+    expect(deployBlock).toContain('--predicate-type "$RELEASE_PREDICATE_TYPE"');
+    expect(deployBlock).toContain(
+      '.verificationResult.statement.predicate.deploySha == $deploySha'
+    );
+    expect(deployBlock).not.toContain('Build static export');
+    expect(deployBlock).not.toContain('bun install');
+    expect(smokeBlock).not.toContain('id-token:');
+    expect(smokeBlock).not.toContain('configure-aws-credentials');
   });
 
   it('requires MCP publishes to use the reviewed release environment and main ancestry', () => {
@@ -101,8 +194,38 @@ describe('security hardening scripts and workflows', () => {
     expect(htmlSyncBlock).toContain('--delete');
     expect(htmlSyncBlock).toContain('--include "*.html"');
     expect(htmlSyncBlock).toContain('--include "sw.js"');
+    expect(deployScript.match(/--no-follow-symlinks/g)).toHaveLength(3);
   });
 
+
+  it('forces stable executable assets to revalidate instead of caching them immutable', () => {
+    const deployScript = readRepoFile('scripts/deploy-app.sh');
+    const immutableStart = deployScript.indexOf('Syncing static assets');
+    const stableStart = deployScript.indexOf('Syncing HTML files and service worker');
+    const metadataStart = deployScript.indexOf('Forcing stable runtime metadata');
+    const immutableBlock = deployScript.slice(immutableStart, stableStart);
+    const stableBlock = deployScript.slice(stableStart, metadataStart);
+
+    expect(immutableBlock).toContain('--exclude "theme-init.js"');
+    expect(stableBlock).toContain('--include "theme-init.js"');
+    expect(deployScript.slice(metadataStart)).toContain('aws s3 cp "$BUILD_DIR/theme-init.js"');
+    expect(deployScript.slice(metadataStart)).toContain('--metadata-directive REPLACE');
+    expect(deployScript.slice(metadataStart)).toContain('public,max-age=0,must-revalidate');
+  });
+
+  it('separates internal, public ACME, and custom certificate modes', () => {
+    const caddyfile = readRepoFile('docker/Caddyfile');
+    const entrypoint = readRepoFile('docker/docker-entrypoint.sh');
+    const readme = readRepoFile('docker/README.md');
+
+    expect(caddyfile).not.toContain('TLS_CERT:internal');
+    expect(caddyfile).toContain('(tls_internal)');
+    expect(caddyfile).toContain('(tls_public)');
+    expect(caddyfile).toContain('(tls_custom)');
+    expect(caddyfile).toContain('import tls_{$TLS_MODE:internal}');
+    expect(entrypoint).toContain('TLS_MODE must be internal, public, or custom');
+    expect(readme).toContain('TLS_MODE=public');
+  });
   it('fails CloudFront header deployment unless the response headers policy is attached', () => {
     const policyScript = readRepoFile('scripts/deploy-cloudfront-response-headers-policy.sh');
     const workflow = readRepoFile('.github/workflows/deploy-cloudfront-infra.yml');
@@ -229,8 +352,9 @@ describe('security hardening scripts and workflows', () => {
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.8');
     expect(rootPackage.overrides.hono).toBe('4.13.0');
+    expect(rootPackage.overrides.sharp).toBe('0.35.3');
     expect(rootPackage.overrides.undici).toBe('7.29.0');
-    expect(rootPackage.overrides['fast-uri']).toBe('4.1.2');
+    expect(rootPackage.overrides['fast-uri']).toBe('4.1.4');
     expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
     expect(rootPackage.overrides['caniuse-lite']).toBe('1.0.30001809');
     expect(rootPackage.overrides.browserslist).toBe('>=4.28.7');
@@ -279,7 +403,7 @@ describe('security hardening scripts and workflows', () => {
         'ci.yml',
         'deploy-cloudfront-infra.yml',
         'deploy-dev.yml',
-        'deploy-prod.yml',
+        'deploy-production-release.yml',
         'publish-docker.yml',
         'publish-mcp-server.yml',
         'security-audit.yml',

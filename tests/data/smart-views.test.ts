@@ -7,6 +7,7 @@ import {
 } from '@/lib/smart-views';
 import { getDb } from '@/lib/db';
 import type { SmartView } from '@/lib/filters';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 
 /**
  * Custom smart-view creation and pinning are deliberately web-absent (retired
@@ -101,6 +102,50 @@ describe('Smart Views', () => {
       const views = await getSmartViews();
 
       expect(views.find((view) => view.id === 'malformed-view')).toBeUndefined();
+    });
+
+    it('skips a persisted view whose filter complexity exceeds the supported bounds', async () => {
+      await getDb().smartViews.add(seedCustomView({
+        id: 'oversized-filter',
+        criteria: {
+          tags: Array.from(
+            { length: SCHEMA_LIMITS.MAX_SMART_VIEW_FILTER_TAGS + 1 },
+            (_, index) => `tag-${index}`
+          ),
+        },
+      }));
+
+      const views = await getSmartViews();
+
+      expect(views.find((view) => view.id === 'oversized-filter')).toBeUndefined();
+    });
+
+    // A view filters from the whole workspace tag vocabulary, which is unrelated
+    // to how many tags one task may carry. Reusing the per-task cap made
+    // previously valid views vanish from the UI with no message.
+    it('renders a view filtering on more tags than a single task may carry', async () => {
+      await getDb().smartViews.add(seedCustomView({
+        id: 'many-tag-filter',
+        criteria: {
+          tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, index) => `tag-${index}`),
+        },
+      }));
+
+      const views = await getSmartViews();
+
+      expect(views.find((view) => view.id === 'many-tag-filter')).toBeDefined();
+    });
+
+    it('does not render any custom views when the persisted collection exceeds the aggregate cap', async () => {
+      await getDb().smartViews.bulkAdd(
+        Array.from({ length: SCHEMA_LIMITS.MAX_SMART_VIEWS + 1 }, (_, index) =>
+          seedCustomView({ id: `custom-${index}`, name: `Custom ${index}` })
+        )
+      );
+
+      const views = await getSmartViews();
+
+      expect(views.every((view) => view.isBuiltIn)).toBe(true);
     });
   });
 

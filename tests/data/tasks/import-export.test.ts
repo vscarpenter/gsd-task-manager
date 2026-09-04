@@ -8,6 +8,7 @@ import {
 } from '@/lib/tasks';
 import { getDb } from '@/lib/db';
 import type { TaskRecord, ImportPayload } from '@/lib/types';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 
 // Mock dependencies
 const mockGetSyncConfig = vi.hoisted(() => vi.fn());
@@ -124,6 +125,8 @@ describe('Task Import/Export Operations', () => {
         toArray: vi.fn().mockResolvedValue([]),
         clear: vi.fn(),
         put: vi.fn(),
+        count: vi.fn().mockResolvedValue(0),
+        bulkGet: vi.fn().mockResolvedValue([]),
       },
       notificationSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
       archiveSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
@@ -152,6 +155,49 @@ describe('Task Import/Export Operations', () => {
       expect(result).toHaveProperty('version');
       expect(result.tasks).toHaveLength(2);
       expect(result.version).toBe('2.1.0');
+    });
+
+    // Smart views were the only store emitted straight out of Dexie. A legacy
+    // row this build cannot represent then produced a file this same build
+    // refused to restore, taking every task with it.
+    it('omits a stored smart view this build cannot represent, still exporting the tasks', async () => {
+      mockDb.tasks.toArray.mockResolvedValue([sampleTask1]);
+      mockDb.smartViews.toArray.mockResolvedValue([
+        {
+          id: 'legacy-view',
+          name: 'x'.repeat(200),
+          criteria: {},
+          isBuiltIn: false,
+          createdAt: '2025-01-17T10:00:00Z',
+          updatedAt: '2025-01-17T10:00:00Z',
+        },
+      ]);
+
+      const result = await exportTasks();
+
+      expect(result.tasks).toHaveLength(1);
+      expect(result.smartViews).toEqual([]);
+    });
+
+    it('exports a store holding more smart views than the cap allows', async () => {
+      mockDb.tasks.toArray.mockResolvedValue([sampleTask1]);
+      mockDb.smartViews.toArray.mockResolvedValue(
+        Array.from({ length: SCHEMA_LIMITS.MAX_SMART_VIEWS + 1 }, (_, i) => ({
+          id: `view-${i}`,
+          name: `View ${i}`,
+          criteria: {},
+          isBuiltIn: false,
+          createdAt: '2025-01-17T10:00:00Z',
+          updatedAt: '2025-01-17T10:00:00Z',
+        }))
+      );
+
+      // There is no smart-view delete surface on the web, so a throw here would
+      // leave the user permanently unable to back anything up.
+      const result = await exportTasks();
+
+      expect(result.tasks).toHaveLength(1);
+      expect(result.smartViews).toHaveLength(SCHEMA_LIMITS.MAX_SMART_VIEWS);
     });
 
     it('should validate tasks with schema', async () => {
@@ -340,8 +386,10 @@ describe('Task Import/Export Operations', () => {
       await expect(importTasks(invalidPayload, 'replace')).rejects.toThrow();
     });
 
-    it('rejects smart views with criteria that would crash the filter pipeline', async () => {
-      const invalidPayload = {
+    // A smart view is one row in a store the envelope treats as optional. It may
+    // never take the user's tasks, archive, trash and settings down with it.
+    it('skips a smart view whose criteria this build cannot represent, restoring the rest', async () => {
+      const payload = {
         ...validPayload,
         smartViews: [{
           id: 'invalid-smart-view',
@@ -353,7 +401,130 @@ describe('Task Import/Export Operations', () => {
         }],
       };
 
-      await expect(importTasks(invalidPayload, 'replace')).rejects.toThrow();
+      await expect(importTasks(payload, 'replace')).resolves.toBeUndefined();
+
+      expect(mockDb.tasks.bulkAdd).toHaveBeenCalled();
+      expect(mockDb.smartViews.put).not.toHaveBeenCalled();
+    });
+
+    it('clips an oversized smart-view collection instead of refusing the payload', async () => {
+      const view = {
+        id: 'bounded-view',
+        name: 'Bounded view',
+        criteria: {},
+        isBuiltIn: false,
+        createdAt: '2025-01-17T10:00:00Z',
+        updatedAt: '2025-01-17T10:00:00Z',
+      };
+      const oversized = {
+        ...validPayload,
+        smartViews: Array.from({ length: 101 }, (_, index) => ({ ...view, id: `view-${index}` })),
+      };
+
+      await expect(importTasks(oversized, 'replace')).resolves.toBeUndefined();
+
+      expect(mockDb.tasks.bulkAdd).toHaveBeenCalled();
+      expect(mockDb.smartViews.put).toHaveBeenCalledTimes(SCHEMA_LIMITS.MAX_SMART_VIEWS);
+    });
+
+    it('skips a smart view with an over-long field, restoring the rest', async () => {
+      const payload = {
+        ...validPayload,
+        smartViews: [{
+          id: 'bounded-view',
+          name: 'x'.repeat(81),
+          criteria: {},
+          isBuiltIn: false,
+          createdAt: '2025-01-17T10:00:00Z',
+          updatedAt: '2025-01-17T10:00:00Z',
+        }],
+      };
+
+      await expect(importTasks(payload, 'replace')).resolves.toBeUndefined();
+
+      expect(mockDb.tasks.bulkAdd).toHaveBeenCalled();
+      expect(mockDb.smartViews.put).not.toHaveBeenCalled();
+    });
+
+    // A view filters by tags drawn from the whole workspace vocabulary. Capping
+    // that at the number of tags ONE TASK may carry made previously valid views
+    // vanish from the UI with no message and no recovery.
+    it('keeps a smart view filtering on more tags than a single task may carry', async () => {
+      const payload = {
+        ...validPayload,
+        smartViews: [{
+          id: 'many-tag-view',
+          name: 'Many tags',
+          criteria: {
+            tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, i) => `tag-${i}`),
+          },
+          isBuiltIn: false,
+          createdAt: '2025-01-17T10:00:00Z',
+          updatedAt: '2025-01-17T10:00:00Z',
+        }],
+      };
+
+      await expect(importTasks(payload, 'replace')).resolves.toBeUndefined();
+
+      expect(mockDb.smartViews.put).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects excessive smart-view nesting before opening a transaction', async () => {
+      let nested: unknown = { leaf: true };
+      for (let depth = 0; depth <= SCHEMA_LIMITS.SMART_VIEW_MAX_DEPTH; depth++) {
+        nested = { next: nested };
+      }
+      const payload = {
+        ...validPayload,
+        smartViews: nested,
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/nesting depth/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects aggregate smart-view complexity before opening a transaction', async () => {
+      const payload = {
+        ...validPayload,
+        appPreferences: {
+          extra: Array.from(
+            { length: SCHEMA_LIMITS.SMART_VIEW_MAX_INPUT_NODES + 1 },
+            () => null,
+          ),
+        },
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/supported complexity/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('bounds aggregate UTF-8 bytes instead of JavaScript character count', async () => {
+      const oversizedUtf8 = 'é'.repeat((SCHEMA_LIMITS.SMART_VIEW_MAX_STRING_BYTES / 2) + 1);
+      const payload = {
+        ...validPayload,
+        appPreferences: { extra: oversizedUtf8 },
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/string data/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects too many pinned smart views before opening a transaction', async () => {
+      const payload = {
+        ...validPayload,
+        appPreferences: {
+          pinnedSmartViewIds: Array.from(
+            { length: SCHEMA_LIMITS.MAX_PINNED_SMART_VIEWS + 1 },
+            (_, index) => `view-${index}`,
+          ),
+        },
+      } as unknown as ImportPayload;
+
+      // Preferences are a single settings row, not a per-row store, so the cap
+      // stays fatal — but it is now the schema that enforces it, before the
+      // transaction opens, rather than a duplicate raw guard.
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/Invalid import data/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
     });
 
     it('should default to replace mode', async () => {

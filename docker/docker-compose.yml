@@ -20,11 +20,17 @@ services:
       # 32-char AES-256 key for at-rest task encryption. Provide via a gitignored
       # .env file or your secret manager — NEVER commit it. `:?` fails the up if unset.
       - GSD_TASKS_ENC_KEY=${GSD_TASKS_ENC_KEY:?set a 32-char key in .env or the environment}
-      # For custom SSL certificates, uncomment and set paths:
+      # Certificate mode: internal (default, Caddy's private CA), public
+      # (automatic Let's Encrypt), or custom (your own files).
+      #
+      # For custom SSL certificates, uncomment all three:
+      # - TLS_MODE=custom
       # - TLS_CERT=/certs/localhost-cert.pem
       # - TLS_KEY=/certs/localhost-key.pem
       #
-      # For a real domain with automatic Let's Encrypt:
+      # For a real domain with automatic Let's Encrypt, both lines are required
+      # — SITE_ADDRESS alone still serves the private CA certificate:
+      # - TLS_MODE=public
       # - SITE_ADDRESS=gsd.example.com
     restart: unless-stopped
 

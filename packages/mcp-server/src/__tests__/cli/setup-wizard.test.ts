@@ -53,6 +53,7 @@ describe('runSetupWizard', () => {
   it('validates access and writes an owner-only redacted configuration artifact', async () => {
     const privateUrl = 'https://private.internal:8443';
     vi.mocked(prompt).mockResolvedValueOnce(privateUrl);
+    vi.mocked(promptPassword).mockResolvedValueOnce('abc123SUPERSECRETxyz789');
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
     vi.mocked(getSyncStatus).mockResolvedValueOnce({
       healthy: true,
@@ -66,14 +67,25 @@ describe('runSetupWizard', () => {
     expect(writeFileSync).toHaveBeenCalledOnce();
     const [path, contents, options] = writeFileSync.mock.calls[0]!;
     expect(path).toBe('/private/setup.json');
-    expect(JSON.parse(String(contents))).toMatchObject({
-      mcpServers: { 'gsd-tasks': { env: { GSD_AUTH_TOKEN: 'secret-token' } } },
+    const generated = JSON.parse(String(contents));
+    expect(generated).toMatchObject({
+      mcpServers: {
+        'gsd-tasks': {
+          command: process.execPath,
+          args: [expect.stringMatching(/index\.js$/)],
+          env: { GSD_AUTH_TOKEN: 'abc123SUPERSECRETxyz789' },
+        },
+      },
     });
     expect(options).toEqual({ mode: 0o600 });
     expect(chmodSync).toHaveBeenCalledWith('/private/setup.json', 0o600);
-    expect(logSpy.mock.calls.flat().join('\n')).not.toContain('secret-token');
-    expect(logSpy.mock.calls.flat().join('\n')).toContain('https://[pocketbase-host]');
-    expect(logSpy.mock.calls.flat().join('\n')).not.toContain('private.internal');
+    const transcript = logSpy.mock.calls.flat().join('\n');
+    expect(transcript).not.toContain('abc123SUPERSECRETxyz789');
+    expect(transcript).not.toContain('abc123');
+    expect(transcript).not.toContain('xyz789');
+    expect(transcript).not.toMatch(/\b(?:cat|less|more|head|tail)\s+\/private\/setup\.json/);
+    expect(transcript).toContain('https://[pocketbase-host]');
+    expect(transcript).not.toContain('private.internal');
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
@@ -130,6 +142,18 @@ describe('runSetupWizard', () => {
 
     expect(logSpy).toHaveBeenCalledWith('✗ Token validation failed');
     expect(removeSetupArtifact).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not write an artifact when sync validation returns unhealthy', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
+    vi.mocked(getSyncStatus).mockResolvedValueOnce({
+      healthy: false,
+      taskCount: 0,
+      lastSyncAt: null,
+    });
+
+    await expect(runSetupWizard()).rejects.toThrow('process.exit:1');
+    expect(writeFileSync).not.toHaveBeenCalled();
   });
 
   it('does not echo a setup failure that includes a configured host', async () => {

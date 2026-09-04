@@ -189,6 +189,20 @@ function invalidate(): void {
   for (const listener of listeners) listener();
 }
 
+/** Clear every module-level fallback so a complete reset cannot resurrect data. */
+export function resetFeedbackState(): void {
+  memoryDraft = null;
+  memoryLastSentAt = null;
+  memoryNudgeDismissedAt = null;
+  removeRaw(FEEDBACK_DRAFT_KEY);
+  removeRaw(FEEDBACK_LAST_SENT_KEY);
+  removeRaw(FEEDBACK_NUDGE_DISMISSED_KEY);
+  cachedState = null;
+  submissionId = null;
+  builtAt = null;
+  for (const listener of listeners) listener();
+}
+
 const OWN_KEYS = new Set<string>([
   FEEDBACK_DRAFT_KEY,
   FEEDBACK_LAST_SENT_KEY,

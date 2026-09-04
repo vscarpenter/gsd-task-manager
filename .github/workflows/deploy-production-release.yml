@@ -1,0 +1,327 @@
+name: Deploy Production Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  repository_dispatch:
+    types: [deploy-production-release]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  evidence:
+    name: Authorize protected release and publish Gate 2 evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    outputs:
+      deploy_ref: ${{ steps.release.outputs.deploy_ref }}
+      deploy_sha: ${{ steps.release.outputs.deploy_sha }}
+      version: ${{ steps.release.outputs.version }}
+      attestation_source_sha: ${{ steps.release.outputs.attestation_source_sha }}
+      attestation_source_ref: ${{ steps.release.outputs.attestation_source_ref }}
+    steps:
+      - name: Checkout trusted workflow control plane
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify deployment ref is on main
+        id: release
+        env:
+          REQUESTED_REF: ${{ github.event_name == 'push' && github.ref || github.event.client_payload.ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          ATTESTATION_SOURCE_SHA: ${{ github.sha }}
+          ATTESTATION_SOURCE_REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if ! printf '%s' "$REQUESTED_REF" | grep -Eq '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Production deployment requires an existing semantic release tag."
+            exit 1
+          fi
+
+          git fetch --force --tags origin
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          DEPLOY_COMMIT="$(git rev-parse "$REQUESTED_REF^{commit}")"
+          if [ "$EVENT_NAME" = "push" ]; then
+            EVENT_COMMIT="$(git rev-parse "$EVENT_SHA^{commit}")"
+            if [ "$DEPLOY_COMMIT" != "$EVENT_COMMIT" ]; then
+              echo "::error::Release tag moved after the triggering push."
+              exit 1
+            fi
+          fi
+          if ! git merge-base --is-ancestor "$DEPLOY_COMMIT" origin/main; then
+            echo "::error::Deployment commit $DEPLOY_COMMIT is not reachable from origin/main"
+            exit 1
+          fi
+
+          TAG_REF="$(printf '%s' "$REQUESTED_REF" | sed 's#^refs/tags/##')"
+          TAG_VERSION="$(printf '%s' "$TAG_REF" | sed 's/^v//')"
+          PKG_VERSION="$(
+            git show "$DEPLOY_COMMIT:package.json" |
+              node -e 'const fs=require("fs");process.stdout.write(JSON.parse(fs.readFileSync(0,"utf8")).version)'
+          )"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+
+          PREV="$(
+            git tag --merged "$DEPLOY_COMMIT" --list 'v*.*.*' --sort=-version:refname |
+              grep -Fxv "$TAG_REF" |
+              head -n 1 || true
+          )"
+          {
+            echo "deploy_ref=$REQUESTED_REF"
+            echo "deploy_sha=$DEPLOY_COMMIT"
+            echo "version=$TAG_VERSION"
+            echo "attestation_source_sha=$ATTESTATION_SOURCE_SHA"
+            echo "attestation_source_ref=$ATTESTATION_SOURCE_REF"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "## Gate 2 — release evidence"
+            echo
+            echo "Deploying: $TAG_REF at $DEPLOY_COMMIT"
+            echo "Source policy: existing semantic tag, exact commit reachable from protected main"
+            if [ -n "$PREV" ]; then
+              echo "Previous prod: $PREV"
+              echo
+              echo "Rollback: dispatch this same gated workflow for the prior immutable tag:"
+              echo '~~~bash'
+              echo "gh api --method POST repos/$REPOSITORY/dispatches -f event_type=deploy-production-release -F 'client_payload[ref]=refs/tags/$PREV'"
+              echo '~~~'
+            else
+              echo "Previous prod: none found"
+            fi
+            echo
+            echo "Artifact: built without AWS/OIDC authority, signed with GitHub provenance and an exact release predicate, then verified before AWS credentials."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build credential-free release artifact
+    needs: evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact authorized release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.evidence.outputs.deploy_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Build static export
+        uses: ./.github/actions/build-static-export
+
+      - name: Package and checksum static export
+        env:
+          DEPLOY_SHA: ${{ needs.evidence.outputs.deploy_sha }}
+        run: |
+          ARCHIVE="static-export-$DEPLOY_SHA.tgz"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 \
+            --numeric-owner -czf "$ARCHIVE" -C out .
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+
+      - name: Upload immutable release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-static-export-${{ needs.evidence.outputs.deploy_sha }}
+          path: |
+            static-export-${{ needs.evidence.outputs.deploy_sha }}.tgz
+            static-export-${{ needs.evidence.outputs.deploy_sha }}.tgz.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  attest:
+    name: Attest release artifact outside the build job
+    needs: [evidence, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-static-export-${{ needs.evidence.outputs.deploy_sha }}
+          path: artifact/
+
+      - name: Verify artifact checksum and build release predicate
+        env:
+          DEPLOY_REF: ${{ needs.evidence.outputs.deploy_ref }}
+          DEPLOY_SHA: ${{ needs.evidence.outputs.deploy_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          ARCHIVE="static-export-$DEPLOY_SHA.tgz"
+          (cd artifact && sha256sum -c "$ARCHIVE.sha256")
+          ARCHIVE_SHA="$(cut -d ' ' -f1 "artifact/$ARCHIVE.sha256")"
+          jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg deployRef "$DEPLOY_REF" \
+            --arg deploySha "$DEPLOY_SHA" \
+            --arg artifact "$ARCHIVE" \
+            --arg artifactSha256 "$ARCHIVE_SHA" \
+            '{repository:$repository,deployRef:$deployRef,deploySha:$deploySha,artifact:$artifact,artifactSha256:$artifactSha256}' \
+            > release-predicate.json
+
+      - name: Generate signed build provenance
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: artifact/static-export-${{ needs.evidence.outputs.deploy_sha }}.tgz
+
+      - name: Generate signed exact-release predicate
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: artifact/static-export-${{ needs.evidence.outputs.deploy_sha }}.tgz
+          predicate-type: https://gsd.vinny.dev/attestations/release/v1
+          predicate-path: release-predicate.json
+
+  deploy:
+    name: Deploy verified artifact to production
+    needs: [evidence, build, attest]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+      attestations: read
+    outputs:
+      site_url: ${{ steps.metadata.outputs.site_url }}
+    steps:
+      - name: Checkout trusted deployment tools only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/deploy-app.sh
+            scripts/fix-discovery-content-types.sh
+            scripts/verify-static-export-artifact.py
+
+      - name: Download attested release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-static-export-${{ needs.evidence.outputs.deploy_sha }}
+          path: artifact/
+
+      - name: Verify checksum and signed provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_REF: ${{ needs.evidence.outputs.deploy_ref }}
+          DEPLOY_SHA: ${{ needs.evidence.outputs.deploy_sha }}
+          ATTESTATION_SOURCE_SHA: ${{ needs.evidence.outputs.attestation_source_sha }}
+          ATTESTATION_SOURCE_REF: ${{ needs.evidence.outputs.attestation_source_ref }}
+          RELEASE_PREDICATE_TYPE: https://gsd.vinny.dev/attestations/release/v1
+        run: |
+          ARCHIVE="static-export-$DEPLOY_SHA.tgz"
+          (cd artifact && sha256sum -c "$ARCHIVE.sha256")
+          ARCHIVE_SHA="$(cut -d ' ' -f1 "artifact/$ARCHIVE.sha256")"
+          SIGNER="$GITHUB_REPOSITORY/.github/workflows/deploy-production-release.yml"
+          gh attestation verify "artifact/$ARCHIVE" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER" \
+            --signer-digest "$ATTESTATION_SOURCE_SHA" \
+            --source-digest "$ATTESTATION_SOURCE_SHA" \
+            --source-ref "$ATTESTATION_SOURCE_REF" \
+            --deny-self-hosted-runners
+          gh attestation verify "artifact/$ARCHIVE" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER" \
+            --signer-digest "$ATTESTATION_SOURCE_SHA" \
+            --source-digest "$ATTESTATION_SOURCE_SHA" \
+            --source-ref "$ATTESTATION_SOURCE_REF" \
+            --predicate-type "$RELEASE_PREDICATE_TYPE" \
+            --deny-self-hosted-runners \
+            --format json > "$RUNNER_TEMP/release-verification.json"
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg deployRef "$DEPLOY_REF" \
+            --arg deploySha "$DEPLOY_SHA" \
+            --arg artifact "$ARCHIVE" \
+            --arg artifactSha256 "$ARCHIVE_SHA" \
+            'any(.[];
+              .verificationResult.statement.predicate.repository == $repository and
+              .verificationResult.statement.predicate.deployRef == $deployRef and
+              .verificationResult.statement.predicate.deploySha == $deploySha and
+              .verificationResult.statement.predicate.artifact == $artifact and
+              .verificationResult.statement.predicate.artifactSha256 == $artifactSha256
+            )' "$RUNNER_TEMP/release-verification.json"
+
+      - name: Validate and extract static export
+        env:
+          DEPLOY_SHA: ${{ needs.evidence.outputs.deploy_sha }}
+        run: |
+          python3 scripts/verify-static-export-artifact.py \
+            "artifact/static-export-$DEPLOY_SHA.tgz" out
+
+      - name: Record deployment metadata
+        id: metadata
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          case "$SITE_URL" in
+            https://*) ;;
+            *) echo "::error::SITE_URL must use HTTPS"; exit 1 ;;
+          esac
+          echo "site_url=$SITE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy to S3 and create CloudFront invalidation
+        id: deploy
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_ID: ${{ vars.CLOUDFRONT_ID }}
+          ENV_LABEL: Production
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bash scripts/deploy-app.sh
+
+      - name: Wait for CloudFront invalidation
+        run: |
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ vars.CLOUDFRONT_ID }}" \
+            --id "${{ steps.deploy.outputs.invalidation_id }}"
+
+  smoke:
+    name: Verify deployed production surface without cloud credentials
+    needs: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout trusted smoke test only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: scripts/smoke-test.sh
+
+      - name: Smoke test
+        env:
+          SITE_URL: ${{ needs.deploy.outputs.site_url }}
+        run: bash scripts/smoke-test.sh

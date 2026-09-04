@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => {
     users,
     pb,
     getPocketBase: vi.fn(() => pb),
+    requireUsersPrincipal: vi.fn(),
     invalidate: vi.fn(),
     taskToPBFields: vi.fn(() => ({ mapped: true })),
   };
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../pocketbase-client.js', () => ({
   getPocketBase: mocks.getPocketBase,
+  requireUsersPrincipal: mocks.requireUsersPrincipal,
 }));
 
 vi.mock('../../cache.js', () => ({
@@ -92,6 +94,7 @@ beforeEach(() => {
   mocks.tasks.getFirstListItem.mockResolvedValue(pbRecord());
   mocks.tasks.getFullList.mockResolvedValue([]);
   mocks.users.authRefresh.mockResolvedValue({});
+  mocks.requireUsersPrincipal.mockResolvedValue({ pb: mocks.pb, ownerId: 'owner-1' });
 });
 
 describe('filter and identity helpers', () => {
@@ -243,14 +246,13 @@ describe('auth hydration', () => {
       ownerId: 'owner-1',
       deviceId: 'mcp-server',
     });
-    expect(mocks.users.authRefresh).not.toHaveBeenCalled();
+    expect(mocks.requireUsersPrincipal).toHaveBeenCalledWith(config);
   });
 
-  it('refreshes a token-only auth store before returning the owner', async () => {
-    mocks.pb.authStore.record = null;
-    mocks.users.authRefresh.mockImplementationOnce(async () => {
-      mocks.pb.authStore.record = { id: 'owner-refreshed' };
-      return {};
+  it('uses the owner returned by principal attestation', async () => {
+    mocks.requireUsersPrincipal.mockResolvedValueOnce({
+      pb: mocks.pb,
+      ownerId: 'owner-refreshed',
     });
 
     await expect(getAuthInfo(config)).resolves.toEqual({
@@ -259,18 +261,10 @@ describe('auth hydration', () => {
     });
   });
 
-  it('reports refresh failure without leaking the raw server response', async () => {
-    mocks.pb.authStore.record = null;
-    mocks.users.authRefresh.mockRejectedValueOnce(new Error('secret server body'));
+  it('propagates principal attestation failures without fallback', async () => {
+    const error = new Error('Not authenticated as a normal users-collection account');
+    mocks.requireUsersPrincipal.mockRejectedValueOnce(error);
 
-    await expect(getAuthInfo(config)).rejects.toThrow(/Not authenticated/);
-  });
-
-  it('rejects an empty auth store', async () => {
-    mocks.pb.authStore.record = null;
-    mocks.pb.authStore.token = '';
-
-    await expect(getAuthInfo(config)).rejects.toThrow(/Not authenticated/);
-    expect(mocks.users.authRefresh).not.toHaveBeenCalled();
+    await expect(getAuthInfo(config)).rejects.toBe(error);
   });
 });

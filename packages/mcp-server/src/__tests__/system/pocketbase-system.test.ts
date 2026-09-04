@@ -370,6 +370,26 @@ describeSystem('PocketBase authenticated system boundary', () => {
         );
       }
     }
+
+    try {
+      execFileSync('bash', ['scripts/setup-pocketbase-feedback-collection.sh'], {
+        cwd: REPO_ROOT,
+        env: {
+          ...process.env,
+          PB_URL: baseUrl,
+          PB_ADMIN_EMAIL: ADMIN_EMAIL,
+          PB_ADMIN_PASSWORD: ADMIN_PASSWORD,
+        },
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      const failure = error as { stdout?: Buffer; stderr?: Buffer };
+      throw new Error(
+        'Feedback setup failed:\n' +
+          (failure.stdout?.toString() ?? '') +
+          (failure.stderr?.toString() ?? '')
+      );
+    }
   }, 30_000);
 
   afterAll(async () => {
@@ -385,6 +405,74 @@ describeSystem('PocketBase authenticated system boundary', () => {
     }
     if (dataDirectory) rmSync(dataDirectory, { recursive: true, force: true });
     if (migrationsDirectory) rmSync(migrationsDirectory, { recursive: true, force: true });
+  });
+
+  it('proves anonymous feedback stays write-only behind installed abuse controls', async () => {
+    const admin = new PocketBase(baseUrl);
+    await admin.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+    const markerResponse = await fetch(baseUrl + '/api/gsd/feedback-controls', {
+      headers: { Authorization: admin.authStore.token },
+    });
+    expect(markerResponse.status).toBe(200);
+    expect(await markerResponse.json()).toMatchObject({
+      hookVersion: 1,
+      ready: true,
+      accepting: true,
+      quotaLimit: 10000,
+      retentionDays: 180,
+    });
+
+    const unauthenticatedMarker = await fetch(baseUrl + '/api/gsd/feedback-controls');
+    expect(unauthenticatedMarker.status).toBe(401);
+
+    const submissionId = 'system-feedback-' + randomBytes(8).toString('hex');
+    const anonymous = new PocketBase(baseUrl);
+    const created = await anonymous.collection('feedback').create({
+      submission_id: submissionId,
+      sentiment: 'up',
+      category: 'praise',
+      message: 'System boundary test',
+      votes: {},
+      app_version: 'system',
+      client_submitted_at: new Date().toISOString(),
+    });
+    expect(created.submission_id).toBe(submissionId);
+
+    await expect(anonymous.collection('feedback').getFullList()).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      anonymous.collection('feedback').create({
+        submission_id: submissionId,
+        message: 'Duplicate',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const stored = await admin.collection('feedback').getFullList();
+    expect(stored.map((record) => record.submission_id)).toContain(submissionId);
+
+    // The setup intentionally enables PocketBase's global limiter, including
+    // pre-existing auth rules. Disable it only in this ephemeral fixture so the
+    // later browser test can perform its intentionally bursty auth sequence.
+    const settingsResponse = await fetch(baseUrl + '/api/settings', {
+      headers: { Authorization: admin.authStore.token },
+    });
+    expect(settingsResponse.status).toBe(200);
+    const settings = (await settingsResponse.json()) as {
+      rateLimits: Record<string, unknown>;
+    };
+    const resetResponse = await fetch(baseUrl + '/api/settings', {
+      method: 'PATCH',
+      headers: {
+        Authorization: admin.authStore.token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        rateLimits: { ...settings.rateLimits, enabled: false },
+      }),
+    });
+    expect(resetResponse.status).toBe(200);
   });
 
   it('proves MCP writes, owner isolation, realtime delivery, and ciphertext at rest', async () => {

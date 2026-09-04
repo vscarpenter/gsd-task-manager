@@ -6,7 +6,7 @@
 import type { GsdConfig, PBTask } from '../types.js';
 import { pbTaskSnapshotFields, taskDependencyPatchToPBFields, taskToPBFields } from '../types.js';
 import type { Task } from '../types.js';
-import { getPocketBase } from '../pocketbase-client.js';
+import { getPocketBase, requireUsersPrincipal } from '../pocketbase-client.js';
 import { getTaskCache } from '../cache.js';
 
 /** Maximum allowed length for filter values, mirroring lib/sync/pb-sync-helpers.ts. */
@@ -264,31 +264,10 @@ export async function updateTaskDependenciesInPBById(
 export async function getAuthInfo(
   config: GsdConfig
 ): Promise<{ ownerId: string; deviceId: string }> {
-  const pb = getPocketBase(config);
-
-  if (!pb.authStore.record?.id && pb.authStore.token) {
-    try {
-      await pb.collection('users').authRefresh();
-    } catch {
-      throw new Error(
-        `Not authenticated\n\n` +
-          `Your auth token may be invalid or expired.\n` +
-          `Run: npx gsd-mcp-server --setup`
-      );
-    }
-  }
-
-  const model = pb.authStore.record;
-  if (!model?.id) {
-    throw new Error(
-      `Not authenticated\n\n` +
-        `Your auth token may be invalid or expired.\n` +
-        `Run: npx gsd-mcp-server --setup`
-    );
-  }
+  const { ownerId } = await requireUsersPrincipal(config);
 
   return {
-    ownerId: model.id,
+    ownerId,
     deviceId: 'mcp-server', // MCP server always uses this device ID
   };
 }

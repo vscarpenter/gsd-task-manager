@@ -45,20 +45,39 @@ echo -e "${BLUE}[1/3]${NC} Syncing to S3 (${S3_BUCKET})..."
 
 echo "  → Syncing static assets (JS, CSS, images)..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
+  --no-follow-symlinks \
   --delete \
   --exclude "*.html" \
   --exclude "sw.js" \
   --exclude "sw-cache-logic.js" \
+  --exclude "theme-init.js" \
   --cache-control "public,max-age=31536000,immutable"
 
 echo "  → Syncing HTML files and service worker..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
+  --no-follow-symlinks \
   --delete \
   --exclude "*" \
   --include "*.html" \
   --include "sw.js" \
   --include "sw-cache-logic.js" \
+  --include "theme-init.js" \
   --cache-control "public,max-age=0,must-revalidate"
+
+# Releases before v12 shipped no public/theme-init.js. A rollback runs this
+# script against one of those older artifacts, and the syncs above are already
+# destructive, so a hard failure here would leave the bucket rewritten and the
+# CloudFront invalidation below unreached.
+echo "  → Forcing stable runtime metadata..."
+if [ -f "$BUILD_DIR/theme-init.js" ]; then
+  aws s3 cp "$BUILD_DIR/theme-init.js" "$S3_BUCKET/theme-init.js" \
+    --no-follow-symlinks \
+    --metadata-directive REPLACE \
+    --cache-control "public,max-age=0,must-revalidate" \
+    --content-type "application/javascript"
+else
+  echo "    (skipped — this build ships no theme-init.js)"
+fi
 
 echo "  → Forcing no-cache on index.html..."
 aws s3 cp "$S3_BUCKET/index.html" "$S3_BUCKET/index.html" \

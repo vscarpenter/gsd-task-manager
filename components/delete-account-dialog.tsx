@@ -77,13 +77,34 @@ function deleteAccountFormReducer(
 
 /** Human-readable message for a failed remote deletion, by failure mode. */
 function failureMessage(result: DeleteAccountResult): string {
+	// The client-side fallback can remove synced tasks and still fail before the
+	// account is gone. Say so — "check your connection" would hide real data loss.
+	if (result.remoteTasksErased) {
+		return result.authRejected
+			? "Some synced tasks were deleted, but your account is still there. Sign in again, then run Delete account once more."
+			: "Some synced tasks were deleted, but your account is still there. Try again to finish deleting it.";
+	}
 	if (result.authRejected) {
 		return "Your session expired — sign in again to delete your account.";
 	}
 	if (result.stage === "tasks") {
-		return "Couldn't reach the server to delete your account. Check your connection and try again.";
+		return "Couldn't list your synced tasks, so nothing was deleted. Check your connection and try again.";
 	}
 	return "Couldn't delete your account right now. Check your connection and try again.";
+}
+
+async function eraseLocalDataAndScheduleReload(): Promise<boolean> {
+	const resetResult = await resetEverything({ preserveTheme: true });
+	if (!resetResult.success) {
+		toast.error(
+			"Cloud account deleted, but local erase was incomplete. Use Reset Everything to retry local cleanup.",
+		);
+		return false;
+	}
+
+	toast.success("Account deleted — reloading…");
+	setTimeout(() => reloadAfterReset(), UI_TIMING.RESET_RELOAD_DELAY_MS);
+	return true;
 }
 
 /**
@@ -126,9 +147,9 @@ export function DeleteAccountDialog({
 
 			// Remote account is gone. Only now do we touch local data.
 			if (eraseLocal) {
-				await resetEverything({ preserveTheme: true });
-				toast.success("Account deleted — reloading…");
-				setTimeout(() => reloadAfterReset(), UI_TIMING.RESET_RELOAD_DELAY_MS);
+				if (!(await eraseLocalDataAndScheduleReload())) {
+					dispatch({ type: "setDeleting", value: false });
+				}
 				return;
 			}
 

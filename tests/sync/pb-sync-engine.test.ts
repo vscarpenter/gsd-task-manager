@@ -6,9 +6,21 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   getCurrentUserId: vi.fn(),
 }));
 
+// Faithful stub of the real classifier. This suite's mockTasks.toArray resolves
+// [], so the pull path never reaches it today — the stub is hygiene against a
+// future test that populates tasks, not a load-bearing gate.
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(),
-  isPendingSyncQueueItem: vi.fn((item) => (item.status ?? 'pending') === 'pending'),
+  classifyRemoteDeletion: vi.fn((rows) => {
+    if (rows.some((row) => (row.status ?? 'pending') === 'pending')) {
+      return { verdict: 'protect', staleRowIds: [] };
+    }
+    const staleRowIds = rows.map((row) => row.id);
+    return {
+      verdict: rows.some((row) => row.status === 'failed') ? 'abandon' : 'apply',
+      staleRowIds,
+    };
+  }),
 }));
 
 vi.mock('@/lib/sync/task-mapper', () => ({
@@ -138,10 +150,10 @@ import { notifySyncError } from '@/lib/sync/notifications';
 import { recordSyncError } from '@/lib/sync-history';
 
 // Helper to create a mock PocketBase instance
-// Returns a stable collection mock so chained getFullList calls work correctly
+// Returns a stable collection mock so chained getList calls work correctly
 function createMockPB() {
   const collectionMock = {
-    getFullList: vi.fn().mockResolvedValue([]),
+    getList: vi.fn().mockResolvedValue([]),
     getFirstListItem: vi.fn().mockRejectedValue({ status: 404 }),
     create: vi.fn().mockResolvedValue({ id: 'pb-123' }),
     update: vi.fn().mockResolvedValue({}),
@@ -198,9 +210,9 @@ describe('pb-sync-engine', () => {
     it('should not dequeue delete operations when remote index fetch fails', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
-      // Simulate index fetch failure by making getFullList reject
+      // Simulate index fetch failure by making getList reject
       const mockCollection = {
-        getFullList: vi.fn().mockRejectedValue(new Error('Network error')),
+        getList: vi.fn().mockRejectedValue(new Error('Network error')),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -231,7 +243,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]), // Success but empty
+        getList: vi.fn().mockResolvedValue([]), // Success but empty
         getFirstListItem: vi.fn().mockRejectedValue({ status: 404 }),
         create: vi.fn(),
         update: vi.fn(),
@@ -272,7 +284,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]),
+        getList: vi.fn().mockResolvedValue([]),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -281,8 +293,8 @@ describe('pb-sync-engine', () => {
 
       await pullRemoteChanges('2026-06-10T15:00:00.000Z');
 
-      const listOptions = mockCollection.getFullList.mock.calls[0][0];
-      expect(listOptions.sort).toBe('client_updated_at');
+      const listOptions = mockCollection.getList.mock.calls[0][2];
+      expect(listOptions.sort).toBe('client_updated_at,task_id,id');
       expect(listOptions.filter).toContain('client_updated_at >= "2026-06-10T15:00:00.000Z"');
       expect(listOptions.filter).not.toMatch(/(^|[^_])updated\s*>?=/);
     });
@@ -300,7 +312,7 @@ describe('pb-sync-engine', () => {
 
       // First call returns records for pull, second call returns records for reconcileDeletedTasks index fetch
       const mockCollection = {
-        getFullList: vi.fn()
+        getList: vi.fn()
           .mockResolvedValueOnce(records) // pullRemoteChanges fetch
           .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))), // reconcileDeletedTasks index fetch
         create: vi.fn(),
@@ -330,7 +342,7 @@ describe('pb-sync-engine', () => {
       ];
 
       const mockCollection = {
-        getFullList: vi.fn()
+        getList: vi.fn()
           .mockResolvedValueOnce(records)
           .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))),
         create: vi.fn(),
@@ -361,7 +373,7 @@ describe('pb-sync-engine', () => {
       ];
 
       const mockCollection = {
-        getFullList: vi.fn()
+        getList: vi.fn()
           .mockResolvedValueOnce(records)
           .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))),
         create: vi.fn(),
@@ -384,7 +396,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]),
+        getList: vi.fn().mockResolvedValue([]),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -414,7 +426,7 @@ describe('pb-sync-engine', () => {
       ];
 
       const mockCollection = {
-        getFullList: vi.fn()
+        getList: vi.fn()
           .mockResolvedValueOnce(records) // pullRemoteChanges fetch
           .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))), // reconcileDeletedTasks index fetch
         create: vi.fn(),
@@ -447,7 +459,7 @@ describe('pb-sync-engine', () => {
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]),
+        getList: vi.fn().mockResolvedValue([]),
       };
       mockPB.collection.mockReturnValue(mockCollection);
 
@@ -476,10 +488,10 @@ describe('pb-sync-engine', () => {
         { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-06-15T12:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-16 03:00:00.000Z' },
       ];
 
-      // pushLocalChanges returns early (no pending items), so no getFullList for push.
-      // pullRemoteChanges calls getFullList once, then reconcileDeletedTasks calls it again.
+      // pushLocalChanges returns early (no pending items), so no getList for push.
+      // pullRemoteChanges calls getList once, then reconcileDeletedTasks calls it again.
       const mockCollection = {
-        getFullList: vi.fn()
+        getList: vi.fn()
           .mockResolvedValueOnce(records) // pullRemoteChanges fetch
           .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))), // reconcileDeletedTasks index fetch
         create: vi.fn(),
@@ -523,7 +535,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]),
+        getList: vi.fn().mockResolvedValue([]),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -543,7 +555,7 @@ describe('pb-sync-engine', () => {
 
       await fullSync('auto');
 
-      const pullOptions = mockCollection.getFullList.mock.calls[0][0];
+      const pullOptions = mockCollection.getList.mock.calls[0][2];
       expect(pullOptions.filter).toBe('owner = "user-123"');
       const putCall = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(putCall.lastServerUpdatedAt).toBeNull();
@@ -555,7 +567,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]),
+        getList: vi.fn().mockResolvedValue([]),
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),
@@ -577,7 +589,7 @@ describe('pb-sync-engine', () => {
 
       await fullSync('auto');
 
-      const pullOptions = mockCollection.getFullList.mock.calls[0][0];
+      const pullOptions = mockCollection.getList.mock.calls[0][2];
       expect(pullOptions.filter).toContain('client_updated_at >= "2024-06-14T12:00:00.000Z"');
     });
 
@@ -586,7 +598,7 @@ describe('pb-sync-engine', () => {
 
       // Set up push to partially fail
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]),
+        getList: vi.fn().mockResolvedValue([]),
         create: vi.fn()
           .mockResolvedValueOnce({ id: 'pb-1' }) // First succeeds
           .mockRejectedValueOnce(new Error('Server error')), // Second fails
@@ -625,7 +637,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
-        getFullList: vi.fn().mockResolvedValue([]), // No records
+        getList: vi.fn().mockResolvedValue([]), // No records
         create: vi.fn(),
         update: vi.fn(),
         delete: vi.fn(),

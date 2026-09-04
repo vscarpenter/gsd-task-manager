@@ -16,7 +16,8 @@ import { ensureValidAuth } from './pb-auth';
 import { getDeviceId, isRemoteNewerThanArchive } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
-import { isPendingSyncQueueItem } from './queue';
+import { classifyRemoteDeletion } from './queue';
+import { toTrashedRecord } from '@/lib/trash';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import type { RecordModel } from 'pocketbase';
 
@@ -30,6 +31,36 @@ const logger = createLogger('SYNC_ENGINE');
 /**
  * Apply a single remote change to IndexedDB (used by realtime handler)
  */
+/**
+ * Apply a delete that arrived over the realtime channel.
+ *
+ * Mirrors reconcileDeletedTasks through the same classifier so the two guards
+ * cannot drift: a still-push-eligible queued op suppresses the delete (it will
+ * be re-pushed and recreate the remote record); a retry-exhausted op never will,
+ * so the task goes to Trash and its dead rows go with it.
+ */
+async function applyRemoteDeletion(taskId: string): Promise<void> {
+  const db = getDb();
+  await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue], async () => {
+    const rowsForTask = (await db.syncQueue.toArray()).filter((op) => op.taskId === taskId);
+    const { verdict, staleRowIds } = classifyRemoteDeletion(rowsForTask);
+
+    if (verdict === 'protect') {
+      logger.debug('Realtime delete skipped: local change pending', { taskId });
+      return;
+    }
+    if (verdict === 'abandon') {
+      const local = await db.tasks.get(taskId);
+      if (local) await db.deletedTasks.put(toTrashedRecord(local));
+      logger.warn('Abandoned retry-exhausted local edits to trash', { taskId });
+    }
+
+    if (staleRowIds.length > 0) await db.syncQueue.bulkDelete(staleRowIds);
+    await db.tasks.delete(taskId);
+    logger.debug('Realtime delete applied', { taskId });
+  });
+}
+
 export async function applyRemoteChange(
   action: 'create' | 'update' | 'delete',
   record: RecordModel
@@ -42,20 +73,7 @@ export async function applyRemoteChange(
       logger.warn('Realtime delete skipped: invalid record');
       return;
     }
-
-    // Mirror reconcileDeletedTasks: don't drop a task that has a queued local
-    // change. The pending op (edit-beats-delete under LWW) will be re-pushed and
-    // recreate the remote record, so deleting locally now would just lose the
-    // unsynced edit until the next pull round-trips.
-    await db.transaction('rw', [db.tasks, db.syncQueue], async () => {
-      const queuedOps = await db.syncQueue.toArray();
-      if (queuedOps.some((op) => op.taskId === taskId && isPendingSyncQueueItem(op))) {
-        logger.debug('Realtime delete skipped: local change pending', { taskId });
-        return;
-      }
-      await db.tasks.delete(taskId);
-      logger.debug('Realtime delete applied', { taskId });
-    });
+    await applyRemoteDeletion(taskId);
     return;
   }
 

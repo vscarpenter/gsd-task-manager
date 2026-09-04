@@ -223,29 +223,15 @@ async function validateTokenAndRefresh(
   setters.setSessionExpired(!refreshed);
 }
 
-/** Persist sync config to IndexedDB after successful OAuth */
-async function persistSyncConfig(authState: AuthState) {
-  const db = getDb();
-  const existingConfig = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
-  const deviceId = existingConfig?.deviceId ?? crypto.randomUUID();
-  const localTaskCount = await db.tasks.count();
-  const localTaskOwnerUserId = existingConfig?.localTaskOwnerUserId ?? null;
-
-  if (
-    localTaskCount > 0 &&
-    localTaskOwnerUserId &&
-    localTaskOwnerUserId !== authState.userId
-  ) {
-    throw new Error(
-      "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync."
-    );
-  }
-
-  const newConfig: PBSyncConfig = {
+function buildSyncConfig(
+  authState: AuthState,
+  existingConfig: PBSyncConfig | undefined,
+): PBSyncConfig {
+  return {
     key: "sync_config",
     enabled: true,
     userId: authState.userId,
-    deviceId,
+    deviceId: existingConfig?.deviceId ?? crypto.randomUUID(),
     deviceName: navigator.userAgent.substring(0, 50),
     email: authState.email,
     provider: authState.provider,
@@ -262,8 +248,42 @@ async function persistSyncConfig(authState: AuthState) {
     autoSyncIntervalMinutes: 2,
     localTaskOwnerUserId: authState.userId,
   };
+}
 
-  await db.syncMetadata.put(newConfig);
+/** Persist sync config to IndexedDB after successful OAuth */
+async function persistSyncConfig(authState: AuthState) {
+  const db = getDb();
+  await db.transaction(
+    "rw",
+    db.tasks,
+    db.archivedTasks,
+    db.deletedTasks,
+    db.syncMetadata,
+    async () => {
+      const existingConfig = (await db.syncMetadata.get("sync_config")) as
+        | PBSyncConfig
+        | undefined;
+      const lifecycleCounts = await Promise.all([
+        db.tasks.count(),
+        db.archivedTasks.count(),
+        db.deletedTasks.count(),
+      ]);
+      const localTaskOwnerUserId =
+        existingConfig?.localTaskOwnerUserId ?? existingConfig?.userId ?? null;
+
+      if (
+        lifecycleCounts.some((count) => count > 0) &&
+        localTaskOwnerUserId &&
+        localTaskOwnerUserId !== authState.userId
+      ) {
+        throw new Error(
+          "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync."
+        );
+      }
+
+      await db.syncMetadata.put(buildSyncConfig(authState, existingConfig));
+    },
+  );
 
   const queue = getSyncQueue();
   await queue.populateFromExistingTasks();

@@ -65,8 +65,9 @@ Set these in `docker-compose.yml` or pass via `docker compose`:
 | Variable | Default | Description |
 |---|---|---|
 | `SITE_ADDRESS` | `localhost` | Hostname Caddy listens on |
-| `TLS_CERT` | `internal` | Path to TLS cert **or** `internal` for self-signed |
-| `TLS_KEY` | *(empty)* | Path to TLS private key (omit for self-signed) |
+| `TLS_MODE` | `internal` | Explicit certificate mode: `internal`, `public`, or `custom` |
+| `TLS_CERT` | *(empty)* | Certificate path when `TLS_MODE=custom` |
+| `TLS_KEY` | *(empty)* | Private-key path when `TLS_MODE=custom` |
 
 If you proxy PocketBase on a different origin instead of the same host, set
 `NEXT_PUBLIC_POCKETBASE_URL` at build time so the static app can target the
@@ -84,6 +85,7 @@ correct backend.
    volumes:
      - ./certs:/certs:ro
    environment:
+     - TLS_MODE=custom
      - TLS_CERT=/certs/cert.pem
      - TLS_KEY=/certs/key.pem
    ```
@@ -95,6 +97,7 @@ If you have a public domain pointing to your server:
 
 ```yaml
 environment:
+  - TLS_MODE=public
   - SITE_ADDRESS=gsd.example.com
   # No TLS_CERT/TLS_KEY needed — Caddy handles ACME automatically
 ```

@@ -15,6 +15,7 @@ import {
   getServerFeedbackSnapshot,
   readNudgeDismissedAt,
   recordNudgeDismissed,
+  resetFeedbackState,
 } from "@/lib/feedback/feedback-store";
 import { ROADMAP_ITEMS } from "@/lib/feedback/roadmap-items";
 
@@ -140,6 +141,21 @@ describe("when localStorage is unavailable", () => {
 
     expect(() => readDraft()).not.toThrow();
     expect(readDraft()).toEqual(emptyDraft());
+  });
+
+  it("complete reset clears every in-memory fallback", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("QuotaExceededError");
+    });
+    writeDraft({ ...emptyDraft(), message: "private fallback" });
+    writeLastSentAt("2026-09-04T00:00:00.000Z");
+    recordNudgeDismissed("2026-09-04T01:00:00.000Z");
+
+    resetFeedbackState();
+
+    expect(readDraft()).toEqual(emptyDraft());
+    expect(readLastSentAt()).toBeNull();
+    expect(readNudgeDismissedAt()).toBeNull();
   });
 });
 

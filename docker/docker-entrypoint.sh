@@ -8,6 +8,37 @@ if [ -z "$GSD_TASKS_ENC_KEY" ] || [ "${#GSD_TASKS_ENC_KEY}" -ne 32 ]; then
     exit 1
 fi
 
+# Deployments predating TLS_MODE configure a certificate as a bare TLS_CERT and
+# TLS_KEY pair, which is still what docker-compose.yml and docker-setup-and-run.md
+# describe. Defaulting those to `internal` would quietly swap a trusted
+# certificate for Caddy's private CA and break every OAuth callback, so an unset
+# mode alongside both paths means custom.
+if [ -z "${TLS_MODE:-}" ] && [ -n "${TLS_CERT:-}" ] && [ -n "${TLS_KEY:-}" ]; then
+    TLS_MODE=custom
+fi
+
+TLS_MODE="${TLS_MODE:-internal}"
+case "$TLS_MODE" in
+    internal|public)
+        ;;
+    custom)
+        if [ -z "${TLS_CERT:-}" ] || [ -z "${TLS_KEY:-}" ]; then
+            echo "[gsd] FATAL: TLS_CERT and TLS_KEY are required when TLS_MODE=custom" >&2
+            exit 1
+        fi
+        if [ ! -r "$TLS_CERT" ] || [ ! -r "$TLS_KEY" ]; then
+            echo "[gsd] FATAL: custom TLS certificate or key is not readable" >&2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "[gsd] FATAL: TLS_MODE must be internal, public, or custom" >&2
+        exit 1
+        ;;
+esac
+export TLS_MODE
+echo "[gsd] TLS mode: $TLS_MODE"
+
 # ---------------------------------------------------------------------------
 # GSD Task Manager — Container Entrypoint
 # Starts PocketBase (background) and Caddy (foreground-ish), with clean

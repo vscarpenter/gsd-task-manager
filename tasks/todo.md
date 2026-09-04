@@ -1,3 +1,117 @@
+# Session state — 2026-09-04 (PR #527 blocking-defect fixes)
+
+Branch: `fix/pr527-blocking-defects`, cut from `fix/security-review-2026-09-04`
+@ `b2d597c`. These are defects **in** that PR, found by reviewing it before merge.
+
+## Review that produced this list
+
+10-dimension review with three-lens adversarial refutation: 35 findings raised,
+16 survived (12 unique after dedup), 19 refuted. The critical one was confirmed
+against production with a read-only probe.
+
+## Fixed here
+
+- [x] **Night-shift discovery reported a broken helper as "no work"** —
+      `node "$HELPER" || echo 0` turned any execution failure into `NO_WORK`.
+      Same gap made CI red: the test pinned PATH to `/usr/bin:/bin` but Linux
+      runners keep node in `/usr/local/bin`. Now reports `UNKNOWN`. (`63adaea`)
+- [x] **Rollback aborted mid-deploy** — the new unconditional
+      `aws s3 cp out/theme-init.js` fails for any tag before v12, after both
+      `--delete` syncs and before the CloudFront invalidation. (`12e31d4`)
+- [x] **Encryption verification harnesses broken by the owner hook** — both
+      created their probe task with a synthetic owner, which
+      `account_lifecycle.pb.js` rejects. Verified against a real PocketBase,
+      with a control run proving causation. (`004c0a3`)
+- [x] **Legacy TLS config silently ignored** — a bare `TLS_CERT`/`TLS_KEY` pair
+      fell back to Caddy's private CA. Also fixed the compose file's Let's
+      Encrypt example, which needs `TLS_MODE=public`. (`649bca7`)
+
+- [x] **CRITICAL — account deletion was broken in production.** The client only
+      called `DELETE /api/gsd/account`, which lives in `docker/pb_hooks/` and is
+      **not loaded on api.vinny.io**: verified live, the route 404s identically
+      to a nonexistent one, and the repo's own privacy doc confirms task content
+      is plaintext, so the sibling encryption hook is absent too. The
+      transactional route stays preferred; a 404, and only a 404, falls through
+      to client-side erasure. (`2dd8802`)
+- [x] **Export wrote backups this build refused to restore** — smart views were
+      the only store emitted unvalidated while import hard-failed on them. Shape
+      and count bounds now clip and count; resource bounds still fail closed.
+      Also fixed the tag cap, which reused the per-task limit. (`0dcdeca`)
+- [x] **MCP server died silently at startup** — a network round-trip inside a
+      bare `catch { process.exit(1) }`, with the token file left on disk.
+      Startup is offline-only now, and reachability no longer retires a
+      token. (`0f14206`)
+- [x] **Failed queue items pinned tasks forever** — reverted the #440 fix for a
+      Confirmed Medium in `docs/audits/AUDIT-2026-07-10.md`. Both guards share
+      one classifier; a released task goes to Trash rather than being
+      dropped. (`c837b9a`)
+
+## Verification
+
+Full suite 2996 passing, typecheck, lint, and the code-shape ratchet all green.
+The cross-platform fixture pair still round-trips, so the iOS backup contract
+is intact. The local encryption harness was run against a real PocketBase with
+the hooks loaded, with a control run proving the owner hook was the cause.
+
+## Resuming From Here
+
+Still open, and none of it is code on this branch:
+
+- The audit's second half: a failed queue row for a task that still exists
+  remotely is still terminal, with no retry or dismiss surface. Recorded in the
+  audit's status line rather than silently closed.
+- `packages/mcp-server/package.json` is still 1.2.5. The docs now pin users to
+  that published version, which predates every MCP fix here, so a release is
+  needed before those docs are true.
+- The operational items below, none of which this branch can do.
+
+## Not code defects, still required before merging #527
+
+- `gh workflow disable deploy-prod.yml` (id 279641929) — still active.
+- `production` environment has no deployment branch policy; `cloudfront-infra`
+  has no required reviewer.
+- Deploy the two new pb_hooks **before** the web deploy, or account deletion
+  ships broken. Do not run the new feedback setup script first: it nulls
+  `createRule`, then verifies the hook, then exits on the 404, which would
+  disable the working feedback form.
+- `packages/mcp-server/package.json` is still 1.2.5, the published version that
+  predates every MCP fix here, and the docs now pin users to it.
+
+---
+
+# Session state — 2026-09-04 (21-finding security remediation)
+
+Branch: `fix/security-review-2026-09-04` · Source: sealed scan
+`7a618980-51cd-4b14-8241-4020dd8a7e58` at `e7ae02d7`.
+
+## Plan
+
+- [x] Read security skill, repository policy, current sources, callers, and tests.
+- [x] Run eight independent read-only pre-patch investigations and reconcile scope.
+- [ ] RED/GREEN local lifecycle, account-switch, delete-dialog, import, telemetry,
+      verifier, cache, TLS, and feedback-control fixes.
+- [ ] RED/GREEN browser sync completeness/version/conflict/cardinality fixes plus
+      server-side account-deletion hooks.
+- [ ] RED/GREEN MCP principal, executable pinning, token display, and bounded reads.
+- [ ] RED/GREEN builder/night-shift attestation and fail-closed execution changes.
+- [ ] RED/GREEN deployment/publishing job privilege separation and protected dispatch.
+- [ ] Focused verification and atomic commits by boundary; never stage `bun.lock`.
+- [ ] One fresh bypass/regression reviewer; address one review cycle.
+- [ ] Full project/MCP/PocketBase/security gates and final fix report.
+
+## Decisions
+
+- Use the existing 10,000-task import ceiling for browser/MCP account-wide reads;
+  overflow is an explicit error, never silent truncation.
+- Retire unattended local PR code execution until a real ephemeral,
+  credential-free runner exists; exact-SHA attested discovery remains diagnostic.
+- Default anonymous feedback creation to denied. Public creation becomes an
+  explicit final setup step only after the provisioned controls verify.
+- Keep remote account cleanup client-compatible, but make checked-in server hooks
+  the authoritative no-orphan boundary for the supported deployment.
+
+---
+
 # Session state — 2026-09-02 (resume: merge #525, release v12.7.0, audit fix)
 
 Branch: `fix/deps-browserslist-advisory` (off `main` @ af0bbff). Local commits only, not pushed.

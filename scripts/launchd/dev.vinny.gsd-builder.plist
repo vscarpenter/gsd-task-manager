@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  launchd template for the GSD Task Manager builder (cycle B).
-  Runs scripts/builder-run.sh every 30 minutes; the wrapper pre-checks and
-  exits immediately when there is no work, so empty wake-ups are cheap.
+  RETIRED: scripts/builder-run.sh is an inert security tombstone. This plist
+  may remain installed, but it cannot select issues or invoke an agent.
 
   Install:
     cp scripts/launchd/dev.vinny.gsd-builder.plist ~/Library/LaunchAgents/
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vinny.gsd-builder.plist
-  Halt without uninstalling: add the `builder:paused` label to the Builder
-  Control issue (the wrapper exits on it).
   Uninstall:
     launchctl bootout gui/$(id -u)/dev.vinny.gsd-builder
     rm ~/Library/LaunchAgents/dev.vinny.gsd-builder.plist

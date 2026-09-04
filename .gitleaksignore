@@ -5,6 +5,7 @@
 5b9f2bf6dcdbb73af1f3b154acfe8e7d1860de4b:packages/mcp-server/QUICKSTART.md:generic-api-key:48
 5b9f2bf6dcdbb73af1f3b154acfe8e7d1860de4b:packages/mcp-server/TESTING.md:curl-auth-header:163
 5b9f2bf6dcdbb73af1f3b154acfe8e7d1860de4b:packages/mcp-server/TESTING_V0.2.md:curl-auth-header:165
+649bca76f2bcc7779934de94f57c73910db7fadf:tests/docker-entrypoint.test.ts:generic-api-key:10
 bc876f19242e74e8004900b0ef68d6640f546065:OAUTH_OIDC_GUIDE.md:generic-api-key:295
 d497bea961bbeb1d1880173294594ae384127c98:OAUTH_SETUP_GUIDE.md:private-key:168
 dcc28decc39e31f2f61c588043bdef13330812ed:OAUTH_OIDC_GUIDE.md:generic-api-key:295

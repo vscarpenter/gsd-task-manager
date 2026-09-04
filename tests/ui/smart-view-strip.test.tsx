@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { SmartView } from "@/lib/filters";
+import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import {
   SmartViewStrip,
   SmartViewOverflowMenu,
@@ -183,6 +184,20 @@ describe("<SmartViewOverflowMenu>", () => {
       "aria-current",
       "true"
     );
+  });
+
+  it("caps direct callers before creating menu items", () => {
+    const limit = SCHEMA_LIMITS.MAX_SMART_VIEWS + BUILT_IN_SMART_VIEWS.length;
+    const oversized = Array.from({ length: limit + 1 }, (_, index) =>
+      makeView(`view-${index}`, index === limit ? "Sentinel beyond cap" : `View ${index}`)
+    );
+
+    render(
+      <SmartViewOverflowMenu views={oversized} activeViewId={null} onSelectView={vi.fn()} />
+    );
+
+    expect(screen.getAllByRole("menuitem")).toHaveLength(limit);
+    expect(screen.queryByRole("menuitem", { name: /Sentinel beyond cap/ })).not.toBeInTheDocument();
   });
 });
 

@@ -1,54 +1,69 @@
 # Gate 2 — Release approval runbook
 
-Gate 2 is the second and final human approval in the delivery pipeline (cycle C). It is the moment you approve **production**, having tested the running software. Gate 1 (plan approval) happens earlier, before code exists; this is the release gate.
+Gate 2 is the final human approval for production. CI, artifact creation, and
+artifact signing do not authorize AWS access. Only the production environment
+reviewer can release the verified artifact.
 
-**Policy:** no rollback path, no approval. The evidence below always includes the exact rollback command; if it cannot, do not approve.
+Policy: no validated rollback tag, no approval.
 
-## The release path
+The retired .github/workflows/deploy-prod.yml path must stay absent. Its
+historical tagged copies accepted manual refs. Production now uses the distinct
+.github/workflows/deploy-production-release.yml identity with no manual trigger.
 
-```
-PR: required CI green + required human review + 0 unresolved threads
+## Release path
+
+~~~
+PR: required CI green + required human review + no unresolved threads
 YOU merge the PR
-YOU validate the release candidate through an appropriate running-app check
-/release ─▶ bumps version, tags v*.*.* ─▶ deploy-prod.yml runs:
-   1. evidence job (ungated)  — writes version + rollback command to the run summary
-   2. deploy job              — PAUSES at the `production` Environment gate   ← GATE 2
-      └─▶ YOU read the evidence, approve ─▶ S3 + CloudFront ─▶ smoke-test.sh
-```
+deploy-dev consumes the exact successful main CI artifact
+YOU validate that running development build
+/release creates vX.Y.Z at a protected main commit
+deploy-production-release:
+  1. evidence — authorize the immutable tag/main commit and print rollback
+  2. build    — build and package with no OIDC, environment, or AWS authority
+  3. attest   — sign provenance with GitHub's short-lived Sigstore identity
+  4. deploy   — pause at production Gate 2, verify, then obtain AWS OIDC
+  5. smoke    — verify the live surface without cloud credentials
+~~~
 
-The former automatic DEV deployment is disabled. Until a replacement preview
-environment exists, record the running-app validation used for the release
-candidate in the release notes or approval record. Do not treat CI alone as
-proof of runtime behavior.
+Development has no manual-ref entry point. It accepts only a successful push CI
+run whose branch is main, whose head repository is this repository, and whose
+artifact name is bound to the exact CI head SHA.
 
-## What the evidence job shows (read this before approving)
+## Evidence to review
 
-When `deploy-prod` runs, the **Gate 2 — release evidence** job completes before the gate. Open the run and read its summary:
+Before approving production, confirm:
 
-- **Deploying:** the version this deploy will ship (`vX.Y.Z`).
-- **Previous prod:** the last released version — the rollback target.
-- **Rollback command:** the exact one-liner to redeploy the previous release. Copy it somewhere before approving.
-- **Validation:** the running-app check you completed before starting the release.
-- **Post-deploy:** `smoke-test.sh` runs automatically against the live site after the CloudFront invalidation completes, proving the deploy rather than assuming it.
+- the semantic release tag and exact commit;
+- the commit is reachable from protected main;
+- the tag version matches package.json;
+- the prior immutable release tag is a valid rollback target; and
+- the build job had no OIDC or AWS authority and provenance verification is
+  required before AWS credential configuration.
 
-Then approve the `production` environment deployment (GitHub UI or mobile app). Only after approval does anything touch prod.
+The production environment gate occurs after build and attestation. Rejecting the
+deployment consumes no AWS credentials and changes no cloud state.
 
 ## Rollback
 
-Rollback = redeploy the previous release tag through the **same gated** `deploy-prod` path (a deterministic rebuild):
+Dispatch the same gated workflow for an existing previous release tag:
 
-```bash
-gh workflow run deploy-prod.yml --ref v9.3.2   # example: previous release was v9.3.2
-```
+~~~bash
+gh api --method POST repos/vscarpenter/gsd-task-manager/dispatches \
+  -f event_type=deploy-production-release \
+  -F 'client_payload[ref]=refs/tags/v9.3.2'
+~~~
 
-This still pauses at the Gate 2 `production` approval, so a rollback is a deliberate, gated action too. The evidence job prints the correct `--ref` for the current deploy; use that value.
+The workflow rejects arbitrary commits and branches. It validates the tag,
+requires its commit to be on main, rebuilds without cloud authority, signs the
+artifact, and pauses at Gate 2. If no earlier release tag exists, stop and create
+a separately reviewed recovery plan.
 
-If there is no previous release (first-ever deploy), roll back by redeploying an earlier known-good commit.
+## Required GitHub environment policy
 
-## Notes
+- development: permit protected main deployments only; no required reviewer.
+- production: permit protected main/release-tag contexts only; retain the
+  vscarpenter required reviewer.
 
-- The automated Claude reviewer and `release-ready` workflow are retired. Branch
-  protection, required CI, Code Owners, and resolved review threads are the PR gate.
-- `deploy-dev.yml` remains in the repository as a restoration reference but is
-  disabled in GitHub Actions.
-- The builder (cycle B) never merges or deploys and never edits `deploy-prod.yml` — Gate 2 is always yours.
+The local unattended builder is retired; workflow labels do not authorize code
+execution or deployment.

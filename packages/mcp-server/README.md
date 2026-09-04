@@ -7,28 +7,19 @@ Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task m
 
 ## Quick Start
 
-**First time? Run the interactive setup wizard:**
+Install a reviewed, exact release and run its interactive setup wizard:
 
 ```bash
-npx gsd-mcp-server --setup
+npm install --global gsd-mcp-server@1.2.5
+gsd-mcp-server --setup
 ```
 
-The wizard will guide you through configuration and test your connection. Once complete, add to Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "gsd-tasks": {
-      "command": "npx",
-      "args": ["-y", "gsd-mcp-server"],
-      "env": {
-        "GSD_POCKETBASE_URL": "https://api.vinny.io",
-        "GSD_AUTH_TOKEN": "your-auth-token-here"
-      }
-    }
-  }
-}
-```
+The wizard validates a normal user account and writes an owner-only configuration
+artifact for Claude Desktop. That generated configuration launches the exact local
+Node executable and package entrypoint used by the wizard; it never asks `npx` to
+select code while passing your bearer token. Open the artifact only in a trusted
+editor and merge it into Claude Desktop. To update, explicitly install another exact
+reviewed version and rerun the wizard.
 
 See [Installation](#installation) section below for detailed setup instructions.
 
@@ -94,16 +85,16 @@ The MCP server includes interactive tools for easy setup and troubleshooting:
 
 ```bash
 # Interactive setup wizard (recommended for first-time users)
-npx gsd-mcp-server --setup
+gsd-mcp-server --setup
 
 # Validate existing configuration
-npx gsd-mcp-server --validate
+gsd-mcp-server --validate
 
 # Show help and usage information
-npx gsd-mcp-server --help
+gsd-mcp-server --help
 
 # Run as MCP server (normal mode - used by Claude Desktop)
-npx gsd-mcp-server
+gsd-mcp-server
 ```
 
 **Setup Wizard Features:**
@@ -122,9 +113,10 @@ npx gsd-mcp-server
 
 **Two installation options:**
 
-### Option A: Use Published Package (Recommended)
+### Option A: Install an Exact Published Release (Recommended)
 
-No installation needed! Use `npx` to run the package directly from npm.
+Install an explicitly reviewed version, such as `npm install --global
+gsd-mcp-server@1.2.5`. Updating is a deliberate reinstall followed by `--setup`.
 
 ### Option B: Build from Source
 
@@ -153,22 +145,9 @@ Add the MCP server to your Claude Desktop config:
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-**Using published package (recommended):**
-
-```json
-{
-  "mcpServers": {
-    "gsd-tasks": {
-      "command": "npx",
-      "args": ["-y", "gsd-mcp-server"],
-      "env": {
-        "GSD_POCKETBASE_URL": "https://api.vinny.io",
-        "GSD_AUTH_TOKEN": "your-auth-token-here"
-      }
-    }
-  }
-}
-```
+**Using the exact published package (recommended):** run `gsd-mcp-server --setup`,
+then merge the generated owner-only artifact. The credential-bearing configuration
+is intentionally not reproduced in terminal-oriented instructions.
 
 **Using local build (for development):**
 
@@ -742,7 +721,7 @@ Delete all completed tasks from last year
 - Try accessing the URL in your browser: `{GSD_POCKETBASE_URL}/api/health`
 
 ### "Cannot find module" error
-- **If using npx**: Ensure you have internet connection (npx needs to download the package)
+- **If using an exact installed release**: Reinstall that version and rerun `--setup`
 - **If using local build**:
   - Run `npm run build` to compile TypeScript
   - Check that the path in Claude config is absolute and correct

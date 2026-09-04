@@ -297,7 +297,7 @@
         <div class="gate">
           <div class="t">◆ Gated</div>
           <div class="l">Production website</div>
-          <div class="s"><code>deploy-prod.yml</code> → <code>production</code> Environment, required reviewer</div>
+          <div class="s"><code>deploy-production-release.yml</code> → <code>production</code> Environment, required reviewer</div>
         </div>
         <div class="gate">
           <div class="t">◆ Gated</div>
@@ -378,7 +378,7 @@
       <div class="frow"><code>ISSUE_TEMPLATE/change_request.yml</code><span>The enforced contract, labeled by <code>apply-risk-label.yml</code></span></div>
       <div class="frow"><span><code>scripts/builder-run.sh</code> · <code>/build-next</code></span><span>The builder wrapper + its operating command</span></div>
       <div class="frow"><span><code>CODEOWNERS</code> + branch protection</span><span>The PR gate — required CI, required review, resolved threads (<code>docs/ops/gate2.md</code>)</span></div>
-      <div class="frow"><code>deploy-prod.yml</code><span>Gate 2 — the <code>production</code> Environment reviewer + smoke test</span></div>
+      <div class="frow"><code>deploy-production-release.yml</code><span>Gate 2 — the <code>production</code> Environment reviewer + smoke test</span></div>
       <div class="frow"><span><code>scripts/triage-run.sh</code> · <code>/triage-prs</code></span><span>The night shift wrapper + its triage command</span></div>
       <div class="frow"><code>docs/ops/pipeline-audit.md</code><span>The learning loop, now a manual spot-check discipline</span></div>
       <div class="frow"><span><code>publish-mcp-server.yml</code> · <code>publish-docker.yml</code></span><span>The other two things a release tag ships — one gated, one not</span></div>

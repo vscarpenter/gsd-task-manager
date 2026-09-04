@@ -82,7 +82,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     const fiveMinFromNow = Date.now() + 5 * 60 * 1000;
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('t1', '3000-01-01T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('t1', '3000-01-01T00:00:00.000Z')]),
       }),
     });
 
@@ -99,7 +99,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
+        getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
       }),
     });
 
@@ -111,18 +111,22 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 
   it('uses client_updated_at for filtering and sorting', async () => {
-    const getFullList = vi.fn(async () => []);
+    const getList = vi.fn(async () => []);
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
-      collection: () => ({ getFullList }),
+      collection: () => ({ getList }),
     });
 
     await pullRemoteChanges('2026-05-18T00:00:00.000Z');
 
-    expect(getFullList).toHaveBeenCalledWith(expect.objectContaining({
-      filter: expect.stringContaining('client_updated_at >= "2026-05-18T00:00:00.000Z"'),
-      sort: 'client_updated_at',
-    }));
-    expect(getFullList.mock.calls[0][0].filter).not.toMatch(/\bupdated\b/);
+    expect(getList).toHaveBeenCalledWith(
+      1,
+      200,
+      expect.objectContaining({
+        filter: expect.stringContaining('client_updated_at >= "2026-05-18T00:00:00.000Z"'),
+        sort: 'client_updated_at,task_id,id',
+      }),
+    );
+    expect(getList.mock.calls[0][2].filter).not.toMatch(/\bupdated\b/);
   });
 
   it('skips records where remote timestamp equals local (no phantom pull count)', async () => {
@@ -151,7 +155,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('t-equal', timestamp)]),
+        getList: vi.fn(async () => [pbRecord('t-equal', timestamp)]),
       }),
     });
 
@@ -185,7 +189,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('archived-task', '2026-05-20T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('archived-task', '2026-05-20T00:00:00.000Z')]),
       }),
     });
 
@@ -205,7 +209,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('deleted-task', '2026-05-20T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('deleted-task', '2026-05-20T00:00:00.000Z')]),
       }),
     });
 
@@ -224,7 +228,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('edited-after-delete', '2026-05-20T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('edited-after-delete', '2026-05-20T00:00:00.000Z')]),
       }),
     });
     fetchRemoteTaskIndexMock.mockResolvedValue({
@@ -250,7 +254,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [
+        getList: vi.fn(async () => [
           pbRecord('archived-task', '2026-05-20T00:00:00.000Z'),
           pbRecord('live-task', '2026-05-20T00:00:00.000Z'),
         ]),
@@ -282,7 +286,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [
+        getList: vi.fn(async () => [
           pbRecord('edited-after-archive', '2026-05-20T00:00:00.000Z'),
         ]),
       }),
@@ -311,7 +315,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [
+        getList: vi.fn(async () => [
           pbRecord('atomic-restore', '2026-05-20T00:00:00.000Z'),
         ]),
       }),
@@ -335,7 +339,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('stale-remote', '2026-05-18T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('stale-remote', '2026-05-18T00:00:00.000Z')]),
       }),
     });
 
@@ -351,7 +355,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => [pbRecord('restored-task', '2026-05-20T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('restored-task', '2026-05-20T00:00:00.000Z')]),
       }),
     });
     fetchRemoteTaskIndexMock.mockResolvedValue({
@@ -374,9 +378,12 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     const db = getDb();
     await db.tasks.clear();
     await db.syncQueue.clear();
+    // The archive-guard describe above leaves a row in deletedTasks, which
+    // would poison the trash assertions below.
+    await db.deletedTasks.clear();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
-        getFullList: vi.fn(async () => []),
+        getList: vi.fn(async () => []),
       }),
     });
     fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
@@ -399,6 +406,9 @@ describe('pullRemoteChanges deletion reconciliation', () => {
 
     await expect(db.tasks.get('remote-kept')).resolves.toBeDefined();
     await expect(db.tasks.get('server-deleted')).resolves.toBeUndefined();
+    // Over-reach guard: an ordinary cross-device deletion has nothing unsynced
+    // to preserve, so it must not land in Trash.
+    await expect(db.deletedTasks.count()).resolves.toBe(0);
   });
 
   it('preserves a remote-absent local task when it has a pending sync operation', async () => {
@@ -438,7 +448,10 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     await expect(db.tasks.get(legacyUnsyncedTask.id)).resolves.toEqual(legacyUnsyncedTask);
   });
 
-  it('deletes a remote-absent local task when its only queued operation has failed', async () => {
+  // A retry-exhausted row can never be pushed, so it must not shield the task
+  // from a deletion it will never contest. Its content never reached the server
+  // either, so the task is preserved in Trash rather than dropped.
+  it('abandons a remote-absent task to trash when its queued operation has failed', async () => {
     const db = getDb();
     const staleTask = makeTask('failed-local-edit');
     await db.tasks.add(staleTask);
@@ -453,6 +466,44 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     await pullRemoteChanges(null);
 
     await expect(db.tasks.get(staleTask.id)).resolves.toBeUndefined();
+    const trashed = await db.deletedTasks.get(staleTask.id);
+    expect(trashed).toMatchObject({ id: staleTask.id, title: staleTask.title });
+    expect(trashed?.deletedAt).toEqual(expect.any(String));
+  });
+
+  // The second-order failure: a dead row outliving the task it guarded would
+  // shield that id forever, even after a later edit healed the server copy.
+  it('drops the retry-exhausted rows in the same pass that releases the task', async () => {
+    const db = getDb();
+    const staleTask = makeTask('failed-local-edit');
+    await db.tasks.add(staleTask);
+    await getSyncQueue().enqueue('update', staleTask.id, staleTask);
+    const [queuedItem] = await db.syncQueue.toArray();
+    await db.syncQueue.update(queuedItem.id, { status: 'failed' });
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+
+    await pullRemoteChanges(null);
+
+    const remaining = await db.syncQueue.toArray();
+    expect(remaining.filter((row) => row.taskId === staleTask.id)).toEqual([]);
+  });
+
+  // ADR 0013 rule 3: the trash write is idempotent, so a task whose id already
+  // sits in deletedTasks does not abort the whole reconciliation.
+  it('re-trashes a task already present in the trash without aborting', async () => {
+    const db = getDb();
+    const staleTask = makeTask('already-trashed');
+    await db.tasks.add(staleTask);
+    await db.deletedTasks.put({ ...staleTask, deletedAt: '2026-01-01T00:00:00.000Z' });
+    await getSyncQueue().enqueue('update', staleTask.id, staleTask);
+    const [queuedItem] = await db.syncQueue.toArray();
+    await db.syncQueue.update(queuedItem.id, { status: 'failed' });
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+
+    await expect(pullRemoteChanges(null)).resolves.not.toThrow();
+
+    await expect(db.tasks.get(staleTask.id)).resolves.toBeUndefined();
+    await expect(db.deletedTasks.count()).resolves.toBe(1);
   });
 
   it('skips local deletion when the remote index cannot be fetched', async () => {

@@ -65,7 +65,7 @@ export interface PBTaskRecord {
 export interface PocketBaseTaskIdentity {
   taskId: string;
   pbRecordId: string;
-  clientUpdatedAt: string | null;
+  clientUpdatedAt: string;
 }
 
 export interface PocketBaseRealtimeEnvelope {
@@ -79,14 +79,19 @@ export function getPocketBaseTaskId(record: RecordModel): string | null {
   return typeof taskId === 'string' && taskId.length > 0 ? taskId : null;
 }
 
+const pocketBaseTaskIdentitySchema = z.object({
+  id: z.string().min(1),
+  task_id: z.string().min(1),
+  client_updated_at: z.iso.datetime({ offset: true }),
+});
+
 export function getPocketBaseTaskIdentity(record: RecordModel): PocketBaseTaskIdentity | null {
-  const taskId = getPocketBaseTaskId(record);
-  const clientUpdatedAt = record['client_updated_at'];
-  if (!taskId || typeof record.id !== 'string') return null;
+  const parsed = pocketBaseTaskIdentitySchema.safeParse(record);
+  if (!parsed.success) return null;
   return {
-    taskId,
-    pbRecordId: record.id,
-    clientUpdatedAt: typeof clientUpdatedAt === 'string' ? clientUpdatedAt : null,
+    taskId: parsed.data.task_id,
+    pbRecordId: parsed.data.id,
+    clientUpdatedAt: parsed.data.client_updated_at,
   };
 }
 

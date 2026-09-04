@@ -1,3 +1,56 @@
+# Spec: Resolve the 2026-09-04 security review
+
+**Date:** 2026-09-04 · **Status:** Approved / in progress · **Tier:** Security-critical
+
+## Goal
+
+Close all 21 validated review findings at their shared trust boundaries while
+preserving local-first task behavior, backup compatibility, authenticated sync,
+and the existing release gates.
+
+## Required outcomes
+
+- Retire credentialed execution of untrusted PR branches on the maintainer host;
+  retain only exact-SHA, bot-attested discovery until an ephemeral
+  credential-free execution service exists.
+- Bind unattended issue work to a trusted actor and immutable issue-content
+  digest before an agent starts.
+- Dispatch deployments from protected current-main code, separate unprivileged
+  build/package jobs from OIDC jobs, and deploy only verified artifacts.
+- Erase every application-owned lifecycle store and local key, and surface
+  incomplete local erasure after account deletion.
+- Keep anonymous feedback writes disabled unless checked-in rate, quota, and
+  retention controls are installed and verified.
+- Treat account ownership, remote versions, queue conflicts, remote indexes,
+  account deletion, and PocketBase collection sizes as fail-closed invariants.
+- Pin the MCP executable, reject PocketBase superuser principals, bound MCP
+  collection reads, and never recommend printing bearer-token configuration.
+- Separate public ACME, internal CA, and custom-certificate modes; make stable
+  executable assets revalidate; keep privileged verifier secrets out of argv.
+- Bound smart-view import, persistence, evaluation, and rendering work; remove
+  stable identifiers from external telemetry.
+
+## Compatibility constraints
+
+- Numeric/string backup versions, absent optional stores, legacy
+  `criteria.dueDate`, and current iOS fixtures remain accepted.
+- Missing or malformed remote versions may protect/quarantine data but may not
+  authorize overwrite or deletion.
+- Failed sync entries remain outside automatic retries while continuing to
+  protect unsynced local state.
+- A partial or over-cap remote enumeration may never drive deletion.
+- No dependency or release-version changes; preserve the pre-existing `bun.lock`.
+
+## Acceptance criteria
+
+- [ ] Every finding has a negative regression test at the affected trust boundary.
+- [ ] Focused application, MCP, script, workflow, and PocketBase tests pass.
+- [ ] Typecheck, lint, shape, coverage, build, audit, and applicable system gates run.
+- [ ] One fresh post-patch bypass review finds no unresolved direct or sibling path.
+- [ ] Security fix report records evidence and any environment-only uncertainty.
+
+---
+
 # Spec: Implement the approved Refined Evolution hybrid
 
 **Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial

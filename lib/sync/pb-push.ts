@@ -73,6 +73,23 @@ async function upsertRemoteTask(
  */
 type PushItemOutcome = 'pushed' | 'skipped' | 'index_unavailable';
 
+function hasUsableRemoteVersion(value: unknown): value is string {
+  return typeof value === 'string'
+    && /(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+    && !Number.isNaN(new Date(value).getTime());
+}
+
+async function recordUnusableRemoteVersion(item: SyncQueueItem): Promise<void> {
+  logger.warn('Skipping mutation: remote task version is missing or malformed', {
+    taskId: item.taskId,
+    operation: item.operation,
+  });
+  await getSyncQueue().recordAttemptFailure(
+    item.id,
+    'Remote task version is missing or malformed',
+  );
+}
+
 /**
  * Process a single queue item: create, update, or delete the remote record.
  *
@@ -90,6 +107,11 @@ async function pushSingleItem(
   const pb = getPocketBase();
   const queue = getSyncQueue();
   const { entry: remote, fetchSucceeded } = await fetchRemoteTaskEntry(ownerId, item.taskId);
+
+  if (remote && !hasUsableRemoteVersion(remote.clientUpdatedAt)) {
+    await recordUnusableRemoteVersion(item);
+    return 'index_unavailable';
+  }
 
   if (item.operation === 'create' || item.operation === 'update') {
     if (!item.payload) {
@@ -114,7 +136,7 @@ async function pushSingleItem(
       return 'index_unavailable';
     }
 
-    if (remote?.clientUpdatedAt && isRemoteNewer(remote.clientUpdatedAt, item.payload.updatedAt)) {
+    if (remote && isRemoteNewer(remote.clientUpdatedAt, item.payload.updatedAt)) {
       logger.info('Skipping stale push: remote is newer', {
         taskId: item.taskId,
         operation: item.operation,
@@ -133,7 +155,7 @@ async function pushSingleItem(
   // item.operation === 'delete'
   if (remote) {
     const deletionIntent = new Date(item.timestamp).toISOString();
-    if (remote.clientUpdatedAt && isRemoteNewer(remote.clientUpdatedAt, deletionIntent)) {
+    if (isRemoteNewer(remote.clientUpdatedAt, deletionIntent)) {
       logger.info('Skipping stale delete: remote modified after delete was queued', {
         taskId: item.taskId,
         remoteAt: remote.clientUpdatedAt,

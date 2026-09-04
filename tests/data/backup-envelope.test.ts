@@ -4,6 +4,7 @@ import { exportTasks, importTasks } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
 import { createMockTask } from "@/tests/fixtures";
 import type { TaskRecord } from "@/lib/types";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 
 /**
  * Full-fidelity backup coverage (ADR 0014).
@@ -273,6 +274,71 @@ describe("Backup envelope", () => {
 
       // Merge combines task lists; it does not adopt another device's config.
       expect((await db.archiveSettings.get("settings"))?.archiveAfterDays).toBe(60);
+    });
+
+    it("clips a merge at the smart-view cap without refusing the tasks", async () => {
+      const db = getDb();
+      await db.smartViews.bulkPut(
+        Array.from({ length: SCHEMA_LIMITS.MAX_SMART_VIEWS }, (_, index) => ({
+          id: `existing-${index}`,
+          name: `Existing ${index}`,
+          criteria: {},
+          isBuiltIn: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        }))
+      );
+
+      await expect(importTasks({
+        version: "2.1.0",
+        exportedAt: "2026-01-01T00:00:00.000Z",
+        tasks: [createMockTask({ id: "must-not-commit" })],
+        smartViews: [{
+          id: "one-too-many",
+          name: "One too many",
+          criteria: {},
+          isBuiltIn: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        }],
+      }, "merge")).resolves.toBeUndefined();
+
+      // The cap holds, but it clips the one over-cap view rather than refusing
+      // the payload — the tasks travelling with it are the point of the restore.
+      expect(await db.tasks.get("must-not-commit")).toBeDefined();
+      expect(await db.smartViews.get("one-too-many")).toBeUndefined();
+      expect(await db.smartViews.count()).toBe(SCHEMA_LIMITS.MAX_SMART_VIEWS);
+    });
+
+    it("should_allow_overwriting_an_existing_smart_view_at_the_cap", async () => {
+      const db = getDb();
+      await db.smartViews.bulkPut(
+        Array.from({ length: SCHEMA_LIMITS.MAX_SMART_VIEWS }, (_, index) => ({
+          id: `existing-${index}`,
+          name: `Existing ${index}`,
+          criteria: {},
+          isBuiltIn: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        }))
+      );
+
+      await expect(importTasks({
+        version: "2.1.0",
+        exportedAt: "2026-01-01T00:00:00.000Z",
+        tasks: [],
+        smartViews: [{
+          id: "existing-0",
+          name: "Updated",
+          criteria: { status: "active" },
+          isBuiltIn: false,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-02-01T00:00:00.000Z",
+        }],
+      }, "merge")).resolves.toBeUndefined();
+
+      expect((await db.smartViews.get("existing-0"))?.name).toBe("Updated");
+      expect(await db.smartViews.count()).toBe(SCHEMA_LIMITS.MAX_SMART_VIEWS);
     });
   });
 
