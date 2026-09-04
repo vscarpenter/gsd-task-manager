@@ -218,7 +218,8 @@ describe("Error Logger module", () => {
 				userId: "user-1",
 				timestamp: "2025-01-15T12:00:00Z",
 				userMessage: "Failed to create task",
-				metadata: { title: "secret task content", operation: "createTask" },
+				taskId: "task-1",
+				metadata: { title: "secret task content", operation: "createTask", deviceId: "device-1" },
 			};
 
 			logError(error, context);
@@ -230,7 +231,10 @@ describe("Error Logger module", () => {
 			// Non-allowlisted content must never reach Sentry, even nested.
 			expect(JSON.stringify(sentryContext)).not.toContain("secret task content");
 			// Allowlisted diagnostic keys still pass through.
-			expect(sentryContext.userId).toBe("user-1");
+			expect(sentryContext).not.toHaveProperty("userId");
+			expect(sentryContext).not.toHaveProperty("taskId");
+			expect(sentryContext).not.toHaveProperty("deviceId");
+			expect(JSON.stringify(sentryContext)).not.toContain("device-1");
 			expect(sentryContext.operation).toBe("createTask");
 		});
 

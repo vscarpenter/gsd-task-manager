@@ -49,6 +49,7 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --exclude "*.html" \
   --exclude "sw.js" \
   --exclude "sw-cache-logic.js" \
+  --exclude "theme-init.js" \
   --cache-control "public,max-age=31536000,immutable"
 
 echo "  → Syncing HTML files and service worker..."
@@ -58,7 +59,14 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --include "*.html" \
   --include "sw.js" \
   --include "sw-cache-logic.js" \
+  --include "theme-init.js" \
   --cache-control "public,max-age=0,must-revalidate"
+
+echo "  → Forcing stable runtime metadata..."
+aws s3 cp "$BUILD_DIR/theme-init.js" "$S3_BUCKET/theme-init.js" \
+  --metadata-directive REPLACE \
+  --cache-control "public,max-age=0,must-revalidate" \
+  --content-type "application/javascript"
 
 echo "  → Forcing no-cache on index.html..."
 aws s3 cp "$S3_BUCKET/index.html" "$S3_BUCKET/index.html" \

@@ -761,6 +761,8 @@ describe("Logger module", () => {
 
 			logger.error("Push failed", new Error("boom"), {
 				taskId: "task-1",
+				userId: "user-1",
+				deviceId: "device-1",
 				phase: "push",
 				correlationId: "corr-9",
 				record: { title: "private note" },
@@ -768,7 +770,9 @@ describe("Logger module", () => {
 
 			const [, context] = mockCaptureException.mock.calls[0];
 			const ctx = context as Record<string, unknown>;
-			expect(ctx.taskId).toBe("task-1");
+			expect(ctx).not.toHaveProperty("taskId");
+			expect(ctx).not.toHaveProperty("userId");
+			expect(ctx).not.toHaveProperty("deviceId");
 			expect(ctx.phase).toBe("push");
 			expect(ctx.correlationId).toBe("corr-9");
 			expect(ctx).not.toHaveProperty("record");

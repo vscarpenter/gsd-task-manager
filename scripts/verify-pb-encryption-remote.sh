@@ -33,37 +33,42 @@ for cmd in curl jq; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "Error: required command not found: $cmd" >&2; exit 1; }
 done
 
+AUTH_PAYLOAD_FILE=$(mktemp)
+PB_CURL_CONFIG=$(mktemp)
+chmod 600 "$AUTH_PAYLOAD_FILE" "$PB_CURL_CONFIG"
+
 TOKEN=""
 ID=""
 # Best-effort cleanup: delete the temporary task we created so the target isn't
 # littered, even if an assertion fails partway through.
 cleanup() {
   if [ -n "$ID" ] && [ -n "$TOKEN" ]; then
-    if curl -sf -X DELETE -H "Authorization: $TOKEN" \
+    if curl --config "$PB_CURL_CONFIG" -sf -X DELETE \
         "$PB_URL/api/collections/tasks/records/$ID" >/dev/null 2>&1; then
       echo "   cleaned up test record $ID"
     else
       echo "   WARN: could not delete test record $ID — remove it manually" >&2
     fi
   fi
+  rm -f "$AUTH_PAYLOAD_FILE" "$PB_CURL_CONFIG"
 }
 trap cleanup EXIT
 
 echo "1) authenticate against $PB_URL"
-# Piped to jq so a non-2xx response yields an empty/null token (handled below)
-# rather than aborting under set -e before the friendly check runs.
+jq -n '{identity: env.PB_ADMIN_EMAIL, password: env.PB_ADMIN_PASSWORD}' > "$AUTH_PAYLOAD_FILE"
 TOKEN=$(curl -sf -X POST "$PB_URL/api/collections/_superusers/auth-with-password" \
   -H 'content-type: application/json' \
-  -d "{\"identity\":\"$PB_ADMIN_EMAIL\",\"password\":\"$PB_ADMIN_PASSWORD\"}" | jq -r .token)
+  --data-binary @"$AUTH_PAYLOAD_FILE" | jq -r .token)
 if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
   echo "   FAIL: could not authenticate superuser at $PB_URL" >&2
   exit 1
 fi
 
+printf 'header = "Authorization: %s"\n' "$TOKEN" > "$PB_CURL_CONFIG"
 echo "2) create a temporary task with non-empty json fields"
 TASK_ID="verify-remote-$$"
 REC=$(curl -sf -X POST "$PB_URL/api/collections/tasks/records" \
-  -H "Authorization: $TOKEN" -H 'content-type: application/json' \
+  --config "$PB_CURL_CONFIG" -H 'content-type: application/json' \
   -d "{
     \"task_id\":\"$TASK_ID\",
     \"owner\":\"verify-remote\",
@@ -81,7 +86,7 @@ fi
 echo "   created record id=$ID"
 
 echo "3) read it back and ASSERT plaintext round-trip over the API"
-API_REC=$(curl -sf -H "Authorization: $TOKEN" \
+API_REC=$(curl --config "$PB_CURL_CONFIG" -sf \
   "$PB_URL/api/collections/tasks/records/$ID")
 
 VIEW=$(echo "$API_REC" | jq -r .title)

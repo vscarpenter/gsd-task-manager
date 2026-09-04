@@ -9,7 +9,7 @@
  * erase the set if it lived there.
  */
 export const SENTRY_SAFE_METADATA_KEYS: ReadonlySet<string> = new Set([
-  'correlationId', 'userId', 'taskId', 'deviceId', 'phase', 'operation',
+  'correlationId', 'phase', 'operation',
   'action', 'trigger', 'triggeredBy', 'validationErrors', 'componentStack',
   'count', 'attempt', 'status', 'statusCode', 'type', 'url', 'timestamp',
   'errorCode',

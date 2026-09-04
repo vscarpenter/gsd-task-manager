@@ -8,6 +8,27 @@ if [ -z "$GSD_TASKS_ENC_KEY" ] || [ "${#GSD_TASKS_ENC_KEY}" -ne 32 ]; then
     exit 1
 fi
 
+TLS_MODE="${TLS_MODE:-internal}"
+case "$TLS_MODE" in
+    internal|public)
+        ;;
+    custom)
+        if [ -z "${TLS_CERT:-}" ] || [ -z "${TLS_KEY:-}" ]; then
+            echo "[gsd] FATAL: TLS_CERT and TLS_KEY are required when TLS_MODE=custom" >&2
+            exit 1
+        fi
+        if [ ! -r "$TLS_CERT" ] || [ ! -r "$TLS_KEY" ]; then
+            echo "[gsd] FATAL: custom TLS certificate or key is not readable" >&2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "[gsd] FATAL: TLS_MODE must be internal, public, or custom" >&2
+        exit 1
+        ;;
+esac
+export TLS_MODE
+
 # ---------------------------------------------------------------------------
 # GSD Task Manager — Container Entrypoint
 # Starts PocketBase (background) and Caddy (foreground-ish), with clean

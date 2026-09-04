@@ -424,6 +424,9 @@ describe("Sentry wrapper", () => {
       contexts: {
         gsd: {
           context: "sync-engine",
+          taskId: "TASK_ID_SENTINEL",
+          userId: "USER_ID_SENTINEL",
+          deviceId: "DEVICE_ID_SENTINEL",
           logMessage: "Sync failed",
           action: "manual",
           errorCode: "network_error",
@@ -441,6 +444,9 @@ describe("Sentry wrapper", () => {
     expect(serialized).not.toContain("RAW_MESSAGE_SENTINEL");
     expect(serialized).not.toContain("TASK_TITLE_SENTINEL");
     expect(serialized).not.toContain("INPUT_SENTINEL");
+    expect(serialized).not.toContain("TASK_ID_SENTINEL");
+    expect(serialized).not.toContain("USER_ID_SENTINEL");
+    expect(serialized).not.toContain("DEVICE_ID_SENTINEL");
   });
 
   it("should keep only structural HTTP breadcrumb data", async () => {

@@ -46,6 +46,7 @@ describe('security hardening scripts and workflows', () => {
       readRepoFile('scripts/setup-pocketbase-collections.sh'),
       readRepoFile('scripts/update-pocketbase-tasks-schema.sh'),
       readRepoFile('scripts/setup-pocketbase-feedback-collection.sh'),
+      readRepoFile('scripts/verify-pb-encryption-remote.sh'),
     ];
 
     for (const script of scripts) {
@@ -103,6 +104,35 @@ describe('security hardening scripts and workflows', () => {
     expect(htmlSyncBlock).toContain('--include "sw.js"');
   });
 
+
+  it('forces stable executable assets to revalidate instead of caching them immutable', () => {
+    const deployScript = readRepoFile('scripts/deploy-app.sh');
+    const immutableStart = deployScript.indexOf('Syncing static assets');
+    const stableStart = deployScript.indexOf('Syncing HTML files and service worker');
+    const metadataStart = deployScript.indexOf('Forcing stable runtime metadata');
+    const immutableBlock = deployScript.slice(immutableStart, stableStart);
+    const stableBlock = deployScript.slice(stableStart, metadataStart);
+
+    expect(immutableBlock).toContain('--exclude "theme-init.js"');
+    expect(stableBlock).toContain('--include "theme-init.js"');
+    expect(deployScript.slice(metadataStart)).toContain('aws s3 cp "$BUILD_DIR/theme-init.js"');
+    expect(deployScript.slice(metadataStart)).toContain('--metadata-directive REPLACE');
+    expect(deployScript.slice(metadataStart)).toContain('public,max-age=0,must-revalidate');
+  });
+
+  it('separates internal, public ACME, and custom certificate modes', () => {
+    const caddyfile = readRepoFile('docker/Caddyfile');
+    const entrypoint = readRepoFile('docker/docker-entrypoint.sh');
+    const readme = readRepoFile('docker/README.md');
+
+    expect(caddyfile).not.toContain('TLS_CERT:internal');
+    expect(caddyfile).toContain('(tls_internal)');
+    expect(caddyfile).toContain('(tls_public)');
+    expect(caddyfile).toContain('(tls_custom)');
+    expect(caddyfile).toContain('import tls_{$TLS_MODE:internal}');
+    expect(entrypoint).toContain('TLS_MODE must be internal, public, or custom');
+    expect(readme).toContain('TLS_MODE=public');
+  });
   it('fails CloudFront header deployment unless the response headers policy is attached', () => {
     const policyScript = readRepoFile('scripts/deploy-cloudfront-response-headers-policy.sh');
     const workflow = readRepoFile('.github/workflows/deploy-cloudfront-infra.yml');
