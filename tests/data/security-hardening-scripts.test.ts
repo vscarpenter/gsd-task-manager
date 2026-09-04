@@ -29,6 +29,33 @@ describe('security hardening scripts and workflows', () => {
     expect(script).toContain('"deleteRule": null');
   });
 
+  it('installs and verifies anonymous feedback controls before enabling public writes', () => {
+    const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
+    const hook = readRepoFile('docker/pb_hooks/feedback_controls.pb.js');
+    const caddy = readRepoFile('docker/Caddyfile');
+    const disabledIndex = script.indexOf('"createRule": null');
+    const settingsIndex = script.indexOf('Installing rate-limit and private-log settings');
+    const markerVerifyIndex = script.lastIndexOf('/api/gsd/feedback-controls');
+    const publicIndex = script.lastIndexOf('{"createRule": ""}');
+
+    expect(disabledIndex).toBeGreaterThan(-1);
+    expect(settingsIndex).toBeGreaterThan(disabledIndex);
+    expect(markerVerifyIndex).toBeGreaterThan(settingsIndex);
+    expect(publicIndex).toBeGreaterThan(markerVerifyIndex);
+    expect(script).toContain('"label": "feedback:create"');
+    expect(script).toContain('"audience": ""');
+    expect(script).toContain('logs["logIP"] = False');
+    expect(script).toContain('logs["logAuthId"] = False');
+    expect(script).toContain('assert 0 <= logs["maxDays"] <= 1');
+
+    expect(hook).toContain('txApp.countRecords("feedback") >= 10000');
+    expect(hook).toContain('new TooManyRequestsError');
+    expect(hook).toContain('cronAdd("gsd-feedback-retention"');
+    expect(hook).toContain('created < {:cutoff}');
+    expect(hook).toContain('$apis.requireSuperuserAuth()');
+    expect(caddy).toContain('handle /api/gsd/feedback-controls*');
+  });
+
   it('gives feedback no field that could identify a submitter', () => {
     const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
 

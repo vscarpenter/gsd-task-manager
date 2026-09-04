@@ -80,6 +80,12 @@
 		respond "PocketBase admin API is not exposed through this origin." 404
 	}
 
+	# The feedback setup marker exposes server policy state to superusers on the
+	# direct PocketBase port. It is never part of the browser application's API.
+	handle /api/gsd/feedback-controls* {
+		respond "PocketBase control API is not exposed through this origin." 404
+	}
+
 	# App-facing API endpoints
 	handle /api/* {
 		reverse_proxy localhost:8090

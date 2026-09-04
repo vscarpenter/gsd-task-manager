@@ -10,16 +10,16 @@ const source = readFileSync(
 
 function loadHooks() {
   let route:
-    | { method: string; path: string; handler: (event: any) => unknown; middleware: unknown }
+    | { method: string; path: string; handler: (event: unknown) => unknown; middleware: unknown }
     | undefined;
-  let createHandler: ((event: any) => void) | undefined;
+  let createHandler: ((event: unknown) => void) | undefined;
   const authMiddleware = Symbol('users-auth');
 
   vm.runInNewContext(source, {
-    routerAdd: (method: string, path: string, handler: (event: any) => unknown, middleware: unknown) => {
+    routerAdd: (method: string, path: string, handler: (event: unknown) => unknown, middleware: unknown) => {
       route = { method, path, handler, middleware };
     },
-    onRecordCreateExecute: (handler: (event: any) => void, collection: string) => {
+    onRecordCreateExecute: (handler: (event: unknown) => void, collection: string) => {
       expect(collection).toBe('tasks');
       createHandler = handler;
     },

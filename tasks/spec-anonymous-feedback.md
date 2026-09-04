@@ -39,7 +39,7 @@ and before they do they can see the exact payload that will leave their device.
 | `message` | string, ≤1000 chars | Optional. |
 | `votes` | string[] | Roadmap slugs, ≤`ROADMAP_ITEMS.length`, each a known slug. |
 | `app_version` | string, ≤20 chars | From the build-time version constant. |
-| `client_submitted_at` | ISO 8601 string | Client clock. Never sort or filter on PocketBase's own `created`. |
+| `client_submitted_at` | ISO 8601 string | Untrusted client clock for context only; never used for retention or abuse controls. |
 
 ## Constraints
 
@@ -52,6 +52,15 @@ and before they do they can see the exact payload that will leave their device.
   from the user's tasks may appear in the payload.
 - **No auth token.** The submit path uses bare `fetch`, not the PocketBase SDK client,
   whose auth store attaches tokens automatically.
+- **Server abuse controls are fail-closed.** Collection setup first sets
+  `createRule` to null, verifies the checked-in PocketBase hook, installs one
+  all-audience `feedback:create` rule capped at 30 creates per 60 seconds,
+  enforces a transactional 10,000-record aggregate quota, and only then enables
+  anonymous creation. Missing or drifted controls reject every create.
+- **Server retention is authoritative.** A daily hook deletes feedback older than
+  180 days using PocketBase's server-controlled `created` value. The client timestamp
+  cannot extend retention. Request logs retain at most one day and record neither
+  IP nor authenticated-record ID.
 - **No new CSP origin.** `https://api.vinny.io` is already in `connect-src`
   (`cloudfront/response-headers-policy.json:19`); that string must not change.
 - **No Dexie migration.** Local state lives in `localStorage` under `gsd:feedback:*`,
@@ -130,10 +139,14 @@ urgent/important flags, but no dates.
 6. Voting is one-per-feature per device, enforced by the local store.
 7. The command palette exposes "Send feedback" and routes to the Settings section.
 8. `components/about/privacy-section.tsx` acknowledges that opt-in feedback exists.
-9. The `feedback` collection accepts anonymous creates and refuses list, view, update, and
-   delete for every non-superuser caller.
+9. The `feedback` collection accepts anonymous creates only after the setup script
+   verifies the hook, 30-per-60-second rate rule, aggregate quota, retention, and
+   private-log policy. It refuses list, view, update, and delete for every
+   non-superuser caller.
 10. `connect-src` in `cloudfront/response-headers-policy.json` is unchanged.
 11. `bun run test`, `bun typecheck`, `bun lint`, and `bun run quality:shape` all pass.
+12. The pinned PocketBase system test runs the real setup and proves an anonymous
+    create succeeds while anonymous list and duplicate submission attempts fail.
 
 ## Test Stubs
 
