@@ -6,8 +6,12 @@ import { join } from "node:path";
 
 const SCRIPT = join(__dirname, "..", "docker", "docker-entrypoint.sh");
 
-/** 32 characters, the length the entrypoint requires before it does anything else. */
-const ENC_KEY = "0123456789abcdef0123456789abcdef";
+/**
+ * The entrypoint checks the key's LENGTH before anything else, so these tests
+ * only need 32 characters. Built rather than written as a hex literal, which
+ * secret scanners read as a real key.
+ */
+const ENC_KEY = "not-a-real-key".padEnd(32, "0");
 
 /**
  * Run the entrypoint far enough to observe how it resolved TLS. The script
