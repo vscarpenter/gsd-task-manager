@@ -64,12 +64,20 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --include "theme-init.js" \
   --cache-control "public,max-age=0,must-revalidate"
 
+# Releases before v12 shipped no public/theme-init.js. A rollback runs this
+# script against one of those older artifacts, and the syncs above are already
+# destructive, so a hard failure here would leave the bucket rewritten and the
+# CloudFront invalidation below unreached.
 echo "  → Forcing stable runtime metadata..."
-aws s3 cp "$BUILD_DIR/theme-init.js" "$S3_BUCKET/theme-init.js" \
-  --no-follow-symlinks \
-  --metadata-directive REPLACE \
-  --cache-control "public,max-age=0,must-revalidate" \
-  --content-type "application/javascript"
+if [ -f "$BUILD_DIR/theme-init.js" ]; then
+  aws s3 cp "$BUILD_DIR/theme-init.js" "$S3_BUCKET/theme-init.js" \
+    --no-follow-symlinks \
+    --metadata-directive REPLACE \
+    --cache-control "public,max-age=0,must-revalidate" \
+    --content-type "application/javascript"
+else
+  echo "    (skipped — this build ships no theme-init.js)"
+fi
 
 echo "  → Forcing no-cache on index.html..."
 aws s3 cp "$S3_BUCKET/index.html" "$S3_BUCKET/index.html" \
