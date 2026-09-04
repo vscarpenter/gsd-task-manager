@@ -79,6 +79,27 @@ function isTaskListPage(value: unknown): value is TaskListPage {
     && Array.isArray(page.items);
 }
 
+function validateTaskListPage(
+  value: unknown,
+  expectedPage: number,
+  expectedTotal: number | null,
+  materializedCount: number,
+): TaskListPage {
+  if (!isTaskListPage(value) || value.page !== expectedPage) {
+    throw new Error('Remote task pagination metadata is malformed');
+  }
+  if (value.totalItems > SYNC_CONFIG.MAX_REMOTE_TASKS) {
+    throw new Error('Remote task collection exceeds the supported maximum');
+  }
+  if (expectedTotal !== null && value.totalItems !== expectedTotal) {
+    throw new Error('Remote task collection changed during pagination');
+  }
+  if (materializedCount + value.items.length > SYNC_CONFIG.MAX_REMOTE_TASKS) {
+    throw new Error('Remote task collection exceeds the supported maximum');
+  }
+  return value;
+}
+
 /** Fetch a complete task collection without ever materializing beyond the cap. */
 export async function fetchBoundedRemoteTasks(
   options: BoundedTaskListOptions
@@ -104,22 +125,11 @@ export async function fetchBoundedRemoteTasks(
       }
       return rawPage as RecordModel[];
     }
-    if (!isTaskListPage(rawPage) || rawPage.page !== pageNumber) {
-      throw new Error('Remote task pagination metadata is malformed');
-    }
-    if (rawPage.totalItems > SYNC_CONFIG.MAX_REMOTE_TASKS) {
-      throw new Error('Remote task collection exceeds the supported maximum');
-    }
-    if (expectedTotal !== null && rawPage.totalItems !== expectedTotal) {
-      throw new Error('Remote task collection changed during pagination');
-    }
-    expectedTotal = rawPage.totalItems;
-    if (records.length + rawPage.items.length > SYNC_CONFIG.MAX_REMOTE_TASKS) {
-      throw new Error('Remote task collection exceeds the supported maximum');
-    }
-    records.push(...rawPage.items);
-    if (pageNumber >= rawPage.totalPages) break;
-    if (rawPage.items.length === 0) {
+    const page = validateTaskListPage(rawPage, pageNumber, expectedTotal, records.length);
+    expectedTotal = page.totalItems;
+    records.push(...page.items);
+    if (pageNumber >= page.totalPages) break;
+    if (page.items.length === 0) {
       throw new Error('Remote task pagination made no progress');
     }
     pageNumber += 1;

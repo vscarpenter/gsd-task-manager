@@ -223,6 +223,33 @@ async function validateTokenAndRefresh(
   setters.setSessionExpired(!refreshed);
 }
 
+function buildSyncConfig(
+  authState: AuthState,
+  existingConfig: PBSyncConfig | undefined,
+): PBSyncConfig {
+  return {
+    key: "sync_config",
+    enabled: true,
+    userId: authState.userId,
+    deviceId: existingConfig?.deviceId ?? crypto.randomUUID(),
+    deviceName: navigator.userAgent.substring(0, 50),
+    email: authState.email,
+    provider: authState.provider,
+    lastSyncAt: null,
+    lastClientUpdatedAt: null,
+    pullCursorVersion: 2,
+    lastServerUpdatedAt: null,
+    lastSuccessfulSyncAt: null,
+    consecutiveFailures: 0,
+    lastFailureAt: null,
+    lastFailureReason: null,
+    nextRetryAt: null,
+    autoSyncEnabled: true,
+    autoSyncIntervalMinutes: 2,
+    localTaskOwnerUserId: authState.userId,
+  };
+}
+
 /** Persist sync config to IndexedDB after successful OAuth */
 async function persistSyncConfig(authState: AuthState) {
   const db = getDb();
@@ -253,29 +280,7 @@ async function persistSyncConfig(authState: AuthState) {
         );
       }
 
-      const newConfig: PBSyncConfig = {
-        key: "sync_config",
-        enabled: true,
-        userId: authState.userId,
-        deviceId: existingConfig?.deviceId ?? crypto.randomUUID(),
-        deviceName: navigator.userAgent.substring(0, 50),
-        email: authState.email,
-        provider: authState.provider,
-        lastSyncAt: null,
-        lastClientUpdatedAt: null,
-        pullCursorVersion: 2,
-        lastServerUpdatedAt: null,
-        lastSuccessfulSyncAt: null,
-        consecutiveFailures: 0,
-        lastFailureAt: null,
-        lastFailureReason: null,
-        nextRetryAt: null,
-        autoSyncEnabled: true,
-        autoSyncIntervalMinutes: 2,
-        localTaskOwnerUserId: authState.userId,
-      };
-
-      await db.syncMetadata.put(newConfig);
+      await db.syncMetadata.put(buildSyncConfig(authState, existingConfig));
     },
   );
 

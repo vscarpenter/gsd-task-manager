@@ -122,6 +122,44 @@ describe('fetchBoundedRemoteTasks', () => {
       sort: 'task_id,id',
     })).rejects.toThrow(/changed during pagination/);
   });
+
+  it('rejects a response whose page does not match the requested page', async () => {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => ({
+          page: 2,
+          perPage: 200,
+          totalPages: 2,
+          totalItems: 1,
+          items: [{ id: 'rec-1' }],
+        })),
+      }),
+    });
+
+    await expect(fetchBoundedRemoteTasks({
+      filter: 'owner = "user-1"',
+      sort: 'task_id,id',
+    })).rejects.toThrow(/pagination metadata is malformed/);
+  });
+
+  it('rejects an empty nonterminal page instead of looping', async () => {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => ({
+          page: 1,
+          perPage: 200,
+          totalPages: 2,
+          totalItems: 1,
+          items: [],
+        })),
+      }),
+    });
+
+    await expect(fetchBoundedRemoteTasks({
+      filter: 'owner = "user-1"',
+      sort: 'task_id,id',
+    })).rejects.toThrow(/made no progress/);
+  });
 });
 
 describe('escapeFilterValue', () => {

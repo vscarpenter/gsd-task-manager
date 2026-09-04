@@ -86,6 +86,20 @@ function failureMessage(result: DeleteAccountResult): string {
 	return "Couldn't delete your account right now. Check your connection and try again.";
 }
 
+async function eraseLocalDataAndScheduleReload(): Promise<boolean> {
+	const resetResult = await resetEverything({ preserveTheme: true });
+	if (!resetResult.success) {
+		toast.error(
+			"Cloud account deleted, but local erase was incomplete. Use Reset Everything to retry local cleanup.",
+		);
+		return false;
+	}
+
+	toast.success("Account deleted — reloading…");
+	setTimeout(() => reloadAfterReset(), UI_TIMING.RESET_RELOAD_DELAY_MS);
+	return true;
+}
+
 /**
  * Confirmation dialog for permanently deleting the cloud account and all synced tasks.
  *
@@ -126,16 +140,9 @@ export function DeleteAccountDialog({
 
 			// Remote account is gone. Only now do we touch local data.
 			if (eraseLocal) {
-				const resetResult = await resetEverything({ preserveTheme: true });
-				if (!resetResult.success) {
-					toast.error(
-						"Cloud account deleted, but local erase was incomplete. Use Reset Everything to retry local cleanup.",
-					);
+				if (!(await eraseLocalDataAndScheduleReload())) {
 					dispatch({ type: "setDeleting", value: false });
-					return;
 				}
-				toast.success("Account deleted — reloading…");
-				setTimeout(() => reloadAfterReset(), UI_TIMING.RESET_RELOAD_DELAY_MS);
 				return;
 			}
 

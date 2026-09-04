@@ -97,6 +97,15 @@ function buildPreservedSyncMetadata(deviceId: string) {
 	};
 }
 
+function shouldSkipLocalStorageKey(key: string, preserveTheme: boolean): boolean {
+	const isAppOwned =
+		key === "pocketbase_auth" ||
+		key === "theme" ||
+		key.startsWith("gsd-") ||
+		key.startsWith("gsd:");
+	return !isAppOwned || (preserveTheme && key === "gsd-theme");
+}
+
 /**
  * Clear localStorage items (except theme if preserveTheme=true)
  */
@@ -113,12 +122,7 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 		const keys = [...new Set([...knownKeys, ...storedKeys])];
 
 		for (const key of keys) {
-			const isAppOwned =
-				key === "pocketbase_auth" ||
-				key === "theme" ||
-				key.startsWith("gsd-") ||
-				key.startsWith("gsd:");
-			if (!isAppOwned || (preserveTheme && key === "gsd-theme")) continue;
+			if (shouldSkipLocalStorageKey(key, preserveTheme)) continue;
 
 			try {
 				localStorage.removeItem(key);

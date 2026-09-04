@@ -79,6 +79,17 @@ function hasUsableRemoteVersion(value: unknown): value is string {
     && !Number.isNaN(new Date(value).getTime());
 }
 
+async function recordUnusableRemoteVersion(item: SyncQueueItem): Promise<void> {
+  logger.warn('Skipping mutation: remote task version is missing or malformed', {
+    taskId: item.taskId,
+    operation: item.operation,
+  });
+  await getSyncQueue().recordAttemptFailure(
+    item.id,
+    'Remote task version is missing or malformed',
+  );
+}
+
 /**
  * Process a single queue item: create, update, or delete the remote record.
  *
@@ -98,11 +109,7 @@ async function pushSingleItem(
   const { entry: remote, fetchSucceeded } = await fetchRemoteTaskEntry(ownerId, item.taskId);
 
   if (remote && !hasUsableRemoteVersion(remote.clientUpdatedAt)) {
-    logger.warn('Skipping mutation: remote task version is missing or malformed', {
-      taskId: item.taskId,
-      operation: item.operation,
-    });
-    await queue.recordAttemptFailure(item.id, 'Remote task version is missing or malformed');
+    await recordUnusableRemoteVersion(item);
     return 'index_unavailable';
   }
 

@@ -8,6 +8,7 @@ import {
 } from '@/lib/tasks';
 import { getDb } from '@/lib/db';
 import type { TaskRecord, ImportPayload } from '@/lib/types';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 
 // Mock dependencies
 const mockGetSyncConfig = vi.hoisted(() => vi.fn());
@@ -390,6 +391,61 @@ describe('Task Import/Export Operations', () => {
       };
 
       await expect(importTasks(oversized, 'replace')).rejects.toThrow(/smart-view|Invalid import data/i);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects excessive smart-view nesting before opening a transaction', async () => {
+      let nested: unknown = { leaf: true };
+      for (let depth = 0; depth <= SCHEMA_LIMITS.SMART_VIEW_MAX_DEPTH; depth++) {
+        nested = { next: nested };
+      }
+      const payload = {
+        ...validPayload,
+        smartViews: nested,
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/nesting depth/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects aggregate smart-view complexity before opening a transaction', async () => {
+      const payload = {
+        ...validPayload,
+        appPreferences: {
+          extra: Array.from(
+            { length: SCHEMA_LIMITS.SMART_VIEW_MAX_INPUT_NODES + 1 },
+            () => null,
+          ),
+        },
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/supported complexity/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('bounds aggregate UTF-8 bytes instead of JavaScript character count', async () => {
+      const oversizedUtf8 = 'é'.repeat((SCHEMA_LIMITS.SMART_VIEW_MAX_STRING_BYTES / 2) + 1);
+      const payload = {
+        ...validPayload,
+        appPreferences: { extra: oversizedUtf8 },
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/string data/);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects too many pinned smart views before opening a transaction', async () => {
+      const payload = {
+        ...validPayload,
+        appPreferences: {
+          pinnedSmartViewIds: Array.from(
+            { length: SCHEMA_LIMITS.MAX_PINNED_SMART_VIEWS + 1 },
+            (_, index) => `view-${index}`,
+          ),
+        },
+      } as unknown as ImportPayload;
+
+      await expect(importTasks(payload, 'replace')).rejects.toThrow(/Pinned smart views/);
       expect(mockDb.transaction).not.toHaveBeenCalled();
     });
 

@@ -249,6 +249,33 @@ describe('pushLocalChanges LWW guard', () => {
     expect(result.failedCount).toBe(1);
     expect(result.lastError).toBe('remote_index_unavailable');
     expect(await getSyncQueue().getPendingCount()).toBe(1);
+    const queued = await getSyncQueue().getForTask('t1');
+    expect(queued[0]?.lastError).toBe('Remote task version is missing or malformed');
+  });
+
+  it('does not delete a remote record whose version is unusable', async () => {
+    await getSyncQueue().enqueue('delete', 't1', null);
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([
+        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: null }],
+      ]),
+      fetchSucceeded: true,
+    });
+
+    const deleteSpy = vi.fn();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
+    });
+
+    const result = await pushLocalChanges();
+
+    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(result.pushedCount).toBe(0);
+    expect(result.failedCount).toBe(1);
+    expect(result.lastError).toBe('remote_index_unavailable');
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
+    const queued = await getSyncQueue().getForTask('t1');
+    expect(queued[0]?.lastError).toBe('Remote task version is missing or malformed');
   });
 
   it('fresh-reads the just-updated record so a later stale delete is skipped', async () => {

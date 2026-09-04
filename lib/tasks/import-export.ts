@@ -11,6 +11,7 @@ import type { ImportablePayload, ImportPayload, TaskRecord } from "@/lib/types";
 import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { assertRawSmartViewBounds } from "@/lib/tasks/smart-view-import-bounds";
 
 /** Maximum number of tasks allowed in a single import to prevent storage DoS */
 const MAX_IMPORT_TASKS = 10_000;
@@ -409,75 +410,6 @@ function assertWithinImportCap(parsed: {
   }
 }
 
-function assertRawSmartViewBounds(payload: unknown): void {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return;
-  const record = payload as Record<string, unknown>;
-  const smartViews = record.smartViews;
-
-  if (Array.isArray(smartViews)) {
-    if (smartViews.length > SCHEMA_LIMITS.MAX_SMART_VIEWS) {
-      throw new Error(`Import exceeds maximum of ${SCHEMA_LIMITS.MAX_SMART_VIEWS} smart views.`);
-    }
-    for (const view of smartViews) {
-      if (!view || typeof view !== "object" || Array.isArray(view)) continue;
-      const criteria = (view as Record<string, unknown>).criteria;
-      if (!criteria || typeof criteria !== "object" || Array.isArray(criteria)) continue;
-      const filter = criteria as Record<string, unknown>;
-      const boundedArrays: Array<[unknown, number, string]> = [
-        [filter.quadrants, 4, "quadrants"],
-        [filter.tags, SCHEMA_LIMITS.MAX_TAGS, "tags"],
-        [filter.recurrence, 4, "recurrence"],
-      ];
-      for (const [value, maximum, label] of boundedArrays) {
-        if (Array.isArray(value) && value.length > maximum) {
-          throw new Error(`Smart-view ${label} exceeds maximum of ${maximum}.`);
-        }
-      }
-    }
-  }
-
-  const preferences = record.appPreferences;
-  if (preferences && typeof preferences === "object" && !Array.isArray(preferences)) {
-    const pinned = (preferences as Record<string, unknown>).pinnedSmartViewIds;
-    if (Array.isArray(pinned) && pinned.length > SCHEMA_LIMITS.MAX_PINNED_SMART_VIEWS) {
-      throw new Error("Pinned smart views exceed the supported maximum.");
-    }
-  }
-
-  const roots = [smartViews, preferences].filter((value) => value !== undefined);
-  const stack = roots.map((value) => ({ value, depth: 0 }));
-  const seen = new WeakSet<object>();
-  let inputNodes = 0;
-  let stringBytes = 0;
-  while (stack.length > 0) {
-    const current = stack.pop()!;
-    if (typeof current.value === "string") {
-      if (current.value.length > SCHEMA_LIMITS.SMART_VIEW_MAX_STRING_BYTES) {
-        throw new Error("Smart-view string data exceeds the supported maximum.");
-      }
-      stringBytes += new TextEncoder().encode(current.value).byteLength;
-      if (stringBytes > SCHEMA_LIMITS.SMART_VIEW_MAX_STRING_BYTES) {
-        throw new Error("Smart-view string data exceeds the supported maximum.");
-      }
-      continue;
-    }
-    if (!current.value || typeof current.value !== "object") continue;
-    if (current.depth > SCHEMA_LIMITS.SMART_VIEW_MAX_DEPTH) {
-      throw new Error("Smart-view structure exceeds the supported nesting depth.");
-    }
-    if (seen.has(current.value)) continue;
-    seen.add(current.value);
-    const children = Array.isArray(current.value)
-      ? current.value
-      : Object.keys(current.value).map((key) => (current.value as Record<string, unknown>)[key]);
-    inputNodes += children.length;
-    if (inputNodes > SCHEMA_LIMITS.SMART_VIEW_MAX_INPUT_NODES) {
-      throw new Error("Smart-view structure exceeds the supported complexity.");
-    }
-    for (const child of children) stack.push({ value: child, depth: current.depth + 1 });
-  }
-}
-
 export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   assertRawSmartViewBounds(payload);
@@ -499,9 +431,7 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
     "rw",
     importTransactionTables(db),
     async () => {
-      if (parsed.smartViews) {
-        await assertSmartViewStorageCap(parsed.smartViews, mode);
-      }
+      if (parsed.smartViews) await assertSmartViewStorageCap(parsed.smartViews, mode);
 
       ({ created: tasksToCreate, deletedIds: taskIdsToDelete } = await applyTasks(parsed.tasks, mode));
 
