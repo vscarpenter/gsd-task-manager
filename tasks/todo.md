@@ -26,21 +26,44 @@ against production with a read-only probe.
       fell back to Caddy's private CA. Also fixed the compose file's Let's
       Encrypt example, which needs `TLS_MODE=public`. (`649bca7`)
 
-## Still to fix on this branch
+- [x] **CRITICAL — account deletion was broken in production.** The client only
+      called `DELETE /api/gsd/account`, which lives in `docker/pb_hooks/` and is
+      **not loaded on api.vinny.io**: verified live, the route 404s identically
+      to a nonexistent one, and the repo's own privacy doc confirms task content
+      is plaintext, so the sibling encryption hook is absent too. The
+      transactional route stays preferred; a 404, and only a 404, falls through
+      to client-side erasure. (`2dd8802`)
+- [x] **Export wrote backups this build refused to restore** — smart views were
+      the only store emitted unvalidated while import hard-failed on them. Shape
+      and count bounds now clip and count; resource bounds still fail closed.
+      Also fixed the tag cap, which reused the per-task limit. (`0dcdeca`)
+- [x] **MCP server died silently at startup** — a network round-trip inside a
+      bare `catch { process.exit(1) }`, with the token file left on disk.
+      Startup is offline-only now, and reachability no longer retires a
+      token. (`0f14206`)
+- [x] **Failed queue items pinned tasks forever** — reverted the #440 fix for a
+      Confirmed Medium in `docs/audits/AUDIT-2026-07-10.md`. Both guards share
+      one classifier; a released task goes to Trash rather than being
+      dropped. (`c837b9a`)
 
-- [ ] **CRITICAL — account deletion is broken in production.** The client now
-      only calls `DELETE /api/gsd/account`, which lives in `docker/pb_hooks/`.
-      Those hooks are **not loaded on api.vinny.io**: verified live, the route
-      404s identically to a nonexistent one, and the repo's own privacy doc
-      confirms task content is plaintext, so the sibling encryption hook is
-      absent too. Nothing in the repo ships pb_hooks to that server.
-- [ ] **Export writes backups this build refuses to restore** — smart views are
-      the only store emitted unvalidated, while import hard-fails on them.
-- [ ] **MCP server dies silently at startup** — a network round-trip inside a
-      bare `catch { process.exit(1) }`, and the token file is never deleted.
-- [ ] **Failed queue items pin tasks forever** — reverts the #440 fix for a
-      Confirmed Medium in `docs/audits/AUDIT-2026-07-10.md`, which this PR
-      leaves in the tree contradicting the code.
+## Verification
+
+Full suite 2996 passing, typecheck, lint, and the code-shape ratchet all green.
+The cross-platform fixture pair still round-trips, so the iOS backup contract
+is intact. The local encryption harness was run against a real PocketBase with
+the hooks loaded, with a control run proving the owner hook was the cause.
+
+## Resuming From Here
+
+Still open, and none of it is code on this branch:
+
+- The audit's second half: a failed queue row for a task that still exists
+  remotely is still terminal, with no retry or dismiss surface. Recorded in the
+  audit's status line rather than silently closed.
+- `packages/mcp-server/package.json` is still 1.2.5. The docs now pin users to
+  that published version, which predates every MCP fix here, so a release is
+  needed before those docs are true.
+- The operational items below, none of which this branch can do.
 
 ## Not code defects, still required before merging #527
 
