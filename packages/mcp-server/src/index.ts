@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js';
 import { removeSetupArtifact } from './cli/setup-artifact.js';
 import { loadConfig } from './server/config.js';
+import { requireUsersPrincipal } from './pocketbase-client.js';
 import { createServer, registerHandlers } from './server/setup.js';
 import { createMcpLogger } from './utils/logger.js';
 import { initSentry, reportFatal } from './utils/sentry.js';
@@ -43,12 +44,13 @@ async function main() {
   let config;
   try {
     config = loadConfig();
+    await requireUsersPrincipal(config);
   } catch {
     process.exit(1);
   }
 
   // The setup-wizard artifact (~/.gsd-mcp-setup.json) holds the same token
-  // we just loaded from env — once the server boots with valid config it
+  // we just loaded from env — once the server authenticates as a normal user it
   // has served its purpose. Best-effort; never blocks startup.
   removeSetupArtifact();
 

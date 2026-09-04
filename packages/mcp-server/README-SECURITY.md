@@ -35,8 +35,10 @@ Use `claude-config.example.json` as a template, but keep your real credentials i
 ## Token Lifetime, Revocation, and the Setup Artifact
 
 The MCP server authenticates with your **primary PocketBase session JWT** — the
-same token your browser session uses. Anything that can read it has full
-read/write/delete access to your tasks until it expires. Know the limits:
+same token your browser session uses. Superuser and non-`users` principals are
+rejected before tools are registered. Anything that can read an accepted user token
+has full read/write/delete access to that account's tasks until it expires. Know the
+limits:
 
 - **PocketBase has no per-token revocation.** Logging out in the browser clears
   that browser's copy but does **not** invalidate other copies of the token.
@@ -44,9 +46,15 @@ read/write/delete access to your tasks until it expires. Know the limits:
   password/identity or rotating the collection's token secret on the server.
 - **The setup wizard writes a token-bearing file** (`~/.gsd-mcp-setup.json`,
   mode 0600) for you to copy into the Claude Desktop config. It is deleted
-  automatically the first time the MCP server starts with valid env config,
+  automatically only after the MCP server verifies a normal user identity,
   and any stale copy is cleared when the wizard re-runs — but delete it
   yourself (`rm ~/.gsd-mcp-setup.json`) if you abandon setup partway.
+  The wizard never prints the full token or identifying token fragments. Open
+  the artifact only in a trusted editor; do not print it to terminal history or logs.
+- **The generated launch configuration is pinned locally.** It invokes the exact
+  Node executable and package entrypoint that generated it, rather than selecting
+  the latest package from npm on every credentialed start. Updating is an explicit
+  exact-version install followed by another setup run.
 - **The token lives permanently in the Claude Desktop config**
   (`claude_desktop_config.json`). Treat that file as a credential store:
   don't back it up to shared locations, sync it, or paste it into chats.

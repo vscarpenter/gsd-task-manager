@@ -1,4 +1,4 @@
-import { getPocketBase } from '../pocketbase-client.js';
+import { getPocketBase, requireUsersPrincipal } from '../pocketbase-client.js';
 import type { GsdConfig, SyncStatus, TaskStats, PBTask } from '../types.js';
 import { createMcpLogger } from '../utils/logger.js';
 
@@ -8,9 +8,8 @@ const logger = createMcpLogger('SYNC_STATUS');
  * Get sync status from PocketBase health check
  */
 export async function getSyncStatus(config: GsdConfig): Promise<SyncStatus> {
-  const pb = getPocketBase(config);
-
   try {
+    const { pb } = await requireUsersPrincipal(config);
     await pb.health.check();
     const taskCount = await pb.collection('tasks').getList<PBTask>(1, 1);
 

@@ -49,7 +49,52 @@ export function getPocketBase(config: GsdConfig): PocketBase {
     pbToken = config.authToken;
   }
 
+  if (pbInstance.authStore.isSuperuser) {
+    pbInstance.authStore.clear();
+    pbToken = '';
+    throw new Error('PocketBase superuser tokens are not accepted');
+  }
+
   return pbInstance;
+}
+
+function normalUserAuthError(): Error {
+  return new Error(
+    `Not authenticated as a normal users-collection account\n\n` +
+      `Your auth token may be invalid, expired, or privileged.\n` +
+      `Run the installed setup wizard again: gsd-mcp-server --setup`
+  );
+}
+
+/**
+ * Hydrate and attest the configured PocketBase principal before any account-
+ * scoped operation. Administrator/superuser tokens are never accepted.
+ */
+export async function requireUsersPrincipal(
+  config: GsdConfig
+): Promise<{ pb: PocketBase; ownerId: string }> {
+  const pb = getPocketBase(config);
+  if (pb.authStore.isSuperuser) {
+    pb.authStore.clear();
+    throw normalUserAuthError();
+  }
+
+  if (!pb.authStore.record?.id && pb.authStore.token) {
+    try {
+      await pb.collection('users').authRefresh();
+    } catch {
+      pb.authStore.clear();
+      throw normalUserAuthError();
+    }
+  }
+
+  const model = pb.authStore.record;
+  if (pb.authStore.isSuperuser || !model?.id || model.collectionName !== 'users') {
+    pb.authStore.clear();
+    throw normalUserAuthError();
+  }
+
+  return { pb, ownerId: model.id };
 }
 
 /**
@@ -70,8 +115,8 @@ export function clearPocketBase(): void {
 export function getCurrentUserId(config: GsdConfig): string {
   const pb = getPocketBase(config);
   const model = pb.authStore.record;
-  if (!model?.id) {
-    throw new Error('Not authenticated — no user ID available');
+  if (pb.authStore.isSuperuser || !model?.id || model.collectionName !== 'users') {
+    throw normalUserAuthError();
   }
   return model.id;
 }

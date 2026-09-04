@@ -57,6 +57,10 @@ function pbRecord(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(pbClient, 'requireUsersPrincipal').mockImplementation(async (currentConfig) => ({
+    pb: pbClient.getPocketBase(currentConfig),
+    ownerId: 'user-1',
+  }));
 });
 
 describe('updateTask conflict detection', () => {
@@ -74,7 +78,7 @@ describe('updateTask conflict detection', () => {
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
-        record: { id: 'user-1' },
+        record: { id: 'user-1', collectionName: 'users' },
         token: 'tok',
         isValid: true,
       },
@@ -98,7 +102,7 @@ describe('updateTask conflict detection', () => {
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
-        record: { id: 'user-1' },
+        record: { id: 'user-1', collectionName: 'users' },
         token: 'tok',
         isValid: true,
       },
@@ -125,7 +129,7 @@ describe('updateTask conflict detection', () => {
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
-        record: { id: 'user-1' },
+        record: { id: 'user-1', collectionName: 'users' },
         token: 'tok',
         isValid: true,
       },
@@ -151,7 +155,7 @@ describe('updateTask conflict detection', () => {
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
-        record: { id: 'user-1' },
+        record: { id: 'user-1', collectionName: 'users' },
         token: 'tok',
         isValid: true,
       },
@@ -197,7 +201,7 @@ describe('bulkUpdateTasks conflict detection', () => {
         create: vi.fn(),
       }),
       authStore: {
-        record: { id: 'user-1' },
+        record: { id: 'user-1', collectionName: 'users' },
         token: 'tok',
         isValid: true,
       },
@@ -241,7 +245,7 @@ describe('bulkUpdateTasks conflict detection', () => {
         create: vi.fn(),
       }),
       authStore: {
-        record: { id: 'user-1' },
+        record: { id: 'user-1', collectionName: 'users' },
         token: 'tok',
         isValid: true,
       },

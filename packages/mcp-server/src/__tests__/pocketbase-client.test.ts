@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authStore, autoCancellation, pocketBaseConstructor } = vi.hoisted(() => {
+const { authStore, authRefresh, autoCancellation, collection, pocketBaseConstructor } = vi.hoisted(() => {
   const store = {
     isValid: false,
-    record: null as { id?: string } | null,
+    isSuperuser: false,
+    token: '',
+    record: null as { id?: string; collectionName?: string } | null,
     save: vi.fn(),
     clear: vi.fn(),
   };
+  const refresh = vi.fn();
+  const collectionMock = vi.fn(() => ({ authRefresh: refresh }));
   return {
     authStore: store,
+    authRefresh: refresh,
     autoCancellation: vi.fn(),
+    collection: collectionMock,
     pocketBaseConstructor: vi.fn(function PocketBaseMock() {
-      return { authStore: store, autoCancellation: vi.fn(), afterSend: undefined };
+      return { authStore: store, autoCancellation: vi.fn(), collection: collectionMock, afterSend: undefined };
     }),
   };
 });
@@ -24,6 +30,7 @@ import {
   clearPocketBase,
   getCurrentUserId,
   getPocketBase,
+  requireUsersPrincipal,
 } from '../pocketbase-client.js';
 
 const config = { pocketBaseUrl: 'https://pb.example.com', authToken: 'token' };
@@ -32,9 +39,19 @@ beforeEach(() => {
   clearPocketBase();
   vi.clearAllMocks();
   authStore.isValid = false;
+  authStore.isSuperuser = false;
+  authStore.token = '';
   authStore.record = null;
+  authStore.save.mockImplementation((token: string, record: typeof authStore.record) => {
+    authStore.token = token;
+    authStore.record = record;
+  });
+  authStore.clear.mockImplementation(() => {
+    authStore.token = '';
+    authStore.record = null;
+  });
   pocketBaseConstructor.mockImplementation(function PocketBaseMock() {
-    return { authStore, autoCancellation, afterSend: undefined };
+    return { authStore, autoCancellation, collection, afterSend: undefined };
   });
 });
 
@@ -107,14 +124,59 @@ describe('clearPocketBase', () => {
   });
 });
 
+describe('requireUsersPrincipal', () => {
+  it('hydrates and returns a normal users-collection identity', async () => {
+    authRefresh.mockImplementationOnce(async () => {
+      authStore.record = { id: 'user-1', collectionName: 'users' };
+    });
+
+    await expect(requireUsersPrincipal(config)).resolves.toMatchObject({ ownerId: 'user-1' });
+    expect(collection).toHaveBeenCalledWith('users');
+    expect(authRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a decoded superuser before any refresh request', async () => {
+    authStore.isSuperuser = true;
+
+    await expect(requireUsersPrincipal(config)).rejects.toThrow('superuser tokens are not accepted');
+    expect(collection).not.toHaveBeenCalled();
+    expect(authRefresh).not.toHaveBeenCalled();
+    expect(authStore.clear).toHaveBeenCalled();
+  });
+
+  it('rejects a non-users auth record', async () => {
+    getPocketBase(config);
+    authStore.record = { id: 'admin-1', collectionName: '_superusers' };
+
+    await expect(requireUsersPrincipal(config)).rejects.toThrow('normal users-collection account');
+    expect(authRefresh).not.toHaveBeenCalled();
+    expect(authStore.clear).toHaveBeenCalled();
+  });
+
+  it('rejects a token that cannot be refreshed', async () => {
+    authRefresh.mockRejectedValueOnce(new Error('401'));
+
+    await expect(requireUsersPrincipal(config)).rejects.toThrow('normal users-collection account');
+    expect(authStore.clear).toHaveBeenCalled();
+  });
+});
+
 describe('getCurrentUserId', () => {
   it('returns the authenticated record id', () => {
-    authStore.record = { id: 'user-1' };
+    getPocketBase(config);
+    authStore.record = { id: 'user-1', collectionName: 'users' };
     expect(getCurrentUserId(config)).toBe('user-1');
   });
 
   it('throws when the auth record has no id', () => {
-    authStore.record = {};
+    getPocketBase(config);
+    authStore.record = { collectionName: 'users' };
     expect(() => getCurrentUserId(config)).toThrow('Not authenticated');
+  });
+
+  it('throws for a record outside the users collection', () => {
+    getPocketBase(config);
+    authStore.record = { id: 'admin-1', collectionName: '_superusers' };
+    expect(() => getCurrentUserId(config)).toThrow('normal users-collection account');
   });
 });

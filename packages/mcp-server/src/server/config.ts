@@ -51,13 +51,39 @@ export function isSafePocketBaseUrl(url: string): boolean {
 }
 
 /**
+ * Reject PocketBase superuser JWTs before they are ever attached to a request.
+ * Runtime authentication performs the authoritative principal check after
+ * refresh; this parser is an early, offline guard for known superuser claims.
+ */
+export function isSuperuserAuthToken(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3 || !parts[1]) return false;
+    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as Record<
+      string,
+      unknown
+    >;
+    return (
+      claims['collectionId'] === '_superusers' ||
+      claims['collectionName'] === '_superusers' ||
+      claims['type'] === 'superuser' ||
+      claims['isSuperuser'] === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Configuration schema for GSD MCP Server (PocketBase)
  */
 export const configSchema = z.object({
   pocketBaseUrl: z.url().refine(isSafePocketBaseUrl, {
     message: UNSAFE_POCKETBASE_URL_MESSAGE,
   }),
-  authToken: z.string().min(1),
+  authToken: z.string().min(1).refine((token) => !isSuperuserAuthToken(token), {
+    message: 'PocketBase superuser tokens are not accepted',
+  }),
 });
 
 export type ConfigSchema = z.infer<typeof configSchema>;
@@ -74,7 +100,7 @@ export function loadConfig(): GsdConfig {
   } catch (error) {
     logger.error('Configuration error', error instanceof Error ? error : new Error(String(error)));
     logger.info('Required environment variables: GSD_POCKETBASE_URL, GSD_AUTH_TOKEN');
-    logger.info('Run setup wizard with: npx gsd-mcp-server --setup');
+    logger.info('Run the installed setup wizard with: gsd-mcp-server --setup');
     throw error;
   }
 }

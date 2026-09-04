@@ -3,6 +3,12 @@ import { configSchema } from '../../server/config.js';
 
 const validToken = 'a'.repeat(40);
 
+function jwt(claims: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
+  return `${header}.${payload}.signature`;
+}
+
 describe('configSchema URL validation', () => {
   describe('accepts safe URLs', () => {
     it('accepts https URLs', () => {
@@ -104,5 +110,40 @@ describe('configSchema URL validation', () => {
       });
       expect(result.success).toBe(false);
     });
+  });
+});
+
+describe('configSchema principal validation', () => {
+  const parse = (authToken: string) =>
+    configSchema.safeParse({ pocketBaseUrl: 'https://api.example.com', authToken });
+
+  it.each([
+    { collectionId: '_superusers' },
+    { collectionName: '_superusers' },
+    { type: 'superuser' },
+    { isSuperuser: true },
+  ])('rejects known superuser claims: %j', (claims) => {
+    const result = parse(jwt(claims));
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toContain('superuser tokens are not accepted');
+    }
+  });
+
+  it('accepts a normal users-collection JWT for runtime attestation', () => {
+    expect(
+      parse(
+        jwt({
+          collectionId: 'users_collection_id',
+          collectionName: 'users',
+          id: 'user-1',
+          type: 'auth',
+        })
+      ).success
+    ).toBe(true);
+  });
+
+  it('leaves malformed opaque tokens for authoritative runtime validation', () => {
+    expect(parse(validToken).success).toBe(true);
   });
 });

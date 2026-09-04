@@ -4,6 +4,7 @@
  */
 
 import { writeFileSync, chmodSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { GsdConfig } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
 import { redactPocketBaseHost } from '../api/client.js';
@@ -13,6 +14,8 @@ import { getSetupArtifactPath, removeSetupArtifact } from './setup-artifact.js';
 
 /** Default production PocketBase URL used as prompt default value */
 const DEFAULT_POCKETBASE_URL = process.env.GSD_POCKETBASE_URL || 'https://api.vinny.io';
+/** Exact reviewed package entrypoint; normal startup never selects code from npm. */
+const MCP_ENTRYPOINT = fileURLToPath(new URL('../index.js', import.meta.url));
 
 /**
  * Test PocketBase connectivity via health endpoint
@@ -54,6 +57,9 @@ async function configureAuthentication(pbUrl: string): Promise<string> {
   try {
     const config: GsdConfig = { pocketBaseUrl: pbUrl, authToken };
     const status = await getSyncStatus(config);
+    if (!status.healthy) {
+      throw new Error('PocketBase authentication or health validation failed');
+    }
     console.log('✓ Success!');
     console.log(`  Tasks in PocketBase: ${status.taskCount}`);
     console.log();
@@ -92,8 +98,8 @@ function writeConfigurationFile(pbUrl: string, authToken: string): string {
   const configJson = {
     mcpServers: {
       'gsd-tasks': {
-        command: 'npx',
-        args: ['-y', 'gsd-mcp-server'],
+        command: process.execPath,
+        args: [MCP_ENTRYPOINT],
         env: {
           GSD_POCKETBASE_URL: pbUrl,
           GSD_AUTH_TOKEN: authToken,
@@ -121,10 +127,7 @@ function writeConfigurationFile(pbUrl: string, authToken: string): string {
  */
 function displayConfiguration(pbUrl: string, authToken: string): void {
   const configPath = writeConfigurationFile(pbUrl, authToken);
-  const tokenPreview =
-    authToken.length > 6
-      ? `${authToken.slice(0, 3)}…${authToken.slice(-3)} (${authToken.length} chars)`
-      : `(${authToken.length} chars)`;
+  const tokenPreview = `[REDACTED: ${authToken.length} characters]`;
 
   console.log('Step 3/4: Generated Configuration');
   console.log(`Written to: ${configPath}  (mode 0600, owner-only)`);
@@ -135,8 +138,8 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
       {
         mcpServers: {
           'gsd-tasks': {
-            command: 'npx',
-            args: ['-y', 'gsd-mcp-server'],
+            command: process.execPath,
+            args: [MCP_ENTRYPOINT],
             env: {
               GSD_POCKETBASE_URL: redactPocketBaseHost(pbUrl),
               GSD_AUTH_TOKEN: `<see ${configPath}>  // ${tokenPreview}`,
@@ -157,8 +160,9 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
 function displayNextSteps(): void {
   const artifactPath = getSetupArtifactPath();
   console.log('Step 4/4: Next Steps');
-  console.log(`1. Open the generated file:  cat ${artifactPath}`);
-  console.log(`2. Open Claude Desktop config: ${getClaudeConfigPath()}`);
+  console.log(`1. Open the generated file in a trusted editor: ${artifactPath}`);
+  console.log('   Do not print it to the terminal or paste it into logs or chat.');
+  console.log(`2. Open Claude Desktop config in a trusted editor: ${getClaudeConfigPath()}`);
   console.log('3. Merge the "mcpServers" section into the Claude config');
   console.log('4. Restart Claude Desktop');
   console.log("5. Ask Claude: \"What's my GSD sync status?\"");
@@ -168,7 +172,7 @@ function displayNextSteps(): void {
   );
   console.log(`To remove it sooner:  rm ${artifactPath}`);
   console.log();
-  console.log('✓ Setup complete! Need help? Run: npx gsd-mcp-server --help');
+  console.log(`✓ Setup complete! Need help? Run: ${process.execPath} ${MCP_ENTRYPOINT} --help`);
 }
 
 /**
