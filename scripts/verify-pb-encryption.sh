@@ -89,19 +89,39 @@ if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
   exit 1
 fi
 
+# docker/pb_hooks/account_lifecycle.pb.js rejects any task whose owner is not a
+# live users record, so the harness owns its task from a real account rather than
+# a synthetic string.
+OWNER_REC=$(curl -s -X POST http://127.0.0.1:8099/api/collections/users/records \
+  -H "Authorization: $TOKEN" -H 'content-type: application/json' \
+  -d "{
+    \"email\":\"owner@example.com\",
+    \"password\":\"$ADMIN_PASS\",
+    \"passwordConfirm\":\"$ADMIN_PASS\"
+  }")
+OWNER=$(echo "$OWNER_REC" | jq -r .id)
+
+if [[ -z "$OWNER" || "$OWNER" == "null" ]]; then
+  echo "   FAIL: could not create the owning user: $OWNER_REC" >&2
+  exit 1
+fi
+echo "   created owning user id=$OWNER"
+
 # Create a task with non-empty json fields so the at-rest and round-trip assertions
 # cover the json-typed columns (tags, subtasks, time_entries), not just text fields.
-REC=$(curl -sf -X POST http://127.0.0.1:8099/api/collections/tasks/records \
+# `curl -s` rather than `-sf`: under `set -e` a failing `-f` aborts the assignment
+# and the FAIL branch below never prints the server's reason.
+REC=$(curl -s -X POST http://127.0.0.1:8099/api/collections/tasks/records \
   -H "Authorization: $TOKEN" -H 'content-type: application/json' \
-  -d '{
-    "task_id":"t1",
-    "owner":"verify",
-    "title":"Buy milk",
-    "description":"2%",
-    "tags":["home","work"],
-    "subtasks":[{"id":"s1","title":"step one","completed":false}],
-    "time_entries":[{"start":"2026-06-20T10:00:00Z","end":"2026-06-20T10:30:00Z"}]
-  }')
+  -d "$(jq -n --arg owner "$OWNER" '{
+    task_id: "t1",
+    owner: $owner,
+    title: "Buy milk",
+    description: "2%",
+    tags: ["home", "work"],
+    subtasks: [{ id: "s1", title: "step one", completed: false }],
+    time_entries: [{ start: "2026-06-20T10:00:00Z", end: "2026-06-20T10:30:00Z" }]
+  }')")
 ID=$(echo "$REC" | jq -r .id)
 
 if [[ -z "$ID" || "$ID" == "null" ]]; then

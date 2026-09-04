@@ -17,7 +17,9 @@
 #   PB_ADMIN_EMAIL     superuser email
 #   PB_ADMIN_PASSWORD  superuser password
 #
-# This creates a temporary task on the target server and DELETES it on exit.
+# This creates a temporary user and task on the target server and DELETES both on
+# exit. The user is required: docker/pb_hooks/account_lifecycle.pb.js refuses a
+# task whose owner is not a live users record.
 #
 # Usage:
 #   PB_URL=https://api.vinny.io PB_ADMIN_EMAIL=you@example.com \
@@ -39,16 +41,25 @@ chmod 600 "$AUTH_PAYLOAD_FILE" "$PB_CURL_CONFIG"
 
 TOKEN=""
 ID=""
-# Best-effort cleanup: delete the temporary task we created so the target isn't
-# littered, even if an assertion fails partway through.
+OWNER=""
+# Best-effort cleanup: delete the temporary records we created so the target
+# isn't littered, even if an assertion fails partway through. The task goes
+# first so a failure here cannot strand it behind a deleted owner.
+remove_record() {
+  local collection="$1" record="$2" label="$3"
+  [ -n "$record" ] || return 0
+  if curl --config "$PB_CURL_CONFIG" -sf -X DELETE \
+      "$PB_URL/api/collections/$collection/records/$record" >/dev/null 2>&1; then
+    echo "   cleaned up $label $record"
+  else
+    echo "   WARN: could not delete $label $record — remove it manually" >&2
+  fi
+}
+
 cleanup() {
-  if [ -n "$ID" ] && [ -n "$TOKEN" ]; then
-    if curl --config "$PB_CURL_CONFIG" -sf -X DELETE \
-        "$PB_URL/api/collections/tasks/records/$ID" >/dev/null 2>&1; then
-      echo "   cleaned up test record $ID"
-    else
-      echo "   WARN: could not delete test record $ID — remove it manually" >&2
-    fi
+  if [ -n "$TOKEN" ]; then
+    remove_record tasks "$ID" "test record"
+    remove_record users "$OWNER" "test user"
   fi
   rm -f "$AUTH_PAYLOAD_FILE" "$PB_CURL_CONFIG"
 }
@@ -65,19 +76,36 @@ if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
 fi
 
 printf 'header = "Authorization: %s"\n' "$TOKEN" > "$PB_CURL_CONFIG"
-echo "2) create a temporary task with non-empty json fields"
-TASK_ID="verify-remote-$$"
-REC=$(curl -sf -X POST "$PB_URL/api/collections/tasks/records" \
+echo "2) create a temporary owning user"
+# The account-lifecycle hook refuses a task whose owner is not a live users
+# record, so the round-trip needs a real account to own its throwaway task.
+OWNER_PASSWORD="$(head -c 24 /dev/urandom | base64 | tr -d '/+=')"
+OWNER_REC=$(curl -s -X POST "$PB_URL/api/collections/users/records" \
   --config "$PB_CURL_CONFIG" -H 'content-type: application/json' \
-  -d "{
-    \"task_id\":\"$TASK_ID\",
-    \"owner\":\"verify-remote\",
-    \"title\":\"Buy milk\",
-    \"description\":\"2%\",
-    \"tags\":[\"home\",\"work\"],
-    \"subtasks\":[{\"id\":\"s1\",\"title\":\"step one\",\"completed\":false}],
-    \"time_entries\":[{\"start\":\"2026-06-20T10:00:00Z\",\"end\":\"2026-06-20T10:30:00Z\"}]
-  }")
+  -d "$(jq -n --arg email "verify-remote-$$@example.com" --arg password "$OWNER_PASSWORD" \
+    '{email: $email, password: $password, passwordConfirm: $password}')")
+OWNER=$(echo "$OWNER_REC" | jq -r .id)
+if [ -z "$OWNER" ] || [ "$OWNER" = "null" ]; then
+  echo "   FAIL: could not create the owning user: $OWNER_REC" >&2
+  exit 1
+fi
+echo "   created owning user id=$OWNER"
+
+echo "3) create a temporary task with non-empty json fields"
+TASK_ID="verify-remote-$$"
+# `curl -s` rather than `-sf`: under `set -e` a failing `-f` aborts the
+# assignment, so the FAIL branch below never reports the server's reason.
+REC=$(curl -s -X POST "$PB_URL/api/collections/tasks/records" \
+  --config "$PB_CURL_CONFIG" -H 'content-type: application/json' \
+  -d "$(jq -n --arg task_id "$TASK_ID" --arg owner "$OWNER" '{
+    task_id: $task_id,
+    owner: $owner,
+    title: "Buy milk",
+    description: "2%",
+    tags: ["home", "work"],
+    subtasks: [{ id: "s1", title: "step one", completed: false }],
+    time_entries: [{ start: "2026-06-20T10:00:00Z", end: "2026-06-20T10:30:00Z" }]
+  }')")
 ID=$(echo "$REC" | jq -r .id)
 if [ -z "$ID" ] || [ "$ID" = "null" ]; then
   echo "   FAIL: record creation failed: $REC" >&2
@@ -85,7 +113,7 @@ if [ -z "$ID" ] || [ "$ID" = "null" ]; then
 fi
 echo "   created record id=$ID"
 
-echo "3) read it back and ASSERT plaintext round-trip over the API"
+echo "4) read it back and ASSERT plaintext round-trip over the API"
 API_REC=$(curl --config "$PB_CURL_CONFIG" -sf \
   "$PB_URL/api/collections/tasks/records/$ID")
 
