@@ -1,97 +1,87 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, chmodSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const SCRIPT = join(__dirname, "..", "scripts", "triage-run.sh");
 const HELPER = join(__dirname, "..", "scripts", "failing-agent-prs.cjs");
+const SHA = "a".repeat(40);
 
-function expectLaunchdPath(capturedPath: string, ghDir: string, homeDir: string): void {
-  const parts = capturedPath.split(":");
-  expect(parts.slice(0, 3)).toEqual([ghDir, "/usr/bin", "/bin"]);
-  expect(parts).toContain("/opt/homebrew/bin");
-  expect(parts).toContain(join(homeDir, ".local/bin"));
-  expect(parts).toContain(join(homeDir, ".bun/bin"));
-}
-
-// Stub gh: `gh issue list …` -> paused count; `gh pr list …` -> PR JSON.
-function stubGh(pausedCount: number, prsJson: unknown): string {
-  const dir = mkdtempSync(join(tmpdir(), "ghstub-"));
+function stubTools(pausedCount: number, prsJson: unknown): { dir: string; marker: string } {
+  const dir = mkdtempSync(join(tmpdir(), "triage-tools-"));
   const prsFile = join(dir, "prs.json");
+  const marker = join(dir, "executed.txt");
   writeFileSync(prsFile, JSON.stringify(prsJson));
-  const bin = join(dir, "gh");
   writeFileSync(
-    bin,
-    `#!/usr/bin/env bash
-case "$1" in
-  issue) echo ${pausedCount} ;;
-  pr) cat ${prsFile} ;;
-  *) echo "" ;;
-esac
-`
+    join(dir, "gh"),
+    '#!/bin/bash\ncase "$1" in\n  issue) echo ' +
+      pausedCount +
+      ' ;;\n  pr) cat "' +
+      prsFile +
+      '" ;;\nesac\n'
   );
-  chmodSync(bin, 0o755);
-  return dir;
+  chmodSync(join(dir, "gh"), 0o755);
+  for (const tool of ["git", "claude", "bun"]) {
+    writeFileSync(join(dir, tool), '#!/bin/bash\necho ' + tool + ' >> "' + marker + '"\nexit 97\n');
+    chmodSync(join(dir, tool), 0o755);
+  }
+  return { dir, marker };
 }
 
-function pathCapturingGh(pathFile: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "ghpath-"));
-  const bin = join(dir, "gh");
-  writeFileSync(bin, `#!/usr/bin/env bash\nprintf '%s' "$PATH" > "${pathFile}"\necho 1\n`);
-  chmodSync(bin, 0o755);
-  return dir;
-}
-
-function run(mode: string, pausedCount: number, prsJson: unknown): string {
-  const stub = stubGh(pausedCount, prsJson);
-  return execFileSync("bash", [SCRIPT, mode], {
-    env: { ...process.env, PATH: `${stub}:${process.env.PATH}`, GSD_TRIAGE_HELPER: HELPER },
+function run(mode: string, pausedCount: number, prsJson: unknown): { output: string; marker: string } {
+  const { dir, marker } = stubTools(pausedCount, prsJson);
+  const output = execFileSync("bash", [SCRIPT, mode], {
+    env: {
+      ...process.env,
+      PATH: dir + ":/usr/bin:/bin",
+      GSD_TRIAGE_HELPER: HELPER,
+      GSD_TRIAGE_BOT_LOGIN: "claude[bot]",
+    },
     encoding: "utf8",
   });
+  return { output, marker };
 }
 
-// Same-repo (isCrossRepository:false) marks these as the fleet's own PRs.
-const failingAgentPr = { headRefName: "claude/fix-a", statusCheckRollup: [{ conclusion: "FAILURE" }], isCrossRepository: false };
-const passingAgentPr = { headRefName: "claude/fix-b", statusCheckRollup: [{ conclusion: "SUCCESS" }], isCrossRepository: false };
-const failingUserPr = { headRefName: "feat/mine", statusCheckRollup: [{ conclusion: "FAILURE" }] };
-// A fork PR with a spoofed claude/ branch name — must never count as work.
-const forkAgentPr = {
-  headRefName: "claude/fix-ci",
+const botFailure = {
+  author: { login: "claude[bot]" },
+  headRefName: "claude/fix-a",
+  headRefOid: SHA,
+  isCrossRepository: false,
   statusCheckRollup: [{ conclusion: "FAILURE" }],
-  isCrossRepository: true,
-  headRepositoryOwner: { login: "attacker" },
 };
 
-describe("triage-run.sh pre-check", () => {
-  it("exits PAUSED when triage:paused is set", () => {
-    expect(run("--check", 1, [failingAgentPr])).toContain("PAUSED");
-  });
-  it("appends launchd tool dirs without shadowing an existing gh", () => {
-    const homeDir = mkdtempSync(join(tmpdir(), "triage-home-"));
-    const pathFile = join(homeDir, "captured-path.txt");
-    const ghDir = pathCapturingGh(pathFile);
-
-    const out = execFileSync("bash", [SCRIPT, "--check"], {
-      env: { ...process.env, HOME: homeDir, PATH: `${ghDir}:/usr/bin:/bin`, GSD_TRIAGE_HELPER: HELPER },
+describe("triage-run.sh discovery-only boundary", () => {
+  it("is disabled by default without a configured bot identity", () => {
+    const output = execFileSync("bash", [SCRIPT, "--check"], {
+      env: { ...process.env, GSD_TRIAGE_BOT_LOGIN: "" },
       encoding: "utf8",
     });
+    expect(output).toContain("DISABLED");
+  });
 
-    expect(out).toContain("PAUSED");
-    expectLaunchdPath(readFileSync(pathFile, "utf8"), ghDir, homeDir);
+  it("honors the pause switch", () => {
+    expect(run("--check", 1, [botFailure]).output).toContain("PAUSED");
   });
-  it("exits NO_WORK when no claude/* PR is failing", () => {
-    expect(run("--check", 0, [passingAgentPr, failingUserPr])).toContain("NO_WORK");
+
+  it("reports only exact bot and SHA candidates", () => {
+    const output = run("--check", 0, [botFailure]).output;
+    expect(output).toContain("DISCOVERY:");
+    expect(output).toContain("local branch remediation is retired");
   });
-  it("exits NO_WORK for a failing fork claude/* PR (not the fleet's own)", () => {
-    expect(run("--check", 0, [forkAgentPr])).toContain("NO_WORK");
-  });
-  it("reports WORK when a claude/* PR is failing", () => {
-    expect(run("--check", 0, [failingAgentPr, failingUserPr])).toMatch(/^WORK:/m);
-  });
-  it("dry-run prints the intended invocation", () => {
-    const out = run("--dry-run", 0, [failingAgentPr]);
-    expect(out).toMatch(/^WORK:/m);
-    expect(out).toContain("/triage-prs");
+
+  it.each(["--check", "--dry-run", ""])(
+    "never executes branch tools in mode %s",
+    (mode) => {
+      const { output, marker } = run(mode, 0, [botFailure]);
+      expect(output).toContain("DISABLED:");
+      expect(existsSync(marker)).toBe(false);
+    }
+  );
+
+  it("contains no local branch execution sink", () => {
+    const source = readFileSync(SCRIPT, "utf8");
+    expect(source).not.toMatch(/claude\s+-p|git\s+-C|bun\s+/);
+    expect(source).not.toContain("/triage-prs");
   });
 });

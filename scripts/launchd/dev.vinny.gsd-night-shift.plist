@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  launchd template for the GSD night shift (cycle D). Runs scripts/triage-run.sh
-  nightly at 20:00 local; the wrapper pre-checks and exits when there is no
-  failing claude/* PR, so idle nights are cheap.
+  DISCOVERY ONLY: scripts/triage-run.sh may list failing exact-bot/exact-SHA
+  PRs when GSD_TRIAGE_BOT_LOGIN is configured. It never checks out or executes
+  branch code. Without that variable it is an inert security tombstone.
 
   Install:
     cp scripts/launchd/dev.vinny.gsd-night-shift.plist ~/Library/LaunchAgents/
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vinny.gsd-night-shift.plist
-  Halt without uninstalling: add the `triage:paused` label to the Night Shift
-  Control issue (the wrapper exits on it).
+  Halt discovery without uninstalling: add `triage:paused` to the control issue.
   Uninstall:
     launchctl bootout gui/$(id -u)/dev.vinny.gsd-night-shift
     rm ~/Library/LaunchAgents/dev.vinny.gsd-night-shift.plist
