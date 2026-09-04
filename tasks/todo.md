@@ -1,3 +1,61 @@
+# Session state — 2026-09-04 (PR #527 blocking-defect fixes)
+
+Branch: `fix/pr527-blocking-defects`, cut from `fix/security-review-2026-09-04`
+@ `b2d597c`. These are defects **in** that PR, found by reviewing it before merge.
+
+## Review that produced this list
+
+10-dimension review with three-lens adversarial refutation: 35 findings raised,
+16 survived (12 unique after dedup), 19 refuted. The critical one was confirmed
+against production with a read-only probe.
+
+## Fixed here
+
+- [x] **Night-shift discovery reported a broken helper as "no work"** —
+      `node "$HELPER" || echo 0` turned any execution failure into `NO_WORK`.
+      Same gap made CI red: the test pinned PATH to `/usr/bin:/bin` but Linux
+      runners keep node in `/usr/local/bin`. Now reports `UNKNOWN`. (`63adaea`)
+- [x] **Rollback aborted mid-deploy** — the new unconditional
+      `aws s3 cp out/theme-init.js` fails for any tag before v12, after both
+      `--delete` syncs and before the CloudFront invalidation. (`12e31d4`)
+- [x] **Encryption verification harnesses broken by the owner hook** — both
+      created their probe task with a synthetic owner, which
+      `account_lifecycle.pb.js` rejects. Verified against a real PocketBase,
+      with a control run proving causation. (`004c0a3`)
+- [x] **Legacy TLS config silently ignored** — a bare `TLS_CERT`/`TLS_KEY` pair
+      fell back to Caddy's private CA. Also fixed the compose file's Let's
+      Encrypt example, which needs `TLS_MODE=public`. (`649bca7`)
+
+## Still to fix on this branch
+
+- [ ] **CRITICAL — account deletion is broken in production.** The client now
+      only calls `DELETE /api/gsd/account`, which lives in `docker/pb_hooks/`.
+      Those hooks are **not loaded on api.vinny.io**: verified live, the route
+      404s identically to a nonexistent one, and the repo's own privacy doc
+      confirms task content is plaintext, so the sibling encryption hook is
+      absent too. Nothing in the repo ships pb_hooks to that server.
+- [ ] **Export writes backups this build refuses to restore** — smart views are
+      the only store emitted unvalidated, while import hard-fails on them.
+- [ ] **MCP server dies silently at startup** — a network round-trip inside a
+      bare `catch { process.exit(1) }`, and the token file is never deleted.
+- [ ] **Failed queue items pin tasks forever** — reverts the #440 fix for a
+      Confirmed Medium in `docs/audits/AUDIT-2026-07-10.md`, which this PR
+      leaves in the tree contradicting the code.
+
+## Not code defects, still required before merging #527
+
+- `gh workflow disable deploy-prod.yml` (id 279641929) — still active.
+- `production` environment has no deployment branch policy; `cloudfront-infra`
+  has no required reviewer.
+- Deploy the two new pb_hooks **before** the web deploy, or account deletion
+  ships broken. Do not run the new feedback setup script first: it nulls
+  `createRule`, then verifies the hook, then exits on the 404, which would
+  disable the working feedback form.
+- `packages/mcp-server/package.json` is still 1.2.5, the published version that
+  predates every MCP fix here, and the docs now pin users to it.
+
+---
+
 # Session state — 2026-09-04 (21-finding security remediation)
 
 Branch: `fix/security-review-2026-09-04` · Source: sealed scan
