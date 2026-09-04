@@ -156,7 +156,7 @@ export const filterCriteriaSchema = z.object({
 	status: z.enum(["all", "active", "completed"]).optional(),
 	tags: z.array(
 		z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH)
-	).max(SCHEMA_LIMITS.MAX_TAGS).optional(),
+	).max(SCHEMA_LIMITS.MAX_SMART_VIEW_FILTER_TAGS).optional(),
 	dueDateRange: z.object({
 		start: z.string().max(SCHEMA_LIMITS.SMART_VIEW_DATE_MAX_LENGTH).optional(),
 		end: z.string().max(SCHEMA_LIMITS.SMART_VIEW_DATE_MAX_LENGTH).optional(),
@@ -219,7 +219,12 @@ export const importPayloadSchema = z.object({
 	version: z.union([z.string(), z.number()]).transform(String),
 	archivedTasks: z.array(z.preprocess(deriveQuadrant, storedArchivedTaskRecordSchema)).optional(),
 	deletedTasks: z.array(z.preprocess(deriveQuadrant, storedTrashedTaskRecordSchema)).optional(),
-	smartViews: z.array(smartViewSchema).max(SCHEMA_LIMITS.MAX_SMART_VIEWS).optional(),
+	// Deliberately unvalidated here. A smart view is one row of an optional
+	// store, and a legacy row this build cannot represent must not abort the
+	// tasks, archive, trash and settings travelling with it. `applySmartViews`
+	// validates each row against `smartViewSchema`, keeps what it can, and
+	// reports the rest. Resource bounds still fail closed before this point.
+	smartViews: z.array(z.unknown()).optional(),
 	notificationSettings: notificationSettingsSchema.optional(),
 	archiveSettings: archiveSettingsSchema.optional(),
 	appPreferences: appPreferencesSchema.optional(),

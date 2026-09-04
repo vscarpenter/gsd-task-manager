@@ -107,12 +107,33 @@ describe('Smart Views', () => {
     it('skips a persisted view whose filter complexity exceeds the supported bounds', async () => {
       await getDb().smartViews.add(seedCustomView({
         id: 'oversized-filter',
-        criteria: { tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, index) => `tag-${index}`) },
+        criteria: {
+          tags: Array.from(
+            { length: SCHEMA_LIMITS.MAX_SMART_VIEW_FILTER_TAGS + 1 },
+            (_, index) => `tag-${index}`
+          ),
+        },
       }));
 
       const views = await getSmartViews();
 
       expect(views.find((view) => view.id === 'oversized-filter')).toBeUndefined();
+    });
+
+    // A view filters from the whole workspace tag vocabulary, which is unrelated
+    // to how many tags one task may carry. Reusing the per-task cap made
+    // previously valid views vanish from the UI with no message.
+    it('renders a view filtering on more tags than a single task may carry', async () => {
+      await getDb().smartViews.add(seedCustomView({
+        id: 'many-tag-filter',
+        criteria: {
+          tags: Array.from({ length: SCHEMA_LIMITS.MAX_TAGS + 1 }, (_, index) => `tag-${index}`),
+        },
+      }));
+
+      const views = await getSmartViews();
+
+      expect(views.find((view) => view.id === 'many-tag-filter')).toBeDefined();
     });
 
     it('does not render any custom views when the persisted collection exceeds the aggregate cap', async () => {

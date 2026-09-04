@@ -4,10 +4,11 @@ import { createLogger } from "@/lib/logger";
 import {
   archivedTaskRecordSchema,
   importPayloadSchema,
+  smartViewSchema,
   taskRecordSchema,
   trashedTaskRecordSchema,
 } from "@/lib/schema";
-import type { ImportablePayload, ImportPayload, TaskRecord } from "@/lib/types";
+import type { ImportablePayload, ImportPayload, SmartViewRecord, TaskRecord } from "@/lib/types";
 import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
@@ -107,21 +108,57 @@ async function collectExportableTrash(): Promise<{ tasks: TaskRecord[]; skippedC
   return { tasks: normalized, skippedCount };
 }
 
+/**
+ * Read the smart views, keeping only rows the import path would accept.
+ *
+ * Mirrors the task/archive/trash collectors. Smart views were the one store
+ * emitted straight out of Dexie, so a legacy row produced a backup this same
+ * build refused to restore — and the over-cap case threw, which bricked export
+ * entirely for a user with no smart-view delete surface to recover through.
+ */
+function partitionRepresentableViews(candidates: unknown[]): {
+  views: SmartViewRecord[];
+  skipped: number;
+} {
+  const views: SmartViewRecord[] = [];
+  let skipped = 0;
+  for (const candidate of candidates) {
+    const result = smartViewSchema.safeParse(candidate);
+    if (result.success) views.push(result.data as SmartViewRecord);
+    else skipped++;
+  }
+  return { views, skipped };
+}
+
+async function collectExportableSmartViews(): Promise<{
+  smartViews: SmartViewRecord[];
+  skippedCount: number;
+}> {
+  const db = getDb();
+  const { views, skipped } = partitionRepresentableViews(await db.smartViews.toArray());
+  const smartViews = views.slice(0, SCHEMA_LIMITS.MAX_SMART_VIEWS);
+  const skippedCount = skipped + (views.length - smartViews.length);
+
+  if (skippedCount > 0) {
+    logger.warn('Skipped smart views during export', { count: skippedCount });
+  }
+  return { smartViews, skippedCount };
+}
+
 async function collectUserOwnedStores() {
   const db = getDb();
-  const smartViewCount = await db.smartViews.count();
-  if (smartViewCount > SCHEMA_LIMITS.MAX_SMART_VIEWS) {
-    throw new Error(
-      `Stored smart views exceed the maximum of ${SCHEMA_LIMITS.MAX_SMART_VIEWS}; export aborted.`
-    );
-  }
   const [smartViews, notificationSettings, archiveSettings, appPreferences] = await Promise.all([
-    db.smartViews.toArray(),
+    collectExportableSmartViews(),
     db.notificationSettings.get("settings"),
     db.archiveSettings.get("settings"),
     db.appPreferences.get("preferences"),
   ]);
-  return { smartViews, notificationSettings, archiveSettings, appPreferences };
+  return {
+    smartViews: smartViews.smartViews,
+    notificationSettings,
+    archiveSettings,
+    appPreferences,
+  };
 }
 
 /**
@@ -310,41 +347,60 @@ async function applyTrashedTasks(
   }
 }
 
+/**
+ * Restore the smart views a backup carries, skipping any row this build cannot
+ * represent and clipping at the storage cap. Returns how many were dropped.
+ *
+ * Rows arrive unvalidated by design (see `importPayloadSchema.smartViews`), so
+ * this is where the shape bound is enforced — per row, never per payload.
+ */
 async function applySmartViews(
-  smartViews: ImportPayload["smartViews"],
+  smartViews: unknown[] | undefined,
   mode: "replace" | "merge"
-): Promise<void> {
-  if (!smartViews) return;
+): Promise<number> {
+  if (!smartViews) return 0;
   const db = getDb();
   if (mode === "replace") await db.smartViews.clear();
-  for (const view of smartViews) {
+
+  const { views: representable, skipped } = partitionRepresentableViews(smartViews);
+  let skippedCount = skipped;
+
+  // Overwriting a view the user already has consumes no room, so only genuinely
+  // new ids count against the cap.
+  const existingIds = await existingSmartViewIds(mode, representable);
+  let stored = mode === "replace" ? 0 : await db.smartViews.count();
+
+  for (const view of representable) {
+    const isOverwrite = existingIds.has(view.id);
+    if (!isOverwrite && stored >= SCHEMA_LIMITS.MAX_SMART_VIEWS) {
+      skippedCount++;
+      continue;
+    }
     await db.smartViews.put(view as never);
+    if (!isOverwrite) stored++;
   }
+
+  return skippedCount;
 }
 
-async function assertSmartViewStorageCap(
-  smartViews: NonNullable<ImportPayload["smartViews"]>,
-  mode: "replace" | "merge"
-): Promise<void> {
-  if (mode === "replace") return;
+async function existingSmartViewIds(
+  mode: "replace" | "merge",
+  views: SmartViewRecord[]
+): Promise<Set<string>> {
+  if (mode === "replace") return new Set();
   const db = getDb();
-  const existingCount = await db.smartViews.count();
-  if (existingCount > SCHEMA_LIMITS.MAX_SMART_VIEWS) {
-    throw new Error(`Stored smart views exceed the maximum of ${SCHEMA_LIMITS.MAX_SMART_VIEWS}.`);
-  }
-
-  const incomingIds = [...new Set(smartViews.map((view) => view.id))];
-  const existingRows = await db.smartViews.bulkGet(incomingIds);
-  const freshCount = existingRows.filter((row) => row === undefined).length;
-  if (existingCount + freshCount > SCHEMA_LIMITS.MAX_SMART_VIEWS) {
-    throw new Error(
-      `Import would exceed the maximum of ${SCHEMA_LIMITS.MAX_SMART_VIEWS} smart views.`
-    );
-  }
+  const rows = await db.smartViews.bulkGet([...new Set(views.map((view) => view.id))]);
+  return new Set(rows.filter((row) => row !== undefined).map((row) => row.id));
 }
 
 /** Settings singletons, applied on the restore path only. */
-async function applySettings(parsed: ImportPayload): Promise<void> {
+/** Only the settings singletons — smart views travel unvalidated and are applied separately. */
+type SettingsBearingPayload = Pick<
+  ImportPayload,
+  "notificationSettings" | "archiveSettings" | "appPreferences"
+>;
+
+async function applySettings(parsed: SettingsBearingPayload): Promise<void> {
   const db = getDb();
   if (parsed.notificationSettings) await db.notificationSettings.put(parsed.notificationSettings);
   if (parsed.archiveSettings) await db.archiveSettings.put(parsed.archiveSettings);
@@ -410,6 +466,23 @@ function assertWithinImportCap(parsed: {
   }
 }
 
+/** Records the rows a restore could not take, so a partial restore is never silent. */
+function reportImportSkips(counts: {
+  skippedSmartViewCount: number;
+  droppedArchivedCount: number;
+}): void {
+  if (counts.skippedSmartViewCount > 0) {
+    logger.warn('Skipped smart views this build cannot represent', {
+      count: counts.skippedSmartViewCount,
+    });
+  }
+  if (counts.droppedArchivedCount > 0) {
+    logger.warn('Dropped archived records that were also present as live tasks', {
+      count: counts.droppedArchivedCount,
+    });
+  }
+}
+
 export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   assertRawSmartViewBounds(payload);
@@ -426,18 +499,17 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
   let tasksToCreate: TaskRecord[] = [];
   let taskIdsToDelete: string[] = [];
   let droppedArchivedCount = 0;
+  let skippedSmartViewCount = 0;
 
   await db.transaction(
     "rw",
     importTransactionTables(db),
     async () => {
-      if (parsed.smartViews) await assertSmartViewStorageCap(parsed.smartViews, mode);
-
       ({ created: tasksToCreate, deletedIds: taskIdsToDelete } = await applyTasks(parsed.tasks, mode));
 
       droppedArchivedCount = await applyArchivedTasks(parsed.archivedTasks, mode);
       await applyTrashedTasks(parsed.deletedTasks, mode);
-      await applySmartViews(parsed.smartViews, mode);
+      skippedSmartViewCount = await applySmartViews(parsed.smartViews, mode);
       // Settings belong to the restore path: merging combines task lists, it
       // does not adopt another device's configuration.
       if (mode === "replace") await applySettings(parsed);
@@ -452,11 +524,7 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
       }
     });
 
-  if (droppedArchivedCount > 0) {
-    logger.warn('Dropped archived records that were also present as live tasks', {
-      count: droppedArchivedCount,
-    });
-  }
+  reportImportSkips({ skippedSmartViewCount, droppedArchivedCount });
 
   if (syncEnabled) {
     scheduleSyncAfterChange();

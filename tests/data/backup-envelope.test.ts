@@ -276,7 +276,7 @@ describe("Backup envelope", () => {
       expect((await db.archiveSettings.get("settings"))?.archiveAfterDays).toBe(60);
     });
 
-    it("should_reject_a_merge_that_would_exceed_the_smart_view_cap_atomically", async () => {
+    it("clips a merge at the smart-view cap without refusing the tasks", async () => {
       const db = getDb();
       await db.smartViews.bulkPut(
         Array.from({ length: SCHEMA_LIMITS.MAX_SMART_VIEWS }, (_, index) => ({
@@ -301,9 +301,12 @@ describe("Backup envelope", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
         }],
-      }, "merge")).rejects.toThrow(/smart views/i);
+      }, "merge")).resolves.toBeUndefined();
 
-      expect(await db.tasks.get("must-not-commit")).toBeUndefined();
+      // The cap holds, but it clips the one over-cap view rather than refusing
+      // the payload — the tasks travelling with it are the point of the restore.
+      expect(await db.tasks.get("must-not-commit")).toBeDefined();
+      expect(await db.smartViews.get("one-too-many")).toBeUndefined();
       expect(await db.smartViews.count()).toBe(SCHEMA_LIMITS.MAX_SMART_VIEWS);
     });
 

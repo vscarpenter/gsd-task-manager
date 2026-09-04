@@ -17,39 +17,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function assertArrayLimit(value: unknown, maximum: number, label: string): void {
-  if (Array.isArray(value) && value.length > maximum) {
-    throw new Error(`Smart-view ${label} exceeds maximum of ${maximum}.`);
-  }
-}
-
-function assertCriteriaArrayBounds(view: unknown): void {
-  const viewRecord = asRecord(view);
-  if (!viewRecord) return;
-  const criteria = asRecord(viewRecord.criteria);
-  if (!criteria) return;
-  assertArrayLimit(criteria.quadrants, 4, "quadrants");
-  assertArrayLimit(criteria.tags, SCHEMA_LIMITS.MAX_TAGS, "tags");
-  assertArrayLimit(criteria.recurrence, 4, "recurrence");
-}
-
-function assertSmartViewCollectionBounds(smartViews: unknown): void {
-  if (!Array.isArray(smartViews)) return;
-  if (smartViews.length > SCHEMA_LIMITS.MAX_SMART_VIEWS) {
-    throw new Error(`Import exceeds maximum of ${SCHEMA_LIMITS.MAX_SMART_VIEWS} smart views.`);
-  }
-  for (const view of smartViews) assertCriteriaArrayBounds(view);
-}
-
-function assertPinnedSmartViewBounds(preferences: unknown): void {
-  const preferenceRecord = asRecord(preferences);
-  if (!preferenceRecord) return;
-  const pinned = preferenceRecord.pinnedSmartViewIds;
-  if (Array.isArray(pinned) && pinned.length > SCHEMA_LIMITS.MAX_PINNED_SMART_VIEWS) {
-    throw new Error("Pinned smart views exceed the supported maximum.");
-  }
-}
-
 function addBoundedString(value: string, state: StructureState): void {
   if (value.length > SCHEMA_LIMITS.SMART_VIEW_MAX_STRING_BYTES) {
     throw new Error("Smart-view string data exceeds the supported maximum.");
@@ -106,13 +73,20 @@ function assertAggregateStructureBounds(roots: unknown[]): void {
   }
 }
 
+/**
+ * Fail closed on the resource cost of raw, untrusted smart-view input: nesting
+ * depth, aggregate node count, aggregate UTF-8 bytes.
+ *
+ * Only memory bounds live here. Shape and count bounds — field lengths, the
+ * per-collection cap, criteria array caps — belong to the import path, which
+ * skips the offending row and counts it. A single unrepresentable view must
+ * never abort a payload carrying the user's tasks, archive, trash and settings.
+ */
 export function assertRawSmartViewBounds(payload: unknown): void {
   const record = asRecord(payload);
   if (!record) return;
-  const smartViews = record.smartViews;
-  const preferences = record.appPreferences;
-  assertSmartViewCollectionBounds(smartViews);
-  assertPinnedSmartViewBounds(preferences);
-  const roots = [smartViews, preferences].filter((value) => value !== undefined);
+  const roots = [record.smartViews, record.appPreferences].filter(
+    (value) => value !== undefined,
+  );
   assertAggregateStructureBounds(roots);
 }

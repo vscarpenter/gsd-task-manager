@@ -42,6 +42,12 @@ export const SCHEMA_LIMITS = {
 
   /** Maximum custom smart views retained or accepted in one backup */
   MAX_SMART_VIEWS: 100,
+  /**
+   * Maximum tags one smart view may FILTER BY. Deliberately not `MAX_TAGS`,
+   * which bounds the tags a single task may CARRY: a view draws from the whole
+   * workspace vocabulary, so the two quantities are unrelated.
+   */
+  MAX_SMART_VIEW_FILTER_TAGS: 200,
   /** Maximum custom smart-view identifier length */
   SMART_VIEW_ID_MAX_LENGTH: 128,
   /** Maximum custom smart-view display-name length */
