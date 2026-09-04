@@ -3,6 +3,7 @@ import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
 import { smartViewSchema } from "@/lib/schema";
 import type { AppPreferences } from "@/lib/types";
 import { SMART_VIEWS_CONFIG } from "@/lib/constants";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 
 export const APP_PREFERENCES_EVENT = "gsd:app-preferences";
 
@@ -26,11 +27,6 @@ function parseStoredSmartView(view: unknown): SmartView | undefined {
  * Get all Smart Views (built-in + custom)
  */
 export async function getSmartViews(): Promise<SmartView[]> {
-  const db = getDb();
-  const customViews = (await db.smartViews.toArray())
-    .map(parseStoredSmartView)
-    .filter((view): view is SmartView => view !== undefined);
-
   // Convert built-in views to full SmartView objects
   const builtInViews: SmartView[] = BUILT_IN_SMART_VIEWS.map(view => ({
     ...view,
@@ -38,6 +34,19 @@ export async function getSmartViews(): Promise<SmartView[]> {
     createdAt: "2025-01-01T00:00:00.000Z", // Fixed date for built-ins
     updatedAt: "2025-01-01T00:00:00.000Z"
   }));
+
+  const db = getDb();
+  const storedViews = await db.smartViews
+    .toCollection()
+    .limit(SCHEMA_LIMITS.MAX_SMART_VIEWS + 1)
+    .toArray();
+
+  // A poisoned store must not be eagerly materialized or partially rendered.
+  if (storedViews.length > SCHEMA_LIMITS.MAX_SMART_VIEWS) return builtInViews;
+
+  const customViews = storedViews
+    .map(parseStoredSmartView)
+    .filter((view): view is SmartView => view !== undefined);
 
   // Return built-in views first, then custom views
   return [...builtInViews, ...customViews];

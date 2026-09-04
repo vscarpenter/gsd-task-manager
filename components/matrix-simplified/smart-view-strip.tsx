@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { ChevronDownIcon, CheckIcon } from "lucide-react";
-import type { SmartView } from "@/lib/filters";
+import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -12,6 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SMART_VIEW_ICONS, type SmartViewIconKey } from "@/lib/smart-views/icons";
 import { useSmartViewOverflow } from "./use-smart-view-overflow";
+
+const MAX_RENDERED_SMART_VIEWS =
+  SCHEMA_LIMITS.MAX_SMART_VIEWS + BUILT_IN_SMART_VIEWS.length;
 
 /**
  * Renders a view's icon. Built-ins name a Lucide glyph; a custom view saved
@@ -63,12 +67,13 @@ export function SmartViewStrip({
   onSelectView,
   onClearView,
 }: SmartViewStripProps) {
-  const { containerRef, ghostRef, visibleCount } = useSmartViewOverflow(views.length);
+  const boundedViews = views.slice(0, MAX_RENDERED_SMART_VIEWS);
+  const { containerRef, ghostRef, visibleCount } = useSmartViewOverflow(boundedViews.length);
 
-  if (views.length === 0) return null;
+  if (boundedViews.length === 0) return null;
 
-  const inlineViews = views.slice(0, visibleCount);
-  const overflowViews = views.slice(visibleCount);
+  const inlineViews = boundedViews.slice(0, visibleCount);
+  const overflowViews = boundedViews.slice(visibleCount);
 
   return (
     <div ref={containerRef} className="relative">
@@ -92,7 +97,7 @@ export function SmartViewStrip({
           />
         ) : null}
       </div>
-      <SmartViewGhost ref={ghostRef} views={views} />
+      <SmartViewGhost ref={ghostRef} views={boundedViews} />
     </div>
   );
 }
@@ -191,17 +196,18 @@ export function SmartViewOverflowMenu({
   activeViewId?: string | null;
   onSelectView: (viewId: string) => void;
 }) {
-  const activeView = views.find((view) => view.id === activeViewId);
+  const boundedViews = views.slice(0, MAX_RENDERED_SMART_VIEWS);
+  const activeView = boundedViews.find((view) => view.id === activeViewId);
 
   // Menu items use aria-current (not the aria-pressed used by inline pills):
   // Radix renders role="menuitem", which does not support aria-pressed.
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MoreButton count={views.length} activeLabel={activeView?.name} />
+        <MoreButton count={boundedViews.length} activeLabel={activeView?.name} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-[60vh] overflow-y-auto">
-        {views.map((view) => {
+        {boundedViews.map((view) => {
           const isActive = view.id === activeViewId;
           return (
             <DropdownMenuItem

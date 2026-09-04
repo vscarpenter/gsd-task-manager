@@ -143,48 +143,52 @@ export const archiveSettingsSchema = z.object({
 
 export const appPreferencesSchema = z.object({
 	id: z.literal("preferences").default("preferences"),
-	pinnedSmartViewIds: z.array(z.string()).default([]),
-	maxPinnedViews: z.number().int().min(0),
+	pinnedSmartViewIds: z.array(
+		z.string().min(1).max(SCHEMA_LIMITS.SMART_VIEW_ID_MAX_LENGTH)
+	).max(SCHEMA_LIMITS.MAX_PINNED_SMART_VIEWS).default([]),
+	maxPinnedViews: z.number().int().min(0).max(SCHEMA_LIMITS.MAX_PINNED_SMART_VIEWS),
 	smartViewsEnabled: z.boolean(),
 });
 
 /** Runtime validation for filters persisted in custom smart views and backups. */
 export const filterCriteriaSchema = z.object({
-	quadrants: z.array(quadrantIdSchema).optional(),
+	quadrants: z.array(quadrantIdSchema).max(4).optional(),
 	status: z.enum(["all", "active", "completed"]).optional(),
-	tags: z.array(z.string()).optional(),
+	tags: z.array(
+		z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH)
+	).max(SCHEMA_LIMITS.MAX_TAGS).optional(),
 	dueDateRange: z.object({
-		start: z.string().optional(),
-		end: z.string().optional(),
+		start: z.string().max(SCHEMA_LIMITS.SMART_VIEW_DATE_MAX_LENGTH).optional(),
+		end: z.string().max(SCHEMA_LIMITS.SMART_VIEW_DATE_MAX_LENGTH).optional(),
 	}).strict().optional(),
 	// Legacy custom views may retain this unused pre-filter shape. Preserve it
 	// with a bounded runtime type rather than admitting arbitrary criteria.
 	dueDate: z.object({
-		mode: z.string(),
-		days: z.number().int().nonnegative().optional(),
+		mode: z.string().min(1).max(SCHEMA_LIMITS.SMART_VIEW_MODE_MAX_LENGTH),
+		days: z.number().int().min(0).max(36_600).optional(),
 	}).strict().optional(),
 	overdue: z.boolean().optional(),
 	dueToday: z.boolean().optional(),
 	dueThisWeek: z.boolean().optional(),
 	noDueDate: z.boolean().optional(),
-	recurrence: z.array(recurrenceTypeSchema).optional(),
+	recurrence: z.array(recurrenceTypeSchema).max(4).optional(),
 	recentlyAdded: z.boolean().optional(),
 	recentlyCompleted: z.boolean().optional(),
 	readyToWork: z.boolean().optional(),
-	searchQuery: z.string().optional(),
+	searchQuery: z.string().max(SCHEMA_LIMITS.SMART_VIEW_SEARCH_MAX_LENGTH).optional(),
 }).strict();
 
 /** Custom smart views only — built-ins are derived at read time, never stored. */
 export const smartViewSchema = z.object({
-	id: z.string().min(1),
-	name: z.string().min(1),
-	description: z.string().optional(),
-	icon: z.string().optional(),
+	id: z.string().min(1).max(SCHEMA_LIMITS.SMART_VIEW_ID_MAX_LENGTH),
+	name: z.string().min(1).max(SCHEMA_LIMITS.SMART_VIEW_NAME_MAX_LENGTH),
+	description: z.string().max(SCHEMA_LIMITS.SMART_VIEW_DESCRIPTION_MAX_LENGTH).optional(),
+	icon: z.string().max(SCHEMA_LIMITS.SMART_VIEW_ICON_MAX_LENGTH).optional(),
 	criteria: filterCriteriaSchema,
-	isBuiltIn: z.boolean().default(false),
+	isBuiltIn: z.literal(false).default(false),
 	createdAt: z.iso.datetime({ offset: true }),
 	updatedAt: z.iso.datetime({ offset: true }),
-});
+}).strict();
 
 
 export const notificationSettingsSchema = z.object({
@@ -215,7 +219,7 @@ export const importPayloadSchema = z.object({
 	version: z.union([z.string(), z.number()]).transform(String),
 	archivedTasks: z.array(z.preprocess(deriveQuadrant, storedArchivedTaskRecordSchema)).optional(),
 	deletedTasks: z.array(z.preprocess(deriveQuadrant, storedTrashedTaskRecordSchema)).optional(),
-	smartViews: z.array(smartViewSchema).optional(),
+	smartViews: z.array(smartViewSchema).max(SCHEMA_LIMITS.MAX_SMART_VIEWS).optional(),
 	notificationSettings: notificationSettingsSchema.optional(),
 	archiveSettings: archiveSettingsSchema.optional(),
 	appPreferences: appPreferencesSchema.optional(),

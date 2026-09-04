@@ -124,6 +124,8 @@ describe('Task Import/Export Operations', () => {
         toArray: vi.fn().mockResolvedValue([]),
         clear: vi.fn(),
         put: vi.fn(),
+        count: vi.fn().mockResolvedValue(0),
+        bulkGet: vi.fn().mockResolvedValue([]),
       },
       notificationSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
       archiveSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
@@ -354,6 +356,41 @@ describe('Task Import/Export Operations', () => {
       };
 
       await expect(importTasks(invalidPayload, 'replace')).rejects.toThrow();
+    });
+
+    it('rejects an oversized smart-view collection before opening a transaction', async () => {
+      const view = {
+        id: 'bounded-view',
+        name: 'Bounded view',
+        criteria: {},
+        isBuiltIn: false,
+        createdAt: '2025-01-17T10:00:00Z',
+        updatedAt: '2025-01-17T10:00:00Z',
+      };
+      const oversized = {
+        ...validPayload,
+        smartViews: Array.from({ length: 101 }, (_, index) => ({ ...view, id: `view-${index}` })),
+      };
+
+      await expect(importTasks(oversized, 'replace')).rejects.toThrow(/smart views/i);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects oversized smart-view fields and filter arrays', async () => {
+      const oversized = {
+        ...validPayload,
+        smartViews: [{
+          id: 'bounded-view',
+          name: 'x'.repeat(81),
+          criteria: { tags: Array.from({ length: 21 }, (_, index) => `tag-${index}`) },
+          isBuiltIn: false,
+          createdAt: '2025-01-17T10:00:00Z',
+          updatedAt: '2025-01-17T10:00:00Z',
+        }],
+      };
+
+      await expect(importTasks(oversized, 'replace')).rejects.toThrow(/smart-view|Invalid import data/i);
+      expect(mockDb.transaction).not.toHaveBeenCalled();
     });
 
     it('should default to replace mode', async () => {
