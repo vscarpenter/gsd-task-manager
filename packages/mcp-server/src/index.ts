@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js';
-import { removeSetupArtifact } from './cli/setup-artifact.js';
-import { loadConfig } from './server/config.js';
-import { requireUsersPrincipal } from './pocketbase-client.js';
-import { createServer, registerHandlers } from './server/setup.js';
-import { createMcpLogger } from './utils/logger.js';
-import { initSentry, reportFatal } from './utils/sentry.js';
-
-const logger = createMcpLogger('SERVER');
+import { reportStartupFailure, startMcpServer } from './server/startup.js';
+import { flush, initSentry, reportFatal } from './utils/sentry.js';
 
 /**
  * GSD Task Manager MCP Server
@@ -40,31 +33,17 @@ async function main() {
     process.exit(0);
   }
 
-  // MCP mode: Load configuration from environment
-  let config;
+  // MCP mode. Startup touches only local state, so a PocketBase outage cannot
+  // stop the server from coming up; see ./server/startup.ts.
   try {
-    config = loadConfig();
-    await requireUsersPrincipal(config);
-  } catch {
+    await startMcpServer();
+  } catch (error) {
+    // reportStartupFailure already captured this via logger.error — flush
+    // rather than re-capture, then exit. No-op without GSD_SENTRY_DSN.
+    reportStartupFailure(error);
+    await flush().catch(() => false);
     process.exit(1);
   }
-
-  // The setup-wizard artifact (~/.gsd-mcp-setup.json) holds the same token
-  // we just loaded from env — once the server authenticates as a normal user it
-  // has served its purpose. Best-effort; never blocks startup.
-  removeSetupArtifact();
-
-  // Create MCP server
-  const server = createServer();
-
-  // Register all request handlers
-  registerHandlers(server, config);
-
-  // Start server with stdio transport
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-
-  logger.info('GSD MCP Server running on stdio');
 }
 
 main().catch(async (error) => {

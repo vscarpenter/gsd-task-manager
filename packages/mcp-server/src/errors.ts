@@ -25,3 +25,22 @@ export class ConflictError extends Error {
     );
   }
 }
+
+/**
+ * The configured token belongs to a PocketBase superuser.
+ *
+ * A superuser JWT declares its own collection in its payload, so this verdict is
+ * reached by decoding the token locally. It never depends on reaching
+ * PocketBase, which is what lets startup refuse offline instead of guessing.
+ */
+export class SuperuserPrincipalError extends Error {
+  readonly name = 'SuperuserPrincipalError';
+
+  constructor() {
+    super(
+      'PocketBase superuser tokens are not accepted\n\n' +
+        'This MCP server is account-scoped and never runs as an administrator.\n' +
+        'Re-run setup and sign in with your normal GSD account: gsd-mcp-server --setup'
+    );
+  }
+}

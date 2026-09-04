@@ -6,11 +6,28 @@
  */
 
 import PocketBase from 'pocketbase';
+import { redactPocketBaseHost } from './api/client.js';
+import { SuperuserPrincipalError } from './errors.js';
 import type { GsdConfig } from './types.js';
 
 let pbInstance: PocketBase | null = null;
 let pbUrl = '';
 let pbToken = '';
+
+/**
+ * The only statuses in which PocketBase actually evaluated the principal and
+ * refused it. Everything else — no HTTP response (SDK status 0), 429, 5xx, a
+ * reverse-proxy 404 — says nothing about the token and must never retire it.
+ * 404 is excluded deliberately: a proxy 404 is indistinguishable from a deleted
+ * auth record, and wrongly discarding a working token is the worse failure.
+ */
+const PRINCIPAL_REJECTION_STATUSES: ReadonlySet<number> = new Set([401, 403]);
+
+/** True only when PocketBase itself refused the principal. */
+function isPrincipalRejection(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && PRINCIPAL_REJECTION_STATUSES.has(status);
+}
 
 function parseRetryAfterMs(value: string | null): number | null {
   if (!value?.trim()) return null;
@@ -52,10 +69,18 @@ export function getPocketBase(config: GsdConfig): PocketBase {
   if (pbInstance.authStore.isSuperuser) {
     pbInstance.authStore.clear();
     pbToken = '';
-    throw new Error('PocketBase superuser tokens are not accepted');
+    throw new SuperuserPrincipalError();
   }
 
   return pbInstance;
+}
+
+/**
+ * Refuse a privileged principal using only the decoded token, so startup can
+ * make this call without touching the network.
+ */
+export function assertNonSuperuserPrincipal(config: GsdConfig): void {
+  getPocketBase(config);
 }
 
 function normalUserAuthError(): Error {
@@ -67,22 +92,35 @@ function normalUserAuthError(): Error {
 }
 
 /**
+ * PocketBase could not be reached, or answered with something that is not a
+ * verdict about the principal. The configured token is untouched and the same
+ * call can simply be retried, so this message must never advise rotating
+ * credentials. The host is redacted so it is safe to paste into a chat.
+ */
+function unreachableError(config: GsdConfig, cause: unknown): Error {
+  return new Error(
+    `Cannot reach PocketBase at ${redactPocketBaseHost(config.pocketBaseUrl)}\n\n` +
+      `Your saved credentials were not changed. Check your network or VPN and try again.\n` +
+      `To diagnose the connection, run: gsd-mcp-server --validate`,
+    { cause }
+  );
+}
+
+/**
  * Hydrate and attest the configured PocketBase principal before any account-
  * scoped operation. Administrator/superuser tokens are never accepted.
  */
 export async function requireUsersPrincipal(
   config: GsdConfig
 ): Promise<{ pb: PocketBase; ownerId: string }> {
+  // getPocketBase has already refused a decoded superuser, offline.
   const pb = getPocketBase(config);
-  if (pb.authStore.isSuperuser) {
-    pb.authStore.clear();
-    throw normalUserAuthError();
-  }
 
   if (!pb.authStore.record?.id && pb.authStore.token) {
     try {
       await pb.collection('users').authRefresh();
-    } catch {
+    } catch (error) {
+      if (!isPrincipalRejection(error)) throw unreachableError(config, error);
       pb.authStore.clear();
       throw normalUserAuthError();
     }

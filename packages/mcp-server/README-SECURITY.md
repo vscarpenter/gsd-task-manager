@@ -35,10 +35,15 @@ Use `claude-config.example.json` as a template, but keep your real credentials i
 ## Token Lifetime, Revocation, and the Setup Artifact
 
 The MCP server authenticates with your **primary PocketBase session JWT** — the
-same token your browser session uses. Superuser and non-`users` principals are
-rejected before tools are registered. Anything that can read an accepted user token
-has full read/write/delete access to that account's tasks until it expires. Know the
-limits:
+same token your browser session uses. A PocketBase superuser token is refused
+before any tool is registered — a superuser JWT declares its own collection, so
+that check decodes the token locally, needs no network, and the process exits
+after printing recovery steps to stderr. Every other principal check runs on the
+first account-scoped call: before any write, and before `get_sync_status`. A
+backend that cannot be reached never stops the server — tools stay registered and
+each call reports the connection problem without changing your saved credentials.
+Anything that can read an accepted user token has full read/write/delete access to
+that account's tasks until it expires. Know the limits:
 
 - **PocketBase has no per-token revocation.** Logging out in the browser clears
   that browser's copy but does **not** invalidate other copies of the token.
@@ -46,7 +51,8 @@ limits:
   password/identity or rotating the collection's token secret on the server.
 - **The setup wizard writes a token-bearing file** (`~/.gsd-mcp-setup.json`,
   mode 0600) for you to copy into the Claude Desktop config. It is deleted
-  automatically only after the MCP server verifies a normal user identity,
+  automatically the first time the MCP server starts with valid env config —
+  including an offline start —
   and any stale copy is cleared when the wizard re-runs — but delete it
   yourself (`rm ~/.gsd-mcp-setup.json`) if you abandon setup partway.
   The wizard never prints the full token or identifying token fragments. Open

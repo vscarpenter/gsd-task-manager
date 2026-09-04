@@ -153,11 +153,37 @@ describe('requireUsersPrincipal', () => {
     expect(authStore.clear).toHaveBeenCalled();
   });
 
-  it('rejects a token that cannot be refreshed', async () => {
-    authRefresh.mockRejectedValueOnce(new Error('401'));
+  it('retires the token when PocketBase rejects the principal', async () => {
+    authRefresh.mockRejectedValueOnce(Object.assign(new Error('401'), { status: 401 }));
 
     await expect(requireUsersPrincipal(config)).rejects.toThrow('normal users-collection account');
     expect(authStore.clear).toHaveBeenCalled();
+  });
+
+  // Reachability is not a verdict about the principal. Clearing the store on a
+  // blip strands a good token for the life of the process: getPocketBase only
+  // re-saves when the configured token CHANGES, so the next call skips the
+  // refresh entirely and reports "run --setup" forever.
+  it.each([
+    ['no HTTP response', 0],
+    ['rate limiting', 429],
+    ['a backend outage', 503],
+  ])('keeps the saved token when the failure is %s', async (_label, status) => {
+    authRefresh.mockRejectedValueOnce(Object.assign(new Error('boom'), { status }));
+
+    await expect(requireUsersPrincipal(config)).rejects.toThrow('Cannot reach PocketBase');
+    expect(authStore.clear).not.toHaveBeenCalled();
+  });
+
+  it('never advises rotating credentials for an unreachable backend', async () => {
+    authRefresh.mockRejectedValueOnce(Object.assign(new Error('boom'), { status: 0 }));
+
+    const error = await requireUsersPrincipal(config).catch((e: unknown) => e as Error);
+
+    expect(error.message).toMatch(/were not changed/i);
+    expect(error.message).not.toMatch(/--setup/);
+    // The host is redacted so the message is safe to paste into a chat.
+    expect(error.message).not.toContain('pb.example.com');
   });
 });
 
