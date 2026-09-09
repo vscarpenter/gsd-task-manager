@@ -103,6 +103,10 @@ describe('useSync', () => {
       syncOnOnline: true,
       debounceAfterChangeMs: 30000,
     });
+
+    // clearAllMocks() resets calls but not implementations, so pin the default
+    // here. A test that holds subscribe open must not leak into the next one.
+    vi.mocked(subscribe).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -185,6 +189,35 @@ describe('useSync', () => {
 
       await flushAsync();
       expect(result.current.isEnabled).toBe(false);
+    });
+
+    it('reports isEnabled before the realtime subscribe resolves', async () => {
+      vi.mocked(isAuthenticated).mockReturnValue(true);
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: true,
+        deviceId: 'browser-device',
+      });
+
+      // subscribe() is a network round trip (SSE handshake + subscription POST).
+      // Hold it open to model the window a user sees on a cold load: sync is
+      // already known to be enabled, but the connection has not settled yet.
+      let releaseSubscribe = () => {};
+      vi.mocked(subscribe).mockReturnValue(
+        new Promise<void>((resolve) => {
+          releaseSubscribe = resolve;
+        })
+      );
+
+      try {
+        const { result } = renderHook(() => useSync(), { wrapper });
+
+        await waitFor(() => {
+          expect(result.current.isEnabled).toBe(true);
+        });
+      } finally {
+        releaseSubscribe();
+      }
     });
 
     it('should poll coordinator status', async () => {

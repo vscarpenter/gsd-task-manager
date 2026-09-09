@@ -170,14 +170,32 @@ async function reconcileBackgroundSync(enabled: boolean, deviceId?: string): Pro
   }
 }
 
-async function reconcileSyncServices(): Promise<boolean> {
+/**
+ * Read whether sync is on. Cheap and local: an auth-store check plus one
+ * IndexedDB read, with no network in the path.
+ */
+async function readSyncEnabled(): Promise<{
+  enabled: boolean;
+  config?: PBSyncConfig;
+}> {
   const db = getDb();
   const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
-  const enabled = isAuthenticated() && Boolean(config?.enabled);
+  return { enabled: isAuthenticated() && Boolean(config?.enabled), config };
+}
+
+/**
+ * Bring the sync services in line with `enabled`. Kept separate from reading
+ * that flag because these are network round trips (the realtime handshake and
+ * subscription POST, then the background-sync start) and the UI must not wait
+ * on them to learn a value it already has. See the caller.
+ */
+async function applySyncServices(
+  enabled: boolean,
+  config?: PBSyncConfig
+): Promise<void> {
   await reconcileRealtime(enabled, config?.deviceId);
   reconcileHealthMonitor(enabled);
   await reconcileBackgroundSync(enabled, config?.deviceId);
-  return enabled;
 }
 
 function stopSyncServices(): void {
@@ -191,8 +209,13 @@ function stopSyncServices(): void {
 function useSyncLifecycle(dispatch: Dispatch<SyncAction>): void {
   useEffect(() => {
     const checkEnabled = async () => {
-      const isEnabled = await reconcileSyncServices();
-      dispatch({ type: 'SET_ENABLED', isEnabled });
+      const { enabled, config } = await readSyncEnabled();
+      // Publish before the services are reconciled. Holding this back until the
+      // realtime socket settles renders an authenticated user as signed out for
+      // the length of a network round trip, and the sync button offers them a
+      // re-login they do not need.
+      dispatch({ type: 'SET_ENABLED', isEnabled: enabled });
+      await applySyncServices(enabled, config);
     };
     void checkEnabled();
     const interval = setInterval(checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
