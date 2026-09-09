@@ -4,13 +4,21 @@ import { useState, useEffect, useRef } from "react";
 import { HistoryIcon, ZapIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { getAutoSyncConfig, updateAutoSyncConfig } from "@/lib/sync/config";
+import {
+	getAutoSyncConfig,
+	updateAutoSyncConfig,
+	getSyncStatus,
+	disableSync,
+} from "@/lib/sync/config";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/logger";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import { LogoutConfirmation } from "@/components/sync/sync-auth-dialog-sections";
 
 const logger = createLogger("UI");
+
+type SyncStatusSnapshot = Awaited<ReturnType<typeof getSyncStatus>>;
 
 interface SyncSettingsProps {
 	onViewHistory: () => void;
@@ -41,6 +49,9 @@ export function SyncSettings({
 	const [syncInterval, setSyncInterval] = useState(2);
 	const [isLoading, setIsLoading] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [syncStatus, setSyncStatus] = useState<SyncStatusSnapshot | null>(null);
+	const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+	const [isSigningOut, setIsSigningOut] = useState(false);
 	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
@@ -51,6 +62,16 @@ export function SyncSettings({
 				setSyncInterval(config.intervalMinutes);
 			} catch (error) {
 				logger.error("Failed to load sync config", error instanceof Error ? error : undefined);
+			}
+		})();
+	}, []);
+
+	useEffect(() => {
+		void (async () => {
+			try {
+				setSyncStatus(await getSyncStatus());
+			} catch (error) {
+				logger.error("Failed to load sync status", error instanceof Error ? error : undefined);
 			}
 		})();
 	}, []);
@@ -105,6 +126,35 @@ export function SyncSettings({
 		opt => opt.value === syncInterval.toString()
 	);
 
+	async function handleSignOut() {
+		// Re-read rather than trust the mounted snapshot: the queue may have
+		// filled since this page loaded.
+		const status = await getSyncStatus();
+		setSyncStatus(status);
+		if (status.pendingCount > 0) {
+			setShowSignOutConfirm(true);
+			return;
+		}
+		await performSignOut();
+	}
+
+	async function performSignOut() {
+		setIsSigningOut(true);
+		try {
+			await disableSync();
+			setSyncStatus((prev) =>
+				prev ? { ...prev, enabled: false, email: null, pendingCount: 0 } : prev,
+			);
+			setShowSignOutConfirm(false);
+			toast.success("Signed out");
+		} catch (error) {
+			logger.error("Sign out failed", error instanceof Error ? error : undefined);
+			toast.error("Sign out failed");
+		} finally {
+			setIsSigningOut(false);
+		}
+	}
+
 	return (
 		<>
 			{/* Auto-Sync Toggle */}
@@ -158,6 +208,32 @@ export function SyncSettings({
 				<span className="flex-1 text-sm font-medium text-foreground">Sync history</span>
 				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
 			</button>
+
+			{/* Account */}
+			{syncStatus?.enabled && (
+				<>
+					<SettingsRow label="Account" description={syncStatus.email ?? undefined}>
+						<Button
+							variant="subtle"
+							onClick={handleSignOut}
+							disabled={isSigningOut}
+						>
+							{isSigningOut ? "Signing out…" : "Sign out"}
+						</Button>
+					</SettingsRow>
+
+					{showSignOutConfirm && (
+						<div className="px-4 pb-3.5">
+							<LogoutConfirmation
+								pendingChanges={syncStatus.pendingCount}
+								isLoading={isSigningOut}
+								onCancel={() => setShowSignOutConfirm(false)}
+								onConfirm={performSignOut}
+							/>
+						</div>
+					)}
+				</>
+			)}
 
 			{/* Danger zone */}
 			<div className="px-4 py-3.5">
