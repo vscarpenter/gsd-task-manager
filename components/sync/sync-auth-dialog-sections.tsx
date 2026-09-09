@@ -168,7 +168,7 @@ interface LogoutConfirmationProps {
 }
 
 /** Warning banner shown when user has unsynced changes */
-function LogoutConfirmation({
+export function LogoutConfirmation({
   pendingChanges,
   isLoading,
   onCancel,
