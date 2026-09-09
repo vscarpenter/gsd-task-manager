@@ -1,24 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { HistoryIcon, ZapIcon, ChevronRightIcon, Trash2Icon } from "lucide-react";
+import { HistoryIcon, ZapIcon, ChevronRightIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import {
-	getAutoSyncConfig,
-	updateAutoSyncConfig,
-	getSyncStatus,
-	disableSync,
-} from "@/lib/sync/config";
+import { getAutoSyncConfig, updateAutoSyncConfig } from "@/lib/sync/config";
 import { toast } from "sonner";
 import { createLogger } from "@/lib/logger";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
-import { DeleteAccountDialog } from "@/components/delete-account-dialog";
-import { LogoutConfirmation } from "@/components/sync/sync-auth-dialog-sections";
+import { SyncDangerZone } from "./sync-danger-zone";
+import { SyncAccountRow } from "./sync-account-row";
 
 const logger = createLogger("UI");
-
-type SyncStatusSnapshot = Awaited<ReturnType<typeof getSyncStatus>>;
 
 interface SyncSettingsProps {
 	onViewHistory: () => void;
@@ -48,10 +40,6 @@ export function SyncSettings({
 	const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
 	const [syncInterval, setSyncInterval] = useState(2);
 	const [isLoading, setIsLoading] = useState(false);
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [syncStatus, setSyncStatus] = useState<SyncStatusSnapshot | null>(null);
-	const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-	const [isSigningOut, setIsSigningOut] = useState(false);
 	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
@@ -66,15 +54,6 @@ export function SyncSettings({
 		})();
 	}, []);
 
-	useEffect(() => {
-		void (async () => {
-			try {
-				setSyncStatus(await getSyncStatus());
-			} catch (error) {
-				logger.error("Failed to load sync status", error instanceof Error ? error : undefined);
-			}
-		})();
-	}, []);
 
 	// react-doctor-disable-next-line react-doctor/exhaustive-deps -- cleanup intentionally reads the latest ref value at unmount
 	useEffect(() => {
@@ -125,35 +104,6 @@ export function SyncSettings({
 	const currentInterval = SYNC_INTERVAL_OPTIONS.find(
 		opt => opt.value === syncInterval.toString()
 	);
-
-	async function handleSignOut() {
-		// Re-read rather than trust the mounted snapshot: the queue may have
-		// filled since this page loaded.
-		const status = await getSyncStatus();
-		setSyncStatus(status);
-		if (status.pendingCount > 0) {
-			setShowSignOutConfirm(true);
-			return;
-		}
-		await performSignOut();
-	}
-
-	async function performSignOut() {
-		setIsSigningOut(true);
-		try {
-			await disableSync();
-			setSyncStatus((prev) =>
-				prev ? { ...prev, enabled: false, email: null, pendingCount: 0 } : prev,
-			);
-			setShowSignOutConfirm(false);
-			toast.success("Signed out");
-		} catch (error) {
-			logger.error("Sign out failed", error instanceof Error ? error : undefined);
-			toast.error("Sign out failed");
-		} finally {
-			setIsSigningOut(false);
-		}
-	}
 
 	return (
 		<>
@@ -209,59 +159,9 @@ export function SyncSettings({
 				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
 			</button>
 
-			{/* Account */}
-			{syncStatus?.enabled && (
-				<>
-					<SettingsRow label="Account" description={syncStatus.email ?? undefined}>
-						<Button
-							variant="subtle"
-							onClick={handleSignOut}
-							disabled={isSigningOut}
-						>
-							{isSigningOut ? "Signing out…" : "Sign out"}
-						</Button>
-					</SettingsRow>
+			<SyncAccountRow />
 
-					{showSignOutConfirm && (
-						<div className="px-4 pb-3.5">
-							<LogoutConfirmation
-								pendingChanges={syncStatus.pendingCount}
-								isLoading={isSigningOut}
-								onCancel={() => setShowSignOutConfirm(false)}
-								onConfirm={performSignOut}
-							/>
-						</div>
-					)}
-				</>
-			)}
-
-			{/* Danger zone */}
-			<div className="px-4 py-3.5">
-				<div className="rounded-lg border border-status-overdue/35 bg-status-overdue-muted/40 p-4 space-y-3">
-					<div>
-						<p className="text-sm font-semibold text-status-overdue-ink">Danger zone</p>
-						<p className="text-xs text-foreground-muted mt-1">
-							Permanently delete your account and every task synced to it. This
-							cannot be undone.
-						</p>
-					</div>
-					<Button
-						variant="destructive"
-						onClick={() => setDeleteDialogOpen(true)}
-						className="w-full sm:w-auto"
-					>
-						<Trash2Icon className="mr-2 h-4 w-4" />
-						Delete account…
-					</Button>
-				</div>
-			</div>
-
-			<DeleteAccountDialog
-				open={deleteDialogOpen}
-				onOpenChange={setDeleteDialogOpen}
-				onExport={onExport}
-				onDeleted={onAccountDeleted}
-			/>
+			<SyncDangerZone onExport={onExport} onAccountDeleted={onAccountDeleted} />
 		</>
 	);
 }
