@@ -25,6 +25,37 @@ vi.mock('@/lib/sync/pb-sync-helpers', async () => {
 
 import { pullRemoteChanges } from '@/lib/sync/pb-pull';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
+import { StaleSyncSessionError } from '@/lib/sync/sync-session';
+import type { PBSyncConfig } from '@/lib/sync/types';
+
+function signedInConfig(overrides: Partial<PBSyncConfig> = {}): PBSyncConfig {
+  return {
+    key: 'sync_config',
+    enabled: true,
+    userId: 'user-1',
+    deviceId: 'device-1',
+    deviceName: 'Test device',
+    email: 'one@example.com',
+    provider: 'google',
+    lastSyncAt: null,
+    lastSuccessfulSyncAt: null,
+    consecutiveFailures: 0,
+    lastFailureAt: null,
+    lastFailureReason: null,
+    nextRetryAt: null,
+    ...overrides,
+  };
+}
+
+/** Resolve to the rejection reason, or undefined when the promise resolves. */
+function settle(promise: Promise<unknown>): Promise<unknown> {
+  return promise.then(() => undefined, (error: unknown) => error);
+}
+
+// A pull writes only while sync_config still names the signed-in user.
+beforeEach(async () => {
+  await getDb().syncMetadata.put(signedInConfig());
+});
 
 function pbRecord(taskId: string, clientUpdatedAt: string): RecordModel {
   return {
@@ -569,5 +600,86 @@ describe('pullRemoteChanges deletion reconciliation', () => {
       releaseRead();
       toArraySpy.mockRestore();
     }
+  });
+});
+
+describe('pullRemoteChanges after teardown', () => {
+  const REMOTE_EDIT_AT = '2026-05-20T00:00:00.000Z';
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.archivedTasks.clear();
+    await db.deletedTasks.clear();
+    await db.syncQueue.clear();
+  });
+
+  /** Hold the task fetch open and return the function that lets it land. */
+  function holdRemoteFetch(): (records: RecordModel[]) => void {
+    let release: ((records: RecordModel[]) => void) | undefined;
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(() => new Promise<RecordModel[]>((resolve) => { release = resolve; })),
+      }),
+    });
+    return (records) => release?.(records);
+  }
+
+  /** List the task in the remote index so reconciliation alone would keep it. */
+  function remoteIndexWith(taskId: string): void {
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([[taskId, { pbRecordId: `rec-${taskId}`, clientUpdatedAt: REMOTE_EDIT_AT }]]),
+      fetchSucceeded: true,
+    });
+  }
+
+  it('should_not_write_tasks_when_sync_disabled_while_fetch_pending', async () => {
+    const db = getDb();
+    remoteIndexWith('arrived-after-sign-out');
+    const releaseFetch = holdRemoteFetch();
+
+    const pull = pullRemoteChanges(null);
+    await db.syncMetadata.put(signedInConfig({ enabled: false, userId: null }));
+    releaseFetch([pbRecord('arrived-after-sign-out', REMOTE_EDIT_AT)]);
+    const outcome = await settle(pull);
+
+    await expect(db.tasks.count()).resolves.toBe(0);
+    expect(outcome).toBeInstanceOf(StaleSyncSessionError);
+  });
+
+  it('should_not_reconcile_deletions_when_sync_disabled_while_fetch_pending', async () => {
+    const db = getDb();
+    await db.tasks.add(makeTask('kept-after-sign-out'));
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getList: vi.fn(async () => []) }),
+    });
+    let releaseIndex: ((value: { index: Map<string, never>; fetchSucceeded: boolean }) => void) | undefined;
+    fetchRemoteTaskIndexMock.mockImplementationOnce(
+      () => new Promise((resolve) => { releaseIndex = resolve; }),
+    );
+
+    const pull = pullRemoteChanges(null);
+    await vi.waitFor(() => expect(fetchRemoteTaskIndexMock).toHaveBeenCalled());
+    await db.syncMetadata.put(signedInConfig({ enabled: false, userId: null }));
+    releaseIndex?.({ index: new Map(), fetchSucceeded: true });
+    const outcome = await settle(pull);
+
+    await expect(db.tasks.get('kept-after-sign-out')).resolves.toBeDefined();
+    expect(outcome).toBeInstanceOf(StaleSyncSessionError);
+  });
+
+  it('should_not_write_tasks_when_another_account_signed_in_while_fetch_pending', async () => {
+    const db = getDb();
+    remoteIndexWith('old-account-task');
+    const releaseFetch = holdRemoteFetch();
+
+    const pull = pullRemoteChanges(null);
+    await db.syncMetadata.put(signedInConfig({ userId: 'user-2', email: 'two@example.com' }));
+    releaseFetch([pbRecord('old-account-task', REMOTE_EDIT_AT)]);
+    const outcome = await settle(pull);
+
+    await expect(db.tasks.count()).resolves.toBe(0);
+    expect(outcome).toBeInstanceOf(StaleSyncSessionError);
   });
 });

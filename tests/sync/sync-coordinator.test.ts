@@ -349,6 +349,16 @@ describe('SyncCoordinator', () => {
       expect(status.lastResult?.status).toBe('success');
     });
 
+    it('should_report_no_last_error_for_cancelled_sync', async () => {
+      mockFullSync.mockResolvedValueOnce({ status: 'cancelled' });
+
+      await coordinator.requestSync('user');
+
+      const status = await coordinator.getStatus();
+      expect(status.lastResult?.status).toBe('cancelled');
+      expect(status.lastError).toBeNull();
+    });
+
     it('should include error in status when sync fails', async () => {
       mockFullSync.mockRejectedValueOnce(new Error('Network failure'));
 

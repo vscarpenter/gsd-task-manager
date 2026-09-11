@@ -20,6 +20,3 @@ export { enableSync } from "./enable";
 
 // Disable sync
 export { disableSync } from "./disable";
-
-// Reset operations
-export { resetAndFullSync } from "./reset";

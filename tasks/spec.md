@@ -694,3 +694,302 @@ describe("handleEditSubmit create path", () => {
   it("should_pass_dependencies_to_create_task_when_present_and_undefined_when_empty", () => {}); // AC6
 });
 ```
+
+---
+
+# Spec: Fence stale sync writes after sign-out and reset
+
+**Date:** 2026-09-11 · **Status:** Approved, in progress · **Tier:** Non-trivial (shared sync code, persisted config)
+**Source:** Aikido "Cross-Tenant Isolation Bypass" (`lib/sync/pb-sync-engine.ts`) and "Incomplete Data Deletion" (`components/reset-everything-dialog.tsx`), both verified against code on 2026-09-11.
+
+## Goal
+
+Stop a sync that started for one signed-in account from writing tasks, sync
+config, retry state, or sync history after that account signs out, resets, or
+is replaced, and make a failed reset say plainly whether tasks were deleted.
+
+## Background (verified in code)
+
+- `pullRemoteChanges` reads `ownerId` once (`lib/sync/pb-pull.ts:106`), awaits
+  the network (`:123`), then writes tasks (`:128`) and reconciles deletions
+  (`:141`, transaction at `:212`) without checking auth again.
+- `fullSync` reads `sync_config` at start (`lib/sync/pb-sync-engine.ts:143`) and
+  later writes that snapshot back with `...config` in `updateSyncCursor`
+  (`:191-204`). After a sign-out, that write restores `enabled: true` and the
+  old `userId`.
+- `disableSync` clears PocketBase auth, awaits `clearBrowserCaches()`, and only
+  then persists the disabled config (`lib/sync/config/disable.ts:98-102`). During
+  that gap the persisted config still names the old account.
+- Retry state (`lib/sync/retry-manager.ts` through `updateSyncConfig`, a
+  read-then-put with no transaction) and sync history (`lib/sync-history.ts:41`,
+  `:79`, `:120`) are written after network calls on four paths in
+  `pb-sync-engine.ts` (lines 165-249). Three of those paths also show a toast.
+- Realtime unsubscribes when sync turns off (`lib/sync/sync-provider.tsx:135-141`),
+  but an event already in progress still calls `applyRemoteChange`
+  (`lib/sync/pb-realtime.ts:104-116`).
+- Reset writes `localTaskOwnerUserId: null` (`lib/reset-everything.ts:96`), which
+  switches off the owner-mismatch guard at sign-in
+  (`components/sync/use-sync-auth-dialog.ts:274-278`). If a stale pull lands after
+  the clear and the reload beats the stale config write, the next account's
+  first sync queues those rows (`:289`) and pushes them into its own PocketBase
+  account.
+- A failed reset shows "Reset completed with errors: ..."
+  (`components/reset-everything-dialog.tsx:130`) and never says whether tasks
+  were deleted.
+
+## Design
+
+The fence checks persisted state, not memory. Every sync write re-reads
+`sync_config` inside its own transaction and proceeds only while the config
+still names the account the sync started for.
+
+1. **Session owner.** `fullSync` takes the session owner from the config it
+   reads at start: the `userId` when `enabled` is true and `userId` is set,
+   otherwise no owner. With no owner it returns `{ status: 'cancelled' }` before
+   any auth refresh, network call, write, or toast.
+2. **Check inside the transaction.** A new leaf module, `lib/sync/sync-session.ts`,
+   exports `assertSyncSessionCurrent(ownerId)`. It reads `sync_config` and throws
+   `StaleSyncSessionError` unless `enabled` is true and `userId === ownerId`.
+   Each guarded transaction adds `db.syncMetadata` to its scope and calls the
+   check before its first write. Dexie serializes overlapping read-write
+   transactions, and the check reads persisted state, so the fence also covers
+   a second open tab and a sync that outlives the page reload.
+3. **Guarded task writes.** `applyRemoteRecords` and `reconcileDeletedTasks`
+   (pull), and `applyRemoteChange` and `applyRemoteDeletion` (realtime, with the
+   owner captured when the event arrives).
+4. **Guarded config and outcome writes.** The cursor update becomes a
+   transaction that merges only the cursor fields into the row it just read,
+   instead of writing back the start-of-sync snapshot. Retry-state and
+   sync-history writes accept the session owner and run the check inside the
+   transaction that writes. Toasts fire only after a guarded outcome write
+   succeeds.
+5. **Cancellation.** `fullSync` treats `StaleSyncSessionError` from any step as
+   `{ status: 'cancelled' }`, with no retry update, history row, or toast. Every
+   other error keeps today's path.
+6. **Teardown order.** `disableSync` persists the disabled config before any
+   other awaited teardown step, so the fence engages at the first await.
+7. **Sign-in invariant.** `persistSyncConfig` refuses to enable sync when
+   `authState.userId` is null, because the fence would otherwise cancel every
+   sync for that config without saying why.
+8. **Reset result.** `ResetResult` gains `failedSteps`, and the dialog words its
+   error from that list instead of one generic line.
+
+Rejected alternative: an in-memory generation counter like the existing
+`subscriptionGeneration` in `pb-realtime.ts`. It is simpler to bump, but it
+lives in one tab's memory, so it cannot fence a second tab or survive the
+reload that Reset forces.
+
+## Inputs / Outputs
+
+- `PBSyncResult.status` (`lib/sync/types.ts:112`) gains `'cancelled'`. Consumers
+  treat it like `'already_running'`: neither success nor error.
+  `SyncCoordinator.getStatus().lastError` stays null for it, and
+  `sync-provider.tsx:294` shows no success toast.
+- New `lib/sync/sync-session.ts`:
+  - `class StaleSyncSessionError extends Error`
+  - `getSessionOwner(config: PBSyncConfig | undefined): string | null`
+  - `assertSyncSessionCurrent(ownerId: string): Promise<void>`, called inside a
+    transaction that includes `db.syncMetadata`
+- `ResetResult` (`lib/reset-everything.ts:31`) gains
+  `failedSteps: Array<'sync-sign-out' | 'local-data' | 'browser-storage'>`.
+  `success` becomes `failedSteps.length === 0`, and `errors` keeps its strings.
+- Reset dialog error copy, each followed by the joined error detail:
+  - `local-data` failed: "Reset didn't finish. Your tasks were not deleted."
+  - Only `sync-sign-out` or `browser-storage` failed: "Your tasks were deleted,
+    but reset didn't finish."
+- Unchanged: the Dexie schema and version, `PBSyncConfig` fields, the backup
+  envelope (`lib/schema.ts`), and the PocketBase wire model. No cross-platform
+  contract moves.
+
+## Constraints
+
+- Local-first behavior stays: sign-out still keeps local tasks and
+  `localTaskOwnerUserId`. Only writes from a session that has ended are dropped.
+- The guarded read of `sync_config` happens inside the same Dexie transaction as
+  the write, with no non-Dexie await inside that transaction (the trap in
+  `.claude/rules/archive-tombstone.md`).
+- The archive and trash invariants hold. A fenced transaction aborts whole and
+  never applies part of its writes.
+- No new dependency. The added module stays small and client-only.
+- Code shape: new functions at most 30 lines and files at most 350 lines (spec
+  target), inside the ratchet's 40 and 400. The largest touched file today is
+  `components/reset-everything-dialog.tsx` at 280 lines.
+- Errors are typed. Only `StaleSyncSessionError` maps to cancellation. Logs carry
+  no task content, error bodies, or tokens.
+- iOS and Android may carry the same race. Checking them belongs to their own
+  repos and sessions.
+
+## Edge Cases
+
+- **No sync running at teardown:** nothing changes.
+- **Same account signs back in while an old pull is in flight:** the fence
+  passes (same `userId`, `enabled` true), so the old pull's rows land in that
+  same account's store. Accepted, because nothing crosses accounts.
+- **A different account signs in while an old pull is in flight:** `userId`
+  differs, so the old pull writes nothing.
+- **Reset while a pull is in flight:** `disableSync` flips the config first, so
+  the pull writes nothing whether it resolves before or after the reload. A
+  transaction that started before the flip finishes first, and Reset's clear
+  transaction then removes its rows.
+- **Two tabs:** tab A resets while tab B is mid-sync. Tab B reads the persisted
+  config inside its transaction and stops.
+- **Realtime event during teardown:** the owner captured when the event arrived no
+  longer matches, so nothing applies.
+- **Offline:** a fetch that never resolves writes nothing.
+- **Expired token, config still enabled with a `userId`:** the owner is still
+  current, so today's "Please sign in to sync your tasks" path is unchanged.
+- **Enabled config with a null `userId`:** this can't be produced after AC10.
+  An existing one counts as signed out, so sync cancels until the user signs in
+  again.
+- **Sync requests queued before teardown:** they run `fullSync`, find no owner,
+  and return `cancelled` at once.
+- **Push in flight at teardown:** its follow-up queue updates target rows
+  `disableSync` already cleared, so Dexie `update` and `delete` are no-ops. It
+  stays unfenced in this version.
+- **Delete account:** it calls `disableSync` and `resetEverything`, so it
+  inherits the fence.
+- **Several reset steps fail:** the `local-data` wording wins, and every error
+  detail shows.
+
+## Out of Scope
+
+- Locking the task matrix after a failed reset.
+- Changing `localTaskOwnerUserId` semantics or the owner-mismatch guard.
+- Cancelling in-flight network requests (AbortController plumbing).
+- Fencing push-side queue writes.
+- The delete-account dialog's own error copy.
+- The same race in the iOS and Android clients.
+- Finding or cleaning up rows an earlier race may already have pushed into an
+  account.
+
+## Acceptance Criteria
+
+- **AC1:** `fullSync` with no session owner (config missing, disabled, or
+  without a `userId`) returns `{ status: 'cancelled' }` and makes no auth
+  refresh, network call, Dexie write, history row, retry update, or toast.
+- **AC2:** When sync is disabled while a pull's fetch is pending, the pull writes
+  no tasks and reconciles no deletions after the fetch resolves.
+- **AC3:** When another account's config replaces the session owner while a
+  pull's fetch is pending, the pull writes no tasks.
+- **AC4:** A sync fenced mid-run leaves `sync_config` exactly as teardown wrote
+  it, with no restored `enabled`, `userId`, cursor, or retry counters.
+- **AC5:** A sync fenced mid-run adds no sync history row, shows no toast, and
+  returns `{ status: 'cancelled' }`. `SyncCoordinator` reports no `lastError`
+  for it.
+- **AC6:** The cursor update merges only cursor fields into the current
+  `sync_config` row, so a field changed during the sync (for example
+  `autoSyncIntervalMinutes`) survives.
+- **AC7:** A realtime create, update, or delete event whose session owner no
+  longer matches applies nothing.
+- **AC8:** `disableSync` persists the disabled config before it awaits browser
+  cache clearing.
+- **AC9:** End to end with fake-indexeddb: start a sync whose pull fetch is held
+  open, run `resetEverything()`, then release the fetch. `db.tasks` stays empty
+  and `sync_config.enabled` stays false.
+- **AC10:** `persistSyncConfig` rejects an `authState` without a `userId` and
+  enables nothing.
+- **AC11:** `resetEverything()` reports `failedSteps` naming exactly the steps
+  that threw, and `success` is true only when `failedSteps` is empty.
+- **AC12:** The reset dialog says tasks were not deleted when `local-data`
+  failed, and says tasks were deleted when only `sync-sign-out` or
+  `browser-storage` failed. Both show the error detail and keep the dialog open.
+- **Regression:** the existing sync, reset, sign-out, and delete-account suites
+  stay green, along with `bun typecheck`, `bun lint`, and
+  `bun run quality:shape`.
+
+## Test Stubs
+
+`tests/data/sync/sync-session.test.ts` (new):
+
+```ts
+describe("sync session fence", () => {
+  it("should_return_null_owner_when_config_missing_disabled_or_without_user_id", () => {}); // AC1
+  it("should_throw_stale_session_when_config_disabled", () => {});                           // AC2
+  it("should_throw_stale_session_when_user_id_differs", () => {});                           // AC3
+  it("should_pass_when_enabled_config_matches_owner", () => {});                             // AC2, AC3
+});
+```
+
+`tests/data/sync/pb-pull.test.ts` (additions):
+
+```ts
+describe("pullRemoteChanges after teardown", () => {
+  it("should_not_write_tasks_when_sync_disabled_while_fetch_pending", () => {});            // AC2
+  it("should_not_reconcile_deletions_when_sync_disabled_while_fetch_pending", () => {});    // AC2
+  it("should_not_write_tasks_when_another_account_signed_in_while_fetch_pending", () => {}); // AC3
+});
+```
+
+`tests/data/sync/pb-sync-engine.test.ts` (additions):
+
+```ts
+describe("fullSync session fence", () => {
+  it("should_return_cancelled_without_side_effects_when_no_session_owner", () => {}); // AC1
+  it("should_not_restore_enabled_user_or_cursor_after_mid_sync_sign_out", () => {}); // AC4
+  it("should_not_record_retry_state_after_mid_sync_sign_out", () => {});             // AC4
+  it("should_return_cancelled_without_history_or_toast_when_fenced", () => {});      // AC5
+  it("should_merge_cursor_fields_into_current_config_row", () => {});                // AC6
+  it("should_not_apply_realtime_change_when_session_owner_changed", () => {});       // AC7
+  it("should_not_apply_realtime_deletion_when_session_owner_changed", () => {});     // AC7
+});
+```
+
+`tests/sync/sync-coordinator.test.ts` (addition):
+
+```ts
+it("should_report_no_last_error_for_cancelled_sync", () => {}); // AC5
+```
+
+`tests/data/sync/config.test.ts` (addition):
+
+```ts
+it("should_persist_disabled_config_before_clearing_browser_caches", () => {}); // AC8
+```
+
+`tests/data/reset-everything.test.ts` (additions):
+
+```ts
+describe("resetEverything failure reporting and stale sync", () => {
+  it("should_keep_tasks_empty_when_in_flight_pull_resolves_after_reset", () => {}); // AC9
+  it("should_report_local_data_step_when_indexeddb_clear_throws", () => {});        // AC11
+  it("should_report_only_browser_storage_step_when_local_storage_throws", () => {}); // AC11
+  it("should_report_success_only_when_no_step_failed", () => {});                   // AC11
+});
+```
+
+`tests/ui/sync-auth-dialog.test.tsx` (addition):
+
+```ts
+it("should_not_enable_sync_when_auth_state_has_no_user_id", () => {}); // AC10
+```
+
+`tests/ui/reset-everything-dialog.test.tsx` (additions):
+
+```ts
+it("should_say_tasks_were_not_deleted_when_local_data_step_fails", () => {});               // AC12
+it("should_say_tasks_were_deleted_when_only_browser_storage_or_sign_out_fails", () => {}); // AC12
+```
+
+## Open questions for approval
+
+Both are resolved. The owner approved the design on 2026-09-11 and asked to
+apply it without answering them, so each keeps its drafted position. Confirm
+both at PR review.
+
+1. Same-account re-sign-in race: accepted. A same-account re-sign-in during an
+   in-flight pull still lets that pull's rows land (see Edge Cases). There is
+   no per-sign-in session id, so `PBSyncConfig` gains no field.
+2. Reset failure wording: used as drafted in Inputs / Outputs.
+
+## Scope addendum (2026-09-11)
+
+Review found one more write outside the fence: `resetAndFullSync` in
+`lib/sync/config/reset.ts` cleared `tasks` and `syncQueue`, then wrote a
+`sync_config` built from a snapshot read before those awaits. A sign-out in
+between would have been undone, the same bug as the old cursor update.
+
+Nothing calls it. It started as a debug helper, and its last caller went away
+in the v6.1.0 refactor (`a21cc99`); only its two re-exports and its own tests
+referenced it. The owner asked to resolve it, so it is deleted with its
+re-exports and tests instead of fenced. Deleting it removes the write path, so
+no acceptance criterion changes. Typecheck proves nothing still imports it.

@@ -6,7 +6,6 @@ import {
   disableSync,
   isSyncEnabled,
   getSyncStatus,
-  resetAndFullSync,
   getAutoSyncConfig,
 } from '@/lib/sync/config';
 import { getDb } from '@/lib/db';
@@ -284,6 +283,18 @@ describe('Sync Config', () => {
       expect(clearPocketBase).toHaveBeenCalled();
     });
 
+    it('should_persist_disabled_config_before_clearing_browser_caches', async () => {
+      let enabledWhileClearingCaches: boolean | undefined;
+      mockClearAppCaches.mockImplementationOnce(async () => {
+        enabledWhileClearingCaches = (await getSyncConfig())?.enabled;
+        return [];
+      });
+
+      await disableSync();
+
+      expect(enabledWhileClearingCaches).toBe(false);
+    });
+
     it('should clear app service worker caches', async () => {
       mockClearAppCaches.mockResolvedValueOnce(['gsd-runtime-v9.3.7']);
 
@@ -445,89 +456,6 @@ describe('Sync Config', () => {
       const status = await getSyncStatus();
 
       expect(status.pendingCount).toBe(3);
-    });
-  });
-
-  describe('resetAndFullSync', () => {
-    beforeEach(async () => {
-      // Set up enabled sync with data
-      await updateSyncConfig({
-        enabled: true,
-        userId: 'user-123',
-        email: 'test@example.com',
-        provider: 'google',
-        lastSyncAt: '2026-01-15T08:00:00.000Z',
-        lastServerUpdatedAt: '2026-01-15T08:00:00.000Z',
-      });
-
-      // Add tasks
-      await db.tasks.bulkAdd([
-        {
-          id: 'task-1',
-          title: 'Task 1',
-          description: '',
-          urgent: true,
-          important: true,
-          quadrant: 'urgent-important',
-          completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          recurrence: 'none',
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-        },
-      ]);
-
-      // Add queue items
-      await db.syncQueue.add({
-        id: 'queue-1',
-        taskId: 'task-1',
-        operation: 'create',
-        timestamp: Date.now(),
-        retryCount: 0,
-        payload: null,
-      });
-    });
-
-    it('should reset lastSyncAt and clear local data', async () => {
-      await resetAndFullSync();
-
-      const config = await getSyncConfig();
-
-      expect(config?.lastSyncAt).toBeNull();
-      expect(config?.lastClientUpdatedAt).toBeNull();
-      expect(config?.pullCursorVersion).toBe(2);
-      expect(config?.lastServerUpdatedAt).toBeNull();
-
-      const taskCount = await db.tasks.count();
-      expect(taskCount).toBe(0);
-
-      const queueCount = await db.syncQueue.count();
-      expect(queueCount).toBe(0);
-    });
-
-    it('should preserve auth credentials', async () => {
-      await resetAndFullSync();
-
-      const config = await getSyncConfig();
-
-      expect(config?.enabled).toBe(true);
-      expect(config?.userId).toBe('user-123');
-      expect(config?.email).toBe('test@example.com');
-      expect(config?.provider).toBe('google');
-    });
-
-    it('should throw error when sync not enabled', async () => {
-      await updateSyncConfig({ enabled: false });
-
-      await expect(resetAndFullSync()).rejects.toThrow('Sync not enabled');
-    });
-
-    it('should throw error when config does not exist', async () => {
-      await db.syncMetadata.clear();
-
-      await expect(resetAndFullSync()).rejects.toThrow('Sync not enabled');
     });
   });
 

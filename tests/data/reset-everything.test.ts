@@ -242,6 +242,53 @@ describe('reset-everything', () => {
     });
   });
 
+  describe('resetEverything failure reporting', () => {
+    it('should_report_local_data_step_when_indexeddb_clear_throws', async () => {
+      mockClear.mockRejectedValueOnce(new Error('DB clear failed'));
+
+      const result = await resetEverything();
+
+      expect(result.failedSteps).toEqual(['local-data']);
+    });
+
+    it('should_report_only_browser_storage_step_when_local_storage_throws', async () => {
+      const storageLength = vi.spyOn(window.localStorage, 'length', 'get').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      try {
+        const result = await resetEverything();
+
+        expect(result.failedSteps).toEqual(['browser-storage']);
+      } finally {
+        storageLength.mockRestore();
+      }
+    });
+
+    it('should_report_sync_sign_out_step_when_disable_sync_throws', async () => {
+      mockDisableSync.mockRejectedValueOnce(new Error('sync error'));
+
+      const result = await resetEverything();
+
+      expect(result.failedSteps).toEqual(['sync-sign-out']);
+    });
+
+    it('should_name_every_step_that_threw_in_order', async () => {
+      mockDisableSync.mockRejectedValueOnce(new Error('sync error'));
+      mockClear.mockRejectedValueOnce(new Error('DB clear failed'));
+
+      const result = await resetEverything();
+
+      expect(result.failedSteps).toEqual(['sync-sign-out', 'local-data']);
+    });
+
+    it('should_report_success_only_when_no_step_failed', async () => {
+      const result = await resetEverything();
+
+      expect(result).toMatchObject({ success: true, failedSteps: [] });
+    });
+  });
+
   describe('reloadAfterReset', () => {
     it('should set window.location.href to root when window is defined', () => {
       // jsdom provides window by default

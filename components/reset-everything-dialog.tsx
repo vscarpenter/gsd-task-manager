@@ -61,6 +61,16 @@ function resetFormReducer(state: ResetFormState, action: ResetFormAction): Reset
 	}
 }
 
+/**
+ * Lead with what happened to the tasks. The local-data step clears IndexedDB in
+ * one transaction, so its failure means no task was deleted.
+ */
+function resetFailureMessage(failedSteps: readonly string[]): string {
+	return failedSteps.includes("local-data")
+		? "Reset didn't finish. Your tasks were not deleted."
+		: "Your tasks were deleted, but reset didn't finish.";
+}
+
 interface ResetEverythingDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -126,8 +136,7 @@ export function ResetEverythingDialog({
 					reloadAfterReset();
 				}, UI_TIMING.RESET_RELOAD_DELAY_MS);
 			} else {
-				// Partial failure
-				toast.error(`Reset completed with errors: ${result.errors.join(", ")}`);
+				toast.error(resetFailureMessage(result.failedSteps), { description: result.errors.join(", ") });
 				dispatch({ type: "setResetting", value: false });
 			}
 		} catch (err) {

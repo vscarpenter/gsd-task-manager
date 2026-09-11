@@ -372,6 +372,27 @@ describe('useSync', () => {
       expect(result.current.lastResult?.status).toBe('already_running');
     });
 
+    it('should_return_to_idle_without_error_when_sync_is_cancelled', async () => {
+      mockCoordinator.getStatus.mockResolvedValue({
+        isRunning: false,
+        pendingRequests: 0,
+        lastSyncAt: Date.now(),
+        lastError: null,
+        retryCount: 0,
+        nextRetryAt: null,
+        lastResult: { status: 'cancelled' },
+      });
+
+      const { result } = renderHook(() => useSync(), { wrapper });
+
+      await act(async () => {
+        await result.current.sync();
+      });
+
+      expect(result.current.status).toBe('idle');
+      expect(result.current.error).toBe(null);
+    });
+
     it('should recover from error state on successful sync', async () => {
       const { result } = renderHook(() => useSync(), { wrapper });
 
