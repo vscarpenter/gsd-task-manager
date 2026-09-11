@@ -351,8 +351,8 @@ describe('security hardening scripts and workflows', () => {
     const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.8');
-    expect(rootPackage.overrides.hono).toBe('4.13.0');
-    expect(rootPackage.overrides.sharp).toBe('0.35.3');
+    expect(rootPackage.overrides.hono).toBe('4.13.7');
+    expect(rootPackage.overrides.sharp).toBe('0.35.4');
     expect(rootPackage.overrides.undici).toBe('7.29.0');
     expect(rootPackage.overrides['fast-uri']).toBe('4.1.4');
     expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
