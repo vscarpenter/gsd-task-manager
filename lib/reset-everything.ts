@@ -25,6 +25,9 @@ export interface ResetOptions {
 	preserveTheme?: boolean; // Keep user's theme preference
 }
 
+/** A reset step that can fail on its own. */
+export type ResetStep = "sync-sign-out" | "local-data" | "browser-storage";
+
 /**
  * Result of reset operation
  */
@@ -33,6 +36,11 @@ export interface ResetResult {
 	clearedTables: string[];
 	clearedLocalStorage: string[];
 	errors: string[];
+	/**
+	 * Steps that threw, in the order they ran. Only "local-data" decides whether
+	 * tasks survived, because that step clears IndexedDB in one transaction.
+	 */
+	failedSteps: ResetStep[];
 }
 
 /**
@@ -210,13 +218,14 @@ export async function resetEverything(
 		clearedTables: [],
 		clearedLocalStorage: [],
 		errors: [],
+		failedSteps: [],
 	};
 
 	// Step 1: Logout from sync
 	const sessionResult = await clearSessionData();
 	if (!sessionResult.success) {
 		result.errors.push(...sessionResult.errors);
-		result.success = false;
+		result.failedSteps.push("sync-sign-out");
 	}
 
 	// Step 2: Clear IndexedDB
@@ -224,7 +233,7 @@ export async function resetEverything(
 	result.clearedTables = dbResult.tables;
 	if (dbResult.errors.length > 0) {
 		result.errors.push(...dbResult.errors);
-		result.success = false;
+		result.failedSteps.push("local-data");
 	}
 
 	// Step 3: Clear localStorage
@@ -232,8 +241,10 @@ export async function resetEverything(
 	result.clearedLocalStorage = storageResult.items;
 	if (storageResult.errors.length > 0) {
 		result.errors.push(...storageResult.errors);
-		result.success = false;
+		result.failedSteps.push("browser-storage");
 	}
+
+	result.success = result.failedSteps.length === 0;
 
 	logger.info("Reset complete", {
 		success: result.success,

@@ -133,4 +133,50 @@ describe("ResetEverythingDialog", () => {
     );
     expect(toast.success).not.toHaveBeenCalled();
   });
+
+  describe("when reset fails", () => {
+    async function resetWith(failure: { failedSteps: string[]; errors: string[] }) {
+      const { resetEverything } = await import("@/lib/reset-everything");
+      vi.mocked(resetEverything).mockResolvedValueOnce({
+        success: false,
+        clearedTables: [],
+        clearedLocalStorage: [],
+        ...failure,
+      } as Awaited<ReturnType<typeof resetEverything>>);
+      const user = userEvent.setup();
+      render(<ResetEverythingDialog {...baseProps} />);
+      await user.type(screen.getByPlaceholderText("Type RESET here"), "RESET");
+      await user.click(screen.getByRole("button", { name: /reset everything/i }));
+    }
+
+    it("should_say_tasks_were_not_deleted_when_local_data_step_fails", async () => {
+      await resetWith({
+        failedSteps: ["sync-sign-out", "local-data"],
+        errors: ["Sync logout: offline", "IndexedDB: blocked"],
+      });
+
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith("Reset didn't finish. Your tasks were not deleted.", {
+          description: "Sync logout: offline, IndexedDB: blocked",
+        }),
+      );
+      expect(screen.getByRole("button", { name: /reset everything/i })).toBeEnabled();
+      expect(baseProps.onOpenChange).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["sync-sign-out", "Sync logout: offline"],
+      ["browser-storage", "localStorage theme: denied"],
+    ])("should_say_tasks_were_deleted_when_only_browser_storage_or_sign_out_fails (%s)", async (step, detail) => {
+      await resetWith({ failedSteps: [step], errors: [detail] });
+
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith("Your tasks were deleted, but reset didn't finish.", {
+          description: detail,
+        }),
+      );
+      expect(screen.getByRole("button", { name: /reset everything/i })).toBeEnabled();
+      expect(baseProps.onOpenChange).not.toHaveBeenCalled();
+    });
+  });
 });
