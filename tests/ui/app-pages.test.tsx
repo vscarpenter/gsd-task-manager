@@ -190,3 +190,40 @@ describe('AboutPage', () => {
   });
 });
 
+/** Render the layout as a development build with a configured PocketBase URL, and return its CSP. */
+async function renderDevelopmentCsp(pocketBaseUrl: string): Promise<string> {
+  vi.stubEnv('NODE_ENV', 'development');
+  vi.stubEnv('NEXT_PUBLIC_POCKETBASE_URL', pocketBaseUrl);
+  try {
+    // The layout reads both variables once, when the module loads.
+    vi.resetModules();
+    const { default: DevelopmentRootLayout } = await import('@/app/layout');
+    render(
+      <DevelopmentRootLayout>
+        <p>content</p>
+      </DevelopmentRootLayout>
+    );
+    return document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? '';
+  } finally {
+    vi.unstubAllEnvs();
+  }
+}
+
+describe('RootLayout development CSP with a configured PocketBase URL', () => {
+  it('should_allow_the_configured_pocketbase_origin', async () => {
+    const csp = await renderDevelopmentCsp('https://pocketbase.example.test/api');
+
+    expect(csp).toContain('https://pocketbase.example.test');
+  });
+
+  it.each(['ftp://files.example.test', 'not a url'])(
+    'should_leave_%s_out_of_the_csp',
+    async (pocketBaseUrl) => {
+      const csp = await renderDevelopmentCsp(pocketBaseUrl);
+
+      expect(csp).toContain('https://api.vinny.io');
+      expect(csp).not.toContain(pocketBaseUrl);
+    }
+  );
+});
+

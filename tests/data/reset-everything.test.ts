@@ -296,6 +296,15 @@ describe('reset-everything', () => {
       expect(result.failedSteps).toEqual(['sync-sign-out', 'local-data']);
     });
 
+    it('should_run_the_delete_fallback_when_sync_metadata_keeps_an_account_row', async () => {
+      mockToArray.mockResolvedValueOnce([{ key: 'sync_config', userId: 'user-1' }]);
+
+      const result = await resetEverything();
+
+      expect(mockDeleteDatabase).toHaveBeenCalledTimes(1);
+      expect(result.errors).toContain('IndexedDB: rows survived in syncMetadata');
+    });
+
     it('should_report_success_only_when_no_step_failed', async () => {
       const result = await resetEverything();
 
