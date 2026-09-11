@@ -11,6 +11,7 @@ import { createLogger } from '@/lib/logger';
 import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { classifyRemoteDeletion } from './queue';
+import { assertSyncSessionCurrent } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { TaskRecord } from '@/lib/types';
@@ -72,8 +73,10 @@ async function applyPreparedRecord(
 
 /**
  * Apply fetched remote records to local IndexedDB using LWW resolution.
+ * The fetch may have outlived a sign-out, so nothing is written unless
+ * `ownerId` still owns the sync session inside the transaction.
  */
-async function applyRemoteRecords(records: RecordModel[]): Promise<{
+async function applyRemoteRecords(records: RecordModel[], ownerId: string): Promise<{
   pulledCount: number;
   skippedCount: number;
   appliedRecords: PreparedRemoteRecord[];
@@ -82,7 +85,8 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
   const acceptedRecords = prepareRemoteRecords(records);
   let pulledCount = 0;
   const appliedRecords: PreparedRemoteRecord[] = [];
-  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks], async () => {
+  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncMetadata], async () => {
+    await assertSyncSessionCurrent(ownerId);
     for (const prepared of acceptedRecords) {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction preserves tombstone/live invariants
       const applied = await applyPreparedRecord(db, prepared);
@@ -101,6 +105,7 @@ async function applyRemoteRecords(records: RecordModel[]): Promise<{
  * Pull remote changes from PocketBase into local IndexedDB.
  * Fetches tasks whose client-stamped `client_updated_at` is at or past the cursor.
  * LWW: remote wins if remote client_updated_at > local updatedAt.
+ * Throws StaleSyncSessionError when the user's session ends before a write.
  */
 export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const ownerId = getCurrentUserId();
@@ -125,7 +130,7 @@ export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Pro
     sort: 'client_updated_at,task_id,id',
   });
 
-  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records);
+  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records, ownerId);
   if (skippedCount > 0) {
     logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }
@@ -209,7 +214,9 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
 
   const db = getDb();
   const remoteTaskIds = new Set(remoteIndex.keys());
-  await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue], async () => {
+  await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
+    // The index fetch may have outlived a sign-out; delete nothing for a past session.
+    await assertSyncSessionCurrent(ownerId);
     const [localTasks, queueRows] = await Promise.all([
       db.tasks.toArray(),
       db.syncQueue.toArray(),

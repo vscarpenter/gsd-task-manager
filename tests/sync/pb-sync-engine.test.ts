@@ -186,6 +186,13 @@ describe('pb-sync-engine', () => {
     mockQueue = createMockQueue();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue(mockPB);
     (getSyncQueue as ReturnType<typeof vi.fn>).mockReturnValue(mockQueue);
+    // Pull and outcome writes only land while the config names the signed-in owner.
+    (getDb().syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      key: 'sync_config',
+      enabled: true,
+      userId: 'user-123',
+      deviceId: 'device-1',
+    });
   });
 
   describe('pushLocalChanges', () => {
@@ -453,6 +460,7 @@ describe('pb-sync-engine', () => {
       const config = {
         key: 'sync_config',
         enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
         lastSyncAt: '2024-01-01T00:00:00.000Z',
       };
@@ -507,6 +515,7 @@ describe('pb-sync-engine', () => {
       const config = {
         key: 'sync_config',
         enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
         lastSyncAt: '2024-01-01T00:00:00.000Z',
       };
@@ -547,6 +556,7 @@ describe('pb-sync-engine', () => {
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         key: 'sync_config',
         enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
         lastSyncAt: '2024-01-01T00:00:00.000Z',
         lastServerUpdatedAt: '2024-06-01T00:00:00.000Z',
@@ -582,6 +592,7 @@ describe('pb-sync-engine', () => {
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         key: 'sync_config',
         enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
         lastSyncAt: '2024-06-15T12:00:00.000Z',
       });
@@ -616,6 +627,7 @@ describe('pb-sync-engine', () => {
       const config = {
         key: 'sync_config',
         enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
         lastSyncAt: null,
       };
@@ -651,6 +663,7 @@ describe('pb-sync-engine', () => {
       const config = {
         key: 'sync_config',
         enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
         lastSyncAt: null,
         lastClientUpdatedAt: existingCursor,
