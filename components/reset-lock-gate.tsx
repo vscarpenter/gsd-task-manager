@@ -105,7 +105,7 @@ function ResetLockScreen({ running }: { running: boolean }) {
 			ref={screenRef}
 			tabIndex={-1}
 			aria-labelledby={running ? statusId : headingId}
-			className="flex min-h-screen flex-col items-center justify-center gap-6 px-4"
+			className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 outline-none"
 		>
 			{running ? (
 				<ResetProgress statusId={statusId} />
