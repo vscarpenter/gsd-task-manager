@@ -1,12 +1,17 @@
 # =============================================================================
 # GSD Task Manager — Self-Hosted Docker Image
-# Multi-stage: bun builds the static site → Caddy + PocketBase runtime
+# Multi-stage: Node builds the static site → Caddy + PocketBase runtime
 # =============================================================================
 
 # ---------------------------------------------------------------------------
 # Stage 1: Build the Next.js static export
 # ---------------------------------------------------------------------------
-FROM oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS builder
+# Real Node runs `next build` here. The oven/bun image links `node` to Bun,
+# and Bun 1.3.14 crashed while exiting after a successful build (exit 132).
+# Copy only the Bun binary so `bun install` stays on Bun and `node` stays Node.
+FROM node:24-trixie-slim@sha256:6950b66b4c0cb0151ce89fa75074673850763d096b044f422c6729b588dd4956 AS builder
+
+COPY --from=oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 
