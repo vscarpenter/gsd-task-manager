@@ -252,6 +252,12 @@ function buildSyncConfig(
 
 /** Persist sync config to IndexedDB after successful OAuth */
 async function persistSyncConfig(authState: AuthState) {
+  // Every sync is fenced to the config's userId, so a config without one would
+  // cancel each sync without saying why. Refuse to enable it instead.
+  if (!authState.userId) {
+    throw new Error("The sign-in response did not include an account ID. Please try again.");
+  }
+
   const db = getDb();
   await db.transaction(
     "rw",

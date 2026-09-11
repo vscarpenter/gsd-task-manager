@@ -509,6 +509,23 @@ describe('SyncAuthDialog', () => {
       expect(mockClearPocketBase).toHaveBeenCalled();
     });
 
+    it('should_not_enable_sync_when_auth_state_has_no_user_id', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+      await waitFor(() => expect(capturedOnSuccess).toBeDefined());
+
+      const outcome = await Promise.resolve(capturedOnSuccess!({
+        isLoggedIn: true,
+        userId: null,
+        email: 'test@example.com',
+        provider: 'google',
+      })).then(() => undefined, (error: unknown) => error);
+
+      expect(mockDb.syncMetadata.put).not.toHaveBeenCalled();
+      expect(mockQueue.populateFromExistingTasks).not.toHaveBeenCalled();
+      expect(outcome).toBeInstanceOf(Error);
+      expect(mockClearPocketBase).toHaveBeenCalled();
+    });
+
     it('should display error on OAuth failure', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
