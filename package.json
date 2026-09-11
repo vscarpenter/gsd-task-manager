@@ -59,8 +59,8 @@
 		"zod": "4.4.3"
 	},
 	"devDependencies": {
-		"@browserbasehq/stagehand": "^4.0.2",
-		"@playwright/test": "^1.62.1",
+		"@browserbasehq/stagehand": "^4.1.0",
+		"@playwright/test": "^1.63.0",
 		"@tailwindcss/postcss": "4.3.3",
 		"@testing-library/dom": "10.4.1",
 		"@testing-library/jest-dom": "7.0.1",
