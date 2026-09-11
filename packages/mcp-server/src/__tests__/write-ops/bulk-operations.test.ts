@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { GsdConfig, Task } from '../../types.js';
+import { pbTaskToTask, type GsdConfig, type PBTask, type Task } from '../../types.js';
 
 const { mockBulkInfo } = vi.hoisted(() => ({ mockBulkInfo: vi.fn() }));
 
@@ -25,12 +25,14 @@ vi.mock('../../write-ops/helpers.js', async () => {
     // Per-item preflight check just before each write.
     fetchSinglePBTaskFresh: vi.fn().mockResolvedValue(null),
     updateTaskInPBById: vi.fn().mockResolvedValue(undefined),
+    updateTaskDependenciesInPBById: vi.fn().mockResolvedValue(undefined),
     deleteTaskInPBById: vi.fn().mockResolvedValue(undefined),
   };
 });
 
 vi.mock('../../tools/list-tasks.js', () => ({
   listTasks: vi.fn(),
+  listTasksFresh: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../cache.js', () => ({
@@ -385,5 +387,148 @@ describe('bulkUpdateTasks — delete safety', () => {
     expect(result.dryRun).toBe(false);
     expect(result.updated).toBe(11);
     expect(result.conflicts).toEqual([]);
+  });
+});
+
+type PBEntry = { pbRecordId: string; clientUpdatedAt: string; record: PBTask };
+
+function makeDependentEntry(id: string, dependencies: string[]): PBEntry {
+  const entry = makeSnapshotEntry(id);
+  return { ...entry, record: { ...entry.record, dependencies } };
+}
+
+/**
+ * Serve every PocketBase helper from one in-memory store, so a delete
+ * disappears from later reads the way it does against the real backend.
+ */
+async function seedPocketBase(
+  entries: PBEntry[],
+  batchIds: string[]
+): Promise<Map<string, PBEntry>> {
+  const helpers = await import('../../write-ops/helpers.js');
+  const { listTasksFresh } = await import('../../tools/list-tasks.js');
+  const store = new Map(entries.map((entry) => [entry.record.task_id, entry]));
+  vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(
+    new Map(batchIds.map((id) => [id, store.get(id)!]))
+  );
+  vi.mocked(listTasksFresh).mockImplementation(async () =>
+    [...store.values()].map((entry) => pbTaskToTask(entry.record))
+  );
+  vi.mocked(helpers.fetchSinglePBTaskFresh).mockImplementation(
+    async (_config, id) => store.get(id) ?? null
+  );
+  vi.mocked(helpers.deleteTaskInPBById).mockImplementation(async (_config, recordId) => {
+    store.delete(recordId.replace(/^rec-/, ''));
+  });
+  return store;
+}
+
+describe('bulkUpdateTasks dependency cleanup after delete', () => {
+  it('strips a deleted task id from a surviving dependent in PocketBase', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    await seedPocketBase(
+      [
+        makeSnapshotEntry('blocker'),
+        makeSnapshotEntry('other'),
+        makeDependentEntry('dependent', ['blocker', 'other']),
+      ],
+      ['blocker']
+    );
+
+    const result = await bulkUpdateTasks(config, ['blocker'], { type: 'delete' }, { dryRun: false });
+
+    expect(result).toMatchObject({ deleted: 1, errors: [], conflicts: [] });
+    expect(helpers.updateTaskDependenciesInPBById).toHaveBeenCalledWith(
+      config,
+      'rec-dependent',
+      ['other'],
+      expect.any(String),
+      'device-1'
+    );
+  });
+
+  it('skips the dependency update for a dependent deleted in the same batch', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    await seedPocketBase(
+      [
+        makeSnapshotEntry('blocker'),
+        makeDependentEntry('doomed', ['blocker']),
+        makeDependentEntry('survivor', ['blocker']),
+      ],
+      ['blocker', 'doomed']
+    );
+
+    const result = await bulkUpdateTasks(
+      config,
+      ['blocker', 'doomed'],
+      { type: 'delete' },
+      { dryRun: false }
+    );
+
+    const patchedRecords = vi
+      .mocked(helpers.updateTaskDependenciesInPBById)
+      .mock.calls.map((call) => call[1]);
+    expect(patchedRecords).toEqual(['rec-survivor']);
+    expect(result).toMatchObject({ deleted: 2, errors: [] });
+  });
+
+  it('keeps the id of a task whose delete conflicted in its dependents', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const store = await seedPocketBase(
+      [
+        makeSnapshotEntry('blocker'),
+        makeSnapshotEntry('changed'),
+        makeDependentEntry('dependent', ['blocker', 'changed']),
+      ],
+      ['blocker', 'changed']
+    );
+    // Another device saves "changed" after the batch snapshot, so its delete preflight conflicts.
+    store.set('changed', { ...store.get('changed')!, clientUpdatedAt: '2026-04-02T00:00:00Z' });
+
+    const result = await bulkUpdateTasks(
+      config,
+      ['blocker', 'changed'],
+      { type: 'delete' },
+      { dryRun: false }
+    );
+
+    expect(result).toMatchObject({ deleted: 1, conflicts: ['changed'] });
+    expect(helpers.updateTaskDependenciesInPBById).toHaveBeenCalledWith(
+      config,
+      'rec-dependent',
+      ['changed'],
+      expect.any(String),
+      'device-1'
+    );
+  });
+
+  it('reports incomplete cleanup as errors, never as conflicts a caller would retry', async () => {
+    // The bulk handler invites a retry for every conflict id. On a delete, that
+    // retry would remove the dependent, so cleanup trouble belongs in errors.
+    const helpers = await import('../../write-ops/helpers.js');
+    const store = await seedPocketBase(
+      [
+        makeSnapshotEntry('blocker'),
+        makeDependentEntry('rejected', ['blocker']),
+        makeDependentEntry('edited', ['blocker']),
+      ],
+      ['blocker']
+    );
+    vi.mocked(helpers.updateTaskDependenciesInPBById).mockRejectedValueOnce({ status: 422 });
+    // "edited" changes after its first read, as if another device saved it mid-cleanup.
+    let editedReads = 0;
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockImplementation(async (_config, id) => {
+      const entry = store.get(id) ?? null;
+      if (id !== 'edited' || editedReads++ === 0) return entry;
+      return { ...entry!, clientUpdatedAt: '2026-04-02T00:00:00Z' };
+    });
+
+    const result = await bulkUpdateTasks(config, ['blocker'], { type: 'delete' }, { dryRun: false });
+
+    expect(result).toMatchObject({ deleted: 1, conflicts: [] });
+    expect(result.errors).toEqual([
+      'Task rejected: dependency cleanup validation_failed',
+      'Task edited: dependency cleanup conflict',
+    ]);
   });
 });

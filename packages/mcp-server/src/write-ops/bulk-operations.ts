@@ -9,7 +9,7 @@
 import type { GsdConfig, Task } from '../types.js';
 import { pbTaskToTask } from '../types.js';
 import type { BulkOperation } from './types.js';
-import { listTasks } from '../tools/list-tasks.js';
+import { listTasks, listTasksFresh } from '../tools/list-tasks.js';
 import { getTaskCache } from '../cache.js';
 import { createMcpLogger } from '../utils/logger.js';
 import {
@@ -21,6 +21,7 @@ import {
   deleteTaskInPBById,
 } from './helpers.js';
 import { sanitizePocketBaseWriteError, WriteRateLimiter } from './write-rate-limiter.js';
+import { cleanDependents, snapshotDependents, type CleanupOutcome } from './dependency-cleanup.js';
 
 const logger = createMcpLogger('BULK_WRITE');
 
@@ -249,14 +250,48 @@ function appendMissingTaskErrors(
   }
 }
 
+function describeCleanupIssue(outcome: CleanupOutcome): string[] {
+  if (outcome.kind === 'cleaned') return [];
+  const code = outcome.kind === 'conflict' ? 'conflict' : outcome.code;
+  return [`Task ${outcome.taskId}: dependency cleanup ${code}`];
+}
+
+/**
+ * Strip the ids this batch deleted from every surviving task that depended on
+ * one of them. Cleanup trouble comes back as error strings, never as conflicts.
+ * The handler invites a retry for each conflict id, and retrying a delete
+ * would remove the dependent.
+ */
+async function removeDeletedReferences(
+  config: GsdConfig,
+  tasks: Task[],
+  outcomes: BulkTaskOutcome[],
+  deviceId: string,
+  limiter: WriteRateLimiter
+): Promise<string[]> {
+  const deletedIds = new Set(
+    outcomes.filter((outcome) => outcome.kind === 'deleted').map((outcome) => outcome.taskId)
+  );
+  if (deletedIds.size === 0) return [];
+  const dependents = tasks.filter((task) =>
+    !deletedIds.has(task.id) && task.dependencies.some((id) => deletedIds.has(id))
+  );
+  const pending = await snapshotDependents(config, dependents);
+  const cleanup = await cleanDependents(config, deletedIds, pending, deviceId, limiter);
+  return cleanup.flatMap(describeCleanupIssue);
+}
+
 async function executeBulkWrite(
   config: GsdConfig,
   taskIds: string[],
   operation: BulkOperation
 ): Promise<BulkUpdateResult> {
-  const [{ ownerId, deviceId }, snapshot] = await Promise.all([
+  // Deletes read the task list before any write, as deleteTask does. A failed
+  // read then aborts the batch before it removes anything.
+  const [{ ownerId, deviceId }, snapshot, tasks] = await Promise.all([
     getAuthInfo(config),
     fetchPBSnapshotForTasks(config, taskIds),
+    operation.type === 'delete' ? listTasksFresh(config) : [],
   ]);
   if (snapshot.size === 0) return emptyBulkResult(false, 'No matching tasks found');
   const inputs = collectBulkInputs(taskIds, snapshot);
@@ -266,6 +301,7 @@ async function executeBulkWrite(
     processBulkTask(config, input, operation, ownerId, deviceId, writeLimiter)
   );
   const summary = summarizeOutcomes(outcomes);
+  summary.errors.push(...await removeDeletedReferences(config, tasks, outcomes, deviceId, writeLimiter));
   summary.rateLimitCount += writeLimiter.getRateLimitCount();
   appendMissingTaskErrors(taskIds, snapshot, summary.errors);
   getTaskCache().invalidate();
