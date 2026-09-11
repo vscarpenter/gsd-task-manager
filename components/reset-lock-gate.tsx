@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { UI_TIMING } from "@/lib/constants/ui";
 import { reloadAfterReset, resetEverything } from "@/lib/reset-everything";
 import {
 	RESET_PENDING_KEY,
@@ -9,7 +10,10 @@ import {
 	getResetLockSnapshot,
 	readPendingPreserveTheme,
 	subscribeToResetLock,
+	type ResetLockState,
 } from "@/lib/reset-lock";
+
+type ShownLock = Exclude<ResetLockState, "unlocked">;
 
 /**
  * Keeps every task surface unmounted while Reset Everything runs, and after a
@@ -22,10 +26,18 @@ export function ResetLockGate({ children }: { children: ReactNode }) {
 		getResetLockSnapshot,
 		getResetLockServerSnapshot,
 	);
+	// The last lock this gate showed, stored during render. After any lock the app
+	// never remounts before the reload, because FirstTimeRedirect and the
+	// onboarding tour would act on flags the reset just cleared.
+	const [shownLock, setShownLock] = useState<ShownLock | null>(null);
+	if (lockState !== "unlocked" && lockState !== shownLock) {
+		setShownLock(lockState);
+	}
 	useReloadWhenAnotherTabUnlocks(lockState === "locked");
+	useReloadAfterLocalReset(lockState === "unlocked" && shownLock === "running");
 
-	if (lockState === "unlocked") return <>{children}</>;
-	return <ResetLockScreen running={lockState === "running"} />;
+	if (lockState === "unlocked" && shownLock === null) return <>{children}</>;
+	return <ResetLockScreen running={lockState !== "locked"} />;
 }
 
 /**
@@ -41,6 +53,19 @@ function useReloadWhenAnotherTabUnlocks(locked: boolean): void {
 		window.addEventListener("storage", handleStorage);
 		return () => window.removeEventListener("storage", handleStorage);
 	}, [locked]);
+}
+
+/**
+ * A reset that finished in this document reloads after the reset delay, so its
+ * toast stays readable. The dialogs never reload after a run whose sign-out or
+ * browser-storage step failed, so this reload covers those runs too.
+ */
+function useReloadAfterLocalReset(finished: boolean): void {
+	useEffect(() => {
+		if (!finished) return;
+		const timer = setTimeout(reloadAfterReset, UI_TIMING.RESET_RELOAD_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [finished]);
 }
 
 /** Rerun the reset. Resolves to an error to announce, or null once the reload starts. */

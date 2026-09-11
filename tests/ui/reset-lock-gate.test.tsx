@@ -1,17 +1,18 @@
 /**
- * Tests for components/reset-lock-gate.tsx (AC10 to AC16).
+ * Tests for components/reset-lock-gate.tsx (AC10 to AC16, and AC20).
  *
  * The lock store runs for real. resetEverything and reloadAfterReset are
  * mocked, so no test resets data or navigates. Task titles come from a task
  * seeded in fake-indexeddb and read through the real useTasks hook.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getDb } from '@/lib/db';
 import { useTasks } from '@/lib/use-tasks';
 import { endResetLock, startResetLock } from '@/lib/reset-lock';
+import { UI_TIMING } from '@/lib/constants/ui';
 import { createMockTask } from '@/tests/fixtures';
 
 vi.mock('@/lib/reset-everything', () => ({
@@ -55,6 +56,21 @@ function renderGate() {
   );
 }
 
+/** Render the gate around children that count their own renders. */
+function renderGateWithWatchedChildren() {
+  const renderChildren = vi.fn();
+  function WatchedChildren() {
+    renderChildren();
+    return <p>Matrix content</p>;
+  }
+  render(
+    <ResetLockGate>
+      <WatchedChildren />
+    </ResetLockGate>,
+  );
+  return renderChildren;
+}
+
 function mockRetryResult(failedSteps: Array<'sync-sign-out' | 'local-data' | 'browser-storage'>, errors: string[]) {
   vi.mocked(resetEverything).mockResolvedValueOnce({
     success: failedSteps.length === 0,
@@ -73,6 +89,10 @@ describe('ResetLockGate', () => {
     localStorage.removeItem(RESET_PENDING_KEY);
     await getDb().tasks.clear();
     await getDb().tasks.put(createMockTask({ id: 'task-private', title: TASK_TITLE }));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should_render_children_when_no_reset_is_pending', async () => {
@@ -177,6 +197,43 @@ describe('ResetLockGate', () => {
       dispatchMarkerEvent(null);
     });
 
+    expect(reloadAfterReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('should_keep_the_lock_screen_and_reload_after_the_delay_when_a_local_reset_unlocks', () => {
+    vi.useFakeTimers();
+    const renderChildren = renderGateWithWatchedChildren();
+    act(() => startResetLock(true));
+    const rendersBeforeUnlock = renderChildren.mock.calls.length;
+
+    act(() => endResetLock(true));
+    act(() => {
+      vi.advanceTimersByTime(UI_TIMING.RESET_RELOAD_DELAY_MS - 1);
+    });
+    const reloadsBeforeDelay = vi.mocked(reloadAfterReset).mock.calls.length;
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+
+    expect(renderChildren).toHaveBeenCalledTimes(rendersBeforeUnlock);
+    expect(screen.getByText('Deleting your data…')).toBeInTheDocument();
+    expect([reloadsBeforeDelay, vi.mocked(reloadAfterReset).mock.calls.length]).toEqual([0, 1]);
+  });
+
+  it('should_reload_without_remounting_the_app_when_another_tab_unlocks', () => {
+    vi.useFakeTimers();
+    setMarker(true);
+    const renderChildren = renderGateWithWatchedChildren();
+
+    act(() => {
+      localStorage.removeItem(RESET_PENDING_KEY);
+      dispatchMarkerEvent(null);
+    });
+    act(() => {
+      vi.advanceTimersByTime(UI_TIMING.RESET_RELOAD_DELAY_MS);
+    });
+
+    expect(renderChildren).not.toHaveBeenCalled();
     expect(reloadAfterReset).toHaveBeenCalledTimes(1);
   });
 });
