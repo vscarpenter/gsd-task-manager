@@ -12,16 +12,26 @@ const {
   mockClear,
   mockAdd,
   mockResetFeedbackState,
+  mockCount,
+  mockToArray,
+  mockDeleteDatabase,
 } = vi.hoisted(() => ({
   mockDisableSync: vi.fn().mockResolvedValue(undefined),
   mockGetSyncConfig: vi.fn().mockResolvedValue(null),
   mockClear: vi.fn().mockResolvedValue(undefined),
   mockAdd: vi.fn().mockResolvedValue(undefined),
   mockResetFeedbackState: vi.fn(),
+  mockCount: vi.fn().mockResolvedValue(0),
+  mockToArray: vi.fn().mockResolvedValue([]),
+  // No IndexedDB sits behind this mock, so the database delete fallback fails
+  // here. tests/data/reset-local-data.test.ts covers a fallback that succeeds.
+  mockDeleteDatabase: vi.fn().mockRejectedValue(new Error('delete unavailable')),
 }));
 
 vi.mock('@/lib/db', () => ({
   getDb: () => ({
+    name: 'GsdTaskManager',
+    delete: mockDeleteDatabase,
     transaction: vi.fn(async (...args: unknown[]) => (args.at(-1) as () => Promise<unknown>)()),
     tasks: { clear: mockClear, name: 'tasks' },
     archivedTasks: { clear: mockClear, name: 'archivedTasks' },
@@ -36,20 +46,21 @@ vi.mock('@/lib/db', () => ({
     syncMetadata: {
       clear: mockClear,
       add: mockAdd,
+      toArray: mockToArray,
       name: 'syncMetadata',
     },
     tables: [
-      { clear: mockClear, name: 'tasks' },
-      { clear: mockClear, name: 'archivedTasks' },
-      { clear: mockClear, name: 'deletedTasks' },
-      { clear: mockClear, name: 'smartViews' },
-      { clear: mockClear, name: 'notificationSettings' },
-      { clear: mockClear, name: 'syncQueue' },
-      { clear: mockClear, name: 'syncMetadata' },
-      { clear: mockClear, name: 'deviceInfo' },
-      { clear: mockClear, name: 'archiveSettings' },
-      { clear: mockClear, name: 'syncHistory' },
-      { clear: mockClear, name: 'appPreferences' },
+      { clear: mockClear, count: mockCount, name: 'tasks' },
+      { clear: mockClear, count: mockCount, name: 'archivedTasks' },
+      { clear: mockClear, count: mockCount, name: 'deletedTasks' },
+      { clear: mockClear, count: mockCount, name: 'smartViews' },
+      { clear: mockClear, count: mockCount, name: 'notificationSettings' },
+      { clear: mockClear, count: mockCount, name: 'syncQueue' },
+      { clear: mockClear, count: mockCount, name: 'syncMetadata' },
+      { clear: mockClear, count: mockCount, name: 'deviceInfo' },
+      { clear: mockClear, count: mockCount, name: 'archiveSettings' },
+      { clear: mockClear, count: mockCount, name: 'syncHistory' },
+      { clear: mockClear, count: mockCount, name: 'appPreferences' },
     ],
   }),
 }));
