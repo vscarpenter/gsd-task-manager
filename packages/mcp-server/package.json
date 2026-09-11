@@ -82,10 +82,10 @@
   },
   "devDependencies": {
     "@types/node": "26.2.0",
-    "@vitest/ui": "4.1.10",
+    "@vitest/ui": "4.1.11",
     "eventsource": "4.1.1",
     "typescript": "7.0.2",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "engines": {
     "node": ">=18.0.0"
