@@ -1020,6 +1020,8 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 5. **Lock screen.** The heading reads "Reset didn't finish". The body reads "Your tasks are still saved in this browser. GSD stays locked until they're deleted." One primary button, "Try again", reruns `resetEverything` with the stored `preserveTheme` and calls `reloadAfterReset` on success. A failed retry keeps the lock and announces the error in a `role="alert"` region. The footer hint reads "If this keeps failing, clear this site's data in your browser settings." The progress state reads "Deleting your data…" and shows no buttons. There is no cancel, export, or navigation control.
 6. **Other tabs.** A `storage` event that sets the marker locks every other open tab. A locked tab that sees the marker removed reloads through `reloadAfterReset`, because its in-memory stores and database connection predate the wipe.
 7. **Account deletion copy.** The failure toast in `DeleteAccountDialog` stops sending people to Reset Everything, because the lock screen now owns the retry.
+8. **A thrown step still ends the run.** `resetEverything` ends the lock in a `finally` block. If a step throws past its own error handling, the store leaves `"running"`, reports `"locked"`, and keeps the marker. The error still reaches the caller. Without this, the gate would show the progress state forever with no Try again.
+9. **No remount before the reload.** Once a gate instance has shown the lock, a later `"unlocked"` snapshot keeps the lock screen's progress state instead of remounting the app, so item 4's children rule applies only until then. A remount would let `FirstTimeRedirect` and the onboarding tour act on flags the reset just cleared. When the unlock comes from a reset that finished in this document, the gate reloads after `UI_TIMING.RESET_RELOAD_DELAY_MS`. That keeps a success toast readable, and it also reloads runs whose sign-out or browser-storage step failed. A document unlocked by another tab still reloads right away.
 
 ## Inputs / Outputs
 
@@ -1027,7 +1029,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 - `ResetStep` stays `"sync-sign-out" | "local-data" | "browser-storage"`.
 - New localStorage key `gsd-reset-pending` with the value `{"preserveTheme": boolean}`. A missing or unparsable `preserveTheme` defaults to `true`.
 - Lock state snapshot: `"unlocked" | "running" | "locked"`.
-- No Dexie schema change. The database stays at version 15, and no Zod schema in `lib/schema.ts` changes.
+- The Dexie schema and its version do not change, and no Zod schema in `lib/schema.ts` changes.
 
 ## Constraints
 
@@ -1087,6 +1089,9 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 17. `app/layout.tsx` places `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister` inside the gate, and `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` outside it.
 18. The local-erase failure toast in `DeleteAccountDialog` no longer mentions Reset Everything.
 19. The existing reset suites still pass: dialog copy, `failedSteps` order, device ID preservation on the normal path, and the stale-sync fence.
+20. After a reset that ran in this document removes the lock, the gate keeps the lock screen instead of remounting the app and reloads after the reset reload delay. A document unlocked by another tab reloads without remounting the app.
+21. If a reset step throws, the store leaves the running state, reports locked, and keeps the marker.
+22. The lock screen's main landmark is named by its visible message, focus moves to it whenever the screen switches between progress and locked, and Try again is replaced by the progress state as soon as a retry starts.
 
 ## Implementation order
 
@@ -1172,3 +1177,6 @@ it("should_not_mention_reset_everything_when_local_erase_fails", async () => {})
 | 17 | should_mount_data_surfaces_inside_the_gate_and_chrome_outside_it |
 | 18 | should_not_mention_reset_everything_when_local_erase_fails |
 | 19 | the existing reset suites, plus should_preserve_the_device_id_when_the_normal_wipe_succeeds |
+| 20 | should_keep_the_lock_screen_and_reload_after_the_delay_when_a_local_reset_unlocks, should_reload_without_remounting_the_app_when_another_tab_unlocks |
+| 21 | should_end_locked_and_rethrow_when_a_step_throws |
+| 22 | should_name_the_lock_screen_by_its_visible_message, should_move_focus_to_the_locked_message_when_a_reset_fails_here, should_replace_try_again_with_progress_as_soon_as_a_retry_starts |
