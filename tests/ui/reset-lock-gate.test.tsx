@@ -1,5 +1,5 @@
 /**
- * Tests for components/reset-lock-gate.tsx (AC10 to AC16, and AC20).
+ * Tests for components/reset-lock-gate.tsx (AC10 to AC16, AC20, and AC22).
  *
  * The lock store runs for real. resetEverything and reloadAfterReset are
  * mocked, so no test resets data or navigates. Task titles come from a task
@@ -235,5 +235,41 @@ describe('ResetLockGate', () => {
 
     expect(renderChildren).not.toHaveBeenCalled();
     expect(reloadAfterReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('should_name_the_lock_screen_by_its_visible_message', () => {
+    renderGate();
+
+    act(() => startResetLock(true));
+    expect(screen.getByRole('main', { name: 'Deleting your data…' })).toBeInTheDocument();
+
+    act(() => endResetLock(false));
+    expect(screen.getByRole('main', { name: LOCKED_HEADING })).toBeInTheDocument();
+  });
+
+  it('should_move_focus_to_the_locked_message_when_a_reset_fails_here', () => {
+    renderGate();
+    act(() => startResetLock(true));
+    // A closing dialog returns focus to its unmounted trigger, which leaves focus on the body.
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    act(() => endResetLock(false));
+
+    expect(document.activeElement).toBe(screen.getByRole('main', { name: LOCKED_HEADING }));
+  });
+
+  it('should_replace_try_again_with_progress_as_soon_as_a_retry_starts', async () => {
+    setMarker(true);
+    vi.mocked(resetEverything).mockImplementationOnce(() => {
+      startResetLock(true);
+      return new Promise<never>(() => {});
+    });
+    const user = userEvent.setup();
+    renderGate();
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByText('Deleting your data…')).toBeInTheDocument();
   });
 });

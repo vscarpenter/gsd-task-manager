@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { UI_TIMING } from "@/lib/constants/ui";
 import { reloadAfterReset, resetEverything } from "@/lib/reset-everything";
@@ -85,11 +85,15 @@ async function retryReset(): Promise<string | null> {
 function ResetLockScreen({ running }: { running: boolean }) {
 	const [retryError, setRetryError] = useState<string | null>(null);
 	const screenRef = useRef<HTMLElement>(null);
+	const statusId = useId();
+	const headingId = useId();
 
-	// The lock can replace a page whose focused control just unmounted.
+	// Focus the screen on mount and on every switch between progress and locked. Its
+	// name then tells a screen reader what changed, and focus never stays on the page
+	// body after a dialog closes.
 	useEffect(() => {
 		screenRef.current?.focus({ preventScroll: true });
-	}, []);
+	}, [running]);
 
 	const retry = async () => {
 		setRetryError(null);
@@ -100,24 +104,39 @@ function ResetLockScreen({ running }: { running: boolean }) {
 		<main
 			ref={screenRef}
 			tabIndex={-1}
+			aria-labelledby={running ? statusId : headingId}
 			className="flex min-h-screen flex-col items-center justify-center gap-6 px-4"
 		>
 			{running ? (
-				<p role="status" className="text-h2 font-semibold tracking-tight text-foreground">
-					Deleting your data…
-				</p>
+				<ResetProgress statusId={statusId} />
 			) : (
-				<LockedMessage retryError={retryError} onRetry={retry} />
+				<LockedMessage headingId={headingId} retryError={retryError} onRetry={retry} />
 			)}
 		</main>
 	);
 }
 
-function LockedMessage({ retryError, onRetry }: { retryError: string | null; onRetry: () => void }) {
+function ResetProgress({ statusId }: { statusId: string }) {
+	return (
+		<p id={statusId} role="status" className="text-h2 font-semibold tracking-tight text-foreground">
+			Deleting your data…
+		</p>
+	);
+}
+
+interface LockedMessageProps {
+	headingId: string;
+	retryError: string | null;
+	onRetry: () => void;
+}
+
+function LockedMessage({ headingId, retryError, onRetry }: LockedMessageProps) {
 	return (
 		<>
 			<div className="max-w-md space-y-3 text-center">
-				<h1 className="text-h1 font-semibold tracking-tight text-foreground">{"Reset didn't finish"}</h1>
+				<h1 id={headingId} className="text-h1 font-semibold tracking-tight text-foreground">
+					{"Reset didn't finish"}
+				</h1>
 				<p className="text-base leading-relaxed text-foreground-muted">
 					{"Your tasks are still saved in this browser. GSD stays locked until they're deleted."}
 				</p>
