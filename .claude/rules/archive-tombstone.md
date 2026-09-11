@@ -37,8 +37,8 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `restoreTask` | `lib/archive.ts` | One transaction, clears the archived row |
 | `archiveTaskNow` | `lib/archive.ts` | One transaction, idempotent `put` |
 | `reinstateArchivedTask` | `lib/archive.ts` | Writes only when the id is absent |
-| `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit |
-| `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path |
+| `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit; session check first, with `syncMetadata` in scope |
+| `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path; session check first, with `syncMetadata` in scope |
 | Migration v15 | `lib/db.ts` | Deletes only duplicates that stay archivable |
 | `applyArchivedTasks` | `lib/tasks/import-export.ts` | Idempotent `put`; live copy wins on a contradictory payload; absent key ≠ delete |
 | `deleteTask` | `lib/tasks/crud/delete.ts` | Moves live → `deletedTasks` in one transaction; idempotent `put` |
@@ -46,8 +46,8 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `restoreTask` (undo) | `lib/tasks/crud/restore.ts` | `put` + clears any trash row for the same id |
 | `purgeExpiredTrash` | `lib/trash.ts` | Deletes only rows with a `deletedAt` past the window |
 | `applyTrashedTasks` | `lib/tasks/import-export.ts` | Skips ids already live or archived; absent key ≠ delete |
-| `reconcileDeletedTasks` | `lib/sync/pb-pull.ts` | One transaction over tasks+deletedTasks+syncQueue; idempotent `bulkPut`; only a task whose queue rows are all retry-exhausted is preserved in trash |
-| `applyRemoteDeletion` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path; idempotent `put`; drops the released rows in the same transaction |
+| `reconcileDeletedTasks` | `lib/sync/pb-pull.ts` | One transaction over tasks+deletedTasks+syncQueue+syncMetadata; session check first; idempotent `bulkPut`; only a task whose queue rows are all retry-exhausted is preserved in trash |
+| `applyRemoteDeletion` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path; session check first, with `syncMetadata` in scope; idempotent `put`; drops the released rows in the same transaction |
 
 Adding a writer? Add it to this table and give it a test for each rule that applies.
 

@@ -201,6 +201,10 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
  * Retry state and history rows are the sync's outcome. They commit in one
  * transaction with the session check, so a sync that outlived its session
  * records nothing. Callers show a toast only after this resolves.
+ *
+ * A stale session throws StaleSyncSessionError. The report helpers let it
+ * propagate, so they must stay inside fullSync's try block, whose catch turns
+ * it into `cancelled`. reportSyncError runs in that catch and handles it itself.
  */
 async function writeSyncOutcome(ownerId: string, write: () => Promise<void>): Promise<void> {
   const db = getDb();
