@@ -179,4 +179,66 @@ describe("ResetEverythingDialog", () => {
       expect(baseProps.onOpenChange).not.toHaveBeenCalled();
     });
   });
+
+  describe("existing reset flows", () => {
+    async function confirmAndReset(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(screen.getByPlaceholderText("Type RESET here"), "RESET");
+      await user.click(screen.getByRole("button", { name: /reset everything/i }));
+    }
+
+    it("should_toast_success_and_reload_after_a_clean_reset", async () => {
+      const { reloadAfterReset } = await import("@/lib/reset-everything");
+      const user = userEvent.setup();
+      render(<ResetEverythingDialog {...baseProps} />);
+
+      await confirmAndReset(user);
+
+      await waitFor(() =>
+        expect(toast.success).toHaveBeenCalledWith("Reset complete - reloading application..."),
+      );
+      await waitFor(() => expect(reloadAfterReset).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    });
+
+    it("should_show_the_thrown_message_and_stay_open_when_reset_throws", async () => {
+      const { resetEverything } = await import("@/lib/reset-everything");
+      vi.mocked(resetEverything).mockRejectedValueOnce(new Error("IndexedDB unavailable"));
+      const user = userEvent.setup();
+      render(<ResetEverythingDialog {...baseProps} />);
+
+      await confirmAndReset(user);
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith("IndexedDB unavailable"));
+      expect(screen.getByRole("button", { name: /reset everything/i })).toBeEnabled();
+    });
+
+    it("should_clear_the_confirmation_and_close_when_cancel_is_clicked", async () => {
+      const user = userEvent.setup();
+      render(<ResetEverythingDialog {...baseProps} />);
+      await user.type(screen.getByPlaceholderText("Type RESET here"), "RESET");
+
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(baseProps.onOpenChange).toHaveBeenCalledWith(false);
+      expect(screen.getByPlaceholderText("Type RESET here")).toHaveValue("");
+    });
+
+    it("should_reset_without_the_theme_when_preserve_theme_is_turned_off", async () => {
+      const { resetEverything } = await import("@/lib/reset-everything");
+      vi.mocked(resetEverything).mockResolvedValueOnce({
+        success: false,
+        clearedTables: [],
+        clearedLocalStorage: [],
+        errors: ["localStorage theme: denied"],
+        failedSteps: ["browser-storage"],
+      });
+      const user = userEvent.setup();
+      render(<ResetEverythingDialog {...baseProps} />);
+
+      await user.click(screen.getByRole("switch", { name: /preserve my theme preference/i }));
+      await confirmAndReset(user);
+
+      expect(screen.queryByText(/your theme preference/i)).not.toBeInTheDocument();
+      await waitFor(() => expect(resetEverything).toHaveBeenCalledWith({ preserveTheme: false }));
+    });
+  });
 });
