@@ -32,11 +32,13 @@ vi.mock('@/lib/sync/pb-sync-engine', () => ({
   applyRemoteChange: (...args: unknown[]) => mockApplyRemoteChange(...args),
 }));
 
+const { mockLoggerError } = vi.hoisted(() => ({ mockLoggerError: vi.fn() }));
+
 vi.mock('@/lib/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn(),
+    error: mockLoggerError,
     debug: vi.fn(),
   }),
 }));
@@ -169,7 +171,8 @@ describe('pb-realtime', () => {
 
       await handler({ action: 'create', record });
 
-      expect(mockApplyRemoteChange).toHaveBeenCalledWith('create', record);
+      // The owner captured on arrival fences the write if the session ends first.
+      expect(mockApplyRemoteChange).toHaveBeenCalledWith('create', record, 'user-123');
     });
 
     it('does NOT echo-filter when remote device_id is empty/null', async () => {
@@ -210,6 +213,33 @@ describe('pb-realtime', () => {
       });
 
       expect(mockApplyRemoteChange).not.toHaveBeenCalled();
+    });
+
+    it('should_drop_a_change_quietly_when_its_sync_session_ended', async () => {
+      const { StaleSyncSessionError } = await import('@/lib/sync/sync-session');
+      mockApplyRemoteChange.mockRejectedValueOnce(new StaleSyncSessionError());
+      await subscribe('device-1');
+      const handler = mockSubscribe.mock.calls[0][1];
+
+      await handler({
+        action: 'update',
+        record: { device_id: 'device-2', owner: 'user-123', task_id: 'task-1' },
+      });
+
+      expect(mockLoggerError).not.toHaveBeenCalled();
+    });
+
+    it('should_log_an_error_when_applying_a_change_fails_for_another_reason', async () => {
+      mockApplyRemoteChange.mockRejectedValueOnce(new Error('IndexedDB unavailable'));
+      await subscribe('device-1');
+      const handler = mockSubscribe.mock.calls[0][1];
+
+      await handler({
+        action: 'update',
+        record: { device_id: 'device-2', owner: 'user-123', task_id: 'task-1' },
+      });
+
+      expect(mockLoggerError).toHaveBeenCalledTimes(1);
     });
   });
 });

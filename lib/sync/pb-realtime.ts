@@ -9,6 +9,7 @@
 import { getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { applyRemoteChange } from './pb-sync-engine';
 import { getPocketBaseRealtimeEnvelope } from './task-mapper';
+import { StaleSyncSessionError } from './sync-session';
 import { createLogger } from '@/lib/logger';
 import type { RecordSubscription, RecordModel } from 'pocketbase';
 
@@ -100,7 +101,8 @@ async function handleRealtimeEvent(event: RecordSubscription<RecordModel>): Prom
     return;
   }
 
-  // Only process events for the current user.
+  // Only process events for the current user. That user, captured on arrival,
+  // is the session owner the write must still match when it runs.
   const userId = getCurrentUserId();
   if (record.ownerId !== userId) {
     return;
@@ -113,8 +115,12 @@ async function handleRealtimeEvent(event: RecordSubscription<RecordModel>): Prom
   });
 
   try {
-    await applyRemoteChange(event.action as 'create' | 'update' | 'delete', event.record);
+    await applyRemoteChange(event.action as 'create' | 'update' | 'delete', event.record, userId);
   } catch (error) {
+    if (error instanceof StaleSyncSessionError) {
+      logger.debug('Realtime change dropped: its sync session ended', { action: event.action });
+      return;
+    }
     logger.error(
       'Failed to apply realtime change',
       error instanceof Error ? error : new Error(String(error)),

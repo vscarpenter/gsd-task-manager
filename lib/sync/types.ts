@@ -109,7 +109,11 @@ export interface DeviceInfo {
 // ============================================================================
 
 export interface PBSyncResult {
-  status: 'success' | 'error' | 'partial' | 'already_running';
+  /**
+   * 'cancelled' means the sync's session ended (sign-out, reset, or another
+   * account) before it finished. Like 'already_running', it is neither success nor error.
+   */
+  status: 'success' | 'error' | 'partial' | 'already_running' | 'cancelled';
   pushedCount?: number;
   pulledCount?: number;
   failedCount?: number;

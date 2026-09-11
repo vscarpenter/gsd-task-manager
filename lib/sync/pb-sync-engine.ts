@@ -17,6 +17,7 @@ import { getDeviceId, isRemoteNewerThanArchive } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { classifyRemoteDeletion } from './queue';
+import { StaleSyncSessionError, assertSyncSessionCurrent, getSessionOwner } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import type { RecordModel } from 'pocketbase';
@@ -39,9 +40,10 @@ const logger = createLogger('SYNC_ENGINE');
  * be re-pushed and recreate the remote record); a retry-exhausted op never will,
  * so the task goes to Trash and its dead rows go with it.
  */
-async function applyRemoteDeletion(taskId: string): Promise<void> {
+async function applyRemoteDeletion(taskId: string, ownerId: string): Promise<void> {
   const db = getDb();
-  await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue], async () => {
+  await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
+    await assertSyncSessionCurrent(ownerId);
     const rowsForTask = (await db.syncQueue.toArray()).filter((op) => op.taskId === taskId);
     const { verdict, staleRowIds } = classifyRemoteDeletion(rowsForTask);
 
@@ -61,9 +63,14 @@ async function applyRemoteDeletion(taskId: string): Promise<void> {
   });
 }
 
+/**
+ * Apply one realtime event. `ownerId` is the user signed in when the event
+ * arrived, and the write lands only while that user still owns the sync session.
+ */
 export async function applyRemoteChange(
   action: 'create' | 'update' | 'delete',
-  record: RecordModel
+  record: RecordModel,
+  ownerId: string,
 ): Promise<void> {
   const db = getDb();
 
@@ -73,7 +80,7 @@ export async function applyRemoteChange(
       logger.warn('Realtime delete skipped: invalid record');
       return;
     }
-    await applyRemoteDeletion(taskId);
+    await applyRemoteDeletion(taskId, ownerId);
     return;
   }
 
@@ -83,7 +90,8 @@ export async function applyRemoteChange(
     return;
   }
 
-  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks], async () => {
+  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncMetadata], async () => {
+    await assertSyncSessionCurrent(ownerId);
     const archived = await db.archivedTasks.get(remoteTask.id);
     if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) {
       logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
@@ -112,6 +120,15 @@ export async function applyRemoteChange(
 /** Rewind applied when migrating a legacy client-stamped cursor. */
 const LEGACY_CURSOR_REWIND_MS = 24 * 60 * 60 * 1000;
 
+/** Everything the outcome writers need to record a sync for its session owner. */
+interface SyncOutcomeContext {
+  ownerId: string;
+  retryManager: ReturnType<typeof getRetryManager>;
+  deviceId: string;
+  triggeredBy: 'user' | 'auto';
+  startTime: number;
+}
+
 /**
  * Resolve the client_updated_at pull cursor. The persisted field keeps its
  * historical name for storage compatibility. A config from a pre-2026-06
@@ -129,19 +146,33 @@ function resolvePullCursor(config: PBSyncConfig | undefined): string | null {
   return null;
 }
 
+function cancelledSync(): PBSyncResult {
+  logger.debug('Sync cancelled: no current sync session');
+  return { status: 'cancelled' };
+}
+
 /**
  * Full sync: push local changes, then pull remote changes.
  * Handles auth checks, cursor updates, partial failures, and error reporting.
+ * A sync whose session ends partway through returns `cancelled` and leaves no
+ * cursor, retry state, history row, or toast behind.
  */
 export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<PBSyncResult> {
   const startTime = Date.now();
-  const retryManager = getRetryManager();
-  const deviceId = await getDeviceId();
+  const config = await getDb().syncMetadata.get('sync_config') as PBSyncConfig | undefined;
+  const ownerId = getSessionOwner(config);
+  // A request queued before sign-out or reset has no session to sync for.
+  if (!ownerId) return cancelledSync();
+
+  const ctx: SyncOutcomeContext = {
+    ownerId,
+    retryManager: getRetryManager(),
+    deviceId: await getDeviceId(),
+    triggeredBy,
+    startTime,
+  };
 
   try {
-    const db = getDb();
-    const config = await db.syncMetadata.get('sync_config') as PBSyncConfig | undefined;
-
     // A merely-expired JWT can still be refreshed from the server session.
     // Attempt that silently here; if it fails, push/pull report the auth
     // failure cleanly via the unauthenticated path below.
@@ -152,75 +183,100 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     const pullResult = await pullRemoteChanges(resolvePullCursor(config));
 
     if (!pushResult.authenticated && !pullResult.authenticated) {
-      return await reportAuthFailure(retryManager, deviceId, triggeredBy, startTime);
+      return await reportAuthFailure(ctx);
     }
 
-    await updateSyncCursor(config, pullResult.maxObservedTimestamp);
-    const duration = Date.now() - startTime;
+    await updateSyncCursor(ownerId, pullResult.maxObservedTimestamp);
 
     if (pushResult.failedCount > 0) {
-      return await reportPartialFailure(pushResult, pullResult, retryManager, deviceId, triggeredBy, duration);
+      return await reportPartialFailure(pushResult, pullResult, ctx);
     }
-
-    await retryManager.recordSuccess();
-    await recordSyncSuccess(pushResult.pushedCount, pullResult.pulledCount, 0, deviceId, triggeredBy, duration);
-
-    if (pushResult.pushedCount > 0 || pullResult.pulledCount > 0) {
-      notifySyncSuccess(pushResult.pushedCount, pullResult.pulledCount);
-    }
-
-    return { status: 'success', pushedCount: pushResult.pushedCount, pulledCount: pullResult.pulledCount };
+    return await reportSuccess(pushResult, pullResult, ctx);
   } catch (error) {
-    return await reportSyncError(error, retryManager, deviceId, triggeredBy, startTime);
+    return await reportSyncError(error, ctx);
   }
 }
 
-async function reportAuthFailure(
-  retryManager: ReturnType<typeof getRetryManager>,
-  deviceId: string,
-  triggeredBy: 'user' | 'auto',
-  startTime: number,
+/**
+ * Retry state and history rows are the sync's outcome. They commit in one
+ * transaction with the session check, so a sync that outlived its session
+ * records nothing. Callers show a toast only after this resolves.
+ */
+async function writeSyncOutcome(ownerId: string, write: () => Promise<void>): Promise<void> {
+  const db = getDb();
+  await db.transaction('rw', [db.syncMetadata, db.syncHistory], async () => {
+    await assertSyncSessionCurrent(ownerId);
+    await write();
+  });
+}
+
+async function reportSuccess(
+  pushResult: { pushedCount: number },
+  pullResult: { pulledCount: number },
+  ctx: SyncOutcomeContext,
 ): Promise<PBSyncResult> {
+  const { pushedCount } = pushResult;
+  const { pulledCount } = pullResult;
+  await writeSyncOutcome(ctx.ownerId, async () => {
+    await ctx.retryManager.recordSuccess();
+    await recordSyncSuccess(pushedCount, pulledCount, 0, ctx.deviceId, ctx.triggeredBy, Date.now() - ctx.startTime);
+  });
+
+  if (pushedCount > 0 || pulledCount > 0) {
+    notifySyncSuccess(pushedCount, pulledCount);
+  }
+  return { status: 'success', pushedCount, pulledCount };
+}
+
+async function reportAuthFailure(ctx: SyncOutcomeContext): Promise<PBSyncResult> {
   const authError = new Error('Sync skipped: not authenticated');
-  await retryManager.recordFailure(authError);
-  await recordSyncError(authError.message, deviceId, triggeredBy, Date.now() - startTime);
+  await writeSyncOutcome(ctx.ownerId, async () => {
+    await ctx.retryManager.recordFailure(authError);
+    await recordSyncError(authError.message, ctx.deviceId, ctx.triggeredBy, Date.now() - ctx.startTime);
+  });
   notifySyncError('Please sign in to sync your tasks', false);
   return { status: 'error', error: authError.message };
 }
 
-async function updateSyncCursor(config: PBSyncConfig | undefined, maxTimestamp: string | null): Promise<void> {
-  if (!config) return;
-
-  // The legacy `lastSyncAt` is intentionally not advanced — it only feeds the
-  // one-time migration in resolvePullCursor.
+/**
+ * Merge only the cursor fields into the row as it is now. Writing back the
+ * start-of-sync snapshot would undo changes made during the sync, including
+ * a sign-out.
+ */
+async function updateSyncCursor(ownerId: string, maxTimestamp: string | null): Promise<void> {
   const db = getDb();
-  await db.syncMetadata.put({
-    ...config,
-    lastClientUpdatedAt: maxTimestamp ?? config.lastClientUpdatedAt ?? null,
-    pullCursorVersion: 2,
-    lastServerUpdatedAt: null,
-    lastSuccessfulSyncAt: new Date().toISOString(),
+  await db.transaction('rw', [db.syncMetadata], async () => {
+    await assertSyncSessionCurrent(ownerId);
+    const current = await db.syncMetadata.get('sync_config') as PBSyncConfig;
+    // The legacy `lastSyncAt` is intentionally not advanced. It only feeds the
+    // one-time migration in resolvePullCursor.
+    await db.syncMetadata.put({
+      ...current,
+      lastClientUpdatedAt: maxTimestamp ?? current.lastClientUpdatedAt ?? null,
+      pullCursorVersion: 2,
+      lastServerUpdatedAt: null,
+      lastSuccessfulSyncAt: new Date().toISOString(),
+    });
   });
 }
 
 async function reportPartialFailure(
   pushResult: { pushedCount: number; failedCount: number; lastError: string | null; retryAfterMs?: number | null },
   pullResult: { pulledCount: number },
-  retryManager: ReturnType<typeof getRetryManager>,
-  deviceId: string,
-  triggeredBy: 'user' | 'auto',
-  duration: number,
+  ctx: SyncOutcomeContext,
 ): Promise<PBSyncResult> {
   const errorMsg = `${pushResult.failedCount} item(s) failed to sync: ${pushResult.lastError}`;
-  await retryManager.recordFailure(new Error(errorMsg), { retryAfterMs: pushResult.retryAfterMs ?? null });
-  await recordSyncPartial({
-    pushedCount: pushResult.pushedCount,
-    pulledCount: pullResult.pulledCount,
-    failedCount: pushResult.failedCount,
-    ...(pushResult.lastError ? { errorMessage: pushResult.lastError } : {}),
-    deviceId,
-    triggeredBy,
-    duration,
+  await writeSyncOutcome(ctx.ownerId, async () => {
+    await ctx.retryManager.recordFailure(new Error(errorMsg), { retryAfterMs: pushResult.retryAfterMs ?? null });
+    await recordSyncPartial({
+      pushedCount: pushResult.pushedCount,
+      pulledCount: pullResult.pulledCount,
+      failedCount: pushResult.failedCount,
+      ...(pushResult.lastError ? { errorMessage: pushResult.lastError } : {}),
+      deviceId: ctx.deviceId,
+      triggeredBy: ctx.triggeredBy,
+      duration: Date.now() - ctx.startTime,
+    });
   });
   notifySyncError(errorMsg, false);
   return {
@@ -232,25 +288,28 @@ async function reportPartialFailure(
   };
 }
 
-async function reportSyncError(
-  error: unknown,
-  retryManager: ReturnType<typeof getRetryManager>,
-  deviceId: string,
-  triggeredBy: 'user' | 'auto',
-  startTime: number,
-): Promise<PBSyncResult> {
+async function reportSyncError(error: unknown, ctx: SyncOutcomeContext): Promise<PBSyncResult> {
+  if (error instanceof StaleSyncSessionError) return cancelledSync();
   const errorObj = error instanceof Error ? error : new Error(String(error));
   // PB 4xx bodies can echo submitted field values (task titles), so persist
   // and surface only the stable code; keep the raw Error for diagnostics.
   const errorCode = sanitizeSyncError(errorObj);
-  // A directly-thrown 429 (e.g. from pull) may carry a Retry-After hint.
-  await retryManager.recordFailure(errorObj, { retryAfterMs: extractRetryAfterMs(errorObj) });
-  await recordSyncError(errorCode, deviceId, triggeredBy, Date.now() - startTime);
+  try {
+    await writeSyncOutcome(ctx.ownerId, async () => {
+      // A directly-thrown 429 (e.g. from pull) may carry a Retry-After hint.
+      await ctx.retryManager.recordFailure(errorObj, { retryAfterMs: extractRetryAfterMs(errorObj) });
+      await recordSyncError(errorCode, ctx.deviceId, ctx.triggeredBy, Date.now() - ctx.startTime);
+    });
+  } catch (writeError) {
+    // The session can also end while this failure is being recorded.
+    if (writeError instanceof StaleSyncSessionError) return cancelledSync();
+    throw writeError;
+  }
   notifySyncError(errorCode, false);
   if (isTransientSyncFailure(errorObj)) {
-    logger.warn('Full sync failed (transient)', { triggeredBy, errorCode });
+    logger.warn('Full sync failed (transient)', { triggeredBy: ctx.triggeredBy, errorCode });
   } else {
-    logger.error('Full sync failed', errorObj, { triggeredBy, errorCode });
+    logger.error('Full sync failed', errorObj, { triggeredBy: ctx.triggeredBy, errorCode });
   }
   return { status: 'error', error: errorCode };
 }

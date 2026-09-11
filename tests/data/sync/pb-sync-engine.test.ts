@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { applyRemoteChange, fullSync } from '@/lib/sync/pb-sync-engine';
+import { StaleSyncSessionError } from '@/lib/sync/sync-session';
 
 // Mock logger
 vi.mock('@/lib/logger', () => ({
@@ -37,6 +38,19 @@ vi.mock('@/lib/sync/task-mapper', () => ({
     };
   }),
 }));
+
+// The persisted sync_config row. The session fence re-reads it before each
+// write, so a test ends the session by replacing it partway through a sync.
+const SIGNED_IN_CONFIG: Record<string, unknown> = {
+  key: 'sync_config',
+  enabled: true,
+  userId: 'user-1',
+  lastSyncAt: null,
+  lastSuccessfulSyncAt: null,
+  consecutiveFailures: 0,
+};
+const SIGNED_OUT_CONFIG: Record<string, unknown> = { ...SIGNED_IN_CONFIG, enabled: false, userId: null };
+let persistedConfig: Record<string, unknown> | undefined;
 
 // Mock DB
 const mockTasks = new Map<string, Record<string, unknown>>();
@@ -82,14 +96,11 @@ const mockDb = {
     }),
   },
   syncMetadata: {
-    get: vi.fn().mockResolvedValue({
-      key: 'sync_config',
-      enabled: true,
-      lastSyncAt: null,
-      lastSuccessfulSyncAt: null,
-      consecutiveFailures: 0,
+    get: vi.fn(() => Promise.resolve(persistedConfig)),
+    put: vi.fn((row: Record<string, unknown>) => {
+      persistedConfig = row;
+      return Promise.resolve();
     }),
-    put: vi.fn().mockResolvedValue(undefined),
   },
   syncQueue: {
     toArray: vi.fn().mockResolvedValue([]),
@@ -147,12 +158,18 @@ vi.mock('@/lib/sync/pb-auth', () => ({
   ensureValidAuth: () => mockEnsureValidAuth(),
 }));
 
+/** Resolve to the rejection reason, or undefined when the promise resolves. */
+function settle(promise: Promise<unknown>): Promise<unknown> {
+  return promise.then(() => undefined, (error: unknown) => error);
+}
+
 describe('pb-sync-engine', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTasks.clear();
     mockArchivedTasks.clear();
     mockDeletedTasks.clear();
+    persistedConfig = { ...SIGNED_IN_CONFIG };
     mockEnsureValidAuth.mockResolvedValue(true);
   });
 
@@ -160,7 +177,7 @@ describe('pb-sync-engine', () => {
     it('should apply a remote create for new task', async () => {
       const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
 
-      await applyRemoteChange('create', record as never);
+      await applyRemoteChange('create', record as never, 'user-1');
 
       expect(mockDb.tasks.put).toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(true);
@@ -170,7 +187,7 @@ describe('pb-sync-engine', () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'Existing' });
 
       const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('create', record as never);
+      await applyRemoteChange('create', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
@@ -179,7 +196,7 @@ describe('pb-sync-engine', () => {
       mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-09T00:00:00.000Z' });
 
       const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('create', record as never);
+      await applyRemoteChange('create', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(false);
@@ -189,7 +206,7 @@ describe('pb-sync-engine', () => {
       mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-09T00:00:00.000Z' });
 
       const record = { task_id: 'task-1', title: 'Updated', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('update', record as never);
+      await applyRemoteChange('update', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(false);
@@ -201,13 +218,14 @@ describe('pb-sync-engine', () => {
       mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-07T00:00:00.000Z' });
 
       const record = { task_id: 'task-1', title: 'Edited Elsewhere', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('update', record as never);
+      await applyRemoteChange('update', record as never, 'user-1');
 
       expect(mockTasks.has('task-1')).toBe(true);
       expect(mockArchivedTasks.has('task-1')).toBe(false);
+      // syncMetadata is in scope so the session check commits with the writes.
       expect(mockDb.transaction).toHaveBeenCalledWith(
         'rw',
-        [mockDb.tasks, mockDb.archivedTasks, mockDb.deletedTasks],
+        [mockDb.tasks, mockDb.archivedTasks, mockDb.deletedTasks, mockDb.syncMetadata],
         expect.any(Function)
       );
     });
@@ -217,7 +235,7 @@ describe('pb-sync-engine', () => {
 
       await applyRemoteChange('update', {
         task_id: 'task-1', title: 'Stale remote', client_updated_at: '2026-04-08T00:00:00.000Z',
-      } as never);
+      } as never, 'user-1');
 
       expect(mockTasks.has('task-1')).toBe(false);
       expect(mockDeletedTasks.has('task-1')).toBe(true);
@@ -228,7 +246,7 @@ describe('pb-sync-engine', () => {
 
       await applyRemoteChange('update', {
         task_id: 'task-1', title: 'Newer remote', client_updated_at: '2026-04-08T00:00:00.000Z',
-      } as never);
+      } as never, 'user-1');
 
       expect(mockTasks.has('task-1')).toBe(true);
       expect(mockDeletedTasks.has('task-1')).toBe(false);
@@ -238,7 +256,7 @@ describe('pb-sync-engine', () => {
       mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-07T00:00:00.000Z' });
 
       const record = { task_id: 'task-1', title: 'Recreated', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('create', record as never);
+      await applyRemoteChange('create', record as never, 'user-1');
 
       expect(mockTasks.has('task-1')).toBe(true);
       expect(mockArchivedTasks.has('task-1')).toBe(false);
@@ -248,7 +266,7 @@ describe('pb-sync-engine', () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'Old', updatedAt: '2026-04-07T00:00:00.000Z' });
 
       const record = { task_id: 'task-1', title: 'Updated', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('update', record as never);
+      await applyRemoteChange('update', record as never, 'user-1');
 
       expect(mockDb.tasks.put).toHaveBeenCalled();
     });
@@ -257,7 +275,7 @@ describe('pb-sync-engine', () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'Local', updatedAt: '2026-04-09T00:00:00.000Z' });
 
       const record = { task_id: 'task-1', title: 'Older Remote', client_updated_at: '2026-04-08T00:00:00.000Z' };
-      await applyRemoteChange('update', record as never);
+      await applyRemoteChange('update', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
@@ -267,7 +285,7 @@ describe('pb-sync-engine', () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'Local', updatedAt: equalTimestamp });
 
       const record = { task_id: 'task-1', title: 'Remote Same Time', client_updated_at: equalTimestamp };
-      await applyRemoteChange('update', record as never);
+      await applyRemoteChange('update', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
     });
@@ -276,7 +294,7 @@ describe('pb-sync-engine', () => {
       mockTasks.set('task-1', { id: 'task-1', title: 'To Delete' });
 
       const record = { task_id: 'task-1' };
-      await applyRemoteChange('delete', record as never);
+      await applyRemoteChange('delete', record as never, 'user-1');
 
       expect(mockDb.tasks.delete).toHaveBeenCalledWith('task-1');
     });
@@ -290,7 +308,7 @@ describe('pb-sync-engine', () => {
         { id: 'op-1', taskId: 'task-1', operation: 'update', status: 'pending' },
       ]);
 
-      await applyRemoteChange('delete', { task_id: 'task-1' } as never);
+      await applyRemoteChange('delete', { task_id: 'task-1' } as never, 'user-1');
 
       expect(mockDb.tasks.delete).not.toHaveBeenCalled();
       expect(mockTasks.has('task-1')).toBe(true);
@@ -307,7 +325,7 @@ describe('pb-sync-engine', () => {
         { id: 'op-1', taskId: 'task-1', operation: 'update', status: 'failed' },
       ]);
 
-      await applyRemoteChange('delete', { task_id: 'task-1' } as never);
+      await applyRemoteChange('delete', { task_id: 'task-1' } as never, 'user-1');
 
       expect(mockDb.tasks.delete).toHaveBeenCalledWith('task-1');
       expect(mockDeletedTasks.get('task-1')).toMatchObject({ id: 'task-1' });
@@ -316,10 +334,41 @@ describe('pb-sync-engine', () => {
 
     it('should skip invalid records from mapper', async () => {
       const record = { task_id: 'invalid', title: 'Bad Record' };
-      await applyRemoteChange('update', record as never);
+      await applyRemoteChange('update', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
       expect(mockArchivedTasks.has('invalid')).toBe(false);
+    });
+
+    it('should_not_apply_realtime_change_when_session_owner_changed', async () => {
+      persistedConfig = { ...SIGNED_IN_CONFIG, userId: 'user-2' };
+      const record = { task_id: 'task-1', title: 'Meant for user-1', client_updated_at: '2026-04-08T00:00:00.000Z' };
+
+      const outcome = await settle(applyRemoteChange('create', record as never, 'user-1'));
+
+      expect(mockTasks.has('task-1')).toBe(false);
+      expect(outcome).toBeInstanceOf(StaleSyncSessionError);
+    });
+
+    it('should_not_apply_realtime_update_after_sign_out', async () => {
+      persistedConfig = { ...SIGNED_OUT_CONFIG };
+      mockTasks.set('task-1', { id: 'task-1', title: 'Local', updatedAt: '2026-04-07T00:00:00.000Z' });
+      const record = { task_id: 'task-1', title: 'Newer remote', client_updated_at: '2026-04-08T00:00:00.000Z' };
+
+      const outcome = await settle(applyRemoteChange('update', record as never, 'user-1'));
+
+      expect(mockTasks.get('task-1')?.title).toBe('Local');
+      expect(outcome).toBeInstanceOf(StaleSyncSessionError);
+    });
+
+    it('should_not_apply_realtime_deletion_when_session_owner_changed', async () => {
+      persistedConfig = { ...SIGNED_IN_CONFIG, userId: 'user-2' };
+      mockTasks.set('task-1', { id: 'task-1', title: 'Kept for user-1' });
+
+      const outcome = await settle(applyRemoteChange('delete', { task_id: 'task-1' } as never, 'user-1'));
+
+      expect(mockTasks.has('task-1')).toBe(true);
+      expect(outcome).toBeInstanceOf(StaleSyncSessionError);
     });
   });
 
@@ -493,6 +542,136 @@ describe('pb-sync-engine', () => {
         rateLimited,
         { retryAfterMs: 12_000 },
       );
+    });
+  });
+
+  describe('fullSync session fence', () => {
+    const PULLED_ONE = { pulledCount: 1, authenticated: true, maxObservedTimestamp: '2026-04-08T00:00:00.000Z' };
+
+    /** Sign out while the pull is in flight. */
+    async function endSessionDuringPull(pullResult: typeof mockPullResult | typeof PULLED_ONE = PULLED_ONE): Promise<void> {
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      vi.mocked(pullRemoteChanges).mockImplementationOnce(async () => {
+        persistedConfig = { ...SIGNED_OUT_CONFIG };
+        return pullResult;
+      });
+    }
+
+    /** Sign out in the moment after the cursor write commits. */
+    function endSessionAfterCursorWrite(): void {
+      mockDb.syncMetadata.put.mockImplementationOnce(() => {
+        persistedConfig = { ...SIGNED_OUT_CONFIG };
+        return Promise.resolve();
+      });
+    }
+
+    async function expectNoOutcomeRecorded(): Promise<void> {
+      const history = await import('@/lib/sync-history');
+      const notifications = await import('@/lib/sync/notifications');
+      expect(mockRetryManager.recordSuccess).not.toHaveBeenCalled();
+      expect(mockRetryManager.recordFailure).not.toHaveBeenCalled();
+      expect(history.recordSyncSuccess).not.toHaveBeenCalled();
+      expect(history.recordSyncPartial).not.toHaveBeenCalled();
+      expect(history.recordSyncError).not.toHaveBeenCalled();
+      expect(notifications.notifySyncSuccess).not.toHaveBeenCalled();
+      expect(notifications.notifySyncError).not.toHaveBeenCalled();
+    }
+
+    it.each([
+      ['missing', undefined],
+      ['disabled', { ...SIGNED_IN_CONFIG, enabled: false }],
+      ['without a user id', { ...SIGNED_IN_CONFIG, userId: null }],
+    ])('should_return_cancelled_without_side_effects_when_no_session_owner (config %s)', async (_label, config) => {
+      persistedConfig = config;
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+
+      const result = await fullSync('user');
+
+      expect(result).toEqual({ status: 'cancelled' });
+      expect(mockEnsureValidAuth).not.toHaveBeenCalled();
+      expect(pushLocalChanges).not.toHaveBeenCalled();
+      expect(pullRemoteChanges).not.toHaveBeenCalled();
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+      expect(mockDb.syncMetadata.put).not.toHaveBeenCalled();
+      await expectNoOutcomeRecorded();
+    });
+
+    it('should_not_restore_enabled_user_or_cursor_after_mid_sync_sign_out', async () => {
+      await endSessionDuringPull();
+
+      const result = await fullSync('auto');
+
+      expect(persistedConfig).toEqual(SIGNED_OUT_CONFIG);
+      expect(result).toEqual({ status: 'cancelled' });
+    });
+
+    it('should_not_record_retry_state_after_mid_sync_sign_out', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      vi.mocked(pushLocalChanges).mockImplementationOnce(async () => {
+        persistedConfig = { ...SIGNED_OUT_CONFIG };
+        throw new Error('Connection refused');
+      });
+
+      const result = await fullSync('auto');
+
+      expect(mockRetryManager.recordFailure).not.toHaveBeenCalled();
+      expect(result).toEqual({ status: 'cancelled' });
+    });
+
+    const fencedOutcomes: Array<[string, () => Promise<void>]> = [
+      ['success', async () => {
+        const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+        vi.mocked(pullRemoteChanges).mockResolvedValueOnce(PULLED_ONE);
+        endSessionAfterCursorWrite();
+      }],
+      ['partial failure', async () => {
+        const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+        vi.mocked(pushLocalChanges).mockResolvedValueOnce({
+          pushedCount: 1,
+          failedCount: 1,
+          lastError: 'rate_limited',
+          authenticated: true,
+        });
+        endSessionAfterCursorWrite();
+      }],
+      ['auth failure', async () => {
+        const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+        vi.mocked(pushLocalChanges).mockResolvedValueOnce({ ...mockPushResult, authenticated: false });
+        await endSessionDuringPull({ ...mockPullResult, authenticated: false });
+      }],
+      ['thrown error', async () => {
+        const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+        vi.mocked(pushLocalChanges).mockImplementationOnce(async () => {
+          persistedConfig = { ...SIGNED_OUT_CONFIG };
+          throw new Error('Connection refused');
+        });
+      }],
+    ];
+
+    it.each(fencedOutcomes)('should_return_cancelled_without_history_or_toast_when_fenced (%s)', async (_path, arrange) => {
+      await arrange();
+
+      const result = await fullSync('user');
+
+      expect(result).toEqual({ status: 'cancelled' });
+      await expectNoOutcomeRecorded();
+    });
+
+    it('should_merge_cursor_fields_into_current_config_row', async () => {
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      vi.mocked(pullRemoteChanges).mockImplementationOnce(async () => {
+        persistedConfig = { ...persistedConfig, autoSyncIntervalMinutes: 15 };
+        return PULLED_ONE;
+      });
+
+      await fullSync('auto');
+
+      expect(persistedConfig).toMatchObject({
+        autoSyncIntervalMinutes: 15,
+        lastClientUpdatedAt: '2026-04-08T00:00:00.000Z',
+        pullCursorVersion: 2,
+      });
     });
   });
 });

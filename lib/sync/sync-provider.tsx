@@ -296,7 +296,7 @@ function dispatchSyncResult(dispatch: Dispatch<SyncAction>, result: PBSyncResult
     scheduleStatusReset(dispatch, UI_TIMING.AUTO_RESET_SUCCESS_MS);
     return;
   }
-  if (result.status === 'already_running') {
+  if (result.status === 'already_running' || result.status === 'cancelled') {
     dispatch({ type: 'SYNC_IDLE', lastResult: result });
     return;
   }
