@@ -196,17 +196,24 @@ export async function resetEverything(
 	const preserveTheme = options.preserveTheme === true;
 
 	startResetLock(preserveTheme);
-	const result = await runResetSteps(preserveTheme);
-	endResetLock(!result.failedSteps.includes("local-data"));
+	let localDataDeleted = false;
+	try {
+		const result = await runResetSteps(preserveTheme);
+		localDataDeleted = !result.failedSteps.includes("local-data");
 
-	logger.info("Reset complete", {
-		success: result.success,
-		clearedTables: result.clearedTables.length,
-		clearedLocalStorage: result.clearedLocalStorage.length,
-		errors: result.errors.length,
-	});
+		logger.info("Reset complete", {
+			success: result.success,
+			clearedTables: result.clearedTables.length,
+			clearedLocalStorage: result.clearedLocalStorage.length,
+			errors: result.errors.length,
+		});
 
-	return result;
+		return result;
+	} finally {
+		// A step that throws past its own catch still ends the run, so GSD stays
+		// locked with Try again instead of showing the progress state forever.
+		endResetLock(localDataDeleted);
+	}
 }
 
 /**

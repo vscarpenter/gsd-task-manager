@@ -29,7 +29,7 @@ const {
 }));
 
 vi.mock('@/lib/db', () => ({
-  getDb: () => ({
+  getDb: vi.fn(() => ({
     name: 'GsdTaskManager',
     delete: mockDeleteDatabase,
     // The delete fallback subscribes to Dexie's blocked event before it deletes.
@@ -64,7 +64,7 @@ vi.mock('@/lib/db', () => ({
       { clear: mockClear, count: mockCount, name: 'syncHistory' },
       { clear: mockClear, count: mockCount, name: 'appPreferences' },
     ],
-  }),
+  })),
 }));
 
 vi.mock('@/lib/sync/config', () => ({
@@ -87,6 +87,7 @@ vi.mock('@/lib/logger', () => ({
 
 import { resetEverything, reloadAfterReset } from '@/lib/reset-everything';
 import { getResetLockSnapshot } from '@/lib/reset-lock';
+import { getDb } from '@/lib/db';
 
 describe('reset-everything', () => {
   beforeEach(() => {
@@ -388,6 +389,16 @@ describe('reset-everything', () => {
       ]));
       expect(readMarker()).toEqual({ preserveTheme: false });
       expect(getResetLockSnapshot()).toBe('locked');
+    });
+
+    it('should_end_locked_and_rethrow_when_a_step_throws', async () => {
+      vi.mocked(getDb).mockImplementationOnce(() => {
+        throw new Error('IndexedDB is not available in this environment.');
+      });
+
+      await expect(resetEverything({ preserveTheme: true })).rejects.toThrow('IndexedDB is not available');
+      expect(getResetLockSnapshot()).toBe('locked');
+      expect(readMarker()).toEqual({ preserveTheme: true });
     });
 
     it('should_report_running_then_locked_when_local_storage_throws', async () => {
