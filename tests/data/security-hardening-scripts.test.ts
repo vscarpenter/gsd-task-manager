@@ -95,17 +95,8 @@ describe('security hardening scripts and workflows', () => {
     expect(workflow).toContain('fetch-depth: 0');
   });
 
-  it('deploys development only from the exact successful main CI run', () => {
-    const workflow = readRepoFile('.github/workflows/deploy-dev.yml');
-
-    expect(workflow).not.toContain('workflow_dispatch:');
-    expect(workflow).toContain("github.event.workflow_run.head_branch == 'main'");
-    expect(workflow).toContain(
-      'github.event.workflow_run.head_repository.full_name == github.repository'
-    );
-    expect(workflow).toContain('ref: ${{ github.event.workflow_run.head_sha }}');
-    expect(workflow).toContain('name: static-export-${{ github.event.workflow_run.head_sha }}');
-    expect(workflow).not.toContain('build-static-export');
+  it('keeps the retired development deploy workflow absent', () => {
+    expect(() => readRepoFile('.github/workflows/deploy-dev.yml')).toThrow();
   });
 
   it('builds, attests, and deploys production in separate authority domains', () => {
@@ -402,7 +393,6 @@ describe('security hardening scripts and workflows', () => {
         'apply-risk-label.yml',
         'ci.yml',
         'deploy-cloudfront-infra.yml',
-        'deploy-dev.yml',
         'deploy-production-release.yml',
         'publish-docker.yml',
         'publish-mcp-server.yml',

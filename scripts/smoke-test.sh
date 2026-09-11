@@ -13,7 +13,7 @@
 #   5. .well-known/security.txt missing or lacking its charset
 #      (RFC 9116 contact file not published or not stamped)
 #
-# Required env var: SITE_URL (e.g. https://gsd-dev.vinny.dev)
+# Required env var: SITE_URL (e.g. https://gsd.vinny.dev)
 #
 # Exit code: 0 on success, 1 on any failed assertion.
 

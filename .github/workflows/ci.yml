@@ -172,10 +172,4 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-      # Only upload the artifact on pushes to main (and only if the build
-      # succeeds). PR builds verify the build still works but don't produce
-      # deployable artifacts. Phase 3's deploy-dev workflow will consume the
-      # artifact uploaded here via workflow_run + actions/download-artifact.
       - uses: ./.github/actions/build-static-export
-        with:
-          artifact-name: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && format('static-export-{0}', github.sha) || '' }}
