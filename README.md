@@ -109,8 +109,9 @@ the architecture decisions in [`docs/adr/`](docs/adr/).
 ## Deployment
 
 - `bun run build` creates the static export in `out/`.
-- `bun run deploy:dev` and `bun run deploy` use the repository deployment
-  scripts for the configured AWS environments.
+- `bun run deploy` runs the production deployment script. Production
+  (gsd.vinny.dev) is the only deploy target; the development deploy was
+  retired on 2026-09-11.
 - [`docker/Dockerfile`](docker/Dockerfile) builds the self-hosted Caddy and
   PocketBase image.
 - [`cloudfront/response-headers-policy.json`](cloudfront/response-headers-policy.json)

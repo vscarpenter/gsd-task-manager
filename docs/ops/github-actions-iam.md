@@ -1,11 +1,12 @@
 # GitHub Actions → AWS Setup Runbook
 
-> **Current status:** development deploys only the exact successful CI artifact
-> from a same-repository push to protected `main`. Production builds without AWS
-> authority, signs the artifact, and grants AWS OIDC only after Gate 2 and
-> provenance verification.
+> **Current status:** production is the only deploy target. The development
+> deploy (`deploy-dev.yml` to gsd-dev.vinny.dev) was retired on 2026-09-11, so
+> this runbook no longer creates a development role, environment, or variables.
+> Production builds without AWS authority, signs the artifact, and grants AWS
+> OIDC only after Gate 2 and provenance verification.
 
-This is the one-time manual configuration required before `.github/workflows/deploy-dev.yml` (and later `deploy-production-release.yml`, `deploy-cloudfront-infra.yml`) can deploy. Everything below happens in **your AWS account** and **your GitHub repo settings** — none of it is in code.
+This is the one-time manual configuration required before `.github/workflows/deploy-production-release.yml` and `.github/workflows/deploy-cloudfront-infra.yml` can deploy. Everything below happens in **your AWS account** and **your GitHub repo settings**. None of it is in code.
 
 Before merging the production workflow rename, disable the retired workflow
 identity while its file still exists on the default branch:
@@ -23,7 +24,7 @@ Trust model: GitHub-issued OIDC tokens authenticate to AWS roles scoped to speci
 
 ---
 
-## Step 1 — Add GitHub as an OIDC identity provider in AWS (once per account)
+## Step 1: Add GitHub as an OIDC identity provider in AWS (once per account)
 
 If your AWS account does not already have `token.actions.githubusercontent.com` as an IAM OIDC provider, add it:
 
@@ -44,11 +45,11 @@ aws iam list-open-id-connect-providers
 
 ---
 
-## Step 2 — Create the development deploy role
+## Step 2: Create the production deploy role and environment
 
 ### 2a. Trust policy
 
-Save as `trust-policy-development.json`:
+Save as `trust-policy-prod.json`:
 
 ```json
 {
@@ -63,7 +64,7 @@ Save as `trust-policy-development.json`:
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:vscarpenter/gsd-task-manager:environment:development"
+          "token.actions.githubusercontent.com:sub": "repo:vscarpenter/gsd-task-manager:environment:production"
         }
       }
     }
@@ -71,11 +72,11 @@ Save as `trust-policy-development.json`:
 }
 ```
 
-The `sub` condition scopes this role to GitHub Actions runs **inside the `development` environment** of this specific repo. A different env or a different repo cannot assume it.
+The `sub` condition scopes this role to GitHub Actions runs **inside the `production` environment** of this specific repo. A different env or a different repo cannot assume it.
 
 ### 2b. Permission policy
 
-Save as `policy-development.json`:
+Save as `policy-prod.json`:
 
 ```json
 {
@@ -88,7 +89,7 @@ Save as `policy-development.json`:
         "s3:ListBucket",
         "s3:GetBucketLocation"
       ],
-      "Resource": "arn:aws:s3:::gsd-dev.vinny.dev"
+      "Resource": "arn:aws:s3:::gsd.vinny.dev"
     },
     {
       "Sid": "S3DeployObjects",
@@ -99,7 +100,7 @@ Save as `policy-development.json`:
         "s3:DeleteObject",
         "s3:PutObjectAcl"
       ],
-      "Resource": "arn:aws:s3:::gsd-dev.vinny.dev/*"
+      "Resource": "arn:aws:s3:::gsd.vinny.dev/*"
     },
     {
       "Sid": "CloudFrontInvalidate",
@@ -108,7 +109,7 @@ Save as `policy-development.json`:
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation"
       ],
-      "Resource": "arn:aws:cloudfront::<YOUR_ACCOUNT_ID>:distribution/E1HY1IKF5GT513"
+      "Resource": "arn:aws:cloudfront::<YOUR_ACCOUNT_ID>:distribution/E1T6GDX0TQEP94"
     }
   ]
 }
@@ -120,89 +121,6 @@ Save as `policy-development.json`:
 
 ```bash
 aws iam create-role \
-  --role-name gsd-deploy-development \
-  --assume-role-policy-document file://trust-policy-development.json
-
-aws iam put-role-policy \
-  --role-name gsd-deploy-development \
-  --policy-name gsd-deploy-development-inline \
-  --policy-document file://policy-development.json
-```
-
-Note the role ARN — you'll paste it into the GitHub Environment in Step 3.
-
-```
-arn:aws:iam::<YOUR_ACCOUNT_ID>:role/gsd-deploy-development
-```
-
----
-
-## Step 3 — Create the `development` GitHub Environment
-
-GitHub → `vscarpenter/gsd-task-manager` → **Settings → Environments → New environment** → name: `development`.
-
-Required reviewers: **none** (dev auto-deploys on push to main, per locked decision §7.3).
-
-Deployment branches and tags: choose **Selected branches and tags**, and allow
-only the protected `main` branch. The workflow has no `workflow_dispatch` input
-and independently validates the CI branch, source repository, and exact head SHA.
-
-Add these **Environment variables** (not secrets — none of these are confidential):
-
-| Name | Value |
-|---|---|
-| `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::<YOUR_ACCOUNT_ID>:role/gsd-deploy-development` |
-| `S3_BUCKET` | `s3://gsd-dev.vinny.dev` |
-| `CLOUDFRONT_ID` | `E1HY1IKF5GT513` |
-| `ENV_LABEL` | `Development` |
-| `SITE_URL` | `https://gsd-dev.vinny.dev` |
-
----
-
-## Step 4 — First-run sanity check
-
-Complete this after configuring the protected `development` environment.
-
-1. Merge any commit to `main`.
-2. Watch the run — `deploy` job should:
-   - Download the `static-export-<sha>` artifact from the CI run.
-   - Assume the IAM role via OIDC (no secrets used).
-   - Sync to S3, create + wait on the CloudFront invalidation.
-   - Pass the four smoke-test assertions.
-3. Verify the dev URL serves the new build: `curl -I https://gsd-dev.vinny.dev/`.
-
----
-
-## Step 5 — Create the production deploy role and environment
-
-Same shape as Steps 2-3, with these substitutions:
-
-| Setting | Dev (already done) | Prod (this step) |
-|---|---|---|
-| IAM role name | `gsd-deploy-development` | `gsd-deploy-prod` |
-| Trust `sub` claim | `repo:vscarpenter/gsd-task-manager:environment:development` | `repo:vscarpenter/gsd-task-manager:environment:production` |
-| S3 bucket ARN | `arn:aws:s3:::gsd-dev.vinny.dev` | `arn:aws:s3:::gsd.vinny.dev` |
-| CloudFront distribution ARN | `arn:aws:cloudfront::ACCT:distribution/E1HY1IKF5GT513` | `arn:aws:cloudfront::ACCT:distribution/E1T6GDX0TQEP94` |
-| GitHub Environment name | `development` | `production` |
-| Required reviewers | none | **vscarpenter** (locked decision §7.5) |
-| `S3_BUCKET` var | `s3://gsd-dev.vinny.dev` | `s3://gsd.vinny.dev` |
-| `CLOUDFRONT_ID` var | `E1HY1IKF5GT513` | `E1T6GDX0TQEP94` |
-| `ENV_LABEL` var | `Development` | `Production` |
-| `SITE_URL` var | `https://gsd-dev.vinny.dev` | `https://gsd.vinny.dev` |
-
-Concretely:
-
-```bash
-# Reuse trust-policy-development.json, swap the sub claim, save as trust-policy-prod.json
-sed 's|environment:development|environment:production|' \
-  trust-policy-development.json > trust-policy-prod.json
-
-# Reuse policy-development.json, swap the bucket name and distribution ID, save as policy-prod.json
-sed -e 's|gsd-dev\.vinny\.dev|gsd.vinny.dev|g' \
-    -e 's|E1HY1IKF5GT513|E1T6GDX0TQEP94|g' \
-  policy-development.json > policy-prod.json
-
-aws iam create-role \
   --role-name gsd-deploy-prod \
   --assume-role-policy-document file://trust-policy-prod.json
 
@@ -212,9 +130,27 @@ aws iam put-role-policy \
   --policy-document file://policy-prod.json
 ```
 
-Then in GitHub: Settings → Environments → New environment → `production` →
-- **Required reviewers:** add `vscarpenter`.
-- **Variables:** the 5 from the table above, including `AWS_DEPLOY_ROLE_ARN` = `arn:aws:iam::ACCT:role/gsd-deploy-prod`.
+Note the role ARN. You'll paste it into the GitHub Environment in Step 2d.
+
+```
+arn:aws:iam::<YOUR_ACCOUNT_ID>:role/gsd-deploy-prod
+```
+
+### 2d. Create the `production` GitHub Environment
+
+GitHub → `vscarpenter/gsd-task-manager` → **Settings → Environments → New environment** → name: `production`.
+
+Required reviewers: **vscarpenter** (locked decision §7.5).
+
+Add these **Environment variables** (not secrets, because none of these are confidential):
+
+| Name | Value |
+|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | `arn:aws:iam::<YOUR_ACCOUNT_ID>:role/gsd-deploy-prod` |
+| `S3_BUCKET` | `s3://gsd.vinny.dev` |
+| `CLOUDFRONT_ID` | `E1T6GDX0TQEP94` |
+| `ENV_LABEL` | `Production` |
+| `SITE_URL` | `https://gsd.vinny.dev` |
 
 Set **Deployment branches and tags** to selected protected contexts: protected
 `main` plus the release-tag pattern `v*.*.*`. Repository-dispatch rollback runs
@@ -238,7 +174,7 @@ commits, and caller-selected workflow refs are rejected. See `docs/ops/gate2.md`
 
 ---
 
-## Step 6 — Create the CloudFront infrastructure role and environment
+## Step 3: Create the CloudFront infrastructure role and environment
 
 This role is separate from the app deploy roles because it has materially
 broader privileges: it can publish new edge functions and modify the
@@ -246,7 +182,7 @@ distribution config. A misconfigured viewer-request function can take the
 whole distribution offline, so the blast radius warrants a dedicated role
 and a dedicated approval gate.
 
-### 6a. Trust policy
+### 3a. Trust policy
 
 Same shape as Step 2a, but the `sub` claim scopes to the new environment.
 Save as `trust-policy-cloudfront-infra.json`:
@@ -272,7 +208,7 @@ Save as `trust-policy-cloudfront-infra.json`:
 }
 ```
 
-### 6b. Permission policy
+### 3b. Permission policy
 
 Save as `policy-cloudfront-infra.json`:
 
@@ -328,7 +264,7 @@ Notes on resource scoping:
 - `ManageResponseHeadersPolicy` is `Resource: "*"` for the same reason —
   IAM doesn't accept policy ARNs as scopes for these actions.
 
-### 6c. Create the role
+### 3c. Create the role
 
 ```bash
 aws iam create-role \
@@ -341,7 +277,7 @@ aws iam put-role-policy \
   --policy-document file://policy-cloudfront-infra.json
 ```
 
-### 6d. Create the `cloudfront-infra` GitHub Environment
+### 3d. Create the `cloudfront-infra` GitHub Environment
 
 Settings → Environments → New environment → `cloudfront-infra`:
 

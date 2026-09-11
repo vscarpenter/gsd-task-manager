@@ -10,13 +10,15 @@ The retired .github/workflows/deploy-prod.yml path must stay absent. Its
 historical tagged copies accepted manual refs. Production now uses the distinct
 .github/workflows/deploy-production-release.yml identity with no manual trigger.
 
+The development deploy (.github/workflows/deploy-dev.yml) was retired on
+2026-09-11. Production is the only deploy target, so there is no hosted preview
+between merge and release.
+
 ## Release path
 
 ~~~
 PR: required CI green + required human review + no unresolved threads
 YOU merge the PR
-deploy-dev consumes the exact successful main CI artifact
-YOU validate that running development build
 /release creates vX.Y.Z at a protected main commit
 deploy-production-release:
   1. evidence — authorize the immutable tag/main commit and print rollback
@@ -25,10 +27,6 @@ deploy-production-release:
   4. deploy   — pause at production Gate 2, verify, then obtain AWS OIDC
   5. smoke    — verify the live surface without cloud credentials
 ~~~
-
-Development has no manual-ref entry point. It accepts only a successful push CI
-run whose branch is main, whose head repository is this repository, and whose
-artifact name is bound to the exact CI head SHA.
 
 ## Evidence to review
 
@@ -61,7 +59,6 @@ a separately reviewed recovery plan.
 
 ## Required GitHub environment policy
 
-- development: permit protected main deployments only; no required reviewer.
 - production: permit protected main/release-tag contexts only; retain the
   vscarpenter required reviewer.
 
