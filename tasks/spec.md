@@ -993,3 +993,182 @@ in the v6.1.0 refactor (`a21cc99`); only its two re-exports and its own tests
 referenced it. The owner asked to resolve it, so it is deleted with its
 re-exports and tests instead of fenced. Deleting it removes the write path, so
 no acceptance criterion changes. Typecheck proves nothing still imports it.
+
+# Spec: Fail closed when Reset Everything cannot delete local data
+
+Date: 2026-09-11. Source: Aikido "Incomplete Data Deletion" (group 45233789, sub-issue 669037088, Low). Retest #1 after #538 reported "Not fixed". The owner approved the design on 2026-09-11: lock the whole app, fall back to deleting the database, and offer no way out but deletion.
+
+## Goal
+
+When Reset Everything or account deletion cannot prove that local data is gone, GSD locks the whole app behind a retry screen until deletion succeeds, so nobody at a shared browser can see the previous user's tasks.
+
+## Background (verified in code on `b7185c2`)
+
+- `resetEverything` (`lib/reset-everything.ts`) signs out of sync first (`disableSync`). It then clears all 11 IndexedDB tables in one transaction and re-adds a preserved `sync_config` row that carries the device ID. Last, it removes app-owned localStorage keys.
+- Nothing checks the tables after that transaction commits. A thrown transaction only adds `local-data` to `failedSteps`.
+- On failure, `ResetEverythingDialog` shows a toast and clears `isResetting`, so the app stays usable. `DeleteAccountDialog` does the same and tells the user to run Reset Everything.
+- `useTasks` reads `db.tasks.toArray()` with no auth or reset check, and so do the dashboard, archive, trash, and settings surfaces.
+- `AppProviders` in `app/layout.tsx` mounts `ClientLayout` (the sync provider and every route), `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister` side by side. `OnboardingGate` already reads a localStorage flag through `useSyncExternalStore` and listens for `storage` events.
+- `clearLocalStorage` removes every `gsd-` and `gsd:` key, so a marker under those prefixes needs an explicit exemption.
+
+## Design
+
+1. **Reset-pending marker** (`lib/reset-lock.ts`, new). The localStorage key `gsd-reset-pending` holds `{"preserveTheme": boolean}`. An in-memory mirror keeps the current document locked when localStorage throws. The module exposes a store for `useSyncExternalStore` whose snapshot is one of `"unlocked"`, `"running"`, or `"locked"`, and it listens for `storage` events on the marker key. The server snapshot is `"unlocked"`, because the static export prerenders without storage.
+2. **Reset writes the marker first.** `resetEverything` sets the marker and the `"running"` state before `disableSync`. It removes the marker only when the local-data step succeeded. On failure it makes sure the marker is present, since another tab may have removed it, and moves to `"locked"`.
+3. **Verified wipe with a database-delete fallback.** After the clear transaction commits, reset counts every table except `syncMetadata` and confirms that `syncMetadata` holds nothing but the preserved `sync_config` row with a null `userId`. If the clear throws or any row survives, reset deletes the whole `GsdTaskManager` database and confirms it no longer exists. The device ID is lost on that path. The local-data step fails only when the fallback also fails, and then `errors` names both failures.
+4. **Whole-app gate** (`components/reset-lock-gate.tsx`, new). In `AppProviders`, the gate wraps `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister`. `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` stay outside because they hold no task data. `"unlocked"` renders children, `"running"` renders the lock screen's progress state, and `"locked"` renders the lock screen.
+5. **Lock screen.** The heading reads "Reset didn't finish". The body reads "Your tasks are still saved in this browser. GSD stays locked until they're deleted." One primary button, "Try again", reruns `resetEverything` with the stored `preserveTheme` and calls `reloadAfterReset` on success. A failed retry keeps the lock and announces the error in a `role="alert"` region. The footer hint reads "If this keeps failing, clear this site's data in your browser settings." The progress state reads "Deleting your data…" and shows no buttons. There is no cancel, export, or navigation control.
+6. **Other tabs.** A `storage` event that sets the marker locks every other open tab. A locked tab that sees the marker removed reloads through `reloadAfterReset`, because its in-memory stores and database connection predate the wipe.
+7. **Account deletion copy.** The failure toast in `DeleteAccountDialog` stops sending people to Reset Everything, because the lock screen now owns the retry.
+
+## Inputs / Outputs
+
+- `ResetResult` keeps its shape: `success`, `clearedTables`, `clearedLocalStorage`, `errors`, and `failedSteps`. No new fields.
+- `ResetStep` stays `"sync-sign-out" | "local-data" | "browser-storage"`.
+- New localStorage key `gsd-reset-pending` with the value `{"preserveTheme": boolean}`. A missing or unparsable `preserveTheme` defaults to `true`.
+- Lock state snapshot: `"unlocked" | "running" | "locked"`.
+- No Dexie schema change. The database stays at version 15, and no Zod schema in `lib/schema.ts` changes.
+
+## Constraints
+
+- Privacy: the marker holds no task content, account identifier, or timestamp.
+- Sign-out stays step 1. The #538 session fence depends on sync being disabled before local writes stop.
+- No new dependencies. Dexie stays at 4.4.4.
+- Files stay at or under 350 lines and functions at or under 30 lines. `lib/reset-everything.ts` is 271 lines today, so the verify and fallback logic moves to a new module if adding it would cross the limit. `bun run quality:shape` must report no regressions.
+- Bundle: the gate is a small client component with no lazy chunk, and the lock screen reuses `Button` and Inkwell tokens.
+- The UI meets WCAG AA and matches the calm, restrained voice in `PRODUCT.md`.
+- Release trio: bump the patch version in `package.json`, `README.md` line 7, and `CACHE_VERSION` in `public/sw.js` together.
+
+## Edge Cases
+
+- **Tab closed mid-reset.** The marker survives, so the next load opens locked and Try again finishes the job.
+- **localStorage unavailable.** The in-memory mirror locks the current document, but the lock cannot return after a reload. That is an accepted residual risk. A throwing read counts as "no marker", so a browser with storage disabled is never locked permanently.
+- **Malformed marker value.** The app still locks, and Try again uses `preserveTheme: true`.
+- **Sign-out fails but the wipe succeeds.** No lock. The wipe replaces the sync config with a disabled row whose `userId` is null, and the #538 fence rejects stale sync writes. The existing toast still reports the failure.
+- **Only the browser-storage step fails.** No lock, and the existing toast is unchanged.
+- **Another tab holds the database open during the fallback.** Dexie closes its connection in other tabs on `versionchange`. If deletion is still blocked, the step fails, the app stays locked, and Try again can succeed later.
+- **Two tabs retry at once.** Each run writes the marker at start and makes sure it is present on failure, so a success in one tab cannot unlock a tab whose run failed.
+- **WebMCP `create_task` during a lock** that began after registration. The row lands in IndexedDB, the next retry's verification finds it, and the fallback deletes the database. A document that loads locked never registers WebMCP.
+- **Offline.** Reset is local, so the lock works the same way.
+- **Empty database.** Verification passes and the marker is removed.
+- **Schema migration.** After a fallback delete, the next open runs every version upgrade from scratch on an empty database.
+- **Sync conflicts, concurrent multi-device edits, and circular dependencies.** Not affected. Remote data is untouched, and reset writes no task rows.
+
+## Out of Scope
+
+- A cancel or "Keep my tasks" path. The owner chose "no way out but deletion".
+- Exporting data from the lock screen.
+- Changing the step order or `disableSync`.
+- Server-side deletion of tasks or accounts.
+- Clearing a leftover PocketBase auth token when both sign-out and the browser-storage step fail.
+- Locking on sign-out or browser-storage failures alone.
+- Any other copy in `DeleteAccountDialog` or `ResetEverythingDialog`.
+- A Playwright end-to-end test. Forcing an IndexedDB failure in a real browser is not reliable, so unit tests, UI tests, and a live check cover this change.
+- Asking Aikido to retest, which happens after merge.
+
+## Acceptance Criteria
+
+1. `resetEverything` writes `gsd-reset-pending` with the requested `preserveTheme` before it calls `disableSync`.
+2. After a verified wipe, the marker is gone, the state is `"unlocked"`, and `success` follows the existing `failedSteps` rule.
+3. When the clear transaction throws, reset deletes the database. If that succeeds, `failedSteps` omits `local-data`, the marker is gone, and the database no longer exists.
+4. When the clear commits but a user-data table still has rows, reset runs the same fallback.
+5. When the clear and the database delete both fail, `failedSteps` includes `local-data`, `errors` names both failures, the marker is present, and the state is `"locked"`.
+6. The browser-storage step removes other app-owned keys and leaves `gsd-reset-pending` in place.
+7. After a successful fallback, the next `getDb()` read in the same document returns an empty `tasks` table without throwing.
+8. When localStorage throws, reset still runs, and the store reports `"running"` during the run and `"locked"` after a local-data failure.
+9. The store reports `"locked"` when a marker exists at load, and a malformed marker still locks with `preserveTheme` defaulting to `true`.
+10. The gate renders its children when no reset is pending.
+11. With a marker present at mount, the gate renders the lock screen and never renders a task title seeded in IndexedDB.
+12. While a reset runs in the current document, the gate shows the progress state with no buttons.
+13. Try again calls `resetEverything` with the stored `preserveTheme` and calls `reloadAfterReset` on success.
+14. A failed Try again keeps the lock screen and announces the error in a `role="alert"` region.
+15. The lock screen offers exactly one control, Try again, with no cancel, export, or navigation.
+16. A `storage` event that sets the marker locks the current document, and a locked document reloads when a `storage` event removes the marker.
+17. `app/layout.tsx` places `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister` inside the gate, and `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` outside it.
+18. The local-erase failure toast in `DeleteAccountDialog` no longer mentions Reset Everything.
+19. The existing reset suites still pass: dialog copy, `failedSteps` order, device ID preservation on the normal path, and the stale-sync fence.
+
+## Implementation order
+
+1. Commit this spec.
+2. Reset lock store in `lib/reset-lock.ts` (AC8 store half, AC9, AC16 store half).
+3. Verified wipe with the database-delete fallback (AC3, AC4, AC7, and the device ID half of AC19).
+4. Wire the marker and the verified wipe into `resetEverything` (AC1, AC2, AC5, AC6, AC8).
+5. Gate and lock screen (AC10 to AC16).
+6. Root layout wiring and its source guard test (AC17).
+7. Account deletion copy (AC18).
+8. Release trio bump, then full verification.
+
+## Test Stubs
+
+```ts
+// tests/data/reset-lock.test.ts
+describe("reset lock store", () => {
+  it("should_report_unlocked_when_no_marker_exists", () => {});
+  it("should_report_locked_when_a_marker_exists_at_load", () => {});
+  it("should_default_preserve_theme_to_true_when_the_marker_is_malformed", () => {});
+  it("should_keep_an_in_memory_lock_when_local_storage_throws", () => {});
+  it("should_notify_subscribers_when_another_tab_sets_the_marker", () => {});
+});
+
+// tests/data/reset-everything.test.ts (additions)
+describe("resetEverything reset lock", () => {
+  it("should_write_the_marker_before_signing_out", async () => {});
+  it("should_remove_the_marker_after_a_verified_wipe", async () => {});
+  it("should_keep_the_marker_when_clearing_app_local_storage", async () => {});
+  it("should_keep_the_marker_and_report_local_data_when_clear_and_delete_both_fail", async () => {});
+  it("should_report_running_then_locked_when_local_storage_throws", async () => {});
+});
+
+// tests/data/reset-local-data.test.ts (real Dexie on fake-indexeddb)
+describe("verified local wipe", () => {
+  it("should_delete_the_database_when_the_table_clear_throws", async () => {});
+  it("should_delete_the_database_when_rows_survive_the_clear", async () => {});
+  it("should_open_an_empty_database_after_the_fallback_delete", async () => {});
+  it("should_preserve_the_device_id_when_the_normal_wipe_succeeds", async () => {});
+});
+
+// tests/ui/reset-lock-gate.test.tsx
+describe("ResetLockGate", () => {
+  it("should_render_children_when_no_reset_is_pending", () => {});
+  it("should_show_the_lock_screen_and_hide_task_titles_when_a_reset_is_pending", async () => {});
+  it("should_show_progress_without_buttons_while_a_reset_runs", async () => {});
+  it("should_retry_with_the_stored_theme_choice_and_reload_on_success", async () => {});
+  it("should_stay_locked_and_announce_the_error_when_retry_fails", async () => {});
+  it("should_offer_no_control_except_try_again", () => {});
+  it("should_lock_when_another_tab_sets_the_marker", async () => {});
+  it("should_reload_when_another_tab_removes_the_marker", async () => {});
+});
+
+// tests/data/app-layout-reset-gate.test.ts
+describe("root layout reset gate", () => {
+  it("should_mount_data_surfaces_inside_the_gate_and_chrome_outside_it", () => {});
+});
+
+// tests/ui/delete-account-dialog.test.tsx (addition)
+it("should_not_mention_reset_everything_when_local_erase_fails", async () => {});
+```
+
+## Acceptance criteria to test map
+
+| AC | Tests |
+|---|---|
+| 1 | should_write_the_marker_before_signing_out |
+| 2 | should_remove_the_marker_after_a_verified_wipe |
+| 3 | should_delete_the_database_when_the_table_clear_throws |
+| 4 | should_delete_the_database_when_rows_survive_the_clear |
+| 5 | should_keep_the_marker_and_report_local_data_when_clear_and_delete_both_fail |
+| 6 | should_keep_the_marker_when_clearing_app_local_storage |
+| 7 | should_open_an_empty_database_after_the_fallback_delete |
+| 8 | should_keep_an_in_memory_lock_when_local_storage_throws, should_report_running_then_locked_when_local_storage_throws |
+| 9 | should_report_locked_when_a_marker_exists_at_load, should_default_preserve_theme_to_true_when_the_marker_is_malformed |
+| 10 | should_render_children_when_no_reset_is_pending |
+| 11 | should_show_the_lock_screen_and_hide_task_titles_when_a_reset_is_pending |
+| 12 | should_show_progress_without_buttons_while_a_reset_runs |
+| 13 | should_retry_with_the_stored_theme_choice_and_reload_on_success |
+| 14 | should_stay_locked_and_announce_the_error_when_retry_fails |
+| 15 | should_offer_no_control_except_try_again |
+| 16 | should_notify_subscribers_when_another_tab_sets_the_marker, should_lock_when_another_tab_sets_the_marker, should_reload_when_another_tab_removes_the_marker |
+| 17 | should_mount_data_surfaces_inside_the_gate_and_chrome_outside_it |
+| 18 | should_not_mention_reset_everything_when_local_erase_fails |
+| 19 | the existing reset suites, plus should_preserve_the_device_id_when_the_normal_wipe_succeeds |
