@@ -12,7 +12,6 @@ import {
   deriveQuadrant,
   createTaskInPB,
   updateTaskInPBById,
-  updateTaskDependenciesInPBById,
   deleteTaskInPBById,
   fetchSinglePBTaskFresh,
   getAuthInfo,
@@ -25,10 +24,8 @@ import {
 import { extractUrlsFromTitle, buildDescription } from '../text/capture-parser.js';
 import { ConflictError } from '../errors.js';
 import { getTaskCache } from '../cache.js';
-import { createMcpLogger } from '../utils/logger.js';
-import { sanitizePocketBaseWriteError, WriteRateLimiter } from './write-rate-limiter.js';
-
-const logger = createMcpLogger('TASK_OPS');
+import { WriteRateLimiter } from './write-rate-limiter.js';
+import { cleanDependents, snapshotDependents, type CleanupOutcome } from './dependency-cleanup.js';
 
 /**
  * Create task result with dry-run information
@@ -320,59 +317,6 @@ export interface DeleteTaskResult {
   conflicts: string[];
 }
 
-interface DependencySnapshot {
-  taskId: string;
-  clientUpdatedAt: string;
-}
-
-type CleanupOutcome =
-  | { kind: 'cleaned'; taskId: string }
-  | { kind: 'conflict'; taskId: string }
-  | { kind: 'error'; taskId: string; code: string; status?: number };
-
-async function loadDependencySnapshot(
-  config: GsdConfig,
-  taskId: string
-): Promise<DependencySnapshot | CleanupOutcome> {
-  try {
-    const fresh = await fetchSinglePBTaskFresh(config, taskId);
-    if (!fresh) return { kind: 'error', taskId, code: 'not_found' };
-    return { taskId, clientUpdatedAt: fresh.clientUpdatedAt };
-  } catch (error) {
-    const safe = sanitizePocketBaseWriteError(error);
-    return { kind: 'error', taskId, code: safe.code, ...(safe.status ? { status: safe.status } : {}) };
-  }
-}
-
-async function cleanDependencySnapshot(
-  config: GsdConfig,
-  taskId: string,
-  snapshot: DependencySnapshot,
-  deviceId: string,
-  limiter: WriteRateLimiter
-): Promise<CleanupOutcome> {
-  try {
-    return await limiter.run(async () => {
-      const fresh = await fetchSinglePBTaskFresh(config, snapshot.taskId);
-      if (!fresh) return { kind: 'error', taskId: snapshot.taskId, code: 'not_found' };
-      if (fresh.clientUpdatedAt !== snapshot.clientUpdatedAt) {
-        return { kind: 'conflict', taskId: snapshot.taskId };
-      }
-      const current = pbTaskToTask(fresh.record);
-      const dependencies = current.dependencies.filter((id) => id !== taskId);
-      if (dependencies.length !== current.dependencies.length) {
-        await updateTaskDependenciesInPBById(
-          config, fresh.pbRecordId, dependencies, new Date().toISOString(), deviceId
-        );
-      }
-      return { kind: 'cleaned', taskId: snapshot.taskId };
-    });
-  } catch (error) {
-    const safe = sanitizePocketBaseWriteError(error);
-    return { kind: 'error', taskId: snapshot.taskId, code: safe.code, ...(safe.status ? { status: safe.status } : {}) };
-  }
-}
-
 function summarizeCleanup(outcomes: CleanupOutcome[]) {
   const errors = outcomes
     .filter((outcome): outcome is Extract<CleanupOutcome, { kind: 'error' }> => outcome.kind === 'error')
@@ -445,25 +389,10 @@ export async function deleteTask(
   }
 
   const { deviceId } = await getAuthInfo(config);
-  const snapshots = await Promise.all(
-    affectedTasks.map((affected) => loadDependencySnapshot(config, affected.id))
-  );
+  const pending = await snapshotDependents(config, affectedTasks);
   await deletePrimaryTask(config, task, limiter);
-  const outcomes = await Promise.all(snapshots.map((snapshot) =>
-    'kind' in snapshot
-      ? snapshot
-      : cleanDependencySnapshot(config, taskId, snapshot, deviceId, limiter)
-  ));
+  const outcomes = await cleanDependents(config, new Set([taskId]), pending, deviceId, limiter);
   const summary = summarizeCleanup(outcomes);
-  for (const outcome of outcomes) {
-    if (outcome.kind === 'error') {
-      logger.warn('Failed to clean dependency reference after delete', {
-        taskId: outcome.taskId,
-        ...(outcome.status ? { status: outcome.status } : {}),
-        errorCode: outcome.code,
-      });
-    }
-  }
 
   return {
     taskId,
