@@ -12,6 +12,9 @@ on:
 # https://sonarcloud.io/project/admin/analysis_method?id=vscarpenter_gsd-task-manager
 # and toggle "Automatic Analysis" OFF. This is a one-time manual step.
 
+permissions:
+  contents: read
+
 jobs:
   sonarcloud:
     name: SonarCloud
@@ -24,6 +27,7 @@ jobs:
         with:
           # Full history required for SonarCloud blame data and new code detection
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2

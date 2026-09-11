@@ -10,6 +10,9 @@ concurrency:
   group: deploy-development
   cancel-in-progress: false
 
+# Jobs opt in to token scopes; a new job starts with none.
+permissions: {}
+
 jobs:
   deploy:
     name: Deploy exact successful main build to development
@@ -66,10 +69,13 @@ jobs:
         run: bash scripts/deploy-app.sh
 
       - name: Wait for CloudFront invalidation
+        env:
+          CLOUDFRONT_ID: ${{ vars.CLOUDFRONT_ID }}
+          INVALIDATION_ID: ${{ steps.deploy.outputs.invalidation_id }}
         run: |
           aws cloudfront wait invalidation-completed \
-            --distribution-id "${{ vars.CLOUDFRONT_ID }}" \
-            --id "${{ steps.deploy.outputs.invalidation_id }}"
+            --distribution-id "$CLOUDFRONT_ID" \
+            --id "$INVALIDATION_ID"
 
       - name: Smoke test
         env:
