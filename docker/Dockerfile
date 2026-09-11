@@ -20,6 +20,10 @@ RUN --mount=type=secret,id=npmrc,target=/app/.npmrc,required=false \
 # Copy source code
 COPY . .
 
+# `bun run build` puts node_modules/.bin on PATH, but a RUN step does not.
+# The static-export wrapper calls a bare `next`, so add the bin dir here.
+ENV PATH="/app/node_modules/.bin:$PATH"
+
 # Build static export (produces out/ directory)
 RUN node scripts/generate-build-info.cjs \
     && node scripts/update-sw-version.cjs \
