@@ -363,8 +363,8 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
     expect(rootPackage.overrides.qs).toBe('>=6.15.2');
     expect(mcpPackage.dependencies['@sentry/node']).toBe('10.70.0');
-    expect(mcpPackage.devDependencies.vitest).toBe('4.1.10');
-    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.10');
+    expect(mcpPackage.devDependencies.vitest).toBe('4.1.11');
+    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.11');
     expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
   });
 

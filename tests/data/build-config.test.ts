@@ -144,6 +144,20 @@ describe("build configuration", () => {
     expect(runStaticBuildWrapper({ createArtifact: true, exitCode: 0 }).status).toBe(0);
   });
 
+  it("puts node_modules/.bin on PATH before the Docker builder runs the static-export wrapper", () => {
+    const dockerfile = readFileSync("docker/Dockerfile", "utf8");
+    const builderStage = dockerfile.split(/^FROM /m)[1] ?? "";
+    const pathIndex = builderStage.indexOf('ENV PATH="/app/node_modules/.bin:$PATH"');
+    const wrapperIndex = builderStage.indexOf("bash scripts/build-static-export.sh");
+
+    // The wrapper calls a bare `next`. `bun run build` adds node_modules/.bin to
+    // PATH in CI, but a Dockerfile RUN step does not, so the image build fails
+    // with `next: command not found` unless the builder stage adds it.
+    expect(wrapperIndex).toBeGreaterThan(-1);
+    expect(pathIndex).toBeGreaterThan(-1);
+    expect(pathIndex).toBeLessThan(wrapperIndex);
+  });
+
   it("keeps root coverage thresholds blocking in CI and SonarCloud", () => {
     const ci = readFileSync(".github/workflows/ci.yml", "utf8");
     const sonar = readFileSync(".github/workflows/sonarcloud.yml", "utf8");
