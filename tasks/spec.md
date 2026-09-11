@@ -1180,3 +1180,4 @@ it("should_not_mention_reset_everything_when_local_erase_fails", async () => {})
 | 20 | should_keep_the_lock_screen_and_reload_after_the_delay_when_a_local_reset_unlocks, should_reload_without_remounting_the_app_when_another_tab_unlocks |
 | 21 | should_end_locked_and_rethrow_when_a_step_throws |
 | 22 | should_name_the_lock_screen_by_its_visible_message, should_move_focus_to_the_locked_message_when_a_reset_fails_here, should_replace_try_again_with_progress_as_soon_as_a_retry_starts |
+| 11, 15, 16 | `tests/e2e/reset-lock.spec.ts` (Playwright) covers AC11 and AC15 in a real browser, and AC16 across two tabs |
