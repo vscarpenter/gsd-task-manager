@@ -33,22 +33,25 @@ export function ResetLockGate({ children }: { children: ReactNode }) {
 	if (lockState !== "unlocked" && lockState !== shownLock) {
 		setShownLock(lockState);
 	}
-	useReloadWhenAnotherTabUnlocks(lockState === "locked");
-	useReloadAfterLocalReset(lockState === "unlocked" && shownLock === "running");
+	useReloadWhenOwnLockOutlivesMarker(lockState === "locked");
+	useReloadAfterUnlock(lockState === "unlocked" ? shownLock : null);
 
 	if (lockState === "unlocked" && shownLock === null) return <>{children}</>;
 	return <ResetLockScreen running={lockState !== "locked"} />;
 }
 
 /**
- * Another tab removes the marker only after it deletes the data. This
- * document's stores and database connection predate that wipe, so it reloads.
+ * A tab whose own reset failed stays locked through its in-memory mirror even
+ * after another tab deletes the data and removes the marker, so its snapshot
+ * never changes. Only the storage event can tell that tab to reload.
  */
-function useReloadWhenAnotherTabUnlocks(locked: boolean): void {
+function useReloadWhenOwnLockOutlivesMarker(locked: boolean): void {
 	useEffect(() => {
 		if (!locked) return;
 		const handleStorage = (event: StorageEvent) => {
-			if (event.key === RESET_PENDING_KEY && event.newValue === null) reloadAfterReset();
+			const removed = event.key === RESET_PENDING_KEY && event.newValue === null;
+			// A tab without its own lock unlocks through the store, and useReloadAfterUnlock reloads it.
+			if (removed && getResetLockSnapshot() === "locked") reloadAfterReset();
 		};
 		window.addEventListener("storage", handleStorage);
 		return () => window.removeEventListener("storage", handleStorage);
@@ -56,16 +59,24 @@ function useReloadWhenAnotherTabUnlocks(locked: boolean): void {
 }
 
 /**
- * A reset that finished in this document reloads after the reset delay, so its
- * toast stays readable. The dialogs never reload after a run whose sign-out or
- * browser-storage step failed, so this reload covers those runs too.
+ * Reload once a shown lock turns unlocked, without remounting the app. A lock
+ * another tab lifted reloads now, because this document's stores and database
+ * connection predate the wipe. In a browser this cannot rely on the storage
+ * listener: React re-renders after the store's listener and removes the gate's
+ * listener before the browser calls it. A reset that finished here waits for
+ * the reset delay so its toast stays readable, which also covers dialog runs
+ * whose sign-out or browser-storage step failed and that never reload.
  */
-function useReloadAfterLocalReset(finished: boolean): void {
+function useReloadAfterUnlock(unlockedFrom: ShownLock | null): void {
 	useEffect(() => {
-		if (!finished) return;
+		if (unlockedFrom === null) return;
+		if (unlockedFrom === "locked") {
+			reloadAfterReset();
+			return;
+		}
 		const timer = setTimeout(reloadAfterReset, UI_TIMING.RESET_RELOAD_DELAY_MS);
 		return () => clearTimeout(timer);
-	}, [finished]);
+	}, [unlockedFrom]);
 }
 
 /** Rerun the reset. Resolves to an error to announce, or null once the reload starts. */

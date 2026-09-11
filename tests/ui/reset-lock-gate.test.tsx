@@ -237,6 +237,33 @@ describe('ResetLockGate', () => {
     expect(reloadAfterReset).toHaveBeenCalledTimes(1);
   });
 
+  it('should_reload_when_the_store_unlocks_before_the_gate_hears_the_storage_event', () => {
+    // In a browser the store's storage listener runs first, and React re-renders at the
+    // microtask checkpoint after it. That removes the gate's own listener before the
+    // browser calls it. Ending the lock through the store alone reproduces that order.
+    setMarker(true);
+    const renderChildren = renderGateWithWatchedChildren();
+
+    act(() => endResetLock(true));
+
+    expect(renderChildren).not.toHaveBeenCalled();
+    expect(reloadAfterReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('should_reload_a_tab_whose_own_reset_failed_when_another_tab_removes_the_marker', () => {
+    renderGate();
+    act(() => startResetLock(true));
+    act(() => endResetLock(false));
+
+    act(() => {
+      localStorage.removeItem(RESET_PENDING_KEY);
+      dispatchMarkerEvent(null);
+    });
+
+    expect(screen.getByRole('heading', { name: LOCKED_HEADING })).toBeInTheDocument();
+    expect(reloadAfterReset).toHaveBeenCalledTimes(1);
+  });
+
   it('should_name_the_lock_screen_by_its_visible_message', () => {
     renderGate();
 
