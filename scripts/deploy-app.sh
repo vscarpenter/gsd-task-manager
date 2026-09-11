@@ -2,9 +2,9 @@
 #
 # Deploy the existing static export in out/ to a target environment.
 #
-# Builds are NOT performed here. CI builds once and promotes the same
-# artifact across environments; local wrappers (deploy-dev.sh, deploy-prod.sh)
-# handle the build step before calling this script.
+# Builds are NOT performed here. The production release workflow verifies
+# its attested artifact first, and the local wrapper (deploy-prod.sh)
+# handles the build step before calling this script.
 #
 # Required env vars:
 #   S3_BUCKET       e.g. s3://gsd.vinny.dev

@@ -1,11 +1,5 @@
 name: 'Build Static Export'
-description: 'Build the Next.js static export and optionally upload as artifact'
-
-inputs:
-  artifact-name:
-    description: 'Name for the artifact (empty to skip upload)'
-    required: false
-    default: ''
+description: 'Build the Next.js static export'
 
 runs:
   using: 'composite'
@@ -31,11 +25,3 @@ runs:
         rm -rf .next-cache .next out
         mkdir -p .next-cache
         bun run build
-
-    - name: Upload artifact
-      if: inputs.artifact-name != ''
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-      with:
-        name: ${{ inputs.artifact-name }}
-        path: out/
-        retention-days: 1
