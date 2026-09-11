@@ -284,6 +284,18 @@ describe('Sync Config', () => {
       expect(clearPocketBase).toHaveBeenCalled();
     });
 
+    it('should_persist_disabled_config_before_clearing_browser_caches', async () => {
+      let enabledWhileClearingCaches: boolean | undefined;
+      mockClearAppCaches.mockImplementationOnce(async () => {
+        enabledWhileClearingCaches = (await getSyncConfig())?.enabled;
+        return [];
+      });
+
+      await disableSync();
+
+      expect(enabledWhileClearingCaches).toBe(false);
+    });
+
     it('should clear app service worker caches', async () => {
       mockClearAppCaches.mockResolvedValueOnce(['gsd-runtime-v9.3.7']);
 

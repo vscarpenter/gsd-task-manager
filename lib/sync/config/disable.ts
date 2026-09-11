@@ -91,15 +91,16 @@ export async function disableSync(): Promise<void> {
     return;
   }
 
+  // Persist the disabled config before any other awaited step. An in-flight
+  // sync re-reads this row before each write, so it stops at the first await.
+  await resetSyncConfigState(current);
+
   // Stop health monitor
   await stopHealthMonitor();
 
   // Clear PocketBase auth state (token + localStorage)
   clearPocketBase();
   await clearBrowserCaches();
-
-  // Reset config in IndexedDB
-  await resetSyncConfigState(current);
 
   logger.info('Sync disabled');
 }
