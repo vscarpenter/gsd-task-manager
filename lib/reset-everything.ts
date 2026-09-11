@@ -14,6 +14,7 @@ import { disableSync } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
 import { resetFeedbackState } from "@/lib/feedback/feedback-store";
 import { wipeLocalData } from "@/lib/reset-local-data";
+import { RESET_PENDING_KEY, endResetLock, startResetLock } from "@/lib/reset-lock";
 
 const logger = createLogger("DB");
 
@@ -44,6 +45,8 @@ export interface ResetResult {
 }
 
 function shouldSkipLocalStorageKey(key: string, preserveTheme: boolean): boolean {
+	// The reset lock removes its own marker, and only after local data is gone.
+	if (key === RESET_PENDING_KEY) return true;
 	const isAppOwned =
 		key === "pocketbase_auth" ||
 		key === "theme" ||
@@ -127,30 +130,8 @@ async function clearSessionData(): Promise<{ success: boolean; errors: string[] 
 	}
 }
 
-/**
- * Reset everything - complete application reset
- *
- * Clears all data:
- * - All tasks (active and archived)
- * - All settings (notifications, archive)
- * - Custom smart views (built-in views preserved)
- * - Sync data (queue, history, metadata)
- * - PocketBase auth state
- * - PWA prompts
- *
- * Preserves:
- * - deviceId (for potential future sync)
- * - Theme (if preserveTheme=true)
- * - Built-in smart views
- *
- * @param options - Reset options
- * @returns Reset result with success status and details
- */
-export async function resetEverything(
-	options: ResetOptions = {}
-): Promise<ResetResult> {
-	logger.info("Starting complete reset", { options });
-
+/** Run the three reset steps in order. Each step catches and reports its own errors. */
+async function runResetSteps(preserveTheme: boolean): Promise<ResetResult> {
 	const result: ResetResult = {
 		success: true,
 		clearedTables: [],
@@ -175,7 +156,7 @@ export async function resetEverything(
 	}
 
 	// Step 3: Clear localStorage
-	const storageResult = clearLocalStorage(options.preserveTheme);
+	const storageResult = clearLocalStorage(preserveTheme);
 	result.clearedLocalStorage = storageResult.items;
 	if (storageResult.errors.length > 0) {
 		result.errors.push(...storageResult.errors);
@@ -183,6 +164,40 @@ export async function resetEverything(
 	}
 
 	result.success = result.failedSteps.length === 0;
+	return result;
+}
+
+/**
+ * Reset everything - complete application reset
+ *
+ * Clears all data:
+ * - All tasks (active and archived)
+ * - All settings (notifications, archive)
+ * - Custom smart views (built-in views preserved)
+ * - Sync data (queue, history, metadata)
+ * - PocketBase auth state
+ * - PWA prompts
+ *
+ * Preserves:
+ * - deviceId (for potential future sync)
+ * - Theme (if preserveTheme=true)
+ * - Built-in smart views
+ *
+ * The reset lock goes on before the first step and comes off only when local
+ * data is verified gone, so a failed step or a closed tab leaves GSD locked.
+ *
+ * @param options - Reset options
+ * @returns Reset result with success status and details
+ */
+export async function resetEverything(
+	options: ResetOptions = {}
+): Promise<ResetResult> {
+	logger.info("Starting complete reset", { options });
+	const preserveTheme = options.preserveTheme === true;
+
+	startResetLock(preserveTheme);
+	const result = await runResetSteps(preserveTheme);
+	endResetLock(!result.failedSteps.includes("local-data"));
 
 	logger.info("Reset complete", {
 		success: result.success,
