@@ -97,6 +97,26 @@ describe("DeleteAccountDialog", () => {
     expect(screen.getByRole("heading", { name: /delete account/i })).toBeInTheDocument();
   });
 
+  it("should_not_mention_reset_everything_when_local_erase_fails", async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteRemoteAccountAndTasks).mockResolvedValue({ ok: true, stage: "done" });
+    vi.mocked(resetEverything).mockResolvedValueOnce({
+      success: false,
+      clearedTables: [],
+      clearedLocalStorage: [],
+      errors: ["IndexedDB: tasks clear failed", "IndexedDB delete: another open tab is blocking it"],
+      failedSteps: ["local-data"],
+    });
+    render(<DeleteAccountDialog {...baseProps} />);
+
+    await user.click(screen.getByRole("switch", { name: /erase all tasks/i }));
+    await user.type(screen.getByPlaceholderText("Type DELETE here"), "DELETE");
+    await user.click(screen.getByRole("button", { name: /^delete account$/i }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalledWith(expect.stringMatching(/reset everything/i));
+  });
+
   it("keep_local_calls_disableSync_on_success", async () => {
     const user = userEvent.setup();
     vi.mocked(deleteRemoteAccountAndTasks).mockResolvedValue({ ok: true, stage: "done" });
