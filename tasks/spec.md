@@ -1022,6 +1022,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 7. **Account deletion copy.** The failure toast in `DeleteAccountDialog` stops sending people to Reset Everything, because the lock screen now owns the retry.
 8. **A thrown step still ends the run.** `resetEverything` ends the lock in a `finally` block. If a step throws past its own error handling, the store leaves `"running"`, reports `"locked"`, and keeps the marker. The error still reaches the caller. Without this, the gate would show the progress state forever with no Try again.
 9. **No remount before the reload.** Once a gate instance has shown the lock, a later `"unlocked"` snapshot keeps the lock screen's progress state instead of remounting the app, so item 4's children rule applies only until then. A remount would let `FirstTimeRedirect` and the onboarding tour act on flags the reset just cleared. When the unlock comes from a reset that finished in this document, the gate reloads after `UI_TIMING.RESET_RELOAD_DELAY_MS`. That keeps a success toast readable, and it also reloads runs whose sign-out or browser-storage step failed. A document unlocked by another tab still reloads right away.
+10. **Hydration window.** The static export prerenders with the server snapshot `"unlocked"`. On a page that loads locked, React hydrates the app with that snapshot and runs its child effects once before the gate re-renders locked. Task titles never render, because they wait for IndexedDB, but effects that reach outside the page still run. So the notification checker, `WebMcpRegister`, and `FirstTimeRedirect` each check `isResetPending()` and do nothing while a reset is pending. The notification checker checks again right before it shows a notification, because the lock can begin while it waits for IndexedDB. The design rejects a Suspense hydration hold, because a top-level boundary could change how the whole app hydrates.
 
 ## Inputs / Outputs
 
@@ -1050,7 +1051,8 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 - **Only the browser-storage step fails.** No lock, and the existing toast is unchanged.
 - **Another tab holds the database open during the fallback.** Dexie closes its connection in other tabs on `versionchange`. If deletion is still blocked, the step fails, the app stays locked, and Try again can succeed later.
 - **Two tabs retry at once.** Each run writes the marker at start and makes sure it is present on failure, so a success in one tab cannot unlock a tab whose run failed.
-- **WebMCP `create_task` during a lock** that began after registration. The row lands in IndexedDB, the next retry's verification finds it, and the fallback deletes the database. A document that loads locked never registers WebMCP.
+- **WebMCP `create_task` during a lock** that began after registration. The row lands in IndexedDB, the next retry's verification finds it, and the fallback deletes the database. A document that loads locked still hydrates `WebMcpRegister` once (see Design item 10), and its reset-pending check keeps it from registering tools.
+- **Sync on a locked load.** `SyncProvider` also hydrates once but keeps no reset-pending check. It starts only when `isAuthenticated()` returns true and the sync config is enabled. On a locked load, that requires sign-out, the local wipe, and the storage cleanup to all have failed.
 - **Offline.** Reset is local, so the lock works the same way.
 - **Empty database.** Verification passes and the marker is removed.
 - **Schema migration.** After a fallback delete, the next open runs every version upgrade from scratch on an empty database.
@@ -1092,6 +1094,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 20. After a reset that ran in this document removes the lock, the gate keeps the lock screen instead of remounting the app and reloads after the reset reload delay. A document unlocked by another tab reloads without remounting the app.
 21. If a reset step throws, the store leaves the running state, reports locked, and keeps the marker.
 22. The lock screen's main landmark is named by its visible message, focus moves to it whenever the screen switches between progress and locked, and Try again is replaced by the progress state as soon as a retry starts.
+23. Effects that reach outside the page do nothing while a reset is pending, including the hydration pass before the lock renders: the notification checker shows no notification (checked again right before showing), WebMCP registers no tools, and FirstTimeRedirect neither redirects nor sets its flag.
 
 ## Implementation order
 
@@ -1180,4 +1183,5 @@ it("should_not_mention_reset_everything_when_local_erase_fails", async () => {})
 | 20 | should_keep_the_lock_screen_and_reload_after_the_delay_when_a_local_reset_unlocks, should_reload_without_remounting_the_app_when_another_tab_unlocks |
 | 21 | should_end_locked_and_rethrow_when_a_step_throws |
 | 22 | should_name_the_lock_screen_by_its_visible_message, should_move_focus_to_the_locked_message_when_a_reset_fails_here, should_replace_try_again_with_progress_as_soon_as_a_retry_starts |
+| 23 | should_not_notify_or_mark_a_due_task_when_a_reset_is_pending, should_not_notify_when_a_reset_begins_while_tasks_load, should_not_register_tools_while_a_reset_is_pending, should_not_redirect_or_set_the_launch_flag_while_a_reset_is_pending |
 | 11, 15, 16 | `tests/e2e/reset-lock.spec.ts` (Playwright) covers AC11 and AC15 in a real browser, and AC16 across two tabs |
