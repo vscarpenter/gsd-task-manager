@@ -980,3 +980,16 @@ both at PR review.
    in-flight pull still lets that pull's rows land (see Edge Cases). There is
    no per-sign-in session id, so `PBSyncConfig` gains no field.
 2. Reset failure wording: used as drafted in Inputs / Outputs.
+
+## Scope addendum (2026-09-11)
+
+Review found one more write outside the fence: `resetAndFullSync` in
+`lib/sync/config/reset.ts` cleared `tasks` and `syncQueue`, then wrote a
+`sync_config` built from a snapshot read before those awaits. A sign-out in
+between would have been undone, the same bug as the old cursor update.
+
+Nothing calls it. It started as a debug helper, and its last caller went away
+in the v6.1.0 refactor (`a21cc99`); only its two re-exports and its own tests
+referenced it. The owner asked to resolve it, so it is deleted with its
+re-exports and tests instead of fenced. Deleting it removes the write path, so
+no acceptance criterion changes. Typecheck proves nothing still imports it.
