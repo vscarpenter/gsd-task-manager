@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { isResetPending } from "@/lib/reset-lock";
 
 const STORAGE_KEY = "gsd-has-launched";
 
@@ -18,6 +19,10 @@ export function FirstTimeRedirect() {
   // A useEffect redirect is unavoidable here; the component renders null, so it never
   // paints the wrong page itself (no flash originates from this component).
   useEffect(() => {
+    // A page that loads locked hydrates this component once before the lock screen
+    // renders. Leave the flag and the route alone until the reset finishes.
+    if (isResetPending()) return;
+
     const hasLaunched = localStorage.getItem(STORAGE_KEY);
     if (hasLaunched) return;
 

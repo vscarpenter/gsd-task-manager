@@ -634,4 +634,50 @@ describe("NotificationChecker", () => {
 			expect(count).toBe(1); // Only task1 with custom window
 		});
 	});
+
+	describe("while a reset is pending", () => {
+		const RESET_PENDING_KEY = "gsd-reset-pending";
+		const PENDING_MARKER = '{"preserveTheme":true}';
+		const dueTask = () =>
+			createTask({
+				id: "task-private",
+				dueDate: new Date("2025-01-15T12:10:00Z").toISOString(), // 10 minutes from now
+			});
+
+		beforeEach(() => {
+			localStorage.removeItem(RESET_PENDING_KEY);
+			vi.setSystemTime(new Date("2025-01-15T12:00:00Z"));
+		});
+
+		afterEach(() => {
+			localStorage.removeItem(RESET_PENDING_KEY);
+		});
+
+		it("should_not_notify_or_mark_a_due_task_when_a_reset_is_pending", async () => {
+			localStorage.setItem(RESET_PENDING_KEY, PENDING_MARKER);
+			const task = dueTask();
+			mockDb.tasks.toArray.mockResolvedValue([task]);
+			mockDb.tasks.get.mockResolvedValue(task);
+
+			await notificationChecker.checkAndNotify();
+
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+			expect(mockDb.tasks.put).not.toHaveBeenCalled();
+		});
+
+		it("should_not_notify_when_a_reset_begins_while_tasks_load", async () => {
+			const task = dueTask();
+			// The lock begins while the checker waits for IndexedDB.
+			mockDb.tasks.toArray.mockImplementation(async () => {
+				localStorage.setItem(RESET_PENDING_KEY, PENDING_MARKER);
+				return [task];
+			});
+			mockDb.tasks.get.mockResolvedValue(task);
+
+			await notificationChecker.checkAndNotify();
+
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+			expect(mockDb.tasks.put).not.toHaveBeenCalled();
+		});
+	});
 });

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { createLogger } from "@/lib/logger";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { isResetPending } from "@/lib/reset-lock";
 
 const logger = createLogger("WEBMCP");
 
@@ -105,6 +106,9 @@ const TOOLS: WebMCPToolDefinition[] = [
 
 export function WebMcpRegister() {
 	useEffect(() => {
+		// A page that loads locked hydrates this component once before the lock
+		// screen renders. No agent gets tools while a reset is pending.
+		if (isResetPending()) return;
 		if (typeof navigator === "undefined" || !navigator.modelContext?.provideContext) {
 			return;
 		}

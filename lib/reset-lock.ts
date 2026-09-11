@@ -81,6 +81,15 @@ export function getResetLockSnapshot(): ResetLockState {
 	return markerMirror !== null || readStoredMarker() !== null ? "locked" : "unlocked";
 }
 
+/**
+ * True while a reset runs or waits for a retry. Effects that reach outside the
+ * page check it, because a page that loads locked hydrates the app once before
+ * the lock screen renders.
+ */
+export function isResetPending(): boolean {
+	return getResetLockSnapshot() !== "unlocked";
+}
+
 /** The static export prerenders without storage, so the server never locks. */
 export function getResetLockServerSnapshot(): ResetLockState {
 	return "unlocked";

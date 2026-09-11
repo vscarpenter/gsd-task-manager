@@ -13,6 +13,7 @@ import {
 import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
+import { isResetPending } from "@/lib/reset-lock";
 
 const logger = createLogger("NOTIFICATIONS");
 
@@ -45,6 +46,9 @@ class NotificationChecker {
 	 * Core notification logic — check permissions, query tasks, and notify
 	 */
 	private async processNotifications(): Promise<void> {
+		// A page that loads locked hydrates the app once before the lock screen
+		// renders, so this can run while the previous user's tasks are still stored.
+		if (isResetPending()) return;
 		if (!isNotificationSupported()) return;
 		if (checkNotificationPermission() !== "granted") return;
 
@@ -123,6 +127,10 @@ class NotificationChecker {
 				return; // Still snoozed
 			}
 		}
+
+		// The lock can begin while this check waits for IndexedDB. Skip the task
+		// without marking it sent.
+		if (isResetPending()) return;
 
 		// Send notification
 		await showTaskNotification(task, minutesUntil);
