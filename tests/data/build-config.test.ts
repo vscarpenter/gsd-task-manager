@@ -158,6 +158,24 @@ describe("build configuration", () => {
     expect(pathIndex).toBeLessThan(wrapperIndex);
   });
 
+  it("runs the Docker builder on real Node and copies in only the Bun binary", () => {
+    const dockerfile = readFileSync("docker/Dockerfile", "utf8");
+    const builderStage = dockerfile.split(/^FROM /m)[1] ?? "";
+    const bunCopyIndex = builderStage.search(
+      /^COPY --from=oven\/bun:1@sha256:[0-9a-f]{64} \/usr\/local\/bin\/bun \/usr\/local\/bin\/bun$/m,
+    );
+    const installIndex = builderStage.indexOf("bun install --frozen-lockfile");
+
+    // The oven/bun image puts a `node` symlink to Bun on PATH. `next build` ran
+    // on Bun there, and Bun 1.3.14 crashed after the build finished. A Debian
+    // node:24 base keeps `node` real, and the copied Bun binary only runs the install.
+    expect(builderStage).toMatch(
+      /^node:24(?:-(?:bookworm|trixie))?(?:-slim)?@sha256:[0-9a-f]{64} AS builder$/m,
+    );
+    expect(bunCopyIndex).toBeGreaterThan(-1);
+    expect(bunCopyIndex).toBeLessThan(installIndex);
+  });
+
   it("keeps root coverage thresholds blocking in CI and SonarCloud", () => {
     const ci = readFileSync(".github/workflows/ci.yml", "utf8");
     const sonar = readFileSync(".github/workflows/sonarcloud.yml", "utf8");
