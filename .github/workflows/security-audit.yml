@@ -10,6 +10,9 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   audit:
     runs-on: ubuntu-24.04
@@ -23,6 +26,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install pinned Gitleaks
         run: |
@@ -71,10 +75,12 @@ jobs:
 
       - name: Audit summary
         if: always()
+        env:
+          HAS_VULNERABILITIES: ${{ steps.audit.outputs.has_vulnerabilities }}
         run: |
           echo "### Security Audit Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.audit.outputs.has_vulnerabilities }}" = "true" ]; then
+          if [ "$HAS_VULNERABILITIES" = "true" ]; then
             echo "⚠️ High or critical vulnerabilities found. See audit step above." >> $GITHUB_STEP_SUMMARY
           elif [ -s audit-results.json ]; then
             echo "See detailed results in the audit step above." >> $GITHUB_STEP_SUMMARY

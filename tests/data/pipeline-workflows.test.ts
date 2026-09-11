@@ -1,8 +1,40 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+
+const WORKFLOW_DIR = ".github/workflows";
+const RUN_SCRIPT_EXPRESSION =
+  /\$\{\{\s*(?:vars|steps|inputs|github\.event)\.[^}]*\}\}/g;
 
 function readWorkflow(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+function listWorkflowPaths(): string[] {
+  return readdirSync(WORKFLOW_DIR)
+    .filter((name) => /\.ya?ml$/.test(name))
+    .map((name) => `${WORKFLOW_DIR}/${name}`);
+}
+
+// Checkout steps hold only scalar inputs, so splitting on list items keeps a
+// checkout step's whole `with:` block inside one chunk.
+function listItems(workflow: string): string[] {
+  return workflow.split(/^[ \t]*- /m);
+}
+
+// Returns each `run:` value, including the indented body of a block scalar.
+function runBlocks(workflow: string): string[] {
+  const lines = workflow.split("\n");
+  return lines.flatMap((line, index) => {
+    const match = /^([ \t]*(?:- )?)run:(.*)$/.exec(line);
+    if (!match) return [];
+    const keyIndent = match[1].length;
+    const bodyEnd = lines.findIndex(
+      (next, nextIndex) =>
+        nextIndex > index && next.trim() !== "" && next.search(/\S/) <= keyIndent
+    );
+    const body = lines.slice(index + 1, bodyEnd === -1 ? lines.length : bodyEnd);
+    return [[match[2], ...body].join("\n")];
+  });
 }
 
 describe("pipeline workflows", () => {
@@ -49,5 +81,39 @@ describe("pipeline workflows", () => {
     expect(removeStaleIndex).toBeGreaterThan(-1);
     expect(ignoreMissingIndex).toBeGreaterThan(removeStaleIndex);
     expect(addTargetIndex).toBeGreaterThan(ignoreMissingIndex);
+  });
+
+  it("sets persist-credentials explicitly on every checkout step", () => {
+    const checkouts = listWorkflowPaths().flatMap((path) =>
+      listItems(readWorkflow(path))
+        .filter((item) => /uses:\s*actions\/checkout@/.test(item))
+        .map((item) => ({ path, item }))
+    );
+    const implicitCheckouts = checkouts
+      .filter(({ item }) => !/^[ \t]*persist-credentials:\s*(?:true|false)\b/m.test(item))
+      .map(({ path }) => path);
+
+    expect(checkouts.length).toBeGreaterThan(0);
+    expect(implicitCheckouts).toEqual([]);
+  });
+
+  it("declares top-level permissions in every workflow", () => {
+    const missing = listWorkflowPaths().filter(
+      (path) => !/^permissions:/m.test(readWorkflow(path))
+    );
+
+    expect(missing).toEqual([]);
+  });
+
+  it("passes vars, step outputs, inputs, and event data to run scripts through env", () => {
+    const blocks = listWorkflowPaths().flatMap((path) =>
+      runBlocks(readWorkflow(path)).map((block) => ({ path, block }))
+    );
+    const interpolated = blocks.flatMap(({ path, block }) =>
+      (block.match(RUN_SCRIPT_EXPRESSION) ?? []).map((expression) => `${path}: ${expression}`)
+    );
+
+    expect(blocks.length).toBeGreaterThan(0);
+    expect(interpolated).toEqual([]);
   });
 });

@@ -16,9 +16,8 @@ on:
     tags:
       - 'v*.*.*'
 
-permissions:
-  contents: read
-  packages: write
+# Jobs opt in to token scopes; a new job starts with none.
+permissions: {}
 
 concurrency:
   group: publish-docker-${{ github.ref }}
@@ -27,11 +26,15 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Configure build
         id: cfg
@@ -126,11 +129,13 @@ jobs:
           provenance: false
 
       - name: Summary
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           {
             echo "### Docker image"
             echo "Pushed the following tags:"
             echo '```'
-            echo "${{ steps.meta.outputs.tags }}"
+            echo "$IMAGE_TAGS"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

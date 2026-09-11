@@ -29,6 +29,9 @@ concurrency:
   group: deploy-cloudfront-infra
   cancel-in-progress: false
 
+# Jobs opt in to token scopes; a new job starts with none.
+permissions: {}
+
 jobs:
   deploy:
     name: Deploy CloudFront infrastructure
@@ -51,6 +54,7 @@ jobs:
           # Full history so `git diff github.event.before HEAD` always
           # resolves, even when a push contains multiple commits.
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Detect what changed
         id: changes
