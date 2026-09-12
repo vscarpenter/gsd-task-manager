@@ -10,11 +10,11 @@
  * WARNING: All data loss is permanent and cannot be undone
  */
 
-import { getDb } from "@/lib/db";
-import { disableSync, getSyncConfig } from "@/lib/sync/config";
+import { disableSync } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
-import { SYNC_CONFIG } from "@/lib/constants/sync";
 import { resetFeedbackState } from "@/lib/feedback/feedback-store";
+import { wipeLocalData } from "@/lib/reset-local-data";
+import { RESET_PENDING_KEY, endResetLock, startResetLock } from "@/lib/reset-lock";
 
 const logger = createLogger("DB");
 
@@ -38,74 +38,15 @@ export interface ResetResult {
 	errors: string[];
 	/**
 	 * Steps that threw, in the order they ran. Only "local-data" decides whether
-	 * tasks survived, because that step clears IndexedDB in one transaction.
+	 * tasks survived, because that step fails only when neither the IndexedDB
+	 * clear nor the database delete fallback removed them.
 	 */
 	failedSteps: ResetStep[];
 }
 
-/**
- * Clear all IndexedDB tables except deviceId
- * Preserves deviceId for potential future sync re-registration
- */
-async function clearIndexedDB(): Promise<{ tables: string[]; errors: string[] }> {
-	const db = getDb();
-	const cleared: string[] = [];
-	const errors: string[] = [];
-
-	try {
-		const config = await getSyncConfig();
-		const deviceId = config?.deviceId;
-
-		const allTables = [...db.tables];
-		await db.transaction("rw", allTables, async () => {
-			for (const table of allTables) {
-				// react-doctor-disable-next-line react-doctor/async-await-in-loop -- one transaction must fail atomically
-				await table.clear();
-				cleared.push(table.name);
-			}
-			if (deviceId) {
-				await db.syncMetadata.add(buildPreservedSyncMetadata(deviceId));
-			}
-		});
-
-		logger.info("IndexedDB cleared successfully", { clearedTables: cleared });
-	} catch (err) {
-		const errorMsg = err instanceof Error ? err.message : "Unknown error";
-		errors.push(`IndexedDB: ${errorMsg}`);
-		logger.error("Failed to clear IndexedDB", err instanceof Error ? err : undefined, {
-			errorMessage: errorMsg
-		});
-	}
-
-	return { tables: cleared, errors };
-}
-
-/** Build a minimal sync metadata record that preserves deviceId */
-function buildPreservedSyncMetadata(deviceId: string) {
-	return {
-		key: "sync_config" as const,
-		enabled: false,
-		userId: null,
-		deviceId,
-		deviceName: "Device",
-		email: null,
-		provider: null,
-		lastSyncAt: null,
-		lastClientUpdatedAt: null,
-		pullCursorVersion: 2 as const,
-		lastServerUpdatedAt: null,
-		lastSuccessfulSyncAt: null,
-		consecutiveFailures: 0,
-		lastFailureAt: null,
-		lastFailureReason: null,
-		nextRetryAt: null,
-		autoSyncEnabled: true,
-		autoSyncIntervalMinutes: SYNC_CONFIG.DEFAULT_AUTO_SYNC_INTERVAL_MINUTES,
-		localTaskOwnerUserId: null,
-	};
-}
-
 function shouldSkipLocalStorageKey(key: string, preserveTheme: boolean): boolean {
+	// The reset lock removes its own marker, and only after local data is gone.
+	if (key === RESET_PENDING_KEY) return true;
 	const isAppOwned =
 		key === "pocketbase_auth" ||
 		key === "theme" ||
@@ -189,6 +130,43 @@ async function clearSessionData(): Promise<{ success: boolean; errors: string[] 
 	}
 }
 
+/** Run the three reset steps in order. Each step catches and reports its own errors. */
+async function runResetSteps(preserveTheme: boolean): Promise<ResetResult> {
+	const result: ResetResult = {
+		success: true,
+		clearedTables: [],
+		clearedLocalStorage: [],
+		errors: [],
+		failedSteps: [],
+	};
+
+	// Step 1: Logout from sync
+	const sessionResult = await clearSessionData();
+	if (!sessionResult.success) {
+		result.errors.push(...sessionResult.errors);
+		result.failedSteps.push("sync-sign-out");
+	}
+
+	// Step 2: Clear IndexedDB, deleting the whole database if the clear is not verified
+	const dbResult = await wipeLocalData();
+	result.clearedTables = dbResult.tables;
+	if (dbResult.errors.length > 0) {
+		result.errors.push(...dbResult.errors);
+		result.failedSteps.push("local-data");
+	}
+
+	// Step 3: Clear localStorage
+	const storageResult = clearLocalStorage(preserveTheme);
+	result.clearedLocalStorage = storageResult.items;
+	if (storageResult.errors.length > 0) {
+		result.errors.push(...storageResult.errors);
+		result.failedSteps.push("browser-storage");
+	}
+
+	result.success = result.failedSteps.length === 0;
+	return result;
+}
+
 /**
  * Reset everything - complete application reset
  *
@@ -205,6 +183,9 @@ async function clearSessionData(): Promise<{ success: boolean; errors: string[] 
  * - Theme (if preserveTheme=true)
  * - Built-in smart views
  *
+ * The reset lock goes on before the first step and comes off only when local
+ * data is verified gone, so a failed step or a closed tab leaves GSD locked.
+ *
  * @param options - Reset options
  * @returns Reset result with success status and details
  */
@@ -212,48 +193,27 @@ export async function resetEverything(
 	options: ResetOptions = {}
 ): Promise<ResetResult> {
 	logger.info("Starting complete reset", { options });
+	const preserveTheme = options.preserveTheme === true;
 
-	const result: ResetResult = {
-		success: true,
-		clearedTables: [],
-		clearedLocalStorage: [],
-		errors: [],
-		failedSteps: [],
-	};
+	startResetLock(preserveTheme);
+	let localDataDeleted = false;
+	try {
+		const result = await runResetSteps(preserveTheme);
+		localDataDeleted = !result.failedSteps.includes("local-data");
 
-	// Step 1: Logout from sync
-	const sessionResult = await clearSessionData();
-	if (!sessionResult.success) {
-		result.errors.push(...sessionResult.errors);
-		result.failedSteps.push("sync-sign-out");
+		logger.info("Reset complete", {
+			success: result.success,
+			clearedTables: result.clearedTables.length,
+			clearedLocalStorage: result.clearedLocalStorage.length,
+			errors: result.errors.length,
+		});
+
+		return result;
+	} finally {
+		// A step that throws past its own catch still ends the run, so GSD stays
+		// locked with Try again instead of showing the progress state forever.
+		endResetLock(localDataDeleted);
 	}
-
-	// Step 2: Clear IndexedDB
-	const dbResult = await clearIndexedDB();
-	result.clearedTables = dbResult.tables;
-	if (dbResult.errors.length > 0) {
-		result.errors.push(...dbResult.errors);
-		result.failedSteps.push("local-data");
-	}
-
-	// Step 3: Clear localStorage
-	const storageResult = clearLocalStorage(options.preserveTheme);
-	result.clearedLocalStorage = storageResult.items;
-	if (storageResult.errors.length > 0) {
-		result.errors.push(...storageResult.errors);
-		result.failedSteps.push("browser-storage");
-	}
-
-	result.success = result.failedSteps.length === 0;
-
-	logger.info("Reset complete", {
-		success: result.success,
-		clearedTables: result.clearedTables.length,
-		clearedLocalStorage: result.clearedLocalStorage.length,
-		errors: result.errors.length,
-	});
-
-	return result;
 }
 
 /**

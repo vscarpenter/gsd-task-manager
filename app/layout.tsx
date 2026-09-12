@@ -17,6 +17,7 @@ import { ClientLayout } from "@/components/client-layout";
 import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
+import { ResetLockGate } from "@/components/reset-lock-gate";
 
 // Development needs React's eval diagnostics and Next's inline bootstrap. The
 // production static export omits this meta policy: build post-processing moves
@@ -157,11 +158,14 @@ function AppProviders({ children }: { children: ReactNode }) {
         <ToastProvider>
           <QueryProvider>
             <TooltipProvider>
-              <ClientLayout>{children}</ClientLayout>
-              <FirstTimeRedirect />
-              <OnboardingGate />
+              {/* Anything that reads or writes task data stays inside the gate, so a pending reset keeps it unmounted. */}
+              <ResetLockGate>
+                <ClientLayout>{children}</ClientLayout>
+                <FirstTimeRedirect />
+                <OnboardingGate />
+                <WebMcpRegister />
+              </ResetLockGate>
               <PwaRegister />
-              <WebMcpRegister />
               <PwaUpdateToast />
               <GlobalErrorListener />
               <SentryInit />

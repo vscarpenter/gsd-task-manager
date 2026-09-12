@@ -12,16 +12,28 @@ const {
   mockClear,
   mockAdd,
   mockResetFeedbackState,
+  mockCount,
+  mockToArray,
+  mockDeleteDatabase,
 } = vi.hoisted(() => ({
   mockDisableSync: vi.fn().mockResolvedValue(undefined),
   mockGetSyncConfig: vi.fn().mockResolvedValue(null),
   mockClear: vi.fn().mockResolvedValue(undefined),
   mockAdd: vi.fn().mockResolvedValue(undefined),
   mockResetFeedbackState: vi.fn(),
+  mockCount: vi.fn().mockResolvedValue(0),
+  mockToArray: vi.fn().mockResolvedValue([]),
+  // No IndexedDB sits behind this mock, so the database delete fallback fails
+  // here. tests/data/reset-local-data.test.ts covers a fallback that succeeds.
+  mockDeleteDatabase: vi.fn().mockRejectedValue(new Error('delete unavailable')),
 }));
 
 vi.mock('@/lib/db', () => ({
-  getDb: () => ({
+  getDb: vi.fn(() => ({
+    name: 'GsdTaskManager',
+    delete: mockDeleteDatabase,
+    // The delete fallback subscribes to Dexie's blocked event before it deletes.
+    on: vi.fn(() => ({ unsubscribe: vi.fn() })),
     transaction: vi.fn(async (...args: unknown[]) => (args.at(-1) as () => Promise<unknown>)()),
     tasks: { clear: mockClear, name: 'tasks' },
     archivedTasks: { clear: mockClear, name: 'archivedTasks' },
@@ -36,22 +48,23 @@ vi.mock('@/lib/db', () => ({
     syncMetadata: {
       clear: mockClear,
       add: mockAdd,
+      toArray: mockToArray,
       name: 'syncMetadata',
     },
     tables: [
-      { clear: mockClear, name: 'tasks' },
-      { clear: mockClear, name: 'archivedTasks' },
-      { clear: mockClear, name: 'deletedTasks' },
-      { clear: mockClear, name: 'smartViews' },
-      { clear: mockClear, name: 'notificationSettings' },
-      { clear: mockClear, name: 'syncQueue' },
-      { clear: mockClear, name: 'syncMetadata' },
-      { clear: mockClear, name: 'deviceInfo' },
-      { clear: mockClear, name: 'archiveSettings' },
-      { clear: mockClear, name: 'syncHistory' },
-      { clear: mockClear, name: 'appPreferences' },
+      { clear: mockClear, count: mockCount, name: 'tasks' },
+      { clear: mockClear, count: mockCount, name: 'archivedTasks' },
+      { clear: mockClear, count: mockCount, name: 'deletedTasks' },
+      { clear: mockClear, count: mockCount, name: 'smartViews' },
+      { clear: mockClear, count: mockCount, name: 'notificationSettings' },
+      { clear: mockClear, count: mockCount, name: 'syncQueue' },
+      { clear: mockClear, count: mockCount, name: 'syncMetadata' },
+      { clear: mockClear, count: mockCount, name: 'deviceInfo' },
+      { clear: mockClear, count: mockCount, name: 'archiveSettings' },
+      { clear: mockClear, count: mockCount, name: 'syncHistory' },
+      { clear: mockClear, count: mockCount, name: 'appPreferences' },
     ],
-  }),
+  })),
 }));
 
 vi.mock('@/lib/sync/config', () => ({
@@ -73,6 +86,8 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 import { resetEverything, reloadAfterReset } from '@/lib/reset-everything';
+import { getResetLockSnapshot } from '@/lib/reset-lock';
+import { getDb } from '@/lib/db';
 
 describe('reset-everything', () => {
   beforeEach(() => {
@@ -82,7 +97,7 @@ describe('reset-everything', () => {
     for (const key of [
       'pocketbase_auth', 'gsd-pwa-dismissed', 'theme', 'gsd-theme',
       'gsd:feedback:draft', 'gsd:feedback:last-sent',
-      'gsd:feedback:nudge-dismissed', 'gsd-onboarding-seen',
+      'gsd:feedback:nudge-dismissed', 'gsd-onboarding-seen', 'gsd-reset-pending',
     ]) {
       localStorage.removeItem(key);
     }
@@ -282,10 +297,132 @@ describe('reset-everything', () => {
       expect(result.failedSteps).toEqual(['sync-sign-out', 'local-data']);
     });
 
+    it('should_run_the_delete_fallback_when_sync_metadata_keeps_an_account_row', async () => {
+      mockToArray.mockResolvedValueOnce([{ key: 'sync_config', userId: 'user-1' }]);
+
+      const result = await resetEverything();
+
+      expect(mockDeleteDatabase).toHaveBeenCalledTimes(1);
+      expect(result.errors).toContain('IndexedDB: rows survived in syncMetadata');
+    });
+
     it('should_report_success_only_when_no_step_failed', async () => {
       const result = await resetEverything();
 
       expect(result).toMatchObject({ success: true, failedSteps: [] });
+    });
+  });
+
+  describe('resetEverything reset lock', () => {
+    const MARKER_KEY = 'gsd-reset-pending';
+
+    function readMarker(): unknown {
+      const marker = localStorage.getItem(MARKER_KEY);
+      return marker === null ? null : JSON.parse(marker);
+    }
+
+    it('should_write_the_marker_before_signing_out', async () => {
+      let markerAtSignOut: unknown = null;
+      mockDisableSync.mockImplementationOnce(async () => {
+        markerAtSignOut = readMarker();
+      });
+
+      await resetEverything({ preserveTheme: true });
+
+      expect(markerAtSignOut).toEqual({ preserveTheme: true });
+    });
+
+    it('should_remove_the_marker_after_a_verified_wipe', async () => {
+      let markerDuringWipe: string | null = null;
+      mockCount.mockImplementationOnce(async () => {
+        markerDuringWipe = localStorage.getItem(MARKER_KEY);
+        return 0;
+      });
+
+      const result = await resetEverything();
+
+      // Without a marker during the wipe, its absence afterwards would prove nothing.
+      expect(markerDuringWipe).not.toBeNull();
+      expect(localStorage.getItem(MARKER_KEY)).toBeNull();
+      expect(getResetLockSnapshot()).toBe('unlocked');
+      expect(result).toMatchObject({ success: true, failedSteps: [] });
+    });
+
+    it('should_unlock_when_only_sign_out_fails', async () => {
+      mockDisableSync.mockRejectedValueOnce(new Error('sync error'));
+      let stateDuringWipe: string | null = null;
+      mockCount.mockImplementationOnce(async () => {
+        stateDuringWipe = getResetLockSnapshot();
+        return 0;
+      });
+
+      const result = await resetEverything();
+
+      expect(result).toMatchObject({ success: false, failedSteps: ['sync-sign-out'] });
+      expect([stateDuringWipe, getResetLockSnapshot()]).toEqual(['running', 'unlocked']);
+    });
+
+    it('should_keep_the_marker_when_clearing_app_local_storage', async () => {
+      localStorage.setItem('gsd-onboarding-seen', 'true');
+      let markerAfterStorageStep: string | null = null;
+      mockResetFeedbackState.mockImplementationOnce(() => {
+        markerAfterStorageStep = localStorage.getItem(MARKER_KEY);
+      });
+
+      const result = await resetEverything({ preserveTheme: true });
+
+      expect(result.clearedLocalStorage).toContain('gsd-onboarding-seen');
+      expect(result.clearedLocalStorage).not.toContain(MARKER_KEY);
+      expect(markerAfterStorageStep).not.toBeNull();
+    });
+
+    it('should_keep_the_marker_and_report_local_data_when_clear_and_delete_both_fail', async () => {
+      mockClear.mockRejectedValueOnce(new Error('DB clear failed'));
+      mockDeleteDatabase.mockRejectedValueOnce(new Error('delete blocked'));
+
+      const result = await resetEverything({ preserveTheme: false });
+
+      expect(result.failedSteps).toContain('local-data');
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining('DB clear failed'),
+        expect.stringContaining('delete blocked'),
+      ]));
+      expect(readMarker()).toEqual({ preserveTheme: false });
+      expect(getResetLockSnapshot()).toBe('locked');
+    });
+
+    it('should_end_locked_and_rethrow_when_a_step_throws', async () => {
+      vi.mocked(getDb).mockImplementationOnce(() => {
+        throw new Error('IndexedDB is not available in this environment.');
+      });
+
+      await expect(resetEverything({ preserveTheme: true })).rejects.toThrow('IndexedDB is not available');
+      expect(getResetLockSnapshot()).toBe('locked');
+      expect(readMarker()).toEqual({ preserveTheme: true });
+    });
+
+    it('should_report_running_then_locked_when_local_storage_throws', async () => {
+      const denied = () => {
+        throw new Error('SecurityError');
+      };
+      const storageSpies = [
+        vi.spyOn(window.localStorage, 'getItem').mockImplementation(denied),
+        vi.spyOn(window.localStorage, 'setItem').mockImplementation(denied),
+        vi.spyOn(window.localStorage, 'removeItem').mockImplementation(denied),
+      ];
+      let stateDuringRun: string | null = null;
+      mockDisableSync.mockImplementationOnce(async () => {
+        stateDuringRun = getResetLockSnapshot();
+      });
+      mockClear.mockRejectedValueOnce(new Error('DB clear failed'));
+
+      try {
+        await resetEverything();
+
+        expect([stateDuringRun, getResetLockSnapshot()]).toEqual(['running', 'locked']);
+      } finally {
+        storageSpies.forEach((spy) => spy.mockRestore());
+      }
     });
   });
 

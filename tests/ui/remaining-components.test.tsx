@@ -55,6 +55,7 @@ describe('FirstTimeRedirect', () => {
   beforeEach(() => {
     mockReplace.mockClear();
     localStorage.removeItem('gsd-has-launched');
+    localStorage.removeItem('gsd-reset-pending');
     mockPathname = '/';
   });
 
@@ -92,6 +93,16 @@ describe('FirstTimeRedirect', () => {
     const { container } = render(<FirstTimeRedirect />);
 
     expect(container.innerHTML).toBe('');
+  });
+
+  it('should_not_redirect_or_set_the_launch_flag_while_a_reset_is_pending', () => {
+    // A page that loads locked hydrates this component once before the lock screen renders.
+    localStorage.setItem('gsd-reset-pending', '{"preserveTheme":true}');
+
+    render(<FirstTimeRedirect />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(localStorage.getItem('gsd-has-launched')).toBeNull();
   });
 });
 

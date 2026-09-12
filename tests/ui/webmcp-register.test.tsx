@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WebMcpRegister } from '@/components/webmcp-register';
 
 const createTaskMock = vi.fn();
+const RESET_PENDING_KEY = 'gsd-reset-pending';
 
 vi.mock('@/lib/tasks', () => ({
 	createTask: (...args: unknown[]) => createTaskMock(...args),
@@ -25,6 +26,7 @@ describe('WebMcpRegister', () => {
 		provideContext.mockReset();
 		provideContext.mockResolvedValue(undefined);
 		createTaskMock.mockReset();
+		localStorage.removeItem(RESET_PENDING_KEY);
 		Object.defineProperty(navigator, 'modelContext', {
 			value: { provideContext },
 			writable: true,
@@ -100,5 +102,15 @@ describe('WebMcpRegister', () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(provideContext).not.toHaveBeenCalled();
 		expect(createTaskMock).not.toHaveBeenCalled();
+	});
+
+	it('should_not_register_tools_while_a_reset_is_pending', async () => {
+		// A page that loads locked hydrates this component once before the lock screen renders.
+		localStorage.setItem(RESET_PENDING_KEY, '{"preserveTheme":true}');
+
+		render(<WebMcpRegister />);
+
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(provideContext).not.toHaveBeenCalled();
 	});
 });

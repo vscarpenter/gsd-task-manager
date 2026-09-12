@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { isRoadmapSlug, ROADMAP_ITEMS } from "./roadmap-items";
 
 /**

@@ -96,9 +96,7 @@ function failureMessage(result: DeleteAccountResult): string {
 async function eraseLocalDataAndScheduleReload(): Promise<boolean> {
 	const resetResult = await resetEverything({ preserveTheme: true });
 	if (!resetResult.success) {
-		toast.error(
-			"Cloud account deleted, but local erase was incomplete. Use Reset Everything to retry local cleanup.",
-		);
+		toast.error("Cloud account deleted, but local erase was incomplete.");
 		return false;
 	}
 
