@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
@@ -61,6 +61,20 @@ describe("static export CSP hardening", () => {
     );
     expect(readFileSync("public/theme-init.js", "utf8")).toContain("initializeTheme");
     expect(readFileSync("lib/zod.ts", "utf8")).toContain("z.config({ jitless: true })");
+  });
+
+  it("imports zod only through lib/zod so jitless mode is set before any schema exists", () => {
+    // A module that imports zod directly can build its schemas before lib/zod.ts
+    // sets jitless, and zod's eval probe then trips the production CSP.
+    const directZodImport = /from\s+["']zod(?:\/[\w-]+)?["']/;
+    const offenders = ["lib", "components", "app"].flatMap((directory) =>
+      readdirSync(directory, { recursive: true, encoding: "utf8" })
+        .filter((file) => /\.tsx?$/.test(file))
+        .map((file) => join(directory, file))
+        .filter((path) => path !== join("lib", "zod.ts") && directZodImport.test(readFileSync(path, "utf8"))),
+    );
+
+    expect(offenders).toEqual([]);
   });
 
   it("runs a production browser smoke test in blocking Chromium CI", () => {
