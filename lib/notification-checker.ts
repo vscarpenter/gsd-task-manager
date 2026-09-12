@@ -60,10 +60,9 @@ class NotificationChecker {
 		this.lastCheck = now;
 
 		const db = getDb();
-		const tasks = await db.tasks
-			.where("completed")
-			.equals(0)
-			.toArray();
+		// `completed` is stored as a boolean, and IndexedDB cannot index booleans,
+		// so an index query on it finds nothing. Filter the table instead.
+		const tasks = await db.tasks.filter((task) => !task.completed).toArray();
 
 		const tasksWithDueDates = tasks.filter(
 			(task) => task.dueDate && task.notificationEnabled !== false,
@@ -277,7 +276,8 @@ export async function getDueSoonCount(): Promise<number> {
 	const settings = await getNotificationSettings();
 	const db = getDb();
 
-	const tasks = await db.tasks.where("completed").equals(0).toArray();
+	// Filter rather than query the index: `completed` is a boolean (see processNotifications).
+	const tasks = await db.tasks.filter((task) => !task.completed).toArray();
 
 	const now = new Date();
 	let count = 0;

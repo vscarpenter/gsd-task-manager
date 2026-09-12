@@ -68,8 +68,7 @@ describe("NotificationChecker", () => {
 		// Create mock database
 		mockDb = {
 			tasks: {
-				where: vi.fn().mockReturnThis(),
-				equals: vi.fn().mockReturnThis(),
+				filter: vi.fn().mockReturnThis(),
 				toArray: vi.fn().mockResolvedValue(mockTasks),
 				get: vi.fn(),
 				put: vi.fn(),
@@ -159,8 +158,9 @@ describe("NotificationChecker", () => {
 
 			await notificationChecker.checkAndNotify();
 
-			expect(mockDb.tasks.where).toHaveBeenCalledWith("completed");
-			expect(mockDb.tasks.equals).toHaveBeenCalledWith(0);
+			const keepsTask = mockDb.tasks.filter.mock.calls[0][0];
+			expect(keepsTask(createTask({ completed: false }))).toBe(true);
+			expect(keepsTask(createTask({ completed: true }))).toBe(false);
 			expect(notifications.showTaskNotification).toHaveBeenCalledWith(
 				dueTask,
 				10,
