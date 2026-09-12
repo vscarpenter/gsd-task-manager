@@ -66,7 +66,6 @@ const mockEnvConfig = vi.hoisted(() => ({
   environment: "production",
   isDevelopment: false,
   isProduction: true,
-  isStaging: false,
   pocketBaseUrl: "https://api.vinny.io",
 }));
 

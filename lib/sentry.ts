@@ -88,8 +88,8 @@ export function initSentry(): void {
 
   // Development stays local: dev sessions produced most of the Sentry noise
   // (78% of the highest-volume issue) while never representing real users.
-  // To test capture end-to-end, use staging or temporarily lift this gate —
-  // see .claude/skills/sentry-verification/SKILL.md.
+  // To test capture end-to-end, temporarily lift this gate. See
+  // .claude/skills/sentry-verification/SKILL.md.
   if (!dsn || ENV_CONFIG.isDevelopment) {
     return;
   }
