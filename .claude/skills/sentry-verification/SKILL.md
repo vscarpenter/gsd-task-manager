@@ -7,13 +7,10 @@ description: Verify Sentry error capture is working after a DSN change or deploy
 
 **Development never sends events.** `initSentry()` in `lib/sentry.ts` returns
 early when `ENV_CONFIG.isDevelopment` (localhost/127.0.0.1/*.local), so a dev
-server will not report to Sentry no matter what you trigger. Verify capture one
-of two ways:
-
-- **Staging (preferred):** deploy to `gsd-dev.vinny.dev` and trigger the test
-  error there.
-- **Local, gate lifted:** temporarily remove `|| ENV_CONFIG.isDevelopment` from
-  the `initSentry` guard, verify, then restore it before commit.
+server will not report to Sentry no matter what you trigger. There is no staging
+deploy, so verify capture locally with the gate lifted: temporarily remove
+`|| ENV_CONFIG.isDevelopment` from the `initSentry` guard, verify, then restore
+it before commit.
 
 Then:
 

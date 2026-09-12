@@ -3,7 +3,7 @@
  * Single source of truth for environment-dependent URLs and settings
  */
 
-export type Environment = 'development' | 'staging' | 'production';
+export type Environment = 'development' | 'production';
 
 export interface EnvironmentConfig {
   /** PocketBase server URL */
@@ -12,15 +12,12 @@ export interface EnvironmentConfig {
   isDevelopment: boolean;
   /** Whether running in production mode */
   isProduction: boolean;
-  /** Whether running in staging mode */
-  isStaging: boolean;
   /** Current environment */
   environment: Environment;
 }
 
 const KNOWN_REMOTE_POCKETBASE_HOSTS = new Map<string, string>([
   ['gsd.vinny.dev', 'https://api.vinny.io'],
-  ['gsd-dev.vinny.dev', 'https://api.vinny.io'],
 ]);
 
 /**
@@ -36,10 +33,6 @@ function detectEnvironment(): Environment {
 
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')) {
     return 'development';
-  }
-
-  if (hostname === 'gsd-dev.vinny.dev') {
-    return 'staging';
   }
 
   if (hostname === 'gsd.vinny.dev') {
@@ -99,7 +92,6 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     pocketBaseUrl,
     isDevelopment: environment === 'development',
     isProduction: environment === 'production',
-    isStaging: environment === 'staging',
     environment,
   };
 }
