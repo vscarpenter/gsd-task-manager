@@ -76,6 +76,7 @@ const newsreader = Newsreader({
   style: ["normal"],
   variable: "--font-newsreader",
   display: "swap",
+  preload: false,
 });
 
 const developmentContentSecurityPolicy = [
