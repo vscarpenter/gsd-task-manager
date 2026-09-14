@@ -7,7 +7,9 @@ import { test as base } from "@playwright/test";
 // The filename class includes `_` because Turbopack's hashed asset names carry
 // underscores (26aa48c1bdeb5547-s.p.30a_ou6vtcpon.woff2); without it this stops
 // matching and the aborted-font diagnostic fails tests again.
-const FIREFOX_ABORTED_DEV_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ stretch:100 src index:0\): status=2152398850 source: http:\/\/localhost:3000\/(?:_next\/static\/media\/[a-z0-9._-]+|__nextjs_font\/[a-z0-9._-]+)\.woff2"\]$/;
+// Firefox renamed font-stretch to font-width, so the descriptor reads `width:100`
+// in current builds and `stretch:100` in older ones; the pattern accepts both.
+const FIREFOX_ABORTED_DEV_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ (?:stretch|width):100 src index:0\): status=2152398850 source: http:\/\/localhost:3000\/(?:_next\/static\/media\/[a-z0-9._-]+|__nextjs_font\/[a-z0-9._-]+)\.woff2"\]$/;
 
 function isExpectedBrowserDiagnostic(message: string): boolean {
   return FIREFOX_ABORTED_DEV_FONT.test(message);

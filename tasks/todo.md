@@ -256,3 +256,46 @@ run. Still possibly open, per that file:
 - Curate `lib/feedback/roadmap-items.ts` — the eight candidates were a seed.
 - Update the privacy policy at gsdtaskmanager.com/privacy (separate repo).
 - Deferred by design: the earned-moment feedback prompt after N completions.
+
+# Session state: 2026-09-13 (land PR #546 on main)
+
+Branch: `perf/makefaster-round-1`, PR #546. Goal: merge it to main and push, with CI green.
+
+## Findings
+
+- The four required checks (lint, typecheck, test, build) are green. Three non-required
+  jobs are red on the PR and green on main, and each one traces to this branch:
+  - e2e (firefox): `preload: false` moves the Newsreader fetch to CSS discovery, so test
+    navigations abort it far more often, and Firefox now spells the descriptor `width:100`
+    while the fixture fingerprint only accepts `stretch:100`.
+  - e2e (webkit), production PWA lifecycle: with no preloaded font, Next emits
+    `<link rel="preconnect" href="/">`. On the deliberately offline reload WebKit logs
+    "Failed to preconnect" as a console error and the verifier treats it as a failure.
+  - pocketbase-system: the browser boundary test never seeds `gsd-has-launched`, so the
+    pre-bundle redirect sends it to /about before `matrix-grid` can render.
+- Working tree: package.json 13.0.0 and sw.js 13.0.1 from a local deploy (prod serves
+  13.0.1, build 6). README still said 12.9.4. The `bun.lock` churn is the older
+  `bun update` refresh and stays uncommitted, as before.
+
+## Plan
+
+- [x] Pin the trio at 13.0.0 (README line 7, sw.js by hand), commit (09c9c52).
+- [x] Red/green: guard test pins `(?:stretch|width):100`; the fixture regex accepts both.
+- [x] Red/green: export `isExpectedOfflineDiagnostic` from verify-production-pwa.cjs, guard
+      `main()`, unit test it; ignore only the self-origin preconnect failure after the
+      smoke server closes.
+- [x] Seed `gsd-has-launched` in the PocketBase system test's addInitScript.
+- [ ] Commit, push, watch CI, `gh pr merge 546 --squash --admin`, fast-forward local main.
+
+## Resuming From Here
+
+- Done: version trio at 13.0.0 (09c9c52); the three harness fixes with their red/green
+  tests; full unit suite, typecheck, lint, and code-shape gate green locally.
+- Next: push the branch, wait for the PR #546 checks (Firefox e2e is the slow one at
+  about 22 minutes), then `gh pr merge 546 --squash --admin` (owner PR, the code-owner
+  gate cannot be satisfied any other way), then `git checkout main && git merge --ff-only
+  origin/main`. If PR #546 already shows merged, only the local branch is left to delete.
+- Not done on purpose: the `bun.lock` churn stays uncommitted; it is a `bun update`
+  refresh unrelated to this PR. The stray local `.build-info.json` is gitignored and
+  correct as it stands (13.0.1), so leave it alone.
+- Assumption: 13.0.0 is the version the owner chose when deploying; nothing here picked it.

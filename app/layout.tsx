@@ -71,9 +71,12 @@ const connectSrc = process.env.NODE_ENV === "development"
 const newsreader = Newsreader({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  // Normal style only: nothing above the app's editorial copy paints italic
+  // serif, and the italic variable file costs ~60KB preloaded on every page.
+  style: ["normal"],
   variable: "--font-newsreader",
   display: "swap",
+  preload: false,
 });
 
 const developmentContentSecurityPolicy = [

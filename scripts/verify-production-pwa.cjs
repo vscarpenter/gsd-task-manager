@@ -27,6 +27,13 @@ function resolveRequestPath(requestUrl) {
   return target;
 }
 
+// WebKit reports a failed <link rel="preconnect"> as a console error. Next emits one
+// for the page's own origin when no font is preloaded, and the offline reload
+// closes that origin on purpose, so that single failure is expected there.
+function isExpectedOfflineDiagnostic(text, rootUrl) {
+  return text.startsWith(`Failed to preconnect to ${rootUrl}/.`);
+}
+
 async function startStaticServer() {
   const server = createServer((request, response) => {
     const target = resolveRequestPath(request.url ?? "/");
@@ -96,9 +103,11 @@ async function verifyBrowser(browserName, rootUrl, server) {
   const context = await browser.newContext();
   const page = await context.newPage();
   const diagnostics = [];
+  let offline = false;
   page.on("pageerror", (error) => diagnostics.push(`pageerror: ${error.message}`));
   page.on("console", (message) => {
     if (message.type() === "error") {
+      if (offline && isExpectedOfflineDiagnostic(message.text(), rootUrl)) return;
       const location = message.location();
       diagnostics.push(`console: ${message.text()} (${location.url}:${location.lineNumber})`);
     }
@@ -116,6 +125,7 @@ async function verifyBrowser(browserName, rootUrl, server) {
 
     diagnostics.length = 0;
     await new Promise((resolveClose) => server.close(resolveClose));
+    offline = true;
     await page.reload({ waitUntil: "domcontentloaded", timeout: 15_000 });
     await page.getByTestId("capture-input").waitFor({ state: "visible", timeout: 15_000 });
     if (diagnostics.length > 0) throw new Error(diagnostics.join("\n"));
@@ -143,7 +153,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.stack ?? error}\n`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error.stack ?? error}\n`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { isExpectedOfflineDiagnostic };

@@ -22,6 +22,8 @@ describe("Playwright quality gates", () => {
     // not opt in still fails on every error the browser reports.
     expect(fixture).toContain("expectedConsoleErrors: [null, { option: true }]");
     expect(fixture).toContain("status=2152398850");
+    // Firefox now reports the stretch descriptor as width; keep both spellings.
+    expect(fixture).toContain("(?:stretch|width):100");
     expect(fixture).toContain("http:\\/\\/localhost:3000\\/");
     expect(fixture).toContain("_next\\/static\\/media");
     expect(fixture).toContain("__nextjs_font");

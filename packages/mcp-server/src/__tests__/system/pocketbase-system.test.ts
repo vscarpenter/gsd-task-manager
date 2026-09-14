@@ -708,6 +708,8 @@ describeSystem('PocketBase authenticated system boundary', () => {
       const context = await browser.newContext();
       await context.addInitScript(
         ({ token, record }) => {
+          // The pre-bundle first-visit redirect sends an unflagged root load to /about.
+          localStorage.setItem('gsd-has-launched', 'true');
           localStorage.setItem('gsd-onboarding-seen', 'true');
           localStorage.setItem('pocketbase_auth', JSON.stringify({ token, record }));
         },
