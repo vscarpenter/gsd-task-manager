@@ -109,6 +109,7 @@ export const ErrorActions = {
   DELETE_TASK: 'delete_task',
   TOGGLE_TASK: 'toggle_task_completion',
   MOVE_TASK: 'move_task_to_quadrant',
+  SNOOZE_TASK: 'snooze_task',
 
   // Import/Export
   EXPORT_TASKS: 'export_tasks',

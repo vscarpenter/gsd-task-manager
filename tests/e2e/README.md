@@ -39,7 +39,9 @@ tests/e2e/
 ├── settings-navigation.spec.ts     ← section nav, theme, toggles, export
 ├── data-management.spec.ts         ← import flows and import validation
 ├── about.spec.ts                   ← about page smoke tests
-└── first-time-redirect.spec.ts     ← first-visit /about redirect
+├── first-time-redirect.spec.ts     ← first-visit /about redirect
+├── quiet-chrome.spec.ts            ← topbar tucks away on scroll at phone widths
+└── swipe-actions.spec.ts           ← touch swipe: Complete / Snooze / Delete on cards
 ```
 
 ## Conventions

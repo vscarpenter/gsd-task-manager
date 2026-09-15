@@ -33,6 +33,8 @@ interface AppShellProps {
   searchInputRef?: RefObject<HTMLInputElement | null>;
   topbarRightSlot?: ReactNode;
   mainClassName?: string;
+  /** Tuck the topbar away on scroll-down at compact widths. The matrix opts in. */
+  quietChromeOnScroll?: boolean;
   children: ReactNode;
 }
 
@@ -45,6 +47,7 @@ export function AppShell({
   searchInputRef,
   topbarRightSlot,
   mainClassName,
+  quietChromeOnScroll = false,
   children,
 }: AppShellProps) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -104,12 +107,9 @@ export function AppShell({
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
       <div className="flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
         <SimplifiedTopbar
-          title={title}
-          titleAsLabel={titleAsLabel}
-          caption={caption}
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
-          searchInputRef={searchInputRef}
+          title={title} titleAsLabel={titleAsLabel} caption={caption}
+          searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}
+          quietOnScroll={quietChromeOnScroll}
           rightSlot={
             <div className="flex items-center gap-2">
               <Tooltip>

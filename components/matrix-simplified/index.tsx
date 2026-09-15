@@ -18,7 +18,7 @@ import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
-import { handleCapture, handleToggle, reportTaskMutationError } from "./task-actions";
+import { handleCapture, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
 import { DragLayer } from "./drag-layer";
 import { FilteredEmpty } from "./filtered-empty";
 import { MatrixCaption } from "./matrix-caption";
@@ -325,6 +325,7 @@ export function MatrixSimplified() {
       <AppShell
         title="GSD Matrix"
         titleAsLabel
+        quietChromeOnScroll
         mainClassName="max-w-[1540px] pb-48 md:pb-6"
         caption={
           <MatrixCaption
@@ -379,6 +380,7 @@ export function MatrixSimplified() {
             }
             onDelete={handleDelete}
             onShare={handleShareOpen}
+            onSnooze={handleSnooze}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={handleTaskRef}

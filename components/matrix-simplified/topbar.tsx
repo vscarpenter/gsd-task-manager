@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSyncStatus } from "@/lib/hooks/use-sync-status";
+import { useScrollChrome } from "@/lib/use-scroll-chrome";
 import { SyncStatusDisplay } from "@/components/matrix-simplified/sync-status-display";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,8 @@ interface TopbarProps {
   onSearchChange?: (value: string) => void;
   searchInputRef?: RefObject<HTMLInputElement | null>;
   rightSlot?: React.ReactNode;
+  /** Tuck the bar off the top edge on scroll-down at compact widths. */
+  quietOnScroll?: boolean;
 }
 
 export function SimplifiedTopbar({
@@ -25,16 +28,16 @@ export function SimplifiedTopbar({
   onSearchChange,
   searchInputRef,
   rightSlot,
+  quietOnScroll = false,
 }: TopbarProps) {
   const syncStatus = useSyncStatus();
+  const hidden = useScrollChrome(quietOnScroll);
   const hasSearch = onSearchChange !== undefined;
 
   return (
     <header
-      className={cn(
-        "sticky top-0 z-20 flex items-center gap-3 border-b border-border/60",
-        "bg-topbar px-4 py-3 sm:px-7"
-      )}
+      data-chrome-hidden={hidden ? "true" : undefined}
+      className={topbarClassName(hidden)}
     >
       <div className="min-w-0 flex-shrink-0">
         {titleAsLabel ? (
@@ -73,5 +76,19 @@ export function SimplifiedTopbar({
 
       {rightSlot}
     </header>
+  );
+}
+
+/**
+ * The bar slides rather than collapses so the layout below never reflows. A
+ * control that takes focus while tucked away pulls the bar back, so a keyboard
+ * user on a phone never types into an off-screen field.
+ */
+function topbarClassName(hidden: boolean): string {
+  return cn(
+    "sticky top-0 z-20 flex items-center gap-3 border-b border-border/60",
+    "bg-topbar px-4 py-3 sm:px-7",
+    "transition-transform duration-200 ease-out",
+    hidden && "max-md:-translate-y-full max-md:focus-within:translate-y-0"
   );
 }

@@ -5,7 +5,7 @@ import { ChevronRightIcon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { PlusIcon, FlameIcon, CalendarIcon, UsersIcon, Trash2Icon, type LucideIcon } from "lucide-react";
-import { TaskCard } from "@/components/task-card";
+import { SwipeableTaskCard } from "@/components/task-card/swipeable-task-card";
 import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
 import { QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK, QUADRANT_WASH } from "@/lib/quadrants";
@@ -48,6 +48,7 @@ interface QuadrantPaneProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
+  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
   highlightedTaskId?: string | null;
   onTaskRef?: (taskId: string, element: HTMLElement | null) => void;
@@ -62,7 +63,7 @@ export function QuadrantPane({
   onInspect,
   onToggleComplete,
   onDelete,
-  onShare,
+  onShare, onSnooze,
   onAddInQuadrant,
   highlightedTaskId,
   onTaskRef,
@@ -86,7 +87,7 @@ export function QuadrantPane({
   const activeTaskCount = activeTasks.length;
   const [showCompletedHere, setShowCompletedHere] = useState(false);
   const cardHandlers: CardHandlers = {
-    onEdit, onInspect, onDelete, onShare, onToggleComplete, highlightedTaskId, onTaskRef,
+    onEdit, onInspect, onDelete, onShare, onSnooze, onToggleComplete, highlightedTaskId, onTaskRef,
   };
   return (
     <section data-testid={`quadrant-${meta.rdKey}`}
@@ -280,7 +281,7 @@ function CompletedDisclosure({
 
 type CardHandlers = Pick<
   QuadrantPaneProps,
-  "onEdit" | "onInspect" | "onDelete" | "onShare" | "onToggleComplete" | "highlightedTaskId" | "onTaskRef"
+  "onEdit" | "onInspect" | "onDelete" | "onShare" | "onSnooze" | "onToggleComplete" | "highlightedTaskId" | "onTaskRef"
 >;
 
 /** A run of task cards. Shared by the active list and the completed disclosure. */
@@ -296,7 +297,7 @@ function TaskCardList({
   return (
     <>
       {tasks.map((task) => (
-        <TaskCard
+        <SwipeableTaskCard
           key={task.id}
           task={task}
           allTasks={allTasks}
@@ -304,6 +305,7 @@ function TaskCardList({
           onInspect={handlers.onInspect}
           onDelete={handlers.onDelete}
           onShare={handlers.onShare}
+          onSnooze={handlers.onSnooze}
           onToggleComplete={handlers.onToggleComplete}
           isHighlighted={task.id === handlers.highlightedTaskId}
           taskRef={(element) => handlers.onTaskRef?.(task.id, element)}

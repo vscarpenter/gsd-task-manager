@@ -2,11 +2,11 @@
 
 import { toast } from "sonner";
 
-import { createTask, toggleCompleted, deleteTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, snoozeTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { ErrorActions, logError } from "@/lib/error-logger";
-import { TOAST_DURATION } from "@/lib/constants";
+import { TIME_UNITS, TOAST_DURATION } from "@/lib/constants";
 import type { TaskRecord } from "@/lib/types";
 
 import type { CapturePayload } from "./capture-bar";
@@ -78,3 +78,23 @@ export async function handleToggle(
   }
 }
 
+
+/** "1 hour", "30 minutes": the toast's reading of a snooze preset. */
+function snoozeDurationLabel(minutes: number): string {
+  if (minutes % TIME_UNITS.MINUTES_PER_HOUR !== 0) return `${minutes} minutes`;
+  const hours = minutes / TIME_UNITS.MINUTES_PER_HOUR;
+  return hours === 1 ? "1 hour" : `${hours} hours`;
+}
+
+/**
+ * Quiet a task's reminders for a while. Reached from the trailing swipe and the
+ * mobile overflow menu; both hand over the same one-hour preset.
+ */
+export async function handleSnooze(taskId: string, minutes: number): Promise<void> {
+  try {
+    await snoozeTask(taskId, minutes);
+    toast.success(`Snoozed for ${snoozeDurationLabel(minutes)}`, { duration: TOAST_DURATION.SHORT });
+  } catch (error) {
+    reportTaskMutationError(error, ErrorActions.SNOOZE_TASK, "Failed to snooze task", taskId);
+  }
+}

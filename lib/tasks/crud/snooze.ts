@@ -86,3 +86,14 @@ export function getRemainingSnoozeMinutes(task: TaskRecord): number {
   const remaining = new Date(task.snoozedUntil).getTime() - Date.now();
   return Math.max(0, Math.ceil(remaining / TIME_TRACKING.MS_PER_MINUTE));
 }
+
+/**
+ * How long a snooze has left, in the terse form the card wears: "45m", "2h", "3d".
+ */
+export function formatSnoozeRemaining(minutes: number): string {
+  if (minutes < TIME_TRACKING.MINUTES_PER_HOUR) return `${minutes}m`;
+  if (minutes < TIME_TRACKING.MINUTES_PER_DAY) {
+    return `${Math.round(minutes / TIME_TRACKING.MINUTES_PER_HOUR)}h`;
+  }
+  return `${Math.round(minutes / TIME_TRACKING.MINUTES_PER_DAY)}d`;
+}

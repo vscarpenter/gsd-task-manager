@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { snoozeTask, clearSnooze, isTaskSnoozed, getRemainingSnoozeMinutes } from '@/lib/tasks/crud/snooze';
+import {
+  snoozeTask,
+  clearSnooze,
+  isTaskSnoozed,
+  getRemainingSnoozeMinutes,
+  formatSnoozeRemaining,
+} from '@/lib/tasks/crud/snooze';
 import { TIME_TRACKING } from '@/lib/constants';
 import type { TaskRecord } from '@/lib/types';
 
@@ -209,5 +215,21 @@ describe('Snooze Duration Edge Cases', () => {
     commonDurations.forEach((duration) => {
       expect(duration).toBeLessThanOrEqual(TIME_TRACKING.MAX_SNOOZE_MINUTES);
     });
+  });
+});
+
+describe('formatSnoozeRemaining', () => {
+  it('reads minutes under an hour as minutes', () => {
+    expect(formatSnoozeRemaining(45)).toBe('45m');
+  });
+
+  it('rounds to whole hours under a day', () => {
+    expect(formatSnoozeRemaining(60)).toBe('1h');
+    expect(formatSnoozeRemaining(100)).toBe('2h');
+  });
+
+  it('rounds to whole days from a day up', () => {
+    expect(formatSnoozeRemaining(TIME_TRACKING.MINUTES_PER_DAY)).toBe('1d');
+    expect(formatSnoozeRemaining(TIME_TRACKING.MINUTES_PER_DAY * 2)).toBe('2d');
   });
 });
