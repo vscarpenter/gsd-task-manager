@@ -162,3 +162,36 @@ Fix pattern: wait for the title to be focused before touching other fields
   artifact, not a pending bump.** Restore it with `git checkout -- public/sw.js` and
   confirm the deploy via prod `sw.js` plus a grep of the served chunks for a string
   the release introduced.
+
+## 2026-09-15: iOS 27 follow-on, scroll chrome, touch swipes, token guard
+
+- **A `setState` updater must not read a local the caller reassigns afterwards.**
+  React runs the updater eagerly when the queue is empty and at render time
+  otherwise. The scroll sampler passed `previousY` into an updater and then advanced
+  it; the first sample worked and the second read a zero delta, so the topbar never
+  came back. Snapshot the value into a `const` before calling `setState`.
+- **The code-shape ratchet rejects a single added line in a function that is already
+  over 40 lines.** `bun run quality:shape` fails on any per-file increase in count or
+  maximum. Plan plumbing as module-level handlers (`handleSnooze` beside
+  `handleCapture`), wrapper components (`SwipeableTaskCard` around an untouched
+  `TaskCard`), or module helpers (`topbarClassName`), and pack a new handler onto an
+  existing destructuring line where the file already does that (`cardHandlers`).
+- **Firefox throws `NotFoundError` from `setPointerCapture` for a pointer that is not
+  active.** Synthetic pointer events from Playwright's `dispatchEvent` are never active,
+  and a real pointer released between samples is not either. Capture is an
+  optimization, so tolerate that one error and pin it with a test that listens for the
+  window `error` event; React reports handler errors through `reportError`, so a plain
+  assertion on the DOM passes while the page error goes unnoticed.
+- **`lib/tasks.ts` re-exports from `./tasks/crud`, which resolves to the file
+  `lib/tasks/crud.ts`, not `lib/tasks/crud/index.ts`.** A new export has to be added
+  to both barrels or typecheck fails and the runtime call is `undefined`.
+- **The "N done" disclosure only renders with the show-completed preference on.** An
+  e2e assertion for it after a completion is wrong by default; assert the "Task
+  completed" toast instead.
+- **`bun run build` rewrites `public/sw.js` from `package.json`.** Running the build on
+  a tree that carries a deploy's `sw.js` bump silently reverts that bump. Read the
+  deployed version from prod `sw.js` first if it matters.
+- **Paper ink on the swipe grounds clears AA in both themes**: 4.93, 5.50, 5.94 light
+  and 6.47, 6.44, 5.25 dark for olive, slate, and rust. `tests/data/inkwell-token-
+  contract.test.ts` recomputes these from the real stylesheet, so a token move fails
+  the pairing check as well as the snapshot.

@@ -1,4 +1,4 @@
-# Session state — 2026-09-15 (iOS 27 refresh follow-on, web)
+# Session state, 2026-09-15 (iOS 27 refresh follow-on, web)
 
 Branch: `feat/ios27-refresh`, cut from `main` @ `001b077`. Spec:
 `tasks/spec-ios27-refresh.md` (design approved in chat 2026-09-15). Brief:
@@ -23,15 +23,24 @@ Each step is red, green, refactor, commit.
 - [x] 6. Snooze plumbing: `handleSnooze` in the matrix, `onSnooze` through grid and
       pane, mobile menu item, snoozed chip, desktop cluster stops forwarding.
 - [x] 7. E2E: `tests/e2e/quiet-chrome.spec.ts`, `tests/e2e/swipe-actions.spec.ts`.
-- [ ] 8. Gates: `bun run test`, `bun typecheck`, `bun lint`, `bun run build`,
+- [x] 8. Gates: `bun run test`, `bun typecheck`, `bun lint`, `bun run build`,
       `bun run quality:shape`, touched e2e on all three browsers; verify-frontend-change
       at 390px in both themes.
-- [ ] 9. Version trio to 13.1.0, change report and quiz, PR.
+- [x] 9. Version trio to 13.1.0, change report and quiz. PR: awaiting the push go-ahead.
 
 ## Resuming From Here
 
-- Done: spec approved and written; branch cut.
-- Next: step 8.
-- Blockers: none.
-- Assumptions: snooze on the web means "snooze reminders" (`snoozedUntil`), the same
-  field iOS writes; the desktop hover cluster stays without snooze per the brief.
+- Done: all nine steps. Nine commits on `feat/ios27-refresh`; every gate green locally
+  (`bun run test` except one pre-existing local-only service-worker failure that also
+  fails against the committed `sw.js` while CI on main is green; `bun typecheck`;
+  `bun lint`; `bun run build`; `bun run quality:shape`; the six touched e2e specs on
+  Chromium, Firefox, and WebKit, 100 passed). Real-browser pass at 390px light and dark
+  and 1440px light: PASS, no console errors.
+- Next: push `feat/ios27-refresh` and open the PR once the owner says so. Then the
+  usual merge (`gh pr merge --admin`), fast-forward main, delete the branch.
+- Not done on purpose: the `bun.lock` churn stays uncommitted (pre-existing `bun
+  update` refresh). The deployed `sw.js` reads 13.0.1; this branch sets the trio to
+  13.1.0.
+- Assumptions: snooze means "quiet the reminders" (`snoozedUntil`), the field iOS
+  writes; the desktop hover cluster stays without snooze per the brief; `SnoozeDropdown`
+  was removed because nothing rendered it after that decision.
