@@ -17,7 +17,6 @@ import {
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
 import { useShellCommandHandlers } from "@/lib/use-shell-command-handlers";
 import { useAppShortcuts } from "@/lib/use-app-shortcuts";
-import { useScrollChrome } from "@/lib/use-scroll-chrome";
 import { cn } from "@/lib/utils";
 
 function openCommandPalette() {
@@ -54,7 +53,6 @@ export function AppShell({
   const [helpOpen, setHelpOpen] = useState(false);
   const [smartViewsEnabled, setSmartViewsEnabled] = useState(false);
   const { handlers, shortcutHandlers, onSelectTask, conditions } = useShellCommandHandlers();
-  const chromeHidden = useScrollChrome(quietChromeOnScroll);
 
   useAppShortcuts({
     onSearch: openCommandPalette,
@@ -109,13 +107,9 @@ export function AppShell({
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
       <div className="flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
         <SimplifiedTopbar
-          title={title}
-          titleAsLabel={titleAsLabel}
-          caption={caption}
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
-          searchInputRef={searchInputRef}
-          hidden={chromeHidden}
+          title={title} titleAsLabel={titleAsLabel} caption={caption}
+          searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}
+          quietOnScroll={quietChromeOnScroll}
           rightSlot={
             <div className="flex items-center gap-2">
               <Tooltip>

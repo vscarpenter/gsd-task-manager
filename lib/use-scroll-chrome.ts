@@ -55,8 +55,11 @@ export function useScrollChrome(enabled: boolean): boolean {
     const sample = () => {
       frame = 0;
       const y = window.scrollY;
-      setHidden((current) => resolveChromeHidden({ hidden: current, y, previousY }));
+      // Snapshot before the updater runs: React may defer it to render time,
+      // after previousY has already advanced, which would read as no movement.
+      const from = previousY;
       previousY = y;
+      setHidden((current) => resolveChromeHidden({ hidden: current, y, previousY: from }));
     };
     const onScroll = () => {
       if (!compact.matches) {
