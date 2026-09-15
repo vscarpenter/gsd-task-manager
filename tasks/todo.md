@@ -26,7 +26,7 @@ Each step is red, green, refactor, commit.
 - [x] 8. Gates: `bun run test`, `bun typecheck`, `bun lint`, `bun run build`,
       `bun run quality:shape`, touched e2e on all three browsers; verify-frontend-change
       at 390px in both themes.
-- [x] 9. Version trio to 13.1.0, change report and quiz. PR: awaiting the push go-ahead.
+- [x] 9. Version trio to 13.1.0, change report and quiz. PR #547 opened 2026-09-15.
 
 ## Resuming From Here
 
@@ -36,8 +36,9 @@ Each step is red, green, refactor, commit.
   `bun lint`; `bun run build`; `bun run quality:shape`; the six touched e2e specs on
   Chromium, Firefox, and WebKit, 100 passed). Real-browser pass at 390px light and dark
   and 1440px light: PASS, no console errors.
-- Next: push `feat/ios27-refresh` and open the PR once the owner says so. Then the
-  usual merge (`gh pr merge --admin`), fast-forward main, delete the branch.
+- Next: PR #547 is open (https://github.com/vscarpenter/gsd-task-manager/pull/547).
+  Watch `gh pr checks 547`, then the usual merge (`gh pr merge 547 --squash --admin`),
+  fast-forward main, delete the branch.
 - Not done on purpose: the `bun.lock` churn stays uncommitted (pre-existing `bun
   update` refresh). The deployed `sw.js` reads 13.0.1; this branch sets the trio to
   13.1.0.
