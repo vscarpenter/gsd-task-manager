@@ -17,6 +17,7 @@ import {
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
 import { useShellCommandHandlers } from "@/lib/use-shell-command-handlers";
 import { useAppShortcuts } from "@/lib/use-app-shortcuts";
+import { useScrollChrome } from "@/lib/use-scroll-chrome";
 import { cn } from "@/lib/utils";
 
 function openCommandPalette() {
@@ -33,6 +34,8 @@ interface AppShellProps {
   searchInputRef?: RefObject<HTMLInputElement | null>;
   topbarRightSlot?: ReactNode;
   mainClassName?: string;
+  /** Tuck the topbar away on scroll-down at compact widths. The matrix opts in. */
+  quietChromeOnScroll?: boolean;
   children: ReactNode;
 }
 
@@ -45,11 +48,13 @@ export function AppShell({
   searchInputRef,
   topbarRightSlot,
   mainClassName,
+  quietChromeOnScroll = false,
   children,
 }: AppShellProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [smartViewsEnabled, setSmartViewsEnabled] = useState(false);
   const { handlers, shortcutHandlers, onSelectTask, conditions } = useShellCommandHandlers();
+  const chromeHidden = useScrollChrome(quietChromeOnScroll);
 
   useAppShortcuts({
     onSearch: openCommandPalette,
@@ -110,6 +115,7 @@ export function AppShell({
           searchQuery={searchQuery}
           onSearchChange={onSearchChange}
           searchInputRef={searchInputRef}
+          hidden={chromeHidden}
           rightSlot={
             <div className="flex items-center gap-2">
               <Tooltip>

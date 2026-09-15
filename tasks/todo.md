@@ -11,10 +11,10 @@ unstaged.
 
 Each step is red, green, refactor, commit.
 
-- [ ] 1. Token contract guard: `tests/data/inkwell-token-contract.test.ts` plus the
+- [x] 1. Token contract guard: `tests/data/inkwell-token-contract.test.ts` plus the
       JSON fixture; strip contrast table for the swipe pairings.
-- [ ] 2. Scroll chrome decision: `resolveChromeHidden` in `lib/use-scroll-chrome.ts`.
-- [ ] 3. `useScrollChrome` hook, `SimplifiedTopbar.hidden`, `AppShell.quietChromeOnScroll`,
+- [x] 2. Scroll chrome decision: `resolveChromeHidden` in `lib/use-scroll-chrome.ts`.
+- [x] 3. `useScrollChrome` hook, `SimplifiedTopbar.hidden`, `AppShell.quietChromeOnScroll`,
       matrix opt-in; unit tests in `tests/ui/app-shell.test.tsx`.
 - [ ] 4. Swipe resolver: `lib/swipe-gesture.ts` (`lockDirection`, `clampSwipeOffset`,
       `resolveSwipeEnd`), `SWIPE_CONFIG` in `lib/constants.ts`.
@@ -31,7 +31,7 @@ Each step is red, green, refactor, commit.
 ## Resuming From Here
 
 - Done: spec approved and written; branch cut.
-- Next: step 1.
+- Next: step 4.
 - Blockers: none.
 - Assumptions: snooze on the web means "snooze reminders" (`snoozedUntil`), the same
   field iOS writes; the desktop hover cluster stays without snooze per the brief.

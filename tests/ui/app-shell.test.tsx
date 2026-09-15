@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppShell } from "@/components/matrix-simplified/app-shell";
+import { SCROLL_CHROME } from "@/lib/use-scroll-chrome";
 import {
   FOCUS_CAPTURE_EVENT,
   FOCUS_QUADRANT_EVENT,
@@ -345,5 +346,113 @@ describe("AppShell command palette wiring", () => {
     await user.click(screen.getByText("Toggle theme"));
 
     expect(setThemeMock).toHaveBeenCalledWith("dark");
+  });
+});
+
+describe("AppShell quiet chrome on scroll", () => {
+  const { COMPACT_QUERY, HIDE_AFTER, MIN_DELTA } = SCROLL_CHROME;
+  const originalMatchMedia = window.matchMedia;
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+
+  function mockViewport(compact: boolean) {
+    window.matchMedia = ((query: string) => ({
+      matches: compact && query === COMPACT_QUERY,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+  }
+
+  function setScrollY(y: number) {
+    Object.defineProperty(window, "scrollY", { value: y, configurable: true, writable: true });
+  }
+
+  function scrollTo(y: number) {
+    setScrollY(y);
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+  }
+
+  beforeEach(() => {
+    mockGetAppPreferences.mockResolvedValue({
+      id: "preferences",
+      pinnedSmartViewIds: [],
+      maxPinnedViews: 5,
+      smartViewsEnabled: false,
+    });
+    mockGetSmartViews.mockResolvedValue([]);
+    // Run the throttle frame synchronously so each scroll event resolves at once.
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      callback(0);
+      return 0;
+    }) as typeof window.requestAnimationFrame;
+    setScrollY(0);
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+    setScrollY(0);
+    vi.clearAllMocks();
+  });
+
+  it("tucks the topbar away on scroll-down at compact widths and restores it on scroll-up", () => {
+    mockViewport(true);
+    render(
+      <AppShell title="GSD Matrix" quietChromeOnScroll>
+        <div>content</div>
+      </AppShell>
+    );
+    const topbar = screen.getByRole("banner");
+    expect(topbar).not.toHaveAttribute("data-chrome-hidden");
+
+    scrollTo(HIDE_AFTER + MIN_DELTA);
+    expect(topbar).toHaveAttribute("data-chrome-hidden", "true");
+
+    scrollTo(HIDE_AFTER);
+    expect(topbar).not.toHaveAttribute("data-chrome-hidden");
+  });
+
+  it("keeps a hidden topbar reachable for a control that receives focus", () => {
+    mockViewport(true);
+    render(
+      <AppShell title="GSD Matrix" quietChromeOnScroll>
+        <div>content</div>
+      </AppShell>
+    );
+    scrollTo(HIDE_AFTER + MIN_DELTA);
+
+    const topbar = screen.getByRole("banner");
+    expect(topbar.className).toContain("max-md:-translate-y-full");
+    expect(topbar.className).toContain("max-md:focus-within:translate-y-0");
+  });
+
+  it("leaves the topbar alone at wider viewports", () => {
+    mockViewport(false);
+    render(
+      <AppShell title="GSD Matrix" quietChromeOnScroll>
+        <div>content</div>
+      </AppShell>
+    );
+    scrollTo(HIDE_AFTER * 4);
+
+    expect(screen.getByRole("banner")).not.toHaveAttribute("data-chrome-hidden");
+  });
+
+  it("is inert for shells that do not opt in", () => {
+    mockViewport(true);
+    render(
+      <AppShell title="Settings">
+        <div>content</div>
+      </AppShell>
+    );
+    scrollTo(HIDE_AFTER * 4);
+
+    expect(screen.getByRole("banner")).not.toHaveAttribute("data-chrome-hidden");
   });
 });

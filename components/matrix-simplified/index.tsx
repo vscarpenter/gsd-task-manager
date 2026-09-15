@@ -325,6 +325,7 @@ export function MatrixSimplified() {
       <AppShell
         title="GSD Matrix"
         titleAsLabel
+        quietChromeOnScroll
         mainClassName="max-w-[1540px] pb-48 md:pb-6"
         caption={
           <MatrixCaption
