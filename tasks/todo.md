@@ -1,47 +1,37 @@
-# Session state, 2026-09-15 (iOS 27 refresh follow-on, web)
+# Session state, 2026-09-15 (proxy-addr advisory, AIKIDO-2026-101201)
 
-Branch: `feat/ios27-refresh`, cut from `main` @ `001b077`. Spec:
-`tasks/spec-ios27-refresh.md` (design approved in chat 2026-09-15). Brief:
-`design_handoff_ios27_refresh/gsd-taskmanager.md`.
+Branch: `fix/proxy-addr-floor`, cut from `main` @ `49b543c`. Standard tier: three
+files, no interface change.
 
-The `bun.lock` and `public/sw.js` edits in the tree predate this session and stay
-unstaged.
+Aikido flagged `proxy-addr` 2.0.7 (GHSA-jqcg-44mw-7w3h, CVE-2026-90711), reached
+through the `@modelcontextprotocol/sdk` dependency on `express`. The MCP server
+runs over stdio and never configures `trust proxy`, so nothing here is reachable.
+The fix is lockfile hygiene so Aikido and the Security Audit workflow stay green.
+
+The `public/sw.js` edit in the tree (13.1.1) is the build artifact of deploying
+13.1.0 and stays unstaged. The pre-existing `bun update` churn in `bun.lock` was
+set aside (copy in the session scratchpad) so this lock diff is proxy-addr only.
+`bun update` regenerates that churn on demand.
 
 ## Plan
 
-Each step is red, green, refactor, commit.
-
-- [x] 1. Token contract guard: `tests/data/inkwell-token-contract.test.ts` plus the
-      JSON fixture; strip contrast table for the swipe pairings.
-- [x] 2. Scroll chrome decision: `resolveChromeHidden` in `lib/use-scroll-chrome.ts`.
-- [x] 3. `useScrollChrome` hook, `SimplifiedTopbar.hidden`, `AppShell.quietChromeOnScroll`,
-      matrix opt-in; unit tests in `tests/ui/app-shell.test.tsx`.
-- [x] 4. Swipe resolver: `lib/swipe-gesture.ts` (`lockDirection`, `clampSwipeOffset`,
-      `resolveSwipeEnd`), `SWIPE_CONFIG` in `lib/constants.ts`.
-- [x] 5. `SwipeActionRow` component wrapping the card; touch-only pointer handling; one
-      open row store; unit tests in `tests/ui/task-card-swipe.test.tsx`.
-- [x] 6. Snooze plumbing: `handleSnooze` in the matrix, `onSnooze` through grid and
-      pane, mobile menu item, snoozed chip, desktop cluster stops forwarding.
-- [x] 7. E2E: `tests/e2e/quiet-chrome.spec.ts`, `tests/e2e/swipe-actions.spec.ts`.
-- [x] 8. Gates: `bun run test`, `bun typecheck`, `bun lint`, `bun run build`,
-      `bun run quality:shape`, touched e2e on all three browsers; verify-frontend-change
-      at 390px in both themes.
-- [x] 9. Version trio to 13.1.0, change report and quiz. PR #547 opened 2026-09-15.
+- [x] 1. Red: assert `overrides['proxy-addr'] === '>=2.0.8'` in
+      `tests/data/security-hardening-scripts.test.ts`.
+- [x] 2. Green: add the floor to root `package.json`, then `bun install`. The lock
+      moves proxy-addr from 2.0.7 to 2.0.8 and nothing else.
+- [x] 3. Gates: guard test, `bun install --frozen-lockfile`, `bun audit`,
+      `bun run test`, `bun typecheck`, `bun lint`, `bun run build`.
+- [ ] 4. Commit, push, PR, merge, fast-forward main, delete branch.
 
 ## Resuming From Here
 
-- Done: all nine steps. Nine commits on `feat/ios27-refresh`; every gate green locally
-  (`bun run test` except one pre-existing local-only service-worker failure that also
-  fails against the committed `sw.js` while CI on main is green; `bun typecheck`;
-  `bun lint`; `bun run build`; `bun run quality:shape`; the six touched e2e specs on
-  Chromium, Firefox, and WebKit, 100 passed). Real-browser pass at 390px light and dark
-  and 1440px light: PASS, no console errors.
-- Next: PR #547 is open (https://github.com/vscarpenter/gsd-task-manager/pull/547).
-  Watch `gh pr checks 547`, then the usual merge (`gh pr merge 547 --squash --admin`),
-  fast-forward main, delete the branch.
-- Not done on purpose: the `bun.lock` churn stays uncommitted (pre-existing `bun
-  update` refresh). The deployed `sw.js` reads 13.0.1; this branch sets the trio to
-  13.1.0.
-- Assumptions: snooze means "quiet the reminders" (`snoozedUntil`), the field iOS
-  writes; the desktop hover cluster stays without snooze per the brief; `SnoozeDropdown`
-  was removed because nothing rendered it after that decision.
+- Done: steps 1 to 3. All gates green except the known local-only
+  `service-worker-privacy` failure ("deletes legacy capture entries"), which fails
+  identically against main's committed `sw.js` while CI on main @ `49b543c` is green.
+- Next: push `fix/proxy-addr-floor`, open the PR, watch `gh pr checks`, merge with
+  `gh pr merge --squash --admin`, fast-forward main, delete the branch.
+- Note: `bun audit` and GitHub's advisory GraphQL had not ingested the CVE on
+  2026-09-15; Aikido was first. The upstream HISTORY.md and the repo's
+  `security-advisories` endpoint confirmed 2.0.8 as the patched release.
+- Assumption: no version trio bump, matching PR #536 (a dependency-only fix that
+  changes neither the shipped web bundle nor the MCP package).
