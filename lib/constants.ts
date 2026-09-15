@@ -56,6 +56,23 @@ export const DND_CONFIG = {
 } as const;
 
 /**
+ * Touch swipe actions on task cards. Mirrors the iOS swipe row so both clients
+ * share one gesture vocabulary.
+ */
+export const SWIPE_CONFIG = {
+  /** Pointer travel before a drag commits to horizontal or vertical, in pixels */
+  DIRECTION_LOCK_PX: 12,
+  /** Width of one revealed action button, in pixels */
+  BUTTON_WIDTH: 84,
+  /** Fraction of the reveal width past which the row snaps open */
+  OPEN_FRACTION: 0.6,
+  /** Fraction of the row width past which a leading swipe commits its action */
+  FULL_SWIPE_FRACTION: 0.5,
+  /** The snooze preset the trailing action applies, in minutes */
+  SNOOZE_MINUTES: TIME_UNITS.MINUTES_PER_HOUR
+} as const;
+
+/**
  * Toast notification durations in milliseconds
  */
 export const TOAST_DURATION = {

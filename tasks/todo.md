@@ -16,7 +16,7 @@ Each step is red, green, refactor, commit.
 - [x] 2. Scroll chrome decision: `resolveChromeHidden` in `lib/use-scroll-chrome.ts`.
 - [x] 3. `useScrollChrome` hook, `SimplifiedTopbar.hidden`, `AppShell.quietChromeOnScroll`,
       matrix opt-in; unit tests in `tests/ui/app-shell.test.tsx`.
-- [ ] 4. Swipe resolver: `lib/swipe-gesture.ts` (`lockDirection`, `clampSwipeOffset`,
+- [x] 4. Swipe resolver: `lib/swipe-gesture.ts` (`lockDirection`, `clampSwipeOffset`,
       `resolveSwipeEnd`), `SWIPE_CONFIG` in `lib/constants.ts`.
 - [ ] 5. `SwipeActionRow` component wrapping the card; touch-only pointer handling; one
       open row store; unit tests in `tests/ui/task-card-swipe.test.tsx`.
@@ -31,7 +31,7 @@ Each step is red, green, refactor, commit.
 ## Resuming From Here
 
 - Done: spec approved and written; branch cut.
-- Next: step 4.
+- Next: step 5.
 - Blockers: none.
 - Assumptions: snooze on the web means "snooze reminders" (`snoozedUntil`), the same
   field iOS writes; the desktop hover cluster stays without snooze per the brief.
