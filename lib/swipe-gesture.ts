@@ -43,3 +43,48 @@ export function resolveSwipeEnd(dx: number, rowWidth: number): SwipeOutcome {
   if (dx < -TRAILING_REVEAL * SWIPE_CONFIG.OPEN_FRACTION) return "open-trailing";
   return "close";
 }
+
+/** The pointer fields the gesture reads; a `PointerEvent` satisfies it. */
+export interface SwipePointer {
+  pointerId: number;
+  clientX: number;
+  clientY: number;
+}
+
+/** An in-flight drag. `axis` starts undecided and locks on the first sample past the threshold. */
+export interface SwipeDrag {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  /** Offset the row showed when the finger landed, so an open row drags from where it is. */
+  base: number;
+  rowWidth: number;
+  axis: SwipeDirection;
+}
+
+export function beginSwipe(pointer: SwipePointer, base: number, rowWidth: number): SwipeDrag {
+  return {
+    pointerId: pointer.pointerId,
+    startX: pointer.clientX,
+    startY: pointer.clientY,
+    base,
+    rowWidth,
+    axis: "undecided",
+  };
+}
+
+/** The axis a drag belongs to after this sample, and the offset to show if horizontal. */
+export function trackSwipe(
+  drag: SwipeDrag,
+  pointer: SwipePointer
+): { axis: SwipeDirection; offset: number } {
+  const dx = pointer.clientX - drag.startX;
+  const dy = pointer.clientY - drag.startY;
+  const axis = drag.axis === "undecided" ? lockDirection({ dx, dy }) : drag.axis;
+  return { axis, offset: clampSwipeOffset(drag.base + dx, drag.rowWidth) };
+}
+
+/** Where the row settles once the finger lifts. */
+export function endSwipe(drag: SwipeDrag, pointer: SwipePointer): SwipeOutcome {
+  return resolveSwipeEnd(drag.base + (pointer.clientX - drag.startX), drag.rowWidth);
+}

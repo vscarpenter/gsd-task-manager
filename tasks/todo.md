@@ -18,7 +18,7 @@ Each step is red, green, refactor, commit.
       matrix opt-in; unit tests in `tests/ui/app-shell.test.tsx`.
 - [x] 4. Swipe resolver: `lib/swipe-gesture.ts` (`lockDirection`, `clampSwipeOffset`,
       `resolveSwipeEnd`), `SWIPE_CONFIG` in `lib/constants.ts`.
-- [ ] 5. `SwipeActionRow` component wrapping the card; touch-only pointer handling; one
+- [x] 5. `SwipeActionRow` component wrapping the card; touch-only pointer handling; one
       open row store; unit tests in `tests/ui/task-card-swipe.test.tsx`.
 - [ ] 6. Snooze plumbing: `handleSnooze` in the matrix, `onSnooze` through grid and
       pane, mobile menu item, snoozed chip, desktop cluster stops forwarding.
@@ -31,7 +31,7 @@ Each step is red, green, refactor, commit.
 ## Resuming From Here
 
 - Done: spec approved and written; branch cut.
-- Next: step 5.
+- Next: step 6.
 - Blockers: none.
 - Assumptions: snooze on the web means "snooze reminders" (`snoozedUntil`), the same
   field iOS writes; the desktop hover cluster stays without snooze per the brief.
