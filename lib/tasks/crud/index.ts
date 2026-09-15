@@ -32,7 +32,13 @@ export { moveTaskToQuadrant } from "./move";
 export { duplicateTask } from "./duplicate";
 
 // Snooze operations
-export { snoozeTask, clearSnooze, isTaskSnoozed, getRemainingSnoozeMinutes } from "./snooze";
+export {
+  snoozeTask,
+  clearSnooze,
+  isTaskSnoozed,
+  getRemainingSnoozeMinutes,
+  formatSnoozeRemaining,
+} from "./snooze";
 
 // Time tracking operations
 export {

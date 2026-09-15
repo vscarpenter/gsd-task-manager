@@ -1,9 +1,9 @@
 "use client";
 
-import { PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon } from "lucide-react";
 import { cn, formatRelative } from "@/lib/utils";
-import { TIME_MS } from "@/lib/constants";
-import { SnoozeDropdown } from "@/components/snooze-dropdown";
+import { SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
+import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { TaskRecord } from "@/lib/types";
@@ -97,13 +97,14 @@ export function TaskCardActions({
             <RepeatIcon className="h-3 w-3" />
           </span>
         ) : null}
+        <SnoozedChip task={task} />
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
-        {/* Desktop: all buttons on hover */}
-        <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} />
+        {/* Desktop: all buttons on hover. Snooze is touch-only, by design. */}
+        <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} />
 
         {/* Mobile: edit + overflow menu */}
-        <MobileActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} />
+        <MobileActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} />
       </div>
     </div>
   );
@@ -115,10 +116,9 @@ interface DesktopActionsProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
-  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
 }
 
-function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze }: DesktopActionsProps) {
+function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate }: DesktopActionsProps) {
   return (
     <div className="task-card-desktop-actions hidden sm:flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
       {onShare && (
@@ -150,9 +150,6 @@ function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze
           </TooltipTrigger>
           <TooltipContent>Duplicate task</TooltipContent>
         </Tooltip>
-      )}
-      {onSnooze && task.dueDate && !task.completed && (
-        <SnoozeDropdown task={task} onSnooze={onSnooze} />
       )}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -197,9 +194,10 @@ interface MobileActionsProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
 }
 
-function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileActionsProps) {
+function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze }: MobileActionsProps) {
   return (
     <div className="task-card-mobile-actions flex sm:hidden items-center gap-0.5">
       <button
@@ -235,6 +233,13 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileA
               Duplicate
             </DropdownMenuItem>
           )}
+          {/* The non-gesture route to the trailing swipe's Snooze, same preset. */}
+          {onSnooze && !task.completed && (
+            <DropdownMenuItem data-testid="snooze-task" onClick={() => onSnooze(task.id, SWIPE_CONFIG.SNOOZE_MINUTES)}>
+              <MoonIcon className="mr-2 h-4 w-4" />
+              Snooze 1 hour
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-rust-d focus:text-rust-d">
             <Trash2Icon className="mr-2 h-4 w-4" />
             Delete
@@ -242,5 +247,22 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate }: MobileA
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+/**
+ * The visible result of a snooze: how long the reminders stay quiet. Neutral
+ * ground like a tag, because a snooze is a state to know about, not an alarm.
+ */
+function SnoozedChip({ task }: { task: TaskRecord }) {
+  if (!isTaskSnoozed(task)) return null;
+  return (
+    <span
+      data-testid="task-card-snoozed-chip"
+      className="inline-flex items-center gap-1 rounded-full bg-background-muted px-[9px] py-0.5 font-medium text-foreground-muted"
+    >
+      <MoonIcon className="h-3 w-3 shrink-0" aria-hidden />
+      Snoozed {formatSnoozeRemaining(getRemainingSnoozeMinutes(task))}
+    </span>
   );
 }

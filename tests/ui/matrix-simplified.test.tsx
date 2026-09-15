@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { introDateLabel } from "@/components/matrix-simplified/intro-copy";
@@ -56,6 +56,10 @@ vi.mock("@/lib/tasks", () => ({
   updateTask: vi.fn().mockResolvedValue(undefined),
   deleteTask: vi.fn().mockResolvedValue(undefined),
   restoreTask: vi.fn().mockResolvedValue(undefined),
+  snoozeTask: vi.fn().mockResolvedValue(undefined),
+  isTaskSnoozed: vi.fn(() => false),
+  getRemainingSnoozeMinutes: vi.fn(() => 0),
+  formatSnoozeRemaining: vi.fn(() => ""),
 }));
 
 vi.mock("@/lib/smart-views", () => ({
@@ -112,6 +116,7 @@ vi.mock("@/lib/error-logger", () => ({
     UPDATE_TASK: "update_task",
     DELETE_TASK: "delete_task",
     TOGGLE_TASK: "toggle_task_completion",
+    SNOOZE_TASK: "snooze_task",
   },
 }));
 
@@ -161,7 +166,7 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
 }));
 
 import { MatrixSimplified } from "@/components/matrix-simplified";
-import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask, snoozeTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 
 /**
@@ -972,5 +977,37 @@ describe("<MatrixSimplified>", () => {
 
       await waitFor(() => expect(screen.getByText("1 active")).toBeInTheDocument());
     });
+  });
+});
+
+describe("<MatrixSimplified> touch swipe actions", () => {
+  const originalRect = HTMLElement.prototype.getBoundingClientRect;
+  const touch = { pointerType: "touch", pointerId: 1, isPrimary: true } as const;
+
+  beforeEach(() => {
+    tasksFixture.current = [];
+    tasksFixture.loading = false;
+    vi.mocked(snoozeTask).mockReset().mockResolvedValue(undefined as never);
+    HTMLElement.prototype.getBoundingClientRect = () =>
+      ({ width: 340, height: 80, top: 0, left: 0, right: 340, bottom: 80, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  });
+
+  afterEach(() => {
+    HTMLElement.prototype.getBoundingClientRect = originalRect;
+  });
+
+  it("snoozes a card for an hour from the trailing swipe", async () => {
+    tasksFixture.current = [makeTask({ id: "swipe-1", title: "Swipe to snooze", urgent: true, important: true })];
+    render(<MatrixSimplified />);
+
+    const surface = screen.getByTestId("task-card-swipe-surface");
+    fireEvent.pointerDown(surface, { ...touch, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(surface, { ...touch, clientX: 140, clientY: 102 });
+    fireEvent.pointerMove(surface, { ...touch, clientX: 80, clientY: 103 });
+    fireEvent.pointerUp(surface, { ...touch, clientX: 80, clientY: 103 });
+
+    await userEvent.click(screen.getByTestId("swipe-snooze"));
+
+    await waitFor(() => expect(snoozeTask).toHaveBeenCalledWith("swipe-1", 60));
   });
 });

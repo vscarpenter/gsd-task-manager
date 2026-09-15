@@ -26,6 +26,7 @@ export {
   clearSnooze,
   isTaskSnoozed,
   getRemainingSnoozeMinutes,
+  formatSnoozeRemaining,
   startTimeTracking,
   stopTimeTracking,
   hasRunningTimer,

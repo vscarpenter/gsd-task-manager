@@ -258,10 +258,6 @@ describe("TaskCardMetadata", () => {
 // Tests: TaskCardActions sub-component
 // ---------------------------------------------------------------------------
 
-vi.mock("@/components/snooze-dropdown", () => ({
-  SnoozeDropdown: () => <div data-testid="snooze-dropdown">Snooze</div>,
-}));
-
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -419,5 +415,80 @@ describe("TaskCardActions", () => {
 
     const recurIcon = container.querySelector('[title="Recurs daily"]');
     expect(recurIcon).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: snooze on the card (touch route and the visible result)
+// ---------------------------------------------------------------------------
+
+describe("TaskCardActions snooze", () => {
+  const baseTask = {
+    id: "t5",
+    title: "Snooze Task",
+    description: "",
+    urgent: true,
+    important: true,
+    quadrant: "urgent-important" as const,
+    completed: false,
+    dueDate: "2026-01-20T09:00:00.000Z",
+    createdAt: NOW.toISOString(),
+    updatedAt: NOW.toISOString(),
+    recurrence: "none" as const,
+    tags: [],
+    subtasks: [],
+    dependencies: [],
+    notificationEnabled: true,
+    notificationSent: false,
+  };
+
+  async function renderActions(overrides: Partial<typeof baseTask> = {}, onSnooze = vi.fn()) {
+    const { TaskCardActions } = await import("@/components/task-card/task-card-actions");
+    render(
+      <TaskCardActions
+        task={{ ...baseTask, ...overrides }}
+        taskIsOverdue={false}
+        taskIsDueToday={false}
+        overdueDays={0}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onSnooze={onSnooze}
+      />
+    );
+    return onSnooze;
+  }
+
+  it("offers Snooze 1 hour in the mobile menu as the non-gesture route", async () => {
+    const onSnooze = await renderActions();
+
+    await userEvent.click(screen.getByRole("button", { name: "Snooze 1 hour" }));
+
+    expect(onSnooze).toHaveBeenCalledWith("t5", 60);
+  });
+
+  it("drops the mobile snooze item once the task is done", async () => {
+    await renderActions({ completed: true });
+
+    expect(screen.queryByRole("button", { name: "Snooze 1 hour" })).toBeNull();
+  });
+
+  it("keeps the desktop hover cluster free of snooze", async () => {
+    await renderActions();
+
+    expect(screen.queryByRole("button", { name: /snooze notifications/i })).toBeNull();
+    expect(screen.queryByTestId("snooze-task")).toBeNull();
+  });
+
+  it("shows how long a snoozed task stays quiet", async () => {
+    const inFiftyMinutes = new Date(Date.now() + 50 * 60 * 1000).toISOString();
+    await renderActions({ snoozedUntil: inFiftyMinutes });
+
+    expect(screen.getByTestId("task-card-snoozed-chip")).toHaveTextContent("Snoozed 50m");
+  });
+
+  it("shows no chip once the snooze has lapsed", async () => {
+    await renderActions({ snoozedUntil: "2026-01-01T00:00:00.000Z" });
+
+    expect(screen.queryByTestId("task-card-snoozed-chip")).toBeNull();
   });
 });
