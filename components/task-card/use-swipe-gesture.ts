@@ -76,12 +76,26 @@ function pointerMove(machine: SwipeMachine, event: SurfacePointerEvent): void {
   if (next.axis === "undecided") return;
   if (drag.axis !== "horizontal") {
     drag.axis = "horizontal";
-    // Keep samples flowing to the surface even when the finger leaves it.
-    const target = event.currentTarget;
-    if (typeof target.setPointerCapture === "function") target.setPointerCapture(event.pointerId);
+    capturePointer(event);
     machine.setDragging(true);
   }
   machine.setOffset(next.offset);
+}
+
+/**
+ * Keep samples flowing to the surface even when the finger leaves it. Capture is
+ * a nicety, not the gesture: a pointer that is no longer active (released between
+ * samples, or a synthetic event) makes Firefox throw NotFoundError, and the drag
+ * still tracks without it.
+ */
+function capturePointer(event: SurfacePointerEvent): void {
+  const target = event.currentTarget;
+  if (typeof target.setPointerCapture !== "function") return;
+  try {
+    target.setPointerCapture(event.pointerId);
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
+  }
 }
 
 function pointerEnd(machine: SwipeMachine, event: SurfacePointerEvent): void {

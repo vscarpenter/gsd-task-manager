@@ -22,7 +22,7 @@ Each step is red, green, refactor, commit.
       open row store; unit tests in `tests/ui/task-card-swipe.test.tsx`.
 - [x] 6. Snooze plumbing: `handleSnooze` in the matrix, `onSnooze` through grid and
       pane, mobile menu item, snoozed chip, desktop cluster stops forwarding.
-- [ ] 7. E2E: `tests/e2e/quiet-chrome.spec.ts`, `tests/e2e/swipe-actions.spec.ts`.
+- [x] 7. E2E: `tests/e2e/quiet-chrome.spec.ts`, `tests/e2e/swipe-actions.spec.ts`.
 - [ ] 8. Gates: `bun run test`, `bun typecheck`, `bun lint`, `bun run build`,
       `bun run quality:shape`, touched e2e on all three browsers; verify-frontend-change
       at 390px in both themes.
@@ -31,7 +31,7 @@ Each step is red, green, refactor, commit.
 ## Resuming From Here
 
 - Done: spec approved and written; branch cut.
-- Next: step 7.
+- Next: step 8.
 - Blockers: none.
 - Assumptions: snooze on the web means "snooze reminders" (`snoozedUntil`), the same
   field iOS writes; the desktop hover cluster stays without snooze per the brief.

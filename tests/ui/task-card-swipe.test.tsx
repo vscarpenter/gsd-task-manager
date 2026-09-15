@@ -220,6 +220,26 @@ describe("TaskCard swipe actions", () => {
     expect(screen.queryByTestId("swipe-trailing")).toBeNull();
   });
 
+  it("still opens when the browser refuses pointer capture for the pointer id", () => {
+    // Firefox throws NotFoundError for a pointer that is not active, which is what a
+    // synthetic event is and what a pointer released mid-gesture can be.
+    const original = HTMLElement.prototype.setPointerCapture;
+    HTMLElement.prototype.setPointerCapture = () => {
+      throw new DOMException("Invalid pointer id", "NotFoundError");
+    };
+    const pageError = vi.fn();
+    window.addEventListener("error", pageError);
+    try {
+      renderCard(createMockTask({ title: "Capture refused" }));
+      drag(surfaceFor("Capture refused"), touch, OPEN_TRAILING);
+      expect(screen.getByTestId("swipe-trailing")).toBeInTheDocument();
+      expect(pageError).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("error", pageError);
+      HTMLElement.prototype.setPointerCapture = original;
+    }
+  });
+
   it("renders no swipe surface on the plain card", () => {
     const task = createMockTask({ title: "Archive card" });
     render(<TaskCard task={task} allTasks={[task]} {...handlers()} />);
