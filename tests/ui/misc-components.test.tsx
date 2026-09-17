@@ -28,13 +28,15 @@ vi.mock('@/lib/use-view-transition', () => ({
   }),
 }));
 
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
 vi.mock('@/lib/logger', () => ({
-  createLogger: () => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  }),
+  createLogger: () => mockLogger,
 }));
 
 vi.mock('@/components/ui/tooltip', () => ({
@@ -137,5 +139,47 @@ describe('PwaRegister', () => {
         updateViaCache: 'none',
       });
     });
+  });
+
+  function stubRegisterRejection(error: unknown) {
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: {
+        register: vi.fn().mockRejectedValue(error),
+        controller: null,
+        ready: Promise.resolve({ periodicSync: undefined }),
+      },
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  it('reports a browser-raised registration failure as an error', async () => {
+    mockLogger.error.mockClear();
+    const failure = new TypeError('Failed to register a ServiceWorker');
+    stubRegisterRejection(failure);
+
+    render(<PwaRegister />);
+
+    await vi.waitFor(() => {
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Service worker registration failed',
+        failure,
+      );
+    });
+  });
+
+  it('only warns when injected code rejects registration with a plain Error', async () => {
+    mockLogger.error.mockClear();
+    mockLogger.warn.mockClear();
+    stubRegisterRejection(new Error('blocked by extension'));
+
+    render(<PwaRegister />);
+
+    await vi.waitFor(() => {
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Service worker registration blocked by the environment',
+      );
+    });
+    expect(mockLogger.error).not.toHaveBeenCalled();
   });
 });
