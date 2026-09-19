@@ -20,7 +20,12 @@ Full suite: 3,162 passed, 1 skipped, 2 pre-existing failures (README release tex
 service-worker capture cache). Existing pwa-register code-shape debt also fails.
 All reproduced at unchanged HEAD; the token-copy tests, lint and typecheck pass.
 MCP: 319 passed, 4 skipped, build and coverage pass. New UI component: 95.45%
-statement coverage. No push or deployment requested.
+statement coverage.
+
+Follow-up: user authorized bump/commit/push/PR. App, README and tracked SW version
+are 13.1.5; 28 focused release checks, lint, typecheck and production static build
+pass. The README failure above is now resolved. Baseline service-worker privacy
+and pwa-register shape failures remain. Publishing this branch does not deploy it.
 
 ---
 

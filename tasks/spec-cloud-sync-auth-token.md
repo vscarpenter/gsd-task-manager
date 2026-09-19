@@ -40,7 +40,8 @@ checks. Get an independent review of the final diff and resolve valid findings.
 ## Out of scope
 
 No backend changes, new dependencies, token minting/revocation, automatic MCP
-config edits, release/version changes, push or deployment.
+config edits or deployment. Version bump and PR publication were authorized
+in the follow-up below.
 
 ## Verification results
 
@@ -74,3 +75,19 @@ config edits, release/version changes, push or deployment.
   /private/tmp/gsd-token-browser-evidence/cloud-sync-{1280,390}-{light,dark}.png.
 - Independent final review: no actionable findings. No live PocketBase/MCP
   end-to-end session or deployment was performed.
+
+## Version bump and PR follow-up
+
+The user authorized a version bump, commit, push to origin and PR on 2026-09-19.
+App package, README and tracked service-worker cache versions are now 13.1.5.
+Bun's root lock entry has no version field; the MCP package remains independently
+versioned. Version-sensitive checks (documentation, build configuration, offline
+service worker and the token row) pass: 28 tests. Lint and TypeScript pass.
+The production static build passed and generated version 13.1.5. A subsequent
+build artifact at 13.1.6 was observed, consistent with the existing per-build
+increment; tracked source is normalized to 13.1.5. No build generator changed.
+
+The README-version failure from the earlier full suite is fixed and its focused
+regression passes. The baseline service-worker privacy test and pwa-register
+code-shape issues remain. Independent review found no additional feature issues.
+PR publication does not imply merge, deployment or a live-production check.
