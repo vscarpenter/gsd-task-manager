@@ -22,7 +22,7 @@
     },
     "components/pwa-register.tsx": {
       "count": 1,
-      "max": 11
+      "max": 12
     },
     "components/reset-everything-dialog.tsx": {
       "count": 1,
@@ -296,7 +296,7 @@
     },
     "components/pwa-register.tsx": {
       "count": 3,
-      "max": 90
+      "max": 94
     },
     "components/pwa-update-toast.tsx": {
       "count": 1,
