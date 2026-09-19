@@ -15,11 +15,11 @@ npm run build
 **From Browser (Easiest)**
 
 1. Open GSD Task Manager in your browser
-2. Sign in with Google/GitHub OAuth
-3. Open DevTools (F12 or Cmd+Option+I)
-4. Go to: Application → Storage → Local Storage
-5. Find the PocketBase auth token
-6. Copy the value
+2. Sign in with Google or GitHub to enable cloud sync
+3. Open **Settings → Cloud Sync → Copy auth token**
+
+The button copies the raw token for `GSD_AUTH_TOKEN`. Keep it private: it grants
+access to your synced tasks.
 
 ## 3. Configure Claude Desktop
 

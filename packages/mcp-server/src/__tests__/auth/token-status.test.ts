@@ -39,7 +39,8 @@ describe('getTokenStatus', () => {
     expect(result.status).toBe('invalid');
     expect(result.expired).toBe(true);
     expect(result.expiresAt).toBeNull();
-    expect(result.instructions).not.toBeNull();
+    expect(result.instructions).toContain('2. Open Settings → Cloud Sync → Copy auth token');
+    expect(result.instructions).toContain('3. Update GSD_AUTH_TOKEN in your Claude Desktop config');
   });
 
   it('reports invalid for a malformed token', () => {

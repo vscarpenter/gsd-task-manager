@@ -9,6 +9,7 @@ import { createLogger } from "@/lib/logger";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
 import { SyncDangerZone } from "./sync-danger-zone";
 import { SyncAccountRow } from "./sync-account-row";
+import { SyncAuthTokenRow } from "./sync-auth-token-row";
 
 const logger = createLogger("UI");
 
@@ -160,6 +161,8 @@ export function SyncSettings({
 			</button>
 
 			<SyncAccountRow />
+
+			<SyncAuthTokenRow />
 
 			<SyncDangerZone onExport={onExport} onAccountDeleted={onAccountDeleted} />
 		</>

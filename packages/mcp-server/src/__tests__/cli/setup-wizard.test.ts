@@ -80,6 +80,8 @@ describe('runSetupWizard', () => {
     expect(options).toEqual({ mode: 0o600 });
     expect(chmodSync).toHaveBeenCalledWith('/private/setup.json', 0o600);
     const transcript = logSpy.mock.calls.flat().join('\n');
+    expect(transcript).toContain('Settings → Cloud Sync → Copy auth token');
+    expect(transcript).not.toContain('DevTools');
     expect(transcript).not.toContain('abc123SUPERSECRETxyz789');
     expect(transcript).not.toContain('abc123');
     expect(transcript).not.toContain('xyz789');
