@@ -43,8 +43,8 @@ async function validateConnectivity(pbUrl: string): Promise<boolean> {
  */
 async function configureAuthentication(pbUrl: string): Promise<string> {
   console.log('Step 2/4: Authentication Token');
-  console.log('Visit the GSD app and log in with Google or GitHub OAuth');
-  console.log('Copy the PocketBase auth token from: DevTools → Application → Local Storage → pocketbase_auth');
+  console.log('Visit the GSD app and sign in to Cloud Sync');
+  console.log('Copy your token from: Settings → Cloud Sync → Copy auth token');
   const authToken = await promptPassword('Paste token');
 
   if (!authToken) {

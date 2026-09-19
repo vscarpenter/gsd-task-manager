@@ -134,9 +134,11 @@ For development or if you want to modify the code:
 You'll need an auth token from your PocketBase sync setup:
 
 1. Open GSD Task Manager in your browser
-2. Complete OAuth sign-in (Google or GitHub)
-3. Open DevTools → Application → Local Storage
-4. Find the PocketBase auth token and copy the value
+2. Sign in with Google or GitHub to enable cloud sync
+3. Open **Settings → Cloud Sync → Copy auth token**
+
+Paste the copied token as the `GSD_AUTH_TOKEN` value. The button copies only the
+raw token. Keep it private: it grants access to your synced tasks.
 
 ### 2. Configure Claude Desktop
 
@@ -712,7 +714,7 @@ Delete all completed tasks from last year
 
 ### "API request failed: 401 Unauthorized"
 - Your auth token has expired — re-authenticate via OAuth in the GSD app
-- Update the `GSD_AUTH_TOKEN` in your config
+- Open **Settings → Cloud Sync → Copy auth token**, then replace `GSD_AUTH_TOKEN` in your config
 - Restart Claude Desktop
 
 ### "API request failed: 404 Not Found"
