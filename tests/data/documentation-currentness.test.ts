@@ -23,6 +23,18 @@ describe("documentation currentness", () => {
     expect(boundaries).toContain("pocketbase-upgrade-system.test.ts");
   });
 
+  it("scopes at-rest encryption to the Docker image and states the hosted posture", () => {
+    const security = readFileSync("SECURITY.md", "utf8");
+    const adrPath = "docs/adr/0016-hosted-sync-defers-field-encryption.md";
+
+    expect(security).toMatch(/hosted service does not encrypt task content at rest/i);
+    expect(security).not.toContain("the user owns and controls the server");
+    expect(security).not.toContain("runs on user's own infrastructure");
+    expect(security).not.toContain("Tasks are stored on user's own PocketBase server");
+    expect(security).toContain(adrPath);
+    expect(existsSync(adrPath)).toBe(true);
+  });
+
   it("ships contributor guidance with the canonical local commands", () => {
     expect(existsSync("CONTRIBUTING.md")).toBe(true);
     const contributing = readFileSync("CONTRIBUTING.md", "utf8");
