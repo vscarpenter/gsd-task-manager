@@ -89,29 +89,40 @@ type SyncAction =
   | { type: 'SYNC_IDLE'; lastResult: PBSyncResult }
   | { type: 'SYNC_ERROR'; error: string; lastResult: PBSyncResult };
 
+/**
+ * The polls dispatch on every tick, mostly with values the state already holds.
+ * Returning the same reference is what lets React skip the render, so a poll
+ * that changes nothing re-renders no useSync() consumer.
+ */
+function mergeIfChanged(
+  state: SyncReducerState,
+  patch: Partial<SyncReducerState>
+): SyncReducerState {
+  const keys = Object.keys(patch) as Array<keyof SyncReducerState>;
+  return keys.some((key) => state[key] !== patch[key]) ? { ...state, ...patch } : state;
+}
+
 function syncReducer(state: SyncReducerState, action: SyncAction): SyncReducerState {
   switch (action.type) {
     case 'SET_ENABLED':
-      return { ...state, isEnabled: action.isEnabled };
+      return mergeIfChanged(state, { isEnabled: action.isEnabled });
     case 'SET_COORDINATOR_STATUS':
-      return {
-        ...state,
+      return mergeIfChanged(state, {
         isSyncing: action.isSyncing,
         pendingRequests: action.pendingRequests,
         nextRetryAt: action.nextRetryAt,
         retryCount: action.retryCount,
         lastSuccessfulSyncAt: action.lastSuccessfulSyncAt,
-      };
+      });
     case 'SET_AUTO_SYNC':
-      return {
-        ...state,
+      return mergeIfChanged(state, {
         autoSyncEnabled: action.autoSyncEnabled,
         autoSyncInterval: action.autoSyncInterval,
-      };
+      });
     case 'SET_LAST_RESULT':
-      return { ...state, lastResult: action.lastResult };
+      return mergeIfChanged(state, { lastResult: action.lastResult });
     case 'SET_ERROR':
-      return { ...state, error: action.error };
+      return mergeIfChanged(state, { error: action.error });
     case 'SET_STATUS':
       return { ...state, status: action.status };
     case 'SYNC_START':
@@ -251,13 +262,20 @@ async function updateCoordinatorStatus(dispatch: Dispatch<SyncAction>): Promise<
   }
 }
 
-function useCoordinatorStatus(dispatch: Dispatch<SyncAction>): void {
+/**
+ * Coordinator status only changes while sync has work to report, so the 500 ms
+ * poll runs only then. Each tick costs three IndexedDB reads, and this provider
+ * mounts on every route. One read still happens on mount and on every switch,
+ * which publishes the last sync time at boot.
+ */
+function useCoordinatorStatus(dispatch: Dispatch<SyncAction>, shouldPoll: boolean): void {
   useEffect(() => {
     const update = () => updateCoordinatorStatus(dispatch);
     void update();
+    if (!shouldPoll) return;
     const interval = setInterval(update, UI_TIMING.STATUS_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [dispatch]);
+  }, [dispatch, shouldPoll]);
 }
 
 function useSyncHealthMonitoring(isEnabled: boolean): void {
@@ -334,10 +352,15 @@ async function runManualSync(dispatch: Dispatch<SyncAction>): Promise<PBSyncResu
  */
 export function SyncProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(syncReducer, initialSyncState);
-  const { isEnabled } = state;
+  const { isEnabled, isSyncing, pendingRequests } = state;
+  // Signing out does not stop a sync that is already running, so work in flight
+  // is watched to its end. The sync button is disabled while isSyncing is true
+  // and it is the only way back to the sign-in dialog. A status that stopped
+  // updating mid-sync would leave it locked until a reload.
+  const hasStatusToWatch = isEnabled || isSyncing || pendingRequests > 0;
 
   useSyncLifecycle(dispatch);
-  useCoordinatorStatus(dispatch);
+  useCoordinatorStatus(dispatch, hasStatusToWatch);
   useSyncHealthMonitoring(isEnabled);
   const sync = () => runManualSync(dispatch);
 
