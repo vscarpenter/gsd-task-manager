@@ -237,3 +237,14 @@ Fix pattern: wait for the title to be focused before touching other fields
   journeys until the fixture pattern named both local origins.
 - **Staging one hunk without interactive add:** split `git diff -U1 <file>` on
   `@@`, keep the header plus the wanted hunk, then `git apply --cached --recount`.
+- **Pull request CI never builds the Docker image, so a merge can break it.**
+  `next build` inside the image type-checks every root TypeScript file in the
+  build context, and `.dockerignore` drops `tests/`. `playwright.export.config.ts`
+  imports from `tests/`, so the first `Publish Docker Image` run after PR #554
+  failed with TS2307. The config is now dockerignored, and
+  `tests/data/docker-context-imports.test.ts` fails any root file that imports
+  from a dockerignored directory. After a merge, check every workflow on `main`,
+  not only the ones a pull request runs.
+- **`rsync --delete` keeps excluded files that are already on the receiving
+  side.** An emulated Docker context needs `--delete-excluded`, or a file
+  excluded after the first copy stays and hides the fix.
