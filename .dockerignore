@@ -12,6 +12,9 @@ packages/*/node_modules/
 
 # Tests & docs (not needed for production build)
 tests/
+# This config imports its journey list from tests/. `next build` type-checks
+# every root TypeScript file, so leaving it in the context fails the image build.
+playwright.export.config.ts
 docs/
 coverage/
 test_output.txt
