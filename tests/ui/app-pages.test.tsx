@@ -50,10 +50,6 @@ vi.mock('@/components/client-layout', () => ({
   ),
 }));
 
-vi.mock('@/components/query-provider', () => ({
-  QueryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 vi.mock('@/components/first-time-redirect', () => ({
   FirstTimeRedirect: () => null,
 }));
