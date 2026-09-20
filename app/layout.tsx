@@ -14,7 +14,6 @@ import { WebMcpRegister } from "@/components/webmcp-register";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { GlobalErrorListener } from "@/components/global-error-listener";
 import { ClientLayout } from "@/components/client-layout";
-import { QueryProvider } from "@/components/query-provider";
 import { FirstTimeRedirect } from "@/components/first-time-redirect";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
 import { ResetLockGate } from "@/components/reset-lock-gate";
@@ -159,22 +158,20 @@ function AppProviders({ children }: { children: ReactNode }) {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-          <QueryProvider>
-            <TooltipProvider>
-              {/* Anything that reads or writes task data stays inside the gate, so a pending reset keeps it unmounted. */}
-              <ResetLockGate>
-                <ClientLayout>{children}</ClientLayout>
-                <FirstTimeRedirect />
-                <OnboardingGate />
-                <WebMcpRegister />
-              </ResetLockGate>
-              <PwaRegister />
-              <PwaUpdateToast />
-              <GlobalErrorListener />
-              <SentryInit />
-              <ThemedToaster />
-            </TooltipProvider>
-          </QueryProvider>
+          <TooltipProvider>
+            {/* Anything that reads or writes task data stays inside the gate, so a pending reset keeps it unmounted. */}
+            <ResetLockGate>
+              <ClientLayout>{children}</ClientLayout>
+              <FirstTimeRedirect />
+              <OnboardingGate />
+              <WebMcpRegister />
+            </ResetLockGate>
+            <PwaRegister />
+            <PwaUpdateToast />
+            <GlobalErrorListener />
+            <SentryInit />
+            <ThemedToaster />
+          </TooltipProvider>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>

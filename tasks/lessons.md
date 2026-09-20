@@ -62,6 +62,29 @@ UI padding files (different from data files — these were the *sole* tests for 
 - Static export mode means no API routes or SSR.
 - CloudFront Function needed for SPA routing (S3 doesn't auto-serve `index.html` for directory paths).
 - Run `deploy-cloudfront-function.sh` after adding new App Router routes.
+- **First-load JavaScript has a CI budget (2026-09-19, audit finding PRF-1).**
+  `bun run quality:bundle` sums the gzip size of the scripts each prerendered
+  route references and compares it with `scripts/bundle-budget.json`. Refresh with
+  `node scripts/check-bundle-budget.cjs --write-baseline` after a build made by
+  `scripts/build-local.sh`. That script uses the CI flags, and a plain build came
+  out 1 to 4 KB smaller per route.
+- **Never redirect a script's stdout into a file that script reads.** The shell
+  truncates the file before the script starts. `--write-baseline` exists because
+  `--print-baseline > scripts/bundle-budget.json` emptied the budget file.
+- **A lazy chunk needs an idle warm-up in this PWA.** The service worker caches a
+  hashed chunk only after its first fetch, so a chunk behind `import()` that was
+  never fetched online is missing offline. `lib/confetti.ts` fetches its library
+  once on `requestIdleCallback`.
+- **Measure before trusting the story about a bundle.** The audit blamed the sync
+  stack, which is about 40 KB of the 438 KB every route shares. React, Next, Zod,
+  Sentry, Dexie, and Radix are most of it. react-query measured 8 KB, against my
+  13 KB estimate.
+- **`typeof import("pkg")` is not a namespace type for an `export =` package.**
+  `canvas-confetti` types resolve it to the function itself. Cache the one named
+  export you need (`library.create`) and the types work.
+- **`MatrixSimplified` sits at its 269-line code-shape ceiling.** Work that would
+  add a line there goes somewhere else. The confetti warm-up runs at module scope
+  in `lib/confetti.ts`, which also keeps it out of the tests that mock that module.
 
 ## Coding Standards Compliance (April 2026 audit)
 

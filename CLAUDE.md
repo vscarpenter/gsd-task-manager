@@ -39,6 +39,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 - `bun run test` - Run Vitest tests in CI mode (`bun test` invokes bun's built-in runner, not vitest)
 - `bun run test:watch` - Run Vitest in watch mode
 - `bun run test -- --coverage` - Generate coverage report (target: ≥80%)
+- `bun run quality:bundle` - Check first-load JavaScript per route against `scripts/bundle-budget.json` (needs a built `out/`; refresh with `node scripts/check-bundle-budget.cjs --write-baseline` after `bash scripts/build-local.sh`)
 
 ### Build & Deployment
 - `./scripts/deploy-cloudfront-function.sh` - Deploy CloudFront Function for SPA routing

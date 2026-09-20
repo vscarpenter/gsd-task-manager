@@ -1,0 +1,11 @@
+{
+  "allowanceBytes": 5120,
+  "routes": {
+    "/": 522721,
+    "/about": 457554,
+    "/archive": 504510,
+    "/dashboard": 568598,
+    "/settings": 476119,
+    "/sync-history": 473432
+  }
+}

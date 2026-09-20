@@ -14,6 +14,7 @@
 		"lint": "BROWSERSLIST_IGNORE_OLD_DATA=1 eslint . --max-warnings=0",
 		"license:check": "node scripts/check-dependency-licenses.cjs",
 		"quality:shape": "BROWSERSLIST_IGNORE_OLD_DATA=1 node scripts/check-code-shape.cjs",
+		"quality:bundle": "node scripts/check-bundle-budget.cjs",
 		"test": "vitest run",
 		"test:system:pocketbase": "bash scripts/run-pocketbase-system-test.sh",
 		"test:watch": "vitest",
