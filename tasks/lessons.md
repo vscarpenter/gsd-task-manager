@@ -195,3 +195,22 @@ Fix pattern: wait for the title to be focused before touching other fields
   and 6.47, 6.44, 5.25 dark for olive, slate, and rust. `tests/data/inkwell-token-
   contract.test.ts` recomputes these from the real stylesheet, so a token move fails
   the pairing check as well as the snapshot.
+
+## 2026-09-19: production-export journeys (audit finding E2E-1)
+
+- **Production answers every unknown path with `200 text/html`, missing JS chunks
+  included.** `curl` against `gsd.vinny.dev` confirms it. The URL-rewrite function
+  does not do this, so the distribution's error response must. A local server that
+  returns 404 is less faithful than one that falls back to `index.html`.
+- **Reuse the deployed CloudFront function as the local router.** Its test-only
+  `module.exports` lets `scripts/lib/static-export-server.cjs` call the real
+  `handler`, so a routing change cannot reach production without reaching e2e.
+- **A faster server exposes test races the dev server hides.** `click()` resolves on
+  dispatch, not when the IndexedDB write commits. A reload right after a click lost
+  the completion on the static export and never on `next dev`. Wait for the UI to
+  show the write before reloading.
+- **An allowlist that names an origin is pinned to one server.** Firefox's aborted
+  font diagnostic came from `127.0.0.1:3100` on the export and failed five
+  journeys until the fixture pattern named both local origins.
+- **Staging one hunk without interactive add:** split `git diff -U1 <file>` on
+  `@@`, keep the header plus the wanted hunk, then `git apply --cached --recount`.
