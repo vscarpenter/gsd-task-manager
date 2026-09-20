@@ -5,6 +5,7 @@
 
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline';
 import { VERSION } from '../version.js';
 
 export interface CLIOptions {
@@ -95,8 +96,6 @@ export function getClaudeConfigPath(): string {
  * Create readline interface for user input
  */
 function createReadline() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createInterface } = require('node:readline');
   return createInterface({
     input: process.stdin,
     output: process.stdout,

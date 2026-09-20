@@ -5,6 +5,18 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2026-09-19
+
+### Fixed
+- `gsd-mcp-server --setup` no longer crashes before its first prompt. The
+  prompt helper called a bare `require` inside this ESM package, so Node threw
+  a `ReferenceError`. The helper now imports `node:readline` at the top of the
+  module. The call dates to 2025-11-16, and `mcp-v1.1.3` is the earliest tag
+  that carries it.
+- A new test compiles the package and runs both prompts under plain Node. The
+  wizard test mocks the prompt module and Vitest supplies its own `require`, so
+  the suite could not see the crash.
+
 ## [1.2.6] - 2026-09-11
 
 ### Fixed
@@ -584,5 +596,6 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.2.7]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.6...mcp-v1.2.7
 [1.2.6]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.5...mcp-v1.2.6
 [1.2.5]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.4...mcp-v1.2.5
