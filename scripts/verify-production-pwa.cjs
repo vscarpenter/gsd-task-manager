@@ -1,55 +1,15 @@
 #!/usr/bin/env node
 
-const { createServer } = require("node:http");
-const { existsSync, readFileSync, statSync } = require("node:fs");
-const { extname, join, normalize, resolve } = require("node:path");
 const { chromium, firefox, webkit } = require("@playwright/test");
+const { startStaticExportServer } = require("./lib/static-export-server.cjs");
 
-const outputRoot = resolve("out");
 const supportedBrowsers = { chromium, firefox, webkit };
-const contentTypes = {
-  ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".png": "image/png",
-  ".svg": "image/svg+xml",
-  ".webmanifest": "application/manifest+json",
-  ".woff2": "font/woff2",
-};
-
-function resolveRequestPath(requestUrl) {
-  const pathname = decodeURIComponent(new URL(requestUrl, "http://localhost").pathname);
-  const safePath = normalize(pathname).replace(/^(?:\.\.(?:\/|\\|$))+/, "");
-  let target = join(outputRoot, safePath);
-  if (existsSync(target) && statSync(target).isDirectory()) target = join(target, "index.html");
-  if (!existsSync(target)) target = join(outputRoot, "index.html");
-  return target;
-}
 
 // WebKit reports a failed <link rel="preconnect"> as a console error. Next emits one
 // for the page's own origin when no font is preloaded, and the offline reload
 // closes that origin on purpose, so that single failure is expected there.
 function isExpectedOfflineDiagnostic(text, rootUrl) {
   return text.startsWith(`Failed to preconnect to ${rootUrl}/.`);
-}
-
-async function startStaticServer() {
-  const server = createServer((request, response) => {
-    const target = resolveRequestPath(request.url ?? "/");
-    response.writeHead(200, {
-      "Content-Type": contentTypes[extname(target)] ?? "application/octet-stream",
-      "Cache-Control": "no-store",
-    });
-    response.end(readFileSync(target));
-  });
-  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  const address = server.address();
-  if (!address || typeof address === "string") {
-    await new Promise((resolveClose) => server.close(resolveClose));
-    throw new Error("Unable to bind production PWA smoke server.");
-  }
-  return { server, rootUrl: `http://127.0.0.1:${address.port}` };
 }
 
 async function waitForServiceWorkerControl(page) {
@@ -136,13 +96,10 @@ async function verifyBrowser(browserName, rootUrl, server) {
 }
 
 async function main() {
-  if (!existsSync(join(outputRoot, "index.html"))) {
-    throw new Error("Production PWA test requires an existing out/index.html build.");
-  }
   const browserNames = process.argv.slice(2);
   const targets = browserNames.length > 0 ? browserNames : Object.keys(supportedBrowsers);
   for (const browserName of targets) {
-    const { server, rootUrl } = await startStaticServer();
+    const { server, rootUrl } = await startStaticExportServer();
     try {
       await verifyBrowser(browserName, rootUrl, server);
     } finally {

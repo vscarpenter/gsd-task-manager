@@ -1185,3 +1185,124 @@ it("should_not_mention_reset_everything_when_local_erase_fails", async () => {})
 | 22 | should_name_the_lock_screen_by_its_visible_message, should_move_focus_to_the_locked_message_when_a_reset_fails_here, should_replace_try_again_with_progress_as_soon_as_a_retry_starts |
 | 23 | should_not_notify_or_mark_a_due_task_when_a_reset_is_pending, should_not_notify_when_a_reset_begins_while_tasks_load, should_not_register_tools_while_a_reset_is_pending, should_not_redirect_or_set_the_launch_flag_while_a_reset_is_pending |
 | 11, 15, 16 | `tests/e2e/reset-lock.spec.ts` (Playwright) covers AC11 and AC15 in a real browser, and AC16 across two tabs |
+
+---
+
+# Spec: Run critical journeys against the production static export (E2E-1)
+
+Date: 2026-09-19. Tier: Non-trivial (CI infrastructure, shared scripts). Design
+approved by the owner on 2026-09-19. Audit finding E2E-1.
+
+## Goal
+
+Run the journeys that matter most (task CRUD, drag, import, export, first visit)
+against the artifact users get: the Turbopack static export in `out/`, served
+under the production CSP. Today all 117 journeys run on `next dev --webpack`
+under a permissive dev-only CSP meta tag.
+
+## Background (verified on `186ac53`)
+
+- `playwright.config.ts` has one top-level `webServer` (`bun run dev:e2e`) and a
+  `globalSetup` that warms dev routes on `localhost:3000`. Neither is per-project.
+- `prebuild` deletes `.next` and `out`, and `dev:e2e` deletes `.next`. A dev server
+  and a build cannot share one Playwright run.
+- `scripts/verify-production-csp.cjs` and `scripts/verify-production-pwa.cjs` each
+  inline the same static server. A third copy would be the third occurrence.
+- `cloudfront-function-url-rewrite.cjs` exports its `handler` for tests.
+- Production answers every unknown path with `200 text/html` (the app shell),
+  missing JS chunks included. Checked with `curl` against `gsd.vinny.dev` on
+  2026-09-19. The verify scripts' index fallback already matches that.
+- The e2e fixtures delete `navigator.serviceWorker`, so no worker registers.
+  `about.spec.ts` is the one spec that skips that fixture.
+- `lib/env-config.ts` treats `localhost` and `127.0.0.1` as development by
+  hostname, so a locally served export keeps Sentry off.
+
+## Design
+
+1. `scripts/lib/static-export-server.cjs`, one shared server.
+   - `resolveExportFile(outputRoot, requestUrl, headers)` runs the real CloudFront
+     viewer-request `handler`, then maps the rewritten URI to a file under
+     `outputRoot`. A miss, or a path outside `outputRoot`, falls back to
+     `index.html`, the way production does.
+   - `readProductionCsp()` reads `cloudfront/response-headers-policy.json`.
+   - `startStaticExportServer({ outputRoot, port, csp })` resolves to
+     `{ server, rootUrl }`. Port `0` picks a free port. It rejects when
+     `out/index.html` is missing.
+   - Run directly, it serves `out/` on `PORT` (default 3100) with the CSP.
+2. `playwright.export.config.ts`: `testMatch` from `tests/e2e/export-journeys.ts`,
+   `baseURL` `http://127.0.0.1:3100`, no `globalSetup`, never reuses a server,
+   three browser projects, HTML report in `playwright-report/export`.
+3. `package.json` script `test:e2e:export`.
+4. `ci.yml`: a step after "Build production export" runs the export journeys on
+   the leg's browser.
+5. Both verify scripts move onto the shared server with no behavior change.
+
+## Inputs / Outputs
+
+- Input: an existing `out/` build. No task schema or sync contract changes.
+- Output: a Playwright pass or fail per journey, and an HTML report.
+- `resolveExportFile` returns an absolute file path. The server always sends 200.
+
+## Constraints
+
+- No new dependency. Node built-ins and the installed `@playwright/test` only.
+- No change to app code, the dev-server suite, or what either verify script asserts.
+- Code-shape ratchet: new files at complexity 10 or less, functions 40 lines or less.
+- The export run adds a few minutes per CI leg. The subset stays small on purpose.
+
+## Edge Cases
+
+- `out/` missing: the server rejects with a message naming `bun run build`.
+- A `..` path segment or control character: the CloudFront handler rewrites to
+  `/index.html`. The server also refuses any resolved path outside `outputRoot`.
+- A Turbopack chunk name that contains `..` inside the filename still resolves.
+- `/settings` without a trailing slash resolves to `settings/index.html` with no
+  redirect, the way CloudFront rewrites it.
+- `/api/*` passes through the handler untouched and falls back to the app shell.
+  The PWA verifier's cache probe depends on that 200.
+- `Accept: text/markdown` on a route serves `index.md`.
+- A renamed journey spec would shrink the subset silently. A guard test fails.
+- A running `bun dev` on port 3000 cannot be reused: the export config uses 3100.
+
+## Out of Scope
+
+- Running all 117 journeys against the export.
+- Exercising the service worker in these journeys. `test:pwa` covers it.
+- HSTS, COOP, CORP, and Permissions-Policy headers on the local server.
+- Sharing one `out/` artifact across CI jobs.
+- Adding the production CSP to the PWA verifier.
+
+## Acceptance Criteria
+
+- AC1: `resolveExportFile` maps `/`, `/about/`, and `/about` to the matching
+  `index.html`.
+- AC2: It serves an existing asset, including a filename containing `..`.
+- AC3: A missing path, a traversal attempt, and `/api/*` all resolve to the root
+  `index.html`.
+- AC4: `Accept: text/markdown` on a route resolves to `index.md`.
+- AC5: The server sends the production CSP when given one, and none otherwise.
+- AC6: The server rejects when the export is missing.
+- AC7: Every spec in the export journey list exists, and the list covers CRUD,
+  drag, import, export, and first visit.
+- AC8: `ci.yml` runs `test:e2e:export` after the production build, per browser.
+- AC9: `bun run test:csp` and `bun run test:pwa` pass on the shared server.
+- AC10: `bun run test:e2e:export` passes on Chromium, Firefox, and WebKit.
+
+## Test Stubs
+
+`tests/data/static-export-server.test.ts`:
+
+- `should_resolve_route_paths_to_their_index_html` (AC1)
+- `should_serve_an_asset_whose_filename_contains_two_dots` (AC2)
+- `should_fall_back_to_the_app_shell_for_unknown_traversal_and_api_paths` (AC3)
+- `should_serve_markdown_when_the_client_prefers_it` (AC4)
+- `should_send_the_production_csp_only_when_configured` (AC5)
+- `should_reject_when_the_export_is_missing` (AC6)
+
+`tests/data/export-journeys.test.ts`:
+
+- `should_list_only_spec_files_that_exist` (AC7)
+- `should_cover_crud_drag_import_export_and_first_visit` (AC7)
+- `should_run_the_export_journeys_after_the_production_build_in_ci` (AC8)
+
+AC9 and AC10 are verified by running the scripts, locally and in CI.

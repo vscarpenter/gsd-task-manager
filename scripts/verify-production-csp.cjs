@@ -1,51 +1,10 @@
 #!/usr/bin/env node
 
-const { createServer } = require("node:http");
-const { existsSync, readFileSync, statSync } = require("node:fs");
-const { extname, join, normalize, resolve } = require("node:path");
 const { chromium } = require("@playwright/test");
-
-const outputRoot = resolve("out");
-const policy = JSON.parse(readFileSync("cloudfront/response-headers-policy.json", "utf8"));
-const contentSecurityPolicy =
-  policy.SecurityHeadersConfig.ContentSecurityPolicy.ContentSecurityPolicy;
-const contentTypes = {
-  ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".png": "image/png",
-  ".svg": "image/svg+xml",
-  ".webmanifest": "application/manifest+json",
-  ".woff2": "font/woff2",
-};
-
-function resolveRequestPath(requestUrl) {
-  const pathname = decodeURIComponent(new URL(requestUrl, "http://localhost").pathname);
-  const safePath = normalize(pathname).replace(/^(?:\.\.(?:\/|\\|$))+/, "");
-  let target = join(outputRoot, safePath);
-  if (existsSync(target) && statSync(target).isDirectory()) target = join(target, "index.html");
-  if (!existsSync(target)) target = join(outputRoot, "index.html");
-  return target;
-}
+const { readProductionCsp, startStaticExportServer } = require("./lib/static-export-server.cjs");
 
 async function main() {
-  if (!existsSync(join(outputRoot, "index.html"))) {
-    throw new Error("Production CSP smoke test requires an existing out/index.html build.");
-  }
-
-  const server = createServer((request, response) => {
-    const target = resolveRequestPath(request.url ?? "/");
-    response.writeHead(200, {
-      "Content-Type": contentTypes[extname(target)] ?? "application/octet-stream",
-      "Content-Security-Policy": contentSecurityPolicy,
-      "Cache-Control": "no-store",
-    });
-    response.end(readFileSync(target));
-  });
-  await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("Unable to bind CSP smoke server.");
+  const { server, rootUrl } = await startStaticExportServer({ csp: readProductionCsp() });
 
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -70,7 +29,7 @@ async function main() {
   });
 
   try {
-    await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: "networkidle" });
+    await page.goto(`${rootUrl}/`, { waitUntil: "networkidle" });
     await page.getByTestId("capture-input").waitFor({ state: "visible", timeout: 15_000 });
     const externalizedResources = await page.evaluate(() =>
       performance.getEntriesByType("resource")
