@@ -248,3 +248,31 @@ Fix pattern: wait for the title to be focused before touching other fields
 - **`rsync --delete` keeps excluded files that are already on the receiving
   side.** An emulated Docker context needs `--delete-excluded`, or a file
   excluded after the first copy stays and hides the fix.
+
+## 2026-09-20: SyncProvider idle polling
+
+- **A poll needs a gate and a reducer that can say "nothing changed".**
+  `useCoordinatorStatus` ran every 500 ms on every route with no `isEnabled`
+  check, at three IndexedDB reads per tick. The reducer also spread a new state
+  object for every polled action, so each tick re-rendered every `useSync()`
+  consumer. `useReducer` skips a render only when the reducer returns the same
+  reference. Measured on the production export, a signed-out idle page went from
+  65 `syncMetadata` reads per 10 seconds to 5.
+- **Gating a poll on "enabled" has to account for work in flight at the switch.**
+  Signing out does not stop a running sync. The one status read at the switch can
+  see `isRunning: true`, and with the poll stopped `isSyncing` stays true. The
+  sync button is `disabled={isSyncing}` and is the only way back to the sign-in
+  dialog. The poll now runs while `isEnabled || isSyncing || pendingRequests > 0`.
+  `pb-sync-reviewer` caught this. My tests had only mocked an idle coordinator.
+- **React's `Profiler` misses re-renders that a context change triggers.** A
+  render-count test built on `onRender` passed against the unfixed provider. An
+  effect with no dependency array runs after every render and counts correctly.
+  After changing how a test measures, prove it red against the old code again.
+- **One `act()` batches every update inside it into a single render.** Advancing
+  fake timers by 5 seconds in one `act()` showed one extra render where a browser
+  would do ten. Step the clock one tick per `act()` to measure per-tick renders.
+- **Browser harness scripts must release the server in `finally`.** A failed
+  `chromium.launch()` outside the `try` left a static server holding the event
+  loop, and the script hung until its timeout. If the Playwright browser cache is
+  empty, `bunx playwright install chromium` restores it, or launch installed
+  Chrome with `channel: "chrome"`.
