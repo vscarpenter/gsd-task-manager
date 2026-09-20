@@ -15,7 +15,7 @@ This document outlines the security measures implemented in GSD Task Manager and
 
 ## Overview
 
-GSD Task Manager is a privacy-first application where all data is stored locally in the browser using IndexedDB by default. **Optional cloud sync** (v6.9.0+) enables multi-device access via a self-hosted PocketBase instance — the user owns and controls the server and data.
+GSD Task Manager is a privacy-first application where all data is stored locally in the browser using IndexedDB by default. **Optional cloud sync** (v6.9.0+) enables multi-device access through a PocketBase server: the hosted service at `https://api.vinny.io`, or one you run yourself.
 
 ## Client-Side Security
 
@@ -72,23 +72,38 @@ GSD Task Manager is a privacy-first application where all data is stored locally
 
 When users enable cloud sync, the following security measures protect their data:
 
-### Self-Hosted PocketBase Architecture
+### PocketBase Architecture
 
-1. **User-Owned Server**
-   - PocketBase instance runs on user's own infrastructure (e.g., AWS EC2)
-   - Selected task content fields are encrypted at rest by the PocketBase
-     hooks in `docker/pb_hooks/tasks_encryption.pb.js`
-   - `GSD_TASKS_ENC_KEY` is required by the self-hosted runtime; the one-shot
-     migration encrypts existing plaintext rows
-   - User has full control over data retention and access
-   - No third-party cloud service has access to task data
+Cloud sync talks to one PocketBase server. The app ships pointed at the hosted
+service, and the Docker image under `docker/` lets you run your own. The two
+store task content differently at rest.
 
-2. **Data Model**
+1. **Hosted Service (`https://api.vinny.io`)**
+   - I run this server as a PocketBase binary on an AWS EC2 instance
+   - The hosted service does not encrypt task content at rest. Titles,
+     descriptions, tags, subtasks, and time entries are plaintext in the
+     PocketBase database
+   - TLS protects task data in transit, and owner-scoped API rules keep each
+     account to its own tasks
+   - As the operator, I have technical access to synced task content. Stay in
+     local-only mode or self-host if that does not fit your needs
+   - [ADR 0016](docs/adr/0016-hosted-sync-defers-field-encryption.md) records
+     why the field encryption hooks are not deployed here
+
+2. **Self-Hosted Docker Image (`docker/`)**
+   - The hooks in `docker/pb_hooks/tasks_encryption.pb.js` encrypt the same
+     five task content fields at rest
+   - The container refuses to start without a 32-character
+     `GSD_TASKS_ENC_KEY`, and the one-shot migration encrypts existing
+     plaintext rows
+   - You control data retention and access, and no third party sees task data
+
+3. **Data Model**
    - Tasks stored with owner-scoped API rules: `@request.auth.id != "" && owner = @request.auth.id`
    - Each user can only access their own tasks
    - PocketBase enforces row-level security at the API layer
 
-3. **Sync Protocol**
+4. **Sync Protocol**
    - Last-write-wins (LWW) conflict resolution using `client_updated_at` timestamps
    - PocketBase SSE (Server-Sent Events) for realtime cross-device updates
    - Echo filtering prevents processing own-device changes
@@ -121,9 +136,10 @@ The MCP server allows Claude Desktop to access and manage tasks via natural lang
 1. **PocketBase API Access**
    - MCP server communicates directly with PocketBase using auth token
    - Auth token stored only in Claude Desktop config file
-   - PocketBase hooks encrypt selected content fields before persistence and
-     decrypt them after reads; API clients continue to receive the normal task
-     shape over HTTPS
+   - On a self-hosted Docker server, PocketBase hooks encrypt selected content
+     fields before persistence and decrypt them after reads. The hosted
+     service stores them as plaintext. API clients receive the normal task
+     shape over HTTPS either way
 
 2. **Read & Write Access**
    - MCP tools support both read and write operations
@@ -392,9 +408,9 @@ If you discover a security vulnerability, please:
 
 ### Known Trade-offs (Documented)
 
-1. **Auth Token in localStorage** — PocketBase SDK stores auth tokens in localStorage via its built-in `authStore`. Mitigated by React XSS protection, CSP headers, and HTTPS-only communication. Tasks are stored on user's own PocketBase server.
+1. **Auth Token in localStorage**: PocketBase SDK stores auth tokens in localStorage via its built-in `authStore`. Mitigated by React XSS protection, CSP headers, and HTTPS-only communication.
 
-2. **Expired token retained in shared Git history** — Commit `e9230cb` contains
+2. **Expired token retained in shared Git history**: Commit `e9230cb` contains
    an expired PocketBase JWT and associated identity claims. The current tree
    does not contain the credential, and blocking full-history Gitleaks scans
    allow only the committed content-free fingerprints in `.gitleaksignore`.
