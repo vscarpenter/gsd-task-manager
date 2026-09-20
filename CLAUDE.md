@@ -85,6 +85,7 @@ Architecture details for these subsystems live in path-scoped rules:
 ### E2E Testing
 - Playwright tests in `tests/e2e/` with auto-starting dev server (`playwright.config.ts`)
 - Tests run against Chromium, Firefox, WebKit
+- `bun run test:e2e:export` runs the critical journeys (`tests/e2e/export-journeys.ts`) against the built `out/` under the production CSP (`playwright.export.config.ts`, port 3100). Run `bun run build` first.
 - IndexedDB is cleared between tests automatically; root URL redirects to the about page on first load
 - Use `data-testid` attributes on components for stable selectors
 - Page Object Model for maintainable test fixtures

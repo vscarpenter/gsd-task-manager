@@ -1,7 +1,8 @@
 import { test as base } from "@playwright/test";
 
 // Firefox reports an aborted local font request as console.error when a test
-// navigates while Next's development font response is still in flight.
+// navigates while a font response is still in flight. That happens on the dev
+// server (localhost:3000) and on the static export server (127.0.0.1:3100).
 // 2152398850 is NS_BINDING_ABORTED; keep this fingerprint deliberately narrow
 // so missing fonts, non-local URLs, and every application error still fail.
 // The filename class includes `_` because Turbopack's hashed asset names carry
@@ -9,10 +10,10 @@ import { test as base } from "@playwright/test";
 // matching and the aborted-font diagnostic fails tests again.
 // Firefox renamed font-stretch to font-width, so the descriptor reads `width:100`
 // in current builds and `stretch:100` in older ones; the pattern accepts both.
-const FIREFOX_ABORTED_DEV_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ (?:stretch|width):100 src index:0\): status=2152398850 source: http:\/\/localhost:3000\/(?:_next\/static\/media\/[a-z0-9._-]+|__nextjs_font\/[a-z0-9._-]+)\.woff2"\]$/;
+const FIREFOX_ABORTED_LOCAL_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ (?:stretch|width):100 src index:0\): status=2152398850 source: http:\/\/(?:localhost:3000|127\.0\.0\.1:3100)\/(?:_next\/static\/media\/[a-z0-9._-]+|__nextjs_font\/[a-z0-9._-]+)\.woff2"\]$/;
 
 function isExpectedBrowserDiagnostic(message: string): boolean {
-  return FIREFOX_ABORTED_DEV_FONT.test(message);
+  return FIREFOX_ABORTED_LOCAL_FONT.test(message);
 }
 
 /**

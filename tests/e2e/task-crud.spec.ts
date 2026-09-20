@@ -124,6 +124,10 @@ test.describe("Completed tasks stay collapsed", () => {
     const q1 = page.locator("[data-testid='quadrant-q1']");
     const target = q1.locator("[data-testid='task-card']").filter({ hasText: "Finish me" });
     await target.getByRole("button", { name: /mark as complete/i }).click();
+    // click() resolves on dispatch, not when the IndexedDB write commits. The
+    // static export reloads fast enough to beat that write, so wait for the UI
+    // to show the completion before reloading.
+    await expect(target).toHaveCount(0);
 
     await page.evaluate(() => localStorage.setItem("gsd:show-completed", "true"));
     await page.reload({ waitUntil: "domcontentloaded" });

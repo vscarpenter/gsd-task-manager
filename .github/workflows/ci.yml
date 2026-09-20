@@ -155,6 +155,10 @@ jobs:
       - name: Boot production export under strict CSP
         if: matrix.browser == 'chromium'
         run: bun run test:csp
+      - name: Run critical journeys against the production export in ${{ matrix.browser }}
+        run: bun run test:e2e:export -- --project=${{ matrix.browser }}
+        env:
+          CI: true
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
