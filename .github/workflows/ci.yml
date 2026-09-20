@@ -173,3 +173,5 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - uses: ./.github/actions/build-static-export
+      - name: Enforce first-load JavaScript budget
+        run: bun run quality:bundle
