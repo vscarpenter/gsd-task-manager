@@ -24,7 +24,9 @@ describe("Playwright quality gates", () => {
     expect(fixture).toContain("status=2152398850");
     // Firefox now reports the stretch descriptor as width; keep both spellings.
     expect(fixture).toContain("(?:stretch|width):100");
-    expect(fixture).toContain("http:\\/\\/localhost:3000\\/");
+    // Exactly the two local servers, the dev server and the static export
+    // server. A broader origin would let real font failures through.
+    expect(fixture).toContain("http:\\/\\/(?:localhost:3000|127\\.0\\.0\\.1:3100)\\/");
     expect(fixture).toContain("_next\\/static\\/media");
     expect(fixture).toContain("__nextjs_font");
     expect(fixture).toMatch(/runtimeErrors\.length/);
