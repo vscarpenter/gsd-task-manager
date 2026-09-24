@@ -13,7 +13,7 @@ paths:
 
 ## Tool Layout
 
-- **Schemas**: `src/tools/schemas/` — Zod schemas for tool inputs
+- **Schemas**: `src/tools/schemas/` — MCP `Tool` definitions (JSON Schema) advertised to clients; Zod input validation lives in `src/tools/handlers/input-schemas.ts`
 - **Handlers**: `src/tools/handlers/` — implementation
 - **Tool files**: `src/tools/<name>.ts` — wires schema + handler
 - **Write ops**: `src/write-ops/` — task-operations + bulk-operations with dryRun support

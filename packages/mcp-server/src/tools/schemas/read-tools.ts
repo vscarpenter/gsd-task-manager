@@ -8,7 +8,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 export const getSyncStatusTool: Tool = {
   name: 'get_sync_status',
   description:
-    'Get sync status for GSD tasks including last sync time, device count, storage usage, and conflict count. Useful for checking overall sync health.',
+    'Check PocketBase sync backend health. Returns healthy (boolean), taskCount, authenticated, and the redacted pocketBaseUrl. lastSyncAt is always null: PocketBase is live, so there is no last-sync timestamp. Use validate_config for a full diagnostic and get_task_stats for task counts by status.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -19,7 +19,7 @@ export const getSyncStatusTool: Tool = {
 export const listDevicesTool: Tool = {
   name: 'list_devices',
   description:
-    'List all registered devices for the authenticated user. Shows device names, last seen timestamps, and active status. Useful for managing connected devices.',
+    'List devices registered for the authenticated user, most recently seen first. Returns id, name (null when the device is unnamed), and lastSeenAt for each device. isActive and isCurrent are placeholders (always true and false). Returns an empty list when the devices collection does not exist yet.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -30,7 +30,7 @@ export const listDevicesTool: Tool = {
 export const getTaskStatsTool: Tool = {
   name: 'get_task_stats',
   description:
-    'Get statistics about tasks including total count, active count, deleted count, and last update timestamp.',
+    'Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account regardless of quadrant. Use list_tasks when you need the tasks themselves rather than counts.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -41,7 +41,7 @@ export const getTaskStatsTool: Tool = {
 export const listTasksTool: Tool = {
   name: 'list_tasks',
   description:
-    'List all tasks. Returns full task details including titles, descriptions, quadrants, tags, subtasks, and dependencies. Optionally filter by quadrant, completion status, or tags.',
+    'List tasks with optional filters. Returns full task objects (title, description, quadrant, urgent/important, tags, subtasks, dependencies, dueDate, completed, timestamps) sorted by most recently updated first. Without filters it returns every task, completed ones included; pass completed=false for the active list. Multiple filters combine with AND; the tags filter matches a task that has any of the given tags. Results come from a short-lived cache that is invalidated on every write.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -73,7 +73,7 @@ export const listTasksTool: Tool = {
 export const getTaskTool: Tool = {
   name: 'get_task',
   description:
-    'Get a single task by ID. Returns full task details.',
+    'Get a single task by its ID. Returns the full task object. Fails with "Task not found" when no task has that ID; use search_tasks or list_tasks to find an ID first.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -89,7 +89,7 @@ export const getTaskTool: Tool = {
 export const searchTasksTool: Tool = {
   name: 'search_tasks',
   description:
-    'Search tasks by text query. Searches across task titles, descriptions, tags, and subtask text. Returns matching tasks.',
+    'Search tasks by a case-insensitive substring match against titles, descriptions, tags, and subtask titles. Returns full task objects for every match, completed tasks included, most recently updated first; there is no relevance ranking. Use list_tasks with filters when you need a quadrant, tag, or completion filter rather than free text.',
   inputSchema: {
     type: 'object',
     properties: {

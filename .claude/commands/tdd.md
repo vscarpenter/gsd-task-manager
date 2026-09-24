@@ -2,7 +2,7 @@
 description: Start a red/green/refactor cycle for a behavior. Enforces test-first discipline per coding-standards.md.
 ---
 
-Start a red/green/refactor cycle for the behavior described in the arguments. Follow the TDD protocol from `coding-standards.md` Part 3 and the gsd-taskmanager testing conventions in `CLAUDE.md`.
+Start a red/green/refactor cycle for the behavior described in the arguments. Follow the TDD rules in `coding-standards.md` Part 2 ("Testing") and the gsd-taskmanager testing conventions in `CLAUDE.md`.
 
 Behavior: $ARGUMENTS
 
@@ -11,7 +11,7 @@ Execute the cycle strictly in order:
 1. **Red.** Write a failing test in the appropriate location:
    - Data/logic tests → `tests/data/`
    - UI/component tests → `tests/ui/`
-   - MCP server tests → `packages/mcp-server/tests/`
+   - MCP server tests → `packages/mcp-server/src/__tests__/`
 
    Use a behavior-based name (e.g., `should_skip_echo_events_from_own_device`). Follow Arrange-Act-Assert. Use the project conventions:
    - Vitest with `@testing-library/react` + `@testing-library/jest-dom`
@@ -24,8 +24,8 @@ Execute the cycle strictly in order:
 2. **Pause.** Stop and wait for approval of the test before writing any implementation. Do not proceed to green without confirmation.
 
 3. **Green.** Write the minimum implementation needed to make the test pass. Respect:
-   - File-size limit ≤350 lines (split if needed; `lib/analytics/`, `lib/notifications/`, `lib/sync/`, `components/task-form/`, `components/settings/`, `components/dashboard/` are reference modular layouts)
-   - Function-size limit ≤30 lines
+   - File-size limit ~400 lines (split if needed; `lib/analytics/`, `lib/notifications/`, `lib/sync/`, `components/settings-page/`, `components/dashboard/` are reference modular layouts)
+   - Function-size limit ≤40 lines
    - No extra features, no speculative abstractions, no unrelated edits
 
    Run the test and confirm it passes. Then run `bun run test` to confirm no regressions.

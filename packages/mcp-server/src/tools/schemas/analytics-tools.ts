@@ -29,7 +29,7 @@ const getQuadrantAnalysisTool: Tool = {
 export const getTagAnalyticsTool: Tool = {
   name: 'get_tag_analytics',
   description:
-    'Get detailed statistics for all tags including usage counts, completion rates, and tag-based insights. Useful for understanding project/category performance.',
+    'Get per-tag statistics: usage counts and completion rates for every tag. This is the tagStats section of get_productivity_metrics on its own; call this when only tag data is needed, and get_productivity_metrics when you also need completion counts, streaks, or quadrant distribution.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -56,7 +56,7 @@ const getUpcomingDeadlinesTool: Tool = {
 const getTaskInsightsTool: Tool = {
   name: 'get_task_insights',
   description:
-    'Generate an AI-friendly summary of task insights including key metrics, streaks, deadlines, quadrant distribution, and top tags. Perfect for quick status overview.',
+    'Get a prose summary of key metrics, streaks, upcoming deadlines, quadrant distribution, and top tags, computed from the same data as get_productivity_metrics. Returns text rather than JSON; use get_productivity_metrics when you need numbers to compute with.',
   inputSchema: {
     type: 'object',
     properties: {},

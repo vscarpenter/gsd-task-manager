@@ -26,7 +26,7 @@ Do NOT invoke for local-only Dexie fields (those don't need the PB layers).
 
 ## Prerequisites — verify before touching code
 
-1. Read `CLAUDE.md` → "PocketBase v0.23+ Gotchas" section. The gotchas below are condensed but the source of truth is there.
+1. Read `.claude/rules/pocketbase-sync.md`. The gotchas below are condensed but the source of truth is there.
 2. Confirm the user has the PocketBase admin password handy (needed to run `scripts/setup-pocketbase-collections.sh`).
 3. Confirm the field is not a system field name (`id`, `created`, `updated`, `collectionId`, `collectionName`).
 4. Confirm field type is supported by both Dexie and PocketBase: `text`, `number`, `bool`, `json`, `date`. Never use `relation` to `_pb_users_auth_` (placeholder doesn't resolve at runtime).
@@ -51,7 +51,7 @@ Do NOT invoke for local-only Dexie fields (those don't need the PB layers).
 - Verify the field appears in PB admin UI before continuing.
 
 ### 4. Bump Dexie version — `lib/db.ts`
-- Increment the version (current is v13).
+- Increment the version (read the latest `version(...)` call in `lib/db.ts`; `CLAUDE.md` tracks the current number).
 - Add the field to the relevant table schema.
 - If the field is indexed locally, add it to the index list.
 - Write a migration block if existing rows need backfill (use `upgrade()` callback).
@@ -72,11 +72,11 @@ Do NOT invoke for local-only Dexie fields (those don't need the PB layers).
 
 ### 8. Tests — REQUIRED before claiming done
 Write or update:
-- `tests/data/schema.test.ts` — Zod parse/safeParse with and without the new field.
-- `tests/data/task-mapper.test.ts` — round-trip mapping.
-- `tests/data/db-migration.test.ts` — Dexie version upgrade preserves existing data.
-- `tests/data/sync-engine.test.ts` — push/pull serializes the field correctly.
-- `tests/data/import-export.test.ts` — import (lenient `.strip()`) accepts old exports without the field; export (strict `.strict()`) emits it.
+- A schema test under `tests/data/` — Zod parse/safeParse with and without the new field.
+- `tests/data/sync/task-mapper.test.ts` — round-trip mapping.
+- `tests/data/db-migrations.test.ts` — Dexie version upgrade preserves existing data.
+- `tests/data/sync/pb-sync-engine.test.ts` (and `pb-push`/`pb-pull`) — push/pull serializes the field correctly.
+- `tests/data/import.test.ts` and `tests/data/import-export-sync.test.ts` — import (lenient `.strip()`) accepts old exports without the field; export (strict `.strict()`) emits it.
 
 Run `bun run test -- --coverage` and confirm changed-file coverage ≥80%.
 
@@ -92,7 +92,7 @@ Run `bun run test -- --coverage` and confirm changed-file coverage ≥80%.
 ### 10. Commit
 Conventional commit format: `feat(sync): add <field> to tasks collection` or `feat(schema): ...`. Bump `package.json` patch or minor depending on user impact.
 
-## Gotchas (condensed — full list in CLAUDE.md)
+## Gotchas (condensed — full list in `.claude/rules/pocketbase-sync.md`)
 
 - **Sort/filter restriction** — Do not reference `created` or `updated` in PB sort/filter strings. Use `client_updated_at`.
 - **Admin endpoint** — `/api/collections/_superusers/auth-with-password`, not `/api/admins/...`.

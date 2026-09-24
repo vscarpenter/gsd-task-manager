@@ -9,7 +9,7 @@ Feature: $ARGUMENTS
 Include every section:
 - **Goal** — One sentence describing what this does and why it matters for gsd-taskmanager.
 - **Inputs / Outputs** — Schemas (reference `lib/schema.ts` Zod types if applicable), data shapes, formats.
-- **Constraints** — Performance, privacy (local-first IndexedDB), PocketBase sync compatibility, file-size limits (≤350 lines per file, ≤30 lines per function), bundle impact.
+- **Constraints** — Performance, privacy (local-first IndexedDB), PocketBase sync compatibility, size limits from `coding-standards.md` Part 3 (~400 lines per file, ≤40 lines per function), bundle impact.
 - **Edge Cases** — Empty inputs, offline mode, sync conflicts, circular task dependencies, concurrent multi-device edits, schema migration scenarios.
 - **Out of Scope** — Explicit list of what this version does NOT do (prevents scope creep).
 - **Acceptance Criteria** — Checkable statements that prove correctness. Each AC must map to at least one test.
