@@ -227,7 +227,7 @@ Once configured, you can ask Claude questions like:
 **Task Overview** (v0.1.0)
 - "How many tasks do I have in GSD?"
 - "Give me task statistics"
-- "What's my storage usage?"
+- "Is my sync backend healthy?"
 
 **Task Access** (v0.2.0+)
 - "List all my tasks"
@@ -558,7 +558,7 @@ Get task cache statistics including hit rate, cache size, and TTL configuration.
 ## Write Operation Tools (v0.4.0, enhanced v0.6.0)
 
 ### `create_task`
-Create a new task with natural language input. **Requires authentication**.
+Create a new task from structured fields; the quadrant is derived from `urgent` and `important`. **Requires authentication**.
 
 **Parameters**:
 - `title` (required): Task title

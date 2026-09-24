@@ -18,7 +18,7 @@ export const validateConfigTool: Tool = {
 export const getHelpTool: Tool = {
   name: 'get_help',
   description:
-    'Get comprehensive help documentation including available tools, usage examples, common queries, and troubleshooting tips. Perfect for discovering what the GSD MCP server can do.',
+    'Get help documentation for this server: the tool list, analytics capabilities, setup, example queries, and troubleshooting. Pass topic to return one section; omit it for all sections.',
   inputSchema: {
     type: 'object',
     properties: {

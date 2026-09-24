@@ -20,9 +20,7 @@ You should also volunteer to run it if the user mentions:
 
 ## Why it exists
 
-A real session lost ~10 minutes when `tests/ui/edit-drawer.test.tsx` turned out to have unresolved merge conflict markers committed to `main` six commits before the session started (commit `62f3ab4`). The file failed to parse, blocking root `bun run test` and any PR CI. The damage was discovered mid-Task-2 of an implementation plan, requiring an out-of-plan fix and explicit scope-expansion approval from the user.
-
-This script catches that class of damage in under a second, before it becomes a Task-6 surprise.
+Damage inherited from `main` (conflict markers committed to a tracked file, a forgotten autostash, stray uncommitted edits) surfaces later as an unrelated parse or test failure partway through a plan, forcing an out-of-plan fix. This script catches that class of damage in under a second, before any plan step depends on a clean tree.
 
 ## What it checks
 

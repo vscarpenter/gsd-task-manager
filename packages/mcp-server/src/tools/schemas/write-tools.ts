@@ -8,7 +8,7 @@ import { SCHEMA_LIMITS } from '../../constants.js';
 export const createTaskTool: Tool = {
   name: 'create_task',
   description:
-    'Create a new task with natural language input. Supports all task properties including title, description, urgency, importance, due dates, tags, subtasks, recurrence, and dependencies. Use dryRun=true to preview without saving.',
+    'Create a new task from structured fields. Requires title, urgent, and important; the quadrant is derived from the two booleans. Optional fields: description, dueDate, tags, subtasks, recurrence, dependencies, notifyBefore, notificationEnabled, estimatedMinutes. Any http(s) URLs in the title are moved into the description. Dependencies are validated for cycles. Use dryRun=true to preview without saving.',
   inputSchema: {
     type: 'object',
     properties: {
