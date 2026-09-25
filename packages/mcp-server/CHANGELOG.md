@@ -5,6 +5,14 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2026-09-24
+
+### Security
+- Bumps `@modelcontextprotocol/sdk` from 1.30.0 to 1.30.1. Upstream caps the
+  size of HTTP request bodies, bounds JSON-RPC batch length, and keeps
+  resource URIs without a trailing slash in auth. This server talks over
+  stdio, so none of those paths change how it behaves.
+
 ## [1.2.7] - 2026-09-19
 
 ### Fixed
@@ -596,6 +604,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.2.8]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.7...mcp-v1.2.8
 [1.2.7]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.6...mcp-v1.2.7
 [1.2.6]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.5...mcp-v1.2.6
 [1.2.5]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.4...mcp-v1.2.5
