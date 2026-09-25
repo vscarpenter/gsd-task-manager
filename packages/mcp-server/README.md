@@ -10,7 +10,7 @@ Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task m
 Install a reviewed, exact release and run its interactive setup wizard:
 
 ```bash
-npm install --global gsd-mcp-server@1.2.7
+npm install --global gsd-mcp-server@1.2.8
 gsd-mcp-server --setup
 ```
 
@@ -116,7 +116,7 @@ gsd-mcp-server
 ### Option A: Install an Exact Published Release (Recommended)
 
 Install an explicitly reviewed version, such as `npm install --global
-gsd-mcp-server@1.2.7`. Updating is a deliberate reinstall followed by `--setup`.
+gsd-mcp-server@1.2.8`. Updating is a deliberate reinstall followed by `--setup`.
 
 ### Option B: Build from Source
 
