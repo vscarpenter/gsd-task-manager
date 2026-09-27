@@ -58,16 +58,30 @@ Checked and not affected: wildcard-free coverage patterns (the three
 - **D3. Accept Vitest 5's new `clearMocks: true` default.** The measured run shows no
   test depends on call history carried across tests. Rejected: pinning
   `clearMocks: false`, which keeps the weaker v4 default for no measured benefit.
-- **D4. No CI workflow change.** Vitest 5 needs Node 22.12 or later. CI installs Bun
-  but not Node, so Vitest runs on the runner's Node: 22.23.2 on the ubuntu-24.04 image
-  20260920 (24.21.0 is cached). Local default is Node 26.10.
+- **D4 (amended 2026-09-27 after review; owner approved).** Declare, document, and
+  pin the Node floor. Vitest 5 needs Node 22.12 or later, but jsdom 30.0.1 (already on
+  `main`) declares a stricter `^22.22.2 || ^24.15.0 || >=26.0.0`, so that is the real
+  test-toolchain floor. `bun run` executes package scripts on Node, and Bun ignores
+  `engines` (a probe with `node >=99` installed and ran cleanly), so:
+  - `package.json` declares `engines.node` equal to jsdom's range.
+  - `README.md` lists the Node requirement next to Bun.
+  - Every CI job that runs Vitest (`ci.yml` `test` and `mcp-coverage`,
+    `sonarcloud.yml`) adds `actions/setup-node` at the SHA `publish-mcp-server.yml`
+    already pins, with `node-version: '22'`, before `bun install`. An explicit `22`
+    tests the floor line and avoids `node-version-file`, which would resolve the range
+    to Node 26, where `service-worker-privacy` fails.
+  - No local runtime guard: Vitest has no startup version check, and adding one is
+    out of scope. Running Vitest on Bun's runtime (`--bun`) is rejected: Bun as `node`
+    already crashed `next build` once (PR #541), and jsdom behaves differently under
+    Bun.
 - **D5. Root package only.** `packages/mcp-server` stays on Vitest 4.1.11, pinned by
   `tests/data/security-hardening-scripts.test.ts:358-359`, and migrates in its own PR.
   Bun nests the MCP copy, so the two versions do not collide.
 
 ## Constraints
 
-- Test files only, plus `vitest.config.ts`, `package.json`, and `bun.lock`. No
+- Test files, `vitest.config.ts`, `package.json`, `bun.lock`, and (per amended D4)
+  `README.md`, `.github/workflows/ci.yml`, and `.github/workflows/sonarcloud.yml`. No
   production code changes, so bundle size and the PocketBase, IndexedDB, and privacy
   surfaces are untouched.
 - Both touched test files stay under their current size (837 and 141 lines). No new
@@ -116,6 +130,11 @@ Checked and not affected: wildcard-free coverage patterns (the three
 - **AC6.** `bun typecheck`, `bun lint`, `bun run quality:shape`, and `bun run build`
   pass. The MCP suite passes on its own Vitest 4.1.11, and
   `security-hardening-scripts.test.ts` passes unchanged.
+- **AC7.** `package.json` `engines.node` equals the installed jsdom's `engines.node`;
+  `README.md` states the Node floor; and each Vitest job in `ci.yml` and
+  `sonarcloud.yml` sets up Node 22 through a SHA-pinned `actions/setup-node` before
+  `bun install`. Guard tests in `build-config.test.ts` and
+  `documentation-currentness.test.ts` enforce all three.
 
 ## Test stubs
 

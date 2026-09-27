@@ -16,7 +16,19 @@ const requireFromRepo = createRequire(resolve(process.cwd(), "package.json"));
 
 interface PackageJson {
   devDependencies?: Record<string, string>;
+  engines?: Record<string, string>;
   scripts?: Record<string, string>;
+}
+
+const SETUP_NODE_22 =
+  /uses: actions\/setup-node@[0-9a-f]{40} # v4\n\s+with:\n\s+node-version: '22'\n/;
+
+function workflowJob(workflow: string, job: string): string {
+  const start = workflow.indexOf(`\n  ${job}:\n`);
+  if (start === -1) return "";
+  const body = workflow.slice(start + 1);
+  const next = body.slice(1).search(/\n {2}[a-z][\w-]*:\n/);
+  return next === -1 ? body : body.slice(0, next + 1);
 }
 
 interface TypeScriptModule {
@@ -182,6 +194,34 @@ describe("build configuration", () => {
 
     expect(ci).toContain("bun run test -- --coverage");
     expect(sonar).not.toMatch(/continue-on-error:\s*true/);
+  });
+
+  it("declares the test toolchain's Node floor in engines", () => {
+    const packageJson = requireFromRepo("./package.json") as PackageJson;
+    const jsdom = JSON.parse(readFileSync("node_modules/jsdom/package.json", "utf8")) as PackageJson;
+
+    // jsdom declares the strictest floor in the test toolchain; Vitest 5 needs only
+    // 22.12. Bun ignores engines, so CI and the README carry the enforcement.
+    expect(jsdom.engines?.node).toBeDefined();
+    expect(packageJson.engines?.node).toBe(jsdom.engines?.node);
+  });
+
+  it("runs every Vitest job on Node 22, set up before install", () => {
+    const ci = readFileSync(".github/workflows/ci.yml", "utf8");
+    const sonar = readFileSync(".github/workflows/sonarcloud.yml", "utf8");
+    const vitestJobs = [
+      workflowJob(ci, "test"),
+      workflowJob(ci, "mcp-coverage"),
+      workflowJob(sonar, "sonarcloud"),
+    ];
+
+    // `bun run` executes package scripts on Node, so the runner image's default
+    // Node would otherwise decide whether Vitest can start.
+    for (const job of vitestJobs) {
+      const setupIndex = job.search(SETUP_NODE_22);
+      expect(setupIndex).toBeGreaterThan(-1);
+      expect(setupIndex).toBeLessThan(job.indexOf("bun install --frozen-lockfile"));
+    }
   });
 
   it("opts the document into the declared smooth scroll behavior", () => {
