@@ -1,3 +1,28 @@
+# Session state, 2026-09-27: Vitest 5 migration
+
+Branch `chore/vitest-5-migration`, cut from `main` @ `243950e`. Non-trivial tier;
+the owner approved design decisions D1 to D5 in `tasks/spec-vitest-5-migration.md`.
+
+- [x] Discovery: Vitest 5 fails 57 tests (jsdom's getter-only `navigator`) and drops
+      `lib/sync/sync-provider.tsx` from coverage (exact glob matching). CI's runner
+      ships Node 22.23.2, above Vitest 5's 22.12 floor.
+- [x] Red confirmed, then 16 `navigator` writes moved to `vi.stubGlobal` with
+      `vi.unstubAllGlobals()` in `afterEach`. Added `lib/**/*.tsx` to coverage.
+- [x] Verified: 3,193 passed under Node 22 (same as Vitest 4), identical 269-file
+      coverage set, typecheck, lint, shape, build, license, audit, and the MCP suite
+      on its own Vitest 4.1.11.
+
+## Resuming From Here
+
+Next: push and open the PR when the owner says go. No version bump: nothing here
+reaches `out/`, and a bump would rotate every user's service-worker cache.
+
+Later, each on its own branch: move `packages/mcp-server` to Vitest 5 (update the
+pins in `security-hardening-scripts.test.ts:358-359` in the same commit), revisit
+jsdom 30.1.1, and swap `__dirname` for `import.meta.dirname` in `vitest.config.ts`.
+
+---
+
 # Session state, 2026-09-26: `bun update --latest` repair
 
 Branch `chore/deps-update-2026-09-26`, cut from `main` @ `7a7ddcf`. Standard

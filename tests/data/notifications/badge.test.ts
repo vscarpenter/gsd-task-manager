@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { isBadgeSupported, setAppBadge, clearAppBadge } from '@/lib/notifications';
 
 describe('Notification Badge', () => {
@@ -7,25 +7,30 @@ describe('Notification Badge', () => {
     vi.clearAllMocks();
   });
 
+  // Vitest 5 forwards global writes to jsdom, whose navigator is getter-only,
+  // so tests stub it with vi.stubGlobal and restore the real one after each.
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   describe('isBadgeSupported', () => {
     it('should return false when navigator is undefined', () => {
-      // @ts-expect-error - testing undefined navigator
-      global.navigator = undefined;
+      vi.stubGlobal('navigator', undefined);
 
       expect(isBadgeSupported()).toBe(false);
     });
 
     it('should return false when setAppBadge is not available', () => {
-      global.navigator = {} as Navigator;
+      vi.stubGlobal('navigator', {});
 
       expect(isBadgeSupported()).toBe(false);
     });
 
     it('should return true when setAppBadge is available', () => {
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: vi.fn(),
         clearAppBadge: vi.fn(),
-      } as unknown as Navigator;
+      });
 
       expect(isBadgeSupported()).toBe(true);
     });
@@ -33,7 +38,7 @@ describe('Notification Badge', () => {
 
   describe('setAppBadge', () => {
     it('should not call setAppBadge when not supported', async () => {
-      global.navigator = {} as Navigator;
+      vi.stubGlobal('navigator', {});
 
       await setAppBadge(5);
 
@@ -43,10 +48,10 @@ describe('Notification Badge', () => {
 
     it('should call navigator.setAppBadge with count when count > 0', async () => {
       const setAppBadgeMock = vi.fn().mockResolvedValue(undefined);
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: setAppBadgeMock,
         clearAppBadge: vi.fn(),
-      } as unknown as Navigator;
+      });
 
       await setAppBadge(5);
 
@@ -55,10 +60,10 @@ describe('Notification Badge', () => {
 
     it('should call navigator.clearAppBadge when count is 0', async () => {
       const clearAppBadgeMock = vi.fn().mockResolvedValue(undefined);
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: vi.fn(),
         clearAppBadge: clearAppBadgeMock,
-      } as unknown as Navigator;
+      });
 
       await setAppBadge(0);
 
@@ -67,10 +72,10 @@ describe('Notification Badge', () => {
 
     it('should call navigator.clearAppBadge when count is negative', async () => {
       const clearAppBadgeMock = vi.fn().mockResolvedValue(undefined);
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: vi.fn(),
         clearAppBadge: clearAppBadgeMock,
-      } as unknown as Navigator;
+      });
 
       await setAppBadge(-1);
 
@@ -81,10 +86,10 @@ describe('Notification Badge', () => {
       const setAppBadgeMock = vi.fn().mockRejectedValue(new Error('Badge error'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: setAppBadgeMock,
         clearAppBadge: vi.fn(),
-      } as unknown as Navigator;
+      });
 
       await setAppBadge(5);
 
@@ -99,7 +104,7 @@ describe('Notification Badge', () => {
 
   describe('clearAppBadge', () => {
     it('should not call clearAppBadge when not supported', async () => {
-      global.navigator = {} as Navigator;
+      vi.stubGlobal('navigator', {});
 
       await clearAppBadge();
 
@@ -109,10 +114,10 @@ describe('Notification Badge', () => {
 
     it('should call navigator.clearAppBadge when supported', async () => {
       const clearAppBadgeMock = vi.fn().mockResolvedValue(undefined);
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: vi.fn(),
         clearAppBadge: clearAppBadgeMock,
-      } as unknown as Navigator;
+      });
 
       await clearAppBadge();
 
@@ -123,10 +128,10 @@ describe('Notification Badge', () => {
       const clearAppBadgeMock = vi.fn().mockRejectedValue(new Error('Clear badge error'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      global.navigator = {
+      vi.stubGlobal('navigator', {
         setAppBadge: vi.fn(),
         clearAppBadge: clearAppBadgeMock,
-      } as unknown as Navigator;
+      });
 
       await clearAppBadge();
 

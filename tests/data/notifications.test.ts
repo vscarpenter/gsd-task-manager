@@ -69,8 +69,9 @@ describe("Notifications module", () => {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 
-		// Mock navigator with service worker and badge API
-		global.navigator = {
+		// Mock navigator with service worker and badge API. Vitest 5 forwards
+		// global writes to jsdom, whose navigator is getter-only, so stub it.
+		vi.stubGlobal("navigator", {
 			serviceWorker: {
 				ready: Promise.resolve({
 					showNotification: vi.fn().mockResolvedValue(undefined),
@@ -78,13 +79,13 @@ describe("Notifications module", () => {
 			},
 			setAppBadge: vi.fn().mockResolvedValue(undefined),
 			clearAppBadge: vi.fn().mockResolvedValue(undefined),
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} as any;
+		});
 	});
 
 	afterEach(() => {
 		vi.clearAllMocks();
 		vi.useRealTimers();
+		vi.unstubAllGlobals();
 	});
 
 	describe("isNotificationSupported", () => {
@@ -748,14 +749,12 @@ describe("Notifications module", () => {
 		});
 
 		it("should return false when navigator is undefined", () => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			global.navigator = undefined as any;
+			vi.stubGlobal("navigator", undefined);
 			expect(isBadgeSupported()).toBe(false);
 		});
 
 		it("should return false when setAppBadge is not available", () => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			global.navigator = {} as any;
+			vi.stubGlobal("navigator", {});
 			expect(isBadgeSupported()).toBe(false);
 		});
 	});
@@ -780,8 +779,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should do nothing when badge API not supported", async () => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			global.navigator = {} as any;
+			vi.stubGlobal("navigator", {});
 
 			await expect(setAppBadge(5)).resolves.not.toThrow();
 		});
@@ -813,8 +811,7 @@ describe("Notifications module", () => {
 		});
 
 		it("should do nothing when badge API not supported", async () => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			global.navigator = {} as any;
+			vi.stubGlobal("navigator", {});
 
 			await expect(clearAppBadge()).resolves.not.toThrow();
 		});
