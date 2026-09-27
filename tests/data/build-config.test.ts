@@ -206,6 +206,18 @@ describe("build configuration", () => {
     expect(packageJson.engines?.node).toBe(jsdom.engines?.node);
   });
 
+  it("pairs each Vitest runner with a coverage provider of the same version", () => {
+    const root = requireFromRepo("./package.json") as PackageJson;
+    const mcp = requireFromRepo("./packages/mcp-server/package.json") as PackageJson;
+
+    // The MCP workspace once borrowed the root's hoisted provider. When the root
+    // moved to Vitest 5, the v5 provider broke MCP's v4 runner.
+    for (const { devDependencies } of [root, mcp]) {
+      expect(devDependencies?.vitest).toBeDefined();
+      expect(devDependencies?.["@vitest/coverage-v8"]).toBe(devDependencies?.vitest);
+    }
+  });
+
   it("runs every Vitest job on Node 22, set up before install", () => {
     const ci = readFileSync(".github/workflows/ci.yml", "utf8");
     const sonar = readFileSync(".github/workflows/sonarcloud.yml", "utf8");

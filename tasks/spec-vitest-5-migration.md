@@ -77,6 +77,12 @@ Checked and not affected: wildcard-free coverage patterns (the three
 - **D5. Root package only.** `packages/mcp-server` stays on Vitest 4.1.11, pinned by
   `tests/data/security-hardening-scripts.test.ts:358-359`, and migrates in its own PR.
   Bun nests the MCP copy, so the two versions do not collide.
+  Correction (2026-09-27, found by CI on PR #564): the MCP workspace never declared
+  `@vitest/coverage-v8` and borrowed the root's hoisted provider. The root's v5
+  provider broke MCP's v4 `test:coverage` ("coverageFilesDirectory is required") in
+  `ci.yml` `mcp-coverage` and in SonarCloud. MCP now declares its own
+  `@vitest/coverage-v8@4.1.11`, and a guard test pairs each runner with a provider of
+  the same version.
 
 ## Constraints
 
@@ -128,8 +134,8 @@ Checked and not affected: wildcard-free coverage patterns (the three
 - **AC5.** `bun run test -- --coverage` covers exactly the Vitest 4 file set (269
   files, including `lib/sync/sync-provider.tsx`) and passes the thresholds.
 - **AC6.** `bun typecheck`, `bun lint`, `bun run quality:shape`, and `bun run build`
-  pass. The MCP suite passes on its own Vitest 4.1.11, and
-  `security-hardening-scripts.test.ts` passes unchanged.
+  pass. The MCP suite passes `test` and `test:coverage` (the command CI runs) on its
+  own Vitest 4.1.11, and `security-hardening-scripts.test.ts` passes unchanged.
 - **AC7.** `package.json` `engines.node` equals the installed jsdom's `engines.node`;
   `README.md` states the Node floor; and each Vitest job in `ci.yml` and
   `sonarcloud.yml` sets up Node 22 through a SHA-pinned `actions/setup-node` before
