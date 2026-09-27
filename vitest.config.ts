@@ -22,6 +22,9 @@ export default defineConfig({
       provider: "v8",
       include: [
         "lib/**/*.ts",
+        // Vitest 5 matches globs exactly, so "*.ts" no longer catches lib's
+        // one .tsx file (sync-provider.tsx) the way Vitest 4 did.
+        "lib/**/*.tsx",
         "components/**/*.ts",
         "components/**/*.tsx",
         "app/**/*.ts",

@@ -11,6 +11,15 @@ describe("documentation currentness", () => {
     expect(readme).not.toMatch(/### Batch Operations|Smart View Pinning|Quick Settings Panel/);
   });
 
+  it("states the Node floor next to the Bun requirement", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+    const readme = readFileSync("README.md", "utf8");
+    const floor = String(packageJson.engines?.node ?? "").match(/\d+\.\d+\.\d+/)?.[0];
+
+    expect(floor).toBeDefined();
+    expect(readme).toContain(`[Node.js](https://nodejs.org/) ${floor}+`);
+  });
+
   it("documents the executable security gates and both encryption migrations", () => {
     const security = readFileSync("SECURITY.md", "utf8");
     const boundaries = readFileSync("docs/security-trust-boundaries.md", "utf8");
