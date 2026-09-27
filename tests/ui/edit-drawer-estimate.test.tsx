@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -33,6 +33,9 @@ describe("<EditDrawer> estimate", () => {
   it("submits the entered estimate", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={onSubmit} />);
+    // Let the drawer's delayed title autofocus fire first, or it lands mid-type
+    // and sends the rest of the keystrokes into the title.
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
 
     // The Review page reports Total Estimated and Estimation Accuracy; without
     // this field there was no way to give either a number.

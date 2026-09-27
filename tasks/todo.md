@@ -1,3 +1,31 @@
+# Session state, 2026-09-26: `bun update --latest` repair
+
+Branch `chore/deps-update-2026-09-26`, cut from `main` @ `7a7ddcf`. Standard
+tier: `package.json`, `bun.lock`, the version trio, and three test files.
+
+- [x] Root causes, each bisected in a clean worktree: `zod` 4.6.5 against
+      stagehand's exact 4.4.3 pin (the build's type errors), `typescript` 7
+      (typescript-eslint crashes), `vitest` 5 (`navigator` is getter-only, 57
+      tests), and `jsdom` 30.1.1 (`var()` unresolved in computed `color`).
+- [x] Held those four back and kept every other update.
+- [x] Fixed the EditDrawer autofocus race in four tests. The new package mix
+      exposed it.
+- [x] Clean frozen install: typecheck, lint, shape, build, bundle budget, license,
+      MCP tests, and the full suite with coverage under Node 22 all pass.
+
+## Resuming From Here
+
+Next: the owner runs a clean reinstall (`rm -rf node_modules && bun install`).
+The local tree mixes 28 stale bun isolated-store symlinks into a hoisted layout,
+so it loads two copies of React and Dexie. Then push and open the PR on approval.
+
+Later, each on its own branch: migrate to vitest 5 (`vi.stubGlobal` for
+`navigator`), revisit jsdom 30.1.1, and drop the zod pin once stagehand widens
+its range. The `service-worker-privacy` failure is local to Node 26 and predates
+this work.
+
+---
+
 # Session state, 2026-09-20: SyncProvider idle polling
 
 Branch `fix/sync-provider-idle-polling` @ `fffaa29`, PR #558. Standard tier: one

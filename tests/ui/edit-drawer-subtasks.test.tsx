@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -33,6 +33,9 @@ describe("<EditDrawer> subtasks", () => {
   it("adds a subtask and submits it", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={onSubmit} />);
+    // Let the drawer's delayed title autofocus fire first, or it lands mid-type
+    // and sends the rest of the keystrokes into the title.
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
 
     await user.type(screen.getByLabelText(/add a subtask/i), "Write the changelog{Enter}");
     await user.click(screen.getByRole("button", { name: /save changes/i }));
@@ -110,6 +113,7 @@ describe("<EditDrawer> subtasks", () => {
   it("ignores an empty subtask", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
 
     await user.type(screen.getByLabelText(/add a subtask/i), "   {Enter}");
     await user.click(screen.getByRole("button", { name: /save changes/i }));
