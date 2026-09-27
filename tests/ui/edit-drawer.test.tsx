@@ -119,6 +119,9 @@ describe("<EditDrawer>", () => {
   it("normalizes typed tags and ignores duplicate tags before submit", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={onSubmit} />);
+    // Let the delayed title autofocus fire before typing, or it can steal the
+    // tag keystrokes if the title finishes first.
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
 
     await user.type(screen.getByLabelText(/^title$/i), "Tagged task");
     const tagInput = screen.getByPlaceholderText(/add a tag/i);
@@ -279,6 +282,7 @@ describe("<EditDrawer>", () => {
     it("should_submit_dependencies_without_task_id_in_create_mode", async () => {
       const onSubmit = vi.fn();
       render(<EditDrawer open task={null} allTasks={[otherTask]} onClose={vi.fn()} onSubmit={onSubmit} />);
+      await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
       await user.type(screen.getByLabelText(/^title$/i), "Brand new task");
       await user.type(screen.getByLabelText(/search tasks/i), "other");
       await user.click(screen.getByTestId("dep-suggestion"));
