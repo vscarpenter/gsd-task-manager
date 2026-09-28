@@ -59,14 +59,13 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    javascript:(function(){var p=new URLSearchParams({action:"capture",title:document.title||location.hostname,url:location.href,tags:"readme,todo"});window.open("https://gsd.vinny.dev/#"+p.toString(),"_blank");})();
    ```
 
-5. **Telemetry Data Minimization**
-   - Sentry is disabled unless `NEXT_PUBLIC_SENTRY_DSN` is explicitly configured
-   - The final `beforeSend` boundary builds a new event from an allowlist instead
-     of forwarding the SDK event object
-   - Error messages, task context, request bodies/headers/query strings, user
-     fields, tags, and arbitrary extras are dropped
-   - Only structural diagnostics such as error type, sanitized stack locations,
-     HTTP method, path-only URLs, release, environment, and severity are retained
+5. **No Error Telemetry**
+   - The app ships no error-reporting SDK. Runtime errors are logged to the
+     browser console only and never leave the device (see ADR 0017)
+   - Console log metadata is still masked: tokens, credentials, and other
+     secret-shaped keys are replaced before anything is written
+   - The `connect-src` directive names only the sync backend and the OAuth
+     providers, so there is no telemetry origin for the browser to reach
 
 ## Cloud Sync Security (Optional)
 
@@ -200,7 +199,7 @@ style-src-elem 'self' 'unsafe-inline';
 style-src-attr 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self' data:;
-connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com https://*.ingest.us.sentry.io;
+connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
 frame-ancestors 'none';
 base-uri 'none';
 form-action 'self' https://accounts.google.com https://github.com;

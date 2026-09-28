@@ -2,10 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import GlobalError from "@/app/global-error";
 
-vi.mock("@/lib/sentry", () => ({
-  captureException: vi.fn(),
-}));
-
 describe("GlobalError", () => {
   const mockReset = vi.fn();
   const testError = Object.assign(new Error("Layout crashed"), { digest: "abc123" });
@@ -37,16 +33,6 @@ describe("GlobalError", () => {
 
     fireEvent.click(screen.getByText("Try again"));
     expect(mockReset).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls captureException with error and digest on mount", async () => {
-    const { captureException } = await import("@/lib/sentry");
-    const mockCapture = vi.mocked(captureException);
-    mockCapture.mockClear();
-
-    render(<GlobalError error={testError} reset={mockReset} />);
-
-    expect(mockCapture).toHaveBeenCalledWith(testError, { digest: "abc123" });
   });
 
   it("renders without crash when error.message is empty", () => {

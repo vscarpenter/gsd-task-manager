@@ -5,8 +5,6 @@
  * JSON-RPC messages; only stderr is safe for diagnostic output).
  */
 
-import { captureException, captureMessage } from './sentry.js';
-
 type McpLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
 interface LogEntry {
@@ -22,29 +20,6 @@ interface LogEntry {
 function writeLog(entry: LogEntry): void {
   // Write to stderr so it doesn't corrupt the MCP stdio protocol
   process.stderr.write(JSON.stringify(entry) + '\n');
-}
-
-/**
- * Forward an error log to Sentry (opt-in; no-op unless GSD_SENTRY_DSN is set).
- * Errors with an Error object are captured as exceptions, message-only errors as
- * messages. Wrapped so telemetry can never break the server's error path.
- */
-function reportToSentry(
-  module: string,
-  message: string,
-  error?: Error,
-  context?: Record<string, unknown>
-): void {
-  try {
-    const sentryContext = { module, ...(context ?? {}) };
-    if (error) {
-      captureException(error, sentryContext);
-    } else {
-      captureMessage(message, sentryContext);
-    }
-  } catch {
-    // Telemetry must never break the MCP server's error path.
-  }
 }
 
 function createEntry(
@@ -83,10 +58,8 @@ export function createMcpLogger(module: string) {
     warn: (message: string, context?: Record<string, unknown>) =>
       writeLog(createEntry('WARN', module, message, undefined, context)),
 
-    error: (message: string, error?: Error, context?: Record<string, unknown>) => {
-      writeLog(createEntry('ERROR', module, message, error, context));
-      reportToSentry(module, message, error, context);
-    },
+    error: (message: string, error?: Error, context?: Record<string, unknown>) =>
+      writeLog(createEntry('ERROR', module, message, error, context)),
 
     debug: (message: string, context?: Record<string, unknown>) => {
       if (isDebugEnabled) {

@@ -7,9 +7,6 @@
  * - Never swallow exceptions
  */
 
-import { captureException } from '@/lib/sentry';
-import { filterSentryMetadata } from '@/lib/logger';
-
 export interface ErrorContext {
   action: string;
   taskId?: string;
@@ -26,8 +23,8 @@ export interface LoggedError extends ErrorContext {
 }
 
 /**
- * Log an error with structured context
- * In production, this would send to Sentry, Datadog, etc.
+ * Log an error with structured context. Output goes to the local console only;
+ * nothing leaves the device.
  */
 export function logError(error: unknown, context: ErrorContext): LoggedError {
   const timestamp = new Date().toISOString();
@@ -53,8 +50,6 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
       originalError: error
     });
   } else {
-    // In production, send to error tracking service
-    // Example: Sentry.captureException(error, { contexts: { gsd: loggedError } });
     console.error(summary, {
       action: loggedError.action,
       errorType: loggedError.errorType,
@@ -62,15 +57,6 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
       timestamp: loggedError.timestamp
     });
   }
-
-  // Apply the same allowlist as lib/logger.ts so only safe diagnostic keys
-  // reach Sentry. Flatten `metadata` first so allowlisted keys inside it
-  // (operation, correlationId) survive while task content / raw input are
-  // stripped.
-  captureException(
-    error,
-    filterSentryMetadata({ ...loggedError, ...loggedError.metadata })
-  );
 
   return loggedError;
 }

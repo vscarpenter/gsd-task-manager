@@ -7,10 +7,6 @@ import {
 	type ErrorContext,
 } from "@/lib/error-logger";
 
-vi.mock("@/lib/sentry", () => ({
-	captureException: vi.fn(),
-}));
-
 describe("Error Logger module", () => {
 	const originalEnv = process.env.NODE_ENV;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,59 +179,6 @@ describe("Error Logger module", () => {
 			expect(logged.timestamp).toMatch(
 				/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
 			);
-		});
-
-		it("should call captureException with error and context", async () => {
-			const { captureException: mockCapture } = vi.mocked(
-				await import("@/lib/sentry")
-			);
-			mockCapture.mockClear();
-
-			const error = new Error("Sentry test");
-			const context: ErrorContext = {
-				action: "test_action",
-				timestamp: "2025-01-15T12:00:00Z",
-				userMessage: "Test message",
-			};
-
-			logError(error, context);
-
-			expect(mockCapture).toHaveBeenCalledWith(
-				error,
-				expect.objectContaining({ action: "test_action" })
-			);
-		});
-
-		it("should send only allowlisted metadata to Sentry, stripping task content", async () => {
-			const { captureException: mockCapture } = vi.mocked(
-				await import("@/lib/sentry")
-			);
-			mockCapture.mockClear();
-
-			const error = new Error("boom");
-			const context: ErrorContext = {
-				action: ErrorActions.CREATE_TASK,
-				userId: "user-1",
-				timestamp: "2025-01-15T12:00:00Z",
-				userMessage: "Failed to create task",
-				taskId: "task-1",
-				metadata: { title: "secret task content", operation: "createTask", deviceId: "device-1" },
-			};
-
-			logError(error, context);
-
-			const sentryContext = mockCapture.mock.calls[0][1] as Record<
-				string,
-				unknown
-			>;
-			// Non-allowlisted content must never reach Sentry, even nested.
-			expect(JSON.stringify(sentryContext)).not.toContain("secret task content");
-			// Allowlisted diagnostic keys still pass through.
-			expect(sentryContext).not.toHaveProperty("userId");
-			expect(sentryContext).not.toHaveProperty("taskId");
-			expect(sentryContext).not.toHaveProperty("deviceId");
-			expect(JSON.stringify(sentryContext)).not.toContain("device-1");
-			expect(sentryContext.operation).toBe("createTask");
 		});
 
 		it("should return complete LoggedError object", () => {

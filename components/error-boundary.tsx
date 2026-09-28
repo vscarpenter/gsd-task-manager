@@ -35,7 +35,6 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryProps, ErrorBoundaryStat
 
   componentDidCatch(error: Error, errorInfo: unknown) {
     const info = errorInfo as { componentStack?: string } | undefined;
-    // logger.error forwards to Sentry; no separate captureException needed.
     logger.error("Error caught by boundary", error, {
       componentStack: info?.componentStack ?? undefined,
     });

@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockCaptureException = vi.hoisted(() => vi.fn());
-const mockCaptureMessage = vi.hoisted(() => vi.fn());
-
-vi.mock('../../utils/sentry.js', () => ({
-  captureException: mockCaptureException,
-  captureMessage: mockCaptureMessage,
-}));
-
 import { createMcpLogger } from '../../utils/logger.js';
 
-describe('MCP logger Sentry forwarding', () => {
+function lastEntry(spy: ReturnType<typeof vi.spyOn>): Record<string, unknown> {
+  const call = spy.mock.calls.at(-1);
+  return JSON.parse(String(call?.[0]));
+}
+
+describe('MCP logger', () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     stderrSpy = vi
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true);
@@ -22,51 +20,72 @@ describe('MCP logger Sentry forwarding', () => {
 
   afterEach(() => {
     stderrSpy.mockRestore();
+    vi.unstubAllEnvs();
   });
 
-  it('should forward errors to Sentry via captureException with module context', () => {
+  it('should write one JSON line per log call to stderr only', () => {
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const logger = createMcpLogger('LIST_TASKS');
+
+    logger.info('listing tasks', { count: 3 });
+
+    expect(stderrSpy).toHaveBeenCalledTimes(1);
+    expect(stdoutSpy).not.toHaveBeenCalled();
+    expect(String(stderrSpy.mock.calls[0][0])).toMatch(/\n$/);
+    expect(lastEntry(stderrSpy)).toMatchObject({
+      level: 'INFO',
+      module: 'LIST_TASKS',
+      message: 'listing tasks',
+      context: { count: 3 },
+    });
+    stdoutSpy.mockRestore();
+  });
+
+  it('should include the error message and a truncated stack on error entries', () => {
     const logger = createMcpLogger('LIST_TASKS');
     const error = new Error('boom');
 
     logger.error('Failed to map task', error, { taskId: 't1' });
 
-    expect(mockCaptureException).toHaveBeenCalledTimes(1);
-    expect(mockCaptureMessage).not.toHaveBeenCalled();
-    const [forwardedError, context] = mockCaptureException.mock.calls[0];
-    expect(forwardedError).toBe(error);
-    expect(context).toMatchObject({ module: 'LIST_TASKS', taskId: 't1' });
+    const entry = lastEntry(stderrSpy);
+    expect(entry).toMatchObject({
+      level: 'ERROR',
+      module: 'LIST_TASKS',
+      message: 'Failed to map task',
+      error: 'boom',
+      context: { taskId: 't1' },
+    });
+    expect(String(entry.stack).split(' | ')).toHaveLength(3);
   });
 
-  it('should forward message-only errors via captureMessage', () => {
+  it('should omit error fields for message-only errors', () => {
     const logger = createMcpLogger('CONFIG');
 
     logger.error('Configuration error');
 
-    expect(mockCaptureMessage).toHaveBeenCalledTimes(1);
-    expect(mockCaptureException).not.toHaveBeenCalled();
-    const [message, context] = mockCaptureMessage.mock.calls[0];
-    expect(message).toBe('Configuration error');
-    expect(context).toMatchObject({ module: 'CONFIG' });
+    const entry = lastEntry(stderrSpy);
+    expect(entry).toMatchObject({ level: 'ERROR', module: 'CONFIG' });
+    expect(entry).not.toHaveProperty('error');
+    expect(entry).not.toHaveProperty('stack');
+    expect(entry).not.toHaveProperty('context');
   });
 
-  it('should not forward info, warn, or debug logs to Sentry', () => {
+  it('should write warn entries at WARN level', () => {
     const logger = createMcpLogger('SERVER');
 
-    logger.info('i');
-    logger.warn('w');
-    logger.debug('d');
+    logger.warn('slow request', { ms: 1200 });
 
-    expect(mockCaptureException).not.toHaveBeenCalled();
-    expect(mockCaptureMessage).not.toHaveBeenCalled();
+    expect(lastEntry(stderrSpy)).toMatchObject({ level: 'WARN', context: { ms: 1200 } });
   });
 
-  it('should still write to stderr when the Sentry forward throws', () => {
-    mockCaptureException.mockImplementationOnce(() => {
-      throw new Error('sentry down');
-    });
-    const logger = createMcpLogger('SERVER');
+  it('should suppress debug entries unless debug logging is enabled', () => {
+    vi.stubEnv('LOG_LEVEL', '');
+    vi.stubEnv('NODE_ENV', 'production');
+    createMcpLogger('SERVER').debug('hidden');
+    expect(stderrSpy).not.toHaveBeenCalled();
 
-    expect(() => logger.error('boom', new Error('real'))).not.toThrow();
-    expect(stderrSpy).toHaveBeenCalled();
+    vi.stubEnv('LOG_LEVEL', 'debug');
+    createMcpLogger('SERVER').debug('shown');
+    expect(lastEntry(stderrSpy)).toMatchObject({ level: 'DEBUG', message: 'shown' });
   });
 });

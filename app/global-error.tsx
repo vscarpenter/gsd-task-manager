@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import { captureException } from "@/lib/sentry";
 
 /**
  * Next.js global error page — catches errors in the root layout itself.
@@ -99,7 +98,6 @@ function useGlobalErrorFallback(
   fallbackRef: RefObject<HTMLDivElement | null>
 ) {
   useEffect(() => {
-    captureException(error, { digest: error.digest });
     try {
       const savedTheme = window.localStorage.getItem("gsd-theme");
       if (savedTheme === "light" || savedTheme === "dark") {

@@ -386,7 +386,7 @@ describe('SyncCoordinator', () => {
 
     it('records transient PB ClientResponseError status 0 (network fault)', async () => {
       // PocketBase SDK signature: Error with `status: 0` and "Something went
-      // wrong." message. This is the case the Sentry noise fix targets.
+      // wrong." message. This is the case the error-noise fix targets.
       const pbNetworkError = Object.assign(new Error('Something went wrong.'), {
         status: 0,
         isAbort: false,

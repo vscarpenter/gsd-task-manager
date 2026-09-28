@@ -1,3 +1,30 @@
+# Session state, 2026-09-28: remove Sentry
+
+Branch `claude/remove-sentry-nbj60e`, cut from `main` @ `aca6a90`. Non-trivial
+tier by file count, run without a spec gate because the request ("remove
+Sentry") is unambiguous and the owner was not in the loop.
+
+- [x] Red: `security-hardening-scripts` asserts both SDKs are gone;
+      `security-headers-policy` asserts `connect-src` has no Sentry origin.
+- [x] Green: deleted `lib/sentry.ts`, `lib/sentry-safe-keys.ts`,
+      `components/sentry-init.tsx`, `packages/mcp-server/src/utils/sentry.ts`
+      and their tests; stripped forwarding from both loggers, `error-logger`,
+      `global-error`, and the MCP entry point; removed the CSP origin from
+      `app/layout.tsx`, the CloudFront policy, and `SECURITY.md`.
+- [x] Docs: ADR 0017, trust-boundary row, architecture table, MCP README and
+      Unreleased changelog entry, `.env.example`.
+- [x] Version trio bumped to 13.6.0 (the export changes). MCP version left for
+      the release flow.
+
+## Resuming From Here
+
+Next: open the PR. Follow-ups, each on its own branch: regenerate
+`docs/diagrams/architecture.html` without the Sentry node (needs the
+diagram-design geometry checker), and refresh `scripts/bundle-budget.json`
+after a build now that the browser SDK is out of first-load JS.
+
+---
+
 # Session state, 2026-09-27: Vitest 5 migration
 
 Branch `chore/vitest-5-migration`, cut from `main` @ `243950e`. Non-trivial tier;
