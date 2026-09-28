@@ -9,7 +9,6 @@ import { ThemedToaster } from "@/components/ui/themed-toaster";
 import "./globals.css";
 
 import { PwaRegister } from "@/components/pwa-register";
-import { SentryInit } from "@/components/sentry-init";
 import { WebMcpRegister } from "@/components/webmcp-register";
 import { PwaUpdateToast } from "@/components/pwa-update-toast";
 import { GlobalErrorListener } from "@/components/global-error-listener";
@@ -48,7 +47,6 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://api.vinny.io",
       "https://accounts.google.com",
       "https://github.com",
-      "https://*.ingest.us.sentry.io",
       configuredPocketBaseOrigin,
     ].join(" ")
   : [
@@ -56,7 +54,6 @@ const connectSrc = process.env.NODE_ENV === "development"
       "https://api.vinny.io",
       "https://accounts.google.com",
       "https://github.com",
-      "https://*.ingest.us.sentry.io",
     ].join(" ");
 
 // Two-voice editorial type, shared with the iOS app and gsdtaskmanager.com.
@@ -169,7 +166,6 @@ function AppProviders({ children }: { children: ReactNode }) {
             <PwaRegister />
             <PwaUpdateToast />
             <GlobalErrorListener />
-            <SentryInit />
             <ThemedToaster />
           </TooltipProvider>
         </ToastProvider>

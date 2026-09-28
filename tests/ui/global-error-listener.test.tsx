@@ -6,15 +6,8 @@ const mockToast = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
-const mockCaptureException = vi.hoisted(() => vi.fn());
-
 vi.mock("sonner", () => ({
   toast: mockToast,
-}));
-
-vi.mock("@/lib/sentry", () => ({
-  captureException: mockCaptureException,
-  captureMessage: vi.fn(),
 }));
 
 describe("GlobalErrorListener", () => {
@@ -55,22 +48,6 @@ describe("GlobalErrorListener", () => {
     );
   });
 
-  it("should not manually capture a rejection already owned by Sentry", () => {
-    render(<GlobalErrorListener />);
-
-    const handler = addEventSpy.mock.calls.find(
-      (c) => c[0] === "unhandledrejection"
-    )?.[1] as EventListener;
-
-    const event = new PromiseRejectionEvent("unhandledrejection", {
-      promise: Promise.resolve(),
-      reason: new Error("async failure"),
-    });
-    handler(event);
-
-    expect(mockCaptureException).not.toHaveBeenCalled();
-  });
-
   it("should show toast for unhandled rejection", () => {
     render(<GlobalErrorListener />);
 
@@ -101,7 +78,6 @@ describe("GlobalErrorListener", () => {
     handler(event);
 
     expect(mockToast.error).toHaveBeenCalledWith("An unexpected error occurred");
-    expect(mockCaptureException).not.toHaveBeenCalled();
   });
 
   it("should throttle rapid successive rejections", () => {

@@ -71,9 +71,8 @@ export async function submitFeedback(payload: FeedbackPayload): Promise<SubmitOu
     return { ok: true };
   }
 
-  // Only the status code is logged. Metadata is allowlist-filtered before it
-  // reaches Sentry (lib/sentry-safe-keys.ts), but the message itself is not,
-  // so what the user wrote must never appear in a log line.
+  // Only the status code is logged. What the user wrote must never appear in
+  // a log line.
   logger.warn("Feedback submission was refused", { status: response.status });
 
   return { ok: false, reason: failureFor(response.status) };

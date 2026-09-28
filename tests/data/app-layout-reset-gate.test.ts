@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
 const INSIDE_GATE = ['<ClientLayout>', '<FirstTimeRedirect />', '<OnboardingGate />', '<WebMcpRegister />'];
-const OUTSIDE_GATE = ['<PwaRegister />', '<PwaUpdateToast />', '<GlobalErrorListener />', '<SentryInit />', '<ThemedToaster />'];
+const OUTSIDE_GATE = ['<PwaRegister />', '<PwaUpdateToast />', '<GlobalErrorListener />', '<ThemedToaster />'];
 
 function splitAtGate(layout: string): { inside: string; outside: string } {
   const start = layout.indexOf('<ResetLockGate>');

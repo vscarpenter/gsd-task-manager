@@ -111,7 +111,7 @@ export function PwaRegister() {
 				// The browser only ever rejects register() with a TypeError or a
 				// DOMException. Anything else was thrown by code injected into the
 				// page (extension, in-app webview, privacy tool) that wraps the API,
-				// which we cannot fix — so it stays out of Sentry.
+				// which we cannot fix — so it is not logged as an app error.
 				if (error instanceof TypeError || error instanceof DOMException) {
 					logger.error('Service worker registration failed', error);
 				} else {

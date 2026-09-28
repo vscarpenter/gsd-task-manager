@@ -14,8 +14,9 @@ describe("CloudFront response headers policy", () => {
 
 		expect(csp).toContain("base-uri 'none'");
 		expect(csp).toContain(
-			"connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com https://*.ingest.us.sentry.io",
+			"connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;",
 		);
+		expect(csp).not.toContain("sentry");
 		expect(csp).not.toContain("connect-src 'self' https: wss:");
 		expect(csp).not.toContain("'unsafe-eval'");
 		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);

@@ -266,7 +266,7 @@ describe('task-mapper', () => {
       expect(result?.updatedAt).toBe('2026-04-08T11:00:00.000+01:00');
     });
 
-    it('should log the Zod issues under the validationErrors key so Sentry forwarding keeps them', () => {
+    it('should log the Zod issues under the validationErrors key', () => {
       mockLogger.error.mockClear();
       const pb = buildPBRecord({ quadrant: 'invalid-quadrant' });
       pocketBaseToTaskRecord(pb);

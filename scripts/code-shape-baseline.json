@@ -56,10 +56,6 @@
       "count": 2,
       "max": 21
     },
-    "lib/sentry.ts": {
-      "count": 3,
-      "max": 21
-    },
     "lib/sw-cache-logic.ts": {
       "count": 1,
       "max": 18
@@ -131,12 +127,7 @@
       "max": 4
     }
   },
-  "max-lines": {
-    "lib/sentry.ts": {
-      "count": 1,
-      "max": 463
-    }
-  },
+  "max-lines": {},
   "max-lines-per-function": {
     "app/(archive)/archive/page.tsx": {
       "count": 1,
@@ -417,10 +408,6 @@
     "lib/hooks/use-sync-status.ts": {
       "count": 1,
       "max": 68
-    },
-    "lib/sentry.ts": {
-      "count": 3,
-      "max": 45
     },
     "lib/sync/error-categorizer.ts": {
       "count": 1,
