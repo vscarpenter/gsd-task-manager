@@ -4,6 +4,15 @@ export interface Verdict {
   evidence: string;
 }
 
+export interface LlmUsage {
+  model: string;
+  extractPromptTokens: number;
+  extractCompletionTokens: number;
+  extractInferenceTimeMs: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+}
+
 export interface PageEvidence {
   consoleErrors: string[];
   consoleWarnings: string[];
@@ -25,6 +34,7 @@ export interface VerifyReport {
   pageEvidence: PageEvidence;
   screenshots: string[];
   evidenceDir: string;
+  llm: LlmUsage;
   exitCode: 0 | 1;
 }
 
@@ -55,7 +65,8 @@ export function buildVerifyReport(
   verdict: Verdict,
   pageEvidence: PageEvidence,
   screenshots: string[],
-  evidenceDir: string
+  evidenceDir: string,
+  llm: LlmUsage
 ): VerifyReport {
   return {
     goal,
@@ -63,6 +74,7 @@ export function buildVerifyReport(
     pageEvidence,
     screenshots,
     evidenceDir,
+    llm,
     exitCode: verifyExitCode(verdict, pageEvidence),
   };
 }

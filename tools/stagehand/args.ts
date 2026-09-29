@@ -15,6 +15,8 @@ export interface SmokeArgs {
   headless: boolean;
 }
 
+const DEFAULT_STAGEHAND_MODEL = "anthropic/claude-haiku-4-5";
+const ANTHROPIC_MODEL_PREFIX = "anthropic/";
 const VERIFY_DEFAULT_URL = "http://localhost:3000";
 const SMOKE_DEFAULT_URL = "https://gsd.vinny.dev";
 const SEED_SCENARIOS: readonly SeedScenario[] = ["matrix", "dashboard", "storage", "trash", "none"];
@@ -70,4 +72,15 @@ export function parseSmokeArgs(argv: string[], journeyNames: string[]): SmokeArg
     else throw new Error(`Unknown flag: ${flag}`);
   }
   return args;
+}
+
+// STAGEHAND_MODEL lets the judge eval swap models without editing the harness.
+// Only Anthropic models are accepted because createHarness wires ANTHROPIC_API_KEY.
+export function resolveStagehandModel(env: Record<string, string | undefined>): string {
+  const requested = env.STAGEHAND_MODEL?.trim();
+  if (!requested) return DEFAULT_STAGEHAND_MODEL;
+  if (!requested.startsWith(ANTHROPIC_MODEL_PREFIX)) {
+    throw new Error(`STAGEHAND_MODEL must start with "${ANTHROPIC_MODEL_PREFIX}" (got "${requested}")`);
+  }
+  return requested;
 }

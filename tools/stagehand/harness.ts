@@ -1,9 +1,15 @@
-import { localBrowser, Stagehand, type Page, type StagehandBrowser } from "@browserbasehq/stagehand";
+import {
+  localBrowser,
+  Stagehand,
+  type ModelName,
+  type Page,
+  type StagehandBrowser,
+} from "@browserbasehq/stagehand";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { resolveStagehandModel } from "./args";
 import type { PageEvidence } from "./report";
 
-const STAGEHAND_MODEL = "anthropic/claude-haiku-4-5";
 const NAVIGATION_SETTLE_MS = 1500;
 const PAGE_SCRIPTS_DIR = path.join(import.meta.dirname, "page-scripts");
 const EVIDENCE_ROOT = path.join(import.meta.dirname, "evidence");
@@ -16,6 +22,7 @@ export interface HarnessOptions {
 
 export interface Harness {
   stagehand: Stagehand;
+  model: string;
   evidenceDir: string;
   goto(routePath: string): Promise<void>;
   currentUrl(): Promise<string>;
@@ -69,6 +76,7 @@ async function acquirePage(browser: StagehandBrowser): Promise<Page> {
 
 export async function createHarness(options: HarnessOptions): Promise<Harness> {
   const apiKey = requireApiKey();
+  const model = resolveStagehandModel(process.env);
   const collectorSource = readPageScript("console-collector.js");
   const resetSource = readPageScript("reset-app-state.js");
   const seedSource = readPageScript("seed-tasks.js");
@@ -81,7 +89,9 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
   const browser = await localBrowser.launch({ headless: options.headless !== false });
   const stagehand = await Stagehand.create({
     browser,
-    model: { modelName: STAGEHAND_MODEL, apiKey },
+    // Stagehand validates modelName against its own supported list at create
+    // time, so an unsupported STAGEHAND_MODEL fails loudly here.
+    model: { modelName: model as ModelName, apiKey },
     logging: { level: "error", format: "pretty" },
   });
   // The onboarding tour modal makes the app inert behind it, which blanks
@@ -111,6 +121,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
 
   return {
     stagehand,
+    model,
     evidenceDir,
     goto,
     currentUrl: () => page.url(),

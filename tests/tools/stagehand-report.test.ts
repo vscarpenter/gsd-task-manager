@@ -4,6 +4,7 @@ import {
   formatSmokeTable,
   verifyExitCode,
   type JourneyResult,
+  type LlmUsage,
   type PageEvidence,
 } from "@/tools/stagehand/report";
 
@@ -12,6 +13,14 @@ const cleanEvidence: PageEvidence = {
   consoleWarnings: [],
   pageErrors: [],
   failedRequests: [],
+};
+const llmUsage: LlmUsage = {
+  model: "anthropic/claude-haiku-4-5",
+  extractPromptTokens: 1200,
+  extractCompletionTokens: 80,
+  extractInferenceTimeMs: 900,
+  totalPromptTokens: 1500,
+  totalCompletionTokens: 110,
 };
 const pass: JourneyResult = {
   name: "search",
@@ -137,9 +146,22 @@ describe("buildVerifyReport", () => {
       { observed: "o", goalMet: true, evidence: "e" },
       cleanEvidence,
       ["a.png"],
-      "dir"
+      "dir",
+      llmUsage
     );
     expect(report.exitCode).toBe(0);
     expect(report.screenshots).toEqual(["a.png"]);
+  });
+
+  it("carries the judge model and extract token usage", () => {
+    const report = buildVerifyReport(
+      "goal",
+      { observed: "o", goalMet: false, evidence: "e" },
+      cleanEvidence,
+      [],
+      "dir",
+      llmUsage
+    );
+    expect(report.llm).toEqual(llmUsage);
   });
 });
