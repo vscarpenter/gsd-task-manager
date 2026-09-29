@@ -37,8 +37,24 @@ async function main(): Promise<void> {
         "the specific visible evidence (evidence). Judge only what is visible.",
       verdictSchema
     );
+    const metrics = await harness.stagehand.metrics();
+    const llm = {
+      model: harness.model,
+      extractPromptTokens: metrics.extractPromptTokens,
+      extractCompletionTokens: metrics.extractCompletionTokens,
+      extractInferenceTimeMs: metrics.extractInferenceTimeMs,
+      totalPromptTokens: metrics.totalPromptTokens,
+      totalCompletionTokens: metrics.totalCompletionTokens,
+    };
     const pageEvidence = await harness.readEvidence();
-    const report = buildVerifyReport(args.goal, verdict, pageEvidence, screenshots, harness.evidenceDir);
+    const report = buildVerifyReport(
+      args.goal,
+      verdict,
+      pageEvidence,
+      screenshots,
+      harness.evidenceDir,
+      llm
+    );
     harness.writeReport("verify-report", report);
     console.log(JSON.stringify(report, null, 2));
     process.exitCode = report.exitCode;

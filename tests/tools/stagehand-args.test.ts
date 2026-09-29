@@ -1,4 +1,4 @@
-import { parseSmokeArgs, parseVerifyArgs } from "@/tools/stagehand/args";
+import { parseSmokeArgs, parseVerifyArgs, resolveStagehandModel } from "@/tools/stagehand/args";
 
 describe("parseVerifyArgs", () => {
   it("applies defaults with only --goal", () => {
@@ -74,6 +74,28 @@ describe("parseSmokeArgs", () => {
   it("rejects unknown journey, listing valid names", () => {
     expect(() => parseSmokeArgs(["--journey", "nope"], names)).toThrow(
       /first-visit-redirect, search/
+    );
+  });
+});
+
+describe("resolveStagehandModel", () => {
+  it("defaults to Haiku 4.5 when STAGEHAND_MODEL is unset", () => {
+    expect(resolveStagehandModel({})).toBe("anthropic/claude-haiku-4-5");
+  });
+
+  it("uses STAGEHAND_MODEL when set", () => {
+    expect(resolveStagehandModel({ STAGEHAND_MODEL: "anthropic/claude-sonnet-5-5" })).toBe(
+      "anthropic/claude-sonnet-5-5"
+    );
+  });
+
+  it("treats a blank STAGEHAND_MODEL as unset", () => {
+    expect(resolveStagehandModel({ STAGEHAND_MODEL: "  " })).toBe("anthropic/claude-haiku-4-5");
+  });
+
+  it("rejects a non-Anthropic model, since only ANTHROPIC_API_KEY is wired", () => {
+    expect(() => resolveStagehandModel({ STAGEHAND_MODEL: "openai/gpt-5" })).toThrow(
+      /anthropic\//
     );
   });
 });
