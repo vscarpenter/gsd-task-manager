@@ -18,13 +18,12 @@
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { spawn } from 'node:child_process';
 import { copyFileSync } from 'node:fs';
-import { summarize } from './summarize.mjs';
 
-const EVAL_DIR = fileURLToPath(new URL('.', import.meta.url));
+const EVAL_DIR = import.meta.dirname;
+const RUNNER_PATH = import.meta.filename;
 const APP_URL = process.env.JUDGE_EVAL_URL ?? 'http://127.0.0.1:3100';
 const DEFAULT_MODEL = 'claude-haiku-4-5';
 const MS_PER_S = 1000;
@@ -34,6 +33,41 @@ const EXTRACT_PROMPT = (goal) =>
   `Goal under verification: "${goal}". Describe exactly what the page shows that is ` +
   'relevant to this goal (observed), state whether the goal is met (goalMet), and name ' +
   'the specific visible evidence (evidence). Judge only what is visible.';
+
+// Everything a case executes, hashed by the integrity gate even when
+// _state.json is absent (it lives under the gitignored .claude/ directory, so a
+// fresh clone has none). Paths are relative to the repo root the runner runs from.
+export const PROTECTED_HARNESS_PATHS = [
+  'tools/stagehand/eval/cases.json',
+  'tools/stagehand/eval/summarize.mjs',
+  'tools/stagehand/verify.ts',
+  'tools/stagehand/harness.ts',
+  'tools/stagehand/args.ts',
+  'tools/stagehand/report.ts',
+  'tools/stagehand/page-scripts/console-collector.js',
+  'tools/stagehand/page-scripts/reset-app-state.js',
+  'tools/stagehand/page-scripts/seed-tasks.js',
+];
+
+export function harnessPathsFor(listed) {
+  return [...new Set([...PROTECTED_HARNESS_PATHS, ...listed])].sort();
+}
+
+// A variant directory belongs to one model and one case set. Resuming into it
+// under anything else would silently mix two experiments in one summary.
+// JUDGE_EVAL_ONLY subsets are not part of the identity: a pilot's rows are
+// valid rows of the full run.
+export function checkManifest(stored, current, hasRows) {
+  if (!stored) {
+    return hasRows
+      ? { action: 'refuse', reason: 'results exist but predate a manifest; start a new variant directory' }
+      : { action: 'write' };
+  }
+  const changed = ['model', 'cases_sha'].filter((k) => stored[k] !== current[k]);
+  if (!changed.length) return { action: 'ok' };
+  const names = changed.map((k) => (k === 'cases_sha' ? 'cases.json' : k));
+  return { action: 'refuse', reason: `variant was recorded with a different ${names.join(' and ')}; use a new --variant` };
+}
 
 // JUDGE_EVAL_ONLY=id1,id2 runs a subset (pilots, trimmed iteration runs).
 async function loadCases() {
@@ -190,16 +224,17 @@ function usage() {
 // new sha. That write is the one sanctioned exception to "never write
 // _state.json".
 function checkHarness(statePath, st, approve) {
-  const self = fileURLToPath(import.meta.url);
+  const self = RUNNER_PATH;
   const listed = Array.isArray(st.harness_paths) ? st.harness_paths.map(String) : [];
-  const paths = [...new Set([self, ...listed.map(p => resolve(p))])].sort();
+  const required = new Set([self, ...PROTECTED_HARNESS_PATHS.map(p => resolve(p))]);
+  const paths = [...new Set([self, ...harnessPathsFor(listed).map(p => resolve(p))])].sort();
   const h = createHash('sha256');
   const hashed = [];
   for (const p of paths) {
     let buf;
     try { buf = readFileSync(p); }
     catch (e) {
-      if (p === self) throw e;
+      if (required.has(p)) throw e;
       console.error(`warning: harness path '${relative(process.cwd(), p)}' not readable (${e?.code || 'error'}) - skipped`);
       continue;
     }
@@ -314,6 +349,13 @@ async function main() {
   // Rows key on the path-safe id (see pathSafeId), so resume must too.
 
   const cases = await loadCases();
+  const manifestPath = join(vdir, 'manifest.json');
+  const manifest = { model: args.model ?? DEFAULT_MODEL,
+    cases_sha: createHash('sha256').update(readFileSync(join(EVAL_DIR, 'cases.json'))).digest('hex') };
+  const stored = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
+  const verdict = checkManifest(stored, manifest, done.size > 0);
+  if (verdict.action === 'refuse') { console.error(`${vdir}: ${verdict.reason}`); process.exit(2); }
+  if (verdict.action === 'write') writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   // Validate the id space before spending anything: duplicate path-safe ids - 
   // including case-insensitive twins, which macOS/Windows filesystems collapse - 
   // would silently overwrite traces and frozen refs; and a _state.json split id
@@ -480,8 +522,9 @@ async function main() {
   await Promise.all(Array.from({ length: Math.max(1, args.concurrency) }, worker));
   clearInterval(tick); progress();
   console.error(`[${args.variant}] done - ${ok} ok, ${fail} failed -> ${resultsPath}`);
+  const { summarize } = await import('./summarize.mjs');
   console.log(summarize(vdir, cases));
   process.exit(fail ? 1 : 0);
 }
 
-main();
+if (process.argv[1] && resolve(process.argv[1]) === RUNNER_PATH) main();

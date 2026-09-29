@@ -62,7 +62,11 @@ export function summarize(vdir, cases) {
   const errorClasses = {};
   for (const e of openErrors) errorClasses[e.failure_class] = (errorClasses[e.failure_class] ?? 0) + 1;
   const costs = rows.map(costOf).filter((c) => c != null);
-  const total = costs.reduce((a, b) => a + b, 0);
+  // Failed attempts that still billed (usage recorded on the error row) are
+  // real spend, so they count toward the total but not the per-row average.
+  const billedErrors = openErrors.map(costOf).filter((c) => c != null);
+  const scoredTotal = costs.reduce((a, b) => a + b, 0);
+  const total = scoredTotal + billedErrors.reduce((a, b) => a + b, 0);
 
   return [
     `accuracy    ${ratio(correct, rows.length)}  95% CI ${pct(lo)} to ${pct(hi)}`,
@@ -71,6 +75,7 @@ export function summarize(vdir, cases) {
     `precision   ${ratio(saidMet.filter((r) => r.grade.correct === 1).length, saidMet.length)}  (met verdicts that were right)`,
     `by surface  ${Object.entries(bySurface).map(([k, [h, n]]) => `${k} ${h}/${n}`).join(' · ')}`,
     `errors      ${openErrors.length}${openErrors.length ? ` (${Object.entries(errorClasses).map(([k, n]) => `${k} ${n}`).join(', ')})` : ''}`,
-    `cost        $${total.toFixed(4)} over ${costs.length} scored rows ($${(costs.length ? total / costs.length : 0).toFixed(5)}/row)`,
+    `cost        $${total.toFixed(4)} over ${costs.length} scored rows ($${(costs.length ? scoredTotal / costs.length : 0).toFixed(5)}/row)` +
+      (billedErrors.length ? `, including ${billedErrors.length} billed failed attempts` : ''),
   ].join('\n');
 }
