@@ -1,3 +1,27 @@
+# Session state, 2026-09-30: dependency update repair
+
+Branch `chore/deps-update-2026-09-30`, cut from `main` @ `a0c5b48`, carrying the
+owner's uncommitted update. Standard tier: the red guard tests are the failing
+tests, and the fixes are pins, two workflow files, and one regex.
+
+Diagnosis: `main` was red before the update. PR #565 added `claude.yml` and
+`claude-code-review.yml` without top-level `permissions` or explicit
+`persist-credentials` (fails `pipeline-workflows.test.ts`, which reds `test` and
+`SonarCloud`), and `undici@7.29.0` picked up two high advisories (reds `audit`).
+The update then tripped five more guard tests.
+
+- [x] Workflows rebuilt as HEAD plus the new action pins. A YAML formatter had
+      rewritten `[a, b]` as `[ a, b ]`, which broke two text guards. All 13 new
+      action SHAs match their tags. `SETUP_NODE_22` in `build-config.test.ts`
+      now expects `# v7`.
+- [ ] Claude workflows: top-level `permissions` and explicit `persist-credentials`.
+- [ ] Overrides: hold `packageManager` at bun 1.3.14, bump `undici`, `fast-uri`,
+      and `ip-address` to patched versions, update the guard pins.
+- [ ] Verify on Node 22: test, typecheck, lint, shape, build, license, audit,
+      MCP coverage.
+
+---
+
 # Session state, 2026-09-28: remove Sentry
 
 Branch `claude/remove-sentry-nbj60e`, cut from `main` @ `aca6a90`. Non-trivial
@@ -38,15 +62,40 @@ the owner approved design decisions D1 to D5 in `tasks/spec-vitest-5-migration.m
 - [x] Verified: 3,193 passed under Node 22 (same as Vitest 4), identical 269-file
       coverage set, typecheck, lint, shape, build, license, audit, and the MCP suite
       on its own Vitest 4.1.11.
+- [x] Review follow-up (Codex, PR thread): `engines.node` set to jsdom's
+      `^22.22.2 || ^24.15.0 || >=26.0.0`, README lists Node, and the three Vitest CI
+      jobs pin Node 22. CI then caught MCP `test:coverage` borrowing the root's v5
+      coverage provider; MCP now declares its own `@vitest/coverage-v8@4.1.11`.
+- [x] PR #564 merged as `aca6a90`. Local branch deleted after an empty diff against
+      `main`. No version bump: nothing here reaches `out/`.
 
 ## Resuming From Here
 
-Next: push and open the PR when the owner says go. No version bump: nothing here
-reaches `out/`, and a bump would rotate every user's service-worker cache.
+Up next, saved by the owner for the next session. One branch each, in any order.
 
-Later, each on its own branch: move `packages/mcp-server` to Vitest 5 (update the
-pins in `security-hardening-scripts.test.ts:358-359` in the same commit), revisit
-jsdom 30.1.1, and swap `__dirname` for `import.meta.dirname` in `vitest.config.ts`.
+1. **Move `packages/mcp-server` to Vitest 5.** Bump `vitest`, `@vitest/ui`, and
+   `@vitest/coverage-v8` together (all 4.1.11 in `packages/mcp-server/package.json`).
+   Update the pins in `tests/data/security-hardening-scripts.test.ts:358-359` in
+   the same commit; `build-config.test.ts` already requires runner and provider to
+   match. Before bumping, capture MCP's `coverage-summary.json` keys, then diff them
+   after, because Vitest 5 matches coverage globs exactly. Also check the
+   `clearMocks: true` default, hoisted `vi.mock` enforcement, and `test:ui`, which
+   now needs the token URL Vitest prints. Verify with
+   `bun run --cwd packages/mcp-server test:coverage`, the command CI and SonarCloud run.
+2. **Clear the `__dirname` warning in `vitest.config.ts`.** Vite flags
+   `path.resolve(__dirname, ".")` at `vitest.config.ts:66` as unsupported by
+   `configLoader: 'native'`; use `import.meta.dirname`. Done means the warning is
+   gone from `bun run test` output and the `@/` alias still resolves (the full suite
+   passes). Leave `next.config.ts:17` alone: `build-config.test.ts` pins
+   `turbopack: { root: __dirname }`, and that file is Next's, not Vite's.
+3. **Retry jsdom 30.1.1 or newer.** Held at 30.0.1 because 30.1.1 leaves
+   `color: var(--error-ink)` unresolved in computed styles, failing
+   `tests/ui/global-error.test.tsx:71`. The component is correct in browsers. Check
+   the newest jsdom first; if it still fails, choose between keeping the hold and
+   changing how the test reads the color. A jsdom bump can change its
+   `engines.node`, and `build-config.test.ts` requires the root `engines.node` to
+   match it, so update `package.json` engines and the README floor
+   (`documentation-currentness.test.ts`) in the same commit.
 
 ---
 
