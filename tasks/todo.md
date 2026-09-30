@@ -29,11 +29,11 @@ The update then tripped five more guard tests.
 
 ## Resuming From Here
 
-Done: three commits on the branch (`65fe433`, `96de17d`, `36d5a27`), plus this
-ledger. Not pushed.
+Done: pushed and opened as PR #568. The version trio is at 13.6.1
+(`5cec9af`), bumped at the owner's request.
 
-Next: push and open the PR when the owner says go. The PR turns `main` green
-again, so it should merge before other work.
+Next: merge #568 once its checks pass. It turns `main` green again, so it
+should merge before other work.
 
 Open decisions, each with the default this branch took:
 
@@ -41,9 +41,7 @@ Open decisions, each with the default this branch took:
    1.3.14 to match the ten CI setup pins and the guard test. Moving to 1.4.2 is
    its own branch: bump the ten `bun-version` pins, `packageManager`, and
    `security-hardening-scripts.test.ts:374-378` together.
-2. Version bump. None here. `@reduxjs/toolkit` 2.13 reaches the dashboard chunk
-   through recharts, so the next release should bump the trio.
-3. Action majors. `deploy-production-release.yml` and `publish-docker.yml` run
+2. Action majors. `deploy-production-release.yml` and `publish-docker.yml` run
    only on a release or a push to `main`. Watch their first run after merge.
 
 Assumptions: the formatter's flow-sequence spacing (`[ main ]`) was unintended,
