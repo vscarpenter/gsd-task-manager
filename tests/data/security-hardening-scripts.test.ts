@@ -394,6 +394,8 @@ describe('security hardening scripts and workflows', () => {
       ...[
         'apply-risk-label.yml',
         'ci.yml',
+        'claude-code-review.yml',
+        'claude.yml',
         'deploy-cloudfront-infra.yml',
         'deploy-production-release.yml',
         'publish-docker.yml',
