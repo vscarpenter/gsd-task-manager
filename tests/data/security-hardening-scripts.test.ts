@@ -341,18 +341,18 @@ describe('security hardening scripts and workflows', () => {
     const rootPackage = JSON.parse(readRepoFile('package.json'));
     const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
 
-    expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.8');
+    expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.12');
     expect(rootPackage.overrides.hono).toBe('4.13.7');
     expect(rootPackage.overrides.sharp).toBe('0.35.4');
-    expect(rootPackage.overrides.undici).toBe('7.29.0');
-    expect(rootPackage.overrides['fast-uri']).toBe('4.1.4');
-    expect(rootPackage.overrides['ip-address']).toBe('10.4.0');
+    expect(rootPackage.overrides.undici).toBe('7.29.1');
+    expect(rootPackage.overrides['fast-uri']).toBe('4.1.5');
+    expect(rootPackage.overrides['ip-address']).toBe('10.7.2');
     expect(rootPackage.overrides['caniuse-lite']).toBe('1.0.30001809');
-    expect(rootPackage.overrides.browserslist).toBe('>=4.28.7');
-    expect(rootPackage.overrides.vite).toBe('>=8.2.1');
-    expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.1');
-    expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.9.0');
-    expect(rootPackage.overrides.qs).toBe('>=6.15.2');
+    expect(rootPackage.overrides.browserslist).toBe('>=4.29.3');
+    expect(rootPackage.overrides.vite).toBe('>=8.3.1');
+    expect(rootPackage.overrides['@babel/core']).toBe('>=8.0.6');
+    expect(rootPackage.overrides['@opentelemetry/core']).toBe('>=2.11.0');
+    expect(rootPackage.overrides.qs).toBe('>=6.16.0');
     expect(rootPackage.overrides['proxy-addr']).toBe('>=2.0.8');
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.11');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.11');
