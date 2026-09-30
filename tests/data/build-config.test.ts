@@ -21,7 +21,7 @@ interface PackageJson {
 }
 
 const SETUP_NODE_22 =
-  /uses: actions\/setup-node@[0-9a-f]{40} # v4\n\s+with:\n\s+node-version: '22'\n/;
+  /uses: actions\/setup-node@[0-9a-f]{40} # v7\n\s+with:\n\s+node-version: '22'\n/;
 
 function workflowJob(workflow: string, job: string): string {
   const start = workflow.indexOf(`\n  ${job}:\n`);
