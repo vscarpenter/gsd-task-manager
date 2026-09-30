@@ -14,11 +14,45 @@ The update then tripped five more guard tests.
       rewritten `[a, b]` as `[ a, b ]`, which broke two text guards. All 13 new
       action SHAs match their tags. `SETUP_NODE_22` in `build-config.test.ts`
       now expects `# v7`.
-- [ ] Claude workflows: top-level `permissions` and explicit `persist-credentials`.
-- [ ] Overrides: hold `packageManager` at bun 1.3.14, bump `undici`, `fast-uri`,
-      and `ip-address` to patched versions, update the guard pins.
-- [ ] Verify on Node 22: test, typecheck, lint, shape, build, license, audit,
-      MCP coverage.
+- [x] Claude workflows: top-level `permissions: contents: read` and
+      `persist-credentials: false`. claude-code-action replaces the checkout
+      credential with its own token (`replaceCheckoutCredentials` in its
+      `git-config.ts`), so it does not need the stored one.
+- [x] Overrides: `packageManager` held at bun 1.3.14. `undici` 7.29.1,
+      `fast-uri` 4.1.5, `ip-address` 10.7.2. Guard pins updated in the same
+      commit. `bun audit` went from 16 advisories (2 high) to none.
+- [x] Verified in a clean worktree on bun 1.3.14 and Node 22 with
+      `bun install --frozen-lockfile`: 3,177 tests passed, 1 skipped; coverage
+      89/83/89/90; typecheck, lint, shape, license, audit, build, bundle budget,
+      CSP smoke, MCP coverage (308 passed), and 28 of 28 export journeys on
+      Chromium.
+
+## Resuming From Here
+
+Done: three commits on the branch (`65fe433`, `96de17d`, `36d5a27`), plus this
+ledger. Not pushed.
+
+Next: push and open the PR when the owner says go. The PR turns `main` green
+again, so it should merge before other work.
+
+Open decisions, each with the default this branch took:
+
+1. Bun runtime. The update set `packageManager` to 1.4.2; this branch holds
+   1.3.14 to match the ten CI setup pins and the guard test. Moving to 1.4.2 is
+   its own branch: bump the ten `bun-version` pins, `packageManager`, and
+   `security-hardening-scripts.test.ts:374-378` together.
+2. Version bump. None here. `@reduxjs/toolkit` 2.13 reaches the dashboard chunk
+   through recharts, so the next release should bump the trio.
+3. Action majors. `deploy-production-release.yml` and `publish-docker.yml` run
+   only on a release or a push to `main`. Watch their first run after merge.
+
+Assumptions: the formatter's flow-sequence spacing (`[ main ]`) was unintended,
+so the workflows keep the repo's `[main]` style. An editor that formats YAML on
+save will reintroduce it and fail the same two guards.
+
+Follow-up, own branch: `tests/data/service-worker-privacy.test.ts` "deletes
+legacy capture entries" fails on Node 24.18 and 26.10 and passes on Node 22.
+`engines.node` lists all three lines as supported.
 
 ---
 
