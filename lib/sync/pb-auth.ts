@@ -1,12 +1,17 @@
 /**
  * PocketBase authentication helpers
  *
- * Wraps the PocketBase SDK's OAuth2 methods. The SDK handles the popup
- * window, token exchange, and localStorage persistence automatically.
- * This module adds device registration and a clean API for the UI layer.
+ * Signs in with the OAuth2 manual code flow, the same flow the iOS and
+ * Android clients use: this tab holds `state` and the PKCE verifier, the
+ * callback page relays `code` back (see ./oauth-callback), and the SDK
+ * exchanges it and persists the session in localStorage. The SDK's realtime
+ * `authWithOAuth2({ provider })` form is not used: it delivers the code to
+ * whichever realtime client the `state` names, so a crafted provider link
+ * could hand a victim's code to an attacker.
  */
 
 import { getPocketBase } from './pocketbase-client';
+import { OAUTH_REDIRECT_PATH, waitForOAuthCallback } from './oauth-callback';
 import { createLogger } from '@/lib/logger';
 import { isTokenExpired } from 'pocketbase';
 
@@ -26,6 +31,9 @@ const AUTH_REFRESH_THRESHOLD_SECONDS = 5 * 60;
  * support.
  */
 const ALLOWED_OAUTH_PROVIDERS = new Set<OAuthProvider>(['google', 'github', 'apple']);
+
+/** In-flight sign-ins by request key, so cancelOAuthLogin can stop the callback wait. */
+const pendingLogins = new Map<string, AbortController>();
 
 export interface AuthState {
   isLoggedIn: boolean;
@@ -95,7 +103,54 @@ function closeOAuthPopup(popupWindow?: Window | null): void {
 
 export function cancelOAuthLogin(requestKey: string): void {
   if (!requestKey) return;
+  pendingLogins.get(requestKey)?.abort(
+    Object.assign(new Error('OAuth sign-in was cancelled.'), { isAbort: true })
+  );
   getPocketBase().cancelRequest(requestKey);
+}
+
+function openProviderPage(url: string, popupWindow?: Window | null): void {
+  if (popupWindow) {
+    if (popupWindow.closed) {
+      throw new Error('OAuth sign-in window was closed before authentication started.');
+    }
+    popupWindow.location.href = url;
+    return;
+  }
+
+  if (!window.open(url, '_blank')) {
+    throw new Error('Allow pop-ups for this site to sign in.');
+  }
+}
+
+async function runCodeFlow(
+  provider: OAuthProvider,
+  options: OAuthLoginOptions,
+  signal: AbortSignal
+) {
+  const pb = getPocketBase();
+  const requestOptions = options.requestKey ? { requestKey: options.requestKey } : {};
+
+  const methods = await pb.collection('users').listAuthMethods(requestOptions);
+  const providerInfo = methods.oauth2?.providers?.find((p) => p.name === provider);
+  if (!providerInfo) {
+    throw new Error(`OAuth provider is not configured on the server: ${provider}`);
+  }
+
+  const redirectUrl = pb.buildURL(OAUTH_REDIRECT_PATH);
+  const callback = waitForOAuthCallback(providerInfo.state, signal);
+  try {
+    openProviderPage(providerInfo.authURL + encodeURIComponent(redirectUrl), options.popupWindow);
+  } catch (error) {
+    // loginWithProvider's cleanup aborts the wait; this keeps that rejection handled.
+    callback.catch(() => {});
+    throw error;
+  }
+  const code = await callback;
+
+  return pb
+    .collection('users')
+    .authWithOAuth2Code(provider, code, providerInfo.codeVerifier, redirectUrl, undefined, requestOptions);
 }
 
 export function getOAuthErrorMessage(error: unknown): string {
@@ -114,10 +169,50 @@ export function getOAuthErrorMessage(error: unknown): string {
 }
 
 /**
- * Initiate OAuth login via PocketBase SDK
+ * Cancel and timeout handling for one sign-in. Aborting, by cancelOAuthLogin
+ * or the timeout, rejects `aborted` with the reason.
+ */
+function trackLogin(options: OAuthLoginOptions) {
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_OAUTH_TIMEOUT_MS;
+  if (options.requestKey) {
+    pendingLogins.set(options.requestKey, controller);
+  }
+
+  const aborted = new Promise<never>((_, reject) => {
+    controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+      once: true,
+    });
+  });
+  const timeoutId =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          if (options.requestKey) {
+            getPocketBase().cancelRequest(options.requestKey);
+          }
+          controller.abort(
+            new Error('OAuth sign-in timed out. Please close the sign-in page and try again.')
+          );
+        }, timeoutMs)
+      : undefined;
+
+  const dispose = () => {
+    clearTimeout(timeoutId);
+    if (options.requestKey) {
+      pendingLogins.delete(options.requestKey);
+    }
+    // Closes the callback channel if sign-in ended before a code arrived.
+    controller.abort();
+  };
+
+  return { signal: controller.signal, aborted, dispose };
+}
+
+/**
+ * Initiate OAuth login with the manual code flow
  *
- * Opens a popup window for the chosen provider. The SDK handles the full
- * OAuth2 flow (redirect, code exchange, token storage) automatically.
+ * Sends the popup to the provider, waits for the callback page to relay the
+ * code for this tab's `state`, then exchanges it. The SDK stores the session.
  * Returns the authenticated user record on success.
  */
 export async function loginWithProvider(
@@ -130,39 +225,13 @@ export async function loginWithProvider(
     );
   }
 
-  const pb = getPocketBase();
-  const timeoutMs = options.timeoutMs ?? DEFAULT_OAUTH_TIMEOUT_MS;
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const login = trackLogin(options);
 
   try {
-    const authOptions = {
-      provider,
-      ...(options.popupWindow
-        ? {
-            urlCallback: (url: string) => {
-              if (options.popupWindow?.closed) {
-                throw new Error('OAuth sign-in window was closed before authentication started.');
-              }
-              options.popupWindow!.location.href = url;
-            },
-          }
-        : {}),
-      ...(options.requestKey ? { requestKey: options.requestKey } : {}),
-    };
-
-    const oauthPromise = pb.collection('users').authWithOAuth2(authOptions);
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      if (timeoutMs <= 0) return;
-      timeoutId = setTimeout(() => {
-        if (options.requestKey) {
-          pb.cancelRequest(options.requestKey);
-        }
-        reject(new Error('OAuth sign-in timed out. Please close the sign-in page and try again.'));
-      }, timeoutMs);
-    });
-
-    const authData = await Promise.race([oauthPromise, timeoutPromise]);
+    const authData = await Promise.race([
+      runCodeFlow(provider, options, login.signal),
+      login.aborted,
+    ]);
 
     logger.info('OAuth login successful', {
       provider,
@@ -184,9 +253,7 @@ export async function loginWithProvider(
     });
     throw error;
   } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
+    login.dispose();
     closeOAuthPopup(options.popupWindow);
   }
 }

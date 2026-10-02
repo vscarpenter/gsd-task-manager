@@ -244,7 +244,7 @@ docker compose logs -f
 
 ### OAuth not working
 
-OAuth providers must be configured in PocketBase admin (**Settings → Auth providers**). The redirect URL should be `https://localhost/api/oauth2-redirect` (or your custom `SITE_ADDRESS`).
+OAuth providers must be configured in PocketBase admin (**Settings → Auth providers**). Register `https://localhost/api/gsd/oauth-callback` (or the same path on your custom `SITE_ADDRESS`) as the redirect URL with each provider. This image disables PocketBase's built-in `/api/oauth2-redirect`, because it can deliver a sign-in code to a browser other than the one that started sign-in.
 
 ### Build fails during `bun install`
 
