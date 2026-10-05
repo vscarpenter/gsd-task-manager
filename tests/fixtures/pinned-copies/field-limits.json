@@ -1,0 +1,53 @@
+{
+  "$comment": "Pins the two hand-kept copies of SCHEMA_LIMITS. The root suite (tests/data/pinned-copies/field-limits.test.ts) and the MCP suite (packages/mcp-server/src/__tests__/pinned-copies/field-limits.test.ts) each check their own copy against this file, so a limit changed in one copy alone turns one suite red. To change a shared limit, change both copies and this file together. Brief: MODERNIZATION_BRIEF.md, Phase 1 pilot.",
+  "copies": {
+    "web": "lib/constants/schema.ts",
+    "mcp": "packages/mcp-server/src/constants.ts"
+  },
+  "shared": {
+    "TASK_TITLE_MAX_LENGTH": 80,
+    "TASK_DESCRIPTION_MAX_LENGTH": 600,
+    "TAG_MAX_LENGTH": 30,
+    "SUBTASK_TITLE_MAX_LENGTH": 100,
+    "MAX_TAGS": 20,
+    "MAX_SUBTASKS": 50,
+    "MAX_DEPENDENCIES": 50
+  },
+  "webOnly": {
+    "ID_MIN_LENGTH": 4,
+    "TIME_ENTRY_NOTES_MAX_LENGTH": 200,
+    "DEFAULT_NOTIFY_MINUTES": 15,
+    "MAX_TIME_ENTRIES": 1000,
+    "MAX_SMART_VIEWS": 100,
+    "MAX_SMART_VIEW_FILTER_TAGS": 200,
+    "SMART_VIEW_ID_MAX_LENGTH": 128,
+    "SMART_VIEW_NAME_MAX_LENGTH": 80,
+    "SMART_VIEW_DESCRIPTION_MAX_LENGTH": 600,
+    "SMART_VIEW_ICON_MAX_LENGTH": 64,
+    "SMART_VIEW_SEARCH_MAX_LENGTH": 600,
+    "SMART_VIEW_DATE_MAX_LENGTH": 64,
+    "SMART_VIEW_MODE_MAX_LENGTH": 64,
+    "MAX_PINNED_SMART_VIEWS": 5,
+    "SMART_VIEW_MAX_DEPTH": 6,
+    "SMART_VIEW_MAX_INPUT_NODES": 10000,
+    "SMART_VIEW_MAX_STRING_BYTES": 262144
+  },
+  "mcpOnly": {
+    "ID_MAX_LENGTH": 255,
+    "MAX_BULK_TASKS": 50
+  },
+  "knownGaps": [
+    {
+      "key": "ID_MIN_LENGTH",
+      "presentIn": "web",
+      "note": "The web rejects task, subtask, and dependency ids shorter than 4 characters. The MCP copy has no minimum, so MCP writes accept subtask ids under 4 characters.",
+      "brief": "§7 Fix or keep, other suspected bugs: MCP writes skip three limits (SEC-032)"
+    },
+    {
+      "key": "ID_MAX_LENGTH",
+      "presentIn": "mcp",
+      "note": "The MCP server caps ids at 255 characters. The web schema sets no maximum id length.",
+      "brief": null
+    }
+  ]
+}
