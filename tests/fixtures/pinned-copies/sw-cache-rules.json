@@ -1,0 +1,69 @@
+{
+  "$comment": "Pins the two hand-kept copies of the service-worker cache rules: lib/sw-cache-logic.ts and the plain-JS copy public/sw-cache-logic.js that sw.js loads with importScripts(). Both are web code, so tests/data/pinned-copies/sw-cache-rules.test.ts runs every case below against both copies in the root suite. Each classifyRequest case is chosen so that removing one branch changes its answer; most API, admin, cross-origin, and non-GET cases carry a text/html Accept header for that reason. Brief: MODERNIZATION_BRIEF.md, Phase 1; RULE-268 and RULE-028.",
+  "copies": {
+    "ts": "lib/sw-cache-logic.ts",
+    "js": "public/sw-cache-logic.js"
+  },
+  "classifyRequest": [
+    { "name": "build chunk", "request": { "pathname": "/_next/static/chunks/main-abc123.js", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "immutable" },
+    { "name": "build stylesheet", "request": { "pathname": "/_next/static/css/app-abc123.css", "accept": "text/css,*/*;q=0.1", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "immutable" },
+    { "name": "Next data outside /_next/static/", "request": { "pathname": "/_next/data/build-1/index.json", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "page by Accept header", "request": { "pathname": "/dashboard", "accept": "text/html,application/xhtml+xml", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "pages" },
+    { "name": "page by trailing slash", "request": { "pathname": "/settings/", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "pages" },
+    { "name": "page by .html", "request": { "pathname": "/about.html", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "pages" },
+    { "name": "RSC flight data", "request": { "pathname": "/dashboard/__next.dashboard.txt", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "pages" },
+    { "name": "web manifest", "request": { "pathname": "/manifest.json", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "runtime" },
+    { "name": "startup theme script", "request": { "pathname": "/theme-init.js", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "runtime" },
+    { "name": "favicon", "request": { "pathname": "/favicon.svg", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "runtime" },
+    { "name": "app icon", "request": { "pathname": "/icons/icon-192.png", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "runtime" },
+    { "name": "unknown same-origin file", "request": { "pathname": "/robots.txt", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "API root asked for as HTML", "request": { "pathname": "/api", "accept": "text/html", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "API record asked for as HTML", "request": { "pathname": "/api/collections/tasks/records", "accept": "text/html", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "lookalike /apiary/ page", "request": { "pathname": "/apiary/", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "pages" },
+    { "name": "PocketBase admin root asked for as HTML", "request": { "pathname": "/_", "accept": "text/html", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "PocketBase admin page", "request": { "pathname": "/_/", "accept": null, "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "page sent with an Authorization header", "request": { "pathname": "/dashboard/", "accept": "text/html", "sameOrigin": true, "method": "GET", "authorization": true, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "page requested with cache mode no-store", "request": { "pathname": "/dashboard/", "accept": "text/html", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": "no-store" }, "expected": "passthrough" },
+    { "name": "page requested with cache mode default", "request": { "pathname": "/dashboard/", "accept": "text/html", "sameOrigin": true, "method": "GET", "authorization": false, "cacheMode": "default" }, "expected": "pages" },
+    { "name": "POST to a page", "request": { "pathname": "/settings/", "accept": "text/html", "sameOrigin": true, "method": "POST", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "HEAD request for a page", "request": { "pathname": "/settings/", "accept": "text/html", "sameOrigin": true, "method": "HEAD", "authorization": false, "cacheMode": null }, "expected": "passthrough" },
+    { "name": "cross-origin page", "request": { "pathname": "/dashboard/", "accept": "text/html", "sameOrigin": false, "method": "GET", "authorization": false, "cacheMode": null }, "expected": "passthrough" }
+  ],
+  "getCacheNames": [
+    { "name": "deploy and immutable versions", "cacheVersion": "13.7.0", "immutableVersion": 3, "expected": { "immutable": "gsd-immutable-v3", "pages": "gsd-pages-v13.7.0", "runtime": "gsd-runtime-v13.7.0" } }
+  ],
+  "shouldDeleteCache": {
+    "currentCacheNames": { "immutable": "gsd-immutable-v3", "pages": "gsd-pages-v13.7.0", "runtime": "gsd-runtime-v13.7.0" },
+    "cases": [
+      { "cacheName": "gsd-immutable-v3", "expected": false },
+      { "cacheName": "gsd-pages-v13.7.0", "expected": false },
+      { "cacheName": "gsd-runtime-v13.7.0", "expected": false },
+      { "cacheName": "gsd-immutable-v2", "expected": true },
+      { "cacheName": "gsd-pages-v13.6.1", "expected": true },
+      { "cacheName": "gsd-cache-v1", "expected": true },
+      { "cacheName": "workbox-precache-v2", "expected": false }
+    ]
+  },
+  "getSafeLegacyCaptureUrl": [
+    { "url": "https://gsd.test/?action=capture&title=private&url=https%3A%2F%2Fx.test&tags=a&keep=1#frag", "expected": "https://gsd.test/?keep=1" },
+    { "url": "https://gsd.test/?action=open&title=kept", "expected": null },
+    { "url": "not a url", "expected": null }
+  ],
+  "getSafePageUrl": [
+    { "url": "https://gsd.test/dashboard/#private", "expected": "https://gsd.test/dashboard/" },
+    { "url": "https://gsd.test/?action=capture&title=x&url=y&tags=z&keep=1", "expected": "https://gsd.test/?keep=1" },
+    { "url": "https://gsd.test/?title=kept", "expected": "https://gsd.test/?title=kept" },
+    { "url": "::", "expected": null }
+  ],
+  "isCapturePayloadUrl": [
+    { "url": "https://gsd.test/#action=capture&title=x", "expected": true },
+    { "url": "https://gsd.test/?action=capture", "expected": true },
+    { "url": "https://gsd.test/#settings", "expected": false },
+    { "url": "nope", "expected": false }
+  ],
+  "getEvictionCandidates": [
+    { "keys": ["a", "b", "c", "d"], "maxEntries": 2, "expected": ["a", "b"] },
+    { "keys": ["a", "b"], "maxEntries": 2, "expected": [] },
+    { "keys": [], "maxEntries": 60, "expected": [] }
+  ]
+}
