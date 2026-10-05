@@ -4,7 +4,7 @@ A privacy-first Eisenhower matrix for deciding what to do, schedule, delegate,
 or eliminate.
 
 **Live app:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**Current version:** 13.6.1
+**Current version:** 13.7.0
 **Current product:** the v11 single-matrix shell, offline-first local storage,
 optional PocketBase sync, and the GSD MCP server.
 
@@ -128,8 +128,8 @@ Before changing the release version or announcing a feature:
 2. Verify every feature claim in the current shell, not only in retained data
    models or archived ADRs.
 3. Run the canonical checks above and a production static build.
-4. Update `CHANGELOG.md`, `SECURITY.md`, and the trust-boundary map when the
-   release changes their claims.
+4. Update the GitHub release notes, `SECURITY.md`, and the trust-boundary map
+   when the release changes their claims.
 5. Treat source, tests, build artifacts, deployment, and live runtime as
    separate evidence states.
 

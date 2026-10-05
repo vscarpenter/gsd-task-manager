@@ -2,6 +2,29 @@ const { readFileSync } = require('node:fs');
 
 const BLOCKING_SEVERITIES = new Set(['high', 'critical']);
 
+// Reviewed High or Critical advisories that may pass until `expires` (UTC).
+// Each entry names one package, one advisory id, and the severity it was
+// reviewed at. A higher severity or a passed expiry date blocks again until
+// someone re-reviews it. Entries cover dev-only tooling: the workflow's
+// production-scope audit takes no exceptions.
+const ACCEPTED_ADVISORIES = [
+  {
+    packageName: 'braces',
+    id: 1240992, // GHSA-vfj7-8cjw-p6xm
+    severity: 'high',
+    expires: '2027-01-05',
+    reason: 'dev-only lint dependency via eslint-config-next; no patched release exists',
+  },
+];
+
+function findAcceptance(packageName, advisory, now) {
+  return ACCEPTED_ADVISORIES.find((entry) =>
+    entry.packageName === packageName &&
+    entry.id === advisory.id &&
+    entry.severity === advisory.severity.toLowerCase() &&
+    now < new Date(`${entry.expires}T00:00:00Z`));
+}
+
 function parseAuditDocument(raw) {
   if (!raw.trim()) throw new Error('Audit result is empty');
 
@@ -27,9 +50,10 @@ function validateAdvisory(packageName, advisory) {
   }
 }
 
-function analyzeAuditResults(raw) {
+function analyzeAuditResults(raw, { now = new Date() } = {}) {
   const document = parseAuditDocument(raw);
   const blocking = [];
+  const accepted = [];
   let advisoryCount = 0;
 
   for (const [packageName, advisories] of Object.entries(document)) {
@@ -39,25 +63,37 @@ function analyzeAuditResults(raw) {
     for (const advisory of advisories) {
       validateAdvisory(packageName, advisory);
       advisoryCount += 1;
-      if (BLOCKING_SEVERITIES.has(advisory.severity.toLowerCase())) {
-        blocking.push({
-          packageName,
-          id: advisory.id,
-          severity: advisory.severity,
-          title: advisory.title,
-        });
+      if (!BLOCKING_SEVERITIES.has(advisory.severity.toLowerCase())) continue;
+
+      const finding = {
+        packageName,
+        id: advisory.id,
+        severity: advisory.severity,
+        title: advisory.title,
+      };
+      const acceptance = findAcceptance(packageName, advisory, now);
+      if (acceptance) {
+        accepted.push({ ...finding, expires: acceptance.expires, reason: acceptance.reason });
+      } else {
+        blocking.push(finding);
       }
     }
   }
 
-  return { advisoryCount, blocking };
+  return { advisoryCount, blocking, accepted };
 }
 
-function runCli(resultPath) {
+function runCli(resultPath, options) {
   if (!resultPath) throw new Error('Usage: node scripts/check-audit-results.cjs <audit-results.json>');
-  const result = analyzeAuditResults(readFileSync(resultPath, 'utf8'));
+  const result = analyzeAuditResults(readFileSync(resultPath, 'utf8'), options);
+  for (const advisory of result.accepted) {
+    console.log(
+      `Accepted until ${advisory.expires}: ${advisory.severity}: ${advisory.packageName} ` +
+      `(${advisory.id}) ${advisory.title}. Reason: ${advisory.reason}`
+    );
+  }
   if (result.blocking.length === 0) {
-    console.log(`Audit evidence valid: ${result.advisoryCount} advisories, none High/Critical.`);
+    console.log(`Audit evidence valid: ${result.advisoryCount} advisories, none blocking.`);
     return 0;
   }
   for (const advisory of result.blocking) {
