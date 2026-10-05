@@ -111,11 +111,26 @@ store task content differently at rest.
 ### OAuth Authentication
 
 1. **Providers**
-   - Google (via PocketBase built-in OAuth2)
-   - GitHub (via PocketBase built-in OAuth2)
+   - Google, GitHub, and Apple, through PocketBase's built-in OAuth2
 
-2. **Security Features**
-   - PocketBase SDK handles OAuth popup flow and token management
+2. **Sign-in Flow**
+   - The tab that starts sign-in gets a per-request `state` and PKCE code
+     verifier from PocketBase and keeps both in memory
+   - The provider returns to `/api/gsd/oauth-callback`, a PocketBase hook
+     that redirects to `/auth/callback/` with the code and state in the URL
+     fragment. The redirect target comes from `GSD_WEB_OAUTH_CALLBACK_URL` or
+     a fixed default, never from the request, so it can't be an open redirect
+   - The callback page relays the result over a same-origin
+     `BroadcastChannel`, clears it from the address bar, and closes. Only the
+     tab whose `state` matches exchanges the code, using its own verifier
+   - PocketBase's realtime `/api/oauth2-redirect` route answers 404, through
+     a hook on the server and a deny rule in the self-host Caddyfile. That
+     route hands the code to whichever realtime client the `state` names,
+     not to the browser that started sign-in
+   - Self-hosters register `https://<server>/api/gsd/oauth-callback` with each
+     provider (see `docker/README.md`)
+
+3. **Tokens**
    - Auth tokens stored in PocketBase's built-in `authStore` (localStorage)
    - Tokens auto-refresh via PocketBase SDK
 
@@ -419,6 +434,12 @@ If you discover a security vulnerability, please:
    then, the exception must not be broadened, the old files must not be
    restored, and any evidence that the credential is usable must be handled as
    an incident rather than as an allowlist update.
+
+3. **Accepted dev-only advisory**: `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no
+   patched release. It reaches this repo only through `eslint-config-next`,
+   which never passes it a pattern, and it doesn't ship in the static export.
+   `scripts/check-audit-results.cjs` accepts it until 2027-01-05. After that
+   date the Security Audit gate blocks it again unless someone re-reviews it.
 
 ## References
 
