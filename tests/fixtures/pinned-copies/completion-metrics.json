@@ -1,0 +1,212 @@
+{
+  "$comment": "Pins the two hand-kept copies of the completion metrics and streaks. The root suite (tests/data/pinned-copies/completion-metrics.test.ts) checks lib/analytics/{streaks,metrics}.ts and the MCP suite (packages/mcp-server/src/__tests__/pinned-copies/completion-metrics.test.ts) checks packages/mcp-server/src/analytics/{streaks,metrics}.ts against this file. Each scenario sets its own clock ('now') and zone ('timezone'). 'expected' holds what both copies return; 'divergences' holds a value per copy at a dotted path; 'webOnly' holds output the MCP copy doesn't have. A scenario with 'encodesDefect' pins a brief §7 suspected defect as it behaves today, and its note gives the numbers a fix would produce, so Phase 3 can flip it on purpose. quadrantPerformance compares the four fields both copies return; the MCP copy's extra name and activeTasks fields aren't pinned. Brief: MODERNIZATION_BRIEF.md, Phase 1.",
+  "copies": {
+    "web": "lib/analytics/streaks.ts (getStreakData), lib/analytics/metrics.ts (calculateMetrics, getQuadrantPerformance)",
+    "mcp": "packages/mcp-server/src/analytics/streaks.ts (getStreakData), packages/mcp-server/src/analytics/metrics.ts (calculateMetrics, getQuadrantPerformance)"
+  },
+  "taskDefaults": {
+    "description": "",
+    "subtasks": [],
+    "dependencies": [],
+    "recurrence": "none",
+    "createdAt": "2026-05-01T00:00:00.000Z"
+  },
+  "scenarios": [
+    {
+      "name": "completions on consecutive days",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "tasks": [
+        { "id": "c1", "title": "c1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-17T09:00:00.000Z", "updatedAt": "2026-06-17T09:00:00.000Z", "tags": ["work"] },
+        { "id": "c2", "title": "c2", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-06-16T09:00:00.000Z", "updatedAt": "2026-06-16T09:00:00.000Z", "tags": ["work", "home"] },
+        { "id": "c3", "title": "c3", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-15T09:00:00.000Z", "updatedAt": "2026-06-15T09:00:00.000Z", "tags": [] },
+        { "id": "c9", "title": "c9", "quadrant": "urgent-not-important", "urgent": true, "important": false, "completed": true, "completedAt": "2026-06-14T09:00:00.000Z", "updatedAt": "2026-06-14T09:00:00.000Z", "tags": [] },
+        { "id": "c4", "title": "c4", "quadrant": "urgent-not-important", "urgent": true, "important": false, "completed": true, "completedAt": "2026-06-10T09:00:00.000Z", "updatedAt": "2026-06-10T09:00:00.000Z", "tags": [] },
+        { "id": "c5", "title": "c5", "quadrant": "not-urgent-not-important", "urgent": false, "important": false, "completed": true, "completedAt": "2026-06-09T09:00:00.000Z", "updatedAt": "2026-06-09T09:00:00.000Z", "tags": [] },
+        { "id": "c6", "title": "c6", "quadrant": "not-urgent-not-important", "urgent": false, "important": false, "completed": true, "completedAt": "2026-06-08T09:00:00.000Z", "updatedAt": "2026-06-08T09:00:00.000Z", "tags": [] },
+        { "id": "c7", "title": "c7", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-07T09:00:00.000Z", "updatedAt": "2026-06-07T09:00:00.000Z", "tags": [] },
+        { "id": "c10", "title": "c10", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-06-06T09:00:00.000Z", "updatedAt": "2026-06-06T09:00:00.000Z", "tags": [] },
+        { "id": "c8", "title": "c8", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-05-20T09:00:00.000Z", "updatedAt": "2026-05-20T09:00:00.000Z", "tags": [] },
+        { "id": "a1", "title": "a1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": false, "dueDate": "2026-06-16T12:00:00.000Z", "updatedAt": "2026-06-01T00:00:00.000Z", "tags": ["work"] },
+        { "id": "a2", "title": "a2", "quadrant": "urgent-not-important", "urgent": true, "important": false, "completed": false, "dueDate": "2026-06-17T18:00:00.000Z", "updatedAt": "2026-06-01T00:00:00.000Z", "tags": [] },
+        { "id": "a3", "title": "a3", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": false, "dueDate": "2026-06-20T12:00:00.000Z", "updatedAt": "2026-06-01T00:00:00.000Z", "tags": [] },
+        { "id": "a4", "title": "a4", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": false, "updatedAt": "2026-06-01T00:00:00.000Z", "tags": ["home"] },
+        { "id": "a5", "title": "a5", "quadrant": "not-urgent-not-important", "urgent": false, "important": false, "completed": false, "dueDate": "2026-07-30T12:00:00.000Z", "updatedAt": "2026-06-01T00:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 4, "longest": 5, "lastCompletionDate": "2026-06-17" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 4,
+          "completedThisMonth": 9,
+          "activeStreak": 4,
+          "longestStreak": 5,
+          "completionRate": 67,
+          "quadrantDistribution": { "urgent-important": 1, "not-urgent-important": 2, "urgent-not-important": 1, "not-urgent-not-important": 1 },
+          "tagStats": [
+            { "tag": "work", "count": 3, "completedCount": 2, "completionRate": 67 },
+            { "tag": "home", "count": 2, "completedCount": 1, "completionRate": 50 }
+          ],
+          "overdueCount": 1,
+          "dueTodayCount": 1,
+          "dueThisWeekCount": 2,
+          "noDueDateCount": 1,
+          "activeTasks": 5,
+          "completedTasks": 10,
+          "totalTasks": 15
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 75, "totalTasks": 4, "completedTasks": 3 },
+          { "quadrantId": "urgent-not-important", "completionRate": 67, "totalTasks": 3, "completedTasks": 2 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 67, "totalTasks": 3, "completedTasks": 2 },
+          { "quadrantId": "not-urgent-important", "completionRate": 60, "totalTasks": 5, "completedTasks": 3 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, true, true, true, true] }
+    },
+    {
+      "name": "an old completion edited today",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "encodesDefect": "§7 Fix or keep, other suspected bugs: streaks and completion counts use updatedAt instead of completedAt. d1 was completed on 2026-06-01 and only edited today, yet it counts as completed today. Keyed on completedAt, this scenario gives streak current 0, longest 1, lastCompletionDate 2026-06-16, completedToday 0, completedThisWeek 1, and last7Days true only for 2026-06-16.",
+      "tasks": [
+        { "id": "d1", "title": "d1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-01T09:00:00.000Z", "updatedAt": "2026-06-17T10:00:00.000Z", "tags": [] },
+        { "id": "d2", "title": "d2", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-06-16T20:00:00.000Z", "updatedAt": "2026-06-16T20:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 2, "longest": 2, "lastCompletionDate": "2026-06-17" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 2,
+          "completedThisMonth": 2,
+          "activeStreak": 2,
+          "longestStreak": 2,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 2,
+          "totalTasks": 2
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 100, "totalTasks": 1, "completedTasks": 1 },
+          { "quadrantId": "not-urgent-important", "completionRate": 100, "totalTasks": 1, "completedTasks": 1 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, false, true, true] }
+    },
+    {
+      "name": "a single completion day ten days ago",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "tasks": [
+        { "id": "e1", "title": "e1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-07T09:00:00.000Z", "updatedAt": "2026-06-07T09:00:00.000Z", "tags": ["solo"] }
+      ],
+      "expected": {
+        "streak": { "current": 0, "lastCompletionDate": "2026-06-07" },
+        "metrics": {
+          "completedToday": 0,
+          "completedThisWeek": 0,
+          "completedThisMonth": 1,
+          "activeStreak": 0,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [{ "tag": "solo", "count": 1, "completedCount": 1, "completionRate": 100 }],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 1,
+          "totalTasks": 1
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 100, "totalTasks": 1, "completedTasks": 1 },
+          { "quadrantId": "not-urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "divergences": [
+        { "path": "streak.longest", "web": 1, "mcp": 0, "note": "With one completion day, the web reports a longest streak of 1. The MCP copy returns the current streak instead, which is 0 when that day isn't today. Brief §1 notes that the streak copies already disagree." },
+        { "path": "metrics.longestStreak", "web": 1, "mcp": 0, "note": "Same cause as streak.longest." }
+      ],
+      "webOnly": { "last7Days": [false, false, false, false, false, false, false] }
+    },
+    {
+      "name": "a late-evening completion in a zone behind UTC",
+      "timezone": "America/Chicago",
+      "now": "2026-06-17T03:30:00.000Z",
+      "encodesDefect": "§7 Fix or keep, other suspected bugs: the web seven-day strip mixes local and UTC days. It is 22:30 on June 16 in Chicago, and f1 was completed at 21:00 local. The streak counts f1 on its UTC date (2026-06-17) and completedToday counts it from local midnight, but the strip builds local days and labels them with UTC dates, so it shows no completion today. Built on local days, the last element of last7Days would be true.",
+      "tasks": [
+        { "id": "f1", "title": "f1", "quadrant": "not-urgent-not-important", "urgent": false, "important": false, "completed": true, "completedAt": "2026-06-17T02:00:00.000Z", "updatedAt": "2026-06-17T02:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 1, "longest": 1, "lastCompletionDate": "2026-06-17" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 1,
+          "completedThisMonth": 1,
+          "activeStreak": 1,
+          "longestStreak": 1,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 1,
+          "totalTasks": 1
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "not-urgent-not-important", "completionRate": 100, "totalTasks": 1, "completedTasks": 1 },
+          { "quadrantId": "urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, false, false, false] }
+    },
+    {
+      "name": "no tasks",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "tasks": [],
+      "expected": {
+        "streak": { "current": 0, "longest": 0, "lastCompletionDate": null },
+        "metrics": {
+          "completedToday": 0,
+          "completedThisWeek": 0,
+          "completedThisMonth": 0,
+          "activeStreak": 0,
+          "longestStreak": 0,
+          "completionRate": 0,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 0,
+          "totalTasks": 0
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, false, false, false] }
+    }
+  ]
+}
