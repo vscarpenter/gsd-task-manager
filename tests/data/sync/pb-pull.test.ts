@@ -196,6 +196,59 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 });
 
+describe('pullRemoteChanges last-write-wins', () => {
+  const localStamp = '2026-10-05T10:00:00.000Z';
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.syncQueue.clear();
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([['t-lww', { pbRecordId: 'rec-t-lww', clientUpdatedAt: localStamp }]]),
+      fetchSucceeded: true,
+    });
+    await db.tasks.add({
+      ...makeTask('t-lww', localStamp),
+      title: 'Local title',
+      snoozedUntil: '2026-10-05T15:00:00.000Z',
+      notificationSent: true,
+      lastNotificationAt: '2026-10-05T09:45:00.000Z',
+    });
+  });
+
+  function pullRemoteVersion(clientUpdatedAt: string) {
+    const record = { ...pbRecord('t-lww', clientUpdatedAt), title: 'Remote title' } as RecordModel;
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getList: vi.fn(async () => [record]) }),
+    });
+    return pullRemoteChanges(null);
+  }
+
+  it('overwrites the local task with a strictly newer remote and keeps device-local state', async () => {
+    const { pulledCount } = await pullRemoteVersion('2026-10-05T10:00:05.000Z');
+
+    expect(pulledCount).toBe(1);
+    await expect(getDb().tasks.get('t-lww')).resolves.toMatchObject({
+      title: 'Remote title',
+      updatedAt: '2026-10-05T10:00:05.000Z',
+      snoozedUntil: '2026-10-05T15:00:00.000Z',
+      notificationSent: true,
+      lastNotificationAt: '2026-10-05T09:45:00.000Z',
+    });
+  });
+
+  it.each([
+    ['a tie', '2026-10-05T10:00:00.000Z'],
+    ['an older remote', '2026-10-05T09:59:59.000Z'],
+  ])('keeps the local task and counts nothing on %s', async (_label, remoteStamp) => {
+    const { pulledCount } = await pullRemoteVersion(remoteStamp);
+
+    expect(pulledCount).toBe(0);
+    await expect(getDb().tasks.get('t-lww')).resolves.toMatchObject({ title: 'Local title' });
+  });
+});
+
 describe('pullRemoteChanges archive guard', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

@@ -130,6 +130,33 @@ describe("archive", () => {
       expect(await db.archivedTasks.count()).toBe(1);
     });
 
+    it("should_stamp_archivedAt_and_queue_a_sync_delete_when_sync_is_enabled", async () => {
+      // archivedTasks never syncs, so other devices drop the task only because
+      // the archive run queues a remote delete for it.
+      const db = getDb();
+      vi.mocked(getSyncConfig).mockResolvedValue({ enabled: true } as never);
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 60);
+      const oldTask = createMockTask({
+        id: "old-synced",
+        title: "Old Synced",
+        completed: true,
+        completedAt: oldDate.toISOString(),
+        createdAt: oldDate.toISOString(),
+        updatedAt: oldDate.toISOString(),
+      });
+      await db.tasks.add(oldTask);
+      const before = Date.now();
+
+      await archiveOldTasks(30);
+
+      const archivedAt = Date.parse((await db.archivedTasks.get("old-synced"))?.archivedAt ?? "");
+      expect(archivedAt).toBeGreaterThanOrEqual(before);
+      expect(archivedAt).toBeLessThanOrEqual(Date.now());
+      expect(enqueueMock).toHaveBeenCalledTimes(1);
+      expect(enqueueMock).toHaveBeenCalledWith("delete", "old-synced", oldTask);
+    });
+
     it("should_archive_a_task_that_is_already_in_the_archive", async () => {
       // Regression: a task archived earlier can be resurrected in `tasks` by a
       // sync pull while its archived copy still exists. bulkAdd then threw
