@@ -438,8 +438,10 @@ If you discover a security vulnerability, please:
 3. **Accepted dev-only advisory**: `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no
    patched release. It reaches this repo only through `eslint-config-next`,
    which never passes it a pattern, and it doesn't ship in the static export.
-   `scripts/check-audit-results.cjs` accepts it until 2027-01-05. After that
-   date the Security Audit gate blocks it again unless someone re-reviews it.
+   `scripts/check-audit-results.cjs` accepts it at High severity until
+   2027-01-05. A higher severity or a passed expiry date blocks it again until
+   someone re-reviews it. The workflow also audits production dependencies
+   with no exceptions, so the gate fails if `braces` ever reaches runtime code.
 
 ## References
 

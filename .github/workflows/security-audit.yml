@@ -77,6 +77,12 @@ jobs:
             exit 1
           fi
 
+      # The checker's accepted advisories cover dev-only tooling. Runtime
+      # dependencies get no exceptions: any High or Critical advisory, or a
+      # failed audit, fails this step.
+      - name: Audit production dependencies
+        run: bun audit --prod --audit-level=high
+
       - name: Audit summary
         if: always()
         env:

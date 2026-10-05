@@ -46,6 +46,14 @@ describe('analyzeAuditResults', () => {
     expect(result.blocking).toEqual([{ packageName: 'braces', ...BRACES_ADVISORY }]);
   });
 
+  it('blocks the braces advisory if its severity rises above the reviewed level', () => {
+    const critical = { ...BRACES_ADVISORY, severity: 'critical' };
+    const result = analyzeAuditResults(JSON.stringify({ braces: [critical] }), BEFORE_EXPIRY);
+
+    expect(result.accepted).toEqual([]);
+    expect(result.blocking).toEqual([{ packageName: 'braces', ...critical }]);
+  });
+
   it('keeps an acceptance scoped to its package', () => {
     const result = analyzeAuditResults(JSON.stringify({ micromatch: [BRACES_ADVISORY] }), BEFORE_EXPIRY);
 

@@ -3,12 +3,15 @@ const { readFileSync } = require('node:fs');
 const BLOCKING_SEVERITIES = new Set(['high', 'critical']);
 
 // Reviewed High or Critical advisories that may pass until `expires` (UTC).
-// Each entry names one package and one advisory id, and it stops applying on
-// its expiry date, so the advisory blocks again unless someone re-reviews it.
+// Each entry names one package, one advisory id, and the severity it was
+// reviewed at. A higher severity or a passed expiry date blocks again until
+// someone re-reviews it. Entries cover dev-only tooling: the workflow's
+// production-scope audit takes no exceptions.
 const ACCEPTED_ADVISORIES = [
   {
     packageName: 'braces',
     id: 1240992, // GHSA-vfj7-8cjw-p6xm
+    severity: 'high',
     expires: '2027-01-05',
     reason: 'dev-only lint dependency via eslint-config-next; no patched release exists',
   },
@@ -18,6 +21,7 @@ function findAcceptance(packageName, advisory, now) {
   return ACCEPTED_ADVISORIES.find((entry) =>
     entry.packageName === packageName &&
     entry.id === advisory.id &&
+    entry.severity === advisory.severity.toLowerCase() &&
     now < new Date(`${entry.expires}T00:00:00Z`));
 }
 

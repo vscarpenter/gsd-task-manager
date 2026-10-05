@@ -299,6 +299,14 @@ describe('security hardening scripts and workflows', () => {
     expect(security).toContain('separately approved manual gate');
   });
 
+  it('audits production dependencies with no accepted advisories', () => {
+    const workflow = readRepoFile('.github/workflows/security-audit.yml');
+
+    // A one-line run step: bun's exit code alone decides, so the checker's
+    // accepted list (dev-only tooling) can't excuse a runtime dependency.
+    expect(workflow).toMatch(/\n\s+run: bun audit --prod --audit-level=high\n/);
+  });
+
   it('registers a disposable PocketBase system test without production endpoints', () => {
     const rootPackage = JSON.parse(readRepoFile('package.json'));
     const workflow = readRepoFile('.github/workflows/ci.yml');
