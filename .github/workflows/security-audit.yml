@@ -67,7 +67,11 @@ jobs:
           fi
 
           echo "has_vulnerabilities=false" >> "$GITHUB_OUTPUT"
-          if [ "$CHECK_EXIT" -ne 0 ] || [ "$AUDIT_EXIT" -ne 0 ]; then
+          # bun audit exits 1 whenever it reports a High or Critical advisory,
+          # including one the checker accepts, and bun 1.3.14's --ignore can't
+          # suppress it. The checker decides. A failed audit leaves empty
+          # output, which the checker rejects, so it still fails here.
+          if [ "$CHECK_EXIT" -ne 0 ] || [ "$AUDIT_EXIT" -gt 1 ]; then
             echo "Security audit did not produce clean, valid evidence." >&2
             sed -n '1,80p' audit-errors.log >&2
             exit 1
