@@ -227,7 +227,7 @@
       <div class="diagram">
     <svg viewBox="0 0 1120 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="gsd-detail-title gsd-detail-desc">
       <title id="gsd-detail-title">GSD Task Manager in detail</title>
-      <desc id="gsd-detail-desc">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in, error reporting), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted PocketBase database as the sync hub, third-party OAuth providers, Sentry, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>
+      <desc id="gsd-detail-desc">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted PocketBase database as the sync hub, third-party OAuth providers, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>
       <defs>
         <marker id="dt-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6e6760"/></marker>
         <marker id="dt-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2c6680"/></marker>
@@ -241,9 +241,9 @@
       <rect x="440" y="72" width="368" height="360" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.10)" stroke-width="0.8"/>
       <rect x="558" y="76" width="132" height="12" rx="2" fill="#f4f1e9"/>
       <text x="624" y="85" fill="rgba(33,30,26,0.40)" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.14em">AWS · HOSTING & BACKEND</text>
-      <rect x="840" y="232" width="176" height="368" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.10)" stroke-width="0.8"/>
-      <rect x="844" y="236" width="168" height="12" rx="2" fill="#f4f1e9"/>
-      <text x="928" y="245" fill="rgba(33,30,26,0.40)" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.14em">OTHER SERVICES · YOUR COMPUTER</text>
+      <rect x="840" y="312" width="176" height="288" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.10)" stroke-width="0.8"/>
+      <rect x="844" y="316" width="168" height="12" rx="2" fill="#f4f1e9"/>
+      <text x="928" y="325" fill="rgba(33,30,26,0.40)" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.14em">OTHER SERVICES · YOUR COMPUTER</text>
       <rect x="56" y="600" width="1000" height="128" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.10)" stroke-width="0.8"/>
       <rect x="480" y="604" width="152" height="12" rx="2" fill="#f4f1e9"/>
       <text x="556" y="613" fill="rgba(33,30,26,0.40)" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.14em">NATIVE APPS · iOS & ANDROID</text>
@@ -259,7 +259,6 @@
       <path d="M 400,380 H 552" fill="none" stroke="#6e6760" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#dt-arrow)"/>
       <path d="M 400,460 H 576 Q 584,460 584,452 V 408" fill="none" stroke="#8a6a22" stroke-width="1.2" marker-end="url(#dt-arrow-link)"/>
       <path d="M 696,380 H 856" fill="none" stroke="#8a6a22" stroke-width="1.2" marker-end="url(#dt-arrow-link)"/>
-      <path d="M 400,300 H 856" fill="none" stroke="#6e6760" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#dt-arrow)"/>
       <path d="M 856,492 H 656 Q 648,492 648,484 V 408" fill="none" stroke="#8a6a22" stroke-width="1.2" marker-end="url(#dt-arrow-link)"/>
       <path d="M 928,528 V 504" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#dt-arrow)"/>
       <path d="M 200,668 H 240" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#dt-arrow)"/>
@@ -291,8 +290,6 @@
       <text x="488" y="449" fill="#8a6a22" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">OAUTH</text>
       <rect x="748" y="360" width="56" height="12" rx="2" fill="#f4f1e9"/>
       <text x="776" y="369" fill="#8a6a22" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">IDENTITY</text>
-      <rect x="604" y="280" width="48" height="12" rx="2" fill="#f4f1e9"/>
-      <text x="628" y="289" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">REDACTED</text>
       <rect x="742" y="472" width="28" height="12" rx="2" fill="#f4f1e9"/>
       <text x="756" y="481" fill="#8a6a22" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
       <rect x="936" y="510" width="32" height="12" rx="2" fill="#f4f1e9"/>
@@ -326,12 +323,6 @@
       <text x="78" y="287" fill="#211e1a" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">FILE</text>
       <text x="128" y="305" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Backup</text>
       <text x="128" y="319" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">JSON export · import</text>
-      <rect x="256" y="272" width="144" height="56" rx="6" fill="#f4f1e9"/>
-      <rect x="256" y="272" width="144" height="56" rx="6" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
-      <rect x="264" y="278" width="24" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.40)" stroke-width="0.8"/>
-      <text x="276" y="287" fill="#211e1a" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">LOG</text>
-      <text x="328" y="305" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Error reporting</text>
-      <text x="328" y="319" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">content redacted</text>
       <rect x="256" y="352" width="144" height="56" rx="6" fill="#f4f1e9"/>
       <rect x="256" y="352" width="144" height="56" rx="6" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
       <rect x="264" y="358" width="28" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.40)" stroke-width="0.8"/>
@@ -374,12 +365,6 @@
       <text x="570" y="367" fill="#797368" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
       <text x="624" y="385" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">AWS Database</text>
       <text x="624" y="399" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">PocketBase on EC2</text>
-      <rect x="856" y="272" width="144" height="56" rx="6" fill="#f4f1e9"/>
-      <rect x="856" y="272" width="144" height="56" rx="6" fill="rgba(33,30,26,0.03)" stroke="rgba(33,30,26,0.30)" stroke-width="1"/>
-      <rect x="864" y="278" width="24" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.22)" stroke-width="0.8"/>
-      <text x="876" y="287" fill="#797368" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
-      <text x="928" y="305" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Sentry</text>
-      <text x="928" y="319" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">error monitoring</text>
       <rect x="856" y="352" width="144" height="56" rx="6" fill="#f4f1e9"/>
       <rect x="856" y="352" width="144" height="56" rx="6" fill="rgba(33,30,26,0.03)" stroke="rgba(33,30,26,0.30)" stroke-width="1"/>
       <rect x="864" y="358" width="24" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.22)" stroke-width="0.8"/>
@@ -455,7 +440,7 @@
       <text x="780" y="794" fill="#6e6760" font-size="8.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="start">Sync / async</text>
     </svg>
       </div>
-      <figcaption>Web app internals on the left, AWS hosting and the PocketBase database in the middle, third-party services and the Claude Desktop assistant on the right, and the two native apps along the bottom. Every client keeps its own on-device store and syncs through the same database. Error reports go to Sentry with task content redacted.</figcaption>
+      <figcaption>Web app internals on the left, AWS hosting and the PocketBase database in the middle, third-party services and the Claude Desktop assistant on the right, and the two native apps along the bottom. Every client keeps its own on-device store and syncs through the same database.</figcaption>
     </figure>
 
     <p class="colophon">GSD Task Manager · diagram-design · GSD Editorial profile · 2026-09-07</p>
