@@ -1,10 +1,12 @@
-const mockAuthWithOAuth2 = vi.fn();
+const mockListAuthMethods = vi.fn();
+const mockAuthWithOAuth2Code = vi.fn();
 const mockAuthRefresh = vi.fn();
 const mockCancelRequest = vi.fn();
 
 const mockPb = {
   collection: vi.fn(() => ({
-    authWithOAuth2: mockAuthWithOAuth2,
+    listAuthMethods: mockListAuthMethods,
+    authWithOAuth2Code: mockAuthWithOAuth2Code,
     authRefresh: mockAuthRefresh,
   })),
   authStore: {
@@ -12,7 +14,25 @@ const mockPb = {
     isValid: true,
     record: { id: 'user-123', email: 'test@example.com' },
   },
+  buildURL: vi.fn((path: string) => `https://pb.example.test${path}`),
   cancelRequest: mockCancelRequest,
+};
+
+const REDIRECT_URL = 'https://pb.example.test/api/gsd/oauth-callback';
+
+const AUTH_METHODS = {
+  oauth2: {
+    enabled: true,
+    providers: ['google', 'github', 'apple'].map((name) => ({
+      name,
+      displayName: name,
+      state: `state-${name}`,
+      authURL: `https://accounts.example.test/${name}?client_id=gsd&redirect_uri=`,
+      codeVerifier: `verifier-${name}`,
+      codeChallenge: 'challenge',
+      codeChallengeMethod: 'S256',
+    })),
+  },
 };
 
 function tokenExpiringIn(seconds: number): string {
@@ -42,11 +62,53 @@ import {
   loginWithGoogle,
   loginWithGithub,
   loginWithApple,
+  cancelOAuthLogin,
   getOAuthErrorMessage,
   openOAuthPopup,
   refreshAuth,
   ensureValidAuth,
 } from '@/lib/sync/pb-auth';
+import { relayOAuthCallback } from '@/lib/sync/oauth-callback';
+
+/** Provider name encoded in a fake authURL. */
+function providerOf(url: string): string {
+  return new URL(url).pathname.slice(1);
+}
+
+/**
+ * Stands in for the provider plus the callback page: when sign-in navigates to
+ * the provider, relay a code for that flow's state, as the callback page would.
+ */
+function relayCodeFor(url: string, code = 'auth-code'): void {
+  relayOAuthCallback(`code=${code}&state=state-${providerOf(url)}`);
+}
+
+function fakePopup(
+  onNavigate: (url: string, popup: { closed: boolean }) => void = (url) => relayCodeFor(url)
+) {
+  const popup = {
+    closed: false,
+    close: vi.fn(),
+    hrefs: [] as string[],
+    location: {} as { href: string },
+  };
+  Object.defineProperty(popup.location, 'href', {
+    set(url: string) {
+      popup.hrefs.push(url);
+      onNavigate(url, popup);
+    },
+  });
+  return popup;
+}
+
+function stubWindowOpen(onNavigate: (url: string) => void = relayCodeFor) {
+  return vi.spyOn(window, 'open').mockImplementation((url) => {
+    onNavigate(String(url));
+    return {} as Window;
+  });
+}
+
+const signedIn = (id: string, email: string) => ({ token: 'tok', record: { id, email } });
 
 describe('Sign in with Apple', () => {
   // The iOS client has always offered Apple and this app never did, so an iOS user who
@@ -54,23 +116,26 @@ describe('Sign in with Apple', () => {
   // already configured server-side; the whitelist here is what gated it.
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuthWithOAuth2.mockResolvedValue({
-      token: 'tok',
-      record: { id: 'user-1', email: 'someone@example.com' },
-    });
+    mockListAuthMethods.mockResolvedValue(AUTH_METHODS);
+    mockAuthWithOAuth2Code.mockResolvedValue(signedIn('user-1', 'someone@example.com'));
+    stubWindowOpen();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should_allow_apple_through_the_provider_whitelist', async () => {
     await expect(loginWithProvider('apple')).resolves.toMatchObject({ isLoggedIn: true });
-    expect(mockAuthWithOAuth2).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: 'apple' })
+    expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+      'apple', 'auth-code', 'verifier-apple', REDIRECT_URL, undefined, {}
     );
   });
 
   it('should_expose_a_loginWithApple_wrapper', async () => {
     await loginWithApple();
-    expect(mockAuthWithOAuth2).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: 'apple' })
+    expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+      'apple', expect.any(String), expect.any(String), REDIRECT_URL, undefined, {}
     );
   });
 
@@ -78,7 +143,7 @@ describe('Sign in with Apple', () => {
     await expect(
       loginWithProvider('facebook' as unknown as Parameters<typeof loginWithProvider>[0])
     ).rejects.toThrow(/not allowed/i);
-    expect(mockAuthWithOAuth2).not.toHaveBeenCalled();
+    expect(mockListAuthMethods).not.toHaveBeenCalled();
   });
 });
 
@@ -90,15 +155,25 @@ describe('PocketBase Auth', () => {
   });
 
   describe('loginWithProvider', () => {
-    it('should return AuthState on successful login', async () => {
-      mockAuthWithOAuth2.mockResolvedValue({
-        record: { id: 'user-123', email: 'test@example.com' },
-      });
+    beforeEach(() => {
+      mockListAuthMethods.mockResolvedValue(AUTH_METHODS);
+      mockAuthWithOAuth2Code.mockResolvedValue(signedIn('user-123', 'test@example.com'));
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should exchange the relayed code with this flow\'s PKCE verifier', async () => {
+      stubWindowOpen();
 
       const result = await loginWithProvider('google');
 
       expect(mockPb.collection).toHaveBeenCalledWith('users');
-      expect(mockAuthWithOAuth2).toHaveBeenCalledWith({ provider: 'google' });
+      expect(mockListAuthMethods).toHaveBeenCalledWith({});
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+        'google', 'auth-code', 'verifier-google', REDIRECT_URL, undefined, {}
+      );
       expect(result).toEqual({
         isLoggedIn: true,
         userId: 'user-123',
@@ -107,73 +182,86 @@ describe('PocketBase Auth', () => {
       });
     });
 
-    it('should pass a pre-opened popup through urlCallback', async () => {
-      mockAuthWithOAuth2.mockResolvedValue({
-        record: { id: 'user-123', email: 'test@example.com' },
-      });
-      const popupWindow = {
-        closed: false,
-        location: { href: '' },
-      } as unknown as Window;
+    it('should send a pre-opened popup to the provider with the encoded redirect URL', async () => {
+      const popup = fakePopup();
 
       await loginWithProvider('google', {
-        popupWindow,
+        popupWindow: popup as unknown as Window,
         requestKey: 'oauth_google_test',
       });
 
-      const options = mockAuthWithOAuth2.mock.calls[0][0];
-      expect(options).toEqual(
-        expect.objectContaining({
-          provider: 'google',
-          requestKey: 'oauth_google_test',
-          urlCallback: expect.any(Function),
-        })
+      expect(popup.hrefs).toEqual([
+        `https://accounts.example.test/google?client_id=gsd&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`,
+      ]);
+      expect(mockListAuthMethods).toHaveBeenCalledWith({ requestKey: 'oauth_google_test' });
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+        'google', 'auth-code', 'verifier-google', REDIRECT_URL, undefined,
+        { requestKey: 'oauth_google_test' }
       );
+    });
 
-      options.urlCallback('https://accounts.example.test/auth');
-      expect(popupWindow.location.href).toBe('https://accounts.example.test/auth');
+    it('should ignore a code relayed for another state (SEC-001)', async () => {
+      // A crafted provider link lands this browser's callback page with an
+      // attacker's state. Only the code for this tab's own state may be exchanged.
+      stubWindowOpen((url) => {
+        relayOAuthCallback('code=not-ours&state=attacker-state');
+        relayCodeFor(url, 'ours');
+      });
+
+      await loginWithProvider('github');
+
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledOnce();
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+        'github', 'ours', 'verifier-github', REDIRECT_URL, undefined, {}
+      );
+    });
+
+    it('should reject when the provider returns an error for this flow', async () => {
+      stubWindowOpen((url) => {
+        relayOAuthCallback(`error=access_denied&state=state-${providerOf(url)}`);
+      });
+
+      await expect(loginWithProvider('google')).rejects.toThrow(/access_denied/);
+      expect(mockAuthWithOAuth2Code).not.toHaveBeenCalled();
     });
 
     it('should close a pre-opened popup after successful OAuth handoff', async () => {
-      mockAuthWithOAuth2.mockResolvedValue({
-        record: { id: 'user-123', email: 'test@example.com' },
-      });
-      const close = vi.fn();
-      const popupWindow = {
-        closed: false,
-        location: { href: '' },
-        close,
-      } as unknown as Window;
+      const popup = fakePopup();
 
-      await loginWithProvider('google', { popupWindow });
+      await loginWithProvider('google', { popupWindow: popup as unknown as Window });
 
-      expect(close).toHaveBeenCalledOnce();
+      expect(popup.close).toHaveBeenCalledOnce();
     });
 
     it('should not close a popup the browser already reports as closed', async () => {
-      mockAuthWithOAuth2.mockResolvedValue({
-        record: { id: 'user-123', email: 'test@example.com' },
-      });
-      const close = vi.fn();
       // accounts.google.com serves Cross-Origin-Opener-Policy: same-origin, which
-      // swaps the browsing context group and severs our handle. Chrome then reports
-      // the popup as closed and refuses close(), logging a COOP violation for a call
-      // that could never have done anything.
-      const popupWindow = {
-        closed: true,
-        location: { href: '' },
-        close,
-      } as unknown as Window;
+      // swaps the browsing context group and severs our handle once the popup
+      // navigates there. Chrome then reports the popup as closed and refuses
+      // close(), logging a COOP violation for a call that could not do anything.
+      const popup = fakePopup((url, handle) => {
+        handle.closed = true;
+        relayCodeFor(url);
+      });
 
-      await loginWithProvider('google', { popupWindow });
+      await loginWithProvider('google', { popupWindow: popup as unknown as Window });
 
-      expect(close).not.toHaveBeenCalled();
+      expect(popup.close).not.toHaveBeenCalled();
+    });
+
+    it('should reject when the popup closed before sign-in started', async () => {
+      const popup = fakePopup();
+      popup.closed = true;
+
+      await expect(
+        loginWithProvider('google', { popupWindow: popup as unknown as Window })
+      ).rejects.toThrow(/closed before authentication started/);
+      expect(mockAuthWithOAuth2Code).not.toHaveBeenCalled();
     });
 
     it('should cancel the PocketBase request when OAuth times out', async () => {
       vi.useFakeTimers();
       try {
-        mockAuthWithOAuth2.mockReturnValue(new Promise(() => {}));
+        stubWindowOpen(() => {});
 
         const promise = loginWithProvider('github', {
           requestKey: 'oauth_github_timeout',
@@ -185,16 +273,36 @@ describe('PocketBase Auth', () => {
 
         await assertion;
         expect(mockCancelRequest).toHaveBeenCalledWith('oauth_github_timeout');
+        expect(mockAuthWithOAuth2Code).not.toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
       }
     });
 
-    it('should rethrow errors from OAuth2', async () => {
-      const oauthError = new Error('OAuth popup closed');
-      mockAuthWithOAuth2.mockRejectedValue(oauthError);
+    it('should report a cancelled sign-in as cancelled', async () => {
+      stubWindowOpen(() => {
+        cancelOAuthLogin('oauth_google_cancel');
+      });
 
-      await expect(loginWithProvider('github')).rejects.toThrow('OAuth popup closed');
+      const error = await loginWithProvider('google', { requestKey: 'oauth_google_cancel' })
+        .catch((caught: unknown) => caught);
+
+      expect(getOAuthErrorMessage(error)).toMatch(/cancelled/i);
+      expect(mockCancelRequest).toHaveBeenCalledWith('oauth_google_cancel');
+      expect(mockAuthWithOAuth2Code).not.toHaveBeenCalled();
+    });
+
+    it('should reject when the server does not offer the provider', async () => {
+      mockListAuthMethods.mockResolvedValue({ oauth2: { enabled: true, providers: [] } });
+
+      await expect(loginWithProvider('google')).rejects.toThrow(/not configured on the server/);
+    });
+
+    it('should rethrow errors from the code exchange', async () => {
+      stubWindowOpen();
+      mockAuthWithOAuth2Code.mockRejectedValue(new Error('Code exchange failed'));
+
+      await expect(loginWithProvider('github')).rejects.toThrow('Code exchange failed');
     });
 
     it('rejects provider names not in the runtime whitelist', async () => {
@@ -205,7 +313,7 @@ describe('PocketBase Auth', () => {
       await expect(
         loginWithProvider('facebook' as unknown as 'google')
       ).rejects.toThrow(/not allowed|whitelist|provider/i);
-      expect(mockAuthWithOAuth2).not.toHaveBeenCalled();
+      expect(mockListAuthMethods).not.toHaveBeenCalled();
     });
 
     it('rejects empty/null provider strings', async () => {
@@ -215,32 +323,44 @@ describe('PocketBase Auth', () => {
       await expect(
         loginWithProvider(null as unknown as 'google')
       ).rejects.toThrow();
-      expect(mockAuthWithOAuth2).not.toHaveBeenCalled();
+      expect(mockListAuthMethods).not.toHaveBeenCalled();
     });
   });
 
   describe('loginWithGoogle', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('should call loginWithProvider with google', async () => {
-      mockAuthWithOAuth2.mockResolvedValue({
-        record: { id: 'user-123', email: 'test@example.com' },
-      });
+      mockListAuthMethods.mockResolvedValue(AUTH_METHODS);
+      mockAuthWithOAuth2Code.mockResolvedValue(signedIn('user-123', 'test@example.com'));
+      stubWindowOpen();
 
       const result = await loginWithGoogle();
 
-      expect(mockAuthWithOAuth2).toHaveBeenCalledWith({ provider: 'google' });
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+        'google', 'auth-code', 'verifier-google', REDIRECT_URL, undefined, {}
+      );
       expect(result.provider).toBe('google');
     });
   });
 
   describe('loginWithGithub', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('should call loginWithProvider with github', async () => {
-      mockAuthWithOAuth2.mockResolvedValue({
-        record: { id: 'user-456', email: 'dev@github.com' },
-      });
+      mockListAuthMethods.mockResolvedValue(AUTH_METHODS);
+      mockAuthWithOAuth2Code.mockResolvedValue(signedIn('user-456', 'dev@github.com'));
+      stubWindowOpen();
 
       const result = await loginWithGithub();
 
-      expect(mockAuthWithOAuth2).toHaveBeenCalledWith({ provider: 'github' });
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledWith(
+        'github', 'auth-code', 'verifier-github', REDIRECT_URL, undefined, {}
+      );
       expect(result.provider).toBe('github');
     });
   });

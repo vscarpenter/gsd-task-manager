@@ -229,6 +229,17 @@ describe('security hardening scripts and workflows', () => {
     expect(workflow).toContain('CLOUDFRONT_DISTRIBUTION_ID');
   });
 
+  it('blocks the realtime OAuth redirect before the public API reverse proxy', () => {
+    // SEC-001: /api/oauth2-redirect hands a code to whichever realtime client the
+    // state names. The web app signs in through /api/gsd/oauth-callback instead.
+    const caddyfile = readRepoFile('docker/Caddyfile');
+    const oauthRedirectBlockIndex = caddyfile.indexOf('handle /api/oauth2-redirect* {');
+    const publicApiProxyIndex = caddyfile.indexOf('handle /api/* {');
+
+    expect(oauthRedirectBlockIndex).toBeGreaterThan(-1);
+    expect(publicApiProxyIndex).toBeGreaterThan(oauthRedirectBlockIndex);
+  });
+
   it('blocks PocketBase admin API routes before the public API reverse proxy', () => {
     const caddyfile = readRepoFile('docker/Caddyfile');
     const superusersBlockIndex = caddyfile.indexOf('handle /api/collections/_superusers/*');

@@ -32,17 +32,17 @@ paths:
 - `lib/sync/pb-auth.ts` — OAuth login/logout
 - `lib/sync/task-mapper.ts` — camelCase ↔ snake_case mapping
 
-## OAuth (PocketBase-delegated)
+## OAuth (manual code flow)
 
-- OAuth popup flow is delegated to the PocketBase SDK via `authWithOAuth2`; tokens live in the SDK's `authStore` (localStorage).
+- Sign-in uses the manual code flow: `listAuthMethods`, then the provider, then the `/api/gsd/oauth-callback` bounce, then the `/auth/callback/` BroadcastChannel relay, then `authWithOAuth2Code` with this tab's `state` and PKCE verifier (`lib/sync/pb-auth.ts`, `lib/sync/oauth-callback.ts`). Never call the realtime `authWithOAuth2({ provider })` form: it delivers the code to whichever realtime client the state names, so a crafted link can hand a victim's code to an attacker. Tokens live in the SDK's `authStore` (localStorage).
 - **Google**: configured in PB admin.
 - **GitHub**: requires server-side provider setup in PocketBase admin (`https://api.vinny.io/_/` → Settings → Auth providers).
-- **Local dev**: set `NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io` in `.env.local` to test OAuth against production PB. A local PB at `127.0.0.1:8090` would need its own OAuth provider setup.
+- **Local dev**: OAuth sign-in against production PB completes only on gsd.vinny.dev, because the hosted bounce returns there. To test sign-in locally, run PocketBase at `127.0.0.1:8090` with `--hooksDir=docker/pb_hooks`, its own OAuth provider setup, and `GSD_WEB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/callback/`.
 
 ## OAuth Callback Domain Mismatch (recurring bug)
 
 If users hit `redirect_uri_mismatch` after a deploy:
 1. Check the `redirect_uri` registered in the provider (Google Cloud Console / GitHub OAuth App).
 2. Confirm it matches the exact PocketBase origin used for auth — including trailing slash and `www` vs apex.
-3. The PocketBase JS SDK popup flow redirects to `<pocketbase-origin>/api/oauth2-redirect`. The static app does not own an `/api/auth/oauth-callback` route.
+3. Providers redirect to `<pocketbase-origin>/api/gsd/oauth-callback` (`docker/pb_hooks/oauth_web_redirect.pb.js`), which bounces to the app's `/auth/callback/` page with code and state in the URL fragment. PocketBase's `/api/oauth2-redirect` is disabled: its realtime flow hands a code to whichever client the state names.
 4. Production CloudFront rewrites must pass `/api/*` and `/_/*` through unchanged so OAuth callback/admin paths are never turned into static `index.html` lookups.

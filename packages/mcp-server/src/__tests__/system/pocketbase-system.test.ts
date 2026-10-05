@@ -475,6 +475,35 @@ describeSystem('PocketBase authenticated system boundary', () => {
     expect(resetResponse.status).toBe(200);
   });
 
+  it('proves the web OAuth bounce reads GET and form_post returns and the realtime redirect is off', async () => {
+    // Apple returns with form_post; Google and GitHub with a query string. Both
+    // must reach the callback page with the raw values in the fragment.
+    const formPost = await fetch(baseUrl + '/api/gsd/oauth-callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'code=a%2Fb%2Bc&state=s1&user=%7B%7D',
+      redirect: 'manual',
+    });
+    expect(formPost.status).toBe(303);
+    expect(formPost.headers.get('location')).toBe('/auth/callback/#code=a%2Fb%2Bc&state=s1');
+
+    const queryReturn = await fetch(baseUrl + '/api/gsd/oauth-callback?code=12345&state=s2', {
+      redirect: 'manual',
+    });
+    expect(queryReturn.status).toBe(303);
+    expect(queryReturn.headers.get('location')).toBe('/auth/callback/#code=12345&state=s2');
+
+    // SEC-001: the realtime redirect hands a code to whichever realtime client
+    // the state names, so it must not answer at all.
+    for (const method of ['GET', 'POST']) {
+      const realtimeRedirect = await fetch(baseUrl + '/api/oauth2-redirect?code=c&state=s', {
+        method,
+        redirect: 'manual',
+      });
+      expect(realtimeRedirect.status).toBe(404);
+    }
+  });
+
   it('proves MCP writes, owner isolation, realtime delivery, and ciphertext at rest', async () => {
     const unknownResponse = await handleToolCall('not_registered', {}, {
       pocketBaseUrl: baseUrl,

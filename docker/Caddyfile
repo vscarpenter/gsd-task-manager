@@ -86,6 +86,15 @@
 		respond "PocketBase control API is not exposed through this origin." 404
 	}
 
+	# PocketBase's realtime OAuth redirect delivers an authorization code to
+	# whichever realtime client the `state` names, so a crafted provider link
+	# can route a victim's code to an attacker. The web app signs in with the
+	# manual code flow through /api/gsd/oauth-callback instead
+	# (docker/pb_hooks/oauth_web_redirect.pb.js).
+	handle /api/oauth2-redirect* {
+		respond "PocketBase realtime OAuth redirect is not exposed through this origin." 404
+	}
+
 	# App-facing API endpoints
 	handle /api/* {
 		reverse_proxy localhost:8090
