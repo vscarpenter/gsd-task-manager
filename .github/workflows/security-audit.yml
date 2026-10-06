@@ -9,6 +9,8 @@ on:
     # Run daily at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch: # Allow manual trigger
+  # Every deploy and publish workflow calls this first (SEC-030).
+  workflow_call:
 
 permissions:
   contents: read

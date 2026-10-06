@@ -37,6 +37,22 @@ function runBlocks(workflow: string): string[] {
   });
 }
 
+// Maps each job under `jobs:` to its body. Job keys sit at two-space indentation.
+function jobBodies(workflow: string): Map<string, string> {
+  const section = workflow.slice(workflow.indexOf("\njobs:\n") + "\njobs:\n".length);
+  const parts = section.split(/^ {2}([a-z][\w-]*):\n/m).slice(1);
+  const jobs = new Map<string, string>();
+  for (let index = 0; index < parts.length; index += 2) jobs.set(parts[index], parts[index + 1]);
+  return jobs;
+}
+
+const DEPLOY_AND_PUBLISH_WORKFLOWS = [
+  "deploy-cloudfront-infra.yml",
+  "deploy-production-release.yml",
+  "publish-docker.yml",
+  "publish-mcp-server.yml",
+];
+
 describe("pipeline workflows", () => {
   it('only publishes Docker images from reviewed push and tag refs', () => {
     const workflow = readWorkflow('.github/workflows/publish-docker.yml');
@@ -95,6 +111,23 @@ describe("pipeline workflows", () => {
 
     expect(checkouts.length).toBeGreaterThan(0);
     expect(implicitCheckouts).toEqual([]);
+  });
+
+  // SEC-030: a High advisory in a runtime dependency must stop a deploy or
+  // publish, not hide behind a job nobody waits for.
+  it("runs the security audit before every deploy and publish job", () => {
+    const audit = readWorkflow(`${WORKFLOW_DIR}/security-audit.yml`);
+    expect(audit).toMatch(/^ {2}workflow_call:/m);
+
+    for (const name of DEPLOY_AND_PUBLISH_WORKFLOWS) {
+      const jobs = jobBodies(readWorkflow(`${WORKFLOW_DIR}/${name}`));
+      // With `audit` as the only job that needs nothing, every other job waits
+      // on it, directly or through a job that does.
+      const rootJobs = [...jobs].filter(([, body]) => !/^ {4}needs:/m.test(body)).map(([job]) => job);
+
+      expect(rootJobs, name).toEqual(["audit"]);
+      expect(jobs.get("audit"), name).toMatch(/^ {4}uses: \.\/\.github\/workflows\/security-audit\.yml$/m);
+    }
   });
 
   it("declares top-level permissions in every workflow", () => {

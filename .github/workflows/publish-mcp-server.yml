@@ -16,7 +16,15 @@ permissions:
   id-token: write
 
 jobs:
+  # The release waits on the dependency audit (SEC-030).
+  audit:
+    name: Security audit
+    permissions:
+      contents: read
+    uses: ./.github/workflows/security-audit.yml
+
   publish:
+    needs: audit
     runs-on: ubuntu-24.04
     environment:
       name: mcp-release
