@@ -11,6 +11,7 @@ import { pbTaskToTask } from '../types.js';
 import type { BulkOperation } from './types.js';
 import { listTasks, listTasksFresh } from '../tools/list-tasks.js';
 import { getTaskCache } from '../cache.js';
+import { SCHEMA_LIMITS } from '../constants.js';
 import { createMcpLogger } from '../utils/logger.js';
 import {
   deriveQuadrant,
@@ -196,6 +197,21 @@ function validateBulkRequest(taskIds: string[], operation: BulkOperation): void 
   );
 }
 
+// add_tags merges without a cap, and the web pull rejects a task over
+// MAX_TAGS, so refuse the whole batch before anything is written.
+function assertTagCapHolds(tasks: Task[], operation: BulkOperation): void {
+  if (operation.type !== 'add_tags') return;
+  const overCap = tasks
+    .filter((task) => new Set([...task.tags, ...operation.tags]).size > SCHEMA_LIMITS.MAX_TAGS)
+    .map((task) => task.id);
+  if (overCap.length === 0) return;
+  throw new Error(
+    `Bulk tag limit exceeded\n\nAdding these tags would leave ${overCap.length} task(s) ` +
+    `with more than ${SCHEMA_LIMITS.MAX_TAGS} tags: ${overCap.join(', ')}\n\n` +
+    `Remove tags from those tasks first, or exclude them from the operation.`
+  );
+}
+
 function emptyBulkResult(dryRun: boolean, error?: string): BulkUpdateResult {
   return {
     updated: 0,
@@ -214,6 +230,7 @@ async function previewBulkUpdate(
   const allTasks = await listTasks(config);
   const tasks = allTasks.filter((task) => taskIds.includes(task.id));
   if (tasks.length === 0) return emptyBulkResult(true, 'No matching tasks found');
+  assertTagCapHolds(tasks, operation);
   const deleting = operation.type === 'delete';
   return {
     updated: deleting ? 0 : tasks.length,
@@ -295,6 +312,7 @@ async function executeBulkWrite(
   ]);
   if (snapshot.size === 0) return emptyBulkResult(false, 'No matching tasks found');
   const inputs = collectBulkInputs(taskIds, snapshot);
+  assertTagCapHolds(inputs.map((input) => input.task), operation);
   const startedAt = Date.now();
   const writeLimiter = new WriteRateLimiter();
   const outcomes = await mapWithConcurrency(inputs, BULK_WRITE_CONCURRENCY, (input) =>
