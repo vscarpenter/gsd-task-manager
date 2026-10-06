@@ -218,3 +218,23 @@ describe('published agent skills match the MCP input schemas', () => {
 		expect(text).toMatch(/completed:\s*false/);
 	});
 });
+
+describe('/.well-known/openapi/pocketbase.json Task schema', () => {
+	type TaskSchema = { properties: Record<string, { type: string }> };
+	const spec = readJson<{ components: { schemas: { Task: TaskSchema } } }>(
+		'.well-known/openapi/pocketbase.json',
+	);
+	const props = spec.components.schemas.Task.properties;
+
+	it('publishes the real PocketBase field names and types', () => {
+		expect(props.description?.type).toBe('string');
+		expect(props.completed?.type).toBe('boolean');
+		expect(props.due_date?.type).toBe('string');
+	});
+
+	it('does not publish fields PocketBase does not have', () => {
+		for (const stale of ['notes', 'status', 'due_at']) {
+			expect(props[stale]).toBeUndefined();
+		}
+	});
+});
