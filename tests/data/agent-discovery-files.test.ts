@@ -198,3 +198,23 @@ describe('scripts/fix-discovery-content-types.sh', () => {
 		);
 	});
 });
+
+describe('published agent skills match the MCP input schemas', () => {
+	// The MCP tool schemas are strict objects, so an argument they do not
+	// declare fails with "Invalid arguments". Skills must not teach one.
+	const skillText = (name: string): string =>
+		readFileSync(resolve(root, '.well-known/agent-skills', name, 'SKILL.md'), 'utf-8');
+
+	for (const name of ['quick-capture', 'triage-inbox']) {
+		it(`${name} uses dueDate, not dueAt`, () => {
+			expect(skillText(name)).not.toMatch(/dueAt/);
+		});
+	}
+
+	it('triage-inbox calls list_tasks with completed, no status or sort argument', () => {
+		const text = skillText('triage-inbox');
+		expect(text).not.toMatch(/status:\s*"open"/);
+		expect(text).not.toMatch(/sort/i);
+		expect(text).toMatch(/completed:\s*false/);
+	});
+});

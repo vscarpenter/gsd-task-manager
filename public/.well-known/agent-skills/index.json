@@ -12,14 +12,14 @@
       "type": "skill.md",
       "description": "Drop a single new task into GSD Task Manager and place it in the right Eisenhower quadrant.",
       "url": "https://gsd.vinny.dev/.well-known/agent-skills/quick-capture/SKILL.md",
-      "sha256": "7c3a5503a019d769a54313d3b491e661c616e5b0144cab9185e0da1e2546abd6"
+      "sha256": "8d92ec36e680f6fd210fe9b0e69676e8b487e035d9d7ffaae615777af396e984"
     },
     {
       "name": "triage-inbox",
       "type": "skill.md",
       "description": "Walk the user through their open tasks and move them into the correct quadrant.",
       "url": "https://gsd.vinny.dev/.well-known/agent-skills/triage-inbox/SKILL.md",
-      "sha256": "65c40b09b8cb91549c6f99fec3a9715bf218fd319580048425aa71a5e9417718"
+      "sha256": "706478daabc02216fb047dbd9002bb8739a56ba48d6198c56d55ea3e39cb872d"
     }
   ]
 }
