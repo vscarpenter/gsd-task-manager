@@ -51,7 +51,7 @@
           { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
           { "name": "perPage", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 500 } },
           { "name": "sort", "in": "query", "schema": { "type": "string" }, "example": "-client_updated_at" },
-          { "name": "filter", "in": "query", "schema": { "type": "string" }, "example": "status = 'open'" }
+          { "name": "filter", "in": "query", "schema": { "type": "string" }, "example": "completed = false" }
         ],
         "responses": {
           "200": {
@@ -165,9 +165,10 @@
       },
       "Task": {
         "type": "object",
-        "required": ["id", "owner", "title"],
+        "required": ["id", "task_id", "owner", "title"],
         "properties": {
-          "id": { "type": "string", "description": "Task identifier (nanoid)" },
+          "id": { "type": "string", "description": "PocketBase record id" },
+          "task_id": { "type": "string", "description": "Client task id, the id the apps and the MCP tools use" },
           "owner": { "type": "string", "description": "Owning user id" },
           "device_id": { "type": "string", "description": "Originating device for echo filtering" },
           "title": { "type": "string" },

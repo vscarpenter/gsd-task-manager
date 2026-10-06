@@ -237,4 +237,18 @@ describe('/.well-known/openapi/pocketbase.json Task schema', () => {
 			expect(props[stale]).toBeUndefined();
 		}
 	});
+
+	// Examples count too: PocketBase answers 400 to a filter on a field the
+	// collection lacks, so an agent copying a stale example gets nothing.
+	it('names no stale field anywhere, examples included', () => {
+		const text = JSON.stringify(spec);
+		for (const stale of ['notes', 'status', 'due_at']) {
+			expect(text).not.toMatch(new RegExp(`\\b${stale}\\b`));
+		}
+	});
+
+	// MCP tools take the client task id, not the PocketBase record id.
+	it('publishes task_id beside the record id', () => {
+		expect(props.task_id?.type).toBe('string');
+	});
 });

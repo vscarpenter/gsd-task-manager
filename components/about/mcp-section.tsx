@@ -22,8 +22,8 @@ const claudeDesktopConfig = `{
 const setupHint = (
   <>
     Run <code>npm install --global gsd-mcp-server</code>, then{" "}
-    <code>gsd-mcp-server --setup</code> to sign in and generate the config below
-    for you.
+    <code>gsd-mcp-server --setup</code>. It signs you in and writes a config like
+    the one below, with full paths, so Claude Desktop can find the server.
   </>
 );
 
