@@ -145,6 +145,34 @@ describe("Error Logger module", () => {
 			expect(callArgs.originalError).toBeUndefined();
 		});
 
+		it("should mask secrets in production output", () => {
+			vi.stubEnv('NODE_ENV', 'production');
+
+			logError(new Error("PATCH failed: token=abc123secret"), {
+				action: "sync",
+				timestamp: "2025-01-15T12:00:00Z",
+				userMessage: "Sync failed",
+			});
+
+			const output = JSON.stringify(consoleErrorSpy.mock.calls[0]);
+			expect(output).not.toContain("abc123secret");
+			expect(output).toContain("token=***");
+		});
+
+		it("should mask task content in development metadata", () => {
+			vi.stubEnv('NODE_ENV', 'development');
+
+			logError(new Error("Update failed"), {
+				action: "update_task",
+				timestamp: "2025-01-15T12:00:00Z",
+				userMessage: "Update failed",
+				metadata: { taskId: "task-1", title: "Draft the reorg announcement" },
+			});
+
+			const details = consoleErrorSpy.mock.calls[0][1] as Record<string, unknown>;
+			expect(details.metadata).toEqual({ taskId: "task-1", title: "***" });
+		});
+
 		it("should include optional fields when provided", () => {
 			const error = new Error("Test");
 			const context: ErrorContext = {

@@ -7,6 +7,8 @@
  * - Never swallow exceptions
  */
 
+import { maskSensitiveString, sanitizeMetadata } from "@/lib/logger";
+
 export interface ErrorContext {
   action: string;
   taskId?: string;
@@ -41,21 +43,24 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
   // capture stringifies arguments, so passing only an object lands in a bug
   // report as "[GSD Error] [object Object]" — which is what a reviewer of this
   // app actually got, and why they could not diagnose a failing drag.
-  const summary =
-    `[GSD Error] ${loggedError.action}: ${loggedError.errorType}: ${loggedError.errorMessage}`;
+  // Both halves go through the logger's masking (SEC-011): error text can echo
+  // a token, and metadata can carry task content.
+  const summary = maskSensitiveString(
+    `[GSD Error] ${loggedError.action}: ${loggedError.errorType}: ${loggedError.errorMessage}`
+  );
 
   if (process.env.NODE_ENV === 'development') {
-    console.error(summary, {
+    console.error(summary, sanitizeMetadata({
       ...loggedError,
       originalError: error
-    });
+    }));
   } else {
-    console.error(summary, {
+    console.error(summary, sanitizeMetadata({
       action: loggedError.action,
       errorType: loggedError.errorType,
       errorMessage: loggedError.errorMessage,
       timestamp: loggedError.timestamp
-    });
+    }));
   }
 
   return loggedError;

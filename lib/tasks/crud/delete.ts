@@ -39,7 +39,7 @@ export async function deleteTask(id: string): Promise<void> {
       return;
     }
 
-    logger.info("Task moved to trash", { taskId: id, title: task.title });
+    logger.info("Task moved to trash", { taskId: id });
   } catch (error) {
     logger.error("Failed to delete task", error instanceof Error ? error : undefined, {
       taskId: id,

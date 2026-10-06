@@ -68,7 +68,7 @@ export interface LogMetadata {
 const SENSITIVE_QUERY_PARAMS_PATTERN = /token=[^&\s]+|authorization=[^&\s]+|api[_-]?key=[^&\s]+/gi;
 const BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi;
 
-function maskSensitiveString(value: string): string {
+export function maskSensitiveString(value: string): string {
   return value
     .replace(SENSITIVE_QUERY_PARAMS_PATTERN, (match) => {
       if (match.toLowerCase().startsWith('authorization=')) {
@@ -125,11 +125,15 @@ function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
 const SENSITIVE_KEY_PATTERN =
   /token|password|secret|apikey|authorization|passphrase|email|credential|cookie|session|jwt|refresh|access|bearer/i;
 
+// Task content the user wrote (SEC-011). Exact key names, so diagnostic keys
+// such as `titleLength` or `tagCount` stay readable.
+const TASK_CONTENT_KEY_PATTERN = /^(title|description|tags|subtasks|notes)$/i;
+
 /**
  * Sanitize sensitive data from log metadata
  * Removes tokens, passwords, and other secrets
  */
-function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
+export function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
   if (!metadata) return undefined;
 
   const sanitized = { ...metadata };
@@ -141,7 +145,7 @@ function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefined {
 
   // Remove sensitive fields
   for (const key of Object.keys(sanitized)) {
-    if (SENSITIVE_KEY_PATTERN.test(key)) {
+    if (SENSITIVE_KEY_PATTERN.test(key) || TASK_CONTENT_KEY_PATTERN.test(key)) {
       sanitized[key] = '***';
     } else {
       sanitized[key] = sanitizeValue(sanitized[key]);
