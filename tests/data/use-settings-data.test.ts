@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 
 const mockGetNotificationSettings = vi.fn();
 const mockUpdateNotificationSettings = vi.fn();
+const mockClearAppBadge = vi.fn();
 const mockGetSyncStatus = vi.fn();
 const mockGetAppPreferences = vi.fn();
 const mockUpdateAppPreferences = vi.fn();
@@ -12,6 +13,7 @@ const mockErrorLog = vi.fn();
 vi.mock("@/lib/notifications", () => ({
   getNotificationSettings: (...a: unknown[]) => mockGetNotificationSettings(...a),
   updateNotificationSettings: (...a: unknown[]) => mockUpdateNotificationSettings(...a),
+  clearAppBadge: (...a: unknown[]) => mockClearAppBadge(...a),
 }));
 vi.mock("@/lib/sync/config", () => ({
   getSyncStatus: (...a: unknown[]) => mockGetSyncStatus(...a),
@@ -154,6 +156,29 @@ describe("useSettingsData", () => {
     });
 
     expect(mockUpdateNotificationSettings).toHaveBeenCalledWith({ enabled: false });
+  });
+
+  it("clears the app badge when reminders are turned off", async () => {
+    mockGetNotificationSettings.mockResolvedValue({ ...NOTIF, enabled: true });
+    const { result } = await renderLoaded();
+
+    await act(async () => {
+      await result.current.notificationToggle();
+    });
+
+    expect(mockClearAppBadge).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the app badge alone when reminders are turned on", async () => {
+    vi.stubGlobal("Notification", { requestPermission: vi.fn().mockResolvedValue("granted") });
+    const { result } = await renderLoaded();
+
+    await act(async () => {
+      await result.current.notificationToggle();
+    });
+
+    expect(mockClearAppBadge).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it("updates the default reminder", async () => {

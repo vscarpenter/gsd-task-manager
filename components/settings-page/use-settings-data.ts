@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  clearAppBadge,
   getNotificationSettings,
   updateNotificationSettings,
   toggleNotificationSound,
@@ -153,6 +154,8 @@ function buildNotificationHandlers(
         if (permission !== "granted") return;
       }
       await updateNotificationSettings({ enabled: newEnabled });
+      // The checker stops counting once reminders are off, so clear its badge now.
+      if (!newEnabled) await clearAppBadge();
       await reload();
     },
     defaultReminderChange: async (value: string) => {

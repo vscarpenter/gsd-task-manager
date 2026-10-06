@@ -533,6 +533,60 @@ describe("Notifications module", () => {
 			);
 		});
 
+		// The checker marks a reminder sent only when this reports true, so a
+		// reminder the browser never showed stays due.
+		describe("reports whether the reminder was shown", () => {
+			const enabledSettings = {
+				id: "settings",
+				enabled: true,
+				defaultReminder: 15,
+				soundEnabled: true,
+				permissionAsked: true,
+				updatedAt: new Date().toISOString(),
+			};
+
+			function useServiceWorker(showNotification: ReturnType<typeof vi.fn>): void {
+				Object.defineProperty(global.navigator, "serviceWorker", {
+					value: { ready: Promise.resolve({ showNotification }) },
+					writable: true,
+					configurable: true,
+				});
+			}
+
+			beforeEach(() => {
+				mockNotificationConstructor.permission = "granted";
+				mockDb.notificationSettings.get.mockResolvedValue(enabledSettings);
+			});
+
+			it("returns true once the service worker shows it", async () => {
+				useServiceWorker(vi.fn().mockResolvedValue(undefined));
+
+				await expect(showTaskNotification(createTask(), 15)).resolves.toBe(true);
+			});
+
+			it("returns false without permission", async () => {
+				mockNotificationConstructor.permission = "denied";
+
+				await expect(showTaskNotification(createTask(), 15)).resolves.toBe(false);
+			});
+
+			it("returns false when showing it throws", async () => {
+				useServiceWorker(vi.fn().mockRejectedValue(new Error("blocked")));
+
+				await expect(showTaskNotification(createTask(), 15)).resolves.toBe(false);
+			});
+
+			it("shows a reminder for a task saved before notificationEnabled existed", async () => {
+				const showNotification = vi.fn().mockResolvedValue(undefined);
+				useServiceWorker(showNotification);
+				const legacyTask: Partial<TaskRecord> = createTask();
+				delete legacyTask.notificationEnabled;
+
+				await expect(showTaskNotification(legacyTask as TaskRecord, 15)).resolves.toBe(true);
+				expect(showNotification).toHaveBeenCalledTimes(1);
+			});
+		});
+
 		it("should format notification title based on time until due", async () => {
 			mockNotificationConstructor.permission = "granted";
 			mockDb.notificationSettings.get.mockResolvedValue({
