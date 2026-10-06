@@ -336,8 +336,11 @@ async function deletePrimaryTask(
   await limiter.run(async () => {
     const fresh = await fetchSinglePBTaskFresh(config, task.id);
     if (!fresh) throw new Error(`Task not found: ${task.id}`);
-    if (fresh.clientUpdatedAt !== task.updatedAt) {
-      throw new ConflictError(task.id, task.updatedAt, fresh.clientUpdatedAt);
+    // task.updatedAt falls back to PB's `updated` when client_updated_at is
+    // blank (pbTaskToTask), so the fresh stamp must fall back the same way.
+    const freshStamp = fresh.clientUpdatedAt || fresh.record.updated;
+    if (freshStamp !== task.updatedAt) {
+      throw new ConflictError(task.id, task.updatedAt, freshStamp);
     }
     await deleteTaskInPBById(config, fresh.pbRecordId);
   });

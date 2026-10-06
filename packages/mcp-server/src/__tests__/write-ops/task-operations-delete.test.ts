@@ -142,6 +142,38 @@ describe('deleteTask', () => {
     expect(helpers.getAuthInfo).not.toHaveBeenCalled();
   });
 
+  it('deletes an unchanged record whose client_updated_at is blank', async () => {
+    // pbTaskToTask stamps such a record with PB's own `updated`, so the
+    // delete check must fall back the same way instead of comparing '' to it.
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
+    const helpers = await import('../../write-ops/helpers.js');
+    const standalone = makeTask('blank-stamp');
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([standalone]);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce({
+      ...freshTask(standalone),
+      clientUpdatedAt: '',
+    });
+
+    await deleteTask(config, 'blank-stamp', { dryRun: false });
+
+    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blank-stamp');
+  });
+
+  it('refuses to delete a blank-stamp record another device changed since the list', async () => {
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
+    const helpers = await import('../../write-ops/helpers.js');
+    const standalone = makeTask('blank-stamp');
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([standalone]);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(
+      freshTask(standalone, '2026-04-02T00:00:00Z')
+    );
+
+    await expect(deleteTask(config, 'blank-stamp', { dryRun: false })).rejects.toThrow(
+      /changed|conflict/i
+    );
+    expect(helpers.deleteTaskInPBById).not.toHaveBeenCalled();
+  });
+
   it('should_log_cleanup_failures_via_structured_logger_without_echoing_pb_error_message', async () => {
     // PB 422 bodies echo submitted field values (task titles). A failed
     // dependency-cleanup write must go through the masking MCP logger with
