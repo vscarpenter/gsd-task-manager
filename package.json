@@ -120,7 +120,7 @@
 		"proxy-addr": ">=2.0.8",
 		"qs": ">=6.16.0",
 		"rollup": ">=4.63.5",
-		"sharp": "0.35.4",
+		"sharp": "0.35.5",
 		"source-map-js": ">=1.2.2",
 		"typescript-eslint": "8.66.0",
 		"undici": "7.29.1",
