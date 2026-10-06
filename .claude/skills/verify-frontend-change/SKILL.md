@@ -60,7 +60,7 @@ Key facts the seeder encodes so you don't have to:
 
 - Writes go straight to `objectStore.put()`, which **bypasses Zod** — so the seeder sets *every* field (including `tags: []`, `subtasks: []`, `timeEntries: []`), because a missing array crashes components that map over it.
 - `quadrant` is **derived** from `urgent`+`important` and stored denormalized — the seeder computes it with the real resolver so tasks land in the right cell.
-- **Analytics bucket by `updatedAt`, not `completedAt`** — completed-today counts, streaks, and trends all key off the `updatedAt` date. To make a task count as "done Tuesday," set `updatedAt` to Tuesday.
+- **Analytics bucket by `completedAt`, on the local day.** Completed-today counts, streaks, and trends key off `completedAt`, falling back to `updatedAt` only when it's missing. To make a task count as "done Tuesday," set `completedAt` to Tuesday.
 - Seed ids are prefixed `seed-` so cleanup removes only seeded tasks and leaves your real dev data alone. Run `gsdSeed.clear()` when done.
 - Seed the *specific* state your change depends on — an overdue task for overdue styling, a completed history for streaks, a running timer for time analytics. Verifying a conditional style against data that never triggers it proves nothing.
 

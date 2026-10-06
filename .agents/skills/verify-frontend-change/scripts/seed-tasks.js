@@ -27,9 +27,10 @@
  *   optional: dueDate, completedAt, estimatedMinutes, timeSpent, notifyBefore,
  *             parentTaskId, lastNotificationAt, snoozedUntil
  *
- *   ANALYTICS BUCKET BY updatedAt, NOT completedAt — completedToday, streaks,
- *   and trends all key off the updatedAt date (lib/analytics/). To make a task
- *   "done on day N", set BOTH updatedAt and completedAt to day N.
+ *   ANALYTICS BUCKET BY completedAt, ON THE LOCAL DAY. completedToday, streaks,
+ *   and trends key off completedAt (lib/analytics/completion-day.ts), falling
+ *   back to updatedAt only when completedAt is missing. To make a task "done on
+ *   day N", set completedAt to day N; the seeder stamps both fields the same.
  */
 (() => {
   const DB_NAME = "GsdTaskManager";
@@ -80,7 +81,7 @@
       notificationSent: false,
       timeEntries: [],
       createdAt: isoDaysAgo((spec.daysAgo ?? 0) + 1),
-      updatedAt: stamp, // analytics bucket here
+      updatedAt: stamp,
     };
 
     if (completed) record.completedAt = stamp;
