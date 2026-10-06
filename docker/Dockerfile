@@ -35,9 +35,9 @@ RUN node scripts/generate-build-info.cjs \
     && bash scripts/build-static-export.sh
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)
-ARG POCKETBASE_VERSION=0.39.10
-ARG POCKETBASE_SHA256_AMD64=67f68c8041dbb6a35fd7af5997ffc5063a7a7b96bf9df810360788f9e9975408
-ARG POCKETBASE_SHA256_ARM64=5bad497eaf2522418673eacfcc90e75106036f19b4aeeac6e59bc48503c01ddf
+ARG POCKETBASE_VERSION=0.40.4
+ARG POCKETBASE_SHA256_AMD64=9042ec818570e79c3628dadcd0a756c1496d9e1173918ec409d133c02f82e5fa
+ARG POCKETBASE_SHA256_ARM64=86095bf8ed9345954f0d2bf0a5fb9b57584ae60b77ebf3b6cd23a8003a3fd418
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-certificates \
     && case "$TARGETARCH" in \

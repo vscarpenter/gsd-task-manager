@@ -109,7 +109,7 @@ Caddy will obtain and renew certificates from Let's Encrypt automatically.
 Override the default PocketBase version at build time:
 
 ```bash
-docker compose build --build-arg POCKETBASE_VERSION=0.39.10
+docker compose build --build-arg POCKETBASE_VERSION=0.40.4
 ```
 
 ## Data Persistence
