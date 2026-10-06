@@ -1,3 +1,64 @@
+# Session state, 2026-10-05: modernization Phase 1, pin the hand-kept copies
+
+Spec: `tasks/spec-phase1-pin-copies.md`. Approved design:
+`../gsd-modernize/analysis/gsd-taskmanager/MODERNIZATION_BRIEF.md` §3 Phase 1.
+Non-trivial tier. Branches are cut from `main` @ `22b83ee`, one per unit. This
+file and the spec stayed uncommitted during Phase 1, because the owner's done
+criterion was that `git diff main --stat` shows only test and fixture files.
+They ride with the next branch, `chore/source-map-js-audit`.
+
+- [x] Pilot: field limits, branch `test/pin-field-limits` @ `e3e934e`. Probe 10/10.
+- [x] PocketBase record shape, branch `test/pin-pb-record-shape` @ `457ee75`. Probe 14/14.
+- [x] Completion metrics and streaks, branch `test/pin-completion-metrics` @ `e4c626b`. Probe 17/17.
+- [x] Service-worker cache rules, branch `test/pin-sw-cache-rules` @ `80489c5`. The existing
+      test caught 28/54 single-copy edits; with the new case table, 54/54.
+- [x] P0 map: six rules had no pin for their main outcome (002, 003, 093, 191, 265, 272).
+      Branch `test/pin-p0-contract` @ `36c5846`. Probe 16/16; existing pins 45/45.
+- [x] Verified: both suites, typecheck, and lint green on each branch alone and on all five
+      merged (root 3,357 tests, MCP 331). Diffs are test and fixture files only.
+      Cross-platform fixtures match gsd-iosapp and gsd-android by SHA-256.
+- [x] `CONTRACT_MAP.md` written; brief Phase 1 boxes ticked; one Proposed revision line.
+- [x] Handoff: lessons appended to `tasks/lessons.md`.
+
+## Resuming From Here
+
+Done: Phase 1 is built and verified on five branches, one commit each, cut from
+`main` @ `22b83ee`, pushed 2026-10-05 as PRs #572 (pilot, `test/pin-field-limits`),
+#573 (record shape), #574 (metrics), #575 (service worker), and #576 (P0 pins).
+`CONTRACT_MAP.md` and the brief ticks live in
+`../gsd-modernize/analysis/gsd-taskmanager/`. The owner deleted the `GH_API`
+token; GitHub's `/user` returned 401 for it, and both brief boxes are ticked.
+
+All five merged 2026-10-05, pilot first (#572 = `50a6f0d`, then up to `e4d44c7`).
+Local branches cleaned up. Merged `main` passes both suites (root 3,357, MCP 331),
+typecheck, and lint.
+
+Audit fix: `main` went red on the Security Audit workflow (GHSA-68fv-2mgg-jv7q,
+`source-map-js` below 1.2.2). Branch `chore/source-map-js-audit` adds an
+`overrides` floor of `>=1.2.2`, the guard-test pin, and the lockfile bump, made
+with bun 1.3.14. The audit checker and the production audit pass locally.
+
+Next: push the chore branch and open its PR once the owner says so. Then Phase 2
+(its entry criteria are met: Phase 1 merged, `GH_API` revoked), which first needs
+the owner's SEC-002 choice of per-device or all-device sign-out.
+
+Blocked: nothing. The shell still exports the dead `GH_API` value from somewhere
+outside the common profile files; the owner may want to remove it.
+
+Assumptions: this file, the spec, and the lessons addition stay uncommitted, so
+every branch diff stays test-only. Commit them on a docs branch if wanted.
+
+Pilot findings for the brief (reported to the owner, not edited into §7):
+1. MCP writes `notify_before` 0 where the web writes null, so an MCP edit moves a
+   web task's reminder to its due time. Pinned in `pb-record-shape.json`.
+2. More hand-kept copies: the estimate limit (1 to 10080) as literals in
+   `lib/schema.ts` and two MCP files; the 32-character key check in five places;
+   the export messages in `settings-body.tsx` and `backup-download.ts`.
+3. The SW pair has no MCP side, hence the Proposed revision on exit criterion 2.
+4. RULE-270's card contradicts the code on unparseable remote timestamps.
+
+---
+
 # Session state, 2026-09-30: dependency update repair
 
 Branch `chore/deps-update-2026-09-30`, cut from `main` @ `a0c5b48`, carrying the

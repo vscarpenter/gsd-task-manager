@@ -276,3 +276,29 @@ Fix pattern: wait for the title to be focused before touching other fields
   loop, and the script hung until its timeout. If the Playwright browser cache is
   empty, `bunx playwright install chromium` restores it, or launch installed
   Chrome with `channel: "chrome"`.
+
+## 2026-10-05: modernization Phase 1, pinning the hand-kept copies
+
+- **A pin that passes on its first run proves nothing yet.** Every fixture test
+  went green on the first try, because it describes code that already works. The
+  proof is a mutation probe: edit one copy at a time, run the pin, and expect red.
+  The old service-worker source-sync test looked like a pin and let 26 of 54
+  single-branch edits through.
+- **A differential test needs inputs that reach each branch.** That test compared
+  the TS and JS copies on a dozen inputs, and most fell through to
+  `passthrough` whatever the guards said. Pick each case so removing one branch
+  changes its answer. For the `/api` and admin guards, that means sending a
+  `text/html` Accept header.
+- **Test files are never type-checked.** Root `tsconfig.json` excludes `tests/`
+  and `packages/`, and the MCP tsconfig excludes `__tests__/`, so `bun typecheck`
+  passes over them. To check new test files, extend the real tsconfig from a
+  scratch file, and set `typeRoots` to the repo's `node_modules/@types`, because
+  type roots resolve from the config's own folder.
+- **`process.env.TZ` can switch zones inside a Vitest test.** Node resets its
+  timezone cache on assignment, and the default forks pool keeps it inside one
+  file. Restore it with `delete` when it started unset, because assigning
+  `undefined` stores the string "undefined".
+- **Plain JSON is the only fixture both suites can share.** The root suite runs
+  Vitest 5 and the MCP suite runs Vitest 4, and neither can import the other's
+  code. MCP tests reach repo-root fixtures with `resolve(__dirname,
+  '../../../../..')`.
