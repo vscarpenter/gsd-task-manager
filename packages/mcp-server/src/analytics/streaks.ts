@@ -3,7 +3,7 @@
  */
 
 import type { Task } from '../tools.js';
-import { subDays } from './date-utils.js';
+import { completionTime, daysBetweenKeys, localDayKey, startOfDay, subDays } from './date-utils.js';
 
 /**
  * Streak data
@@ -18,7 +18,7 @@ export interface StreakData {
  * Calculate current and longest streak
  */
 export function getStreakData(tasks: Task[]): StreakData {
-  const completedTasks = getCompletedTasksSorted(tasks);
+  const completedTasks = tasks.filter((t) => t.completed);
 
   if (completedTasks.length === 0) {
     return { current: 0, longest: 0, lastCompletionDate: null };
@@ -36,46 +36,30 @@ export function getStreakData(tasks: Task[]): StreakData {
 }
 
 /**
- * Get completed tasks sorted by date (newest first)
- */
-function getCompletedTasksSorted(tasks: Task[]): Task[] {
-  return tasks
-    .filter((t) => t.completed)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-}
-
-/**
- * Get unique completion dates sorted (newest first)
+ * Get unique local completion days sorted (newest first)
  */
 function getUniqueCompletionDates(completedTasks: Task[]): string[] {
   const completionDates = new Set<string>();
 
   completedTasks.forEach((task) => {
-    const date = new Date(task.updatedAt).toISOString().split('T')[0];
-    completionDates.add(date);
+    completionDates.add(localDayKey(completionTime(task)));
   });
 
   return Array.from(completionDates).sort().reverse();
 }
 
 /**
- * Calculate current streak from today backwards
+ * Calculate current streak from today backwards, one local day at a time
  */
 function calculateCurrentStreak(uniqueDates: string[]): number {
-  let currentStreak = 0;
-  const today = new Date().toISOString().split('T')[0];
-  let checkDate = new Date(today);
   const uniqueDateSet = new Set(uniqueDates);
+  let currentStreak = 0;
+  // Stepping local midnights keeps a DST change from skipping or repeating a day.
+  let checkDate = startOfDay(new Date());
 
-  for (let i = 0; i < uniqueDates.length; i++) {
-    const dateStr = checkDate.toISOString().split('T')[0];
-
-    if (uniqueDateSet.has(dateStr)) {
-      currentStreak++;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
-    }
+  while (uniqueDateSet.has(localDayKey(checkDate))) {
+    currentStreak++;
+    checkDate = subDays(checkDate, 1);
   }
 
   return currentStreak;
@@ -85,15 +69,11 @@ function calculateCurrentStreak(uniqueDates: string[]): number {
  * Calculate longest streak in history
  */
 function calculateLongestStreak(uniqueDates: string[], currentStreak: number): number {
-  if (uniqueDates.length <= 1) {
-    return currentStreak;
-  }
-
   let longestStreak = 0;
   let tempStreak = 1;
 
   for (let i = 1; i < uniqueDates.length; i++) {
-    const daysDiff = calculateDaysDifference(uniqueDates[i - 1], uniqueDates[i]);
+    const daysDiff = daysBetweenKeys(uniqueDates[i - 1], uniqueDates[i]);
 
     if (daysDiff === 1) {
       tempStreak++;
@@ -106,11 +86,3 @@ function calculateLongestStreak(uniqueDates: string[], currentStreak: number): n
   return Math.max(longestStreak, tempStreak, currentStreak);
 }
 
-/**
- * Calculate days difference between two date strings
- */
-function calculateDaysDifference(date1Str: string, date2Str: string): number {
-  const prevDate = new Date(date1Str);
-  const currDate = new Date(date2Str);
-  return Math.round((prevDate.getTime() - currDate.getTime()) / (1000 * 60 * 60 * 24));
-}

@@ -4,6 +4,8 @@
 
 import type { Task } from '../tools.js';
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 /**
  * Get start of day (00:00:00.000)
  */
@@ -56,6 +58,32 @@ export function subDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() - days);
   return d;
+}
+
+/**
+ * When a task was completed. Imports and pulls can carry a completed task with
+ * no completedAt, so those fall back to updatedAt. Keep this rule in step with
+ * the web copy in lib/analytics/completion-day.ts.
+ */
+export function completionTime(task: Pick<Task, 'completedAt' | 'updatedAt'>): Date {
+  return new Date(task.completedAt || task.updatedAt);
+}
+
+/**
+ * The local calendar day a moment falls on, as YYYY-MM-DD
+ */
+export function localDayKey(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * Calendar days from an earlier YYYY-MM-DD key to a later one. Both keys parse
+ * as UTC midnight, so the difference is whole days whatever the local DST.
+ */
+export function daysBetweenKeys(laterKey: string, earlierKey: string): number {
+  return Math.round((Date.parse(laterKey) - Date.parse(earlierKey)) / MS_PER_DAY);
 }
 
 /**

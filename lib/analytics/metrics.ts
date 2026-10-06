@@ -1,5 +1,6 @@
 import type { TaskRecord, QuadrantId } from "@/lib/types";
 import { startOfDay, startOfWeek, startOfMonth, isAfter, isBefore } from "date-fns";
+import { completionTime } from "./completion-day";
 import { getStreakData } from "./streaks";
 import { calculateTagStatistics } from "./tags";
 import type { TagStatistic } from "./types";
@@ -89,10 +90,10 @@ function calculateCompletionCounts(completed: TaskRecord[], now: Date, today: Da
 }
 
 /**
- * Count completed tasks after a given date
+ * Count tasks completed at or after a given date
  */
 function countCompletedInPeriod(completed: TaskRecord[], startDate: Date): number {
-  return completed.filter(t => isAfter(new Date(t.updatedAt), startDate)).length;
+  return completed.filter(t => !isBefore(completionTime(t), startDate)).length;
 }
 
 /**

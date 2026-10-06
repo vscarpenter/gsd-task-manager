@@ -1,5 +1,6 @@
 import type { TaskRecord, RecurrenceType } from "@/lib/types";
-import { startOfDay, subDays, isAfter, isBefore } from "date-fns";
+import { startOfDay, subDays, isBefore } from "date-fns";
+import { completionTime, localDayKey } from "./completion-day";
 import type { TrendDataPoint } from "./metrics";
 
 /**
@@ -23,7 +24,7 @@ export function getCompletionTrend(tasks: TaskRecord[], days: number): TrendData
 function calculateDayDataPoint(tasks: TaskRecord[], now: Date, daysAgo: number): TrendDataPoint {
   const date = startOfDay(subDays(now, daysAgo));
   const nextDate = startOfDay(subDays(now, daysAgo - 1));
-  const dateStr = date.toISOString().split('T')[0];
+  const dateStr = localDayKey(date);
 
   const completed = countCompletedInRange(tasks, date, nextDate);
   const created = countCreatedInRange(tasks, date, nextDate);
@@ -36,24 +37,25 @@ function calculateDayDataPoint(tasks: TaskRecord[], now: Date, daysAgo: number):
 }
 
 /**
+ * Whether a moment falls in the half-open day [startDate, endDate), so a moment
+ * at exactly local midnight belongs to the day that starts there
+ */
+function isInDay(moment: Date, startDate: Date, endDate: Date): boolean {
+  return !isBefore(moment, startDate) && isBefore(moment, endDate);
+}
+
+/**
  * Count tasks completed within date range
  */
 function countCompletedInRange(tasks: TaskRecord[], startDate: Date, endDate: Date): number {
-  return tasks.filter(t => {
-    if (!t.completed) return false;
-    const updatedAt = new Date(t.updatedAt);
-    return isAfter(updatedAt, startDate) && isBefore(updatedAt, endDate);
-  }).length;
+  return tasks.filter(t => t.completed && isInDay(completionTime(t), startDate, endDate)).length;
 }
 
 /**
  * Count tasks created within date range
  */
 function countCreatedInRange(tasks: TaskRecord[], startDate: Date, endDate: Date): number {
-  return tasks.filter(t => {
-    const createdAt = new Date(t.createdAt);
-    return isAfter(createdAt, startDate) && isBefore(createdAt, endDate);
-  }).length;
+  return tasks.filter(t => isInDay(new Date(t.createdAt), startDate, endDate)).length;
 }
 
 /**

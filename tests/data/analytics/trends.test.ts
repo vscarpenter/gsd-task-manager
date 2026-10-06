@@ -101,6 +101,60 @@ describe('Analytics Trends', () => {
       expect(trend[0].date).toBe('2024-12-17'); // 30 days ago
       expect(trend[29].date).toBe('2025-01-15'); // Today
     });
+
+    describe('local calendar days', () => {
+      const originalTimezone = process.env.TZ;
+
+      afterEach(() => {
+        if (originalTimezone === undefined) delete process.env.TZ;
+        else process.env.TZ = originalTimezone;
+      });
+
+      it('counts a completion on its completedAt day, not the day it was last edited', () => {
+        process.env.TZ = 'UTC';
+        const tasks: TaskRecord[] = [
+          { ...baseTask, completed: true, completedAt: '2025-01-13T10:00:00Z', updatedAt: '2025-01-15T09:00:00Z' },
+        ];
+
+        const trend = getCompletionTrend(tasks, 3);
+
+        expect(trend.map(point => [point.date, point.completed])).toEqual([
+          ['2025-01-13', 1],
+          ['2025-01-14', 0],
+          ['2025-01-15', 0],
+        ]);
+      });
+
+      it('counts a completion at exactly local midnight on the day that starts there', () => {
+        process.env.TZ = 'UTC';
+        const tasks: TaskRecord[] = [
+          { ...baseTask, completed: true, completedAt: '2025-01-14T00:00:00Z', updatedAt: '2025-01-14T00:00:00Z' },
+        ];
+
+        const trend = getCompletionTrend(tasks, 2);
+
+        expect(trend.map(point => [point.date, point.completed])).toEqual([
+          ['2025-01-14', 1],
+          ['2025-01-15', 0],
+        ]);
+      });
+
+      it('labels each day with its local date east of UTC', () => {
+        // 12:00 UTC is 21:00 on January 15 in Tokyo, and the completion at
+        // 01:00 local on the 15th is still the 14th in UTC.
+        process.env.TZ = 'Asia/Tokyo';
+        const tasks: TaskRecord[] = [
+          { ...baseTask, completed: true, completedAt: '2025-01-14T16:00:00Z', updatedAt: '2025-01-14T16:00:00Z' },
+        ];
+
+        const trend = getCompletionTrend(tasks, 2);
+
+        expect(trend.map(point => [point.date, point.completed])).toEqual([
+          ['2025-01-14', 0],
+          ['2025-01-15', 1],
+        ]);
+      });
+    });
   });
 
   describe('getRecurrenceBreakdown', () => {
