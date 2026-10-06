@@ -62,7 +62,6 @@ See [Installation](#installation) section below for detailed setup instructions.
 
 **Metadata Access** (v0.1.0)
 - ✅ Sync status monitoring (now includes token status)
-- ✅ Device management overview
 - ✅ Task statistics (metadata only)
 
 **Task Access** (v0.2.0+)
@@ -106,7 +105,6 @@ gsd-mcp-server
 **Validation Tool Features:**
 - ✅ Checks environment variables
 - ✅ Tests PocketBase connectivity and authentication
-- ✅ Validates device registration
 - ✅ Provides actionable error messages
 
 ## Installation
@@ -202,11 +200,6 @@ Once configured, you can ask Claude questions like:
 - "When was my last sync?"
 - "Do I have any sync conflicts?"
 
-**Device Management** (v0.1.0)
-- "What devices are connected to my GSD account?"
-- "Show me all my registered devices"
-- "When was each device last active?"
-
 **Task Overview** (v0.1.0)
 - "How many tasks do I have in GSD?"
 - "Give me task statistics"
@@ -268,29 +261,6 @@ Get sync health information.
   "storageUsed": 45678,
   "storageQuota": 10485760
 }
-```
-
-### `list_devices`
-List all registered devices.
-
-**Returns**:
-```json
-[
-  {
-    "id": "device-abc123",
-    "name": "MacBook Pro",
-    "lastSeenAt": 1735171200000,
-    "isActive": true,
-    "isCurrent": true
-  },
-  {
-    "id": "device-def456",
-    "name": "iPhone 15",
-    "lastSeenAt": 1735084800000,
-    "isActive": true,
-    "isCurrent": false
-  }
-]
 ```
 
 ### `get_task_stats`
@@ -677,7 +647,6 @@ Delete all completed tasks from last year
 
 **What This Server Can Access** (when authenticated):
 - ✅ Sync metadata (timestamps, counts, status)
-- ✅ Device information (names, last seen)
 - ✅ Task titles, descriptions, quadrants, tags, due dates
 - ✅ Subtasks, checklists, and task dependencies
 - ✅ **Can create, update, and delete tasks**
@@ -774,9 +743,9 @@ packages/mcp-server/
 │   │   │   ├── write-handlers.ts
 │   │   │   ├── analytics-handlers.ts
 │   │   │   └── system-handlers.ts
-│   │   └── schemas/       # MCP tool schemas (20 tools)
+│   │   └── schemas/       # MCP tool schemas (19 tools)
 │   │       ├── index.ts
-│   │       ├── read-tools.ts     # 7 read tools
+│   │       ├── read-tools.ts     # 6 read tools
 │   │       ├── write-tools.ts    # 5 write tools
 │   │       ├── analytics-tools.ts # 5 analytics tools
 │   │       └── system-tools.ts   # 3 system tools
@@ -835,7 +804,7 @@ MIT - Same as GSD Task Manager
 - 🚀 **Caching** - In-memory TTL cache (30s) with auto-invalidation on writes
 - 🔍 **Dry-Run Mode** - Preview all write operations before committing
 - 🔗 **Dependency Validation** - Circular dependency detection using BFS
-- 📊 **20 total MCP tools** (7 read + 5 write + 5 analytics + 3 system)
+- 📊 **19 total MCP tools** (6 read + 5 write + 5 analytics + 3 system)
 - ✅ **70 passing tests** - Comprehensive schema and integration coverage
 
 **New Tools (v0.6.0)**:

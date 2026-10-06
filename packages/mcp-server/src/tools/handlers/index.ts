@@ -6,7 +6,6 @@
 import type { GsdConfig } from '../../tools.js';
 import {
   handleGetSyncStatus,
-  handleListDevices,
   handleGetTaskStats,
   handleListTasks,
   handleGetTask,
@@ -63,7 +62,6 @@ function createToolRunner<Name extends ToolName>(
 
 const toolRegistry = {
   get_sync_status: createToolRunner('get_sync_status', (config) => handleGetSyncStatus(config)),
-  list_devices: createToolRunner('list_devices', (config) => handleListDevices(config)),
   get_task_stats: createToolRunner('get_task_stats', (config) => handleGetTaskStats(config)),
   list_tasks: createToolRunner('list_tasks', handleListTasks),
   get_task: createToolRunner('get_task', handleGetTask),

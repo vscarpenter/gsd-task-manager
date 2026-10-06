@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../tools.js', () => ({
   getSyncStatus: vi.fn(async () => ({ status: 'healthy', taskCount: 3 })),
-  listDevices: vi.fn(),
   getTaskStats: vi.fn(),
   listTasks: vi.fn(),
   getTask: vi.fn(),
@@ -22,14 +21,12 @@ import {
   handleGetTask,
   handleGetTaskStats,
   handleGetTokenStatus,
-  handleListDevices,
   handleListTasks,
   handleSearchTasks,
 } from '../../tools/handlers/read-handlers.js';
 import {
   getTask,
   getTaskStats,
-  listDevices,
   listTasks,
   searchTasks,
 } from '../../tools.js';
@@ -68,11 +65,6 @@ describe('read handlers', () => {
       status: 'healthy',
       daysRemaining: 12,
     });
-  });
-
-  it('returns devices', async () => {
-    vi.mocked(listDevices).mockResolvedValueOnce([{ id: 'device-1' }] as never);
-    expect(responseJson(await handleListDevices(config))).toEqual([{ id: 'device-1' }]);
   });
 
   it('returns task statistics', async () => {

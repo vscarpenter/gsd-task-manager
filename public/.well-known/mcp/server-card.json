@@ -49,7 +49,6 @@
     { "name": "get_task", "category": "read" },
     { "name": "search_tasks", "category": "read" },
     { "name": "get_sync_status", "category": "read" },
-    { "name": "list_devices", "category": "read" },
     { "name": "get_task_stats", "category": "read" },
     { "name": "get_token_status", "category": "read" },
     { "name": "create_task", "category": "write" },

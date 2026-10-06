@@ -7,7 +7,6 @@ const handlers = vi.hoisted(() => ({
 
 vi.mock('../../tools/handlers/read-handlers.js', () => ({
   handleGetSyncStatus: handlers.noop,
-  handleListDevices: handlers.noop,
   handleGetTaskStats: handlers.noop,
   handleListTasks: handlers.noop,
   handleGetTask: handlers.noop,

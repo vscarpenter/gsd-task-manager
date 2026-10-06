@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
+- The `list_devices` tool. It read a `devices` collection that no PocketBase
+  schema defines and returned an empty list on any error. The server now
+  exposes 19 tools, and `--validate` no longer runs a device check.
 - Opt-in Sentry error reporting and the `@sentry/node` dependency. The
   `GSD_SENTRY_DSN` environment variable is no longer read. Errors still go to
   stderr as structured JSON lines, and nothing leaves the machine.

@@ -152,7 +152,6 @@ export const emptyArgsSchema = z.strictObject({});
  */
 export const toolArgSchemas = {
   get_sync_status: emptyArgsSchema,
-  list_devices: emptyArgsSchema,
   get_task_stats: emptyArgsSchema,
   list_tasks: listTasksArgsSchema,
   get_task: getTaskArgsSchema,

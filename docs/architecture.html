@@ -133,7 +133,7 @@ section.sec > p { max-width: 68ch; }
     <li>All data lives in <strong>IndexedDB via Dexie</strong> (schema v14, 10 tables). The app is fully functional offline with zero infrastructure.</li>
     <li>Cloud sync is <strong>opt-in</strong> via self-hosted PocketBase. Last-write-wins conflict resolution with <code>client_updated_at</code> timestamps. SSE realtime for instant cross-device updates.</li>
     <li>Static export to <strong>S3/CloudFront</strong> with a three-cache service worker strategy. No SSR, no API routes, no hydration complexity.</li>
-    <li>MCP server provides <strong>20 AI tools</strong> for Claude Desktop integration. All writes support dry-run mode.</li>
+    <li>MCP server provides <strong>19 AI tools</strong> for Claude Desktop integration. All writes support dry-run mode.</li>
     <li>Key risks: LWW data loss on concurrent edits, single EC2 instance for PocketBase, no automated backups, documentation drift from reality.</li>
   </ol>
 </div>
@@ -314,7 +314,7 @@ section.sec > p { max-width: 68ch; }
     </div>
     <div class="card">
       <h4>packages/mcp-server/</h4>
-      <p>Standalone workspace. 7 read tools, 5 write tools (with dry-run), 5 analytics tools, 3 system tools. Stdio transport, TTL cache, retry logic.</p>
+      <p>Standalone workspace. 6 read tools, 5 write tools (with dry-run), 5 analytics tools, 3 system tools. Stdio transport, TTL cache, retry logic.</p>
     </div>
   </div>
 

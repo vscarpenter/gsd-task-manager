@@ -28,7 +28,7 @@ when a client sends `Accept: text/markdown`.
 | Storage | IndexedDB via Dexie v13 | Local first; export to JSON for backup |
 | Sync | PocketBase 0.23+ | Last-write-wins; SSE realtime; opt-in |
 | Auth | PocketBase OAuth2 (Google, GitHub) | Tokens persisted in `localStorage` |
-| MCP | `gsd-mcp-server` (stdio) | 20 tools across read, write, analytics |
+| MCP | `gsd-mcp-server` (stdio) | 19 tools across read, write, analytics |
 | Hosting | S3 + CloudFront | Edge function rewrites paths and adds Link headers |
 
 ## Programmatic interfaces for agents

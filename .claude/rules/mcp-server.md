@@ -18,9 +18,9 @@ paths:
 - **Tool files**: `src/tools/<name>.ts` — wires schema + handler
 - **Write ops**: `src/write-ops/` — task-operations + bulk-operations with dryRun support
 
-## 20 Tools Currently Exposed
+## 19 Tools Currently Exposed
 
-- *Read (7)*: list_tasks, get_task, search_tasks, get_sync_status, list_devices, get_task_stats, get_token_status
+- *Read (6)*: list_tasks, get_task, search_tasks, get_sync_status, get_task_stats, get_token_status
 - *Write (5)*: create_task, update_task, complete_task, delete_task, bulk_update_tasks (all support dryRun)
 - *Analytics (5)*: get_productivity_metrics, get_quadrant_analysis, get_tag_analytics, get_upcoming_deadlines, get_task_insights
 - *System (3)*: validate_config, get_help, get_cache_stats

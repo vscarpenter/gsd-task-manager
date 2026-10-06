@@ -89,8 +89,8 @@ describe('/.well-known/mcp/server-card.json', () => {
 		expect(stdio?.install?.command).toBeDefined();
 	});
 
-	it('lists the 20 documented MCP tools', () => {
-		expect(card.tools).toHaveLength(20);
+	it('lists the 19 documented MCP tools', () => {
+		expect(card.tools).toHaveLength(19);
 		const names = new Set(card.tools.map((t) => t.name));
 		for (const required of ['list_tasks', 'create_task', 'get_productivity_metrics']) {
 			expect(names.has(required)).toBe(true);

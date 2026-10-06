@@ -55,7 +55,7 @@ NODES = [
     ("db", 552, 352, 144, 56, "optional", "DB", "AWS Database", "PocketBase on EC2"),
     ("sentry", 856, 272, 144, 56, "external", "EXT", "Sentry", "error monitoring"),
     ("oauth", 856, 352, 144, 56, "external", "EXT", "OAuth providers", "Google · GitHub · Apple"),
-    ("mcp", 856, 448, 144, 56, "optional", "MCP", "MCP server", "stdio · 20 tools"),
+    ("mcp", 856, 448, 144, 56, "optional", "MCP", "MCP server", "stdio · 19 tools"),
     ("claude", 856, 528, 144, 56, "external", "AI", "Claude Desktop", "natural language"),
     ("ios", 72, 640, 128, 56, "backend", "IOS", "iOS app", "SwiftUI · GSDKit"),
     ("iosstore", 240, 640, 128, 56, "store", "DATA", "iOS local store", "GRDB · SQLite"),
