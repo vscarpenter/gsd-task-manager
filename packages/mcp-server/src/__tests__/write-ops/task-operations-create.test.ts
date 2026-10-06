@@ -25,6 +25,8 @@ vi.mock('../../cache.js', () => ({
 }));
 
 import { createTask, updateTask } from '../../write-ops/task-operations.js';
+import { SCHEMA_LIMITS } from '../../constants.js';
+import { createTaskInPB } from '../../write-ops/helpers.js';
 
 const config: GsdConfig = {
   pocketbaseUrl: 'http://example.invalid',
@@ -36,6 +38,35 @@ beforeEach(() => {
 });
 
 describe('createTask URL extraction', () => {
+  it('rejects before any write when title urls push the description over the limit', async () => {
+    const description = 'x'.repeat(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH - 5);
+
+    await expect(
+      createTask(config, {
+        title: 'Read https://example.com later',
+        description,
+        urgent: false,
+        important: false,
+      })
+    ).rejects.toThrow(/URLs extracted from the title/);
+    expect(createTaskInPB).not.toHaveBeenCalled();
+  });
+
+  it('accepts a merged description exactly at the limit', async () => {
+    const url = 'https://example.com';
+    const description = 'x'.repeat(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH - url.length - 1);
+
+    const result = await createTask(config, {
+      title: `Read ${url} later`,
+      description,
+      urgent: false,
+      important: false,
+      dryRun: true,
+    });
+
+    expect(result.task.description).toHaveLength(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH);
+  });
+
   it('extracts a single url from the title into the description', async () => {
     const result = await createTask(config, {
       title: 'Read https://example.com later',
