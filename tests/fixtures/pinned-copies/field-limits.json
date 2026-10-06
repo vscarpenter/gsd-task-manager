@@ -11,10 +11,10 @@
     "SUBTASK_TITLE_MAX_LENGTH": 100,
     "MAX_TAGS": 20,
     "MAX_SUBTASKS": 50,
-    "MAX_DEPENDENCIES": 50
+    "MAX_DEPENDENCIES": 50,
+    "ID_MIN_LENGTH": 4
   },
   "webOnly": {
-    "ID_MIN_LENGTH": 4,
     "TIME_ENTRY_NOTES_MAX_LENGTH": 200,
     "DEFAULT_NOTIFY_MINUTES": 15,
     "MAX_TIME_ENTRIES": 1000,
@@ -37,12 +37,6 @@
     "MAX_BULK_TASKS": 50
   },
   "knownGaps": [
-    {
-      "key": "ID_MIN_LENGTH",
-      "presentIn": "web",
-      "note": "The web rejects task, subtask, and dependency ids shorter than 4 characters. The MCP copy has no minimum, so MCP writes accept subtask ids under 4 characters.",
-      "brief": "§7 Fix or keep, other suspected bugs: MCP writes skip three limits (SEC-032)"
-    },
     {
       "key": "ID_MAX_LENGTH",
       "presentIn": "mcp",

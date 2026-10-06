@@ -142,7 +142,7 @@ export const updateTaskTool: Tool = {
         items: {
           type: 'object',
           properties: {
-            id: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
+            id: { type: 'string', minLength: SCHEMA_LIMITS.ID_MIN_LENGTH, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
             title: {
               type: 'string',
               minLength: 1,
