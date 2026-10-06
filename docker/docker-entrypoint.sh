@@ -55,23 +55,17 @@ cleanup() {
 trap cleanup TERM INT QUIT
 
 # -- Start PocketBase ------------------------------------------------------
-MIGRATIONS_DIR=/pb_migrations
-TASKS_TABLE_EXISTS=0
-if [ -f /pb_data/data.db ]; then
-    TASKS_TABLE_EXISTS="$(sqlite3 /pb_data/data.db \
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'tasks';" \
-        2>/dev/null || echo 0)"
-fi
+. /usr/local/lib/gsd/migrations.sh
 
-if [ "$TASKS_TABLE_EXISTS" != "1" ]; then
+MIGRATIONS_DIR=/pb_migrations
+INSTALL_STATE="$(gsd_install_state /pb_data)"
+
+if [ "$INSTALL_STATE" = "fresh" ]; then
     # The shipped backfill predates fresh-install handling and must remain
     # immutable for databases that already recorded it. A fresh database has
-    # no legacy tasks, so apply a same-name no-op plus the forward remediation.
+    # no legacy tasks, so overlay the same-name no-op on the full shipped set.
     MIGRATIONS_DIR="${TMPDIR:-/tmp}/gsd-fresh-migrations-$$"
-    mkdir -p "$MIGRATIONS_DIR"
-    cp /pb_fresh_migrations/1781000000_encrypt_existing_tasks.js "$MIGRATIONS_DIR/"
-    cp /pb_migrations/1781100000_harden_task_encryption_cleanup.js "$MIGRATIONS_DIR/"
-    cp /pb_migrations/1781200000_reencrypt_invalid_prefixed_task_fields.js "$MIGRATIONS_DIR/"
+    gsd_build_fresh_migrations /pb_migrations /pb_fresh_migrations "$MIGRATIONS_DIR"
 fi
 
 echo "[gsd] Applying PocketBase migrations..."
