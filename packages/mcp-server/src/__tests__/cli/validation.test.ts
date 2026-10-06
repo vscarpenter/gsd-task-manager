@@ -2,12 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../tools.js', () => ({
   getSyncStatus: vi.fn(),
-  listDevices: vi.fn(),
   listTasks: vi.fn(),
 }));
 
 import { runValidation } from '../../cli/validation.js';
-import { getSyncStatus, listDevices, listTasks } from '../../tools.js';
+import { getSyncStatus, listTasks } from '../../tools.js';
 
 describe('runValidation', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
@@ -38,17 +37,13 @@ describe('runValidation', () => {
       lastSyncAt: null,
     });
     vi.mocked(listTasks).mockResolvedValueOnce([{}, {}] as never);
-    vi.mocked(listDevices).mockResolvedValueOnce([
-      { isActive: true },
-      { isActive: false },
-    ] as never);
 
     await expect(runValidation()).resolves.toBeUndefined();
 
     expect(exitSpy).not.toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalledWith('✅ Configuration is healthy! Your MCP server is ready to use.');
     expect(logSpy).toHaveBeenCalledWith('    Healthy (3 tasks synced)');
-    expect(logSpy).toHaveBeenCalledWith('    2 total devices, 1 active');
+    expect(logSpy.mock.calls.flat().join('\n')).not.toContain('Device Management');
   });
 
   it('redacts the configured host from successful validation output', async () => {
@@ -56,7 +51,6 @@ describe('runValidation', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
     vi.mocked(getSyncStatus).mockResolvedValueOnce({ healthy: true, taskCount: 3, lastSyncAt: null });
     vi.mocked(listTasks).mockResolvedValueOnce([] as never);
-    vi.mocked(listDevices).mockResolvedValueOnce([] as never);
 
     await expect(runValidation()).resolves.toBeUndefined();
 
@@ -65,7 +59,7 @@ describe('runValidation', () => {
     expect(output).not.toContain('private.internal');
   });
 
-  it('reports warning-only connectivity, sync, and device results without exiting', async () => {
+  it('reports warning-only connectivity and sync results without exiting', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 503 })));
     vi.mocked(getSyncStatus).mockResolvedValueOnce({
       healthy: false,
@@ -73,7 +67,6 @@ describe('runValidation', () => {
       lastSyncAt: null,
     });
     vi.mocked(listTasks).mockResolvedValueOnce([]);
-    vi.mocked(listDevices).mockRejectedValueOnce(new Error('unsupported'));
 
     await expect(runValidation()).resolves.toBeUndefined();
 
@@ -89,7 +82,6 @@ describe('runValidation', () => {
     }));
     vi.mocked(getSyncStatus).mockRejectedValueOnce(new Error('bad token'));
     vi.mocked(listTasks).mockRejectedValueOnce(new Error('tasks unavailable'));
-    vi.mocked(listDevices).mockResolvedValueOnce([]);
 
     await expect(runValidation()).rejects.toThrow('process.exit:1');
 
@@ -107,7 +99,6 @@ describe('runValidation', () => {
     }));
     vi.mocked(getSyncStatus).mockRejectedValueOnce(new Error(`request to ${privateUrl} failed`));
     vi.mocked(listTasks).mockRejectedValueOnce(new Error(`request to ${privateUrl} failed`));
-    vi.mocked(listDevices).mockResolvedValueOnce([] as never);
 
     await expect(runValidation()).rejects.toThrow('process.exit:1');
 
@@ -120,7 +111,6 @@ describe('runValidation', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
     vi.mocked(getSyncStatus).mockRejectedValueOnce('bad token');
     vi.mocked(listTasks).mockRejectedValueOnce('bad tasks');
-    vi.mocked(listDevices).mockResolvedValueOnce([]);
 
     await expect(runValidation()).rejects.toThrow('process.exit:1');
 

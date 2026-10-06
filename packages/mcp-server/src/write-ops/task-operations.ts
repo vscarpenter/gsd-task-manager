@@ -24,6 +24,7 @@ import {
 import { extractUrlsFromTitle, buildDescription } from '../text/capture-parser.js';
 import { ConflictError } from '../errors.js';
 import { getTaskCache } from '../cache.js';
+import { SCHEMA_LIMITS } from '../constants.js';
 import { WriteRateLimiter } from './write-rate-limiter.js';
 import { cleanDependents, snapshotDependents, type CleanupOutcome } from './dependency-cleanup.js';
 
@@ -34,6 +35,19 @@ export interface CreateTaskResult {
   task: Task;
   dryRun: boolean;
   validation: { valid: boolean; warnings: string[] };
+}
+
+// The input schema checks the caller's description before URLs from the title
+// are appended, so the merged text needs its own check against the same limit.
+function mergeDescriptionWithinLimit(existing: string, urls: string[]): string {
+  const description = buildDescription(existing, urls);
+  const max = SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH;
+  if (description.length > max) {
+    throw new Error(
+      `Description is ${description.length} characters after adding the URLs extracted from the title; the limit is ${max}. Shorten the description or move the URLs out of the title.`
+    );
+  }
+  return description;
 }
 
 /**
@@ -50,7 +64,7 @@ export async function createTask(
   // append them to the description. See lib/capture-parser.ts (canonical) and
   // packages/mcp-server/src/text/capture-parser.ts (vendored mirror).
   const { cleanTitle, urls } = extractUrlsFromTitle(input.title);
-  const mergedDescription = buildDescription(input.description ?? '', urls);
+  const mergedDescription = mergeDescriptionWithinLimit(input.description ?? '', urls);
 
   // Validate dependencies if provided
   if (input.dependencies && input.dependencies.length > 0) {
@@ -336,8 +350,11 @@ async function deletePrimaryTask(
   await limiter.run(async () => {
     const fresh = await fetchSinglePBTaskFresh(config, task.id);
     if (!fresh) throw new Error(`Task not found: ${task.id}`);
-    if (fresh.clientUpdatedAt !== task.updatedAt) {
-      throw new ConflictError(task.id, task.updatedAt, fresh.clientUpdatedAt);
+    // task.updatedAt falls back to PB's `updated` when client_updated_at is
+    // blank (pbTaskToTask), so the fresh stamp must fall back the same way.
+    const freshStamp = fresh.clientUpdatedAt || fresh.record.updated;
+    if (freshStamp !== task.updatedAt) {
+      throw new ConflictError(task.id, task.updatedAt, freshStamp);
     }
     await deleteTaskInPBById(config, fresh.pbRecordId);
   });

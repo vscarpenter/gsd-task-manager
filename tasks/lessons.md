@@ -321,3 +321,24 @@ Fix pattern: wait for the title to be focused before touching other fields
   Adding a feature to `useSyncAuthDialog` pushed it past its baseline; moving the
   sibling logout flow into its own hook made room honestly and shrank the debt.
 
+## 2026-10-06: modernization Phase 3, fixing the ticked defects
+
+- **Probe every new pin against the pre-fix source.** Three worker tests passed
+  on the old code: a conflict test that stamped the record it meant to leave
+  blank, a trash test whose "not-a-date" already sorted after the cutoff, and a
+  file that skipped itself without sqlite3. Copy the old file over the new one,
+  run the test, and restore, before calling a red real.
+- **Parsing a field the code never parsed adds a crash surface.** The pull
+  accepts any text in `completed_at`. Once analytics keyed on it, date-fns
+  `format` threw "Invalid time value" on one bad row and took down the
+  dashboard. Fall back to a validated field when a parse fails.
+- **V8 parses "2026-06-01 09:00" as a local date; Safari doesn't.** A test for
+  "unparseable" input needs a value no engine accepts, such as "not-a-date" or
+  "0000-00-00".
+- **Headless Chromium denies notifications even after `grantPermissions`.**
+  `Notification.permission` reads "denied" in the default headless shell. Launch
+  with `channel: "chromium"` (full headless Chrome) to watch a reminder fire.
+- **Anything mounted in the root layout ships on every route.** Moving the
+  reminder and archive timers into `ClientLayout` added about 3.6 KB of
+  first-load JS everywhere, which put `/auth/callback` near its budget allowance.
+

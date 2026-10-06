@@ -13,6 +13,7 @@
 import { getPocketBase } from './pocketbase-client';
 import { OAUTH_REDIRECT_PATH, waitForOAuthCallback } from './oauth-callback';
 import { createLogger } from '@/lib/logger';
+import { isTransientSyncFailure } from './error-categorizer';
 import { isTokenExpired } from 'pocketbase';
 
 const logger = createLogger('SYNC_AUTH');
@@ -286,28 +287,41 @@ export function loginWithApple(options?: OAuthLoginOptions): Promise<AuthState> 
 
 
 /**
- * Attempt to refresh the auth token.
+ * How a token refresh ended. `unreachable` means the request failed for a
+ * transient reason (offline, 429, 5xx), which says nothing about the session.
+ */
+export type AuthRefreshOutcome = 'refreshed' | 'no-session' | 'rejected' | 'unreachable';
+
+/**
+ * Attempt to refresh the auth token and report how it ended.
  *
  * PocketBase JWTs expire client-side, but the server session may still be
  * valid. This calls the server to exchange the current (possibly expired)
- * token for a fresh one. Returns true if the refresh succeeded.
+ * token for a fresh one.
  */
-export async function refreshAuth(): Promise<boolean> {
+export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
   const pb = getPocketBase();
 
   // Nothing to refresh if there's no token at all
-  if (!pb.authStore.token) return false;
+  if (!pb.authStore.token) return 'no-session';
 
   try {
     await pb.collection('users').authRefresh();
     logger.debug('Auth token refreshed successfully');
-    return true;
+    return 'refreshed';
   } catch (error) {
     logger.warn('Auth token refresh failed', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return false;
+    return isTransientSyncFailure(error) ? 'unreachable' : 'rejected';
   }
+}
+
+/**
+ * Attempt to refresh the auth token. Returns true if the refresh succeeded.
+ */
+export async function refreshAuth(): Promise<boolean> {
+  return (await refreshAuthOutcome()) === 'refreshed';
 }
 
 /**

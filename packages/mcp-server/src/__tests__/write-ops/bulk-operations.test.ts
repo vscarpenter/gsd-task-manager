@@ -423,6 +423,43 @@ async function seedPocketBase(
   return store;
 }
 
+describe('bulkUpdateTasks add_tags tag cap', () => {
+  const fullTags = Array.from({ length: 20 }, (_, index) => `tag${index}`);
+
+  it('refuses a dry run that would leave a task over the tag cap, naming the task', async () => {
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    vi.mocked(listTasks).mockResolvedValueOnce([
+      { ...makeTask('full'), tags: fullTags },
+      makeTask('roomy'),
+    ]);
+
+    await expect(
+      bulkUpdateTasks(config, ['full', 'roomy'], { type: 'add_tags', tags: ['extra'] }, { dryRun: true })
+    ).rejects.toThrow(/20 tags[\s\S]*full/);
+  });
+
+  it('refuses before any write when a snapshot task would pass the cap', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const entry = makeSnapshotEntry('full');
+    entry.record.tags = fullTags;
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(new Map([['full', entry]]));
+
+    await expect(
+      bulkUpdateTasks(config, ['full'], { type: 'add_tags', tags: ['extra'] }, { dryRun: false })
+    ).rejects.toThrow(/full/);
+    expect(helpers.updateTaskInPBById).not.toHaveBeenCalled();
+  });
+
+  it('allows a merge that lands exactly on the cap', async () => {
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    vi.mocked(listTasks).mockResolvedValueOnce([{ ...makeTask('t1'), tags: fullTags.slice(1) }]);
+
+    await expect(
+      bulkUpdateTasks(config, ['t1'], { type: 'add_tags', tags: ['tag0', 'tag1'] }, { dryRun: true })
+    ).resolves.toMatchObject({ updated: 1, dryRun: true });
+  });
+});
+
 describe('bulkUpdateTasks dependency cleanup after delete', () => {
   it('strips a deleted task id from a surviving dependent in PocketBase', async () => {
     const helpers = await import('../../write-ops/helpers.js');

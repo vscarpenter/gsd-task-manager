@@ -261,8 +261,8 @@ describe('security hardening scripts and workflows', () => {
     expect(dockerfile).toContain('sha256sum -c');
   });
 
-  // The self-host image runs ahead of production, which stays on 0.39.10 until
-  // the backend decision in the modernization brief (SEC-025).
+  // Production api.vinny.io runs this same release as a bare binary (checked on
+  // the server 2026-10-06), so the self-host image and production match (SEC-025).
   it('pins the self-hosted image to PocketBase 0.40.4', () => {
     const dockerfile = readRepoFile('docker/Dockerfile');
     const dockerReadme = readRepoFile('docker/README.md');
@@ -346,9 +346,14 @@ describe('security hardening scripts and workflows', () => {
     expect(upgradeTest).toContain('plaintextRemnants');
     expect(entrypoint).toContain('pocketbase migrate up');
     expect(entrypoint).toContain('--automigrate=false');
-    expect(entrypoint).toContain('TASKS_TABLE_EXISTS');
-    expect(entrypoint).toContain('/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js');
-    expect(entrypoint).toContain('1781200000_reencrypt_invalid_prefixed_task_fields.js');
+    // The fresh set is an overlay of pb_fresh_migrations on all of
+    // pb_migrations (docker/lib/migrations.sh, run by tests/docker-migrations
+    // .test.ts), so no migration file name appears in the entrypoint.
+    expect(entrypoint).toContain('gsd_install_state /pb_data');
+    expect(entrypoint).toContain('gsd_build_fresh_migrations /pb_migrations /pb_fresh_migrations');
+    expect(entrypoint).not.toMatch(/\d{10}_[a-z_]+\.js/);
+    expect(systemTest).toContain("'docker/pb_migrations', 'docker/pb_fresh_migrations'");
+    expect(systemTest).not.toContain('1781100000');
     expect(followupMigration).toContain('records.length > 0');
     expect(followupMigration).toContain('$security.decrypt');
     expect(prefixRepairMigration).toContain('isValidCiphertext');

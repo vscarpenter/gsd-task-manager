@@ -16,17 +16,6 @@ export const getSyncStatusTool: Tool = {
   },
 };
 
-export const listDevicesTool: Tool = {
-  name: 'list_devices',
-  description:
-    'List devices registered for the authenticated user, most recently seen first. Returns id, name (null when the device is unnamed), and lastSeenAt for each device. isActive and isCurrent are placeholders (always true and false). Returns an empty list when the devices collection does not exist yet.',
-  inputSchema: {
-    type: 'object',
-    properties: {},
-    required: [],
-  },
-};
-
 export const getTaskStatsTool: Tool = {
   name: 'get_task_stats',
   description:
@@ -115,7 +104,6 @@ export const getTokenStatusTool: Tool = {
 
 export const readTools: Tool[] = [
   getSyncStatusTool,
-  listDevicesTool,
   getTaskStatsTool,
   listTasksTool,
   getTaskTool,

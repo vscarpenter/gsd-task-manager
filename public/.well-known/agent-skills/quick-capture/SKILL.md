@@ -15,7 +15,7 @@ up", or similar phrasing that maps to creating a single new task.
    - long-term planning, learning, prep → `urgent=false, important=true`
    - quick favor, low value request → `urgent=true, important=false`
    - everything else → `urgent=false, important=false`
-2. Call `create_task` with `{ title, urgent, important, tags?, dueAt? }`.
+2. Call `create_task` with `{ title, urgent, important, tags?, dueDate? }`.
    Pass `dryRun: true` first when the user is exploring options.
 3. If the user named a project, add it as a tag (lowercase, kebab-case).
 4. Confirm the created quadrant back to the user in one short sentence.

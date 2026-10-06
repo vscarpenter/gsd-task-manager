@@ -74,7 +74,7 @@ Architecture details for these subsystems live in path-scoped rules:
 
 **Quick refs that survive without opening a rule file**:
 - Backend: self-hosted PocketBase at `https://api.vinny.io`; admin UI at `/_/`.
-- MCP server: `packages/mcp-server/` workspace; build with `npm run build`; 20 tools exposed.
+- MCP server: `packages/mcp-server/` workspace; build with `npm run build`; 19 tools exposed.
 - Cache layers: `gsd-immutable-v1` (hashed, cache-first), `gsd-pages-v{v}` (network-first), `gsd-runtime-v{v}` (cache-first).
 
 ## Testing Guidelines

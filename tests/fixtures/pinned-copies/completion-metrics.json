@@ -68,19 +68,19 @@
       "name": "an old completion edited today",
       "timezone": "UTC",
       "now": "2026-06-17T15:00:00.000Z",
-      "encodesDefect": "§7 Fix or keep, other suspected bugs: streaks and completion counts use updatedAt instead of completedAt. d1 was completed on 2026-06-01 and only edited today, yet it counts as completed today. Keyed on completedAt, this scenario gives streak current 0, longest 1, lastCompletionDate 2026-06-16, completedToday 0, completedThisWeek 1, and last7Days true only for 2026-06-16.",
+      "note": "Phase 3 (2026-10-06) fixed the §7 defect this scenario pinned: d1 was completed on 2026-06-01 and only edited today, so the copies key it on completedAt and it no longer counts as completed today.",
       "tasks": [
         { "id": "d1", "title": "d1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-01T09:00:00.000Z", "updatedAt": "2026-06-17T10:00:00.000Z", "tags": [] },
         { "id": "d2", "title": "d2", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-06-16T20:00:00.000Z", "updatedAt": "2026-06-16T20:00:00.000Z", "tags": [] }
       ],
       "expected": {
-        "streak": { "current": 2, "longest": 2, "lastCompletionDate": "2026-06-17" },
+        "streak": { "current": 0, "longest": 1, "lastCompletionDate": "2026-06-16" },
         "metrics": {
-          "completedToday": 1,
-          "completedThisWeek": 2,
+          "completedToday": 0,
+          "completedThisWeek": 1,
           "completedThisMonth": 2,
-          "activeStreak": 2,
-          "longestStreak": 2,
+          "activeStreak": 0,
+          "longestStreak": 1,
           "completionRate": 100,
           "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
           "tagStats": [],
@@ -99,7 +99,7 @@
           { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
         ]
       },
-      "webOnly": { "last7Days": [false, false, false, false, false, true, true] }
+      "webOnly": { "last7Days": [false, false, false, false, false, true, false] }
     },
     {
       "name": "a single completion day ten days ago",
@@ -109,12 +109,13 @@
         { "id": "e1", "title": "e1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-07T09:00:00.000Z", "updatedAt": "2026-06-07T09:00:00.000Z", "tags": ["solo"] }
       ],
       "expected": {
-        "streak": { "current": 0, "lastCompletionDate": "2026-06-07" },
+        "streak": { "current": 0, "longest": 1, "lastCompletionDate": "2026-06-07" },
         "metrics": {
           "completedToday": 0,
           "completedThisWeek": 0,
           "completedThisMonth": 1,
           "activeStreak": 0,
+          "longestStreak": 1,
           "completionRate": 100,
           "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
           "tagStats": [{ "tag": "solo", "count": 1, "completedCount": 1, "completionRate": 100 }],
@@ -133,22 +134,18 @@
           { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
         ]
       },
-      "divergences": [
-        { "path": "streak.longest", "web": 1, "mcp": 0, "note": "With one completion day, the web reports a longest streak of 1. The MCP copy returns the current streak instead, which is 0 when that day isn't today. Brief §1 notes that the streak copies already disagree." },
-        { "path": "metrics.longestStreak", "web": 1, "mcp": 0, "note": "Same cause as streak.longest." }
-      ],
       "webOnly": { "last7Days": [false, false, false, false, false, false, false] }
     },
     {
       "name": "a late-evening completion in a zone behind UTC",
       "timezone": "America/Chicago",
       "now": "2026-06-17T03:30:00.000Z",
-      "encodesDefect": "§7 Fix or keep, other suspected bugs: the web seven-day strip mixes local and UTC days. It is 22:30 on June 16 in Chicago, and f1 was completed at 21:00 local. The streak counts f1 on its UTC date (2026-06-17) and completedToday counts it from local midnight, but the strip builds local days and labels them with UTC dates, so it shows no completion today. Built on local days, the last element of last7Days would be true.",
+      "note": "Phase 3 (2026-10-06) fixed the §7 defect this scenario pinned. It is 22:30 on June 16 in Chicago, and f1 was completed at 21:00 local, so every output counts it on the local day, 2026-06-16, and the strip shows it today.",
       "tasks": [
         { "id": "f1", "title": "f1", "quadrant": "not-urgent-not-important", "urgent": false, "important": false, "completed": true, "completedAt": "2026-06-17T02:00:00.000Z", "updatedAt": "2026-06-17T02:00:00.000Z", "tags": [] }
       ],
       "expected": {
-        "streak": { "current": 1, "longest": 1, "lastCompletionDate": "2026-06-17" },
+        "streak": { "current": 1, "longest": 1, "lastCompletionDate": "2026-06-16" },
         "metrics": {
           "completedToday": 1,
           "completedThisWeek": 1,
@@ -173,7 +170,118 @@
           { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
         ]
       },
-      "webOnly": { "last7Days": [false, false, false, false, false, false, false] }
+      "webOnly": { "last7Days": [false, false, false, false, false, false, true] }
+    },
+    {
+      "name": "a completed task with no completedAt falls back to updatedAt",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "note": "Imports and pulls can carry a completed task with no completedAt. Both copies then key it on updatedAt, the same rule lib/feedback/nudge-eligibility.ts uses.",
+      "tasks": [
+        { "id": "g1", "title": "g1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "updatedAt": "2026-06-17T09:00:00.000Z", "tags": [] },
+        { "id": "g2", "title": "g2", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "2026-06-16T09:00:00.000Z", "updatedAt": "2026-06-16T09:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 2, "longest": 2, "lastCompletionDate": "2026-06-17" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 2,
+          "completedThisMonth": 2,
+          "activeStreak": 2,
+          "longestStreak": 2,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 2,
+          "totalTasks": 2
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 100, "totalTasks": 2, "completedTasks": 2 },
+          { "quadrantId": "not-urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, false, true, true] }
+    },
+    {
+      "name": "an unparseable completedAt falls back to updatedAt",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "note": "The sync pull accepts any text in completed_at, so a malformed value can reach both copies. It falls back to updatedAt like a missing one, so one bad record can't break the dashboard or skew the MCP streak.",
+      "tasks": [
+        { "id": "i1", "title": "i1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "not-a-date", "updatedAt": "2026-06-17T09:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 1, "longest": 1, "lastCompletionDate": "2026-06-17" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 1,
+          "completedThisMonth": 1,
+          "activeStreak": 1,
+          "longestStreak": 1,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 1,
+          "totalTasks": 1
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 100, "totalTasks": 1, "completedTasks": 1 },
+          { "quadrantId": "not-urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, false, false, true] }
+    },
+    {
+      "name": "a streak across the autumn clock change",
+      "timezone": "Europe/London",
+      "now": "2026-10-26T12:00:00.000Z",
+      "note": "British Summer Time ends at 01:00 UTC on 2026-10-25. A walk that steps a UTC date back by local days skips October 25; a walk over local days doesn't.",
+      "tasks": [
+        { "id": "h1", "title": "h1", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-10-26T10:00:00.000Z", "updatedAt": "2026-10-26T10:00:00.000Z", "tags": [] },
+        { "id": "h2", "title": "h2", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-10-25T10:00:00.000Z", "updatedAt": "2026-10-25T10:00:00.000Z", "tags": [] },
+        { "id": "h3", "title": "h3", "quadrant": "not-urgent-important", "urgent": false, "important": true, "completed": true, "completedAt": "2026-10-24T10:00:00.000Z", "updatedAt": "2026-10-24T10:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 3, "longest": 3, "lastCompletionDate": "2026-10-26" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 2,
+          "completedThisMonth": 3,
+          "activeStreak": 3,
+          "longestStreak": 3,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 3,
+          "totalTasks": 3
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "not-urgent-important", "completionRate": 100, "totalTasks": 3, "completedTasks": 3 },
+          { "quadrantId": "urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, true, true, true] }
     },
     {
       "name": "no tasks",

@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { parseISO } from "date-fns";
 import type { TrendDataPoint } from "@/lib/analytics";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
@@ -136,5 +137,7 @@ function ChartHeader({ control }: { control?: React.ReactNode }) {
 }
 
 function formatDate(isoDate: string): string {
-  return DATE_FORMATTER.format(new Date(isoDate));
+  // Trend keys are local days. new Date() would read "2025-01-02" as UTC
+  // midnight and show the day before anywhere west of UTC.
+  return DATE_FORMATTER.format(parseISO(isoDate));
 }

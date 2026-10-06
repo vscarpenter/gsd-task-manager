@@ -1,6 +1,6 @@
 import type { TaskRecord } from "@/lib/types";
-import { subDays } from "date-fns";
-import { TIME_MS } from "@/lib/constants";
+import { differenceInCalendarDays, parseISO, startOfDay, subDays } from "date-fns";
+import { completionTime, localDayKey } from "./completion-day";
 
 /**
  * Streak data
@@ -14,12 +14,10 @@ export interface StreakData {
 
 /**
  * Calculate current and longest streak of task completion
- * A streak is broken if a day passes without completing any tasks
+ * A streak is broken if a local calendar day passes without completing any tasks
  */
 export function getStreakData(tasks: TaskRecord[]): StreakData {
-  const completedTasks = tasks
-    .filter(t => t.completed)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const completedTasks = tasks.filter(t => t.completed);
 
   if (completedTasks.length === 0) {
     return { current: 0, longest: 0, lastCompletionDate: null, last7Days: Array(7).fill(false) as boolean[] };
@@ -33,41 +31,34 @@ export function getStreakData(tasks: TaskRecord[]): StreakData {
     current: currentStreak,
     longest: longestStreak,
     lastCompletionDate: uniqueDates[0] || null,
-    last7Days: getLast7Days(completedTasks)
+    last7Days: getLast7Days(new Set(uniqueDates))
   };
 }
 
 /**
- * Get unique completion dates sorted in descending order
+ * Get unique local completion days sorted in descending order
  */
 function getUniqueCompletionDates(completedTasks: TaskRecord[]): string[] {
   const completionDates = new Set<string>();
   completedTasks.forEach(task => {
-    const date = new Date(task.updatedAt).toISOString().split('T')[0];
-    completionDates.add(date);
+    completionDates.add(localDayKey(completionTime(task)));
   });
 
   return Array.from(completionDates).sort().reverse();
 }
 
 /**
- * Calculate current streak from today backwards
+ * Calculate current streak from today backwards, one local day at a time
  */
 function calculateCurrentStreak(uniqueDates: string[]): number {
-  let currentStreak = 0;
-  const today = new Date().toISOString().split('T')[0];
-  let checkDate = new Date(today);
   const uniqueDateSet = new Set(uniqueDates);
+  let currentStreak = 0;
+  // Stepping local midnights keeps a DST change from skipping or repeating a day.
+  let checkDate = startOfDay(new Date());
 
-  for (let i = 0; i < uniqueDates.length; i++) {
-    const dateStr = checkDate.toISOString().split('T')[0];
-
-    if (uniqueDateSet.has(dateStr)) {
-      currentStreak++;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
-    }
+  while (uniqueDateSet.has(localDayKey(checkDate))) {
+    currentStreak++;
+    checkDate = subDays(checkDate, 1);
   }
 
   return currentStreak;
@@ -95,32 +86,22 @@ function calculateLongestStreak(uniqueDates: string[], currentStreak: number): n
 }
 
 /**
- * Build an array of 7 booleans representing task completion for the last 7 days.
+ * Build an array of 7 booleans representing task completion for the last 7 local days.
  * Index 0 = 6 days ago, index 6 = today (left-to-right chronological).
  */
-function getLast7Days(completedTasks: TaskRecord[]): boolean[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const completionDates = new Set<string>();
-  completedTasks.forEach(task => {
-    completionDates.add(new Date(task.updatedAt).toISOString().split('T')[0]);
-  });
+function getLast7Days(completionDates: Set<string>): boolean[] {
+  const today = startOfDay(new Date());
 
   const result: boolean[] = [];
   for (let i = 6; i >= 0; i--) {
-    const date = subDays(today, i);
-    const dateStr = date.toISOString().split('T')[0];
-    result.push(completionDates.has(dateStr));
+    result.push(completionDates.has(localDayKey(subDays(today, i))));
   }
   return result;
 }
 
 /**
- * Calculate days between two ISO date strings
+ * Calculate calendar days between two yyyy-MM-dd day keys
  */
 function calculateDaysDifference(date1: string, date2: string): number {
-  const prevDate = new Date(date1);
-  const currDate = new Date(date2);
-  return Math.round((prevDate.getTime() - currDate.getTime()) / TIME_MS.DAY);
+  return differenceInCalendarDays(parseISO(date1), parseISO(date2));
 }

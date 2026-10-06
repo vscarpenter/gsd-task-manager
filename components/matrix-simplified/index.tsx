@@ -10,8 +10,6 @@ import { useTasks } from "@/lib/use-tasks";
 import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { ErrorActions } from "@/lib/error-logger";
 import { useDragAndDrop } from "@/lib/use-drag-and-drop";
-import { useAutoArchive } from "@/lib/use-auto-archive";
-import { useNotificationChecker } from "@/lib/use-notification-checker";
 import { SHOW_COMPLETED_EVENT, readShowCompleted } from "@/lib/preferences/show-completed";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
@@ -121,9 +119,6 @@ export function MatrixSimplified() {
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
   const { sensors, activeId, statusMessage, announcements, handleDragStart, handleDragEnd } =
     useDragAndDrop(handleError);
-
-  useAutoArchive();
-  useNotificationChecker();
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);

@@ -103,8 +103,10 @@ export async function applyRemoteChange(
       return;
     }
     const localTask = await db.tasks.get(remoteTask.id);
-    if (action === 'create' && localTask) return;
-    if (action === 'update' && localTask &&
+    // A create can name a task this device already has (edit-beats-delete
+    // re-creates the record), and the pull cursor may never fetch it again, so
+    // it follows the same strictly-newer rule as an update.
+    if (localTask &&
         new Date(remoteTask.updatedAt).getTime() <= new Date(localTask.updatedAt).getTime()) return;
     const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
     if (!mergedTask) return;

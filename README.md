@@ -25,7 +25,7 @@ optional PocketBase sync, and the GSD MCP server.
   user-controlled update prompts.
 - Optional multi-device PocketBase sync with Google, Apple, or GitHub OAuth and
   realtime server-sent events.
-- A separately installed MCP server with 20 task, analytics, and diagnostic
+- A separately installed MCP server with 19 task, analytics, and diagnostic
   tools, including validated and dry-run-aware writes.
 - Light and dark Inkwell "GSD Editorial" themes with WCAG AA as the
   accessibility floor.

@@ -66,6 +66,7 @@ import {
   getOAuthErrorMessage,
   openOAuthPopup,
   refreshAuth,
+  refreshAuthOutcome,
   ensureValidAuth,
 } from '@/lib/sync/pb-auth';
 import { relayOAuthCallback } from '@/lib/sync/oauth-callback';
@@ -391,6 +392,37 @@ describe('PocketBase Auth', () => {
 
       expect(mockAuthRefresh).not.toHaveBeenCalled();
       expect(result).toBe(false);
+    });
+  });
+
+  // Account deletion needs to tell a dead session from an unreachable server,
+  // so it can say "sign in again" only when signing in would help.
+  describe('refreshAuthOutcome', () => {
+    it('reports refreshed on success', async () => {
+      mockAuthRefresh.mockResolvedValue({});
+
+      await expect(refreshAuthOutcome()).resolves.toBe('refreshed');
+    });
+
+    it('reports no-session without a token', async () => {
+      mockPb.authStore.token = '';
+
+      await expect(refreshAuthOutcome()).resolves.toBe('no-session');
+      expect(mockAuthRefresh).not.toHaveBeenCalled();
+    });
+
+    it('reports rejected when the server refuses the token', async () => {
+      mockAuthRefresh.mockRejectedValue(
+        Object.assign(new Error('The request requires valid record authorization token.'), { status: 401 }),
+      );
+
+      await expect(refreshAuthOutcome()).resolves.toBe('rejected');
+    });
+
+    it('reports unreachable when the request never got a response', async () => {
+      mockAuthRefresh.mockRejectedValue(Object.assign(new Error('Something went wrong.'), { status: 0 }));
+
+      await expect(refreshAuthOutcome()).resolves.toBe('unreachable');
     });
   });
 

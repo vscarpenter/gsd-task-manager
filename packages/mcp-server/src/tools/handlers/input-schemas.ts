@@ -23,6 +23,9 @@ const recurrenceSchema = z.enum(['none', 'daily', 'weekly', 'monthly']);
 
 const optionalIsoDatetime = z.iso.datetime({ offset: true }).optional();
 const idSchema = z.string().min(1).max(SCHEMA_LIMITS.ID_MAX_LENGTH);
+// The web pull drops a task whose subtask id is under ID_MIN_LENGTH, so MCP
+// enforces it here; task and dependency ids keep the looser idSchema.
+const subtaskIdSchema = idSchema.min(SCHEMA_LIMITS.ID_MIN_LENGTH);
 const taskTitleSchema = z.string().min(1).max(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH);
 const taskDescriptionSchema = z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH);
 const tagSchema = z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH);
@@ -92,7 +95,7 @@ export const updateTaskArgsSchema = z.strictObject({
   subtasks: z
     .array(
       z.object({
-        id: idSchema,
+        id: subtaskIdSchema,
         title: subtaskTitleSchema,
         completed: z.boolean(),
       })
@@ -149,7 +152,6 @@ export const emptyArgsSchema = z.strictObject({});
  */
 export const toolArgSchemas = {
   get_sync_status: emptyArgsSchema,
-  list_devices: emptyArgsSchema,
   get_task_stats: emptyArgsSchema,
   list_tasks: listTasksArgsSchema,
   get_task: getTaskArgsSchema,

@@ -1,6 +1,5 @@
 import {
   getSyncStatus,
-  listDevices,
   getTaskStats,
   listTasks,
   getTask,
@@ -51,18 +50,6 @@ export async function handleGetTokenStatus(config: GsdConfig): Promise<McpToolRe
       {
         type: 'text' as const,
         text: JSON.stringify(result, null, 2),
-      },
-    ],
-  };
-}
-
-export async function handleListDevices(config: GsdConfig): Promise<McpToolResponse> {
-  const devices = await listDevices(config);
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: JSON.stringify(devices, null, 2),
       },
     ],
   };

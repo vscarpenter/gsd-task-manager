@@ -303,14 +303,13 @@ describeSystem('PocketBase authenticated system boundary', () => {
     ({ handleToolCall } = await import('../../tools/handlers/index.js'));
     dataDirectory = mkdtempSync(join(tmpdir(), 'gsd-pocketbase-data-'));
     migrationsDirectory = mkdtempSync(join(tmpdir(), 'gsd-pocketbase-fresh-migrations-'));
-    copyFileSync(
-      resolve(REPO_ROOT, 'docker/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js'),
-      join(migrationsDirectory, '1781000000_encrypt_existing_tasks.js')
-    );
-    copyFileSync(
-      resolve(REPO_ROOT, 'docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js'),
-      join(migrationsDirectory, '1781100000_harden_task_encryption_cleanup.js')
-    );
+    // The same overlay docker/lib/migrations.sh builds on a fresh install: every
+    // shipped migration, with the fresh set replacing same-named files.
+    for (const source of ['docker/pb_migrations', 'docker/pb_fresh_migrations']) {
+      for (const name of readdirSync(resolve(REPO_ROOT, source)).filter((f) => f.endsWith('.js'))) {
+        copyFileSync(resolve(REPO_ROOT, source, name), join(migrationsDirectory, name));
+      }
+    }
     encryptionKey = randomBytes(16).toString('hex');
     const port = await availablePort();
     baseUrl = `http://127.0.0.1:${port}`;

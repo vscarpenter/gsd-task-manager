@@ -20,7 +20,7 @@ vi.mock('../../cache.js', () => ({
   getTaskCache: () => ({ getStats: () => ({}) }),
 }));
 
-import { handleValidateConfig } from '../../tools/handlers/system-handlers.js';
+import { handleGetHelp, handleValidateConfig } from '../../tools/handlers/system-handlers.js';
 
 const privateConfig = {
   pocketBaseUrl: 'https://user:secret@private.internal:8443/pb?token=hidden#fragment',
@@ -61,5 +61,20 @@ describe('handleValidateConfig', () => {
     expect(text).not.toContain('private.internal');
     expect(text).not.toContain('user:secret');
     expect(text).not.toContain('token=hidden');
+  });
+});
+
+describe('handleGetHelp tool list', () => {
+  it('counts 19 tools and does not mention list_devices', async () => {
+    const text = responseText(await handleGetHelp({ topic: 'tools' }));
+
+    expect(text).toContain('Available Tools (19 total)');
+    expect(text).not.toContain('list_devices');
+  });
+
+  it('does not advertise a status filter list_tasks rejects', async () => {
+    const text = responseText(await handleGetHelp({ topic: 'tools' }));
+
+    expect(text).toContain('(quadrant, completed, tags)');
   });
 });

@@ -191,7 +191,7 @@ function formatBulkMessage(result: BulkResult, isPartial: boolean): string {
     const affected = result.updated + result.deleted;
     return `🔍 DRY RUN - Bulk operation would affect ${affected} task(s) (not saved):\n\n` +
       formatBulkCounts(result, true) +
-      `\nTo apply changes, remove dryRun or set it to false.` +
+      `\nTo apply changes, set dryRun to false.` +
       formatBulkIssues(result);
   }
   const headline = isPartial

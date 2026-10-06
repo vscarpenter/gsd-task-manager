@@ -8,8 +8,8 @@ import {
   startOfDay,
   startOfWeek,
   startOfMonth,
-  isAfter,
   isBefore,
+  completionTime,
   isDueToday,
   isDueThisWeek,
 } from './date-utils.js';
@@ -117,10 +117,13 @@ function calculateCompletionCounts(
   weekStart: Date,
   monthStart: Date
 ) {
+  const completedSince = (start: Date) =>
+    completed.filter((t) => !isBefore(completionTime(t), start)).length;
+
   return {
-    completedToday: completed.filter((t) => isAfter(new Date(t.updatedAt), today)).length,
-    completedThisWeek: completed.filter((t) => isAfter(new Date(t.updatedAt), weekStart)).length,
-    completedThisMonth: completed.filter((t) => isAfter(new Date(t.updatedAt), monthStart)).length,
+    completedToday: completedSince(today),
+    completedThisWeek: completedSince(weekStart),
+    completedThisMonth: completedSince(monthStart),
   };
 }
 

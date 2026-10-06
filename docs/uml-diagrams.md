@@ -569,8 +569,8 @@ graph LR
         CLI["CLI Entry\n(setup / validate)"]
         Server["MCP Server\n(stdio transport)"]
         
-        subgraph "Tools (20)"
-            Read["Read Tools (7)\nlist-tasks, get-task,\nsearch-tasks, filter-tasks,\nget-dependencies, get-stats,\nlist-devices"]
+        subgraph "Tools (19)"
+            Read["Read Tools (6)\nlist-tasks, get-task,\nsearch-tasks, filter-tasks,\nget-dependencies, get-stats"]
             Write["Write Tools (5)\ncreate-task, update-task,\ndelete-task, complete-task,\nbulk-update"]
             Analytics["Analytics Tools (5)\nproductivity-metrics,\ncompletion-trends,\nquadrant-distribution,\ntag-analysis, streaks"]
             System["System Tools (3)\nhealth-check, sync-status,\nget-config"]

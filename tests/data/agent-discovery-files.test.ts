@@ -89,8 +89,8 @@ describe('/.well-known/mcp/server-card.json', () => {
 		expect(stdio?.install?.command).toBeDefined();
 	});
 
-	it('lists the 20 documented MCP tools', () => {
-		expect(card.tools).toHaveLength(20);
+	it('lists the 19 documented MCP tools', () => {
+		expect(card.tools).toHaveLength(19);
 		const names = new Set(card.tools.map((t) => t.name));
 		for (const required of ['list_tasks', 'create_task', 'get_productivity_metrics']) {
 			expect(names.has(required)).toBe(true);
@@ -196,5 +196,59 @@ describe('scripts/fix-discovery-content-types.sh', () => {
 		expect(script).toMatch(
 			/fix_type "\.well-known\/security\.txt" "text\/plain; charset=utf-8"/,
 		);
+	});
+});
+
+describe('published agent skills match the MCP input schemas', () => {
+	// The MCP tool schemas are strict objects, so an argument they do not
+	// declare fails with "Invalid arguments". Skills must not teach one.
+	const skillText = (name: string): string =>
+		readFileSync(resolve(root, '.well-known/agent-skills', name, 'SKILL.md'), 'utf-8');
+
+	for (const name of ['quick-capture', 'triage-inbox']) {
+		it(`${name} uses dueDate, not dueAt`, () => {
+			expect(skillText(name)).not.toMatch(/dueAt/);
+		});
+	}
+
+	it('triage-inbox calls list_tasks with completed, no status or sort argument', () => {
+		const text = skillText('triage-inbox');
+		expect(text).not.toMatch(/status:\s*"open"/);
+		expect(text).not.toMatch(/sort/i);
+		expect(text).toMatch(/completed:\s*false/);
+	});
+});
+
+describe('/.well-known/openapi/pocketbase.json Task schema', () => {
+	type TaskSchema = { properties: Record<string, { type: string }> };
+	const spec = readJson<{ components: { schemas: { Task: TaskSchema } } }>(
+		'.well-known/openapi/pocketbase.json',
+	);
+	const props = spec.components.schemas.Task.properties;
+
+	it('publishes the real PocketBase field names and types', () => {
+		expect(props.description?.type).toBe('string');
+		expect(props.completed?.type).toBe('boolean');
+		expect(props.due_date?.type).toBe('string');
+	});
+
+	it('does not publish fields PocketBase does not have', () => {
+		for (const stale of ['notes', 'status', 'due_at']) {
+			expect(props[stale]).toBeUndefined();
+		}
+	});
+
+	// Examples count too: PocketBase answers 400 to a filter on a field the
+	// collection lacks, so an agent copying a stale example gets nothing.
+	it('names no stale field anywhere, examples included', () => {
+		const text = JSON.stringify(spec);
+		for (const stale of ['notes', 'status', 'due_at']) {
+			expect(text).not.toMatch(new RegExp(`\\b${stale}\\b`));
+		}
+	});
+
+	// MCP tools take the client task id, not the PocketBase record id.
+	it('publishes task_id beside the record id', () => {
+		expect(props.task_id?.type).toBe('string');
 	});
 });

@@ -4,6 +4,7 @@
  * larger write payloads than the first-party UI accepts.
  */
 export const SCHEMA_LIMITS = {
+  ID_MIN_LENGTH: 4,
   ID_MAX_LENGTH: 255,
   TASK_TITLE_MAX_LENGTH: 80,
   TASK_DESCRIPTION_MAX_LENGTH: 600,

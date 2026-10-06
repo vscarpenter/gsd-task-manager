@@ -24,9 +24,19 @@ vi.mock("@/lib/notifications", () => ({
 		updatedAt: new Date().toISOString(),
 	})),
 	isInQuietHours: vi.fn(() => false),
-	showTaskNotification: vi.fn(async () => {}),
+	showTaskNotification: vi.fn(async () => true),
 	setAppBadge: vi.fn(async () => {}),
+	clearAppBadge: vi.fn(async () => {}),
 }));
+
+const enabledSettings = {
+	id: "settings",
+	enabled: true,
+	defaultReminder: 15,
+	soundEnabled: true,
+	permissionAsked: true,
+	updatedAt: new Date().toISOString(),
+};
 
 const MS_PER_MINUTE = 60_000;
 
@@ -71,5 +81,69 @@ describe("notification checker on a real database", () => {
 		);
 
 		await expect(getDueSoonCount()).resolves.toBe(1);
+	});
+
+	describe("marking a reminder sent", () => {
+		it("should_mark_a_task_sent_once_its_reminder_was_shown", async () => {
+			await getDb().tasks.put(createMockTask({ id: "task-due", completed: false, dueDate: dueInMinutes(10) }));
+
+			await notificationChecker.checkAndNotify();
+
+			expect((await getDb().tasks.get("task-due"))?.notificationSent).toBe(true);
+		});
+
+		it("should_leave_a_task_due_when_its_reminder_was_not_shown", async () => {
+			vi.mocked(notifications.showTaskNotification).mockResolvedValueOnce(false);
+			await getDb().tasks.put(createMockTask({ id: "task-due", completed: false, dueDate: dueInMinutes(10) }));
+
+			await notificationChecker.checkAndNotify();
+
+			expect((await getDb().tasks.get("task-due"))?.notificationSent).toBe(false);
+		});
+
+		it("should_not_mark_the_old_reminder_sent_after_the_due_date_moved", async () => {
+			await getDb().tasks.put(createMockTask({ id: "task-due", completed: false, dueDate: dueInMinutes(10) }));
+			// The user moves the due date while the reminder is on screen, which
+			// re-arms it for the new time.
+			vi.mocked(notifications.showTaskNotification).mockImplementationOnce(async () => {
+				await getDb().tasks.update("task-due", { dueDate: dueInMinutes(120), notificationSent: false });
+				return true;
+			});
+
+			await notificationChecker.checkAndNotify();
+
+			expect((await getDb().tasks.get("task-due"))?.notificationSent).toBe(false);
+		});
+
+		it("should_keep_an_edit_saved_between_reading_and_marking_the_task", async () => {
+			await getDb().tasks.put(
+				createMockTask({ id: "task-due", title: "Before", completed: false, dueDate: dueInMinutes(10) }),
+			);
+			const table = getDb().tasks;
+			const readTask = table.get.bind(table);
+			// An edit lands right after the checker reads the task it will mark.
+			vi.spyOn(table, "get").mockImplementationOnce((async (key: string) => {
+				const snapshot = await readTask(key);
+				await getDb().tasks.update("task-due", { title: "Edited" });
+				return snapshot;
+			}) as unknown as typeof table.get);
+
+			await notificationChecker.checkAndNotify();
+
+			const stored = await getDb().tasks.get("task-due");
+			expect(stored?.title).toBe("Edited");
+			expect(stored?.notificationSent).toBe(true);
+		});
+	});
+
+	describe("app badge", () => {
+		it("should_clear_the_badge_when_reminders_are_off", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValueOnce({ ...enabledSettings, enabled: false });
+
+			await notificationChecker.checkAndNotify();
+
+			expect(notifications.clearAppBadge).toHaveBeenCalledTimes(1);
+			expect(notifications.setAppBadge).not.toHaveBeenCalled();
+		});
 	});
 });

@@ -7,7 +7,6 @@ import {
   analyticsTools,
   systemTools,
   getSyncStatusTool,
-  listDevicesTool,
   getTaskStatsTool,
   listTasksTool,
   getTaskTool,
@@ -27,14 +26,14 @@ import {
 
 describe('Tool Schemas', () => {
   describe('Schema Count Validation', () => {
-    it('should have exactly 20 tools total', () => {
-      // 7 read + 5 write + 5 analytics + 3 system
-      expect(allTools).toHaveLength(20);
+    it('should have exactly 19 tools total', () => {
+      // 6 read + 5 write + 5 analytics + 3 system
+      expect(allTools).toHaveLength(19);
     });
 
-    it('should have 7 read tools', () => {
-      // get_sync_status, list_devices, get_task_stats, list_tasks, get_task, search_tasks, get_token_status
-      expect(readTools).toHaveLength(7);
+    it('should have 6 read tools', () => {
+      // get_sync_status, get_task_stats, list_tasks, get_task, search_tasks, get_token_status
+      expect(readTools).toHaveLength(6);
     });
 
     it('should have 5 write tools', () => {
@@ -92,9 +91,8 @@ describe('Tool Schemas', () => {
       expect(getSyncStatusTool.inputSchema.required).toHaveLength(0);
     });
 
-    it('list_devices should have no required parameters', () => {
-      expect(listDevicesTool.name).toBe('list_devices');
-      expect(listDevicesTool.inputSchema.required).toHaveLength(0);
+    it('does not advertise list_devices', () => {
+      expect(allTools.map((tool) => tool.name)).not.toContain('list_devices');
     });
 
     it('get_task_stats should have no required parameters', () => {

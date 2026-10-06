@@ -10,14 +10,22 @@ const exampleQueries = [
 const claudeDesktopConfig = `{
   "mcpServers": {
     "gsd": {
-      "command": "npx",
-      "args": ["-y", "gsd-mcp-server"],
+      "command": "gsd-mcp-server",
       "env": {
-        "GSD_SYNC_URL": "https://gsd.vinny.dev/api"
+        "GSD_POCKETBASE_URL": "https://api.vinny.io",
+        "GSD_AUTH_TOKEN": "<your-auth-token>"
       }
     }
   }
 }`;
+
+const setupHint = (
+  <>
+    Run <code>npm install --global gsd-mcp-server</code>, then{" "}
+    <code>gsd-mcp-server --setup</code>. It signs you in and writes a config like
+    the one below, with full paths, so Claude Desktop can find the server.
+  </>
+);
 
 export function McpSection() {
   return (
@@ -35,7 +43,7 @@ export function McpSection() {
             <p className="text-foreground-muted leading-relaxed mb-6">
               GSD ships with an MCP server. Install it once, and your AI
               assistant can query, search, and analyze your tasks using plain
-              English.
+              English. {setupHint}
             </p>
             <ul className="text-sm text-foreground-muted/80 italic space-y-2 mb-6">
               {exampleQueries.map((query) => (

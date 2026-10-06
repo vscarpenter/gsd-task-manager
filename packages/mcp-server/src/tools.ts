@@ -12,7 +12,6 @@
 export type {
   GsdConfig,
   SyncStatus,
-  Device,
   TaskStats,
   Task,
   TaskFilters,
@@ -32,6 +31,3 @@ export { searchTasks } from './tools/search-tasks.js';
 
 // Re-export sync tools
 export { getSyncStatus, getTaskStats } from './tools/sync-status.js';
-
-// Re-export device tools
-export { listDevices } from './tools/devices.js';

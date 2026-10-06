@@ -95,10 +95,13 @@ export async function emptyTrash(): Promise<number> {
  */
 export async function purgeExpiredTrash(): Promise<number> {
   const db = getDb();
-  const cutoff = new Date(Date.now() - TRASH_RETENTION_DAYS * TIME_MS.DAY).toISOString();
+  const cutoffMs = Date.now() - TRASH_RETENTION_DAYS * TIME_MS.DAY;
 
+  // Compare instants, not strings: `deletedAt` may carry a timezone offset, and
+  // an offset string sorts by wall clock, so it would expire hours early or late.
+  // An unparseable value is NaN, which compares false, so the row is kept.
   const expired = await db.deletedTasks
-    .filter((task) => typeof task.deletedAt === "string" && task.deletedAt < cutoff)
+    .filter((task) => typeof task.deletedAt === "string" && Date.parse(task.deletedAt) < cutoffMs)
     .primaryKeys();
 
   if (expired.length === 0) return 0;

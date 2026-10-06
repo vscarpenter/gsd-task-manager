@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { notificationChecker } from "@/lib/notification-checker";
 
 /**
- * Hook to start and stop the notification checker for the active view.
+ * Hook to start and stop the notification checker. Mounted once, app-wide, in ClientLayout.
  */
 export function useNotificationChecker(): void {
   useEffect(() => {

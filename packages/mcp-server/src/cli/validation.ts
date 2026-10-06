@@ -4,7 +4,7 @@
  */
 
 import type { GsdConfig, SyncStatus } from '../tools.js';
-import { getSyncStatus, listDevices, listTasks } from '../tools.js';
+import { getSyncStatus, listTasks } from '../tools.js';
 import { redactPocketBaseHost } from '../api/client.js';
 import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/config.js';
 
@@ -126,27 +126,6 @@ async function validateTaskAccess(config: GsdConfig): Promise<ValidationCheck> {
 }
 
 /**
- * Test device management access
- */
-async function validateDeviceAccess(config: GsdConfig): Promise<ValidationCheck> {
-  try {
-    const devices = await listDevices(config);
-    const activeDevices = devices.filter(d => d.isActive).length;
-    return {
-      name: 'Device Management',
-      status: '✓',
-      details: `${devices.length} total devices, ${activeDevices} active`,
-    };
-  } catch {
-    return {
-      name: 'Device Management',
-      status: '⚠',
-      details: 'Could not fetch device list',
-    };
-  }
-}
-
-/**
  * Print validation results
  */
 function printValidationResults(checks: ValidationCheck[]): void {
@@ -219,10 +198,6 @@ export async function runValidation(): Promise<void> {
   // Step 4: Task access
   const taskCheck = await validateTaskAccess(config);
   checks.push(taskCheck);
-
-  // Step 5: Device access
-  const deviceCheck = await validateDeviceAccess(config);
-  checks.push(deviceCheck);
 
   // Print results and overall status
   printValidationResults(checks);

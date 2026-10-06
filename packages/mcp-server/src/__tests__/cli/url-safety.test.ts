@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // guard ever regresses — the assertions below would catch the leak.
 vi.mock('../../tools.js', () => ({
   getSyncStatus: vi.fn(),
-  listDevices: vi.fn(),
   listTasks: vi.fn(),
 }));
 

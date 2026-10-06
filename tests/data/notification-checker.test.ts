@@ -72,7 +72,9 @@ describe("NotificationChecker", () => {
 				toArray: vi.fn().mockResolvedValue(mockTasks),
 				get: vi.fn(),
 				put: vi.fn(),
+				update: vi.fn(),
 			},
+			transaction: vi.fn((_mode: string, _table: unknown, scope: () => Promise<void>) => scope()),
 		};
 		vi.mocked(getDb).mockReturnValue(mockDb);
 
@@ -85,7 +87,7 @@ describe("NotificationChecker", () => {
 			createSettings(),
 		);
 		vi.mocked(notifications.isInQuietHours).mockReturnValue(false);
-		vi.mocked(notifications.showTaskNotification).mockResolvedValue();
+		vi.mocked(notifications.showTaskNotification).mockResolvedValue(true);
 		vi.mocked(notifications.setAppBadge).mockResolvedValue();
 
 		// Use fake timers
@@ -309,13 +311,12 @@ describe("NotificationChecker", () => {
 
 			await notificationChecker.checkAndNotify();
 
-			expect(mockDb.tasks.put).toHaveBeenCalledWith(
-				expect.objectContaining({
-					id: "task-1",
-					notificationSent: true,
-					lastNotificationAt: expect.any(String),
-				}),
-			);
+			// Only the reminder fields, so a concurrent edit to the task survives.
+			expect(mockDb.tasks.update).toHaveBeenCalledWith("task-1", {
+				notificationSent: true,
+				lastNotificationAt: expect.any(String),
+			});
+			expect(mockDb.tasks.put).not.toHaveBeenCalled();
 		});
 
 		it("should update app badge with due soon count", async () => {
@@ -662,7 +663,7 @@ describe("NotificationChecker", () => {
 			await notificationChecker.checkAndNotify();
 
 			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
-			expect(mockDb.tasks.put).not.toHaveBeenCalled();
+			expect(mockDb.tasks.update).not.toHaveBeenCalled();
 		});
 
 		it("should_not_notify_when_a_reset_begins_while_tasks_load", async () => {
@@ -677,7 +678,7 @@ describe("NotificationChecker", () => {
 			await notificationChecker.checkAndNotify();
 
 			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
-			expect(mockDb.tasks.put).not.toHaveBeenCalled();
+			expect(mockDb.tasks.update).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -3,6 +3,25 @@ import { SCHEMA_LIMITS } from '../../constants.js';
 import { validateToolArgs } from '../../tools/handlers/input-schemas.js';
 
 describe('validateToolArgs', () => {
+  describe('update_task subtask ids', () => {
+    const withSubtaskId = (id: string) => ({
+      id: 'task-1',
+      subtasks: [{ id, title: 'Part A', completed: false }],
+    });
+
+    it('rejects a subtask id shorter than the web minimum', () => {
+      expect(() =>
+        validateToolArgs('update_task', withSubtaskId('x'.repeat(SCHEMA_LIMITS.ID_MIN_LENGTH - 1)))
+      ).toThrow(/subtasks/);
+    });
+
+    it('accepts a subtask id at the web minimum', () => {
+      expect(() =>
+        validateToolArgs('update_task', withSubtaskId('x'.repeat(SCHEMA_LIMITS.ID_MIN_LENGTH)))
+      ).not.toThrow();
+    });
+  });
+
   describe('create_task', () => {
     it('accepts a minimal valid payload', () => {
       const result = validateToolArgs('create_task', {

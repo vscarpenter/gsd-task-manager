@@ -41,10 +41,9 @@ done
 # Note: python3 is required by setup-pocketbase-collections.sh, invoked in step 2
 
 FRESH_MIGRATIONS="$WORK/fresh-migrations"
-mkdir -p "$FRESH_MIGRATIONS"
-cp docker/pb_fresh_migrations/1781000000_encrypt_existing_tasks.js "$FRESH_MIGRATIONS/"
-cp docker/pb_migrations/1781100000_harden_task_encryption_cleanup.js "$FRESH_MIGRATIONS/"
-cp docker/pb_migrations/1781200000_reencrypt_invalid_prefixed_task_fields.js "$FRESH_MIGRATIONS/"
+# Same overlay the container entrypoint builds on a fresh install.
+. docker/lib/migrations.sh
+gsd_build_fresh_migrations docker/pb_migrations docker/pb_fresh_migrations "$FRESH_MIGRATIONS"
 
 echo "1) initialize and start PocketBase with production hooks/migrations"
 "$PB_BIN" superuser upsert "$ADMIN_EMAIL" "$ADMIN_PASS" --dir="$WORK" >/dev/null

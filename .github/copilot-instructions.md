@@ -47,7 +47,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 ### MCP Server Integration
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language.
 - **Location**: `packages/mcp-server/` (standalone npm package, Node.js 18+).
-- **20 Tools**: Read (7), Write (5), Analytics (5), System (3). All write operations support `dryRun` mode.
+- **19 Tools**: Read (6), Write (5), Analytics (5), System (3). All write operations support `dryRun` mode.
 - **Config**: `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_POCKETBASE_URL`, `GSD_AUTH_TOKEN`.
 
 ## Developer Workflows

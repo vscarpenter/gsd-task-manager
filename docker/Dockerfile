@@ -76,6 +76,7 @@ RUN chmod +x /entrypoint.sh
 COPY docker/pb_hooks/      /pb_hooks/
 COPY docker/pb_migrations/ /pb_migrations/
 COPY docker/pb_fresh_migrations/ /pb_fresh_migrations/
+COPY docker/lib/migrations.sh /usr/local/lib/gsd/migrations.sh
 
 # Allow non-root to bind privileged ports (80, 443)
 RUN apk add --no-cache libcap sqlite \

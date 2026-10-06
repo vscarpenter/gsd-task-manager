@@ -101,55 +101,61 @@ function shouldShowTaskNotification(
   task: TaskRecord,
   settings: NotificationSettings
 ): boolean {
-  if (!settings.enabled || !task.notificationEnabled) {
+  // A task saved before the flag existed has none; the schema default is on.
+  if (!settings.enabled || task.notificationEnabled === false) {
     return false;
   }
   return !isTaskSnoozed(task);
 }
 
 /**
- * Display notification using service worker or fallback
+ * Display notification using service worker or fallback.
+ * Returns false when neither is available.
  */
 async function displayNotification(
   title: string,
   options: NotificationOptions
-): Promise<void> {
+): Promise<boolean> {
   const registration = await getActiveServiceWorker();
 
   if (registration?.showNotification) {
     await registration.showNotification(title, options);
-    return;
+    return true;
   }
 
   if (typeof Notification === "undefined") {
-    return;
+    return false;
   }
 
   displayFallbackNotification(title, options);
+  return true;
 }
 
 /**
- * Show a notification for a task that is due soon
+ * Show a notification for a task that is due soon.
+ * Returns true only when the notification was shown, so a skipped or failed
+ * reminder is never marked sent.
  */
 export async function showTaskNotification(
   task: TaskRecord,
   minutesUntil: number
-): Promise<void> {
+): Promise<boolean> {
   if (!isNotificationSupported() || checkNotificationPermission() !== "granted") {
-    return;
+    return false;
   }
 
   const settings = await getNotificationSettings();
   if (!shouldShowTaskNotification(task, settings)) {
-    return;
+    return false;
   }
 
   try {
     const title = getNotificationTitle(task, minutesUntil);
     const options = createNotificationOptions(task, settings);
-    await displayNotification(title, options);
+    return await displayNotification(title, options);
   } catch (error) {
     logger.error("Error showing notification", error instanceof Error ? error : new Error(String(error)));
+    return false;
   }
 }
 

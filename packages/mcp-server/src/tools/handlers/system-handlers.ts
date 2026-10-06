@@ -82,15 +82,14 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
 function buildToolsHelpSection(): string {
   return `# GSD Task Manager MCP Server - Help
 
-## Available Tools (20 total)
+## Available Tools (19 total)
 
 ### Metadata & Status Tools
 - **get_sync_status** - Check PocketBase health and task count
-- **list_devices** - View all registered devices and their status
 - **get_task_stats** - Get high-level task statistics
 
 ### Task Access Tools
-- **list_tasks** - List all tasks with optional filtering (quadrant, status, tags)
+- **list_tasks** - List all tasks with optional filtering (quadrant, completed, tags)
 - **get_task** - Get a single task by ID
 - **search_tasks** - Search across titles, descriptions, tags, subtasks
 

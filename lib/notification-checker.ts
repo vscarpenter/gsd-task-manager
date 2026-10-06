@@ -8,6 +8,7 @@ import {
 	showTaskNotification,
 	checkNotificationPermission,
 	setAppBadge,
+	clearAppBadge,
 	isNotificationSupported,
 } from "@/lib/notifications";
 import { isoNow } from "@/lib/utils";
@@ -16,6 +17,20 @@ import { createLogger } from "@/lib/logger";
 import { isResetPending } from "@/lib/reset-lock";
 
 const logger = createLogger("NOTIFICATIONS");
+
+/**
+ * Whether a stored task still wants the reminder that was checked for it. A
+ * task completed, already marked, or given a new due date or reminder offset
+ * in the meantime has a different reminder (or none), so the mark is skipped.
+ */
+function isSameReminder(current: TaskRecord, checked: TaskRecord): boolean {
+	return (
+		!current.completed &&
+		!current.notificationSent &&
+		current.dueDate === checked.dueDate &&
+		current.notifyBefore === checked.notifyBefore
+	);
+}
 
 /**
  * NotificationChecker class
@@ -53,7 +68,11 @@ class NotificationChecker {
 		if (checkNotificationPermission() !== "granted") return;
 
 		const settings = await getNotificationSettings();
-		if (!settings.enabled) return;
+		if (!settings.enabled) {
+			// A badge left from before reminders were turned off would never clear.
+			await clearAppBadge();
+			return;
+		}
 		if (isInQuietHours(settings)) return;
 
 		const now = new Date();
@@ -131,31 +150,28 @@ class NotificationChecker {
 		// without marking it sent.
 		if (isResetPending()) return;
 
-		// Send notification
-		await showTaskNotification(task, minutesUntil);
+		const shown = await showTaskNotification(task, minutesUntil);
+		if (!shown) return;
 
-		// Mark as notified
-		await this.markNotificationSent(task.id);
+		await this.markNotificationSent(task);
 	}
 
 	/**
-	 * Mark a task as having received a notification
+	 * Mark a task as having received the reminder it was checked for
 	 */
-	private async markNotificationSent(taskId: string): Promise<void> {
+	private async markNotificationSent(checked: TaskRecord): Promise<void> {
 		const db = getDb();
-		const task = await db.tasks.get(taskId);
+		// Read and write in one transaction, and write only the reminder fields,
+		// so an edit saved while the reminder was showing isn't overwritten.
+		await db.transaction("rw", db.tasks, async () => {
+			const current = await db.tasks.get(checked.id);
+			if (!current || !isSameReminder(current, checked)) return;
 
-		if (!task) {
-			return;
-		}
-
-		const updated: TaskRecord = {
-			...task,
-			notificationSent: true,
-			lastNotificationAt: isoNow(),
-		};
-
-		await db.tasks.put(updated);
+			await db.tasks.update(checked.id, {
+				notificationSent: true,
+				lastNotificationAt: isoNow(),
+			});
+		});
 	}
 
 	/**

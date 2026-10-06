@@ -29,10 +29,10 @@ function getUtf8ByteLength(value: string): number {
 
 const logger = createLogger("IMPORT");
 
-/** An export plus a count of tasks dropped because they failed validation. */
+/** An export plus a count of records dropped because they failed validation. */
 export interface ExportReport {
   json: string;
-  /** Number of stored tasks excluded from the backup as unreadable/corrupt. */
+  /** Records (live, archived, and trashed tasks, plus smart views) left out of the backup as unreadable. */
   skippedCount: number;
 }
 
@@ -155,6 +155,7 @@ async function collectUserOwnedStores() {
   ]);
   return {
     smartViews: smartViews.smartViews,
+    skippedCount: smartViews.skippedCount,
     notificationSettings,
     archiveSettings,
     appPreferences,
@@ -189,7 +190,8 @@ async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: nu
 
   return {
     payload,
-    skippedCount: live.skippedCount + archive.skippedCount + trash.skippedCount,
+    skippedCount:
+      live.skippedCount + archive.skippedCount + trash.skippedCount + stores.skippedCount,
   };
 }
 
