@@ -4,9 +4,15 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const LIB = join(__dirname, "..", "docker", "lib", "migrations.sh");
-const hasSqlite = spawnSync("sqlite3", ["-version"]).status === 0;
-const describeSqlite = hasSqlite ? describe : describe.skip;
+const DOCKER = join(__dirname, "..", "docker");
+const LIB = join(DOCKER, "lib", "migrations.sh");
+
+// The fail-closed cases need the sqlite3 CLI, which the image installs and the
+// CI Ubuntu runner ships. Fail loudly instead of skipping: a skip would hide
+// the one check this file exists for.
+if (spawnSync("sqlite3", ["-version"]).status !== 0) {
+  throw new Error("tests/docker-migrations.test.ts needs the sqlite3 CLI on PATH");
+}
 
 const workDirs: string[] = [];
 
@@ -30,7 +36,7 @@ function makeDb(dataDir: string, sql: string): void {
   expect(result.status).toBe(0);
 }
 
-describeSqlite("gsd_install_state", () => {
+describe("gsd_install_state", () => {
   it("reports fresh when there is no data.db", () => {
     const result = sh(`gsd_install_state "${workDir()}"`);
 
@@ -70,6 +76,16 @@ describeSqlite("gsd_install_state", () => {
     expect(result.stdout.trim()).not.toBe("fresh");
     expect(result.stderr).toContain("FATAL");
   });
+
+  it("stops a set -e script at the assignment, as the entrypoint uses it", () => {
+    const dir = workDir();
+    writeFileSync(join(dir, "data.db"), "this is not a sqlite database, just text ".repeat(50));
+
+    const result = sh(`set -e; INSTALL_STATE="$(gsd_install_state "${dir}")"; echo "reached $INSTALL_STATE"`);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).not.toContain("reached");
+  });
 });
 
 describe("gsd_build_fresh_migrations", () => {
@@ -91,5 +107,14 @@ describe("gsd_build_fresh_migrations", () => {
     expect(readdirSync(dest).sort()).toEqual(["1_backfill.js", "2_followup.js", "3_added_later.js"]);
     expect(readFileSync(join(dest, "1_backfill.js"), "utf8")).toBe("no-op");
     expect(readFileSync(join(dest, "3_added_later.js"), "utf8")).toBe("added later");
+  });
+
+  it("ships only fresh-set files that replace a shipped migration", () => {
+    // A fresh-only file would run on new installs and never on upgraded ones.
+    const shipped = new Set(readdirSync(join(DOCKER, "pb_migrations")));
+
+    for (const file of readdirSync(join(DOCKER, "pb_fresh_migrations"))) {
+      expect(shipped.has(file), file).toBe(true);
+    }
   });
 });
