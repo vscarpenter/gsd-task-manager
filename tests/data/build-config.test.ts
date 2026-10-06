@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 const requireFromRepo = createRequire(resolve(process.cwd(), "package.json"));
 
 interface PackageJson {
+  dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   engines?: Record<string, string>;
   scripts?: Record<string, string>;
@@ -216,6 +217,18 @@ describe("build configuration", () => {
       expect(devDependencies?.vitest).toBeDefined();
       expect(devDependencies?.["@vitest/coverage-v8"]).toBe(devDependencies?.vitest);
     }
+  });
+
+  it("pins next and eslint-config-next to one exact release, 16.3.8 or later", () => {
+    const packageJson = requireFromRepo("./package.json") as PackageJson;
+    const next = packageJson.dependencies?.next ?? "";
+    const [major, minor, patch] = next.split(".").map(Number);
+
+    // SEC-028: 16.3.8 is the security release. The lint config is written for
+    // one framework release, so the two move together.
+    expect(next).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(packageJson.devDependencies?.["eslint-config-next"]).toBe(next);
+    expect(major * 1_000_000 + minor * 1_000 + patch).toBeGreaterThanOrEqual(16_003_008);
   });
 
   it("runs every Vitest job on Node 22, set up before install", () => {
