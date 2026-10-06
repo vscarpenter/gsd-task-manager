@@ -11,6 +11,17 @@ export interface BackupDownloadResult {
   skippedCount: number;
 }
 
+export const EXPORT_SUCCESS_MESSAGE = "Tasks exported";
+
+/**
+ * Warning text for a partial export, shared by the palette and Settings so the
+ * two copies can't drift. "Records" because skipped rows can be tasks, archived
+ * or trashed tasks, or smart views.
+ */
+export function skippedRecordsWarning(skippedCount: number): string {
+  return `Exported, but ${skippedCount} unreadable record${skippedCount === 1 ? "" : "s"} could not be included.`;
+}
+
 /**
  * Write the backup to a file the user receives.
  *
@@ -32,12 +43,10 @@ export async function runBackupExport(): Promise<boolean> {
     return false;
   }
   if (skippedCount > 0) {
-    toast.warning(
-      `Exported, but ${skippedCount} unreadable task${skippedCount === 1 ? "" : "s"} could not be included.`,
-    );
+    toast.warning(skippedRecordsWarning(skippedCount));
     return true;
   }
-  toast.success("Tasks exported");
+  toast.success(EXPORT_SUCCESS_MESSAGE);
   return true;
 }
 

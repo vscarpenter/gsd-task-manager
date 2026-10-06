@@ -173,7 +173,7 @@ describe("SettingsBody", () => {
     fireEvent.click(screen.getByText("Export tasks"));
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        expect.stringContaining("2 unreadable tasks"),
+        expect.stringContaining("2 unreadable records"),
       ),
     );
   });

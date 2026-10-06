@@ -45,7 +45,7 @@ describe("runBackupExport", () => {
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(toastMock.warning).toHaveBeenCalledWith(
-      "Exported, but 2 unreadable tasks could not be included."
+      "Exported, but 2 unreadable records could not be included."
     );
     expect(toastMock.success).not.toHaveBeenCalled();
   });
@@ -56,7 +56,7 @@ describe("runBackupExport", () => {
     await runBackupExport();
 
     expect(toastMock.warning).toHaveBeenCalledWith(
-      "Exported, but 1 unreadable task could not be included."
+      "Exported, but 1 unreadable record could not be included."
     );
   });
 

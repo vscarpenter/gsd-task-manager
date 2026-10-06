@@ -177,6 +177,8 @@ describe('Task Import/Export Operations', () => {
 
       expect(result.tasks).toHaveLength(1);
       expect(result.smartViews).toEqual([]);
+      // The dropped view is disclosed, not just logged.
+      expect((await exportToJsonWithReport()).skippedCount).toBe(1);
     });
 
     it('exports a store holding more smart views than the cap allows', async () => {
@@ -198,6 +200,7 @@ describe('Task Import/Export Operations', () => {
 
       expect(result.tasks).toHaveLength(1);
       expect(result.smartViews).toHaveLength(SCHEMA_LIMITS.MAX_SMART_VIEWS);
+      expect((await exportToJsonWithReport()).skippedCount).toBe(1);
     });
 
     it('should validate tasks with schema', async () => {

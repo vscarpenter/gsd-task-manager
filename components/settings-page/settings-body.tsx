@@ -4,7 +4,7 @@ import { lazy, Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { downloadBackup } from "@/lib/backup-download";
+import { downloadBackup, EXPORT_SUCCESS_MESSAGE, skippedRecordsWarning } from "@/lib/backup-download";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 
@@ -98,11 +98,9 @@ export function SettingsBody({
       if (!ok) throw new Error("Export failed");
       if (skippedCount > 0) {
         // Never let a corrupt record silently vanish from the user's backup.
-        toast.warning(
-          `Exported, but ${skippedCount} unreadable task${skippedCount === 1 ? "" : "s"} could not be included.`,
-        );
+        toast.warning(skippedRecordsWarning(skippedCount));
       } else {
-        toast.success("Tasks exported");
+        toast.success(EXPORT_SUCCESS_MESSAGE);
       }
       setIsExporting(false);
       return true;
