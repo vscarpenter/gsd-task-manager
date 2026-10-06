@@ -62,11 +62,13 @@ export function subDays(date: Date, days: number): Date {
 
 /**
  * When a task was completed. Imports and pulls can carry a completed task with
- * no completedAt, so those fall back to updatedAt. Keep this rule in step with
- * the web copy in lib/analytics/completion-day.ts.
+ * no completedAt, so those fall back to updatedAt, and so does an unparseable
+ * completed_at, which PocketBase stores as free text. Keep this rule in step
+ * with the web copy in lib/analytics/completion-day.ts.
  */
 export function completionTime(task: Pick<Task, 'completedAt' | 'updatedAt'>): Date {
-  return new Date(task.completedAt || task.updatedAt);
+  const completed = task.completedAt ? new Date(task.completedAt) : null;
+  return completed && !Number.isNaN(completed.getTime()) ? completed : new Date(task.updatedAt);
 }
 
 /**

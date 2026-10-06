@@ -210,6 +210,42 @@
       "webOnly": { "last7Days": [false, false, false, false, false, true, true] }
     },
     {
+      "name": "an unparseable completedAt falls back to updatedAt",
+      "timezone": "UTC",
+      "now": "2026-06-17T15:00:00.000Z",
+      "note": "The sync pull accepts any text in completed_at, so a malformed value can reach both copies. It falls back to updatedAt like a missing one, so one bad record can't break the dashboard or skew the MCP streak.",
+      "tasks": [
+        { "id": "i1", "title": "i1", "quadrant": "urgent-important", "urgent": true, "important": true, "completed": true, "completedAt": "not-a-date", "updatedAt": "2026-06-17T09:00:00.000Z", "tags": [] }
+      ],
+      "expected": {
+        "streak": { "current": 1, "longest": 1, "lastCompletionDate": "2026-06-17" },
+        "metrics": {
+          "completedToday": 1,
+          "completedThisWeek": 1,
+          "completedThisMonth": 1,
+          "activeStreak": 1,
+          "longestStreak": 1,
+          "completionRate": 100,
+          "quadrantDistribution": { "urgent-important": 0, "not-urgent-important": 0, "urgent-not-important": 0, "not-urgent-not-important": 0 },
+          "tagStats": [],
+          "overdueCount": 0,
+          "dueTodayCount": 0,
+          "dueThisWeekCount": 0,
+          "noDueDateCount": 0,
+          "activeTasks": 0,
+          "completedTasks": 1,
+          "totalTasks": 1
+        },
+        "quadrantPerformance": [
+          { "quadrantId": "urgent-important", "completionRate": 100, "totalTasks": 1, "completedTasks": 1 },
+          { "quadrantId": "not-urgent-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 },
+          { "quadrantId": "not-urgent-not-important", "completionRate": 0, "totalTasks": 0, "completedTasks": 0 }
+        ]
+      },
+      "webOnly": { "last7Days": [false, false, false, false, false, false, true] }
+    },
+    {
       "name": "a streak across the autumn clock change",
       "timezone": "Europe/London",
       "now": "2026-10-26T12:00:00.000Z",
