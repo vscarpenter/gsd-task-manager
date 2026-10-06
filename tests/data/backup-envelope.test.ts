@@ -3,7 +3,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { exportTasks, importTasks } from "@/lib/tasks";
 import { getDb } from "@/lib/db";
 import { createMockTask } from "@/tests/fixtures";
-import type { TaskRecord } from "@/lib/types";
+import type { ImportablePayload, TaskRecord } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 
 /**
@@ -185,7 +185,83 @@ describe("Backup envelope", () => {
     });
   });
 
+  describe("import: quadrant missing from the iOS client", () => {
+    // iOS treats quadrant as computed and leaves it out of its backups, so the
+    // import derives it from the urgent and important flags.
+    function withoutQuadrant(task: TaskRecord): Omit<TaskRecord, "quadrant"> {
+      const copy: Partial<TaskRecord> = { ...task };
+      delete copy.quadrant;
+      return copy as Omit<TaskRecord, "quadrant">;
+    }
+
+    it("should_derive_the_quadrant_for_live_archived_and_trashed_rows", async () => {
+      const db = getDb();
+      const delegate = { urgent: true, important: false };
+      const payload = {
+        version: 1,
+        exportedAt: "2026-01-01T00:00:00.000Z",
+        tasks: [withoutQuadrant(createMockTask({ id: "ios-live", ...delegate }))],
+        archivedTasks: [withoutQuadrant(archived("ios-archived"))],
+        deletedTasks: [
+          withoutQuadrant({
+            ...createMockTask({ id: "ios-trashed", urgent: false, important: true }),
+            deletedAt: "2026-02-01T00:00:00.000Z",
+          }),
+        ],
+      } as unknown as ImportablePayload;
+
+      await importTasks(payload, "replace");
+
+      expect((await db.tasks.get("ios-live"))?.quadrant).toBe("urgent-not-important");
+      expect((await db.archivedTasks.get("ios-archived"))?.quadrant).toBe("urgent-important");
+      expect((await db.deletedTasks.get("ios-trashed"))?.quadrant).toBe("not-urgent-important");
+    });
+
+    it("should_keep_a_supplied_quadrant_that_contradicts_the_flags", async () => {
+      // Pins today's behavior, which the modernization brief lists as a
+      // suspected defect (§7, RULE-002): a supplied quadrant is never rechecked.
+      const db = getDb();
+      await importTasks(
+        {
+          version: "2.0.0",
+          exportedAt: "2026-01-01T00:00:00.000Z",
+          tasks: [
+            createMockTask({
+              id: "contradiction",
+              urgent: true,
+              important: true,
+              quadrant: "not-urgent-not-important",
+            }),
+          ],
+        },
+        "replace"
+      );
+
+      expect((await db.tasks.get("contradiction"))?.quadrant).toBe("not-urgent-not-important");
+    });
+  });
+
   describe("import — replace", () => {
+    it("should_clear_a_store_sent_empty_and_keep_a_store_left_out", async () => {
+      // An empty array says the store is empty. A missing key says nothing,
+      // so replace mode must leave that store alone.
+      const db = getDb();
+      await seedEveryStore();
+
+      await importTasks(
+        {
+          version: "2.0.0",
+          exportedAt: "2026-01-01T00:00:00.000Z",
+          tasks: [createMockTask({ id: "live-1", title: "Live one" })],
+          archivedTasks: [],
+        },
+        "replace"
+      );
+
+      expect(await db.archivedTasks.count()).toBe(0);
+      expect(await db.smartViews.count()).toBe(1);
+    });
+
     it("should_restore_every_store", async () => {
       const db = getDb();
       await seedEveryStore();
