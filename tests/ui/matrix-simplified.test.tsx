@@ -168,6 +168,8 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
 import { MatrixSimplified } from "@/components/matrix-simplified";
 import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask, snoozeTask } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
+import { useAutoArchive } from "@/lib/use-auto-archive";
+import { useNotificationChecker } from "@/lib/use-notification-checker";
 
 /**
  * Completed tasks now live behind a per-quadrant "N done" disclosure, so tests
@@ -199,6 +201,18 @@ describe("<MatrixSimplified>", () => {
     vi.mocked(restoreTask).mockReset().mockResolvedValue(undefined);
     handleSuccessSpy.mockClear();
     logErrorSpy.mockClear();
+  });
+
+  // The app layout owns these timers. A second mount here would also stop the
+  // app-wide reminder checker whenever the matrix unmounts.
+  it("leaves reminders and the archive sweep to the app layout", () => {
+    vi.mocked(useAutoArchive).mockClear();
+    vi.mocked(useNotificationChecker).mockClear();
+
+    render(<MatrixSimplified />);
+
+    expect(useAutoArchive).not.toHaveBeenCalled();
+    expect(useNotificationChecker).not.toHaveBeenCalled();
   });
 
   // The empty states make a specific claim ("Nothing on fire.") that must not be

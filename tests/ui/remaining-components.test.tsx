@@ -24,6 +24,11 @@ vi.mock('@/lib/sync/sync-provider', () => ({
   ),
 }));
 
+// ClientLayout starts these app-wide timers; their behavior is covered in
+// client-layout-background-tasks.test.tsx.
+vi.mock('@/lib/use-auto-archive', () => ({ useAutoArchive: vi.fn() }));
+vi.mock('@/lib/use-notification-checker', () => ({ useNotificationChecker: vi.fn() }));
+
 vi.mock('@/lib/hooks/use-sync-status', () => ({
   useSyncStatus: () => ({
     isSyncing: false,
