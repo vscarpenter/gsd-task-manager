@@ -5,7 +5,15 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-06
+
+### Security
+- Bumps `@modelcontextprotocol/sdk` from 1.30.1 to 1.31.0 for
+  GHSA-6qxp-vccf-f47h. In affected versions, the SDK's OAuth client could
+  send stored credentials to an authorization server the MCP server chose.
+  Upstream now binds stored credentials to the server that issued them. This
+  server talks over stdio and never uses the SDK's OAuth client, so its
+  behavior doesn't change.
 
 ### Removed
 - The `list_devices` tool. It read a `devices` collection that no PocketBase
@@ -614,6 +622,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.3.0]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.8...mcp-v1.3.0
 [1.2.8]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.7...mcp-v1.2.8
 [1.2.7]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.6...mcp-v1.2.7
 [1.2.6]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.5...mcp-v1.2.6
