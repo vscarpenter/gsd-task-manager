@@ -1,3 +1,26 @@
+# Session state, 2026-10-06: modernization Phase 3, fix the ticked defects
+
+Spec: `tasks/spec-phase3-defects.md`. Approved design: brief §3 Phase 3, with
+Vinny's §7 decisions of 2026-10-06 (production stays on the bare PocketBase
+binary; extract-rules skipped; 11 revisions accepted; 15 items to fix, 4 kept;
+`list_devices` removed). Branches are cut from `main` @ `53418f1`, one per bundle.
+
+- [x] Recorded the §7 decisions in the brief; unticked the four Phase 3 exit boxes Vinny
+      ticked early (his request); ticked SEC-002's Phase 2 exit box under the accepted revision.
+- [ ] A. completion metrics, `fix/completion-date-metrics` (Claude)
+- [ ] B. reminders, `fix/app-level-reminders` (Claude)
+- [ ] C. MCP correctness and `list_devices` removal, `fix/mcp-write-correctness` (worker)
+- [ ] D. sync, RULE-194 and RULE-192, `fix/sync-realtime-and-deletion` (Claude)
+- [ ] E. agent skills, OpenAPI, About snippet, `fix/agent-facing-docs` (worker)
+- [ ] F. self-host fresh migrations, `fix/self-host-fresh-migrations` (worker)
+- [ ] G. export message and trash cutoff, `fix/export-and-trash-hardening` (worker)
+- [ ] Reviews, combined verification, RULE_REVIEWS and CONTRACT_MAP records
+- [ ] Push and PR: waits for Vinny
+
+Open for Vinny, not blocking: Phase 1's service-worker `Proposed revision:` line.
+
+---
+
 # Session state, 2026-10-05 (evening): modernization Phase 2, security findings
 
 Spec: `tasks/spec-phase2-security.md`. Approved design: brief §3 Phase 2, with
@@ -26,7 +49,16 @@ Branches are cut from `main` @ `5df1fd7`, one per finding.
       tests 6/6 on 0.40.4 with the revoke hook.
 - [x] Pushed all six branches 2026-10-06; the owner asked for one PR, so the six commits are stacked on
       `fix/phase-2-security-findings` (byte-identical to the verified merge).
-- [ ] After merge and CI (`pocketbase-system` for SEC-025): tick the brief's Phase 2 exit boxes.
+- [x] PR #578 merged 2026-10-06 as `53418f1` (tree identical to the PR head). On `main`, the new
+      "Security audit / audit" job ran inside publish-docker before `publish`, so SEC-030 works.
+- [x] All 14 checks on `main` `53418f1` passed. Brief: five of six Phase 2 exit boxes ticked with evidence;
+      SEC-002 left unticked with a note, pending the owner's acceptance of its Proposed revision.
+- [x] Owner approved 2026-10-06: deleted the six single-finding branches (local and origin) and
+      `origin/fix/phase-2-security-findings` after re-verifying each against `main`. Only `main` remains.
+- [ ] Phase 3: owner ticks §7. Review delivered 2026-10-06: 15 to fix (4 low priority or optional),
+      4 keep, 2 belong in Phase 4; seven proposed PR bundles, streaks first. With the owner's OK the
+      brief's §7 now carries 10 Proposed revision lines, 4 notes, and a new Phase 4 item (an unset
+      notify_before is stored as 0). Also still open: the extract-rules skip (recommend skip).
 
 Follow-up found (not this phase): `pocketbase-system.test.ts` spawns `bun run dev:e2e` and
 kills only the bun process, so `next dev` survives as an orphan and rewrites
