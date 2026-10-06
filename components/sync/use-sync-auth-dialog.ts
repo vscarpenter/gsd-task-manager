@@ -3,11 +3,12 @@
 import { useState, useEffect, useSyncExternalStore } from "react";
 import { getOAuthErrorMessage, type AuthState, refreshAuth } from "@/lib/sync/pb-auth";
 import { clearPocketBase, isAuthenticated } from "@/lib/sync/pocketbase-client";
-import { getSyncStatus, disableSync } from "@/lib/sync/config";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { toast } from "sonner";
 import { getDb } from "@/lib/db";
 import type { PBSyncConfig } from "@/lib/sync/types";
+import { useLogout } from "./use-logout";
+import { useSignOutEverywhere } from "./use-sign-out-everywhere";
 
 export interface SyncStatusInfo {
   enabled: boolean;
@@ -37,10 +38,16 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatusInfo | null>(null);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState(0);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const signOutCallbacks = {
+    onSuccess,
+    onSignedOut: () => setSyncStatus({ enabled: false, email: null }),
+    setIsLoading,
+    setError,
+  };
+  const logout = useLogout(signOutCallbacks);
+  const signOutEverywhere = useSignOutEverywhere(signOutCallbacks);
 
   const mounted = useSyncExternalStore(
     subscribeMounted,
@@ -55,7 +62,8 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
   if (isOpen !== prevIsOpen) {
     setPrevIsOpen(isOpen);
     if (isOpen) {
-      setShowLogoutConfirm(false);
+      logout.cancelLogout();
+      signOutEverywhere.onCancel();
       setSessionExpired(false);
     }
   }
@@ -114,52 +122,18 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
     toast.error(message);
   };
 
-  const handleLogout = async () => {
-    const status = await getSyncStatus();
-    if (status.pendingCount > 0) {
-      setPendingChanges(status.pendingCount);
-      setShowLogoutConfirm(true);
-      return;
-    }
-
-    await performLogout();
-  };
-
-  const performLogout = async () => {
-    setIsLoading(true);
-    try {
-      await disableSync();
-      setSyncStatus({ enabled: false, email: null });
-      setError(null);
-      setShowLogoutConfirm(false);
-      toast.success("Logged out successfully");
-      onSuccess?.();
-      setIsLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Logout failed");
-      setIsLoading(false);
-    }
-  };
-
-  const cancelLogout = () => {
-    setShowLogoutConfirm(false);
-  };
-
   return {
     isLoading,
     error,
     syncStatus,
     mounted,
-    showLogoutConfirm,
-    pendingChanges,
+    logout,
     sessionExpired,
     isRefreshing,
     handleOAuthSuccess,
     handleOAuthStart,
     handleOAuthError,
-    handleLogout,
-    performLogout,
-    cancelLogout,
+    signOutEverywhere,
   };
 }
 
@@ -283,7 +257,7 @@ async function persistSyncConfig(authState: AuthState) {
         localTaskOwnerUserId !== authState.userId
       ) {
         throw new Error(
-          "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync."
+          "Local tasks belong to a different sync account. Reset local data or sign in with the original account before enabling sync. To end that account's sessions on its other devices, sign in with it and choose Sign out of all devices."
         );
       }
 

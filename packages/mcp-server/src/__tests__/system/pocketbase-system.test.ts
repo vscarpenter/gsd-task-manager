@@ -115,6 +115,27 @@ async function stopProcess(process: ChildProcessWithoutNullStreams | undefined):
   if (process.exitCode === null) process.kill('SIGKILL');
 }
 
+async function ensureUsersCollection(admin: PocketBase): Promise<void> {
+  const collections = await admin.collections.getFullList();
+  if (collections.some((collection) => collection.name === 'users')) return;
+  try {
+    await admin.collections.create({
+      name: 'users',
+      type: 'auth',
+      listRule: 'id = @request.auth.id',
+      viewRule: 'id = @request.auth.id',
+      updateRule: 'id = @request.auth.id',
+      deleteRule: 'id = @request.auth.id',
+      manageRule: 'id = @request.auth.id',
+      authRule: '',
+      passwordAuth: { enabled: true, identityFields: ['email'] },
+    });
+  } catch (error) {
+    const response = (error as { response?: unknown }).response;
+    throw new Error(`Failed to create users collection: ${JSON.stringify(response)}`);
+  }
+}
+
 function remoteTask(ownerId: string, taskId: string, title: string, deviceId = 'remote-system') {
   const now = new Date().toISOString();
   return {
@@ -514,25 +535,7 @@ describeSystem('PocketBase authenticated system boundary', () => {
 
     const admin = new PocketBase(baseUrl);
     await admin.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
-    const collections = await admin.collections.getFullList();
-    if (!collections.some((collection) => collection.name === 'users')) {
-      try {
-        await admin.collections.create({
-          name: 'users',
-          type: 'auth',
-          listRule: 'id = @request.auth.id',
-          viewRule: 'id = @request.auth.id',
-          updateRule: 'id = @request.auth.id',
-          deleteRule: 'id = @request.auth.id',
-          manageRule: 'id = @request.auth.id',
-          authRule: '',
-          passwordAuth: { enabled: true, identityFields: ['email'] },
-        });
-      } catch (error) {
-        const response = (error as { response?: unknown }).response;
-        throw new Error(`Failed to create users collection: ${JSON.stringify(response)}`);
-      }
-    }
+    await ensureUsersCollection(admin);
 
     await admin.collection('users').create({
       email: 'owner-one@example.test',
@@ -649,6 +652,31 @@ describeSystem('PocketBase authenticated system boundary', () => {
     unsubscribeOne();
     unsubscribeTwo();
   }, 30_000);
+
+  it('proves "Sign out of all devices" ends every session for the user', async () => {
+    const admin = new PocketBase(baseUrl);
+    await admin.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await ensureUsersCollection(admin);
+    const email = `revoke-${randomBytes(4).toString('hex')}@example.test`;
+    await admin.collection('users').create({
+      email,
+      password: USER_PASSWORD,
+      passwordConfirm: USER_PASSWORD,
+      verified: true,
+    });
+
+    // One account signed in on two devices.
+    const laptop = new PocketBase(baseUrl);
+    const phone = new PocketBase(baseUrl);
+    await laptop.collection('users').authWithPassword(email, USER_PASSWORD);
+    await phone.collection('users').authWithPassword(email, USER_PASSWORD);
+    await expect(phone.collection('users').authRefresh()).resolves.toBeDefined();
+
+    await laptop.send('/api/gsd/sessions', { method: 'DELETE' });
+
+    await expect(phone.collection('users').authRefresh()).rejects.toMatchObject({ status: 401 });
+    await expect(laptop.collection('users').authRefresh()).rejects.toMatchObject({ status: 401 });
+  });
 
   it('proves browser push, pull, realtime isolation, token renewal, tombstones, and reconnect', async () => {
     expect(baseUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
