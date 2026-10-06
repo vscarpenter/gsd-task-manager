@@ -364,7 +364,7 @@ describe('security hardening scripts and workflows', () => {
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.12');
     expect(rootPackage.overrides.hono).toBe('4.13.7');
-    expect(rootPackage.overrides.sharp).toBe('0.35.4');
+    expect(rootPackage.overrides.sharp).toBe('0.35.5');
     expect(rootPackage.overrides.undici).toBe('7.29.1');
     expect(rootPackage.overrides['fast-uri']).toBe('4.1.5');
     expect(rootPackage.overrides['ip-address']).toBe('10.7.2');
