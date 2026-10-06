@@ -113,16 +113,73 @@ describe("Trash (ADR 0015)", () => {
       expect(await db.deletedTasks.get("recent")).toBeDefined();
     });
 
-    it("keeps a row that is exactly at the boundary", async () => {
+    it("keeps a row 29 days old", async () => {
       const db = getDb();
       await db.deletedTasks.put({
-        ...createMockTask({ id: "boundary" }),
+        ...createMockTask({ id: "recent-ish" }),
         deletedAt: daysAgo(TRASH_RETENTION_DAYS - 1),
       });
 
       await purgeExpiredTrash();
 
-      expect(await db.deletedTasks.get("boundary")).toBeDefined();
+      expect(await db.deletedTasks.get("recent-ish")).toBeDefined();
+    });
+
+    describe("cutoff comparison", () => {
+      const NOW = new Date("2026-10-06T12:00:00.000Z");
+      const cutoffMs = NOW.getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+      beforeEach(() => {
+        // Only Date is faked so fake-indexeddb's timers keep running.
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(NOW);
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      async function putAt(id: string, deletedAt: string) {
+        await getDb().deletedTasks.put({ ...createMockTask({ id }), deletedAt });
+      }
+
+      it("keeps a row deleted exactly 30 days ago to the millisecond", async () => {
+        await putAt("exact", new Date(cutoffMs).toISOString());
+
+        await expect(purgeExpiredTrash()).resolves.toBe(0);
+        expect(await getDb().deletedTasks.get("exact")).toBeDefined();
+      });
+
+      it("purges a row one millisecond past the cutoff", async () => {
+        await putAt("past", new Date(cutoffMs - 1).toISOString());
+
+        await expect(purgeExpiredTrash()).resolves.toBe(1);
+      });
+
+      it("keeps an offset row whose instant is inside the window", async () => {
+        // 08:00-05:00 is 13:00Z, after the 12:00Z cutoff, yet "08:00" sorts
+        // before "12:00" as a string, so a string compare would purge it.
+        await putAt("inside", "2026-09-06T08:00:00.000-05:00");
+
+        await expect(purgeExpiredTrash()).resolves.toBe(0);
+        expect(await getDb().deletedTasks.get("inside")).toBeDefined();
+      });
+
+      it("purges an offset row whose instant is past the cutoff", async () => {
+        // 17:00+06:00 is 11:00Z, before the cutoff, yet "17:00" sorts after
+        // "12:00" as a string, so a string compare would keep it.
+        await putAt("outside", "2026-09-06T17:00:00.000+06:00");
+
+        await expect(purgeExpiredTrash()).resolves.toBe(1);
+        expect(await getDb().deletedTasks.get("outside")).toBeUndefined();
+      });
+
+      it("keeps a row whose deletedAt does not parse", async () => {
+        await putAt("garbage", "not-a-date");
+
+        await expect(purgeExpiredTrash()).resolves.toBe(0);
+        expect(await getDb().deletedTasks.get("garbage")).toBeDefined();
+      });
     });
   });
 
