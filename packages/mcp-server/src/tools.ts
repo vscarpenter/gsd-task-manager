@@ -12,7 +12,6 @@
 export type {
   GsdConfig,
   SyncStatus,
-  Device,
   TaskStats,
   Task,
   TaskFilters,

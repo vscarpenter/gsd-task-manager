@@ -1,5 +1,5 @@
 {
-  "$comment": "Pins the two hand-kept copies of SCHEMA_LIMITS. The root suite (tests/data/pinned-copies/field-limits.test.ts) and the MCP suite (packages/mcp-server/src/__tests__/pinned-copies/field-limits.test.ts) each check their own copy against this file, so a limit changed in one copy alone turns one suite red. To change a shared limit, change both copies and this file together. Brief: MODERNIZATION_BRIEF.md, Phase 1 pilot.",
+  "$comment": "Pins the two hand-kept copies of SCHEMA_LIMITS. The root suite (tests/data/pinned-copies/field-limits.test.ts) and the MCP suite (packages/mcp-server/src/__tests__/pinned-copies/field-limits.test.ts) each check their own copy against this file, so a limit changed in one copy alone turns one suite red. To change a shared limit, change both copies and this file together. ID_MIN_LENGTH is shared, but the MCP server applies it to subtask ids only: the task and dependency ids it accepts must already exist, so they meet it. Brief: MODERNIZATION_BRIEF.md, Phase 1 pilot.",
   "copies": {
     "web": "lib/constants/schema.ts",
     "mcp": "packages/mcp-server/src/constants.ts"

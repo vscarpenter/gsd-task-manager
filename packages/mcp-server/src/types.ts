@@ -97,15 +97,6 @@ export type SyncStatus = {
   lastSyncAt: string | null;
 };
 
-// Device info
-export interface Device {
-  id: string;
-  name: string | null;
-  lastSeenAt: string;
-  isActive: boolean;
-  isCurrent: boolean;
-}
-
 // Task stats
 export interface TaskStats {
   totalTasks: number | null;

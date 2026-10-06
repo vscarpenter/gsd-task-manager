@@ -159,7 +159,7 @@ describe('deleteTask', () => {
     expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blank-stamp');
   });
 
-  it('refuses to delete a blank-stamp record another device changed since the list', async () => {
+  it('refuses to delete a blank-stamp record that another device has since stamped', async () => {
     const { listTasksFresh } = await import('../../tools/list-tasks.js');
     const helpers = await import('../../write-ops/helpers.js');
     const standalone = makeTask('blank-stamp');
@@ -167,6 +167,24 @@ describe('deleteTask', () => {
     vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce(
       freshTask(standalone, '2026-04-02T00:00:00Z')
     );
+
+    await expect(deleteTask(config, 'blank-stamp', { dryRun: false })).rejects.toThrow(
+      /changed|conflict/i
+    );
+    expect(helpers.deleteTaskInPBById).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete a blank-stamp record whose server update time moved since the list', async () => {
+    // A writer that never stamps client_updated_at (the PB admin UI) still
+    // moves `updated`, which is what the listed task's updatedAt came from.
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
+    const helpers = await import('../../write-ops/helpers.js');
+    const standalone = makeTask('blank-stamp');
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([standalone]);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValueOnce({
+      ...freshTask(standalone, '2026-04-02T00:00:00Z'),
+      clientUpdatedAt: '',
+    });
 
     await expect(deleteTask(config, 'blank-stamp', { dryRun: false })).rejects.toThrow(
       /changed|conflict/i
