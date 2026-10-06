@@ -1,3 +1,40 @@
+# Session state, 2026-10-05 (evening): modernization Phase 2, security findings
+
+Spec: `tasks/spec-phase2-security.md`. Approved design: brief §3 Phase 2, with
+the owner's §7 decisions of 2026-10-05 (sign out everywhere as an explicit
+action only, no rotation on account switch; self-host image only; Claude edits
+the ruleset).
+Branches are cut from `main` @ `5df1fd7`, one per finding.
+
+- [x] SEC-025: PocketBase 0.40.4 in the self-host image, branch `chore/pocketbase-0-40-4` @ `c490af0`.
+      System tests 5/5 on 0.40.4 locally; all gates green. Not pushed.
+- [x] SEC-002: "Sign out of all devices", branch `feat/sign-out-everywhere` @ `3dc77ff`.
+      Owner's second answer: no automatic rotation on account switch; the cross-account error
+      points to the action. Hook test, client test (8), UI tests (51), and a system test that
+      fails without the route; browser check passed for the 404 and 204 outcomes.
+      Deviation: the logout flow moved unchanged into `components/sync/use-logout.ts` so
+      `useSyncAuthDialog` stays under its code-shape baseline (it shrank, 96 -> 95 violations).
+      Review fixes taken: local-cleanup failure after a revoke, a 401 on an unexpired token,
+      `saveNoValidate`, focus to Cancel and back to the trigger, `role="alert"` errors.
+- [x] SEC-011: task logs carry ids only; error-logger masks through logger, branch `fix/redact-task-content-logs` @ `5395078`
+- [x] SEC-027: `**/.env`, `**/.env.*`, and a root-only `.*` in `.dockerignore`, branch `chore/dockerignore-nested-env` @ `f4b98ce`
+- [x] SEC-028: `next` and `eslint-config-next` to 16.3.8, branch `chore/next-16-3-8` @ `e1cf427` (scrubbed build,
+      bundle budget, 28/28 export journeys)
+- [x] SEC-030: audit before every deploy and publish, branch `ci/audit-before-deploy` @ `2efecfd`; `audit` added to
+      `main-protection` required checks via gh api (owner approved)
+- [x] Verified each branch and all six merged: root 3,384, MCP 331, typecheck, lint, shape; PocketBase system
+      tests 6/6 on 0.40.4 with the revoke hook.
+- [x] Pushed all six branches 2026-10-06; the owner asked for one PR, so the six commits are stacked on
+      `fix/phase-2-security-findings` (byte-identical to the verified merge).
+- [ ] After merge and CI (`pocketbase-system` for SEC-025): tick the brief's Phase 2 exit boxes.
+
+Follow-up found (not this phase): `pocketbase-system.test.ts` spawns `bun run dev:e2e` and
+kills only the bun process, so `next dev` survives as an orphan and rewrites
+`next-env.d.ts` and `tsconfig.json`. Kill the process group (`detached: true`, then
+`process.kill(-pid)`). Locally, stop the orphan and `git restore` both files after each run.
+
+---
+
 # Session state, 2026-10-05: modernization Phase 1, pin the hand-kept copies
 
 Spec: `tasks/spec-phase1-pin-copies.md`. Approved design:

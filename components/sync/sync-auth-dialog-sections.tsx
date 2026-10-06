@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { OAuthButtons } from "@/components/sync/oauth-buttons";
+import type { LogoutControls } from "@/components/sync/use-logout";
+import type { SignOutEverywhereControls } from "@/components/sync/use-sign-out-everywhere";
 import type { AuthState, OAuthProvider } from "@/lib/sync/pb-auth";
 import type { SyncStatusInfo } from "./use-sync-auth-dialog";
 
@@ -75,11 +78,8 @@ interface AuthenticatedSectionProps {
   syncStatus: SyncStatusInfo;
   error: string | null;
   isLoading: boolean;
-  showLogoutConfirm: boolean;
-  pendingChanges: number;
-  onLogout: () => void;
-  onPerformLogout: () => void;
-  onCancelLogout: () => void;
+  logout: LogoutControls;
+  signOutEverywhere: SignOutEverywhereControls;
 }
 
 /** UI for when the user is authenticated and sync is active */
@@ -87,11 +87,8 @@ export function AuthenticatedSection({
   syncStatus,
   error,
   isLoading,
-  showLogoutConfirm,
-  pendingChanges,
-  onLogout,
-  onPerformLogout,
-  onCancelLogout,
+  logout,
+  signOutEverywhere,
 }: AuthenticatedSectionProps) {
   return (
     <div className="space-y-4">
@@ -108,7 +105,7 @@ export function AuthenticatedSection({
       <ErrorMessage error={error} />
 
       <Button
-        onClick={onLogout}
+        onClick={logout.handleLogout}
         disabled={isLoading}
         variant="subtle"
         className="w-full"
@@ -116,14 +113,16 @@ export function AuthenticatedSection({
         {isLoading ? "Logging out..." : "Logout"}
       </Button>
 
-      {showLogoutConfirm && (
+      {logout.showLogoutConfirm && (
         <LogoutConfirmation
-          pendingChanges={pendingChanges}
+          pendingChanges={logout.pendingChanges}
           isLoading={isLoading}
-          onCancel={onCancelLogout}
-          onConfirm={onPerformLogout}
+          onCancel={logout.cancelLogout}
+          onConfirm={logout.performLogout}
         />
       )}
+
+      <SignOutEverywhereSection controls={signOutEverywhere} isLoading={isLoading} />
     </div>
   );
 }
@@ -182,24 +181,135 @@ export function LogoutConfirmation({
         You have {pendingChanges} unsynchronized {changeLabel}.
         Logging out will discard them.
       </p>
-      <div className="flex gap-2">
-        <Button
-          variant="subtle"
-          onClick={onCancel}
-          disabled={isLoading}
-          className="flex-1 text-xs"
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="destructive"
-          onClick={onConfirm}
-          disabled={isLoading}
-          className="flex-1 text-xs"
-        >
-          Logout Anyway
-        </Button>
+      <ConfirmButtons
+        isLoading={isLoading}
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+        confirmLabel="Logout Anyway"
+      />
+    </div>
+  );
+}
+
+/** "Sign out of all devices" and its confirmation (SEC-002). */
+function SignOutEverywhereSection({
+  controls,
+  isLoading,
+}: {
+  controls: SignOutEverywhereControls;
+  isLoading: boolean;
+}) {
+  const panelId = useId();
+  const triggerRef = useReturnFocusWhenClosed(controls.showConfirm);
+
+  return (
+    <>
+      <Button
+        ref={triggerRef}
+        onClick={controls.onRequest}
+        disabled={isLoading}
+        variant="ghost"
+        className="w-full"
+        aria-expanded={controls.showConfirm}
+        aria-controls={panelId}
+      >
+        Sign out of all devices
+      </Button>
+      {controls.showConfirm && (
+        <SignOutEverywhereConfirmation
+          id={panelId}
+          pendingChanges={controls.pendingChanges}
+          isLoading={isLoading}
+          onCancel={controls.onCancel}
+          onConfirm={controls.onConfirm}
+        />
+      )}
+    </>
+  );
+}
+
+/** Returns a ref for a trigger, and moves focus back to it when its panel closes. */
+function useReturnFocusWhenClosed(open: boolean) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (wasOpen.current && !open) triggerRef.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+  return triggerRef;
+}
+
+/** Shown every time: ending every session signs out other devices too. */
+function SignOutEverywhereConfirmation({
+  id,
+  pendingChanges,
+  isLoading,
+  onCancel,
+  onConfirm,
+}: LogoutConfirmationProps & { id: string }) {
+  const changeLabel = pendingChanges === 1 ? "change" : "changes";
+  const descriptionId = `${id}-description`;
+
+  return (
+    <div
+      id={id}
+      role="group"
+      aria-label="Confirm sign out of all devices"
+      aria-describedby={descriptionId}
+      className="rounded-lg border border-status-blocked/45 bg-status-blocked-muted p-3"
+    >
+      <div id={descriptionId} className="mb-2 space-y-2 text-sm text-status-blocked-ink">
+        <p>
+          This ends every session for this account, on this device and every
+          other one, including AI assistants set up with a token from it. Each
+          one will need to sign in again.
+        </p>
+        {pendingChanges > 0 && (
+          <p className="font-medium">
+            {pendingChanges} unsynchronized {changeLabel} will be discarded.
+          </p>
+        )}
       </div>
+      <ConfirmButtons
+        isLoading={isLoading}
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+        confirmLabel="Sign out everywhere"
+      />
+    </div>
+  );
+}
+
+/** Cancel and confirm buttons shared by the two sign-out confirmations. */
+function ConfirmButtons({
+  isLoading,
+  onCancel,
+  onConfirm,
+  confirmLabel,
+}: Omit<LogoutConfirmationProps, "pendingChanges"> & { confirmLabel: string }) {
+  // A destructive choice opens on its safe answer, so screen readers announce it.
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => cancelRef.current?.focus(), []);
+
+  return (
+    <div className="flex gap-2">
+      <Button
+        ref={cancelRef}
+        variant="subtle"
+        onClick={onCancel}
+        disabled={isLoading}
+        className="flex-1 text-xs"
+      >
+        Cancel
+      </Button>
+      <Button
+        variant="destructive"
+        onClick={onConfirm}
+        disabled={isLoading}
+        className="flex-1 text-xs"
+      >
+        {confirmLabel}
+      </Button>
     </div>
   );
 }
@@ -209,7 +319,7 @@ function ErrorMessage({ error }: { error: string | null }) {
   if (!error) return null;
 
   return (
-    <div className="rounded-lg bg-status-overdue-muted p-3 text-sm text-status-overdue-ink">
+    <div role="alert" className="rounded-lg bg-status-overdue-muted p-3 text-sm text-status-overdue-ink">
       {error}
     </div>
   );

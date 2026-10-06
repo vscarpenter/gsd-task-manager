@@ -168,7 +168,7 @@ function DialogBody({ state, oauthCallbacks }: DialogBodyProps) {
         error={state.error}
         isLoading={state.isLoading}
         oauthCallbacks={oauthCallbacks}
-        onLogout={state.handleLogout}
+        onLogout={state.logout.handleLogout}
       />
     );
   }
@@ -179,11 +179,8 @@ function DialogBody({ state, oauthCallbacks }: DialogBodyProps) {
         syncStatus={state.syncStatus}
         error={state.error}
         isLoading={state.isLoading}
-        showLogoutConfirm={state.showLogoutConfirm}
-        pendingChanges={state.pendingChanges}
-        onLogout={state.handleLogout}
-        onPerformLogout={state.performLogout}
-        onCancelLogout={state.cancelLogout}
+        logout={state.logout}
+        signOutEverywhere={state.signOutEverywhere}
       />
     );
   }

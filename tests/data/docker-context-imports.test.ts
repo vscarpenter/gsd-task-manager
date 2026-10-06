@@ -32,4 +32,15 @@ describe("Docker build context", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  // SEC-027: `COPY . .` must not carry an encryption key or an agent's config
+  // into the builder stage. `.env` patterns need `**/` to reach `docker/.env`,
+  // and a root-only `.*` drops every root tool folder without listing each one.
+  // A nested `**/.*` would also drop `public/.well-known/`, which the site serves.
+  it("should_exclude_env_files_at_any_depth_and_every_root_dot_entry", () => {
+    const ignored = dockerIgnoreEntries();
+
+    expect(ignored).toEqual(expect.arrayContaining(["**/.env", "**/.env.*", ".*"]));
+    expect(ignored).not.toContain("**/.*");
+  });
 });

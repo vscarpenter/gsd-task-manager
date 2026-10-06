@@ -255,6 +255,38 @@ describe("Logger module", () => {
 	});
 
 	describe("secret sanitization", () => {
+		it("should redact task content keys at any depth", () => {
+			const logger = createLogger("TASK_CRUD", "debug");
+			logger.info("task event", {
+				taskId: "task-1",
+				title: "Draft the reorg announcement",
+				description: "details",
+				tags: ["hr"],
+				notes: "call notes",
+				subtasks: [{ id: "sub-1", title: "step" }],
+				task: { title: "nested title" },
+			});
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<string, unknown>;
+			expect(logObject.metadata).toEqual({
+				taskId: "task-1",
+				title: "***",
+				description: "***",
+				tags: "***",
+				notes: "***",
+				subtasks: "***",
+				task: { title: "***" },
+			});
+		});
+
+		it("should keep diagnostic keys that only mention a content field", () => {
+			const logger = createLogger("TASK_CRUD", "debug");
+			logger.info("task event", { titleLength: 12, tagCount: 3 });
+
+			const logObject = consoleLogSpy.mock.calls[0][1] as Record<string, unknown>;
+			expect(logObject.metadata).toEqual({ titleLength: 12, tagCount: 3 });
+		});
+
 		it("should redact fields containing 'token'", () => {
 			const logger = createLogger("AUTH", "debug");
 			logger.info("auth event", { authToken: "secret-value-123" });

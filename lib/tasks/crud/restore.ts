@@ -29,7 +29,7 @@ export async function restoreTask(task: TaskRecord): Promise<void> {
       if (syncEnabled) await enqueue("create", task.id, task);
     });
 
-    logger.info("Task restored", { taskId: task.id, title: task.title });
+    logger.info("Task restored", { taskId: task.id });
   } catch (error) {
     logger.error("Failed to restore task", error instanceof Error ? error : undefined, {
       taskId: task.id,

@@ -261,17 +261,19 @@ describe('security hardening scripts and workflows', () => {
     expect(dockerfile).toContain('sha256sum -c');
   });
 
-  it('aligns self-hosted assets with the production PocketBase 0.39.10 release', () => {
+  // The self-host image runs ahead of production, which stays on 0.39.10 until
+  // the backend decision in the modernization brief (SEC-025).
+  it('pins the self-hosted image to PocketBase 0.40.4', () => {
     const dockerfile = readRepoFile('docker/Dockerfile');
     const dockerReadme = readRepoFile('docker/README.md');
     const setupGuide = readRepoFile('docker/docker-setup-and-run.md');
 
-    expect(dockerfile).toContain('ARG POCKETBASE_VERSION=0.39.10');
+    expect(dockerfile).toContain('ARG POCKETBASE_VERSION=0.40.4');
     expect(dockerfile).toContain(
-      'ARG POCKETBASE_SHA256_AMD64=67f68c8041dbb6a35fd7af5997ffc5063a7a7b96bf9df810360788f9e9975408'
+      'ARG POCKETBASE_SHA256_AMD64=9042ec818570e79c3628dadcd0a756c1496d9e1173918ec409d133c02f82e5fa'
     );
     expect(dockerfile).toContain(
-      'ARG POCKETBASE_SHA256_ARM64=5bad497eaf2522418673eacfcc90e75106036f19b4aeeac6e59bc48503c01ddf'
+      'ARG POCKETBASE_SHA256_ARM64=86095bf8ed9345954f0d2bf0a5fb9b57584ae60b77ebf3b6cd23a8003a3fd418'
     );
     expect(dockerReadme).not.toMatch(/POCKETBASE_VERSION=0\.26\./);
     expect(setupGuide).not.toMatch(/POCKETBASE_VERSION=0\.26\./);
@@ -328,7 +330,7 @@ describe('security hardening scripts and workflows', () => {
 
     expect(rootPackage.scripts['test:system:pocketbase']).toBeDefined();
     expect(workflow).toContain('test:system:pocketbase');
-    expect(runner).toContain('CURRENT_POCKETBASE_VERSION="0.39.10"');
+    expect(runner).toContain('CURRENT_POCKETBASE_VERSION="0.40.4"');
     expect(runner).toContain('UPGRADE_SOURCE_VERSION="0.26.6"');
     expect(runner).toContain('CURRENT_SHA256=');
     expect(runner).toContain('UPGRADE_SOURCE_SHA256=');

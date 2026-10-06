@@ -16,6 +16,9 @@ const {
   mockGetSyncStatus,
   mockToastSuccess,
   mockToastError,
+  mockToastWarning,
+  mockSignOutEverywhere,
+  MockLocalSignOutIncompleteError,
   mockIsAuthenticated,
   mockRefreshAuth,
   mockClearPocketBase,
@@ -26,6 +29,15 @@ const {
   mockGetSyncStatus: vi.fn().mockResolvedValue({ enabled: false, pendingCount: 0 }),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockToastWarning: vi.fn(),
+  mockSignOutEverywhere: vi.fn(),
+  MockLocalSignOutIncompleteError: class extends Error {
+    otherSessionsEnded: boolean;
+    constructor(otherSessionsEnded: boolean) {
+      super("This device couldn't finish signing out");
+      this.otherSessionsEnded = otherSessionsEnded;
+    }
+  },
   mockIsAuthenticated: vi.fn().mockReturnValue(true),
   mockRefreshAuth: vi.fn().mockResolvedValue(true),
   mockClearPocketBase: vi.fn(),
@@ -60,7 +72,13 @@ vi.mock('sonner', () => ({
   toast: {
     success: mockToastSuccess,
     error: mockToastError,
+    warning: mockToastWarning,
   },
+}));
+
+vi.mock('@/lib/sync/sign-out-everywhere', () => ({
+  signOutEverywhere: (...args: unknown[]) => mockSignOutEverywhere(...args),
+  LocalSignOutIncompleteError: MockLocalSignOutIncompleteError,
 }));
 
 // Capture OAuthButtons callbacks so tests can invoke them directly
@@ -433,6 +451,31 @@ describe('SyncAuthDialog', () => {
       expect(mockClearPocketBase).toHaveBeenCalled();
     });
 
+    it('points to Sign out of all devices when another account owns the local tasks', async () => {
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: false,
+        userId: null,
+        localTaskOwnerUserId: 'previous-user',
+      });
+      mockDb.tasks.count.mockResolvedValue(2);
+
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnSuccess).toBeDefined();
+      });
+
+      await expect(
+        capturedOnSuccess!({
+          isLoggedIn: true,
+          userId: 'new-user',
+          email: 'new@example.com',
+          provider: 'google',
+        })
+      ).rejects.toThrow(/Sign out of all devices/);
+    });
+
     it('should preserve legacy ownership recorded only in userId', async () => {
       mockDb.syncMetadata.get.mockResolvedValue({
         key: 'sync_config',
@@ -732,6 +775,110 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         expect(screen.getByText(/3 unsynchronized changes/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Logout Anyway/i })).toBeInTheDocument();
+      });
+    });
+
+    describe('Sign out of all devices', () => {
+      async function openConfirmation(user: ReturnType<typeof userEvent.setup>) {
+        render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+        await user.click(await screen.findByRole('button', { name: 'Sign out of all devices' }));
+      }
+
+      it('asks before ending every session', async () => {
+        const user = userEvent.setup();
+
+        await openConfirmation(user);
+
+        expect(await screen.findByText(/ends every session for this account/)).toBeInTheDocument();
+        expect(mockSignOutEverywhere).not.toHaveBeenCalled();
+      });
+
+      it('warns about unsynced changes in the confirmation', async () => {
+        const user = userEvent.setup();
+        mockGetSyncStatus.mockResolvedValueOnce({ enabled: true, pendingCount: 2 });
+
+        await openConfirmation(user);
+
+        expect(await screen.findByText(/2 unsynchronized changes will be discarded/)).toBeInTheDocument();
+      });
+
+      it('moves focus to Cancel and marks the trigger expanded', async () => {
+        const user = userEvent.setup();
+
+        await openConfirmation(user);
+
+        expect(await screen.findByRole('button', { name: 'Cancel' })).toHaveFocus();
+        expect(screen.getByRole('button', { name: 'Sign out of all devices' })).toHaveAttribute(
+          'aria-expanded',
+          'true'
+        );
+      });
+
+      it('cancels without signing out and returns focus to the trigger', async () => {
+        const user = userEvent.setup();
+
+        await openConfirmation(user);
+        await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+        expect(screen.queryByText(/ends every session for this account/)).not.toBeInTheDocument();
+        expect(mockSignOutEverywhere).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Sign out of all devices' })).toHaveFocus();
+      });
+
+      it('ends every session after confirmation', async () => {
+        const user = userEvent.setup();
+        const onSuccess = vi.fn();
+        mockSignOutEverywhere.mockResolvedValue({ otherSessionsEnded: true });
+
+        render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} onSuccess={onSuccess} />);
+        await user.click(await screen.findByRole('button', { name: 'Sign out of all devices' }));
+        await user.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
+
+        await waitFor(() => {
+          expect(mockSignOutEverywhere).toHaveBeenCalledTimes(1);
+          expect(mockToastSuccess).toHaveBeenCalledWith('Signed out of all devices');
+          expect(onSuccess).toHaveBeenCalled();
+        });
+      });
+
+      it('says so when the server could only sign out this device', async () => {
+        const user = userEvent.setup();
+        mockSignOutEverywhere.mockResolvedValue({ otherSessionsEnded: false });
+
+        await openConfirmation(user);
+        await user.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
+
+        await waitFor(() => {
+          expect(mockToastWarning).toHaveBeenCalledWith(
+            "Signed out on this device. This server can't end your other sessions.",
+            { duration: 10_000 }
+          );
+        });
+      });
+
+      it('stays signed in and shows the error when the server refuses', async () => {
+        const user = userEvent.setup();
+        mockSignOutEverywhere.mockRejectedValue(new Error('Network down'));
+
+        await openConfirmation(user);
+        await user.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          "Couldn't sign out of all devices (Network down). You're still signed in."
+        );
+        expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      });
+
+      it('asks the user to finish with Logout when this device could not finish', async () => {
+        const user = userEvent.setup();
+        mockSignOutEverywhere.mockRejectedValue(new MockLocalSignOutIncompleteError(true));
+
+        await openConfirmation(user);
+        await user.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          "Your other devices are signed out, but this device couldn't finish signing out. Choose Logout to finish."
+        );
       });
     });
   });

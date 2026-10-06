@@ -302,3 +302,22 @@ Fix pattern: wait for the title to be focused before touching other fields
   Vitest 5 and the MCP suite runs Vitest 4, and neither can import the other's
   code. MCP tests reach repo-root fixtures with `resolve(__dirname,
   '../../../../..')`.
+
+## 2026-10-05: modernization Phase 2, closing the security findings
+
+- **PocketBase can only end sessions by rotating the user's token key.** Its
+  tokens are stateless, so there is no per-device revoke; rotation signs out
+  every device and every MCP config at once. An account switch can't trigger it
+  either, because the old account's token is gone before the new one signs in.
+- **The PocketBase system test orphans `next dev`.** It spawns `bun run dev:e2e`
+  and kills only the bun process, so the dev server survives and rewrites
+  `next-env.d.ts` and `tsconfig.json`. Plain `next dev` rewrites
+  `next-env.d.ts` too. After any run, stop the orphan and `git restore` both.
+- **Seed IndexedDB only after Dexie creates it.** Opening `GsdTaskManager`
+  without a version creates an empty database, and holding that connection
+  blocks Dexie's upgrade, which hangs the app. Poll `indexedDB.databases()` in
+  the page, then open, write, and close.
+- **The code-shape ratchet rejects growth, so extract instead of compressing.**
+  Adding a feature to `useSyncAuthDialog` pushed it past its baseline; moving the
+  sibling logout flow into its own hook made room honestly and shrank the debt.
+

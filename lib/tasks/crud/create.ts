@@ -46,7 +46,7 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
       if (syncEnabled) await enqueue("create", record.id, record);
     });
 
-    logger.info("Task created", { taskId: record.id, title: record.title });
+    logger.info("Task created", { taskId: record.id });
     return record;
   } catch (error) {
     // Log only the operation, never the raw input — it holds the task

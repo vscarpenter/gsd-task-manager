@@ -31,7 +31,7 @@ export async function updateTask(
       return record;
     });
 
-    logger.info("Task updated", { taskId: id, title: nextRecord.title });
+    logger.info("Task updated", { taskId: id });
     return nextRecord;
   } catch (error) {
     logger.error("Failed to update task", error instanceof Error ? error : undefined, {
