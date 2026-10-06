@@ -261,8 +261,8 @@ describe('security hardening scripts and workflows', () => {
     expect(dockerfile).toContain('sha256sum -c');
   });
 
-  // The self-host image runs ahead of production, which stays on 0.39.10 until
-  // the backend decision in the modernization brief (SEC-025).
+  // Production api.vinny.io runs this same release as a bare binary (checked on
+  // the server 2026-10-06), so the self-host image and production match (SEC-025).
   it('pins the self-hosted image to PocketBase 0.40.4', () => {
     const dockerfile = readRepoFile('docker/Dockerfile');
     const dockerReadme = readRepoFile('docker/README.md');
