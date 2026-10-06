@@ -175,7 +175,8 @@ describe("Trash (ADR 0015)", () => {
       });
 
       it("keeps a row whose deletedAt does not parse", async () => {
-        await putAt("garbage", "not-a-date");
+        // Sorts before any real cutoff as a string, so a string compare purged it.
+        await putAt("garbage", "0000-00-00");
 
         await expect(purgeExpiredTrash()).resolves.toBe(0);
         expect(await getDb().deletedTasks.get("garbage")).toBeDefined();
