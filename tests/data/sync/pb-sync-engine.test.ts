@@ -183,13 +183,38 @@ describe('pb-sync-engine', () => {
       expect(mockTasks.has('task-1')).toBe(true);
     });
 
-    it('should skip create if task already exists locally', async () => {
-      mockTasks.set('task-1', { id: 'task-1', title: 'Existing' });
+    // RULE-194, changed in Phase 3: a create for a task this device already has
+    // (edit-beats-delete re-creates the record on the server) follows the same
+    // strictly-newer rule as an update. The pull cursor won't fetch it later.
+    it('should apply a create for an existing task when the remote is newer', async () => {
+      mockTasks.set('task-1', { id: 'task-1', title: 'Existing', updatedAt: '2026-04-07T00:00:00.000Z' });
 
-      const record = { task_id: 'task-1', title: 'New Task', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      const record = { task_id: 'task-1', title: 'Recreated', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      await applyRemoteChange('create', record as never, 'user-1');
+
+      expect(mockTasks.get('task-1')).toMatchObject({ title: 'Recreated' });
+    });
+
+    it.each([
+      ['older', '2026-04-07T00:00:00.000Z'],
+      ['equal', '2026-04-08T00:00:00.000Z'],
+    ])('should skip a create for an existing task when the remote is %s', async (_label, remoteStamp) => {
+      mockTasks.set('task-1', { id: 'task-1', title: 'Existing', updatedAt: '2026-04-08T00:00:00.000Z' });
+
+      const record = { task_id: 'task-1', title: 'Stale', client_updated_at: remoteStamp };
       await applyRemoteChange('create', record as never, 'user-1');
 
       expect(mockDb.tasks.put).not.toHaveBeenCalled();
+    });
+
+    it('should not restore a trashed task on a remote create that predates the deletion', async () => {
+      mockDeletedTasks.set('task-1', { id: 'task-1', deletedAt: '2026-04-09T00:00:00.000Z' });
+
+      const record = { task_id: 'task-1', title: 'Recreated', client_updated_at: '2026-04-08T00:00:00.000Z' };
+      await applyRemoteChange('create', record as never, 'user-1');
+
+      expect(mockTasks.has('task-1')).toBe(false);
+      expect(mockDeletedTasks.has('task-1')).toBe(true);
     });
 
     it('should not resurrect an archived task on a remote create that predates the archive', async () => {
