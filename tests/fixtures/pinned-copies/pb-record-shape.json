@@ -1,0 +1,419 @@
+{
+  "$comment": "Pins the two hand-kept mappings between a task and its PocketBase tasks record. The root suite (tests/data/pinned-copies/pb-record-shape.test.ts) checks lib/sync/task-mapper.ts and the MCP suite (packages/mcp-server/src/__tests__/pinned-copies/pb-record-shape.test.ts) checks packages/mcp-server/src/types.ts against this file. 'expected' holds what both copies produce. 'divergences' holds a value per copy for fields where they differ today; a copy missing from a divergence leaves the field out. 'rejects' names a copy that returns null for the record. Divergences are pinned as they stand and not fixed here. Brief: MODERNIZATION_BRIEF.md, Phase 1.",
+  "copies": {
+    "web": "lib/sync/task-mapper.ts (taskRecordToPocketBase, pocketBaseToTaskRecord)",
+    "mcp": "packages/mcp-server/src/types.ts (taskToPBFields, pbTaskToTask)"
+  },
+  "ownerId": "owner_fixture_1",
+  "deviceId": "device_fixture_1",
+  "now": "2026-10-05T18:00:00.000Z",
+  "wireFields": [
+    "task_id", "owner", "title", "description", "urgent", "important", "quadrant",
+    "due_date", "completed", "completed_at", "recurrence", "tags", "subtasks",
+    "dependencies", "notification_enabled", "notification_sent", "notify_before",
+    "last_notification_at", "estimated_minutes", "time_spent", "time_entries",
+    "snoozed_until", "client_updated_at", "client_created_at", "device_id"
+  ],
+  "toRecord": [
+    {
+      "name": "every optional field set",
+      "task": {
+        "id": "task-fixture-full",
+        "title": "Plan the quarterly review",
+        "description": "Gather the numbers first",
+        "urgent": true,
+        "important": false,
+        "quadrant": "urgent-not-important",
+        "dueDate": "2026-10-09T17:00:00.000Z",
+        "completed": true,
+        "completedAt": "2026-10-05T15:30:00.000Z",
+        "recurrence": "weekly",
+        "tags": ["work", "review"],
+        "subtasks": [{ "id": "sub-1", "title": "Pull the metrics", "completed": true }],
+        "dependencies": ["task-dep-1"],
+        "notificationEnabled": false,
+        "notificationSent": true,
+        "notifyBefore": 30,
+        "lastNotificationAt": "2026-10-05T14:00:00.000Z",
+        "estimatedMinutes": 45,
+        "timeSpent": 20,
+        "timeEntries": [{ "id": "te-1", "startedAt": "2026-10-05T13:00:00.000Z", "endedAt": "2026-10-05T13:20:00.000Z", "notes": "first pass" }],
+        "snoozedUntil": "2026-10-06T09:00:00.000Z",
+        "createdAt": "2026-10-01T12:00:00.000Z",
+        "updatedAt": "2026-10-05T15:30:00.000Z"
+      },
+      "expected": {
+        "task_id": "task-fixture-full",
+        "owner": "owner_fixture_1",
+        "title": "Plan the quarterly review",
+        "description": "Gather the numbers first",
+        "urgent": true,
+        "important": false,
+        "quadrant": "urgent-not-important",
+        "due_date": "2026-10-09T17:00:00.000Z",
+        "completed": true,
+        "completed_at": "2026-10-05T15:30:00.000Z",
+        "recurrence": "weekly",
+        "tags": ["work", "review"],
+        "subtasks": [{ "id": "sub-1", "title": "Pull the metrics", "completed": true }],
+        "dependencies": ["task-dep-1"],
+        "notification_enabled": false,
+        "notification_sent": true,
+        "notify_before": 30,
+        "last_notification_at": "2026-10-05T14:00:00.000Z",
+        "estimated_minutes": 45,
+        "time_spent": 20,
+        "time_entries": [{ "id": "te-1", "startedAt": "2026-10-05T13:00:00.000Z", "endedAt": "2026-10-05T13:20:00.000Z", "notes": "first pass" }],
+        "snoozed_until": "2026-10-06T09:00:00.000Z",
+        "client_updated_at": "2026-10-05T15:30:00.000Z",
+        "client_created_at": "2026-10-01T12:00:00.000Z",
+        "device_id": "device_fixture_1"
+      }
+    },
+    {
+      "name": "optional fields absent",
+      "task": {
+        "id": "task-fixture-sparse",
+        "title": "Call the bank",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "createdAt": "2026-10-02T08:00:00.000Z",
+        "updatedAt": "2026-10-02T08:00:00.000Z"
+      },
+      "expected": {
+        "task_id": "task-fixture-sparse",
+        "owner": "owner_fixture_1",
+        "title": "Call the bank",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "due_date": "",
+        "completed": false,
+        "completed_at": "",
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notification_enabled": true,
+        "notification_sent": false,
+        "last_notification_at": "",
+        "time_spent": 0,
+        "time_entries": [],
+        "snoozed_until": "",
+        "client_updated_at": "2026-10-02T08:00:00.000Z",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1"
+      },
+      "divergences": {
+        "notify_before": {
+          "web": null,
+          "mcp": 0,
+          "note": "The web writes null and the MCP server writes 0. The web reminder checker reads null as 'use the default reminder' and 0 as 'remind at the due time' (lib/notification-checker.ts:110). MCP updates rewrite every field through this mapping, so an MCP edit to a web task with no notifyBefore moves its reminder to the due time. Not listed in brief §7."
+        },
+        "estimated_minutes": {
+          "web": null,
+          "mcp": 0,
+          "note": "The web writes null and the MCP server writes 0, which is outside the 1 to 10080 estimate range. Web analytics treat 0 as no estimate."
+        }
+      }
+    }
+  ],
+  "fromRecord": [
+    {
+      "name": "every field set",
+      "record": {
+        "id": "pbrecfixture001",
+        "collectionId": "pbc_tasks",
+        "collectionName": "tasks",
+        "task_id": "task-fixture-full",
+        "owner": "owner_fixture_1",
+        "title": "Plan the quarterly review",
+        "description": "Gather the numbers first",
+        "urgent": true,
+        "important": false,
+        "quadrant": "urgent-not-important",
+        "due_date": "2026-10-09T17:00:00.000Z",
+        "completed": true,
+        "completed_at": "2026-10-05T15:30:00.000Z",
+        "recurrence": "weekly",
+        "tags": ["work", "review"],
+        "subtasks": [{ "id": "sub-1", "title": "Pull the metrics", "completed": true }],
+        "dependencies": ["task-dep-1"],
+        "notification_enabled": false,
+        "notification_sent": true,
+        "notify_before": 30,
+        "last_notification_at": "2026-10-05T14:00:00.000Z",
+        "estimated_minutes": 45,
+        "time_spent": 20,
+        "time_entries": [{ "id": "te-1", "startedAt": "2026-10-05T13:00:00.000Z", "endedAt": "2026-10-05T13:20:00.000Z", "notes": "first pass" }],
+        "snoozed_until": "2026-10-06T09:00:00.000Z",
+        "client_updated_at": "2026-10-05T15:30:00.000Z",
+        "client_created_at": "2026-10-01T12:00:00.000Z",
+        "device_id": "device_fixture_1",
+        "created": "2026-10-01T12:00:01.000Z",
+        "updated": "2026-10-05T15:30:01.000Z"
+      },
+      "expected": {
+        "id": "task-fixture-full",
+        "title": "Plan the quarterly review",
+        "description": "Gather the numbers first",
+        "urgent": true,
+        "important": false,
+        "quadrant": "urgent-not-important",
+        "dueDate": "2026-10-09T17:00:00.000Z",
+        "completed": true,
+        "completedAt": "2026-10-05T15:30:00.000Z",
+        "recurrence": "weekly",
+        "tags": ["work", "review"],
+        "subtasks": [{ "id": "sub-1", "title": "Pull the metrics", "completed": true }],
+        "dependencies": ["task-dep-1"],
+        "notificationEnabled": false,
+        "notifyBefore": 30,
+        "estimatedMinutes": 45,
+        "timeSpent": 20,
+        "timeEntries": [{ "id": "te-1", "startedAt": "2026-10-05T13:00:00.000Z", "endedAt": "2026-10-05T13:20:00.000Z", "notes": "first pass" }],
+        "createdAt": "2026-10-01T12:00:00.000Z",
+        "updatedAt": "2026-10-05T15:30:00.000Z"
+      },
+      "divergences": {
+        "notificationSent": {
+          "web": false,
+          "mcp": true,
+          "note": "The web treats reminder state as device-local and takes it from the local copy, which is absent here (RULE-003). The MCP server reports the record's value."
+        },
+        "lastNotificationAt": {
+          "mcp": "2026-10-05T14:00:00.000Z",
+          "note": "Device-local on the web, so it is left out without a local copy. The MCP server reports the record's value."
+        },
+        "snoozedUntil": {
+          "mcp": "2026-10-06T09:00:00.000Z",
+          "note": "Device-local on the web, so it is left out without a local copy. The MCP server reports the record's value."
+        }
+      }
+    },
+    {
+      "name": "empty strings and nulls",
+      "record": {
+        "id": "pbrecfixture002",
+        "task_id": "task-fixture-sparse",
+        "owner": "owner_fixture_1",
+        "title": "Call the bank",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "due_date": "",
+        "completed": false,
+        "completed_at": "",
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notification_enabled": true,
+        "notification_sent": false,
+        "notify_before": null,
+        "last_notification_at": "",
+        "estimated_minutes": null,
+        "time_spent": 0,
+        "time_entries": [],
+        "snoozed_until": "",
+        "client_updated_at": "2026-10-02T08:00:00.000Z",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1",
+        "created": "2026-10-02T08:00:01.000Z",
+        "updated": "2026-10-02T08:00:01.000Z"
+      },
+      "expected": {
+        "id": "task-fixture-sparse",
+        "title": "Call the bank",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notificationEnabled": true,
+        "notificationSent": false,
+        "timeSpent": 0,
+        "timeEntries": [],
+        "createdAt": "2026-10-02T08:00:00.000Z",
+        "updatedAt": "2026-10-02T08:00:00.000Z"
+      }
+    },
+    {
+      "name": "client_updated_at far in the future",
+      "record": {
+        "id": "pbrecfixture003",
+        "task_id": "task-fixture-future",
+        "owner": "owner_fixture_1",
+        "title": "Stamped by a skewed clock",
+        "description": "",
+        "urgent": false,
+        "important": false,
+        "quadrant": "not-urgent-not-important",
+        "completed": false,
+        "client_updated_at": "2027-01-01T00:00:00.000Z",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1",
+        "created": "2026-10-02T08:00:01.000Z",
+        "updated": "2026-10-02T08:00:01.000Z"
+      },
+      "expected": {
+        "id": "task-fixture-future",
+        "title": "Stamped by a skewed clock",
+        "description": "",
+        "urgent": false,
+        "important": false,
+        "quadrant": "not-urgent-not-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notificationEnabled": true,
+        "notificationSent": false,
+        "timeSpent": 0,
+        "timeEntries": [],
+        "createdAt": "2026-10-02T08:00:00.000Z"
+      },
+      "divergences": {
+        "updatedAt": {
+          "web": "2026-10-05T18:05:00.000Z",
+          "mcp": "2027-01-01T00:00:00.000Z",
+          "note": "The web caps a client stamp at now plus 5 minutes (RULE-040, RULE-271). The MCP server keeps the raw stamp."
+        }
+      }
+    },
+    {
+      "name": "title over the shared 80-character limit",
+      "record": {
+        "id": "pbrecfixture004",
+        "task_id": "task-fixture-long",
+        "owner": "owner_fixture_1",
+        "title": "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
+        "description": "",
+        "urgent": true,
+        "important": true,
+        "quadrant": "urgent-important",
+        "completed": false,
+        "client_updated_at": "2026-10-02T08:00:00.000Z",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1"
+      },
+      "rejects": {
+        "web": "The web validates each pulled record against the field limits and skips this one. The MCP server doesn't validate what it reads."
+      },
+      "expected": {
+        "id": "task-fixture-long",
+        "title": "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
+        "description": "",
+        "urgent": true,
+        "important": true,
+        "quadrant": "urgent-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notificationEnabled": true,
+        "notificationSent": false,
+        "timeSpent": 0,
+        "timeEntries": [],
+        "createdAt": "2026-10-02T08:00:00.000Z",
+        "updatedAt": "2026-10-02T08:00:00.000Z"
+      }
+    },
+    {
+      "name": "blank client_updated_at",
+      "record": {
+        "id": "pbrecfixture005",
+        "task_id": "task-fixture-blank-stamp",
+        "owner": "owner_fixture_1",
+        "title": "Written by an older client",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "client_updated_at": "",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1",
+        "created": "2026-10-02T08:00:01.000Z",
+        "updated": "2026-10-03T09:00:01.000Z"
+      },
+      "rejects": {
+        "web": "The web requires an ISO client_updated_at and skips the record. The MCP server falls back to PocketBase's own updated time."
+      },
+      "expected": {
+        "id": "task-fixture-blank-stamp",
+        "title": "Written by an older client",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notificationEnabled": true,
+        "notificationSent": false,
+        "timeSpent": 0,
+        "timeEntries": [],
+        "createdAt": "2026-10-02T08:00:00.000Z",
+        "updatedAt": "2026-10-03T09:00:01.000Z"
+      }
+    },
+    {
+      "name": "unknown recurrence",
+      "record": {
+        "id": "pbrecfixture006",
+        "task_id": "task-fixture-yearly",
+        "owner": "owner_fixture_1",
+        "title": "Renew the passport",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "recurrence": "yearly",
+        "client_updated_at": "2026-10-02T08:00:00.000Z",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1"
+      },
+      "rejects": {
+        "web": "The web accepts only none, daily, weekly, and monthly, and skips the record. The MCP server maps an unknown value to none."
+      },
+      "expected": {
+        "id": "task-fixture-yearly",
+        "title": "Renew the passport",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notificationEnabled": true,
+        "notificationSent": false,
+        "timeSpent": 0,
+        "timeEntries": [],
+        "createdAt": "2026-10-02T08:00:00.000Z",
+        "updatedAt": "2026-10-02T08:00:00.000Z"
+      }
+    }
+  ]
+}
