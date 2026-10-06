@@ -38,7 +38,7 @@
 
 import type PocketBase from "pocketbase";
 import { getPocketBase, getCurrentUserId } from "./pocketbase-client";
-import { refreshAuth } from "./pb-auth";
+import { refreshAuthOutcome } from "./pb-auth";
 import { THROTTLE_MS, delay, fetchRemoteTaskIndex } from "./pb-sync-helpers";
 import type { RemoteTaskIndexEntry } from "./types";
 import { createLogger } from "@/lib/logger";
@@ -225,9 +225,14 @@ export async function deleteRemoteAccountAndTasks(
 
   // Refresh the (possibly expired) token, then resolve the owner id. A dead session
   // yields no id — report it so the UI can prompt a re-sign-in.
-  await refreshAuth();
+  const refresh = await refreshAuthOutcome();
   const userId = getCurrentUserId();
   if (!userId) {
+    // Offline with an expired token also yields no id, but signing in again
+    // can't help there, so report a connection failure the user can retry.
+    if (refresh === "unreachable") {
+      return { ok: false, stage: "tasks", authRejected: false, remoteTasksErased: false };
+    }
     return { ok: false, stage: "tasks", authRejected: true };
   }
 

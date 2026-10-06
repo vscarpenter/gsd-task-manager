@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type PocketBase from 'pocketbase';
 import { deleteRemoteAccountAndTasks } from '@/lib/sync/pb-account-deletion';
 import { getPocketBase, getCurrentUserId } from '@/lib/sync/pocketbase-client';
-import { refreshAuth } from '@/lib/sync/pb-auth';
+import { refreshAuthOutcome } from '@/lib/sync/pb-auth';
 import type { RemoteTaskIndexEntry } from '@/lib/sync/types';
 
 const { fetchRemoteTaskIndexMock } = vi.hoisted(() => ({ fetchRemoteTaskIndexMock: vi.fn() }));
@@ -57,7 +57,7 @@ describe('deleteRemoteAccountAndTasks', () => {
       collection: (name: string) => ({ delete: name === 'tasks' ? tasksDelete : usersDelete }),
     } as unknown as PocketBase);
     vi.mocked(getCurrentUserId).mockReturnValue('user-123');
-    vi.mocked(refreshAuth).mockResolvedValue(true);
+    vi.mocked(refreshAuthOutcome).mockResolvedValue('refreshed');
     fetchRemoteTaskIndexMock.mockResolvedValue(EMPTY_INDEX);
   });
 
@@ -74,11 +74,25 @@ describe('deleteRemoteAccountAndTasks', () => {
   });
 
   it('does not call the route when authentication has no users principal', async () => {
+    vi.mocked(refreshAuthOutcome).mockResolvedValue('rejected');
     vi.mocked(getCurrentUserId).mockReturnValue(null);
 
     const result = await deleteRemoteAccountAndTasks();
 
     expect(result).toEqual({ ok: false, stage: 'tasks', authRejected: true });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  // RULE-192, changed in Phase 3: offline with an expired token, the refresh
+  // fails for want of a network, which says nothing about the session. The
+  // user gets "check your connection", not "your session expired".
+  it('reports a connection failure when the refresh cannot reach the server', async () => {
+    vi.mocked(refreshAuthOutcome).mockResolvedValue('unreachable');
+    vi.mocked(getCurrentUserId).mockReturnValue(null);
+
+    const result = await deleteRemoteAccountAndTasks();
+
+    expect(result).toMatchObject({ ok: false, stage: 'tasks', authRejected: false, remoteTasksErased: false });
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -126,9 +140,9 @@ describe('deleteRemoteAccountAndTasks', () => {
 
   it('refreshes auth before resolving the principal and invoking erasure', async () => {
     const order: string[] = [];
-    vi.mocked(refreshAuth).mockImplementationOnce(async () => {
+    vi.mocked(refreshAuthOutcome).mockImplementationOnce(async () => {
       order.push('refresh');
-      return true;
+      return 'refreshed';
     });
     vi.mocked(getCurrentUserId).mockImplementationOnce(() => {
       order.push('principal');
