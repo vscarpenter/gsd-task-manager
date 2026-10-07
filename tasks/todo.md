@@ -1,3 +1,34 @@
+# Resuming From Here, 2026-10-07: modernization Phase 3 signed off
+
+- [x] All four Phase 3 exit boxes in the brief are ticked with evidence. Each of the 15 fixes was
+      reversed on `main` @ `a1d3444` with the tests kept, and every item had a test fail on the
+      pre-fix code. Table: `../gsd-modernize/analysis/gsd-taskmanager/CONTRACT_MAP.md`.
+- [x] `8d385ce` (a structured 429 or 5xx is transient) missed #579 because it was never pushed.
+      It landed as #583 (`bb5c42a`). All 15 PR checks passed, and so did `main`'s runs.
+- [ ] Next: record the code-shape counts in `BASELINE.md`, then start Phase 5. The ratchet
+      expires 2026-12-31. Phase 4 waits on Vinny's §7 decisions.
+- [ ] Cleanup, needs Vinny's OK: the four agent worktrees, the bundle and `worktree-agent-*`
+      branches, `fix/phase-3-defects` (now fully merged), and the remote branch
+      `fix/sync-structured-5xx-transient`.
+
+Blockers: none. Full handoff: `../gsd-modernize/HANDOFF.md`.
+
+# Resuming From Here, 2026-10-06: 13.8.0 release and gsd-mcp-server 1.3.0
+
+- [x] Local sign-in on `dev.local:8080` timed out by design: since #569 the hosted bounce
+      returns only to gsd.vinny.dev. Google sign-in verified on production.
+- [x] Web 13.8.0: PR #581, tag `v13.8.0`. The release run failed its audit on
+      GHSA-6qxp-vccf-f47h, so Vinny deployed locally. Prod `sw.js` reads 13.8.1 and serves
+      13.8.0 code, but that build has no attestation.
+- [x] MCP SDK 1.30.1 to 1.31.0 and gsd-mcp-server 1.3.0: PR #582 (`a1d3444`), tag
+      `mcp-v1.3.0`, run 37531982567. On npm since 21:21 UTC with provenance; `latest` is 1.3.0.
+- [ ] Optional: cut the next web tag so production returns to a gated, attested build.
+      `v13.8.0` can't re-run green because its commit still pins SDK 1.30.1.
+- [ ] Later: SDK 1.32.x as its own change (it accepts `tools/call` without arguments).
+- [ ] The `braces` audit exception expires 2027-01-05.
+
+Blockers: none. Assumption: 1.3.0 (not 1.2.9) because `list_devices` left the tool surface.
+
 # Session state, 2026-10-06: modernization Phase 3, fix the ticked defects
 
 Spec: `tasks/spec-phase3-defects.md`. Approved design: brief §3 Phase 3, with
@@ -23,7 +54,8 @@ binary; extract-rules skipped; 11 revisions accepted; 15 items to fix, 4 kept;
       Headless check on the built app: dashboard counts and streak, About snippet, and a reminder
       fired and marked on `/dashboard` in full headless Chrome.
 - [x] `CONTRACT_MAP.md` rows and a Phase 3 section; `RULE_REVIEWS.json` notes, `.md` regenerated.
-- [ ] Push and PR: waits for Vinny. After merge and CI, tick the four Phase 3 exit boxes with evidence.
+- [x] Push and PR: #579 merged 2026-10-06 as `bbdbd88`. The four exit boxes were ticked on
+      2026-10-07, after #583 landed the missing commit (see the block above).
 
 Watch on first CI run: `tests/docker-migrations.test.ts` now requires the sqlite3 CLI (it ships on
 `ubuntu-24.04`). `/auth/callback` sits 4.4 KB over its recorded first-load size, inside the
