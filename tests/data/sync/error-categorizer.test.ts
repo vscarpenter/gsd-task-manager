@@ -194,6 +194,24 @@ describe('error-categorizer', () => {
       expect(isTransientSyncFailure(pbAbort)).toBe(true);
     });
 
+    // The PB SDK sets `message` from the response body, so a 5xx from PocketBase
+    // or a proxy arrives as "Something went wrong..." with no status in the text.
+    it.each([429, 500, 502, 503, 504])(
+      'returns true for a structured HTTP %s with a generic message',
+      (status) => {
+        const pbError = Object.assign(new Error('Something went wrong.'), { status });
+        expect(isTransientSyncFailure(pbError)).toBe(true);
+      }
+    );
+
+    it.each([400, 401, 403, 404, 422])(
+      'returns false for a structured HTTP %s with a generic message',
+      (status) => {
+        const pbError = Object.assign(new Error('Something went wrong.'), { status });
+        expect(isTransientSyncFailure(pbError)).toBe(false);
+      }
+    );
+
     it('returns true for known transient text patterns', () => {
       expect(isTransientSyncFailure(new Error('Network error'))).toBe(true);
       expect(isTransientSyncFailure(new Error('Request timeout'))).toBe(true);

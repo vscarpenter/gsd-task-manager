@@ -57,6 +57,9 @@ export function isAuthError(error: Error): boolean {
   );
 }
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+const HTTP_SERVER_ERROR_MIN = 500;
+
 /**
  * Should this failure be treated as transient operational noise?
  *
@@ -78,6 +81,13 @@ export function isTransientSyncFailure(error: unknown): boolean {
   // Something went wrong." signature and is purely operational noise.
   const status = (error as { status?: unknown }).status;
   if (typeof status === 'number' && status === 0) return true;
+
+  // The SDK takes `message` from the response body, so a 429 or 5xx from
+  // PocketBase or a proxy usually reads "Something went wrong..." and names no
+  // status. Trust the structured field before the text patterns.
+  if (typeof status === 'number' && (status === HTTP_TOO_MANY_REQUESTS || status >= HTTP_SERVER_ERROR_MIN)) {
+    return true;
+  }
 
   return isTransientError(error);
 }

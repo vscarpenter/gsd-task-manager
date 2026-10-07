@@ -424,6 +424,14 @@ describe('PocketBase Auth', () => {
 
       await expect(refreshAuthOutcome()).resolves.toBe('unreachable');
     });
+
+    it('reports unreachable for a server error whose message names no status', async () => {
+      mockAuthRefresh.mockRejectedValue(
+        Object.assign(new Error('Something went wrong while processing your request.'), { status: 503 }),
+      );
+
+      await expect(refreshAuthOutcome()).resolves.toBe('unreachable');
+    });
   });
 
   describe('ensureValidAuth', () => {
