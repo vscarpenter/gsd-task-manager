@@ -4,10 +4,10 @@ const { createServer } = require("node:http");
 const { existsSync, readFileSync, statSync } = require("node:fs");
 const { extname, join, resolve, sep } = require("node:path");
 const { handler: rewriteLikeCloudFront } = require("../../cloudfront-function-url-rewrite.cjs");
+const { buildCsp } = require("../../config/csp.cjs");
 
 const DEFAULT_PORT = 3100;
 const HOST = "127.0.0.1";
-const POLICY_PATH = join(__dirname, "../../cloudfront/response-headers-policy.json");
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -21,8 +21,7 @@ const CONTENT_TYPES = {
 };
 
 function readProductionCsp() {
-  const policy = JSON.parse(readFileSync(POLICY_PATH, "utf8"));
-  return policy.SecurityHeadersConfig.ContentSecurityPolicy.ContentSecurityPolicy;
+  return buildCsp("cloudfront");
 }
 
 function toCloudFrontHeaders(headers) {
