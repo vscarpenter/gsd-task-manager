@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
 /**
- * Updates the service worker cache version to match the current build version.
- * Called as part of the build process to ensure cache busting on deploys.
+ * Stamps the build's cache version into an exported service worker.
  *
- * Reads from .build-info.json (the per-build version produced by
- * generate-build-info.cjs) so every build rotates the cache key, even when
- * package.json hasn't been bumped. Falls back to package.json if build info
- * is missing (e.g. running this script standalone before a build).
+ * public/sw.js keeps a fixed placeholder, so a build never rewrites a tracked
+ * file. scripts/build-static-export.sh runs this on out/sw.js after the export.
+ * The version comes from .build-info.json (written by generate-build-info.cjs),
+ * with package.json as the fallback, so every build rotates the cache key.
+ *
+ * It fails closed. A deployed worker that kept an old version would never
+ * rotate its pages and runtime caches, so a missing placeholder or a version
+ * that can't sit inside a quoted literal exits 1.
  */
 
 const fs = require('fs');
@@ -15,7 +18,8 @@ const path = require('path');
 
 const BUILD_INFO = path.join(__dirname, '..', '.build-info.json');
 const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
-const SW_FILE = path.join(__dirname, '..', 'public', 'sw.js');
+const CACHE_VERSION_PLACEHOLDER = "const CACHE_VERSION = 'dev';";
+const VERSION_PATTERN = /^[0-9A-Za-z.+-]+$/;
 
 function resolveVersion() {
   if (fs.existsSync(BUILD_INFO)) {
@@ -30,17 +34,32 @@ function resolveVersion() {
   return packageJson.version || '0.0.0';
 }
 
-const version = resolveVersion();
+function stampCacheVersion(source, version) {
+  if (!VERSION_PATTERN.test(version)) {
+    throw new Error(`Refusing to stamp an invalid cache version: ${JSON.stringify(version)}`);
+  }
+  if (!source.includes(CACHE_VERSION_PLACEHOLDER)) {
+    throw new Error(`The worker has no CACHE_VERSION placeholder to stamp: ${CACHE_VERSION_PLACEHOLDER}`);
+  }
+  return source.replace(CACHE_VERSION_PLACEHOLDER, `const CACHE_VERSION = '${version}';`);
+}
 
-let swContent = fs.readFileSync(SW_FILE, 'utf8');
+function main(target) {
+  if (!target) {
+    throw new Error('Usage: node scripts/update-sw-version.cjs <path to the exported sw.js>');
+  }
+  const version = resolveVersion();
+  fs.writeFileSync(target, stampCacheVersion(fs.readFileSync(target, 'utf8'), version));
+  console.log(`Service worker cache version stamped to ${version} in ${target}`);
+}
 
-// Replace the CACHE_VERSION constant value
-const versionPattern = /const CACHE_VERSION = '[^']+';/;
-if (versionPattern.test(swContent)) {
-  swContent = swContent.replace(versionPattern, `const CACHE_VERSION = '${version}';`);
-  fs.writeFileSync(SW_FILE, swContent);
-  console.log(`Service worker cache version updated to ${version}`);
-} else {
-  console.error('Could not find CACHE_VERSION in sw.js');
-  process.exit(1);
+module.exports = { CACHE_VERSION_PLACEHOLDER, stampCacheVersion };
+
+if (require.main === module) {
+  try {
+    main(process.argv[2]);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }

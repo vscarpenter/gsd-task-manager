@@ -26,6 +26,6 @@ Three purpose-specific caches with distinct strategies:
 - `lib/sw-cache-logic.ts` — **canonical TypeScript source** — keep in sync with the JS copy
 - `components/pwa-register.tsx` — SW registration
 
-## Bump Cache Version
+## Cache Version
 
-When the SW cache logic changes, bump the version constant in `public/sw.js` so old pages/runtime caches rotate. The immutable cache is content-hashed and does not need a bump.
+Every build rotates the pages and runtime caches on its own. `public/sw.js` keeps the placeholder `const CACHE_VERSION = 'dev';`, and `scripts/build-static-export.sh` stamps the build's version into `out/sw.js` with `scripts/update-sw-version.cjs`. Never commit a real version to `public/sw.js`: the stamp fails the build when the placeholder is missing. The immutable cache is content-hashed and does not need a version.

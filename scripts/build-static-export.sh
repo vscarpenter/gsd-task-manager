@@ -18,6 +18,11 @@ if [[ ! -s out/index.html ]]; then
   exit 1
 fi
 
+# public/sw.js keeps a placeholder so a build never rewrites a tracked file.
+# Stamp this build's cache version into the exported worker; the script fails
+# closed if the placeholder is missing.
+node scripts/update-sw-version.cjs out/sw.js
+
 # Next's static App Router export includes executable hydration/RSC blocks in
 # HTML. Move them to hashed same-origin files so production can enforce
 # `script-src 'self'` without nonces or unsafe-inline.
