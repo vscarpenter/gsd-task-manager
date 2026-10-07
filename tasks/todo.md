@@ -1,3 +1,21 @@
+# Session state, 2026-10-07: modernization Phase 5, restructure and burn down code shape
+
+Spec: `tasks/spec-phase5-restructure.md`. Approved design: brief §3 Phase 5. Both entry boxes are
+ticked, and the baseline is in `../gsd-modernize/analysis/gsd-taskmanager/BASELINE.md` (measured
+code shape 133 at `d4baa2d`; the ledger's ceilings total 153). Branches are cut from `main` @
+`d4baa2d`, one per bundle.
+
+- [x] Baseline recorded, entry boxes ticked, and three new §7 items added unticked (CSP drift,
+      the missing "Synced" tooltip, the off-by-one build version).
+- [ ] A. stamp the cache version into `out/sw.js`, `chore/stamp-sw-version-in-out`
+- [ ] B. generate `public/sw-cache-logic.js`, `chore/generate-sw-cache-logic`
+- [ ] C. one CSP source, `refactor/csp-single-source`
+- [ ] D. dead code and knip, `chore/knip-dead-exports`
+- [ ] E. one sync-status store, five PRs
+- [ ] F. `MatrixSimplified` extractions, one per PR
+- [ ] G. small burn-downs
+- [ ] H. final ratchet and exit boxes
+
 # Resuming From Here, 2026-10-07: modernization Phase 3 signed off
 
 - [x] All four Phase 3 exit boxes in the brief are ticked with evidence. Each of the 15 fixes was
