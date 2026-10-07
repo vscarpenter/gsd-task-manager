@@ -7,14 +7,29 @@ code shape 133 at `d4baa2d`; the ledger's ceilings total 153). Branches are cut 
 
 - [x] Baseline recorded, entry boxes ticked, and three new §7 items added unticked (CSP drift,
       the missing "Synced" tooltip, the off-by-one build version).
-- [ ] A. stamp the cache version into `out/sw.js`, `chore/stamp-sw-version-in-out`
-- [ ] B. generate `public/sw-cache-logic.js`, `chore/generate-sw-cache-logic`
-- [ ] C. one CSP source, `refactor/csp-single-source`
-- [ ] D. dead code and knip, `chore/knip-dead-exports`
+- [x] A. stamp the cache version into `out/sw.js`, `chore/stamp-sw-version-in-out` (`f34a5b7`,
+      review fixes `ee58dae`). A local build now leaves the tree clean.
+- [x] B. generate `public/sw-cache-logic.js`, `chore/generate-sw-cache-logic`, stacked on A
+      (`6f6193c`, review fixes `5ff7651`). The deployed worker updates once.
+- [x] C. one CSP source, `refactor/csp-single-source` (`576d2b7`, review fixes `7021d11`). The
+      CloudFront JSON and Caddyfile are byte-identical, so no infra deploy fires.
+- [x] D. dead code and knip, `chore/knip-dead-exports` (`429f6ab`, `13e0a15`, `25938e6`). Code
+      shape 133 to 130. knip checks unused files and dependencies only (see below).
+- [ ] Push and PR A to D plus this spec: waits for Vinny. Merge A before B.
 - [ ] E. one sync-status store, five PRs
 - [ ] F. `MatrixSimplified` extractions, one per PR
 - [ ] G. small burn-downs
 - [ ] H. final ratchet and exit boxes
+
+Each bundle passed its own gates and an adversarial review, and every review finding was fixed.
+All five branches merged together cleanly in a scratch clone: root 3,392 passed with coverage
+89.4/83.3/89.7/90.6, MCP 348, typecheck, lint, shape (130), knip, a build that left the tree
+clean, PWA in three browsers, CSP, and export journeys 84/84.
+
+Open for Vinny, defaults taken: knip runs on files and dependencies only. Production mode also
+reports 216 unused exports and 50 types, about 139 of them exports only tests call; that
+cleanup, widening knip past production files, and moving the RULE-265 pins off `exportTasks` are
+follow-ups. The three new §7 items stay unticked, so they keep today's behavior.
 
 # Resuming From Here, 2026-10-07: modernization Phase 3 signed off
 
