@@ -74,11 +74,14 @@ function startStaticExportServer({ outputRoot = resolve("out"), port = 0, csp } 
   });
 }
 
+// playwright.export.config.ts runs this file directly. Exporting the entry
+// point lets a test pin the CSP that the export journeys are served under.
+function serveProductionExport({ outputRoot, port = Number(process.env.PORT ?? DEFAULT_PORT) } = {}) {
+  return startStaticExportServer({ outputRoot, port, csp: readProductionCsp() });
+}
+
 if (require.main === module) {
-  startStaticExportServer({
-    port: Number(process.env.PORT ?? DEFAULT_PORT),
-    csp: readProductionCsp(),
-  })
+  serveProductionExport()
     .then(({ rootUrl }) => {
       process.stdout.write(`Serving out/ at ${rootUrl} under the production CSP.\n`);
     })
@@ -88,4 +91,9 @@ if (require.main === module) {
     });
 }
 
-module.exports = { readProductionCsp, resolveExportFile, startStaticExportServer };
+module.exports = {
+  readProductionCsp,
+  resolveExportFile,
+  serveProductionExport,
+  startStaticExportServer,
+};
