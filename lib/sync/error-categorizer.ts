@@ -2,17 +2,6 @@
  * Error categorizer - classifies sync errors for appropriate handling
  */
 
-export type ErrorCategory = 'transient' | 'auth' | 'permanent';
-
-/**
- * Categorize a sync error to determine handling strategy
- */
-export function categorizeError(error: Error): ErrorCategory {
-  if (isAuthError(error)) return 'auth';
-  if (isPermanentError(error)) return 'permanent';
-  return 'transient';
-}
-
 /**
  * Check if error is transient (network/timeout/5xx)
  */
@@ -90,32 +79,6 @@ export function isTransientSyncFailure(error: unknown): boolean {
   }
 
   return isTransientError(error);
-}
-
-/**
- * Check if error is permanent (400/404/validation)
- */
-export function isPermanentError(error: Error): boolean {
-  const message = error.message.toLowerCase();
-
-  return (
-    message.includes('400') ||
-    message.includes('404') ||
-    message.includes('405') ||
-    message.includes('409') ||
-    message.includes('410') ||
-    message.includes('422') ||
-    message.includes('bad request') ||
-    message.includes('not found') ||
-    message.includes('method not allowed') ||
-    message.includes('conflict') ||
-    message.includes('gone') ||
-    message.includes('unprocessable') ||
-    message.includes('validation') ||
-    message.includes('invalid') ||
-    message.includes('malformed') ||
-    message.includes('parse error')
-  );
 }
 
 /** Stable error codes for sync queue / sync history persistence. */

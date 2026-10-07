@@ -4,40 +4,11 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  categorizeError,
   isTransientError,
   isAuthError,
-  isPermanentError,
 } from '@/lib/sync/error-categorizer';
 
 describe('error-categorizer', () => {
-  describe('categorizeError', () => {
-    it('should categorize auth errors as auth', () => {
-      const error = new Error('401 Unauthorized');
-      expect(categorizeError(error)).toBe('auth');
-    });
-
-    it('should categorize permanent errors as permanent', () => {
-      const error = new Error('400 Bad Request');
-      expect(categorizeError(error)).toBe('permanent');
-    });
-
-    it('should categorize network errors as transient', () => {
-      const error = new Error('Network error');
-      expect(categorizeError(error)).toBe('transient');
-    });
-
-    it('should default to transient for unknown errors', () => {
-      const error = new Error('Something went wrong');
-      expect(categorizeError(error)).toBe('transient');
-    });
-
-    it('should prioritize auth over permanent classification', () => {
-      const error = new Error('401 Bad Request');
-      expect(categorizeError(error)).toBe('auth');
-    });
-  });
-
   describe('isTransientError - network errors', () => {
     it('should detect network error', () => {
       const error = new Error('Network error occurred');
@@ -210,125 +181,12 @@ describe('error-categorizer', () => {
     });
   });
 
-  describe('isPermanentError - client errors (4xx)', () => {
-    it('should detect 400 Bad Request', () => {
-      const error = new Error('400 Bad Request');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect 404 Not Found', () => {
-      const error = new Error('404 Not Found');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect 405 Method Not Allowed', () => {
-      const error = new Error('405 Method Not Allowed');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect 409 Conflict', () => {
-      const error = new Error('409 Conflict');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect 410 Gone', () => {
-      const error = new Error('410 Gone');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect 422 Unprocessable Entity', () => {
-      const error = new Error('422 Unprocessable Entity');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect bad request text', () => {
-      const error = new Error('Bad request');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect not found text', () => {
-      const error = new Error('Not found');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect method not allowed text', () => {
-      const error = new Error('Method not allowed');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect conflict text', () => {
-      const error = new Error('Conflict detected');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect gone text', () => {
-      const error = new Error('Resource gone');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect unprocessable text', () => {
-      const error = new Error('Unprocessable entity');
-      expect(isPermanentError(error)).toBe(true);
-    });
-  });
-
-  describe('isPermanentError - validation errors', () => {
-    it('should detect validation error', () => {
-      const error = new Error('Validation failed');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect invalid data', () => {
-      const error = new Error('Invalid data format');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect malformed data', () => {
-      const error = new Error('Malformed request');
-      expect(isPermanentError(error)).toBe(true);
-    });
-
-    it('should detect parse error', () => {
-      const error = new Error('Parse error');
-      expect(isPermanentError(error)).toBe(true);
-    });
-  });
-
-  describe('isPermanentError - non-permanent errors', () => {
-    it('should not classify 401 as permanent', () => {
-      const error = new Error('401 Unauthorized');
-      expect(isPermanentError(error)).toBe(false);
-    });
-
-    it('should not classify 403 as permanent', () => {
-      const error = new Error('403 Forbidden');
-      expect(isPermanentError(error)).toBe(false);
-    });
-
-    it('should not classify 429 as permanent', () => {
-      const error = new Error('429 Too Many Requests');
-      expect(isPermanentError(error)).toBe(false);
-    });
-
-    it('should not classify 500 as permanent', () => {
-      const error = new Error('500 Internal Server Error');
-      expect(isPermanentError(error)).toBe(false);
-    });
-
-    it('should not classify network errors as permanent', () => {
-      const error = new Error('Network error');
-      expect(isPermanentError(error)).toBe(false);
-    });
-  });
-
   describe('case insensitivity', () => {
     it('should detect errors regardless of case', () => {
       expect(isAuthError(new Error('UNAUTHORIZED'))).toBe(true);
       expect(isAuthError(new Error('UnAuthorized'))).toBe(true);
       expect(isTransientError(new Error('NETWORK ERROR'))).toBe(true);
       expect(isTransientError(new Error('Network Error'))).toBe(true);
-      expect(isPermanentError(new Error('VALIDATION FAILED'))).toBe(true);
-      expect(isPermanentError(new Error('Validation Failed'))).toBe(true);
     });
   });
 
@@ -344,7 +202,6 @@ describe('error-categorizer', () => {
 
       transientErrors.forEach(error => {
         expect(isTransientError(error)).toBe(true);
-        expect(categorizeError(error)).toBe('transient');
       });
     });
 
@@ -357,21 +214,6 @@ describe('error-categorizer', () => {
 
       authErrors.forEach(error => {
         expect(isAuthError(error)).toBe(true);
-        expect(categorizeError(error)).toBe('auth');
-      });
-    });
-
-    it('should classify permanent errors as non-retry-able', () => {
-      const permanentErrors = [
-        new Error('400 Bad Request'),
-        new Error('404 Not Found'),
-        new Error('409 Conflict'),
-        new Error('Validation failed'),
-      ];
-
-      permanentErrors.forEach(error => {
-        expect(isPermanentError(error)).toBe(true);
-        expect(categorizeError(error)).toBe('permanent');
       });
     });
   });
