@@ -26,14 +26,20 @@ const HEADER = [
   '',
 ].join('\n');
 
-function exportedFunctionNames(typescriptSource) {
+function isExported(statement) {
+  return (ts.getCombinedModifierFlags(statement) & ts.ModifierFlags.Export) !== 0;
+}
+
+// Names of the exported functions and constants, in source order, for the footer.
+function exportedValueNames(typescriptSource) {
   const file = ts.createSourceFile('sw-cache-logic.ts', typescriptSource, ts.ScriptTarget.Latest);
-  return file.statements
-    .filter((statement) => ts.isFunctionDeclaration(statement) && statement.name)
-    .filter((statement) =>
-      (ts.getCombinedModifierFlags(statement) & ts.ModifierFlags.Export) !== 0,
-    )
-    .map((statement) => statement.name.text);
+  return file.statements.filter(isExported).flatMap((statement) => {
+    if (ts.isFunctionDeclaration(statement) && statement.name) return [statement.name.text];
+    if (ts.isVariableStatement(statement)) {
+      return statement.declarationList.declarations.map((declaration) => declaration.name.getText(file));
+    }
+    return [];
+  });
 }
 
 function moduleExportsFooter(names) {
@@ -47,17 +53,26 @@ function spaceTopLevelDeclarations(code) {
   return code.replace(/\n(?=\/\*\*)|(?<!\*\/)\n(?=(?:function|const) )/g, '\n\n');
 }
 
+// The source's own header comment speaks for the .ts file, so drop it while
+// the blank line that ends it is still there.
+function withoutLeadingHeader(typescriptSource) {
+  return typescriptSource.replace(/^(?:(?:\/\/[^\n]*|\/\*[\s\S]*?\*\/)\n)+\n/, '');
+}
+
 function generateSwCacheLogic(typescriptSource) {
-  const { outputText } = ts.transpileModule(typescriptSource, {
+  const { outputText } = ts.transpileModule(withoutLeadingHeader(typescriptSource), {
     compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext },
     fileName: 'sw-cache-logic.ts',
   });
-  const globals = outputText
-    .replace(/^(?:\/\/.*\n)+/, '') // the source's own header speaks for the .ts file
-    .replace(/^export (?=function |const )/gm, '')
-    .trim();
+  const globals = outputText.replace(/^export (?=(?:async )?function |const )/gm, '').trim();
+  // importScripts() runs a classic script, where any export left behind is a
+  // SyntaxError that stops the worker from installing. Fail here instead.
+  const leftover = globals.match(/^export\b.*$/m);
+  if (leftover) {
+    throw new Error(`Unsupported export form for importScripts(): ${leftover[0]}`);
+  }
   const body = spaceTopLevelDeclarations(globals);
-  return `${HEADER}\n${body}\n${moduleExportsFooter(exportedFunctionNames(typescriptSource))}`;
+  return `${HEADER}\n${body}\n${moduleExportsFooter(exportedValueNames(typescriptSource))}`;
 }
 
 module.exports = { generateSwCacheLogic };
