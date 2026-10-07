@@ -34,8 +34,9 @@ describe("service worker cache version stamp", () => {
     );
   });
 
-  it("refuses a version that would break the quoted literal", () => {
+  it("refuses anything but a release version, including the placeholder's own value", () => {
     expect(() => stampCacheVersion(CACHE_VERSION_PLACEHOLDER, "")).toThrow(/invalid/);
+    expect(() => stampCacheVersion(CACHE_VERSION_PLACEHOLDER, "dev")).toThrow(/invalid/);
     expect(() => stampCacheVersion(CACHE_VERSION_PLACEHOLDER, "13.8.1'; evil()")).toThrow(
       /invalid/,
     );

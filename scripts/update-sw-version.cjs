@@ -9,8 +9,8 @@
  * with package.json as the fallback, so every build rotates the cache key.
  *
  * It fails closed. A deployed worker that kept an old version would never
- * rotate its pages and runtime caches, so a missing placeholder or a version
- * that can't sit inside a quoted literal exits 1.
+ * rotate its pages and runtime caches, so a missing placeholder or anything
+ * but a release version (which must start with a digit) exits 1.
  */
 
 const fs = require('fs');
@@ -19,7 +19,8 @@ const path = require('path');
 const BUILD_INFO = path.join(__dirname, '..', '.build-info.json');
 const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
 const CACHE_VERSION_PLACEHOLDER = "const CACHE_VERSION = 'dev';";
-const VERSION_PATTERN = /^[0-9A-Za-z.+-]+$/;
+// A release version starts with a digit, which also rules out the placeholder's 'dev'.
+const VERSION_PATTERN = /^\d[0-9A-Za-z.+-]*$/;
 
 function resolveVersion() {
   if (fs.existsSync(BUILD_INFO)) {

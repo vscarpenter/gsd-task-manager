@@ -185,6 +185,8 @@ Fix pattern: wait for the title to be focused before touching other fields
   artifact, not a pending bump.** Restore it with `git checkout -- public/sw.js` and
   confirm the deploy via prod `sw.js` plus a grep of the served chunks for a string
   the release introduced.
+  (Retired 2026-10-07: builds now stamp only `out/sw.js`, so a build no longer
+  leaves `public/sw.js` changed.)
 
 ## 2026-09-15: iOS 27 follow-on, scroll chrome, touch swipes, token guard
 
@@ -214,6 +216,9 @@ Fix pattern: wait for the title to be focused before touching other fields
 - **`bun run build` rewrites `public/sw.js` from `package.json`.** Running the build on
   a tree that carries a deploy's `sw.js` bump silently reverts that bump. Read the
   deployed version from prod `sw.js` first if it matters.
+  (Retired 2026-10-07: `public/sw.js` keeps a `'dev'` placeholder, and the build
+  stamps the version into `out/sw.js`. Committing a real version there fails every
+  build at the stamp.)
 - **Paper ink on the swipe grounds clears AA in both themes**: 4.93, 5.50, 5.94 light
   and 6.47, 6.44, 5.25 dark for olive, slate, and rust. `tests/data/inkwell-token-
   contract.test.ts` recomputes these from the real stylesheet, so a token move fails

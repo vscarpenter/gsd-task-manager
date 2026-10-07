@@ -5,7 +5,8 @@
 # and to catch the five classes of silent breakage observed historically:
 #
 #   1. Site doesn't return 200 (DNS/cert/origin broken)
-#   2. sw.js missing or replaced by an SPA fallback
+#   2. sw.js missing, replaced by an SPA fallback, or still carrying the
+#      unstamped 'dev' cache version
 #   3. .well-known/api-catalog wrong Content-Type
 #      (fix-discovery-content-types.sh did not run)
 #   4. index.html missing no-cache headers
@@ -51,6 +52,11 @@ echo "  [2/5] GET ${SITE_URL}/sw.js"
 sw_body=$(curl -fsS "${SITE_URL}/sw.js" | head -c 500)
 echo "$sw_body" | grep -q "CACHE_VERSION" \
   || fail "sw.js did not contain CACHE_VERSION marker (SPA fallback?)"
+# The build stamps the real version over public/sw.js's placeholder. A served
+# placeholder means a build path skipped the stamp, so caches would never rotate.
+if echo "$sw_body" | grep -q "CACHE_VERSION = 'dev'"; then
+  fail "sw.js still carries the 'dev' CACHE_VERSION placeholder (the build skipped the stamp)"
+fi
 pass "sw.js served correctly"
 
 # 3. .well-known/api-catalog must be application/linkset+json (RFC 9727).

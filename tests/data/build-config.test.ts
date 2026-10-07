@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -57,20 +58,14 @@ function fakeNextBuild(options: { createArtifact?: boolean; exitCode?: number })
   ].join("\n");
 }
 
-function runStaticBuildWrapper(options: {
-  createArtifact?: boolean;
-  exportedWorker?: string;
-  exitCode?: number;
-}): { status: number | null; stdout: string; exportedWorker: string | null } {
-  const fixtureRoot = mkdtempSync(join(tmpdir(), "gsd-static-build-"));
+type WrapperOptions = { createArtifact?: boolean; exportedWorker?: string; exitCode?: number };
+
+function writeBuildFixture(fixtureRoot: string, options: WrapperOptions) {
   const fixtureScripts = join(fixtureRoot, "scripts");
   const fixtureBin = join(fixtureRoot, "bin");
   mkdirSync(fixtureScripts);
   mkdirSync(fixtureBin);
-
-  const wrapper = readFileSync("scripts/build-static-export.sh", "utf8");
-  writeFileSync(join(fixtureScripts, "build-static-export.sh"), wrapper);
-  for (const script of ["externalize-inline-assets.cjs", "update-sw-version.cjs"]) {
+  for (const script of ["build-static-export.sh", "externalize-inline-assets.cjs", "update-sw-version.cjs"]) {
     writeFileSync(join(fixtureScripts, script), readFileSync(`scripts/${script}`, "utf8"));
   }
   writeFileSync(
@@ -84,28 +79,22 @@ function runStaticBuildWrapper(options: {
   );
   writeFileSync(join(fixtureBin, "next"), fakeNextBuild(options));
   chmodSync(join(fixtureBin, "next"), 0o755);
+}
 
-  const readExportedWorker = () => {
-    try {
-      return readFileSync(join(fixtureRoot, "out/sw.js"), "utf8");
-    } catch {
-      return null;
-    }
-  };
-
+function runStaticBuildWrapper(options: WrapperOptions) {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "gsd-static-build-"));
   try {
-    const stdout = execFileSync("bash", ["scripts/build-static-export.sh"], {
+    writeBuildFixture(fixtureRoot, options);
+    const run = spawnSync("bash", ["scripts/build-static-export.sh"], {
       cwd: fixtureRoot,
       encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
     });
-    return { status: 0, stdout, exportedWorker: readExportedWorker() };
-  } catch (error) {
-    const failure = error as { status?: number | null; stdout?: Buffer | string };
+    const workerPath = join(fixtureRoot, "out/sw.js");
     return {
-      status: failure.status ?? null,
-      stdout: String(failure.stdout ?? ""),
-      exportedWorker: readExportedWorker(),
+      status: run.status,
+      stdout: run.stdout,
+      stderr: run.stderr,
+      exportedWorker: existsSync(workerPath) ? readFileSync(workerPath, "utf8") : null,
     };
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -194,6 +183,7 @@ describe("build configuration", () => {
     });
 
     expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/no CACHE_VERSION placeholder/);
   });
 
   it("never stamps the tracked public/sw.js on any build path", () => {

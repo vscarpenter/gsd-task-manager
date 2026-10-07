@@ -1040,7 +1040,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 - Files stay at or under 350 lines and functions at or under 30 lines. `lib/reset-everything.ts` is 271 lines today, so the verify and fallback logic moves to a new module if adding it would cross the limit. `bun run quality:shape` must report no regressions.
 - Bundle: the gate is a small client component with no lazy chunk, and the lock screen reuses `Button` and Inkwell tokens.
 - The UI meets WCAG AA and matches the calm, restrained voice in `PRODUCT.md`.
-- Release trio: bump the patch version in `package.json`, `README.md` line 7, and `CACHE_VERSION` in `public/sw.js` together.
+- Release pair: bump the patch version in `package.json` and `README.md` line 7 together. Leave `public/sw.js` alone: since 2026-10-07 it keeps the `'dev'` placeholder, and the build stamps the cache version into `out/sw.js`.
 
 ## Edge Cases
 
