@@ -54,6 +54,8 @@ jobs:
         run: bun lint
       - name: Enforce code-shape baseline
         run: bun run quality:shape
+      - name: Check for unused files and dependencies
+        run: bun run knip
 
   test:
     runs-on: ubuntu-24.04
