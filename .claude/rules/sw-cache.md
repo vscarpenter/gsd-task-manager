@@ -19,12 +19,12 @@ Three purpose-specific caches with distinct strategies:
 | `gsd-pages-v{version}` | HTML + RSC flight data | network-first | rotated on deploy |
 | `gsd-runtime-v{version}` | icons, manifest, other static | cache-first | rotated on deploy |
 
-## Files to Keep in Sync
+## Files
 
-- `public/sw.js` — runtime SW (loads cache logic via `importScripts()`)
-- `public/sw-cache-logic.js` — pure cache routing functions
-- `lib/sw-cache-logic.ts` — **canonical TypeScript source** — keep in sync with the JS copy
-- `components/pwa-register.tsx` — SW registration
+- `public/sw.js`: the runtime SW, which loads the cache logic with `importScripts()`.
+- `lib/sw-cache-logic.ts`: the **canonical source** for the cache routing functions. Edit only this file.
+- `public/sw-cache-logic.js`: generated from the TypeScript by `node scripts/generate-sw-cache-logic.cjs`. Never edit it by hand. `tests/data/sw-cache-logic-generated.test.ts` fails when the committed copy drifts, and the fix is to rerun the generator and commit its output.
+- `components/pwa-register.tsx`: SW registration.
 
 ## Cache Version
 
