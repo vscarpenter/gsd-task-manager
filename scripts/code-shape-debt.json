@@ -3,7 +3,7 @@
   "deadline": "2026-12-31",
   "policy": "Remaining exceptions may only decrease. Resolve or explicitly renew this contract before the deadline.",
   "maximumRemainingViolations": {
-    "complexity": 31,
+    "complexity": 30,
     "max-depth": 4,
     "max-lines": 0,
     "max-lines-per-function": 95

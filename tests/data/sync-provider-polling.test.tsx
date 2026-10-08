@@ -22,19 +22,6 @@ vi.mock('@/lib/sync/pb-realtime', () => ({
 }));
 vi.mock('@/lib/db');
 
-// Every logger context shares one spy, tagged with its context, so a test can
-// prove a failed poll was logged through SYNC_STATUS and nowhere else.
-const { warn } = vi.hoisted(() => ({ warn: vi.fn() }));
-vi.mock('@/lib/logger', () => ({
-  createLogger: (context: string) => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: (message: string, metadata?: Record<string, unknown>) => warn(context, message, metadata),
-    error: vi.fn(),
-  }),
-}));
-
-const FIVE_SECONDS_MS = 5000;
 // The coordinator hands back the same result object on every read, the way the
 // real one does between syncs.
 const LAST_RESULT: PBSyncResult = { status: 'success' };
@@ -51,7 +38,6 @@ const IDLE_STATUS = {
 };
 
 const getStatus = vi.fn();
-let latestSync: ReturnType<typeof useSync> | null = null;
 // Counts renders of a component that reads the sync context. An effect with no
 // dependency array runs after every render, so this needs no side effect during
 // render. React's Profiler is not an option: it misses re-renders that a context
@@ -59,9 +45,8 @@ let latestSync: ReturnType<typeof useSync> | null = null;
 const onConsumerRender = vi.fn();
 
 function SyncConsumer() {
-  const sync = useSync();
+  useSync();
   useEffect(() => {
-    latestSync = sync;
     onConsumerRender();
   });
   return null;
@@ -90,10 +75,12 @@ async function advance(milliseconds: number): Promise<void> {
   });
 }
 
+// The timer arithmetic of the polls themselves is pinned on the store in
+// tests/data/sync/sync-status-store.test.ts. This file keeps the one check that
+// needs React: a poll that changes nothing must not re-render a consumer.
 describe('SyncProvider polling', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    latestSync = null;
     getStatus.mockReset().mockResolvedValue(IDLE_STATUS);
     vi.mocked(getSyncCoordinator).mockReturnValue({
       getStatus,
@@ -121,64 +108,6 @@ describe('SyncProvider polling', () => {
     vi.clearAllMocks();
   });
 
-  it('should_read_coordinator_status_once_while_sync_is_disabled', async () => {
-    setSyncEnabled(false);
-
-    render(<SyncApp />);
-    await advance(FIVE_SECONDS_MS);
-
-    expect(getStatus).toHaveBeenCalledTimes(1);
-    expect(getAutoSyncConfig).toHaveBeenCalledTimes(1);
-  });
-
-  it('should_poll_coordinator_status_every_500_ms_while_sync_is_enabled', async () => {
-    setSyncEnabled(true);
-
-    render(<SyncApp />);
-    await advance(1000);
-    const callsAfterOneSecond = getStatus.mock.calls.length;
-    await advance(2000);
-
-    expect(getStatus.mock.calls.length - callsAfterOneSecond).toBe(4);
-  });
-
-  it('should_stop_polling_once_sync_is_disabled_again', async () => {
-    setSyncEnabled(true);
-    render(<SyncApp />);
-    await advance(1000);
-
-    setSyncEnabled(false);
-    // The lifecycle check runs every 2 s, so this covers the switch-off.
-    await advance(3000);
-    const callsAfterSwitchOff = getStatus.mock.calls.length;
-    await advance(FIVE_SECONDS_MS);
-
-    expect(getStatus).toHaveBeenCalledTimes(callsAfterSwitchOff);
-  });
-
-  // The sync button is disabled while isSyncing is true, and it is the only way
-  // back to the sign-in dialog. A sync still in flight at sign-out must not
-  // leave that flag stuck on.
-  it('should_keep_polling_after_sign_out_until_an_in_flight_sync_settles', async () => {
-    setSyncEnabled(true);
-    render(<SyncApp />);
-    await advance(1000);
-
-    getStatus.mockResolvedValue({ ...IDLE_STATUS, isRunning: true });
-    setSyncEnabled(false);
-    await advance(3000);
-    expect(latestSync?.isEnabled).toBe(false);
-    expect(latestSync?.isSyncing).toBe(true);
-
-    getStatus.mockResolvedValue(IDLE_STATUS);
-    await advance(1000);
-    expect(latestSync?.isSyncing).toBe(false);
-
-    const callsOnceSettled = getStatus.mock.calls.length;
-    await advance(FIVE_SECONDS_MS);
-    expect(getStatus).toHaveBeenCalledTimes(callsOnceSettled);
-  });
-
   it('should_not_rerender_consumers_when_a_poll_changes_nothing', async () => {
     setSyncEnabled(true);
 
@@ -193,51 +122,5 @@ describe('SyncProvider polling', () => {
 
     expect(getStatus.mock.calls.length).toBeGreaterThan(10);
     expect(onConsumerRender).toHaveBeenCalledTimes(rendersOnceSettled);
-  });
-
-  // A status read that fails must be logged and must not escape the effect.
-  // Before the guard, the rejection reached the window unhandled, and the
-  // global listener showed the generic "An unexpected error occurred" toast.
-  it('should_log_a_failed_coordinator_status_read_through_SYNC_STATUS_and_keep_polling', async () => {
-    setSyncEnabled(true);
-    render(<SyncApp />);
-    await advance(1000);
-
-    getStatus.mockRejectedValueOnce(new Error('IndexedDB is closed'));
-    await advance(500);
-
-    expect(warn).toHaveBeenCalledWith(
-      'SYNC_STATUS',
-      'Sync status poll failed',
-      expect.objectContaining({ poll: 'coordinator', errorMessage: 'IndexedDB is closed' }),
-    );
-    expect(warn).toHaveBeenCalledTimes(1);
-    const readsAfterFailure = getStatus.mock.calls.length;
-    await advance(1000);
-    expect(getStatus.mock.calls.length).toBe(readsAfterFailure + 2);
-  });
-
-  it('should_log_a_failed_enabled_check_through_SYNC_STATUS_and_keep_the_last_value', async () => {
-    setSyncEnabled(true);
-    render(<SyncApp />);
-    await advance(1000);
-    expect(latestSync?.isEnabled).toBe(true);
-
-    vi.mocked(getDb).mockReturnValueOnce({
-      syncMetadata: { get: vi.fn().mockRejectedValue(new Error('IndexedDB is closed')) },
-    } as unknown as ReturnType<typeof getDb>);
-    // The enabled check runs every 2 s, so this covers one failed read.
-    await advance(2000);
-
-    expect(warn).toHaveBeenCalledWith(
-      'SYNC_STATUS',
-      'Sync status poll failed',
-      expect.objectContaining({ poll: 'enabled', errorMessage: 'IndexedDB is closed' }),
-    );
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(latestSync?.isEnabled).toBe(true);
-    const checksAfterFailure = vi.mocked(getDb).mock.calls.length;
-    await advance(2000);
-    expect(vi.mocked(getDb).mock.calls.length).toBe(checksAfterFailure + 1);
   });
 });
