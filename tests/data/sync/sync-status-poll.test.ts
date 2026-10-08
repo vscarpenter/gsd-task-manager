@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Every logger context gets the same spy, tagged with its context, so a test
 // can prove a poll failure went through SYNC_STATUS and not a neighbour. The
-// module creates its logger at import, before clearMocks runs, so the context
-// is checked on the warn call rather than on createLogger.
+// module creates its logger once at import, and Vitest 5 clears every mock's
+// calls before each test by default, so that createLogger call is gone by the
+// time a test runs. The context is checked on the warn call instead.
 const { warn, createLogger } = vi.hoisted(() => {
   const warn = vi.fn();
   const createLogger = vi.fn((context: string) => ({

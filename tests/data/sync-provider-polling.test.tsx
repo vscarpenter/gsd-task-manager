@@ -214,6 +214,7 @@ describe('SyncProvider polling', () => {
       'Sync status poll failed',
       expect.objectContaining({ poll: 'coordinator', errorMessage: 'IndexedDB is closed' }),
     );
+    expect(warn).toHaveBeenCalledTimes(1);
     const readsAfterFailure = getStatus.mock.calls.length;
     await advance(1000);
     expect(getStatus.mock.calls.length).toBe(readsAfterFailure + 2);
@@ -236,6 +237,7 @@ describe('SyncProvider polling', () => {
       'Sync status poll failed',
       expect.objectContaining({ poll: 'enabled', errorMessage: 'IndexedDB is closed' }),
     );
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(latestSync?.isEnabled).toBe(true);
     const checksAfterFailure = vi.mocked(getDb).mock.calls.length;
     await advance(2000);
