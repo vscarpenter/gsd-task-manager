@@ -1224,7 +1224,8 @@ under a permissive dev-only CSP meta tag.
      viewer-request `handler`, then maps the rewritten URI to a file under
      `outputRoot`. A miss, or a path outside `outputRoot`, falls back to
      `index.html`, the way production does.
-   - `readProductionCsp()` reads `cloudfront/response-headers-policy.json`.
+   - `readProductionCsp()` returns `buildCsp("cloudfront")` from `config/csp.cjs`,
+     the one source the CloudFront policy JSON is pinned to.
    - `startStaticExportServer({ outputRoot, port, csp })` resolves to
      `{ server, rootUrl }`. Port `0` picks a free port. It rejects when
      `out/index.html` is missing.

@@ -4,10 +4,10 @@ const { createServer } = require("node:http");
 const { existsSync, readFileSync, statSync } = require("node:fs");
 const { extname, join, resolve, sep } = require("node:path");
 const { handler: rewriteLikeCloudFront } = require("../../cloudfront-function-url-rewrite.cjs");
+const { buildCsp } = require("../../config/csp.cjs");
 
 const DEFAULT_PORT = 3100;
 const HOST = "127.0.0.1";
-const POLICY_PATH = join(__dirname, "../../cloudfront/response-headers-policy.json");
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -21,8 +21,7 @@ const CONTENT_TYPES = {
 };
 
 function readProductionCsp() {
-  const policy = JSON.parse(readFileSync(POLICY_PATH, "utf8"));
-  return policy.SecurityHeadersConfig.ContentSecurityPolicy.ContentSecurityPolicy;
+  return buildCsp("cloudfront");
 }
 
 function toCloudFrontHeaders(headers) {
@@ -75,11 +74,14 @@ function startStaticExportServer({ outputRoot = resolve("out"), port = 0, csp } 
   });
 }
 
+// playwright.export.config.ts runs this file directly. Exporting the entry
+// point lets a test pin the CSP that the export journeys are served under.
+function serveProductionExport({ outputRoot, port = Number(process.env.PORT ?? DEFAULT_PORT) } = {}) {
+  return startStaticExportServer({ outputRoot, port, csp: readProductionCsp() });
+}
+
 if (require.main === module) {
-  startStaticExportServer({
-    port: Number(process.env.PORT ?? DEFAULT_PORT),
-    csp: readProductionCsp(),
-  })
+  serveProductionExport()
     .then(({ rootUrl }) => {
       process.stdout.write(`Serving out/ at ${rootUrl} under the production CSP.\n`);
     })
@@ -89,4 +91,9 @@ if (require.main === module) {
     });
 }
 
-module.exports = { readProductionCsp, resolveExportFile, startStaticExportServer };
+module.exports = {
+  readProductionCsp,
+  resolveExportFile,
+  serveProductionExport,
+  startStaticExportServer,
+};

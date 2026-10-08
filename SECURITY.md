@@ -205,20 +205,12 @@ form-action 'self' https://accounts.google.com https://github.com;
 ```
 
 **Production (Current):**
-```
-default-src 'self';
-script-src 'self';
-script-src-attr 'none';
-style-src 'self';
-style-src-elem 'self' 'unsafe-inline';
-style-src-attr 'unsafe-inline';
-img-src 'self' data: blob:;
-font-src 'self' data:;
-connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
-frame-ancestors 'none';
-base-uri 'none';
-form-action 'self' https://accounts.google.com https://github.com;
-```
+
+`config/csp.cjs` defines the policy once. `buildCsp("cloudfront")` returns the
+CloudFront policy, and `buildCsp("selfhost")` returns the Caddy policy for the
+self-host image. `tests/data/csp-single-source.test.ts` keeps
+the copies in `cloudfront/response-headers-policy.json` and `docker/Caddyfile`
+equal to it.
 
 > **Note:** The build externalizes Next.js hydration/RSC script blocks and
 > stable style blocks into hashed same-origin assets before deployment.
