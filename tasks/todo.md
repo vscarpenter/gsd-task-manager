@@ -1,3 +1,46 @@
+# Session state, 2026-10-08: modernization Phase 5, bundle E (one sync-status store)
+
+Spec: `tasks/spec-phase5-restructure.md`, bundle E. Approved design: brief §3 Phase 5, exit
+criterion 4. Five stacked branches cut in order from `main` @ `9b4f9fb`, each from the previous
+tip, so the PRs merge in order and E5's tip is the integration tree.
+
+- [x] E1 `refactor/sync-status-1-log-polls` (`3ecb3f6`, review fix `bdabb23`): every status poll
+      runs through `guardPoll`, which logs a failed read under `SYNC_STATUS` and keeps the last
+      value.
+- [x] E2 `refactor/sync-status-2-drop-health-timer` (`4b14219`): the health monitor's own timer,
+      whose report nobody read, is gone with `start`, `stop`, and `isActive`.
+- [x] E3 `refactor/sync-status-3-store` (`1d0ce74`, review fix `637801a`):
+      `lib/sync/sync-status-store.ts` behind `useSyncExternalStore`, started once by
+      `SyncProvider`; the reducer split drops the provider's complexity exception (130 to 129).
+- [x] E4 `refactor/sync-status-4-hooks` (`1b2dfe9`, review fix `cd26d79`): the store polls the
+      pending count; both `useSyncStatus` hooks read the store and share `useRetryCountdown`;
+      both hooks lose their length exception (129 to 127).
+- [x] E5 `refactor/sync-status-5-health-merge` (`5dcbab4`, review fix `7feb2d0`): one health
+      poll on the sync button's schedule; `useSyncHealth` turns each report into toasts with the
+      same cooldown and id; the provider's own check goes (127 to 126).
+- [ ] Push and PR E1 to E5 in order: waits for Vinny. Merge E1 first and work down.
+- [ ] F. `MatrixSimplified` extractions, one per PR
+- [ ] G. small burn-downs
+- [ ] H. final ratchet and exit boxes
+
+Each PR passed its gates (root suite, MCP, typecheck, lint, shape, scrubbed build with a clean
+tree; E4 and E5 also 84 export journeys in three browsers and a look at the built app), had an
+adversarial review with every finding fixed in a follow-up commit, and had a mutation probe that
+reversed its change one line at a time (E2 2 of 2, E3 13 of 13, E4 12 of 12, E5 15 of 16 with one
+equivalent mutant). On `7feb2d0`: root 3,412 passed, 1 skipped; shape 126 with ledger ceilings
+30/4/0/92; knip clean; sync code down to 7 `setInterval` call sites from 12.
+
+Named in the commits, inside the spec's wording: the header shows a finished sync within 500 ms
+instead of up to 5 s; the health check also runs at the 5 min mark and no longer at 1 s; a
+remounted sync button waits for the store's next check instead of running its own, and ignores
+reports from before it mounted. The §7 "Synced" tooltip item stays unticked.
+
+Open for Vinny: push and PRs; `enableSync` in `lib/sync/config/enable.ts` has no production
+caller (dead-export follow-up); the three §7 items from the Phase 5 mapping stay unticked.
+Playwright 1.64 browser builds were installed on 2026-10-08 with Vinny's OK.
+
+Blockers: none. Full handoff: `../gsd-modernize/HANDOFF.md`.
+
 # Session state, 2026-10-07: modernization Phase 5, restructure and burn down code shape
 
 Spec: `tasks/spec-phase5-restructure.md`. Approved design: brief §3 Phase 5. Both entry boxes are
@@ -15,8 +58,8 @@ code shape 133 at `d4baa2d`; the ledger's ceilings total 153). Branches are cut 
       CloudFront JSON and Caddyfile are byte-identical, so no infra deploy fires.
 - [x] D. dead code and knip, `chore/knip-dead-exports` (`429f6ab`, `13e0a15`, `25938e6`). Code
       shape 133 to 130. knip checks unused files and dependencies only (see below).
-- [ ] Push and PR A to D plus this spec: waits for Vinny. Merge A before B.
-- [ ] E. one sync-status store, five PRs
+- [x] Push and PR A to D plus this spec: merged by Vinny on 2026-10-07 as #585 to #589.
+- [x] E. one sync-status store, five PRs (built 2026-10-08; see the block above)
 - [ ] F. `MatrixSimplified` extractions, one per PR
 - [ ] G. small burn-downs
 - [ ] H. final ratchet and exit boxes

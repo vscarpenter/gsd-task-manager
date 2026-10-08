@@ -6,6 +6,7 @@ import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
 import { subscribe, unsubscribe } from '@/lib/sync/pb-realtime';
 import { getDb } from '@/lib/db';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { PBSyncResult } from '@/lib/sync/types';
 
 vi.mock('@/lib/sync/pocketbase-client');
@@ -20,8 +21,13 @@ vi.mock('@/lib/db');
 
 // Every logger context shares one spy, tagged with its context, so a test can
 // prove a failed poll was logged through SYNC_STATUS and nowhere else.
-const { warn, getPendingCount } = vi.hoisted(() => ({ warn: vi.fn(), getPendingCount: vi.fn() }));
+const { warn, getPendingCount, check } = vi.hoisted(() => ({
+  warn: vi.fn(),
+  getPendingCount: vi.fn(),
+  check: vi.fn(),
+}));
 vi.mock('@/lib/sync/queue', () => ({ getSyncQueue: () => ({ getPendingCount }) }));
+vi.mock('@/lib/sync/health-monitor', () => ({ getHealthMonitor: () => ({ check }) }));
 vi.mock('@/lib/logger', () => ({
   createLogger: (context: string) => ({
     debug: vi.fn(),
@@ -32,6 +38,14 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 const FIVE_SECONDS_MS = 5000;
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+const HEALTHY = { healthy: true, issues: [], timestamp: 0 };
+const STALE_QUEUE_ISSUE = {
+  type: 'stale_queue' as const,
+  severity: 'warning' as const,
+  message: '1 pending operations are older than 1 hour',
+  suggestedAction: 'Try syncing manually to clear pending operations',
+};
 // The coordinator hands back the same result object on every read, the way the
 // real one does between syncs.
 const LAST_RESULT: PBSyncResult = { status: 'success' };
@@ -73,6 +87,7 @@ describe('sync status store', () => {
     vi.useFakeTimers();
     getStatus.mockReset().mockResolvedValue(IDLE_STATUS);
     getPendingCount.mockReset().mockResolvedValue(2);
+    check.mockReset().mockResolvedValue(HEALTHY);
     vi.mocked(getSyncCoordinator).mockReturnValue({
       getStatus,
       requestSync: vi.fn(),
@@ -347,13 +362,136 @@ describe('sync status store', () => {
     const readsAtStop = getStatus.mock.calls.length;
     const checksAtStop = vi.mocked(getDb).mock.calls.length;
     const pendingReadsAtStop = getPendingCount.mock.calls.length;
-    await advance(FIVE_SECONDS_MS);
+    const healthChecksAtStop = check.mock.calls.length;
+    await advance(FIVE_MINUTES_MS);
 
     expect(backgroundSync.stop).toHaveBeenCalledTimes(1);
     expect(unsubscribe).toHaveBeenCalled();
     expect(getStatus).toHaveBeenCalledTimes(readsAtStop);
     expect(vi.mocked(getDb)).toHaveBeenCalledTimes(checksAtStop);
     expect(getPendingCount).toHaveBeenCalledTimes(pendingReadsAtStop);
+    expect(check).toHaveBeenCalledTimes(healthChecksAtStop);
+  });
+
+  // SyncProvider and the sync button each ran their own health check, the
+  // provider's 1 s after enable and then every 10 min, the button's 10 s after
+  // enable and then every 5 min. The store runs one on the button's schedule.
+  it('should_check_health_10_s_after_sync_is_enabled_and_every_5_min_after', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS - 1);
+    expect(check).toHaveBeenCalledTimes(0);
+
+    await advance(1);
+    expect(check).toHaveBeenCalledTimes(1);
+
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS - SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS - 1);
+    expect(check).toHaveBeenCalledTimes(1);
+    await advance(1);
+    expect(check).toHaveBeenCalledTimes(2);
+
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+    expect(check).toHaveBeenCalledTimes(3);
+  });
+
+  it('should_check_no_health_while_sync_is_disabled_and_stop_once_it_switches_off', async () => {
+    setSyncEnabled(false);
+    store.start();
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS + FIVE_MINUTES_MS);
+    expect(check).not.toHaveBeenCalled();
+    expect(store.getSnapshot().healthReport).toBeNull();
+
+    setSyncEnabled(true);
+    await advance(2000 + SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().healthReport).toBe(HEALTHY);
+
+    setSyncEnabled(false);
+    await advance(2000);
+    expect(store.getSnapshot().isEnabled).toBe(false);
+    expect(store.getSnapshot().healthReport).toBeNull();
+    await advance(FIVE_MINUTES_MS * 2);
+    expect(check).toHaveBeenCalledTimes(1);
+  });
+
+  it('should_publish_each_health_report_and_log_its_issues_under_SYNC_ENGINE', async () => {
+    const unhealthy = { healthy: false, issues: [STALE_QUEUE_ISSUE], timestamp: 1 };
+    check.mockResolvedValue(unhealthy);
+    setSyncEnabled(true);
+    store.start();
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+
+    expect(store.getSnapshot().healthReport).toBe(unhealthy);
+    expect(warn).toHaveBeenCalledWith(
+      'SYNC_ENGINE',
+      'Health issue detected',
+      expect.objectContaining({ type: 'stale_queue', severity: 'warning' }),
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    const later = { healthy: false, issues: [STALE_QUEUE_ISSUE], timestamp: 2 };
+    check.mockResolvedValue(later);
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+    expect(store.getSnapshot().healthReport).toBe(later);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it('should_drop_a_health_report_that_lands_after_sync_switched_off', async () => {
+    let release: (report: typeof HEALTHY) => void = () => {};
+    check.mockReturnValueOnce(new Promise<typeof HEALTHY>((resolve) => {
+      release = resolve;
+    }));
+    setSyncEnabled(true);
+    store.start();
+    // The 10 s check starts a read that stays open across the switch-off.
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    expect(check).toHaveBeenCalledTimes(1);
+    setSyncEnabled(false);
+    await advance(2000);
+    expect(store.getSnapshot().isEnabled).toBe(false);
+
+    release({ healthy: false, issues: [STALE_QUEUE_ISSUE], timestamp: 3 });
+    await advance(0);
+    expect(store.getSnapshot().healthReport).toBeNull();
+  });
+
+  // A second start() after the enabled flag was published, with sync still
+  // on, must arm every poll again from the snapshot it has.
+  it('should_arm_every_poll_on_a_restart_while_sync_is_on', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(0);
+    expect(store.getSnapshot().isEnabled).toBe(true);
+    store.stop();
+
+    const readsBeforeRestart = getStatus.mock.calls.length;
+    const pendingReadsBeforeRestart = getPendingCount.mock.calls.length;
+    store.start();
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(getPendingCount.mock.calls.length - pendingReadsBeforeRestart).toBe(1 + 5);
+    expect(getStatus.mock.calls.length - readsBeforeRestart).toBe(1 + 20);
+  });
+
+  it('should_log_a_failed_health_check_through_SYNC_STATUS_and_keep_the_last_report', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    expect(store.getSnapshot().healthReport).toBe(HEALTHY);
+
+    check.mockRejectedValueOnce(new Error('IndexedDB is closed'));
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+
+    expect(warn).toHaveBeenCalledWith(
+      'SYNC_STATUS',
+      'Sync status poll failed',
+      expect.objectContaining({ poll: 'health', errorMessage: 'IndexedDB is closed' }),
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().healthReport).toBe(HEALTHY);
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+    expect(check).toHaveBeenCalledTimes(3);
   });
 
   // The queue's pending count used to be polled by both useSyncStatus hooks,

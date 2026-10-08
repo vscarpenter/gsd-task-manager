@@ -1,15 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { SYNC_CONFIG, SYNC_TOAST_DURATION } from "@/lib/constants/sync";
 import type { HealthIssue, HealthReport } from "@/lib/sync/health-monitor";
-
-const mockCheck = vi.fn<() => Promise<HealthReport>>();
-
-vi.mock("@/lib/sync/health-monitor", () => ({
-  getHealthMonitor: () => ({ check: mockCheck }),
-}));
-
 import { useSyncHealth } from "@/components/sync/use-sync-health";
+
+// The hook used to run its own health check on a timer. The sync status store
+// runs the check now and publishes each report; the hook turns a report into
+// toasts, once per report, with the same cooldown and stable ids as before.
+
+const NOW = new Date("2026-10-08T12:00:00.000Z").getTime();
 
 const staleQueueIssue: HealthIssue = {
   type: "stale_queue",
@@ -26,34 +25,34 @@ const failedItemsIssue: HealthIssue = {
     "Review failed items in sync history. They will not retry automatically until cleared.",
 };
 
-function unhealthy(issues: HealthIssue[]): HealthReport {
-  return { healthy: false, issues, timestamp: 0 };
+function unhealthy(issues: HealthIssue[], timestamp = NOW): HealthReport {
+  return { healthy: false, issues, timestamp };
 }
 
-async function advance(ms: number): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
+type HookProps = {
+  healthReport: HealthReport | null;
+  onHealthIssue: (notification: { id: string }) => void;
+  onSync: () => void;
+};
+
+function renderSyncHealth(initialProps: HookProps) {
+  return renderHook((props: HookProps) => useSyncHealth(props), { initialProps });
 }
 
 describe("useSyncHealth", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockCheck.mockReset();
+    vi.setSystemTime(NOW);
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("shows a stale-queue warning with a stable id and a Sync Now action", async () => {
-    mockCheck.mockResolvedValue(unhealthy([staleQueueIssue]));
+  it("shows a stale-queue warning with a stable id and a Sync Now action", () => {
     const onHealthIssue = vi.fn();
 
-    renderHook(() =>
-      useSyncHealth({ isEnabled: true, onHealthIssue, onSync: vi.fn() }),
-    );
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    renderSyncHealth({ healthReport: unhealthy([staleQueueIssue]), onHealthIssue, onSync: vi.fn() });
 
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
     expect(onHealthIssue).toHaveBeenCalledWith(
@@ -66,27 +65,21 @@ describe("useSyncHealth", () => {
     );
   });
 
-  it("wires the Sync Now action to onSync", async () => {
-    mockCheck.mockResolvedValue(unhealthy([staleQueueIssue]));
+  it("wires the Sync Now action to onSync", () => {
     const onHealthIssue = vi.fn();
     const onSync = vi.fn();
 
-    renderHook(() => useSyncHealth({ isEnabled: true, onHealthIssue, onSync }));
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    renderSyncHealth({ healthReport: unhealthy([staleQueueIssue]), onHealthIssue, onSync });
 
     const notification = onHealthIssue.mock.calls[0][0];
     notification.action.onClick();
     expect(onSync).toHaveBeenCalledTimes(1);
   });
 
-  it("shows an error issue with a stable id and no action", async () => {
-    mockCheck.mockResolvedValue(unhealthy([failedItemsIssue]));
+  it("shows an error issue with a stable id and no action", () => {
     const onHealthIssue = vi.fn();
 
-    renderHook(() =>
-      useSyncHealth({ isEnabled: true, onHealthIssue, onSync: vi.fn() }),
-    );
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    renderSyncHealth({ healthReport: unhealthy([failedItemsIssue]), onHealthIssue, onSync: vi.fn() });
 
     expect(onHealthIssue).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -98,74 +91,93 @@ describe("useSyncHealth", () => {
     expect(onHealthIssue.mock.calls[0][0].action).toBeUndefined();
   });
 
-  it("does not notify again within the cooldown window", async () => {
-    mockCheck.mockResolvedValue(unhealthy([staleQueueIssue]));
+  it("notifies once per report, not once per render", () => {
     const onHealthIssue = vi.fn();
+    const report = unhealthy([staleQueueIssue]);
 
-    renderHook(() =>
-      useSyncHealth({ isEnabled: true, onHealthIssue, onSync: vi.fn() }),
-    );
+    const { rerender } = renderSyncHealth({ healthReport: report, onHealthIssue, onSync: vi.fn() });
+    rerender({ healthReport: report, onHealthIssue, onSync: vi.fn() });
+    rerender({ healthReport: report, onHealthIssue, onSync: vi.fn() });
 
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
-    expect(onHealthIssue).toHaveBeenCalledTimes(1);
-
-    // The periodic check fires again but is gated by the cooldown.
-    await advance(
-      SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS -
-        SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS,
-    );
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the cooldown when callbacks change identity between renders", async () => {
-    mockCheck.mockResolvedValue(unhealthy([staleQueueIssue]));
+  // The cooldown is measured on the report's timestamp, which the monitor
+  // stamps when the check starts, not on the clock when the report arrives.
+  // The store's ticks are exactly one cooldown apart, so a slower first check
+  // and a faster second one would otherwise push every other toast out.
+  it("does not notify again for a report inside the cooldown window", () => {
     const onHealthIssue = vi.fn();
+    const onSync = vi.fn();
 
-    const { rerender } = renderHook(
-      ({ cb }: { cb: () => void }) =>
-        useSyncHealth({ isEnabled: true, onHealthIssue, onSync: cb }),
-      { initialProps: { cb: () => {} } },
-    );
-
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    // The button mounts at boot; the first check starts 10 s later and takes
+    // 180 ms to come back.
+    vi.setSystemTime(NOW - 10_000);
+    const { rerender } = renderSyncHealth({ healthReport: null, onHealthIssue, onSync });
+    vi.setSystemTime(NOW + 180);
+    rerender({ healthReport: unhealthy([staleQueueIssue], NOW), onHealthIssue, onSync });
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
 
-    // A status-poll re-render hands the hook fresh callback identities. This
-    // must not re-arm the timers and replay the notification.
-    rerender({ cb: () => {} });
-    rerender({ cb: () => {} });
-
-    await advance(
-      SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS -
-        SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS,
-    );
+    // The next check lands 5 min after enable, 4 min 50 s after this one.
+    vi.setSystemTime(NOW + SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS - 10_000);
+    rerender({ healthReport: unhealthy([staleQueueIssue], NOW + 290_000), onHealthIssue, onSync });
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
+
+    // The check one cooldown later took 90 ms to come back.
+    vi.setSystemTime(NOW + SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS + 90);
+    rerender({ healthReport: unhealthy([staleQueueIssue], NOW + 300_000), onHealthIssue, onSync });
+    expect(onHealthIssue).toHaveBeenCalledTimes(2);
   });
 
-  it("ignores warnings that are not a stale queue", async () => {
-    mockCheck.mockResolvedValue(
-      unhealthy([{ ...staleQueueIssue, type: "server_unreachable" }]),
-    );
+  // The sync button remounts on every route change while the store keeps its
+  // last report. Replaying that report would re-toast an issue the user may
+  // have fixed since, so a fresh instance waits for the next check instead.
+  it("ignores a report from before it mounted", () => {
     const onHealthIssue = vi.fn();
 
-    renderHook(() =>
-      useSyncHealth({ isEnabled: true, onHealthIssue, onSync: vi.fn() }),
-    );
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    renderSyncHealth({
+      healthReport: unhealthy([staleQueueIssue], NOW - 1),
+      onHealthIssue,
+      onSync: vi.fn(),
+    });
 
     expect(onHealthIssue).not.toHaveBeenCalled();
   });
 
-  it("does not check health when sync is disabled", async () => {
-    mockCheck.mockResolvedValue(unhealthy([staleQueueIssue]));
+  it("keeps the cooldown when callbacks change identity between renders", () => {
+    const onHealthIssue = vi.fn();
+    const report = unhealthy([staleQueueIssue]);
+
+    const { rerender } = renderSyncHealth({ healthReport: report, onHealthIssue, onSync: () => {} });
+    expect(onHealthIssue).toHaveBeenCalledTimes(1);
+
+    // A status-poll re-render hands the hook fresh callback identities. This
+    // must not replay the notification, with or without a fresh report.
+    rerender({ healthReport: report, onHealthIssue, onSync: () => {} });
+    vi.setSystemTime(NOW + 60_000);
+    rerender({ healthReport: unhealthy([staleQueueIssue], NOW + 60_000), onHealthIssue, onSync: () => {} });
+
+    expect(onHealthIssue).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores warnings that are not a stale queue", () => {
     const onHealthIssue = vi.fn();
 
-    renderHook(() =>
-      useSyncHealth({ isEnabled: false, onHealthIssue, onSync: vi.fn() }),
-    );
-    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    renderSyncHealth({
+      healthReport: unhealthy([{ ...staleQueueIssue, type: "server_unreachable" }]),
+      onHealthIssue,
+      onSync: vi.fn(),
+    });
 
-    expect(mockCheck).not.toHaveBeenCalled();
+    expect(onHealthIssue).not.toHaveBeenCalled();
+  });
+
+  it("does nothing without a report or with a healthy one", () => {
+    const onHealthIssue = vi.fn();
+
+    const { rerender } = renderSyncHealth({ healthReport: null, onHealthIssue, onSync: vi.fn() });
+    rerender({ healthReport: { healthy: true, issues: [], timestamp: NOW }, onHealthIssue, onSync: vi.fn() });
+
     expect(onHealthIssue).not.toHaveBeenCalled();
   });
 });

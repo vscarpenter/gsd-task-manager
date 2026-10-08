@@ -3,7 +3,7 @@ import { createLogger } from '@/lib/logger';
 const logger = createLogger('SYNC_STATUS');
 
 /** The sync-status reads that run on a timer. */
-export type SyncStatusPoll = 'enabled' | 'coordinator' | 'pendingCount';
+export type SyncStatusPoll = 'enabled' | 'coordinator' | 'pendingCount' | 'health';
 
 /**
  * Wrap a status poll so a failed read is logged and dropped. The caller keeps

@@ -6,7 +6,7 @@
     "complexity": 30,
     "max-depth": 4,
     "max-lines": 0,
-    "max-lines-per-function": 93
+    "max-lines-per-function": 92
   },
   "resolvedTargets": [
     "lib/db.ts:GsdDatabase.constructor",

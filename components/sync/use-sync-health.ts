@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import { getHealthMonitor, type HealthIssue } from '@/lib/sync/health-monitor';
+import type { HealthIssue, HealthReport } from '@/lib/sync/health-monitor';
 import { SYNC_CONFIG, SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 
 /** A health notification ready to be handed to a toast. */
@@ -14,7 +14,8 @@ export interface HealthNotification {
 }
 
 interface SyncHealthOptions {
-  isEnabled: boolean;
+  /** The latest report from the sync status store's health poll. Null while sync is off. */
+  healthReport: HealthReport | null;
   onHealthIssue: (notification: HealthNotification) => void;
   onSync: () => void;
 }
@@ -52,64 +53,58 @@ function buildNotification(
 }
 
 /**
- * Hook for monitoring sync health and showing notifications.
+ * Hook for surfacing sync health as notifications.
  *
- * Checks health periodically and surfaces a toast per issue. The cooldown and
- * the consumer callbacks live in refs, so frequent status-poll re-renders (which
- * hand the hook fresh callback identities) never re-arm the timers — a single
- * wake-from-sleep would otherwise fire several overlapping checks at once.
+ * The sync status store runs the health check (10 s after sync comes on, then
+ * every 5 min) and publishes each report. This hook turns a report into a toast
+ * per issue, once per report. The cooldown and the consumer callbacks live in
+ * refs, so frequent status-poll re-renders (which hand the hook fresh callback
+ * identities) never replay a notification.
  */
-export function useSyncHealth({ isEnabled, onHealthIssue, onSync }: SyncHealthOptions) {
+export function useSyncHealth({ healthReport, onHealthIssue, onSync }: SyncHealthOptions) {
   const lastNotificationTimeRef = useRef(0);
+  // The sync button remounts on every route change while the store keeps its
+  // last report. Replaying that report would re-toast an issue the user may
+  // have fixed since, so a fresh instance only acts on reports from after it
+  // mounted.
+  const mountedAtRef = useRef<number | null>(null);
   const onHealthIssueRef = useRef(onHealthIssue);
   const onSyncRef = useRef(onSync);
 
-  // Keep the latest callbacks without retriggering the timer effect below.
+  useEffect(() => {
+    mountedAtRef.current ??= Date.now();
+  }, []);
+
+  // Keep the latest callbacks without retriggering the report effect below.
   useEffect(() => {
     onHealthIssueRef.current = onHealthIssue;
     onSyncRef.current = onSync;
   });
 
   useEffect(() => {
-    if (!isEnabled) {
+    if (!healthReport || healthReport.healthy || healthReport.issues.length === 0) {
+      return;
+    }
+    if (healthReport.timestamp < (mountedAtRef.current ?? 0)) {
       return;
     }
 
-    const checkHealthAndNotify = async () => {
-      const now = Date.now();
+    // Avoid notification spam. The monitor stamps the report when the check
+    // starts, so the cooldown counts from tick to tick, not from arrival to
+    // arrival: the ticks are exactly one cooldown apart, and a slower first
+    // check followed by a faster one would otherwise skip every other toast.
+    // Reading/writing a ref keeps this immune to re-render churn.
+    const now = healthReport.timestamp;
+    if (now - lastNotificationTimeRef.current < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) {
+      return;
+    }
 
-      // Avoid notification spam. Reading/writing a ref keeps this immune to the
-      // re-render churn that an effect-dependency state value would suffer.
-      if (now - lastNotificationTimeRef.current < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) {
-        return;
+    for (const issue of healthReport.issues) {
+      const notification = buildNotification(issue, onSyncRef.current);
+      if (notification) {
+        onHealthIssueRef.current(notification);
+        lastNotificationTimeRef.current = now;
       }
-
-      const report = await getHealthMonitor().check();
-      if (report.healthy || report.issues.length === 0) {
-        return;
-      }
-
-      for (const issue of report.issues) {
-        const notification = buildNotification(issue, onSyncRef.current);
-        if (notification) {
-          onHealthIssueRef.current(notification);
-          lastNotificationTimeRef.current = now;
-        }
-      }
-    };
-
-    const interval = setInterval(
-      checkHealthAndNotify,
-      SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS,
-    );
-    const initialTimeout = setTimeout(
-      checkHealthAndNotify,
-      SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS,
-    );
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(initialTimeout);
-    };
-  }, [isEnabled]);
+    }
+  }, [healthReport]);
 }

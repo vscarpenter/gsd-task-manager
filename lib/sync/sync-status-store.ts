@@ -3,8 +3,9 @@
  *
  * SyncProvider creates one store, starts it once on mount, and reads it through
  * useSyncExternalStore. The store runs the enabled check every 2 s, the
- * coordinator status read every 500 ms while there is status to watch, and the
- * queue's pending count every 2 s while sync is on, and it brings the realtime
+ * coordinator status read every 500 ms while there is status to watch, and,
+ * while sync is on, the queue's pending count every 2 s and a health check
+ * 10 s after enable and then every 5 min. It also brings the realtime
  * subscription and the background-sync manager in line with the enabled flag.
  * Every poll runs through guardPoll, so a failed read is logged under
  * SYNC_STATUS and the snapshot keeps the value it last held.
@@ -13,6 +14,7 @@
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
+import { getHealthMonitor, type HealthReport } from '@/lib/sync/health-monitor';
 import { getSyncQueue } from '@/lib/sync/queue';
 import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
@@ -41,6 +43,8 @@ export interface SyncStatusSnapshot {
   lastSuccessfulSyncAt: string | null;
   /** Queue operations waiting to be pushed. Held at 0 while sync is off. */
   pendingCount: number;
+  /** The latest health check report. Null while sync is off. */
+  healthReport: HealthReport | null;
 }
 
 export const initialSyncStatus: SyncStatusSnapshot = {
@@ -56,6 +60,7 @@ export const initialSyncStatus: SyncStatusSnapshot = {
   autoSyncInterval: 2,
   lastSuccessfulSyncAt: null,
   pendingCount: 0,
+  healthReport: null,
 };
 
 export type SyncStatusAction =
@@ -72,6 +77,7 @@ export type SyncStatusAction =
   | { type: 'SET_LAST_RESULT'; lastResult: PBSyncResult }
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_PENDING_COUNT'; pendingCount: number }
+  | { type: 'SET_HEALTH_REPORT'; healthReport: HealthReport }
   | { type: 'SET_STATUS'; status: SyncStatusSnapshot['status'] }
   | { type: 'SYNC_START' }
   | { type: 'SYNC_SUCCESS'; lastResult: PBSyncResult }
@@ -98,14 +104,19 @@ function reducePollAction(
 ): SyncStatusSnapshot | null {
   switch (action.type) {
     case 'SET_ENABLED':
-      // The pending count is only read while sync is on, so switching off
-      // zeroes it here rather than leaving the last count on the badge.
+      // The pending count and the health report are only read while sync is
+      // on, so switching off clears them rather than leaving the last values
+      // on the badge and in the toasts.
       return mergeIfChanged(
         state,
-        action.isEnabled ? { isEnabled: true } : { isEnabled: false, pendingCount: 0 }
+        action.isEnabled
+          ? { isEnabled: true }
+          : { isEnabled: false, pendingCount: 0, healthReport: null }
       );
     case 'SET_PENDING_COUNT':
       return mergeIfChanged(state, { pendingCount: action.pendingCount });
+    case 'SET_HEALTH_REPORT':
+      return mergeIfChanged(state, { healthReport: action.healthReport });
     case 'SET_COORDINATOR_STATUS':
       return mergeIfChanged(state, {
         isSyncing: action.isSyncing,
@@ -266,9 +277,12 @@ export class SyncStatusStore {
   private started = false;
   private watching = false;
   private countingPending = false;
+  private checkingHealth = false;
   private enabledInterval: ReturnType<typeof setInterval> | null = null;
   private statusInterval: ReturnType<typeof setInterval> | null = null;
   private pendingInterval: ReturnType<typeof setInterval> | null = null;
+  private healthTimeout: ReturnType<typeof setTimeout> | null = null;
+  private healthInterval: ReturnType<typeof setInterval> | null = null;
 
   private readonly checkEnabled = guardPoll('enabled', async () => {
     const { enabled, config } = await readSyncEnabled();
@@ -289,6 +303,18 @@ export class SyncStatusStore {
     if (this.state.isEnabled) this.dispatch({ type: 'SET_PENDING_COUNT', pendingCount });
   });
 
+  private readonly checkHealth = guardPoll('health', async () => {
+    const healthReport = await getHealthMonitor().check();
+    for (const issue of healthReport.issues) {
+      logger.warn('Health issue detected', {
+        type: issue.type,
+        severity: issue.severity,
+        message: issue.message,
+      });
+    }
+    if (this.state.isEnabled) this.dispatch({ type: 'SET_HEALTH_REPORT', healthReport });
+  });
+
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => {
@@ -306,6 +332,7 @@ export class SyncStatusStore {
     if (!this.started) return;
     this.reconcileStatusPoll();
     this.reconcilePendingPoll();
+    this.reconcileHealthPoll();
   };
 
   /** Run the enabled check now and every 2 s, and read the status once. */
@@ -318,6 +345,8 @@ export class SyncStatusStore {
     this.armStatusPoll();
     this.countingPending = this.state.isEnabled;
     this.armPendingPoll();
+    this.checkingHealth = this.state.isEnabled;
+    this.armHealthPoll();
   }
 
   stop(): void {
@@ -327,7 +356,33 @@ export class SyncStatusStore {
     this.enabledInterval = null;
     this.clearStatusPoll();
     this.clearPendingPoll();
+    this.clearHealthPoll();
     stopSyncServices();
+  }
+
+  private reconcileHealthPoll(): void {
+    const enabled = this.state.isEnabled;
+    if (enabled === this.checkingHealth) return;
+    this.checkingHealth = enabled;
+    this.clearHealthPoll();
+    this.armHealthPoll();
+  }
+
+  /**
+   * The sync button's schedule, kept as the one schedule: a first check 10 s
+   * after sync comes on, then one every 5 min, only while sync is on.
+   */
+  private armHealthPoll(): void {
+    if (!this.checkingHealth) return;
+    this.healthTimeout = setTimeout(this.checkHealth, SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    this.healthInterval = setInterval(this.checkHealth, SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+  }
+
+  private clearHealthPoll(): void {
+    if (this.healthTimeout) clearTimeout(this.healthTimeout);
+    if (this.healthInterval) clearInterval(this.healthInterval);
+    this.healthTimeout = null;
+    this.healthInterval = null;
   }
 
   private reconcilePendingPoll(): void {

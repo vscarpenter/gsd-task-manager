@@ -8,7 +8,6 @@ import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
 import { getDb } from '@/lib/db';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
-import { UI_TIMING } from '@/lib/constants/ui';
 
 vi.mock('@/lib/sync/pocketbase-client');
 vi.mock('@/lib/sync/sync-coordinator');
@@ -74,31 +73,27 @@ describe('health check schedule', () => {
     vi.restoreAllMocks();
   });
 
-  // The monitor used to arm its own interval on start() and drop every report
-  // it produced. SyncProvider and the sync button each call check() on their
-  // own schedule, so those are the only checks that should run.
-  it('should_run_health_checks_only_on_the_providers_schedule_while_sync_is_enabled', async () => {
+  // The provider and the sync button used to run their own checks, the
+  // provider's at 1 s and the button's at 10 s after enable. The store runs the
+  // one schedule now, so with the provider mounted exactly these checks run.
+  it('should_run_health_checks_only_on_the_stores_schedule_while_sync_is_enabled', async () => {
     const check = vi.spyOn(HealthMonitor.prototype, 'check').mockResolvedValue(HEALTHY);
 
     render(<SyncProvider><div /></SyncProvider>);
     // Let the enabled check publish isEnabled before the clock moves, so the
-    // provider arms its health timer at t = 0 and the arithmetic below holds.
+    // store arms its health timers at t = 0 and the arithmetic below holds.
     await advance(0);
-    await advance(UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS - 1);
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS - 1);
     expect(check).toHaveBeenCalledTimes(0);
 
     await advance(1);
     expect(check).toHaveBeenCalledTimes(1);
 
-    // The provider's first 5-minute tick lands inside its own cooldown and
-    // skips; its second tick runs. A monitor timer on HEALTH_CHECK_INTERVAL_MS
-    // would add a check at 0 ms, 5 min, and 10 min, so an exact count catches
-    // one at any of those.
-    await advance(SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS - UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
-    expect(check).toHaveBeenCalledTimes(1);
-
-    await advance(SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS - SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
     expect(check).toHaveBeenCalledTimes(2);
+
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS);
+    expect(check).toHaveBeenCalledTimes(3);
   });
 
   it('should_run_no_health_check_while_sync_is_disabled', async () => {
@@ -107,7 +102,7 @@ describe('health check schedule', () => {
 
     render(<SyncProvider><div /></SyncProvider>);
     await advance(0);
-    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS + UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
+    await advance(SYNC_CONFIG.HEALTH_CHECK_INTERVAL_MS + SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
 
     expect(check).toHaveBeenCalledTimes(0);
   });

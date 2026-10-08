@@ -19,9 +19,6 @@ export const UI_TIMING = {
   /** Auto-reset timeout after sync error (10 seconds) — longer so users can read errors */
   AUTO_RESET_ERROR_MS: 10000,
 
-  /** Initial delay before first health check (1 second) */
-  INITIAL_HEALTH_CHECK_DELAY_MS: 1000,
-
   /** Delay before refreshing sync status display (600ms) */
   STATUS_REFRESH_DELAY_MS: 600,
 

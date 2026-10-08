@@ -341,10 +341,6 @@
       "count": 1,
       "max": 86
     },
-    "components/sync/use-sync-health.ts": {
-      "count": 1,
-      "max": 43
-    },
     "components/task-card/index.tsx": {
       "count": 1,
       "max": 103
