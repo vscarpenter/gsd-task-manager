@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSync } from "@/lib/hooks/use-sync";
-import { getSyncQueue } from "@/lib/sync/queue";
-import { guardPoll } from "@/lib/sync/sync-status-poll";
-import { SYNC_CONFIG } from "@/lib/constants/sync";
+import { useRetryCountdown } from "@/lib/hooks/use-retry-countdown";
 import { UI_TIMING } from "@/lib/constants/ui";
 
 /**
@@ -27,17 +25,6 @@ function formatRelativeTime(timestamp: string | null): string {
   return `${days} day${days !== 1 ? "s" : ""} ago`;
 }
 
-/**
- * Read the last successful sync time from the coordinator. Kept at module
- * scope (not inside the hook) so the dynamic `import()` stays out of the
- * React-Compiler-compiled hook body, which it cannot yet lower.
- */
-async function fetchLastSuccessfulSyncAt(): Promise<string | null> {
-  const { getSyncCoordinator } = await import("@/lib/sync/sync-coordinator");
-  const status = await getSyncCoordinator().getStatus();
-  return status.lastSuccessfulSyncAt;
-}
-
 interface SyncStatusResult {
   isEnabled: boolean;
   retryCount: number;
@@ -48,31 +35,14 @@ interface SyncStatusResult {
 }
 
 /**
- * Custom hook that polls sync status (last sync time, pending count,
- * retry countdown) and exposes the results for display.
+ * Sync status for the header: the last sync time, the pending operation
+ * count, and the retry countdown. The values come from the sync status store
+ * through the sync context, so this hook reads nothing on its own.
  */
 export function useSyncStatus(): SyncStatusResult {
-  const { isEnabled, nextRetryAt, retryCount } = useSync();
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const { isEnabled, nextRetryAt, retryCount, pendingCount, lastSuccessfulSyncAt } = useSync();
   const [, setTick] = useState(0);
-
-  // Poll last sync time from coordinator
-  useEffect(() => {
-    const updateLastSync = guardPoll("lastSync", async () => {
-      if (!isEnabled) {
-        setLastSyncTime(null);
-        return;
-      }
-      setLastSyncTime(await fetchLastSuccessfulSyncAt());
-    });
-
-    updateLastSync();
-
-    const interval = setInterval(updateLastSync, SYNC_CONFIG.SYNC_STATUS_POLL_MS);
-    return () => clearInterval(interval);
-  }, [isEnabled]);
+  const retryCountdown = useRetryCountdown(nextRetryAt);
 
   // Force re-render every 30 seconds to update relative time display
   useEffect(() => {
@@ -83,54 +53,10 @@ export function useSyncStatus(): SyncStatusResult {
     return () => clearInterval(interval);
   }, []);
 
-  // Poll pending operation count
-  useEffect(() => {
-    const updatePendingCount = guardPoll("pendingCount", async () => {
-      if (!isEnabled) {
-        setPendingCount(0);
-        return;
-      }
-
-      const queue = getSyncQueue();
-      const count = await queue.getPendingCount();
-      setPendingCount(count);
-    });
-
-    updatePendingCount();
-
-    const interval = setInterval(
-      updatePendingCount,
-      SYNC_CONFIG.PENDING_COUNT_POLL_INTERVAL_MS
-    );
-    return () => clearInterval(interval);
-  }, [isEnabled]);
-
-  // Update retry countdown
-  useEffect(() => {
-    const updateCountdown = () => {
-      if (nextRetryAt && nextRetryAt > Date.now()) {
-        const secondsRemaining = Math.ceil(
-          (nextRetryAt - Date.now()) / 1000
-        );
-        setRetryCountdown(secondsRemaining);
-      } else {
-        setRetryCountdown(null);
-      }
-    };
-
-    updateCountdown();
-
-    const interval = setInterval(
-      updateCountdown,
-      SYNC_CONFIG.COUNTDOWN_UPDATE_INTERVAL_MS
-    );
-    return () => clearInterval(interval);
-  }, [nextRetryAt]);
-
   return {
     isEnabled,
     retryCount,
-    lastSyncTime,
+    lastSyncTime: isEnabled ? lastSuccessfulSyncAt : null,
     pendingCount,
     retryCountdown,
     formatRelativeTime,

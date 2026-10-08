@@ -345,10 +345,6 @@
       "count": 1,
       "max": 43
     },
-    "components/sync/use-sync-status.ts": {
-      "count": 1,
-      "max": 69
-    },
     "components/task-card/index.tsx": {
       "count": 1,
       "max": 103
@@ -380,10 +376,6 @@
     "lib/command-actions.ts": {
       "count": 1,
       "max": 132
-    },
-    "lib/hooks/use-sync-status.ts": {
-      "count": 1,
-      "max": 68
     },
     "lib/sync/error-categorizer.ts": {
       "count": 1,

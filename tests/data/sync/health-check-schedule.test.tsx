@@ -19,6 +19,9 @@ vi.mock('@/lib/sync/pb-realtime', () => ({
   unsubscribe: vi.fn(),
 }));
 vi.mock('@/lib/db');
+vi.mock('@/lib/sync/queue', () => ({
+  getSyncQueue: () => ({ getPendingCount: vi.fn().mockResolvedValue(0) }),
+}));
 
 // The health monitor stays real here. Only check() is stubbed, so the test
 // counts who schedules a check, not what a check reads.

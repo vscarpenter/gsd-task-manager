@@ -1,9 +1,5 @@
 import { renderHook } from '@testing-library/react';
 
-vi.mock('@/lib/sync/queue', () => ({
-  getSyncQueue: () => ({ getPendingCount: async () => 0 }),
-}));
-
 vi.mock('@/lib/sync/error-categorizer', () => ({
   isAuthError: () => false,
 }));
@@ -28,6 +24,7 @@ describe('useSyncStatus tooltip — healthy idle', () => {
         status: 'idle',
         error: null,
         nextRetryAt: null,
+        pendingCount: 0,
         onAuthError,
         lastSuccessfulSyncAt: '2026-04-20T00:00:00.000Z',
       })
@@ -42,6 +39,7 @@ describe('useSyncStatus tooltip — healthy idle', () => {
         status: 'idle',
         error: null,
         nextRetryAt: null,
+        pendingCount: 0,
         onAuthError,
         lastSuccessfulSyncAt: null,
       })
@@ -56,6 +54,7 @@ describe('useSyncStatus tooltip — healthy idle', () => {
         status: 'idle',
         error: null,
         nextRetryAt: null,
+        pendingCount: 0,
         onAuthError,
         lastSuccessfulSyncAt: '2026-04-20T00:00:00.000Z',
       })

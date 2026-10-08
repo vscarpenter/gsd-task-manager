@@ -12,6 +12,7 @@ const mockUseSync = vi.fn(() => ({
   error: null,
   isEnabled: false,
   nextRetryAt: null,
+  pendingCount: 0,
 }));
 
 vi.mock('@/lib/sync/sync-provider', () => ({
@@ -165,6 +166,21 @@ describe('SyncButton', () => {
 
     render(<SyncButton />);
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('hands the pending count from the sync context to useSyncStatus', () => {
+    mockUseSync.mockReturnValue({
+      sync: mockSync,
+      isSyncing: false,
+      status: 'idle',
+      error: null,
+      isEnabled: true,
+      nextRetryAt: null,
+      pendingCount: 3,
+    });
+
+    render(<SyncButton />);
+    expect(mockUseSyncStatus).toHaveBeenCalledWith(expect.objectContaining({ pendingCount: 3 }));
   });
 
   it('forwards stable health issue ids to sonner so repeated warnings are deduped', () => {

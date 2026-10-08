@@ -217,20 +217,6 @@ vi.mock("@/lib/hooks/use-sync", () => ({
   useSync: () => mockUseSync(),
 }));
 
-vi.mock("@/lib/sync/queue", () => ({
-  getSyncQueue: () => ({
-    getPendingCount: vi.fn().mockResolvedValue(0),
-  }),
-}));
-
-vi.mock("@/lib/sync/sync-coordinator", () => ({
-  getSyncCoordinator: () => ({
-    getStatus: vi.fn().mockResolvedValue({
-      lastSuccessfulSyncAt: null,
-    }),
-  }),
-}));
-
 describe("useSyncStatus — formatRelativeTime", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -238,6 +224,8 @@ describe("useSyncStatus — formatRelativeTime", () => {
       isEnabled: false,
       nextRetryAt: null,
       retryCount: 0,
+      pendingCount: 0,
+      lastSuccessfulSyncAt: null,
     });
   });
 

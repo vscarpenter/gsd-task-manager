@@ -78,7 +78,7 @@ function SyncStatusOverlays({
 }
 
 export function SyncButton() {
-  const { sync, isSyncing, status, error, isEnabled, nextRetryAt } = useSync();
+  const { sync, isSyncing, status, error, isEnabled, nextRetryAt, pendingCount: queuedCount } = useSync();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   useSyncHealth({
@@ -100,6 +100,7 @@ export function SyncButton() {
     status,
     error,
     nextRetryAt,
+    pendingCount: queuedCount,
     onAuthError: (message, _action, duration) => {
       toast(message, {
         duration,
@@ -110,8 +111,6 @@ export function SyncButton() {
       });
     },
   });
-
-  const icon = getIconComponent(iconType);
 
   async function handleSync() {
     if (!isEnabled) {
@@ -148,7 +147,7 @@ export function SyncButton() {
               aria-label={tooltip}
               data-testid="sync-button"
             >
-              {icon}
+              {getIconComponent(iconType)}
               <SyncStatusOverlays
                 hasAuthError={hasAuthError}
                 isEnabled={isEnabled}

@@ -21,6 +21,9 @@ vi.mock('@/lib/sync/pb-realtime', () => ({
   unsubscribe: vi.fn(),
 }));
 vi.mock('@/lib/db');
+vi.mock('@/lib/sync/queue', () => ({
+  getSyncQueue: () => ({ getPendingCount: vi.fn().mockResolvedValue(0) }),
+}));
 
 // The coordinator hands back the same result object on every read, the way the
 // real one does between syncs.
