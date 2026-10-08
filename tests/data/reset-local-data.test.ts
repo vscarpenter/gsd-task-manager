@@ -20,10 +20,6 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
   clearPocketBase: vi.fn(),
 }));
 
-vi.mock('@/lib/sync/health-monitor', () => ({
-  getHealthMonitor: () => ({ isActive: () => false, stop: vi.fn() }),
-}));
-
 vi.mock('@/lib/browser-cache', () => ({
   clearAppCaches: vi.fn().mockResolvedValue([]),
 }));

@@ -78,9 +78,6 @@ describe('useSync', () => {
 
     // Setup mock health monitor
     mockHealthMonitor = {
-      isActive: vi.fn().mockReturnValue(false),
-      start: vi.fn(),
-      stop: vi.fn(),
       check: vi.fn().mockResolvedValue({
         healthy: true,
         issues: [],
@@ -135,17 +132,6 @@ describe('useSync', () => {
       expect(isAuthenticated).toHaveBeenCalled();
     });
 
-    it('should start health monitor when sync is enabled', async () => {
-      vi.mocked(isAuthenticated).mockReturnValue(true);
-      mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
-
-      renderHook(() => useSync(), { wrapper });
-
-      await flushAsync();
-
-      expect(mockHealthMonitor.start).toHaveBeenCalled();
-    });
-
     it('should subscribe to realtime when authenticated sync is enabled', async () => {
       vi.mocked(isAuthenticated).mockReturnValue(true);
       mockDb.syncMetadata.get.mockResolvedValue({
@@ -171,15 +157,6 @@ describe('useSync', () => {
       });
     });
 
-    it('should not start health monitor when sync is disabled', async () => {
-      vi.mocked(isAuthenticated).mockReturnValue(false);
-
-      renderHook(() => useSync(), { wrapper });
-
-      await flushAsync();
-
-      expect(mockHealthMonitor.start).not.toHaveBeenCalled();
-    });
   });
 
   describe('sync state updates', () => {
@@ -426,34 +403,10 @@ describe('useSync', () => {
     });
   });
 
-  describe('health monitoring', () => {
-    it('should start health monitor when sync is enabled', async () => {
-      vi.mocked(isAuthenticated).mockReturnValue(true);
-      mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
-
-      renderHook(() => useSync(), { wrapper });
-
-      await flushAsync();
-
-      expect(mockHealthMonitor.start).toHaveBeenCalled();
-    });
-
-    it('should not start health monitor when sync is disabled', async () => {
-      vi.mocked(isAuthenticated).mockReturnValue(false);
-
-      renderHook(() => useSync(), { wrapper });
-
-      await flushAsync();
-
-      expect(mockHealthMonitor.start).not.toHaveBeenCalled();
-    });
-  });
-
   describe('cleanup', () => {
-    it('should stop health monitor on unmount', async () => {
+    it('should unsubscribe realtime on unmount', async () => {
       vi.mocked(isAuthenticated).mockReturnValue(true);
       mockDb.syncMetadata.get.mockResolvedValue({ key: 'sync_config', enabled: true, deviceId: 'test-device' });
-      mockHealthMonitor.isActive.mockReturnValue(true);
 
       const { unmount } = renderHook(() => useSync(), { wrapper });
 
@@ -461,7 +414,6 @@ describe('useSync', () => {
 
       unmount();
 
-      expect(mockHealthMonitor.stop).toHaveBeenCalled();
       expect(unsubscribe).toHaveBeenCalled();
     });
 

@@ -100,9 +100,6 @@ describe('SyncProvider polling', () => {
       requestSync: vi.fn(),
     } as unknown as ReturnType<typeof getSyncCoordinator>);
     vi.mocked(getHealthMonitor).mockReturnValue({
-      isActive: vi.fn().mockReturnValue(false),
-      start: vi.fn(),
-      stop: vi.fn(),
       check: vi.fn().mockResolvedValue({ healthy: true, issues: [], timestamp: 0 }),
     } as unknown as ReturnType<typeof getHealthMonitor>);
     vi.mocked(getBackgroundSyncManager).mockReturnValue({

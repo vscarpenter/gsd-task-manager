@@ -14,19 +14,6 @@ import { clearAppCaches } from "@/lib/browser-cache";
 const logger = createLogger('SYNC_CONFIG');
 
 /**
- * Stop health monitoring
- */
-async function stopHealthMonitor(): Promise<void> {
-  const { getHealthMonitor } = await import("../health-monitor");
-  const healthMonitor = getHealthMonitor();
-
-  if (healthMonitor.isActive()) {
-    logger.info('Stopping health monitor (sync disabled)');
-    healthMonitor.stop();
-  }
-}
-
-/**
  * Reset sync config to disabled state and wipe per-user sync artefacts.
  *
  * Important on shared/kiosk devices: the next user on the same browser
@@ -94,9 +81,6 @@ export async function disableSync(): Promise<void> {
   // Persist the disabled config before any other awaited step. An in-flight
   // sync re-reads this row before each write, so it stops at the first await.
   await resetSyncConfigState(current);
-
-  // Stop health monitor
-  await stopHealthMonitor();
 
   // Clear PocketBase auth state (token + localStorage)
   clearPocketBase();

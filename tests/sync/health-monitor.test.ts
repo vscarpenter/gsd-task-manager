@@ -1,5 +1,5 @@
 /**
- * Tests for HealthMonitor - periodic health checks and issue detection
+ * Tests for HealthMonitor - health checks and issue detection
  *
  * Updated for PocketBase migration: token-manager and api-client mocks
  * replaced with pocketbase-client mocks (getPocketBase, isAuthenticated).
@@ -79,9 +79,6 @@ describe('HealthMonitor', () => {
   });
 
   afterEach(async () => {
-    // Stop monitor if running
-    monitor.stop();
-
     // Restore console
     consoleMock.restore();
 
@@ -92,53 +89,6 @@ describe('HealthMonitor', () => {
     }
 
     await db.delete();
-  });
-
-  describe('start and stop', () => {
-    it('should start health monitor and run initial check', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      monitor.start();
-
-      expect(monitor.isActive()).toBe(true);
-
-      // Wait for initial check to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Verify initial check was performed
-      expect(mockQueue.getPending).toHaveBeenCalled();
-    });
-
-    it('should not start if already running', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      monitor.start();
-      const firstActive = monitor.isActive();
-
-      monitor.start(); // Try to start again
-      const secondActive = monitor.isActive();
-
-      expect(firstActive).toBe(true);
-      expect(secondActive).toBe(true);
-    });
-
-    it('should stop health monitor and clear interval', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      monitor.start();
-      expect(monitor.isActive()).toBe(true);
-
-      monitor.stop();
-      expect(monitor.isActive()).toBe(false);
-    });
-
-    it('should not error when stopping if not running', () => {
-      expect(monitor.isActive()).toBe(false);
-
-      expect(() => monitor.stop()).not.toThrow();
-
-      expect(monitor.isActive()).toBe(false);
-    });
   });
 
   describe('check - health status calculation', () => {
@@ -358,43 +308,6 @@ describe('HealthMonitor', () => {
       const issueTypes = report.issues.map(i => i.type);
       expect(issueTypes).toContain('stale_queue');
       expect(issueTypes).toContain('token_expired');
-    });
-  });
-
-  describe('periodic health checks', () => {
-    it('should schedule periodic checks when started', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      monitor.start();
-
-      // Verify monitor is active
-      expect(monitor.isActive()).toBe(true);
-
-      // Wait for initial check to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Verify initial check was performed
-      expect(mockQueue.getPending).toHaveBeenCalled();
-    });
-
-    it('should clear interval when stopped', async () => {
-      await db.syncMetadata.add(createMockSyncConfig());
-
-      monitor.start();
-      expect(monitor.isActive()).toBe(true);
-
-      const callsBeforeStop = mockQueue.getPending.mock.calls.length;
-
-      monitor.stop();
-      expect(monitor.isActive()).toBe(false);
-
-      // Wait a bit to ensure no more calls are made
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const callsAfterStop = mockQueue.getPending.mock.calls.length;
-
-      // Should not have made additional calls after stop (or at most 1 if timing)
-      expect(callsAfterStop - callsBeforeStop).toBeLessThanOrEqual(1);
     });
   });
 

@@ -21,16 +21,6 @@ vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(() => mockQueue),
 }));
 
-const mockMonitor = {
-  isActive: vi.fn().mockReturnValue(false),
-  start: vi.fn(),
-  stop: vi.fn(),
-};
-
-vi.mock('@/lib/sync/health-monitor', () => ({
-  getHealthMonitor: vi.fn(() => mockMonitor),
-}));
-
 vi.mock('@/lib/sync/pocketbase-client', () => ({
   clearPocketBase: vi.fn(),
 }));
@@ -192,20 +182,6 @@ describe('Sync Config', () => {
 
       expect(mockQueue.populateFromExistingTasks).toHaveBeenCalled();
     });
-
-    it('should start health monitor', async () => {
-      await enableSync();
-
-      expect(mockMonitor.start).toHaveBeenCalled();
-    });
-
-    it('should not start health monitor if already active', async () => {
-      mockMonitor.isActive.mockReturnValue(true);
-
-      await enableSync();
-
-      expect(mockMonitor.start).not.toHaveBeenCalled();
-    });
   });
 
   describe('disableSync', () => {
@@ -265,14 +241,6 @@ describe('Sync Config', () => {
 
       const queueCountAfter = await db.syncQueue.count();
       expect(queueCountAfter).toBe(0);
-    });
-
-    it('should stop health monitor when active', async () => {
-      mockMonitor.isActive.mockReturnValue(true);
-
-      await disableSync();
-
-      expect(mockMonitor.stop).toHaveBeenCalled();
     });
 
     it('should call clearPocketBase', async () => {
