@@ -1,6 +1,7 @@
-// Cache version — updated at build time by scripts/update-sw-version.cjs
-// Using a deterministic version prevents unbounded cache growth from Date.now()
-const CACHE_VERSION = '13.8.0';
+// Cache version. This placeholder stays in git: the build stamps the real
+// version into out/sw.js (scripts/update-sw-version.cjs), so a build never
+// rewrites this file. A deterministic version keeps caches from growing forever.
+const CACHE_VERSION = 'dev';
 const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 

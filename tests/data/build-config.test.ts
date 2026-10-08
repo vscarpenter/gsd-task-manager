@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -42,49 +43,58 @@ function firstNumericMajor(versionRange: string): number | null {
   return match ? Number(match[0]) : null;
 }
 
-function runStaticBuildWrapper(options: {
-  createArtifact?: boolean;
-  exitCode?: number;
-}): { status: number | null; stdout: string } {
-  const fixtureRoot = mkdtempSync(join(tmpdir(), "gsd-static-build-"));
+const FIXTURE_BUILD_VERSION = "9.9.9";
+
+function fakeNextBuild(options: { createArtifact?: boolean; exitCode?: number }) {
+  // The real export copies public/sw.js to out/sw.js; the fake one copies the
+  // fixture's worker, written next to it.
+  return [
+    "#!/usr/bin/env bash",
+    "echo 'fixture next build'",
+    options.createArtifact ? "mkdir -p out && printf '<html></html>' > out/index.html" : "true",
+    options.createArtifact ? "cp exported-sw.js out/sw.js" : "true",
+    `exit ${options.exitCode ?? 0}`,
+    "",
+  ].join("\n");
+}
+
+type WrapperOptions = { createArtifact?: boolean; exportedWorker?: string; exitCode?: number };
+
+function writeBuildFixture(fixtureRoot: string, options: WrapperOptions) {
   const fixtureScripts = join(fixtureRoot, "scripts");
   const fixtureBin = join(fixtureRoot, "bin");
   mkdirSync(fixtureScripts);
   mkdirSync(fixtureBin);
-
-  const wrapper = readFileSync("scripts/build-static-export.sh", "utf8");
-  writeFileSync(join(fixtureScripts, "build-static-export.sh"), wrapper);
-  writeFileSync(
-    join(fixtureScripts, "externalize-inline-assets.cjs"),
-    readFileSync("scripts/externalize-inline-assets.cjs", "utf8"),
-  );
+  for (const script of ["build-static-export.sh", "externalize-inline-assets.cjs", "update-sw-version.cjs"]) {
+    writeFileSync(join(fixtureScripts, script), readFileSync(`scripts/${script}`, "utf8"));
+  }
   writeFileSync(
     join(fixtureRoot, ".build-env.sh"),
     `export PATH=${JSON.stringify(`${fixtureBin}:${process.env.PATH ?? ""}`)}\n`,
   );
-
-  const fakeNext = [
-    "#!/usr/bin/env bash",
-    "echo 'fixture next build'",
-    options.createArtifact ? "mkdir -p out && printf '<html></html>' > out/index.html" : "true",
-    `exit ${options.exitCode ?? 0}`,
-    "",
-  ].join("\n");
-  writeFileSync(join(fixtureBin, "next"), fakeNext);
+  writeFileSync(join(fixtureRoot, ".build-info.json"), JSON.stringify({ version: FIXTURE_BUILD_VERSION }));
+  writeFileSync(
+    join(fixtureRoot, "exported-sw.js"),
+    options.exportedWorker ?? readFileSync("public/sw.js", "utf8"),
+  );
+  writeFileSync(join(fixtureBin, "next"), fakeNextBuild(options));
   chmodSync(join(fixtureBin, "next"), 0o755);
+}
 
+function runStaticBuildWrapper(options: WrapperOptions) {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "gsd-static-build-"));
   try {
-    const stdout = execFileSync("bash", ["scripts/build-static-export.sh"], {
+    writeBuildFixture(fixtureRoot, options);
+    const run = spawnSync("bash", ["scripts/build-static-export.sh"], {
       cwd: fixtureRoot,
       encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
     });
-    return { status: 0, stdout };
-  } catch (error) {
-    const failure = error as { status?: number | null; stdout?: Buffer | string };
+    const workerPath = join(fixtureRoot, "out/sw.js");
     return {
-      status: failure.status ?? null,
-      stdout: String(failure.stdout ?? ""),
+      status: run.status,
+      stdout: run.stdout,
+      stderr: run.stderr,
+      exportedWorker: existsSync(workerPath) ? readFileSync(workerPath, "utf8") : null,
     };
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -155,6 +165,35 @@ describe("build configuration", () => {
   it("rejects a successful build command that did not export the app shell", () => {
     expect(runStaticBuildWrapper({ exitCode: 0 }).status).not.toBe(0);
     expect(runStaticBuildWrapper({ createArtifact: true, exitCode: 0 }).status).toBe(0);
+  });
+
+  it("stamps the build's cache version into the exported worker", () => {
+    const result = runStaticBuildWrapper({ createArtifact: true });
+
+    expect(result.status).toBe(0);
+    expect(result.exportedWorker).toContain(`const CACHE_VERSION = '${FIXTURE_BUILD_VERSION}';`);
+    expect(result.exportedWorker).not.toContain("const CACHE_VERSION = 'dev';");
+  });
+
+  it("fails the build when the exported worker has no placeholder to stamp", () => {
+    // A deployed worker that kept an old version would never rotate its caches.
+    const result = runStaticBuildWrapper({
+      createArtifact: true,
+      exportedWorker: "const CACHE_VERSION = '13.8.0';\n",
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/no CACHE_VERSION placeholder/);
+  });
+
+  it("never stamps the tracked public/sw.js on any build path", () => {
+    const packageJson = requireFromRepo("./package.json") as PackageJson;
+    const builderStage = readFileSync("docker/Dockerfile", "utf8").split(/^FROM /m)[1] ?? "";
+    const wrapper = readFileSync("scripts/build-static-export.sh", "utf8");
+
+    expect(packageJson.scripts?.build).not.toContain("update-sw-version");
+    expect(builderStage).not.toContain("update-sw-version");
+    expect(wrapper).toContain("node scripts/update-sw-version.cjs out/sw.js");
   });
 
   it("puts node_modules/.bin on PATH before the Docker builder runs the static-export wrapper", () => {

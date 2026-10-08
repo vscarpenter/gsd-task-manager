@@ -12,7 +12,7 @@
 		"dev:e2e": "rimraf .next && next dev --webpack",
 		"clean": "rimraf .next out",
 		"prebuild": "rimraf .next out",
-		"build": "node scripts/generate-build-info.cjs && node scripts/update-sw-version.cjs && bash scripts/build-static-export.sh",
+		"build": "node scripts/generate-build-info.cjs && bash scripts/build-static-export.sh",
 		"start": "next start",
 		"lint": "BROWSERSLIST_IGNORE_OLD_DATA=1 eslint . --max-warnings=0",
 		"license:check": "node scripts/check-dependency-licenses.cjs",

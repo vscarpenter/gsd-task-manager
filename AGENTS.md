@@ -46,9 +46,10 @@ build does not need any manual setup. CI builds with `NEXT_DISABLE_SWC_BINARY=1`
 and a writable `NEXT_CACHE_DIR`; mirror that if a build behaves oddly.
 
 **Generated files to leave uncommitted.** `next dev`/`next build` rewrite
-`next-env.d.ts` (toggling `.next/types` vs `.next/dev/types`) and bump
-`lib/build-info.json` / the service-worker version. Revert these unless the
-change is intentional.
+`next-env.d.ts` (toggling `.next/types` vs `.next/dev/types`). Revert it unless
+the change is intentional. The build itself writes only gitignored files and
+`out/`: it stamps the service-worker cache version into `out/sw.js`, and
+`public/sw.js` keeps its `'dev'` placeholder.
 
 **Verifying frontend changes.** The PWA service worker can serve stale JS chunks
 and data surfaces render empty on a fresh load — use the `verify-frontend-change`

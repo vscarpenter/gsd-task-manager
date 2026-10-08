@@ -31,7 +31,6 @@ ENV PATH="/app/node_modules/.bin:$PATH"
 
 # Build static export (produces out/ directory)
 RUN node scripts/generate-build-info.cjs \
-    && node scripts/update-sw-version.cjs \
     && bash scripts/build-static-export.sh
 
 # Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)
