@@ -1,5 +1,5 @@
 {
-  "$comment": "Pins the two hand-kept copies of the service-worker cache rules: lib/sw-cache-logic.ts and the plain-JS copy public/sw-cache-logic.js that sw.js loads with importScripts(). Both are web code, so tests/data/pinned-copies/sw-cache-rules.test.ts runs every case below against both copies in the root suite. Each classifyRequest case is chosen so that removing one branch changes its answer; most API, admin, cross-origin, and non-GET cases carry a text/html Accept header for that reason. Brief: MODERNIZATION_BRIEF.md, Phase 1; RULE-268 and RULE-028.",
+  "$comment": "Pins both copies of the service-worker cache rules: lib/sw-cache-logic.ts and public/sw-cache-logic.js, which scripts/generate-sw-cache-logic.cjs generates from it and sw.js loads with importScripts(). Both are web code, so tests/data/pinned-copies/sw-cache-rules.test.ts runs every case below against both copies in the root suite. Each classifyRequest case is chosen so that removing one branch changes its answer; most API, admin, cross-origin, and non-GET cases carry a text/html Accept header for that reason. Brief: MODERNIZATION_BRIEF.md, Phase 1; RULE-268 and RULE-028.",
   "copies": {
     "ts": "lib/sw-cache-logic.ts",
     "js": "public/sw-cache-logic.js"

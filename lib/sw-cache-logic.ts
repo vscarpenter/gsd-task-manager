@@ -1,6 +1,6 @@
 // Canonical source for SW cache routing logic.
-// public/sw-cache-logic.js is a plain-JS copy of these functions for
-// use with importScripts() in the service worker. Keep them in sync.
+// scripts/generate-sw-cache-logic.cjs generates public/sw-cache-logic.js from
+// this file for importScripts() in the service worker. Edit only this file.
 
 export type CacheClassification = "immutable" | "pages" | "runtime" | "passthrough";
 
