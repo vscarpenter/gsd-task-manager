@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, isEmptyFilter, getFilterDescription, BUILT_IN_SMART_VIEWS } from "@/lib/filters";
+import { applyFilters, BUILT_IN_SMART_VIEWS } from "@/lib/filters";
 import type { FilterCriteria } from "@/lib/filters";
 import type { TaskRecord } from "@/lib/types";
 import { createMockTask } from "@/tests/fixtures";
@@ -223,100 +223,6 @@ describe("Filter utilities", () => {
       expect(result.some(t => t.id === "2")).toBe(true);
       // Should not include task 1 (due today)
       expect(result.some(t => t.id === "1")).toBe(false);
-    });
-  });
-
-  describe("isEmptyFilter", () => {
-    it("should return true for empty criteria", () => {
-      expect(isEmptyFilter({})).toBe(true);
-    });
-
-    it("should return true for status: all", () => {
-      expect(isEmptyFilter({ status: "all" })).toBe(true);
-    });
-
-    it("should return false when quadrants specified", () => {
-      expect(isEmptyFilter({ quadrants: ["urgent-important"] })).toBe(false);
-    });
-
-    it("should return false when tags specified", () => {
-      expect(isEmptyFilter({ tags: ["work"] })).toBe(false);
-    });
-
-    it("should return false when overdue specified", () => {
-      expect(isEmptyFilter({ overdue: true })).toBe(false);
-    });
-
-    it("should return false when search query specified", () => {
-      expect(isEmptyFilter({ searchQuery: "test" })).toBe(false);
-    });
-
-    // Migrated from the former tests/data/final-coverage-push.test.ts (F2.1):
-    // exercises the remaining `&&` sub-conditions not covered above.
-    it("should return false for each remaining active criterion", () => {
-      expect(isEmptyFilter({ dueToday: true })).toBe(false);
-      expect(isEmptyFilter({ dueThisWeek: true })).toBe(false);
-      expect(isEmptyFilter({ noDueDate: true })).toBe(false);
-      expect(isEmptyFilter({ recurrence: ["daily"] })).toBe(false);
-      expect(isEmptyFilter({ recentlyAdded: true })).toBe(false);
-      expect(isEmptyFilter({ recentlyCompleted: true })).toBe(false);
-      expect(isEmptyFilter({ readyToWork: true })).toBe(false);
-      expect(isEmptyFilter({ dueDateRange: { start: "2026-01-01" } })).toBe(false);
-    });
-  });
-
-  describe("getFilterDescription", () => {
-    it("should return 'No filters' for empty criteria", () => {
-      expect(getFilterDescription({})).toBe("No filters");
-    });
-
-    it("should describe quadrant filter", () => {
-      const desc = getFilterDescription({ quadrants: ["urgent-important", "not-urgent-important"] });
-      expect(desc).toBe("2 quadrants");
-    });
-
-    it("should describe status filter", () => {
-      const desc = getFilterDescription({ status: "active" });
-      expect(desc).toBe("active");
-    });
-
-    it("should describe tag filter", () => {
-      const desc = getFilterDescription({ tags: ["work", "urgent"] });
-      expect(desc).toBe("2 tags");
-    });
-
-    it("should describe overdue filter", () => {
-      const desc = getFilterDescription({ overdue: true });
-      expect(desc).toBe("overdue");
-    });
-
-    it("should describe combined filters", () => {
-      const desc = getFilterDescription({
-        status: "active",
-        tags: ["work"],
-        overdue: true,
-        searchQuery: "urgent"
-      });
-      expect(desc).toContain("active");
-      expect(desc).toContain("1 tag");
-      expect(desc).toContain("overdue");
-      expect(desc).toContain('"urgent"');
-    });
-
-    // Migrated from the former tests/data/final-coverage-push.test.ts (F2.1):
-    // covers the per-criterion description branches not exercised above.
-    it("should describe the remaining single-criterion filters", () => {
-      expect(getFilterDescription({ dueToday: true })).toBe("due today");
-      expect(getFilterDescription({ dueThisWeek: true })).toBe("due this week");
-      expect(getFilterDescription({ noDueDate: true })).toBe("no due date");
-      expect(getFilterDescription({ recurrence: ["daily", "weekly"] })).toBe(
-        "daily, weekly recurrence"
-      );
-      expect(getFilterDescription({ recentlyAdded: true })).toBe("recently added");
-      expect(getFilterDescription({ recentlyCompleted: true })).toBe(
-        "recently completed"
-      );
-      expect(getFilterDescription({ readyToWork: true })).toBe("ready to work");
     });
   });
 

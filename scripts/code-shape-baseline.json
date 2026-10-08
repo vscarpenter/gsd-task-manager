@@ -1,9 +1,5 @@
 {
   "complexity": {
-    "components/dashboard/stats-card.tsx": {
-      "count": 1,
-      "max": 14
-    },
     "components/matrix-simplified/capture-bar.tsx": {
       "count": 1,
       "max": 18
@@ -34,7 +30,7 @@
     },
     "components/task-card/index.tsx": {
       "count": 1,
-      "max": 14
+      "max": 11
     },
     "components/task-card/task-card-header.tsx": {
       "count": 1,
@@ -52,21 +48,17 @@
       "count": 1,
       "max": 12
     },
-    "lib/filters.ts": {
-      "count": 2,
-      "max": 21
-    },
     "lib/sw-cache-logic.ts": {
       "count": 1,
       "max": 18
     },
     "lib/sync/error-categorizer.ts": {
-      "count": 3,
+      "count": 2,
       "max": 30
     },
     "lib/sync/pb-auth.ts": {
-      "count": 2,
-      "max": 13
+      "count": 1,
+      "max": 11
     },
     "lib/sync/pb-pull.ts": {
       "count": 1,
@@ -78,7 +70,7 @@
     },
     "lib/sync/pb-sync-engine.ts": {
       "count": 1,
-      "max": 14
+      "max": 11
     },
     "lib/sync/sync-coordinator.ts": {
       "count": 1,
@@ -134,8 +126,8 @@
       "max": 151
     },
     "app/(dashboard)/dashboard/page.tsx": {
-      "count": 2,
-      "max": 80
+      "count": 1,
+      "max": 49
     },
     "app/(dashboard)/dashboard/use-dashboard-data.ts": {
       "count": 1,
@@ -175,7 +167,7 @@
     },
     "components/dashboard/completion-chart.tsx": {
       "count": 1,
-      "max": 91
+      "max": 68
     },
     "components/dashboard/quadrant-distribution.tsx": {
       "count": 1,
@@ -184,10 +176,6 @@
     "components/dashboard/review-prompts.tsx": {
       "count": 1,
       "max": 47
-    },
-    "components/dashboard/stats-card.tsx": {
-      "count": 2,
-      "max": 76
     },
     "components/dashboard/streak-indicator.tsx": {
       "count": 1,
@@ -215,7 +203,7 @@
     },
     "components/matrix-simplified/app-shell.tsx": {
       "count": 1,
-      "max": 115
+      "max": 113
     },
     "components/matrix-simplified/capture-bar.tsx": {
       "count": 1,
@@ -235,7 +223,7 @@
     },
     "components/matrix-simplified/help-drawer.tsx": {
       "count": 1,
-      "max": 169
+      "max": 155
     },
     "components/matrix-simplified/icon-rail.tsx": {
       "count": 2,
@@ -243,7 +231,7 @@
     },
     "components/matrix-simplified/index.tsx": {
       "count": 1,
-      "max": 269
+      "max": 267
     },
     "components/matrix-simplified/matrix-grid.tsx": {
       "count": 1,
@@ -267,7 +255,7 @@
     },
     "components/matrix-simplified/use-edit-draft-state.ts": {
       "count": 1,
-      "max": 59
+      "max": 53
     },
     "components/matrix-simplified/use-matrix-window-events.ts": {
       "count": 1,
@@ -315,11 +303,11 @@
     },
     "components/settings/notification-settings.tsx": {
       "count": 1,
-      "max": 46
+      "max": 44
     },
     "components/settings/sync-settings.tsx": {
       "count": 1,
-      "max": 139
+      "max": 115
     },
     "components/settings-page/index.tsx": {
       "count": 1,
@@ -327,7 +315,7 @@
     },
     "components/settings-page/settings-body.tsx": {
       "count": 1,
-      "max": 131
+      "max": 113
     },
     "components/settings-page/settings-sidebar.tsx": {
       "count": 1,
@@ -335,7 +323,7 @@
     },
     "components/settings-page/use-settings-data.ts": {
       "count": 1,
-      "max": 94
+      "max": 79
     },
     "components/share-task-dialog/index.tsx": {
       "count": 1,
@@ -345,17 +333,9 @@
       "count": 2,
       "max": 52
     },
-    "components/snooze-dropdown.tsx": {
-      "count": 1,
-      "max": 65
-    },
     "components/sync/oauth-buttons.tsx": {
       "count": 1,
-      "max": 69
-    },
-    "components/sync/sync-auth-dialog-sections.tsx": {
-      "count": 1,
-      "max": 41
+      "max": 64
     },
     "components/sync/sync-button.tsx": {
       "count": 1,
@@ -363,7 +343,7 @@
     },
     "components/sync/use-sync-auth-dialog.ts": {
       "count": 1,
-      "max": 109
+      "max": 86
     },
     "components/sync/use-sync-health.ts": {
       "count": 1,
@@ -375,15 +355,15 @@
     },
     "components/task-card/index.tsx": {
       "count": 1,
-      "max": 110
+      "max": 103
     },
     "components/task-card/task-card-actions.tsx": {
       "count": 3,
-      "max": 70
+      "max": 67
     },
     "components/task-card/task-card-header.tsx": {
       "count": 1,
-      "max": 116
+      "max": 109
     },
     "components/task-card/task-card-metadata.tsx": {
       "count": 1,
@@ -403,7 +383,7 @@
     },
     "lib/command-actions.ts": {
       "count": 1,
-      "max": 153
+      "max": 132
     },
     "lib/hooks/use-sync-status.ts": {
       "count": 1,
@@ -413,25 +393,13 @@
       "count": 1,
       "max": 53
     },
-    "lib/sync/pb-account-deletion.ts": {
-      "count": 1,
-      "max": 41
-    },
-    "lib/sync/pb-auth.ts": {
-      "count": 1,
-      "max": 63
-    },
     "lib/sync/pb-push.ts": {
       "count": 2,
       "max": 66
     },
     "lib/sync/pb-sync-engine.ts": {
       "count": 1,
-      "max": 50
-    },
-    "lib/sync/sync-provider.tsx": {
-      "count": 1,
-      "max": 42
+      "max": 43
     },
     "lib/tasks/crud/toggle.ts": {
       "count": 1,
@@ -451,7 +419,7 @@
     },
     "lib/use-shell-command-handlers.ts": {
       "count": 1,
-      "max": 88
+      "max": 86
     },
     "packages/mcp-server/src/auth/token-status.ts": {
       "count": 1,

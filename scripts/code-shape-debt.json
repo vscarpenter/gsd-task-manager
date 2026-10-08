@@ -3,10 +3,10 @@
   "deadline": "2026-12-31",
   "policy": "Remaining exceptions may only decrease. Resolve or explicitly renew this contract before the deadline.",
   "maximumRemainingViolations": {
-    "complexity": 39,
+    "complexity": 31,
     "max-depth": 4,
-    "max-lines": 1,
-    "max-lines-per-function": 109
+    "max-lines": 0,
+    "max-lines-per-function": 95
   },
   "resolvedTargets": [
     "lib/db.ts:GsdDatabase.constructor",

@@ -1,12 +1,28 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "public/sw.js",
-    "public/sw-cache-logic.js",
-    "cloudfront-function-response-headers.cjs",
-    "cloudfront-function-url-rewrite.cjs",
-    "docker/pb_hooks/*.js",
-    "docker/pb_migrations/*.js",
-    "packages/mcp-server/decode-jwt.cjs"
-  ]
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "lib/sw-cache-logic.ts!",
+        "public/sw.js!",
+        "public/sw-cache-logic.js!",
+        "public/theme-init.js!",
+        "cloudfront-function-response-headers.cjs!",
+        "cloudfront-function-url-rewrite.cjs!",
+        "docker/pb_hooks/*.js!",
+        "docker/pb_migrations/*.js!",
+        "docker/pb_fresh_migrations/*.js!"
+      ],
+      "project": [
+        "{app,components,lib}/**/*.{ts,tsx}!",
+        "public/*.js!",
+        "docker/**/*.js!",
+        "*.cjs!"
+      ]
+    },
+    "packages/mcp-server": {
+      "entry": ["decode-jwt.cjs"],
+      "project": ["src/**/*.ts!"]
+    }
+  }
 }
