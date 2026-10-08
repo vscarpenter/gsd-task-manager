@@ -78,11 +78,11 @@ function SyncStatusOverlays({
 }
 
 export function SyncButton() {
-  const { sync, isSyncing, status, error, isEnabled, nextRetryAt, pendingCount: queuedCount } = useSync();
+  const { sync, isSyncing, status, error, isEnabled, nextRetryAt, pendingCount: queued, healthReport } = useSync();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   useSyncHealth({
-    isEnabled,
+    healthReport,
     onHealthIssue: ({ id, message, action, duration }) => {
       // The stable `id` lets sonner replace a recurring health toast in place
       // instead of stacking duplicates (e.g. after a wake-from-sleep burst).
@@ -100,7 +100,7 @@ export function SyncButton() {
     status,
     error,
     nextRetryAt,
-    pendingCount: queuedCount,
+    pendingCount: queued,
     onAuthError: (message, _action, duration) => {
       toast(message, {
         duration,

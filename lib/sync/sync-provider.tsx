@@ -9,10 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
-import { getHealthMonitor } from '@/lib/sync/health-monitor';
-import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { UI_TIMING } from '@/lib/constants/ui';
-import { createLogger } from '@/lib/logger';
 import type { PBSyncResult } from '@/lib/sync/types';
 import {
   createSyncStatusStore,
@@ -20,8 +17,6 @@ import {
   type SyncStatusAction,
   type SyncStatusSnapshot,
 } from '@/lib/sync/sync-status-store';
-
-const logger = createLogger('SYNC_ENGINE');
 
 export interface SyncState extends SyncStatusSnapshot {
   /** Trigger a manual sync. Returns the result directly (no stale closure). */
@@ -34,32 +29,6 @@ type Dispatch = (action: SyncStatusAction) => void;
 
 function getInitialSyncStatus(): SyncStatusSnapshot {
   return initialSyncStatus;
-}
-
-function useSyncHealthMonitoring(isEnabled: boolean): void {
-  useEffect(() => {
-    if (!isEnabled) return;
-    let lastHealthCheckTime = 0;
-    const checkHealth = async () => {
-      const now = Date.now();
-      if (now - lastHealthCheckTime < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) return;
-      lastHealthCheckTime = now;
-      const report = await getHealthMonitor().check();
-      for (const issue of report.issues) {
-        logger.warn('Health issue detected', {
-          type: issue.type,
-          severity: issue.severity,
-          message: issue.message,
-        });
-      }
-    };
-    const timeout = setTimeout(checkHealth, UI_TIMING.INITIAL_HEALTH_CHECK_DELAY_MS);
-    const interval = setInterval(checkHealth, SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
-    return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-    };
-  }, [isEnabled]);
 }
 
 function scheduleStatusReset(dispatch: Dispatch, delay: number): void {
@@ -116,7 +85,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     store.start();
     return () => store.stop();
   }, [store]);
-  useSyncHealthMonitoring(state.isEnabled);
   const sync = () => runManualSync(store.dispatch);
 
   const value: SyncState = {
