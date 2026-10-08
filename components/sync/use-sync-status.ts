@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getSyncQueue } from '@/lib/sync/queue';
+import { guardPoll } from '@/lib/sync/sync-status-poll';
 import { isAuthError } from '@/lib/sync/error-categorizer';
 import { SYNC_CONFIG, SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 
@@ -57,7 +58,7 @@ export function useSyncStatus({
 
   // Poll pending operation count
   useEffect(() => {
-    const updatePendingCount = async () => {
+    const updatePendingCount = guardPoll('pendingCount', async () => {
       if (!isEnabled) {
         setPendingCount(0);
         return;
@@ -66,7 +67,7 @@ export function useSyncStatus({
       const queue = getSyncQueue();
       const count = await queue.getPendingCount();
       setPendingCount(count);
-    };
+    });
 
     updatePendingCount();
 

@@ -19,6 +19,7 @@ import { createLogger } from '@/lib/logger';
 import type { PBSyncResult, PBSyncConfig } from '@/lib/sync/types';
 import { getDb } from '@/lib/db';
 import { subscribe, unsubscribe } from '@/lib/sync/pb-realtime';
+import { guardPoll } from '@/lib/sync/sync-status-poll';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -219,7 +220,7 @@ function stopSyncServices(): void {
 
 function useSyncLifecycle(dispatch: Dispatch<SyncAction>): void {
   useEffect(() => {
-    const checkEnabled = async () => {
+    const checkEnabled = guardPoll('enabled', async () => {
       const { enabled, config } = await readSyncEnabled();
       // Publish before the services are reconciled. Holding this back until the
       // realtime socket settles renders an authenticated user as signed out for
@@ -227,7 +228,7 @@ function useSyncLifecycle(dispatch: Dispatch<SyncAction>): void {
       // re-login they do not need.
       dispatch({ type: 'SET_ENABLED', isEnabled: enabled });
       await applySyncServices(enabled, config);
-    };
+    });
     void checkEnabled();
     const interval = setInterval(checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
     return () => {
@@ -270,7 +271,7 @@ async function updateCoordinatorStatus(dispatch: Dispatch<SyncAction>): Promise<
  */
 function useCoordinatorStatus(dispatch: Dispatch<SyncAction>, shouldPoll: boolean): void {
   useEffect(() => {
-    const update = () => updateCoordinatorStatus(dispatch);
+    const update = guardPoll('coordinator', () => updateCoordinatorStatus(dispatch));
     void update();
     if (!shouldPoll) return;
     const interval = setInterval(update, UI_TIMING.STATUS_POLL_INTERVAL_MS);
