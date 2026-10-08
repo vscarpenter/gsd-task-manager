@@ -43,10 +43,6 @@ vi.mock('@/lib/sync/notifications', () => ({
   notifySyncError: mockNotifySyncError,
 }));
 
-vi.mock('@/lib/sync/health-monitor', () => ({
-  getHealthMonitor: () => ({ isActive: () => false, stop: vi.fn() }),
-}));
-
 vi.mock('@/lib/browser-cache', () => ({
   clearAppCaches: vi.fn().mockResolvedValue([]),
 }));

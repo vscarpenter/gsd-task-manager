@@ -61,32 +61,6 @@ describe('HealthMonitor', () => {
     mockEnsureValidAuth.mockResolvedValue(false);
   });
 
-  describe('start/stop', () => {
-    it('should start and become active', () => {
-      monitor.start();
-      expect(monitor.isActive()).toBe(true);
-      monitor.stop();
-    });
-
-    it('should stop and become inactive', () => {
-      monitor.start();
-      monitor.stop();
-      expect(monitor.isActive()).toBe(false);
-    });
-
-    it('should be idempotent on start', () => {
-      monitor.start();
-      monitor.start(); // Should not throw
-      expect(monitor.isActive()).toBe(true);
-      monitor.stop();
-    });
-
-    it('should be idempotent on stop', () => {
-      monitor.stop(); // Should not throw even if not started
-      expect(monitor.isActive()).toBe(false);
-    });
-  });
-
   describe('check', () => {
     it('should report healthy when sync is disabled', async () => {
       mockDb.syncMetadata.get.mockResolvedValue({ enabled: false });

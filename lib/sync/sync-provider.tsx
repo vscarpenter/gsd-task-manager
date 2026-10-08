@@ -158,13 +158,6 @@ async function reconcileRealtime(enabled: boolean, deviceId?: string): Promise<v
   }
 }
 
-function reconcileHealthMonitor(enabled: boolean): void {
-  const monitor = getHealthMonitor();
-  if (monitor.isActive() === enabled) return;
-  if (enabled) monitor.start();
-  else monitor.stop();
-}
-
 async function reconcileBackgroundSync(enabled: boolean, deviceId?: string): Promise<void> {
   const manager = getBackgroundSyncManager();
   if (!enabled) {
@@ -206,13 +199,10 @@ async function applySyncServices(
   config?: PBSyncConfig
 ): Promise<void> {
   await reconcileRealtime(enabled, config?.deviceId);
-  reconcileHealthMonitor(enabled);
   await reconcileBackgroundSync(enabled, config?.deviceId);
 }
 
 function stopSyncServices(): void {
-  const healthMonitor = getHealthMonitor();
-  if (healthMonitor.isActive()) healthMonitor.stop();
   const backgroundSync = getBackgroundSyncManager();
   if (backgroundSync.isRunning()) backgroundSync.stop();
   unsubscribe();
@@ -348,8 +338,8 @@ async function runManualSync(dispatch: Dispatch<SyncAction>): Promise<PBSyncResu
  *
  * Mount once in ClientLayout. This replaces the per-component
  * lifecycle effects that previously ran in every useSync() consumer,
- * eliminating race conditions from multiple health-monitor and
- * background-sync starts/stops.
+ * eliminating race conditions from multiple background-sync starts and
+ * stops.
  */
 export function SyncProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(syncReducer, initialSyncState);

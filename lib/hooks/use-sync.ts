@@ -3,7 +3,7 @@
 /**
  * useSync hook -- thin wrapper around the SyncProvider context.
  *
- * All sync lifecycle management (health monitor, background sync,
+ * All sync lifecycle management (health checks, background sync,
  * status polling) is handled by the single SyncProvider mounted
  * at the app level. This hook just reads from that context.
  */

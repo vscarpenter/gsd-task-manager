@@ -7,7 +7,7 @@ import { useNotificationChecker } from "@/lib/use-notification-checker";
 /**
  * Client-side layout wrapper
  *
- * Mounts the SyncProvider so sync lifecycle (health monitor,
+ * Mounts the SyncProvider so sync lifecycle (health checks,
  * background sync, status polling) is managed once at the app
  * level instead of per-component. Reminders and the trash and
  * archive sweep run here too, so they keep working on every route.

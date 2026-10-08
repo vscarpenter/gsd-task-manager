@@ -1,7 +1,9 @@
 /**
- * Health Monitor - periodically checks sync health
+ * Health Monitor - checks sync health on demand
  *
- * Checks stale queue operations and PB server connectivity.
+ * Checks stale queue operations and PB server connectivity. It keeps no timer
+ * of its own: SyncProvider and the sync button each call check() on their own
+ * schedule and act on the report.
  */
 
 import { getSyncQueue } from './queue';
@@ -14,7 +16,7 @@ import type { PBSyncConfig } from './types';
 
 const logger = createLogger('SYNC_HEALTH');
 
-const { HEALTH_CHECK_INTERVAL_MS, STALE_OPERATION_THRESHOLD_MS } = SYNC_CONFIG;
+const { STALE_OPERATION_THRESHOLD_MS } = SYNC_CONFIG;
 
 export interface HealthIssue {
   type: 'stale_queue' | 'token_expired' | 'server_unreachable' | 'failed_items';
@@ -30,35 +32,6 @@ export interface HealthReport {
 }
 
 export class HealthMonitor {
-  private intervalId: NodeJS.Timeout | null = null;
-  private isRunning = false;
-
-  start(): void {
-    if (this.isRunning) return;
-
-    this.isRunning = true;
-
-    this.check().catch((error) => {
-      logger.warn('Initial health check failed', { error });
-    });
-
-    this.intervalId = setInterval(() => {
-      this.check().catch((error) => {
-        logger.warn('Periodic health check failed', { error });
-      });
-    }, HEALTH_CHECK_INTERVAL_MS);
-  }
-
-  stop(): void {
-    if (!this.isRunning) return;
-
-    this.isRunning = false;
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
-
   async check(): Promise<HealthReport> {
     const timestamp = Date.now();
 
@@ -173,10 +146,6 @@ export class HealthMonitor {
         suggestedAction: 'Check your internet connection and try again',
       };
     }
-  }
-
-  isActive(): boolean {
-    return this.isRunning;
   }
 }
 
