@@ -192,10 +192,12 @@ describe('sync status store', () => {
     await advance(1000);
     const readsAfterOneSecond = getStatus.mock.calls.length;
     const checksAfterOneSecond = vi.mocked(getDb).mock.calls.length;
+    const pendingReadsAfterOneSecond = getPendingCount.mock.calls.length;
     await advance(2000);
 
     expect(getStatus.mock.calls.length - readsAfterOneSecond).toBe(4);
     expect(vi.mocked(getDb).mock.calls.length - checksAfterOneSecond).toBe(1);
+    expect(getPendingCount.mock.calls.length - pendingReadsAfterOneSecond).toBe(1);
   });
 
   it('should_ignore_a_second_start_while_started', async () => {

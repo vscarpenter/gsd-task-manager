@@ -52,10 +52,6 @@ vi.mock('@/components/sync/sync-auth-dialog', () => ({
     isOpen ? <div data-testid="sync-auth-dialog">Auth Dialog</div> : null,
 }));
 
-vi.mock('@/lib/sync/queue', () => ({
-  getSyncQueue: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('@/lib/sync/error-categorizer', () => ({
   isAuthError: vi.fn(() => false),
 }));
@@ -83,6 +79,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: false,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-off',
@@ -113,6 +110,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-idle',
@@ -134,6 +132,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-syncing',
@@ -155,6 +154,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-idle',
@@ -191,6 +191,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncHealth.mockImplementation(({ onHealthIssue }) => {
       onHealthIssue({

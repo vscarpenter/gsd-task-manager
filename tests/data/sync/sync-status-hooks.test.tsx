@@ -58,7 +58,7 @@ describe('sync status hooks', () => {
   describe('lib/hooks/use-sync-status', () => {
     it('should_take_the_pending_count_and_last_sync_time_from_the_sync_context', async () => {
       const { result } = renderHook(() => useHeaderSyncStatus());
-      await advance(SYNC_CONFIG.SYNC_STATUS_POLL_MS * 2);
+      await advance(SYNC_CONFIG.PENDING_COUNT_POLL_INTERVAL_MS * 2);
 
       expect(result.current.pendingCount).toBe(3);
       expect(result.current.lastSyncTime).toBe(LAST_SYNC_AT);
