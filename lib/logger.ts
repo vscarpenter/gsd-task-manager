@@ -36,6 +36,7 @@ export type LogContext =
   | 'SYNC_CONFIG'
   | 'SYNC_AUTH'
   | 'SYNC_REALTIME'
+  | 'SYNC_STATUS'
   | 'OAUTH'
   | 'TASK_CRUD'
   | 'TIME_TRACKING'

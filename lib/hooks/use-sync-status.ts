@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSync } from "@/lib/hooks/use-sync";
 import { getSyncQueue } from "@/lib/sync/queue";
+import { guardPoll } from "@/lib/sync/sync-status-poll";
 import { SYNC_CONFIG } from "@/lib/constants/sync";
 import { UI_TIMING } from "@/lib/constants/ui";
 
@@ -59,13 +60,13 @@ export function useSyncStatus(): SyncStatusResult {
 
   // Poll last sync time from coordinator
   useEffect(() => {
-    const updateLastSync = async () => {
+    const updateLastSync = guardPoll("lastSync", async () => {
       if (!isEnabled) {
         setLastSyncTime(null);
         return;
       }
       setLastSyncTime(await fetchLastSuccessfulSyncAt());
-    };
+    });
 
     updateLastSync();
 
@@ -84,7 +85,7 @@ export function useSyncStatus(): SyncStatusResult {
 
   // Poll pending operation count
   useEffect(() => {
-    const updatePendingCount = async () => {
+    const updatePendingCount = guardPoll("pendingCount", async () => {
       if (!isEnabled) {
         setPendingCount(0);
         return;
@@ -93,7 +94,7 @@ export function useSyncStatus(): SyncStatusResult {
       const queue = getSyncQueue();
       const count = await queue.getPendingCount();
       setPendingCount(count);
-    };
+    });
 
     updatePendingCount();
 

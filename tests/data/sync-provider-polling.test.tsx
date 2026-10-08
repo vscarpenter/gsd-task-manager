@@ -22,6 +22,18 @@ vi.mock('@/lib/sync/pb-realtime', () => ({
 }));
 vi.mock('@/lib/db');
 
+// Every logger context shares one spy, tagged with its context, so a test can
+// prove a failed poll was logged through SYNC_STATUS and nowhere else.
+const { warn } = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('@/lib/logger', () => ({
+  createLogger: (context: string) => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: (message: string, metadata?: Record<string, unknown>) => warn(context, message, metadata),
+    error: vi.fn(),
+  }),
+}));
+
 const FIVE_SECONDS_MS = 5000;
 // The coordinator hands back the same result object on every read, the way the
 // real one does between syncs.
@@ -184,5 +196,49 @@ describe('SyncProvider polling', () => {
 
     expect(getStatus.mock.calls.length).toBeGreaterThan(10);
     expect(onConsumerRender).toHaveBeenCalledTimes(rendersOnceSettled);
+  });
+
+  // A status read that fails must be logged and must not escape the effect.
+  // Before the guard, the rejection reached the window unhandled, and the
+  // global listener showed the generic "An unexpected error occurred" toast.
+  it('should_log_a_failed_coordinator_status_read_through_SYNC_STATUS_and_keep_polling', async () => {
+    setSyncEnabled(true);
+    render(<SyncApp />);
+    await advance(1000);
+
+    getStatus.mockRejectedValueOnce(new Error('IndexedDB is closed'));
+    await advance(500);
+
+    expect(warn).toHaveBeenCalledWith(
+      'SYNC_STATUS',
+      'Sync status poll failed',
+      expect.objectContaining({ poll: 'coordinator', errorMessage: 'IndexedDB is closed' }),
+    );
+    const readsAfterFailure = getStatus.mock.calls.length;
+    await advance(1000);
+    expect(getStatus.mock.calls.length).toBe(readsAfterFailure + 2);
+  });
+
+  it('should_log_a_failed_enabled_check_through_SYNC_STATUS_and_keep_the_last_value', async () => {
+    setSyncEnabled(true);
+    render(<SyncApp />);
+    await advance(1000);
+    expect(latestSync?.isEnabled).toBe(true);
+
+    vi.mocked(getDb).mockReturnValueOnce({
+      syncMetadata: { get: vi.fn().mockRejectedValue(new Error('IndexedDB is closed')) },
+    } as unknown as ReturnType<typeof getDb>);
+    // The enabled check runs every 2 s, so this covers one failed read.
+    await advance(2000);
+
+    expect(warn).toHaveBeenCalledWith(
+      'SYNC_STATUS',
+      'Sync status poll failed',
+      expect.objectContaining({ poll: 'enabled', errorMessage: 'IndexedDB is closed' }),
+    );
+    expect(latestSync?.isEnabled).toBe(true);
+    const checksAfterFailure = vi.mocked(getDb).mock.calls.length;
+    await advance(2000);
+    expect(vi.mocked(getDb).mock.calls.length).toBe(checksAfterFailure + 1);
   });
 });
