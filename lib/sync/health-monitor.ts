@@ -2,8 +2,8 @@
  * Health Monitor - checks sync health on demand
  *
  * Checks stale queue operations and PB server connectivity. It keeps no timer
- * of its own: SyncProvider and the sync button each call check() on their own
- * schedule and act on the report.
+ * of its own: the sync status store calls check() on its schedule and
+ * publishes the report for the sync button to act on.
  */
 
 import { getSyncQueue } from './queue';

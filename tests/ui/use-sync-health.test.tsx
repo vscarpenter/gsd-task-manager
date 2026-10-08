@@ -102,15 +102,20 @@ describe("useSyncHealth", () => {
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
   });
 
+  // The cooldown is measured on the report's timestamp, which the monitor
+  // stamps when the check starts, not on the clock when the report arrives.
+  // The store's ticks are exactly one cooldown apart, so a slower first check
+  // and a faster second one would otherwise push every other toast out.
   it("does not notify again for a report inside the cooldown window", () => {
     const onHealthIssue = vi.fn();
     const onSync = vi.fn();
 
-    const { rerender } = renderSyncHealth({
-      healthReport: unhealthy([staleQueueIssue]),
-      onHealthIssue,
-      onSync,
-    });
+    // The button mounts at boot; the first check starts 10 s later and takes
+    // 180 ms to come back.
+    vi.setSystemTime(NOW - 10_000);
+    const { rerender } = renderSyncHealth({ healthReport: null, onHealthIssue, onSync });
+    vi.setSystemTime(NOW + 180);
+    rerender({ healthReport: unhealthy([staleQueueIssue], NOW), onHealthIssue, onSync });
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
 
     // The next check lands 5 min after enable, 4 min 50 s after this one.
@@ -118,9 +123,25 @@ describe("useSyncHealth", () => {
     rerender({ healthReport: unhealthy([staleQueueIssue], NOW + 290_000), onHealthIssue, onSync });
     expect(onHealthIssue).toHaveBeenCalledTimes(1);
 
-    vi.setSystemTime(NOW + SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS);
+    // The check one cooldown later took 90 ms to come back.
+    vi.setSystemTime(NOW + SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS + 90);
     rerender({ healthReport: unhealthy([staleQueueIssue], NOW + 300_000), onHealthIssue, onSync });
     expect(onHealthIssue).toHaveBeenCalledTimes(2);
+  });
+
+  // The sync button remounts on every route change while the store keeps its
+  // last report. Replaying that report would re-toast an issue the user may
+  // have fixed since, so a fresh instance waits for the next check instead.
+  it("ignores a report from before it mounted", () => {
+    const onHealthIssue = vi.fn();
+
+    renderSyncHealth({
+      healthReport: unhealthy([staleQueueIssue], NOW - 1),
+      onHealthIssue,
+      onSync: vi.fn(),
+    });
+
+    expect(onHealthIssue).not.toHaveBeenCalled();
   });
 
   it("keeps the cooldown when callbacks change identity between renders", () => {

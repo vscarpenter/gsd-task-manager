@@ -436,6 +436,44 @@ describe('sync status store', () => {
     expect(warn).toHaveBeenCalledTimes(2);
   });
 
+  it('should_drop_a_health_report_that_lands_after_sync_switched_off', async () => {
+    let release: (report: typeof HEALTHY) => void = () => {};
+    check.mockReturnValueOnce(new Promise<typeof HEALTHY>((resolve) => {
+      release = resolve;
+    }));
+    setSyncEnabled(true);
+    store.start();
+    // The 10 s check starts a read that stays open across the switch-off.
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+    expect(check).toHaveBeenCalledTimes(1);
+    setSyncEnabled(false);
+    await advance(2000);
+    expect(store.getSnapshot().isEnabled).toBe(false);
+
+    release({ healthy: false, issues: [STALE_QUEUE_ISSUE], timestamp: 3 });
+    await advance(0);
+    expect(store.getSnapshot().healthReport).toBeNull();
+  });
+
+  // A second start() after the enabled flag was published, with sync still
+  // on, must arm every poll again from the snapshot it has.
+  it('should_arm_every_poll_on_a_restart_while_sync_is_on', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(0);
+    expect(store.getSnapshot().isEnabled).toBe(true);
+    store.stop();
+
+    const readsBeforeRestart = getStatus.mock.calls.length;
+    const pendingReadsBeforeRestart = getPendingCount.mock.calls.length;
+    store.start();
+    await advance(SYNC_CONFIG.INITIAL_HEALTH_CHECK_DELAY_MS);
+
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(getPendingCount.mock.calls.length - pendingReadsBeforeRestart).toBe(1 + 5);
+    expect(getStatus.mock.calls.length - readsBeforeRestart).toBe(1 + 20);
+  });
+
   it('should_log_a_failed_health_check_through_SYNC_STATUS_and_keep_the_last_report', async () => {
     setSyncEnabled(true);
     store.start();

@@ -63,8 +63,17 @@ function buildNotification(
  */
 export function useSyncHealth({ healthReport, onHealthIssue, onSync }: SyncHealthOptions) {
   const lastNotificationTimeRef = useRef(0);
+  // The sync button remounts on every route change while the store keeps its
+  // last report. Replaying that report would re-toast an issue the user may
+  // have fixed since, so a fresh instance only acts on reports from after it
+  // mounted.
+  const mountedAtRef = useRef<number | null>(null);
   const onHealthIssueRef = useRef(onHealthIssue);
   const onSyncRef = useRef(onSync);
+
+  useEffect(() => {
+    mountedAtRef.current ??= Date.now();
+  }, []);
 
   // Keep the latest callbacks without retriggering the report effect below.
   useEffect(() => {
@@ -76,10 +85,16 @@ export function useSyncHealth({ healthReport, onHealthIssue, onSync }: SyncHealt
     if (!healthReport || healthReport.healthy || healthReport.issues.length === 0) {
       return;
     }
+    if (healthReport.timestamp < (mountedAtRef.current ?? 0)) {
+      return;
+    }
 
-    // Avoid notification spam. Reading/writing a ref keeps this immune to the
-    // re-render churn that an effect-dependency state value would suffer.
-    const now = Date.now();
+    // Avoid notification spam. The monitor stamps the report when the check
+    // starts, so the cooldown counts from tick to tick, not from arrival to
+    // arrival: the ticks are exactly one cooldown apart, and a slower first
+    // check followed by a faster one would otherwise skip every other toast.
+    // Reading/writing a ref keeps this immune to re-render churn.
+    const now = healthReport.timestamp;
     if (now - lastNotificationTimeRef.current < SYNC_CONFIG.NOTIFICATION_COOLDOWN_MS) {
       return;
     }
