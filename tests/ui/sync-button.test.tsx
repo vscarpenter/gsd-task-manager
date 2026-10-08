@@ -12,6 +12,7 @@ const mockUseSync = vi.fn(() => ({
   error: null,
   isEnabled: false,
   nextRetryAt: null,
+  pendingCount: 0,
 }));
 
 vi.mock('@/lib/sync/sync-provider', () => ({
@@ -51,10 +52,6 @@ vi.mock('@/components/sync/sync-auth-dialog', () => ({
     isOpen ? <div data-testid="sync-auth-dialog">Auth Dialog</div> : null,
 }));
 
-vi.mock('@/lib/sync/queue', () => ({
-  getSyncQueue: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('@/lib/sync/error-categorizer', () => ({
   isAuthError: vi.fn(() => false),
 }));
@@ -82,6 +79,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: false,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-off',
@@ -112,6 +110,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-idle',
@@ -133,6 +132,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-syncing',
@@ -154,6 +154,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-idle',
@@ -167,6 +168,21 @@ describe('SyncButton', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
+  it('hands the pending count from the sync context to useSyncStatus', () => {
+    mockUseSync.mockReturnValue({
+      sync: mockSync,
+      isSyncing: false,
+      status: 'idle',
+      error: null,
+      isEnabled: true,
+      nextRetryAt: null,
+      pendingCount: 3,
+    });
+
+    render(<SyncButton />);
+    expect(mockUseSyncStatus).toHaveBeenCalledWith(expect.objectContaining({ pendingCount: 3 }));
+  });
+
   it('forwards stable health issue ids to sonner so repeated warnings are deduped', () => {
     mockUseSync.mockReturnValue({
       sync: mockSync,
@@ -175,6 +191,7 @@ describe('SyncButton', () => {
       error: null,
       isEnabled: true,
       nextRetryAt: null,
+      pendingCount: 0,
     });
     mockUseSyncHealth.mockImplementation(({ onHealthIssue }) => {
       onHealthIssue({

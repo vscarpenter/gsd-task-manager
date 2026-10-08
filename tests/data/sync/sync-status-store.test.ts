@@ -20,7 +20,8 @@ vi.mock('@/lib/db');
 
 // Every logger context shares one spy, tagged with its context, so a test can
 // prove a failed poll was logged through SYNC_STATUS and nowhere else.
-const { warn } = vi.hoisted(() => ({ warn: vi.fn() }));
+const { warn, getPendingCount } = vi.hoisted(() => ({ warn: vi.fn(), getPendingCount: vi.fn() }));
+vi.mock('@/lib/sync/queue', () => ({ getSyncQueue: () => ({ getPendingCount }) }));
 vi.mock('@/lib/logger', () => ({
   createLogger: (context: string) => ({
     debug: vi.fn(),
@@ -71,6 +72,7 @@ describe('sync status store', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     getStatus.mockReset().mockResolvedValue(IDLE_STATUS);
+    getPendingCount.mockReset().mockResolvedValue(2);
     vi.mocked(getSyncCoordinator).mockReturnValue({
       getStatus,
       requestSync: vi.fn(),
@@ -190,10 +192,12 @@ describe('sync status store', () => {
     await advance(1000);
     const readsAfterOneSecond = getStatus.mock.calls.length;
     const checksAfterOneSecond = vi.mocked(getDb).mock.calls.length;
+    const pendingReadsAfterOneSecond = getPendingCount.mock.calls.length;
     await advance(2000);
 
     expect(getStatus.mock.calls.length - readsAfterOneSecond).toBe(4);
     expect(vi.mocked(getDb).mock.calls.length - checksAfterOneSecond).toBe(1);
+    expect(getPendingCount.mock.calls.length - pendingReadsAfterOneSecond).toBe(1);
   });
 
   it('should_ignore_a_second_start_while_started', async () => {
@@ -342,11 +346,90 @@ describe('sync status store', () => {
     store.stop();
     const readsAtStop = getStatus.mock.calls.length;
     const checksAtStop = vi.mocked(getDb).mock.calls.length;
+    const pendingReadsAtStop = getPendingCount.mock.calls.length;
     await advance(FIVE_SECONDS_MS);
 
     expect(backgroundSync.stop).toHaveBeenCalledTimes(1);
     expect(unsubscribe).toHaveBeenCalled();
     expect(getStatus).toHaveBeenCalledTimes(readsAtStop);
     expect(vi.mocked(getDb)).toHaveBeenCalledTimes(checksAtStop);
+    expect(getPendingCount).toHaveBeenCalledTimes(pendingReadsAtStop);
+  });
+
+  // The queue's pending count used to be polled by both useSyncStatus hooks,
+  // each on its own 2 s timer. The store reads it once, on the same cadence,
+  // only while sync is on.
+  it('should_poll_the_pending_count_every_2_s_while_enabled_and_hold_0_once_disabled', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(0);
+    expect(getPendingCount).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().pendingCount).toBe(2);
+
+    await advance(4000);
+    expect(getPendingCount).toHaveBeenCalledTimes(3);
+
+    getPendingCount.mockResolvedValue(5);
+    setSyncEnabled(false);
+    // The enabled check runs every 2 s, so this covers the switch-off.
+    await advance(2000);
+    expect(store.getSnapshot().isEnabled).toBe(false);
+    expect(store.getSnapshot().pendingCount).toBe(0);
+    const readsAtSwitchOff = getPendingCount.mock.calls.length;
+    await advance(FIVE_SECONDS_MS);
+    expect(getPendingCount).toHaveBeenCalledTimes(readsAtSwitchOff);
+    expect(store.getSnapshot().pendingCount).toBe(0);
+  });
+
+  it('should_drop_a_pending_count_read_that_lands_after_sync_switched_off', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(0);
+    expect(store.getSnapshot().pendingCount).toBe(2);
+
+    let release: (count: number) => void = () => {};
+    getPendingCount.mockReturnValueOnce(new Promise<number>((resolve) => {
+      release = resolve;
+    }));
+    // The 2 s tick starts a read that stays open across the switch-off.
+    await advance(2000);
+    setSyncEnabled(false);
+    await advance(2000);
+    expect(store.getSnapshot().isEnabled).toBe(false);
+    expect(store.getSnapshot().pendingCount).toBe(0);
+
+    release(7);
+    await advance(0);
+    expect(store.getSnapshot().pendingCount).toBe(0);
+  });
+
+  it('should_never_read_the_pending_count_while_sync_is_disabled', async () => {
+    setSyncEnabled(false);
+    store.start();
+    await advance(FIVE_SECONDS_MS);
+
+    expect(getPendingCount).not.toHaveBeenCalled();
+    expect(store.getSnapshot().pendingCount).toBe(0);
+  });
+
+  it('should_log_a_failed_pending_count_read_through_SYNC_STATUS_and_keep_the_last_value', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(0);
+    expect(store.getSnapshot().pendingCount).toBe(2);
+
+    getPendingCount.mockRejectedValueOnce(new Error('IndexedDB is closed'));
+    await advance(2000);
+
+    expect(warn).toHaveBeenCalledWith(
+      'SYNC_STATUS',
+      'Sync status poll failed',
+      expect.objectContaining({ poll: 'pendingCount', errorMessage: 'IndexedDB is closed' }),
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(store.getSnapshot().pendingCount).toBe(2);
+    const readsAfterFailure = getPendingCount.mock.calls.length;
+    await advance(2000);
+    expect(getPendingCount.mock.calls.length).toBe(readsAfterFailure + 1);
   });
 });

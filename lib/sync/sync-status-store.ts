@@ -2,17 +2,20 @@
  * Sync status store: the one owner of sync-status polling.
  *
  * SyncProvider creates one store, starts it once on mount, and reads it through
- * useSyncExternalStore. The store runs the enabled check every 2 s and the
- * coordinator status read every 500 ms while there is status to watch, and it
- * brings the realtime subscription and the background-sync manager in line
- * with the enabled flag. Every poll runs through guardPoll, so a failed read is
- * logged under SYNC_STATUS and the snapshot keeps the value it last held.
+ * useSyncExternalStore. The store runs the enabled check every 2 s, the
+ * coordinator status read every 500 ms while there is status to watch, and the
+ * queue's pending count every 2 s while sync is on, and it brings the realtime
+ * subscription and the background-sync manager in line with the enabled flag.
+ * Every poll runs through guardPoll, so a failed read is logged under
+ * SYNC_STATUS and the snapshot keeps the value it last held.
  */
 
 import { getSyncCoordinator } from '@/lib/sync/sync-coordinator';
 import { getBackgroundSyncManager } from '@/lib/sync/background-sync';
 import { getAutoSyncConfig } from '@/lib/sync/config';
+import { getSyncQueue } from '@/lib/sync/queue';
 import { isAuthenticated } from '@/lib/sync/pocketbase-client';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { UI_TIMING } from '@/lib/constants/ui';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncResult, PBSyncConfig } from '@/lib/sync/types';
@@ -36,6 +39,8 @@ export interface SyncStatusSnapshot {
   autoSyncInterval: number;
   /** Timestamp of the most recent successful sync, or null if never synced. */
   lastSuccessfulSyncAt: string | null;
+  /** Queue operations waiting to be pushed. Held at 0 while sync is off. */
+  pendingCount: number;
 }
 
 export const initialSyncStatus: SyncStatusSnapshot = {
@@ -50,6 +55,7 @@ export const initialSyncStatus: SyncStatusSnapshot = {
   autoSyncEnabled: true,
   autoSyncInterval: 2,
   lastSuccessfulSyncAt: null,
+  pendingCount: 0,
 };
 
 export type SyncStatusAction =
@@ -65,6 +71,7 @@ export type SyncStatusAction =
   | { type: 'SET_AUTO_SYNC'; autoSyncEnabled: boolean; autoSyncInterval: number }
   | { type: 'SET_LAST_RESULT'; lastResult: PBSyncResult }
   | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'SET_PENDING_COUNT'; pendingCount: number }
   | { type: 'SET_STATUS'; status: SyncStatusSnapshot['status'] }
   | { type: 'SYNC_START' }
   | { type: 'SYNC_SUCCESS'; lastResult: PBSyncResult }
@@ -91,7 +98,14 @@ function reducePollAction(
 ): SyncStatusSnapshot | null {
   switch (action.type) {
     case 'SET_ENABLED':
-      return mergeIfChanged(state, { isEnabled: action.isEnabled });
+      // The pending count is only read while sync is on, so switching off
+      // zeroes it here rather than leaving the last count on the badge.
+      return mergeIfChanged(
+        state,
+        action.isEnabled ? { isEnabled: true } : { isEnabled: false, pendingCount: 0 }
+      );
+    case 'SET_PENDING_COUNT':
+      return mergeIfChanged(state, { pendingCount: action.pendingCount });
     case 'SET_COORDINATOR_STATUS':
       return mergeIfChanged(state, {
         isSyncing: action.isSyncing,
@@ -251,8 +265,10 @@ export class SyncStatusStore {
   private readonly listeners = new Set<() => void>();
   private started = false;
   private watching = false;
+  private countingPending = false;
   private enabledInterval: ReturnType<typeof setInterval> | null = null;
   private statusInterval: ReturnType<typeof setInterval> | null = null;
+  private pendingInterval: ReturnType<typeof setInterval> | null = null;
 
   private readonly checkEnabled = guardPoll('enabled', async () => {
     const { enabled, config } = await readSyncEnabled();
@@ -265,6 +281,13 @@ export class SyncStatusStore {
   });
 
   private readonly readStatus = guardPoll('coordinator', () => readCoordinatorStatus(this.dispatch));
+
+  private readonly readPendingCount = guardPoll('pendingCount', async () => {
+    const pendingCount = await getSyncQueue().getPendingCount();
+    // A read that lands after sync switched off would put a stale count back
+    // on a badge that is no longer shown.
+    if (this.state.isEnabled) this.dispatch({ type: 'SET_PENDING_COUNT', pendingCount });
+  });
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -280,7 +303,9 @@ export class SyncStatusStore {
     if (next === this.state) return;
     this.state = next;
     for (const listener of this.listeners) listener();
-    if (this.started) this.reconcileStatusPoll();
+    if (!this.started) return;
+    this.reconcileStatusPoll();
+    this.reconcilePendingPoll();
   };
 
   /** Run the enabled check now and every 2 s, and read the status once. */
@@ -291,6 +316,8 @@ export class SyncStatusStore {
     this.enabledInterval = setInterval(this.checkEnabled, UI_TIMING.AUTH_CHECK_INTERVAL_MS);
     this.watching = hasStatusToWatch(this.state);
     this.armStatusPoll();
+    this.countingPending = this.state.isEnabled;
+    this.armPendingPoll();
   }
 
   stop(): void {
@@ -299,7 +326,31 @@ export class SyncStatusStore {
     if (this.enabledInterval) clearInterval(this.enabledInterval);
     this.enabledInterval = null;
     this.clearStatusPoll();
+    this.clearPendingPoll();
     stopSyncServices();
+  }
+
+  private reconcilePendingPoll(): void {
+    const enabled = this.state.isEnabled;
+    if (enabled === this.countingPending) return;
+    this.countingPending = enabled;
+    this.clearPendingPoll();
+    this.armPendingPoll();
+  }
+
+  /** One read now, then every 2 s, only while sync is on. */
+  private armPendingPoll(): void {
+    if (!this.countingPending) return;
+    void this.readPendingCount();
+    this.pendingInterval = setInterval(
+      this.readPendingCount,
+      SYNC_CONFIG.PENDING_COUNT_POLL_INTERVAL_MS
+    );
+  }
+
+  private clearPendingPoll(): void {
+    if (this.pendingInterval) clearInterval(this.pendingInterval);
+    this.pendingInterval = null;
   }
 
   private reconcileStatusPoll(): void {

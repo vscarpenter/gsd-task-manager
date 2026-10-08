@@ -27,6 +27,9 @@ vi.mock('@/lib/sync/pb-realtime', () => ({
   unsubscribe: vi.fn(),
 }));
 vi.mock('@/lib/db');
+vi.mock('@/lib/sync/queue', () => ({
+  getSyncQueue: () => ({ getPendingCount: vi.fn().mockResolvedValue(0) }),
+}));
 
 /** Wrapper that provides SyncProvider context for the hook under test. */
 function wrapper({ children }: { children: ReactNode }) {

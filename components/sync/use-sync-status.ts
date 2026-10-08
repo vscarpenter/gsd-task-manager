@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { getSyncQueue } from '@/lib/sync/queue';
-import { guardPoll } from '@/lib/sync/sync-status-poll';
+import { useEffect, useRef } from 'react';
+import { useRetryCountdown } from '@/lib/hooks/use-retry-countdown';
 import { isAuthError } from '@/lib/sync/error-categorizer';
-import { SYNC_CONFIG, SYNC_TOAST_DURATION } from '@/lib/constants/sync';
+import { SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 
 export type SyncStatus = 'syncing' | 'success' | 'error' | 'conflict' | 'idle';
 
@@ -23,6 +22,8 @@ interface SyncStatusOptions {
   status: SyncStatus;
   error: string | null;
   nextRetryAt: number | null;
+  /** Queue operations waiting to be pushed, from the sync status store. */
+  pendingCount: number;
   onAuthError: (message: string, action?: { label: string; onClick: () => void }, duration?: number) => void;
   /**
    * Timestamp of the most recent successful sync. When provided alongside
@@ -42,75 +43,34 @@ interface SyncStatusResult {
 
 /**
  * Hook for managing sync status display logic
- * Handles pending count, retry countdown, and auth error detection
+ * Handles the retry countdown and auth error detection, and derives the icon
+ * and tooltip from the sync state the button hands it.
  */
 export function useSyncStatus({
   isEnabled,
   status,
   error,
   nextRetryAt,
+  pendingCount,
   onAuthError,
   lastSuccessfulSyncAt = null,
 }: SyncStatusOptions): SyncStatusResult {
-  const [pendingCount, setPendingCount] = useState(0);
-  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const retryCountdown = useRetryCountdown(nextRetryAt);
   const previousAuthErrorRef = useRef(false);
 
-  // Poll pending operation count
-  useEffect(() => {
-    const updatePendingCount = guardPoll('pendingCount', async () => {
-      if (!isEnabled) {
-        setPendingCount(0);
-        return;
-      }
-
-      const queue = getSyncQueue();
-      const count = await queue.getPendingCount();
-      setPendingCount(count);
-    });
-
-    updatePendingCount();
-
-    const interval = setInterval(updatePendingCount, SYNC_CONFIG.PENDING_COUNT_POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [isEnabled]);
-
-  // Update retry countdown
-  useEffect(() => {
-    const updateCountdown = () => {
-      if (nextRetryAt && nextRetryAt > Date.now()) {
-        const secondsRemaining = Math.ceil((nextRetryAt - Date.now()) / 1000);
-        setRetryCountdown(secondsRemaining);
-      } else {
-        setRetryCountdown(null);
-      }
-    };
-
-    updateCountdown();
-
-    const interval = setInterval(updateCountdown, SYNC_CONFIG.COUNTDOWN_UPDATE_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [nextRetryAt]);
-
   // Detect authentication errors - derive from error state
-  const authErrorDetected = error ? isAuthError(new Error(error)) : false;
-  const hasAuthError = authErrorDetected;
+  const hasAuthError = error ? isAuthError(new Error(error)) : false;
 
   // Trigger callback once when we transition into an auth error state
   useEffect(() => {
-    if (authErrorDetected && !previousAuthErrorRef.current && error) {
+    if (hasAuthError && !previousAuthErrorRef.current && error) {
       // react-doctor-disable-next-line react-doctor/no-pass-data-to-parent -- one-shot toast on an external-state transition; no event source
       onAuthError(error, undefined, SYNC_TOAST_DURATION.LONG);
     }
-    previousAuthErrorRef.current = authErrorDetected;
-  }, [authErrorDetected, error, onAuthError]);
+    previousAuthErrorRef.current = hasAuthError;
+  }, [hasAuthError, error, onAuthError]);
 
-  const iconType = getIconType({
-    isEnabled,
-    hasAuthError,
-    retryCountdown,
-    status,
-  });
+  const iconType = getIconType({ isEnabled, hasAuthError, retryCountdown, status });
 
   const tooltip = getTooltip({
     isEnabled,
