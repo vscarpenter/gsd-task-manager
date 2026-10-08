@@ -140,7 +140,7 @@ function reduceManualSyncAction(
   }
 }
 
-export function syncStatusReducer(
+function syncStatusReducer(
   state: SyncStatusSnapshot,
   action: SyncStatusAction
 ): SyncStatusSnapshot {

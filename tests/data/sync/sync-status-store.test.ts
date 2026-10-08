@@ -120,6 +120,7 @@ describe('sync status store', () => {
     setSyncEnabled(true);
     store.start();
     await advance(1000);
+    const callsAfterOneSecond = getStatus.mock.calls.length;
 
     setSyncEnabled(false);
     // The enabled check runs every 2 s, so this covers the switch-off.
@@ -127,6 +128,7 @@ describe('sync status store', () => {
     const callsAfterSwitchOff = getStatus.mock.calls.length;
     await advance(FIVE_SECONDS_MS);
 
+    expect(callsAfterSwitchOff).toBeGreaterThan(callsAfterOneSecond);
     expect(getStatus).toHaveBeenCalledTimes(callsAfterSwitchOff);
   });
 
@@ -151,6 +153,86 @@ describe('sync status store', () => {
     const callsOnceSettled = getStatus.mock.calls.length;
     await advance(FIVE_SECONDS_MS);
     expect(getStatus).toHaveBeenCalledTimes(callsOnceSettled);
+  });
+
+  it('should_keep_polling_after_sign_out_while_requests_are_still_pending', async () => {
+    setSyncEnabled(true);
+    store.start();
+    await advance(1000);
+
+    getStatus.mockResolvedValue({ ...IDLE_STATUS, pendingRequests: 1 });
+    setSyncEnabled(false);
+    await advance(3000);
+    expect(store.getSnapshot().isEnabled).toBe(false);
+    expect(store.getSnapshot().pendingRequests).toBe(1);
+    const callsWhilePending = getStatus.mock.calls.length;
+    await advance(2000);
+    expect(getStatus.mock.calls.length - callsWhilePending).toBe(4);
+
+    getStatus.mockResolvedValue(IDLE_STATUS);
+    await advance(1000);
+    const callsOnceDrained = getStatus.mock.calls.length;
+    await advance(FIVE_SECONDS_MS);
+    expect(getStatus).toHaveBeenCalledTimes(callsOnceDrained);
+  });
+
+  // React StrictMode mounts, unmounts, and mounts the provider again in
+  // development, so stop() must leave nothing armed and the second start()
+  // must arm exactly one set of timers.
+  it('should_arm_one_set_of_timers_across_start_stop_start', async () => {
+    setSyncEnabled(true);
+    store.start();
+    store.stop();
+    store.start();
+    expect(getStatus).toHaveBeenCalledTimes(2);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+
+    await advance(1000);
+    const readsAfterOneSecond = getStatus.mock.calls.length;
+    const checksAfterOneSecond = vi.mocked(getDb).mock.calls.length;
+    await advance(2000);
+
+    expect(getStatus.mock.calls.length - readsAfterOneSecond).toBe(4);
+    expect(vi.mocked(getDb).mock.calls.length - checksAfterOneSecond).toBe(1);
+  });
+
+  it('should_ignore_a_second_start_while_started', async () => {
+    setSyncEnabled(true);
+    store.start();
+    store.start();
+    expect(getStatus).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getDb)).toHaveBeenCalledTimes(1);
+
+    await advance(1000);
+    const readsAfterOneSecond = getStatus.mock.calls.length;
+    await advance(2000);
+    expect(getStatus.mock.calls.length - readsAfterOneSecond).toBe(4);
+  });
+
+  // A read that lands after stop() updates the snapshot but must arm nothing,
+  // the way a dispatch to an unmounted reducer was dropped before. The next
+  // start() then polls for the sync it finds still running.
+  it('should_arm_nothing_for_a_read_that_lands_after_stop_and_poll_for_it_on_restart', async () => {
+    setSyncEnabled(false);
+    let release: (status: typeof IDLE_STATUS) => void = () => {};
+    getStatus.mockReturnValueOnce(new Promise<typeof IDLE_STATUS>((resolve) => {
+      release = resolve;
+    }));
+    store.start();
+    await advance(0);
+    store.stop();
+
+    release({ ...IDLE_STATUS, isRunning: true });
+    await advance(0);
+    expect(store.getSnapshot().isSyncing).toBe(true);
+    const readsAfterStop = getStatus.mock.calls.length;
+    await advance(FIVE_SECONDS_MS);
+    expect(getStatus).toHaveBeenCalledTimes(readsAfterStop);
+
+    getStatus.mockResolvedValue({ ...IDLE_STATUS, isRunning: true });
+    store.start();
+    await advance(2000);
+    expect(getStatus.mock.calls.length - readsAfterStop).toBe(1 + 4);
   });
 
   // useSyncExternalStore re-renders a consumer whenever getSnapshot returns a
