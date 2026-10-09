@@ -236,5 +236,8 @@ describe('isRemoteNewerThanArchive', () => {
     expect(isRemoteNewerThanArchive('2026-05-20T00:00:00.000Z', undefined)).toBe(false);
     expect(isRemoteNewerThanArchive('not-a-date', archivedAt)).toBe(false);
     expect(isRemoteNewerThanArchive('2026-05-20T00:00:00.000Z', 'not-a-date')).toBe(false);
+    const now = Date.parse('2026-05-19T12:00:00.000Z');
+    expect(isRemoteNewerThanArchive('3000-01-01T00:00:00.000Z', archivedAt, now)).toBe(false);
+    expect(isRemoteNewerThanArchive('2026-05-19T12:04:00.000Z', archivedAt, now)).toBe(true);
   });
 });

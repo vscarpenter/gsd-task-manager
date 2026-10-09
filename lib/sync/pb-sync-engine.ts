@@ -13,7 +13,7 @@ import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/syn
 import { notifySyncSuccess, notifySyncError } from './notifications';
 import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
 import { ensureValidAuth } from './pb-auth';
-import { getDeviceId, isRemoteNewerThanArchive } from './pb-sync-helpers';
+import { getDeviceId, isRemoteNewerThanArchive, readClientUpdatedAt } from './pb-sync-helpers';
 import { pushLocalChanges } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { classifyRemoteDeletion } from './queue';
@@ -92,13 +92,14 @@ export async function applyRemoteChange(
 
   await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
+    const rawUpdatedAt = readClientUpdatedAt(record);
     const archived = await db.archivedTasks.get(remoteTask.id);
-    if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) {
+    if (archived && !isRemoteNewerThanArchive(rawUpdatedAt, archived.archivedAt)) {
       logger.debug('Realtime change skipped: task is archived locally', { taskId: remoteTask.id });
       return;
     }
     const deleted = await db.deletedTasks.get(remoteTask.id);
-    if (deleted && !isRemoteNewerThanArchive(remoteTask.updatedAt, deleted.deletedAt)) {
+    if (deleted && !isRemoteNewerThanArchive(rawUpdatedAt, deleted.deletedAt)) {
       logger.debug('Realtime change skipped: task is deleted locally', { taskId: remoteTask.id });
       return;
     }

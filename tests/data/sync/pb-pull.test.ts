@@ -109,8 +109,8 @@ describe('pullRemoteChanges cursor clamping', () => {
     fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
   });
 
-  it('clamps year-3000 timestamps to now+5min when computing the cursor', async () => {
-    const fiveMinFromNow = Date.now() + 5 * 60 * 1000;
+  it('does not advance the cursor past now for a far-future stamp', async () => {
+    const before = Date.now();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
         getList: vi.fn(async () => [pbRecord('t1', '3000-01-01T00:00:00.000Z')]),
@@ -119,7 +119,20 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     const { maxObservedTimestamp } = await pullRemoteChanges(null);
     expect(maxObservedTimestamp).not.toBeNull();
-    expect(new Date(maxObservedTimestamp!).getTime()).toBeLessThanOrEqual(fiveMinFromNow + 1000);
+    expect(new Date(maxObservedTimestamp!).getTime()).toBeLessThanOrEqual(before);
+  });
+
+  it('does not advance the cursor past now for a clock a few minutes fast', async () => {
+    const before = Date.now();
+    const twoMinutesAhead = new Date(before + 2 * 60 * 1000).toISOString();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => [pbRecord('t1', twoMinutesAhead)]),
+      }),
+    });
+
+    const { maxObservedTimestamp } = await pullRemoteChanges(null);
+    expect(new Date(maxObservedTimestamp!).getTime()).toBeLessThanOrEqual(before);
   });
 
   it('does not include invalid (un-applied) records in the cursor', async () => {
@@ -258,6 +271,45 @@ describe('pullRemoteChanges archive guard', () => {
     await db.deletedTasks.clear();
     await db.syncQueue.clear();
     fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+  });
+
+  it('does not resurrect an archived task when the remote stamp is far in the future', async () => {
+    const db = getDb();
+    await db.archivedTasks.add({
+      ...makeTask('future-archive'),
+      archivedAt: '2026-05-21T00:00:00.000Z',
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => [pbRecord('future-archive', '3000-01-01T00:00:00.000Z')]),
+      }),
+    });
+
+    const { pulledCount, maxObservedTimestamp } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(0);
+    expect(maxObservedTimestamp).toBeNull();
+    await expect(db.tasks.get('future-archive')).resolves.toBeUndefined();
+    await expect(db.archivedTasks.count()).resolves.toBe(1);
+  });
+
+  it('does not resurrect a trashed task when the remote stamp is far in the future', async () => {
+    const db = getDb();
+    await db.deletedTasks.add({
+      ...makeTask('future-trash'),
+      deletedAt: '2026-05-21T00:00:00.000Z',
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => [pbRecord('future-trash', '3000-01-01T00:00:00.000Z')]),
+      }),
+    });
+
+    const { pulledCount } = await pullRemoteChanges(null);
+
+    expect(pulledCount).toBe(0);
+    await expect(db.tasks.get('future-trash')).resolves.toBeUndefined();
+    await expect(db.deletedTasks.get('future-trash')).resolves.toBeDefined();
   });
 
   it('does not resurrect a task that is already archived locally', async () => {

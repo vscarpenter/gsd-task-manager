@@ -224,13 +224,22 @@ export async function fetchRemoteTaskEntry(
  * never resurrects a task — the archive stands unless the remote is demonstrably
  * newer. Shared by both apply paths so the two guards cannot drift apart.
  */
+export function readClientUpdatedAt(record: RecordModel): string | undefined {
+  const value = (record as { client_updated_at?: unknown }).client_updated_at;
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function isRemoteNewerThanArchive(
   remoteUpdatedAt: string | undefined,
   archivedAt: string | undefined,
+  nowMs: number = Date.now(),
 ): boolean {
   if (!remoteUpdatedAt || !archivedAt) return false;
   const remoteTime = new Date(remoteUpdatedAt).getTime();
   const archivedTime = new Date(archivedAt).getTime();
   if (Number.isNaN(remoteTime) || Number.isNaN(archivedTime)) return false;
+  // A far-future stamp is not a newer edit. Push already refuses to lose to one.
+  // Comparing the clamped "now + 5 min" value would resurrect the tombstone.
+  if (remoteTime > nowMs + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS) return false;
   return remoteTime > archivedTime;
 }
