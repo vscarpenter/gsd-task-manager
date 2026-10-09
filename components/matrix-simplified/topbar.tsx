@@ -55,11 +55,11 @@ export function SimplifiedTopbar({
       <div className="flex-1" />
 
       {hasSearch ? (
-        <div className="relative hidden w-72 sm:block">
+        <div data-testid="topbar-search" className="relative order-last w-full sm:order-none sm:w-72">
           <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
           <Input
             data-testid="search-input"
-            className="touch-target"
+            className="touch-target topbar-search-input"
             ref={searchInputRef}
             placeholder="Search tasks…"
             style={{ paddingLeft: "2.25rem" }}
@@ -70,7 +70,7 @@ export function SimplifiedTopbar({
         </div>
       ) : null}
 
-      <div className="hidden sm:block">
+      <div data-testid="topbar-sync">
         <SyncStatusDisplay {...syncStatus} />
       </div>
 
@@ -86,7 +86,7 @@ export function SimplifiedTopbar({
  */
 function topbarClassName(hidden: boolean): string {
   return cn(
-    "sticky top-0 z-20 flex items-center gap-3 border-b border-border/60",
+    "sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-border/60",
     "bg-topbar px-4 py-3 sm:px-7",
     "transition-transform duration-200 ease-out",
     hidden && "max-md:-translate-y-full max-md:focus-within:translate-y-0"
