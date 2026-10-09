@@ -78,6 +78,8 @@ interface ResetEverythingDialogProps {
 	onExport: () => Promise<boolean>;
 	activeTasks: number;
 	completedTasks: number;
+	archivedTasks?: number;
+	trashedTasks?: number;
 	syncEnabled: boolean;
 	pendingSync: number;
 }
@@ -98,6 +100,8 @@ export function ResetEverythingDialog({
 	onExport,
 	activeTasks,
 	completedTasks,
+	archivedTasks = 0,
+	trashedTasks = 0,
 	syncEnabled,
 	pendingSync,
 }: ResetEverythingDialogProps) {
@@ -174,6 +178,8 @@ export function ResetEverythingDialog({
 						</h4>
 						<ul className="space-y-1 text-sm text-status-overdue-ink">
 							<li>• {totalTasks} task{totalTasks !== 1 ? "s" : ""} ({activeTasks} active, {completedTasks} completed)</li>
+							<li>• {archivedTasks} archived task{archivedTasks !== 1 ? "s" : ""}</li>
+							<li>• {trashedTasks} task{trashedTasks !== 1 ? "s" : ""} in Trash</li>
 							<li>• All custom smart views</li>
 							<li>• All notification settings</li>
 							<li>• All archive settings</li>

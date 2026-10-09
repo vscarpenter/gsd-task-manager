@@ -98,10 +98,67 @@ describe("ImportDialog", () => {
     render(<ImportDialog {...defaultProps} />);
 
     expect(screen.getByText("Replace Everything")).toBeInTheDocument();
-    // Replace restores the whole backup, not just the task list (ADR 0014), so
-    // the copy has to name what else it overwrites.
-    expect(screen.getByText(/tasks, archive, and settings/i)).toBeInTheDocument();
-    expect(screen.getByText(/warning - deletes 5 existing/i)).toBeInTheDocument();
+    expect(screen.getByText(/leaves the archive on this device/i)).toBeInTheDocument();
+    expect(screen.getByText(/leaves trash on this device/i)).toBeInTheDocument();
+    expect(screen.getByText(/warning\. deletes 5 tasks on this device/i)).toBeInTheDocument();
+  });
+
+  it("names archive and trash rows when the file carries those stores", () => {
+    const withStores = JSON.stringify({
+      tasks: [{ id: "1", title: "Task 1" }],
+      archivedTasks: [{ id: "a" }],
+      deletedTasks: [],
+      exportedAt: "2024-01-01T00:00:00.000Z",
+      version: "2.0.0",
+    });
+    render(
+      <ImportDialog
+        {...defaultProps}
+        fileContents={withStores}
+        archivedCount={4}
+        trashedCount={2}
+      />
+    );
+
+    expect(screen.getByText(/replaces 4 archived tasks with 1 from this file/i)).toBeInTheDocument();
+    expect(screen.getByText(/replaces 2 tasks in trash with 0 from this file/i)).toBeInTheDocument();
+  });
+
+  it("asks before a synced replace deletes live tasks from the account", async () => {
+    const user = userEvent.setup();
+    render(
+      <ImportDialog
+        {...defaultProps}
+        syncEnabled
+        existingTaskIds={["1", "local-only"]}
+      />
+    );
+
+    await user.click(screen.getByText("Replace Everything"));
+    expect(mockImportFromJson).not.toHaveBeenCalled();
+    expect(screen.getByText(/delete these tasks from your account/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /delete and replace/i }));
+    await waitFor(() => {
+      expect(mockImportFromJson).toHaveBeenCalledWith(validJsonContent, "replace");
+    });
+  });
+
+  it("replaces in one click when sync is on but every live task is in the file", async () => {
+    const user = userEvent.setup();
+    render(
+      <ImportDialog
+        {...defaultProps}
+        syncEnabled
+        existingTaskIds={["1", "2"]}
+        existingTaskCount={2}
+      />
+    );
+
+    await user.click(screen.getByText("Replace Everything"));
+    await waitFor(() => {
+      expect(mockImportFromJson).toHaveBeenCalledWith(validJsonContent, "replace");
+    });
   });
 
   it("renders cancel button", () => {
@@ -275,13 +332,13 @@ describe("ImportDialog", () => {
   it("displays correct warning text for replace with multiple tasks", () => {
     render(<ImportDialog {...defaultProps} existingTaskCount={10} />);
 
-    expect(screen.getByText(/warning - deletes 10 existing tasks/i)).toBeInTheDocument();
+    expect(screen.getByText(/warning\. deletes 10 tasks on this device/i)).toBeInTheDocument();
   });
 
   it("displays correct warning text for replace with single task", () => {
     render(<ImportDialog {...defaultProps} existingTaskCount={1} />);
 
-    expect(screen.getByText(/warning - deletes 1 existing task/i)).toBeInTheDocument();
+    expect(screen.getByText(/warning\. deletes 1 task on this device/i)).toBeInTheDocument();
   });
 
   it("handles empty tasks array in JSON", () => {

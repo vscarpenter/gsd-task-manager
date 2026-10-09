@@ -71,6 +71,17 @@ describe("ResetEverythingDialog", () => {
     expect(
       screen.getByText(/8 tasks \(5 active, 3 completed\)/)
     ).toBeInTheDocument();
+    expect(screen.getByText(/0 archived tasks/)).toBeInTheDocument();
+    expect(screen.getByText(/0 tasks in Trash/)).toBeInTheDocument();
+  });
+
+  it("counts archive and trash in what will be deleted", () => {
+    render(
+      <ResetEverythingDialog {...baseProps} archivedTasks={12} trashedTasks={3} />
+    );
+
+    expect(screen.getByText(/12 archived tasks/)).toBeInTheDocument();
+    expect(screen.getByText(/3 tasks in Trash/)).toBeInTheDocument();
   });
 
   it("shows sync warning when syncEnabled and pending changes exist", () => {
