@@ -126,6 +126,162 @@ function liveDeleteCount(
   return existingIds.filter((id) => !fileIds.has(id)).length;
 }
 
+/** "1 task", "3 tasks". */
+function taskCount(count: number): string {
+  return `${count} task${count === 1 ? "" : "s"}`;
+}
+
+interface ReplaceSummary {
+  archive: string;
+  trash: string;
+  settings: string;
+  warning: string;
+}
+
+/** One sentence per store a replace touches, plus the live-task warning. */
+function describeReplace(
+  impact: ImportImpact,
+  archivedCount: number,
+  trashedCount: number,
+  liveDeletes: number | null,
+): ReplaceSummary {
+  return {
+    archive: impact.hasArchive
+      ? `Replaces ${archivedCount} archived task${archivedCount === 1 ? "" : "s"} with ${impact.archiveCount} from this file.`
+      : "Leaves the archive on this device as it is.",
+    trash: impact.hasTrash
+      ? `Replaces ${taskCount(trashedCount)} in Trash with ${impact.trashCount} from this file.`
+      : "Leaves Trash on this device as it is.",
+    settings: impact.settingsLabels.length > 0
+      ? `Replaces your ${listFormat.format(impact.settingsLabels)} settings with the ones in this file.`
+      : "Leaves your settings as they are.",
+    warning: liveDeletes === null
+      ? "Warning. Deletes tasks on this device that are not in this file."
+      : `Warning. Deletes ${taskCount(liveDeletes)} on this device.`,
+  };
+}
+
+interface ImportCountsProps {
+  existingTaskCount: number;
+  importTaskCount: number | null;
+}
+
+function ImportCounts({ existingTaskCount, importTaskCount }: ImportCountsProps) {
+  return (
+    <div className="rounded-lg border border-border bg-background-muted p-4">
+      <p className="text-sm text-foreground-muted">
+        You currently have <span className="font-semibold text-foreground">{existingTaskCount}</span> task{existingTaskCount !== 1 ? "s" : ""}.
+      </p>
+      {importTaskCount !== null && (
+        <p className="mt-1 text-sm text-foreground-muted">
+          Importing <span className="font-semibold text-foreground">{importTaskCount}</span> task{importTaskCount !== 1 ? "s" : ""}.
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface OptionCardProps {
+  disabled: boolean;
+  onClick: () => void;
+}
+
+function MergeCard({ disabled, onClick }: OptionCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full rounded-lg border-2 border-olive/30 bg-olive-tint p-4 text-left transition-all hover:border-olive/50 hover:bg-status-success-muted disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-olive text-on-success">
+          <PlusCircleIcon className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-foreground">Merge Tasks</h3>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Keep your existing tasks and add the imported ones, archive included. Duplicate IDs are regenerated to avoid conflicts, and your settings stay as they are.
+          </p>
+          <p className="mt-2 text-xs font-medium text-olive-d">
+            ✓ Safe - No data loss
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+interface ReplaceCardProps extends OptionCardProps {
+  summary: ReplaceSummary;
+  cloudDeletes: boolean;
+}
+
+function ReplaceCard({ summary, cloudDeletes, disabled, onClick }: ReplaceCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-left transition-all hover:border-rust/50 hover:bg-status-overdue-muted disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-fill text-on-danger">
+          <RefreshCwIcon className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-foreground">Replace Everything</h3>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Restore this backup over the tasks on this device. This cannot be undone.
+          </p>
+          <p className="mt-2 text-sm text-foreground-muted">{summary.archive}</p>
+          <p className="mt-1 text-sm text-foreground-muted">{summary.trash}</p>
+          <p className="mt-1 text-sm text-foreground-muted">{summary.settings}</p>
+          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust-d">
+            <AlertTriangleIcon className="h-3 w-3" />
+            <span>{summary.warning}</span>
+          </div>
+          {cloudDeletes ? (
+            <p className="mt-1 text-xs font-medium text-rust-d">
+              Sync is on, so those deletes also leave your cloud account.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+interface ReplaceConfirmProps {
+  liveDeletes: number | null;
+  disabled: boolean;
+  onBack: () => void;
+  onConfirm: () => void;
+}
+
+function ReplaceConfirm({ liveDeletes, disabled, onBack, onConfirm }: ReplaceConfirmProps) {
+  const target = liveDeletes === null
+    ? "the tasks on this device that are not in this file"
+    : `${taskCount(liveDeletes)} on this device`;
+
+  return (
+    <div className="rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4">
+      <h3 className="font-semibold text-foreground">Delete these tasks from your account?</h3>
+      <p className="mt-1 text-sm text-foreground-muted">
+        Replace will delete {target} from this device and from your cloud account. Other devices drop them on the next sync. This cannot be undone.
+      </p>
+      <div className="mt-4 flex gap-2">
+        <Button variant="subtle" onClick={onBack} disabled={disabled} className="flex-1">
+          Back
+        </Button>
+        <Button onClick={onConfirm} disabled={disabled} className="flex-1">
+          Delete and replace
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -191,10 +347,6 @@ export function ImportDialog({
     onOpenChange(next);
   };
 
-  const liveDeleteLabel = liveDeletes === null
-    ? "the tasks on this device that are not in this file"
-    : `${liveDeletes} task${liveDeletes === 1 ? "" : "s"} on this device`;
-
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-md">
@@ -206,112 +358,24 @@ export function ImportDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Current state info */}
-          <div className="rounded-lg border border-border bg-background-muted p-4">
-            <p className="text-sm text-foreground-muted">
-              You currently have <span className="font-semibold text-foreground">{existingTaskCount}</span> task{existingTaskCount !== 1 ? "s" : ""}.
-            </p>
-            {importTaskCount !== null && (
-              <p className="mt-1 text-sm text-foreground-muted">
-                Importing <span className="font-semibold text-foreground">{importTaskCount}</span> task{importTaskCount !== 1 ? "s" : ""}.
-              </p>
-            )}
-          </div>
+          <ImportCounts existingTaskCount={existingTaskCount} importTaskCount={importTaskCount} />
 
-          {/* Merge option */}
-          <button
-            type="button"
-            onClick={() => handleImport("merge")}
-            disabled={isImporting}
-            className="w-full rounded-lg border-2 border-olive/30 bg-olive-tint p-4 text-left transition-all hover:border-olive/50 hover:bg-status-success-muted disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-olive text-on-success">
-                <PlusCircleIcon className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Merge Tasks</h3>
-                <p className="mt-1 text-sm text-foreground-muted">
-                  Keep your existing tasks and add the imported ones, archive included. Duplicate IDs are regenerated to avoid conflicts, and your settings stay as they are.
-                </p>
-                <p className="mt-2 text-xs font-medium text-olive-d">
-                  ✓ Safe - No data loss
-                </p>
-              </div>
-            </div>
-          </button>
+          <MergeCard disabled={isImporting} onClick={() => handleImport("merge")} />
 
           {confirmingReplace ? (
-            <div className="rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4">
-              <h3 className="font-semibold text-foreground">Delete these tasks from your account?</h3>
-              <p className="mt-1 text-sm text-foreground-muted">
-                Replace will delete {liveDeleteLabel} from this device and from your cloud account. Other devices drop them on the next sync. This cannot be undone.
-              </p>
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="subtle"
-                  onClick={() => setConfirmingReplace(false)}
-                  disabled={isImporting}
-                  className="flex-1"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={() => void handleImport("replace")}
-                  disabled={isImporting}
-                  className="flex-1"
-                >
-                  Delete and replace
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={requestReplace}
+            <ReplaceConfirm
+              liveDeletes={liveDeletes}
               disabled={isImporting}
-              className="w-full rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-left transition-all hover:border-rust/50 hover:bg-status-overdue-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-danger-fill text-on-danger">
-                  <RefreshCwIcon className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">Replace Everything</h3>
-                  <p className="mt-1 text-sm text-foreground-muted">
-                    Restore this backup over the tasks on this device. This cannot be undone.
-                  </p>
-                  <p className="mt-2 text-sm text-foreground-muted">
-                    {impact.hasArchive
-                      ? `Replaces ${archivedCount} archived task${archivedCount === 1 ? "" : "s"} with ${impact.archiveCount} from this file.`
-                      : "Leaves the archive on this device as it is."}
-                  </p>
-                  <p className="mt-1 text-sm text-foreground-muted">
-                    {impact.hasTrash
-                      ? `Replaces ${trashedCount} task${trashedCount === 1 ? "" : "s"} in Trash with ${impact.trashCount} from this file.`
-                      : "Leaves Trash on this device as it is."}
-                  </p>
-                  <p className="mt-1 text-sm text-foreground-muted">
-                    {impact.settingsLabels.length > 0
-                      ? `Replaces your ${listFormat.format(impact.settingsLabels)} settings with the ones in this file.`
-                      : "Leaves your settings as they are."}
-                  </p>
-                  <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust-d">
-                    <AlertTriangleIcon className="h-3 w-3" />
-                    <span>
-                      {liveDeletes === null
-                        ? "Warning. Deletes tasks on this device that are not in this file."
-                        : `Warning. Deletes ${liveDeletes} task${liveDeletes === 1 ? "" : "s"} on this device.`}
-                    </span>
-                  </div>
-                  {cloudDeletes ? (
-                    <p className="mt-1 text-xs font-medium text-rust-d">
-                      Sync is on, so those deletes also leave your cloud account.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            </button>
+              onBack={() => setConfirmingReplace(false)}
+              onConfirm={() => void handleImport("replace")}
+            />
+          ) : (
+            <ReplaceCard
+              summary={describeReplace(impact, archivedCount, trashedCount, liveDeletes)}
+              cloudDeletes={cloudDeletes}
+              disabled={isImporting}
+              onClick={requestReplace}
+            />
           )}
 
           {/* Cancel button */}
