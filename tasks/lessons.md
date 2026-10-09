@@ -347,3 +347,11 @@ Fix pattern: wait for the title to be focused before touching other fields
   reminder and archive timers into `ClientLayout` added about 3.6 KB of
   first-load JS everywhere, which put `/auth/callback` near its budget allowance.
 
+- **The PocketBase upgrade test passes only in dev mode.** It asserts that
+  startup logs `VACUUM`, which PocketBase prints only in dev mode. PocketBase
+  turns dev mode on when its binary sits under the temp folder, so CI passes
+  because the system-test script unpacks PocketBase into `/tmp`. Run the binary
+  from anywhere else and that assertion fails. Passing `--dev` in the test's
+  spawn arguments would remove the dependency.
+- **A fresh Debian or Node image lacks `sqlite3`.** `tests/docker-migrations.test.ts`
+  throws without it, so any new test image has to install it.

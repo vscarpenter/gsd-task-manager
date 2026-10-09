@@ -635,3 +635,54 @@ set aside (copy in the session scratchpad) so this lock diff is proxy-addr only.
   `security-advisories` endpoint confirmed 2.0.8 as the patched release.
 - Assumption: no version trio bump, matching PR #536 (a dependency-only fix that
   changes neither the shipped web bundle nor the MCP package).
+
+# OSS Scanner enrollment (2026-10-09)
+
+Tier: Standard (three new files under `.oss-scanner/`, no app or contract change).
+Branch `chore/oss-scanner-enrollment` from `main` @ `37e33e5`, worked in the worktree
+at `.claude/worktrees/oss-scanner`. These notes sit at the end of the file so they
+can't collide with the modernization session state above.
+
+- [x] `.oss-scanner/Dockerfile`: node:22-bookworm, sqlite3, both pinned PocketBase
+      binaries under `/tmp`, Bun from `packageManager`, the frozen lockfile,
+      Playwright's browsers, the static export, and the MCP server build. Vitest
+      and the system tests run as non-fatal checks.
+- [x] `.oss-scanner/Dockerfile.dockerignore`. The root `.dockerignore` drops
+      `tests/` and `.git/` for the self-host image, so the scanner build uses its
+      own ignore file.
+- [x] `.oss-scanner/threat_model.md`.
+- [x] Build-check with upstream's `check_build` steps against a clean clone. The
+      first run failed twice: no `sqlite3`, and the upgrade test outside dev mode
+      (see lessons.md). After both fixes the image builds in 5.8 minutes, Vitest
+      passes 3412 tests, and the system tests pass 6 of 6.
+- [x] Offline in the finished image with 2 CPUs and 8 GB: typecheck, lint, and
+      knip pass; the MCP suite passes 354 of 354; Chromium e2e passes 117; the
+      export journeys pass 28; the CSP smoke passes. Firefox and WebKit e2e were
+      not run here; CI covers them.
+- [x] `projects/gsd-taskmanager/project.yaml` passes upstream's `tools/validate.py`.
+
+## Resuming From Here
+
+- Done: committed on `chore/oss-scanner-enrollment`. Nothing is pushed.
+- Next, in order, and all Vinny's call:
+  1. Push the branch, open a PR here, and merge it. The scanner reads the
+     Dockerfile from the default branch, so this lands first.
+  2. Fork anthropics/oss-scanner, add `projects/gsd-taskmanager/project.yaml`
+     with the contents below, run `tools/validate.py` and
+     `tools/check gsd-taskmanager`, then open the PR. Vinny ticks the
+     core-maintainer, terms, and contact boxes and signs the CLA.
+- project.yaml:
+
+      repo: https://github.com/vscarpenter/gsd-task-manager
+      primary_contact: vscarpenter@gmail.com
+      homepage: https://gsd.vinny.dev
+      disabled: false
+      dockerfile: .oss-scanner/Dockerfile
+      threat_model: .oss-scanner/threat_model.md
+
+- Assumptions: primary_contact uses the address already public in the commit
+  history. `security.txt` lists only GitHub private advisories, and the scanner
+  needs an email. The severity ratings in the threat model are defaults to tune.
+  No version trio bump, since nothing in the web bundle or the MCP package changed.
+- Finding, not fixed: the upgrade system test depends on PocketBase's dev mode
+  (lessons.md). Passing `--dev` in the test would make it location-independent.
