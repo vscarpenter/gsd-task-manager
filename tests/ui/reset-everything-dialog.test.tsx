@@ -80,6 +80,8 @@ describe("ResetEverythingDialog", () => {
       <ResetEverythingDialog {...baseProps} archivedTasks={12} trashedTasks={3} />
     );
 
+    // The first row stays live-only, so archived tasks are listed once.
+    expect(screen.getByText(/8 tasks \(5 active, 3 completed\)/)).toBeInTheDocument();
     expect(screen.getByText(/12 archived tasks/)).toBeInTheDocument();
     expect(screen.getByText(/3 tasks in Trash/)).toBeInTheDocument();
   });
