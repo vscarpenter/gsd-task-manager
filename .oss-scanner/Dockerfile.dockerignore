@@ -1,14 +1,31 @@
 # Docker uses this file instead of the root .dockerignore when it builds
 # .oss-scanner/Dockerfile. The scanner needs tests/ and .git/, which the root file
-# drops for the self-host image. Local build output and secrets still stay out, in
-# case someone builds from a working copy rather than a clean clone.
-node_modules/
-packages/*/node_modules/
+# drops for the self-host image. Everything else the root file keeps out stays out,
+# with recursive patterns, so a build from a working copy can't pick up secrets.
+
+# Local build output.
+**/node_modules/
 .next/
 .next-cache/
 out/
 coverage/
+.build-env.sh
+.build-info.json
+
+# Environment files, registry credentials, keys, and certificates.
 **/.env
 **/.env.*
-*.pem
-*.key
+**/.npmrc
+**/bunfig.toml
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/*.cert
+**/certs/
+**/*.secret
+**/*.secrets
+**/credentials*
+**/.terraform/
+**/*.tfstate*
