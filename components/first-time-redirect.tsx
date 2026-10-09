@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { isResetPending } from "@/lib/reset-lock";
+import { isRouteActive } from "@/lib/routes";
 
 const STORAGE_KEY = "gsd-has-launched";
+/** Per-tab record of seeing /about. public/theme-init.js reads and writes the same key. */
+const SEEN_ABOUT_KEY = "gsd-seen-about";
 
 /**
  * Redirects first-time visitors to /about so they see the landing page.
@@ -14,7 +17,6 @@ const STORAGE_KEY = "gsd-has-launched";
 export function FirstTimeRedirect() {
   const router = useRouter();
   const pathname = usePathname();
-  const seenAbout = useRef(pathname === "/about");
 
   // The redirect decision depends on localStorage (client-only) in a static-export
   // SPA, so it cannot be resolved during render with next/navigation's redirect().
@@ -28,13 +30,15 @@ export function FirstTimeRedirect() {
     const hasLaunched = localStorage.getItem(STORAGE_KEY);
     if (hasLaunched) return;
 
-    if (pathname === "/about") {
-      seenAbout.current = true;
+    // The trailing-slash export reports /about/, so match every variant.
+    if (isRouteActive(pathname, "ABOUT")) {
+      sessionStorage.setItem(SEEN_ABOUT_KEY, "true");
       return;
     }
 
-    // They opened the app from the landing page. Remember that, and stay.
-    if (seenAbout.current) {
+    // They opened the app from the landing page in this tab. Remember that, and
+    // stay. Session storage outlives a full reload, which a tap before hydration is.
+    if (sessionStorage.getItem(SEEN_ABOUT_KEY)) {
       localStorage.setItem(STORAGE_KEY, "true");
       return;
     }
