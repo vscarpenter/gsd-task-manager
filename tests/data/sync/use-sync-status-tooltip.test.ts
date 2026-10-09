@@ -47,6 +47,21 @@ describe('useSyncStatus tooltip — healthy idle', () => {
     expect(result.current.tooltip).toBe('Sync with cloud');
   });
 
+  it('does not claim a sync succeeded while the last attempt is still an error', () => {
+    const { result } = renderHook(() =>
+      useSyncStatus({
+        isEnabled: true,
+        status: 'idle',
+        error: 'network_error',
+        nextRetryAt: null,
+        pendingCount: 0,
+        onAuthError,
+        lastSuccessfulSyncAt: '2026-04-20T00:00:00.000Z',
+      })
+    );
+    expect(result.current.tooltip).toBe('Last sync failed · Click to sync now');
+  });
+
   it('still reports "Sync not enabled" when sync is disabled even with a stale success timestamp', () => {
     const { result } = renderHook(() =>
       useSyncStatus({

@@ -31,6 +31,7 @@ interface SyncStatusResult {
   lastSyncTime: string | null;
   pendingCount: number;
   retryCountdown: number | null;
+  error: string | null;
   formatRelativeTime: (timestamp: string | null) => string;
 }
 
@@ -40,7 +41,7 @@ interface SyncStatusResult {
  * through the sync context, so this hook reads nothing on its own.
  */
 export function useSyncStatus(): SyncStatusResult {
-  const { isEnabled, nextRetryAt, retryCount, pendingCount, lastSuccessfulSyncAt } = useSync();
+  const { isEnabled, nextRetryAt, retryCount, pendingCount, lastSuccessfulSyncAt, error } = useSync();
   const [, setTick] = useState(0);
   const retryCountdown = useRetryCountdown(nextRetryAt);
 
@@ -59,6 +60,7 @@ export function useSyncStatus(): SyncStatusResult {
     lastSyncTime: isEnabled ? lastSuccessfulSyncAt : null,
     pendingCount,
     retryCountdown,
+    error,
     formatRelativeTime,
   };
 }
