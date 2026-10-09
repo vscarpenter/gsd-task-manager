@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "13.9.0",
+	"version": "13.9.2",
 	"packageManager": "bun@1.3.14",
 	"private": true,
 	"type": "module",
@@ -64,7 +64,7 @@
 		"zod": "4.4.3"
 	},
 	"devDependencies": {
-		"@browserbasehq/stagehand": "^4.1.0",
+		"@browserbasehq/stagehand": "^4.2.0",
 		"@playwright/test": "^1.64.0",
 		"@tailwindcss/postcss": "4.3.3",
 		"@testing-library/dom": "10.4.2",
