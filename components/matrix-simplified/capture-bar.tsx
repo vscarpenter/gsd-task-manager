@@ -120,6 +120,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     const flags = override
       ? { urgent: quadrantByRdKey(override).urgent, important: quadrantByRdKey(override).important }
       : { urgent: parsed.urgent, important: parsed.important };
+    const draftText = text;
+    const draftOverride = override;
     submittingRef.current = true;
     try {
       const saved = await onSubmit({
@@ -129,8 +131,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         tags: parsed.tags,
       });
       if (saved === false) return;
-      setText("");
-      setOverride(null);
+      // The field stays editable during the save. Clear only what still holds
+      // the submitted draft, so the start of the next task survives.
+      setText((current) => (current === draftText ? "" : current));
+      setOverride((current) => (current === draftOverride ? null : current));
       setJustCaptured(true);
     } catch {
       // The caller reports the failure. The sentence stays so it can be retried.

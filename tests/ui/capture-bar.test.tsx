@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CaptureBar } from "@/components/matrix-simplified/capture-bar";
 
@@ -59,6 +59,43 @@ describe("<CaptureBar>", () => {
     expect(input).toHaveValue("buy milk");
     resolveSave(true);
     await screen.findByDisplayValue("");
+  });
+
+  it("keeps text typed while the save is still pending", async () => {
+    let resolveSave: (value: boolean) => void = () => undefined;
+    const onSubmit = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Capture a task") as HTMLInputElement;
+    await userEvent.type(input, "buy milk{Enter}");
+    await userEvent.clear(input);
+    await userEvent.type(input, "call mom");
+
+    await act(async () => resolveSave(true));
+
+    expect(input).toHaveValue("call mom");
+  });
+
+  it("keeps a quadrant chosen while the save is still pending", async () => {
+    let resolveSave: (value: boolean) => void = () => undefined;
+    const onSubmit = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Capture a task");
+    await userEvent.type(input, "buy milk{Enter}");
+    await userEvent.clear(input);
+    await userEvent.type(input, "call mom");
+    await userEvent.click(screen.getByTestId("quadrant-toggle"));
+
+    await act(async () => resolveSave(true));
+
+    expect(screen.getByText("·fixed")).toBeInTheDocument();
   });
 
   it("does not submit empty input", async () => {
