@@ -80,9 +80,20 @@ export function useTaskHighlight(
   useEffect(() => {
     if (!highlightedTaskId) return;
 
-    const frame = window.requestAnimationFrame(() => {
+    let frame = 0;
+    let attempts = 0;
+    const tryFocus = () => {
       const node = getTaskRefs().get(highlightedTaskId);
-      if (!node) return;
+      if (!node) {
+        // The card may still be behind the render cap or the completed
+        // disclosure. Those open in the same commit, so give them a few frames.
+        const stillThere = visibleTasks.some((task) => task.id === highlightedTaskId);
+        if (stillThere && attempts < 8) {
+          attempts += 1;
+          frame = window.requestAnimationFrame(tryFocus);
+        }
+        return;
+      }
 
       const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       node.scrollIntoView({
@@ -90,7 +101,8 @@ export function useTaskHighlight(
         behavior: reduceMotion ? "auto" : "smooth",
       });
       node.focus({ preventScroll: true });
-    });
+    };
+    frame = window.requestAnimationFrame(tryFocus);
     return () => window.cancelAnimationFrame(frame);
     // visibleTasks re-triggers the scroll after the task list re-renders.
      
