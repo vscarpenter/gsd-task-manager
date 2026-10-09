@@ -21,7 +21,8 @@ export interface CapturePayload {
 }
 
 interface CaptureBarProps {
-  onSubmit: (payload: CapturePayload) => void | Promise<void>;
+  /** Return false, or reject, to keep the draft on screen. */
+  onSubmit: (payload: CapturePayload) => void | boolean | Promise<void | boolean>;
   /** Called when the user wants to open the full new-task drawer (Shift+N or "Details" button). */
   onMoreOptions?: (payload: CapturePayload) => void;
   inputRef?: React.MutableRefObject<HTMLInputElement | null>;
@@ -43,6 +44,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   // Fires the lightning-glyph pop on a real capture; self-clears on animation end.
   const [justCaptured, setJustCaptured] = useState(false);
   const internalRef = useRef<HTMLInputElement | null>(null);
+  const submittingRef = useRef(false);
 
   // Stable refs so the global keydown handler does not re-register on every keystroke.
   const textRef = useRef(text);
@@ -112,26 +114,33 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     setOverride(CYCLE[(idx + 1) % CYCLE.length]);
   };
 
-  const submit = (e?: FormEvent) => {
+  const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!parsed.title) return;
+    if (!parsed.title || submittingRef.current) return;
     const flags = override
       ? { urgent: quadrantByRdKey(override).urgent, important: quadrantByRdKey(override).important }
       : { urgent: parsed.urgent, important: parsed.important };
-    void onSubmit({
-      title: parsed.title,
-      urgent: flags.urgent,
-      important: flags.important,
-      tags: parsed.tags,
-    });
-    setText("");
-    setOverride(null);
-    setJustCaptured(true);
+    submittingRef.current = true;
+    try {
+      const saved = await onSubmit({
+        title: parsed.title,
+        urgent: flags.urgent,
+        important: flags.important,
+        tags: parsed.tags,
+      });
+      if (saved === false) return;
+      setText("");
+      setOverride(null);
+      setJustCaptured(true);
+    } catch {
+      // The caller reports the failure. The sentence stays so it can be retried.
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") submit();
-    else if (e.key === "Escape") {
+    if (e.key === "Escape") {
       internalRef.current?.blur();
     }
   };

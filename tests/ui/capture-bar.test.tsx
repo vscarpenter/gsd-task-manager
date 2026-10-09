@@ -25,6 +25,42 @@ describe("<CaptureBar>", () => {
     expect(input.value).toBe("");
   });
 
+  it("keeps the draft when saving fails", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(false);
+    const { container } = render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Capture a task") as HTMLInputElement;
+    await userEvent.type(input, "buy milk{Enter}");
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(input).toHaveValue("buy milk");
+    expect(container.querySelector(".animate-capture-pop")).toBeNull();
+  });
+
+  it("keeps the draft when saving throws", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("disk full"));
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Capture a task") as HTMLInputElement;
+    await userEvent.type(input, "buy milk{Enter}");
+
+    expect(input).toHaveValue("buy milk");
+  });
+
+  it("clears the draft only after an async save resolves", async () => {
+    let resolveSave: (value: boolean) => void = () => undefined;
+    const onSubmit = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Capture a task") as HTMLInputElement;
+    await userEvent.type(input, "buy milk{Enter}");
+
+    expect(input).toHaveValue("buy milk");
+    resolveSave(true);
+    await screen.findByDisplayValue("");
+  });
+
   it("does not submit empty input", async () => {
     const onSubmit = vi.fn();
     const { container } = render(<CaptureBar onSubmit={onSubmit} />);

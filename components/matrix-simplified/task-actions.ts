@@ -28,7 +28,7 @@ export function reportTaskMutationError(
 
 // Pure capture/toggle handlers — they close over no component state, so they
 // live at module scope (stable identity for memoized children).
-export async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<void> {
+export async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<boolean> {
   try {
     const { cleanTitle, urls } = extractUrlsFromTitle(title);
     await createTask({
@@ -39,8 +39,10 @@ export async function handleCapture({ title, urgent, important, tags }: CaptureP
       tags: tags.length > 0 ? tags : undefined,
     });
     toast.success("Task added", { duration: TOAST_DURATION.SHORT });
+    return true;
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.CREATE_TASK, "Failed to create task");
+    return false;
   }
 }
 
@@ -58,16 +60,17 @@ export async function handleToggle(
   task: TaskRecord,
   completedNext: boolean,
   offerUndo: (message: string, undo: () => Promise<void>) => void
-): Promise<void> {
+): Promise<boolean> {
   try {
     const { recurringInstance } = await toggleCompleted(task.id, completedNext);
-    if (!completedNext) return;
+    if (!completedNext) return true;
 
     celebrateCompletion();
     offerUndo("Task completed", async () => {
       await toggleCompleted(task.id, false);
       if (recurringInstance) await deleteTask(recurringInstance.id);
     });
+    return true;
   } catch (error) {
     reportTaskMutationError(
       error,
@@ -75,6 +78,7 @@ export async function handleToggle(
       "Failed to update task",
       task.id
     );
+    return false;
   }
 }
 
