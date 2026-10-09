@@ -355,3 +355,22 @@ Fix pattern: wait for the title to be focused before touching other fields
   spawn arguments would remove the dependency.
 - **A fresh Debian or Node image lacks `sqlite3`.** `tests/docker-migrations.test.ts`
   throws without it, so any new test image has to install it.
+
+## 2026-10-09: PR #595 review comments and the first-visit flag
+
+- **`usePathname()` reports `/about/` under `trailingSlash: true`.** A unit test
+  that mocks the pathname as `/about` passes while the real route never matches.
+  Compare with `isRouteActive` from `lib/routes.ts`, and mock the slashed form.
+- **A tap on a `next/link` before hydration is a full page load.** It reruns
+  `public/theme-init.js`, so the pre-bundle redirect has to tolerate a visitor
+  coming from `/about`. Per-tab state that must survive that load goes in
+  session storage, not a React ref.
+- **A block-body arrow drops a returned promise without a type error.** A prop
+  typed `Promise<void> | void` accepts `undefined`, so an awaited busy guard
+  released early. Return the chain when moving a callback to a block body.
+- **Local e2e flakes when anything writes into the repo mid-run.** A dashboard
+  update during a dev-server run fired `hmrRefresh` and three sync specs failed;
+  all passed on rerun. Hold repo writes until the run ends, or rerun the failures.
+- **The code-shape debt ledger only goes down.** When a PR adds exceptions, fix
+  the new ones until counts match `code-shape-debt.json`, then regenerate the
+  per-file maxima with `node scripts/check-code-shape.cjs --print-baseline`.
