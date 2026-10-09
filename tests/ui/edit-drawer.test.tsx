@@ -62,6 +62,24 @@ describe("<EditDrawer>", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("asks before discarding a description edit", async () => {
+    const onClose = vi.fn();
+    render(<EditDrawer open task={mockTask} onClose={onClose} onSubmit={vi.fn()} />);
+    await user.type(screen.getByLabelText(/description/i), " extra context");
+    await user.keyboard("{Escape}");
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Discard unsaved changes?")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("quadrant picker switches urgent/important flags", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);

@@ -71,19 +71,40 @@ function quadrantChrome(urgent: boolean, important: boolean) {
 
 function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
-  const modalSurface = useModalSurface(onClose);
-
+  const keepEditingRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLFormElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
-  const trapKeyDown = useDialogFocus(true, drawerRef);
+  const baselineRef = useRef<string | null>(null);
+  if (baselineRef.current === null) baselineRef.current = JSON.stringify(draft.toDraft());
+  const dirty = JSON.stringify(draft.toDraft()) !== baselineRef.current || draft.tagInput.trim() !== "";
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
+
+  const requestClose = (): void => {
+    if (confirmingDiscard) {
+      setConfirmingDiscard(false);
+      return;
+    }
+    if (dirty) {
+      setConfirmingDiscard(true);
+      return;
+    }
+    onClose();
+  };
+
+  const modalSurface = useModalSurface(requestClose);
+  const trapKeyDown = useDialogFocus(true, drawerRef);
 
   const handleDependenciesChange = (ids: string[]): void => {
     setDependencyError(null);
     draft.setDependencies(ids);
   };
 
-  useEscapeToClose(onClose);
+  useEscapeToClose(requestClose);
+
+  useEffect(() => {
+    if (confirmingDiscard) keepEditingRef.current?.focus();
+  }, [confirmingDiscard]);
 
   const isCreateMode = !task;
   const { activeQuadrant, accent, quadrantInk } = quadrantChrome(draft.urgent, draft.important);
@@ -133,7 +154,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
           accent={accent}
           quadrantInk={quadrantInk}
           activeQuadrantTitle={activeQuadrant?.title}
-          onClose={onClose}
+          onClose={requestClose}
         />
 
         <EditDrawerBody
@@ -146,7 +167,10 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
         />
 
         <DrawerFooter
-          onClose={onClose}
+          onClose={requestClose}
+          onDiscard={onClose}
+          confirmingDiscard={confirmingDiscard}
+          keepEditingRef={keepEditingRef}
           canSave={Boolean(draft.title.trim())}
           isCreateMode={isCreateMode}
         />
@@ -158,13 +182,49 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
 /** The sticky action bar. Split out to keep the drawer body readable. */
 function DrawerFooter({
   onClose,
+  onDiscard,
+  confirmingDiscard,
+  keepEditingRef,
   canSave,
   isCreateMode,
 }: {
   onClose: () => void;
+  onDiscard: () => void;
+  confirmingDiscard: boolean;
+  keepEditingRef: React.RefObject<HTMLButtonElement | null>;
   canSave: boolean;
   isCreateMode: boolean;
 }) {
+  if (confirmingDiscard) {
+    return (
+      <footer
+        className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5"
+        role="alertdialog"
+        aria-labelledby="discard-changes-title"
+      >
+        <p id="discard-changes-title" className="text-sm font-medium text-foreground">
+          Discard unsaved changes?
+        </p>
+        <div className="flex-1" />
+        <button
+          ref={keepEditingRef}
+          type="button"
+          onClick={onClose}
+          className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-foreground-muted hover:text-foreground"
+        >
+          Keep editing
+        </button>
+        <button
+          type="button"
+          onClick={onDiscard}
+          className="inline-flex items-center rounded-lg bg-foreground px-3.5 py-1.5 text-[13px] font-medium text-background"
+        >
+          Discard
+        </button>
+      </footer>
+    );
+  }
+
   return (
         <footer className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5">
           <DrawerHint />
@@ -299,7 +359,7 @@ function TitleAndDescriptionFields({
           rows={4}
           placeholder="Optional details, links, context"
           aria-label="Description"
-          className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+          className="touch-type w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
       </Field>
     </>
