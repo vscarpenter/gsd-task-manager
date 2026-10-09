@@ -22,7 +22,7 @@
     },
     "components/reset-everything-dialog.tsx": {
       "count": 1,
-      "max": 14
+      "max": 18
     },
     "components/settings-page/settings-body.tsx": {
       "count": 1,
@@ -195,7 +195,7 @@
     },
     "components/import-dialog.tsx": {
       "count": 1,
-      "max": 97
+      "max": 83
     },
     "components/matrix-simplified/app-shell.tsx": {
       "count": 1,
@@ -203,7 +203,7 @@
     },
     "components/matrix-simplified/capture-bar.tsx": {
       "count": 1,
-      "max": 178
+      "max": 187
     },
     "components/matrix-simplified/edit-drawer-dependencies.tsx": {
       "count": 2,
@@ -215,7 +215,7 @@
     },
     "components/matrix-simplified/edit-drawer.tsx": {
       "count": 1,
-      "max": 68
+      "max": 90
     },
     "components/matrix-simplified/help-drawer.tsx": {
       "count": 1,
@@ -227,7 +227,7 @@
     },
     "components/matrix-simplified/index.tsx": {
       "count": 1,
-      "max": 267
+      "max": 272
     },
     "components/matrix-simplified/matrix-grid.tsx": {
       "count": 1,
@@ -235,11 +235,11 @@
     },
     "components/matrix-simplified/quadrant-pane.tsx": {
       "count": 1,
-      "max": 128
+      "max": 139
     },
     "components/matrix-simplified/sync-status-display.tsx": {
       "count": 1,
-      "max": 53
+      "max": 59
     },
     "components/matrix-simplified/task-detail-sheet.tsx": {
       "count": 1,
@@ -263,7 +263,7 @@
     },
     "components/matrix-simplified/use-task-highlight.ts": {
       "count": 1,
-      "max": 57
+      "max": 67
     },
     "components/onboarding/onboarding.tsx": {
       "count": 1,
@@ -279,7 +279,7 @@
     },
     "components/reset-everything-dialog.tsx": {
       "count": 1,
-      "max": 176
+      "max": 180
     },
     "components/settings/about-section.tsx": {
       "count": 1,
@@ -295,7 +295,7 @@
     },
     "components/settings/data-management.tsx": {
       "count": 2,
-      "max": 60
+      "max": 63
     },
     "components/settings/notification-settings.tsx": {
       "count": 1,
@@ -311,7 +311,7 @@
     },
     "components/settings-page/settings-body.tsx": {
       "count": 1,
-      "max": 113
+      "max": 118
     },
     "components/settings-page/settings-sidebar.tsx": {
       "count": 1,
@@ -343,7 +343,7 @@
     },
     "components/task-card/index.tsx": {
       "count": 1,
-      "max": 103
+      "max": 104
     },
     "components/task-card/task-card-actions.tsx": {
       "count": 3,
@@ -383,7 +383,7 @@
     },
     "lib/sync/pb-sync-engine.ts": {
       "count": 1,
-      "max": 43
+      "max": 44
     },
     "lib/tasks/crud/toggle.ts": {
       "count": 1,
