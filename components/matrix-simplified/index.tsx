@@ -375,7 +375,7 @@ export function MatrixSimplified() {
             onInspect={handleInspectOpen}
             onToggleComplete={(task, completedNext) => {
               const nextId = completedNext ? neighborFocusId(visibleTasks, task.id) : null;
-              void handleToggle(task, completedNext, handleSuccess).then((saved) => {
+              return handleToggle(task, completedNext, handleSuccess).then((saved) => {
                 if (saved && nextId) scheduleCardFocus(nextId);
               });
             }}

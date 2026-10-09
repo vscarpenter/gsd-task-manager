@@ -287,6 +287,27 @@ describe("<MatrixSimplified>", () => {
       expect(celebrateCompletion).toHaveBeenCalledTimes(1);
     });
 
+    it("keeps the checkbox busy until the completion save finishes", async () => {
+      const user = userEvent.setup();
+      let finishSave: () => void = () => undefined;
+      vi.mocked(toggleCompleted).mockImplementation(
+        () => new Promise((resolve) => {
+          finishSave = () => resolve({ task: null, recurringInstance: null });
+        })
+      );
+      tasksFixture.current = [makeTask({ id: "a", title: "Active alpha", completed: false })];
+      render(<MatrixSimplified />);
+      const checkbox = screen.getByRole("button", { name: /mark as complete/i });
+
+      await user.click(checkbox);
+      await user.click(checkbox);
+
+      expect(toggleCompleted).toHaveBeenCalledTimes(1);
+      expect(checkbox).toHaveAttribute("aria-busy", "true");
+      await act(async () => finishSave());
+      expect(checkbox).toHaveAttribute("aria-busy", "false");
+    });
+
     it("does not fire confetti when a task is uncompleted", async () => {
       const user = userEvent.setup();
       localStorage.setItem("gsd:show-completed", "true");
