@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { isResetPending } from "@/lib/reset-lock";
 
@@ -8,11 +8,13 @@ const STORAGE_KEY = "gsd-has-launched";
 
 /**
  * Redirects first-time visitors to /about so they see the landing page.
- * Once they navigate away from /about, the flag is set and they never see it again.
+ * The flag is written only after they leave /about, so closing the tab
+ * on the landing page still shows it next time.
  */
 export function FirstTimeRedirect() {
   const router = useRouter();
   const pathname = usePathname();
+  const seenAbout = useRef(pathname === "/about");
 
   // The redirect decision depends on localStorage (client-only) in a static-export
   // SPA, so it cannot be resolved during render with next/navigation's redirect().
@@ -26,13 +28,19 @@ export function FirstTimeRedirect() {
     const hasLaunched = localStorage.getItem(STORAGE_KEY);
     if (hasLaunched) return;
 
-    // Set the flag first so subsequent navigations never re-trigger
-    localStorage.setItem(STORAGE_KEY, "true");
-
-    if (pathname !== "/about") {
-      // react-doctor-disable-next-line react-doctor/nextjs-no-client-side-redirect -- client-gated SPA redirect; renders null, no flash
-      router.replace("/about");
+    if (pathname === "/about") {
+      seenAbout.current = true;
+      return;
     }
+
+    // They opened the app from the landing page. Remember that, and stay.
+    if (seenAbout.current) {
+      localStorage.setItem(STORAGE_KEY, "true");
+      return;
+    }
+
+    // react-doctor-disable-next-line react-doctor/nextjs-no-client-side-redirect -- client-gated SPA redirect; renders null, no flash
+    router.replace("/about");
   }, [pathname, router]);
 
   return null;
