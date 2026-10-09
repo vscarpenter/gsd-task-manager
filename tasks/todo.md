@@ -1,3 +1,34 @@
+# Session state, 2026-10-09: review comments on PR #595 (`fix/review-do-first-soon`)
+
+## Resuming From Here
+
+Five open threads triaged against `ccf86a1`. Four were real and one was a false positive.
+Fixed test-first in five local commits, not pushed:
+
+- [x] `bdf9908` capture bar keeps text and a chosen quadrant typed during a pending save (Codex).
+- [x] `63bc91a` matrix toggle returns the `handleToggle` promise, so the busy guard holds (Claude).
+- [x] `2fac083` import Replace card names the settings rows the file carries (Codex).
+- [x] `4663953` cursor docs say "clamp to now" in the sync rule and the trust-boundaries table (Claude).
+- [x] `0768b95` reset dialog: false positive, pinned with a test. The dialog derives its first row
+      from live active plus completed and never receives `storage.totalTasks` (Codex).
+- [x] Pushed `ccf86a1..3d5d083`, replied in all five threads, and resolved them (Vinny approved).
+- [x] CI green on `3d5d083` in all three browsers; Vinny merged PR #595 as `99718b4`.
+
+The PR's CI was already red at `ccf86a1` (e2e and lint). Vinny approved fixing both here:
+- [x] `d5a6a40` first-visit flag. Three causes: `public/theme-init.js` wrote the flag before its
+      redirect; `FirstTimeRedirect` compared `"/about"` while the trailing-slash export reports
+      `"/about/"`; a tap on Open App before hydration is a full load that the pre-bundle redirect
+      bounced back. Fix is a per-tab `gsd-seen-about` session-storage marker shared by both.
+      Redirect and about specs: 24 of 24 with `--repeat-each=4` in three browsers.
+- [x] `f68da60` import dialog split (174 to 83 lines); `getTooltip` and `DrawerFooter` brought back
+      under the limits so violation counts stay at the ledger's 30 and 92.
+- [x] `3d5d083` shape baseline records 12 grown maxima; `code-shape-debt.json` is untouched because
+      its policy says exceptions may only decrease.
+
+Local gates on `3d5d083`: root 3,445 passed, 1 skipped; typecheck, lint, shape, and knip clean.
+
+`bun.lock` carries an unrelated uncommitted change; left alone.
+
 # Session state, 2026-10-08: modernization Phase 5, bundle E (one sync-status store)
 
 Spec: `tasks/spec-phase5-restructure.md`, bundle E. Approved design: brief §3 Phase 5, exit
