@@ -19,7 +19,7 @@ paths:
 ## Sync Architecture
 
 - **Protocol**: last-write-wins (LWW) using `client_updated_at`; remote wins if newer.
-- **Cursor contract**: `client_updated_at` is both the LWW authority and pull query field. Advance `lastClientUpdatedAt` only from records actually committed locally, clamp future values to now + 5 minutes, subtract a 30-second overlap, and query the next pull with `>=`. `pullCursorVersion: 2` proves the cursor's domain; an unversioned `lastServerUpdatedAt` forces a full pull and is cleared.
+- **Cursor contract**: `client_updated_at` is both the LWW authority and pull query field. Advance `lastClientUpdatedAt` only from records actually committed locally, clamp future values to now, subtract a 30-second overlap, and query the next pull with `>=`. The LWW ceiling in `task-mapper.ts` stays at now + 5 minutes. The cursor clamp is tighter, so a fast clock can't lift the next pull's lower bound past real time. `pullCursorVersion: 2` proves the cursor's domain; an unversioned `lastServerUpdatedAt` forces a full pull and is cleared.
 - **Realtime**: PocketBase SSE auto-reconnects; periodic sync runs as safety net.
 - **Echo filtering**: skip own-device changes via `device_id` comparison.
 - **Auth**: PocketBase SDK auto-stores tokens in localStorage and auto-refreshes.
