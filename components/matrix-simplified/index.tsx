@@ -17,6 +17,7 @@ import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
 import { handleCapture, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
+import { neighborFocusId, scheduleCardFocus } from "./focus-after-removal";
 import { DragLayer } from "./drag-layer";
 import { FilteredEmpty } from "./filtered-empty";
 import { MatrixCaption } from "./matrix-caption";
@@ -193,10 +194,12 @@ export function MatrixSimplified() {
   };
 
   const handleDelete = async (task: TaskRecord) => {
+    const nextId = neighborFocusId(visibleTasks, task.id);
     try {
       await deleteTask(task.id);
       // Faithful undo: restore the exact original record (id/timestamps intact).
-      handleSuccess("Task deleted", () => restoreTask(task));
+      handleSuccess("Task deleted. It's in Trash.", () => restoreTask(task));
+      if (nextId) scheduleCardFocus(nextId);
     } catch (error) {
       reportTaskMutationError(
         error,
@@ -370,9 +373,12 @@ export function MatrixSimplified() {
             allTasks={all}
             onEdit={handleEditOpen}
             onInspect={handleInspectOpen}
-            onToggleComplete={(task, completedNext) =>
-              handleToggle(task, completedNext, handleSuccess)
-            }
+            onToggleComplete={(task, completedNext) => {
+              const nextId = completedNext ? neighborFocusId(visibleTasks, task.id) : null;
+              void handleToggle(task, completedNext, handleSuccess).then((saved) => {
+                if (saved && nextId) scheduleCardFocus(nextId);
+              });
+            }}
             onDelete={handleDelete}
             onShare={handleShareOpen}
             onSnooze={handleSnooze}

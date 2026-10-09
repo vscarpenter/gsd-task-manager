@@ -930,7 +930,7 @@ describe("<MatrixSimplified>", () => {
       await user.click(screen.getByRole("button", { name: /delete task/i }));
 
       await waitFor(() => expect(deleteTask).toHaveBeenCalledWith("del-1"));
-      expect(handleSuccessSpy).toHaveBeenCalledWith("Task deleted", expect.any(Function));
+      expect(handleSuccessSpy).toHaveBeenCalledWith("Task deleted. It's in Trash.", expect.any(Function));
 
       // Invoking the toast's undo action restores the exact original task record.
       const undoAction = handleSuccessSpy.mock.calls[0][1] as () => Promise<void>;
