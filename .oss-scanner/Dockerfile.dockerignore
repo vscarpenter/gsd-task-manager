@@ -1,0 +1,14 @@
+# Docker uses this file instead of the root .dockerignore when it builds
+# .oss-scanner/Dockerfile. The scanner needs tests/ and .git/, which the root file
+# drops for the self-host image. Local build output and secrets still stay out, in
+# case someone builds from a working copy rather than a clean clone.
+node_modules/
+packages/*/node_modules/
+.next/
+.next-cache/
+out/
+coverage/
+**/.env
+**/.env.*
+*.pem
+*.key
