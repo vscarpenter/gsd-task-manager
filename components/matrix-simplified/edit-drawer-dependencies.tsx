@@ -124,7 +124,7 @@ export function DependenciesField({
             aria-autocomplete="list"
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
-            className="min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed"
+            className="touch-type min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed"
           />
         </div>
         <Suggestions

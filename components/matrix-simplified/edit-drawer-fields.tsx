@@ -193,7 +193,7 @@ function CustomDateInput({
       type="date"
       onChange={(e) => { if (e.target.value) { onCustomDateChange(e.target.value); onToggleCustomInput(false); } }}
       onBlur={() => onToggleCustomInput(false)}
-      className="rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+      className="touch-type rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
       aria-label="Pick a custom due date"
     />
   );
@@ -244,7 +244,7 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           aria-label="Add a tag"
           // Inset ring: this input is borderless inside a bordered chip box, so
           // an offset ring would draw outside the field it belongs to.
-          className="min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          className="touch-type min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         />
       </div>
     </Field>
@@ -407,7 +407,7 @@ function SubtaskEntry({
       }}
       placeholder="Add a subtask…"
       aria-label="Add a subtask"
-      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+      className="touch-type w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
     />
   );
 }
@@ -439,7 +439,7 @@ export function EstimateField({
           onChange={(e) => onChange(e.target.value)}
           placeholder="—"
           aria-label="Estimate in minutes"
-          className="w-28 rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+          className="touch-type w-28 rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
         <span className="text-[13px] text-foreground-muted">minutes</span>
       </div>

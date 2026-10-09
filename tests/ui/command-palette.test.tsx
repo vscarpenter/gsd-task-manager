@@ -254,6 +254,7 @@ describe('CommandPalette (full component)', () => {
     );
 
     const input = screen.getByPlaceholderText('Search tasks, actions, settings...');
+    expect(input).toHaveClass("touch-type");
     await user.type(input, 'export');
 
     await waitFor(() => {
