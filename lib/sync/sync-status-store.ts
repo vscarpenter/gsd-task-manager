@@ -150,7 +150,7 @@ function reduceManualSyncAction(
     case 'SYNC_START':
       return { ...state, status: 'syncing', error: null };
     case 'SYNC_SUCCESS':
-      return { ...state, status: 'success', lastResult: action.lastResult };
+      return { ...state, status: 'success', error: null, lastResult: action.lastResult };
     case 'SYNC_IDLE':
       return { ...state, status: 'idle', lastResult: action.lastResult };
     case 'SYNC_ERROR':
@@ -258,6 +258,11 @@ async function readCoordinatorStatus(dispatch: (action: SyncStatusAction) => voi
   }
   if (coordStatus.lastError) {
     dispatch({ type: 'SET_ERROR', error: coordStatus.lastError });
+  } else if (coordStatus.lastResult?.status === 'success') {
+    // A later healthy read clears the failure the header is showing.
+    // A null result means this read has nothing to say, so it must not
+    // wipe an error a manual sync just recorded.
+    dispatch({ type: 'SET_ERROR', error: null });
   }
 }
 

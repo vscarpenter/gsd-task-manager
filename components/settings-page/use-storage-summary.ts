@@ -3,6 +3,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 
 import { getArchivedStorageStats } from "@/lib/archive";
+import { getTrashCount } from "@/lib/trash";
 import type { TaskRecord } from "@/lib/types";
 
 const BYTES_PER_KB = 1024;
@@ -11,7 +12,8 @@ export interface StorageSummary {
   activeTasks: number;
   completedTasks: number;
   archivedTasks: number;
-  /** Live + archived. What "Reset everything" would actually destroy. */
+  trashedTasks: number;
+  /** Live + archived. Trash is counted separately for the reset confirmation. */
   totalTasks: number;
   /** Footprint of both stores, in KB, to one decimal place. */
   estimatedKb: string;
@@ -26,6 +28,7 @@ export interface StorageSummary {
  */
 export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
   const archived = useLiveQuery(() => getArchivedStorageStats());
+  const trashed = useLiveQuery(() => getTrashCount());
 
   let activeTasks = 0;
   let completedTasks = 0;
@@ -42,6 +45,7 @@ export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
     activeTasks,
     completedTasks,
     archivedTasks,
+    trashedTasks: trashed ?? 0,
     totalTasks: tasks.length + archivedTasks,
     estimatedKb: (totalBytes / BYTES_PER_KB).toFixed(1),
   };

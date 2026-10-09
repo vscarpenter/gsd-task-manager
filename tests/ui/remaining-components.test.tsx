@@ -61,6 +61,7 @@ describe('FirstTimeRedirect', () => {
     mockReplace.mockClear();
     localStorage.removeItem('gsd-has-launched');
     localStorage.removeItem('gsd-reset-pending');
+    sessionStorage.removeItem('gsd-seen-about');
     mockPathname = '/';
   });
 
@@ -70,10 +71,10 @@ describe('FirstTimeRedirect', () => {
     expect(mockReplace).toHaveBeenCalledWith('/about');
   });
 
-  it('sets localStorage flag on first visit', () => {
+  it('does not remember the visit until they leave /about', () => {
     render(<FirstTimeRedirect />);
 
-    expect(localStorage.getItem('gsd-has-launched')).toBe('true');
+    expect(localStorage.getItem('gsd-has-launched')).toBeNull();
   });
 
   it('does not redirect when localStorage flag exists', () => {
@@ -89,7 +90,44 @@ describe('FirstTimeRedirect', () => {
 
     render(<FirstTimeRedirect />);
 
-    // Flag is set but no redirect because we're already on /about
+    expect(localStorage.getItem('gsd-has-launched')).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('sets the flag when they leave /about for the app', () => {
+    mockPathname = '/about';
+    const { rerender } = render(<FirstTimeRedirect />);
+
+    mockPathname = '/';
+    rerender(<FirstTimeRedirect />);
+
+    expect(localStorage.getItem('gsd-has-launched')).toBe('true');
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('remembers a visit that reached the app through a full page load', () => {
+    // A tap on Open App before hydration reloads the page, so this tab's
+    // record of seeing /about has to outlive the component.
+    mockPathname = '/about/';
+    const { unmount } = render(<FirstTimeRedirect />);
+    unmount();
+
+    mockPathname = '/';
+    render(<FirstTimeRedirect />);
+
+    expect(localStorage.getItem('gsd-has-launched')).toBe('true');
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('treats /about/ as the landing page, the pathname a trailing-slash export reports', () => {
+    mockPathname = '/about/';
+    const { rerender } = render(<FirstTimeRedirect />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    mockPathname = '/';
+    rerender(<FirstTimeRedirect />);
+
     expect(localStorage.getItem('gsd-has-launched')).toBe('true');
     expect(mockReplace).not.toHaveBeenCalled();
   });

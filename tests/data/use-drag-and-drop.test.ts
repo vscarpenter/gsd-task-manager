@@ -163,6 +163,28 @@ describe("useDragAndDrop", () => {
     expect(mockOnError).not.toHaveBeenCalled();
   });
 
+  it("announces the task title when a drag starts", () => {
+    const { result } = renderHook(() => useDragAndDrop(mockOnError));
+
+    const message = result.current.announcements.onDragStart?.({
+      active: { id: "nanoid-123", data: { current: { title: "Ship the deck" } } },
+    } as never);
+
+    expect(message).toBe("Picked up Ship the deck.");
+    expect(message).not.toContain("nanoid-123");
+  });
+
+  it("announces a generic task when the drag has no title", () => {
+    const { result } = renderHook(() => useDragAndDrop(mockOnError));
+
+    const message = result.current.announcements.onDragStart?.({
+      active: { id: "nanoid-123", data: { current: {} } },
+    } as never);
+
+    expect(message).toBe("Picked up task.");
+    expect(message).not.toContain("nanoid-123");
+  });
+
   it("announces the drop as pending, never as succeeded", () => {
     const { result } = renderHook(() => useDragAndDrop(mockOnError));
 

@@ -86,6 +86,12 @@ export function QuadrantPane({
   const completedTasks = tasks.filter((task) => task.completed);
   const activeTaskCount = activeTasks.length;
   const [showCompletedHere, setShowCompletedHere] = useState(false);
+  const highlightIsCompleted = Boolean(
+    highlightedTaskId && completedTasks.some((task) => task.id === highlightedTaskId),
+  );
+  if (highlightIsCompleted && !showCompletedHere) {
+    setShowCompletedHere(true);
+  }
   const cardHandlers: CardHandlers = {
     onEdit, onInspect, onDelete, onShare, onSnooze, onToggleComplete, highlightedTaskId, onTaskRef,
   };
@@ -179,7 +185,12 @@ export function QuadrantPane({
               ) : null}
             </div>
           ) : (
-            <CappedActiveList tasks={activeTasks} allTasks={allTasks} handlers={cardHandlers} />
+            <CappedActiveList
+              tasks={activeTasks}
+              allTasks={allTasks}
+              handlers={cardHandlers}
+              highlightedTaskId={highlightedTaskId}
+            />
           )}
 
           <CompletedDisclosure
@@ -207,12 +218,19 @@ function CappedActiveList({
   tasks,
   allTasks,
   handlers,
+  highlightedTaskId,
 }: {
   tasks: TaskRecord[];
   allTasks: TaskRecord[];
   handlers: CardHandlers;
+  highlightedTaskId?: string | null;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const highlightedPastCap = tasks.findIndex((task) => task.id === highlightedTaskId) >= ACTIVE_RENDER_CAP;
+  if (highlightedPastCap && !showAll) {
+    setShowAll(true);
+  }
+
   const visible = showAll ? tasks : tasks.slice(0, ACTIVE_RENDER_CAP);
   const deferred = tasks.length - visible.length;
 

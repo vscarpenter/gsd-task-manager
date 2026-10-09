@@ -18,16 +18,24 @@
   // First-visit redirect, done here rather than after React hydrates: a new
   // visitor on the app root is sent to the marketing page before the matrix
   // bundle downloads and boots, so they never pay to render a page they
-  // immediately leave. The React-side FirstTimeRedirect stays as the fallback
-  // for deep links to other routes; it sees the flag already set here and no-ops.
+  // immediately leave. The launch flag waits until the visitor leaves /about for
+  // the app, so closing the tab on the landing page still shows it next time.
+  // Loading /about marks this tab in session storage, and a later full load of
+  // the root writes the flag instead of redirecting. That covers a tap on
+  // Open App before hydration. FirstTimeRedirect shares the marker and covers
+  // client-side navigation and deep links to other routes.
   try {
-    if (
-      location.pathname === "/" &&
-      !localStorage.getItem("gsd-has-launched") &&
-      !localStorage.getItem("gsd-reset-pending")
-    ) {
-      localStorage.setItem("gsd-has-launched", "true");
-      location.replace("/about/");
+    var path = location.pathname;
+    if (!localStorage.getItem("gsd-has-launched") && !localStorage.getItem("gsd-reset-pending")) {
+      if (path === "/about" || path === "/about/" || path === "/about.html") {
+        sessionStorage.setItem("gsd-seen-about", "true");
+      } else if (path === "/") {
+        if (sessionStorage.getItem("gsd-seen-about")) {
+          localStorage.setItem("gsd-has-launched", "true");
+        } else {
+          location.replace("/about/");
+        }
+      }
     }
   } catch {}
 })();

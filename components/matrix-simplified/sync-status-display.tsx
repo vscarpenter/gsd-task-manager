@@ -14,6 +14,8 @@ interface SyncStatusDisplayProps {
   retryCountdown: number | null;
   retryCount: number;
   pendingCount: number;
+  /** Set while the last attempt failed and a later read has not cleared it. */
+  error?: string | null;
   formatRelativeTime: (timestamp: string | null) => string;
 }
 
@@ -23,6 +25,7 @@ export function SyncStatusDisplay({
   retryCountdown,
   retryCount,
   pendingCount,
+  error = null,
   formatRelativeTime,
 }: SyncStatusDisplayProps) {
   return (
@@ -43,6 +46,11 @@ export function SyncStatusDisplay({
               <span className="h-1.5 w-1.5 rounded-full bg-info" aria-hidden />
               {pendingCount} pending operation
               {pendingCount !== 1 ? "s" : ""}
+            </span>
+          ) : error ? (
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-status-overdue" aria-hidden />
+              Last sync failed
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-foreground-muted">

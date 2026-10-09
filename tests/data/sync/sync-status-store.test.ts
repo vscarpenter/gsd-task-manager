@@ -112,6 +112,19 @@ describe('sync status store', () => {
     vi.clearAllMocks();
   });
 
+  it('publishes a coordinator error and clears it on the next healthy read', async () => {
+    setSyncEnabled(true);
+    getStatus.mockResolvedValue({ ...IDLE_STATUS, lastError: 'network_error' });
+
+    store.start();
+    await advance(1000);
+    expect(store.getSnapshot().error).toBe('network_error');
+
+    getStatus.mockResolvedValue({ ...IDLE_STATUS, lastError: null });
+    await advance(500);
+    expect(store.getSnapshot().error).toBeNull();
+  });
+
   it('should_read_coordinator_status_once_while_sync_is_disabled', async () => {
     setSyncEnabled(false);
 

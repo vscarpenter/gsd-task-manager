@@ -26,11 +26,25 @@ test.describe("First-time Redirect", () => {
     await expect(page).toHaveURL(/\/about\/?(?:[?#].*)?$/);
     await expect(page.getByRole("link", { name: /open app/i })).toBeVisible();
     await expect(page.locator("main h1", { hasText: /stop juggling/i })).toBeVisible();
-    await expect.poll(() => page.evaluate(() => localStorage.getItem("gsd-has-launched"))).toBe("true");
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("gsd-has-launched"))).toBeNull();
     await page.evaluate(() => localStorage.setItem("gsd-onboarding-seen", "true"));
+    await page.getByRole("link", { name: /open app/i }).click();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("gsd-has-launched"))).toBe("true");
 
     await gotoRememberedMatrix(page);
     await expect(page).not.toHaveURL(/\/about(?:[?#].*)?$/);
     await waitForAppLoad(page);
+  });
+
+  test("remembers the visit when the app opens with a full page load from /about", async ({ page, clearIndexedDB }) => {
+    // A tap on Open App before hydration is a full load of /, which runs the
+    // pre-bundle redirect again. Having seen /about in this tab must be enough.
+    await expect(page).toHaveURL(/\/about\/?(?:[?#].*)?$/);
+    await page.evaluate(() => localStorage.setItem("gsd-onboarding-seen", "true"));
+
+    await gotoRememberedMatrix(page);
+
+    await expect(page).not.toHaveURL(/\/about(?:[?#].*)?$/);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("gsd-has-launched"))).toBe("true");
   });
 });

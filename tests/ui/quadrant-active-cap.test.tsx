@@ -69,6 +69,25 @@ describe("QuadrantPane active-task cap", () => {
     expect(more).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("renders a highlighted task that sits past the cap", () => {
+    const tasks = makeActive(ACTIVE_RENDER_CAP + 12);
+    render(
+      <QuadrantPane
+        meta={quadrantForTask(true, true)}
+        tasks={tasks}
+        allTasks={tasks}
+        onEdit={vi.fn()}
+        onToggleComplete={vi.fn()}
+        onDelete={vi.fn()}
+        onShare={vi.fn()}
+        onAddInQuadrant={vi.fn()}
+        highlightedTaskId={`t${ACTIVE_RENDER_CAP + 3}`}
+      />
+    );
+
+    expect(screen.getByText(`Active task ${ACTIVE_RENDER_CAP + 3}`)).toBeInTheDocument();
+  });
+
   it("reveals the rest on request", async () => {
     const user = userEvent.setup();
     renderPane(makeActive(ACTIVE_RENDER_CAP + 12));

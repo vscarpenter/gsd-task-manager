@@ -217,6 +217,19 @@ describe('pb-sync-engine', () => {
       expect(mockDeletedTasks.has('task-1')).toBe(true);
     });
 
+    it('does not resurrect an archived task when the remote stamp is far in the future', async () => {
+      mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-09T00:00:00.000Z' });
+
+      await applyRemoteChange('update', {
+        task_id: 'task-1',
+        title: 'From the year 3000',
+        client_updated_at: '3000-01-01T00:00:00.000Z',
+      } as never, 'user-1');
+
+      expect(mockDb.tasks.put).not.toHaveBeenCalled();
+      expect(mockArchivedTasks.has('task-1')).toBe(true);
+    });
+
     it('should not resurrect an archived task on a remote create that predates the archive', async () => {
       mockArchivedTasks.set('task-1', { id: 'task-1', archivedAt: '2026-04-09T00:00:00.000Z' });
 

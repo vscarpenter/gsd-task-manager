@@ -8,12 +8,11 @@
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
-import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { TaskRecord } from '@/lib/types';
 import type { SyncQueueItem } from './types';
 
@@ -38,12 +37,14 @@ function prepareRemoteRecords(records: RecordModel[]): PreparedRemoteRecord[] {
   return prepared;
 }
 
-function findMaxAppliedClientUpdated(records: PreparedRemoteRecord[]): string | null {
+function findMaxAppliedClientUpdated(records: PreparedRemoteRecord[], nowMs: number = Date.now()): string | null {
   let maxTime = Number.NEGATIVE_INFINITY;
-  const ceiling = Date.now() + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS;
   for (const { remoteTask } of records) {
     const parsed = new Date(remoteTask.updatedAt).getTime();
-    if (!Number.isNaN(parsed)) maxTime = Math.max(maxTime, Math.min(parsed, ceiling));
+    // The cursor is a lower bound for the next pull. A clock a few minutes
+    // fast must not move that bound ahead of real time, or edits stamped in
+    // the gap are never fetched.
+    if (!Number.isNaN(parsed)) maxTime = Math.max(maxTime, Math.min(parsed, nowMs));
   }
   return Number.isFinite(maxTime) ? new Date(maxTime).toISOString() : null;
 }
@@ -53,10 +54,11 @@ async function applyPreparedRecord(
   prepared: PreparedRemoteRecord
 ): Promise<number> {
   const { record, remoteTask } = prepared;
+  const rawUpdatedAt = readClientUpdatedAt(record);
   const archived = await db.archivedTasks.get(remoteTask.id);
-  if (archived && !isRemoteNewerThanArchive(remoteTask.updatedAt, archived.archivedAt)) return 0;
+  if (archived && !isRemoteNewerThanArchive(rawUpdatedAt, archived.archivedAt)) return 0;
   const deleted = await db.deletedTasks.get(remoteTask.id);
-  if (deleted && !isRemoteNewerThanArchive(remoteTask.updatedAt, deleted.deletedAt)) return 0;
+  if (deleted && !isRemoteNewerThanArchive(rawUpdatedAt, deleted.deletedAt)) return 0;
 
   const localTask = await db.tasks.get(remoteTask.id);
   const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;

@@ -3,12 +3,16 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { isResetPending } from "@/lib/reset-lock";
+import { isRouteActive } from "@/lib/routes";
 
 const STORAGE_KEY = "gsd-has-launched";
+/** Per-tab record of seeing /about. public/theme-init.js reads and writes the same key. */
+const SEEN_ABOUT_KEY = "gsd-seen-about";
 
 /**
  * Redirects first-time visitors to /about so they see the landing page.
- * Once they navigate away from /about, the flag is set and they never see it again.
+ * The flag is written only after they leave /about, so closing the tab
+ * on the landing page still shows it next time.
  */
 export function FirstTimeRedirect() {
   const router = useRouter();
@@ -26,13 +30,21 @@ export function FirstTimeRedirect() {
     const hasLaunched = localStorage.getItem(STORAGE_KEY);
     if (hasLaunched) return;
 
-    // Set the flag first so subsequent navigations never re-trigger
-    localStorage.setItem(STORAGE_KEY, "true");
-
-    if (pathname !== "/about") {
-      // react-doctor-disable-next-line react-doctor/nextjs-no-client-side-redirect -- client-gated SPA redirect; renders null, no flash
-      router.replace("/about");
+    // The trailing-slash export reports /about/, so match every variant.
+    if (isRouteActive(pathname, "ABOUT")) {
+      sessionStorage.setItem(SEEN_ABOUT_KEY, "true");
+      return;
     }
+
+    // They opened the app from the landing page in this tab. Remember that, and
+    // stay. Session storage outlives a full reload, which a tap before hydration is.
+    if (sessionStorage.getItem(SEEN_ABOUT_KEY)) {
+      localStorage.setItem(STORAGE_KEY, "true");
+      return;
+    }
+
+    // react-doctor-disable-next-line react-doctor/nextjs-no-client-side-redirect -- client-gated SPA redirect; renders null, no flash
+    router.replace("/about");
   }, [pathname, router]);
 
   return null;

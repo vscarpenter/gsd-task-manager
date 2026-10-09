@@ -41,6 +41,24 @@ describe("QuadrantPane completed disclosure", () => {
     expect(screen.getByRole("button", { name: /2 done/i })).toBeInTheDocument();
   });
 
+  it("opens the completed list when a highlight targets a finished task", () => {
+    render(
+      <QuadrantPane
+        meta={quadrantForTask(true, true)}
+        tasks={[active, done1]}
+        allTasks={[active, done1]}
+        onEdit={vi.fn()}
+        onToggleComplete={vi.fn()}
+        onDelete={vi.fn()}
+        onShare={vi.fn()}
+        onAddInQuadrant={vi.fn()}
+        highlightedTaskId="d1"
+      />
+    );
+
+    expect(screen.getByText("Finished one")).toBeInTheDocument();
+  });
+
   it("reveals them on request", async () => {
     const user = userEvent.setup();
     renderPane([active, done1, done2]);

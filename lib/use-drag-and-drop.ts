@@ -27,8 +27,13 @@ export type DragErrorHandler = (
  * regardless of whether it succeeds. These report intent only; the outcome is
  * announced separately once it is actually known.
  */
+function announcedTaskTitle(active: { data: { current?: Record<string, unknown> | null } }): string {
+  const title = active.data.current?.title;
+  return typeof title === "string" && title.trim() ? title.trim() : "task";
+}
+
 const DRAG_ANNOUNCEMENTS: Announcements = {
-  onDragStart: ({ active }) => `Picked up task ${active.id}.`,
+  onDragStart: ({ active }) => `Picked up ${announcedTaskTitle(active)}.`,
   onDragOver: ({ over }) => {
     const quadrant = resolveDropQuadrant(over);
     return quadrant ? `Over ${quadrantTitle(quadrant)}.` : "Not over a quadrant.";

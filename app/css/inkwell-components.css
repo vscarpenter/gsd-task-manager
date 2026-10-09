@@ -766,6 +766,18 @@ hr.rule       { border: none; border-top: var(--border-rule); margin: 0 0 22px; 
     min-height: 44px;
   }
 
+  /* 14px type makes iOS zoom the page when the field is focused. The matrix
+     search is on the phone now, so this field stays at 16px there. */
+  .input.topbar-search-input {
+    font-size: 16px;
+  }
+
+  /* Composer and command-palette fields are 13 to 14px on a mouse. On a
+     phone they have to be at least 16px or Safari zooms the page. */
+  .touch-type {
+    font-size: 16px;
+  }
+
   /* The small toggles expand their reach, not their appearance. A pseudo-
      element is part of its originating element for hit-testing, so the control
      keeps the compact 18px shape and still answers a 44px tap —

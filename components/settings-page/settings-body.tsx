@@ -164,6 +164,7 @@ export function SettingsBody({
             activeTasks={storage.activeTasks}
             completedTasks={storage.completedTasks}
             archivedTasks={storage.archivedTasks}
+            trashedTasks={storage.trashedTasks}
             totalTasks={storage.totalTasks}
             estimatedSize={storage.estimatedKb}
             onExport={handleExport}
@@ -184,6 +185,10 @@ export function SettingsBody({
             onOpenChange={setImportDialogOpen}
             fileContents={pendingImportContents}
             existingTaskCount={tasks.length}
+            existingTaskIds={tasks.map((task) => task.id)}
+            archivedCount={storage.archivedTasks}
+            trashedCount={storage.trashedTasks}
+            syncEnabled={settings.syncEnabled}
             onImportComplete={() => {
               setImportDialogOpen(false);
               setPendingImportContents(null);

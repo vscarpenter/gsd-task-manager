@@ -166,7 +166,7 @@ function SearchInput({ search, onSearchChange }: SearchInputProps) {
         value={search}
         onValueChange={onSearchChange}
         placeholder="Search tasks, actions, settings..."
-        className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-50"
+        className="touch-type flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-50"
       />
       <kbd className="hidden sm:inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-background px-1.5 text-[10px] font-medium text-foreground-muted ml-2">
         <span className="text-xs">ESC</span>

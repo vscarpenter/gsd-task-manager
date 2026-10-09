@@ -10,6 +10,7 @@ interface DataManagementProps {
 	completedTasks: number;
 	/** Auto-archived tasks. Counted in `totalTasks`, shown separately so the two rows agree. */
 	archivedTasks: number;
+	trashedTasks?: number;
 	totalTasks: number;
 	estimatedSize: string;
 	/** Export tasks to a JSON backup. Resolves `true` on success, `false` on failure. */
@@ -69,6 +70,7 @@ export function DataManagement({
 	activeTasks,
 	completedTasks,
 	archivedTasks,
+	trashedTasks = 0,
 	totalTasks,
 	estimatedSize,
 	onExport,
@@ -124,6 +126,8 @@ export function DataManagement({
 				onExport={onExport}
 				activeTasks={activeTasks}
 				completedTasks={completedTasks}
+				archivedTasks={archivedTasks}
+				trashedTasks={trashedTasks}
 				syncEnabled={syncEnabled}
 				pendingSync={pendingSync}
 			/>

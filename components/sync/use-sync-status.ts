@@ -70,7 +70,7 @@ export function useSyncStatus({
     previousAuthErrorRef.current = hasAuthError;
   }, [hasAuthError, error, onAuthError]);
 
-  const iconType = getIconType({ isEnabled, hasAuthError, retryCountdown, status });
+  const iconType = getIconType({ isEnabled, hasAuthError, retryCountdown, status, error });
 
   const tooltip = getTooltip({
     isEnabled,
@@ -96,12 +96,22 @@ interface IconOptions {
   hasAuthError: boolean;
   retryCountdown: number | null;
   status: SyncStatus;
+  error: string | null;
 }
 
-function getIconType({ isEnabled, hasAuthError, retryCountdown, status }: IconOptions): IconType {
+/**
+ * A background failure sets `error` without leaving `status` on "error",
+ * and a manual failure returns `status` to idle after a few seconds.
+ */
+function showsLastFailure(error: string | null, status: SyncStatus): boolean {
+  return Boolean(error) && status !== 'syncing' && status !== 'success';
+}
+
+function getIconType({ isEnabled, hasAuthError, retryCountdown, status, error }: IconOptions): IconType {
   if (!isEnabled) return 'cloud-off';
   if (hasAuthError) return 'alert-auth';
   if (retryCountdown !== null && retryCountdown > 0) return 'clock';
+  if (showsLastFailure(error, status)) return 'x-error';
 
   return getStatusIcon(status);
 }
@@ -143,6 +153,8 @@ function getTooltip({
   if (!isEnabled) return 'Sync not enabled';
   if (hasAuthError) return 'Authentication expired - Click to re-login';
   if (retryCountdown !== null && retryCountdown > 0) return `Retrying in ${retryCountdown}s...`;
+
+  if (showsLastFailure(error, status)) return 'Last sync failed · Click to sync now';
 
   // Healthy steady-state: mirror the green-dot affordance with matching copy.
   if (status === 'idle' && pendingCount === 0 && lastSuccessfulSyncAt) {
