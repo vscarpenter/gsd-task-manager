@@ -47,6 +47,8 @@ interface ImportImpact {
   archiveCount: number;
   hasTrash: boolean;
   trashCount: number;
+  /** Settings rows this file carries. A replace overwrites each one. */
+  settingsLabels: string[];
 }
 
 const EMPTY_IMPACT: ImportImpact = {
@@ -56,7 +58,17 @@ const EMPTY_IMPACT: ImportImpact = {
   archiveCount: 0,
   hasTrash: false,
   trashCount: 0,
+  settingsLabels: [],
 };
+
+/** Backup keys that `applySettings` writes on replace, with the name a person knows them by. */
+const SETTINGS_KEYS = [
+  ["notificationSettings", "notification"],
+  ["archiveSettings", "archive"],
+  ["appPreferences", "app"],
+] as const;
+
+const listFormat = new Intl.ListFormat("en", { type: "conjunction" });
 
 function idFromRow(row: unknown): string | null {
   if (!row || typeof row !== "object") return null;
@@ -96,6 +108,7 @@ function parseImportImpact(fileContents: string | null): ImportImpact {
       archiveCount: Array.isArray(record.archivedTasks) ? record.archivedTasks.length : 0,
       hasTrash,
       trashCount: Array.isArray(record.deletedTasks) ? record.deletedTasks.length : 0,
+      settingsLabels: SETTINGS_KEYS.flatMap(([key, label]) => (record[key] ? [label] : [])),
     };
   } catch {
     return EMPTY_IMPACT;
@@ -277,6 +290,11 @@ export function ImportDialog({
                     {impact.hasTrash
                       ? `Replaces ${trashedCount} task${trashedCount === 1 ? "" : "s"} in Trash with ${impact.trashCount} from this file.`
                       : "Leaves Trash on this device as it is."}
+                  </p>
+                  <p className="mt-1 text-sm text-foreground-muted">
+                    {impact.settingsLabels.length > 0
+                      ? `Replaces your ${listFormat.format(impact.settingsLabels)} settings with the ones in this file.`
+                      : "Leaves your settings as they are."}
                   </p>
                   <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rust-d">
                     <AlertTriangleIcon className="h-3 w-3" />

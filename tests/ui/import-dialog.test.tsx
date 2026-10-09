@@ -124,6 +124,27 @@ describe("ImportDialog", () => {
     expect(screen.getByText(/replaces 2 tasks in trash with 0 from this file/i)).toBeInTheDocument();
   });
 
+  it("names the settings a replace restores when the file carries them", () => {
+    const withSettings = JSON.stringify({
+      tasks: [{ id: "1", title: "Task 1" }],
+      notificationSettings: { id: "settings", enabled: true },
+      archiveSettings: { id: "settings", enabled: true, archiveAfterDays: 30 },
+      exportedAt: "2024-01-01T00:00:00.000Z",
+      version: "2.0.0",
+    });
+    render(<ImportDialog {...defaultProps} fileContents={withSettings} />);
+
+    expect(
+      screen.getByText(/replaces your notification and archive settings with the ones in this file/i)
+    ).toBeInTheDocument();
+  });
+
+  it("says settings stay put when the file carries none", () => {
+    render(<ImportDialog {...defaultProps} />);
+
+    expect(screen.getByText(/leaves your settings as they are/i)).toBeInTheDocument();
+  });
+
   it("asks before a synced replace deletes live tasks from the account", async () => {
     const user = userEvent.setup();
     render(
