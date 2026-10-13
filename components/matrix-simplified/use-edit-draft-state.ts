@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
 import { DUE_PRESETS, localDayOf, resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
+import { useDefaultReminder } from "@/lib/notifications/use-default-reminder";
 import { UI_TIMING } from "@/lib/constants/ui";
 import { generateId } from "@/lib/id-generator";
 import type { EditDraft } from "./edit-draft";
@@ -112,13 +113,7 @@ function useDetailDraftFields(
   const [estimateInput, setEstimateInput] = useState<string>(() =>
     String(task?.estimatedMinutes ?? initialDraft?.estimatedMinutes ?? "")
   );
-  // null = no reminder on this task. A stored `notifyBefore` only counts when the task
-  // actually has reminders on, so a disabled task reads as Off rather than showing a
-  // preset it will never fire.
-  const [reminderMinutes, setReminderMinutes] = useState<number | null>(() => {
-    if (task) return task.notificationEnabled ? task.notifyBefore ?? null : null;
-    return initialDraft?.notificationEnabled ? initialDraft.notifyBefore ?? null : null;
-  });
+  const reminder = useReminderDraft(task, initialDraft);
 
   return {
     recurrence,
@@ -127,8 +122,57 @@ function useDetailDraftFields(
     ...subtaskActions(setSubtasks),
     estimateInput,
     setEstimateInput,
-    reminderMinutes,
-    setReminderMinutes,
+    reminderMinutes: reminder.minutes,
+    setReminderMinutes: reminder.setMinutes,
+    reminderDraftFields: reminder.draftFields,
+  };
+}
+
+/** A pick is minutes, null for Off, or undefined while the user hasn't touched the field. */
+type ReminderPick = number | null | undefined;
+
+/** What the Reminder field shows: the pick once made, else what the checker will fire. */
+function displayedReminder(
+  task: TaskRecord | null | undefined,
+  pick: ReminderPick,
+  defaultReminder: number
+): number | null {
+  if (pick !== undefined) return pick;
+  if (!task?.notificationEnabled) return null;
+  return task.notifyBefore ?? defaultReminder;
+}
+
+/** What a save writes: the stored pair while untouched, else the pick. */
+function savedReminder(
+  task: TaskRecord | null | undefined,
+  pick: ReminderPick
+): Pick<EditDraft, "notifyBefore" | "notificationEnabled"> {
+  if (task && pick === undefined) {
+    return { notifyBefore: task.notifyBefore, notificationEnabled: task.notificationEnabled };
+  }
+  return { notifyBefore: pick ?? undefined, notificationEnabled: typeof pick === "number" };
+}
+
+/**
+ * The Reminder field. A task with reminders on but no offset of its own follows the
+ * default from Settings, so it shows that default, and an untouched field saves the
+ * stored values back unchanged. It used to read Off, and any save turned the reminder off.
+ */
+function useReminderDraft(
+  task: TaskRecord | null | undefined,
+  initialDraft: Partial<EditDraft> | undefined
+) {
+  const defaultReminder = useDefaultReminder();
+  // Edit mode starts untouched. Create mode starts from the seeded draft, Off by default.
+  const [pick, setPick] = useState<ReminderPick>(() => {
+    if (task) return undefined;
+    return initialDraft?.notificationEnabled ? initialDraft.notifyBefore ?? null : null;
+  });
+
+  return {
+    minutes: displayedReminder(task, pick, defaultReminder),
+    setMinutes: (value: number | null) => setPick(value),
+    draftFields: () => savedReminder(task, pick),
   };
 }
 
@@ -208,7 +252,7 @@ export function useEditDraftState(
   const [dependencies, setDependencies] = useState<string[]>(() =>
     task ? task.dependencies ?? [] : initialDraft?.dependencies ?? []
   );
-  const detail = useDetailDraftFields(task, initialDraft);
+  const { reminderDraftFields, ...detail } = useDetailDraftFields(task, initialDraft);
 
   useAutofocusTitle(titleRef);
 
@@ -228,8 +272,7 @@ export function useEditDraftState(
     recurrence: detail.recurrence,
     subtasks: detail.subtasks,
     estimatedMinutes: parseEstimate(detail.estimateInput),
-    notifyBefore: detail.reminderMinutes ?? undefined,
-    notificationEnabled: detail.reminderMinutes !== null,
+    ...reminderDraftFields(),
   });
 
   return {

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
+import { getDb } from "@/lib/db";
 import type { TaskRecord } from "@/lib/types";
 
 /**
@@ -131,6 +132,69 @@ describe("<EditDrawer> reminder", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ notifyBefore: 5, notificationEnabled: true }),
+      "t1"
+    );
+  });
+
+  describe("a task that follows the default reminder", () => {
+    // Reminders on with no offset of its own: what the capture bar creates. The notification
+    // checker fires it at the default from Settings, so the editor must show that and leave
+    // it alone. It used to read Off, and any save turned the reminder off.
+    const followsDefault = { ...baseTask, notificationEnabled: true, notifyBefore: undefined };
+
+    beforeEach(async () => {
+      await getDb().notificationSettings.clear();
+    });
+
+    it("shows the built-in default when Settings has none stored", () => {
+      render(<EditDrawer open task={followsDefault} onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+      expect(screen.getByRole("button", { name: "15m" })).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("shows the default reminder chosen in Settings", async () => {
+      await getDb().notificationSettings.put({
+        id: "settings",
+        enabled: true,
+        defaultReminder: 60,
+        soundEnabled: true,
+        permissionAsked: false,
+        updatedAt: "2026-04-26T00:00:00.000Z",
+      });
+
+      render(<EditDrawer open task={followsDefault} onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "1h" })).toHaveAttribute("aria-pressed", "true")
+      );
+    });
+
+    it("keeps the reminder on and following the default when saved untouched", async () => {
+      const onSubmit = vi.fn();
+      render(<EditDrawer open task={followsDefault} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+      const [draft] = onSubmit.mock.calls[0] as [Record<string, unknown>];
+      expect(draft).toMatchObject({ notificationEnabled: true, notifyBefore: undefined });
+    });
+  });
+
+  it("keeps a disabled reminder's stored offset when saved untouched", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <EditDrawer
+        open
+        task={{ ...baseTask, notifyBefore: 30, notificationEnabled: false }}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ notifyBefore: 30, notificationEnabled: false }),
       "t1"
     );
   });

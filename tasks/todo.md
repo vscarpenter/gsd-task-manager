@@ -1,3 +1,31 @@
+# Session state, 2026-10-12 (late): editing turned off a default reminder (`fix/editor-keeps-default-reminder`)
+
+## Resuming From Here
+
+A task with reminders on but no `notifyBefore` of its own follows the default from Settings;
+the capture bar creates every task that way. The editor showed its Reminder field as Off, and
+any save sent `notificationEnabled: false`, so editing a title quietly turned the reminder off.
+B-41 in the GSD Project backlog, found by `pb-sync-reviewer` during B-02; reproduced in the
+running app before the fix.
+
+- [x] Red: four cases in `tests/ui/edit-drawer-reminder.test.tsx`: show the built-in default,
+      show the default chosen in Settings, keep a default reminder on through an untouched save,
+      and keep a disabled reminder's stored offset through an untouched save. All four failed.
+- [x] Green: the Reminder field now tracks the user's pick separately and stays untouched until
+      clicked. Untouched, it shows what the checker will fire (`notifyBefore ?? defaultReminder`)
+      and saves the stored pair back as is. This matches the iOS editor. The default comes from
+      the new read-only `useDefaultReminder` hook. Create mode is unchanged (starts at Off).
+- [x] Live check in Chromium (America/Chicago), title-only edit then save: on `main` the field
+      read Off and the save stored `notificationEnabled: false`; on the branch it read 15m and
+      the reminder stayed on, still following the default.
+
+Local gates: 3,457 passed, 1 skipped; `tests/docker-migrations.test.ts` couldn't run without the
+sqlite3 CLI. Typecheck, lint, knip, and shape clean (the first try grew `useEditDraftState` from
+53 to 55 lines; moving the reminder wiring into `useDetailDraftFields` brought it to 52). Not pushed.
+
+Still open from B-41: if PocketBase stores a null `notify_before` as 0, other clients read a
+default-following task as "at time of event". Needs a check against a real server.
+
 # Session state, 2026-10-12 (evening): cleared editor fields didn't save (`fix/editor-clears-fields`)
 
 ## Resuming From Here
