@@ -1,3 +1,32 @@
+# Session state, 2026-10-12 (evening): cleared editor fields didn't save (`fix/editor-clears-fields`)
+
+## Resuming From Here
+
+Choosing None for the due date or emptying Estimate in the edit drawer saved nothing: the
+editor sends the key as `undefined`, and `mergeTaskUpdates` used `??`, which kept the old value.
+B-02 in the GSD Project backlog; reproduced in the running app before the fix.
+
+- [x] Red: `tests/data/tasks/update-clear-fields.test.ts` on the real fake-indexeddb, using the
+      exact draft shape the editor submits. Four failed, each keeping the old value; the guard
+      test (absent keys keep their values) passed.
+- [x] Green: `dueDate`, `notifyBefore`, and `estimatedMinutes` now merge by key presence, so a
+      present `undefined` clears and an absent key keeps. `updateTask` has one app caller (the
+      editor), so no other path changes.
+- [x] Review by `pb-sync-reviewer`: nothing blocking. Took two of its four notes: a cleared due
+      date now also drops the old snooze and sent flag (it already did for a changed date), and
+      the sync test asserts an `update` was queued and maps to `due_date: ''`.
+- [x] Live check in Chromium (America/Chicago): on `main` the date and the 45-minute estimate
+      survived None and an empty field; on the branch both cleared and the reminder stayed.
+
+Local gates: 3,453 passed, 1 skipped; `tests/docker-migrations.test.ts` couldn't run without the
+sqlite3 CLI. Typecheck, lint, shape (30 and 92, unchanged), and knip clean. Not pushed.
+
+Found along the way, not fixed here:
+- A task with reminders on but no stored `notifyBefore` (the capture bar's default) shows Off
+  in the editor, and any save turns its reminder off (`use-edit-draft-state.ts:118-121, 232`).
+- A cleared estimate may reach other devices as `estimated_minutes: 0` if PocketBase stores
+  null numbers as 0. The schema already reads 0 as no estimate, so nothing visible changes.
+
 # Session state, 2026-10-12: the editor moved untouched due dates (`fix/editor-keeps-due-date`)
 
 ## Resuming From Here
