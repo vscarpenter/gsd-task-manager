@@ -1,3 +1,29 @@
+# Session state, 2026-10-12: the editor moved untouched due dates (`fix/editor-keeps-due-date`)
+
+## Resuming From Here
+
+The edit drawer turned an existing due date back into a preset on every save. A date 1–7 days out
+became this Friday, one 8–14 days out became next Monday (sometimes earlier than the real date), and
+any time of day dropped to local midnight. "Today" came from the UTC date. Found in the 2026-10-12
+cross-platform parity audit (B-01 in the GSD Project backlog) and reproduced in the running app.
+
+- [x] Red: `tests/ui/edit-drawer-due-date.test.tsx`, nine cases built in local time. Six failed in
+      UTC and seven in America/Chicago, each for the predicted reason.
+- [x] Green: `classifyExistingDate` matches a preset only on that preset's own day, and a pick on
+      the stored date's day returns the stored ISO untouched. New `localDayOf` in
+      `lib/due-date-presets.ts`.
+- [x] Live check in Chromium (America/Chicago), title-only edit then save: on `main` all three
+      seeded dates moved; on the branch all three kept their date and time. No page errors.
+
+Local gates: 3,447 passed, 1 skipped; `tests/docker-migrations.test.ts` couldn't run without the
+sqlite3 CLI. Typecheck, lint, shape (30 and 92, unchanged), and knip clean. Not pushed.
+
+Still open:
+- B-02: choosing None or emptying Estimate keeps the old value (`mergeTaskUpdates` uses `??`).
+- "submits the custom-picked date" in `tests/ui/edit-drawer.test.tsx` fails east of UTC
+  (Asia/Tokyo) because it compares `dueDate.slice(0, 10)`, the UTC day. It failed before this
+  change too.
+
 # Session state, 2026-10-09: review comments on PR #595 (`fix/review-do-first-soon`)
 
 ## Resuming From Here
