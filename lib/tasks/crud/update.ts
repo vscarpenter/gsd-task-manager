@@ -59,7 +59,12 @@ function validateUpdatedDraft(
 }
 
 /**
- * Merge existing task data with partial updates
+ * Merge existing task data with partial updates.
+ *
+ * A field left out of `updates` keeps its stored value. The optional fields the
+ * editor can empty (due date, reminder offset, estimate) also clear when the key
+ * is present with `undefined`, which is how the editor sends None or an empty
+ * field. With `??` alone, a cleared field silently kept its old value.
  */
 function mergeTaskUpdates(
   existing: TaskRecord,
@@ -70,14 +75,15 @@ function mergeTaskUpdates(
     description: updates.description ?? existing.description,
     urgent: updates.urgent ?? existing.urgent,
     important: updates.important ?? existing.important,
-    dueDate: updates.dueDate ?? existing.dueDate,
+    dueDate: "dueDate" in updates ? updates.dueDate : existing.dueDate,
     recurrence: updates.recurrence ?? existing.recurrence,
     tags: updates.tags ?? existing.tags,
     subtasks: updates.subtasks ?? existing.subtasks,
     dependencies: updates.dependencies ?? existing.dependencies,
-    notifyBefore: updates.notifyBefore ?? existing.notifyBefore,
+    notifyBefore: "notifyBefore" in updates ? updates.notifyBefore : existing.notifyBefore,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled,
-    estimatedMinutes: updates.estimatedMinutes ?? existing.estimatedMinutes,
+    estimatedMinutes:
+      "estimatedMinutes" in updates ? updates.estimatedMinutes : existing.estimatedMinutes,
   };
 }
 
@@ -89,10 +95,12 @@ function buildUpdatedRecord(
   validated: TaskDraft,
   updates: Partial<TaskDraft>
 ): TaskRecord {
+  // Clearing a field counts as a change too, so a cleared due date drops the old
+  // snooze and sent flag along with it.
   const dueDateChanged =
-    updates.dueDate !== undefined && updates.dueDate !== existing.dueDate;
+    "dueDate" in updates && updates.dueDate !== existing.dueDate;
   const notifyBeforeChanged =
-    updates.notifyBefore !== undefined && updates.notifyBefore !== existing.notifyBefore;
+    "notifyBefore" in updates && updates.notifyBefore !== existing.notifyBefore;
 
   const notificationReset =
     dueDateChanged || notifyBeforeChanged
