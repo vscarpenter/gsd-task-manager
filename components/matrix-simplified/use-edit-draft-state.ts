@@ -3,28 +3,26 @@
 import { useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
-import { resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
+import { DUE_PRESETS, localDayOf, resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
 import { UI_TIMING } from "@/lib/constants/ui";
 import { generateId } from "@/lib/id-generator";
 import type { EditDraft } from "./edit-draft";
 
+/**
+ * The preset whose own date an existing due date falls on, or "none".
+ *
+ * Only an exact match counts. A range ("within 7 days" → This week) made save
+ * re-resolve the preset and move an untouched date to Friday or Monday.
+ */
 function classifyExistingDate(iso: string | undefined): DuePreset {
   if (!iso) return "none";
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const dateOnly = iso.slice(0, 10);
-  if (dateOnly === todayIso) return "today";
-  const target = new Date(`${dateOnly}T00:00:00`);
-  const today = new Date(`${todayIso}T00:00:00`);
-  const diff = (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
-  if (diff > 0 && diff <= 7) return "this-week";
-  if (diff > 7 && diff <= 14) return "next-week";
-  return "none";
+  const day = localDayOf(iso);
+  return DUE_PRESETS.find(({ value }) => resolveDuePreset(value) === day)?.value ?? "none";
 }
 
 function classifyExistingCustomDate(iso: string | undefined): string | undefined {
-  if (!iso) return undefined;
-  if (classifyExistingDate(iso) !== "none") return undefined;
-  return iso.slice(0, 10);
+  if (!iso || classifyExistingDate(iso) !== "none") return undefined;
+  return localDayOf(iso);
 }
 
 export interface EditDraftState {
@@ -157,10 +155,20 @@ function useAutofocusTitle(titleRef: RefObject<HTMLInputElement | null>): void {
   }, [titleRef]);
 }
 
-/** Resolve the picked preset (or custom date) into an ISO due date. */
-function resolveDueDate(customDate: string | undefined, duePreset: DuePreset): string | undefined {
+/**
+ * Resolve the picked preset (or custom date) into an ISO due date. A pick on the
+ * stored date's own day returns the stored value, so a save never rewrites a due
+ * date, or its time of day, that the user didn't change.
+ */
+function resolveDueDate(
+  customDate: string | undefined,
+  duePreset: DuePreset,
+  storedDueDate: string | undefined
+): string | undefined {
   const rawDate = customDate ?? resolveDuePreset(duePreset);
-  return rawDate ? new Date(`${rawDate}T00:00:00`).toISOString() : undefined;
+  if (!rawDate) return undefined;
+  if (storedDueDate && localDayOf(storedDueDate) === rawDate) return storedDueDate;
+  return new Date(`${rawDate}T00:00:00`).toISOString();
 }
 
 /**
@@ -214,7 +222,7 @@ export function useEditDraftState(
     description: description.trim(),
     urgent,
     important,
-    dueDate: resolveDueDate(due.customDate, due.duePreset),
+    dueDate: resolveDueDate(due.customDate, due.duePreset, task?.dueDate),
     tags,
     dependencies,
     recurrence: detail.recurrence,

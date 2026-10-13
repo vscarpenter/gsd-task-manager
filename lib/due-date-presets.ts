@@ -14,6 +14,11 @@ function toIsoDate(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/** The calendar day (YYYY-MM-DD) an ISO timestamp falls on in the user's time zone. */
+export function localDayOf(iso: string): string {
+  return toIsoDate(new Date(iso));
+}
+
 export function resolveDuePreset(
   preset: DuePreset,
   now: Date = new Date(),
