@@ -1,3 +1,38 @@
+# Session state, 2026-10-13: auto-archive waits for a pull when sync is on (`fix/auto-archive-after-pull`)
+
+## Resuming From Here
+
+Archiving deletes each task's server copy. `useAutoArchive` ran `archiveOldTasks` on mount and
+hourly from local Dexie even with sync on, so a page load before the first pull, or a tab that
+sat in the background, could archive a task another device had reopened, and the queued delete
+removed it everywhere. B-46 in the GSD Project backlog (web half; Android still open).
+
+- [x] Red: `onPulled` cases in `tests/sync/sync-coordinator.test.ts` (fires after `success` and
+      `partial`, not after `error` or `cancelled`, unsubscribes, a failing listener is isolated)
+      and a "with sync on" block in `tests/data/use-auto-archive.test.ts`. Against the old hook,
+      four failed: it archived on mount, never listened for pulls, and never unsubscribed.
+- [x] Green: `SyncCoordinator.onPulled` notifies after a completed pull. The hook purges trash on
+      mount and hourly as before; it archives on mount and hourly only with sync off (an
+      unreadable sync state counts as on). With sync on it archives after a pull, at most once
+      an hour, and a disabled setting doesn't use up the hour.
+- [x] Test fix: two older interval tests restored their `setInterval`/`clearInterval` spies after
+      `useRealTimers()`, which put the fake timer back on `global`. Every later `waitFor` in the
+      file then checked once and timed out. Restoring the spy first fixed it.
+- [x] `pb-sync-reviewer`: nothing blocking. Mutation-checked the four tests added after its pass.
+
+Local gates: 3,478 passed, 1 skipped (sqlite3 installed so `tests/docker-migrations.test.ts`
+ran). Typecheck, lint, knip, and shape clean.
+
+Follow-ups, from the review, not in this PR:
+- A completed pull doesn't prove local matches server: the `>=` cursor minus 30s can miss a
+  record another device pushes later with an older `client_updated_at`. The push-side delete
+  guard compares the remote stamp to the queue time; it should also skip when the remote stamp
+  is newer than the archived payload's `updatedAt`.
+- `fullSync` can report `success` when push is authenticated but pull isn't, and records that
+  fail mapping are only logged. Either can leave a stale completed copy for the sweep.
+- Signed-in users with auto-sync off now archive only after a manual Sync. Safe, but a settings
+  hint might help. "Archive now" in Settings still calls `archiveOldTasks` directly.
+
 # Session state, 2026-10-12 (late): editing turned off a default reminder (`fix/editor-keeps-default-reminder`)
 
 ## Resuming From Here
