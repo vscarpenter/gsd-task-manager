@@ -12,8 +12,19 @@ import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/co
 import { prompt, promptPassword, getClaudeConfigPath } from './index.js';
 import { getSetupArtifactPath, removeSetupArtifact } from './setup-artifact.js';
 
-/** Default production PocketBase URL used as prompt default value */
-const DEFAULT_POCKETBASE_URL = process.env.GSD_POCKETBASE_URL || 'https://api.vinny.io';
+/** Production PocketBase URL offered when no safe inherited value exists. */
+const PRODUCTION_POCKETBASE_URL = 'https://api.vinny.io';
+
+/**
+ * The prompt renders its default verbatim, so an inherited GSD_POCKETBASE_URL
+ * is gated through the URL policy before it is offered. A malformed value
+ * carrying userinfo or a query string is dropped here rather than printed and
+ * then rejected after the operator answers.
+ */
+function resolveDefaultPocketBaseUrl(): string {
+  const inherited = process.env.GSD_POCKETBASE_URL;
+  return inherited && isSafePocketBaseUrl(inherited) ? inherited : PRODUCTION_POCKETBASE_URL;
+}
 /** Exact reviewed package entrypoint; normal startup never selects code from npm. */
 const MCP_ENTRYPOINT = fileURLToPath(new URL('../index.js', import.meta.url));
 
@@ -192,7 +203,7 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
   try {
     // Step 1: PocketBase URL
     console.log('Step 1/4: PocketBase URL');
-    const pbUrl = await prompt('Enter your PocketBase URL', DEFAULT_POCKETBASE_URL);
+    const pbUrl = await prompt('Enter your PocketBase URL', resolveDefaultPocketBaseUrl());
     // Gate the destination through the shared policy BEFORE any request — the
     // connectivity probe and (later) the token-bearing sync check must never
     // reach an unvalidated host.

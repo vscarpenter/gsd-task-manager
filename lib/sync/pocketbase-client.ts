@@ -6,7 +6,7 @@
  * refresh internally, eliminating the need for a custom TokenManager.
  */
 
-import PocketBase from 'pocketbase';
+import PocketBase, { BaseAuthStore } from 'pocketbase';
 import { ENV_CONFIG } from '@/lib/env-config';
 import { parseRetryAfterMs } from './error-categorizer';
 
@@ -39,11 +39,17 @@ export function getPocketBase(): PocketBase {
 }
 
 /**
- * Destroy the singleton (used on logout / reset)
+ * Destroy the singleton (used on logout / reset).
+ *
+ * The SDK cannot cancel an in-flight `authRefresh`, and its response handler
+ * saves whatever comes back into the shared localStorage key. Swapping the
+ * retired client onto an in-memory store means a late response for the
+ * signed-out account lands in a throwaway, not on top of whoever signs in next.
  */
 export function clearPocketBase(): void {
   if (pbInstance) {
     pbInstance.authStore.clear();
+    pbInstance.authStore = new BaseAuthStore();
     pbInstance = null;
   }
 }

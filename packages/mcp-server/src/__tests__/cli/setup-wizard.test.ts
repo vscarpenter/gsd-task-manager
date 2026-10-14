@@ -46,6 +46,7 @@ describe('runSetupWizard', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -123,6 +124,32 @@ describe('runSetupWizard', () => {
 
     expect(logSpy).toHaveBeenCalledWith('⚠ Warning: Got status 503');
     expect(logSpy).toHaveBeenCalledWith('⚠ Could not list tasks');
+  });
+
+  // The prompt renders its default verbatim, so an inherited URL is validated
+  // before it is offered; otherwise userinfo or a query secret in a malformed
+  // GSD_POCKETBASE_URL would be written to the terminal before rejection.
+  it('does not offer a credential-bearing inherited URL as the prompt default', async () => {
+    vi.stubEnv('GSD_POCKETBASE_URL', 'https://admin:hunter2@pb.example.com/?key=abc');
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
+    vi.mocked(promptPassword).mockResolvedValueOnce('');
+
+    await expect(runSetupWizard()).rejects.toThrow('process.exit:1');
+
+    const [, offeredDefault] = vi.mocked(prompt).mock.calls[0]!;
+    expect(offeredDefault).toBe('https://api.vinny.io');
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain('hunter2');
+  });
+
+  it('offers a policy-safe inherited URL as the prompt default', async () => {
+    vi.stubEnv('GSD_POCKETBASE_URL', 'https://pb.internal.example:8443');
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
+    vi.mocked(promptPassword).mockResolvedValueOnce('');
+
+    await expect(runSetupWizard()).rejects.toThrow('process.exit:1');
+
+    const [, offeredDefault] = vi.mocked(prompt).mock.calls[0]!;
+    expect(offeredDefault).toBe('https://pb.internal.example:8443');
   });
 
   it('cleans up and exits when the token is empty', async () => {
