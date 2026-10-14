@@ -10,8 +10,9 @@ const BUILD_INFO_FILE = path.join(__dirname, '..', '.build-info.json');
 const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
 const baseVersion = packageJson.version || '0.1.0';
 
-// Read or initialize build info
-let buildInfo = { version: baseVersion };
+// Read the previous build's info, if this checkout has one. CI and the
+// release workflows build from a clean checkout where the file is absent.
+let buildInfo = null;
 if (fs.existsSync(BUILD_INFO_FILE)) {
   try {
     buildInfo = JSON.parse(fs.readFileSync(BUILD_INFO_FILE, 'utf8'));
@@ -20,17 +21,19 @@ if (fs.existsSync(BUILD_INFO_FILE)) {
   }
 }
 
-// If the base version in package.json changed, reset to that version
-// Otherwise, increment the patch number
+// A first build, or the first build after a version bump, reports the
+// package version itself. Only a repeat local build of the same package
+// version increments the patch; seeding the first build from package.json
+// and then incrementing would stamp a v13.9.4 release as 13.9.5.
 let newVersion;
-if (buildInfo.version !== baseVersion) {
+if (!buildInfo || buildInfo.version !== baseVersion) {
   newVersion = baseVersion;
 } else {
   const [currentMajor, currentMinor, currentPatch] = buildInfo.version.split('.').map(Number);
   newVersion = `${currentMajor}.${currentMinor}.${currentPatch + 1}`;
 }
 
-buildInfo.version = newVersion;
+buildInfo = { ...(buildInfo ?? {}), version: newVersion };
 
 // Generate friendly date format: "Jan 5, 2025 at 2:30 PM"
 const now = new Date();
