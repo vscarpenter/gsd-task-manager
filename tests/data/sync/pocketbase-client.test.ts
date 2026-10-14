@@ -20,6 +20,10 @@ const MockPocketBase = vi.fn(function () {
 
 vi.mock('pocketbase', () => ({
   default: MockPocketBase,
+  // clearPocketBase swaps the retired client onto an in-memory store.
+  BaseAuthStore: vi.fn(function () {
+    return { clear: vi.fn(), save: vi.fn() };
+  }),
 }));
 
 vi.mock('@/lib/env-config', () => ({
@@ -32,6 +36,8 @@ describe('PocketBase Client', () => {
     mockAuthStore.isValid = false;
     mockAuthStore.token = '';
     mockAuthStore.record = null;
+    // clearPocketBase swaps the retired client's store; the fixture is shared.
+    mockPb.authStore = mockAuthStore;
 
     // Reset module state so each test gets a fresh singleton
     vi.resetModules();

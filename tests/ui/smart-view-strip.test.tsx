@@ -232,6 +232,23 @@ describe("<SmartViewStrip> icons", () => {
     );
     expect(visibleGlyphs().length).toBe(0);
   });
+
+  // Smart view rows arrive through backup import unvalidated, so the icon can
+  // be any string. A key inherited from Object.prototype must read as an
+  // unknown icon (inert text), never as a renderable component; otherwise one
+  // crafted backup breaks the matrix on every subsequent load.
+  it.each(["__proto__", "constructor", "toString", "hasOwnProperty", "valueOf"])(
+    "treats inherited key %s as an unknown icon instead of a component",
+    (icon) => {
+      expect(() =>
+        render(
+          <SmartViewStrip views={[withIcon(icon)]} onSelectView={vi.fn()} onClearView={vi.fn()} />
+        )
+      ).not.toThrow();
+      expect(visibleGlyphs().length).toBe(0);
+      expect(screen.getAllByText(icon).length).toBeGreaterThan(0);
+    }
+  );
 });
 
 describe("<SmartViewStrip>", () => {

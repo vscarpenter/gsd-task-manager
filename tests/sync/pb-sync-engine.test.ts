@@ -199,7 +199,7 @@ describe('pb-sync-engine', () => {
     it('should return authenticated: false when user is not authenticated', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue(null);
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-123');
 
       expect(result.authenticated).toBe(false);
       expect(result.pushedCount).toBe(0);
@@ -209,7 +209,7 @@ describe('pb-sync-engine', () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
       mockQueue.getPending.mockResolvedValue([]);
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-123');
 
       expect(result.authenticated).toBe(true);
     });
@@ -236,7 +236,7 @@ describe('pb-sync-engine', () => {
         { id: 'q1', taskId: 'task-1', operation: 'delete', payload: null, retryCount: 0, timestamp: Date.now() },
       ]);
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-123');
 
       // Delete should NOT be dequeued
       expect(mockQueue.dequeue).not.toHaveBeenCalled();
@@ -268,7 +268,7 @@ describe('pb-sync-engine', () => {
         { id: 'q1', taskId: 'task-1', operation: 'delete', payload: null, retryCount: 0, timestamp: Date.now() },
       ]);
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-123');
 
       // Delete should be dequeued (task not found remotely, which is fine)
       expect(mockQueue.dequeue).toHaveBeenCalledWith('q1');

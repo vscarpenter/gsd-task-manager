@@ -420,6 +420,24 @@ describe('pb-sync-engine', () => {
       expect(mockRetryManager.recordSuccess).toHaveBeenCalled();
     });
 
+    it('binds the push to the persisted session owner, not the ambient SDK principal', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+
+      await fullSync('user');
+
+      expect(pushLocalChanges).toHaveBeenCalledWith('user-1');
+    });
+
+    it('returns cancelled when push reports the session owner is no longer the SDK principal', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      vi.mocked(pushLocalChanges).mockRejectedValueOnce(new StaleSyncSessionError());
+
+      const result = await fullSync('user');
+
+      expect(result.status).toBe('cancelled');
+      expect(mockRetryManager.recordFailure).not.toHaveBeenCalled();
+    });
+
     it('should return error when not authenticated', async () => {
       const { pushLocalChanges } = await import('@/lib/sync/pb-push');
       const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');

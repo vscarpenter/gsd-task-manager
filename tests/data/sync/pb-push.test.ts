@@ -31,6 +31,7 @@ vi.mock('@/lib/sync/pb-sync-helpers', async () => {
 });
 
 import { pushLocalChanges } from '@/lib/sync/pb-push';
+import { StaleSyncSessionError } from '@/lib/sync/sync-session';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 
 function makeTask(id: string, updatedAt: string): TaskRecord {
@@ -84,7 +85,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(fetchRemoteTaskEntryMock).toHaveBeenCalledWith('user-1', 't1');
     expect(updateSpy).not.toHaveBeenCalled();
@@ -109,7 +110,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: createSpy, update: updateSpy, delete: deleteSpy }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).not.toHaveBeenCalled();
     expect(createSpy).not.toHaveBeenCalled();
@@ -140,7 +141,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(result.pushedCount).toBe(0);
@@ -182,7 +183,7 @@ describe('pushLocalChanges LWW guard', () => {
       remoteAt('2026-05-18T10:00:00.000Z');
       const deleteSpy = deleteSpyOnPb();
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-1');
 
       expect(deleteSpy).not.toHaveBeenCalled();
       expect(result.pushedCount).toBe(0);
@@ -194,7 +195,7 @@ describe('pushLocalChanges LWW guard', () => {
       remoteAt(archivedVersion);
       const deleteSpy = deleteSpyOnPb();
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-1');
 
       expect(deleteSpy).toHaveBeenCalledWith('rec-1');
       expect(result.pushedCount).toBe(1);
@@ -217,7 +218,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).toHaveBeenCalledTimes(1);
     expect(result.pushedCount).toBe(1);
@@ -244,7 +245,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).toHaveBeenCalledTimes(1);
     expect(result.pushedCount).toBe(1);
@@ -268,7 +269,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: createSpy, update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).not.toHaveBeenCalled();
     expect(createSpy).not.toHaveBeenCalled();
@@ -295,7 +296,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).not.toHaveBeenCalled();
     expect(result.pushedCount).toBe(0);
@@ -320,7 +321,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(result.pushedCount).toBe(0);
@@ -375,7 +376,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: deleteSpy }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).toHaveBeenCalledTimes(1);
     expect(deleteSpy).not.toHaveBeenCalled();
@@ -409,7 +410,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).toHaveBeenCalledTimes(1);
     expect(result.pushedCount).toBe(0);
@@ -437,7 +438,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(result).toMatchObject({ pushedCount: 1, failedCount: 1 });
     expect(updateSpy).toHaveBeenCalledTimes(2);
@@ -475,7 +476,7 @@ describe('pushLocalChanges LWW guard', () => {
         collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
       });
 
-      const result = await pushLocalChanges();
+      const result = await pushLocalChanges('user-1');
 
       expect(updateSpy).toHaveBeenCalledTimes(1);
       expect(result.pushedCount).toBe(0);
@@ -512,7 +513,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).not.toHaveBeenCalled();
     expect(result.pushedCount).toBe(0);
@@ -545,7 +546,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(result.failedCount).toBe(1);
     expect(result.lastError).toBe('rate_limited');
@@ -588,7 +589,7 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(updateSpy).toHaveBeenCalledTimes(1);
     expect(updateSpy).toHaveBeenCalledWith('rec-1', expect.any(Object));
@@ -622,10 +623,41 @@ describe('pushLocalChanges LWW guard', () => {
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
-    const result = await pushLocalChanges();
+    const result = await pushLocalChanges('user-1');
 
     expect(result.failedCount).toBe(1);
     expect(result.lastError).toBe('rate_limited');
     expect(result.retryAfterMs).toBeNull();
+  });
+});
+
+// The sync session owner comes from persisted sync_config; the SDK principal
+// comes from shared browser auth storage. A late auth refresh for a previous
+// account can restore that account's bearer after the next account signs in,
+// so push must refuse to attribute the queue to anyone but the session owner.
+describe('pushLocalChanges session binding', () => {
+  beforeEach(async () => {
+    await getDb().syncQueue.clear();
+    fetchRemoteTaskIndexMock.mockReset();
+    vi.mocked(getPocketBase).mockReset();
+  });
+
+  it('throws StaleSyncSessionError and sends nothing when the SDK principal is not the session owner', async () => {
+    const create = vi.fn();
+    vi.mocked(getPocketBase).mockReturnValue({
+      collection: () => ({ create, update: vi.fn() }),
+    } as never);
+    await getSyncQueue().enqueue('create', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
+    fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+
+    await expect(pushLocalChanges('user-2')).rejects.toBeInstanceOf(StaleSyncSessionError);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(fetchRemoteTaskIndexMock).not.toHaveBeenCalled();
+    expect((await getSyncQueue().getPending()).length).toBe(1);
+  });
+
+  it('checks the principal before reading the queue, so an empty queue still rejects a mismatch', async () => {
+    await expect(pushLocalChanges('user-2')).rejects.toBeInstanceOf(StaleSyncSessionError);
   });
 });

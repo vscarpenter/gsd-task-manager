@@ -182,7 +182,7 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     // react-doctor-disable-next-line react-doctor/async-parallel -- auth->push->pull ordering is required; not independent
     await ensureValidAuth();
 
-    const pushResult = await pushLocalChanges();
+    const pushResult = await pushLocalChanges(ownerId);
     const pullResult = await pullRemoteChanges(resolvePullCursor(config));
 
     if (!pushResult.authenticated && !pullResult.authenticated) {

@@ -26,10 +26,16 @@ const MAX_RENDERED_SMART_VIEWS =
  * through a helper call: react-hooks/static-components cannot see through a
  * function boundary and treats the returned type as a component minted during
  * render, which would (wrongly) imply remounting on every keystroke.
+ *
+ * The icon string is imported data, so only an own key of the registry counts
+ * as a glyph: an inherited key such as `__proto__` would otherwise resolve to a
+ * truthy non-component and throw on every matrix load.
  */
 function SmartViewIcon({ icon }: { icon?: string }) {
   if (!icon) return null;
-  const Glyph = SMART_VIEW_ICONS[icon as SmartViewIconKey];
+  const Glyph = Object.hasOwn(SMART_VIEW_ICONS, icon)
+    ? SMART_VIEW_ICONS[icon as SmartViewIconKey]
+    : undefined;
   return Glyph ? (
     <Glyph className="h-3.5 w-3.5 shrink-0" aria-hidden />
   ) : (

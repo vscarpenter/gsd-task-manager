@@ -12,6 +12,7 @@ import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskEntry } from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
+import { StaleSyncSessionError } from './sync-session';
 import type { SyncQueueItem } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -210,13 +211,25 @@ function isRemoteNewer(remoteIso: string, localIso: string, nowMs: number = Date
 }
 
 /**
- * Push all pending local changes to PocketBase.
+ * Push all pending local changes to PocketBase on behalf of `sessionOwnerId`,
+ * the account sync_config names as the enabled session.
+ *
+ * The SDK principal lives in shared browser auth storage, where a late
+ * `authRefresh` response for a previous account can land after the next
+ * account signs in. The queue carries no owner of its own, so the only way to
+ * keep one account's tasks out of another's cloud record is to refuse any push
+ * whose SDK principal is not the session owner. Throws StaleSyncSessionError
+ * on that mismatch, which fullSync reports as `cancelled`.
  */
-export async function pushLocalChanges(): Promise<PushResult> {
+export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResult> {
   const ownerId = getCurrentUserId();
   if (!ownerId) {
     logger.warn('Push skipped: not authenticated');
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: false };
+  }
+  if (ownerId !== sessionOwnerId) {
+    logger.warn('Push refused: SDK principal does not match the sync session owner');
+    throw new StaleSyncSessionError();
   }
 
   const queue = getSyncQueue();
