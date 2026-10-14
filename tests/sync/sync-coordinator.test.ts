@@ -432,4 +432,65 @@ describe('SyncCoordinator', () => {
       expect(JSON.stringify(status)).not.toContain(secretTitle);
     });
   });
+
+  // Auto-archive deletes server copies, so with sync on it runs only after a
+  // pull has brought the local copy up to date (parity backlog B-46).
+  describe('onPulled', () => {
+    it('notifies a listener after a sync whose pull completed', async () => {
+      const listener = vi.fn();
+      coordinator.onPulled(listener);
+
+      await coordinator.requestSync('user');
+
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(1));
+    });
+
+    it('notifies after a partial sync, because only the push failed', async () => {
+      mockFullSync.mockResolvedValueOnce({ status: 'partial', pushedCount: 0, pulledCount: 1, failedCount: 1 });
+      const listener = vi.fn();
+      coordinator.onPulled(listener);
+
+      await coordinator.requestSync('user');
+
+      await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(1));
+    });
+
+    it('does not notify after a failed or cancelled sync', async () => {
+      const listener = vi.fn();
+      coordinator.onPulled(listener);
+      mockFullSync.mockRejectedValueOnce(new Error('Network failure'));
+      mockFullSync.mockResolvedValueOnce({ status: 'cancelled' });
+
+      await coordinator.requestSync('user');
+      await coordinator.requestSync('user');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('stops notifying once unsubscribed', async () => {
+      const listener = vi.fn();
+      const unsubscribe = coordinator.onPulled(listener);
+      unsubscribe();
+
+      await coordinator.requestSync('user');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('keeps the sync and other listeners going when one listener fails', async () => {
+      const failing = vi.fn(async () => {
+        throw new Error('listener failed');
+      });
+      const healthy = vi.fn();
+      coordinator.onPulled(failing);
+      coordinator.onPulled(healthy);
+
+      await expect(coordinator.requestSync('user')).resolves.toBeUndefined();
+
+      await vi.waitFor(() => expect(healthy).toHaveBeenCalledTimes(1));
+      expect((await coordinator.getStatus()).lastResult?.status).toBe('success');
+    });
+  });
 });

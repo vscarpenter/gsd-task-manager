@@ -91,10 +91,23 @@ async function recordUnusableRemoteVersion(item: SyncQueueItem): Promise<void> {
 }
 
 /**
+ * A delete is stale when the remote changed after the delete was queued. An
+ * archive's delete also carries the task as it was archived, and is stale when
+ * the remote is newer than that version: another device edited the task after
+ * this copy was last synced, either in an edit a pull missed or between the
+ * pull and the archive. Archiving a stale copy must not delete it (B-46).
+ */
+function isStaleDelete(item: SyncQueueItem, remoteAt: string): boolean {
+  if (isRemoteNewer(remoteAt, new Date(item.timestamp).toISOString())) return true;
+  const archivedVersion = item.payload?.updatedAt;
+  return archivedVersion !== undefined && isRemoteNewer(remoteAt, archivedVersion);
+}
+
+/**
  * Process a single queue item: create, update, or delete the remote record.
  *
  * LWW guard: before writing or deleting, compare the queued payload's
- * `updatedAt` (or the queue item's `timestamp` for deletes) against the
+ * `updatedAt` (for deletes, see isStaleDelete) against the
  * remote record's `client_updated_at`. If the remote is strictly newer,
  * the queued op is stale — skip the write and dequeue. The next pull will
  * deliver the newer remote version, restoring correctness on this device.
@@ -154,12 +167,11 @@ async function pushSingleItem(
 
   // item.operation === 'delete'
   if (remote) {
-    const deletionIntent = new Date(item.timestamp).toISOString();
-    if (isRemoteNewer(remote.clientUpdatedAt, deletionIntent)) {
-      logger.info('Skipping stale delete: remote modified after delete was queued', {
+    if (isStaleDelete(item, remote.clientUpdatedAt)) {
+      logger.info('Skipping stale delete: remote modified after the deleted version', {
         taskId: item.taskId,
         remoteAt: remote.clientUpdatedAt,
-        deletionQueuedAt: deletionIntent,
+        deletionQueuedAt: new Date(item.timestamp).toISOString(),
       });
       await queue.dequeue(item.id);
       return 'skipped';

@@ -31,12 +31,45 @@ interface QueuedSyncRequest {
   timestamp: number;
 }
 
+type PulledListener = () => void | Promise<void>;
+
+/** A sync whose pull ran to completion. `partial` means only some pushes failed. */
+function pullCompleted(result: PBSyncResult): boolean {
+  return result.status === 'success' || result.status === 'partial';
+}
+
 export class SyncCoordinator {
   private retryManager = getRetryManager();
 
   private isRunning = false;
   private pendingRequests: QueuedSyncRequest[] = [];
   private lastResult: PBSyncResult | null = null;
+  private pulledListeners = new Set<PulledListener>();
+
+  /**
+   * Subscribe to completed pulls. Work that must see data at least as fresh as
+   * the server hangs off this: auto-archive deletes server copies, so with sync
+   * on it waits for a pull (parity backlog B-46). Listeners run on a microtask
+   * once fullSync returns and aren't awaited, so they can't hold up the queue,
+   * and one that fails is logged without affecting the sync or other listeners.
+   * Returns an unsubscribe function.
+   */
+  onPulled(listener: PulledListener): () => void {
+    this.pulledListeners.add(listener);
+    return () => {
+      this.pulledListeners.delete(listener);
+    };
+  }
+
+  private notifyPulled(): void {
+    for (const listener of this.pulledListeners) {
+      Promise.resolve()
+        .then(listener)
+        .catch((error: unknown) => {
+          logger.error('Post-pull listener failed', error instanceof Error ? error : undefined);
+        });
+    }
+  }
 
   /**
    * Request a sync operation
@@ -143,6 +176,7 @@ export class SyncCoordinator {
       const result = await fullSync(priority);
       this.lastResult = result;
       logger.debug('Sync completed', { status: result.status });
+      if (pullCompleted(result)) this.notifyPulled();
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
       // PB 4xx bodies can echo task titles — store/log only the stable code.

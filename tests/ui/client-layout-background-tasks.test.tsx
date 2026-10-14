@@ -23,6 +23,10 @@ vi.mock("@/lib/sync/sync-provider", () => ({
   SyncProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Signed out: nothing leaves the device, so archiving runs on mount and hourly.
+// With sync on it waits for a pull instead (tests/data/use-auto-archive.test.ts).
+vi.mock("@/lib/sync/config", () => ({ isSyncEnabled: vi.fn().mockResolvedValue(false) }));
+
 import { ClientLayout } from "@/components/client-layout";
 import { purgeExpiredTrash } from "@/lib/trash";
 import { archiveOldTasks } from "@/lib/archive";

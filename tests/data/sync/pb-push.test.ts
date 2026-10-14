@@ -148,6 +148,59 @@ describe('pushLocalChanges LWW guard', () => {
     expect(await getSyncQueue().getPendingCount()).toBe(0);
   });
 
+  // An archive's delete carries the task as it was archived. Another device's
+  // edit can predate the delete yet postdate that version: a pull missed it,
+  // or it landed between the pull and the archive. Archiving a stale copy must
+  // not delete the newer task (B-46).
+  describe('archive deletes', () => {
+    const archivedVersion = '2026-05-18T08:00:00.000Z';
+    const queuedAt = new Date('2026-05-18T12:00:00.000Z').getTime();
+
+    async function queueArchiveDelete(): Promise<void> {
+      await getSyncQueue().enqueue('delete', 't1', makeTask('t1', archivedVersion));
+      const [item] = await getDb().syncQueue.toArray();
+      await getDb().syncQueue.update(item.id, { timestamp: queuedAt });
+    }
+
+    function remoteAt(clientUpdatedAt: string): void {
+      fetchRemoteTaskIndexMock.mockResolvedValue({
+        index: new Map([['t1', { pbRecordId: 'rec-1', clientUpdatedAt }]]),
+        fetchSucceeded: true,
+      });
+    }
+
+    function deleteSpyOnPb(): ReturnType<typeof vi.fn> {
+      const deleteSpy = vi.fn();
+      (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+        collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
+      });
+      return deleteSpy;
+    }
+
+    it('skips the delete when the remote was edited after the archived version', async () => {
+      await queueArchiveDelete();
+      remoteAt('2026-05-18T10:00:00.000Z');
+      const deleteSpy = deleteSpyOnPb();
+
+      const result = await pushLocalChanges();
+
+      expect(deleteSpy).not.toHaveBeenCalled();
+      expect(result.pushedCount).toBe(0);
+      expect(await getSyncQueue().getPendingCount()).toBe(0);
+    });
+
+    it('deletes when the remote holds the archived version', async () => {
+      await queueArchiveDelete();
+      remoteAt(archivedVersion);
+      const deleteSpy = deleteSpyOnPb();
+
+      const result = await pushLocalChanges();
+
+      expect(deleteSpy).toHaveBeenCalledWith('rec-1');
+      expect(result.pushedCount).toBe(1);
+    });
+  });
+
   it('proceeds with the write when the payload is newer than the remote record', async () => {
     const freshPayload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     await getSyncQueue().enqueue('update', 't1', freshPayload);
