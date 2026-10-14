@@ -19,17 +19,20 @@ removed it everywhere. B-46 in the GSD Project backlog (web half; Android still 
       `useRealTimers()`, which put the fake timer back on `global`. Every later `waitFor` in the
       file then checked once and timed out. Restoring the spy first fixed it.
 - [x] `pb-sync-reviewer`: nothing blocking. Mutation-checked the four tests added after its pass.
+- [x] Codex P1 on PR #603 (also B-47): a completed pull doesn't prove local matches server. The
+      `>=` cursor minus 30s can miss a record another device pushes later with an older stamp,
+      and an edit can land between the pull and the archive. The push delete guard now also
+      skips an archive's delete when the remote is newer than the archived payload's
+      `updatedAt` (`isStaleDelete` in `lib/sync/pb-push.ts`). Manual deletes carry no payload
+      and are unchanged. Red first in `tests/data/sync/pb-push.test.ts`.
 
-Local gates: 3,478 passed, 1 skipped (sqlite3 installed so `tests/docker-migrations.test.ts`
+Local gates: 3,480 passed, 1 skipped (sqlite3 installed so `tests/docker-migrations.test.ts`
 ran). Typecheck, lint, knip, and shape clean.
 
-Follow-ups, from the review, not in this PR:
-- A completed pull doesn't prove local matches server: the `>=` cursor minus 30s can miss a
-  record another device pushes later with an older `client_updated_at`. The push-side delete
-  guard compares the remote stamp to the queue time; it should also skip when the remote stamp
-  is newer than the archived payload's `updatedAt`.
-- `fullSync` can report `success` when push is authenticated but pull isn't, and records that
-  fail mapping are only logged. Either can leave a stale completed copy for the sweep.
+Follow-ups, not in this PR:
+- B-48: `fullSync` can report `success` when push is authenticated but pull isn't, and records
+  that fail mapping are only logged. Codex raised it as a P1; the delete guard above now keeps
+  either from deleting a newer task, so what's left is status accuracy. Waiting on the owner.
 - Signed-in users with auto-sync off now archive only after a manual Sync. Safe, but a settings
   hint might help. "Archive now" in Settings still calls `archiveOldTasks` directly.
 
