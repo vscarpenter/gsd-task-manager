@@ -456,3 +456,51 @@ describe("AppShell quiet chrome on scroll", () => {
     expect(screen.getByRole("banner")).not.toHaveAttribute("data-chrome-hidden");
   });
 });
+
+describe("AppShell fillViewport", () => {
+  beforeEach(() => {
+    mockGetAppPreferences.mockResolvedValue({
+      id: "preferences",
+      pinnedSmartViewIds: [],
+      maxPinnedViews: 5,
+      smartViewsEnabled: false,
+    });
+    mockGetSmartViews.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("pins the shell to the viewport and makes main a flex column at md+ when asked", () => {
+    render(
+      <AppShell title="GSD Matrix" fillViewport>
+        <div>content</div>
+      </AppShell>
+    );
+
+    const main = screen.getByRole("main");
+    expect(main.className).toContain("md:flex");
+    expect(main.className).toContain("md:flex-col");
+    // The important variant: globals.css gives `main` an unlayered min-height
+    // that a plain utility cannot override.
+    expect(main.className).toContain("md:min-h-0!");
+    expect(main.className).toContain("md:overflow-hidden");
+
+    const column = main.parentElement as HTMLElement;
+    expect(column.className).toContain("md:h-dvh");
+    expect(column.className).toContain("md:overflow-hidden");
+  });
+
+  it("leaves other routes page-scrolling by default", () => {
+    render(
+      <AppShell title="Settings">
+        <div>content</div>
+      </AppShell>
+    );
+
+    const main = screen.getByRole("main");
+    expect(main.className).not.toContain("md:overflow-hidden");
+    expect((main.parentElement as HTMLElement).className).not.toContain("md:h-dvh");
+  });
+});

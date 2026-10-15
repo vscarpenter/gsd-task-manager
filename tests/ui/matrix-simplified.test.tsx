@@ -258,7 +258,10 @@ describe("<MatrixSimplified>", () => {
 
     // The axis-label frame now sits between the grid and its container scope.
     expect(grid.closest(".\\@container")).not.toBeNull();
-    expect(grid).toHaveClass("@min-[696px]:grid-cols-2", "@min-[696px]:grid-rows-2");
+    expect(grid).toHaveClass(
+      "@min-[696px]:grid-cols-2",
+      "@min-[696px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]",
+    );
     expect(grid.className).not.toMatch(/\b(md|lg):grid-cols-2\b/);
   });
 

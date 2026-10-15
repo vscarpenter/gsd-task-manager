@@ -10,6 +10,7 @@ import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
 import { QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK, QUADRANT_WASH } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
+import { usePaneOverflow } from "./use-pane-overflow";
 
 const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
   flame: FlameIcon,
@@ -95,6 +96,9 @@ export function QuadrantPane({
   const cardHandlers: CardHandlers = {
     onEdit, onInspect, onDelete, onShare, onSnooze, onToggleComplete, highlightedTaskId, onTaskRef,
   };
+  // The list is the scroll container; the header stays put above it. The fade
+  // re-samples whenever the rendered card set changes.
+  const { ref: listRef, moreBelow } = usePaneOverflow(`${tasks.length}:${showCompletedHere}`);
   return (
     <section data-testid={`quadrant-${meta.rdKey}`}
       data-drop-active={isOver ? "true" : undefined}
@@ -105,6 +109,11 @@ export function QuadrantPane({
       }}
       tabIndex={-1}
       className={cn(
+        // The explicit min-height does two jobs: it is the floor under which a
+        // pane stops being useful (the matrix overflows the stage instead), and
+        // it switches off the grid item's automatic minimum size, so the pane
+        // takes its cell's height rather than its content's and the list below
+        // can scroll.
         "relative flex min-h-[280px] flex-col overflow-hidden rounded-lg border border-pane-border shadow-[var(--shadow-card)] transition-colors focus:outline-none focus:ring-4 focus:ring-accent focus:ring-offset-4",
         isOver && "ring-2 ring-inset"
       )}
@@ -116,7 +125,7 @@ export function QuadrantPane({
     >
       <header
         data-testid="quadrant-header"
-        className="flex items-center gap-2 border-t-[3px] px-[18px] pb-2.5 pt-3"
+        className="flex shrink-0 items-center gap-2 border-t-[3px] px-[18px] pb-2.5 pt-3"
         style={{ backgroundColor: header, borderTopColor: accent }}
       >
         <QuadrantIcon
@@ -149,7 +158,11 @@ export function QuadrantPane({
       </header>
 
       <SortableContext id={meta.id} items={taskIds} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-1 flex-col gap-2 px-4 pb-4 pt-1">
+        <div
+          ref={listRef}
+          data-testid="quadrant-list"
+          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-4 pt-1"
+        >
           {activeTasks.length === 0 && completedTasks.length === 0 ? (
             <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">
               {/* Reassuring mark: one icon in ink-3 on a 60pt sunken tile — never a
@@ -202,6 +215,17 @@ export function QuadrantPane({
           />
         </div>
       </SortableContext>
+      {/* Says "there is more below" without a scrollbar: a short fade into the
+          pane's own wash, present only while the list is clipped. */}
+      <div
+        data-testid="quadrant-overflow-fade"
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-x-0 bottom-0 h-7 transition-opacity duration-150",
+          moreBelow ? "opacity-100" : "opacity-0",
+        )}
+        style={{ background: `linear-gradient(to bottom, transparent, ${wash})` }}
+      />
     </section>
   );
 }

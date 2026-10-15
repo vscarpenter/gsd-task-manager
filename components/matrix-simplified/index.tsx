@@ -324,6 +324,7 @@ export function MatrixSimplified() {
         title="GSD Matrix"
         titleAsLabel
         quietChromeOnScroll
+        fillViewport
         mainClassName="max-w-[1540px] pb-48 md:pb-6"
         caption={
           <MatrixCaption
@@ -359,6 +360,14 @@ export function MatrixSimplified() {
             />
           </div>
         ) : null}
+        {/* The stage takes whatever height the shell has left and hands it to
+            the grid. The -mx/px pair keeps pane focus rings and card shadows
+            from being clipped by the scroll container, which only engages when
+            the viewport is too short for the panes' 280px floor. */}
+        <div
+          data-testid="matrix-stage"
+          className="md:-mx-2 md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:px-2 md:pb-2"
+        >
         {isLoading ? (
           <MatrixGridSkeleton />
         ) : isFiltered && matchCount === 0 ? (
@@ -388,6 +397,7 @@ export function MatrixSimplified() {
             onQuadrantRef={handleQuadrantRef}
           />
         )}
+        </div>
       </AppShell>
 
       <ShareTaskDialog

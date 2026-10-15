@@ -35,6 +35,13 @@ interface AppShellProps {
   mainClassName?: string;
   /** Tuck the topbar away on scroll-down at compact widths. The matrix opts in. */
   quietChromeOnScroll?: boolean;
+  /**
+   * Pin the shell to the viewport at md+ and hand the remaining height to the
+   * page as a flex column, so a child can scroll internally instead of the
+   * page. The matrix opts in; every other route keeps page scroll. Compact
+   * widths are untouched either way.
+   */
+  fillViewport?: boolean;
   children: ReactNode;
 }
 
@@ -48,6 +55,7 @@ export function AppShell({
   topbarRightSlot,
   mainClassName,
   quietChromeOnScroll = false,
+  fillViewport = false,
   children,
 }: AppShellProps) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -105,7 +113,12 @@ export function AppShell({
         Skip to main content
       </a>
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
-      <div className="flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0",
+          fillViewport && "md:h-dvh md:overflow-hidden",
+        )}
+      >
         <SimplifiedTopbar
           title={title} titleAsLabel={titleAsLabel} caption={caption}
           searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}
@@ -143,6 +156,10 @@ export function AppShell({
           tabIndex={-1}
           className={cn(
             "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6",
+            // min-h-0! because globals.css sets `main { min-height: calc(100vh -
+            // 3.5rem) }` outside any layer, which outranks a layered utility and
+            // would push the footer below the fold.
+            fillViewport && "md:flex md:min-h-0! md:flex-col md:overflow-hidden",
             mainClassName
           )}
         >

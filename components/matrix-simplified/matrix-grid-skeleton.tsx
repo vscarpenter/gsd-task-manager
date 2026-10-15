@@ -36,7 +36,7 @@ export function MatrixGridSkeleton() {
       role="status"
       aria-busy="true"
       aria-label="Loading tasks"
-      className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-2"
+      className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
     >
       {quadrants.map((meta, index) => (
         <QuadrantSkeleton key={meta.id} meta={meta} cardCount={CARD_COUNT[index]} />
