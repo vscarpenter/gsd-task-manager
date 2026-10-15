@@ -260,7 +260,7 @@ describe("<MatrixSimplified>", () => {
     expect(grid.closest(".\\@container")).not.toBeNull();
     expect(grid).toHaveClass(
       "@min-[696px]:grid-cols-2",
-      "@min-[696px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]",
+      "@min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]",
     );
     expect(grid.className).not.toMatch(/\b(md|lg):grid-cols-2\b/);
   });

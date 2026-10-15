@@ -77,9 +77,12 @@ describe("MatrixGrid — viewport-bound rows", () => {
     );
 
     const grid = screen.getByTestId("matrix-grid");
-    // minmax(0,1fr) rather than plain 1fr: 1fr has an implicit min-content
+    // minmax(280px,1fr) rather than plain 1fr: 1fr has an implicit min-content
     // floor, which is exactly the "tallest pane wins" behavior being removed.
-    expect(grid.className).toContain("@min-[696px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]");
+    // The 280px floor sits on the track so a short viewport makes the grid
+    // overflow (and the stage scroll) instead of panes overlapping the row
+    // below, which is what a pane-only min-height did at 1440x900.
+    expect(grid.className).toContain("@min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]");
     expect(grid.className).toContain("min-h-0");
 
     const frame = screen.getByTestId("matrix-axis-frame");

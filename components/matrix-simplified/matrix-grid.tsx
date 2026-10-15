@@ -57,10 +57,15 @@ export function MatrixGrid({
       <AxisFrame>
         <div
           data-testid="matrix-grid"
-          // minmax(0,1fr) rather than plain 1fr: 1fr carries an implicit
+          // minmax(280px,1fr) rather than plain 1fr: 1fr carries an implicit
           // min-content floor, which is exactly the "tallest pane sets the row"
-          // behavior that pushed the other quadrants off screen.
-          className="grid min-h-0 gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
+          // behavior that pushed the other quadrants off screen. The 280px is
+          // the pane floor: below it a pane shows one card and stops being a
+          // quadrant, so the grid grows past its cell and the stage scrolls.
+          // The floor has to live on the track, not only on the pane: a pane
+          // with min-height inside a smaller minmax(0,1fr) track overflows its
+          // cell and paints over the row below.
+          className="grid min-h-0 gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]"
         >
         {quadrants.map((meta) => (
           <QuadrantPane
