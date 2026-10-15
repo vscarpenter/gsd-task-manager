@@ -96,9 +96,6 @@ export function QuadrantPane({
   const cardHandlers: CardHandlers = {
     onEdit, onInspect, onDelete, onShare, onSnooze, onToggleComplete, highlightedTaskId, onTaskRef,
   };
-  // The list is the scroll container; the header stays put above it. The fade
-  // re-samples whenever the rendered card set changes.
-  const { ref: listRef, moreBelow } = usePaneOverflow(`${tasks.length}:${showCompletedHere}`);
   return (
     <section data-testid={`quadrant-${meta.rdKey}`}
       data-drop-active={isOver ? "true" : undefined}
@@ -158,11 +155,7 @@ export function QuadrantPane({
       </header>
 
       <SortableContext id={meta.id} items={taskIds} strategy={verticalListSortingStrategy}>
-        <div
-          ref={listRef}
-          data-testid="quadrant-list"
-          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-4 pt-1"
-        >
+        <PaneList wash={wash} revision={`${tasks.length}:${showCompletedHere}`}>
           {activeTasks.length === 0 && completedTasks.length === 0 ? (
             <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">
               {/* Reassuring mark: one icon in ink-3 on a 60pt sunken tile — never a
@@ -213,10 +206,40 @@ export function QuadrantPane({
             onToggle={() => setShowCompletedHere((open) => !open)}
             handlers={cardHandlers}
           />
-        </div>
+        </PaneList>
       </SortableContext>
-      {/* Says "there is more below" without a scrollbar: a short fade into the
-          pane's own wash, present only while the list is clipped. */}
+    </section>
+  );
+}
+
+/**
+ * The pane's scroll container, with the header pinned above it by the parent.
+ *
+ * A list clipped by its grid cell looks like it simply ends, so a short fade
+ * into the pane's own wash says "there is more below" without a scrollbar. It
+ * is present only while the list is clipped, and re-samples whenever the
+ * rendered card set changes (`revision`). The fade is a sibling rather than a
+ * child so it stays put while the list scrolls under it.
+ */
+function PaneList({
+  wash,
+  revision,
+  children,
+}: {
+  wash: string;
+  revision: string;
+  children: React.ReactNode;
+}) {
+  const { ref, moreBelow } = usePaneOverflow(revision);
+  return (
+    <>
+      <div
+        ref={ref}
+        data-testid="quadrant-list"
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-4 pt-1"
+      >
+        {children}
+      </div>
       <div
         data-testid="quadrant-overflow-fade"
         aria-hidden="true"
@@ -226,7 +249,7 @@ export function QuadrantPane({
         )}
         style={{ background: `linear-gradient(to bottom, transparent, ${wash})` }}
       />
-    </section>
+    </>
   );
 }
 
