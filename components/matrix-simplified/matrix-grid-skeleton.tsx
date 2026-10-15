@@ -36,7 +36,10 @@ export function MatrixGridSkeleton() {
       role="status"
       aria-busy="true"
       aria-label="Loading tasks"
-      className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
+      // flex-1/min-h-0 so the rows resolve against the stage's height, as the
+      // real grid's do; otherwise they size to the 280px floors and every pane
+      // jumps taller the moment the read completes.
+      className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
     >
       {quadrants.map((meta, index) => (
         <QuadrantSkeleton key={meta.id} meta={meta} cardCount={CARD_COUNT[index]} />

@@ -6,17 +6,19 @@ import { resolvePaneOverflow } from "@/lib/pane-overflow";
 /**
  * Tracks whether a pane's scroll container has content below the fold.
  *
- * Re-samples on scroll, on resize of the container, and whenever the caller's
- * `revision` changes (the task list re-rendered, the cap or completed
- * disclosure opened). ResizeObserver is optional so the hook stays inert in
- * jsdom.
+ * Re-samples on scroll and whenever either the container or its content
+ * changes size. Observing the content matters: at 2x2 widths the container
+ * is a fixed grid cell that never resizes when "N more" opens or a card moves
+ * into the done disclosure, so a container-only observer would go stale.
+ * ResizeObserver is optional so the hook stays inert in jsdom.
  */
-export function usePaneOverflow(revision: unknown) {
-  const ref = useRef<HTMLDivElement | null>(null);
+export function usePaneOverflow() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const [moreBelow, setMoreBelow] = useState(false);
 
   const sample = useCallback(() => {
-    const node = ref.current;
+    const node = containerRef.current;
     if (!node) return;
     setMoreBelow(
       resolvePaneOverflow({
@@ -28,18 +30,20 @@ export function usePaneOverflow(revision: unknown) {
   }, []);
 
   useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container) return;
     sample();
-    node.addEventListener("scroll", sample, { passive: true });
+    container.addEventListener("scroll", sample, { passive: true });
     const observer =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(sample) : null;
-    observer?.observe(node);
+    observer?.observe(container);
+    if (content) observer?.observe(content);
     return () => {
-      node.removeEventListener("scroll", sample);
+      container.removeEventListener("scroll", sample);
       observer?.disconnect();
     };
-  }, [sample, revision]);
+  }, [sample]);
 
-  return { ref, moreBelow };
+  return { containerRef, contentRef, moreBelow };
 }

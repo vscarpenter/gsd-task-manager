@@ -155,7 +155,7 @@ export function QuadrantPane({
       </header>
 
       <SortableContext id={meta.id} items={taskIds} strategy={verticalListSortingStrategy}>
-        <PaneList wash={wash} revision={`${tasks.length}:${showCompletedHere}`}>
+        <PaneList wash={wash}>
           {activeTasks.length === 0 && completedTasks.length === 0 ? (
             <div className="my-auto flex flex-col items-center gap-2 py-4 text-center">
               {/* Reassuring mark: one icon in ink-3 on a 60pt sunken tile — never a
@@ -217,28 +217,22 @@ export function QuadrantPane({
  *
  * A list clipped by its grid cell looks like it simply ends, so a short fade
  * into the pane's own wash says "there is more below" without a scrollbar. It
- * is present only while the list is clipped, and re-samples whenever the
- * rendered card set changes (`revision`). The fade is a sibling rather than a
- * child so it stays put while the list scrolls under it.
+ * is present only while the list is clipped. The inner content div is what
+ * the overflow hook observes for height changes; the fade is a sibling of the
+ * scroll container so it stays put while the list scrolls under it.
  */
-function PaneList({
-  wash,
-  revision,
-  children,
-}: {
-  wash: string;
-  revision: string;
-  children: React.ReactNode;
-}) {
-  const { ref, moreBelow } = usePaneOverflow(revision);
+function PaneList({ wash, children }: { wash: string; children: React.ReactNode }) {
+  const { containerRef, contentRef, moreBelow } = usePaneOverflow();
   return (
     <>
       <div
-        ref={ref}
+        ref={containerRef}
         data-testid="quadrant-list"
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-4 pt-1"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-1"
       >
-        {children}
+        <div ref={contentRef} data-testid="quadrant-list-content" className="flex min-h-full flex-col gap-2">
+          {children}
+        </div>
       </div>
       <div
         data-testid="quadrant-overflow-fade"

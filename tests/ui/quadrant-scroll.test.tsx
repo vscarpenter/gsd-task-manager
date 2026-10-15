@@ -87,3 +87,37 @@ describe("MatrixGrid — viewport-bound rows", () => {
     expect(frame.className).toContain("min-h-0");
   });
 });
+
+describe("QuadrantPane — overflow fade tracks the content, not the container", () => {
+  it("observes the list content so the fade re-samples when cards change height", () => {
+    // At 2x2 widths the list container has a fixed size, so observing it
+    // never fires when its content grows or shrinks ("N more", a task moving
+    // into the done disclosure). The hook has to watch the content instead.
+    const observed: Element[] = [];
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      observe(el: Element) { observed.push(el); }
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      renderPane(makeActive(3));
+      const list = screen.getByTestId("quadrant-list");
+      const content = screen.getByTestId("quadrant-list-content");
+      expect(content.parentElement).toBe(list);
+      expect(observed).toContain(content);
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
+  });
+});
+
+describe("MatrixGridSkeleton — fills the stage like the real grid", () => {
+  it("takes the stage's remaining height so panes do not jump when data lands", async () => {
+    const { MatrixGridSkeleton } = await import("@/components/matrix-simplified/matrix-grid-skeleton");
+    render(<MatrixGridSkeleton />);
+    const skeleton = screen.getByTestId("matrix-grid-skeleton");
+    expect(skeleton.className).toContain("flex-1");
+    expect(skeleton.className).toContain("min-h-0");
+  });
+});
