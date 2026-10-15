@@ -115,6 +115,15 @@ function overlayReducer(state: OverlayState, action: OverlayAction): OverlayStat
   }
 }
 
+/**
+ * The stage takes whatever height the shell has left and hands it to the grid.
+ * The -mx/px pair keeps pane focus rings and card shadows from being clipped by
+ * the scroll container, which only engages when the viewport is too short for
+ * the panes' 280px floor.
+ */
+const MATRIX_STAGE_CLASS =
+  "md:-mx-2 md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:px-2 md:pb-2";
+
 export function MatrixSimplified() {
   const { all, isLoading } = useTasks();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
@@ -324,15 +333,9 @@ export function MatrixSimplified() {
         title="GSD Matrix"
         titleAsLabel
         quietChromeOnScroll
+        fillViewport
         mainClassName="max-w-[1540px] pb-48 md:pb-6"
-        caption={
-          <MatrixCaption
-            active={total - completed}
-            completed={completed}
-            overdue={overdue}
-            mounted={mounted}
-          />
-        }
+        caption={<MatrixCaption active={total - completed} completed={completed} overdue={overdue} mounted={mounted} />}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
@@ -359,6 +362,7 @@ export function MatrixSimplified() {
             />
           </div>
         ) : null}
+        <div data-testid="matrix-stage" className={MATRIX_STAGE_CLASS}>
         {isLoading ? (
           <MatrixGridSkeleton />
         ) : isFiltered && matchCount === 0 ? (
@@ -388,6 +392,7 @@ export function MatrixSimplified() {
             onQuadrantRef={handleQuadrantRef}
           />
         )}
+        </div>
       </AppShell>
 
       <ShareTaskDialog

@@ -19,6 +19,16 @@ import { useShellCommandHandlers } from "@/lib/use-shell-command-handlers";
 import { useAppShortcuts } from "@/lib/use-app-shortcuts";
 import { cn } from "@/lib/utils";
 
+/**
+ * Classes that pin the shell to the viewport at md+ when `fillViewport` is set.
+ * main needs min-h-0! because globals.css sets `main { min-height: calc(100vh -
+ * 3.5rem) }` outside any layer, which outranks a layered utility and would push
+ * the footer below the fold.
+ */
+const MAIN_CLASS = "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6";
+const FILL_VIEWPORT_COLUMN = "md:h-dvh md:overflow-hidden";
+const FILL_VIEWPORT_MAIN = "md:flex md:min-h-0! md:flex-col md:overflow-hidden";
+
 function openCommandPalette() {
   window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
 }
@@ -35,6 +45,13 @@ interface AppShellProps {
   mainClassName?: string;
   /** Tuck the topbar away on scroll-down at compact widths. The matrix opts in. */
   quietChromeOnScroll?: boolean;
+  /**
+   * Pin the shell to the viewport at md+ and hand the remaining height to the
+   * page as a flex column, so a child can scroll internally instead of the
+   * page. The matrix opts in; every other route keeps page scroll. Compact
+   * widths are untouched either way.
+   */
+  fillViewport?: boolean;
   children: ReactNode;
 }
 
@@ -48,6 +65,7 @@ export function AppShell({
   topbarRightSlot,
   mainClassName,
   quietChromeOnScroll = false,
+  fillViewport = false,
   children,
 }: AppShellProps) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -105,7 +123,7 @@ export function AppShell({
         Skip to main content
       </a>
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
-      <div className="flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div className={cn("flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0", fillViewport && FILL_VIEWPORT_COLUMN)}>
         <SimplifiedTopbar
           title={title} titleAsLabel={titleAsLabel} caption={caption}
           searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}
@@ -141,10 +159,7 @@ export function AppShell({
         <main
           id="main-content"
           tabIndex={-1}
-          className={cn(
-            "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6",
-            mainClassName
-          )}
+          className={cn(MAIN_CLASS, fillViewport && FILL_VIEWPORT_MAIN, mainClassName)}
         >
           {children}
         </main>

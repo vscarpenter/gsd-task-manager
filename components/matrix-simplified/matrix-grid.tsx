@@ -49,11 +49,23 @@ export function MatrixGrid({
     // columns on a wide desktop, and a 3+1 arrangement destroys the argument
     // exactly as thoroughly as a 1x4 stack: the matrix means Q1/Q2 over Q3/Q4
     // or it means nothing. 696px is two 340px panes plus the 16px gutter.
-    <div className="@container">
+    // The whole stack is a column of flex-1/min-h-0 so that, when the shell
+    // pins the matrix to the viewport, the height reaches the panes and each
+    // one scrolls its own list. Where nothing pins it (compact widths), these
+    // are inert and the page scrolls as before.
+    <div className="@container flex min-h-0 flex-1 flex-col">
       <AxisFrame>
         <div
           data-testid="matrix-grid"
-          className="grid gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-2"
+          // minmax(280px,1fr) rather than plain 1fr: 1fr carries an implicit
+          // min-content floor, which is exactly the "tallest pane sets the row"
+          // behavior that pushed the other quadrants off screen. The 280px is
+          // the pane floor: below it a pane shows one card and stops being a
+          // quadrant, so the grid grows past its cell and the stage scrolls.
+          // The floor has to live on the track, not only on the pane: a pane
+          // with min-height inside a smaller minmax(0,1fr) track overflows its
+          // cell and paints over the row below.
+          className="grid min-h-0 gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]"
         >
         {quadrants.map((meta) => (
           <QuadrantPane
@@ -93,7 +105,7 @@ function AxisFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-testid="matrix-axis-frame"
-      className="@min-[696px]:grid @min-[696px]:grid-cols-[22px_minmax(0,1fr)] @min-[696px]:gap-x-1.5"
+      className="min-h-0 flex-1 @min-[696px]:grid @min-[696px]:grid-cols-[22px_minmax(0,1fr)] @min-[696px]:grid-rows-[auto_minmax(0,1fr)] @min-[696px]:gap-x-1.5"
     >
       <div data-testid="matrix-axis-corner" aria-hidden="true" className="hidden @min-[696px]:block" />
 
