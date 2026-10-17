@@ -1,25 +1,23 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { EXPORT_JOURNEYS } from "../e2e/export-journeys";
+
+// Importing the config would load @playwright/test, which never resolves under
+// Vitest, so these guards read the file the way the other workflow guards do.
+const EXPORT_CONFIG = readFileSync("playwright.export.config.ts", "utf8");
 
 describe("production export journeys", () => {
-  // Playwright skips a testMatch entry that matches nothing, so a renamed spec
-  // would shrink the production run without failing it.
-  it("should_list_only_spec_files_that_exist", () => {
-    for (const spec of EXPORT_JOURNEYS) {
-      expect(existsSync(join("tests/e2e", spec)), spec).toBe(true);
-    }
+  // CI runs Playwright only against the built export, so a narrowed match
+  // would silently drop specs from every browser leg.
+  it("should_run_every_e2e_spec_against_the_production_export", () => {
+    expect(EXPORT_CONFIG).toContain('testDir: "./tests/e2e"');
+    expect(EXPORT_CONFIG).not.toMatch(/\btest(?:Match|Ignore)\s*:/);
+    expect(existsSync("tests/e2e/export-journeys.ts")).toBe(false);
   });
 
-  it("should_cover_crud_drag_import_export_and_first_visit", () => {
-    expect([...EXPORT_JOURNEYS].sort()).toEqual([
-      "data-management.spec.ts",
-      "drag-and-drop.spec.ts",
-      "first-time-redirect.spec.ts",
-      "settings-navigation.spec.ts",
-      "task-crud.spec.ts",
-    ]);
+  // A static server has no on-demand compile to contend for, and GitHub's
+  // public runners have four cores.
+  it("should_use_two_workers_for_the_export_suite_on_ci", () => {
+    expect(EXPORT_CONFIG).toContain("workers: process.env.CI ? 2 : undefined");
   });
 
   it("should_run_the_export_journeys_after_the_production_build_in_ci", () => {

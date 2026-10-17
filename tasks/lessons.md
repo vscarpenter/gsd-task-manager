@@ -374,3 +374,25 @@ Fix pattern: wait for the title to be focused before touching other fields
 - **The code-shape debt ledger only goes down.** When a PR adds exceptions, fix
   the new ones until counts match `code-shape-debt.json`, then regenerate the
   per-file maxima with `node scripts/check-code-shape.cjs --print-baseline`.
+
+## 2026-10-17: full e2e suite on the production export
+
+- **Make the export server send what S3 sends.** A static export's router accepts an
+  RSC payload (`__next.*.txt`) only as `text/plain`. The local server sent
+  `application/octet-stream`, so every client navigation in the suite became a full
+  page load that users never get. A test that only checks the URL can't see this. Check
+  a new route type's `Content-Type` against `curl -sI https://gsd.vinny.dev/...`.
+- **A full page load hides under `toHaveURL`.** The URL commits before the new page
+  hydrates, so a keypress right after it lands on a page with no listeners yet. To tell
+  a client navigation from a reload, set a marker on `window` before it and read it
+  after: a reload wipes it.
+- **Playwright mangles WebKit page errors that contain a URL.** It splits the text at
+  the first colon, which falls inside `http://`, so `error.name` and `error.message`
+  each hold a fragment. Match the first line of `error.stack`, and test a fingerprint
+  against the value the code reads, not against what the log printed.
+- **Production prefetches; the dev server doesn't.** A hard `page.goto` cancels the
+  outgoing page's prefetches, and WebKit reports each as an uncaught "access control
+  checks" fetch error. Only the export suite can see this.
+- **Neither a Playwright config nor `@playwright/test` loads inside Vitest.** The import
+  never resolves, and a `node` environment pragma fails because `vitest.setup.ts`
+  writes to `window`. Guard Playwright and workflow files by reading their text.

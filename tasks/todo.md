@@ -1,4 +1,36 @@
-# Session state, 2026-10-13: auto-archive waits for a pull when sync is on (`fix/auto-archive-after-pull`)
+# Session state, 2026-10-17: full e2e suite on the production export in CI (`ci/e2e-on-export`)
+
+## Resuming From Here
+
+CI wall time was 9 to 13 minutes, set by three e2e legs that ran 118 tests at 1 worker on
+`next dev --webpack` and then reran 29 of them on the export. Vinny chose to run every spec
+on the export with 2 workers and drop the dev-server pass from CI. Spec: the 2026-10-17
+section at the end of `tasks/spec.md`.
+
+- [x] Red, then green, one cycle each: AC1 (no `testMatch` in `playwright.export.config.ts`,
+      `tests/e2e/export-journeys.ts` deleted), AC2 (`workers: process.env.CI ? 2`), AC3 (no
+      `bun run test:e2e --` in `ci.yml`). AC6 guards the required job names. All 8 workflow
+      guard files pass (75 tests).
+- [x] AC7: the first full run on the export found three harness problems, none in the app.
+      The export server sent `__next.*.txt` RSC payloads as `application/octet-stream`, so
+      every client navigation became a full page load (fixed: `.txt` is `text/plain`, as on
+      S3). `production-hybrid.spec.ts` pressed Alt+N before `/dashboard` committed (fixed: a
+      URL wait). WebKit reports a prefetch that a test's `page.goto` cancels as an uncaught
+      error (fixed: a narrow fixture fingerprint, matched on the stack's first line). Details
+      in the spec's same-day amendment.
+- [x] Verified: both fixed specs 225 of 225 with no retries; the full suite passes in
+      Chromium (118, 42 s), Firefox (117 + 1 skip, 53 s), and WebKit (117 + 1 skip, 55 s)
+      with no flakes, locally with 2 workers. Gates: 3,511 unit tests with coverage,
+      typecheck, lint, knip, and code shape 126 all clean. `CLAUDE.md:89` updated.
+- [ ] Push and open the PR (needs Vinny's go-ahead), then check AC8 against the CI baseline:
+      no e2e leg over 6 minutes, and wall time under 9 minutes.
+
+Open for Vinny: the WebKit fingerprint relaxes the shared fixture narrowly. The default
+taken is to keep it (it matches the Firefox aborted-font precedent).
+
+Not in this branch: Vinny's uncommitted `package.json` and `bun.lock` (Playwright 1.64.1 and
+Stagehand 4.2.1 bumps) ride along unstaged. No version bump; releases are separate PRs.
+
 
 ## Resuming From Here
 

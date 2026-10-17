@@ -44,7 +44,7 @@ The image has Node 22, Bun, the locked dependencies, and Playwright's Chromium, 
 - `bun run --cwd packages/mcp-server test` runs the MCP server tests. Because the image sets `POCKETBASE_BIN`, that run includes the system tests too.
 - The binaries live under `/tmp`, as they do in CI. PocketBase treats a binary under the temp folder as a development run and logs its SQL, and the upgrade test asserts on that log. Copy a binary elsewhere and that one assertion fails.
 - `bun run test:e2e -- --project=chromium` runs Playwright against the dev server. Offline, the dev server logs a failed fetch from `fonts.googleapis.com`. That's expected, and the tests still pass.
-- `bun run test:e2e:export -- --project=chromium` runs the critical journeys against the built `out/` under the production CSP. `bun run test:csp` boots the export under that same CSP.
+- `bun run test:e2e:export -- --project=chromium` runs every spec against the built `out/` under the production CSP, as CI does. `bun run test:csp` boots the export under that same CSP.
 - Don't use `bun run test:system:pocketbase` or `bun audit` offline. The first downloads PocketBase before testing, and the second queries npm.
 - Playwright sizes its worker pool from the CPU count Node reports, and inside a container that count can exceed the two CPUs a scan gets. Pass `--workers=1` if browser tests time out.
 

@@ -12,8 +12,15 @@ import { test as base } from "@playwright/test";
 // in current builds and `stretch:100` in older ones; the pattern accepts both.
 const FIREFOX_ABORTED_LOCAL_FONT = /^\[JavaScript Error: "downloadable font: download failed \(font-family: "[^"]+" style:[^ ]+ weight:[^ ]+ (?:stretch|width):100 src index:0\): status=2152398850 source: http:\/\/(?:localhost:3000|127\.0\.0\.1:3100)\/(?:_next\/static\/media\/[a-z0-9._-]+|__nextjs_font\/[a-z0-9._-]+)\.woff2"\]$/;
 
+// WebKit reports a route prefetch that a test's page.goto cancels as an uncaught
+// "access control checks" fetch error. Only production builds prefetch, so this
+// appears only on the static export server, and only for the router's
+// `__next.*.txt` payloads; the new page fetches the same files again. Any other
+// failed fetch, origin, or file still fails the test.
+const WEBKIT_ABORTED_LOCAL_PREFETCH = /^Fetch API cannot load http:\/\/127\.0\.0\.1:3100\/(?:[a-z0-9-]+\/)*__next\.[^/?\s]+\.txt\?_rsc=[A-Za-z0-9_-]+ due to access control checks\.$/;
+
 function isExpectedBrowserDiagnostic(message: string): boolean {
-  return FIREFOX_ABORTED_LOCAL_FONT.test(message);
+  return FIREFOX_ABORTED_LOCAL_FONT.test(message) || WEBKIT_ABORTED_LOCAL_PREFETCH.test(message);
 }
 
 /**
@@ -43,6 +50,10 @@ export const test = base.extend<TestFixtures>({
     async ({ page, expectedConsoleErrors }, runTest, testInfo) => {
       const runtimeErrors: string[] = [];
       const onPageError = (error: Error) => {
+        // Playwright splits WebKit's error text at its first colon, which here
+        // falls inside the URL, so only the stack's first line holds it whole.
+        const firstLine = (error.stack ?? error.message).split("\n")[0];
+        if (isExpectedBrowserDiagnostic(firstLine)) return;
         runtimeErrors.push(`pageerror: ${error.stack ?? error.message}`);
       };
       const onConsole = (message: import("@playwright/test").ConsoleMessage) => {

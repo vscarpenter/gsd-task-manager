@@ -153,10 +153,6 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Install ${{ matrix.browser }}
         run: bunx playwright install --with-deps ${{ matrix.browser }}
-      - name: Run ${{ matrix.browser }} end-to-end tests
-        run: bun run test:e2e -- --project=${{ matrix.browser }} --reporter=line,html
-        env:
-          CI: true
       - name: Build production export
         run: bun run build
       - name: Verify production PWA lifecycle in ${{ matrix.browser }}
@@ -164,7 +160,7 @@ jobs:
       - name: Boot production export under strict CSP
         if: matrix.browser == 'chromium'
         run: bun run test:csp
-      - name: Run critical journeys against the production export in ${{ matrix.browser }}
+      - name: Run end-to-end tests against the production export in ${{ matrix.browser }}
         run: bun run test:e2e:export -- --project=${{ matrix.browser }}
         env:
           CI: true
