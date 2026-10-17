@@ -13,8 +13,8 @@ bun run test:e2e:debug    # headed, stepping through with the inspector
 ```
 
 The dev server starts automatically via the `webServer` block in `playwright.config.ts`.
-If you already have `bun dev` running, Playwright reuses it locally; in CI it always
-spawns a fresh one.
+If you already have `bun dev` running, Playwright reuses it. CI doesn't use this
+config; see [CI behaviour](#ci-behaviour).
 
 Target a single file, project, or test:
 
@@ -118,9 +118,18 @@ removal" and would be reopened if the underlying features are resurrected.
 
 ## CI behaviour
 
-- `forbidOnly: true` — `.only` calls fail the build.
-- `retries: 2` — flaky tests retry; first failure produces trace, screenshot, and
-  video in `test-results/`.
-- `workers: 1` — serial execution in CI for log readability.
+CI runs every spec against the production static export. Each browser leg runs
+`bun run build`, then `bun run test:e2e:export -- --project=<browser>`, which serves
+`out/` on port 3100 under the production CSP (`playwright.export.config.ts`). Run the
+same two commands to reproduce a CI failure locally.
 
-Locally, retries are disabled and workers run in parallel.
+- `forbidOnly: true`: `.only` calls fail the build.
+- `retries: 2`: flaky tests retry, and the first failure saves a trace, screenshot,
+  and video in `test-results/`.
+- `workers: 2`: each browser leg runs two specs at a time.
+
+Locally, retries are disabled and workers size to your CPU count.
+
+React's dev-only warnings, such as duplicate keys, invalid DOM nesting, and StrictMode
+double effects, appear only on the dev server, so CI no longer fails on them. Run
+`bun run test:e2e -- --project=chromium` before shipping UI work to see them.
