@@ -1307,3 +1307,176 @@ under a permissive dev-only CSP meta tag.
 - `should_run_the_export_journeys_after_the_production_build_in_ci` (AC8)
 
 AC9 and AC10 are verified by running the scripts, locally and in CI.
+
+---
+
+# Spec: Run the full Playwright suite on the production export in CI (2026-10-17)
+
+Tier: non-trivial (CI infrastructure, guard tests). Branch: `ci/e2e-on-export`.
+Design approved by Vinny on 2026-10-17 in chat: run every spec against the
+export with 2 workers on CI, and drop the dev-server pass from CI.
+
+## Goal
+
+Cut CI wall time from 9 to 13 minutes to about 5 to 6 by running every
+Playwright spec against the built static export with two workers, so each
+journey also tests what ships under the production CSP.
+
+## Background (measured on `4c7ec53`, last 8 CI runs)
+
+- Wall time is set by the three e2e legs: WebKit 9 to 13 min, Chromium 7 to 9,
+  Firefox 6.5 to 10. The unit `test` job is next at 4.3 to 5.7 min.
+- Each leg runs 118 tests at 1 worker on `next dev --webpack` (5.9 min Chromium,
+  7.0 min WebKit), then builds the export and reruns 29 of the same journeys on
+  it (34 s Chromium, 60 s WebKit).
+- Per-test cost is 3.0 s on the dev server and 1.2 s on the export in Chromium,
+  and 3.6 s against 2.0 s in WebKit.
+- `workers: process.env.CI ? 1 : undefined` dates from the scaffold in #269. It
+  is Playwright's generated default, not a flake fix. Both configs already set
+  `fullyParallel: true`.
+- No retries or flaky results appear in the logs.
+- PR #554 (E2E-1) deferred "running all 117 journeys against the export". This
+  spec does that.
+
+## Inputs / Outputs
+
+No task data, schema, or Zod type changes. `lib/schema.ts` is untouched.
+
+- Input: the built `out/` directory, served by `scripts/lib/static-export-server.cjs`
+  on `127.0.0.1:3100` under the production CSP.
+- Output: one Playwright run per browser leg covering every `*.spec.ts` in
+  `tests/e2e/`, with an HTML report under `playwright-report/export`, uploaded
+  as today by the `Upload Playwright report` step.
+
+## Design
+
+- `playwright.export.config.ts`: drop `testMatch` and the `EXPORT_JOURNEYS`
+  import, so Playwright's default match picks up every spec in `tests/e2e/`.
+  Set `workers: process.env.CI ? 2 : undefined`.
+- Delete `tests/e2e/export-journeys.ts`; its only job was to narrow the export run.
+- `.github/workflows/ci.yml` e2e job: remove the `Run ${{ matrix.browser }}
+  end-to-end tests` step. The leg keeps: install the browser, build, PWA
+  lifecycle, CSP smoke (Chromium), export suite, upload report.
+- `playwright.config.ts` and `dev:e2e` stay as they are for local iteration.
+- Docs: update the `test:e2e:export` line in `CLAUDE.md`.
+
+## Constraints
+
+- The required checks (`lint`, `typecheck`, `test`, `build`, `audit`) keep their
+  job names. The e2e matrix stays advisory, as today.
+- The CI matrix stays `[chromium, firefox, webkit]`, and the existing workflow
+  guards keep passing (`playwright install --with-deps ${{ matrix.browser }}`,
+  `--project=${{ matrix.browser }}`, the Chromium-only CSP smoke).
+- Actions stay pinned by SHA on `ubuntu-24.04`. No new action, dependency, or
+  workflow file.
+- Privacy and sync: tests keep running against local servers only. Fixtures
+  still delete `navigator.serviceWorker`, and `test:pwa` still covers the worker.
+- Size limits from `coding-standards.md` Part 3 hold. Every touched file stays
+  under 400 lines, and no function grows.
+- Bundle impact: none. No application code changes.
+- No version bump. This change ships nothing to users, and releases go out as
+  separate `chore(release)` PRs.
+
+## Edge Cases
+
+- A spec that passes on the dev server fails on the export. If the export
+  exposes a real CSP or bundling defect, stop and record it before deciding
+  anything. Don't exclude the spec from the run to get green.
+- Sync specs that mock PocketBase with `page.route`: the production CSP's
+  `connect-src` decides whether the request leaves the page. A blocked request
+  never reaches the route handler.
+- Two workers sharing one static server: each test gets its own browser context,
+  so IndexedDB is isolated per test. The `clearIndexedDB` fixture still runs.
+- First visit: the root redirects to `/about` without the launch flag, as on
+  the dev server. `first-time-redirect.spec.ts` already passes on the export.
+- Offline and service worker: out of these journeys by design; `test:pwa`
+  covers install and update per browser.
+- The Chromium-only clipboard skip in `sync-auth-token.spec.ts` keeps working,
+  because it keys off `browserName`.
+- A renamed or added spec: with no `testMatch` list, every spec runs, so there
+  is no list to drift. The old guard against a stale list goes with the list.
+- Dependencies, conflicts, and schema migrations: no data path changes. The
+  dependency and recurring-task specs simply run on the export too.
+
+## Out of Scope
+
+- Folding SonarCloud into CI, or removing its second unit-suite run.
+- Splitting the unit suite by environment, or changing its Vitest pool.
+- Skipping e2e on docs-only PRs.
+- Sharding, a shared `out/` artifact across jobs, and the Playwright container image.
+- Changing the dev config's worker count, `dev:e2e`, or the route warm-up.
+- The `pocketbase-system` job.
+
+## Acceptance Criteria
+
+- AC1: The export config runs every `*.spec.ts` in `tests/e2e/`, with no list
+  narrowing it, and `tests/e2e/export-journeys.ts` no longer exists.
+- AC2: The export config uses 2 workers when `CI` is set.
+- AC3: `ci.yml` no longer runs the dev-server suite (`bun run test:e2e --`
+  without `:export`).
+- AC4: `ci.yml` still runs the export suite per browser, after the production
+  build.
+- AC5: The dev config still starts `bun run dev:e2e` with the route warm-up,
+  for local runs.
+- AC6: The required check jobs `typecheck`, `lint`, `test`, and `build` keep
+  their names in `ci.yml`.
+- AC7: `CI=1 bun run test:e2e:export` passes every spec in Chromium, Firefox,
+  and WebKit against a fresh `bun run build`.
+- AC8: On the PR's CI run, no e2e leg takes longer than 6 minutes, and the
+  run's wall time is under 9 minutes, the fastest of the last 8 runs.
+
+## Test Stubs
+
+`tests/data/export-journeys.test.ts`:
+
+- `should_run_every_e2e_spec_against_the_production_export` (AC1)
+- `should_use_two_workers_for_the_export_suite_on_ci` (AC2)
+- `should_run_the_export_journeys_after_the_production_build_in_ci` (AC4, kept)
+
+`tests/data/e2e-quality-gates.test.ts`:
+
+- `should_not_run_the_dev_server_suite_in_ci` (AC3)
+- `runs E2E against webpack rather than the observed Turbopack chunk race` (AC5, kept)
+- `warms every application route before parallel browser workers start` (AC5, kept)
+- `should_keep_the_required_check_job_names` (AC6)
+
+AC7 is verified by running the suite locally in all three browsers. AC8 is
+verified by the PR's CI run timings, compared with the 2026-10-17 baseline above.
+
+## Amendment, same day: what the first full run on the export found
+
+The first `CI=1` run of all 118 specs on the export had one hard failure (Firefox) and two
+flakes (WebKit). Neither was an app defect. Root causes, each confirmed by experiment:
+
+- **The export server served RSC payloads with the wrong type.** It had no `.txt` entry, so
+  `__next.*.txt` route payloads went out as `application/octet-stream`. A static export's
+  router accepts a payload only as `text/plain`, which is what S3 sends in production, so
+  every client navigation in the suite became a full page load. An instrumented run proved
+  the window was replaced on "Review". With `.txt` mapped, the same test passed 24 of 24.
+  Fix: `".txt": "text/plain; charset=utf-8"` in `scripts/lib/static-export-server.cjs`.
+- **`production-hybrid.spec.ts` pressed Alt+N mid-navigation.** It waits for `/dashboard`
+  before Alt+2 but not before Alt+N, and Alt+N decides by the current path. The full page
+  loads above had hidden this. Fix: the same URL wait before Alt+N (36 of 36 after).
+- **WebKit reports a cancelled production prefetch as an uncaught error.** Only production
+  builds prefetch. When the first-visit test hard-navigates with `page.goto("/")`, the
+  outgoing page's `/settings` prefetch is cancelled 5 to 22 ms later, and WebKit raises
+  "Fetch API cannot load ... due to access control checks". The new page fetches the same
+  files again. Fix: a narrow fingerprint in `tests/e2e/fixtures/test-fixtures.ts`, next to
+  the Firefox aborted-font one: the export origin only, `__next.*.txt?_rsc=` payloads only,
+  that exact message only. Page errors now consult the same check, on the first line of
+  the error's stack. The first version matched `error.message` and never fired (3 of 15
+  still failed): Playwright splits WebKit's error text at its first colon, which falls
+  inside the URL, so `name` and `message` both hold fragments. After the fix, 50 of 50.
+
+Two red-phase dead ends: a `node` environment pragma fails because `vitest.setup.ts` writes
+to `window`, and importing a Playwright config inside Vitest never resolves. The guards read
+files as text instead, like the repo's other workflow guards.
+
+No acceptance criterion changed. Added test stubs:
+
+- `tests/data/static-export-server.test.ts`: `should_serve_rsc_payloads_as_text_plain_like_production` (AC7)
+- `tests/data/e2e-quality-gates.test.ts`: `should_tolerate_only_webkits_cancelled_rsc_prefetch_on_the_export_server` (AC7)
+
+Open for Vinny: the WebKit fingerprint relaxes the shared fixture, narrowly. The default
+taken is to add it, matching the Firefox precedent. The alternative is to leave the
+first-visit test as a known WebKit flake that CI's retries absorb.
