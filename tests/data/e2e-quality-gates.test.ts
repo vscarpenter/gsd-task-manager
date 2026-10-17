@@ -32,6 +32,20 @@ describe("Playwright quality gates", () => {
     expect(fixture).toMatch(/runtimeErrors\.length/);
   });
 
+  // Only production builds prefetch routes, so only the export server sees
+  // WebKit report a prefetch that a test's own page.goto cancelled.
+  it("should_tolerate_only_webkits_cancelled_rsc_prefetch_on_the_export_server", () => {
+    const fixture = readFileSync("tests/e2e/fixtures/test-fixtures.ts", "utf8");
+
+    expect(fixture).toContain(
+      "^Fetch API cannot load http:\\/\\/127\\.0\\.0\\.1:3100\\/(?:[a-z0-9-]+\\/)*__next\\.[^/?\\s]+\\.txt\\?_rsc=[A-Za-z0-9_-]+ due to access control checks\\.$"
+    );
+    // Playwright splits WebKit's text at the first colon, which sits inside the
+    // URL, so only the stack's first line still holds the whole message.
+    expect(fixture).toContain('(error.stack ?? error.message).split("\\n")[0]');
+    expect(fixture).toMatch(/onPageError[^}]*isExpectedBrowserDiagnostic\(firstLine\)/);
+  });
+
   it("runs E2E against webpack rather than the observed Turbopack chunk race", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     const playwrightConfig = readFileSync("playwright.config.ts", "utf8");
@@ -74,5 +88,22 @@ describe("Playwright quality gates", () => {
     expect(workflow).toContain("playwright install --with-deps ${{ matrix.browser }}");
     expect(workflow).toContain("--project=${{ matrix.browser }}");
     expect(workflow).not.toContain("e2e-chromium:");
+  });
+
+  // Every spec runs against the production export instead; the dev config stays
+  // for local iteration.
+  it("should_not_run_the_dev_server_suite_in_ci", () => {
+    const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+
+    expect(workflow).not.toMatch(/bun run test:e2e(?!:)/);
+  });
+
+  // The main-protection ruleset requires these checks by job name.
+  it("should_keep_the_required_check_job_names", () => {
+    const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+
+    for (const job of ["typecheck", "lint", "test", "build"]) {
+      expect(workflow, job).toMatch(new RegExp(`^  ${job}:$`, "m"));
+    }
   });
 });

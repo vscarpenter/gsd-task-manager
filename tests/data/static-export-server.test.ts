@@ -22,6 +22,7 @@ describe("static export server", () => {
     writeFileSync(join(outputRoot, "index.html"), "<html>shell</html>");
     writeFileSync(join(outputRoot, "index.md"), "# shell");
     writeFileSync(join(outputRoot, "about/index.html"), "<html>about</html>");
+    writeFileSync(join(outputRoot, "about/__next._tree.txt"), "0:{}");
     writeFileSync(join(outputRoot, DOTTED_CHUNK), "export {};");
   });
 
@@ -72,6 +73,23 @@ describe("static export server", () => {
     } finally {
       await new Promise((resolveClose) => withCsp.server.close(resolveClose));
       await new Promise((resolveClose) => withoutCsp.server.close(resolveClose));
+    }
+  });
+
+  // A static export's router accepts an RSC payload only as text/plain, which
+  // is what S3 sends. Any other type turns every client navigation into a
+  // full page load, so the e2e suite would test navigation users never get.
+  it("should_serve_rsc_payloads_as_text_plain_like_production", async () => {
+    const exportServer = await startStaticExportServer({ outputRoot, port: 0 });
+
+    try {
+      const payload = await fetch(`${exportServer.rootUrl}/about/__next._tree.txt?_rsc=abc`);
+
+      expect(payload.status).toBe(200);
+      expect(await payload.text()).toBe("0:{}");
+      expect(payload.headers.get("content-type")).toMatch(/^text\/plain\b/);
+    } finally {
+      await new Promise((resolveClose) => exportServer.server.close(resolveClose));
     }
   });
 

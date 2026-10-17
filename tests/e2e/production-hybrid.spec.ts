@@ -63,6 +63,9 @@ test.describe("Refined Evolution production hybrid", () => {
     await expect(page).toHaveURL(/\/$/);
 
     await page.getByRole("button", { name: "Review" }).first().click();
+    // Alt+N decides by the current path. Pressed before /dashboard commits, it
+    // focuses the outgoing matrix's capture bar instead of crossing routes.
+    await expect(page).toHaveURL(/\/dashboard\/?$/);
     await page.keyboard.press("Alt+n");
     await expect(page.getByTestId("capture-input")).toBeFocused();
     await expect(page).toHaveURL(/\/$/);

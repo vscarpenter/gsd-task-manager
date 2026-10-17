@@ -1,19 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
-import { EXPORT_JOURNEYS } from "./tests/e2e/export-journeys";
 
-// Runs the critical journeys against the built `out/` directory, served under
-// the production CSP. Build first with `bun run build`. This is a separate
-// config because the dev server and the build both delete `.next` and `out`,
-// so one Playwright run cannot host both.
+// Runs every spec against the built `out/` directory, served under the
+// production CSP. This is the suite CI runs; build first with `bun run build`.
+// It is a separate config because the dev server and the build both delete
+// `.next` and `out`, so one Playwright run cannot host both.
 const EXPORT_ORIGIN = "http://127.0.0.1:3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: EXPORT_JOURNEYS.map((spec) => `**/${spec}`),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   reporter: [["line"], ["html", { outputFolder: "playwright-report/export", open: "never" }]],
   timeout: 30 * 1000,
   use: {
