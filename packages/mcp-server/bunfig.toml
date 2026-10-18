@@ -1,0 +1,4 @@
+# `bun test` starts Bun's built-in runner, which ignores vitest.config.ts.
+# This preload stops it and points at `bun run test` instead.
+[test]
+preload = ["../../scripts/bun-test-guard.cjs"]
