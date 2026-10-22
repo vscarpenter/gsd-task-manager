@@ -1,3 +1,34 @@
+# Session state, 2026-10-22: /impeccable harden on branch `fix/audit-harden`
+
+## Resuming From Here
+
+Standard tier. Nine commits on `fix/audit-harden`, not pushed; the owner decides on push and PR.
+
+- [x] Palette: only the selected row is filled, and it carries a 1px tide ring (5.13:1 light, 6.99:1 dark against the fill). `a673472`, `961150a`.
+- [x] Settings: Show completed, Auto-sync and Auto-archive switches are named; every `Switch` answers a 44px tap on coarse pointers without growing. `a3186c1`.
+- [x] Settings selects get their focus ring back (audit correction, WCAG 2.4.7). `c687010`.
+- [x] About `<pre>`: focusable, named scroll region with an inset terminal-ink ring. `3ff4fda`.
+- [x] Swipe: `pointercancel` and the row's own lost capture abort to the pre-gesture offset and never commit. `432ff3a`, then `43c1698` after real touch showed every swipe aborting on implicit capture.
+- [x] Edit drawer: `role="dialog"` moved off the `<form>`, header and footer are no longer page landmarks, and Keep editing returns focus to the field in use. Archive list gained a hidden `<h2>`. `0d6c439`, `bac275d`.
+- [x] Verified: `bun run test` 3,539 passed; typecheck and lint clean; rendered axe on a fresh build across 32 states shows every targeted rule at zero (only the two contrast findings routed to polish remain); real-touch swipe e2e fails with the bug and passes with the fix.
+
+Not done, by decision: no version bump (fix PRs leave it to the release PR). Window `blur` is not handled; touch interruptions arrive as `pointercancel`.
+
+Known, pre-existing: `production-hybrid.spec.ts` "delivers cross-route capture" fails on the dev server on unmodified main too. Four other e2e failures in a full run were dev-server load flakiness and pass in isolation.
+
+Next: owner says whether to push and open the PR. Then `/impeccable polish` for the editor sub-label and About card contrast, and `/impeccable typeset` for the type ramp. Release work in parallel: PR #615 (gsd-mcp-server 1.3.1) is green and waits for the owner to merge, then the `mcp-v1.3.1` tag and the publish gate approval.
+
+# Session state, 2026-10-22: Impeccable technical audit (read-only, no code changed)
+
+## Resuming From Here
+
+- Ran `/impeccable audit` on the web app at `d81a522` (v13.9.6) against the built export: source detector, CDP-rendered detector, axe 4.10 WCAG 2.2 AA across 6 routes x light/dark x 1280/390 plus editor, palette, onboarding and help drawer; Tab-order focus probe; real CDP touch on swipe rows. Score 14/20 (Good). No P0.
+- P1, fix first: palette selection invisible (`data-[selected]:` matches `data-selected="false"`, `components/command-palette/command-item.tsx:24`, `task-item.tsx:39`); three switches with no name (`SettingsRow` label is a bare `<p>`, `components/settings/shared-components.tsx:21`); switch off-state boundary 1.5:1 (`components/ui/switch.tsx` uses `border-border`, not the control-border token); editor quadrant sub-labels 3.49 to 4.14:1 (`edit-drawer-fields.tsx:77`); About quadrant cards muted text 4.03 to 4.16:1 (`components/about/matrix-section.tsx:70`).
+- P2: a `touchcancel` past the full-swipe threshold completes the task (`components/task-card/use-swipe-gesture.ts:171` routes cancel to `pointerEnd`); px-only type ramp ignores the browser font-size preference (`app/css/inkwell-tokens.css:98-105`); 61 arbitrary `text-[Npx]` sizes, 17 distinct, 11 fractional, some at 9 and 10px; About `<pre>` not keyboard-scrollable (`components/about/terminal-block.tsx:65`).
+- Verified false positives: detector `cream-palette` and `nested-cards` (both pinned by DESIGN.md), `outline-none` matches (global unlayered `*:focus-visible` wins), dashboard 1x1 radios (labels 81 to 89 x 56px).
+- Not tested: WebKit or a physical device for touch, touch drag between quadrants, reset/delete/import/share/sync dialogs, a real screen reader.
+- Next: owner picks which `/impeccable` follow-ups to run (harden, polish, typeset, distill). Nothing is staged; this block rides the next branch.
+
 # Session state, 2026-10-22: include all current dependency updates in PR #614
 
 ## Resuming From Here

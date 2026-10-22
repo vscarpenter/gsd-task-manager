@@ -115,6 +115,7 @@ export function SyncSettings({
 				state={autoSyncEnabled}
 			>
 				<Switch
+					aria-label="Auto-sync"
 					checked={autoSyncEnabled}
 					onCheckedChange={handleAutoSyncToggle}
 					disabled={isLoading}

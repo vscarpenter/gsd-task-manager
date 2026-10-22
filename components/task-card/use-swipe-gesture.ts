@@ -107,6 +107,32 @@ function pointerEnd(machine: SwipeMachine, event: SurfacePointerEvent): void {
   machine.settle(endSwipe(drag, event));
 }
 
+/**
+ * A cancel means the browser or OS took the pointer back (a call, an edge swipe,
+ * palm rejection), so the gesture never finished: put the row back where it
+ * rested before it and commit nothing. Losing capture mid-drag means the same.
+ * After a normal lift the drag is already cleared, so the late capture release
+ * that follows pointerup is a no-op.
+ */
+function pointerAbort(machine: SwipeMachine, event: SurfacePointerEvent): void {
+  const drag = machine.drag.current;
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  machine.drag.current = null;
+  if (drag.axis !== "horizontal") return;
+  machine.setDragging(false);
+  machine.setOffset(drag.base);
+}
+
+/**
+ * Only the surface losing its own capture interrupts the swipe. A touch pointer
+ * starts implicitly captured by the child under the finger, so claiming it
+ * makes that child fire lostpointercapture, which bubbles here as the swipe begins.
+ */
+function captureLost(machine: SwipeMachine, event: SurfacePointerEvent): void {
+  if (event.target !== event.currentTarget) return;
+  pointerAbort(machine, event);
+}
+
 /** While open, a tap anywhere on the card closes it instead of reaching the card's controls. */
 function clickCapture(machine: SwipeMachine, event: MouseEvent<HTMLElement>): void {
   if (machine.shown === 0) return;
@@ -120,6 +146,7 @@ export interface SwipeSurfaceProps {
   onPointerMove: (event: SurfacePointerEvent) => void;
   onPointerUp: (event: SurfacePointerEvent) => void;
   onPointerCancel: (event: SurfacePointerEvent) => void;
+  onLostPointerCapture: (event: SurfacePointerEvent) => void;
   onClickCapture: (event: MouseEvent<HTMLElement>) => void;
 }
 
@@ -168,7 +195,8 @@ export function useSwipeGesture(rowId: string, onCommitLeading: () => void): Swi
       onPointerDown: (event) => pointerDown(machine, event),
       onPointerMove: (event) => pointerMove(machine, event),
       onPointerUp: (event) => pointerEnd(machine, event),
-      onPointerCancel: (event) => pointerEnd(machine, event),
+      onPointerCancel: (event) => pointerAbort(machine, event),
+      onLostPointerCapture: (event) => captureLost(machine, event),
       onClickCapture: (event) => clickCapture(machine, event),
     },
   };

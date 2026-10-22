@@ -89,6 +89,7 @@ export function ArchiveSettings({
 				state={settings.enabled}
 			>
 				<Switch
+					aria-label="Auto-archive"
 					checked={settings.enabled}
 					onCheckedChange={handleToggleEnabled}
 				/>

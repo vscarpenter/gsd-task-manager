@@ -77,6 +77,14 @@ function drag(
   fireEvent.pointerUp(surface, { ...pointer, clientX: 100 + dx, clientY: 100 + dy });
 }
 
+/** Starts a touch drag and ends it with an interruption instead of a lift. */
+function interrupt(surface: HTMLElement, dx: number, end: "pointerCancel" | "lostPointerCapture") {
+  fireEvent.pointerDown(surface, { ...touch, clientX: 100, clientY: 100 });
+  fireEvent.pointerMove(surface, { ...touch, clientX: 100 + dx / 2, clientY: 100 });
+  fireEvent.pointerMove(surface, { ...touch, clientX: 100 + dx, clientY: 100 });
+  fireEvent[end](surface, { ...touch, clientX: 100 + dx, clientY: 100 });
+}
+
 describe("TaskCard swipe actions", () => {
   const originalRect = HTMLElement.prototype.getBoundingClientRect;
 
@@ -238,6 +246,84 @@ describe("TaskCard swipe actions", () => {
       window.removeEventListener("error", pageError);
       HTMLElement.prototype.setPointerCapture = original;
     }
+  });
+
+  describe("interrupted gestures", () => {
+    // An incoming call, a system edge swipe, or palm rejection cancels the
+    // pointer. That is an abort, never a release: nothing commits or opens.
+    it("never commits a full swipe the browser cancels", () => {
+      const props = renderCard(createMockTask({ title: "Cancelled" }));
+
+      interrupt(surfaceFor("Cancelled"), FULL_SWIPE, "pointerCancel");
+
+      expect(props.onToggleComplete).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("swipe-complete")).toBeNull();
+    });
+
+    it("returns a cancelled partial swipe to rest instead of opening it", () => {
+      renderCard(createMockTask({ title: "Partial" }));
+
+      interrupt(surfaceFor("Partial"), OPEN_LEADING, "pointerCancel");
+
+      expect(screen.queryByTestId("swipe-complete")).toBeNull();
+    });
+
+    it("leaves an already open row open when a later gesture is cancelled", () => {
+      renderCard(createMockTask({ title: "Was open" }));
+      const surface = surfaceFor("Was open");
+      drag(surface, touch, OPEN_TRAILING);
+
+      interrupt(surface, 40, "pointerCancel");
+
+      expect(screen.getByTestId("swipe-trailing")).toBeInTheDocument();
+    });
+
+    it("abandons the gesture when pointer capture is lost mid-drag", () => {
+      const props = renderCard(createMockTask({ title: "Capture lost" }));
+
+      interrupt(surfaceFor("Capture lost"), FULL_SWIPE, "lostPointerCapture");
+
+      expect(props.onToggleComplete).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("swipe-complete")).toBeNull();
+    });
+
+    it("ignores the capture a child loses when the row claims the pointer", () => {
+      // A touch pointer starts implicitly captured by the element under the
+      // finger. When the row takes capture, that child gets lostpointercapture,
+      // which bubbles here. That is the swipe starting, not an interruption.
+      renderCard(createMockTask({ title: "Implicit capture" }));
+      const child = within(surfaceFor("Implicit capture")).getByText("Implicit capture");
+
+      fireEvent.pointerDown(child, { ...touch, clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(child, { ...touch, clientX: 100 + OPEN_LEADING / 2, clientY: 100 });
+      fireEvent.lostPointerCapture(child, { ...touch });
+      fireEvent.pointerMove(child, { ...touch, clientX: 100 + OPEN_LEADING, clientY: 100 });
+      fireEvent.pointerUp(child, { ...touch, clientX: 100 + OPEN_LEADING, clientY: 100 });
+
+      expect(screen.getByTestId("swipe-complete")).toBeInTheDocument();
+    });
+
+    it("keeps a finished swipe when capture is released after the lift", () => {
+      // Browsers fire lostpointercapture right after pointerup, so the abort
+      // must not undo a gesture that already ended normally.
+      renderCard(createMockTask({ title: "Lifted" }));
+      const surface = surfaceFor("Lifted");
+
+      drag(surface, touch, OPEN_LEADING);
+      fireEvent.lostPointerCapture(surface, { ...touch, clientX: 100 + OPEN_LEADING, clientY: 100 });
+
+      expect(screen.getByTestId("swipe-complete")).toBeInTheDocument();
+    });
+
+    it("lets the next swipe work after a cancel", () => {
+      renderCard(createMockTask({ title: "Next swipe" }));
+      const surface = surfaceFor("Next swipe");
+
+      interrupt(surface, OPEN_LEADING, "pointerCancel");
+      drag(surface, touch, OPEN_LEADING);
+
+      expect(screen.getByTestId("swipe-complete")).toBeInTheDocument();
+    });
   });
 
   it("renders no swipe surface on the plain card", () => {

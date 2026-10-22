@@ -12,7 +12,11 @@ import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers"
  * state machine across all three engines; the mouse test uses a real mouse.
  */
 
-async function swipe(surface: Locator, dx: number): Promise<void> {
+async function swipe(
+  surface: Locator,
+  dx: number,
+  end: "pointerup" | "pointercancel" = "pointerup"
+): Promise<void> {
   const box = await surface.boundingBox();
   if (!box) throw new Error("swipe surface has no box");
   const y = box.y + box.height / 2;
@@ -21,11 +25,46 @@ async function swipe(surface: Locator, dx: number): Promise<void> {
   await surface.dispatchEvent("pointerdown", at(startX));
   await surface.dispatchEvent("pointermove", at(startX + dx / 2));
   await surface.dispatchEvent("pointermove", at(startX + dx));
-  await surface.dispatchEvent("pointerup", at(startX + dx));
+  await surface.dispatchEvent(end, at(startX + dx));
 }
 
 function swipeRow(page: Page, title: string): Locator {
   return page.getByTestId("task-card-swipe").filter({ hasText: title });
+}
+
+/**
+ * A real finger, through Chromium's touch injection. Synthetic pointer events
+ * skip implicit pointer capture, which is exactly where a real swipe once broke.
+ */
+async function realSwipe(
+  page: Page,
+  surface: Locator,
+  dx: number,
+  end: "touchEnd" | "touchCancel" = "touchEnd"
+): Promise<void> {
+  // A touch lands by coordinates, and the fixed mobile dock covers the bottom of
+  // the screen, so center the card and prove the finger actually lands on it.
+  // "instant" overrides the page's smooth scrolling, which would move the card
+  // after it was measured.
+  await surface.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
+  const box = await surface.boundingBox();
+  if (!box) throw new Error("swipe surface has no box");
+  const y = box.y + box.height / 2;
+  const startX = box.x + box.width / 2;
+  const lands = await surface.evaluate(
+    (el, point) => el.contains(document.elementFromPoint(point.x, point.y)),
+    { x: startX, y }
+  );
+  if (!lands) throw new Error("the touch point is covered, so the finger would miss the card");
+  const cdp = await page.context().newCDPSession(page);
+  const STEPS = 8;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: startX, y }] });
+  for (let step = 1; step <= STEPS; step++) {
+    const x = startX + (dx * step) / STEPS;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y }] });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: end, touchPoints: [] });
+  await cdp.detach();
 }
 
 test.describe("Touch swipe actions", () => {
@@ -45,6 +84,18 @@ test.describe("Touch swipe actions", () => {
 
       await expect(row).toBeHidden();
       await expect(page.getByText("Task completed")).toBeVisible();
+    });
+
+    test("a full swipe the browser cancels never completes the task", async ({ page }) => {
+      await waitForAppLoad(page);
+      await createTaskViaCaptureBar(page, "Interrupted swipe");
+      const row = swipeRow(page, "Interrupted swipe");
+
+      await swipe(row.getByTestId("task-card-swipe-surface"), 260, "pointercancel");
+
+      await expect(row).toBeVisible();
+      await expect(row.getByTestId("swipe-complete")).toHaveCount(0);
+      await expect(page.getByText("Task completed")).toHaveCount(0);
     });
 
     test("a short rightward swipe reveals Complete for a tap", async ({ page }) => {
@@ -99,6 +150,34 @@ test.describe("Touch swipe actions", () => {
       await expect(row.getByTestId("swipe-delete")).toBeVisible();
       await expect(row).toHaveCount(1);
       await expect(page.getByText("Task deleted")).toHaveCount(0);
+    });
+  });
+
+  test.describe("with real touch input", () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    test("a real swipe opens the row through implicit pointer capture", async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "only Chromium can inject real touch");
+      await waitForAppLoad(page);
+      await createTaskViaCaptureBar(page, "Real finger");
+      const row = swipeRow(page, "Real finger");
+
+      await realSwipe(page, row.getByTestId("task-card-swipe-surface"), -120);
+
+      await expect(row.getByTestId("swipe-trailing")).toBeVisible();
+    });
+
+    test("a real full swipe the system cancels completes nothing", async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "only Chromium can inject real touch");
+      await waitForAppLoad(page);
+      await createTaskViaCaptureBar(page, "Real interruption");
+      const row = swipeRow(page, "Real interruption");
+
+      await realSwipe(page, row.getByTestId("task-card-swipe-surface"), 260, "touchCancel");
+
+      await expect(row).toBeVisible();
+      await expect(row.getByTestId("swipe-complete")).toHaveCount(0);
+      await expect(page.getByText("Task completed")).toHaveCount(0);
     });
   });
 

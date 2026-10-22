@@ -143,6 +143,20 @@ describe('Settings Components', () => {
       fireEvent.change(select, { target: { value: 'oldest' } });
       expect(handleChange).toHaveBeenCalledWith('oldest');
     });
+
+    it('keeps the keyboard focus ring on the select', () => {
+      render(
+        <SettingsSelectRow
+          label="Archive after"
+          value="30 days"
+          options={[{ value: '30', label: '30 days' }]}
+          onChange={vi.fn()}
+        />
+      );
+      // Tailwind utilities outrank the layered global :focus-visible ring, so an
+      // outline-none here erased the row's only focus indicator.
+      expect(screen.getByRole('combobox').className).not.toMatch(/outline-none/);
+    });
   });
 
   describe('AboutSection', () => {
@@ -230,6 +244,12 @@ describe('Settings Components', () => {
     it('switch reflects showCompleted=true state', () => {
       render(<AppearanceSettings showCompleted={true} onToggleCompleted={vi.fn()} />);
       expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('names the show completed switch for assistive tech', () => {
+      // SettingsRow renders its label as plain text, so the switch needs its own name.
+      render(<AppearanceSettings showCompleted={false} onToggleCompleted={vi.fn()} />);
+      expect(screen.getByRole('switch', { name: 'Show completed' })).toBeInTheDocument();
     });
   });
 
@@ -418,6 +438,11 @@ describe('Settings Components', () => {
       expect(await screen.findByText('Auto-archive')).toBeInTheDocument();
     });
 
+    it('names the auto-archive switch for assistive tech', async () => {
+      render(<ArchiveSettings onViewArchive={vi.fn()} />);
+      expect(await screen.findByRole('switch', { name: 'Auto-archive' })).toBeInTheDocument();
+    });
+
     it('shows archive after select when auto-archive is enabled', async () => {
       render(<ArchiveSettings onViewArchive={vi.fn()} />);
       expect(await screen.findByText('Archive after')).toBeInTheDocument();
@@ -521,6 +546,11 @@ describe('Settings Components', () => {
     it('renders auto-sync toggle after loading', async () => {
       render(<SyncSettings onViewHistory={vi.fn()} />);
       expect(await screen.findByText('Auto-sync')).toBeInTheDocument();
+    });
+
+    it('names the auto-sync switch for assistive tech', async () => {
+      render(<SyncSettings onViewHistory={vi.fn()} />);
+      expect(await screen.findByRole('switch', { name: 'Auto-sync' })).toBeInTheDocument();
     });
 
     it('shows sync interval select when auto-sync is enabled', async () => {

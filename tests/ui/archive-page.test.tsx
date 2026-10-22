@@ -166,6 +166,15 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     });
   });
 
+  it("heads the list with a level-2 heading so card titles do not skip a level", async () => {
+    mockListArchivedTasks.mockResolvedValue([createMockArchivedTask({ id: "task-1", title: "First Task" })]);
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+
+    // Each TaskCard titles itself with an <h3>, as it does under a matrix pane's <h2>.
+    expect(await screen.findByRole("heading", { level: 2, name: "Archived tasks" })).toBeInTheDocument();
+  });
+
   it("displays correct task count", async () => {
     const tasks = [
       createMockArchivedTask({ id: "task-1", title: "Task 1" }),

@@ -27,6 +27,16 @@ describe("TerminalBlock", () => {
     expect(screen.getByText(/"mcpServers"/)).toBeInTheDocument();
   });
 
+  it("lets a keyboard user reach the code and scroll it sideways", () => {
+    render(<TerminalBlock label="Claude Desktop config" code={code} />);
+
+    // The <pre> scrolls horizontally, and only a focusable element can be
+    // scrolled with arrow keys (WCAG 2.1.1).
+    const region = screen.getByRole("region", { name: "Claude Desktop config" });
+    expect(region.tagName).toBe("PRE");
+    expect(region).toHaveAttribute("tabindex", "0");
+  });
+
   it("copies the code, confirms, and reverts after the feedback window", async () => {
     vi.useFakeTimers();
     const writeText = vi.fn().mockResolvedValue(undefined);

@@ -88,4 +88,28 @@ test.describe("Coarse-pointer target floor", () => {
       expect(result.visualHeight, `#${id} visual height`).toBeLessThan(30);
     }
   });
+
+  test("the app's settings switch reaches 44px without growing visually", async ({ page }) => {
+    await waitForAppLoad(page);
+    await page.goto("/settings");
+
+    // The React Switch is a Radix button, not the .switch input above, so it
+    // needs the same pseudo-element reach of its own.
+    const toggle = page.getByRole("switch", { name: "Show completed" });
+    await expect(toggle).toBeVisible();
+
+    const result = await toggle.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const hit = (dx: number, dy: number) => document.elementFromPoint(cx + dx, cy + dy) === el;
+      return { visualHeight: r.height, up: hit(0, -21), down: hit(0, 21), left: hit(-21, 0), right: hit(21, 0) };
+    });
+
+    expect(result.up, "reach up").toBe(true);
+    expect(result.down, "reach down").toBe(true);
+    expect(result.left, "reach left").toBe(true);
+    expect(result.right, "reach right").toBe(true);
+    expect(result.visualHeight, "visual height").toBeLessThan(30);
+  });
 });

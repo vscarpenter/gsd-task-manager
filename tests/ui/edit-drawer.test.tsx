@@ -80,6 +80,34 @@ describe("<EditDrawer>", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("returns focus to the field being edited when Keep editing closes the prompt", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    // The title takes focus after a short delay; let it land so it cannot steal the typing.
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    const description = screen.getByLabelText(/description/i);
+    await user.type(description, " extra context");
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+
+    // The focused button unmounts with the prompt. Without a new target, focus
+    // falls to <body> and the next Tab walks out of the modal.
+    expect(description).toHaveFocus();
+  });
+
+  it("focuses the title when the control that opened the prompt is gone", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    await user.type(screen.getByLabelText(/description/i), " extra context");
+    // The prompt replaces the footer, so the Cancel button that opened it unmounts.
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+
+    expect(screen.getByTestId("edit-title")).toHaveFocus();
+  });
+
   it("quadrant picker switches urgent/important flags", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
@@ -223,6 +251,22 @@ describe("<EditDrawer>", () => {
       render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
       const dialog = screen.getByRole("dialog", { name: /edit task/i });
       expect(dialog).toHaveAttribute("aria-modal", "true");
+    });
+
+    it("puts the dialog role on an element ARIA allows it on", () => {
+      render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      const dialog = screen.getByRole("dialog", { name: /edit task/i });
+      // role=dialog is not permitted on <form>, so the form nests inside it.
+      expect(dialog.tagName).not.toBe("FORM");
+      expect(dialog.querySelector("form")).not.toBeNull();
+    });
+
+    it("keeps its title bar and action bar out of the page's landmarks", () => {
+      render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      const dialog = screen.getByRole("dialog", { name: /edit task/i });
+      // A <header> or <footer> outside a sectioning element maps to banner or
+      // contentinfo, which duplicated the page's own while the drawer was open.
+      expect(dialog.querySelector("header, footer")).toBeNull();
     });
 
     it("restores focus to the trigger element when the drawer closes", async () => {
