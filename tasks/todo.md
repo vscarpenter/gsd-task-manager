@@ -1,3 +1,184 @@
+# Session state, 2026-10-22: include all current dependency updates in PR #614
+
+## Resuming From Here
+
+- The owner approved including all existing dependency updates in [PR #614](https://github.com/vscarpenter/gsd-task-manager/pull/614), on `fix/next-security-browser-validation`. The earlier decision to leave Stagehand/Playwright changes unstaged is superseded.
+- Include Stagehand `^4.2.0 -> ^4.3.0`, Playwright `^1.64.0 -> ^1.64.1`, and all 44 existing changed package records in the lockfile. These include the existing Vite/PostCSS/Rolldown, Radix, Browserbase SDK, OpenTelemetry and other transitive updates. No new package update was run or version selected in this follow-up. Next.js and eslint-config-next remain pinned to 16.4.1.
+- Preserved the complete dependency snapshot byte-for-byte: manifest SHA-256 `b800a2efee3f7251ff34f07e69ab3eeb2b2fbb8472bb481792b6fa8a99d05700`; lock SHA-256 `60a9d96e85abad7f9ee40481d8f05595f0258b336b2d60874c87c2bbd26245fa`. Installed Stagehand is 4.3.0 and Playwright is 1.64.1.
+- Fresh validation used Bun 1.3.14 through `bunx --package=bun@1.3.14 bun`: frozen install, lint, typecheck, full unit coverage, license check and production audit passed. Unit result: 3,519 passed, 1 existing skipped; statements/branches/functions/lines 89.93/83.99/90.03/91.07%. Licenses approved 723 installed versions. The new unit log is `/tmp/gsd-all-deps-unit-coverage.log`.
+- Exact fresh commands: `bunx --package=bun@1.3.14 bun install --frozen-lockfile`; `bunx --package=bun@1.3.14 bun lint`; `bunx --package=bun@1.3.14 bun typecheck`; `bunx --package=bun@1.3.14 bun run test -- --coverage`; `bunx --package=bun@1.3.14 bun run license:check`; `bunx --package=bun@1.3.14 bun audit --prod --audit-level=high`.
+- Raw `bunx --package=bun@1.3.14 bun audit --audit-level=high --json > /tmp/gsd-all-deps-audit.json` exits 1 for the existing accepted high-severity braces advisory. The fresh audit also lists moderate ip-address GHSA-rxp7-6hxx-x8q5 at installed 10.7.2; that package record is identical in the initial PR and the complete snapshot. `node scripts/check-audit-results.cjs /tmp/gsd-all-deps-audit.json` passes: two advisories, none blocking under unchanged policy. No suppression or exception was added; this follow-up does not remediate the moderate finding.
+- The preceding working-checkout validation already exercised this exact complete manifest and lockfile: 352 browser cases passed with 2 existing native-clipboard skips, plus production build/export, bundle, CSP, all-three-browser PWA, development feedback and MCP checks. Hashes were verified before reusing that evidence; those browser/build checks were not rerun solely to change Git staging. The older narrow PR snapshot below remains historical evidence for the initial commit, not the final dependency scope.
+- Stagehand module-load verification passed under Node with `fetch` disabled: `Stagehand`, `Stagehand.create` and `localBrowser.launch` exports are present. Provider-backed Stagehand smoke was not run because it calls an additional AI account. Its transitive OpenTelemetry core 3.0.0 declares API peer `>=1.10.0 <1.11.0`, while API 1.9.1 is installed. Module load and local tests pass, but this peer-range discrepancy remains a tooling compatibility limitation for review; no speculative dependency change was made.
+- Update the existing PR description to match the full scope. No merge, release, deployment, Aikido rescan, account access or security-setting change is authorized/performed. Final chat handoff records the follow-up commit, push and CI state.
+
+# Historical evidence, 2026-10-22: browser validation repair and initial PR
+
+## Resuming From Here
+
+- Authorized: fix feedback/CSP test-origin mismatch and Firefox profile launch, preserve existing changes, validate, create a branch, push and open a PR. No merge or deployment.
+- Standard tier: bounded test-tooling changes with no application interface or production security-policy change.
+- Branch: `fix/next-security-browser-validation` from `479fc798a9287099bfe6b0fef50f504cfbc294e4`. Preflight found only the five known modified files; no conflict markers or stashes.
+- Completed: reproduced both failures, configured an export-test build for the CSP-approved backend, isolated Firefox app-data on macOS with deterministic teardown, and validated both the working checkout and the exact staged PR snapshot.
+- Baseline RED: focused Chromium feedback suite reproduced exactly four CSP failures and one pass. Plain Firefox launch reproduced `Could not find profile folder`; the same Firefox 157 binary launched successfully with a private `CFFIXED_USER_HOME`. New build/CI regression checks failed before implementation.
+- Implementation: `build:e2e` compiles the existing hosted backend override; CI uses it. Feedback stubs and runtime-error guards remain intact. Shared Firefox-home lifecycle covers worker launch options and the PWA verifier; only macOS Firefox uses it. Teardown removes the ACLs macOS creates inside the disposable home, then deletes it. Regular profiles, system privacy grants, sandbox settings and production CSP are unchanged.
+- References: https://github.com/microsoft/playwright/issues/42768 and https://github.com/microsoft/playwright/pull/43494. Registry's latest stable remains 1.64.1; the upstream Firefox roll is in the upcoming 1.65 line. No dependency upgrade or system privacy grant is used for the workaround.
+- Independent read-only review: no actionable findings; challenged request interception, CSP, environment merging, browser/worker lifetimes, cleanup and test guards. This was source review, not separate test execution or deployment proof.
+- PR scope: Next.js 16.4.1, its existing regression guard/security documentation, and these browser repairs. Pre-existing Stagehand `^4.3.0` and Playwright `^1.64.1` updates stay local and unstaged. The PR retains HEAD's Stagehand `^4.2.0` and Playwright `^1.64.0`; its isolated frozen installation actually resolved Playwright 1.64.0 / Firefox 157.0 and passed validation below.
+- Publication is authorized for this branch; the final chat handoff carries commit/push/PR proof. Next gates: review GitHub CI, merge only with separate authorization, then authorized deployment and an Aikido rescan of the exact intended commit. No merge, deployment, production probe, advisory suppression or new audit acceptance was performed.
+
+## Validation commands and evidence
+
+All Bun commands used `bunx --package=bun@1.3.14 bun` on Node 22.22.3 / macOS 27.0.1. In the table, `bun ...` abbreviates that exact launcher. PR checks ran from a temporary, ignored copy of the Git index inside this authorized checkout, with its own frozen installation. No working manifest or lockfile was replaced to test the PR.
+
+| Command | Working checkout | Exact PR snapshot |
+| --- | --- | --- |
+| `bun install --frozen-lockfile` | PASS, no changes | PASS; 692 packages installed; lock digest unchanged |
+| `bun run test -- tests/data/export-journeys.test.ts tests/data/firefox-test-home.test.ts tests/data/e2e-quality-gates.test.ts tests/data/production-pwa-verifier.test.ts` | PASS: 19 tests | Covered by full suite |
+| `bun run test -- tests/data/firefox-test-home.test.ts --coverage --coverage.include=scripts/lib/firefox-test-home.cjs` | PASS: 3 tests; helper 100% statements/functions/lines, 85.71% branches | Same helper coverage in full suite |
+| `bun run test -- --coverage` | PASS: 3,519 tests; 1 existing skipped; 272 files passed, 1 skipped. S/B/F/L: 89.94/83.99/90.08/91.07% | PASS: same test counts; S/B/F/L: 89.93/83.99/90.03/91.07% |
+| `bun lint` | PASS, zero warnings | PASS |
+| `bun typecheck` | PASS | PASS |
+| `bun run quality:shape` | PASS: complexity 30/30, depth 4/5, lines 0/0, function length 92/268 | Same source; no thresholds changed |
+| `bun run license:check` | PASS: 723 installed versions | PASS: 692 installed versions |
+| `bun audit --prod --audit-level=high` | PASS: no reported vulnerabilities | PASS |
+| `bun audit --audit-level=high --json > /tmp/gsd-browser-audit.json` | FAIL, exit 1: only existing dev-only braces GHSA-vfj7-8cjw-p6xm | Same result, saved as `/tmp/gsd-pr-audit.json` |
+| `node scripts/check-audit-results.cjs /tmp/gsd-browser-audit.json` | PASS using unchanged existing acceptance through 2027-01-05 | PASS with `/tmp/gsd-pr-audit.json`; no new exception |
+| `NEXT_DISABLE_SWC_BINARY=1 NEXT_CACHE_DIR="$PWD/.next-cache" bunx --package=bun@1.3.14 bun run build:e2e` | PASS: Next 16.4.1; 9 static pages; 31 script blocks and 1 style externalized | PASS, same output; no font-loader failure |
+| `bun run quality:bundle` | PASS within original budgets, including the existing 5,120-byte allowance | PASS |
+| `bun run test:csp` | PASS, 3 externalized assets | PASS |
+| `bun run test:pwa` | PASS: Chromium, Firefox, WebKit | PASS: all three |
+| `bun run test:e2e:export -- tests/e2e/feedback.spec.ts --workers=2` | PASS: all 15 tests | Covered by full browser suite |
+| `bun run test:e2e:export -- --workers=2` | PASS: 352 passed, 2 existing skipped, zero failures/flakes/retries | PASS: same counts; every report result checked |
+| `bun run test:e2e -- tests/e2e/feedback.spec.ts --workers=2` | PASS: all 15 tests on development server | Shared fixture; full export suite above |
+| `bun run --cwd packages/mcp-server test:coverage` | PASS: 350 passed, 6 existing skipped | No MCP dependency/source changes in PR |
+| `bun run --cwd packages/mcp-server build` | PASS | No MCP dependency/source changes in PR |
+| `git diff --check` and `git diff --cached --check` | PASS | PASS |
+| `git diff --cached \| gitleaks stdin --redact` (with pipefail) | PASS: no leaks in staged diff | Same staged source |
+
+The two browser skips are the existing native-clipboard case in Firefox and WebKit. Chromium passed 118 cases; Firefox and WebKit each passed 117 and skipped one. No skips, retries, console allowances, budgets, CSP directives or audit exceptions were added or widened. The staged snapshot's report is retained locally at `playwright-report/pr-validation/index.html`; generated reports are not committed.
+
+The first focused checks deliberately failed before implementation: two build/CI guards, the four Chromium feedback cases, and an ordinary Firefox launch. Firefox's control launch with private app-data succeeded with the same binary. Two PWA-helper import runs eventually passed after about 120 seconds; moving Playwright's import to the launch path reduced the four-file focused run to 0.44 seconds without dropping checks. Initial audit-tool invocations used a nonexistent `scripts/check-security-audit.cjs`, then omitted the required filename for `check-audit-results.cjs`; the corrected, successful invocations are listed above. These were invocation errors, not dependency-check passes.
+
+## Preservation and release status
+
+- Working lockfile SHA-256 remains `60a9d96e85abad7f9ee40481d8f05595f0258b336b2d60874c87c2bbd26245fa`, byte-identical to the start of this browser repair. The only new working-manifest change is the dedicated build script.
+- Staged manifest SHA-256: `9583dbbb001dcdcdbdce885c8c8a4aeb94acf0e4e4f61e0cabd72cbcaba0e075`; staged lock: `bb97f339a4468aa0daf5deef2305747ca9d5e21ca071abefe633f015d48a07dc`. Compared every staged lock record: only the twelve Next records differ from HEAD, plus the two workspace pins; unrelated user records remain outside the PR. Frozen installation of this exact snapshot passed.
+- Checked all fifteen staged files against the independently installed/tested snapshot before removing that temporary source/dependency copy. Next-generated development edits to AGENTS.md's heading and next-env.d.ts type paths were restored; tracked CSP, service worker, TypeScript configuration and budgets were preserved.
+- Browser release blockers from the previous entry are resolved locally. The raw braces audit remains as disclosed above under existing repository policy. The earlier intermittent font-loader observation did not recur in these builds. GitHub CI, deployment and Aikido clearance remain separate evidence stages.
+
+# Session state, 2026-10-22: authorized Next.js 16.4.1 upgrade
+
+## Resuming From Here
+
+- Upgrade applied locally: **next 16.3.8 -> 16.4.1**, **eslint-config-next 16.3.8 -> 16.4.1**, following the owner's explicit approval and upstream GHSA-673q-mjm6-r5xr guidance. Both manifest pins, lock records and installed packages agree.
+- Preserved existing Stagehand `^4.3.0`, Playwright `^1.64.1`, and all unrelated manifest content. Compared every lock entry with the pre-upgrade snapshot: **12 Next-related records changed; all 889 unrelated records are unchanged**. Lock metadata differs only in the two requested workspace pins.
+- Related records now at 16.4.1: Next, eslint-config-next, @next/env, @next/eslint-plugin-next, and eight optional SWC platform packages. Installed Darwin ARM64 native binding is 16.4.1. Root React/React DOM stay 19.3.0; root TypeScript 6 API plus native TypeScript 7 CLI are preserved.
+- Raised the existing build-configuration security guard to 16.4.1, retained exact Next/lint alignment, and proved red before the dependency change, then green after it. Updated SECURITY.md's earlier no-upgrade disposition.
+- Two fresh independent read-only reviews completed: pre-patch compatibility investigation and post-patch security/regression review. No actionable findings. The reviewer also checked the 12 package integrity values against published npm metadata; runtime validation and dirty-tree preservation were verified by the parent.
+- Current working branch remains main at `479fc798a9287099bfe6b0fef50f504cfbc294e4`. Changes are uncommitted: repository policy prohibits commits on main and the owner prohibited a branch. No push, PR, tag, publication, deployment, account, credential, security-setting or advisory-exception change was made.
+
+## Exact upgrade and validation commands
+
+Run in this checkout with Node **22.22.3**. Every Bun command below uses the repository's **1.3.14** launcher, rather than installed global Bun 1.4.2.
+
+| Command | Result |
+| --- | --- |
+| `bunx --package=bun@1.3.14 bun pm view next@16.4.1` | PASS: published version and metadata verified |
+| `bunx --package=bun@1.3.14 bun pm view eslint-config-next@16.4.1` | PASS: published version and compatible peer/dependency requirements verified |
+| `bunx --package=bun@1.3.14 bun run test -- tests/data/build-config.test.ts -t 'pins next and eslint-config-next'` | Intentional RED before upgrade: version-floor assertion failed on 16.3.8; other tests were outside this focused selection |
+| `bunx --package=bun@1.3.14 bun install` | PASS: installed exact 16.4.1 pair; seven packages installed; lockfile regenerated |
+| `bunx --package=bun@1.3.14 bun run test -- tests/data/build-config.test.ts` | GREEN: all 17 tests passed |
+| `bunx --package=bun@1.3.14 bun install --frozen-lockfile` | PASS: 733 installs checked, no changes |
+| `bunx --package=bun@1.3.14 bun lint` | PASS, no warnings |
+| `bunx --package=bun@1.3.14 bun typecheck` | PASS |
+| `bunx --package=bun@1.3.14 bun run test -- --coverage` | PASS: 3,515 tests passed, 1 existing skipped; 271 files passed, 1 skipped; statements 89.93%, branches 84.04%, functions 90.07%, lines 91.05% |
+| `bunx --package=bun@1.3.14 bun audit --prod --audit-level=high` | PASS: no vulnerabilities reported; published fixed Next version is established separately by the advisory and package checks |
+| `bunx --package=bun@1.3.14 bun audit --audit-level=high` | FAIL, exit 1: same existing dev-only braces GHSA-vfj7-8cjw-p6xm; no new acceptance or suppression |
+| `bunx --package=bun@1.3.14 bun run license:check` | PASS: 723 installed package versions approved |
+| `bunx --package=bun@1.3.14 bun run quality:shape` | PASS within unchanged ratchet limits |
+| `NEXT_DISABLE_SWC_BINARY=1 NEXT_CACHE_DIR="$PWD/.next-cache" bunx --package=bun@1.3.14 bun run build` | First attempt FAIL: nine Newsreader font query parsing errors. Identical second attempt PASS: Next 16.4.1, nine static pages, 31 script blocks and one style block externalized |
+| `bunx --package=bun@1.3.14 bun run quality:bundle` | PASS; budgets unchanged |
+| `bunx --package=bun@1.3.14 bun run test:csp` | PASS: three externalized bootstrap assets loaded under production CSP |
+| `bunx --package=bun@1.3.14 bun run test:pwa` | FAIL, exit 1: Chromium lifecycle passed; same Firefox profile-launch failure stopped the sequential script before WebKit |
+| `bunx --package=bun@1.3.14 bun run test:pwa -- webkit` | PASS: WebKit lifecycle |
+| `bunx --package=bun@1.3.14 bun run test:e2e:export -- --workers=2` | FAIL, exit 1: 354 tests attempted; 227 passed, 126 failed, 1 existing skipped, zero retries/flakes; exact pre-upgrade outcome and failure fingerprints |
+| `git diff --check` | PASS |
+
+## Failure diagnosis and comparison
+
+The first production-build attempt observed a font-loader failure not seen in the successful immediately preceding 16.3.8 baseline build. Next and its actual resolved native binding were both 16.4.1, and the additional `.next-cache` directory was empty. The error matched upstream [Next issue99114](https://github.com/vercel/next.js/issues/99114), which describes Google Fonts sometimes returning extensionless URLs with query parameters that the loader misparses. A fresh diagnostic Newsreader CSS response returned HTTP200 with nine conventional font URLs and no query-bearing URLs. The unchanged build then passed. This supports an intermittent upstream font-response issue; the exact CSS response from the failed build was not retained, so its cause is not conclusively proven. No font, bundler, cache policy, or application-source workaround was introduced. Retain this reliability issue separately from the passing retry.
+
+Parsed every unexpected result in the new `playwright-report/export/index.html`:
+
+- Chromium: **114 passed, 4 failed**. All four contain localhost:8090 feedback requests blocked by connect-src, exactly matching the pre-upgrade baseline.
+- WebKit: **113 passed, 4 failed, 1 skipped**. All four failures have the same feedback/CSP fingerprint; no auth-token flakes.
+- Firefox: **118 failed before app startup**. Every failure contains the same `Could not find profile folder` error as the pre-upgrade run.
+- **Zero unmatched failures.** No CSP changes, disabled checks, added skips or advisory suppressions were used.
+
+The actual 16.4.1 export's generated config still has `output=export`, `cacheComponents=false`, and `experimental.useCache=false`. No production or exploit probe was performed. The advisory remediation is the published patched framework version, with its bundled RSC implementation, rather than a root React override. Legitimate local behavior was exercised by the unit suite, export build, CSP/PWA smoke and 227 passing browser tests; complete browser release proof remains blocked by the failures above.
+
+## Preservation evidence and remaining handoff
+
+- Pre-upgrade manifest SHA-256: `4779bb289d308980b3c03d0590c1aa8a82a8535f71cb2e9aae1b1a81348a072f`; final: `a1f86c2f9a89fb2ef3d742095ceb7fb28fe584f22719b532540ff1e2245c5eb7`. Exact text comparison passed after substituting only the two requested pins.
+- Pre-upgrade lock SHA-256: `4c91c14e2e0c0d3cac5b3ffe71232e2386452383bd715bcea6772340d01de4f2`; final: `60a9d96e85abad7f9ee40481d8f05595f0258b336b2d60874c87c2bbd26245fa`. Every unrelated parsed record and all unrelated metadata match the snapshot. `next-env.d.ts`, `tsconfig.json`, `public/sw.js`, and AGENTS.md remain unchanged.
+- Full release validation is not green: baseline feedback/CSP tests, Firefox execution and the raw all-dependency braces audit still fail. The newly observed intermittent font-build failure also remains a reliability follow-up even though the unchanged retry passed.
+- Upgrade is local only. No authorized branch, push, release or deployment was performed. Aikido's scanned commit remains unavailable; Aikido resolution requires an authorized source update and re-scan of that exact commit. Nothing was closed or suppressed in Aikido.
+- The earlier applicability review and pre-upgrade validation below are historical baseline evidence; their no-upgrade disposition is superseded by this authorized upgrade.
+
+# Session state, 2026-10-22: Next.js GHSA-673q-mjm6-r5xr applicability
+
+## Resuming From Here
+
+- Completed: exact advisory identification, local applicability investigation, two independent read-only reviews, repository documentation, and local verification. See `SECURITY.md`'s dated GHSA subsection.
+- Disposition: affected package present; vulnerable Cache Components functionality not used/reachable in the reviewed supported static deployments. No dependency or runtime-code change justified under the owner's applicability-based scope. Upstream still recommends upgrading even without similar functions; 16.4.1 is the smallest patched Next release.
+- Reviewed source: `main` at `479fc798a9287099bfe6b0fef50f504cfbc294e4`, plus the existing manifest/lockfile edits. Aikido issue 52751721's advisory ID was supplied by the owner; its scan commit remains unavailable.
+- Next.js and eslint-config-next before/after: **16.3.8 -> 16.3.8** in manifests, lockfile and installed packages. Root React remains 19.3.0; Next's server-dom implementation is bundled separately.
+- Preserved existing Stagehand/Playwright/transitive edits byte-for-byte: `package.json` SHA-256 `4779bb289d308980b3c03d0590c1aa8a82a8535f71cb2e9aae1b1a81348a072f`; `bun.lock` SHA-256 `4c91c14e2e0c0d3cac5b3ffe71232e2386452383bd715bcea6772340d01de4f2`.
+- Only this task's `SECURITY.md` and `tasks/todo.md` edits remain for handoff. No branch, commit, push, PR, publication, deployment, credential/security-setting change, or advisory exception was made. Repository policy prohibits commits on main; the owner prohibited creating a branch.
+
+## Local verification
+
+Runtime: Node **22.22.3**. Installed global Bun was 1.4.2; checks below used the repository's **1.3.14** through `bunx --package=bun@1.3.14 bun`. Run from this checkout. Commands are shown exactly as invoked.
+
+| Command | Result |
+| --- | --- |
+| `bunx --package=bun@1.3.14 bun install --frozen-lockfile` | PASS: 733 installs checked, no changes |
+| `bunx --package=bun@1.3.14 bun lint` | PASS, no warnings |
+| `bunx --package=bun@1.3.14 bun typecheck` | PASS |
+| `bunx --package=bun@1.3.14 bun run test -- --coverage` | PASS: 3,515 tests passed, 1 existing skipped; 271 files passed, 1 skipped; statements 89.93%, branches 84.02%, functions 90.07%, lines 91.05% |
+| `bunx --package=bun@1.3.14 bun audit --prod --audit-level=high` | PASS: no vulnerabilities reported by this audit database; does not prove Aikido resolution |
+| `bunx --package=bun@1.3.14 bun audit --audit-level=high` | FAIL, exit 1: existing dev-only braces GHSA-vfj7-8cjw-p6xm; no Next advisory returned; existing acceptance policy was not changed |
+| `bunx --package=bun@1.3.14 bun run quality:shape` | PASS within existing ratchet limits |
+| `bunx --package=bun@1.3.14 bun run license:check` | PASS: 723 installed package versions approved |
+| `NEXT_DISABLE_SWC_BINARY=1 NEXT_CACHE_DIR="$PWD/.next-cache" bunx --package=bun@1.3.14 bun run build` | PASS: Next 16.3.8; nine static pages generated; 21 executable script blocks and one style block externalized; generated export worker stamped 13.9.6 (tracked app version remains 13.9.5) |
+| `bunx --package=bun@1.3.14 bun run quality:bundle` | PASS |
+| `bunx --package=bun@1.3.14 bun run test:csp` | PASS: Chromium boot under production CSP, two externalized assets loaded |
+| `bunx --package=bun@1.3.14 bun run test:pwa` | FAIL, exit 1: Chromium lifecycle passed, Firefox failed before app startup with `Could not find profile folder`; this sequential command did not reach WebKit |
+| `bunx --package=bun@1.3.14 bun run test:pwa -- webkit` | PASS: WebKit lifecycle |
+| `bunx --package=bun@1.3.14 bun run test:e2e:export -- --workers=2` | FAIL, exit 1: 354 tests attempted; 227 passed, 126 failed, 1 existing skipped, zero retries/flakes |
+| `git diff --check` | PASS |
+
+Toolchain setup attempt `npx --yes --package=bun@1.3.14 -- bun --version` failed with npm `EOVERRIDE` for the repository's nanoid override. Using Bun's own pinned launcher succeeded without changing manifests or lockfile. Two isolated Firefox persistent-context launches reproduced the profile error using newly created, verified-existing directories in the OS temporary directory and `.next-cache`; both directories were cleaned up.
+
+Loading Next's production-build config returned `output=export`, `cacheComponents=false`, `experimental.useCache=false`; `.next/required-server-files.json` from the actual build contains the same values. Source searches found no cache directives or `next/cache` imports. All generated route entries are pages, with no request-time API handlers. No exploit PoC or production request was attempted. No regression test was added for this documentation-only disposition; existing build, unit and browser checks exercised unchanged behavior.
+
+## Browser failures and baseline comparison
+
+The HTML report at `playwright-report/export/index.html` records:
+
+- Chromium: **114 passed, 4 failed**, all four in feedback.spec.ts. Each failure contains localhost:8090 feedback requests blocked by `connect-src`, matching the inspected main CI baseline at https://github.com/vscarpenter/gsd-task-manager/actions/runs/39721986279.
+- WebKit: **113 passed, 4 failed, 1 skipped**. The four failures have the same feedback/CSP fingerprint. The two auth-token flakes seen in that CI run did not recur locally.
+- Firefox: **118 failed before app startup**. Every failure has the browser profile-launch fingerprint; these are additional local environment failures, not the known feedback baseline. macOS is 27.0.1; the symptom matches upstream https://github.com/microsoft/playwright/issues/42768 and https://bugzilla.mozilla.org/show_bug.cgi?id=2062988, but this run did not establish the OS-level root cause.
+- Parsed every unexpected result in the generated report: 118 Firefox launch errors and eight feedback/CSP errors; **zero unmatched failures**. No CSP relaxation, skips, disabled checks or test suppressions were introduced.
+
+## Remaining handoff
+
+- The reviewed vulnerability has no reachable path under current supported configuration; the installed package version is still in the advisory range. Reassess if Cache Components, cache directives, custom handlers or server hosting are introduced. A package-only re-scan can continue to flag 16.3.8.
+- Browser release validation is not green: resolve the feedback harness/CSP-origin mismatch without weakening the policy, and restore Firefox execution through a separately authorized environment/tooling fix or supported CI runner. The all-dependency braces advisory also remains.
+- Production infrastructure and deployed source were not inspected. No deployment is required for this documentation-only change, and none is authorized. Any future patched dependency release requires its own review/release/deployment handoff.
+- Give the applicability evidence to the Aikido owner for review and a scan of the exact intended commit. This task did not close, suppress or confirm resolution of the Aikido issue.
+
 # Session state, 2026-10-21: bun audit advisories (`chore/deps-audit-2026-10-21`, PR #613)
 
 ## Resuming From Here

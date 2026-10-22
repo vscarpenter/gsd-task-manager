@@ -94,6 +94,22 @@ authenticated PocketBase harness runs with:
 bun run test:system:pocketbase
 ```
 
+To run the CI browser suite locally under the production CSP:
+
+```bash
+bun run build:e2e
+bun run test:csp
+bun run test:pwa
+bun run test:e2e:export -- --workers=2
+```
+
+`build:e2e` selects the CSP-approved hosted backend at build time; feedback
+tests intercept that endpoint and never submit to it. A plain local build
+defaults to localhost:8090, which the production CSP intentionally blocks.
+On macOS, Firefox tests use a disposable app-data home to avoid Playwright's
+Firefox 157 profile-launch issue. It is removed after the browser exits;
+the regular browser profile and system privacy permissions are untouched.
+
 ## Architecture
 
 - Next.js 16 App Router static export; the application is client-side.

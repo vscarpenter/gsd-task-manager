@@ -258,16 +258,16 @@ describe("build configuration", () => {
     }
   });
 
-  it("pins next and eslint-config-next to one exact release, 16.3.8 or later", () => {
+  it("pins next and eslint-config-next to one exact release, 16.4.1 or later", () => {
     const packageJson = requireFromRepo("./package.json") as PackageJson;
     const next = packageJson.dependencies?.next ?? "";
     const [major, minor, patch] = next.split(".").map(Number);
 
-    // SEC-028: 16.3.8 is the security release. The lint config is written for
-    // one framework release, so the two move together.
+    // GHSA-673q-mjm6-r5xr is patched in 16.4.1. Keep the lint config
+    // aligned with the framework release.
     expect(next).toMatch(/^\d+\.\d+\.\d+$/);
     expect(packageJson.devDependencies?.["eslint-config-next"]).toBe(next);
-    expect(major * 1_000_000 + minor * 1_000 + patch).toBeGreaterThanOrEqual(16_003_008);
+    expect(major * 1_000_000 + minor * 1_000 + patch).toBeGreaterThanOrEqual(16_004_001);
   });
 
   it("runs every Vitest job on Node 22, set up before install", () => {

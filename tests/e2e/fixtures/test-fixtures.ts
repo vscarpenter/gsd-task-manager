@@ -1,4 +1,5 @@
 import { test as base } from "@playwright/test";
+import { withFirefoxTestHome } from "../../../scripts/lib/firefox-test-home.cjs";
 
 // Firefox reports an aborted local font request as console.error when a test
 // navigates while a font response is still in flight. That happens on the dev
@@ -44,6 +45,17 @@ type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
+  launchOptions: [
+    async ({ browserName, launchOptions }, runTest) => {
+      await withFirefoxTestHome(browserName, async (env: Record<string, string> | undefined) => {
+        await runTest(env ? {
+          ...launchOptions,
+          env: { ...process.env, ...launchOptions.env, ...env },
+        } : launchOptions);
+      });
+    },
+    { scope: "worker" },
+  ],
   firstTimeVisitor: [false, { option: true }],
   expectedConsoleErrors: [null, { option: true }],
   runtimeErrors: [

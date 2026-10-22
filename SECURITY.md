@@ -403,6 +403,60 @@ If you discover a security vulnerability, please:
 
 ## Security Audit Results
 
+### 2026-10-22: GHSA-673q-mjm6-r5xr review and upgrade
+
+Aikido issue `52751721` was identified by the owner as
+[GHSA-673q-mjm6-r5xr](https://github.com/vercel/next.js/security/advisories/GHSA-673q-mjm6-r5xr).
+Its scanned commit was unavailable. The initial review covered local source at
+`479fc798a9287099bfe6b0fef50f504cfbc294e4` and existing manifest/lockfile
+edits. Both Next.js and eslint-config-next initially resolved to `16.3.8`.
+
+The advisory affects `next >=16.0.0 <=16.4.0` and is patched in `16.4.1`.
+It describes unauthenticated remote code execution in App Router applications
+with Cache Components and a `use cache` function returning multiple typed
+arrays. The [upstream React advisory](https://github.com/react/react/security/advisories/GHSA-xqc2-xf4c-x3h3)
+also requires an attacker-controlled value in the transported response.
+Next bundles its own React Server Components implementation; changing the
+root `react` package alone would not establish remediation.
+
+The initial applicability review found no affected execution path in the
+supported application configurations:
+
+- `next.config.ts` uses `output: "export"`. The resolved production build
+  configuration disabled both `cacheComponents` and `experimental.useCache`;
+  application source had no cache directive or `next/cache` import.
+- `.github/workflows/deploy-production-release.yml` and `scripts/deploy-app.sh`
+  package and upload `out/` to S3/CloudFront. They do not deploy a Next server.
+- `docker/Dockerfile` copies `out/` into the final Caddy image. Its entrypoint
+  runs Caddy and PocketBase; Next runs only in the separate build stage.
+- Server Components such as `app/layout.tsx` execute at build time for this
+  export. Static RSC navigation payloads do not establish a network-accessible
+  Cache Components execution path. Local `next dev` runs a server, but the
+  affected cache feature and functions were absent.
+
+The owner subsequently authorized following the
+[upstream upgrade recommendation](https://nextjs.org/blog/nextjs-security-update-october-14-2026),
+which applies even without similar cached functions. The workspace now pins
+and resolves both `next` and `eslint-config-next` to **`16.4.1`**, the smallest
+published patched Next release for this advisory. The regenerated Bun lockfile
+changes only twelve Next-related package records; all 889 unrelated records
+and pre-existing Stagehand/Playwright manifest edits were preserved. Root React
+remains `19.3.0`. The existing build-configuration regression guard now requires
+Next `16.4.1` or later and an exactly aligned eslint-config-next release.
+
+This is a local dependency remediation, not proof of deployed exposure or
+Aikido resolution. No runtime configuration, CSP, test suppression, audit
+exception, credential, or security setting was changed. No production probe,
+deployment, or Aikido re-scan was performed. The latest 2026-10-22 upgrade entry
+in `tasks/todo.md` records verification and remaining release blockers.
+
+The subsequent authorized browser-test repair uses a dedicated `build:e2e`
+backend override allowed by the unchanged production CSP and a disposable
+macOS Firefox app-data home. The exact staged PR snapshot passed all 352
+executable export-browser cases; two existing native-clipboard cases remain
+skipped. This resolves the local feedback/CSP and Firefox validation blockers,
+without establishing deployment or Aikido clearance.
+
 ### Last Audit: 2026-08-10
 
 - ✅ `bun audit --audit-level=high` reports no known vulnerabilities
