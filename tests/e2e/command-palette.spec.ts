@@ -29,8 +29,19 @@ test.describe("Command palette selection", () => {
           .map((row) => row.index)
       );
 
+    // The fill alone is about 1.2:1 on paper, so the selected row also carries a ring.
+    const ringedRows = () =>
+      options.evaluateAll((rows) =>
+        rows
+          .map((row, index) => ({ index, ring: getComputedStyle(row).boxShadow }))
+          .filter((row) => row.ring !== "none")
+          .map((row) => row.index)
+      );
+
     await expect.poll(filledRows).toEqual([0]);
+    await expect.poll(ringedRows).toEqual([0]);
     await page.keyboard.press("ArrowDown");
     await expect.poll(filledRows).toEqual([1]);
+    await expect.poll(ringedRows).toEqual([1]);
   });
 });

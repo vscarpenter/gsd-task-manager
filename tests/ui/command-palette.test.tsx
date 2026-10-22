@@ -76,6 +76,21 @@ describe('Command Palette Components', () => {
       expect(option).toHaveClass('data-[selected=true]:bg-background-muted');
       expect(option.className).not.toMatch(/data-\[selected\]:/);
     });
+
+    it('marks the selected row with a tide ring, not the fill alone', () => {
+      render(
+        <CommandWrapper>
+          <CommandActionItem action={createAction()} onSelect={vi.fn()} />
+        </CommandWrapper>
+      );
+
+      // The neutral fill is about 1.2:1 on paper, under the 3:1 a state cue needs (WCAG 1.4.11).
+      expect(screen.getByRole('option', { name: 'Test Action' })).toHaveClass(
+        'data-[selected=true]:ring-1',
+        'data-[selected=true]:ring-inset',
+        'data-[selected=true]:ring-accent'
+      );
+    });
   });
 
   describe('ShortcutDisplay', () => {
@@ -159,6 +174,11 @@ describe('Command Palette Components', () => {
       const option = screen.getByRole('option', { name: /Buy groceries/ });
       expect(option).toHaveClass('data-[selected=true]:bg-background-muted');
       expect(option.className).not.toMatch(/data-\[selected\]:/);
+      expect(option).toHaveClass(
+        'data-[selected=true]:ring-1',
+        'data-[selected=true]:ring-inset',
+        'data-[selected=true]:ring-accent'
+      );
     });
   });
 

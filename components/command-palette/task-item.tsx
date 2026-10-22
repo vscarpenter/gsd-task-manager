@@ -37,7 +37,9 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
         "touch-target relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none",
         // Editorial chrome: row highlight is a neutral sunken fill, not a tint.
         // cmdk writes data-selected="false" on every other row, so match the value.
-        "hover:bg-background-muted data-[selected=true]:bg-background-muted"
+        "hover:bg-background-muted data-[selected=true]:bg-background-muted",
+        // The fill alone is about 1.2:1 on paper; tide marks the current selection.
+        "data-[selected=true]:ring-1 data-[selected=true]:ring-inset data-[selected=true]:ring-accent"
       )}
     >
       <CheckIcon
