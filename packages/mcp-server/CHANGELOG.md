@@ -5,6 +5,25 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-10-22
+
+### Security
+- Bumps `@modelcontextprotocol/sdk` from 1.31.0 to 1.32.1 for
+  GHSA-22jm-h49p-29qw and GHSA-46jr-4wx8-v453 (high) and GHSA-6prh-2h8m-c8cw
+  and GHSA-rvq5-wwqv-78pq (moderate). In affected versions, experimental tasks
+  weren't tied to the session that created them, and one HTTP request could
+  exhaust server memory during validation. The HTTP client transports also
+  followed cross-origin redirects with custom headers, and server bearer auth
+  accepted tokens issued for another service. This server talks over stdio and
+  never runs those paths, so its behavior doesn't change. The published 1.3.0
+  pins SDK 1.31.0 exactly, so npm users get the patched SDK only by upgrading.
+- `gsd-mcp-server --setup` no longer offers an unsafe inherited
+  `GSD_POCKETBASE_URL` as the default for its first prompt. A value that fails
+  the server's URL policy now falls back to `https://api.vinny.io`. That covers
+  userinfo, a query string, a fragment, or plain `http` to a non-loopback host.
+  Before this, the wizard printed the raw value, which could carry a
+  credential, and rejected it only after the operator answered.
+
 ## [1.3.0] - 2026-10-06
 
 ### Security
@@ -622,6 +641,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.3.1]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.3.0...mcp-v1.3.1
 [1.3.0]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.8...mcp-v1.3.0
 [1.2.8]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.7...mcp-v1.2.8
 [1.2.7]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.6...mcp-v1.2.7
