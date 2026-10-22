@@ -1,13 +1,22 @@
 # Session state, 2026-10-22: /impeccable harden on branch `fix/audit-harden`
 
-Standard tier: five independent bounded fixes from the audit, test-first each.
+## Resuming From Here
 
-- [ ] Palette: only the selected row gets the fill (`data-[selected=true]:`); tighten the ArrowDown test, add an e2e regression on computed fills.
-- [ ] Settings: name the Show completed, Auto-sync and Auto-archive switches (the `aria-label` pattern `notification-settings.tsx` already uses); give `Switch` a 44px coarse-pointer hit area without changing its drawing.
-- [ ] About `<pre>`: focusable, named scroll region.
-- [ ] Swipe: `pointercancel` and `lostpointercapture` abort to the pre-gesture rest offset and never commit; jsdom and e2e regressions.
-- [ ] Edit drawer: `role="dialog"` moves off the `<form>`; header and footer stop being page landmarks. Archive: hidden `<h2>` over the list.
-- [ ] Verify: `bun run test`, `bun typecheck`, `bun lint`, affected e2e on chromium, rendered axe re-check, a11y-reviewer. Commit per fix; ask before push.
+Standard tier. Nine commits on `fix/audit-harden`, not pushed; the owner decides on push and PR.
+
+- [x] Palette: only the selected row is filled, and it carries a 1px tide ring (5.13:1 light, 6.99:1 dark against the fill). `a673472`, `961150a`.
+- [x] Settings: Show completed, Auto-sync and Auto-archive switches are named; every `Switch` answers a 44px tap on coarse pointers without growing. `a3186c1`.
+- [x] Settings selects get their focus ring back (audit correction, WCAG 2.4.7). `c687010`.
+- [x] About `<pre>`: focusable, named scroll region with an inset terminal-ink ring. `3ff4fda`.
+- [x] Swipe: `pointercancel` and the row's own lost capture abort to the pre-gesture offset and never commit. `432ff3a`, then `43c1698` after real touch showed every swipe aborting on implicit capture.
+- [x] Edit drawer: `role="dialog"` moved off the `<form>`, header and footer are no longer page landmarks, and Keep editing returns focus to the field in use. Archive list gained a hidden `<h2>`. `0d6c439`, `bac275d`.
+- [x] Verified: `bun run test` 3,539 passed; typecheck and lint clean; rendered axe on a fresh build across 32 states shows every targeted rule at zero (only the two contrast findings routed to polish remain); real-touch swipe e2e fails with the bug and passes with the fix.
+
+Not done, by decision: no version bump (fix PRs leave it to the release PR). Window `blur` is not handled; touch interruptions arrive as `pointercancel`.
+
+Known, pre-existing: `production-hybrid.spec.ts` "delivers cross-route capture" fails on the dev server on unmodified main too. Four other e2e failures in a full run were dev-server load flakiness and pass in isolation.
+
+Next: owner says whether to push and open the PR. Then `/impeccable polish` for the editor sub-label and About card contrast, and `/impeccable typeset` for the type ramp. Release work in parallel: PR #615 (gsd-mcp-server 1.3.1) is green and waits for the owner to merge, then the `mcp-v1.3.1` tag and the publish gate approval.
 
 # Session state, 2026-10-22: Impeccable technical audit (read-only, no code changed)
 

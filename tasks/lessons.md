@@ -396,3 +396,15 @@ Fix pattern: wait for the title to be focused before touching other fields
 - **Neither a Playwright config nor `@playwright/test` loads inside Vitest.** The import
   never resolves, and a `node` environment pragma fails because `vitest.setup.ts`
   writes to `window`. Guard Playwright and workflow files by reading their text.
+
+## Inkwell's global focus ring loses to Tailwind utilities (2026-10-22)
+
+`app/css/inkwell-components.css` is imported `layer(components)`, so its `*:focus-visible` ring sits below `@layer utilities`. Any `outline-none` or `focus:outline-none` on a control removes its only focus indicator unless the call site adds its own ring. An audit once called these matches false positives because a Tab probe came back clean; the probe never reached the settings `<select>` rows, which had no ring at all. When checking focus visibility, focus the specific control (open its section or dialog first) and read its computed outline, rather than trusting a page-wide Tab walk.
+
+## Real touch has implicit pointer capture; synthetic events do not (2026-10-22)
+
+A touch pointer starts implicitly captured by the element under the finger. When the swipe row calls `setPointerCapture`, that child fires `lostpointercapture`, and it bubbles to the row. A `lostpointercapture` handler that aborts the swipe therefore aborts every real swipe the moment it starts (`432ff3a`, fixed in `43c1698`). jsdom and the `dispatchEvent` e2e helper have no implicit capture, so both stayed green. Gesture changes need the real-touch group in `tests/e2e/swipe-actions.spec.ts` (Chromium `Input.dispatchTouchEvent`). Its helper centers the card with `behavior: "instant"`, because `html { scroll-behavior: smooth }` moves the card after it is measured, and it asserts the finger lands on the card, because the fixed mobile dock covers the bottom of a 390px screen.
+
+## Builds rewrite AGENTS.md and next-env.d.ts (2026-10-22)
+
+`bun run build` and `next dev` (including the Playwright dev server) rewrite the Next-managed `nextjs-agent-rules` block in `AGENTS.md` (the installed 16.4.1 template uses `##` where the committed copy has `#`) and touch `next-env.d.ts`. Restore both with `git checkout --` after a local build or e2e run unless you mean to refresh them, and never sweep them into a feature commit.
