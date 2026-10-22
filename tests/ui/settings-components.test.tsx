@@ -231,6 +231,12 @@ describe('Settings Components', () => {
       render(<AppearanceSettings showCompleted={true} onToggleCompleted={vi.fn()} />);
       expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
     });
+
+    it('names the show completed switch for assistive tech', () => {
+      // SettingsRow renders its label as plain text, so the switch needs its own name.
+      render(<AppearanceSettings showCompleted={false} onToggleCompleted={vi.fn()} />);
+      expect(screen.getByRole('switch', { name: 'Show completed' })).toBeInTheDocument();
+    });
   });
 
   describe('FeatureSettings', () => {
@@ -418,6 +424,11 @@ describe('Settings Components', () => {
       expect(await screen.findByText('Auto-archive')).toBeInTheDocument();
     });
 
+    it('names the auto-archive switch for assistive tech', async () => {
+      render(<ArchiveSettings onViewArchive={vi.fn()} />);
+      expect(await screen.findByRole('switch', { name: 'Auto-archive' })).toBeInTheDocument();
+    });
+
     it('shows archive after select when auto-archive is enabled', async () => {
       render(<ArchiveSettings onViewArchive={vi.fn()} />);
       expect(await screen.findByText('Archive after')).toBeInTheDocument();
@@ -521,6 +532,11 @@ describe('Settings Components', () => {
     it('renders auto-sync toggle after loading', async () => {
       render(<SyncSettings onViewHistory={vi.fn()} />);
       expect(await screen.findByText('Auto-sync')).toBeInTheDocument();
+    });
+
+    it('names the auto-sync switch for assistive tech', async () => {
+      render(<SyncSettings onViewHistory={vi.fn()} />);
+      expect(await screen.findByRole('switch', { name: 'Auto-sync' })).toBeInTheDocument();
     });
 
     it('shows sync interval select when auto-sync is enabled', async () => {

@@ -66,6 +66,7 @@ export function AppearanceSettings({
 				state={showCompleted}
 			>
 				<Switch
+					aria-label="Show completed"
 					checked={showCompleted}
 					onCheckedChange={onToggleCompleted}
 				/>
