@@ -381,8 +381,9 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides.qs).toBe('>=6.16.0');
     expect(rootPackage.overrides['proxy-addr']).toBe('>=2.0.8');
     expect(rootPackage.overrides['source-map-js']).toBe('>=1.2.2');
-    expect(mcpPackage.devDependencies.vitest).toBe('4.1.11');
-    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.11');
+    expect(rootPackage.devDependencies.vitest).toBe('5.0.5');
+    expect(mcpPackage.devDependencies.vitest).toBe('4.1.12');
+    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.12');
     expect(mcpPackage.dependencies['@modelcontextprotocol/sdk']).toBe('1.32.1');
     expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
     expect(rootPackage.dependencies['@sentry/browser']).toBeUndefined();
