@@ -287,6 +287,22 @@ describe("TaskCard swipe actions", () => {
       expect(screen.queryByTestId("swipe-complete")).toBeNull();
     });
 
+    it("ignores the capture a child loses when the row claims the pointer", () => {
+      // A touch pointer starts implicitly captured by the element under the
+      // finger. When the row takes capture, that child gets lostpointercapture,
+      // which bubbles here. That is the swipe starting, not an interruption.
+      renderCard(createMockTask({ title: "Implicit capture" }));
+      const child = within(surfaceFor("Implicit capture")).getByText("Implicit capture");
+
+      fireEvent.pointerDown(child, { ...touch, clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(child, { ...touch, clientX: 100 + OPEN_LEADING / 2, clientY: 100 });
+      fireEvent.lostPointerCapture(child, { ...touch });
+      fireEvent.pointerMove(child, { ...touch, clientX: 100 + OPEN_LEADING, clientY: 100 });
+      fireEvent.pointerUp(child, { ...touch, clientX: 100 + OPEN_LEADING, clientY: 100 });
+
+      expect(screen.getByTestId("swipe-complete")).toBeInTheDocument();
+    });
+
     it("keeps a finished swipe when capture is released after the lift", () => {
       // Browsers fire lostpointercapture right after pointerup, so the abort
       // must not undo a gesture that already ended normally.
