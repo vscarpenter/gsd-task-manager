@@ -72,7 +72,7 @@ function quadrantChrome(urgent: boolean, important: boolean) {
 function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
   const keepEditingRef = useRef<HTMLButtonElement>(null);
-  const drawerRef = useRef<HTMLFormElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
   const baselineRef = useRef<string | null>(null);
   if (baselineRef.current === null) baselineRef.current = JSON.stringify(draft.toDraft());
@@ -138,43 +138,45 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
       // ui-craft-detect-ignore-next-line
       className="fixed inset-0 z-[60] flex justify-end bg-[var(--backdrop)] animate-drawer-overlay"
     >
-      <form
+      {/* role=dialog is not allowed on <form>, so the form nests inside the panel. */}
+      <div
         data-testid="edit-drawer"
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={trapKeyDown}
-        onSubmit={submit}
         className="flex h-full w-full max-w-[520px] flex-col border-l border-border bg-card shadow-[var(--shadow-lg)] animate-drawer-slide-in"
         aria-label={heading}
       >
-        <DrawerHeader
-          heading={heading}
-          accent={accent}
-          quadrantInk={quadrantInk}
-          activeQuadrantTitle={activeQuadrant?.title}
-          onClose={requestClose}
-        />
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <DrawerHeader
+            heading={heading}
+            accent={accent}
+            quadrantInk={quadrantInk}
+            activeQuadrantTitle={activeQuadrant?.title}
+            onClose={requestClose}
+          />
 
-        <EditDrawerBody
-          draft={draft}
-          titleRef={titleRef}
-          taskId={task?.id}
-          allTasks={allTasks}
-          dependencyError={dependencyError}
-          onDependenciesChange={handleDependenciesChange}
-        />
+          <EditDrawerBody
+            draft={draft}
+            titleRef={titleRef}
+            taskId={task?.id}
+            allTasks={allTasks}
+            dependencyError={dependencyError}
+            onDependenciesChange={handleDependenciesChange}
+          />
 
-        <DrawerFooter
-          onClose={requestClose}
-          onDiscard={onClose}
-          confirmingDiscard={confirmingDiscard}
-          keepEditingRef={keepEditingRef}
-          canSave={Boolean(draft.title.trim())}
-          isCreateMode={isCreateMode}
-        />
-      </form>
+          <DrawerFooter
+            onClose={requestClose}
+            onDiscard={onClose}
+            confirmingDiscard={confirmingDiscard}
+            keepEditingRef={keepEditingRef}
+            canSave={Boolean(draft.title.trim())}
+            isCreateMode={isCreateMode}
+          />
+        </form>
+      </div>
     </div>
   );
 }
@@ -188,7 +190,7 @@ interface DiscardConfirmFooterProps {
 /** Takes the footer's place while a changed draft waits on keep or discard. */
 function DiscardConfirmFooter({ keepEditingRef, onKeepEditing, onDiscard }: DiscardConfirmFooterProps) {
   return (
-    <footer
+    <div
       className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5"
       role="alertdialog"
       aria-labelledby="discard-changes-title"
@@ -212,7 +214,7 @@ function DiscardConfirmFooter({ keepEditingRef, onKeepEditing, onDiscard }: Disc
       >
         Discard
       </button>
-    </footer>
+    </div>
   );
 }
 
@@ -240,8 +242,9 @@ function DrawerFooter({
     );
   }
 
+  // A <div>, not <footer>: inside the dialog a footer reads as the page's contentinfo.
   return (
-        <footer className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5">
+        <div className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5">
           <DrawerHint />
           <div className="flex-1" />
           <button
@@ -263,7 +266,7 @@ function DrawerFooter({
             <CheckIcon className="h-3.5 w-3.5" />
             {isCreateMode ? "Create task" : "Save changes"}
           </button>
-        </footer>
+        </div>
   );
 }
 
@@ -281,8 +284,9 @@ function DrawerHeader({
   activeQuadrantTitle?: string;
   onClose: () => void;
 }) {
+  // A <div>, not <header>: inside the dialog a header reads as the page's banner.
   return (
-        <header className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
+        <div className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{heading}</h2>
           {activeQuadrantTitle ? (
@@ -298,7 +302,7 @@ function DrawerHeader({
           >
             <XIcon className="h-4 w-4" />
           </button>
-        </header>
+        </div>
   );
 }
 

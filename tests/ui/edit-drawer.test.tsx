@@ -225,6 +225,22 @@ describe("<EditDrawer>", () => {
       expect(dialog).toHaveAttribute("aria-modal", "true");
     });
 
+    it("puts the dialog role on an element ARIA allows it on", () => {
+      render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      const dialog = screen.getByRole("dialog", { name: /edit task/i });
+      // role=dialog is not permitted on <form>, so the form nests inside it.
+      expect(dialog.tagName).not.toBe("FORM");
+      expect(dialog.querySelector("form")).not.toBeNull();
+    });
+
+    it("keeps its title bar and action bar out of the page's landmarks", () => {
+      render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+      const dialog = screen.getByRole("dialog", { name: /edit task/i });
+      // A <header> or <footer> outside a sectioning element maps to banner or
+      // contentinfo, which duplicated the page's own while the drawer was open.
+      expect(dialog.querySelector("header, footer")).toBeNull();
+    });
+
     it("restores focus to the trigger element when the drawer closes", async () => {
       function Harness({ open }: { open: boolean }) {
         return (

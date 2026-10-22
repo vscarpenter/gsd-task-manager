@@ -190,6 +190,8 @@ export default function ArchivePage() {
             className="overflow-auto"
             style={{ height: "70vh" }}
           >
+            {/* TaskCard titles are <h3>, so the list needs an <h2> above them. */}
+            <h2 className="sr-only">Archived tasks</h2>
             <div
               style={{
                 height: `${virtualizer.getTotalSize()}px`,
