@@ -12,7 +12,11 @@ import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers"
  * state machine across all three engines; the mouse test uses a real mouse.
  */
 
-async function swipe(surface: Locator, dx: number): Promise<void> {
+async function swipe(
+  surface: Locator,
+  dx: number,
+  end: "pointerup" | "pointercancel" = "pointerup"
+): Promise<void> {
   const box = await surface.boundingBox();
   if (!box) throw new Error("swipe surface has no box");
   const y = box.y + box.height / 2;
@@ -21,7 +25,7 @@ async function swipe(surface: Locator, dx: number): Promise<void> {
   await surface.dispatchEvent("pointerdown", at(startX));
   await surface.dispatchEvent("pointermove", at(startX + dx / 2));
   await surface.dispatchEvent("pointermove", at(startX + dx));
-  await surface.dispatchEvent("pointerup", at(startX + dx));
+  await surface.dispatchEvent(end, at(startX + dx));
 }
 
 function swipeRow(page: Page, title: string): Locator {
@@ -45,6 +49,18 @@ test.describe("Touch swipe actions", () => {
 
       await expect(row).toBeHidden();
       await expect(page.getByText("Task completed")).toBeVisible();
+    });
+
+    test("a full swipe the browser cancels never completes the task", async ({ page }) => {
+      await waitForAppLoad(page);
+      await createTaskViaCaptureBar(page, "Interrupted swipe");
+      const row = swipeRow(page, "Interrupted swipe");
+
+      await swipe(row.getByTestId("task-card-swipe-surface"), 260, "pointercancel");
+
+      await expect(row).toBeVisible();
+      await expect(row.getByTestId("swipe-complete")).toHaveCount(0);
+      await expect(page.getByText("Task completed")).toHaveCount(0);
     });
 
     test("a short rightward swipe reveals Complete for a tap", async ({ page }) => {
