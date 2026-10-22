@@ -1,4 +1,18 @@
-# Session state, 2026-10-22: browser validation repair and PR
+# Session state, 2026-10-22: include all current dependency updates in PR #614
+
+## Resuming From Here
+
+- The owner approved including all existing dependency updates in [PR #614](https://github.com/vscarpenter/gsd-task-manager/pull/614), on `fix/next-security-browser-validation`. The earlier decision to leave Stagehand/Playwright changes unstaged is superseded.
+- Include Stagehand `^4.2.0 -> ^4.3.0`, Playwright `^1.64.0 -> ^1.64.1`, and all 44 existing changed package records in the lockfile. These include the existing Vite/PostCSS/Rolldown, Radix, Browserbase SDK, OpenTelemetry and other transitive updates. No new package update was run or version selected in this follow-up. Next.js and eslint-config-next remain pinned to 16.4.1.
+- Preserved the complete dependency snapshot byte-for-byte: manifest SHA-256 `b800a2efee3f7251ff34f07e69ab3eeb2b2fbb8472bb481792b6fa8a99d05700`; lock SHA-256 `60a9d96e85abad7f9ee40481d8f05595f0258b336b2d60874c87c2bbd26245fa`. Installed Stagehand is 4.3.0 and Playwright is 1.64.1.
+- Fresh validation used Bun 1.3.14 through `bunx --package=bun@1.3.14 bun`: frozen install, lint, typecheck, full unit coverage, license check and production audit passed. Unit result: 3,519 passed, 1 existing skipped; statements/branches/functions/lines 89.93/83.99/90.03/91.07%. Licenses approved 723 installed versions. The new unit log is `/tmp/gsd-all-deps-unit-coverage.log`.
+- Exact fresh commands: `bunx --package=bun@1.3.14 bun install --frozen-lockfile`; `bunx --package=bun@1.3.14 bun lint`; `bunx --package=bun@1.3.14 bun typecheck`; `bunx --package=bun@1.3.14 bun run test -- --coverage`; `bunx --package=bun@1.3.14 bun run license:check`; `bunx --package=bun@1.3.14 bun audit --prod --audit-level=high`.
+- Raw `bunx --package=bun@1.3.14 bun audit --audit-level=high --json > /tmp/gsd-all-deps-audit.json` exits 1 for the existing accepted high-severity braces advisory. The fresh audit also lists moderate ip-address GHSA-rxp7-6hxx-x8q5 at installed 10.7.2; that package record is identical in the initial PR and the complete snapshot. `node scripts/check-audit-results.cjs /tmp/gsd-all-deps-audit.json` passes: two advisories, none blocking under unchanged policy. No suppression or exception was added; this follow-up does not remediate the moderate finding.
+- The preceding working-checkout validation already exercised this exact complete manifest and lockfile: 352 browser cases passed with 2 existing native-clipboard skips, plus production build/export, bundle, CSP, all-three-browser PWA, development feedback and MCP checks. Hashes were verified before reusing that evidence; those browser/build checks were not rerun solely to change Git staging. The older narrow PR snapshot below remains historical evidence for the initial commit, not the final dependency scope.
+- Stagehand module-load verification passed under Node with `fetch` disabled: `Stagehand`, `Stagehand.create` and `localBrowser.launch` exports are present. Provider-backed Stagehand smoke was not run because it calls an additional AI account. Its transitive OpenTelemetry core 3.0.0 declares API peer `>=1.10.0 <1.11.0`, while API 1.9.1 is installed. Module load and local tests pass, but this peer-range discrepancy remains a tooling compatibility limitation for review; no speculative dependency change was made.
+- Update the existing PR description to match the full scope. No merge, release, deployment, Aikido rescan, account access or security-setting change is authorized/performed. Final chat handoff records the follow-up commit, push and CI state.
+
+# Historical evidence, 2026-10-22: browser validation repair and initial PR
 
 ## Resuming From Here
 
