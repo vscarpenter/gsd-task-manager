@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // Runs every spec against the built `out/` directory, served under the
-// production CSP. This is the suite CI runs; build first with `bun run build`.
+// production CSP. This is the suite CI runs; build first with `bun run build:e2e`.
 // It is a separate config because the dev server and the build both delete
 // `.next` and `out`, so one Playwright run cannot host both.
 const EXPORT_ORIGIN = "http://127.0.0.1:3100";

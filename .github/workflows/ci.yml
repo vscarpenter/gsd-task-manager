@@ -154,7 +154,7 @@ jobs:
       - name: Install ${{ matrix.browser }}
         run: bunx playwright install --with-deps ${{ matrix.browser }}
       - name: Build production export
-        run: bun run build
+        run: bun run build:e2e
       - name: Verify production PWA lifecycle in ${{ matrix.browser }}
         run: bun run test:pwa -- ${{ matrix.browser }}
       - name: Boot production export under strict CSP

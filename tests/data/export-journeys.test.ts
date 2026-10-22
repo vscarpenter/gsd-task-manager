@@ -22,7 +22,7 @@ describe("production export journeys", () => {
 
   it("should_run_the_export_journeys_after_the_production_build_in_ci", () => {
     const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
-    const build = workflow.indexOf("run: bun run build");
+    const build = workflow.indexOf("run: bun run build:e2e");
     const journeys = workflow.indexOf(
       "run: bun run test:e2e:export -- --project=${{ matrix.browser }}"
     );
@@ -32,6 +32,14 @@ describe("production export journeys", () => {
     expect(journeys).toBeGreaterThan(build);
     expect(packageJson.scripts["test:e2e:export"]).toBe(
       "playwright test --config playwright.export.config.ts"
+    );
+  });
+
+  it("builds browser fixtures with the CSP-approved hosted backend", () => {
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+
+    expect(packageJson.scripts["build:e2e"]).toBe(
+      "NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io bun run build"
     );
   });
 });

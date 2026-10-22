@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { chromium, firefox, webkit } = require("@playwright/test");
 const { startStaticExportServer } = require("./lib/static-export-server.cjs");
+const { withFirefoxTestHome } = require("./lib/firefox-test-home.cjs");
 
-const supportedBrowsers = { chromium, firefox, webkit };
+const supportedBrowsers = ["chromium", "firefox", "webkit"];
 
 // WebKit reports a failed <link rel="preconnect"> as a console error. Next emits one
 // for the page's own origin when no font is preloaded, and the offline reload
@@ -56,10 +56,12 @@ async function assertCacheBoundaries(page, rootUrl) {
   }
 }
 
-async function verifyBrowser(browserName, rootUrl, server) {
-  const browserType = supportedBrowsers[browserName];
-  if (!browserType) throw new Error(`Unsupported browser: ${browserName}`);
-  const browser = await browserType.launch();
+async function verifyBrowser(browserName, rootUrl, server, env) {
+  if (!supportedBrowsers.includes(browserName)) throw new Error(`Unsupported browser: ${browserName}`);
+  // Import only at launch: pure diagnostic tests must not initialize a second
+  // test runner inside Vitest.
+  const browserType = require("@playwright/test")[browserName];
+  const browser = await browserType.launch(env ? { env: { ...process.env, ...env } } : {});
   const context = await browser.newContext();
   const page = await context.newPage();
   const diagnostics = [];
@@ -97,11 +99,11 @@ async function verifyBrowser(browserName, rootUrl, server) {
 
 async function main() {
   const browserNames = process.argv.slice(2);
-  const targets = browserNames.length > 0 ? browserNames : Object.keys(supportedBrowsers);
+  const targets = browserNames.length > 0 ? browserNames : supportedBrowsers;
   for (const browserName of targets) {
     const { server, rootUrl } = await startStaticExportServer();
     try {
-      await verifyBrowser(browserName, rootUrl, server);
+      await withFirefoxTestHome(browserName, (env) => verifyBrowser(browserName, rootUrl, server, env));
     } finally {
       if (server.listening) {
         await new Promise((resolveClose) => server.close(resolveClose));

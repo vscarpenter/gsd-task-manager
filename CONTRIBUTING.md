@@ -49,6 +49,12 @@ bun run --cwd packages/mcp-server test:coverage
 bun run --cwd packages/mcp-server build
 ```
 
+The production-export browser suite uses `bun run build:e2e`, followed by
+`bun run test:csp`, `bun run test:pwa`, and `bun run test:e2e:export`.
+The dedicated build selects a backend origin allowed by the production CSP;
+feedback requests are stubbed, with no live submissions. See README.md for
+the macOS Firefox app-data isolation used by both browser suites and PWA checks.
+
 PocketBase/sync changes require the disposable authenticated system harness:
 
 ```bash
