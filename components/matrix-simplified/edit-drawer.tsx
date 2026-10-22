@@ -79,6 +79,8 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   const dirty = JSON.stringify(draft.toDraft()) !== baselineRef.current || draft.tagInput.trim() !== "";
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
+  // Where Keep editing sends focus back to: the field the user was in, if any.
+  const resumeFocusRef = useRef<HTMLElement | null>(null);
 
   const requestClose = (): void => {
     if (confirmingDiscard) {
@@ -86,6 +88,9 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
       return;
     }
     if (dirty) {
+      const active = document.activeElement;
+      const inDrawer = active instanceof HTMLElement && drawerRef.current?.contains(active);
+      resumeFocusRef.current = inDrawer ? active : titleRef.current;
       setConfirmingDiscard(true);
       return;
     }
@@ -103,7 +108,15 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   useEscapeToClose(requestClose);
 
   useEffect(() => {
-    if (confirmingDiscard) keepEditingRef.current?.focus();
+    if (confirmingDiscard) {
+      keepEditingRef.current?.focus();
+      return;
+    }
+    // The focused prompt button just unmounted. Without a new target, focus
+    // falls to <body> and the next Tab walks out of the modal.
+    const resume = resumeFocusRef.current;
+    resumeFocusRef.current = null;
+    if (resume) (resume.isConnected ? resume : titleRef.current)?.focus();
   }, [confirmingDiscard]);
 
   const isCreateMode = !task;

@@ -80,6 +80,34 @@ describe("<EditDrawer>", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("returns focus to the field being edited when Keep editing closes the prompt", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    // The title takes focus after a short delay; let it land so it cannot steal the typing.
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    const description = screen.getByLabelText(/description/i);
+    await user.type(description, " extra context");
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+
+    // The focused button unmounts with the prompt. Without a new target, focus
+    // falls to <body> and the next Tab walks out of the modal.
+    expect(description).toHaveFocus();
+  });
+
+  it("focuses the title when the control that opened the prompt is gone", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    await user.type(screen.getByLabelText(/description/i), " extra context");
+    // The prompt replaces the footer, so the Cancel button that opened it unmounts.
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+
+    expect(screen.getByTestId("edit-title")).toHaveFocus();
+  });
+
   it("quadrant picker switches urgent/important flags", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
