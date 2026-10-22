@@ -62,6 +62,20 @@ describe('Command Palette Components', () => {
 
       expect(screen.getByRole('option', { name: 'Test Action' })).toHaveClass('touch-target');
     });
+
+    it('reserves the selected fill for the row cmdk marks selected', () => {
+      render(
+        <CommandWrapper>
+          <CommandActionItem action={createAction()} onSelect={vi.fn()} />
+        </CommandWrapper>
+      );
+
+      // cmdk writes data-selected="false" on every row it is not on, so a bare
+      // data-[selected] variant filled them all and hid the keyboard cursor.
+      const option = screen.getByRole('option', { name: 'Test Action' });
+      expect(option).toHaveClass('data-[selected=true]:bg-background-muted');
+      expect(option.className).not.toMatch(/data-\[selected\]:/);
+    });
   });
 
   describe('ShortcutDisplay', () => {
@@ -133,6 +147,18 @@ describe('Command Palette Components', () => {
       );
 
       expect(screen.getByRole('option', { name: /Buy groceries/ })).toHaveClass('touch-target');
+    });
+
+    it('reserves the selected fill for the row cmdk marks selected', () => {
+      render(
+        <CommandWrapper>
+          <TaskItem task={createMockTask({ title: 'Buy groceries' })} onSelect={vi.fn()} />
+        </CommandWrapper>
+      );
+
+      const option = screen.getByRole('option', { name: /Buy groceries/ });
+      expect(option).toHaveClass('data-[selected=true]:bg-background-muted');
+      expect(option.className).not.toMatch(/data-\[selected\]:/);
     });
   });
 
@@ -411,11 +437,14 @@ describe('CommandPalette (full component)', () => {
     );
 
     const input = screen.getByPlaceholderText('Search tasks, actions, settings...');
+    const firstSelected = document.querySelector('[cmdk-item][data-selected="true"]');
     fireEvent.keyDown(input, { key: 'ArrowDown' });
 
+    // Every row carries data-selected, so only its value says which one is current.
     await waitFor(() => {
-      const selectedItems = document.querySelectorAll('[data-selected], [aria-selected="true"]');
-      expect(selectedItems.length).toBeGreaterThan(0);
+      const selectedItems = document.querySelectorAll('[cmdk-item][data-selected="true"]');
+      expect(selectedItems).toHaveLength(1);
+      expect(selectedItems[0]).not.toBe(firstSelected);
     });
   });
 

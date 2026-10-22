@@ -21,7 +21,8 @@ export function CommandActionItem({ action, onSelect }: CommandActionItemProps) 
       className={cn(
         "touch-target relative flex cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none",
         // Editorial chrome: row highlight is a neutral sunken fill, not a tint.
-        "hover:bg-background-muted data-[selected]:bg-background-muted"
+        // cmdk writes data-selected="false" on every other row, so match the value.
+        "hover:bg-background-muted data-[selected=true]:bg-background-muted"
       )}
     >
       <span className="text-foreground">{action.label}</span>

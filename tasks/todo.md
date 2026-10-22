@@ -1,3 +1,25 @@
+# Session state, 2026-10-22: /impeccable harden on branch `fix/audit-harden`
+
+Standard tier: five independent bounded fixes from the audit, test-first each.
+
+- [ ] Palette: only the selected row gets the fill (`data-[selected=true]:`); tighten the ArrowDown test, add an e2e regression on computed fills.
+- [ ] Settings: name the Show completed, Auto-sync and Auto-archive switches (the `aria-label` pattern `notification-settings.tsx` already uses); give `Switch` a 44px coarse-pointer hit area without changing its drawing.
+- [ ] About `<pre>`: focusable, named scroll region.
+- [ ] Swipe: `pointercancel` and `lostpointercapture` abort to the pre-gesture rest offset and never commit; jsdom and e2e regressions.
+- [ ] Edit drawer: `role="dialog"` moves off the `<form>`; header and footer stop being page landmarks. Archive: hidden `<h2>` over the list.
+- [ ] Verify: `bun run test`, `bun typecheck`, `bun lint`, affected e2e on chromium, rendered axe re-check, a11y-reviewer. Commit per fix; ask before push.
+
+# Session state, 2026-10-22: Impeccable technical audit (read-only, no code changed)
+
+## Resuming From Here
+
+- Ran `/impeccable audit` on the web app at `d81a522` (v13.9.6) against the built export: source detector, CDP-rendered detector, axe 4.10 WCAG 2.2 AA across 6 routes x light/dark x 1280/390 plus editor, palette, onboarding and help drawer; Tab-order focus probe; real CDP touch on swipe rows. Score 14/20 (Good). No P0.
+- P1, fix first: palette selection invisible (`data-[selected]:` matches `data-selected="false"`, `components/command-palette/command-item.tsx:24`, `task-item.tsx:39`); three switches with no name (`SettingsRow` label is a bare `<p>`, `components/settings/shared-components.tsx:21`); switch off-state boundary 1.5:1 (`components/ui/switch.tsx` uses `border-border`, not the control-border token); editor quadrant sub-labels 3.49 to 4.14:1 (`edit-drawer-fields.tsx:77`); About quadrant cards muted text 4.03 to 4.16:1 (`components/about/matrix-section.tsx:70`).
+- P2: a `touchcancel` past the full-swipe threshold completes the task (`components/task-card/use-swipe-gesture.ts:171` routes cancel to `pointerEnd`); px-only type ramp ignores the browser font-size preference (`app/css/inkwell-tokens.css:98-105`); 61 arbitrary `text-[Npx]` sizes, 17 distinct, 11 fractional, some at 9 and 10px; About `<pre>` not keyboard-scrollable (`components/about/terminal-block.tsx:65`).
+- Verified false positives: detector `cream-palette` and `nested-cards` (both pinned by DESIGN.md), `outline-none` matches (global unlayered `*:focus-visible` wins), dashboard 1x1 radios (labels 81 to 89 x 56px).
+- Not tested: WebKit or a physical device for touch, touch drag between quadrants, reset/delete/import/share/sync dialogs, a real screen reader.
+- Next: owner picks which `/impeccable` follow-ups to run (harden, polish, typeset, distill). Nothing is staged; this block rides the next branch.
+
 # Session state, 2026-10-22: include all current dependency updates in PR #614
 
 ## Resuming From Here
