@@ -42,6 +42,26 @@ test.describe("Settings Sections", () => {
     await expect(page.getByRole("button", { name: /^run$/i })).toBeVisible();
   });
 
+  test("a settings select shows a focus ring when reached by keyboard", async ({ page }) => {
+    await matrixPage.openSettings();
+    await page.locator("aside.lg\\:block").getByRole("button", { name: "Archive" }).click();
+
+    const autoArchive = page.locator("main").getByRole("switch", { name: "Auto-archive" });
+    if ((await autoArchive.getAttribute("aria-checked")) !== "true") await autoArchive.click();
+    const select = page.locator("main").getByRole("combobox", { name: "Archive after" });
+    await expect(select).toBeVisible();
+
+    await autoArchive.focus();
+    await page.keyboard.press("Tab");
+    await expect(select).toBeFocused();
+    const outline = await select.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+    });
+    expect(outline.style).not.toBe("none");
+    expect(outline.width).toBeGreaterThan(0);
+  });
+
   test("about section renders app metadata", async ({ page }) => {
     await matrixPage.openSettings();
     await page.locator("aside.lg\\:block").getByRole("button", { name: "About" }).click();

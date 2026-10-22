@@ -143,6 +143,20 @@ describe('Settings Components', () => {
       fireEvent.change(select, { target: { value: 'oldest' } });
       expect(handleChange).toHaveBeenCalledWith('oldest');
     });
+
+    it('keeps the keyboard focus ring on the select', () => {
+      render(
+        <SettingsSelectRow
+          label="Archive after"
+          value="30 days"
+          options={[{ value: '30', label: '30 days' }]}
+          onChange={vi.fn()}
+        />
+      );
+      // Tailwind utilities outrank the layered global :focus-visible ring, so an
+      // outline-none here erased the row's only focus indicator.
+      expect(screen.getByRole('combobox').className).not.toMatch(/outline-none/);
+    });
   });
 
   describe('AboutSection', () => {

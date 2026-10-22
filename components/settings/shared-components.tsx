@@ -68,7 +68,7 @@ export function SettingsSelectRow({
 						value={options.find((opt) => opt.label === value)?.value || options[0].value}
 						onChange={(e) => onChange(e.target.value)}
 						className="appearance-none bg-transparent text-sm text-foreground-muted
-						           text-right pr-5 cursor-pointer focus:outline-none"
+						           text-right pr-5 cursor-pointer"
 					>
 						{options.map((opt) => (
 							<option key={opt.value} value={opt.value}>
