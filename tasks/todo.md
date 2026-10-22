@@ -1,3 +1,24 @@
+# Session state, 2026-10-21: bun audit advisories (`chore/deps-audit-2026-10-21`, PR #613)
+
+## Resuming From Here
+
+`bun audit` reported 10 advisories (3 high, 7 moderate) in four packages. PR #612, opened
+that morning, already moved the MCP SDK to 1.32.1. This branch stacks on #612 and clears
+the rest, so merging #613 covers #612.
+
+- [x] Vitest: root 5.0.2 to 5.0.5, MCP 4.1.11 to 4.1.12 (`7108dcb`). The hardening guard
+      now pins the root runner too. Coverage totals and the 281-file key set match 5.0.2.
+- [x] Hono: the exact override moves from 4.13.7 to 4.13.13 (`5eca4c4`).
+- [x] Verified in a clean worktree on bun 1.3.14 and Node 22.19: every CI job's command,
+      the CI audit checker, `next build`, and a stdio probe of the built MCP server.
+- [ ] CI on PR #613, then Vinny merges it and closes #612.
+- [ ] Release `gsd-mcp-server` 1.3.1. The published 1.3.0 pins SDK 1.31.0 exactly, so npm
+      users keep the vulnerable SDK until then.
+
+Left alone on purpose: `braces` 3.0.3 has no patched release and stays accepted until
+2027-01-05. The e2e jobs have been red on main since #609 (2026-10-17). Vinny's uncommitted
+stagehand 4.2.1 and playwright 1.64.1 bump in the main checkout was not touched.
+
 # Session state, 2026-10-17: full e2e suite on the production export in CI (`ci/e2e-on-export`)
 
 ## Resuming From Here

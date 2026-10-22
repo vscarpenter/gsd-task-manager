@@ -368,7 +368,7 @@ describe('security hardening scripts and workflows', () => {
     const mcpPackage = JSON.parse(readRepoFile('packages/mcp-server/package.json'));
 
     expect(rootPackage.overrides['brace-expansion']).toBe('>=5.0.12');
-    expect(rootPackage.overrides.hono).toBe('4.13.7');
+    expect(rootPackage.overrides.hono).toBe('4.13.13');
     expect(rootPackage.overrides.sharp).toBe('0.35.5');
     expect(rootPackage.overrides.undici).toBe('7.29.1');
     expect(rootPackage.overrides['fast-uri']).toBe('4.1.5');
@@ -381,9 +381,10 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides.qs).toBe('>=6.16.0');
     expect(rootPackage.overrides['proxy-addr']).toBe('>=2.0.8');
     expect(rootPackage.overrides['source-map-js']).toBe('>=1.2.2');
-    expect(mcpPackage.devDependencies.vitest).toBe('4.1.11');
-    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.11');
-    expect(mcpPackage.dependencies['@modelcontextprotocol/sdk']).toBe('1.31.0');
+    expect(rootPackage.devDependencies.vitest).toBe('5.0.5');
+    expect(mcpPackage.devDependencies.vitest).toBe('4.1.12');
+    expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.12');
+    expect(mcpPackage.dependencies['@modelcontextprotocol/sdk']).toBe('1.32.1');
     expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
     expect(rootPackage.dependencies['@sentry/browser']).toBeUndefined();
     expect(mcpPackage.dependencies['@sentry/node']).toBeUndefined();
