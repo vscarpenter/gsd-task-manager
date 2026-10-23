@@ -75,4 +75,12 @@ describe("MatrixGrid — axis labels", () => {
     expect(frame).toContainElement(screen.getByTestId("matrix-grid"));
     expect(frame.className).toContain("@min-[696px]:grid-cols-[22px_minmax(0,1fr)]");
   });
+
+  it("gives the row labels the panes' own row tracks, so each stays beside its row", () => {
+    renderGrid();
+    const paneRows = "@min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]";
+
+    expect(screen.getByTestId("matrix-grid").className).toContain(paneRows);
+    expect(screen.getByTestId("matrix-axis-rows").className).toContain(paneRows);
+  });
 });

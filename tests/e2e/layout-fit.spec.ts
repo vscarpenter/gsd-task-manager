@@ -56,4 +56,20 @@ test.describe("Layout fit", () => {
       expect(Math.abs(palette - sync), `at ${width}px`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
     }
   });
+
+  // On a screen too short for two 280px pane rows, the stage scrolls and each
+  // row keeps its floor. The labels used to split the visible height instead,
+  // so at 800px tall "Not important" sat 122px above the middle of its row.
+  test("each row label stays level with its row on a short screen", async ({ page }) => {
+    for (const height of [720, 800]) {
+      await page.setViewportSize({ width: 1280, height });
+      await waitForAppLoad(page);
+
+      const labels = page.getByTestId("matrix-axis-rows").locator("p");
+      for (const [index, pane] of ["quadrant-q1", "quadrant-q3"].entries()) {
+        const drift = Math.abs((await centerY(labels.nth(index))) - (await centerY(page.getByTestId(pane))));
+        expect(drift, `${pane} label at ${height}px tall`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+      }
+    }
+  });
 });
