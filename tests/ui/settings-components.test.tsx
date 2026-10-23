@@ -122,6 +122,18 @@ describe('Settings Components', () => {
       );
       expect(screen.getByText('Some desc')).toBeInTheDocument();
     });
+
+    // jsdom has no layout; tests/e2e/layout-fit.spec.ts measures the wrap.
+    it('wraps a wide control below its label instead of squeezing the label', () => {
+      render(
+        <SettingsRow label="Theme" description="Choose your visual style">
+          <span>control</span>
+        </SettingsRow>
+      );
+      const labelColumn = screen.getByText('Theme').parentElement;
+      expect(labelColumn?.parentElement).toHaveClass('flex-wrap');
+      expect(labelColumn).toHaveClass('flex-[1_1_8rem]');
+    });
   });
 
   describe('SettingsSelectRow', () => {
