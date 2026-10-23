@@ -86,7 +86,7 @@ export function UpcomingDeadlines({ tasks, onTaskClick }: UpcomingDeadlinesProps
           {dueThisWeekTasks.length > 0 && (
             <DeadlineSection
               title="Due this week"
-              icon={<ClockIcon className="h-4 w-4 text-sky" />}
+              icon={<ClockIcon className="h-4 w-4 text-foreground-muted" />}
               tasks={dueThisWeekTasks}
               onTaskClick={onTaskClick}
               color="info"
@@ -113,16 +113,18 @@ function DeadlineSection({
   onTaskClick,
   color,
 }: DeadlineSectionProps) {
+  // "This week" carries no status worth a tint. A tide-family wash beside the
+  // quadrant chips read as Schedule, and status-blocking means "blocked".
   const borderColor = {
     overdue: "border-status-overdue/35",
     warning: "border-warning/35",
-    info: "border-sky/35",
+    info: "border-border",
   }[color];
 
   const bgColor = {
     overdue: "bg-status-overdue-muted",
     warning: "bg-warning-tint",
-    info: "bg-status-blocking-muted",
+    info: "bg-card",
   }[color];
 
   return (

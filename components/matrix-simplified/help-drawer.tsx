@@ -30,7 +30,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           restoreFocusOrMainContent(previouslyFocusedRef.current);
           previouslyFocusedRef.current = null;
         }}
-        className="redesign-scope rd-fade-in max-h-[calc(100dvh-env(safe-area-inset-top))] border-card-border bg-transparent p-0 [&>button]:right-[max(1rem,env(safe-area-inset-right))] [&>button]:top-[max(1rem,env(safe-area-inset-top))] md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:max-h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:overflow-hidden md:p-0"
+        className="animate-sheet-in max-h-[calc(100dvh-env(safe-area-inset-top))] border-card-border bg-transparent p-0 [&>button]:right-[max(1rem,env(safe-area-inset-right))] [&>button]:top-[max(1rem,env(safe-area-inset-top))] md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:max-h-[100dvh] md:w-[520px] md:max-w-[520px] md:translate-x-0 md:translate-y-0 md:rounded-none md:border-l md:border-t-0 md:overflow-hidden md:p-0"
         style={{ paddingBottom: 0 }}
       >
         <div
@@ -40,7 +40,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             height: "100%",
             minHeight: "inherit",
             flexDirection: "column",
-            boxShadow: "var(--rd-shadow-lg)",
+            boxShadow: "var(--shadow-lg)",
           }}
         >
         <header
@@ -58,7 +58,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
                 fontSize: 12,
                 letterSpacing: 0.12,
                 textTransform: "uppercase",
-                color: "var(--ink-3)",
+                color: "var(--gray-500)",
                 fontWeight: 600,
               }}
             >
@@ -66,7 +66,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             </div>
             <DialogTitle asChild className="text-h1">
               <h2 style={{ margin: "4px 0 0" }}>
-                How to use <em style={{ fontStyle: "italic", color: "var(--accent)" }}>GSD</em>
+                How to use <em>GSD</em>
               </h2>
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -81,11 +81,11 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 28 }}
         >
           <Section label="One board, one capture bar">
-            <Concept title="The matrix" accent="var(--accent)">
+            <Concept title="The matrix">
               The classic 2×2 Eisenhower board is your home view. Drag a task between quadrants to reclassify it; hover a
               quadrant while dragging to see the drop target highlight.
             </Concept>
-            <Concept title="The capture bar" accent="var(--accent)">
+            <Concept title="The capture bar">
               Every task starts in the bar at the top. Type your task, hit{" "}
               <kbd>Enter</kbd>, and the parser routes it to the right quadrant based on{" "}
               <code style={codeStyle}>!</code> / <code style={codeStyle}>*</code> markers — or press{" "}
@@ -110,7 +110,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <SyntaxRow symbol="!!" meaning="Urgent and important (Do First)" />
             <SyntaxRow symbol="*" meaning="Marks the task important" />
             <SyntaxRow symbol="#tag" meaning="Adds a tag (any word-like token)" />
-            <p style={{ ...bodyStyle, color: "var(--ink-3)" }}>
+            <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
               Example: <code style={codeStyle}>!! ship the deck #work #q2</code> creates an urgent + important task tagged{" "}
               <code style={codeStyle}>#work</code> and <code style={codeStyle}>#q2</code>.
             </p>
@@ -128,7 +128,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <ShortcutRow keys={["Enter"]} action="Submit the task (in the capture bar)" />
             <ShortcutRow keys={["?"]} action="Open this help drawer" />
             <ShortcutRow keys={["Esc"]} action="Close any open drawer" />
-            <p style={{ ...bodyStyle, color: "var(--ink-3)", fontSize: 12 }}>
+            <p style={{ ...bodyStyle, color: "var(--gray-500)", fontSize: 12 }}>
               Option shortcuts follow the physical key position and are suppressed while a text field or modal is active,
               so typing in Quick Capture or the composer won&rsquo;t hijack keys.
             </p>
@@ -153,7 +153,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               The cloud icon in the top bar is your sync control. Click it to sign in with Google, Apple, or GitHub — once
               enabled, your tasks sync across devices against a self-hosted PocketBase backend.
             </p>
-            <p style={{ ...bodyStyle, color: "var(--ink-3)" }}>
+            <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
               An aubergine badge means there are pending changes to push; a coral&nbsp;<em>!</em> badge means the session expired and you
               need to re-authenticate. Visit{" "}
               <Link href={"/sync-history" as const} style={linkStyle} onClick={onClose}>
@@ -217,7 +217,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
           fontWeight: 600,
           letterSpacing: 0.12,
           textTransform: "uppercase",
-          color: "var(--ink-3)",
+          color: "var(--gray-500)",
         }}
       >
         {label}
@@ -227,19 +227,13 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function Concept({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
+function Concept({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-      <span
-        aria-hidden
-        style={{ width: 4, borderRadius: 3, background: accent, alignSelf: "stretch", flexShrink: 0, minHeight: 36 }}
-      />
-      <div>
-        <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.2, color: "var(--ink)" }}>
-          {title}
-        </div>
-        <p style={{ ...bodyStyle, marginTop: 2 }}>{children}</p>
+    <div>
+      <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.2, color: "var(--slate)" }}>
+        {title}
       </div>
+      <p style={{ ...bodyStyle, marginTop: 2 }}>{children}</p>
     </div>
   );
 }
@@ -261,7 +255,7 @@ function QuadrantLine({
         gap: 12,
         alignItems: "center",
         padding: "8px 10px",
-        background: `var(--${rdKey}-soft)`,
+        background: `var(--${rdKey}-wash)`,
         borderRadius: 10,
       }}
     >
@@ -275,8 +269,8 @@ function QuadrantLine({
         }}
       />
       <div>
-        <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13.5 }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.4 }}>{hint}</div>
+        <div style={{ fontWeight: 600, color: "var(--slate)", fontSize: 13.5 }}>{title}</div>
+        <div style={{ fontSize: 12.5, color: "var(--gray-500)", lineHeight: 1.4 }}>{hint}</div>
       </div>
     </div>
   );
@@ -286,7 +280,7 @@ function SyntaxRow({ symbol, meaning }: { symbol: string; meaning: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
       <code style={{ ...codeStyle, minWidth: 40, textAlign: "center" }}>{symbol}</code>
-      <span style={{ color: "var(--ink-2)" }}>{meaning}</span>
+      <span style={{ color: "var(--gray-700)" }}>{meaning}</span>
     </div>
   );
 }
@@ -299,7 +293,7 @@ function ShortcutRow({ keys, action }: { keys: string[]; action: string }) {
           <kbd key={k}>{k}</kbd>
         ))}
       </div>
-      <span style={{ color: "var(--ink-2)" }}>{action}</span>
+      <span style={{ color: "var(--gray-700)" }}>{action}</span>
     </div>
   );
 }
@@ -308,7 +302,7 @@ const bodyStyle: React.CSSProperties = {
   margin: 0,
   fontSize: 13.5,
   lineHeight: 1.55,
-  color: "var(--ink-2)",
+  color: "var(--gray-700)",
 };
 
 const codeStyle: React.CSSProperties = {
@@ -316,9 +310,8 @@ const codeStyle: React.CSSProperties = {
   fontSize: 12,
   padding: "2px 8px",
   borderRadius: "var(--r-xs)",
-  border: "var(--line)",
-  background: "var(--bg-inset)",
-  color: "var(--ink)",
+  background: "var(--gray-100)",
+  color: "var(--slate)",
 };
 
 const linkStyle: React.CSSProperties = {

@@ -1,3 +1,18 @@
+# Session state, 2026-10-22: /impeccable polish on branch `fix/audit-polish`
+
+## Resuming From Here
+
+Standard tier. Five fix commits on `fix/audit-polish`, not pushed; the owner decides on push and PR.
+
+- [x] Switch off state uses `--control-border`: 3.38:1 light, 3.13:1 dark, measured (was about 1.5). `169c2c1`.
+- [x] Edit drawer quadrant sub-labels drop `opacity-80` and clear 4.5:1. `c4103a0`.
+- [x] About quadrant cards use `--gray-700` on their tints. `4267f3a`.
+- [x] Due-this-week rows are plain paper instead of the `status-blocking` tide wash. `2397109`.
+- [x] Help drawer leaves `.redesign-scope`; about 280 lines of legacy `.rd-*` CSS deleted; tide no longer decorates it. `65f304b`.
+- [x] Verified: every CI job command passes (lint, quality:shape, knip, license, test with coverage, typecheck, build, bundle). Rendered axe on a fresh build across 32 states is now at zero for every rule, contrast included (13 before). Related e2e specs pass, except the cross-route capture test that also fails on main.
+
+Next: owner says whether to push and open the PR. Remaining audit items route to `/impeccable typeset` (61 hand-set text sizes, sub-11px text, px-only ramp) and `/impeccable distill` (eyebrow count, the matrix heading's double announcement).
+
 # Session state, 2026-10-22: /impeccable harden on branch `fix/audit-harden`
 
 ## Resuming From Here
@@ -16,7 +31,7 @@ Not done, by decision: no version bump (fix PRs leave it to the release PR). Win
 
 Known, pre-existing: `production-hybrid.spec.ts` "delivers cross-route capture" fails on the dev server on unmodified main too. Four other e2e failures in a full run were dev-server load flakiness and pass in isolation.
 
-Next: owner says whether to push and open the PR. Then `/impeccable polish` for the editor sub-label and About card contrast, and `/impeccable typeset` for the type ramp. Release work in parallel: PR #615 (gsd-mcp-server 1.3.1) is green and waits for the owner to merge, then the `mcp-v1.3.1` tag and the publish gate approval.
+Done since: #616 merged with its required `lint` red (the code-shape step); #617 fixed forward and main went green on `fc8fbd9`. gsd-mcp-server 1.3.1 published 2026-10-23 00:10 UTC from tag `mcp-v1.3.1` on `5039f88`, with provenance, SDK 1.32.1.
 
 # Session state, 2026-10-22: Impeccable technical audit (read-only, no code changed)
 
@@ -224,7 +239,7 @@ the rest, so merging #613 covers #612.
 - [x] Verified in a clean worktree on bun 1.3.14 and Node 22.19: every CI job's command,
       the CI audit checker, `next build`, and a stdio probe of the built MCP server.
 - [ ] CI on PR #613, then Vinny merges it and closes #612.
-- [ ] Release `gsd-mcp-server` 1.3.1. The published 1.3.0 pins SDK 1.31.0 exactly, so npm
+- [x] Release `gsd-mcp-server` 1.3.1 (published 2026-10-23 from `mcp-v1.3.1`). The published 1.3.0 pins SDK 1.31.0 exactly, so npm
       users keep the vulnerable SDK until then.
 
 Left alone on purpose: `braces` 3.0.3 has no patched release and stays accepted until

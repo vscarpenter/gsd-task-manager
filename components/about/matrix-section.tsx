@@ -1,5 +1,7 @@
 import { ScrollReveal } from "@/components/about/scroll-reveal";
 
+// These tints carry the cards' small text in --gray-700: --gray-500's 5.6:1
+// holds on paper, but drops near 4:1 on a pigment tint.
 const quadrants = [
   {
     label: "Q1",
@@ -67,13 +69,13 @@ export function MatrixSection() {
                     key={q.label}
                     className={`rounded-xl border p-4 sm:p-5 ${q.className}`}
                   >
-                    <span className="kicker text-foreground-muted">
+                    <span className="kicker text-gray-700">
                       {q.label}
                     </span>
                     <h3 className="text-base font-semibold text-foreground mt-1">
                       {q.name}
                     </h3>
-                    <p className="text-caption text-foreground-muted mt-0.5">
+                    <p className="text-caption text-gray-700 mt-0.5">
                       {q.description}
                     </p>
                   </div>
