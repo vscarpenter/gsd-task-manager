@@ -24,7 +24,8 @@ export function SegmentedControl<T extends string>({
   return (
     <fieldset
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-background-muted p-1",
+        // Wraps only when large browser text makes the options wider than their container.
+        "inline-flex max-w-full flex-wrap items-center gap-1 rounded-full bg-background-muted p-1",
         className
       )}
     >

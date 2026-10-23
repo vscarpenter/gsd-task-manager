@@ -47,8 +47,9 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
         </div>
       </div>
 
-      {/* Middle: 7-day activity strip — olive marks a completed day */}
-      <div className="flex items-center gap-1.5">
+      {/* Middle: 7-day activity strip — olive marks a completed day. It wraps
+          rather than widening the page when the browser's text is set large. */}
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
         {last7Days.map((active, index) => (
           <div key={DAY_LABELS[index]} className="flex flex-col items-center gap-1">
             <div
