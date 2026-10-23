@@ -185,7 +185,7 @@ function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): Reac
       : completedInsight;
 
   return (
-    <div className="mt-8 grid gap-6 border-t border-border/70 pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/70">
+    <div className="mt-8 grid gap-6 *:min-w-0 border-t border-border/70 pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/70">
       <StatsCard
         className="sm:pr-6"
         title="Closed today"
@@ -251,7 +251,7 @@ function DashboardContent({
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 *:min-w-0 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <CompletionChart
             data={trendData}
@@ -273,7 +273,7 @@ function DashboardContent({
 
       <ReviewPrompts distribution={metrics.quadrantDistribution} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 *:min-w-0 lg:grid-cols-2">
         <UpcomingDeadlines tasks={tasks} onTaskClick={onDeadlineTaskClick} />
         <TagAnalytics tagStats={metrics.tagStats} maxTags={8} />
       </div>

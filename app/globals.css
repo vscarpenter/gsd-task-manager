@@ -378,6 +378,9 @@ body {
 .text-h3,
 .text-numeral {
   font-family: var(--serif);
+  /* The ramp is rem, so large browser text can make one long word wider than
+     its column. Break that word instead of scrolling the page sideways. */
+  overflow-wrap: break-word;
 }
 
 .text-numeral {
