@@ -9,9 +9,9 @@ function source(path: string): string {
 }
 
 describe("Two-Voice Rule (DESIGN.md)", () => {
-  it("applies the serif voice to every heading step in the type ramp", () => {
+  it("applies the serif voice to every heading step and the Numeral role", () => {
     const globals = source("app/globals.css");
-    const rule = /\.text-display\s*,\s*\.text-h1\s*,\s*\.text-h2\s*,\s*\.text-h3\s*\{[^}]*\}/;
+    const rule = /\.text-display\s*,\s*\.text-h1\s*,\s*\.text-h2\s*,\s*\.text-h3\s*,\s*\.text-numeral\s*\{[^}]*\}/;
     const match = globals.match(rule);
     expect(match).not.toBeNull();
     expect(match?.[0]).toMatch(/font-family:\s*var\(--serif\)/);

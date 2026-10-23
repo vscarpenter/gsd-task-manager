@@ -44,8 +44,7 @@ export function StatsCard({
       {/* 40px, not 48: at this weight the metric already dominates its column,
           and the serif verdict above owns the page's largest voice. */}
       <p
-        className="mt-3 text-[40px] font-semibold leading-none tabular-nums text-foreground"
-        style={{ letterSpacing: "-0.02em" }}
+        className="mt-3 text-numeral text-foreground"
       >
         {animatedValue}
       </p>

@@ -38,7 +38,7 @@ export const ACTIVE_RENDER_CAP = 50;
  * are AA-checked against paper, and ochre ink on ochre measures under 4.5:1.
  */
 const COUNT_PILL =
-  "ml-auto shrink-0 rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold tabular-nums";
+  "ml-auto shrink-0 rounded-full bg-card px-2 py-0.5 text-caption font-semibold tabular-nums";
 
 interface QuadrantPaneProps {
   meta: QuadrantMeta;
@@ -133,7 +133,7 @@ export function QuadrantPane({
         />
         <h2
           data-testid="quadrant-title"
-          className="shrink-0 text-body font-semibold leading-none"
+          className="shrink-0 text-h3 leading-none"
           style={{ color: ink }}
         >
           {meta.title}
@@ -167,7 +167,7 @@ export function QuadrantPane({
               >
                 <QuadrantIcon className="h-6 w-6" />
               </span>
-              <p className="text-balance text-[16px] font-semibold leading-tight tracking-tight text-foreground">
+              <p className="text-balance text-h3 text-foreground">
                 {meta.rdEmptyHeadline}
               </p>
               <p className="max-w-[26ch] text-pretty text-caption text-foreground-muted">

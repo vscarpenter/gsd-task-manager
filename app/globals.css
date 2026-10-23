@@ -102,6 +102,13 @@
   --text-2xl: var(--t-h2);
   --text-2xl--line-height: 1.3;
 
+  /* Numeral (DESIGN.md): a stat value set as a figure, 40px by default. The
+     one role off the reading ramp, serif and tabular like the iOS dashboard. */
+  --text-numeral: 2.5rem;
+  --text-numeral--line-height: 1;
+  --text-numeral--letter-spacing: -0.02em;
+  --text-numeral--font-weight: 600;
+
   /* Radii — Inkwell ladder: pane 14 (lg) · card 12 (md) · control 10 (sm) ·
      icon button 8 (icon) · chip pill (full). */
   --radius-xs:   var(--r-xs);
@@ -368,8 +375,13 @@ body {
 .text-display,
 .text-h1,
 .text-h2,
-.text-h3 {
+.text-h3,
+.text-numeral {
   font-family: var(--serif);
+}
+
+.text-numeral {
+  font-variant-numeric: tabular-nums;
 }
 
 main {

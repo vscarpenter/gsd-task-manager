@@ -33,8 +33,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
           </p>
           <div className="mt-3 flex items-baseline gap-2">
             <span
-              className="text-[40px] font-semibold leading-none tabular-nums text-foreground"
-              style={{ letterSpacing: "-0.02em" }}
+              className="text-numeral text-foreground"
             >
               {current}
             </span>
@@ -58,7 +57,7 @@ export function StreakIndicator({ streakData }: StreakIndicatorProps) {
               }`}
               title={`${DAY_LABELS[index]}: ${active ? "Completed" : "No completions"}`}
             />
-            <span className="text-[10px] text-foreground-muted">
+            <span className="text-caption text-foreground-muted">
               {DAY_LABELS[index]}
             </span>
           </div>

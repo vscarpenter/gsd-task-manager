@@ -187,14 +187,14 @@ function DiscardConfirmFooter({ keepEditingRef, onKeepEditing, onDiscard }: Disc
         ref={keepEditingRef}
         type="button"
         onClick={onKeepEditing}
-        className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-foreground-muted hover:text-foreground"
+        className="rounded-lg px-3 py-1.5 text-small font-medium text-foreground-muted hover:text-foreground"
       >
         Keep editing
       </button>
       <button
         type="button"
         onClick={onDiscard}
-        className="inline-flex items-center rounded-lg bg-foreground px-3.5 py-1.5 text-[13px] font-medium text-background"
+        className="inline-flex items-center rounded-lg bg-foreground px-3.5 py-1.5 text-small font-medium text-background"
       >
         Discard
       </button>
@@ -234,7 +234,7 @@ function DrawerFooter({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-foreground-muted hover:text-foreground"
+            className="rounded-lg px-3 py-1.5 text-small font-medium text-foreground-muted hover:text-foreground"
           >
             Cancel
           </button>
@@ -243,7 +243,7 @@ function DrawerFooter({
             type="submit"
             disabled={!canSave}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-1.5 text-[13px] font-medium text-background",
+              "inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-1.5 text-small font-medium text-background",
               "hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-40"
             )}
           >
@@ -272,9 +272,9 @@ function DrawerHeader({
   return (
         <div className="flex items-center gap-2.5 border-b border-border/60 px-5 py-4">
           <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{heading}</h2>
+          <h2 className="text-h3 text-foreground">{heading}</h2>
           {activeQuadrantTitle ? (
-            <span className="ml-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: quadrantInk }}>
+            <span className="ml-1 text-eyebrow uppercase" style={{ color: quadrantInk }}>
               {activeQuadrantTitle}
             </span>
           ) : null}
@@ -350,7 +350,7 @@ function TitleAndDescriptionFields({
         value={draft.title}
         onChange={(e) => draft.setTitle(e.target.value)}
         placeholder="What needs doing?"
-        className="w-full rounded-lg border border-border bg-background px-3 py-3 text-[18px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
+        className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
         aria-label="Title"
       />
 
@@ -362,7 +362,7 @@ function TitleAndDescriptionFields({
           rows={4}
           placeholder="Optional details, links, context"
           aria-label="Description"
-          className="pointer-coarse:text-base w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+          className="pointer-coarse:text-base w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-small leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
       </Field>
     </>

@@ -49,4 +49,12 @@ describe("type ramp", () => {
   it("sets the eyebrow at the documented 600", () => {
     expect(declared(globals, "text-eyebrow--font-weight")).toBe("600");
   });
+
+  it("defines the Numeral role as 40px serif at 600 with tabular figures", () => {
+    expect(parseFloat(declared(globals, "text-numeral") ?? "") * ROOT_FONT_SIZE_PX).toBe(40);
+    expect(declared(globals, "text-numeral--font-weight")).toBe("600");
+    expect(globals).toMatch(/\.text-numeral\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
+    const serifSelector = globals.match(/((?:\.text-[a-z0-9]+,?\s*)+)\{\s*font-family:\s*var\(--serif\)/)?.[1] ?? "";
+    expect(serifSelector).toContain(".text-numeral");
+  });
 });

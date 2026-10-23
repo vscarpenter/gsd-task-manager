@@ -57,14 +57,14 @@ export function CompletionChart({ data, control }: CompletionChartProps) {
             dataKey="date"
             stroke="currentColor"
             className="text-foreground-muted"
-            style={{ fontSize: "12px" }}
+            style={{ fontSize: "var(--t-caption)" }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
             stroke="currentColor"
             className="text-foreground-muted"
-            style={{ fontSize: "12px" }}
+            style={{ fontSize: "var(--t-caption)" }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
@@ -74,7 +74,7 @@ export function CompletionChart({ data, control }: CompletionChartProps) {
               backgroundColor: "var(--paper)",
               border: "var(--border)",
               borderRadius: "10px",
-              fontSize: "13px",
+              fontSize: "var(--t-caption)",
               color: "var(--slate)",
               boxShadow: "var(--shadow-card-hover)",
             }}

@@ -45,7 +45,7 @@ export function TaskCardMetadata({
             <span
               key={tag}
               data-testid="task-tag"
-              className="inline-flex items-center rounded-full bg-background-muted px-[9px] py-0.5 text-[11px] font-medium text-foreground-muted"
+              className="inline-flex items-center rounded-full bg-background-muted px-[9px] py-0.5 text-caption font-medium text-foreground-muted"
             >
               {tag}
             </span>

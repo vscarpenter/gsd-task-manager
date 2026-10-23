@@ -28,7 +28,7 @@ export function FeatureCard({ icon: Icon, title, description, badge, className }
         {badge ? (
           // Deliberately quiet: this marks an absence, so it must not compete
           // with the shipped features around it.
-          <span className="rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-foreground-muted">
+          <span className="rounded-full border border-border/70 px-2 py-0.5 text-eyebrow uppercase text-foreground-muted">
             {badge}
           </span>
         ) : null}

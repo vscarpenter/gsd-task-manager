@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "\\s*var\\(--serif\\)/)?.[1] ??",
+        "createdAt": "2026-10-23T01:21:06.276Z",
+        "reason": "Claude: tests/data/type-ramp.test.ts regex that asserts the serif rule's selector; not a font declaration"
+      }
+    ]
+  }
+}

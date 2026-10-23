@@ -39,7 +39,7 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
               {/* Full-strength --gray-500, never alpha-reduced: at 10px the /80
                   composite measured 3.72:1 on paper, under the AA floor, and it
                   failed in light mode only. */}
-              <p className="px-3 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
+              <p className="px-3 pb-2 pt-4 text-eyebrow uppercase text-foreground-muted">
                 {group}
               </p>
               <ul className="space-y-0.5">

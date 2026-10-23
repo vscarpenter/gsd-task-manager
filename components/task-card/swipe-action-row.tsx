@@ -116,7 +116,7 @@ function SwipeActionButton({
       aria-label={action.ariaLabel ?? action.label}
       onClick={() => onAct(action)}
       className={cn(
-        "flex flex-col items-center justify-center gap-1 text-[11px] font-semibold leading-none",
+        "flex flex-col items-center justify-center gap-1 text-caption font-semibold leading-none",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--paper)]",
         className
       )}

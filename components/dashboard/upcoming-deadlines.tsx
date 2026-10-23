@@ -157,7 +157,7 @@ function DeadlineSection({
                     )}
                   </div>
                   {quadrant && (
-                    <span className="shrink-0 rounded-full bg-background-muted px-2 py-0.5 text-[10px] font-medium text-foreground-muted">
+                    <span className="shrink-0 rounded-full bg-background-muted px-2 py-0.5 text-caption font-medium text-foreground-muted">
                       {quadrant.title}
                     </span>
                   )}

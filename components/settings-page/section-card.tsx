@@ -28,12 +28,12 @@ export function SectionCard({ eyebrow, title, description, icon: Icon, children 
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+          <p className="text-eyebrow uppercase text-foreground-muted">
             {eyebrow}
           </p>
           <h2
             id={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
-            className="mt-2 text-[26px] font-semibold tracking-[-0.015em] text-foreground"
+            className="mt-2 text-h2 text-foreground"
           >
             {title}
           </h2>
