@@ -61,7 +61,7 @@
     "why": "rendered: STREAK 4 days / Best 4 days (seed completes tasks 0-3 days ago)" },
   { "id": "review-trend-periods", "tags": ["review", "true", "past-goal"], "seed": "dashboard", "path": "/dashboard", "acts": [], "expected": true,
     "goal": "The Completion trend chart has a period control offering 7, 30, and 90 day ranges",
-    "why": "rendered: 7 Days / 30 Days / 90 Days; adapted from a past Review-page goal" },
+    "why": "rendered: 7d / 30d / 90d; adapted from a past Review-page goal" },
   { "id": "review-distribution-four", "tags": ["review", "false", "near-miss"], "seed": "dashboard", "path": "/dashboard", "acts": [], "expected": false,
     "goal": "The Quadrant distribution card shows active tasks spread across all four quadrants",
     "why": "card reads '4 active tasks across 3 quadrants' (Delegate has none)" },
