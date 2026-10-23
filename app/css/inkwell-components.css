@@ -404,7 +404,7 @@ kbd, .kbd {
   width: 34px;
   flex-shrink: 0;
 }
-.sec-head h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 27px; letter-spacing: -0.012em; }
+.sec-head h2 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: var(--t-h2); letter-spacing: -0.012em; }
 .sec-head .count {
   font: 11px/1 var(--mono);
   color: var(--gray-500);
