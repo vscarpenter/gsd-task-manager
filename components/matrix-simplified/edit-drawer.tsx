@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
+import { useDiscardGuard } from "./use-discard-guard";
 import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
@@ -71,31 +72,13 @@ function quadrantChrome(urgent: boolean, important: boolean) {
 
 function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }: EditDrawerFormProps): React.ReactElement {
   const titleRef = useRef<HTMLInputElement>(null);
-  const keepEditingRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
   const baselineRef = useRef<string | null>(null);
   if (baselineRef.current === null) baselineRef.current = JSON.stringify(draft.toDraft());
   const dirty = JSON.stringify(draft.toDraft()) !== baselineRef.current || draft.tagInput.trim() !== "";
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
-  // Where Keep editing sends focus back to: the field the user was in, if any.
-  const resumeFocusRef = useRef<HTMLElement | null>(null);
-
-  const requestClose = (): void => {
-    if (confirmingDiscard) {
-      setConfirmingDiscard(false);
-      return;
-    }
-    if (dirty) {
-      const active = document.activeElement;
-      const inDrawer = active instanceof HTMLElement && drawerRef.current?.contains(active);
-      resumeFocusRef.current = inDrawer ? active : titleRef.current;
-      setConfirmingDiscard(true);
-      return;
-    }
-    onClose();
-  };
+  const { confirmingDiscard, keepEditingRef, requestClose } = useDiscardGuard(dirty, onClose, drawerRef, titleRef);
 
   const modalSurface = useModalSurface(requestClose);
   const trapKeyDown = useDialogFocus(true, drawerRef);
@@ -106,18 +89,6 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   };
 
   useEscapeToClose(requestClose);
-
-  useEffect(() => {
-    if (confirmingDiscard) {
-      keepEditingRef.current?.focus();
-      return;
-    }
-    // The focused prompt button just unmounted. Without a new target, focus
-    // falls to <body> and the next Tab walks out of the modal.
-    const resume = resumeFocusRef.current;
-    resumeFocusRef.current = null;
-    if (resume) (resume.isConnected ? resume : titleRef.current)?.focus();
-  }, [confirmingDiscard]);
 
   const isCreateMode = !task;
   const { activeQuadrant, accent, quadrantInk } = quadrantChrome(draft.urgent, draft.important);

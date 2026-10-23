@@ -62,16 +62,24 @@ export function TerminalBlock({ label, code }: TerminalBlockProps) {
           {BUTTON_LABEL[copyState]}
         </button>
       </div>
-      {/* Focusable so arrow keys can scroll a long line. The ring is inset in
-          terminal ink: the panel clips anything outside it, and tide is too dim here. */}
-      <pre
-        tabIndex={0}
-        role="region"
-        aria-label={label}
-        className="overflow-x-auto p-4 sm:p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--terminal-ink)]"
-      >
-        <code>{code}</code>
-      </pre>
+      <ScrollableCode label={label} code={code} />
     </div>
+  );
+}
+
+/**
+ * Focusable so arrow keys can scroll a long line. The ring is inset in terminal
+ * ink: the panel clips anything outside it, and tide is too dim here.
+ */
+function ScrollableCode({ label, code }: TerminalBlockProps) {
+  return (
+    <pre
+      tabIndex={0}
+      role="region"
+      aria-label={label}
+      className="overflow-x-auto p-4 sm:p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--terminal-ink)]"
+    >
+      <code>{code}</code>
+    </pre>
   );
 }
