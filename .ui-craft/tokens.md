@@ -132,10 +132,9 @@ pigments. Automatic dark mode and `[data-theme="dark"]` must declare the same va
 
 ## Typography
 
-Newsreader is loaded with `next/font` as the variable font with its optical-size axis, upright
-only. The browser sets headings in the display design and small serif in the text design. No
-italic is loaded, so serif text never asks for one. It is self-hosted in the static build and
-exposed as `--font-newsreader`.
+Newsreader is loaded with `next/font` at weights 400, 500 and 600, upright only. No italic is
+loaded, so serif text never asks for one. It is self-hosted in the static build and exposed as
+`--font-newsreader`.
 
 - `--serif`: `--font-newsreader` (Newsreader) feeds the serif chain, standing in for Apple's New
   York on non-Apple platforms; it carries display and headlines.
