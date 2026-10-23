@@ -26,7 +26,7 @@ export function PrivacySection() {
             <h2 className="text-h2 font-semibold tracking-tight text-foreground sm:text-h1 mb-4">
               Your tasks stay on your device.
             </h2>
-            <div className="text-foreground-muted leading-relaxed mb-8 space-y-4">
+            <div className="mx-auto max-w-[55ch] text-foreground-muted leading-relaxed mb-8 space-y-4">
               {privacyParagraphs.map((paragraph) => (
                 <p key={paragraph.slice(0, 32)}>{paragraph}</p>
               ))}

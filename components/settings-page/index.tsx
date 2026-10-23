@@ -27,7 +27,7 @@ export function SettingsPage() {
           <h2 className="mt-2 text-h1 font-semibold tracking-tight text-foreground sm:text-display">
             Settings
           </h2>
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-foreground-muted">
+          <p className="mt-3 max-w-[55ch] text-base leading-relaxed text-foreground-muted">
             Personalize the workspace, tune reminders, and manage local data without losing the calm, editorial tone of the main app.
           </p>
         </div>
