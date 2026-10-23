@@ -48,19 +48,19 @@ function SyncHistoryStats({ stats }: { stats: SyncStatsData }): React.ReactEleme
     <div className="mb-8 grid gap-4 md:grid-cols-4">
       <div className="rounded-lg border border-border bg-background-muted p-4">
         <div className="text-sm text-foreground-muted">Total Syncs</div>
-        <div className="text-2xl font-semibold text-foreground">{stats.totalSyncs}</div>
+        <div className="text-h2 tabular-nums text-foreground">{stats.totalSyncs}</div>
       </div>
       <div className="rounded-lg border border-border bg-background-muted p-4">
         <div className="text-sm text-foreground-muted">Successful</div>
-        <div className="text-2xl font-semibold text-status-success-ink">{stats.successfulSyncs}</div>
+        <div className="text-h2 tabular-nums text-status-success-ink">{stats.successfulSyncs}</div>
       </div>
       <div className="rounded-lg border border-border bg-background-muted p-4">
         <div className="text-sm text-foreground-muted">Tasks Pushed</div>
-        <div className="text-2xl font-semibold text-foreground">{stats.totalPushed}</div>
+        <div className="text-h2 tabular-nums text-foreground">{stats.totalPushed}</div>
       </div>
       <div className="rounded-lg border border-border bg-background-muted p-4">
         <div className="text-sm text-foreground-muted">Tasks Pulled</div>
-        <div className="text-2xl font-semibold text-foreground">{stats.totalPulled}</div>
+        <div className="text-h2 tabular-nums text-foreground">{stats.totalPulled}</div>
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ export default function SyncHistoryPage(): React.ReactElement {
 					</div>
 				) : history.length === 0 ? (
 					<div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
-						<h2 className="text-lg font-semibold text-foreground">No sync history yet</h2>
+						<h2 className="text-h3 text-foreground">No sync history yet</h2>
 						<p className="mt-2 text-sm text-foreground-muted">
 							Your sync operations will appear here once you enable cloud sync.
 						</p>

@@ -70,7 +70,7 @@ function ErrorFallback({
       className="flex min-h-screen flex-col items-center justify-center gap-6 px-4"
     >
       <div className="text-center space-y-3">
-        <h1 id="error-boundary-title" className="text-4xl font-bold">Something went wrong</h1>
+        <h1 id="error-boundary-title" className="text-h1">Something went wrong</h1>
         <p className="text-muted-foreground max-w-md">
           An unexpected error occurred. Your data is safe in local storage.
         </p>

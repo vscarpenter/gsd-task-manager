@@ -82,7 +82,7 @@ export function DialogTitle({
   return (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold text-foreground", className)}
+    className={cn("text-h3 text-foreground", className)}
     {...props}
   />
   );

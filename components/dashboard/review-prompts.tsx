@@ -49,7 +49,7 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Reflection prompts</p>
+          <p className="text-eyebrow uppercase text-foreground-muted">Reflection prompts</p>
           <h3
             id="review-prompts-title"
             className="mt-2 text-h3 text-foreground"
@@ -76,7 +76,7 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
               >
                 {prompt.label}
               </p>
-              <h4 className="mt-2 text-base font-semibold leading-snug text-foreground sm:text-lg">
+              <h4 className="mt-2 text-h3 leading-snug text-foreground">
                 {prompt.question}
               </h4>
               <p className="mt-2 text-sm tabular-nums text-foreground-muted">

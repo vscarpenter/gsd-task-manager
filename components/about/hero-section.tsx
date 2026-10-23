@@ -67,7 +67,7 @@ export function HeroSection() {
             Start finishing.
           </h1>
 
-          <p className="mx-auto mb-10 max-w-[56ch] text-lg leading-relaxed text-foreground-muted">
+          <p className="mx-auto mb-10 max-w-[56ch] text-body leading-relaxed text-foreground-muted">
             GSD Task Manager uses the Eisenhower Matrix to help you sort what&apos;s
             urgent from what&apos;s important — so you can focus on what actually
             moves the needle.

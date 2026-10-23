@@ -62,7 +62,7 @@ export function ReviewVerdict({ metrics }: { metrics: ProductivityMetrics }): Re
           parks the count alone at the end of line one — the worst break for a
           sentence whose whole job is to deliver that number. */}
       <h2 className="text-pretty text-h2 text-foreground sm:text-h1">{lead}</h2>
-      <p className="mt-3 text-pretty text-h3 font-normal leading-snug text-foreground-muted">
+      <p className="mt-3 text-pretty text-body text-foreground-muted">
         {observation}
       </p>
     </div>
