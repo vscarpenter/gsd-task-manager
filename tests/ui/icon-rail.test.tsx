@@ -55,6 +55,15 @@ describe("IconRail", () => {
     expect(localStorage.getItem(RAIL_COLLAPSED_KEY)).toBe("false");
   });
 
+  it("clips without becoming a scroll container, so its column stays put as the page scrolls", () => {
+    render(<IconRail onHelp={vi.fn()} />);
+    const desktopNav = screen.getByRole("navigation", { name: "Primary navigation" });
+    // overflow:hidden made the nav the sticky column's scroll container, and the
+    // nav never scrolls, so the logo and links scrolled off with the page.
+    expect(desktopNav.className).toContain("md:overflow-clip");
+    expect(desktopNav.className).not.toContain("md:overflow-hidden");
+  });
+
   it("does not include hover-driven auto-expansion classes", () => {
     render(<IconRail onHelp={vi.fn()} />);
     const desktopNav = screen.getByRole("navigation", { name: "Primary navigation" });

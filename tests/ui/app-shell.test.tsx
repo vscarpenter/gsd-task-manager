@@ -472,24 +472,27 @@ describe("AppShell fillViewport", () => {
     vi.clearAllMocks();
   });
 
-  it("pins the shell to the viewport and makes main a flex column at md+ when asked", () => {
+  it("pins the shell to the viewport and makes main a flex column when asked and the screen is tall enough", () => {
     render(
       <AppShell title="GSD Matrix" fillViewport>
         <div>content</div>
       </AppShell>
     );
 
+    // `pinned` is md plus a minimum height in rem (globals.css), so a reader
+    // with large text on a short screen gets a scrolling page, not a sliver.
     const main = screen.getByRole("main");
-    expect(main.className).toContain("md:flex");
-    expect(main.className).toContain("md:flex-col");
+    expect(main.className).toContain("pinned:flex");
+    expect(main.className).toContain("pinned:flex-col");
     // The important variant: globals.css gives `main` an unlayered min-height
     // that a plain utility cannot override.
-    expect(main.className).toContain("md:min-h-0!");
-    expect(main.className).toContain("md:overflow-hidden");
+    expect(main.className).toContain("pinned:min-h-0!");
+    expect(main.className).toContain("pinned:overflow-hidden");
+    expect(main.className).not.toContain("md:overflow-hidden");
 
     const column = main.parentElement as HTMLElement;
-    expect(column.className).toContain("md:h-dvh");
-    expect(column.className).toContain("md:overflow-hidden");
+    expect(column.className).toContain("pinned:h-dvh");
+    expect(column.className).toContain("pinned:overflow-hidden");
   });
 
   it("leaves other routes page-scrolling by default", () => {
@@ -500,7 +503,7 @@ describe("AppShell fillViewport", () => {
     );
 
     const main = screen.getByRole("main");
-    expect(main.className).not.toContain("md:overflow-hidden");
-    expect((main.parentElement as HTMLElement).className).not.toContain("md:h-dvh");
+    expect(main.className).not.toContain("pinned:overflow-hidden");
+    expect((main.parentElement as HTMLElement).className).not.toContain("pinned:h-dvh");
   });
 });

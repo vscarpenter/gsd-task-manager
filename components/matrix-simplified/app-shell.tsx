@@ -20,14 +20,15 @@ import { useAppShortcuts } from "@/lib/use-app-shortcuts";
 import { cn } from "@/lib/utils";
 
 /**
- * Classes that pin the shell to the viewport at md+ when `fillViewport` is set.
+ * Classes that pin the shell to the viewport when `fillViewport` is set and the
+ * screen is wide and tall enough for it (the `pinned` variant in globals.css).
  * main needs min-h-0! because globals.css sets `main { min-height: calc(100vh -
  * 3.5rem) }` outside any layer, which outranks a layered utility and would push
  * the footer below the fold.
  */
 const MAIN_CLASS = "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6";
-const FILL_VIEWPORT_COLUMN = "md:h-dvh md:overflow-hidden";
-const FILL_VIEWPORT_MAIN = "md:flex md:min-h-0! md:flex-col md:overflow-hidden";
+const FILL_VIEWPORT_COLUMN = "pinned:h-dvh pinned:overflow-hidden";
+const FILL_VIEWPORT_MAIN = "pinned:flex pinned:min-h-0! pinned:flex-col pinned:overflow-hidden";
 
 function openCommandPalette() {
   window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));

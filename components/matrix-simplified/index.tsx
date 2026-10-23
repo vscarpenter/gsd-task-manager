@@ -116,13 +116,13 @@ function overlayReducer(state: OverlayState, action: OverlayAction): OverlayStat
 }
 
 /**
- * The stage takes whatever height the shell has left and hands it to the grid.
- * The -mx/px pair keeps pane focus rings and card shadows from being clipped by
- * the scroll container, which only engages when the viewport is too short for
- * the panes' 280px floor.
+ * While the shell is pinned, the stage takes whatever height is left and hands
+ * it to the grid. The -mx/px pair keeps pane focus rings and card shadows from
+ * being clipped by the scroll container, which only engages when the viewport
+ * is too short for the panes' 280px floor.
  */
 const MATRIX_STAGE_CLASS =
-  "md:-mx-2 md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:px-2 md:pb-2";
+  "pinned:-mx-2 pinned:flex pinned:min-h-0 pinned:flex-1 pinned:flex-col pinned:overflow-y-auto pinned:px-2 pinned:pb-2";
 
 export function MatrixSimplified() {
   const { all, isLoading } = useTasks();
@@ -348,7 +348,7 @@ export function MatrixSimplified() {
         />
         <div
           data-testid="mobile-capture-dock"
-          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:sticky md:bottom-auto md:left-auto md:right-auto md:top-[60px] md:-mx-9 md:mb-4 md:px-9 md:py-4"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:relative md:bottom-auto md:left-auto md:right-auto md:-mx-9 md:mb-4 md:px-9 md:py-4"
         >
           <CaptureBar onSubmit={handleCapture} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>

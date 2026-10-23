@@ -9,6 +9,8 @@ import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers"
  * sideways or clipping. Only Chromium exposes the setting.
  */
 const LARGE_TEXT_PX = 24;
+// The grid's minmax(280px,1fr) row floor.
+const PANE_FLOOR_PX = 280;
 
 async function useLargeText(page: Page): Promise<void> {
   const cdp = await page.context().newCDPSession(page);
@@ -58,5 +60,34 @@ test.describe("Text scaling at 150%", () => {
     await expect(label).toBeVisible();
     const [railBox, labelBox] = await Promise.all([rail.boundingBox(), label.boundingBox()]);
     expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(railBox!.x + railBox!.width);
+  });
+
+  // Pinned to a 720px screen, the header, briefing, and capture bar took 28rem
+  // at this size and left the matrix a 48px scroller. The page scrolls instead,
+  // so both 280px pane rows get their full height.
+  test("the matrix keeps both pane rows on a laptop-height screen", async ({ page }) => {
+    await useLargeText(page);
+    await waitForAppLoad(page);
+    const gridBox = await page.getByTestId("matrix-grid").boundingBox();
+    expect(gridBox!.height).toBeGreaterThanOrEqual(2 * PANE_FLOOR_PX);
+  });
+
+  test("scrolling that page leaves the rail and header uncovered", async ({ page }) => {
+    await useLargeText(page);
+    await waitForAppLoad(page);
+    await page.mouse.move(700, 400);
+    await page.mouse.wheel(0, 700);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    const rail = page.getByRole("navigation", { name: "Primary navigation" });
+    await expect(rail.getByText("Matrix")).toBeInViewport();
+
+    // Whatever paints just inside the header's bottom edge must be the header.
+    const header = await page.locator("header").first().boundingBox();
+    const topmost = await page.evaluate(
+      ([x, y]) => document.elementFromPoint(x, y)?.closest("header") !== null,
+      [header!.x + header!.width / 2, header!.y + header!.height - 4]
+    );
+    expect(topmost, "something covers the header").toBe(true);
   });
 });
