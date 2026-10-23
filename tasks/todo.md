@@ -7,7 +7,10 @@ Standard tier. The owner answered the three questions the polish pass left open.
 - [x] Review chart period labels are "7d", "30d", and "90d", and the legend reads "Completion trend period in days". The old labels needed 312px against 276 at 390, so "90 Days" wrapped. New `layout-fit.spec.ts` case failed first (48px drift at 390).
 - [x] Settings intro: "Change how GSD looks and when it reminds you. Sync your tasks, back them up, or bring back ones you deleted."
 - [x] Sync sign-in dialog: "Your data is stored on GSD's own Cloud DB server." New unit test failed first.
-- [ ] Every CI gate, Chromium export e2e, and a running-app check at 390 and 1280, light and dark.
+- [x] Every CI gate passes locally: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,572 passed, statements 89.98%), build, quality:bundle. Chromium export e2e after `build:e2e`: 137 passed.
+- [x] Running app (built export, light and dark): the control is 229px, down from 312, and sits on one row at 1280, 390, and 360. Axe found nothing on the dashboard, settings, or sync dialog at 1280 and 390, and the console stayed clean.
+
+Still wraps by design: at 320 the chart header has 206px, so "90d" drops to a second row. It wrapped there before too. Fitting 320 would mean dropping the checkmark's reserved space on unselected options below 360px.
 
 # Session state, 2026-10-23: /impeccable polish (PR #624)
 
