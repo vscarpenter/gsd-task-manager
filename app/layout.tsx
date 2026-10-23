@@ -66,6 +66,8 @@ const connectSrc = process.env.NODE_ENV === "development"
 // the 11-12px chip sizes the matrix leans on.
 const newsreader = Newsreader({
   subsets: ["latin"],
+  // Static weights leave the optical-size axis off on purpose. next/font loads
+  // opsz only with the full weight range: 2.27x the file for ~2% tighter titles.
   weight: ["400", "500", "600"],
   // Normal style only: nothing above the app's editorial copy paints italic
   // serif, and the italic variable file costs ~60KB preloaded on every page.

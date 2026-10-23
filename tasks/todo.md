@@ -11,11 +11,31 @@ Standard tier. Four commits on `fix/adapt-layout`, branched from main at `91f833
 
 By design: at 768px, and at 1152px with 150% text, the bar still takes two rows, with sync and the command button together at the right. On a 390px phone the Tasks breakdown and feedback type rows also stack now; at 320px the Build row does too.
 
-Merge note: #622 also adds a block at the top of this file. Whichever merges second gets a small conflict here; keep both blocks, newest first.
+Merge note: #622 merged first (`8452e57`); main was merged into this branch and both blocks kept.
 
 With #622 and this branch, every item on the impeccable "Noted, not done" list is handled.
 
-# Session state, 2026-10-22: /impeccable typeset (PR #620) and distill (`fix/audit-distill`)
+# Session state, 2026-10-23: help drawer copy and serif fixes (`fix/help-copy-and-serif`)
+
+## Resuming From Here
+
+Standard tier. The owner approved push and PR on 2026-10-23 after reverting the font commit.
+
+- [x] The help drawer's sync copy says what each badge shows (a count, an exclamation mark) instead of the retired "aubergine" and "coral". `65a585d`.
+- [x] The help title drops the `<em>` around GSD that the browser drew as a fake italic. `65a585d`.
+- [x] Newsreader's optical-size axis: tried in `47b95ad`, reverted by owner decision. Static weights stay; a comment in `app/layout.tsx` records why.
+  - Cost: the Latin woff2 grew from 58,152 to 131,848 bytes. next/font only adds an axis alongside the full 200 to 800 weight range.
+  - Gain: the 32px help title set about 2% tighter with finer hairlines. At 24px the change was hard to see.
+  - Safari on Apple devices uses New York and never downloads Newsreader. `quality:bundle` counts JavaScript only, so CI can't see font growth.
+  - Kept from that commit: `.ui-craft/tokens.md` no longer claims italic is loaded.
+- [x] Verification: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,561 passed; 89.98/84/90.19/91.12), build, and quality:bundle are green. Headless Chromium on the built export at 1280 and 390 shows the upright title and the new copy, with no console errors. Chromium export e2e after `build:e2e`: 129 passed. Firefox and WebKit e2e were not run locally; CI runs them.
+
+Noted, not done (`/impeccable adapt`):
+- At 390px the Settings Theme row's description wraps one word per line beside the segmented control.
+- At 150% text on a 1280px screen the topbar wraps the ⌘ button onto a row of its own (header 187px).
+- While the pinned stage scrolls (short screens), the row axis labels size to the stage, not the grid, so "Not important" drifts off the bottom row. Predates #620.
+
+# Session state, 2026-10-23: /impeccable typeset (PR #620) and distill (PR #621)
 
 ## Resuming From Here
 
@@ -31,14 +51,14 @@ With #622 and this branch, every item on the impeccable "Noted, not done" list i
     - Export e2e: chromium 129 passed; layout specs in Firefox and WebKit 30 passed.
     - Rendered axe across 32 states: 0.
     - Detector type scope: 34 to 0.
-- [x] Distill on `fix/audit-distill`, 5 commits on main after #620, not pushed. Each view now has one eyebrow at most.
+- [x] Distill, PR #621 squash-merged 2026-10-23 (main at `91f8332`; all 13 checks green). Each view now has one eyebrow at most.
   - The matrix eyebrow is aria-hidden, so "Today's matrix" is announced once.
   - Settings section headers lose the eyebrow, the tide icon tile, the gradient, and the off-ladder radius. Titles align with the rows.
   - The review prompts lose their section eyebrow; quadrant names become captions.
   - The help drawer drops its "Field guide" eyebrow.
   - Verification: CI commands green; rendered axe across 32 states: 0.
 
-Next: Vinny approves the push, then open the distill PR.
+Next: nothing in flight. Local `fix/type-system`, `fix/audit-distill`, `fix/audit-polish`, and `fix/touch-input-zoom` are deleted; `chore/oss-scanner-enrollment` and its worktree are untouched. Pick up a "Noted, not done" item below.
 
 Noted, not done:
 - At 390px the Settings Theme row's description wraps one word per line beside the segmented control (`/impeccable adapt`).
