@@ -1,4 +1,4 @@
-# Session state, 2026-10-22: /impeccable typeset (PR #620) and distill (`fix/audit-distill`)
+# Session state, 2026-10-23: /impeccable typeset (PR #620) and distill (PR #621)
 
 ## Resuming From Here
 
@@ -14,14 +14,14 @@
     - Export e2e: chromium 129 passed; layout specs in Firefox and WebKit 30 passed.
     - Rendered axe across 32 states: 0.
     - Detector type scope: 34 to 0.
-- [x] Distill on `fix/audit-distill`, 5 commits on main after #620, not pushed. Each view now has one eyebrow at most.
+- [x] Distill, PR #621 squash-merged 2026-10-23 (main at `91f8332`; all 13 checks green). Each view now has one eyebrow at most.
   - The matrix eyebrow is aria-hidden, so "Today's matrix" is announced once.
   - Settings section headers lose the eyebrow, the tide icon tile, the gradient, and the off-ladder radius. Titles align with the rows.
   - The review prompts lose their section eyebrow; quadrant names become captions.
   - The help drawer drops its "Field guide" eyebrow.
   - Verification: CI commands green; rendered axe across 32 states: 0.
 
-Next: Vinny approves the push, then open the distill PR.
+Next: nothing in flight. Local `fix/type-system`, `fix/audit-distill`, `fix/audit-polish`, and `fix/touch-input-zoom` are deleted; `chore/oss-scanner-enrollment` and its worktree are untouched. Pick up a "Noted, not done" item below.
 
 Noted, not done:
 - At 390px the Settings Theme row's description wraps one word per line beside the segmented control (`/impeccable adapt`).

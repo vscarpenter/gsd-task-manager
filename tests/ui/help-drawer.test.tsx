@@ -21,6 +21,22 @@ describe("HelpDrawer", () => {
     expect(screen.queryByText("Field guide")).toBeNull();
   });
 
+  it("sets its title upright, since the serif ships no italic for the browser to use", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+
+    const title = screen.getByRole("heading", { name: "How to use GSD" });
+    expect(title.querySelector("em, i")).toBeNull();
+  });
+
+  it("describes the sync badges by what they show, not by color", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+
+    const help = screen.getByTestId("help-drawer-scroll");
+    expect(help).not.toHaveTextContent(/aubergine|coral/i);
+    expect(help).toHaveTextContent("A number on the icon counts changes waiting to sync.");
+    expect(help).toHaveTextContent("An exclamation mark means your session expired. Click the icon to sign in again.");
+  });
+
   it("documents native Tab order for the capture destination control", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
 

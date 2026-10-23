@@ -54,9 +54,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
         >
           <div>
             <DialogTitle asChild className="text-h1">
-              <h2 style={{ margin: 0 }}>
-                How to use <em>GSD</em>
-              </h2>
+              <h2 style={{ margin: 0 }}>How to use GSD</h2>
             </DialogTitle>
             <DialogDescription className="sr-only">
               Overview of the Eisenhower matrix, capture bar syntax, keyboard shortcuts, and sync guidance.
@@ -143,8 +141,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               enabled, your tasks sync across devices against a self-hosted PocketBase backend.
             </p>
             <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
-              An aubergine badge means there are pending changes to push; a coral&nbsp;<em>!</em> badge means the session expired and you
-              need to re-authenticate. Visit{" "}
+              A number on the icon counts changes waiting to sync. An exclamation mark means your session expired. Click
+              the icon to sign in again. Visit{" "}
               <Link href={"/sync-history" as const} style={linkStyle} onClick={onClose}>
                 Sync history
               </Link>{" "}
