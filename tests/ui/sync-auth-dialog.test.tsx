@@ -296,6 +296,18 @@ describe('SyncAuthDialog', () => {
       });
     });
 
+    // The server is GSD's, not one the user runs, so the dialog must not say "your".
+    it("says synced data is stored on GSD's own server", async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Your data is stored on GSD's own Cloud DB server\./)
+        ).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/your self-hosted/i)).not.toBeInTheDocument();
+    });
+
     it('should set loading state when OAuth starts', async () => {
       const user = userEvent.setup();
 

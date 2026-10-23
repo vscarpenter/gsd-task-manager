@@ -152,7 +152,7 @@ export function UnauthenticatedSection({
         <p className="mb-2 font-medium text-foreground">Cloud sync</p>
         <p>
           Sign in to sync your tasks across devices. Your data is stored on
-          your self-hosted PocketBase server.
+          GSD&apos;s own Cloud DB server.
         </p>
       </div>
     </>
