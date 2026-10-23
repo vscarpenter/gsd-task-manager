@@ -749,3 +749,28 @@ main {
     min-height: 44px;
   }
 }
+
+/* =====================================================================
+   Toasts — sonner's rich colors on Inkwell's status tokens.
+   Sonner ships its own palette, and its light success pair measured
+   4.25:1. Declared on the toast itself, these beat the values the toaster
+   hands down, whatever order the two stylesheets load in. Fills are opaque
+   mixes into paper because a toast floats over whatever is under it.
+   ===================================================================== */
+[data-sonner-toast] {
+  --normal-bg: var(--paper);
+  --normal-border: var(--gray-300);
+  --normal-text: var(--slate);
+  --success-bg: color-mix(in srgb, var(--olive) 12%, var(--paper));
+  --success-border: color-mix(in srgb, var(--olive) 40%, var(--paper));
+  --success-text: var(--olive-d);
+  --error-bg: color-mix(in srgb, var(--rust) 10%, var(--paper));
+  --error-border: color-mix(in srgb, var(--rust) 40%, var(--paper));
+  --error-text: var(--rust-d);
+  --warning-bg: color-mix(in srgb, var(--warning) 14%, var(--paper));
+  --warning-border: color-mix(in srgb, var(--warning) 45%, var(--paper));
+  --warning-text: var(--warning-dark);
+  --info-bg: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --info-border: color-mix(in srgb, var(--accent) 40%, var(--paper));
+  --info-text: var(--accent);
+}
