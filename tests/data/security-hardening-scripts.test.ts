@@ -385,9 +385,23 @@ describe('security hardening scripts and workflows', () => {
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.12');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.12');
     expect(mcpPackage.dependencies['@modelcontextprotocol/sdk']).toBe('1.32.1');
+    expect(rootPackage.dependencies.zod).toBe('4.6.7');
+    expect(rootPackage.overrides.zod).toBe('4.6.7');
+    expect(mcpPackage.dependencies.zod).toBe('4.6.7');
     expect(rootPackage.dependencies['@openai/codex-security']).toBeUndefined();
     expect(rootPackage.dependencies['@sentry/browser']).toBeUndefined();
     expect(mcpPackage.dependencies['@sentry/node']).toBeUndefined();
+  });
+
+  it('resolves every copy of zod at or above the GHSA-mrhx-c7xc-m3w5 fix', () => {
+    // Stagehand pins zod exactly, so a manifest bump alone leaves a nested
+    // vulnerable copy in the lockfile. The root override removes it.
+    const resolved = [...readRepoFile('bun.lock').matchAll(/\["zod@(\d+)\.(\d+)\.(\d+)"/g)];
+    const patched = ([, major, minor, patch]: RegExpMatchArray): boolean =>
+      Number(major) > 4 || (Number(major) === 4 && (Number(minor) > 6 || (Number(minor) === 6 && Number(patch) >= 6)));
+
+    expect(resolved.length).toBeGreaterThan(0);
+    expect(resolved.filter((entry) => !patched(entry)).map(([match]) => match)).toEqual([]);
   });
 
   it('pins the Bun runtime and invokes the repository audit without dynamic npx execution', () => {

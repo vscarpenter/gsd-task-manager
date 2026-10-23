@@ -1,8 +1,27 @@
-# Session state, 2026-10-23: review range labels and copy (`fix/review-range-and-copy`)
+# Session state, 2026-10-23: zod security update (`fix/zod-security-update`)
 
 ## Resuming From Here
 
-Standard tier. The owner answered the three questions the polish pass left open. Branched from main at `4675d18`; not pushed, the owner decides on push and PR.
+Standard tier: three manifests, the lockfile, and a guard test, with no new public contract. Branched from main at `06d3ed6`; not pushed, the owner decides on push, PR, and any MCP publish.
+
+GHSA-mrhx-c7xc-m3w5 (high): zod through 4.6.5 keeps one issue object per failing array element, so a huge array exhausts memory. Patched in 4.6.6; 4.6.7 is the latest. Measured with the MCP `tags` schema and a 200,000-element array: 4.4.3 made 200,001 issues and grew the heap 172MB, while 4.6.7 makes 1 issue.
+
+- [x] Red: `security-hardening-scripts.test.ts` pins zod 4.6.7 (root dependency, root override, MCP dependency) and checks that every `zod@` entry in `bun.lock` is at least 4.6.6. Both tests failed first on 4.4.3.
+- [x] Green: zod 4.6.7 in both manifests, plus a root `overrides` entry. Stagehand 4.3.0 (the latest) still pins zod exactly 4.4.3, so without the override it keeps a nested vulnerable copy, the audit stays red, and `tools/stagehand` fails type checking. The lock was written with bun 1.3.14 (CI's version); it now holds one zod entry.
+- [x] `bun audit`: the zod advisory is gone. The moderate `ip-address` advisory that was already there remains, and `--audit-level=high` exits 0.
+- [x] Root gates: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,573 passed, statements 89.98%).
+- [x] MCP server: build and tests (350 passed). A stdio probe of the built `dist/` (HOME sandboxed) returned initialize, 19 tools, and two validation rejections. All 4 stdout lines were JSON-RPC.
+- [x] Stagehand: loads under bun, its exported schemas are instances of the root zod, and `toJSONSchema` works. Its 44 unit tests pass.
+- [ ] Build, quality:bundle, Chromium export e2e.
+- [ ] Version 13.9.9 (prod serves 13.9.6), commit.
+
+Parked for the owner (default chosen): release gsd-mcp-server 1.3.2 so npx users stop getting zod 4.4.3. The default is to prepare the bump and CHANGELOG on this branch as a separate commit; the tag push and publish wait.
+
+# Session state, 2026-10-23: review range labels and copy (PR #625)
+
+## Resuming From Here
+
+Standard tier. The owner answered the three questions the polish pass left open. PR #625 squash-merged as `06d3ed6`; the local branch was deleted after verification.
 
 - [x] Review chart period labels are "7d", "30d", and "90d", and the legend reads "Completion trend period in days". The old labels needed 312px against 276 at 390, so "90 Days" wrapped. New `layout-fit.spec.ts` case failed first (48px drift at 390).
 - [x] Settings intro: "Change how GSD looks and when it reminds you. Sync your tasks, back them up, or bring back ones you deleted."
