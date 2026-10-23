@@ -612,6 +612,23 @@ main {
   .animate-drawer-slide-in {
     animation: drawer-slide-in var(--duration-normal, 250ms) cubic-bezier(0.4, 0, 0.2, 1) both;
   }
+
+  /* Help drawer entrance: a short rise and fade. It is a bottom sheet on
+     phones and a side sheet on desktop, so it cannot slide in from the right. */
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-sheet-in {
+    animation: sheet-in 0.35s cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
 }
 
 /* Respect reduced motion preference.
@@ -668,292 +685,6 @@ main {
   }
 }
 
-/* ─────────────────────────────────────────────── */
-/* Redesign palette — now aliases to root tokens   */
-/* ─────────────────────────────────────────────── */
-
-.redesign-scope {
-  --bg: var(--ivory);
-  --bg-inset: var(--gray-100);
-  --ink: var(--slate);
-  --ink-2: color-mix(in srgb, var(--slate) 75%, transparent);
-  --ink-3: var(--gray-500);
-  --ink-4: color-mix(in srgb, var(--gray-500) 60%, transparent);
-  --line: var(--gray-300);
-  --line-soft: var(--gray-100);
-  --rd-accent: var(--accent);
-  --rd-accent-soft: var(--accent-tint);
-
-  --q1-soft: var(--q1-wash); --q1-tint: var(--q1-header);
-  --q2-soft: var(--q2-wash); --q2-tint: var(--q2-header);
-  --q3-soft: var(--q3-wash); --q3-tint: var(--q3-header);
-  --q4-soft: var(--q4-wash); --q4-tint: var(--q4-header);
-
-  --rd-radius: 14px;
-  --rd-radius-sm: 10px;
-  --rd-radius-lg: 20px;
-  --rd-shadow-sm: var(--shadow-card);
-  --rd-shadow: var(--shadow-card-hover);
-  --rd-shadow-lg: var(--shadow-lg);
-
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--sans);
-  font-feature-settings: "ss01", "cv11";
-}
-
-/* `.rd-serif` stays retired even though the editorial serif is back. It was
- * unlayered, so its `font-weight: 400` silently beat any `font-semibold` in
- * @layer utilities — call sites set their own size/weight instead, and
- * `--serif` (now Newsreader/New York again) covers anything external. */
-
-.redesign-scope .rd-mono {
-  font-family: var(--mono);
-}
-
-.redesign-scope kbd {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: var(--r-xs);
-  border: var(--border);
-  background: var(--paper);
-  color: var(--ink-2);
-  box-shadow: 0 1px 0 var(--line);
-}
-
-.redesign-scope .rd-checkbox {
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--r-icon);
-  border: 1px solid var(--control-border);
-  background: var(--paper);
-  display: inline-grid;
-  place-items: center;
-  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-.redesign-scope .rd-checkbox:hover {
-  border-color: var(--ink-3);
-}
-.redesign-scope .rd-checkbox:checked {
-  background: var(--ink);
-  border-color: var(--ink);
-}
-.redesign-scope .rd-checkbox:checked::after {
-  content: "";
-  width: 12px;
-  height: 12px;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'><path d='M2.5 6.5L5 9L9.5 3.5' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;
-}
-.dark .redesign-scope .rd-checkbox:checked::after {
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'><path d='M2.5 6.5L5 9L9.5 3.5' stroke='%2318181b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;
-}
-
-.redesign-scope :where(button, [role="tab"], a, input, textarea):focus-visible {
-  outline: 2px solid var(--rd-accent);
-  outline-offset: 2px;
-}
-
-.redesign-scope :where(button, a, input, textarea) {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.redesign-scope .rd-fade-in {
-  animation: rd-fade-in 0.35s cubic-bezier(0.22, 0.9, 0.3, 1);
-}
-@keyframes rd-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* Density */
-.redesign-scope[data-density="compact"] .rd-task-card {
-  padding: 10px 12px;
-}
-.redesign-scope[data-density="compact"] .rd-task-card .rd-task-meta,
-.redesign-scope[data-density="compact"] .rd-task-card .rd-task-desc {
-  display: none;
-}
-.redesign-scope[data-density="roomy"] .rd-task-card {
-  padding: 18px 18px 16px;
-}
-
-/* Focus view grid */
-.redesign-scope .rd-focus-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap: 40px;
-  align-items: flex-start;
-}
-
-.redesign-scope .rd-topbar__search {
-  min-width: 0;
-}
-
-.redesign-scope .rd-topbar__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.redesign-scope .rd-quick-add-hint {
-  display: none;
-}
-
-/* Responsive — collapse to single column / stack sidebar at narrower widths */
-@media (max-width: 900px) {
-  .redesign-scope .rd-focus-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 28px;
-  }
-  .redesign-scope .rd-editorial-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
-  }
-}
-
-@media (max-width: 1024px) {
-  .redesign-scope {
-    grid-template-columns: minmax(0, 1fr) !important;
-  }
-  .redesign-scope .rd-sidebar {
-    display: none !important;
-  }
-}
-
-@media (max-width: 720px) {
-  .redesign-scope .rd-topbar {
-    padding: 12px 16px !important;
-    flex-wrap: wrap;
-  }
-  .redesign-scope .rd-topbar__search {
-    order: 3;
-    width: 100%;
-    max-width: none !important;
-  }
-  .redesign-scope .rd-topbar__search kbd {
-    display: none;
-  }
-  .redesign-scope .rd-topbar__actions {
-    margin-left: auto;
-  }
-  .redesign-scope main {
-    padding: 18px 16px 40px !important;
-  }
-  .redesign-scope .rd-compass {
-    position: static !important;
-  }
-  .redesign-scope .rd-task-card-main {
-    min-height: 76px;
-  }
-  .redesign-scope .rd-quick-add {
-    padding: 12px !important;
-    gap: 12px !important;
-    align-items: stretch !important;
-    flex-wrap: wrap;
-  }
-  .redesign-scope .rd-quick-add-input {
-    width: 100%;
-    min-width: 0;
-  }
-  .redesign-scope .rd-quick-add-actions {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 8px !important;
-  }
-  .redesign-scope .rd-quick-add-actions > * {
-    min-height: 40px;
-  }
-  .redesign-scope .rd-quick-add-submit {
-    margin-left: auto;
-    min-width: 108px;
-    justify-content: center;
-  }
-  .redesign-scope .rd-quick-add-hint {
-    display: block;
-    order: 4;
-    width: 100%;
-    font-size: 11px;
-    color: var(--ink-3);
-    line-height: 1.45;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .redesign-scope .rd-fade-in {
-    animation: none !important;
-  }
-}
-
-/* RdButton variants — split out of inline styles so :hover rules can attach
- * and so `prefers-reduced-motion` gating works consistently. */
-.redesign-scope .rd-button-default {
-  border: var(--border);
-  background: var(--paper);
-  color: var(--ink);
-}
-.redesign-scope .rd-button-default:hover:not(:disabled) {
-  background: var(--bg-inset);
-  border-color: var(--ink-3);
-}
-.redesign-scope .rd-button-primary {
-  border: var(--border-strong);
-  background: var(--ink);
-  color: var(--paper);
-}
-.redesign-scope .rd-button-primary:hover:not(:disabled) {
-  background: var(--ink-2);
-  border-color: var(--ink-2);
-}
-.redesign-scope .rd-button-ghost {
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--ink-2);
-}
-.redesign-scope .rd-button-ghost:hover:not(:disabled) {
-  background: var(--bg-inset);
-  color: var(--ink);
-}
-
-/* Touch target minimums (WCAG 2.5.5) — enforced only on coarse pointers so
- * desktop/mouse UIs keep their compact density. !important is needed because
- * the redesign primitives set explicit inline width/height. */
-@media (pointer: coarse) {
-  .redesign-scope .rd-icon-button,
-  .redesign-scope [role="tab"] {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    width: auto !important;
-    height: auto !important;
-    padding: 8px !important;
-  }
-
-  .redesign-scope .rd-button,
-  .redesign-scope .rd-toggle-pill,
-  .redesign-scope .rd-quick-add-submit,
-  .redesign-scope .rd-primary-action {
-    min-height: 44px !important;
-  }
-
-  .redesign-scope [role="tablist"] {
-    height: auto !important;
-  }
-
-  .redesign-scope .rd-checkbox {
-    width: 26px;
-    height: 26px;
-  }
-}
-
 /* Touch-primary devices (iPad, iPhone): show always-visible mobile actions instead of
    hover-only desktop actions. Unlayered rules override Tailwind's @layer utilities. */
 @media (hover: none) {
@@ -974,8 +705,7 @@ main {
 
 /* Enforce the 44px touch-target floor (WCAG 2.5.5) on coarse pointers for the
    compact v9 controls (task complete, quadrant add) that stay small on
-   mouse-driven desktops. The legacy .redesign-scope rule above doesn't reach
-   the v9 shell, which uses Tailwind utilities. */
+   mouse-driven desktops. */
 @media (pointer: coarse) {
   .touch-target {
     min-width: 44px;
