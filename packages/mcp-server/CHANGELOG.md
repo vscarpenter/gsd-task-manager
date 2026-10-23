@@ -5,6 +5,19 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-10-23
+
+### Security
+- Bumps `zod` from 4.4.3 to 4.6.7 for GHSA-mrhx-c7xc-m3w5 (high). Through
+  4.6.5, zod recorded an issue for every failing element of an array before it
+  checked the array's length limit, so one oversized array could exhaust
+  memory. This server validates tool arguments with length-limited arrays
+  (`tags`, `dependencies`, and `bulk_update_tasks`' `taskIds`), and any MCP
+  client can send one. On 4.4.3, a 200,000-item `tags` array sent to
+  `list_tasks` made 200,001 issues and grew the heap by 172MB. On 4.6.7 the
+  call fails at the length check with one issue. The published 1.3.1 pins zod
+  4.4.3 exactly, so npm users get the fix only by upgrading.
+
 ## [1.3.1] - 2026-10-22
 
 ### Security
@@ -641,6 +654,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.3.2]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.3.1...mcp-v1.3.2
 [1.3.1]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.3.0...mcp-v1.3.1
 [1.3.0]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.8...mcp-v1.3.0
 [1.2.8]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.7...mcp-v1.2.8
