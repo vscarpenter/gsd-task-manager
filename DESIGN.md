@@ -75,25 +75,25 @@ typography:
   display:
     fontFamily: "ui-serif, 'New York', var(--font-newsreader), Georgia, serif"
     fontSize: "48px"
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 1.1
     letterSpacing: "-0.02em"
   headline:
     fontFamily: "ui-serif, 'New York', var(--font-newsreader), Georgia, serif"
     fontSize: "32px"
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "-0.01em"
   section:
     fontFamily: "ui-serif, 'New York', var(--font-newsreader), Georgia, serif"
     fontSize: "24px"
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
   title:
     fontFamily: "ui-serif, 'New York', var(--font-newsreader), Georgia, serif"
     fontSize: "19px"
-    fontWeight: 500
+    fontWeight: 600
     lineHeight: 1.22
     letterSpacing: "-0.008em"
   body:
@@ -117,6 +117,12 @@ typography:
     fontWeight: 600
     lineHeight: 1
     letterSpacing: "0.12em"
+  numeral:
+    fontFamily: "ui-serif, 'New York', var(--font-newsreader), Georgia, serif"
+    fontSize: "40px"
+    fontWeight: 600
+    lineHeight: 1
+    fontVariantNumeric: "tabular-nums"
 rounded:
   xs: "4px"
   icon: "8px"
@@ -312,14 +318,22 @@ gsdtaskmanager.com (Newsreader over system sans).
 
 ### Hierarchy
 
-- **Display:** 48px/1.1 serif, weight 500, tracking −0.02em. Reserved for the largest editorial moments.
-- **H1:** 32px/1.2 serif, weight 500, tracking −0.01em.
-- **H2:** 24px/1.3 serif, weight 500, tracking −0.01em.
-- **H3/title:** 19px/1.22 serif, weight 500, tracking −0.008em.
+- **Display:** 48px/1.1 serif, weight 600, tracking −0.02em. Reserved for the largest editorial moments.
+- **H1:** 32px/1.2 serif, weight 600, tracking −0.01em.
+- **H2:** 24px/1.3 serif, weight 600, tracking −0.01em.
+- **H3/title:** 19px/1.22 serif, weight 600, tracking −0.008em.
 - **Body:** 16px/1.55 sans, weight 430. Cap prose at 65–75ch.
 - **Small:** 14px/1.5 sans, weight 430.
 - **Caption:** 12px/1.4 sans, weight 500.
 - **Eyebrow:** 11px/1 sans, weight 600, tracking 0.12em, uppercase and used sparingly.
+- **Numeral:** 40px/1 serif, weight 600, `tabular-nums`. Stat values only, such as the Review page's stat
+  cards and streak count (`.text-numeral`). It is the one role off the eight-step reading ramp: a
+  number set as a figure, the way the iOS dashboard sets it.
+
+The ramp lives in `app/css/inkwell-tokens.css` as `--t-*` in rem, so text follows the browser's
+font-size setting the way iOS Dynamic Type and Android `sp` do. At the default 16px root the steps
+render at exactly the px values above. The serif's one weight is 600, matching the iOS app's
+semibold.
 
 **The Two-Voice Rule.** The serif carries display and headings; the sans carries working UI.
 Hierarchy inside each voice comes from scale, weight, spacing, and contrast — never from
@@ -334,7 +348,9 @@ are permitted only where they land exactly on a step — `text-xs` = Caption, `t
 size only, never the serif voice, since the Two-Voice Rule is wired to the ramp classes themselves;
 headings must use `.text-display`/`.text-h1`/`.text-h2`/`.text-h3`, not their Tailwind-spelling
 equivalents. Sizes with no step behind them are not: `text-xl` (20px) and `text-3xl` (30px) belong to
-Tailwind's ramp, not this one.
+Tailwind's ramp, not this one. The `@theme` block in `app/globals.css` maps each spelling onto its
+step's token, line height, and weight, so a spelling and its step compute identically
+(`tests/data/type-ramp.test.ts` pins this).
 
 Two consequences follow. Do not add a GSD-only alias for a step Inkwell already ships; `text-title`
 and `text-label` were exactly that, and both had drifted off the documented values before they were

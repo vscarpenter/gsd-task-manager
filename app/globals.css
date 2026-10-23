@@ -61,19 +61,19 @@
   --text-display: var(--t-display);
   --text-display--line-height: 1.1;
   --text-display--letter-spacing: -0.02em;
-  --text-display--font-weight: 500;
+  --text-display--font-weight: 600;
   --text-h1: var(--t-h1);
   --text-h1--line-height: 1.2;
   --text-h1--letter-spacing: -0.01em;
-  --text-h1--font-weight: 500;
+  --text-h1--font-weight: 600;
   --text-h2: var(--t-h2);
   --text-h2--line-height: 1.3;
   --text-h2--letter-spacing: -0.01em;
-  --text-h2--font-weight: 500;
+  --text-h2--font-weight: 600;
   --text-h3: var(--t-h3);
   --text-h3--line-height: 1.22;
   --text-h3--letter-spacing: -0.008em;
-  --text-h3--font-weight: 500;
+  --text-h3--font-weight: 600;
   --text-body: var(--t-body);
   --text-body--line-height: 1.55;
   --text-body--font-weight: 430;
@@ -86,7 +86,21 @@
   --text-eyebrow: var(--t-eyebrow);
   --text-eyebrow--line-height: 1;
   --text-eyebrow--letter-spacing: 0.12em;
-  --text-eyebrow--font-weight: 500;
+  --text-eyebrow--font-weight: 600;
+
+  /* Tailwind's default size names are exact spellings of the ramp steps they
+     land on (DESIGN.md One-Ramp Rule): same size, line height, and weight. */
+  --text-xs: var(--t-caption);
+  --text-xs--line-height: 1.4;
+  --text-xs--font-weight: 500;
+  --text-sm: var(--t-small);
+  --text-sm--line-height: 1.5;
+  --text-sm--font-weight: 430;
+  --text-base: var(--t-body);
+  --text-base--line-height: 1.55;
+  --text-base--font-weight: 430;
+  --text-2xl: var(--t-h2);
+  --text-2xl--line-height: 1.3;
 
   /* Radii — Inkwell ladder: pane 14 (lg) · card 12 (md) · control 10 (sm) ·
      icon button 8 (icon) · chip pill (full). */
