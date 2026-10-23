@@ -238,6 +238,12 @@ describe("QuadrantPane header — quadrant identity", () => {
     expect(screen.getByTestId("quadrant-hint").style.color).toBe("var(--q1-ink)");
   });
 
+  it("sets the quadrant title in the serif H3 voice, as the iOS app does", () => {
+    // The .text-h3 class carries the serif (Two-Voice Rule) at 19px and 600.
+    renderPane("q2");
+    expect(screen.getByTestId("quadrant-title")).toHaveClass("text-h3");
+  });
+
   it("exposes a semantic, programmatically focusable quadrant target", () => {
     renderPane("q2");
     const pane = screen.getByTestId("quadrant-q2");
