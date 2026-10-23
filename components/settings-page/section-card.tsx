@@ -22,7 +22,8 @@ export function SectionCard({ title, description, children }: SectionCardProps) 
       className="overflow-hidden rounded-lg border border-border/70 bg-card/95"
       style={{ boxShadow: "var(--shadow-md)" }}
     >
-      <header className="border-b border-border/60 px-6 py-6 sm:px-8 sm:py-7">
+      {/* px-4 matches SettingsRow, so the title shares one left edge with the rows. */}
+      <header className="border-b border-border/60 px-4 py-5 sm:py-6">
         <h2 id={headingId} className="text-h2 text-foreground">
           {title}
         </h2>
