@@ -1,3 +1,36 @@
+# Session state, 2026-10-22: /impeccable typeset (PR #620) and distill (`fix/audit-distill`)
+
+## Resuming From Here
+
+- [x] iPhone zoom fix merged as #619 (`39f25e2`): drawer and palette fields hold 16px on touch.
+- [x] Type system, PR #620 merged 2026-10-23 (rebase merge, main at `01311f6`; spec `tasks/spec-type-system.md`).
+  - The ramp is rem, and Tailwind's text-xs/sm/base/2xl are exact spellings.
+  - Serif weight 600; headings in the serif, quadrant pane titles included; Numeral role.
+  - No hand-set sizes remain, enforced by `tests/data/type-ramp-usage.test.ts`.
+  - Reflows at 150% text, pinned by `tests/e2e/text-scaling.spec.ts`.
+  - CI fix (`01311f6` on main): rem text squeezed the pinned matrix stage to 48px at 150% on 1280x720 (0px on Linux, so `waitForAppLoad` timed out). The shell now pins only at `pinned` (md and height >= 40rem, globals.css). The capture dock is `md:relative`, no longer sticky at 60px, and the rail is `md:overflow-clip` so its sticky column holds.
+  - Verification:
+    - CI commands: green.
+    - Export e2e: chromium 129 passed; layout specs in Firefox and WebKit 30 passed.
+    - Rendered axe across 32 states: 0.
+    - Detector type scope: 34 to 0.
+- [x] Distill on `fix/audit-distill`, 5 commits on main after #620, not pushed. Each view now has one eyebrow at most.
+  - The matrix eyebrow is aria-hidden, so "Today's matrix" is announced once.
+  - Settings section headers lose the eyebrow, the tide icon tile, the gradient, and the off-ladder radius. Titles align with the rows.
+  - The review prompts lose their section eyebrow; quadrant names become captions.
+  - The help drawer drops its "Field guide" eyebrow.
+  - Verification: CI commands green; rendered axe across 32 states: 0.
+
+Next: Vinny approves the push, then open the distill PR.
+
+Noted, not done:
+- At 390px the Settings Theme row's description wraps one word per line beside the segmented control (`/impeccable adapt`).
+- The help drawer copy still names the old "aubergine" and "coral" badges (`/impeccable clarify`).
+- The help title's "GSD" is a synthesized italic.
+- Newsreader's optical-size axis is unused.
+- At 150% text on a 1280px screen the topbar wraps the ⌘ button onto a row of its own (header 187px).
+- While the pinned stage scrolls (short screens), the row axis labels size to the stage, not the grid, so "Not important" drifts off the bottom row. Predates #620.
+
 # Session state, 2026-10-22: /impeccable polish on branch `fix/audit-polish`
 
 ## Resuming From Here
