@@ -89,7 +89,7 @@ function ReminderOption({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
+        "rounded-full border px-3 py-1.5 text-small font-medium transition-colors",
         active
           ? "border-accent bg-accent/10 text-accent"
           : "border-border text-foreground-muted hover:bg-background-muted"

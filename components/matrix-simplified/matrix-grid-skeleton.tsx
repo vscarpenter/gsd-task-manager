@@ -60,7 +60,7 @@ function QuadrantSkeleton({ meta, cardCount }: { meta: QuadrantMeta; cardCount: 
         style={{ backgroundColor: QUADRANT_HEADER[meta.rdKey], borderTopColor: QUADRANT_ACCENT[meta.rdKey] }}
       >
         <Icon aria-hidden className="h-[18px] w-[18px] shrink-0" style={{ color: QUADRANT_INK[meta.rdKey] }} />
-        <span className="text-[14px] font-semibold leading-none" style={{ color: QUADRANT_INK[meta.rdKey] }}>
+        <span className="text-h3 leading-none" style={{ color: QUADRANT_INK[meta.rdKey] }}>
           {meta.title}
         </span>
         <Skeleton className="ml-auto h-3.5 w-6 rounded-full" />

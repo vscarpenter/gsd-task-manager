@@ -55,11 +55,11 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
         {...preventPersistedDisabledState}
         onClick={onFocusSchedule}
         disabled={scheduleCount === null}
-        className="touch-target inline-flex shrink-0 items-center gap-2 rounded-sm bg-accent px-3 py-2 text-[13px] font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
+        className="touch-target inline-flex shrink-0 items-center gap-2 rounded-sm bg-accent px-3 py-2 text-small font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
       >
         <CalendarRangeIcon className="h-[15px] w-[15px] shrink-0" aria-hidden />
         {scheduleLabel(scheduleCount)}
-        <kbd className="rounded-xs border border-on-accent/40 px-1.5 py-px font-mono text-[11px]" aria-label="Option 2">
+        <kbd className="rounded-xs border border-on-accent/40 px-1.5 py-px" aria-label="Option 2">
           ⌥2
         </kbd>
       </button>

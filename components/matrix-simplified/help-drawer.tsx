@@ -53,15 +53,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           }}
         >
           <div>
-            <div
-              style={{
-                fontSize: 12,
-                letterSpacing: 0.12,
-                textTransform: "uppercase",
-                color: "var(--gray-500)",
-                fontWeight: 600,
-              }}
-            >
+            <div className="text-eyebrow uppercase" style={{ color: "var(--gray-500)" }}>
               Field guide
             </div>
             <DialogTitle asChild className="text-h1">
@@ -128,7 +120,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <ShortcutRow keys={["Enter"]} action="Submit the task (in the capture bar)" />
             <ShortcutRow keys={["?"]} action="Open this help drawer" />
             <ShortcutRow keys={["Esc"]} action="Close any open drawer" />
-            <p style={{ ...bodyStyle, color: "var(--gray-500)", fontSize: 12 }}>
+            <p style={{ ...bodyStyle, color: "var(--gray-500)", fontSize: "var(--t-caption)" }}>
               Option shortcuts follow the physical key position and are suppressed while a text field or modal is active,
               so typing in Quick Capture or the composer won&rsquo;t hijack keys.
             </p>
@@ -210,16 +202,7 @@ function PrivacySection({ onClose }: { onClose: () => void }) {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h3
-        style={{
-          margin: 0,
-          fontSize: 12,
-          fontWeight: 600,
-          letterSpacing: 0.12,
-          textTransform: "uppercase",
-          color: "var(--gray-500)",
-        }}
-      >
+      <h3 className="text-eyebrow uppercase" style={{ margin: 0, color: "var(--gray-500)" }}>
         {label}
       </h3>
       {children}
@@ -230,7 +213,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 function Concept({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.2, color: "var(--slate)" }}>
+      <div className="text-h3" style={{ color: "var(--slate)" }}>
         {title}
       </div>
       <p style={{ ...bodyStyle, marginTop: 2 }}>{children}</p>
@@ -269,8 +252,8 @@ function QuadrantLine({
         }}
       />
       <div>
-        <div style={{ fontWeight: 600, color: "var(--slate)", fontSize: 13.5 }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: "var(--gray-500)", lineHeight: 1.4 }}>{hint}</div>
+        <div style={{ fontWeight: 600, color: "var(--slate)", fontSize: "var(--t-small)" }}>{title}</div>
+        <div style={{ fontSize: "var(--t-caption)", color: "var(--gray-500)", lineHeight: 1.4 }}>{hint}</div>
       </div>
     </div>
   );
@@ -278,7 +261,7 @@ function QuadrantLine({
 
 function SyntaxRow({ symbol, meaning }: { symbol: string; meaning: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "var(--t-small)" }}>
       <code style={{ ...codeStyle, minWidth: 40, textAlign: "center" }}>{symbol}</code>
       <span style={{ color: "var(--gray-700)" }}>{meaning}</span>
     </div>
@@ -287,7 +270,7 @@ function SyntaxRow({ symbol, meaning }: { symbol: string; meaning: string }) {
 
 function ShortcutRow({ keys, action }: { keys: string[]; action: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "var(--t-small)" }}>
       <div style={{ display: "flex", gap: 4, minWidth: 80 }}>
         {keys.map((k) => (
           <kbd key={k}>{k}</kbd>
@@ -300,14 +283,14 @@ function ShortcutRow({ keys, action }: { keys: string[]; action: string }) {
 
 const bodyStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 13.5,
+  fontSize: "var(--t-small)",
   lineHeight: 1.55,
   color: "var(--gray-700)",
 };
 
 const codeStyle: React.CSSProperties = {
   fontFamily: "var(--mono)",
-  fontSize: 12,
+  fontSize: "var(--t-caption)",
   padding: "2px 8px",
   borderRadius: "var(--r-xs)",
   background: "var(--gray-100)",

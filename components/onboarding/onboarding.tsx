@@ -55,10 +55,10 @@ const SCREENS: Screen[] = [
               backgroundColor: `var(--${q.key}-wash)`,
             }}
           >
-            <span className="text-[11px] font-semibold" style={{ color: `var(--${q.key}-ink)` }}>
+            <span className="text-caption font-semibold" style={{ color: `var(--${q.key}-ink)` }}>
               {q.label}
             </span>
-            <span className="text-[9px] text-foreground-muted">{q.tag}</span>
+            <span className="text-caption text-foreground-muted">{q.tag}</span>
           </div>
         ))}
       </div>
@@ -74,7 +74,7 @@ const SCREENS: Screen[] = [
         <span className="text-sm text-foreground-muted">Ship the deploy </span>
         <span className="text-sm font-semibold" style={{ color: "var(--q1-ink)" }}>!!</span>
         <span
-          className="ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium"
+          className="ml-auto rounded-full px-2 py-0.5 text-caption font-medium"
           style={{ backgroundColor: "var(--q1-header)", color: "var(--q1-ink)" }}
         >
           Do First
@@ -125,7 +125,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
         type="button"
         onClick={onClose}
         aria-label="Skip"
-        className="touch-target absolute right-4 top-4 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground"
+        className="touch-target absolute right-4 top-4 inline-flex items-center gap-1 rounded-full px-2 py-1 text-small font-medium text-foreground-muted transition-colors hover:bg-background-muted hover:text-foreground"
       >
         Skip
         <XIcon className="h-3.5 w-3.5" aria-hidden />
@@ -133,10 +133,10 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
 
       <div className="flex min-h-[140px] items-center justify-center">{screen.visual}</div>
 
-      <DialogTitle className="mt-6 text-[26px] font-semibold leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
+      <DialogTitle className="mt-6 text-h2 text-foreground">
         {screen.title}
       </DialogTitle>
-      <DialogDescription className="mt-3 max-w-[44ch] text-[15px] leading-relaxed text-foreground-muted">
+      <DialogDescription className="mt-3 max-w-[44ch] text-body leading-relaxed text-foreground-muted">
         {screen.body}
       </DialogDescription>
 
@@ -158,7 +158,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
             <button
               type="button"
               onClick={onClose}
-              className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+              className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-body font-semibold text-on-accent transition-colors hover:bg-accent-hover"
             >
               Start using GSD
             </button>
@@ -166,7 +166,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
               <button
                 type="button"
                 onClick={onSignIn}
-                className="touch-target text-[13px] font-medium text-foreground-muted transition-colors hover:text-foreground"
+                className="touch-target text-small font-medium text-foreground-muted transition-colors hover:text-foreground"
               >
                 Sign in to sync
               </button>
@@ -176,7 +176,7 @@ function OnboardingDialog({ onClose, onSignIn }: Omit<OnboardingProps, "open">) 
           <button
             type="button"
             onClick={() => setIndex((i) => Math.min(i + 1, SCREENS.length - 1))}
-            className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+            className="touch-target w-full rounded-lg bg-accent px-4 py-2.5 text-body font-semibold text-on-accent transition-colors hover:bg-accent-hover"
           >
             Next
           </button>

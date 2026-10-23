@@ -41,7 +41,7 @@ describe("MatrixGrid — axis labels", () => {
     expect(screen.getByText("Not important")).toBeInTheDocument();
   });
 
-  it("speaks in the kicker voice and stays out of the accessibility tree", () => {
+  it("speaks in the eyebrow voice and stays out of the accessibility tree", () => {
     renderGrid();
     const columns = screen.getByTestId("matrix-axis-columns");
     const rows = screen.getByTestId("matrix-axis-rows");
@@ -50,7 +50,10 @@ describe("MatrixGrid — axis labels", () => {
     expect(rows).toHaveAttribute("aria-hidden", "true");
     // The panes already carry `aria-label="… quadrant"`; repeating the axes
     // would make a screen reader announce urgency twice per pane.
-    expect(screen.getByText("Urgent").className).toContain("kicker");
+    // Product UI labels use the sans eyebrow; the mono kicker belongs to the About page.
+    const label = screen.getByText("Urgent");
+    expect(label.className).toContain("text-eyebrow");
+    expect(label.className).not.toContain("kicker");
   });
 
   it("hides the label frame below the container width that produces two columns", () => {

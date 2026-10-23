@@ -70,7 +70,7 @@ export function TaskCardHeader({
         />
         <div className="min-w-0 flex-1">
           <h3 className={cn(
-            "text-[14.5px] font-semibold leading-[1.4] tracking-[-0.005em]",
+            "text-small font-semibold",
             !onInspect && "truncate",
             // Strike-through alone leaves the title at full contrast; in dark
             // mode that makes a completed card read as an active one. The
@@ -97,7 +97,7 @@ export function TaskCardHeader({
             ) : task.title}
           </h3>
           {task.description ? (
-            <p className="mt-[3px] text-[12.5px] leading-[1.55] text-foreground-muted line-clamp-2">
+            <p className="mt-[3px] text-caption text-foreground-muted line-clamp-2">
               <TaskDescription description={task.description} />
             </p>
           ) : null}

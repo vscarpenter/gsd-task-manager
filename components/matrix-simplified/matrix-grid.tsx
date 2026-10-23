@@ -138,7 +138,7 @@ function AxisFrame({ children }: { children: React.ReactNode }) {
  * quadrant titles they sit beside.
  */
 const AXIS_LABEL =
-  "kicker m-0 text-center text-[10px] tracking-[0.14em] text-foreground-muted";
+  "m-0 text-center text-eyebrow uppercase text-foreground-muted";
 
 /** Reads bottom-to-top, so the pair sits beside the rows it names. */
 const VERTICAL_AXIS_LABEL =

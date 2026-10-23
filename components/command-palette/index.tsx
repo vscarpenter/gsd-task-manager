@@ -86,7 +86,7 @@ export function CommandPalette({
       >
         {/* Calm editorial overlay: a serif title over the dimmed board (reference §07) */}
         <div className="flex items-baseline justify-between border-b border-border px-4 pt-3 pb-2">
-          <DialogTitle className="text-[17px] font-semibold text-foreground">Commands</DialogTitle>
+          <DialogTitle className="text-h3 text-foreground">Commands</DialogTitle>
         </div>
         <DialogDescription className="sr-only">
           Search for tasks, actions, and settings. Use arrow keys to navigate and Enter to select.
@@ -168,8 +168,8 @@ function SearchInput({ search, onSearchChange }: SearchInputProps) {
         placeholder="Search tasks, actions, settings..."
         className="pointer-coarse:text-base flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <kbd className="hidden sm:inline-flex h-5 shrink-0 items-center gap-1 rounded border border-border bg-background px-1.5 text-[10px] font-medium text-foreground-muted ml-2">
-        <span className="text-xs">ESC</span>
+      <kbd className="hidden sm:inline-flex min-h-5 shrink-0 items-center gap-1 rounded border border-border bg-background px-1.5 text-foreground-muted ml-2">
+        <span>ESC</span>
       </kbd>
     </div>
   );

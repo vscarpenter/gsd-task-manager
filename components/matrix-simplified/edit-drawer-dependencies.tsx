@@ -124,7 +124,7 @@ export function DependenciesField({
             aria-autocomplete="list"
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
-            className="pointer-coarse:text-base min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed"
+            className="pointer-coarse:text-base min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-small text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-not-allowed"
           />
         </div>
         <Suggestions
@@ -160,7 +160,7 @@ function FieldNotes({
   return (
     <>
       {atLimit ? (
-        <p id={limitNoteId} className="text-[11.5px] text-foreground-muted">
+        <p id={limitNoteId} className="text-caption text-foreground-muted">
           Dependency limit reached ({SCHEMA_LIMITS.MAX_DEPENDENCIES}).
         </p>
       ) : null}
@@ -187,7 +187,7 @@ function DependencyChips({
         <span
           key={t.id}
           data-testid="dep-chip"
-          className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-[11.5px] font-medium text-foreground-muted"
+          className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-caption font-medium text-foreground-muted"
         >
           {t.title}
           {/* Unsaved-draft chip removal, same as the tag chips: reversible by
@@ -319,7 +319,7 @@ function Suggestions({
             // unmounting the option before it can commit the selection.
             onPointerDown={(event) => event.preventDefault()}
             onClick={() => onPick(t.id)}
-            className={`block w-full truncate px-3 py-2 text-left text-[13px] text-foreground hover:bg-background-muted ${
+            className={`block w-full truncate px-3 py-2 text-left text-small text-foreground hover:bg-background-muted ${
               index === activeIndex ? "bg-background-muted" : ""
             }`}
           >
@@ -327,7 +327,7 @@ function Suggestions({
           </button>
         ))
       ) : (
-        <p className="px-3 py-2 text-[12.5px] text-foreground-muted">No matching tasks.</p>
+        <p className="px-3 py-2 text-small text-foreground-muted">No matching tasks.</p>
       )}
     </div>,
     document.body

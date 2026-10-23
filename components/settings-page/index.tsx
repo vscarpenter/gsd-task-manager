@@ -21,7 +21,7 @@ export function SettingsPage() {
     <TooltipProvider delayDuration={300}>
       <div className="mx-auto max-w-6xl pb-20">
         <div className="mb-8 sm:mb-12">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+          <p className="text-eyebrow uppercase text-foreground-muted">
             Preferences & Data
           </p>
           <h2 className="mt-2 text-h1 font-semibold tracking-tight text-foreground sm:text-display">

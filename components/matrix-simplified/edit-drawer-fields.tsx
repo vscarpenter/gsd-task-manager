@@ -21,7 +21,7 @@ export function Field({
   if (as === "group") {
     return (
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+        <legend className="mb-1.5 block text-eyebrow uppercase text-foreground-muted">
           {label}
         </legend>
         <div className="flex flex-col gap-1.5">{children}</div>
@@ -31,7 +31,7 @@ export function Field({
 
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground-muted">
+      <span className="text-eyebrow uppercase text-foreground-muted">
         {label}
       </span>
       {children}
@@ -73,9 +73,9 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
               }
               aria-pressed={active}
             >
-              <div className="text-[12px] font-bold uppercase tracking-wider">{q.title}</div>
+              <div className="text-small font-semibold">{q.title}</div>
               {/* Full --q*-ink: at 80% opacity this small text fell under 4.5:1. */}
-              <div className="mt-0.5 text-[11.5px]">{q.rdTag}</div>
+              <div className="mt-0.5 text-caption">{q.rdTag}</div>
             </button>
           );
         })}
@@ -124,7 +124,7 @@ export function DueDateField({
                 className={cn(
                   // Selected due-date preset reads in tide tint (reference §07);
                   // unselected presets stay graphite.
-                  "rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-[background-color,color,box-shadow] duration-200",
+                  "rounded-md px-3 py-1.5 text-small font-medium transition-[background-color,color,box-shadow] duration-200",
                   isActive
                     ? "bg-accent-tint text-accent font-semibold shadow-sm"
                     : "text-foreground-muted hover:text-foreground"
@@ -138,7 +138,7 @@ export function DueDateField({
         </div>
 
         {customDate ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-2.5 py-1 text-[12px] font-medium text-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground-muted/30 bg-background px-2.5 py-1 text-caption font-medium text-foreground">
             <CalendarIcon className="h-3 w-3" aria-hidden />
             {formatChipDate(customDate)}
             <button
@@ -159,7 +159,7 @@ export function DueDateField({
           <button
             type="button"
             onClick={() => onToggleCustomInput(true)}
-            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-[12.5px] font-medium text-foreground-muted transition-colors hover:border-foreground-muted/50 hover:text-foreground"
+            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-small font-medium text-foreground-muted transition-colors hover:border-foreground-muted/50 hover:text-foreground"
           >
             <CalendarIcon className="h-3 w-3" aria-hidden />
             Pick a date…
@@ -194,7 +194,7 @@ function CustomDateInput({
       type="date"
       onChange={(e) => { if (e.target.value) { onCustomDateChange(e.target.value); onToggleCustomInput(false); } }}
       onBlur={() => onToggleCustomInput(false)}
-      className="pointer-coarse:text-base rounded-md border border-border bg-background px-2.5 py-1 text-[12.5px] font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+      className="pointer-coarse:text-base rounded-md border border-border bg-background px-2.5 py-1 text-small font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
       aria-label="Pick a custom due date"
     />
   );
@@ -218,7 +218,7 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
         {tags.map((t) => (
           <span
             key={t}
-            className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-[11.5px] font-medium text-foreground-muted"
+            className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-caption font-medium text-foreground-muted"
           >
             <span className="opacity-60">#</span>
             {t}
@@ -245,7 +245,7 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           aria-label="Add a tag"
           // Inset ring: this input is borderless inside a bordered chip box, so
           // an offset ring would draw outside the field it belongs to.
-          className="pointer-coarse:text-base min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          className="pointer-coarse:text-base min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-small text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         />
       </div>
     </Field>
@@ -286,7 +286,7 @@ export function RecurrenceField({
               onClick={() => onChange(option.value)}
               aria-pressed={active}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                "rounded-full border px-3 py-1.5 text-small font-medium transition-colors",
                 active
                   ? "border-accent bg-accent/10 text-accent"
                   : "border-border text-foreground-muted hover:bg-background-muted"
@@ -367,7 +367,7 @@ function SubtaskRow({
       />
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-[13px]",
+          "min-w-0 flex-1 truncate text-small",
           subtask.completed ? "text-foreground-muted line-through" : "text-foreground"
         )}
       >
@@ -408,7 +408,7 @@ function SubtaskEntry({
       }}
       placeholder="Add a subtask…"
       aria-label="Add a subtask"
-      className="pointer-coarse:text-base w-full rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+      className="pointer-coarse:text-base w-full rounded-lg border border-border bg-background px-3 py-2 text-small text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
     />
   );
 }
@@ -440,9 +440,9 @@ export function EstimateField({
           onChange={(e) => onChange(e.target.value)}
           placeholder="—"
           aria-label="Estimate in minutes"
-          className="pointer-coarse:text-base w-28 rounded-lg border border-border bg-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+          className="pointer-coarse:text-base w-28 rounded-lg border border-border bg-background px-3 py-2 text-small text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
-        <span className="text-[13px] text-foreground-muted">minutes</span>
+        <span className="text-small text-foreground-muted">minutes</span>
       </div>
     </Field>
   );
