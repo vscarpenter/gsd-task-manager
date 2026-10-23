@@ -43,7 +43,7 @@ export function MatrixSection() {
               <h2 className="font-semibold text-display tracking-tight text-foreground mb-6">
                 Prioritize by urgency and importance. Not just vibes.
               </h2>
-              <div className="text-foreground-muted leading-relaxed space-y-4">
+              <div className="max-w-[55ch] text-foreground-muted leading-relaxed space-y-4">
                 <p>
                   President Eisenhower noticed that urgent tasks are rarely important, and
                   important tasks are rarely urgent. GSD puts that insight to work.

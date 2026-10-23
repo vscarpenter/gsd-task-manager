@@ -40,7 +40,7 @@ export function McpSection() {
             <h2 className="text-h2 font-semibold tracking-tight text-foreground sm:text-h1 mb-4">
               Let Claude manage your tasks.
             </h2>
-            <p className="text-foreground-muted leading-relaxed mb-6">
+            <p className="max-w-[55ch] text-foreground-muted leading-relaxed mb-6">
               GSD ships with an MCP server. Install it once, and your AI
               assistant can query, search, and analyze your tasks using plain
               English. {setupHint}
