@@ -89,6 +89,37 @@ test.describe("Coarse-pointer target floor", () => {
     }
   });
 
+  test("text fields are at least 16px on a touch screen, so iOS Safari does not zoom", async ({ page }) => {
+    // Safari on iPhone zooms the page into any focused field set under 16px.
+    const typedFields = "input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select";
+    await waitForAppLoad(page);
+    // Touch hides the card's hover actions, so open the drawer as the composer.
+    // Its button appears once the capture bar holds text to hand off.
+    await page.getByTestId("capture-input").fill("Field sizes");
+    await page.getByTestId("more-options").click();
+    await expect(page.getByTestId("edit-drawer")).toBeVisible();
+
+    const drawerFields = await page.getByTestId("edit-drawer").evaluate(
+      (drawer, selector) =>
+        [...drawer.querySelectorAll<HTMLElement>(selector)]
+          .filter((el) => el.getBoundingClientRect().width > 0)
+          .map((el) => ({
+            name: el.getAttribute("aria-label") ?? el.getAttribute("data-testid") ?? el.tagName,
+            size: parseFloat(getComputedStyle(el).fontSize),
+          })),
+      typedFields
+    );
+    expect(drawerFields.length).toBeGreaterThan(0);
+    for (const field of drawerFields) expect(field.size, field.name).toBeGreaterThanOrEqual(16);
+
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("ControlOrMeta+k");
+    const search = page.getByPlaceholder("Search tasks, actions, settings...");
+    await expect(search).toBeVisible();
+    const searchSize = await search.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(searchSize, "command palette search").toBeGreaterThanOrEqual(16);
+  });
+
   test("the app's settings switch reaches 44px without growing visually", async ({ page }) => {
     await waitForAppLoad(page);
     await page.goto("/settings");
