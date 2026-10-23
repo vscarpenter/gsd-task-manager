@@ -28,7 +28,7 @@ export function SettingsPage() {
             Settings
           </h2>
           <p className="mt-3 max-w-[55ch] text-base leading-relaxed text-foreground-muted">
-            Personalize the workspace, tune reminders, and manage local data without losing the calm, editorial tone of the main app.
+            Change how GSD looks and when it reminds you. Sync your tasks, back them up, or bring back ones you deleted.
           </p>
         </div>
 
