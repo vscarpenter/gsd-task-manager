@@ -12,10 +12,22 @@ GHSA-mrhx-c7xc-m3w5 (high): zod through 4.6.5 keeps one issue object per failing
 - [x] Root gates: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,573 passed, statements 89.98%).
 - [x] MCP server: build and tests (350 passed). A stdio probe of the built `dist/` (HOME sandboxed) returned initialize, 19 tools, and two validation rejections. All 4 stdout lines were JSON-RPC.
 - [x] Stagehand: loads under bun, its exported schemas are instances of the root zod, and `toJSONSchema` works. Its 44 unit tests pass.
-- [ ] Build, quality:bundle, Chromium export e2e.
-- [ ] Version 13.9.9 (prod serves 13.9.6), commit.
+- [x] Build passes; Chromium export e2e: 137 passed.
+- [x] quality:bundle failed, and the cause is zod. 4.5 and 4.6 added `z.compile`, `.validate`, and `z.withParser` to the classic `z` namespace. `lib/zod.ts` re-exports the whole namespace, so the bundler keeps the compiler even though jitless mode never runs it. The zod chunk went from 82.7KB to 108.5KB gzip, adding 25.8KB to every route. The baseline was refreshed from a CI-matching build in a clean worktree, `742cb59`. The same worktree also passed typecheck, lint, knip, and 3,573 tests on a frozen install.
+- [x] MCP 1.3.2 prepared, `d0096b7`: version, CHANGELOG, README, `public/index.md`, server card, and the `bun.lock` workspace line, hand-edited as in 1.3.1.
+- [x] Version 13.9.9, `f6efa63`. Final HEAD: audit at high is clean, the frozen install passes, and so do quality:bundle, test with coverage (3,573 passed, statements 89.96%), and the MCP tests (350 passed).
 
-Parked for the owner (default chosen): release gsd-mcp-server 1.3.2 so npx users stop getting zod 4.4.3. The default is to prepare the bump and CHANGELOG on this branch as a separate commit; the tag push and publish wait.
+Commits: `8a5024f` (zod and guard test), `742cb59` (budget), `d0096b7` (MCP 1.3.2), `f6efa63` (13.9.9).
+
+Next, all waiting on the owner:
+1. Push and open the PR.
+2. After the merge, tag `mcp-v1.3.2` on the merge commit and push it. The `mcp-release` environment then waits for the owner's approval in GitHub.
+3. Deploy.
+
+Open questions for the owner, each with a default:
+- MCP 1.3.2: prepared on the branch; the tag and publish wait.
+- Bundle: the 25.8KB was accepted. Winning it back means moving schemas to `zod/mini` or named imports, which is a separate refactor.
+- The moderate `ip-address` advisory (GHSA-rxp7-6hxx-x8q5, <=10.7.3, through the MCP SDK's express-rate-limit) is still pinned at 10.7.2. The high-level gate ignores it.
 
 # Session state, 2026-10-23: review range labels and copy (PR #625)
 
