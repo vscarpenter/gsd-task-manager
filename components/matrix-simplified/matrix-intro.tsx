@@ -35,7 +35,8 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
     // 64px and scrolled the page sideways.
     <section className="mb-5 flex flex-col items-start gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-center sm:gap-5">
       <div className="shrink-0">
-        <p className="text-eyebrow uppercase text-foreground-muted">Today&rsquo;s matrix</p>
+        {/* Visual only: the h1 below says it to screen readers. */}
+        <p aria-hidden="true" className="text-eyebrow uppercase text-foreground-muted">Today&rsquo;s matrix</p>
         {/* h2 rather than display: at 24px the date still reads as the page's
             subject in the serif voice without spending a fifth of the fold. */}
         <h1 className="mt-1 text-h2 text-foreground">
