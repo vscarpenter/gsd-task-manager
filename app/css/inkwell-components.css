@@ -106,10 +106,10 @@ code, .code-inline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 38px;
+  min-height: 38px;
   padding: 0 16px;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: var(--t-small);
   font-weight: 500;
   border-radius: var(--r-sm);
   border: 1px solid transparent;
@@ -130,7 +130,7 @@ code, .code-inline {
 .textarea,
 .select {
   padding: 0 12px;
-  font: 14px var(--sans);
+  font: var(--t-small) var(--sans);
   color: var(--slate);
   background: var(--paper);
   border: 1px solid var(--control-border);
@@ -138,8 +138,8 @@ code, .code-inline {
   outline: none;
   transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease;
 }
-.input  { height: 38px; }
-.select { height: 38px; appearance: none;
+.input  { min-height: 38px; }
+.select { min-height: 38px; appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%236E6760' stroke-width='1.5' stroke-linecap='round'/></svg>");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -263,9 +263,9 @@ kbd, .kbd {
   align-items: center;
   justify-content: center;
   min-width: 22px;
-  height: 22px;
+  min-height: 22px;
   padding: 0 6px;
-  font: 500 11px/1 var(--mono);
+  font: 500 var(--t-eyebrow)/1 var(--mono);
   color: var(--gray-700);
   background: var(--paper);
   border: 1px solid var(--gray-300);
@@ -277,8 +277,8 @@ kbd, .kbd {
 /* ---------- Badge / Pill ---------- */
 .badge {
   display: inline-flex; align-items: center;
-  height: 22px; padding: 0 9px;
-  font-size: 12px; font-weight: 500;
+  min-height: 22px; padding: 0 9px;
+  font-size: var(--t-caption); font-weight: 500;
   border-radius: var(--r-pill);
 }
 .badge-neutral { background: var(--gray-100);    color: var(--gray-700); }
@@ -770,7 +770,7 @@ hr.rule       { border: none; border-top: var(--border-rule); margin: 0 0 22px; 
   /* 14px type makes iOS zoom the page when the field is focused. The matrix
      search is on the phone now, so this field stays at 16px there. */
   .input.topbar-search-input {
-    font-size: 16px;
+    font-size: var(--t-body);
   }
 
   /* The small toggles expand their reach, not their appearance. A pseudo-
