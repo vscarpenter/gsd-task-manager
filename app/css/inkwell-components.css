@@ -33,6 +33,7 @@ body {
   color: var(--slate);
   font-family: var(--sans);
   font-size: var(--t-body);
+  font-weight: 430;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }

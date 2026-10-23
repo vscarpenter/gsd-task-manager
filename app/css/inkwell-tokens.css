@@ -94,15 +94,17 @@
   --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono:  ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
 
-  /* Type scale */
-  --t-display: 48px;
-  --t-h1:      32px;
-  --t-h2:      24px;
-  --t-h3:      19px;
-  --t-body:    16px;
-  --t-small:   14px;
-  --t-caption: 12px;
-  --t-eyebrow: 11px;
+  /* Type scale. rem so text follows the browser's font-size setting, as iOS
+     Dynamic Type and Android sp do; at the default 16px root these are
+     48 / 32 / 24 / 19 / 16 / 14 / 12 / 11px. */
+  --t-display: 3rem;
+  --t-h1:      2rem;
+  --t-h2:      1.5rem;
+  --t-h3:      1.1875rem;
+  --t-body:    1rem;
+  --t-small:   0.875rem;
+  --t-caption: 0.75rem;
+  --t-eyebrow: 0.6875rem;
 
   /* ---------- Spacing (8px base, 4px micro) ---------- */
   --sp-1:  4px;
