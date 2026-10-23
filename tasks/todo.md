@@ -1,8 +1,28 @@
-# Session state, 2026-10-23: /impeccable adapt (`fix/adapt-layout`)
+# Session state, 2026-10-23: /impeccable polish (`fix/final-polish`)
 
 ## Resuming From Here
 
-Standard tier. Four commits on `fix/adapt-layout`, branched from main at `91f8332`, not stacked on #622. Not pushed; the owner decides on push and PR.
+Standard tier. A final polish after typeset, distill, clarify, and adapt. Branched from main at `5e090bf`; not pushed, the owner decides on push and PR.
+
+- [x] Edit drawer: quadrant buttons are named by their visible text (WCAG 2.5.3, flagged by axe in both themes). The footer and discard prompt use the shared Button: Save is the tide primary, and touch targets went from 33px to 44px. `ef61bb4`.
+- [x] Build date: the footer and Settings About read "Oct 23, 2026 at 10:29 AM", not "Oct 23 at 2026, 10:29 AM". `4294f8d`.
+- [x] Copy: Archive and Sync history say "Open matrix" (the one label for that intent); the Sync settings, Delete account, Reset everything, and Share task dialog titles are sentence case. `3165ccc`.
+- [x] Toasts use Inkwell status tokens. The light "Task added" toast was 4.25:1; every status now clears AA in both themes. `f7eebac`.
+- [x] Verification: 32 rendered states (routes and overlays at 1280 and 390, light and dark) show 0 axe violations and 0 console errors. Every CI gate is green; test with coverage passed 3,571. New `tests/e2e/toast-contrast.spec.ts` and a discard-prompt case in `layout-fit.spec.ts` failed first. Chromium export e2e after `build:e2e`: 136 passed.
+- [x] The `impeccable critique-storage` helper closed the stale 2026-06-01 matrix critique (the target changed since).
+
+Open questions for the owner, left unchanged:
+- The Review chart's 7 Days / 30 Days / 90 Days control wraps onto two rows on phones (needs 312px; 276 at 390, 206 at 320). Fixing it means shorter labels or dropping the selected checkmark on narrow screens.
+- The Settings intro ends "...without losing the calm, editorial tone of the main app", which describes the design rather than the user's task.
+- The sync sign-in dialog says "Your data is stored on your self-hosted PocketBase server", but the server is the owner's, not the user's.
+
+# Session state, 2026-10-23: /impeccable adapt (PR #623)
+
+## Resuming From Here
+
+Standard tier. PR #623 squash-merged 2026-10-23 (main at `5e090bf`). Local `fix/help-copy-and-serif` and `fix/adapt-layout` are deleted after verification; `chore/oss-scanner-enrollment` and its worktree are untouched.
+
+Next: nothing in flight. The impeccable audit's follow-ups are all on main.
 
 - [x] A settings row wraps its control below the label when the control can't leave the label 8rem. At 390px the Theme label column went from 53px and four lines to one line; at 320px it was 0px. `f7a811a`.
 - [x] Topbar search flexes from 12rem to 18rem, and sync plus the command button wrap as one unit at the right edge. At 1280px with 150% text the bar went from 187px on two rows to one 109px row; at 900px, from 125px to one 73px row. `49bcd71`, then `013e127` moved search into `TopbarSearch` for the code-shape ratchet.
@@ -13,7 +33,7 @@ By design: at 768px, and at 1152px with 150% text, the bar still takes two rows,
 
 Merge note: #622 merged first (`8452e57`); main was merged into this branch and both blocks kept.
 
-With #622 and this branch, every item on the impeccable "Noted, not done" list is handled.
+With #622 and #623, every item on the impeccable "Noted, not done" list is handled.
 
 # Session state, 2026-10-23: help drawer copy and serif fixes (`fix/help-copy-and-serif`)
 
