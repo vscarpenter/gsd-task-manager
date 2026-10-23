@@ -1,3 +1,24 @@
+# Session state, 2026-10-23: help drawer copy and serif fixes (`fix/help-copy-and-serif`)
+
+## Resuming From Here
+
+Standard tier. Two commits on `fix/help-copy-and-serif`, not pushed. The owner decides on push and PR.
+
+- [x] The help drawer's sync copy says what each badge shows (a count, an exclamation mark) instead of the retired "aubergine" and "coral". `65a585d`.
+- [x] The help title drops the `<em>` around GSD that the browser drew as a fake italic. `65a585d`.
+- [x] Newsreader loads its optical-size axis, and `.ui-craft/tokens.md` no longer claims italic is loaded. `47b95ad`.
+  - Cost: the Latin woff2 grows from 58,152 to 131,848 bytes. next/font only adds an axis alongside the full 200 to 800 weight range.
+  - Gain: the 32px help title sets about 2% tighter with finer hairlines. At 24px the change is hard to see.
+  - Safari on Apple devices uses New York and never downloads Newsreader. `quality:bundle` counts JavaScript only, so CI can't see font growth.
+- [x] Verification: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,561 passed; 89.98/84/90.19/91.12), build, and quality:bundle are green. Headless Chromium on the built export at 1280 and 390 shows the upright title and the new copy, with no console errors. Chromium export e2e after `build:e2e`: 129 passed. Firefox and WebKit e2e were not run locally; CI runs them.
+
+Open question for the owner: keep `47b95ad` (+74 KB on a first visit outside Safari) or revert it before the PR.
+
+Noted, not done (`/impeccable adapt`):
+- At 390px the Settings Theme row's description wraps one word per line beside the segmented control.
+- At 150% text on a 1280px screen the topbar wraps the ⌘ button onto a row of its own (header 187px).
+- While the pinned stage scrolls (short screens), the row axis labels size to the stage, not the grid, so "Not important" drifts off the bottom row. Predates #620.
+
 # Session state, 2026-10-23: /impeccable typeset (PR #620) and distill (PR #621)
 
 ## Resuming From Here
