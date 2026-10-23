@@ -17,10 +17,11 @@ function Switch({
       // a 44px target while the switch keeps its compact shape (as Inkwell's .switch does).
       "pointer-coarse:before:absolute pointer-coarse:before:left-1/2 pointer-coarse:before:top-1/2 pointer-coarse:before:size-11",
       "pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']",
-      "border border-border bg-background-accent",
+      // The pane border is about 1.5:1 on paper; the off state needs a 3:1 control boundary (WCAG 1.4.11).
+      "border border-control-border bg-background-accent",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       "disabled:cursor-not-allowed disabled:opacity-50",
-      "data-[state=checked]:bg-accent data-[state=checked]:shadow-none",
+      "data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:shadow-none",
       "data-[state=unchecked]:bg-background-accent",
       className
     )}
