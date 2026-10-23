@@ -35,17 +35,13 @@ if (!buildInfo || buildInfo.version !== baseVersion) {
 
 buildInfo = { ...(buildInfo ?? {}), version: newVersion };
 
-// Generate friendly date format: "Jan 5, 2025 at 2:30 PM"
+// Generate friendly date format: "Jan 5, 2025 at 2:30 PM". Date and time are
+// formatted separately: toLocaleString joins them with a second comma, and
+// replacing the first one produced "Jan 5 at 2025, 2:30 PM".
 const now = new Date();
-const options = {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true
-};
-const formattedDate = now.toLocaleString('en-US', options).replace(',', ' at');
+const datePart = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const timePart = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+const formattedDate = `${datePart} at ${timePart}`;
 
 buildInfo.buildDate = formattedDate;
 buildInfo.timestamp = now.toISOString();
