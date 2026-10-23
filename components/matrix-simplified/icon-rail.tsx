@@ -66,7 +66,7 @@ export function DesktopIconRail({ onHelp }: IconRailProps) {
     <nav
       className={cn(
         "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-rail md:transition-[width] md:duration-150 md:ease-out",
-        collapsed ? "md:w-[60px]" : "md:w-[180px]"
+        collapsed ? "md:w-15" : "md:w-45"
       )}
       aria-label="Primary navigation"
     >
