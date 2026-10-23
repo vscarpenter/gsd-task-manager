@@ -48,6 +48,12 @@ test.describe("Text scaling at 150%", () => {
     await useLargeText(page);
     await waitForAppLoad(page);
     const rail = page.getByRole("navigation", { name: "Primary navigation" });
+    // system-ui is narrow San Francisco on macOS but a wider face such as DejaVu
+    // Sans on Linux and Windows. Widen every glyph so the check holds on any
+    // machine. Set through CSSOM, which the production CSP allows.
+    await rail.evaluate((el) => {
+      (el as HTMLElement).style.letterSpacing = "0.1em";
+    });
     const label = rail.getByText("Collapse sidebar");
     await expect(label).toBeVisible();
     const [railBox, labelBox] = await Promise.all([rail.boundingBox(), label.boundingBox()]);

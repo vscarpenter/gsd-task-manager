@@ -23,9 +23,10 @@ describe("IconRail", () => {
   it("renders expanded by default with visible labels", () => {
     render(<IconRail onHelp={vi.fn()} />);
     const desktopNav = screen.getByRole("navigation", { name: "Primary navigation" });
-    // Spacing-scale widths are rem (180px and 60px by default), so the rail grows
-    // with the browser's font size instead of clipping its labels.
-    expect(desktopNav.className).toContain("md:w-45");
+    // Expanded, the rail fits its widest label with a 180px floor (rem), so large
+    // text in a wide system font cannot clip it.
+    expect(desktopNav.className).toContain("md:w-max");
+    expect(desktopNav.className).toContain("md:min-w-45");
     expect(desktopNav.className).not.toContain("md:w-15");
   });
 
@@ -34,7 +35,7 @@ describe("IconRail", () => {
     render(<IconRail onHelp={vi.fn()} />);
     const desktopNav = screen.getByRole("navigation", { name: "Primary navigation" });
     expect(desktopNav.className).toContain("md:w-15");
-    expect(desktopNav.className).not.toContain("md:w-45");
+    expect(desktopNav.className).not.toContain("md:w-max");
   });
 
   it("toggles between expanded and collapsed when the toggle button is clicked", async () => {
@@ -50,7 +51,7 @@ describe("IconRail", () => {
 
     const expand = screen.getByRole("button", { name: /expand sidebar/i });
     await user.click(expand);
-    expect(desktopNav.className).toContain("md:w-45");
+    expect(desktopNav.className).toContain("md:w-max");
     expect(localStorage.getItem(RAIL_COLLAPSED_KEY)).toBe("false");
   });
 
