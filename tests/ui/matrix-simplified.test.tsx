@@ -573,14 +573,18 @@ describe("<MatrixSimplified>", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" });
   });
 
-  it("docks Quick Capture above mobile navigation and restores top-stickiness on desktop", () => {
+  it("docks Quick Capture above mobile navigation and keeps it in the page flow on desktop", () => {
     render(<MatrixSimplified />);
-    expect(screen.getByTestId("mobile-capture-dock")).toHaveClass(
+    const dock = screen.getByTestId("mobile-capture-dock");
+    expect(dock).toHaveClass(
       "fixed",
-      "md:sticky",
+      "md:relative",
       "pl-[max(0.75rem,env(safe-area-inset-left))]",
       "pr-[max(0.75rem,env(safe-area-inset-right))]"
     );
+    // A fixed 60px sticky offset slid the dock over a taller header once the
+    // unpinned page scrolled.
+    expect(dock).not.toHaveClass("md:sticky");
   });
 
   it("renders four quadrant panes (regions)", () => {

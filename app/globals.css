@@ -135,6 +135,14 @@
    Mirrors @custom-variant dark in inkwell-theme.css. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* The matrix shell pins to the viewport (AppShell fillViewport) at md and above,
+   but only on a screen at least 40rem tall. Its header, briefing, and capture bar
+   take 22.5rem, and 28rem once large text wraps the header, so a shorter screen
+   leaves the stage a scroller too thin to use. A media query's rem is the browser's default font size, so the floor
+   rises with the reader's text: 640px at 16px, 960px at 24px. Below it the page
+   scrolls, as it does at compact widths. 48rem is the md breakpoint. */
+@custom-variant pinned (@media (width >= 48rem) and (height >= 40rem));
+
 /* =====================================================================
    GSD-specific tokens — extensions on top of Inkwell 1.3.1.
    Inkwell owns surfaces / accent / semantic / type / radii / dark cascade
