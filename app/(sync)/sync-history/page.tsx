@@ -181,7 +181,7 @@ export default function SyncHistoryPage(): React.ReactElement {
 							Your sync operations will appear here once you enable cloud sync.
 						</p>
 						<Button variant="primary" className="mt-4" onClick={() => router.push("/")}>
-							Back to Tasks
+							Open matrix
 						</Button>
 					</div>
 				) : (

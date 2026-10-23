@@ -57,7 +57,8 @@ describe("ResetEverythingDialog", () => {
     render(<ResetEverythingDialog {...baseProps} />);
 
     // Title text appears in both heading and reset button — verify heading
-    expect(screen.getByRole("heading", { name: /Reset Everything/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reset everything" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reset everything" })).toBeInTheDocument();
     expect(
       screen.getByText(
         "This will permanently delete all your data. This action cannot be undone."

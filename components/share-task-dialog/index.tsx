@@ -109,7 +109,7 @@ export function ShareTaskDialog({ task, open, onOpenChange }: ShareTaskDialogPro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2Icon className="h-5 w-5" aria-hidden />
-            Share Task: {task.title}
+            Share task: {task.title}
           </DialogTitle>
           <DialogDescription>
             {canUseWebShare()

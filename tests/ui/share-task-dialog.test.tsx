@@ -31,6 +31,12 @@ describe("ShareTaskDialog email flow", () => {
     clickSpy.mockRestore();
   });
 
+  it("titles the dialog in sentence case, like every other dialog", () => {
+    render(<ShareTaskDialog task={createMockTask({ title: "Renew passport" })} open onOpenChange={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "Share task: Renew passport" })).toBeInTheDocument();
+  });
+
   it("builds an encoded mailto link for a valid recipient and closes", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

@@ -94,7 +94,7 @@ describe("DeleteAccountDialog", () => {
     expect(toast.success).not.toHaveBeenCalled();
     expect(reloadAfterReset).not.toHaveBeenCalled();
     expect(baseProps.onDeleted).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: /delete account/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Delete account" })).toBeInTheDocument();
   });
 
   it("should_not_mention_reset_everything_when_local_erase_fails", async () => {
