@@ -14,6 +14,7 @@ const SOURCE_DIRS = ["components", "app"];
 const ARBITRARY_PX_SIZE = /\btext-\[[0-9.]+px\]/g;
 const NUMERIC_FONT_SIZE = /\bfontSize\s*[:=]\s*\{?\s*[0-9.]+/g;
 const PX_STRING_FONT_SIZE = /\bfontSize\s*:\s*["'][0-9.]+px["']/g;
+const OFF_RAMP_NAMED_SIZE = /(?<![\w-])(?:[a-z]+:)*text-(?:lg|xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)\b/g;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -44,5 +45,10 @@ describe("type ramp usage", () => {
 
   it("sets no px-string inline fontSize", () => {
     expect(offenders(PX_STRING_FONT_SIZE)).toEqual([]);
+  });
+
+  it("uses no Tailwind size without a ramp step behind it", () => {
+    // text-xs/sm/base/2xl are spellings of Caption/Small/Body/H2; these are not.
+    expect(offenders(OFF_RAMP_NAMED_SIZE)).toEqual([]);
   });
 });

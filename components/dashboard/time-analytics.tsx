@@ -163,7 +163,7 @@ function StatBlock({ icon: Icon, label, value, subtitle, valueColor }: StatBlock
         <Icon className="h-4 w-4 text-foreground-muted" />
         <span className="text-xs font-medium text-foreground-muted">{label}</span>
       </div>
-      <p className={cn("mt-2 text-2xl font-bold tabular-nums", valueColor || "text-foreground")}>
+      <p className={cn("mt-2 text-h2 tabular-nums", valueColor || "text-foreground")}>
         {value}
       </p>
       <p className="text-xs text-foreground-muted">{subtitle}</p>

@@ -104,7 +104,7 @@ function ReviewBody({ onOpenMatrix, onDeadlineTaskClick }: ReviewBodyProps): Rea
     <div className="pb-10">
       <header className="border-b border-border/60 px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl">
-          <p className="eyebrow">Weekly review</p>
+          <p className="text-eyebrow uppercase text-foreground-muted">Weekly review</p>
           <div className="mt-2">
             <HeroSlot isLoading={isLoading} isEmpty={isEmpty} data={data} />
           </div>

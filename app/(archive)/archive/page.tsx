@@ -169,7 +169,7 @@ export default function ArchivePage() {
           </div>
         ) : archivedTasks.length === 0 ? (
           <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-h3 text-foreground">
               No archived tasks
             </h2>
             <p className="mt-2 text-sm text-foreground-muted">
