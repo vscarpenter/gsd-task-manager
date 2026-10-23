@@ -151,6 +151,15 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
     });
   });
 
+  // "Open matrix" is the one label for this intent across the app (see EmptyRegion).
+  it("offers the app's one label for returning to the matrix", async () => {
+    mockGetRecentHistory.mockResolvedValue([]);
+
+    render(<SyncHistoryPage />, { wrapper: createQueryWrapper() });
+
+    expect(await screen.findByRole("button", { name: "Open matrix" })).toBeInTheDocument();
+  });
+
   it("renders sync history records via useQuery", async () => {
     const records = [
       createMockHistoryRecord({

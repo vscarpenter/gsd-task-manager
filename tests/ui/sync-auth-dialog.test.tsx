@@ -163,14 +163,14 @@ describe('SyncAuthDialog', () => {
     it('should not render when isOpen is false', () => {
       render(<SyncAuthDialog isOpen={false} onClose={vi.fn()} />);
 
-      expect(screen.queryByText('Sync Settings')).not.toBeInTheDocument();
+      expect(screen.queryByText('Sync settings')).not.toBeInTheDocument();
     });
 
     it('should render when isOpen is true', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Sync Settings')).toBeInTheDocument();
+        expect(screen.getByText('Sync settings')).toBeInTheDocument();
       });
     });
 
@@ -181,7 +181,7 @@ describe('SyncAuthDialog', () => {
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
-      const dialog = await screen.findByRole('dialog', { name: 'Sync Settings' });
+      const dialog = await screen.findByRole('dialog', { name: 'Sync settings' });
       expect(dialog).toHaveAttribute('aria-modal', 'true');
       await waitFor(() => expect(screen.getByLabelText('Close')).toHaveFocus());
 
@@ -197,7 +197,7 @@ describe('SyncAuthDialog', () => {
         <SyncAuthDialog isOpen={true} onClose={onClose} />
       );
 
-      const dialog = await screen.findByRole('dialog', { name: 'Sync Settings' });
+      const dialog = await screen.findByRole('dialog', { name: 'Sync settings' });
       fireEvent.keyDown(dialog, { key: 'Escape' });
       expect(onClose).toHaveBeenCalledTimes(1);
 
@@ -210,7 +210,7 @@ describe('SyncAuthDialog', () => {
       const user = userEvent.setup();
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
-      const dialog = await screen.findByRole('dialog', { name: 'Sync Settings' });
+      const dialog = await screen.findByRole('dialog', { name: 'Sync settings' });
       const focusable = dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]');
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -265,7 +265,7 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={onClose} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Sync Settings')).toBeInTheDocument();
+        expect(screen.getByText('Sync settings')).toBeInTheDocument();
       });
 
       const backdrop = document.querySelector('.fixed.inset-0.z-50.bg-black\\/50');
@@ -953,7 +953,7 @@ describe('SyncAuthDialog', () => {
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
-      // The subtitle under "Sync Settings" should read "Session expired"
+      // The subtitle under "Sync settings" should read "Session expired"
       await waitFor(() => {
         const subtitles = screen.getAllByText('Session expired');
         expect(subtitles.length).toBeGreaterThanOrEqual(1);

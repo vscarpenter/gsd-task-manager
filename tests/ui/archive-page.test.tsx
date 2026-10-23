@@ -151,6 +151,15 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     });
   });
 
+  // "Open matrix" is the one label for this intent across the app (see EmptyRegion).
+  it("offers the app's one label for returning to the matrix", async () => {
+    mockListArchivedTasks.mockResolvedValue([]);
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+
+    expect(await screen.findByRole("button", { name: "Open matrix" })).toBeInTheDocument();
+  });
+
   it("renders archived tasks via useQuery", async () => {
     const tasks = [
       createMockArchivedTask({ id: "task-1", title: "First Task" }),

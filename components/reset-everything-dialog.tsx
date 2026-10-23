@@ -163,7 +163,7 @@ export function ResetEverythingDialog({
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-status-overdue-ink">
 						<AlertTriangleIcon className="h-5 w-5" />
-						Reset Everything
+						Reset everything
 					</DialogTitle>
 					<DialogDescription className="text-foreground-muted">
 						This will permanently delete all your data. This action cannot be undone.
@@ -285,7 +285,7 @@ export function ResetEverythingDialog({
 							onClick={handleReset}
 							disabled={!canReset || isResetting}
 						>
-							{isResetting ? "Resetting..." : "Reset Everything"}
+							{isResetting ? "Resetting..." : "Reset everything"}
 						</Button>
 					</div>
 				</div>

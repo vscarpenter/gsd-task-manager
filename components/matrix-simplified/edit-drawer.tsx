@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "rea
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
@@ -183,21 +183,13 @@ function DiscardConfirmFooter({ keepEditingRef, onKeepEditing, onDiscard }: Disc
         Discard unsaved changes?
       </p>
       <div className="flex-1" />
-      <button
-        ref={keepEditingRef}
-        type="button"
-        onClick={onKeepEditing}
-        className="rounded-lg px-3 py-1.5 text-small font-medium text-foreground-muted hover:text-foreground"
-      >
+      {/* nowrap: on a phone the prompt text wraps, never an action label. */}
+      <Button ref={keepEditingRef} variant="ghost" className="whitespace-nowrap" onClick={onKeepEditing}>
         Keep editing
-      </button>
-      <button
-        type="button"
-        onClick={onDiscard}
-        className="inline-flex items-center rounded-lg bg-foreground px-3.5 py-1.5 text-small font-medium text-background"
-      >
+      </Button>
+      <Button variant="destructive" onClick={onDiscard}>
         Discard
-      </button>
+      </Button>
     </div>
   );
 }
@@ -231,25 +223,13 @@ function DrawerFooter({
         <div className="flex items-center gap-2.5 border-t border-border/60 bg-background px-5 py-3.5">
           <DrawerHint />
           <div className="flex-1" />
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-small font-medium text-foreground-muted hover:text-foreground"
-          >
+          <Button variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            data-testid="save-task"
-            type="submit"
-            disabled={!canSave}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-1.5 text-small font-medium text-background",
-              "hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-40"
-            )}
-          >
+          </Button>
+          <Button data-testid="save-task" type="submit" disabled={!canSave} className="whitespace-nowrap">
             <CheckIcon className="h-3.5 w-3.5" />
             {isCreateMode ? "Create task" : "Save changes"}
-          </button>
+          </Button>
         </div>
   );
 }

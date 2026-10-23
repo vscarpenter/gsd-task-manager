@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
-import { waitForAppLoad } from "./helpers/test-helpers";
+import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers";
 
 /**
  * Controls that must fit beside their neighbours, measured at real sizes.
@@ -25,6 +25,26 @@ test.describe("Layout fit", () => {
 
   test.describe("on a touch phone", () => {
     test.use({ hasTouch: true });
+
+    // Inside the shared buttons' 16px padding, "Keep editing" wrapped onto two
+    // lines beside the discard prompt at 390.
+    test("the discard prompt keeps each action on one line", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await waitForAppLoad(page);
+      await createTaskViaCaptureBar(page, "Renew passport");
+      await page.getByTestId("task-card").first().getByRole("button", { name: /edit/i }).first().click();
+      await page.getByLabel(/description/i).fill("More context");
+      await page.getByRole("button", { name: "Cancel" }).click();
+
+      for (const name of ["Keep editing", "Discard"]) {
+        const lines = await page.getByRole("button", { name }).evaluate((el) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return range.getClientRects().length;
+        });
+        expect(lines, name).toBe(1);
+      }
+    });
 
     // The touch-sized theme control is about 255px wide. Beside it the label
     // column fell to 53px at 390, one word per line, and to nothing at 320.

@@ -111,12 +111,37 @@ describe("<EditDrawer>", () => {
   it("quadrant picker switches urgent/important flags", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={onSubmit} />);
-    await user.click(screen.getByRole("button", { name: /^schedule$/i }));
+    await user.click(screen.getByRole("button", { name: /^schedule\b/i }));
     await user.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ urgent: false, important: true }),
       "t1"
     );
+  });
+
+  // WCAG 2.5.3: a voice-control user says what they see. An aria-label of the
+  // title alone left the caption under it out of the button's name.
+  it("names each quadrant button with all the text it shows", () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: /^schedule\s*important, not urgent$/i })).toBeInTheDocument();
+  });
+
+  it("uses the shared primary and ghost buttons for save and cancel", () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: /save changes/i })).toHaveClass("btn", "btn-primary");
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("btn", "btn-ghost");
+  });
+
+  it("uses the shared ghost and destructive buttons in the discard prompt", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    await user.type(screen.getByLabelText(/description/i), " extra context");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByRole("button", { name: "Keep editing" })).toHaveClass("btn", "btn-ghost");
+    expect(screen.getByRole("button", { name: "Discard" })).toHaveClass("btn", "btn-danger");
   });
 
   it("submits dueDate as a full ISO datetime string, not a date-only string", async () => {

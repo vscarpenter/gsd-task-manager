@@ -175,7 +175,7 @@ export function DeleteAccountDialog({
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-status-overdue-ink">
 						<AlertTriangleIcon className="h-5 w-5" />
-						Delete Account
+						Delete account
 					</DialogTitle>
 					<DialogDescription className="text-foreground-muted">
 						This permanently deletes your account and every task synced to it. This

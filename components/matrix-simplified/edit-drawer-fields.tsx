@@ -60,7 +60,6 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
               data-testid={`edit-quadrant-${q.rdKey}`}
               key={q.id}
               type="button"
-              aria-label={q.title}
               onClick={() => onChange(q.urgent, q.important)}
               className={cn(
                 "rounded-lg border px-3 py-2.5 text-left transition-colors",

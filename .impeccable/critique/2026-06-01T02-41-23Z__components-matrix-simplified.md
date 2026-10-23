@@ -5,6 +5,7 @@ p0_count: 0
 p1_count: 3
 timestamp: 2026-06-01T02-41-23Z
 slug: components-matrix-simplified
+closed: true
 ---
 ## Design Health Score
 
