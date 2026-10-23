@@ -31,9 +31,9 @@ import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
 import { useDashboardData } from "./use-dashboard-data";
 
 const TREND_OPTIONS = [
-  { value: "7", label: "7 Days" },
-  { value: "30", label: "30 Days" },
-  { value: "90", label: "90 Days" },
+  { value: "7", label: "7d" },
+  { value: "30", label: "30d" },
+  { value: "90", label: "90d" },
 ] as const;
 
 type TrendPeriod = 7 | 30 | 90;
@@ -257,7 +257,7 @@ function DashboardContent({
             data={trendData}
             control={
               <SegmentedControl
-                label="Completion trend period"
+                label="Completion trend period in days"
                 options={TREND_OPTIONS}
                 value={String(trendPeriod) as "7" | "30" | "90"}
                 onChange={(v) => onTrendPeriodChange(Number(v) as TrendPeriod)}

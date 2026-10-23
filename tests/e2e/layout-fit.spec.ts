@@ -46,6 +46,23 @@ test.describe("Layout fit", () => {
       }
     });
 
+    // "7 Days", "30 Days", and "90 Days" needed 312px, and the chart header
+    // had 276 at 390, so "90 Days" dropped onto a second row.
+    test("the review's period control keeps its options on one row", async ({ page }) => {
+      await waitForAppLoad(page);
+      await createTaskViaCaptureBar(page, "Renew passport");
+
+      for (const width of [390, 360]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto("/dashboard");
+        const options = page.getByRole("group", { name: /completion trend period/i }).locator("label");
+        await expect(options.last()).toBeVisible();
+
+        const drift = Math.abs((await centerY(options.first())) - (await centerY(options.last())));
+        expect(drift, `at ${width}px`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+      }
+    });
+
     // The touch-sized theme control is about 255px wide. Beside it the label
     // column fell to 53px at 390, one word per line, and to nothing at 320.
     test("the theme control moves below its label instead of squeezing it", async ({ page }) => {

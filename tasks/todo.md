@@ -1,8 +1,23 @@
-# Session state, 2026-10-23: /impeccable polish (`fix/final-polish`)
+# Session state, 2026-10-23: review range labels and copy (`fix/review-range-and-copy`)
 
 ## Resuming From Here
 
-Standard tier. A final polish after typeset, distill, clarify, and adapt. Branched from main at `5e090bf`; not pushed, the owner decides on push and PR.
+Standard tier. The owner answered the three questions the polish pass left open. Branched from main at `4675d18`; not pushed, the owner decides on push and PR.
+
+- [x] Review chart period labels are "7d", "30d", and "90d", and the legend reads "Completion trend period in days". The old labels needed 312px against 276 at 390, so "90 Days" wrapped. New `layout-fit.spec.ts` case failed first (48px drift at 390).
+- [x] Settings intro: "Change how GSD looks and when it reminds you. Sync your tasks, back them up, or bring back ones you deleted."
+- [x] Sync sign-in dialog: "Your data is stored on GSD's own Cloud DB server." New unit test failed first.
+- [ ] Every CI gate, Chromium export e2e, and a running-app check at 390 and 1280, light and dark.
+
+# Session state, 2026-10-23: /impeccable polish (PR #624)
+
+## Resuming From Here
+
+Standard tier. A final polish after typeset, distill, clarify, and adapt. PR #624 squash-merged 2026-10-23 (main at `4675d18`) with all 13 checks green; the local `fix/final-polish` branch is deleted after verification. `chore/oss-scanner-enrollment` and its worktree are untouched.
+
+Next: nothing in flight. The open questions below wait on the owner.
+
+- [x] Version 13.9.7 (`package.json` and README line 7). Production already served cache version 13.9.6 from a repeat local build of 13.9.5, so 13.9.6 would not have rotated the pages and runtime caches. `8b6b681`.
 
 - [x] Edit drawer: quadrant buttons are named by their visible text (WCAG 2.5.3, flagged by axe in both themes). The footer and discard prompt use the shared Button: Save is the tide primary, and touch targets went from 33px to 44px. `ef61bb4`.
 - [x] Build date: the footer and Settings About read "Oct 23, 2026 at 10:29 AM", not "Oct 23 at 2026, 10:29 AM". `4294f8d`.
