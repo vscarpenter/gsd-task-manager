@@ -16,12 +16,14 @@ interface SettingsRowProps {
 }
 
 /**
- * Settings row with label, optional description, and inline content
+ * Settings row with label, optional description, and inline content.
+ * A control too wide to leave the label 8rem wraps below it instead, so a
+ * phone never squeezes the label to one word per line.
  */
 export function SettingsRow({ label, description, state, children }: SettingsRowProps) {
 	return (
-		<div className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]">
-			<div className="flex-1 min-w-0">
+		<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3.5 min-h-[52px]">
+			<div className="flex-[1_1_8rem] min-w-0">
 				<p className="text-sm font-medium text-foreground">{label}</p>
 				{description && (
 					<p className="text-xs text-foreground-muted mt-0.5">

@@ -65,7 +65,7 @@ export function MatrixGrid({
           // The floor has to live on the track, not only on the pane: a pane
           // with min-height inside a smaller minmax(0,1fr) track overflows its
           // cell and paints over the row below.
-          className="grid min-h-0 gap-4 @min-[696px]:grid-cols-2 @min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]"
+          className={`grid min-h-0 gap-4 @min-[696px]:grid-cols-2 ${PANE_ROWS}`}
         >
         {quadrants.map((meta) => (
           <QuadrantPane
@@ -121,7 +121,7 @@ function AxisFrame({ children }: { children: React.ReactNode }) {
       <div
         data-testid="matrix-axis-rows"
         aria-hidden="true"
-        className="hidden grid-rows-2 gap-4 @min-[696px]:grid"
+        className={`hidden gap-4 @min-[696px]:grid ${PANE_ROWS}`}
       >
         <p className={VERTICAL_AXIS_LABEL}>Important</p>
         <p className={VERTICAL_AXIS_LABEL}>Not important</p>
@@ -131,6 +131,13 @@ function AxisFrame({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/**
+ * Both pane rows, each floored at 280px. The row labels share these tracks, so
+ * when a short screen scrolls the stage rather than shrink the panes, each
+ * label still sits beside its row instead of halving the visible height.
+ */
+const PANE_ROWS = "@min-[696px]:grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]";
 
 /**
  * The kicker voice, one step quieter than a kicker normally speaks: 10px and

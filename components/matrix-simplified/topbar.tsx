@@ -55,27 +55,53 @@ export function SimplifiedTopbar({
       <div className="flex-1" />
 
       {hasSearch ? (
-        <div data-testid="topbar-search" className="relative order-last w-full sm:order-none sm:w-72">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
-          <Input
-            data-testid="search-input"
-            className="touch-target topbar-search-input"
-            ref={searchInputRef}
-            placeholder="Search tasks…"
-            style={{ paddingLeft: "2.25rem" }}
-            value={searchQuery ?? ""}
-            onChange={(e) => onSearchChange(e.target.value)}
-            aria-label="Search tasks"
-          />
-        </div>
+        <TopbarSearch value={searchQuery ?? ""} onChange={onSearchChange} inputRef={searchInputRef} />
       ) : null}
 
-      <div data-testid="topbar-sync">
-        <SyncStatusDisplay {...syncStatus} />
+      {/* Sync and the right slot wrap as one unit, so the command button is
+          never left alone on a row. ml-auto holds the pair at the right edge
+          when it does wrap. */}
+      <div data-testid="topbar-actions" className="ml-auto flex items-center gap-3">
+        <div data-testid="topbar-sync">
+          <SyncStatusDisplay {...syncStatus} />
+        </div>
+        {rightSlot}
       </div>
-
-      {rightSlot}
     </header>
+  );
+}
+
+/**
+ * Search gives up width first: it grows to 18rem when there is room and
+ * shrinks toward 12rem before the controls beside it wrap. Below sm it takes
+ * a full-width row of its own.
+ */
+function TopbarSearch({
+  value,
+  onChange,
+  inputRef,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  inputRef?: RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <div
+      data-testid="topbar-search"
+      className="relative order-last w-full sm:order-none sm:w-auto sm:max-w-72 sm:flex-[1_1_12rem]"
+    >
+      <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+      <Input
+        data-testid="search-input"
+        className="touch-target topbar-search-input"
+        ref={inputRef}
+        placeholder="Search tasks…"
+        style={{ paddingLeft: "2.25rem" }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="Search tasks"
+      />
+    </div>
   );
 }
 
