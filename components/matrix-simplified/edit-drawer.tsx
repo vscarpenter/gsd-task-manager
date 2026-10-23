@@ -362,7 +362,7 @@ function TitleAndDescriptionFields({
           rows={4}
           placeholder="Optional details, links, context"
           aria-label="Description"
-          className="touch-type w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+          className="pointer-coarse:text-base w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-[13.5px] leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
       </Field>
     </>

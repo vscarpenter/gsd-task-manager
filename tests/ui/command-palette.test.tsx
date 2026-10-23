@@ -300,7 +300,9 @@ describe('CommandPalette (full component)', () => {
     );
 
     const input = screen.getByPlaceholderText('Search tasks, actions, settings...');
-    expect(input).toHaveClass("touch-type");
+    // A variant utility, so it outranks the input's own size on a phone; the old
+    // layered .touch-type rule lost to it and Safari zoomed on focus.
+    expect(input).toHaveClass("pointer-coarse:text-base");
     await user.type(input, 'export');
 
     await waitFor(() => {
