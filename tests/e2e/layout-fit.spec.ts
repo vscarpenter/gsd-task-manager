@@ -1,4 +1,6 @@
+import type { Locator } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
+import { waitForAppLoad } from "./helpers/test-helpers";
 
 /**
  * Controls that must fit beside their neighbours, measured at real sizes.
@@ -8,6 +10,14 @@ import { test, expect } from "./fixtures/test-fixtures";
  * its row. jsdom has no layout, so the unit suite pins the class contract and
  * these check the geometry.
  */
+const ROW_TOLERANCE_PX = 4;
+
+async function centerY(locator: Locator): Promise<number> {
+  const rect = await locator.boundingBox();
+  if (!rect) throw new Error("Element has no bounding box");
+  return rect.y + rect.height / 2;
+}
+
 test.describe("Layout fit", () => {
   test.beforeEach(async ({ clearIndexedDB }) => {
     // Fixture clears IndexedDB
@@ -32,5 +42,18 @@ test.describe("Layout fit", () => {
         expect(Math.round(lines), `description lines at ${width}px`).toBe(1);
       }
     });
+  });
+
+  // The search box was a fixed 18rem, so the bar's last control wrapped onto a
+  // row of its own: at 900px the command button sat alone under the title.
+  test("the command button never sits alone on a row", async ({ page }) => {
+    for (const width of [768, 900, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await waitForAppLoad(page);
+
+      const palette = await centerY(page.getByRole("button", { name: "Open command palette" }));
+      const sync = await centerY(page.getByTestId("sync-button"));
+      expect(Math.abs(palette - sync), `at ${width}px`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+    }
   });
 });

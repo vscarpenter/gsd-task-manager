@@ -90,4 +90,21 @@ test.describe("Text scaling at 150%", () => {
     );
     expect(topmost, "something covers the header").toBe(true);
   });
+
+  // The search box was a fixed 18rem, 432px at this size. It pushed the command
+  // button onto a row of its own and made the header 187px tall.
+  test("the topbar keeps search, sync, and the command button on one row", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await useLargeText(page);
+    await waitForAppLoad(page);
+
+    const centerY = async (selector: string) => {
+      const rect = await page.locator(selector).first().boundingBox();
+      return rect!.y + rect!.height / 2;
+    };
+    const search = await centerY("[data-testid='search-input']");
+    for (const selector of ["[data-testid='sync-button']", "button[aria-label='Open command palette']"]) {
+      expect(Math.abs((await centerY(selector)) - search), selector).toBeLessThanOrEqual(4);
+    }
+  });
 });
