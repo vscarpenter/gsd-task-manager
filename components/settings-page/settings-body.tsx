@@ -120,12 +120,7 @@ export function SettingsBody({
 
   return (
     <div className="min-w-0 flex-1">
-      <SectionCard
-        eyebrow={activeMeta.group}
-        title={activeMeta.label}
-        description={activeMeta.description}
-        icon={activeMeta.icon}
-      >
+      <SectionCard title={activeMeta.label} description={activeMeta.description}>
         {activeSection === "appearance" && (
           <AppearanceSettings
             showCompleted={settings.showCompleted}

@@ -53,11 +53,8 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           }}
         >
           <div>
-            <div className="text-eyebrow uppercase" style={{ color: "var(--gray-500)" }}>
-              Field guide
-            </div>
             <DialogTitle asChild className="text-h1">
-              <h2 style={{ margin: "4px 0 0" }}>
+              <h2 style={{ margin: 0 }}>
                 How to use <em>GSD</em>
               </h2>
             </DialogTitle>

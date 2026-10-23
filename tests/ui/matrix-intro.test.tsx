@@ -84,6 +84,16 @@ describe("MatrixIntro — compact one-row briefing", () => {
     expect(section?.className).toContain("sm:items-center");
   });
 
+  it("says 'Today's matrix' once to assistive tech", () => {
+    renderIntro({ dateLabel: "Thursday, October 22", message: null });
+
+    // The h1 carries the phrase as a visually hidden prefix, so the visible
+    // eyebrow stays out of the tree instead of announcing it a second time.
+    const eyebrows = screen.getAllByText(/Today.s matrix/).filter((el) => !el.closest("h1"));
+    expect(eyebrows).toHaveLength(1);
+    expect(eyebrows[0]).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("renders no date text before hydration so the static export stays date-free", () => {
     renderIntro({ dateLabel: null, message: null });
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Today.s matrix —\s*$/);

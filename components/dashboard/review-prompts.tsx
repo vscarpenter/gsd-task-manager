@@ -49,10 +49,9 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-eyebrow uppercase text-foreground-muted">Reflection prompts</p>
           <h3
             id="review-prompts-title"
-            className="mt-2 text-h3 text-foreground"
+            className="text-h3 text-foreground"
           >
             Look at the shape of active work.
           </h3>
@@ -71,7 +70,7 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
               className="py-5 first:pt-0 last:pb-0 md:px-6 md:py-0 md:first:pl-0 md:last:pr-0"
             >
               <p
-                className="text-eyebrow font-semibold uppercase"
+                className="text-caption font-semibold"
                 style={{ color: QUADRANT_INK[prompt.rdKey] }}
               >
                 {prompt.label}

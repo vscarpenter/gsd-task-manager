@@ -15,6 +15,12 @@ describe("HelpDrawer", () => {
     );
   });
 
+  it("lets its title speak without an eyebrow above it", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+
+    expect(screen.queryByText("Field guide")).toBeNull();
+  });
+
   it("documents native Tab order for the capture destination control", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
 
