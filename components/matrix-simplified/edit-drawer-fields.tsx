@@ -74,7 +74,8 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
               aria-pressed={active}
             >
               <div className="text-[12px] font-bold uppercase tracking-wider">{q.title}</div>
-              <div className="mt-0.5 text-[11.5px] opacity-80">{q.rdTag}</div>
+              {/* Full --q*-ink: at 80% opacity this small text fell under 4.5:1. */}
+              <div className="mt-0.5 text-[11.5px]">{q.rdTag}</div>
             </button>
           );
         })}
