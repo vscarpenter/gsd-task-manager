@@ -66,7 +66,11 @@ export function DesktopIconRail({ onHelp }: IconRailProps) {
     <nav
       className={cn(
         "hidden md:flex md:shrink-0 md:flex-col md:items-stretch md:overflow-hidden md:border-r md:border-border/70 md:bg-rail md:transition-[width] md:duration-150 md:ease-out",
-        collapsed ? "md:w-15" : "md:w-45"
+        // Expanded, the rail fits its widest label (never under 180px by default),
+        // so large text in a wide system font cannot clip it. interpolate-size keeps
+        // the width animation to and from max-content where browsers support it.
+        "[interpolate-size:allow-keywords]",
+        collapsed ? "md:w-15" : "md:w-max md:min-w-45"
       )}
       aria-label="Primary navigation"
     >
