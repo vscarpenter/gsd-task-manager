@@ -1,3 +1,20 @@
+# Session state, 2026-10-23: /impeccable adapt (`fix/adapt-layout`)
+
+## Resuming From Here
+
+Standard tier. Four commits on `fix/adapt-layout`, branched from main at `91f8332`, not stacked on #622. Not pushed; the owner decides on push and PR.
+
+- [x] A settings row wraps its control below the label when the control can't leave the label 8rem. At 390px the Theme label column went from 53px and four lines to one line; at 320px it was 0px. `f7a811a`.
+- [x] Topbar search flexes from 12rem to 18rem, and sync plus the command button wrap as one unit at the right edge. At 1280px with 150% text the bar went from 187px on two rows to one 109px row; at 900px, from 125px to one 73px row. `49bcd71`, then `013e127` moved search into `TopbarSearch` for the code-shape ratchet.
+- [x] Matrix row labels share the panes' row tracks, so they stay level with their rows when a short screen scrolls the stage. At 1280x800 the drift went from 122px to 0. `f3b8b6e`.
+- [x] Verification: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,562 passed), build, and quality:bundle are green. New `tests/e2e/layout-fit.spec.ts` and a 150% topbar case in `text-scaling.spec.ts` failed first for the right reasons. Chromium export e2e after `build:e2e`: 133 passed. Firefox and WebKit passed layout-fit, layout-overlap, and quiet-chrome.
+
+By design: at 768px, and at 1152px with 150% text, the bar still takes two rows, with sync and the command button together at the right. On a 390px phone the Tasks breakdown and feedback type rows also stack now; at 320px the Build row does too.
+
+Merge note: #622 also adds a block at the top of this file. Whichever merges second gets a small conflict here; keep both blocks, newest first.
+
+With #622 and this branch, every item on the impeccable "Noted, not done" list is handled.
+
 # Session state, 2026-10-22: /impeccable typeset (PR #620) and distill (`fix/audit-distill`)
 
 ## Resuming From Here
