@@ -927,7 +927,7 @@ describe("<MatrixSimplified>", () => {
       expect(heading).toBeInTheDocument();
 
       // Pre-selected quadrant button should be Do First (urgent + important).
-      const doFirstQuadrant = screen.getByRole("button", { name: /^do first$/i, pressed: true });
+      const doFirstQuadrant = screen.getByRole("button", { name: /^do first\b/i, pressed: true });
       expect(doFirstQuadrant).toBeInTheDocument();
     });
   });
