@@ -66,7 +66,10 @@ const connectSrc = process.env.NODE_ENV === "development"
 // the 11-12px chip sizes the matrix leans on.
 const newsreader = Newsreader({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  // Variable weight is what lets next/font load the optical-size axis. With
+  // it, the browser's default font-optical-sizing draws headings with the
+  // display design and small serif with the text design.
+  axes: ["opsz"],
   // Normal style only: nothing above the app's editorial copy paints italic
   // serif, and the italic variable file costs ~60KB preloaded on every page.
   style: ["normal"],
