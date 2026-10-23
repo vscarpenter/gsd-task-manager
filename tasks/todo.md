@@ -1,8 +1,39 @@
-# Session state, 2026-10-23: review range labels and copy (`fix/review-range-and-copy`)
+# Session state, 2026-10-23: zod security update (`fix/zod-security-update`)
 
 ## Resuming From Here
 
-Standard tier. The owner answered the three questions the polish pass left open. Branched from main at `4675d18`; not pushed, the owner decides on push and PR.
+Standard tier: three manifests, the lockfile, and a guard test, with no new public contract. Branched from main at `06d3ed6`; not pushed, the owner decides on push, PR, and any MCP publish.
+
+GHSA-mrhx-c7xc-m3w5 (high): zod through 4.6.5 keeps one issue object per failing array element, so a huge array exhausts memory. Patched in 4.6.6; 4.6.7 is the latest. Measured with the MCP `tags` schema and a 200,000-element array: 4.4.3 made 200,001 issues and grew the heap 172MB, while 4.6.7 makes 1 issue.
+
+- [x] Red: `security-hardening-scripts.test.ts` pins zod 4.6.7 (root dependency, root override, MCP dependency) and checks that every `zod@` entry in `bun.lock` is at least 4.6.6. Both tests failed first on 4.4.3.
+- [x] Green: zod 4.6.7 in both manifests, plus a root `overrides` entry. Stagehand 4.3.0 (the latest) still pins zod exactly 4.4.3, so without the override it keeps a nested vulnerable copy, the audit stays red, and `tools/stagehand` fails type checking. The lock was written with bun 1.3.14 (CI's version); it now holds one zod entry.
+- [x] `bun audit`: the zod advisory is gone. The moderate `ip-address` advisory that was already there remains, and `--audit-level=high` exits 0.
+- [x] Root gates: typecheck, lint, quality:shape, knip, license:check, test with coverage (3,573 passed, statements 89.98%).
+- [x] MCP server: build and tests (350 passed). A stdio probe of the built `dist/` (HOME sandboxed) returned initialize, 19 tools, and two validation rejections. All 4 stdout lines were JSON-RPC.
+- [x] Stagehand: loads under bun, its exported schemas are instances of the root zod, and `toJSONSchema` works. Its 44 unit tests pass.
+- [x] Build passes; Chromium export e2e: 137 passed.
+- [x] quality:bundle failed, and the cause is zod. 4.5 and 4.6 added `z.compile`, `.validate`, and `z.withParser` to the classic `z` namespace. `lib/zod.ts` re-exports the whole namespace, so the bundler keeps the compiler even though jitless mode never runs it. The zod chunk went from 82.7KB to 108.5KB gzip, adding 25.8KB to every route. The baseline was refreshed from a CI-matching build in a clean worktree, `742cb59`. The same worktree also passed typecheck, lint, knip, and 3,573 tests on a frozen install.
+- [x] MCP 1.3.2 prepared, `d0096b7`: version, CHANGELOG, README, `public/index.md`, server card, and the `bun.lock` workspace line, hand-edited as in 1.3.1.
+- [x] Version 13.9.9, `f6efa63`. Final HEAD: audit at high is clean, the frozen install passes, and so do quality:bundle, test with coverage (3,573 passed, statements 89.96%), and the MCP tests (350 passed).
+
+Commits: `8a5024f` (zod and guard test), `742cb59` (budget), `d0096b7` (MCP 1.3.2), `f6efa63` (13.9.9).
+
+Next, all waiting on the owner:
+1. Push and open the PR.
+2. After the merge, tag `mcp-v1.3.2` on the merge commit and push it. The `mcp-release` environment then waits for the owner's approval in GitHub.
+3. Deploy.
+
+Open questions for the owner, each with a default:
+- MCP 1.3.2: prepared on the branch; the tag and publish wait.
+- Bundle: the 25.8KB was accepted. Winning it back means moving schemas to `zod/mini` or named imports, which is a separate refactor.
+- The moderate `ip-address` advisory (GHSA-rxp7-6hxx-x8q5, <=10.7.3, through the MCP SDK's express-rate-limit) is still pinned at 10.7.2. The high-level gate ignores it.
+
+# Session state, 2026-10-23: review range labels and copy (PR #625)
+
+## Resuming From Here
+
+Standard tier. The owner answered the three questions the polish pass left open. PR #625 squash-merged as `06d3ed6`; the local branch was deleted after verification.
 
 - [x] Review chart period labels are "7d", "30d", and "90d", and the legend reads "Completion trend period in days". The old labels needed 312px against 276 at 390, so "90 Days" wrapped. New `layout-fit.spec.ts` case failed first (48px drift at 390).
 - [x] Settings intro: "Change how GSD looks and when it reminds you. Sync your tasks, back them up, or bring back ones you deleted."
