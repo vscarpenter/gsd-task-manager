@@ -1,15 +1,15 @@
-# Session state, 2026-10-23: undici advisory (`fix/undici-advisory`)
+# Session state, 2026-10-23: undici and fast-uri advisories (`fix/undici-advisory`)
 
 ## Resuming From Here
 
-Trivial tier: one override, the lockfile, and a guard-test pin. Branched from main at `f1af139`. Push, PR, and merge wait on the owner.
+Trivial tier: two overrides, the lockfile, and two guard-test pins, in two commits. Branched from main at `f1af139`. The owner approved push and PR with both fixes in one PR. Merging needs a separate OK.
 
 - [x] Main went red after #628 merged. Security Audit run 40043842627 failed on GHSA-xjj6-f33q-929c (high, undici DoS through an unhandled error on excessive content-encodings, fixed in 7.30.1). Publish Docker Image run 40043842668 failed at its audit job and skipped the publish, so nothing shipped. CI and SonarCloud passed.
 - [x] Same race as body-parser: GitHub published the advisory at 22:14Z, but bun's feed only had it after #628's audit passed (about 00:08Z) and before main's ran (00:13Z).
 - [x] The path is jsdom (dev only) to undici. Bun 1.3.14's `--prod` audit still counts that path; bun 1.4.4's does not, so a local `--prod` run on 1.4.4 looked clean. Audit with the bun CI uses.
 - [x] The root override pinned undici to exactly 7.29.1 (#568). Now 7.30.1, the fix on the same 7.x line. jsdom 30.0.1 asks for `^8.9.0`, and the override already held it on 7.x before this change. The guard pin failed first on 7.29.1.
 - [x] This also clears the undici moderates GHSA-4qv8-2p9j-2685 and GHSA-f72v-6w45-q472. Bun 1.3.14: the frozen install passes, the checker reports "4 advisories, none blocking", and the `--prod` high audit exits 0.
-- [ ] Still open for the owner: fast-uri 4.1.5 (another exact pin from #568) has 2 moderate and 2 low advisories, fixed in 4.2.3. They're below CI's high gate. Default: leave them out of this branch.
+- [x] fast-uri was another exact pin from #568, at 4.1.5. It had 2 moderate and 2 low advisories (GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr, GHSA-xhq7-xmqj-769h, GHSA-333x-w4r6-6crp), fixed in 4.2.3. The owner asked for it in the same PR. It reaches runtime through the MCP SDK's ajv, so the MCP build, tests, and stdio probe ran too. The guard pin failed first on 4.1.5. `bun audit` on 1.3.14 now reports no vulnerabilities at any level.
 
 # Session state, 2026-10-23: ip-address advisory, shipped (PR #628)
 
