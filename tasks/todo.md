@@ -1,8 +1,33 @@
-# Session state, 2026-10-23: zod security update (`fix/zod-security-update`)
+# Session state, 2026-10-23: ip-address advisory (`fix/ip-address-advisory`)
 
 ## Resuming From Here
 
-Standard tier: three manifests, the lockfile, and a guard test, with no new public contract. Branched from main at `06d3ed6`; not pushed, the owner decides on push, PR, and any MCP publish.
+Trivial tier: one override, the lockfile, and a guard-test pin. Branched from main at `d4fc1ea`; push, PR, and merge wait on the owner.
+
+- [x] GHSA-rxp7-6hxx-x8q5 and GHSA-p3hm-x653-5rc6 (both moderate) cover ip-address through 10.7.3. The root override pinned it to exactly 10.7.2, and update tools skip exact pins. Now 10.7.4, the fix and the latest, inside express-rate-limit's `^10.2.0`. The guard pin failed first on 10.7.2.
+- [x] `bun audit` reports no vulnerabilities at any level. The frozen install passes on bun 1.3.14. Typecheck, lint, knip, and license:check pass. MCP: build, tests (350), stdio probe, and express-rate-limit loads with 10.7.4.
+- [x] Root suite on Node 22.23.4 (official tarball, checksum verified): 3,573 passed. The shell's `node` had become 26.10, where `service-worker-privacy.test.ts` "deletes legacy capture entries" fails. Main `d4fc1ea` fails the same way on 26.10, so the failure predates this change.
+- No release: the web app doesn't ship ip-address, and npm installs of gsd-mcp-server already resolve 10.7.4.
+
+# Session state, 2026-10-23: zod security update, shipped (PRs #626 and #627)
+
+## Resuming From Here
+
+Shipped. Nothing is in flight.
+
+- PR #626 (zod) squash-merged as `5ea7e8e`, on the owner's "merge it now, don't wait for webkit". Its WebKit e2e job was cancelled after 30 minutes stuck in "Install webkit", without running a test. WebKit passed on main's CI for `d4fc1ea`.
+- On `5ea7e8e`, Security Audit failed on a brand-new advisory, GHSA-27r3-jxmh-p828 (body-parser below 2.4.0, high, published 20:53 UTC). It reached the tree through the MCP SDK's express. PR #626's audit had passed about 80 minutes after publication, so bun's feed lagged GitHub's. PR #627 raised the override floor to `>=2.4.0` with a guard-test pin, and squash-merged as `d4fc1ea`. CI, Security Audit, Publish Docker Image, and SonarCloud then went green.
+- Tags on `d4fc1ea`: `mcp-v1.3.2` (annotated) and `v13.9.9`. The owner approved both environment gates in GitHub.
+  - npm: `gsd-mcp-server` latest is 1.3.2 with zod 4.6.7 and attestations. The no-cache registry curl caught up about a minute after the run.
+  - Production: Deploy Production Release run 40035411439 passed every job, including smoke. Prod `sw.js` serves 13.9.9, and the zod 4.6 chunk is live.
+  - GitHub release v13.9.9 is published as Latest.
+- Local branches `fix/zod-security-update` and `fix/body-parser-advisory` are merged and still present; deleting them waits on the owner.
+
+Still open for the owner: winning back the 25.8KB (`zod/mini` or named imports), and the moderate `ip-address` advisory.
+
+## Earlier notes from the branch
+
+Standard tier: three manifests, the lockfile, and a guard test, with no new public contract. Branched from main at `06d3ed6`.
 
 GHSA-mrhx-c7xc-m3w5 (high): zod through 4.6.5 keeps one issue object per failing array element, so a huge array exhausts memory. Patched in 4.6.6; 4.6.7 is the latest. Measured with the MCP `tags` schema and a 200,000-element array: 4.4.3 made 200,001 issues and grew the heap 172MB, while 4.6.7 makes 1 issue.
 
@@ -19,13 +44,7 @@ GHSA-mrhx-c7xc-m3w5 (high): zod through 4.6.5 keeps one issue object per failing
 
 Commits: `8a5024f` (zod and guard test), `742cb59` (budget), `d0096b7` (MCP 1.3.2), `f6efa63` (13.9.9).
 
-Next, all waiting on the owner:
-1. Push and open the PR.
-2. After the merge, tag `mcp-v1.3.2` on the merge commit and push it. The `mcp-release` environment then waits for the owner's approval in GitHub.
-3. Deploy.
-
-Open questions for the owner, each with a default:
-- MCP 1.3.2: prepared on the branch; the tag and publish wait.
+Decisions recorded:
 - Bundle: the 25.8KB was accepted. Winning it back means moving schemas to `zod/mini` or named imports, which is a separate refactor.
 - The moderate `ip-address` advisory (GHSA-rxp7-6hxx-x8q5, <=10.7.3, through the MCP SDK's express-rate-limit) is still pinned at 10.7.2. The high-level gate ignores it.
 

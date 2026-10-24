@@ -372,7 +372,7 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides.sharp).toBe('0.35.5');
     expect(rootPackage.overrides.undici).toBe('7.29.1');
     expect(rootPackage.overrides['fast-uri']).toBe('4.1.5');
-    expect(rootPackage.overrides['ip-address']).toBe('10.7.2');
+    expect(rootPackage.overrides['ip-address']).toBe('10.7.4');
     expect(rootPackage.overrides['caniuse-lite']).toBe('1.0.30001809');
     expect(rootPackage.overrides.browserslist).toBe('>=4.29.3');
     expect(rootPackage.overrides.vite).toBe('>=8.3.1');
