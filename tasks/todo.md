@@ -1,8 +1,21 @@
-# Session state, 2026-10-23: ip-address advisory (`fix/ip-address-advisory`)
+# Session state, 2026-10-23: undici advisory (`fix/undici-advisory`)
 
 ## Resuming From Here
 
-Trivial tier: one override, the lockfile, and a guard-test pin. Branched from main at `d4fc1ea`; push, PR, and merge wait on the owner.
+Trivial tier: one override, the lockfile, and a guard-test pin. Branched from main at `f1af139`. Push, PR, and merge wait on the owner.
+
+- [x] Main went red after #628 merged. Security Audit run 40043842627 failed on GHSA-xjj6-f33q-929c (high, undici DoS through an unhandled error on excessive content-encodings, fixed in 7.30.1). Publish Docker Image run 40043842668 failed at its audit job and skipped the publish, so nothing shipped. CI and SonarCloud passed.
+- [x] Same race as body-parser: GitHub published the advisory at 22:14Z, but bun's feed only had it after #628's audit passed (about 00:08Z) and before main's ran (00:13Z).
+- [x] The path is jsdom (dev only) to undici. Bun 1.3.14's `--prod` audit still counts that path; bun 1.4.4's does not, so a local `--prod` run on 1.4.4 looked clean. Audit with the bun CI uses.
+- [x] The root override pinned undici to exactly 7.29.1 (#568). Now 7.30.1, the fix on the same 7.x line. jsdom 30.0.1 asks for `^8.9.0`, and the override already held it on 7.x before this change. The guard pin failed first on 7.29.1.
+- [x] This also clears the undici moderates GHSA-4qv8-2p9j-2685 and GHSA-f72v-6w45-q472. Bun 1.3.14: the frozen install passes, the checker reports "4 advisories, none blocking", and the `--prod` high audit exits 0.
+- [ ] Still open for the owner: fast-uri 4.1.5 (another exact pin from #568) has 2 moderate and 2 low advisories, fixed in 4.2.3. They're below CI's high gate. Default: leave them out of this branch.
+
+# Session state, 2026-10-23: ip-address advisory, shipped (PR #628)
+
+## Resuming From Here
+
+Trivial tier: one override, the lockfile, and a guard-test pin. Squash-merged as `f1af139` once all 5 required checks passed. The local branch `fix/ip-address-advisory` remains; deleting it waits on the owner.
 
 - [x] GHSA-rxp7-6hxx-x8q5 and GHSA-p3hm-x653-5rc6 (both moderate) cover ip-address through 10.7.3. The root override pinned it to exactly 10.7.2, and update tools skip exact pins. Now 10.7.4, the fix and the latest, inside express-rate-limit's `^10.2.0`. The guard pin failed first on 10.7.2.
 - [x] `bun audit` reports no vulnerabilities at any level. The frozen install passes on bun 1.3.14. Typecheck, lint, knip, and license:check pass. MCP: build, tests (350), stdio probe, and express-rate-limit loads with 10.7.4.
