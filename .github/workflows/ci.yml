@@ -128,7 +128,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install Chromium for browser/PocketBase boundary test
-        run: bunx playwright install --with-deps chromium
+        uses: ./.github/actions/install-playwright
+        with:
+          browser: chromium
       - name: Run authenticated PocketBase system test
         run: bun run test:system:pocketbase
 
@@ -152,7 +154,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Install ${{ matrix.browser }}
-        run: bunx playwright install --with-deps ${{ matrix.browser }}
+        uses: ./.github/actions/install-playwright
+        with:
+          browser: ${{ matrix.browser }}
       - name: Build production export
         run: bun run build:e2e
       - name: Verify production PWA lifecycle in ${{ matrix.browser }}

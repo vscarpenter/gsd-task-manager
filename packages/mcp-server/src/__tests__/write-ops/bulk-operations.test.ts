@@ -135,9 +135,9 @@ describe('bulkUpdateTasks — delete safety', () => {
   });
 
   it('defaults dryRun to true for delete operations when not specified', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
     const helpers = await import('../../write-ops/helpers.js');
-    vi.mocked(listTasks).mockResolvedValueOnce([makeTask('t1'), makeTask('t2')]);
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([makeTask('t1'), makeTask('t2')]);
 
     const result = await bulkUpdateTasks(config, ['t1', 't2'], { type: 'delete' });
 
@@ -177,9 +177,9 @@ describe('bulkUpdateTasks — delete safety', () => {
   });
 
   it('allows up to 10 deletes per call', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
     const ids = Array.from({ length: 10 }, (_, i) => `t${i}`);
-    vi.mocked(listTasks).mockResolvedValueOnce(ids.map((id) => makeTask(id)));
+    vi.mocked(listTasksFresh).mockResolvedValueOnce(ids.map((id) => makeTask(id)));
 
     // dryRun stays true by default — proves the cap is not exceeded
     const result = await bulkUpdateTasks(config, ids, { type: 'delete' });
@@ -188,9 +188,9 @@ describe('bulkUpdateTasks — delete safety', () => {
   });
 
   it('reports no matches in dry-run and write modes', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
     const helpers = await import('../../write-ops/helpers.js');
-    vi.mocked(listTasks).mockResolvedValueOnce([]);
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([]);
 
     await expect(
       bulkUpdateTasks(config, ['missing'], { type: 'delete' })
@@ -208,8 +208,8 @@ describe('bulkUpdateTasks — delete safety', () => {
   });
 
   it('previews non-delete matches as updates', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
-    vi.mocked(listTasks).mockResolvedValueOnce([makeTask('t1')]);
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([makeTask('t1')]);
 
     await expect(
       bulkUpdateTasks(
@@ -427,8 +427,8 @@ describe('bulkUpdateTasks add_tags tag cap', () => {
   const fullTags = Array.from({ length: 20 }, (_, index) => `tag${index}`);
 
   it('refuses a dry run that would leave a task over the tag cap, naming the task', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
-    vi.mocked(listTasks).mockResolvedValueOnce([
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([
       { ...makeTask('full'), tags: fullTags },
       makeTask('roomy'),
     ]);
@@ -451,8 +451,8 @@ describe('bulkUpdateTasks add_tags tag cap', () => {
   });
 
   it('allows a merge that lands exactly on the cap', async () => {
-    const { listTasks } = await import('../../tools/list-tasks.js');
-    vi.mocked(listTasks).mockResolvedValueOnce([{ ...makeTask('t1'), tags: fullTags.slice(1) }]);
+    const { listTasksFresh } = await import('../../tools/list-tasks.js');
+    vi.mocked(listTasksFresh).mockResolvedValueOnce([{ ...makeTask('t1'), tags: fullTags.slice(1) }]);
 
     await expect(
       bulkUpdateTasks(config, ['t1'], { type: 'add_tags', tags: ['tag0', 'tag1'] }, { dryRun: true })
@@ -567,5 +567,40 @@ describe('bulkUpdateTasks dependency cleanup after delete', () => {
       'Task rejected: dependency cleanup validation_failed',
       'Task edited: dependency cleanup conflict',
     ]);
+  });
+});
+
+describe('bulkUpdateTasks — Saved placement', () => {
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    const helpers = await import('../../write-ops/helpers.js');
+    vi.mocked(helpers.getAuthInfo).mockResolvedValue({ ownerId: 'owner-1', deviceId: 'device-1' });
+  });
+
+  it.each([true, false])('requires return before completing any mixed batch (dryRun=%s)', async (dryRun) => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    const saved: PBEntry = makeSnapshotEntry('saved');
+    saved.record.saved_at = '2026-10-26T00:00:00Z';
+    await seedPocketBase([makeSnapshotEntry('active'), saved], ['active', 'saved']);
+    vi.mocked(listTasks).mockResolvedValueOnce([makeTask('active')]);
+
+    await expect(bulkUpdateTasks(
+      config, ['active', 'saved'], { type: 'complete', completed: true }, { dryRun }
+    )).rejects.toThrow(/return.*matrix.*before completing/i);
+    expect(helpers.updateTaskInPBById).not.toHaveBeenCalled();
+  });
+
+  it.each([['saved'], ['active', 'saved']])('previews the same Saved deletes it executes: %j', async (...ids) => {
+    const { listTasks } = await import('../../tools/list-tasks.js');
+    const saved: PBEntry = makeSnapshotEntry('saved');
+    saved.record.saved_at = '2026-10-26T00:00:00Z';
+    await seedPocketBase([makeSnapshotEntry('active'), saved], ids);
+    vi.mocked(listTasks).mockResolvedValueOnce([makeTask('active')]);
+
+    const preview = await bulkUpdateTasks(config, ids, { type: 'delete' });
+    expect(preview).toMatchObject({ deleted: ids.length, errors: [], dryRun: true });
+    const result = await bulkUpdateTasks(config, ids, { type: 'delete' }, { dryRun: false });
+    expect(result).toMatchObject({ deleted: preview.deleted, errors: [], dryRun: false });
   });
 });

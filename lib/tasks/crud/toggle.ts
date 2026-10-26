@@ -60,11 +60,7 @@ async function toggleCompletedTransaction(
   try {
     const db = getDb();
     const result = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
-      const existing = await db.tasks.get(id);
-      if (!existing) {
-        logger.warn("Task not found for completion toggle", { taskId: id });
-        throw new Error(`Task ${id} not found`);
-      }
+      const existing = await getCompletableTask(id);
       let recurringInstance: TaskRecord | null = null;
       if (completed && !existing.completed && existing.recurrence !== "none") {
         recurringInstance = await createAndQueueRecurringInstance(
@@ -184,4 +180,11 @@ function calculateNextDueDate(
   }
 
   return next.toISOString();
+}
+
+async function getCompletableTask(id: string): Promise<TaskRecord> {
+  const task = await getDb().tasks.get(id);
+  if (!task) throw new Error(`Task ${id} not found`);
+  if (task.savedAt) throw new Error("Return this item to the matrix before completing it");
+  return task;
 }

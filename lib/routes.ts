@@ -19,6 +19,9 @@ export const ROUTES = {
   /** Analytics dashboard */
   DASHBOARD: '/dashboard' as Route,
 
+  /** Bookmarks and short notes outside the matrix */
+  SAVED: '/saved' as Route,
+
   /** Application settings */
   SETTINGS: '/settings' as Route,
 
@@ -39,6 +42,7 @@ export const ROUTES = {
 export const ROUTE_VARIANTS = {
   HOME: ['/', '/index.html'] as const,
   DASHBOARD: ['/dashboard', '/dashboard/', '/dashboard.html'] as const,
+  SAVED: ['/saved', '/saved/', '/saved.html'] as const,
   SETTINGS: ['/settings', '/settings/', '/settings.html'] as const,
   ABOUT: ['/about', '/about/', '/about.html'] as const,
 } as const;

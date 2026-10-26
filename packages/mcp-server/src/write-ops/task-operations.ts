@@ -6,7 +6,7 @@
 import type { GsdConfig, Task } from '../types.js';
 import { pbTaskToTask } from '../types.js';
 import type { CreateTaskInput, UpdateTaskInput } from './types.js';
-import { listTasks, listTasksFresh } from '../tools/list-tasks.js';
+import { listTasksFresh } from '../tools/list-tasks.js';
 import {
   generateTaskId,
   deriveQuadrant,
@@ -58,7 +58,7 @@ export async function createTask(
   input: CreateTaskInput
 ): Promise<CreateTaskResult> {
   const warnings: string[] = [];
-  const allTasks = input.dependencies?.length ? await listTasks(config) : [];
+  const allTasks = input.dependencies?.length ? await listTasksFresh(config) : [];
 
   // Mirror the webapp capture flow: pull http(s) URLs out of the title and
   // append them to the description. See lib/capture-parser.ts (canonical) and
@@ -152,7 +152,7 @@ async function validateUpdateDependencies(
   input: UpdateTaskInput
 ): Promise<void> {
   if (input.dependencies === undefined) return;
-  const allTasks = await listTasks(config);
+  const allTasks = await listTasksFresh(config);
   const validation = validateDependencies(input.id, input.dependencies, allTasks);
   if (!validation.valid) {
     throw new Error(formatDependencyError(validation.error!));
@@ -268,6 +268,9 @@ export async function updateTask(
 ): Promise<UpdateTaskResult> {
   const fresh = await loadTaskForUpdate(config, input.id);
   const currentTask = pbTaskToTask(fresh.record);
+  if (currentTask.savedAt && input.completed === true) {
+    throw new Error("Return this saved item to the matrix before completing it");
+  }
   await validateUpdateDependencies(config, input);
   const changes = describeTaskChanges(currentTask, input);
   const warnings = updateWarnings(input);

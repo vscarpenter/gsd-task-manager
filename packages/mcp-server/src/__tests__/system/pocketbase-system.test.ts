@@ -938,6 +938,25 @@ describeSystem('PocketBase authenticated system boundary', () => {
         .filter({ hasText: reconnectTitle })
         .waitFor({ state: 'visible', timeout: 15_000 });
 
+      const savedCard = page.getByTestId('task-card').filter({ hasText: reconnectTitle });
+      await savedCard.hover();
+      await savedCard.getByRole('button', { name: 'Move to Saved' }).click();
+      await page.getByRole('button', { name: 'Saved', exact: true }).click();
+      const savedItem = page.getByTestId('saved-item').filter({ hasText: reconnectTitle });
+      await savedItem.getByRole('button', { name: 'Edit notes' }).click();
+      await page.getByLabel('Notes and links').fill('Short annotation from the web');
+      await page.getByRole('button', { name: 'Save notes', exact: true }).click();
+      await clickBrowserSync(page);
+      const syncedSaved = await waitForAsyncValue(async () => {
+        const records = await admin.collection('tasks').getFullList({ filter: `owner = "${browserAuth.record.id}"` });
+        return records.find((record) => record.title === reconnectTitle && record.saved_at && record.description === 'Short annotation from the web');
+      }, 'saved placement and annotation in PocketBase');
+      await admin.collection('tasks').update(syncedSaved.id, {
+        saved_at: '', client_updated_at: new Date(Date.now() + 1000).toISOString(), device_id: 'saved-other-device',
+      });
+      await savedItem.waitFor({ state: 'hidden', timeout: 10_000 });
+      await page.getByRole('button', { name: 'Matrix', exact: true }).click();
+      await page.getByTestId('task-card').filter({ hasText: reconnectTitle }).waitFor({ state: 'visible', timeout: 10_000 });
       expect(pageErrors).toEqual([]);
       await context.close();
     } catch (error) {

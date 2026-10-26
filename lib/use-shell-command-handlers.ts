@@ -42,7 +42,7 @@ export interface ShellShortcutHandlers {
 interface ShellCommandResult {
   handlers: CommandActionHandlers;
   shortcutHandlers: ShellShortcutHandlers;
-  onSelectTask: (taskId: string) => void;
+  onSelectTask: (taskId: string, saved?: boolean) => void;
   conditions: {
     isSyncEnabled: boolean;
   };
@@ -60,16 +60,7 @@ export function useShellCommandHandlers(): ShellCommandResult {
   const router = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
 
-  const onSelectTask = (taskId: string) => {
-    if (typeof window === "undefined") return;
-    if (window.location.pathname === "/") {
-      window.dispatchEvent(
-        new CustomEvent(HIGHLIGHT_TASK_EVENT, { detail: { taskId } })
-      );
-    } else {
-      router.push(`/?highlight=${encodeURIComponent(taskId)}`);
-    }
-  };
+  const onSelectTask = (taskId: string, saved = false) => selectTaskInShell(router, taskId, saved);
 
   const handlers: CommandActionHandlers = {
     onNewTask: () => {
@@ -150,4 +141,14 @@ export function useShellCommandHandlers(): ShellCommandResult {
       isSyncEnabled: false,
     },
   };
+}
+
+function selectTaskInShell(router: ReturnType<typeof useRouter>, taskId: string, saved: boolean): void {
+  if (typeof window === "undefined") return;
+  if (saved) { router.push(`/saved#${encodeURIComponent(taskId)}`); return; }
+  if (window.location.pathname === "/") {
+    window.dispatchEvent(new CustomEvent(HIGHLIGHT_TASK_EVENT, { detail: { taskId } }));
+  } else {
+    router.push(`/?highlight=${encodeURIComponent(taskId)}`);
+  }
 }

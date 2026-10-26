@@ -57,10 +57,10 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
           <span
             className={cn(
               "inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium",
-              quadrantStyles[task.quadrant]
+              task.savedAt ? "bg-background-muted text-foreground-muted" : quadrantStyles[task.quadrant]
             )}
           >
-            {quadrantLabel}
+            {task.savedAt ? "Saved" : quadrantLabel}
           </span>
           {task.tags.length > 0 && (
             <span className="text-foreground-muted">

@@ -28,6 +28,7 @@ export interface PBTask {
   notification_sent: boolean;
   last_notification_at: string;
   snoozed_until: string;
+  saved_at?: string;
   estimated_minutes: number;
   time_spent: number;
   time_entries: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
@@ -71,6 +72,7 @@ export interface Task {
   notificationSent?: boolean;
   lastNotificationAt?: string;
   snoozedUntil?: string;
+  savedAt?: string;
   estimatedMinutes?: number;
   timeSpent?: number;
   timeEntries?: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
@@ -136,6 +138,7 @@ export function pbTaskToTask(pb: PBTask): Task {
     notificationSent: pb.notification_sent ?? false,
     ...(pb.last_notification_at ? { lastNotificationAt: pb.last_notification_at } : {}),
     ...(pb.snoozed_until ? { snoozedUntil: pb.snoozed_until } : {}),
+    ...savedPlacement(pb),
     estimatedMinutes: pb.estimated_minutes ?? undefined,
     timeSpent: pb.time_spent ?? 0,
     timeEntries: pb.time_entries ?? [],
@@ -172,6 +175,7 @@ export function taskToPBFields(
     notification_sent: task.notificationSent ?? false,
     last_notification_at: task.lastNotificationAt ?? '',
     snoozed_until: task.snoozedUntil ?? '',
+    saved_at: task.savedAt ?? '',
     estimated_minutes: task.estimatedMinutes ?? 0,
     time_spent: task.timeSpent ?? 0,
     time_entries: task.timeEntries ?? [],
@@ -191,4 +195,8 @@ export function taskDependencyPatchToPBFields(
     client_updated_at: clientUpdatedAt,
     device_id: deviceId,
   };
+}
+
+function savedPlacement(pb: PBTask): { savedAt?: string } {
+  return pb.saved_at ? { savedAt: pb.saved_at } : {};
 }

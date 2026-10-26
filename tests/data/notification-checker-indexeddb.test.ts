@@ -64,6 +64,13 @@ describe("notification checker on a real database", () => {
 		expect(vi.mocked(notifications.showTaskNotification).mock.calls[0][0].id).toBe("task-due");
 	});
 
+	it("ignores saved items for reminders and badges", async () => {
+    await getDb().tasks.put(createMockTask({ id: "saved-due", dueDate: dueInMinutes(10), savedAt: new Date().toISOString() }));
+    await notificationChecker.checkAndNotify();
+    expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+    await expect(getDueSoonCount()).resolves.toBe(0);
+  });
+
 	it("should_not_notify_a_completed_task", async () => {
 		await getDb().tasks.put(
 			createMockTask({ id: "task-done", completed: true, completedAt: new Date().toISOString(), dueDate: dueInMinutes(10) }),

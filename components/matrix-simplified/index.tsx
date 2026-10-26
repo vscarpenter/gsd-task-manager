@@ -1,5 +1,7 @@
 "use client";
 
+import { handleSaveForLater, taskContext } from "./task-actions";
+
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { DndContext, closestCorners } from "@dnd-kit/core";
 import { createTask, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
@@ -125,7 +127,7 @@ const MATRIX_STAGE_CLASS =
   "pinned:-mx-2 pinned:flex pinned:min-h-0 pinned:flex-1 pinned:flex-col pinned:overflow-y-auto pinned:px-2 pinned:pb-2";
 
 export function MatrixSimplified() {
-  const { all, isLoading } = useTasks();
+  const { all, stored, isLoading } = useTasks();
   const { handleError, handleSuccess } = useErrorHandlerWithUndo();
   const { sensors, activeId, statusMessage, announcements, handleDragStart, handleDragEnd } =
     useDragAndDrop(handleError);
@@ -162,7 +164,7 @@ export function MatrixSimplified() {
   };
 
   const { visibleTasks, total, completed, overdue, isFiltered, matchCount } = deriveMatrixView({
-    all,
+    all, dependencyTasks: taskContext(stored, all),
     showCompleted,
     smartViewsEnabled,
     activeSmartView,
@@ -374,7 +376,7 @@ export function MatrixSimplified() {
         ) : (
           <MatrixGrid
             tasks={visibleTasks}
-            allTasks={all}
+            allTasks={taskContext(stored, all)}
             onEdit={handleEditOpen}
             onInspect={handleInspectOpen}
             onToggleComplete={(task, completedNext) => {
@@ -385,7 +387,7 @@ export function MatrixSimplified() {
             }}
             onDelete={handleDelete}
             onShare={handleShareOpen}
-            onSnooze={handleSnooze}
+            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={handleTaskRef}
@@ -404,7 +406,7 @@ export function MatrixSimplified() {
       <TaskDetailSheet
         open={Boolean(viewingTask)}
         task={viewingTask}
-        allTasks={all}
+        allTasks={taskContext(stored, all)}
         onClose={handleInspectClose}
         onEdit={handleEditOpen}
       />
@@ -412,7 +414,7 @@ export function MatrixSimplified() {
       <EditDrawer
         open={Boolean(editingTask)}
         task={editingTask}
-        allTasks={all}
+        allTasks={taskContext(stored, all)}
         onClose={handleEditClose}
         onSubmit={handleEditSubmit}
       />
@@ -420,7 +422,7 @@ export function MatrixSimplified() {
         open={createDrawerOpen}
         task={null}
         initialDraft={createInitial}
-        allTasks={all}
+        allTasks={taskContext(stored, all)}
         onClose={handleCreateClose}
         onSubmit={handleEditSubmit}
       />

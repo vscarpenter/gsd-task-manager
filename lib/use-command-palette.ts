@@ -9,7 +9,7 @@ export const OPEN_COMMAND_PALETTE_EVENT = "gsd:open-command-palette";
 interface UseCommandPaletteOptions {
   actions: CommandAction[];
   tasks: TaskRecord[];
-  onSelectTask?: (taskId: string) => void;
+  onSelectTask?: (taskId: string, saved?: boolean) => void;
 }
 
 interface PaletteState {
@@ -194,7 +194,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
   const selectTask = (taskId: string) => {
     returnFocusRef.current = null;
     if (onSelectTask) {
-      onSelectTask(taskId);
+      selectPaletteTask(tasks, taskId, onSelectTask);
       setOpen(false);
       return;
     }
@@ -219,4 +219,9 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
     selectedActionId,
     setSelectedActionId
   };
+}
+
+function selectPaletteTask(tasks: TaskRecord[], taskId: string, onSelect: (id: string, saved?: boolean) => void) {
+  if (tasks.find((task) => task.id === taskId)?.savedAt) onSelect(taskId, true);
+  else onSelect(taskId);
 }

@@ -77,11 +77,31 @@ interface ResetEverythingDialogProps {
 	/** Export tasks to a JSON backup. Resolves `true` on success, `false` on failure. */
 	onExport: () => Promise<boolean>;
 	activeTasks: number;
+	savedTasks?: number;
 	completedTasks: number;
 	archivedTasks?: number;
 	trashedTasks?: number;
 	syncEnabled: boolean;
 	pendingSync: number;
+}
+
+type ResetTaskCountProps = Pick<ResetEverythingDialogProps,
+	"activeTasks" | "savedTasks" | "completedTasks" | "archivedTasks" | "trashedTasks">;
+
+function ResetTaskCounts({
+	activeTasks, savedTasks = 0, completedTasks, archivedTasks = 0, trashedTasks = 0,
+}: ResetTaskCountProps) {
+	const totalTasks = activeTasks + savedTasks + completedTasks;
+	return (
+		<>
+			<li>
+				• {totalTasks} task{totalTasks !== 1 ? "s" : ""} ({activeTasks} active, {completedTasks} completed
+				{savedTasks > 0 && `, ${savedTasks} saved`})
+			</li>
+			<li>• {archivedTasks} archived task{archivedTasks !== 1 ? "s" : ""}</li>
+			<li>• {trashedTasks} task{trashedTasks !== 1 ? "s" : ""} in Trash</li>
+		</>
+	);
 }
 
 /**
@@ -94,23 +114,13 @@ interface ResetEverythingDialogProps {
  * - Requires typing "RESET" to confirm
  * - Optional theme preservation
  */
-export function ResetEverythingDialog({
-	open,
-	onOpenChange,
-	onExport,
-	activeTasks,
-	completedTasks,
-	archivedTasks = 0,
-	trashedTasks = 0,
-	syncEnabled,
-	pendingSync,
-}: ResetEverythingDialogProps) {
+export function ResetEverythingDialog(props: ResetEverythingDialogProps) {
+	const { open, onOpenChange, onExport, syncEnabled, pendingSync } = props;
 	const [{ confirmText, exportFirst, preserveTheme, hasExported, isResetting }, dispatch] = useReducer(
 		resetFormReducer,
 		INITIAL_RESET_FORM_STATE,
 	);
 
-	const totalTasks = activeTasks + completedTasks;
 	const isConfirmed = confirmText === "RESET";
 	const canReset = isConfirmed && (!exportFirst || hasExported);
 
@@ -177,9 +187,7 @@ export function ResetEverythingDialog({
 							What will be deleted:
 						</h4>
 						<ul className="space-y-1 text-sm text-status-overdue-ink">
-							<li>• {totalTasks} task{totalTasks !== 1 ? "s" : ""} ({activeTasks} active, {completedTasks} completed)</li>
-							<li>• {archivedTasks} archived task{archivedTasks !== 1 ? "s" : ""}</li>
-							<li>• {trashedTasks} task{trashedTasks !== 1 ? "s" : ""} in Trash</li>
+							<ResetTaskCounts {...props} />
 							<li>• All custom smart views</li>
 							<li>• All notification settings</li>
 							<li>• All archive settings</li>

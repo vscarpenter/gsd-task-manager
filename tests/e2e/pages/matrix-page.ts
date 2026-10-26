@@ -47,6 +47,18 @@ export class MatrixPage {
     await expect(this.page.locator("[data-testid='task-card']")).toHaveCount(taskCount + 1);
   }
 
+  async saveForLater(title: string): Promise<void> {
+    const card = this.page.getByTestId("task-card").filter({ hasText: title });
+    if (await card.getByTestId("save-task").isVisible()) {
+      await card.hover();
+      await card.getByTestId("save-task").click();
+    } else {
+      await card.getByRole("button", { name: "More actions" }).click();
+      await this.page.getByRole("menuitem", { name: "Move to Saved" }).click();
+    }
+    await expect(card).toHaveCount(0);
+  }
+
   async getTaskCount(): Promise<number> {
     return await this.page.locator("[data-testid='task-card']").count();
   }

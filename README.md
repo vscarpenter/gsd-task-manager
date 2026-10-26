@@ -59,6 +59,20 @@ full composer, `/` for search, `?` for help, and `Option+1` through `Option+4`
 (`Alt` on non-Mac keyboards) to focus a quadrant. The in-app help drawer is the
 canonical shortcut ledger.
 
+## Saved items
+
+Choose **Move to Saved** on an incomplete task to keep reading material or an idea
+outside the matrix. Saved preserves the title, links, tags, and task context.
+Use **Notes and links** for short annotations (600 characters including links),
+search Saved or the command palette, and choose **Return to matrix** when ready.
+Review the quadrant and due date before returning. Saved items do not contribute
+to active task counts, review analytics, reminders, or due badges.
+
+Saved works offline and travels in JSON backups. Cloud sync requires the additive
+`saved_at` migration shipped with this feature before rollout. iOS support is a
+follow-up: older iOS clients still treat saved items as ordinary tasks. See
+[`tasks/saved-tasks/spec.md`](tasks/saved-tasks/spec.md) for the compatibility scope.
+
 ## Local development
 
 Requirements: [Bun](https://bun.sh/) 1.3.14, [Node.js](https://nodejs.org/) 22.22.2+ (or 24.15+ or 26+), and a current browser. `bun run` executes package scripts on Node, so tests, lint, and builds run on your installed Node.

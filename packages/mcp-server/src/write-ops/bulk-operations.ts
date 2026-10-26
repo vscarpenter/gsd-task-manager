@@ -9,7 +9,7 @@
 import type { GsdConfig, Task } from '../types.js';
 import { pbTaskToTask } from '../types.js';
 import type { BulkOperation } from './types.js';
-import { listTasks, listTasksFresh } from '../tools/list-tasks.js';
+import { listTasksFresh } from '../tools/list-tasks.js';
 import { getTaskCache } from '../cache.js';
 import { SCHEMA_LIMITS } from '../constants.js';
 import { createMcpLogger } from '../utils/logger.js';
@@ -222,15 +222,22 @@ function emptyBulkResult(dryRun: boolean, error?: string): BulkUpdateResult {
   };
 }
 
+function assertBulkOperationAllowed(tasks: Task[], operation: BulkOperation): void {
+  assertTagCapHolds(tasks, operation);
+  if (operation.type === 'complete' && operation.completed && tasks.some((task) => task.savedAt)) {
+    throw new Error('Return saved items to the matrix before completing them.');
+  }
+}
+
 async function previewBulkUpdate(
   config: GsdConfig,
   taskIds: string[],
   operation: BulkOperation
 ): Promise<BulkUpdateResult> {
-  const allTasks = await listTasks(config);
+  const allTasks = await listTasksFresh(config);
   const tasks = allTasks.filter((task) => taskIds.includes(task.id));
   if (tasks.length === 0) return emptyBulkResult(true, 'No matching tasks found');
-  assertTagCapHolds(tasks, operation);
+  assertBulkOperationAllowed(tasks, operation);
   const deleting = operation.type === 'delete';
   return {
     updated: deleting ? 0 : tasks.length,
@@ -312,7 +319,7 @@ async function executeBulkWrite(
   ]);
   if (snapshot.size === 0) return emptyBulkResult(false, 'No matching tasks found');
   const inputs = collectBulkInputs(taskIds, snapshot);
-  assertTagCapHolds(inputs.map((input) => input.task), operation);
+  assertBulkOperationAllowed(inputs.map((input) => input.task), operation);
   const startedAt = Date.now();
   const writeLimiter = new WriteRateLimiter();
   const outcomes = await mapWithConcurrency(inputs, BULK_WRITE_CONCURRENCY, (input) =>

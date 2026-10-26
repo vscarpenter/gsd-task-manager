@@ -157,6 +157,7 @@ export function SettingsBody({
         {activeSection === "data" && (
           <DataManagement
             activeTasks={storage.activeTasks}
+            savedTasks={storage.savedTasks}
             completedTasks={storage.completedTasks}
             archivedTasks={storage.archivedTasks}
             trashedTasks={storage.trashedTasks}

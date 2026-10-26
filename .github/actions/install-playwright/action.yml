@@ -1,0 +1,23 @@
+name: 'Install Playwright browser'
+description: 'Install a browser and Linux dependencies with bounded APT network retries'
+inputs:
+  browser:
+    description: 'Playwright browser to install'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Use the Ubuntu archive for browser dependencies
+      shell: bash
+      run: |
+        # The runner's Azure mirror can stall for the entire job before tests start.
+        sudo find /etc/apt -type f \( -name '*.list' -o -name '*.sources' -o -name '*mirrors*.txt' \) \
+          -exec sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' {} +
+        printf '%s\n' 'Acquire::ForceIPv4 "true";' 'Acquire::Retries "3";' \
+          'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
+          | sudo tee /etc/apt/apt.conf.d/80-playwright-network
+    - name: Install browser and dependencies
+      shell: bash
+      env:
+        PLAYWRIGHT_BROWSER: ${{ inputs.browser }}
+      run: bunx playwright install --with-deps "$PLAYWRIGHT_BROWSER"

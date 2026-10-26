@@ -20,12 +20,12 @@ vi.mock('../../write-ops/helpers.js', async () => {
   };
 });
 
-vi.mock('../../tools/list-tasks.js', () => ({ listTasks: vi.fn() }));
+vi.mock('../../tools/list-tasks.js', () => ({ listTasks: vi.fn(), listTasksFresh: vi.fn() }));
 vi.mock('../../cache.js', () => ({
   getTaskCache: () => ({ invalidate: mocks.invalidate }),
 }));
 
-import { listTasks } from '../../tools/list-tasks.js';
+import { listTasksFresh as listTasks } from '../../tools/list-tasks.js';
 import { completeTask, updateTask } from '../../write-ops/task-operations.js';
 
 const config = {
@@ -78,6 +78,7 @@ function freshRecord(local: Task, timestamp = local.updatedAt) {
       notification_sent: false,
       last_notification_at: '',
       snoozed_until: '',
+      saved_at: local.savedAt ?? '',
       estimated_minutes: local.estimatedMinutes ?? 0,
       time_spent: 0,
       time_entries: [],
@@ -96,6 +97,12 @@ beforeEach(() => {
 });
 
 describe('updateTask', () => {
+  it('requires an explicit return before completing a saved item', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValueOnce(freshRecord(task('saved-reading', { savedAt: '2026-10-26T12:00:00.000Z' })));
+    await expect(completeTask(config, 'saved-reading', true)).rejects.toThrow(/Return this saved item/);
+    expect(mocks.updateTaskInPBById).not.toHaveBeenCalled();
+  });
+
   it('rejects a task missing from the initial fresh read', async () => {
     mocks.fetchSinglePBTaskFresh.mockResolvedValueOnce(null);
 

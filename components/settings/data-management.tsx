@@ -7,6 +7,7 @@ import { SettingsRow } from "./shared-components";
 
 interface DataManagementProps {
 	activeTasks: number;
+	savedTasks?: number;
 	completedTasks: number;
 	/** Auto-archived tasks. Counted in `totalTasks`, shown separately so the two rows agree. */
 	archivedTasks: number;
@@ -23,7 +24,7 @@ interface DataManagementProps {
 
 type StorageSummaryRowsProps = Pick<
 	DataManagementProps,
-	"activeTasks" | "completedTasks" | "archivedTasks" | "totalTasks" | "estimatedSize"
+	"activeTasks" | "savedTasks" | "completedTasks" | "archivedTasks" | "totalTasks" | "estimatedSize"
 >;
 
 /**
@@ -32,6 +33,7 @@ type StorageSummaryRowsProps = Pick<
  */
 function StorageSummaryRows({
 	activeTasks,
+	savedTasks = 0,
 	completedTasks,
 	archivedTasks,
 	totalTasks,
@@ -47,10 +49,15 @@ function StorageSummaryRows({
 			</SettingsRow>
 
 			<SettingsRow label="Tasks breakdown">
-				<div className="flex gap-4 text-xs">
+				<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
 					<span className="text-foreground-muted">
 						Active: <span className="font-medium text-foreground">{activeTasks}</span>
 					</span>
+					{savedTasks > 0 && (
+						<span className="text-foreground-muted">
+							Saved: <span className="font-medium text-foreground">{savedTasks}</span>
+						</span>
+					)}
 					<span className="text-foreground-muted">
 						Done: <span className="font-medium text-foreground">{completedTasks}</span>
 					</span>
@@ -66,30 +73,13 @@ function StorageSummaryRows({
 /**
  * iOS-style data management settings
  */
-export function DataManagement({
-	activeTasks,
-	completedTasks,
-	archivedTasks,
-	trashedTasks = 0,
-	totalTasks,
-	estimatedSize,
-	onExport,
-	onImportClick,
-	isLoading,
-	syncEnabled = false,
-	pendingSync = 0,
-}: DataManagementProps) {
+export function DataManagement(props: DataManagementProps) {
+	const { onExport, onImportClick, isLoading, syncEnabled = false, pendingSync = 0 } = props;
 	const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
 	return (
 		<>
-			<StorageSummaryRows
-				activeTasks={activeTasks}
-				completedTasks={completedTasks}
-				archivedTasks={archivedTasks}
-				totalTasks={totalTasks}
-				estimatedSize={estimatedSize}
-			/>
+			<StorageSummaryRows {...props} />
 
 			{/* Export Row */}
 			<ActionRow
@@ -124,10 +114,11 @@ export function DataManagement({
 				open={resetDialogOpen}
 				onOpenChange={setResetDialogOpen}
 				onExport={onExport}
-				activeTasks={activeTasks}
-				completedTasks={completedTasks}
-				archivedTasks={archivedTasks}
-				trashedTasks={trashedTasks}
+				activeTasks={props.activeTasks}
+				savedTasks={props.savedTasks}
+				completedTasks={props.completedTasks}
+				archivedTasks={props.archivedTasks}
+				trashedTasks={props.trashedTasks}
 				syncEnabled={syncEnabled}
 				pendingSync={pendingSync}
 			/>

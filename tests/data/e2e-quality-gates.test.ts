@@ -83,9 +83,13 @@ describe("Playwright quality gates", () => {
 
   it("runs every supported browser as a blocking CI matrix", () => {
     const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+    const installer = readFileSync(".github/actions/install-playwright/action.yml", "utf8");
 
     expect(workflow).toMatch(/browser:\s*\[chromium, firefox, webkit\]/);
-    expect(workflow).toContain("playwright install --with-deps ${{ matrix.browser }}");
+    expect(workflow).toContain("uses: ./.github/actions/install-playwright");
+    expect(workflow).toContain("browser: ${{ matrix.browser }}");
+    expect(installer).toContain("PLAYWRIGHT_BROWSER: ${{ inputs.browser }}");
+    expect(installer).toContain('playwright install --with-deps "$PLAYWRIGHT_BROWSER"');
     expect(workflow).toContain("--project=${{ matrix.browser }}");
     expect(workflow).not.toContain("e2e-chromium:");
   });
