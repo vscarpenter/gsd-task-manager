@@ -16,7 +16,7 @@ interface CommandPaletteProps {
   conditions: {
     isSyncEnabled: boolean;
   };
-  onSelectTask?: (taskId: string) => void;
+  onSelectTask?: (taskId: string, saved?: boolean) => void;
   /**
    * When false, the palette will not load or render built-in smart-view
    * actions. The shell wires this to the user's feature preference.
@@ -36,7 +36,7 @@ export function CommandPalette({
   onSelectTask,
   showSmartViews = true,
 }: CommandPaletteProps) {
-  const { all: tasks } = useTasks();
+  const tasks = paletteTaskRecords(useTasks());
   const [smartViews, setSmartViews] = useState<SmartView[]>([]);
 
   // Load smart views (only when surface is enabled)
@@ -190,3 +190,5 @@ function Footer({ isOpen }: FooterProps) {
     </div>
   );
 }
+
+function paletteTaskRecords(tasks: ReturnType<typeof useTasks>) { return tasks.stored ?? tasks.all; }

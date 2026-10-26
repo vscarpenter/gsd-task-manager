@@ -3,6 +3,7 @@
 import { toast } from "sonner";
 
 import { createTask, toggleCompleted, deleteTask, snoozeTask } from "@/lib/tasks";
+import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { ErrorActions, logError } from "@/lib/error-logger";
@@ -100,5 +101,23 @@ export async function handleSnooze(taskId: string, minutes: number): Promise<voi
     toast.success(`Snoozed for ${snoozeDurationLabel(minutes)}`, { duration: TOAST_DURATION.SHORT });
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.SNOOZE_TASK, "Failed to snooze task", taskId);
+  }
+}
+
+export function taskContext(stored: TaskRecord[] | undefined, active: TaskRecord[]): TaskRecord[] {
+  return stored ?? active;
+}
+
+export async function handleSaveForLater(
+  task: TaskRecord,
+  offerUndo: (message: string, undo: () => Promise<void>) => void
+): Promise<boolean> {
+  try {
+    await saveTaskForLater(task.id);
+    offerUndo("Moved to Saved", () => returnSavedTask(task.id, task.quadrant, task.dueDate).then(() => {}));
+    return true;
+  } catch (error) {
+    reportTaskMutationError(error, "save_task", error instanceof Error ? error.message : "Failed to move to Saved", task.id);
+    return false;
   }
 }

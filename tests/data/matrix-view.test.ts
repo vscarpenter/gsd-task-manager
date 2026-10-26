@@ -58,6 +58,16 @@ describe("deriveMatrixView", () => {
   const done = makeTask({ id: "done", title: "Done bravo", completed: true });
   const overdue = makeTask({ id: "od", title: "Overdue", completed: false, dueDate: "2000-01-01" });
 
+  it("keeps an active task blocked by a prerequisite in Saved", () => {
+    const prerequisite = makeTask({ id: "saved-reading", savedAt: "2026-10-26T12:00:00.000Z" });
+    const dependent = makeTask({ id: "dependent", dependencies: [prerequisite.id] });
+    const view = deriveMatrixView({
+      all: [dependent], dependencyTasks: [dependent, prerequisite], showCompleted: false,
+      smartViewsEnabled: true, activeSmartView: { ...completedView, criteria: { readyToWork: true } }, searchQuery: "",
+    });
+    expect(view.visibleTasks).toEqual([]);
+  });
+
   it("counts total, completed, and overdue", () => {
     const view = deriveMatrixView({
       all: [active, done, overdue],

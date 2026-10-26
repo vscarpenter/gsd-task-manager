@@ -113,7 +113,7 @@ describe("IconRail", () => {
       "pl-[max(0.5rem,env(safe-area-inset-left))]",
       "pr-[max(0.5rem,env(safe-area-inset-right))]"
     );
-    for (const label of ["Matrix", "Review", "Settings", "About", "Help"]) {
+    for (const label of ["Matrix", "Saved", "Review", "Settings", "About", "Help"]) {
       expect(mobileNav.querySelector(`button[aria-label="${label}"] span`)).toHaveTextContent(label);
     }
   });

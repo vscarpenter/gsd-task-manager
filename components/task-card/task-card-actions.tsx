@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon } from "lucide-react";
+import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon } from "lucide-react";
 import { cn, formatRelative } from "@/lib/utils";
 import { SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
@@ -38,6 +38,7 @@ export interface TaskCardActionsProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSave?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
 }
 
@@ -51,6 +52,7 @@ export function TaskCardActions({
   onShare,
   onDuplicate,
   onSnooze,
+  onSave,
 }: TaskCardActionsProps) {
   return (
     <div
@@ -101,16 +103,17 @@ export function TaskCardActions({
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
         {/* Desktop: all buttons on hover. Snooze is touch-only, by design. */}
-        <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} />
+        <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSave={onSave} />
 
         {/* Mobile: edit + overflow menu */}
-        <MobileActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} />
+        <MobileActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} />
       </div>
     </div>
   );
 }
 
 interface DesktopActionsProps {
+  onSave?: (task: TaskRecord) => Promise<void> | void;
   task: TaskRecord;
   onEdit: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => Promise<void> | void;
@@ -118,73 +121,34 @@ interface DesktopActionsProps {
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
 }
 
-function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate }: DesktopActionsProps) {
+function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSave }: DesktopActionsProps) {
   return (
     <div className="task-card-desktop-actions hidden sm:flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-      {onShare && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => onShare(task)}
-              className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors"
-              aria-label="Share task"
-            >
-              <Share2Icon className="h-3 w-3" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Share task</TooltipContent>
-        </Tooltip>
-      )}
-      {onDuplicate && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => onDuplicate(task)}
-              className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors"
-              aria-label="Duplicate task"
-            >
-              <CopyIcon className="h-3 w-3" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Duplicate task</TooltipContent>
-        </Tooltip>
-      )}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            data-testid="edit-task"
-            type="button"
-            onClick={() => onEdit(task)}
-            className="rounded px-1.5 py-0.5 flex items-center justify-center hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors"
-            aria-label="Edit task"
-          >
-            <PencilIcon className="h-3 w-3" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>Edit task</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {/* Delete is undoable, not confirmed: the handler pairs it with a
-              faithful Undo toast that restores the exact original record
-              (matrix-simplified/index.tsx). review.md's Interaction Audit takes
-              "confirmed OR Undo provided"; the detector cannot see the toast. */}
-          {/* ui-craft-detect-ignore-next-line */}
-          <button
-            data-testid="delete-task"
-            type="button"
-            onClick={() => onDelete(task)}
-            className="rounded px-1.5 py-0.5 flex items-center justify-center text-rust-d hover:bg-rust-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust transition-colors"
-            aria-label="Delete task"
-          >
-            <Trash2Icon className="h-3 w-3" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>Delete task</TooltipContent>
-      </Tooltip>
+      {onSave && !task.completed ? <DesktopTaskAction label="Move to Saved" testId="save-task" icon={BookmarkIcon} onClick={() => onSave(task)} /> : null}
+      {onShare ? <DesktopTaskAction label="Share task" icon={Share2Icon} onClick={() => onShare(task)} /> : null}
+      {onDuplicate ? <DesktopTaskAction label="Duplicate task" icon={CopyIcon} onClick={() => onDuplicate(task)} /> : null}
+      <DesktopTaskAction label="Edit task" testId="edit-task" icon={PencilIcon} onClick={() => onEdit(task)} />
+      <DesktopTaskAction label="Delete task" testId="delete-task" icon={Trash2Icon} onClick={() => onDelete(task)} destructive />
     </div>
+  );
+}
+
+function DesktopTaskAction({ label, testId, icon: Icon, onClick, destructive = false }: {
+  label: string;
+  testId?: string;
+  icon: typeof BookmarkIcon;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" data-testid={testId} onClick={onClick} aria-label={label} className={cn("touch-target inline-flex items-center justify-center rounded px-1.5 py-0.5 hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors", destructive && "text-rust-d hover:bg-rust-tint")}>
+          <Icon className="h-3 w-3" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -194,10 +158,11 @@ interface MobileActionsProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSave?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
 }
 
-function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze }: MobileActionsProps) {
+function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze, onSave }: MobileActionsProps) {
   return (
     <div className="task-card-mobile-actions flex sm:hidden items-center gap-0.5">
       <button
@@ -221,7 +186,12 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze 
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {onShare && (
+          {onSave && !task.completed ? (
+            <DropdownMenuItem data-testid="save-task-mobile" onClick={() => onSave(task)}>
+              <BookmarkIcon className="mr-2 h-4 w-4" aria-hidden="true" />Move to Saved
+            </DropdownMenuItem>
+          ) : null}
+                {onShare && (
             <DropdownMenuItem onClick={() => onShare(task)}>
               <Share2Icon className="mr-2 h-4 w-4" />
               Share

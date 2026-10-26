@@ -22,6 +22,7 @@ const PRECACHE_PAGES = [
 	"/about/",
 	"/archive/",
 	"/dashboard/",
+	"/saved/",
 	"/settings/",
 	"/sync-history/",
 ];

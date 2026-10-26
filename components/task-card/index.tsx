@@ -19,7 +19,7 @@ export function TaskCard({
   onInspect,
   onShare,
   onDuplicate,
-  onSnooze,
+  onSnooze, onSave,
   onStartTimer,
   onStopTimer,
   taskRef,
@@ -139,7 +139,7 @@ export function TaskCard({
         onDelete={onDelete}
         onShare={onShare}
         onDuplicate={onDuplicate}
-        onSnooze={onSnooze}
+        onSnooze={onSnooze} onSave={onSave}
       />
     </article>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   BarChart3Icon,
+  BookmarkIcon,
   CircleHelpIcon,
   InfoIcon,
   LayoutGridIcon,
@@ -30,6 +31,7 @@ interface RailItem {
 
 const PRIMARY: RailItem[] = [
   { routeKey: "HOME", label: "Matrix", icon: LayoutGridIcon },
+  { routeKey: "SAVED", label: "Saved", icon: BookmarkIcon },
   { routeKey: "DASHBOARD", label: "Review", icon: BarChart3Icon },
   { routeKey: "SETTINGS", label: "Settings", icon: SettingsIcon },
   { routeKey: "ABOUT", label: "About", icon: InfoIcon },
@@ -37,6 +39,7 @@ const PRIMARY: RailItem[] = [
 
 const ROUTE_TEST_IDS: Partial<Record<RouteKey, string>> = {
   HOME: "nav-matrix",
+  SAVED: "nav-saved",
   DASHBOARD: "nav-dashboard",
   SETTINGS: "nav-settings",
   ABOUT: "nav-about",
@@ -125,7 +128,7 @@ export function MobileIconRail({ onHelp }: IconRailProps) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 items-center gap-1 border-t border-border/70 bg-rail pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-6 items-center gap-1 border-t border-border/70 bg-rail pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:hidden"
       aria-label="Primary navigation (mobile)"
     >
       {PRIMARY.map((item) => (

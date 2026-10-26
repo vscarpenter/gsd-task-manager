@@ -29,6 +29,7 @@ export function filterTasks(tasks: TaskRecord[], query: string): TaskRecord[] {
 
 export interface MatrixViewInput {
   all: TaskRecord[];
+  dependencyTasks?: TaskRecord[];
   showCompleted: boolean;
   smartViewsEnabled: boolean;
   activeSmartView: SmartView | null;
@@ -73,6 +74,7 @@ function tally(tasks: TaskRecord[]): { total: number; completed: number; overdue
  */
 export function deriveMatrixView({
   all,
+  dependencyTasks = all,
   showCompleted,
   smartViewsEnabled,
   activeSmartView,
@@ -83,7 +85,7 @@ export function deriveMatrixView({
   const effectiveSmartView = smartViewsEnabled ? activeSmartView : null;
   const base = effectiveSmartView ? all : showCompleted ? all : activeTasks;
   const smartViewTasks = effectiveSmartView
-    ? applyFilters(base, effectiveSmartView.criteria, all)
+    ? applyFilters(base, effectiveSmartView.criteria, dependencyTasks)
     : base;
 
   const visibleTasks = filterTasks(smartViewTasks, searchQuery);

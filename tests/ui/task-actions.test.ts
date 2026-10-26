@@ -4,8 +4,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { snoozeTask } from "@/lib/tasks";
+import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
+import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { handleSnooze } from "@/components/matrix-simplified/task-actions";
+import { handleSnooze, handleSaveForLater } from "@/components/matrix-simplified/task-actions";
+
+vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -62,5 +66,28 @@ describe("handleSnooze", () => {
       expect.objectContaining({ action: "snooze_task", taskId: "task-1" })
     );
     expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleSaveForLater", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+  it("offers an Undo with the original quadrant and due date", async () => {
+    const task = createMockTask({ dueDate: "2026-11-01T16:00:00.000Z" });
+    vi.mocked(saveTaskForLater).mockResolvedValue(task);
+    vi.mocked(returnSavedTask).mockResolvedValue(task);
+    const offerUndo = vi.fn();
+    await expect(handleSaveForLater(task, offerUndo)).resolves.toBe(true);
+    expect(saveTaskForLater).toHaveBeenCalledWith(task.id);
+    expect(offerUndo).toHaveBeenCalledWith("Moved to Saved", expect.any(Function));
+    await offerUndo.mock.calls[0][1]();
+    expect(returnSavedTask).toHaveBeenCalledWith(task.id, task.quadrant, task.dueDate);
+  });
+  it("reports a running timer without falsely confirming a save", async () => {
+    const task = createMockTask();
+    vi.mocked(saveTaskForLater).mockRejectedValue(new Error("Stop the timer before moving this task to Saved"));
+    const offerUndo = vi.fn();
+    await expect(handleSaveForLater(task, offerUndo)).resolves.toBe(false);
+    expect(offerUndo).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("Stop the timer before moving this task to Saved", expect.anything());
   });
 });
