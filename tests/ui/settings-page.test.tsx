@@ -28,7 +28,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("@/lib/use-tasks", () => ({
-  useTasks: () => ({ all: [], isLoading: false }),
+  useTasks: () => ({ all: [], stored: [], isLoading: false }),
 }));
 
 vi.mock("@/lib/notifications", () => ({

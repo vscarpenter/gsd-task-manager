@@ -10,6 +10,7 @@ const BYTES_PER_KB = 1024;
 
 export interface StorageSummary {
   activeTasks: number;
+  savedTasks: number;
   completedTasks: number;
   archivedTasks: number;
   trashedTasks: number;
@@ -31,9 +32,11 @@ export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
   const trashed = useLiveQuery(() => getTrashCount());
 
   let activeTasks = 0;
+  let savedTasks = 0;
   let completedTasks = 0;
   for (const task of tasks) {
-    if (task.completed) completedTasks += 1;
+    if (task.savedAt) savedTasks += 1;
+    else if (task.completed) completedTasks += 1;
     else activeTasks += 1;
   }
 
@@ -43,6 +46,7 @@ export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
 
   return {
     activeTasks,
+    savedTasks,
     completedTasks,
     archivedTasks,
     trashedTasks: trashed ?? 0,

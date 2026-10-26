@@ -60,6 +60,33 @@ test("moving to Saved has a faithful Undo", async ({ page }) => {
   await expect(page.getByTestId("quadrant-q1").getByTestId("task-card")).toHaveAttribute("data-task-id", originalId!);
 });
 
+test("Settings counts Saved-only storage in a replace-import warning", async ({ page }) => {
+  const matrix = new MatrixPage(page);
+  await matrix.goto();
+  await matrix.createTask("Keep this reading bookmark");
+  await matrix.saveForLater("Keep this reading bookmark");
+  await page.goto("/settings#data");
+  await expect(page.getByText("1 tasks", { exact: true })).toBeVisible();
+  await expect(page.getByText("Active:", { exact: false })).toHaveText("Active: 0");
+  await expect(page.getByText("Saved:", { exact: false })).toHaveText("Saved: 1");
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByText("Reset everything", { exact: true }).click();
+  await expect(page.getByText(/1 task \(0 active, 0 completed, 1 saved\)/i)).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  const picker = page.waitForEvent("filechooser");
+  await page.getByText("Import tasks", { exact: true }).click();
+  await (await picker).setFiles({
+    name: "replacement.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ tasks: [{ id: "incoming", title: "Replacement" }] })),
+  });
+  await expect(page.getByText(/warning\. deletes 1 task on this device/i)).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.goto("/saved");
+  await expect(page.getByTestId("saved-item")).toContainText("Keep this reading bookmark");
+});
+
 test("Saved works on a narrow screen in light and dark themes", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const matrix = new MatrixPage(page);

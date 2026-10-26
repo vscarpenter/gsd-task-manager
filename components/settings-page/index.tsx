@@ -11,7 +11,7 @@ import { useSettingsData } from "./use-settings-data";
 import { useActiveSection } from "./use-active-section";
 
 export function SettingsPage() {
-  const { all: tasks, isLoading: tasksLoading } = useTasks();
+  const { stored: tasks, isLoading: tasksLoading } = useTasks();
   const settings = useSettingsData();
   const { activeSection, visibleSectionIds, selectSection } = useActiveSection(
     settings.syncEnabled,
