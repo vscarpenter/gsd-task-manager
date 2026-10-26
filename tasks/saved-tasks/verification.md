@@ -51,11 +51,15 @@ focus into editing, and restore it on cancel/save. Light/dark narrow layouts and
 desktop dark were visually inspected. A coarse-pointer tablet probe found no
 footer action overflow. Screen-reader operation was not separately tested.
 
-Screenshots are saved outside the checkout:
+Review screenshots:
 
-- `/Users/vinnycarpenter/.codex/visualizations/2026/10/26/01a1791b-06d2-7bd3-ac77-39ec872c5957/saved-tasks/saved-mobile-light.png`
-- `/Users/vinnycarpenter/.codex/visualizations/2026/10/26/01a1791b-06d2-7bd3-ac77-39ec872c5957/saved-tasks/saved-mobile-dark.png`
-- `/Users/vinnycarpenter/.codex/visualizations/2026/10/26/01a1791b-06d2-7bd3-ac77-39ec872c5957/saved-tasks/saved-desktop-dark.png`
+- [Desktop dark](../../docs/reviews/saved-tasks/saved-desktop-dark.png)
+- [Mobile light](../../docs/reviews/saved-tasks/saved-mobile-light.png)
+- [Mobile dark](../../docs/reviews/saved-tasks/saved-mobile-dark.png)
+
+The user also accepted the local workflow before requesting a pull request.
+The new `/saved` route has a measured first-load JavaScript budget, and the
+production dependency/file check (`knip`) passes.
 
 ### Modern Web Guidance
 
@@ -66,8 +70,9 @@ Screenshots are saved outside the checkout:
 
 ## Delivery and rollout
 
-Local implementation and checks are complete. Nothing was merged, deployed or
-published, and the production schema was not changed. Before hosted release,
+Local implementation, checks and user acceptance are complete. The feature is
+prepared for pull-request review. Production assets, the production schema and
+the published MCP package have not been changed. Before hosted release,
 apply `1793030400_saved_tasks.js` to the backend, ship the updated MCP package,
 and deploy/verify web assets and `/saved` routing. Build output is not evidence
 of deployment.
