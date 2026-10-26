@@ -45,6 +45,30 @@ network errors are narrowly scoped; normal runtime-error checks remain enabled.
 
 ## Visual and interaction evidence
 
+### PR #630 regression fixes
+
+Settings now uses the complete stored task set for storage, reset counts and
+import impact. Saved has its own breakdown count and stays outside Active.
+A Saved-only replacement with sync enabled requires the cloud-deletion
+confirmation. Bulk completion rejects a batch containing Saved items before
+any write, including in dry-run mode. Bulk previews use fresh, complete records
+so Saved-only and mixed delete previews match execution.
+
+Regressions failed before the fixes. Follow-up verification: 3,602 unit/UI tests
+passed (1 existing skip), 357 MCP tests passed (6 system tests remain separate),
+and the Settings storage/reset/import flow passed in Chromium, Firefox and
+WebKit, including a narrow viewport and strict runtime-error checks.
+Typecheck, lint, code-shape and Knip pass. Root coverage is 90.09% statements /
+91.26% lines; MCP coverage is 89.58% statements / 89.38% lines.
+
+The initial WebKit CI attempt timed out downloading Ubuntu dependencies from
+the runner's Azure APT mirror, before app tests ran. The shared browser installer
+uses the Ubuntu archive with IPv4 and bounded retries/timeouts. Its action YAML
+and shell syntax were checked locally; the hosted CI run validates installation
+on Ubuntu. Every browser remains a blocking job with the original timeout.
+
+### Initial feature verification
+
 Verified seeded, running production output with fresh browser contexts and no
 stale service-worker assets. Forms use native labeled controls, move keyboard
 focus into editing, and restore it on cancel/save. Light/dark narrow layouts and
