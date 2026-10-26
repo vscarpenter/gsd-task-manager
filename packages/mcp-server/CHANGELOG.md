@@ -5,6 +5,15 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-26
+
+### Changed
+- Preserve Saved placement when reading and editing synced tasks. Active task
+  lists and analytics exclude Saved items while dependency checks retain them.
+- Require returning Saved items to the matrix before completing them, including
+  bulk operations. Bulk previews include Saved records so delete counts match
+  the records execution will remove.
+
 ## [1.3.2] - 2026-10-23
 
 ### Security
