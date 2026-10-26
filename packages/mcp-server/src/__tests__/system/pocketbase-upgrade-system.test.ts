@@ -122,6 +122,12 @@ describeUpgrade('PocketBase existing-data upgrade boundary', () => {
       }
     }
 
+    // Model a real pre-feature installation before the additive migration.
+    const legacyTasks = await oldAdmin.collections.getOne('tasks');
+    await oldAdmin.collections.update(legacyTasks.id, {
+      fields: legacyTasks.fields.filter((field) => field.name !== 'saved_at'),
+    });
+
     const marker = `upgrade-${randomBytes(6).toString('hex')}`;
     const seeded = await oldAdmin.collection('tasks').create({
       task_id: 'upgrade-task-fixture',

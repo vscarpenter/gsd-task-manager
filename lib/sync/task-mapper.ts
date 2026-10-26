@@ -57,6 +57,7 @@ export interface PBTaskRecord {
   time_spent: number;
   time_entries: TimeEntry[];
   snoozed_until: string;
+  saved_at: string;
   client_updated_at: string;
   client_created_at: string;
   device_id: string;
@@ -144,6 +145,7 @@ export function taskRecordToPocketBase(
     time_spent: task.timeSpent ?? 0,
     time_entries: task.timeEntries ?? [],
     snoozed_until: task.snoozedUntil ?? '',
+    saved_at: savedTimestampToWire(task.savedAt),
     client_updated_at: task.updatedAt,
     client_created_at: task.createdAt,
     device_id: deviceId,
@@ -182,6 +184,7 @@ const pbTaskRecordSchema = z.object({
   time_spent: z.number().int().min(0).default(0),
   time_entries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
   snoozed_until: z.string().default(''),
+  saved_at: z.union([z.literal(''), z.iso.datetime({ offset: true })]).default(''),
 });
 
 /**
@@ -230,5 +233,9 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     timeSpent: r.time_spent,
     timeEntries: r.time_entries,
     snoozedUntil: existingLocal?.snoozedUntil,
+    savedAt: savedTimestampFromWire(r.saved_at),
   };
 }
+
+function savedTimestampToWire(savedAt?: string): string { return savedAt ?? ""; }
+function savedTimestampFromWire(savedAt: string): string | undefined { return savedAt || undefined; }

@@ -232,4 +232,5 @@ export function registerDatabaseVersions(database: Dexie): void {
   // v16 adds the trash store. No upgrade function: an empty new table needs no
   // backfill, and existing rows in tasks/archivedTasks are untouched by it.
   database.version(16).stores(STORES_V16);
+  database.version(17).stores({ ...STORES_V16, tasks: `${TASKS_V8}, savedAt` });
 }

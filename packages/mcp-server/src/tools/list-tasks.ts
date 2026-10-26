@@ -37,7 +37,7 @@ export async function listTasks(
   } else {
     const cachedTasks = cache.getTaskList(cacheKey);
     if (cachedTasks) {
-      return cachedTasks;
+      return applyTaskFilters(cachedTasks, filters);
     }
   }
 
@@ -101,9 +101,10 @@ function applyTaskFilters(
   tasks: Task[],
   filters?: TaskFilters
 ): Task[] {
-  if (!filters) return tasks;
+  const active = tasks.filter((task) => !task.savedAt);
+  if (!filters) return active;
 
-  return tasks.filter((task) => {
+  return active.filter((task) => {
     if (filters.quadrant && task.quadrant !== filters.quadrant) {
       return false;
     }

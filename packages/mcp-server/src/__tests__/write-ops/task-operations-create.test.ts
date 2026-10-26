@@ -18,6 +18,7 @@ vi.mock('../../write-ops/helpers.js', async () => {
 
 vi.mock('../../tools/list-tasks.js', () => ({
   listTasks: vi.fn().mockResolvedValue([]),
+  listTasksFresh: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../cache.js', () => ({

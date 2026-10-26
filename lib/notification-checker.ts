@@ -26,6 +26,7 @@ const logger = createLogger("NOTIFICATIONS");
 function isSameReminder(current: TaskRecord, checked: TaskRecord): boolean {
 	return (
 		!current.completed &&
+		!current.savedAt &&
 		!current.notificationSent &&
 		current.dueDate === checked.dueDate &&
 		current.notifyBefore === checked.notifyBefore
@@ -81,7 +82,7 @@ class NotificationChecker {
 		const db = getDb();
 		// `completed` is stored as a boolean, and IndexedDB cannot index booleans,
 		// so an index query on it finds nothing. Filter the table instead.
-		const tasks = await db.tasks.filter((task) => !task.completed).toArray();
+		const tasks = await db.tasks.filter((task) => !task.completed && !task.savedAt).toArray();
 
 		const tasksWithDueDates = tasks.filter(
 			(task) => task.dueDate && task.notificationEnabled !== false,
@@ -293,7 +294,7 @@ export async function getDueSoonCount(): Promise<number> {
 	const db = getDb();
 
 	// Filter rather than query the index: `completed` is a boolean (see processNotifications).
-	const tasks = await db.tasks.filter((task) => !task.completed).toArray();
+	const tasks = await db.tasks.filter((task) => !task.completed && !task.savedAt).toArray();
 
 	const now = new Date();
 	let count = 0;

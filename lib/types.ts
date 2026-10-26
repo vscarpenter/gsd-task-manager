@@ -40,6 +40,8 @@ export interface TaskRecord {
   notificationSent: boolean;
   lastNotificationAt?: string;
   snoozedUntil?: string;
+  /** Set while an item lives in Saved instead of the active matrix. */
+  savedAt?: string;
   // Archive field
   archivedAt?: string; // Timestamp when task was archived
   deletedAt?: string; // Timestamp when task was moved to trash (ADR 0015)

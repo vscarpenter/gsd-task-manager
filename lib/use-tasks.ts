@@ -9,6 +9,8 @@ const logger = createLogger("DB");
 
 export interface TaskBuckets {
   all: TaskRecord[];
+  stored: TaskRecord[];
+  saved: TaskRecord[];
   byQuadrant: Record<string, TaskRecord[]>;
   isLoading: boolean;
 }
@@ -49,7 +51,9 @@ export function useTasks(): TaskBuckets {
   }, []);
 
   const isLoading = result === undefined;
-  const tasks = result ?? [];
+  const stored = result ?? [];
+  const tasks = stored.filter((task) => !task.savedAt);
+  const saved = stored.filter((task) => task.savedAt).sort((a, b) => b.savedAt!.localeCompare(a.savedAt!));
 
   const byQuadrant: Record<string, TaskRecord[]> = Object.fromEntries(
     quadrantOrder.map((id) => [id, []])
@@ -62,5 +66,5 @@ export function useTasks(): TaskBuckets {
     byQuadrant[task.quadrant].push(task);
   }
 
-  return { all: tasks, byQuadrant, isLoading };
+  return { all: tasks, stored, saved, byQuadrant, isLoading };
 }

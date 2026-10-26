@@ -14,6 +14,7 @@ export interface TaskCardProps {
   onInspect?: (task: TaskRecord) => void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSave?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;

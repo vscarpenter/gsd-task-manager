@@ -286,6 +286,13 @@ cat > "$COLLECTION_PAYLOAD_FILE" <<'ENDJSON'
       }
     },
     {
+      "name": "saved_at",
+      "type": "text",
+      "required": false,
+      "system": false,
+      "options": { "min": null, "max": 50 }
+    },
+    {
       "name": "snoozed_until",
       "type": "text",
       "required": false,
