@@ -177,8 +177,10 @@ describe("service worker capture privacy", () => {
 		});
 
 		await activationPromise;
-		expect(harness.cache.delete).toHaveBeenCalledWith(legacyQueryRequest);
-		expect(harness.cache.delete).toHaveBeenCalledWith(legacyFragmentRequest);
-		expect(harness.cache.delete).not.toHaveBeenCalledWith(safeRequest);
+		// Request fields are non-enumerable; deep equality can equate unrelated URLs.
+		expect(harness.cache.delete.mock.calls.map(([request]: [Request]) => request.url)).toEqual([
+			legacyQueryRequest.url,
+			legacyFragmentRequest.url,
+		]);
 	});
 });
