@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+
+/** The line shown in place of an add control that has hit its cap. */
+export function LimitNote({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <p className="text-caption text-foreground-muted">{children}</p>;
+}
 
 // ─── Shared ────────────────────────────────────────────────────────────────
 
@@ -212,6 +218,7 @@ interface TagsFieldProps {
 }
 
 export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemoveTag, onTagKeyDown }: TagsFieldProps): React.ReactElement {
+  const atLimit = tags.length >= SCHEMA_LIMITS.MAX_TAGS;
   return (
     <Field label="Tags" as="group">
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background p-2">
@@ -243,11 +250,14 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           onBlur={onAddTag}
           placeholder={tags.length ? "" : "Add a tag…"}
           aria-label="Add a tag"
+          maxLength={SCHEMA_LIMITS.TAG_MAX_LENGTH}
+          disabled={atLimit}
           // Inset ring: this input is borderless inside a bordered chip box, so
           // an offset ring would draw outside the field it belongs to.
           className="pointer-coarse:text-base min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-small text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         />
       </div>
+      {atLimit ? <LimitNote>A task can have up to {SCHEMA_LIMITS.MAX_TAGS} tags.</LimitNote> : null}
     </Field>
   );
 }
@@ -321,6 +331,7 @@ export function SubtasksField({
 }): React.ReactElement {
   const [entry, setEntry] = useState("");
   const done = subtasks.filter((s) => s.completed).length;
+  const atLimit = subtasks.length >= SCHEMA_LIMITS.MAX_SUBTASKS;
 
   const commit = (): void => {
     onAdd(entry);
@@ -341,7 +352,8 @@ export function SubtasksField({
           ))}
         </ul>
       ) : null}
-      <SubtaskEntry value={entry} onChange={setEntry} onCommit={commit} />
+      <SubtaskEntry value={entry} onChange={setEntry} onCommit={commit} disabled={atLimit} />
+      {atLimit ? <LimitNote>A task can have up to {SCHEMA_LIMITS.MAX_SUBTASKS} subtasks.</LimitNote> : null}
     </Field>
   );
 }
@@ -391,10 +403,12 @@ function SubtaskEntry({
   value,
   onChange,
   onCommit,
+  disabled,
 }: {
   value: string;
   onChange: (value: string) => void;
   onCommit: () => void;
+  disabled: boolean;
 }): React.ReactElement {
   return (
     <input
@@ -408,6 +422,8 @@ function SubtaskEntry({
       }}
       placeholder="Add a subtask…"
       aria-label="Add a subtask"
+      maxLength={SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH}
+      disabled={disabled}
       className="pointer-coarse:text-base w-full rounded-lg border border-border bg-background px-3 py-2 text-small text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
     />
   );

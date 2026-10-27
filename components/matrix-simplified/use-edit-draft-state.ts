@@ -6,6 +6,8 @@ import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
 import { DUE_PRESETS, localDayOf, resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
 import { useDefaultReminder } from "@/lib/notifications/use-default-reminder";
 import { UI_TIMING } from "@/lib/constants/ui";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { hasVisibleText } from "@/lib/utils";
 import { generateId } from "@/lib/id-generator";
 import type { EditDraft } from "./edit-draft";
 
@@ -88,7 +90,7 @@ function parseEstimate(raw: string): number | undefined {
 /** Append a subtask, ignoring blank input. Ids are generated locally until save. */
 function appendSubtask(subtasks: Subtask[], rawTitle: string): Subtask[] {
   const title = rawTitle.trim();
-  if (!title) return subtasks;
+  if (!hasVisibleText(title) || subtasks.length >= SCHEMA_LIMITS.MAX_SUBTASKS) return subtasks;
   return [...subtasks, { id: generateId(), title, completed: false }];
 }
 
@@ -204,7 +206,9 @@ function seedTags(
 /** Normalise and append a tag, ignoring blanks and duplicates. */
 function appendTag(tags: string[], raw: string): string[] {
   const value = raw.trim().toLowerCase().replace(/^#/, "");
-  if (!value || tags.includes(value)) return tags;
+  if (!hasVisibleText(value) || tags.includes(value) || tags.length >= SCHEMA_LIMITS.MAX_TAGS) {
+    return tags;
+  }
   return [...tags, value];
 }
 

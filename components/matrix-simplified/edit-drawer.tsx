@@ -5,6 +5,8 @@ import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import { Button } from "@/components/ui/button";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { hasVisibleText } from "@/lib/utils";
 import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
@@ -103,7 +105,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
 
   const submit = async (e?: FormEvent): Promise<void> => {
     e?.preventDefault();
-    if (!draft.title.trim() || savingRef.current) return;
+    if (!hasVisibleText(draft.title) || savingRef.current) return;
     const cycleError = task
       ? findDependencyCycleError(task.id, draft.dependencies, allTasks)
       : null;
@@ -173,7 +175,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
             onDiscard={onClose}
             confirmingDiscard={confirmingDiscard}
             keepEditingRef={keepEditingRef}
-            canSave={Boolean(draft.title.trim())}
+            canSave={hasVisibleText(draft.title)}
             saving={saving}
             isCreateMode={isCreateMode}
           />
@@ -350,15 +352,17 @@ function TitleAndDescriptionFields({
 }) {
   return (
     <>
-      <input
-        data-testid="edit-title"
-        ref={titleRef}
-        value={draft.title}
-        onChange={(e) => draft.setTitle(e.target.value)}
-        placeholder="What needs doing?"
-        className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
-        aria-label="Title"
-      />
+      <Field label="Title">
+        <input
+          data-testid="edit-title"
+          ref={titleRef}
+          value={draft.title}
+          onChange={(e) => draft.setTitle(e.target.value)}
+          placeholder="What needs doing?"
+          maxLength={SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH}
+          className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 normal-case text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
+        />
+      </Field>
 
       <Field label="Description">
         <textarea
@@ -366,6 +370,7 @@ function TitleAndDescriptionFields({
           value={draft.description}
           onChange={(e) => draft.setDescription(e.target.value)}
           rows={4}
+          maxLength={SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH}
           placeholder="Optional details, links, context"
           aria-label="Description"
           className="pointer-coarse:text-base w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-small leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
