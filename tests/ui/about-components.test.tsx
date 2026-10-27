@@ -23,7 +23,7 @@ describe('About Components', () => {
     it('renders headline and CTA', () => {
       render(<HeroSection />);
 
-      expect(screen.getByText(/Decide what matters/)).toBeInTheDocument();
+      expect(screen.getByText(/Stop juggling/)).toBeInTheDocument();
       expect(screen.getByText(/Open App/)).toBeInTheDocument();
     });
 

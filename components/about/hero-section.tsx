@@ -91,9 +91,9 @@ export function HeroSection() {
           </p>
 
           <h1 className="mb-6 text-[clamp(2.75rem,1.2rem+5.2vw,5rem)] font-serif font-semibold leading-[1.05] tracking-tight text-foreground">
-            Decide what matters.
+            Stop juggling.
             <br />
-            Then get it done.
+            Start finishing.
           </h1>
 
           <p className="mx-auto mb-10 max-w-[56ch] text-body leading-relaxed text-foreground-muted">

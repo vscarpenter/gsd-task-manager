@@ -8,7 +8,7 @@ test.describe("About Page", () => {
     await page.goto("/about");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: /decide what matters\./i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /stop juggling\./i })).toBeVisible();
     await expect(page.getByRole("link", { name: /open app/i })).toBeVisible();
   });
 
