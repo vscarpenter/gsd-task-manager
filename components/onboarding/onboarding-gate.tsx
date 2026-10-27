@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { OPEN_SYNC_EVENT } from "@/components/sync/open-sync-event";
 import { Onboarding } from "./onboarding";
 
 /** localStorage flag marking the welcome tour as seen. */
@@ -51,7 +52,6 @@ const getSeenServerSnapshot = () => true;
  */
 export function OnboardingGate() {
   const pathname = usePathname();
-  const router = useRouter();
   const [forceOpen, setForceOpen] = useState(false);
   const replayTriggerRef = useRef<HTMLElement | null>(null);
   const seen = useSyncExternalStore(
@@ -84,7 +84,7 @@ export function OnboardingGate() {
 
   const signIn = () => {
     close();
-    router.push("/settings");
+    window.dispatchEvent(new Event(OPEN_SYNC_EVENT));
   };
 
   return <Onboarding open={open} onClose={close} onSignIn={signIn} />;

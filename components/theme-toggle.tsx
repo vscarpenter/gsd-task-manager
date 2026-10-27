@@ -7,10 +7,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useIsHydrated } from "@/lib/use-is-hydrated";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const mounted = useIsHydrated();
 
-  const isDark = theme !== "light";
+  // "system" is a setting, not a look: follow what is actually on screen.
+  const isDark = resolvedTheme === "dark";
 
   if (!mounted) {
     return (

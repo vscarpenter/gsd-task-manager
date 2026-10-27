@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useSync } from '@/lib/hooks/use-sync';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
+import { OPEN_SYNC_EVENT } from '@/components/sync/open-sync-event';
 import { SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 import { useSyncHealth } from '@/components/sync/use-sync-health';
 import { useSyncStatus, type IconType } from '@/components/sync/use-sync-status';
@@ -65,9 +66,6 @@ function SyncStatusOverlays({
           {pendingCount}
         </Badge>
       )}
-      {!isEnabled && (
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-status-blocking" />
-      )}
       {!hasAuthError && retryCountdown !== null && retryCountdown > 0 && (
         <span className="text-caption absolute -bottom-1 left-1/2 -translate-x-1/2 font-medium text-status-blocked-ink">
           {retryCountdown}s
@@ -80,6 +78,12 @@ function SyncStatusOverlays({
 export function SyncButton() {
   const { sync, isSyncing, status, error, isEnabled, nextRetryAt, pendingCount: queued, healthReport } = useSync();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const open = () => setAuthDialogOpen(true);
+    window.addEventListener(OPEN_SYNC_EVENT, open);
+    return () => window.removeEventListener(OPEN_SYNC_EVENT, open);
+  }, []);
 
   useSyncHealth({
     healthReport,
