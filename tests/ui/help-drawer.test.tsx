@@ -143,7 +143,7 @@ describe("HelpDrawer plain wording", () => {
     const help = screen.getByTestId("help-drawer-scroll");
 
     expect(help).toHaveTextContent("Every task starts in the Add a task bar.");
-    expect(help).toHaveTextContent("quadrant button at the right end of the bar");
+    expect(help).toHaveTextContent("quadrant button that appears in the bar as you type");
     expect(help).not.toHaveTextContent(/checkbox|reclassify|spawn|hijack|activation distance/i);
   });
 

@@ -76,7 +76,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <Concept title="Adding a task">
               Every task starts in the Add a task bar. It is at the top on a computer and at the bottom on a phone. Type
               your task and press <kbd>Enter</kbd>. Markers in the text pick the quadrant (see below). To pick it
-              yourself, click or tap the quadrant button at the right end of the bar. Keyboard tip: press{" "}
+              yourself, click or tap the quadrant button that appears in the bar as you type. Keyboard tip: press{" "}
               <kbd>Tab</kbd> to reach the quadrant button, then press <kbd>Enter</kbd> or <kbd>Space</kbd> to change
               it.
             </Concept>
@@ -90,7 +90,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
           <Section label="Markers in the Add a task bar">
             <p style={bodyStyle}>
-              Add markers to your text. The quadrant button at the right end of the bar shows where the task will go.
+              Add markers to your text. The quadrant button in the bar shows where the task will go.
               Click or tap it to change that.
             </p>
             <SyntaxRow symbol="!!" meaning="Urgent and important (Do First)" />
