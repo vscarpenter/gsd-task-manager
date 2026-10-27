@@ -44,7 +44,8 @@ describe("<EditDrawer> estimate", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ estimatedMinutes: 90 }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -69,7 +70,8 @@ describe("<EditDrawer> estimate", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ estimatedMinutes: undefined }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -89,7 +91,8 @@ describe("<EditDrawer> estimate", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ estimatedMinutes: undefined }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 });

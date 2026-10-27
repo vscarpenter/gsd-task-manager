@@ -44,7 +44,8 @@ describe("<EditDrawer> subtasks", () => {
       expect.objectContaining({
         subtasks: [expect.objectContaining({ title: "Write the changelog", completed: false })],
       }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -86,7 +87,8 @@ describe("<EditDrawer> subtasks", () => {
       expect.objectContaining({
         subtasks: [expect.objectContaining({ id: "s1", completed: true })],
       }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -106,7 +108,8 @@ describe("<EditDrawer> subtasks", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ subtasks: [] }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -120,7 +123,8 @@ describe("<EditDrawer> subtasks", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ subtasks: [] }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 });

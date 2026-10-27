@@ -51,7 +51,8 @@ describe("<EditDrawer>", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Updated title" }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -136,7 +137,8 @@ describe("<EditDrawer>", () => {
     await user.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ urgent: false, important: true }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -355,7 +357,8 @@ describe("<EditDrawer>", () => {
       await user.click(screen.getByRole("button", { name: /save changes/i }));
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ dependencies: ["t2"] }),
-        "t1"
+        "t1",
+        expect.anything()
       );
     });
 
@@ -369,7 +372,8 @@ describe("<EditDrawer>", () => {
       await user.click(screen.getByRole("button", { name: /save changes/i }));
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ dependencies: [] }),
-        "t1"
+        "t1",
+        expect.anything()
       );
     });
 

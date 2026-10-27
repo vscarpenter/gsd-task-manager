@@ -9,7 +9,7 @@ import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useDiscardGuard } from "./use-discard-guard";
-import { useEditDraftState } from "./use-edit-draft-state";
+import { changedDraftFields, useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
@@ -24,7 +24,11 @@ interface EditDrawerProps {
   /** Full live task list — candidate pool for the dependency picker. */
   allTasks?: TaskRecord[];
   onClose: () => void;
-  onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
+  /**
+   * `changed` (edit mode only) holds just the fields this drawer altered, so the
+   * save can leave every other field at its stored value.
+   */
+  onSubmit: (draft: EditDraft, taskId?: string, changed?: Partial<EditDraft>) => void | Promise<void>;
 }
 
 type EditDrawerFormProps = Omit<EditDrawerProps, "open">;
@@ -74,9 +78,9 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   const titleRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
-  const baselineRef = useRef<string | null>(null);
-  if (baselineRef.current === null) baselineRef.current = JSON.stringify(draft.toDraft());
-  const dirty = JSON.stringify(draft.toDraft()) !== baselineRef.current || draft.tagInput.trim() !== "";
+  const baselineRef = useRef<EditDraft | null>(null);
+  if (baselineRef.current === null) baselineRef.current = draft.toDraft();
+  const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baselineRef.current) || draft.tagInput.trim() !== "";
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   // The drawer stays open until the save resolves, so a double-click or quick
   // Enters used to create the same task several times.
@@ -110,7 +114,9 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
     savingRef.current = true;
     setSaving(true);
     try {
-      await onSubmit(draft.toDraft(), task?.id);
+      const current = draft.toDraft();
+      if (task) await onSubmit(current, task.id, changedDraftFields(baselineRef.current ?? current, current));
+      else await onSubmit(current, undefined);
     } finally {
       savingRef.current = false;
       setSaving(false);

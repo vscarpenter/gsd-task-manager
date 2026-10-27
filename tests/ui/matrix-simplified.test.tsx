@@ -710,12 +710,8 @@ describe("<MatrixSimplified>", () => {
     await screen.findByRole("heading", { name: /edit task/i });
     await user.click(screen.getByRole("button", { name: /save changes/i }));
 
-    await waitFor(() =>
-      expect(updateTask).toHaveBeenCalledWith(
-        "e1",
-        expect.objectContaining({ dependencies: ["dep-ghost"] })
-      )
-    );
+    // An untouched field is left out of the update, so the stored ids stay as they are.
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith("e1", {}));
   });
 
   it("logs edit failures with the task id and update action", async () => {

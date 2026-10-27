@@ -176,6 +176,23 @@ function useReminderDraft(
   };
 }
 
+/**
+ * The fields whose value differs between the drawer's starting draft and the
+ * current one. A cleared field stays in the result as `undefined`.
+ *
+ * Saving only these keeps a drawer that sat open in a stale tab from writing
+ * its old title, tags, or flags over a newer save from somewhere else.
+ */
+export function changedDraftFields(start: EditDraft, current: EditDraft): Partial<EditDraft> {
+  const changed: Partial<EditDraft> = {};
+  for (const key of Object.keys(current) as Array<keyof EditDraft>) {
+    if (JSON.stringify(start[key]) !== JSON.stringify(current[key])) {
+      Object.assign(changed, { [key]: current[key] });
+    }
+  }
+  return changed;
+}
+
 /** Tags come from the task in edit mode and the seeded draft in create mode. */
 function seedTags(
   task: TaskRecord | null | undefined,

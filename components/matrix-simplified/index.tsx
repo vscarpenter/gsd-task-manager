@@ -282,10 +282,11 @@ export function MatrixSimplified() {
 
   const handleCreateClose = () => dispatchOverlay({ type: "closeCreate" });
 
-  const handleEditSubmit = async (draft: EditDraft, taskId?: string) => {
+  const handleEditSubmit = async (draft: EditDraft, taskId?: string, changed?: Partial<EditDraft>) => {
     try {
       if (taskId) {
-        await updateTask(taskId, draft);
+        // Only what this drawer changed: its other fields may be stale.
+        await updateTask(taskId, changed ?? draft);
         toast.success("Task updated", { duration: TOAST_DURATION.SHORT });
         dispatchOverlay({ type: "closeEdit" });
       } else {
