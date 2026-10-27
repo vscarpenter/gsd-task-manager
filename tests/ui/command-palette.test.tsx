@@ -345,6 +345,23 @@ describe('CommandPalette (full component)', () => {
     });
   });
 
+  it('closes the palette from a visible close button for touch users', async () => {
+    render(<CommandPalette handlers={makeHandlers()} conditions={defaultConditions} />);
+
+    fireEvent.keyDown(document, { key: 'k', metaKey: true });
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Search tasks, actions, settings...')).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close command palette' }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByPlaceholderText('Search tasks, actions, settings...')
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('restores focus to the exact opener after an event-triggered palette closes', async () => {
     const user = userEvent.setup();
     render(
