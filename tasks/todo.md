@@ -1,3 +1,17 @@
+# Session state, 2026-10-27: launch QA with five personas (`fix/launch-qa-first-run`)
+
+## Resuming From Here
+
+Non-trivial by size, but the owner asked for one pass ("fix it all in one pass, then rerun"), which stands in for the spec gate. Branched from main at `310e363`. Nothing pushed.
+
+- [x] Built the production export (`bun run build:e2e`) and served `out/` on 127.0.0.1:3100 under the production CSP.
+- [x] Five persona agents drove headless Chromium through a shared kit (fresh profile per run, production writes stubbed). Kit, reports, screenshots, and the merged list live in the session scratchpad under `qa/` (`RANKED.md`); they are not in the repo.
+- [x] Baseline: 4 of 5 reached a first task; the impatient persona quit when its first task saved off-screen. 34 ranked findings, 2 dropped as artifacts (headless-only PWA warning; local rebuilds bump the build stamp).
+- [x] Fixed so far: dates (`f5509c4`), drawer double-submit (`57241b0`), double-click on the next row (`6cb34ac`), capture feedback and named validation limits (`2a6aa4d`), capture bar copy (`383734d`).
+- [ ] Three worktree agents in flight: copy and sync story; mobile layout and touch; breaker robustness. Merge each into this branch, then run the full gates.
+- [ ] Rebuild, rerun all five personas with `QA_RUN=rerun`, compare against baseline.
+- Parked for the owner (defaults kept): Terms of Service; privacy policy and FAQ text (marketing repo); capture parser odd-URL split (cross-platform contract); merge-import duplicates (backup contract, copy only); unknown URLs render the matrix (SPA fallback); phone keyboard handling (needs a real device); machine-speed typing (won't fix).
+
 # Session state, 2026-10-23: undici and fast-uri advisories (`fix/undici-advisory`)
 
 ## Resuming From Here
