@@ -128,7 +128,7 @@ export function MobileIconRail({ onHelp }: IconRailProps) {
   // The tapped tab reads as selected at once; the route can take a couple of
   // seconds to land. The tap stops counting once the pathname changes.
   const [tapped, setTapped] = useState<{ key: RouteKey; from: string } | null>(null);
-  const tappedKey = tapped && tapped.from === pathname ? tapped.key : null;
+  const tappedKey = tapped?.from === pathname ? tapped.key : null;
 
   return (
     <nav

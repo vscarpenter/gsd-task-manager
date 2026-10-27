@@ -25,6 +25,14 @@ export interface DashboardData {
 }
 
 /** Derives all analytics values for the Dashboard page from the raw task list. */
+/** Plain halves, not a 60% bar the page never explains. */
+function completionInsightFor(rate: number): string {
+  if (rate === 0) return "None completed yet";
+  if (rate >= 80) return "Most are done";
+  if (rate >= 50) return "Over half are done";
+  return "Under half are done";
+}
+
 export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90): DashboardData {
   const metrics = calculateMetrics(tasks);
   const last7TrendData = getCompletionTrend(tasks, 7);
@@ -68,11 +76,7 @@ export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90):
     : metrics.noDueDateCount > 0 ? `${metrics.noDueDateCount} without a due date`
     : "All have due dates";
 
-  // Plain halves, not a 60% bar the page never explains.
-  const completionInsight = metrics.completionRate === 0 ? "None completed yet"
-    : metrics.completionRate >= 80 ? "Most are done"
-    : metrics.completionRate >= 50 ? "Over half are done"
-    : "Under half are done";
+  const completionInsight = completionInsightFor(metrics.completionRate);
 
   return {
     metrics, trendData, streakData, timeTrackingSummary, timeByQuadrant,
