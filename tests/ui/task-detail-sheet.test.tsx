@@ -226,6 +226,18 @@ describe("TaskDetailSheet", () => {
     expect(onToggleComplete).toHaveBeenLastCalledWith(done, false);
   });
 
+  // Staying open after Mark done reflowed the footer under the thumb and hid
+  // the Undo toast behind the backdrop.
+  it("closes the sheet after marking the task done", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<TaskDetailSheet open task={task} onClose={onClose} onEdit={vi.fn()} onToggleComplete={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Mark done" }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
   // The label flips after the first click, so the second click of a
   // double-click would undo it.
   it("ignores the second click of a double-click on Mark done", () => {

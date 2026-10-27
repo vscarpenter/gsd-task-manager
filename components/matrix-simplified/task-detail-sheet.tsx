@@ -298,7 +298,9 @@ function DetailActions({
 }) {
   return (
     <>
-      {onToggleComplete ? <ToggleDoneButton task={task} onToggle={onToggleComplete} /> : null}
+      {onToggleComplete ? (
+        <ToggleDoneButton task={task} onToggle={(done, next) => { onToggleComplete(done, next); onClose(); }} />
+      ) : null}
         <button
           type="button"
           onClick={onClose}
