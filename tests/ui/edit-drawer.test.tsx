@@ -89,6 +89,21 @@ describe("<EditDrawer>", () => {
     expect(screen.getByText("Titles can be up to 80 characters.")).toBeInTheDocument();
   });
 
+  // A pasted link longer than 80 characters moves to the description on save.
+  // maxLength cut it off first, so the task saved a broken link.
+  it("keeps a long pasted link in the title whole and counts only the words", async () => {
+    const onSubmit = vi.fn();
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={onSubmit} />);
+    const link = `https://example.com/${"a".repeat(100)}`;
+    const title = screen.getByLabelText(/title/i) as HTMLInputElement;
+
+    await user.click(title);
+    await user.paste(`Read ${link}`);
+
+    expect(title.value).toBe(`Read ${link}`);
+    expect(screen.queryByText("Titles can be up to 80 characters.")).not.toBeInTheDocument();
+  });
+
   it("says the description limit once the description reaches it", () => {
     render(<EditDrawer open onClose={vi.fn()} onSubmit={vi.fn()} />);
     fireEvent.change(screen.getByTestId("edit-description"), { target: { value: "x".repeat(600) } });

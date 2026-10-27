@@ -35,7 +35,8 @@ async function renderDrawer(task: TaskRecord, onSubmit = vi.fn()) {
 describe("edit drawer input limits", () => {
   it("caps the text inputs at the schema limits", async () => {
     await renderDrawer(makeTask());
-    expect(screen.getByTestId("edit-title")).toHaveAttribute("maxlength", String(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH));
+    // The title has no cap: a pasted link moves to the description on save.
+    expect(screen.getByTestId("edit-title")).not.toHaveAttribute("maxlength");
     expect(screen.getByTestId("edit-description")).toHaveAttribute("maxlength", String(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH));
     expect(screen.getByLabelText("Add a tag")).toHaveAttribute("maxlength", String(SCHEMA_LIMITS.TAG_MAX_LENGTH));
     expect(screen.getByLabelText("Add a subtask")).toHaveAttribute("maxlength", String(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH));

@@ -18,6 +18,7 @@ import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, Subtask
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
 import { LengthLimitNote } from "./limit-note";
+import { extractUrlsFromTitle } from "@/lib/capture-parser";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
 
@@ -346,11 +347,11 @@ function TitleAndDescriptionFields({
           value={draft.title}
           onChange={(e) => draft.setTitle(e.target.value)}
           placeholder="What needs doing?"
-          maxLength={SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH}
           className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 normal-case text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
         />
       </Field>
-      <LengthLimitNote field="title" length={draft.title.length} max={SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH} />
+      {/* No maxLength: a pasted link moves to the description on save, so only the words count. */}
+      <LengthLimitNote field="title" length={extractUrlsFromTitle(draft.title).cleanTitle.length} max={SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH} />
 
       <Field label="Description">
         <textarea
