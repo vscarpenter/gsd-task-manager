@@ -105,6 +105,25 @@ describe("<CaptureBar>", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
+  // Any text change reopened the latch, even with a save still pending, so
+  // typing and deleting a character let the same task save twice.
+  it("keeps the latch closed while a save is pending, even if the text changes", async () => {
+    let finish: (value: boolean) => void = () => {};
+    const onSubmit = vi.fn(() => new Promise<boolean>((resolve) => { finish = resolve; }));
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "Call the dentist");
+    const form = screen.getByTestId("capture-bar");
+
+    fireEvent.submit(form);
+    fireEvent.change(input, { target: { value: "Call the dentistx" } });
+    fireEvent.change(input, { target: { value: "Call the dentist" } });
+    fireEvent.submit(form);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    await act(async () => finish(true));
+  });
+
   it("clears input after successful submit", async () => {
     const onSubmit = vi.fn();
     render(<CaptureBar onSubmit={onSubmit} />);

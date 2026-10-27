@@ -139,6 +139,9 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   const [justCaptured, setJustCaptured] = useState(false);
   const internalRef = useRef<HTMLInputElement | null>(null);
   const submittingRef = useRef(false);
+  // Set after a save until the cleared text renders: a second Enter in that gap
+  // still sees the old text and would save it again.
+  const awaitingClearRef = useRef(false);
   useAdoptTypedText(internalRef, setText);
 
   // Stable refs so the global keydown handler does not re-register on every keystroke.
@@ -211,7 +214,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (submittingRef.current) return;
+    if (submittingRef.current || awaitingClearRef.current) return;
     if (!hasTitle) {
       // An empty Add looked enabled and did nothing. Point at the field instead.
       internalRef.current?.focus();
@@ -241,14 +244,14 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       // The caller reports the failure. The sentence stays so it can be retried.
       saved = false;
     } finally {
-      // After a save the latch holds until the cleared text renders (see the
-      // effect below); a second Enter before then would save the old text.
-      if (saved === false) submittingRef.current = false;
+      submittingRef.current = false;
+      // Only a field still holding the saved draft is about to clear.
+      awaitingClearRef.current = saved !== false && textRef.current === draftText;
     }
   };
 
   useEffect(() => {
-    submittingRef.current = false;
+    awaitingClearRef.current = false;
   }, [text]);
 
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -334,9 +337,9 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       <AddButton hasTitle={hasTitle} />
     </form>
     {pasteNote ? (
-      <p role="status" className="px-1 pt-1.5 text-caption text-foreground-muted">
+      <output className="block px-1 pt-1.5 text-caption text-foreground-muted">
         {pasteNote}
-      </p>
+      </output>
     ) : null}
     </>
   );
