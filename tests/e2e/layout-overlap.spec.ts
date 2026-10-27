@@ -94,7 +94,7 @@ test.describe("Layout overlap", () => {
       await createTaskViaCaptureBar(page, `Mobile task ${i} !!`);
     }
 
-    const captureBar = page.getByLabel("Capture a task");
+    const captureBar = page.getByLabel("Add a task");
     const lastCard = page.locator("[data-testid='task-card']").last();
 
     // Scroll by moving to the element rather than sleeping after a wheel event.

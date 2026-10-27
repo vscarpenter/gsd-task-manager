@@ -392,7 +392,7 @@ describe("<MatrixSimplified>", () => {
   it("submitting capture bar calls createTask with parsed payload", async () => {
     render(<MatrixSimplified />);
     await userEvent.type(
-      screen.getByLabelText("Capture a task"),
+      screen.getByLabelText("Add a task"),
       "ship release !! #ops{Enter}"
     );
     await waitFor(() =>
@@ -415,7 +415,7 @@ describe("<MatrixSimplified>", () => {
     vi.mocked(createTask).mockResolvedValueOnce(created);
     render(<MatrixSimplified />);
 
-    const input = screen.getByLabelText("Capture a task");
+    const input = screen.getByLabelText("Add a task");
     await userEvent.type(input, "Call the dentist{Enter}");
 
     await waitFor(() => expect(screen.getByTestId("task-card")).toHaveClass("ring-4"));
@@ -428,7 +428,7 @@ describe("<MatrixSimplified>", () => {
     // created through it. Edit kept them, which made the loss look like a save bug.
     render(<MatrixSimplified />);
 
-    await userEvent.type(screen.getByLabelText("Capture a task"), "quarterly report");
+    await userEvent.type(screen.getByLabelText("Add a task"), "quarterly report");
     await userEvent.click(screen.getByTestId("more-options"));
 
     await screen.findByRole("heading", { name: /new task/i });
@@ -455,7 +455,7 @@ describe("<MatrixSimplified>", () => {
     vi.mocked(createTask).mockRejectedValueOnce(failure);
     render(<MatrixSimplified />);
 
-    await userEvent.type(screen.getByLabelText("Capture a task"), "private title{Enter}");
+    await userEvent.type(screen.getByLabelText("Add a task"), "private title{Enter}");
 
     await waitFor(() =>
       expect(logErrorSpy).toHaveBeenCalledWith(
@@ -507,7 +507,7 @@ describe("<MatrixSimplified>", () => {
     expect(html).toContain("GSD Matrix");
     expect(html).toContain("Today’s matrix —");
     expect(html).not.toContain(introDateLabel(new Date()));
-    expect(html).toContain("Capture a task");
+    expect(html).toContain("Add a task");
     expect(showSchedule).toBeDisabled();
     expect(showSchedule).toHaveAttribute("autocomplete", "off");
   });
@@ -643,7 +643,7 @@ describe("<MatrixSimplified>", () => {
 
       expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument();
       expect(createTask).not.toHaveBeenCalled();
-      expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+      expect(screen.getByLabelText("Add a task")).toHaveFocus();
     });
 
     it("creates exactly one task after explicit confirmation", async () => {
@@ -661,7 +661,7 @@ describe("<MatrixSimplified>", () => {
       await waitFor(() =>
         expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument()
       );
-      expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+      expect(screen.getByLabelText("Add a task")).toHaveFocus();
       expect(createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           title: "Review roadmap",

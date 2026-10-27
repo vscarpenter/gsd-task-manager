@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightIcon, ArrowUpRightIcon, ZapIcon } from "lucide-react";
+import { ArrowRightIcon, ArrowUpRightIcon, ChevronsUpDownIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import {
   quadrantByRdKey,
@@ -180,8 +180,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onInputKey}
-        placeholder="Capture a task…"
-        aria-label="Capture a task"
+        placeholder="Add a task…"
+        aria-label="Add a task"
         // The focus indicator lives on the parent <form> (focus-within:ring-2
         // ring-accent), which is the visible affordance for this borderless
         // input. The rule matches per element and cannot see the parent.
@@ -195,7 +195,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
             key={effectiveKey}
             type="button"
             onClick={cycleQuadrant}
-            title="Choose task destination"
+            title="Change where this task goes"
             className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
             style={{
               backgroundColor: QUADRANT_HEADER[effectiveKey],
@@ -207,7 +207,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
               aria-hidden
             />
             {meta.title}
-            {override ? <span className="ml-1 font-normal normal-case">·fixed</span> : null}
+            {/* "·fixed" read as "repaired". This says the person picked it. */}
+            {override ? <span className="font-normal normal-case">· chosen</span> : null}
+            {/* The pill read as a label; the chevrons say it can be changed. */}
+            <ChevronsUpDownIcon className="h-3 w-3 opacity-70" aria-hidden />
           </button>
           {onMoreOptions ? (
             <button
@@ -234,7 +237,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
           ) : null}
         </>
       ) : (
-        <kbd className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex">
+        <kbd
+          title="Press n to jump here"
+          className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex"
+        >
           n
         </kbd>
       )}
