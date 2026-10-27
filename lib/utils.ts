@@ -42,6 +42,15 @@ export function isRepeatClick(event: { detail: number }): boolean {
   return event.detail > 1;
 }
 
+// Whitespace plus the zero-width characters (ZWSP, ZWNJ, ZWJ, word joiner, BOM)
+// that paste into a field and look empty while still counting as text.
+const INVISIBLE_CHARS = /[\s\u200B-\u200D\u2060\uFEFF]/g;
+
+/** True when the text holds at least one character a person can see. */
+export function hasVisibleText(value: string): boolean {
+  return value.replace(INVISIBLE_CHARS, "").length > 0;
+}
+
 export function isoNow(): string {
   return new Date().toISOString();
 }
