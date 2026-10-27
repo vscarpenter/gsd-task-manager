@@ -1,7 +1,7 @@
 import type { ProductivityMetrics } from "@/lib/analytics";
 
 export interface ReviewVerdictText {
-  /** Factual lead — what was completed in the last seven days. */
+  /** Factual lead: what was completed in the last seven days. */
   lead: string;
   /** The single most notable true fact about what is still open. */
   observation: string;

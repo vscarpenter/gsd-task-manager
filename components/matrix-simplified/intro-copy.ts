@@ -4,8 +4,9 @@
  * The h1 date label and the one-sentence state reading live here so the copy
  * rules stay unit-testable and MatrixIntro stays presentational. Rules are
  * priority-ordered. The subtext never mentions Q2 (the Schedule button owns
- * that topic; the empty-board hint names Schedule only as a capture marker) and never repeats the header pills' raw counts — it interprets
- * state the pills can't (where overdue work sits, how the day leans).
+ * that topic; the empty-board hint names Schedule only as a capture marker).
+ * It never repeats the header pills' raw counts. It interprets state the
+ * pills can't (where overdue work sits, how the day leans).
  */
 
 import { quadrantForTask } from "@/lib/quadrants";

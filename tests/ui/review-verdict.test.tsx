@@ -36,7 +36,7 @@ function metrics(overrides: Partial<ProductivityMetrics> = {}): ProductivityMetr
 }
 
 describe("buildReviewVerdict", () => {
-  describe("lead — what was completed this week", () => {
+  describe("lead: what was completed this week", () => {
     it("names an empty week without judgement", () => {
       expect(buildReviewVerdict(metrics()).lead).toBe("Nothing completed this week.");
     });
