@@ -28,3 +28,13 @@ describe("SyncStatusDisplay", () => {
     expect(screen.queryByText("All synced")).not.toBeInTheDocument();
   });
 });
+
+describe("SyncStatusDisplay with sync off", () => {
+  // "Saved" is also the name of the saved-tasks list, so the badge says where
+  // the data is instead.
+  it("labels the badge by where the tasks live", () => {
+    render(<SyncStatusDisplay {...base} isEnabled={false} error={null} />);
+    expect(screen.getByText("On this device")).toBeInTheDocument();
+    expect(screen.queryByText(/saved locally/i)).not.toBeInTheDocument();
+  });
+});

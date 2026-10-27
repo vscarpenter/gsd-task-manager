@@ -22,11 +22,11 @@ test.describe("Sync & Auth UI States", () => {
     await expect(syncButton).toBeVisible({ timeout: 5000 });
   });
 
-  test("'Saved locally' indicator appears when sync is disabled", async ({ page }) => {
+  test("'On this device' indicator appears when sync is disabled", async ({ page }) => {
     await waitForAppLoad(page);
 
-    // The status display shows "Saved locally"
-    const savedLocally = page.locator("text=Saved locally");
+    // The status display shows "On this device"
+    const savedLocally = page.locator("text=On this device");
     await expect(savedLocally).toBeVisible({ timeout: 5000 });
   });
 

@@ -285,27 +285,48 @@ describe('SyncAuthDialog', () => {
       });
     });
 
-    it('should show PocketBase sync information message', async () => {
+    it('should say in plain words what signing in does', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('Cloud sync')).toBeInTheDocument();
-        expect(
-          screen.getByText(/Sign in to sync your tasks across devices/i)
-        ).toBeInTheDocument();
       });
+      const text = document.body.textContent ?? '';
+      expect(text).toMatch(/creates a sync account with the provider you pick/i);
+      expect(text).toMatch(/uploads the tasks already in this browser/i);
+      expect(text).toMatch(/delete the account in Settings/i);
     });
 
-    // The server is GSD's, not one the user runs, so the dialog must not say "your".
-    it("says synced data is stored on GSD's own server", async () => {
+    // The server is run by GSD's developer, not one the user controls.
+    it("says synced data is stored on a server run by GSD's developer", async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Your data is stored on GSD's own Cloud DB server\./)
+          screen.getByText(/stores them on a server run by GSD's developer/i)
         ).toBeInTheDocument();
       });
       expect(screen.queryByText(/your self-hosted/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Cloud DB server/i)).not.toBeInTheDocument();
+    });
+
+    it('links the privacy policy', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      expect(await screen.findByRole('link', { name: /privacy policy/i })).toHaveAttribute(
+        'href',
+        'https://gsdtaskmanager.com/privacy/'
+      );
+    });
+
+    it('explains the sign-in before the provider buttons', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      const explanation = await screen.findByText('Cloud sync');
+      const buttons = await screen.findByTestId('oauth-buttons');
+      expect(
+        explanation.compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
     });
 
     it('should set loading state when OAuth starts', async () => {

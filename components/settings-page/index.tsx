@@ -28,7 +28,7 @@ export function SettingsPage() {
             Settings
           </h2>
           <p className="mt-3 max-w-[55ch] text-base leading-relaxed text-foreground-muted">
-            Change how GSD looks and when it reminds you. Sync your tasks, back them up, or bring back ones you deleted.
+            Change how GSD looks and when it reminds you. Back up your tasks or bring back ones you deleted. To sync across devices, use the cloud icon at the top.
           </p>
         </div>
 

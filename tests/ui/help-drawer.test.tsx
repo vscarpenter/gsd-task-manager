@@ -127,3 +127,32 @@ describe("HelpDrawer", () => {
     expect(document.body.textContent).toMatch(/recurring tasks automatically/i);
   });
 });
+
+describe("HelpDrawer plain wording", () => {
+  it("points sync at the cloud icon and names who runs the server", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("The cloud icon at the top is your sync control.");
+    expect(help).toHaveTextContent("a server run by GSD\u2019s developer");
+    expect(help).not.toHaveTextContent(/PocketBase|self-hosted/i);
+  });
+
+  it("describes the capture bar and the quadrant pill by where they are", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("Every task starts in the Add a task bar.");
+    expect(help).toHaveTextContent("quadrant pill at the right end of the bar");
+    expect(help).not.toHaveTextContent(/checkbox|reclassify|spawn|hijack|activation distance/i);
+  });
+
+  it("documents the touch swipe actions and labels the shortcuts as keyboard tips", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("swipe a task right to complete it");
+    expect(help).toHaveTextContent("Swipe left to snooze it for 1 hour or delete it");
+    expect(screen.getByRole("heading", { name: "Keyboard tips" })).toBeInTheDocument();
+  });
+});

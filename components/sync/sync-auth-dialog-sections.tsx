@@ -139,6 +139,24 @@ export function UnauthenticatedSection({
 }: UnauthenticatedSectionProps) {
   return (
     <>
+      <div className="mb-6 rounded-lg bg-background-muted p-4 text-sm text-foreground-muted">
+        <p className="mb-2 font-medium text-foreground">Cloud sync</p>
+        <p>
+          Signing in creates a sync account with the provider you pick. It
+          uploads the tasks already in this browser and stores them on a server
+          run by GSD&apos;s developer. You can delete the account in Settings
+          once you are signed in.
+        </p>
+        <a
+          href="https://gsdtaskmanager.com/privacy/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+        >
+          Privacy policy
+        </a>
+      </div>
+
       <div className="space-y-4">
         <OAuthButtons
           onStart={oauthCallbacks.onStart}
@@ -146,14 +164,6 @@ export function UnauthenticatedSection({
           onError={oauthCallbacks.onError}
         />
         <ErrorMessage error={error} />
-      </div>
-
-      <div className="mt-6 rounded-lg bg-background-muted p-4 text-sm text-foreground-muted">
-        <p className="mb-2 font-medium text-foreground">Cloud sync</p>
-        <p>
-          Sign in to sync your tasks across devices. Your data is stored on
-          GSD&apos;s own Cloud DB server.
-        </p>
       </div>
     </>
   );
