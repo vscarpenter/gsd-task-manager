@@ -257,20 +257,46 @@ function TaskDetailContent({
         data-testid="task-detail-actions"
         className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-background pb-[max(var(--sp-4),env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-3 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
       >
-        {onToggleComplete ? (
-          <button
-            type="button"
-            onClick={() => onToggleComplete(task, !task.completed)}
-            className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-control-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-          >
-            {task.completed ? (
-              <CircleIcon className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <CheckIcon className="h-4 w-4" aria-hidden="true" />
-            )}
-            {task.completed ? "Mark not done" : "Mark done"}
-          </button>
-        ) : null}
+        <DetailActions task={task} onClose={onClose} onEdit={editTask} onToggleComplete={onToggleComplete} />
+      </footer>
+    </DialogContent>
+  );
+}
+
+function ToggleDoneButton({
+  task,
+  onToggle,
+}: {
+  task: TaskRecord;
+  onToggle: (task: TaskRecord, completedNext: boolean) => void;
+}) {
+  const Icon = task.completed ? CircleIcon : CheckIcon;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(task, !task.completed)}
+      className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-control-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {task.completed ? "Mark not done" : "Mark done"}
+    </button>
+  );
+}
+
+function DetailActions({
+  task,
+  onClose,
+  onEdit,
+  onToggleComplete,
+}: {
+  task: TaskRecord;
+  onClose: () => void;
+  onEdit: () => void;
+  onToggleComplete?: (task: TaskRecord, completedNext: boolean) => void;
+}) {
+  return (
+    <>
+      {onToggleComplete ? <ToggleDoneButton task={task} onToggle={onToggleComplete} /> : null}
         <button
           type="button"
           onClick={onClose}
@@ -280,14 +306,13 @@ function TaskDetailContent({
         </button>
         <button
           type="button"
-          onClick={editTask}
+          onClick={onEdit}
           className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           <PencilIcon className="h-4 w-4" aria-hidden="true" />
           Edit task
         </button>
-      </footer>
-    </DialogContent>
+    </>
   );
 }
 
