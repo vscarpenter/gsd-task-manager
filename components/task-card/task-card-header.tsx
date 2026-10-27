@@ -167,23 +167,28 @@ function CardLeadingControl({
           // cannot reach the grip without hovering the card that reveals it —
           // while breaking any tool that asserts actionability before moving
           // the pointer, Playwright's `hover()` included.
-          <button
-            type="button"
-            // Sized to the lane, which is narrow: the spine ends 4px in and the
-            // card's content edge is at 25px, leaving 21px. A 24px button at
-            // left-0 could not fit, so it painted over both neighbours — the
-            // spine vanished under its opaque fill for 24px, and its right edge
-            // landed on the title's first glyph ("Deepsec" read as ")eepsec").
-            // 16px inset 6px leaves 3px of air before the spine and 2px after,
-            // and the fill is gone: a transparent grip cannot erase what it
-            // floats over, so the next rounding error is cosmetic, not a bug.
-            // Coarse pointers drop the float entirely — see globals.css.
-            className="task-card-grip touch-target absolute left-[6px] top-3 z-10 flex h-5 w-4 cursor-grab touch-none items-center justify-center rounded-icon opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
-            aria-label="Drag to move task"
-            {...sortableAttributes}
-            {...sortableListeners}
-          >
-            <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+            <button
+              type="button"
+              // Sized to the lane, which is narrow: the spine ends 4px in and the
+              // card's content edge is at 25px, leaving 21px. A 24px button at
+              // left-0 could not fit, so it painted over both neighbours — the
+              // spine vanished under its opaque fill for 24px, and its right edge
+              // landed on the title's first glyph ("Deepsec" read as ")eepsec").
+              // 16px inset 6px leaves 3px of air before the spine and 2px after,
+              // and the fill is gone: a transparent grip cannot erase what it
+              // floats over, so the next rounding error is cosmetic, not a bug.
+              // Coarse pointers drop the float entirely — see globals.css.
+              className="task-card-grip touch-target absolute left-[6px] top-3 z-10 flex h-5 w-4 cursor-grab touch-none items-center justify-center rounded-icon opacity-0 transition-opacity hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:opacity-100 group-focus-within:opacity-100 [@media(pointer:coarse)]:static [@media(pointer:coarse)]:opacity-100"
+              aria-label="Drag to move task"
+              {...sortableAttributes}
+              {...sortableListeners}
+            >
+              <GripVerticalIcon className="h-4 w-4 text-foreground-muted" />
+            </button>
+            </TooltipTrigger>
+            <TooltipContent>Drag to move task</TooltipContent>
+          </Tooltip>
   );
 }

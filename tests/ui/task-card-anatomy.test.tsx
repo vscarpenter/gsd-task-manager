@@ -288,11 +288,13 @@ describe("QuadrantPane header — quadrant identity", () => {
 
   it("offers an add action in actionable empty quadrants (q1)", () => {
     renderPane("q1");
-    expect(screen.getByText(/Add to Do First/)).toBeInTheDocument();
+    // The header "+" tooltip (always rendered under the test mock) plus the empty-state pill.
+    expect(screen.getAllByText(/Add to Do First/)).toHaveLength(2);
   });
 
   it("omits the add action in the Eliminate quadrant (nothing useful to do)", () => {
     renderPane("q4");
-    expect(screen.queryByText(/Add to Eliminate/)).not.toBeInTheDocument();
+    // Only the header "+" tooltip remains; the empty-state pill is omitted.
+    expect(screen.getAllByText(/Add to Eliminate/)).toHaveLength(1);
   });
 });

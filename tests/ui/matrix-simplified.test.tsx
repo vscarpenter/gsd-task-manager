@@ -936,7 +936,8 @@ describe("<MatrixSimplified>", () => {
       expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument();
 
       // Target the visible-text empty-state pill (not the icon-only header "+").
-      await user.click(screen.getByText("Add to Do First"));
+      // The header "+" tooltip also carries this text; the empty-state pill comes last.
+      await user.click(screen.getAllByText("Add to Do First").at(-1)!);
 
       const heading = await screen.findByRole("heading", { name: /new task/i });
       expect(heading).toBeInTheDocument();
