@@ -11,6 +11,7 @@ import {
   type RedesignQuadrantKey,
 } from "@/lib/quadrants";
 import { cn, hasVisibleText } from "@/lib/utils";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { useCapturePaste } from "./use-capture-paste";
 import { hasOpenModal, isEditableShortcutTarget } from "@/lib/use-app-shortcuts";
 
@@ -59,6 +60,30 @@ function usePillFocus(onCycle: () => void) {
       onCycle();
     },
   };
+}
+
+function AddButton({ hasTitle }: { hasTitle: boolean }) {
+  // Before hydration the form has no handler, and a native submit reloads the
+  // page and loses the task. A disabled default button also blocks Enter.
+  const hydrated = useIsHydrated();
+  return (
+    <button
+      data-testid="submit-task"
+      type="submit"
+      disabled={!hydrated}
+      aria-disabled={!hasTitle}
+      className={cn(
+        "touch-target col-start-3 row-start-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-body font-semibold transition-[background-color,color,transform] duration-[120ms] sm:col-auto sm:row-auto sm:h-9 sm:px-4",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        hasTitle
+          ? "bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.97]"
+          : "bg-accent/15 text-accent hover:bg-accent/20"
+      )}
+    >
+      Add
+      <ArrowRightIcon className="h-4 w-4" />
+    </button>
+  );
 }
 
 /** The quadrant a capture will land in. Clicking cycles through the others. */
@@ -285,21 +310,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
           n
         </kbd>
       )}
-      <button
-        data-testid="submit-task"
-        type="submit"
-        aria-disabled={!hasTitle}
-        className={cn(
-          "touch-target col-start-3 row-start-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-body font-semibold transition-[background-color,color,transform] duration-[120ms] sm:col-auto sm:row-auto sm:h-9 sm:px-4",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-          hasTitle
-            ? "bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.97]"
-            : "bg-accent/15 text-accent hover:bg-accent/20"
-        )}
-      >
-        Add
-        <ArrowRightIcon className="h-4 w-4" />
-      </button>
+      <AddButton hasTitle={hasTitle} />
     </form>
     {pasteNote ? (
       <p role="status" className="px-1 pt-1.5 text-caption text-foreground-muted">

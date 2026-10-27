@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { act, render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import { CaptureBar } from "@/components/matrix-simplified/capture-bar";
 
 describe("<CaptureBar>", () => {
@@ -44,6 +45,18 @@ describe("<CaptureBar>", () => {
     screen.getByTestId("quadrant-toggle").focus();
     await userEvent.keyboard(" ");
     expect(screen.getByTestId("quadrant-toggle")).toHaveFocus();
+  });
+
+  // Before hydration the form has no submit handler, so Add did a plain GET to
+  // "/?" that reloaded the page and lost the task typed on a slow connection.
+  it("ships Add disabled in the static markup so a pre-hydration tap can't submit", () => {
+    const html = renderToString(<CaptureBar onSubmit={vi.fn()} />);
+    expect(html).toMatch(/<button[^>]*data-testid="submit-task"[^>]*disabled=""/);
+  });
+
+  it("enables Add once the page has hydrated", () => {
+    render(<CaptureBar onSubmit={vi.fn()} />);
+    expect(screen.getByTestId("submit-task")).not.toBeDisabled();
   });
 
   it("clears input after successful submit", async () => {
