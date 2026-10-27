@@ -63,3 +63,24 @@ describe("about-page feedback disclosure", () => {
     expect(container.textContent).not.toMatch(/nothing (?:is |ever )?(?:sent|collected)/i);
   });
 });
+
+describe("about-page sync and server claims", () => {
+  it("should_not_say_the_server_is_user_controlled_or_that_no_server_exists", () => {
+    const { container } = render(<FeaturesSection />);
+    expect(container.textContent).not.toMatch(/server you control/i);
+    expect(container.textContent).not.toMatch(/no server/i);
+    expect(container.textContent).toMatch(/run by GSD's developer/);
+  });
+
+  it("should_say_the_mcp_server_needs_sync_and_can_change_tasks", () => {
+    const { container } = render(<McpSection />);
+    expect(container.textContent).toMatch(/turn on sync/i);
+    expect(container.textContent).toMatch(/complete your tasks/i);
+  });
+
+  it("should_describe_smart_views_as_an_option_turned_on_in_settings", () => {
+    const { container } = render(<FeaturesSection />);
+    expect(container.textContent).not.toMatch(/filter in one click/i);
+    expect(container.textContent).toMatch(/turn on in Settings/i);
+  });
+});

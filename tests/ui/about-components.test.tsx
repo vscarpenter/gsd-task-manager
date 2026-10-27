@@ -23,7 +23,7 @@ describe('About Components', () => {
     it('renders headline and CTA', () => {
       render(<HeroSection />);
 
-      expect(screen.getByText(/Stop juggling/)).toBeInTheDocument();
+      expect(screen.getByText(/Decide what matters/)).toBeInTheDocument();
       expect(screen.getByText(/Open App/)).toBeInTheDocument();
     });
 
@@ -80,7 +80,7 @@ describe('About Components', () => {
     it('renders privacy headline', () => {
       render(<PrivacySection />);
 
-      expect(screen.getByText('Your tasks stay on your device.')).toBeInTheDocument();
+      expect(screen.getByText('Your tasks stay on your device by default.')).toBeInTheDocument();
     });
 
     it('does not make a false end-to-end encryption claim', () => {

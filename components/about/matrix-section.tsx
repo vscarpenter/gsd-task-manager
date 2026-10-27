@@ -6,25 +6,25 @@ const quadrants = [
   {
     label: "Q1",
     name: "Do First",
-    description: "Crises, deadlines. Handle now.",
+    description: "Urgent and important. Do these now.",
     className: "border-q1/40 bg-q1/12",
   },
   {
     label: "Q2",
     name: "Schedule",
-    description: "Strategy, growth. Protect this time.",
+    description: "Important, not urgent. Plan a time for these.",
     className: "border-q2/40 bg-q2/12",
   },
   {
     label: "Q3",
     name: "Delegate",
-    description: "Interruptions. Hand these off.",
+    description: "Urgent, not important. Give these to someone else if you can.",
     className: "border-q3/40 bg-q3/12",
   },
   {
     label: "Q4",
     name: "Eliminate",
-    description: "Noise. Stop doing these.",
+    description: "Not urgent, not important. Drop or defer these.",
     className: "border-q4/40 bg-q4/12",
   },
 ] as const;
@@ -41,7 +41,7 @@ export function MatrixSection() {
                 The Eisenhower Matrix
               </p>
               <h2 className="font-semibold text-display tracking-tight text-foreground mb-6">
-                Prioritize by urgency and importance. Not just vibes.
+                Sort every task by urgency and importance.
               </h2>
               <div className="max-w-[55ch] text-foreground-muted leading-relaxed space-y-4">
                 <p>
@@ -54,7 +54,7 @@ export function MatrixSection() {
                 </p>
                 <p>
                   The result is a clear picture of where to focus, what to schedule, what
-                  to hand off, and what to stop doing entirely.
+                  to give to someone else, and what to stop doing entirely.
                 </p>
               </div>
             </ScrollReveal>
