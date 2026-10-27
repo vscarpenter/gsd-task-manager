@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import type { z } from "@/lib/zod";
 
 /** One failed field: names, codes, and limits only, never the user's text. */
 export interface TaskValidationIssue {
