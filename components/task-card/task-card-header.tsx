@@ -42,8 +42,9 @@ export function TaskCardHeader({
     return () => window.clearTimeout(timer);
   }, [locallyCompletedTaskId]);
 
-  const handleToggleComplete = async () => {
-    if (isTogglingComplete) return;
+  // The second click of a double-click would undo the first.
+  const handleToggleComplete = async (event: { detail: number }) => {
+    if (isTogglingComplete || isRepeatClick(event)) return;
 
     setIsTogglingComplete(true);
     try {
@@ -108,9 +109,7 @@ export function TaskCardHeader({
           <button
             data-testid="complete-task"
             type="button"
-            onClick={(event) => {
-              if (!isRepeatClick(event)) void handleToggleComplete();
-            }}
+            onClick={handleToggleComplete}
             disabled={isTogglingComplete}
             // Completed disc fills with the task's quadrant pigment (reference §06),
             // applied inline because the var is per-quadrant; the paper-colored check

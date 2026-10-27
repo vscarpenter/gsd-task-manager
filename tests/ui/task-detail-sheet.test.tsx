@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -224,5 +224,16 @@ describe("TaskDetailSheet", () => {
     );
     await user.click(screen.getByRole("button", { name: "Mark not done" }));
     expect(onToggleComplete).toHaveBeenLastCalledWith(done, false);
+  });
+
+  // The label flips after the first click, so the second click of a
+  // double-click would undo it.
+  it("ignores the second click of a double-click on Mark done", () => {
+    const onToggleComplete = vi.fn();
+    render(<TaskDetailSheet open task={task} onClose={vi.fn()} onEdit={vi.fn()} onToggleComplete={onToggleComplete} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark done" }), { detail: 2 });
+
+    expect(onToggleComplete).not.toHaveBeenCalled();
   });
 });

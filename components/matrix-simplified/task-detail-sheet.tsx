@@ -20,7 +20,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDueDate } from "@/lib/utils";
+import { formatDueDate, isRepeatClick } from "@/lib/utils";
 import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { quadrantForTask, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import type { RecurrenceType, TaskRecord } from "@/lib/types";
@@ -274,7 +274,7 @@ function ToggleDoneButton({
   return (
     <button
       type="button"
-      onClick={() => onToggle(task, !task.completed)}
+      onClick={(event) => { if (!isRepeatClick(event)) onToggle(task, !task.completed); }}
       className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-control-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
     >
       <Icon className="h-4 w-4" aria-hidden="true" />

@@ -10,6 +10,12 @@ import type { TaskRecord } from "@/lib/types";
 /** How long a task stays visually highlighted after being targeted. */
 const HIGHLIGHT_DURATION_MS = 3500;
 
+function revealTask(node: HTMLElement, focus: boolean): void {
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  node.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+  if (focus) node.focus({ preventScroll: true });
+}
+
 export interface TaskHighlight {
   highlightedTaskId: string | null;
   handleTaskRef: (taskId: string, element: HTMLElement | null) => void;
@@ -102,12 +108,7 @@ export function useTaskHighlight(
         return;
       }
 
-      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      node.scrollIntoView({
-        block: "center",
-        behavior: reduceMotion ? "auto" : "smooth",
-      });
-      if (focusOnArrivalRef.current) node.focus({ preventScroll: true });
+      revealTask(node, focusOnArrivalRef.current);
     };
     frame = window.requestAnimationFrame(tryFocus);
     return () => window.cancelAnimationFrame(frame);
