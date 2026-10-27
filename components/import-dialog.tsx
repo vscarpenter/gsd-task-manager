@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { importFromJson } from "@/lib/tasks";
 import { checkImportFile } from "@/lib/tasks/import-check";
+import { useBackToClose } from "@/components/matrix-simplified/use-back-to-close";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("IMPORT");
@@ -293,6 +294,7 @@ function InvalidFileDialog({
   message: string;
   onOpenChange: (open: boolean) => void;
 }) {
+  useBackToClose(open, () => onOpenChange(false));
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -308,7 +310,7 @@ function InvalidFileDialog({
             <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-rust-d" aria-hidden />
             <p>{message}</p>
           </div>
-          <p className="text-sm text-foreground-muted">Nothing was changed. Choose a different file to try again.</p>
+          <p className="text-sm text-foreground-muted">Nothing was changed. Close this, then import a different file.</p>
           <Button variant="subtle" onClick={() => onOpenChange(false)} className="w-full">
             Close
           </Button>
@@ -371,17 +373,15 @@ function ImportChoiceDialog({
   };
 
   const requestReplace = () => {
-    if (cloudDeletes) {
-      setConfirmingReplace(true);
-      return;
-    }
-    void handleImport("replace");
+    if (cloudDeletes) setConfirmingReplace(true);
+    else void handleImport("replace");
   };
 
   const close = (next: boolean) => {
     if (!next) setConfirmingReplace(false);
     onOpenChange(next);
   };
+  useBackToClose(open, () => close(false));
 
   return (
     <Dialog open={open} onOpenChange={close}>

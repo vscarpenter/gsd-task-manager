@@ -109,3 +109,23 @@ describe("leaving the page with unsaved drawer changes", () => {
     unmount();
   });
 });
+
+describe("browser Forward after an overlay closed", () => {
+  // Forward after Back used to land on the overlay's old entry with nothing
+  // open, so the next Back went nowhere.
+  it("steps past a stale overlay entry that Forward lands on", async () => {
+    const { unmount } = await renderDrawer();
+    unmount();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(ownsEntry()).toBe(false);
+
+    await act(async () => {
+      window.history.forward();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    });
+
+    expect(ownsEntry()).toBe(false);
+  });
+});

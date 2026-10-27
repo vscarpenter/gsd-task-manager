@@ -3,6 +3,7 @@
 import { Command } from "cmdk";
 import { XIcon } from "lucide-react";
 import { useCommandPalette } from "@/lib/use-command-palette";
+import { useBackToClose } from "@/components/matrix-simplified/use-back-to-close";
 import { buildCommandActions, type CommandActionHandlers } from "@/lib/command-actions";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { getSmartViews } from "@/lib/smart-views";
@@ -53,8 +54,7 @@ export function CommandPalette({
   const actions = buildCommandActions(handlers, smartViews, conditions);
 
   const {
-    open,
-    setOpen,
+    open, setOpen,
     search,
     setSearch,
     filteredActions,
@@ -62,6 +62,8 @@ export function CommandPalette({
     executeAction,
     selectTask,
   } = useCommandPalette({ actions, tasks, onSelectTask });
+  // Back closes the palette instead of leaving the page.
+  useBackToClose(open, () => setOpen(false));
 
   // Group actions by section
   const actionsBySection = filteredActions.reduce(

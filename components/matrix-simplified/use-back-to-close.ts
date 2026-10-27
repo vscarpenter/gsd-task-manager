@@ -37,7 +37,15 @@ function onPopState(): void {
     ignoreNextPop = false;
     return;
   }
-  if (!entryPushed) return;
+  if (!entryPushed) {
+    // Forward onto an entry left by a closed overlay: nothing is open to close,
+    // so step past it rather than make the next Back do nothing.
+    if (handlers.length === 0 && ownsCurrentEntry()) {
+      ignoreNextPop = true;
+      window.history.back();
+    }
+    return;
+  }
   entryPushed = false;
   const top = handlers.at(-1);
   if (!top) return;
