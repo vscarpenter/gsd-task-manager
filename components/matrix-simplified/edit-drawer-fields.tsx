@@ -8,6 +8,7 @@ import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { TagChip } from "./edit-drawer-tag-chip";
 
 /** The line shown in place of an add control that has hit its cap. */
 export function LimitNote({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -223,25 +224,7 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
     <Field label="Tags" as="group">
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background p-2">
         {tags.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-caption font-medium text-foreground-muted"
-          >
-            <span className="opacity-60">#</span>
-            {t}
-            {/* Removes a chip from an unsaved draft — nothing is persisted until
-                Save, and re-adding is one keystroke. A confirmation dialog on a
-                tag chip would be worse UX than the risk it guards. */}
-            {/* ui-craft-detect-ignore-next-line */}
-            <button
-              type="button"
-              onClick={() => onRemoveTag(t)}
-              aria-label={`Remove ${t}`}
-              className="rounded-xs hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <XIcon className="h-3 w-3" />
-            </button>
-          </span>
+          <TagChip key={t} tag={t} onRemove={onRemoveTag} />
         ))}
         <input
           value={tagInput}

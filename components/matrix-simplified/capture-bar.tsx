@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowRightIcon, ArrowUpRightIcon, ChevronsUpDownIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import {
@@ -11,6 +11,7 @@ import {
   type RedesignQuadrantKey,
 } from "@/lib/quadrants";
 import { cn, hasVisibleText } from "@/lib/utils";
+import { useCapturePaste } from "./use-capture-paste";
 import { hasOpenModal, isEditableShortcutTarget } from "@/lib/use-app-shortcuts";
 
 export interface CapturePayload {
@@ -28,9 +29,6 @@ interface CaptureBarProps {
   inputRef?: React.MutableRefObject<HTMLInputElement | null>;
 }
 
-const MAX_PASTE_LINES = 20;
-const PASTE_LIMIT_NOTE = `Paste up to ${MAX_PASTE_LINES} lines at a time.`;
-
 // Cycle order: null → q1 → q2 → q3 → q4 → null
 const CYCLE: (RedesignQuadrantKey | null)[] = ["q1", "q2", "q3", "q4", null];
 
@@ -41,12 +39,44 @@ function deriveAutoKey(urgent: boolean, important: boolean): RedesignQuadrantKey
   return "q4";
 }
 
+/** The quadrant a capture will land in. Clicking cycles through the others. */
+function QuadrantPill({
+  quadrantKey,
+  chosen,
+  onCycle,
+}: {
+  quadrantKey: RedesignQuadrantKey;
+  chosen: boolean;
+  onCycle: () => void;
+}) {
+  return (
+    <button
+      data-testid="quadrant-toggle"
+      key={quadrantKey}
+      type="button"
+      onClick={onCycle}
+      title="Change where this task goes"
+      className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
+      style={{
+        backgroundColor: QUADRANT_HEADER[quadrantKey],
+        color: QUADRANT_INK[quadrantKey],
+      }}
+    >
+      <span className="h-[5px] w-[5px] rounded-full bg-current" aria-hidden />
+      {quadrantByRdKey(quadrantKey).title}
+      {/* "·fixed" read as "repaired". This says the person picked it. */}
+      {chosen ? <span className="font-normal normal-case">· chosen</span> : null}
+      {/* The pill read as a label; the chevrons say it can be changed. */}
+      <ChevronsUpDownIcon className="h-3 w-3 opacity-70" aria-hidden />
+    </button>
+  );
+}
+
 export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: CaptureBarProps) {
   const [text, setText] = useState("");
   const [override, setOverride] = useState<RedesignQuadrantKey | null>(null);
   // Fires the lightning-glyph pop on a real capture; self-clears on animation end.
   const [justCaptured, setJustCaptured] = useState(false);
-  const [pasteNote, setPasteNote] = useState<string | null>(null);
   const internalRef = useRef<HTMLInputElement | null>(null);
   const submittingRef = useRef(false);
 
@@ -106,13 +136,12 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const { pasteNote, onPaste, clearPasteNote } = useCapturePaste(onSubmit, () => setJustCaptured(true));
   const parsed = parseCapture(text);
   const hasTitle = hasVisibleText(parsed.title);
   const autoKey = deriveAutoKey(parsed.urgent, parsed.important);
   const effectiveKey = override ?? autoKey;
-  const meta = quadrantByRdKey(effectiveKey);
   const accent = QUADRANT_ACCENT[effectiveKey];
-  const ink = QUADRANT_INK[effectiveKey];
 
   const cycleQuadrant = () => {
     const idx = CYCLE.indexOf(override);
@@ -153,37 +182,6 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     }
   };
 
-  // A single-line input flattens pasted line breaks into one run-on title.
-  // Treat each line as its own capture instead.
-  const onPaste = async (e: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData("text");
-    if (!/[\r\n]/.test(pasted)) return;
-    const lines = pasted.split(/\r?\n|\r/).filter(hasVisibleText);
-    if (lines.length < 2) return;
-    e.preventDefault();
-    if (lines.length > MAX_PASTE_LINES) {
-      setPasteNote(PASTE_LIMIT_NOTE);
-      return;
-    }
-    setPasteNote(null);
-    for (const line of lines) {
-      const item = parseCapture(line);
-      if (!hasVisibleText(item.title)) continue;
-      try {
-        const saved = await onSubmit({
-          title: item.title,
-          urgent: item.urgent,
-          important: item.important,
-          tags: item.tags,
-        });
-        if (saved === false) return;
-      } catch {
-        return;
-      }
-    }
-    setJustCaptured(true);
-  };
-
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       internalRef.current?.blur();
@@ -217,7 +215,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         value={text}
         onChange={(e) => {
           setText(e.target.value);
-          setPasteNote(null);
+          clearPasteNote();
         }}
         onPaste={onPaste}
         onKeyDown={onInputKey}
@@ -231,28 +229,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       />
       {hasVisibleText(text) ? (
         <>
-          <button
-            data-testid="quadrant-toggle"
-            key={effectiveKey}
-            type="button"
-            onClick={cycleQuadrant}
-            title="Change where this task goes"
-            className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
-            style={{
-              backgroundColor: QUADRANT_HEADER[effectiveKey],
-              color: ink,
-            }}
-          >
-            <span
-              className="h-[5px] w-[5px] rounded-full bg-current"
-              aria-hidden
-            />
-            {meta.title}
-            {/* "·fixed" read as "repaired". This says the person picked it. */}
-            {override ? <span className="font-normal normal-case">· chosen</span> : null}
-            {/* The pill read as a label; the chevrons say it can be changed. */}
-            <ChevronsUpDownIcon className="h-3 w-3 opacity-70" aria-hidden />
-          </button>
+          <QuadrantPill quadrantKey={effectiveKey} chosen={override !== null} onCycle={cycleQuadrant} />
           {onMoreOptions ? (
             <button
               data-testid="more-options"

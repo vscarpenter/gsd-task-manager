@@ -284,21 +284,37 @@ function ReplaceConfirm({ liveDeletes, disabled, onBack, onConfirm }: ReplaceCon
 }
 
 /** Shown in place of the Merge and Replace choice when the file can't be imported. */
-function InvalidFileBody({ message, onClose }: { message: string; onClose: () => void }) {
+function InvalidFileDialog({
+  open,
+  message,
+  onOpenChange,
+}: {
+  open: boolean;
+  message: string;
+  onOpenChange: (open: boolean) => void;
+}) {
   return (
-    <div className="space-y-4 py-4">
-      <div
-        role="alert"
-        className="flex items-start gap-2 rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-sm text-foreground"
-      >
-        <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-rust-d" aria-hidden />
-        <p>{message}</p>
-      </div>
-      <p className="text-sm text-foreground-muted">Nothing was changed. Choose a different file to try again.</p>
-      <Button variant="subtle" onClick={onClose} className="w-full">
-        Close
-      </Button>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Import Tasks</DialogTitle>
+          <DialogDescription>This file can&apos;t be imported.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-sm text-foreground"
+          >
+            <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-rust-d" aria-hidden />
+            <p>{message}</p>
+          </div>
+          <p className="text-sm text-foreground-muted">Nothing was changed. Choose a different file to try again.</p>
+          <Button variant="subtle" onClick={() => onOpenChange(false)} className="w-full">
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -315,7 +331,7 @@ interface ImportDialogProps {
   onImportComplete: () => void;
 }
 
-export function ImportDialog({
+function ImportChoiceDialog({
   open,
   onOpenChange,
   fileContents,
@@ -335,9 +351,6 @@ export function ImportDialog({
   const impact = parseImportImpact(fileContents);
   const liveDeletes = liveDeleteCount(existingTaskIds, existingTaskCount, impact.taskIds);
   const cloudDeletes = syncEnabled && liveDeletes !== 0;
-  // Reject an unusable file here, before Merge or Replace is offered, so the
-  // person reads the real reason instead of a generic failure after choosing.
-  const check = fileContents ? checkImportFile(fileContents) : null;
 
   const handleImport = async (mode: "replace" | "merge") => {
     if (!fileContents) return;
@@ -376,15 +389,10 @@ export function ImportDialog({
         <DialogHeader>
           <DialogTitle>Import Tasks</DialogTitle>
           <DialogDescription>
-            {check && !check.ok
-              ? "This file can't be imported."
-              : `Choose how to import ${importTaskCount ?? "these"} task${importTaskCount !== 1 ? "s" : ""} into your task manager.`}
+            Choose how to import {importTaskCount ?? "these"} task{importTaskCount !== 1 ? "s" : ""} into your task manager.
           </DialogDescription>
         </DialogHeader>
 
-        {check && !check.ok ? (
-          <InvalidFileBody message={check.message} onClose={() => close(false)} />
-        ) : (
         <div className="space-y-4 py-4">
           <ImportCounts existingTaskCount={existingTaskCount} importTaskCount={importTaskCount} />
 
@@ -416,8 +424,19 @@ export function ImportDialog({
             Cancel
           </Button>
         </div>
-        )}
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Rejects an unusable file before Merge or Replace is offered, so the person
+ * reads the real reason instead of a generic failure after choosing.
+ */
+export function ImportDialog(props: ImportDialogProps) {
+  const check = props.fileContents ? checkImportFile(props.fileContents) : null;
+  if (check && !check.ok) {
+    return <InvalidFileDialog open={props.open} message={check.message} onOpenChange={props.onOpenChange} />;
+  }
+  return <ImportChoiceDialog {...props} />;
 }
