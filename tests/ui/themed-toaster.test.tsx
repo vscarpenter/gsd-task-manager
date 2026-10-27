@@ -22,4 +22,14 @@ describe("ThemedToaster", () => {
     render(<ThemedToaster />);
     expect(toasterSpy.mock.calls.at(-1)?.[0]).toMatchObject({ theme: "dark" });
   });
+
+  it("keeps the toast below the top bar on desktop and mobile", () => {
+    toasterSpy.mockClear();
+    render(<ThemedToaster />);
+    expect(toasterSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+      position: "top-center",
+      offset: { top: 80 },
+      mobileOffset: { top: 130 },
+    });
+  });
 });
