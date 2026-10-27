@@ -5,6 +5,7 @@
  */
 
 import { getDb } from "@/lib/db";
+import { SYNC_CONFIG } from "@/lib/constants/sync";
 import { clearPocketBase } from "../pocketbase-client";
 import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
@@ -33,7 +34,7 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
     provider: null,
     lastSyncAt: null,
     lastClientUpdatedAt: null,
-    pullCursorVersion: 2,
+    pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
     lastServerUpdatedAt: null,
     lastSuccessfulSyncAt: null,
     consecutiveFailures: 0,

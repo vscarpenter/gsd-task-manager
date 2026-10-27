@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { applyRemoteChange, fullSync } from '@/lib/sync/pb-sync-engine';
 import { StaleSyncSessionError } from '@/lib/sync/sync-session';
 
@@ -726,7 +727,7 @@ describe('pb-sync-engine', () => {
       expect(persistedConfig).toMatchObject({
         autoSyncIntervalMinutes: 15,
         lastClientUpdatedAt: '2026-04-08T00:00:00.000Z',
-        pullCursorVersion: 2,
+        pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
       });
     });
   });

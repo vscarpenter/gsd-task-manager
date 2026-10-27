@@ -36,7 +36,7 @@ function buildPreservedSyncMetadata(deviceId: string) {
 		provider: null,
 		lastSyncAt: null,
 		lastClientUpdatedAt: null,
-		pullCursorVersion: 2 as const,
+		pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
 		lastServerUpdatedAt: null,
 		lastSuccessfulSyncAt: null,
 		consecutiveFailures: 0,

@@ -53,6 +53,15 @@ export const SYNC_CONFIG = {
    */
   MAX_CLIENT_CLOCK_SKEW_MS: 5 * 60 * 1000,
 
+  /**
+   * The pull contract this build speaks. Bump it when a build is the first to
+   * read a newly synced field: a config stamped with an older version pulls
+   * everything once and merges same-version records, which backfills the
+   * field onto rows an older build pulled and stored without it (ADR 0019).
+   * 2: client_updated_at became the only cursor. 3: saved_at.
+   */
+  PULL_CURSOR_VERSION: 3,
+
   /** Hard aggregate ceiling for any authoritative remote task scan. */
   MAX_REMOTE_TASKS: 10_000,
 

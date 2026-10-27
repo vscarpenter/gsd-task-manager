@@ -5,6 +5,7 @@ import type { SyncQueueItem } from "@/lib/sync/types";
 import { createLogger } from "@/lib/logger";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { ARCHIVE_CONFIG, TIME_MS } from "@/lib/constants";
+import { SYNC_CONFIG } from "@/lib/constants/sync";
 
 const logger = createLogger("DB");
 
@@ -78,7 +79,7 @@ async function migrateLegacySync(transaction: Transaction): Promise<void> {
     transaction.table("syncMetadata").put({
       key: "sync_config", enabled: false, userId: null, deviceId, deviceName,
       email: null, token: null, tokenExpiresAt: null, lastSyncAt: null,
-      lastClientUpdatedAt: null, pullCursorVersion: 2,
+      lastClientUpdatedAt: null, pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
       vectorClock: {}, conflictStrategy: "last_write_wins", serverUrl: "",
     }),
     transaction.table("deviceInfo").put({
@@ -148,7 +149,7 @@ function pocketBaseSyncConfig(deviceId: string) {
     key: "sync_config", enabled: false, userId: null, deviceId,
     deviceName: globalThis.navigator?.userAgent?.substring(0, 50) || "Desktop",
     email: null, provider: null, lastSyncAt: null, lastClientUpdatedAt: null,
-    pullCursorVersion: 2, lastServerUpdatedAt: null, consecutiveFailures: 0,
+    pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION, lastServerUpdatedAt: null, consecutiveFailures: 0,
     lastFailureAt: null, lastFailureReason: null, nextRetryAt: null,
     autoSyncEnabled: true, autoSyncIntervalMinutes: 2,
   };

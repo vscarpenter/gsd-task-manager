@@ -6,6 +6,7 @@
  */
 
 import { getDb } from '@/lib/db';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getPocketBaseTaskId, pocketBaseToTaskRecord } from './task-mapper';
 import { createLogger } from '@/lib/logger';
 import { getRetryManager } from './retry-manager';
@@ -120,9 +121,6 @@ export async function applyRemoteChange(
 
 // ─── Full sync orchestration ─────────────────────────────────────────
 
-/** Rewind applied when migrating a legacy client-stamped cursor. */
-const LEGACY_CURSOR_REWIND_MS = 24 * 60 * 60 * 1000;
-
 /** Everything the outcome writers need to record a sync for its session owner. */
 interface SyncOutcomeContext {
   ownerId: string;
@@ -132,21 +130,25 @@ interface SyncOutcomeContext {
   startTime: number;
 }
 
+interface PullPlan {
+  cursor: string | null;
+  mergeSameVersion: boolean;
+}
+
 /**
  * Resolve the client_updated_at pull cursor. The persisted field keeps its
- * historical name for storage compatibility. A config from a pre-2026-06
- * build has only `lastSyncAt`, so it is migrated once with a 24h rewind.
+ * historical name for storage compatibility. A config written under an older
+ * pull contract pulls everything once and merges same-version rows, so a
+ * field this build is the first to read reaches rows an older build already
+ * pulled. That also covers a config with no version: a legacy `lastSyncAt`,
+ * or the retired server-domain cursor, which must never be reused because
+ * mixing it with client_updated_at can permanently skip a slow-clock write.
  */
-function resolvePullCursor(config: PBSyncConfig | undefined): string | null {
-  if (config?.pullCursorVersion === 2) return config.lastClientUpdatedAt ?? null;
-  // This value came from PocketBase's server timestamp domain. Mixing it with
-  // client_updated_at can permanently skip a slow-clock client write, so an
-  // unversioned config carrying it must perform a full pull.
-  if (config?.lastServerUpdatedAt) return null;
-  if (config?.lastSyncAt) {
-    return new Date(new Date(config.lastSyncAt).getTime() - LEGACY_CURSOR_REWIND_MS).toISOString();
+function resolvePullCursor(config: PBSyncConfig | undefined): PullPlan {
+  if (config?.pullCursorVersion === SYNC_CONFIG.PULL_CURSOR_VERSION) {
+    return { cursor: config.lastClientUpdatedAt ?? null, mergeSameVersion: false };
   }
-  return null;
+  return { cursor: null, mergeSameVersion: true };
 }
 
 function cancelledSync(): PBSyncResult {
@@ -183,13 +185,14 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     await ensureValidAuth();
 
     const pushResult = await pushLocalChanges(ownerId);
-    const pullResult = await pullRemoteChanges(resolvePullCursor(config));
+    const pull = resolvePullCursor(config);
+    const pullResult = await pullRemoteChanges(pull.cursor, { mergeSameVersion: pull.mergeSameVersion });
 
     if (!pushResult.authenticated && !pullResult.authenticated) {
       return await reportAuthFailure(ctx);
     }
 
-    await updateSyncCursor(ownerId, pullResult.maxObservedTimestamp);
+    await updateSyncCursor(ownerId, pullResult.maxObservedTimestamp, pullResult.authenticated);
 
     if (pushResult.failedCount > 0) {
       return await reportPartialFailure(pushResult, pullResult, ctx);
@@ -250,7 +253,7 @@ async function reportAuthFailure(ctx: SyncOutcomeContext): Promise<PBSyncResult>
  * start-of-sync snapshot would undo changes made during the sync, including
  * a sign-out.
  */
-async function updateSyncCursor(ownerId: string, maxTimestamp: string | null): Promise<void> {
+async function updateSyncCursor(ownerId: string, maxTimestamp: string | null, pullCompleted: boolean): Promise<void> {
   const db = getDb();
   await db.transaction('rw', [db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
@@ -260,7 +263,9 @@ async function updateSyncCursor(ownerId: string, maxTimestamp: string | null): P
     await db.syncMetadata.put({
       ...current,
       lastClientUpdatedAt: maxTimestamp ?? current.lastClientUpdatedAt ?? null,
-      pullCursorVersion: 2,
+      // Only a completed pull satisfies the contract; a backfill that did not
+      // run must run on the next sync.
+      pullCursorVersion: pullCompleted ? SYNC_CONFIG.PULL_CURSOR_VERSION : current.pullCursorVersion,
       lastServerUpdatedAt: null,
       lastSuccessfulSyncAt: new Date().toISOString(),
     });
