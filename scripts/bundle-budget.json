@@ -1,13 +1,13 @@
 {
   "allowanceBytes": 5120,
   "routes": {
-    "/": 522433,
-    "/about": 457439,
-    "/archive": 506508,
-    "/auth/callback": 403487,
-    "/dashboard": 577723,
-    "/saved": 458332,
-    "/settings": 476750,
-    "/sync-history": 476698
+    "/": 528331,
+    "/about": 464145,
+    "/archive": 510065,
+    "/auth/callback": 405304,
+    "/dashboard": 580244,
+    "/saved": 460197,
+    "/settings": 479836,
+    "/sync-history": 479627
   }
 }
