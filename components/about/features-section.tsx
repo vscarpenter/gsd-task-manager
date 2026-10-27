@@ -88,7 +88,7 @@ const features: Feature[] = [
     icon: Cloud,
     title: "Optional Cloud Sync",
     description:
-      "Optional sync across your devices, on a server run by GSD's developer. Sent over TLS, with access limited to your account.",
+      "Optional sync across your devices, on a server run by GSD's developer. Sent over TLS, and other accounts can't see your tasks.",
   },
 ];
 

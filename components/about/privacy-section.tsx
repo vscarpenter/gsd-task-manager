@@ -3,7 +3,7 @@ import { ScrollReveal } from "@/components/about/scroll-reveal";
 
 const privacyParagraphs = [
   "GSD stores everything in your browser's IndexedDB. There's no account required, no server receiving your data by default, and no analytics tracking what you type.",
-  "If you want sync across devices, signing in uploads the tasks already in your browser to a server run by GSD's developer. Connections use TLS, and access is limited to your account. You can delete the account from Settings.",
+  "If you want sync across devices, signing in uploads the tasks already in your browser to a server run by GSD's developer. Connections use TLS, and other accounts can't see your tasks. You can delete the account from Settings.",
   "If you send feedback from Settings, you see the exact message before it goes: no account, no device identifier, and nothing from your tasks. The message carries nothing that points back to you, though sending it makes an ordinary web request my server logs. I have no way to write back.",
 ];
 
