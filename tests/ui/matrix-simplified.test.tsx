@@ -215,7 +215,7 @@ describe("<MatrixSimplified>", () => {
     expect(useNotificationChecker).not.toHaveBeenCalled();
   });
 
-  // The empty states make a specific claim ("Nothing on fire.") that must not be
+  // The empty states make a specific claim ("Nothing urgent right now.") that must not be
   // shown before IndexedDB has been read — a user with urgent tasks would see the
   // app assert the opposite of the truth for the duration of the load.
   describe("loading state", () => {
@@ -501,7 +501,7 @@ describe("<MatrixSimplified>", () => {
     const snapshot = document.createElement("div");
     snapshot.innerHTML = html;
     const showSchedule = Array.from(snapshot.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Protect Q2")
+      button.textContent?.startsWith("Schedule")
     );
 
     expect(html).toContain("GSD Matrix");
@@ -527,7 +527,7 @@ describe("<MatrixSimplified>", () => {
     tasksFixture.loading = true;
     render(<MatrixSimplified />);
 
-    expect(screen.queryByText(/the board is clear/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Add !! for Do First/i)).not.toBeInTheDocument();
   });
 
   it("reports active Schedule work from the full task set", () => {
@@ -540,8 +540,8 @@ describe("<MatrixSimplified>", () => {
 
     render(<MatrixSimplified />);
 
-    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
-      "Protect Q2 · 2 to schedule"
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
+      "Schedule · 2 tasks"
     );
   });
 
@@ -549,9 +549,9 @@ describe("<MatrixSimplified>", () => {
     tasksFixture.loading = true;
     render(<MatrixSimplified />);
 
-    const scheduleButton = screen.getByRole("button", { name: /protect q2/i });
-    expect(scheduleButton).toHaveTextContent("Protect Q2");
-    expect(scheduleButton).not.toHaveTextContent(/to schedule|clear/);
+    const scheduleButton = screen.getByRole("button", { name: /^schedule/i });
+    expect(scheduleButton).toHaveTextContent("Schedule");
+    expect(scheduleButton).not.toHaveTextContent(/\d+ tasks?|empty/);
     expect(scheduleButton).toBeDisabled();
   });
 
@@ -564,8 +564,8 @@ describe("<MatrixSimplified>", () => {
 
     await userEvent.type(screen.getByLabelText("Shell search"), "production");
 
-    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
-      "Protect Q2 · 1 to schedule"
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
+      "Schedule · 1 task"
     );
     expect(screen.queryByText("Write the strategy")).not.toBeInTheDocument();
   });
@@ -575,7 +575,7 @@ describe("<MatrixSimplified>", () => {
     Element.prototype.scrollIntoView = scrollIntoView;
     render(<MatrixSimplified />);
 
-    await userEvent.click(screen.getByRole("button", { name: /protect q2/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^schedule/i }));
 
     expect(screen.getByTestId("quadrant-q2")).toHaveFocus();
     expect(screen.getByTestId("quadrant-q2")).toHaveClass(
@@ -993,14 +993,14 @@ describe("<MatrixSimplified>", () => {
 
       await userEvent.type(screen.getByLabelText("Shell search"), "zzz-no-match");
 
-      // Previously each quadrant kept its default copy ("Nothing on fire.")
+      // Previously each quadrant kept its default copy ("Nothing urgent right now.")
       // while the header still read "2 active", so the board looked as if it
       // had vanished rather than been filtered.
       await waitFor(() =>
         expect(screen.getByTestId("filtered-empty")).toBeInTheDocument()
       );
       expect(screen.getByTestId("filtered-empty")).toHaveTextContent("zzz-no-match");
-      expect(screen.queryByText("Nothing on fire.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Nothing urgent right now.")).not.toBeInTheDocument();
     });
 
     it("offers a way back to the full board", async () => {

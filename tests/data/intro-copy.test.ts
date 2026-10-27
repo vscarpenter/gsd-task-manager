@@ -98,9 +98,9 @@ describe("deriveIntroStats", () => {
 });
 
 describe("introMessage", () => {
-  it("invites capture when the board has no active tasks", () => {
+  it("teaches the capture markers when the board has no active tasks", () => {
     expect(introMessage(makeStats())).toBe(
-      "The board is clear. Capture the first thing on your mind below."
+      "Type a task below. Add !! for Do First or * for Schedule. A plain task goes to Eliminate."
     );
   });
 
@@ -131,14 +131,14 @@ describe("introMessage", () => {
     expect(introMessage(stats)).toBe("All 3 overdue tasks sit in Do First.");
   });
 
-  it("asks for a fresh decision when overdue tasks are scattered", () => {
+  it("asks for a decision on each when overdue tasks are scattered", () => {
     const stats = makeStats({
       activeTotal: 6,
       overdueTotal: 2,
       overdueQuadrants: ["Do First", "Eliminate"],
     });
     expect(introMessage(stats)).toBe(
-      "2 tasks are past their dates — give them a fresh decision."
+      "2 tasks are past their due dates. Decide what to do with each."
     );
   });
 

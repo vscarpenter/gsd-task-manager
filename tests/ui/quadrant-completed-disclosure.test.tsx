@@ -78,7 +78,7 @@ describe("QuadrantPane completed disclosure", () => {
   it("does not treat a quadrant of only completed tasks as empty", () => {
     renderPane([done1, done2]);
 
-    // "Nothing on fire." would be a claim about the user's workload; the truth
+    // "Nothing urgent right now." would be a claim about the user's workload; the truth
     // is that everything here is finished.
     expect(screen.queryByTestId("quadrant-empty-mark")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /2 done/i })).toBeInTheDocument();
