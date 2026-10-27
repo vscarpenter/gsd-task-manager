@@ -42,6 +42,28 @@ describe("<CaptureBar> junk input", () => {
     expect(screen.getByText("Paste up to 20 lines at a time.")).toBeInTheDocument();
   });
 
+  // A long line used to stop the batch: lines before it were added, the rest
+  // were dropped, and the field was empty. Now nothing is added and it says why.
+  it("adds nothing when a pasted line is over the title limit, and names the line", async () => {
+    const onSubmit = vi.fn();
+    render(<CaptureBar onSubmit={onSubmit} />);
+    await act(async () => {
+      paste(screen.getByLabelText("Add a task"), `Short one\n${"x".repeat(100)}\nShort two`);
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Line 2 is over 80 characters, so nothing was added.");
+  });
+
+  it("says how many lines were added when a save fails partway", async () => {
+    const onSubmit = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    render(<CaptureBar onSubmit={onSubmit} />);
+    await act(async () => {
+      paste(screen.getByLabelText("Add a task"), "One\nTwo\nThree");
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("status")).toHaveTextContent("Added 1 of 3 lines. The rest were not added.");
+  });
+
   it("leaves a single-line paste to the browser", () => {
     const onSubmit = vi.fn();
     render(<CaptureBar onSubmit={onSubmit} />);

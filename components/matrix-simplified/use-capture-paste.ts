@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type ClipboardEvent } from "react";
-import { parseCapture } from "@/lib/capture-parser";
+import { extractUrlsFromTitle, parseCapture } from "@/lib/capture-parser";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { hasVisibleText } from "@/lib/utils";
 import type { CapturePayload } from "./capture-bar";
 
@@ -9,6 +10,28 @@ const MAX_PASTE_LINES = 20;
 const PASTE_LIMIT_NOTE = `Paste up to ${MAX_PASTE_LINES} lines at a time.`;
 
 type Submit = (payload: CapturePayload) => void | boolean | Promise<void | boolean>;
+
+/** Saving stops at the first failure, so check every title before saving any. */
+function tooLongLine(items: CapturePayload[]): number | null {
+  const index = items.findIndex(
+    (item) => extractUrlsFromTitle(item.title).cleanTitle.length > SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH
+  );
+  return index < 0 ? null : index + 1;
+}
+
+async function saveInOrder(items: CapturePayload[], onSubmit: Submit): Promise<number> {
+  let added = 0;
+  for (const item of items) {
+    try {
+      if ((await onSubmit(item)) === false) break;
+    } catch {
+      // The caller reports the failure; stop so later lines don't land out of order.
+      break;
+    }
+    added += 1;
+  }
+  return added;
+}
 
 /**
  * A single-line input flattens pasted line breaks into one run-on title.
@@ -28,22 +51,20 @@ export function useCapturePaste(onSubmit: Submit, onCaptured: () => void) {
       setPasteNote(PASTE_LIMIT_NOTE);
       return;
     }
+    const items = lines
+      .map((line) => parseCapture(line))
+      .filter((item) => hasVisibleText(item.title))
+      .map(({ title, urgent, important, tags }) => ({ title, urgent, important, tags }));
+    const badLine = tooLongLine(items);
+    if (badLine !== null) {
+      setPasteNote(`Line ${badLine} is over ${SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH} characters, so nothing was added. Shorten it and paste again.`);
+      return;
+    }
     setPasteNote(null);
-    for (const line of lines) {
-      const item = parseCapture(line);
-      if (!hasVisibleText(item.title)) continue;
-      try {
-        const saved = await onSubmit({
-          title: item.title,
-          urgent: item.urgent,
-          important: item.important,
-          tags: item.tags,
-        });
-        if (saved === false) return;
-      } catch {
-        // The caller reports the failure; stop so later lines don't land out of order.
-        return;
-      }
+    const added = await saveInOrder(items, onSubmit);
+    if (added < items.length) {
+      setPasteNote(`Added ${added} of ${items.length} lines. The rest were not added.`);
+      return;
     }
     onCaptured();
   };
