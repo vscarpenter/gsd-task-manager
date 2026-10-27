@@ -26,6 +26,26 @@ describe("<CaptureBar>", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  // The pill remounts when its quadrant changes, which dropped focus to <body>
+  // after a click, so the Enter that followed did nothing.
+  it("still adds the task on Enter after the pill is clicked", async () => {
+    const onSubmit = vi.fn();
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "Call the dentist");
+    await userEvent.click(screen.getByTestId("quadrant-toggle"));
+    await userEvent.keyboard("{Enter}");
+    expect(onSubmit).toHaveBeenCalledWith({ title: "Call the dentist", urgent: true, important: true, tags: [] });
+  });
+
+  it("keeps keyboard focus on the pill while cycling with the keyboard", async () => {
+    render(<CaptureBar onSubmit={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText("Add a task"), "Call the dentist");
+    screen.getByTestId("quadrant-toggle").focus();
+    await userEvent.keyboard(" ");
+    expect(screen.getByTestId("quadrant-toggle")).toHaveFocus();
+  });
+
   it("clears input after successful submit", async () => {
     const onSubmit = vi.fn();
     render(<CaptureBar onSubmit={onSubmit} />);

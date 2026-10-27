@@ -15,6 +15,8 @@ import type { TaskRecord } from "@/lib/types";
 export interface IntroStats {
   activeTotal: number;
   doFirstCount: number;
+  /** Active tasks in Eliminate, where a plain capture lands by default. */
+  eliminateCount: number;
   overdueTotal: number;
   /** Titles of quadrants holding at least one overdue task, deduped, first-seen order. */
   overdueQuadrants: string[];
@@ -33,6 +35,7 @@ export function introDateLabel(now: Date): string {
 export function deriveIntroStats(all: TaskRecord[], todayIso: string): IntroStats {
   let activeTotal = 0;
   let doFirstCount = 0;
+  let eliminateCount = 0;
   let overdueTotal = 0;
   const overdueQuadrants: string[] = [];
 
@@ -41,6 +44,7 @@ export function deriveIntroStats(all: TaskRecord[], todayIso: string): IntroStat
     activeTotal += 1;
     const meta = quadrantForTask(task.urgent, task.important);
     if (meta.rdKey === "q1") doFirstCount += 1;
+    if (meta.rdKey === "q4") eliminateCount += 1;
     if (task.dueDate && task.dueDate < todayIso) {
       overdueTotal += 1;
       if (!overdueQuadrants.includes(meta.title)) {
@@ -49,7 +53,7 @@ export function deriveIntroStats(all: TaskRecord[], todayIso: string): IntroStat
     }
   }
 
-  return { activeTotal, doFirstCount, overdueTotal, overdueQuadrants };
+  return { activeTotal, doFirstCount, eliminateCount, overdueTotal, overdueQuadrants };
 }
 
 export function introMessage(stats: IntroStats): string {
@@ -64,6 +68,10 @@ export function introMessage(stats: IntroStats): string {
       return `All ${stats.overdueTotal} overdue tasks sit in ${quadrant}.`;
     }
     return `${stats.overdueTotal} tasks are past their due dates. Decide what to do with each.`;
+  }
+  // Nobody chose Eliminate for a plain capture, so keep teaching the markers.
+  if (stats.eliminateCount === stats.activeTotal) {
+    return "Plain tasks go to Eliminate. Add !! for Do First or * for Schedule.";
   }
   if (stats.activeTotal >= 3 && stats.doFirstCount * 2 > stats.activeTotal) {
     return "Today leans urgent: most of the list sits in Do First.";

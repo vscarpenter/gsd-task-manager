@@ -39,6 +39,28 @@ function deriveAutoKey(urgent: boolean, important: boolean): RedesignQuadrantKey
   return "q4";
 }
 
+/**
+ * The key replays the pill's pop-in by remounting the button, which drops focus.
+ * A pointer click keeps focus in the field, so Enter still adds the task; a
+ * keyboard press puts focus back on the new pill so cycling can go on.
+ */
+function usePillFocus(onCycle: () => void) {
+  const refocusRef = useRef(false);
+  return {
+    ref: (node: HTMLButtonElement | null) => {
+      if (node && refocusRef.current) {
+        refocusRef.current = false;
+        node.focus();
+      }
+    },
+    onMouseDown: (event: React.MouseEvent) => event.preventDefault(),
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      refocusRef.current = event.currentTarget === document.activeElement;
+      onCycle();
+    },
+  };
+}
+
 /** The quadrant a capture will land in. Clicking cycles through the others. */
 function QuadrantPill({
   quadrantKey,
@@ -49,12 +71,13 @@ function QuadrantPill({
   chosen: boolean;
   onCycle: () => void;
 }) {
+  const focusProps = usePillFocus(onCycle);
   return (
     <button
       data-testid="quadrant-toggle"
       key={quadrantKey}
+      {...focusProps}
       type="button"
-      onClick={onCycle}
       title="Change where this task goes"
       className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
       style={{

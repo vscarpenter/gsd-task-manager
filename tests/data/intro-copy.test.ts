@@ -32,6 +32,7 @@ function makeStats(overrides: Partial<IntroStats> = {}): IntroStats {
   return {
     activeTotal: 0,
     doFirstCount: 0,
+    eliminateCount: 0,
     overdueTotal: 0,
     overdueQuadrants: [],
     ...overrides,
@@ -69,6 +70,18 @@ describe("deriveIntroStats", () => {
       TODAY
     );
     expect(stats.doFirstCount).toBe(1);
+  });
+
+  it("counts Eliminate membership among active tasks", () => {
+    const stats = deriveIntroStats(
+      [
+        makeTask({ urgent: false, important: false }),
+        makeTask({ urgent: false, important: false, completed: true }),
+        makeTask({ urgent: false, important: true }),
+      ],
+      TODAY
+    );
+    expect(stats.eliminateCount).toBe(1);
   });
 
   it("counts overdue as incomplete tasks due strictly before today", () => {
@@ -171,6 +184,18 @@ describe("introMessage", () => {
     expect(introMessage(stats)).toBe(
       "Nothing overdue. Everything on the board is there by choice."
     );
+  });
+
+  // A first plain task lands in Eliminate by default. Calling that "there by
+  // choice" contradicted what just happened, and the marker hint vanished.
+  it("keeps teaching the markers while every active task sits in Eliminate", () => {
+    const stats = makeStats({ activeTotal: 2, eliminateCount: 2 });
+    expect(introMessage(stats)).toBe("Plain tasks go to Eliminate. Add !! for Do First or * for Schedule.");
+  });
+
+  it("puts overdue work ahead of the marker hint", () => {
+    const stats = makeStats({ activeTotal: 1, eliminateCount: 1, overdueTotal: 1, overdueQuadrants: ["Eliminate"] });
+    expect(introMessage(stats)).toBe("The overdue task sits in Eliminate.");
   });
 
   it("falls back to the calm all-clear reading", () => {
