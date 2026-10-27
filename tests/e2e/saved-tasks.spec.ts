@@ -79,7 +79,9 @@ test("Settings counts Saved-only storage in a replace-import warning", async ({ 
   await (await picker).setFiles({
     name: "replacement.json",
     mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify({ tasks: [{ id: "incoming", title: "Replacement" }] })),
+    // A valid backup: the import check now turns away malformed files before
+    // the merge or replace choice.
+    buffer: Buffer.from(JSON.stringify({ tasks: [], exportedAt: "2026-10-27T12:00:00.000Z", version: "2.1.0" })),
   });
   await expect(page.getByText(/warning\. deletes 1 task on this device/i)).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();

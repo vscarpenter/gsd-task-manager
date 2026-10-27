@@ -25,7 +25,7 @@ test.describe("First-time Redirect", () => {
 
     await expect(page).toHaveURL(/\/about\/?(?:[?#].*)?$/);
     await expect(page.getByRole("link", { name: /open app/i })).toBeVisible();
-    await expect(page.locator("main h1", { hasText: /stop juggling/i })).toBeVisible();
+    await expect(page.locator("main h1", { hasText: /decide what matters/i })).toBeVisible();
     await expect.poll(() => page.evaluate(() => localStorage.getItem("gsd-has-launched"))).toBeNull();
     await page.evaluate(() => localStorage.setItem("gsd-onboarding-seen", "true"));
     await page.getByRole("link", { name: /open app/i }).click();
