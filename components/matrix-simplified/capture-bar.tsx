@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowRightIcon, ArrowUpRightIcon, ChevronsUpDownIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import {
@@ -60,6 +60,18 @@ function usePillFocus(onCycle: () => void) {
       onCycle();
     },
   };
+}
+
+/**
+ * React keeps what was typed into the static field before hydration, but the
+ * text state starts empty, so the next render wrote "" over it. Adopt the
+ * typed value right after the hydration commit, before anything re-renders.
+ */
+function useAdoptTypedText(inputRef: React.RefObject<HTMLInputElement | null>, setText: (text: string) => void) {
+  useLayoutEffect(() => {
+    const typed = inputRef.current?.value;
+    if (typed) setText(typed);
+  }, [inputRef, setText]);
 }
 
 function AddButton({ hasTitle }: { hasTitle: boolean }) {
@@ -127,6 +139,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   const [justCaptured, setJustCaptured] = useState(false);
   const internalRef = useRef<HTMLInputElement | null>(null);
   const submittingRef = useRef(false);
+  useAdoptTypedText(internalRef, setText);
 
   // Stable refs so the global keydown handler does not re-register on every keystroke.
   const textRef = useRef(text);

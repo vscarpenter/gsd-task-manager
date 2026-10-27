@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { act, render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import { CaptureBar } from "@/components/matrix-simplified/capture-bar";
 
 describe("<CaptureBar>", () => {
@@ -52,6 +53,33 @@ describe("<CaptureBar>", () => {
   it("ships Add disabled in the static markup so a pre-hydration tap can't submit", () => {
     const html = renderToString(<CaptureBar onSubmit={vi.fn()} />);
     expect(html).toMatch(/<button[^>]*data-testid="submit-task"[^>]*disabled=""/);
+  });
+
+  // React keeps text typed before hydration, but state starts empty, so the
+  // next render wrote "" back over it. On a slow phone that lost a task.
+  it("keeps text typed before hydration and can add it", async () => {
+    const onSubmit = vi.fn();
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<CaptureBar onSubmit={onSubmit} />);
+    document.body.appendChild(container);
+    const typed = container.querySelector("input") as HTMLInputElement;
+    typed.value = "Buy milk";
+
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, <CaptureBar onSubmit={onSubmit} />);
+    });
+    await act(async () => {
+      root?.render(<CaptureBar onSubmit={onSubmit} />);
+    });
+
+    expect(typed.value).toBe("Buy milk");
+    await act(async () => {
+      fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    });
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: "Buy milk" }));
+    act(() => root?.unmount());
+    container.remove();
   });
 
   it("enables Add once the page has hydrated", () => {
