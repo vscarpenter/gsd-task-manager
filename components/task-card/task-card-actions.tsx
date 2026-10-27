@@ -1,7 +1,7 @@
 "use client";
 
 import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon } from "lucide-react";
-import { cn, formatRelative } from "@/lib/utils";
+import { cn, formatRelative, isRepeatClick } from "@/lib/utils";
 import { DATE_CONFIG, SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -151,7 +151,7 @@ function DesktopTaskAction({ label, testId, icon: Icon, onClick, destructive = f
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button type="button" data-testid={testId} onClick={onClick} aria-label={label} className={cn("touch-target inline-flex items-center justify-center rounded px-1.5 py-0.5 hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors", destructive && "text-rust-d hover:bg-rust-tint")}>
+        <button type="button" data-testid={testId} onClick={(event) => { if (!isRepeatClick(event)) onClick(); }} aria-label={label} className={cn("touch-target inline-flex items-center justify-center rounded px-1.5 py-0.5 hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors", destructive && "text-rust-d hover:bg-rust-tint")}>
           <Icon className="h-3 w-3" aria-hidden="true" />
         </button>
       </TooltipTrigger>

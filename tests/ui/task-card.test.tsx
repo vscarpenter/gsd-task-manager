@@ -174,6 +174,22 @@ describe("TaskCard", () => {
     expect(checkbox).toBeEnabled();
   });
 
+  // The first click of a double-click removes the card; the next card slides
+  // under the pointer and the second click (detail 2) used to act on it.
+  it("ignores the second click of a double-click on complete and delete", () => {
+    const onToggleComplete = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} onToggleComplete={onToggleComplete} onDelete={onDelete} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /mark as complete/i }), { detail: 2 });
+    fireEvent.click(screen.getByRole("button", { name: /delete task/i }), { detail: 2 });
+
+    expect(onToggleComplete).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
   it("calls onEdit when edit button is clicked", async () => {
     const user = userEvent.setup();
     render(<TaskCard task={mockTask} allTasks={[mockTask]} {...mockHandlers} />);

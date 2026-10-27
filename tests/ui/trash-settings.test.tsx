@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { getDb } from "@/lib/db";
@@ -55,6 +55,22 @@ describe("<TrashSettings>", () => {
       expect(await getDb().tasks.get("t1")).toBeDefined();
     });
     expect(await getDb().deletedTasks.get("t1")).toBeUndefined();
+  });
+
+  it("ignores the second click of a double-click, which lands on the next row", async () => {
+    await getDb().deletedTasks.bulkPut([
+      { ...createMockTask({ id: "t1", title: "First" }), deletedAt: daysAgo(1) },
+      { ...createMockTask({ id: "t2", title: "Second" }), deletedAt: daysAgo(1) },
+    ]);
+
+    render(<TrashSettings />);
+    await waitFor(() => expect(screen.getByText("Second")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /restore Second/i }), { detail: 2 });
+    fireEvent.click(screen.getByRole("button", { name: /delete Second forever/i }), { detail: 2 });
+
+    expect(await getDb().deletedTasks.count()).toBe(2);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("empties the trash on confirmation", async () => {

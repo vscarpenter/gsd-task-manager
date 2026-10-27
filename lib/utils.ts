@@ -34,6 +34,14 @@ export function formatErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
 
+/**
+ * True for the second click of a double-click. A row action that removes its
+ * row ignores it: by then the next row has slid under the pointer.
+ */
+export function isRepeatClick(event: { detail: number }): boolean {
+  return event.detail > 1;
+}
+
 export function isoNow(): string {
   return new Date().toISOString();
 }

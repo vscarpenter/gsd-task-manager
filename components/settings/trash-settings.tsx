@@ -13,6 +13,7 @@ import {
   restoreFromTrash,
 } from "@/lib/trash";
 import type { TaskRecord } from "@/lib/types";
+import { isRepeatClick } from "@/lib/utils";
 import { SettingsRow } from "./shared-components";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -127,7 +128,7 @@ function TrashRow({
       </div>
       <button
         type="button"
-        onClick={() => onRestore(task)}
+        onClick={(event) => { if (!isRepeatClick(event)) onRestore(task); }}
         aria-label={`Restore ${task.title}`}
         className="inline-flex items-center gap-1.5 rounded-lg border border-pane-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-background-muted"
       >
@@ -136,7 +137,7 @@ function TrashRow({
       </button>
       <button
         type="button"
-        onClick={() => onDeleteForever(task)}
+        onClick={(event) => { if (!isRepeatClick(event)) onDeleteForever(task); }}
         aria-label={`Delete ${task.title} forever`}
         className="rounded-lg px-2 py-1 text-xs font-medium text-rust-d transition-colors hover:bg-status-overdue-muted"
       >

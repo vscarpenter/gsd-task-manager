@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckIcon, ChevronRightIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isRepeatClick } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { TaskRecord } from "@/lib/types";
 import type { SortableAttributes, SortableListeners } from "./types";
@@ -108,7 +108,9 @@ export function TaskCardHeader({
           <button
             data-testid="complete-task"
             type="button"
-            onClick={handleToggleComplete}
+            onClick={(event) => {
+              if (!isRepeatClick(event)) void handleToggleComplete();
+            }}
             disabled={isTogglingComplete}
             // Completed disc fills with the task's quadrant pigment (reference §06),
             // applied inline because the var is per-quadrant; the paper-colored check
