@@ -116,7 +116,12 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!parsed.title || submittingRef.current) return;
+    if (submittingRef.current) return;
+    if (!parsed.title) {
+      // An empty Add looked enabled and did nothing. Point at the field instead.
+      internalRef.current?.focus();
+      return;
+    }
     const flags = override
       ? { urgent: quadrantByRdKey(override).urgent, important: quadrantByRdKey(override).important }
       : { urgent: parsed.urgent, important: parsed.important };

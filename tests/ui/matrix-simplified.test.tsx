@@ -407,6 +407,21 @@ describe("<MatrixSimplified>", () => {
     );
   });
 
+  // A plain first task lands in Eliminate, often below the fold. The new card
+  // is scrolled to and highlighted, and focus stays in the bar for the next one.
+  it("highlights the captured task and keeps focus in the capture bar", async () => {
+    const created = makeTask({ id: "captured", title: "Call the dentist" });
+    tasksFixture.current = [created];
+    vi.mocked(createTask).mockResolvedValueOnce(created);
+    render(<MatrixSimplified />);
+
+    const input = screen.getByLabelText("Capture a task");
+    await userEvent.type(input, "Call the dentist{Enter}");
+
+    await waitFor(() => expect(screen.getByTestId("task-card")).toHaveClass("ring-4"));
+    expect(input).toHaveFocus();
+  });
+
   it("keeps every composer field when creating a task", async () => {
     // The create branch hand-picked seven fields while the composer renders more than
     // that, so Repeat, Subtasks, Estimate and Reminder were silently dropped on any task

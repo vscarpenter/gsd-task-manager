@@ -17,6 +17,15 @@ describe("<CaptureBar>", () => {
     });
   });
 
+  // An empty Add looked enabled and did nothing, so it now points at the field.
+  it("moves focus to the field when Add is clicked with nothing typed", async () => {
+    const onSubmit = vi.fn();
+    render(<CaptureBar onSubmit={onSubmit} />);
+    await userEvent.click(screen.getByRole("button", { name: /add/i }));
+    expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("clears input after successful submit", async () => {
     const onSubmit = vi.fn();
     render(<CaptureBar onSubmit={onSubmit} />);

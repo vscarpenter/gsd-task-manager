@@ -83,4 +83,21 @@ describe("useTaskHighlight", () => {
     expect(node.scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" });
     expect(node.focus).toHaveBeenCalledWith({ preventScroll: true });
   });
+
+  // A fresh capture scrolls to its card but leaves focus in the capture bar,
+  // so the next task can be typed straight away.
+  it("scrolls without taking focus when asked not to", () => {
+    const node = document.createElement("article");
+    node.scrollIntoView = vi.fn();
+    node.focus = vi.fn();
+    const { result } = renderHook(() => useTaskHighlight([makeTask("target")], vi.fn()));
+
+    act(() => {
+      result.current.handleTaskRef("target", node);
+      result.current.highlightTaskById("target", { focus: false });
+    });
+
+    expect(node.scrollIntoView).toHaveBeenCalled();
+    expect(node.focus).not.toHaveBeenCalled();
+  });
 });

@@ -7,6 +7,8 @@ import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { ErrorActions, logError } from "@/lib/error-logger";
+import { quadrantForTask } from "@/lib/quadrants";
+import { taskValidationMessage } from "@/lib/tasks/crud/validation-error";
 import { TIME_UNITS, TOAST_DURATION } from "@/lib/constants";
 import type { TaskRecord } from "@/lib/types";
 
@@ -24,26 +26,28 @@ export function reportTaskMutationError(
     userMessage,
     timestamp: new Date().toISOString(),
   });
-  toast.error(userMessage, { duration: TOAST_DURATION.LONG });
+  // A limit the person can act on beats a generic failure.
+  toast.error(taskValidationMessage(error) ?? userMessage, { duration: TOAST_DURATION.LONG });
 }
 
 // Pure capture/toggle handlers — they close over no component state, so they
 // live at module scope (stable identity for memoized children).
-export async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<boolean> {
+export async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<TaskRecord | null> {
   try {
     const { cleanTitle, urls } = extractUrlsFromTitle(title);
-    await createTask({
+    const task = await createTask({
       title: cleanTitle,
       description: buildDescription("", urls),
       urgent,
       important,
       tags: tags.length > 0 ? tags : undefined,
     });
-    toast.success("Task added", { duration: TOAST_DURATION.SHORT });
-    return true;
+    // Name the quadrant: a plain task lands in Eliminate, often below the fold.
+    toast.success(`Added to ${quadrantForTask(urgent, important).title}`, { duration: TOAST_DURATION.SHORT });
+    return task;
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.CREATE_TASK, "Failed to create task");
-    return false;
+    return null;
   }
 }
 
