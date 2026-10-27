@@ -5,9 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useSync } from '@/lib/hooks/use-sync';
-import { useEffect, useState } from 'react';
 import { SyncAuthDialog } from '@/components/sync/sync-auth-dialog';
-import { OPEN_SYNC_EVENT } from '@/components/sync/open-sync-event';
+import { useSyncDialogState } from '@/components/sync/open-sync-event';
 import { SYNC_TOAST_DURATION } from '@/lib/constants/sync';
 import { useSyncHealth } from '@/components/sync/use-sync-health';
 import { useSyncStatus, type IconType } from '@/components/sync/use-sync-status';
@@ -77,13 +76,7 @@ function SyncStatusOverlays({
 
 export function SyncButton() {
   const { sync, isSyncing, status, error, isEnabled, nextRetryAt, pendingCount: queued, healthReport } = useSync();
-  const [authDialogOpen, setAuthDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const open = () => setAuthDialogOpen(true);
-    window.addEventListener(OPEN_SYNC_EVENT, open);
-    return () => window.removeEventListener(OPEN_SYNC_EVENT, open);
-  }, []);
+  const [authDialogOpen, setAuthDialogOpen] = useSyncDialogState();
 
   useSyncHealth({
     healthReport,

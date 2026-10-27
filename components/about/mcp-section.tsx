@@ -20,6 +20,9 @@ const claudeDesktopConfig = `{
   }
 }`;
 
+const intro =
+  "GSD ships with an MCP server. Install it once, and your AI assistant can find, add, and complete your tasks in plain English. It works on the copy of your tasks that cloud sync stores, so turn on sync first.";
+
 const setupHint = (
   <>
     Run <code>npm install --global gsd-mcp-server</code>, then{" "}
@@ -42,10 +45,7 @@ export function McpSection() {
               Let Claude manage your tasks.
             </h2>
             <p className="max-w-[55ch] text-foreground-muted leading-relaxed mb-6">
-              GSD ships with an MCP server. Install it once, and your AI
-              assistant can find, add, and complete your tasks in plain
-              English. It works on the copy of your tasks that cloud sync
-              stores, so turn on sync first. {setupHint}
+              {intro} {setupHint}
             </p>
             <ul className="text-sm text-foreground-muted/80 italic space-y-2 mb-6">
               {exampleQueries.map((query) => (

@@ -20,7 +20,7 @@ describe("ReviewPrompts", () => {
   it("names each prompt's quadrant as a caption, not another tracked eyebrow", () => {
     render(<ReviewPrompts distribution={distribution} />);
 
-    const label = screen.getByText("Q1 · Do First");
+    const label = screen.getByText("Do First");
     expect(label.className).toContain("text-caption");
     expect(label.className).not.toContain("text-eyebrow");
     expect(label.className).not.toContain("uppercase");

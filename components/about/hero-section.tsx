@@ -48,6 +48,33 @@ function HeroCtas() {
   );
 }
 
+function TrustSignals() {
+  // Hairline divider above frames the row visually.
+  return (
+    <div className="mx-auto mt-12 max-w-2xl border-t border-border-muted pt-6">
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-caption text-foreground-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <Lock size={16} strokeWidth={1.75} aria-hidden />
+          No account required
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Monitor size={16} strokeWidth={1.75} aria-hidden />
+          Works offline
+        </span>
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-1.5 transition-colors hover:text-foreground"
+        >
+          <Code2 size={16} strokeWidth={1.75} aria-hidden />
+          MIT open source
+        </a>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Hero section for the About / marketing page.
  * Centered single-column layout with headline, CTAs, and trust signals.
@@ -76,28 +103,7 @@ export function HeroSection() {
 
           <HeroCtas />
 
-          {/* Trust signals — hairline divider above frames the row visually */}
-          <div className="mx-auto mt-12 max-w-2xl border-t border-border-muted pt-6">
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-caption text-foreground-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <Lock size={16} strokeWidth={1.75} aria-hidden />
-                No account required
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Monitor size={16} strokeWidth={1.75} aria-hidden />
-                Works offline
-              </span>
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center gap-1.5 transition-colors hover:text-foreground"
-              >
-                <Code2 size={16} strokeWidth={1.75} aria-hidden />
-                MIT open source
-              </a>
-            </div>
-          </div>
+          <TrustSignals />
         </div>
       </div>
     </section>
