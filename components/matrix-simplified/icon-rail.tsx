@@ -124,7 +124,11 @@ export function DesktopIconRail({ onHelp }: IconRailProps) {
 
 export function MobileIconRail({ onHelp }: IconRailProps) {
   const pathname = usePathname();
-  const { navigateWithTransition, isPending } = useViewTransition();
+  const { navigateWithTransition } = useViewTransition();
+  // The tapped tab reads as selected at once; the route can take a couple of
+  // seconds to land. The tap stops counting once the pathname changes.
+  const [tapped, setTapped] = useState<{ key: RouteKey; from: string } | null>(null);
+  const tappedKey = tapped && tapped.from === pathname ? tapped.key : null;
 
   return (
     <nav
@@ -136,9 +140,11 @@ export function MobileIconRail({ onHelp }: IconRailProps) {
           key={item.routeKey}
           label={item.label}
           icon={item.icon}
-          active={isRouteActive(pathname, item.routeKey)}
-          disabled={isPending}
-          onClick={() => navigateWithTransition(ROUTES[item.routeKey])}
+          active={tappedKey ? tappedKey === item.routeKey : isRouteActive(pathname, item.routeKey)}
+          onClick={() => {
+            setTapped({ key: item.routeKey, from: pathname });
+            navigateWithTransition(ROUTES[item.routeKey]);
+          }}
           mobile
         />
       ))}
